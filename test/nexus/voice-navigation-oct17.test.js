@@ -17,7 +17,7 @@ test("'start navigation to ...' is a request to be guided there, like 'take me t
   assert.deepEqual(navigation.parseCommand("Start navigation to the airport in Nairobi."), { type: "go", destination: "the airport in Nairobi", mode: "drive" });
   assert.deepEqual(navigation.parseCommand("Start navigating to Sacramento"), { type: "go", destination: "Sacramento", mode: "drive" });
   assert.deepEqual(navigation.parseCommand("Take me to Sacramento."), { type: "go", destination: "Sacramento", mode: "drive" });
-  assert.equal(navigation.parseCommand("Directions from Stockton to Sacramento"), null, "a route between two named places is the route tool's");
+  assert.equal(navigation.parseCommand("Show me the route from Stockton to Sacramento"), null, "the route drawn on the map is the map tool's");
 });
 
 function spokenApi() {
@@ -29,8 +29,8 @@ function spokenApi() {
 
 test("the page takes a spoken navigation request itself, but not a request to open a screen or an ordinary sentence", () => {
   const api = spokenApi();
-  for (const say of ["Take me to Sacramento.", "Navigate to Nairobi", "Start navigation to the airport in Nairobi.", "Give me directions to the market", "Where am I?", "Stop navigation", "Take me home please"]) assert.equal(api.nav(say), true, say);
-  for (const say of ["Take me to the map.", "Take me to my documents", "Take me to the dashboard", "Open the map.", "Show me a map of California.", "What is the weather in Tokyo?", "Directions from Stockton to Sacramento", "Show me the route from Fresno to Oakland"]) assert.equal(api.nav(say), false, say);
+  for (const say of ["Take me to Sacramento.", "Navigate to Nairobi", "Start navigation to the airport in Nairobi.", "Give me directions to the market", "Where am I?", "Stop navigation", "Take me home please", "Give me directions from Stockton to Sacramento"]) assert.equal(api.nav(say), true, say);
+  for (const say of ["Take me to the map.", "Take me to my documents", "Take me to the dashboard", "Open the map.", "Show me a map of California.", "What is the weather in Tokyo?", "Show me the route from Fresno to Oakland"]) assert.equal(api.nav(say), false, say);
   assert.equal(api.key("Take me to Sacramento."), "take me to sacramento");
 });
 
@@ -49,4 +49,30 @@ test("'estimate the delivery time from A to B' is a shipment estimate between th
   }
   assert.deepEqual(completeLogisticsTrackPlan("Estimate the delivery time from Stockton to Fresno.", catalog).steps[0].input, { origin: "Stockton", destination: "Fresno" });
   assert.equal(completeLogisticsTrackPlan("Estimate the cost of maize.", catalog), null);
+});
+
+// The steps between two named places, read out, with no location read and nothing started (found by the owner asking for turn-by-turn directions from one named place to another).
+test("'directions from A to B' (and its wordings) is a request for the steps between two named places; 'from here' is guidance from the person's own location", () => {
+  for (const [say, from, to, mode] of [["Give me directions from Stockton to Sacramento.", "Stockton", "Sacramento", "drive"], ["Turn by turn directions from Fresno to Oakland", "Fresno", "Oakland", "drive"],
+    ["What are the steps from Nairobi to Nakuru?", "Nairobi", "Nakuru", "drive"], ["How do I get from Stockton to Sacramento?", "Stockton", "Sacramento", "drive"], ["Walking directions from the library to the market", "the library", "the market", "walk"]])
+    assert.deepEqual(navigation.parseCommand(say), { type: "between", from, to, mode }, say);
+  assert.deepEqual(navigation.parseCommand("Give me directions from here to Sacramento"), { type: "go", destination: "Sacramento", mode: "drive" });
+});
+
+test("the steps between two places are found without reading the person's location: both places are searched, the route is planned, the first eight steps are read and the rest counted", async () => {
+  const calls = [];
+  const api = async body => {
+    calls.push(body);
+    if (body.action === "search") return { places: [{ label: "Stockton, California", lat: 37.96, lng: -121.29 }] };
+    return { route: { distanceMeters: 78000, durationSeconds: 3500, destination: { label: "Sacramento", lat: 38.58, lng: -121.49 }, steps: Array.from({ length: 12 }, (_, i) => ({ instruction: i === 0 ? "Head north on Main Street" : `Turn right onto Road ${i}` })) } };
+  };
+  const navigator = navigation.createNavigator({ geolocation: { getCurrentPosition() { throw new Error("location must not be read"); }, watchPosition() { throw new Error("must not follow"); } }, api, speak() {}, storage: null });
+  const reply = await navigator.handle("Give me directions from Stockton to Sacramento");
+  assert.match(reply, /^From Stockton to Sacramento: 78 kilometers, about 58 minutes\. 1, Head north on Main Street\. 2, Turn right onto Road 1\./);
+  assert.match(reply, /8, Turn right onto Road 7\. There are 4 more steps\. To be guided turn by turn from where you are, say "take me to Sacramento"\.$/);
+  assert.deepEqual(calls.map(call => call.action), ["search", "route"]);
+  assert.deepEqual(calls[1].to, { query: "Sacramento" }); assert.deepEqual(calls[1].from, { lat: 37.96, lng: -121.29 });
+  assert.equal(navigator.active, false, "nothing is being followed");
+  const missing = navigation.createNavigator({ geolocation: {}, api: async () => ({ places: [] }), speak() {}, storage: null });
+  assert.equal(await missing.handle("Give me directions from Zzyzxville to Sacramento"), "I couldn't find Zzyzxville on the map.");
 });

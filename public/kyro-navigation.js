@@ -81,6 +81,9 @@
       askWhere: "Where would you like to go? Say \"take me to\" and a place, or \"take me home\" once you have saved home.",
       noHome: "I don't know where home is yet. Stand at home and say \"save this place as home\".",
       routeFailed: "I couldn't plan a route. Check your connection and try again.",
+      betweenNoPlace: "I couldn't find {place} on the map.",
+      between: "From {from} to {to}: {about}. {steps}{more}",
+      betweenMore: " There are {n} more steps. To be guided turn by turn from where you are, say \"take me to {to}\".",
       walking: "Walking", taking: "Taking", destination: "your destination",
       start: "{verb} you to {label}: {about}. {first} Keep your screen on, because a browser can't guide with the screen off. {disclosure}Say \"stop navigation\" to end.",
       disclosure: "I use your phone's location only while guiding you and send it to a directions service to find the way; I don't keep it. ",
@@ -247,6 +250,16 @@
     if (/^(?:stop|end|cancel|exit|quit)(?: the)?(?: navigation| navigating| directions| guidance| route)$/i.test(t) || /^stop navigating$/i.test(t)) return { type: "stop" };
     if (/^(?:repeat(?: that)?|say (?:that )?again|what(?:'s| is) (?:the )?next(?: turn| instruction| direction)?|next turn)$/i.test(t)) return { type: "repeat" };
     if (/^(?:how (?:far|long)(?: is it)?(?: to go)?|how much (?:longer|further)|when (?:will|do) i arrive|what(?:'s| is) my eta|eta)$/i.test(t)) return { type: "status" };
+    // "Give me directions from Stockton to Sacramento", "turn by turn directions from A to B", "what are the steps from A to B", "how do I get from A to B": the steps between two named places, read out (not from where the person is).
+    // ("show me the route from A to B" is the map route, which the map tool draws, and is left to it.)
+    if ((m = /^(?:please )?(?:(?:give me|get me|tell me|read me|what are|what is|show me|i need|i want)\s+(?:the\s+)?)?(?:(?:turn[- ]by[- ]turn|walking|driving)\s+)?(?:directions|steps|instructions|the way)\s+from\s+(.+?)\s+(?:to|towards)\s+(.+)$/i.exec(t))
+        || (m = /^how (?:do|can|would|should) (?:i|we) (?:get|go|drive|walk|travel)\s+from\s+(.+?)\s+(?:to|towards)\s+(.+)$/i.exec(t))) {
+      const from = m[1].replace(/\s+/g, " ").trim(); const to = m[2].replace(/\s+/g, " ").trim().replace(/[.?!]+$/, "");
+      const mode = /\bwalk(?:ing)?\b|\bon foot\b/i.test(t) ? "walk" : "drive";
+      // "from here" is from where the person is: guidance from their own location
+      if (/^(?:here|my (?:current )?location|where i am|current location|me)$/i.test(from) && to && !NOT_A_PLACE.test(to)) return { type: "go", destination: to, mode };
+      if (from && to && !NOT_A_PLACE.test(from) && !NOT_A_PLACE.test(to)) return { type: "between", from, to, mode };
+    }
     if ((m = /^(?:please )?(navigate|start navigation|start navigating|begin navigation|take me|drive me|guide me|walk me|lead me|directions|give me directions|show me the way)\b\s*(.*)$/i.exec(t))) {
       let rest = m[2]; const mode = WALK_WORDS.test(`${m[1]} ${rest}`) || /^walk me/i.test(m[1]) ? "walk" : "drive"; WALK_WORDS.lastIndex = 0;
       rest = rest.replace(WALK_WORDS, " ").replace(/\s+/g, " ").trim().replace(/^(?:to|towards|toward|me to|for|back to|back)\s+/i, "").replace(/^(?:the )?/, match => match).trim();
@@ -360,6 +373,23 @@
       if (result.offRoute) reroute(fix);
     }
 
+    // The steps between two named places, read out: neither is where the person is, so no location is read and nothing starts following them. The first steps are said; the rest are counted.
+    async function between(fromText, toText, mode, language) {
+      let start;
+      try {
+        const found = (await api({ action: "search", query: fromText }))?.places || [];
+        start = found.find(place => Number.isFinite(Number(place?.lat)) && Number.isFinite(Number(place?.lng)));
+      } catch { return tx(language, "routeFailed"); }
+      if (!start) return tx(language, "betweenNoPlace", { place: fromText });
+      let route;
+      try { route = (await api({ action: "route", from: { lat: Number(start.lat), lng: Number(start.lng) }, to: { query: toText }, mode, language })).route; }
+      catch (error) { return error?.code === "place_not_found" ? tx(language, "betweenNoPlace", { place: toText }) : (error?.message && !/failed|network/i.test(error.message) ? error.message : tx(language, "routeFailed")); }
+      const steps = Array.isArray(route?.steps) ? route.steps.filter(step => step && step.instruction) : [];
+      const shown = steps.slice(0, 8);
+      return tx(language, "between", { from: fromText, to: toText, about: about(route.distanceMeters, route.durationSeconds, language),
+        steps: shown.map((step, index) => `${index + 1}, ${step.instruction}.`).join(" "), more: steps.length > shown.length ? tx(language, "betweenMore", { n: steps.length - shown.length, to: toText }) : "" });
+    }
+
     async function go(text, mode, language) {
       let fix; try { fix = await locate(); } catch (error) { return locationProblem(error, language); }
       let destination; const named = text ? placeKey(text) : "home";
@@ -414,6 +444,7 @@
         if (command.type === "places") return listPlaces(language);
         if (command.type === "forget") return forgetPlace(command.name, language);
         if (command.type === "go") return go(command.destination, command.mode, language);
+        if (command.type === "between") return between(command.from, command.to, command.mode, language);
         if (command.type === "stop") return stopGuidance(true) ? tx(language, "stopped") : tx(language, "notGuiding");
         if (!active) return null; // "repeat" and "how far" belong to whatever else was going on
         const fix = active.lastFix; const at = active.follower.update({ ...fix });

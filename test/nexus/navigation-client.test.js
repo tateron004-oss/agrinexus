@@ -32,7 +32,7 @@ test("the GPS takes only words that are plainly for it", () => {
   for (const [text, type] of Object.entries(yes)) assert.equal(nav.parseCommand(text)?.type, type, text);
   assert.deepEqual(nav.parseCommand("Walk me to the market"), { type: "go", destination: "the market", mode: "walk" }); assert.deepEqual(nav.parseCommand("take me to Kibera on foot"), { type: "go", destination: "Kibera", mode: "walk" });
   assert.deepEqual(nav.parseCommand("navigate home"), { type: "go", destination: "home", mode: "drive" });
-  for (const text of ["directions from Nairobi to Nakuru", "take me to settings", "take me to the dashboard", "take me to the next step", "tell me a joke", "what is the weather", "where is the nearest clinic", "I am home", "save this", "stop", "hello", "how do I get to sleep", "Show a route from Nairobi to Nakuru with route geometry.", "Find mobile clinic locations near Nairobi and select the closest one.", "x".repeat(300), ""])
+  for (const text of ["show me the route from Nairobi to Nakuru", "take me to settings", "take me to the dashboard", "take me to the next step", "tell me a joke", "what is the weather", "where is the nearest clinic", "I am home", "save this", "stop", "hello", "how do I get to sleep", "Show a route from Nairobi to Nakuru with route geometry.", "Find mobile clinic locations near Nairobi and select the closest one.", "x".repeat(300), ""])
     assert.equal(nav.parseCommand(text), null, text);
 });
 
@@ -197,7 +197,7 @@ test("problems are said plainly: no permission, no route, no signal, and nothing
   assert.match(await setup({ phone: { failure: 1 } }).navigator.handle("take me home"), /Allow location/);
   assert.equal(await setup({ handler: async () => { throw new Error("I couldn't find Atlantis."); } }).navigator.handle("take me to Atlantis"), "I couldn't find Atlantis.");
   assert.match(await setup({ handler: async () => { throw new TypeError("Failed to fetch"); } }).navigator.handle("take me to Kibera"), /couldn't plan a route\. Check your connection/);
-  const t = setup(); for (const text of ["what is the weather", "take me to settings", "hello", "record my blood pressure", "directions from Nairobi to Nakuru", "repeat that", "how far is it"]) assert.equal(await t.navigator.handle(text), null, text);
+  const t = setup(); for (const text of ["what is the weather", "take me to settings", "hello", "record my blood pressure", "show me the route from Nairobi to Nakuru", "repeat that", "how far is it"]) assert.equal(await t.navigator.handle(text), null, text);
   assert.equal(t.calls.length, 0); assert.equal(t.p.watchers.length, 0, "the location is not read for anything but a navigation request");
   assert.equal(await t.navigator.handle("stop navigation"), "I'm not guiding you anywhere right now.");
 });
@@ -315,7 +315,7 @@ test("repeat, how far, stop and losing permission while guiding", async () => {
 });
 
 test("the page loads the GPS, the offline shell caches it, and the words are handled on the phone before anything is sent", () => {
-  const html = fs.readFileSync(path.join(ROOT, "public", "index.html"), "utf8"); assert.match(html, /<script src="\/kyro-navigation\.js\?v=kyro-navigation-2"><\/script>/);
+  const html = fs.readFileSync(path.join(ROOT, "public", "index.html"), "utf8"); assert.match(html, /<script src="\/kyro-navigation\.js\?v=kyro-navigation-3"><\/script>/);
   assert.ok(html.indexOf("kyro-navigation.js") < html.indexOf('src="/app.js'), "loaded before the app");
   assert.match(fs.readFileSync(path.join(ROOT, "public", "sw.js"), "utf8"), /kyro-navigation\.js/);
   const app = fs.readFileSync(path.join(ROOT, "public", "app.js"), "utf8");
