@@ -52171,10 +52171,30 @@ function kyroHandleSpokenOpen(text, options = {}) {
   if (handled && spokenKey) kyroLastSpokenOpen = { key: spokenKey, at: Date.now() };
   return handled;
 }
+// The pages behind the answer on the screen (see kyro-result-screen.js): "open the page", "open the first source". A browser opens a page only when it is tapped, so by voice the page is tried and, when the
+// browser will not, the person is told which button to tap.
+let kyroSourceLinks = [];
+const KYRO_OPEN_SOURCE = /^(?:please\s+)?(?:open|show|go to|pull up|bring up|take me to|let me see|visit)\s+(?:me\s+)?(?:the\s+|that\s+|this\s+)?(?:(first|second|third|fourth|top|main|1st|2nd|3rd|4th)\s+)?(?:web\s*)?(?:page|website|web site|site|link|source|article|result)(?:\s+(?:for|about|from)\s+(?:that|this|it|the answer))?$/i;
+function kyroOpenSourcePage(text, lang, options = {}) {
+  const m = KYRO_OPEN_SOURCE.exec(String(text || "").trim().replace(/[.?!]+$/, ""));
+  if (!m || !kyroSourceLinks.length || !document.querySelector("[data-kyro-result] [data-kyro-source-link]")) return false;
+  const ordinal = { first: 0, top: 0, main: 0, "1st": 0, second: 1, "2nd": 1, third: 2, "3rd": 2, fourth: 3, "4th": 3 }[String(m[1] || "").toLowerCase()] ?? 0;
+  const link = kyroSourceLinks[Math.min(ordinal, kyroSourceLinks.length - 1)];
+  if (!options.typed) { try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ } }
+  let opened = null;
+  try { opened = window.open(link.url, "_blank"); if (opened) { try { opened.opener = null; } catch { /* cross-origin */ } } } catch { opened = null; }
+  const sw = lang === "sw";
+  const line = opened
+    ? (sw ? `Ninafungua ${link.label}.` : `Opening ${link.label}.`)
+    : (sw ? `Kivinjari chako hakiniruhusu kufungua ukurasa kwa sauti. Gusa Fungua ${link.label} kwenye skrini.` : `Your browser will not let me open a page by voice. Tap Open ${link.label} on the screen.`);
+  try { setVoiceResponse(line, true, { allowHandoff: false, command: text, source: "kyro-open" }); } catch { /* the screen has the buttons */ }
+  return true;
+}
 function kyroHandleSpokenOpenOnce(text, options = {}) {
   const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
   const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
+  if (typeof kyroOpenSourcePage === "function" && kyroOpenSourcePage(said, lang, options)) return true;
   // the short answer to "what would you like to see?"
   if (kyroPendingMedia) {
     const pending = kyroPendingMedia; kyroPendingMedia = null;
@@ -53230,6 +53250,7 @@ function kyroShowResultScreen(toolName, command, result) {
     const model = window.KyroResultScreen.buildModel(result, { command, lang });
     if (!model) return false;
     window.KyroResultScreen.show(document, model, { onClose: () => { void kyroReturnToOrb({ reason: "done", source: "result-screen" }); } }, lang);
+    kyroSourceLinks = Array.isArray(model.links) ? model.links : [];
     kyroNoteActivity();
     return true;
   } catch { return false; }
