@@ -121,7 +121,7 @@ test("requestIsHttps and applySecurityHeaders unit behaviour", () => {
 });
 
 test("a real static file gets a strong ETag, and a conditional request gets 304 with no body and the same ETag", async () => {
-  for (const route of ["/app.js", "/styles.css", "/kyro-navigation.js?v=kyro-navigation-3"]) {
+  for (const route of ["/app.js", "/styles.css", "/kyro-navigation.js?v=kyro-navigation-4"]) {
     const first = await get(plain, route);
     const body = await first.arrayBuffer();
     assert.equal(first.status, 200, route);

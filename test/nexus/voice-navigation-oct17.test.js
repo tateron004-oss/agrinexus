@@ -63,15 +63,16 @@ test("the steps between two places are found without reading the person's locati
   const calls = [];
   const api = async body => {
     calls.push(body);
-    if (body.action === "search") return { places: [{ label: "Stockton, California", lat: 37.96, lng: -121.29 }] };
+    if (body.action === "search") return { places: [body.query === "Sacramento" ? { label: "Sacramento, California", lat: 38.58, lng: -121.49 } : { label: "Stockton, California", lat: 37.96, lng: -121.29 }] };
     return { route: { distanceMeters: 78000, durationSeconds: 3500, destination: { label: "Sacramento", lat: 38.58, lng: -121.49 }, steps: Array.from({ length: 12 }, (_, i) => ({ instruction: i === 0 ? "Head north on Main Street" : `Turn right onto Road ${i}` })) } };
   };
   const navigator = navigation.createNavigator({ geolocation: { getCurrentPosition() { throw new Error("location must not be read"); }, watchPosition() { throw new Error("must not follow"); } }, api, speak() {}, storage: null });
   const reply = await navigator.handle("Give me directions from Stockton to Sacramento");
   assert.match(reply, /^From Stockton to Sacramento: 78 kilometers, about 58 minutes\. 1, Head north on Main Street\. 2, Turn right onto Road 1\./);
   assert.match(reply, /8, Turn right onto Road 7\. There are 4 more steps\. To be guided turn by turn from where you are, say "take me to Sacramento"\.$/);
-  assert.deepEqual(calls.map(call => call.action), ["search", "route"]);
-  assert.deepEqual(calls[1].to, { query: "Sacramento" }); assert.deepEqual(calls[1].from, { lat: 37.96, lng: -121.29 });
+  assert.deepEqual(calls.map(call => call.action), ["search", "search", "route"]);
+  assert.ok(calls.slice(0, 2).every(call => call.near === undefined), "neither place is searched near the other: that finds a namesake next door instead of the far city");
+  assert.deepEqual(calls[2].to, { lat: 38.58, lng: -121.49 }); assert.deepEqual(calls[2].from, { lat: 37.96, lng: -121.29 });
   assert.equal(navigator.active, false, "nothing is being followed");
   const missing = navigation.createNavigator({ geolocation: {}, api: async () => ({ places: [] }), speak() {}, storage: null });
   assert.equal(await missing.handle("Give me directions from Zzyzxville to Sacramento"), "I couldn't find Zzyzxville on the map.");

@@ -378,15 +378,16 @@
 
     // The steps between two named places, read out: neither is where the person is, so no location is read and nothing starts following them. The first steps are said; the rest are counted.
     async function between(fromText, toText, mode, language) {
-      let start;
-      try {
-        const found = (await api({ action: "search", query: fromText }))?.places || [];
-        start = found.find(place => Number.isFinite(Number(place?.lat)) && Number.isFinite(Number(place?.lng)));
-      } catch { return tx(language, "routeFailed"); }
+      // Each place is looked up on its own, with nothing to bias it toward the other: a route request that looks the destination up "near" the start finds an "Oakland" or a "Mombasa" next door instead of the far one that was meant.
+      const lookup = async text => (((await api({ action: "search", query: text }))?.places) || []).find(place => Number.isFinite(Number(place?.lat)) && Number.isFinite(Number(place?.lng)));
+      let start; let end;
+      try { start = await lookup(fromText); } catch { return tx(language, "routeFailed"); }
       if (!start) return tx(language, "betweenNoPlace", { place: fromText });
+      try { end = await lookup(toText); } catch { return tx(language, "routeFailed"); }
+      if (!end) return tx(language, "betweenNoPlace", { place: toText });
       let route;
-      try { route = (await api({ action: "route", from: { lat: Number(start.lat), lng: Number(start.lng) }, to: { query: toText }, mode, language })).route; }
-      catch (error) { return error?.code === "place_not_found" ? tx(language, "betweenNoPlace", { place: toText }) : (error?.message && !/failed|network/i.test(error.message) ? error.message : tx(language, "routeFailed")); }
+      try { route = (await api({ action: "route", from: { lat: Number(start.lat), lng: Number(start.lng) }, to: { lat: Number(end.lat), lng: Number(end.lng) }, mode, language })).route; }
+      catch (error) { return error?.message && !/failed|network/i.test(error.message) ? error.message : tx(language, "routeFailed"); }
       const steps = Array.isArray(route?.steps) ? route.steps.filter(step => step && step.instruction) : [];
       const shown = steps.slice(0, 8);
       return tx(language, "between", { from: fromText, to: toText, about: about(route.distanceMeters, route.durationSeconds, language),
