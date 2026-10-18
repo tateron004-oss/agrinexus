@@ -24200,17 +24200,21 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   if (toolName === "nexus_marketplace_logistics") {
     // "How long will delivery to Nakuru take?" used to fall through to the sample listings. Kyro cannot estimate a delivery time for a place it has no order or route for; it says so and offers what it can do.
     const asksDeliveryTime = /\bhow long\b.*\b(deliver|delivery|shipping|ship|to arrive|to get there)\b|\bwhen (?:will|does|would)\b.*\b(arrive|deliver|delivered)\b/i.test(command);
-    if (asksDeliveryTime || /\b(track|tracking|where is my|shipment|route status|delivery status|eta|route delay|route delays|delayed|traffic)\b/i.test(command)) {
+    const asksShipmentList = SHIPMENT_LIST_QUESTION.test(command) && !/\b(?:create|place|make|new|start|buy|sell|post|cancel)\b/i.test(command);
+    if (asksDeliveryTime || asksShipmentList || /\b(track|tracking|where is my|shipment|route status|delivery status|eta|route delay|route delays|delayed|traffic)\b/i.test(command)) {
       // Only the orders marked as this person's (an Admin may look at any). The latest order of anybody used to be read out to whoever asked; even "their own and unmarked ones" still told every account about the
       // old unmarked orders (found on the live site: a new guest was told about AN-ORD-0021 for Premium Cassava Flour). A read-out costs nothing to be strict about; a new order is marked with its owner.
       const ownEmail = String(user?.email || "").trim().toLowerCase();
       const ownOrders = (db.profile.orders || []).filter(item => user?.role === "Admin" || (ownEmail && ownerOfRecord(item).includes(ownEmail)));
       const order = ownOrders[ownOrders.length - 1];
+      if (asksShipmentList && !/\border\s*(?:no\.?|number|#)?\s*#?\d/i.test(command)) {
+        return { ...common, capability: "marketplace-trade", status: ownOrders.length ? "shipments-listed" : "no-order", response: shipmentListAnswer(ownOrders), receipt: null, evidenceReceipt: null, localOnly: true };
+      }
       if (!order && asksDeliveryTime) {
         return { ...common, capability: "marketplace-trade", status: "no-estimate", response: "I can't estimate a delivery time without an order or a route to work from. Tell me where it is going from and to and I will show the route and the travel time on the map, or create a crop order and I can track its shipment.", receipt: null, evidenceReceipt: null, localOnly: true };
       }
       if (!order) {
-        return { ...common, capability: "marketplace-trade", status: "no-order", response: "I do not see an active crop order yet. Say create a crop order to start one, and then I can track its shipment.", receipt: null, evidenceReceipt: null, localOnly: true };
+        return { ...common, capability: "marketplace-trade", status: "no-order", response: NO_SHIPMENT_REPLY, receipt: null, evidenceReceipt: null, localOnly: true };
       }
       const trackingResult = await refreshOrderLogisticsTracking(db, order, user, "logistics.voice_tracking_check");
       const tracking = trackingResult.tracking;
@@ -32915,7 +32919,8 @@ function utilityAssistantKind(text, lower) {
   if (/\b(health safety|safety reminder|health reminder|is it safe|too hot for grandma|patient safety|care reminder|outbreak safety|heat safety)\b/.test(lower)) return "health-safety";
   if (/\b(situation agent|manage this situation|handle this situation|what is the situation|situation plan|help me with this situation)\b/.test(lower)) return "situation-agent";
   if (/\b(pre provider|pre-provider|before providers|until providers|providerless|no vendor|without vendors|without providers|provider readiness|provider hardening|real providers arrive|live providers arrive|what works without providers)\b/.test(lower)) return "pre-provider-readiness";
-  if (/\b(shipment|delivery|deliver|arrive|arrival|eta|track my sale|track my order|track my product|where is my crop|where is my shipment|route status)\b/.test(lower)) return "shipment";
+  // ("What shipments do I have?", "Where is my order?", "Show me my orders": the plural and the order words were missed, and each was answered "I couldn't do that" or with the sample listings)
+  if (/\b(shipment|delivery|deliver|arrive|arrival|eta|track my sale|track my order|track my product|where is my crop|where is my shipment|route status)\b/.test(lower) || /\b(?:shipments|deliveries)\b|\bwhere(?:'s| is) my (?:order|package|parcel)\b|\b(?:what|which|show|list|see|how many|do i have)\b[^.?!]*\borders\b/.test(lower)) return "shipment";
   if (/\b(route|directions|map|field visit|farm visit|from .+ to .+)\b/.test(lower)) return "";
   if (/\b(appointment|schedule|calendar|visit|call with provider|doctor time|provider time|shift time|what time is my)\b/.test(lower)) return "appointment";
   if (/\b(what is next today|what do i have today|today's plan|daily plan|my day|what should i do today)\b/.test(lower)) return "daily-plan";
@@ -33570,15 +33575,33 @@ function utilityAppointmentAnswer(db, options = {}, user = null) {
   return "I don't see any appointments for you. I can open telehealth scheduling or workforce scheduling and help create one.";
 }
 
-function utilityShipmentEtaAnswer(db, text = "") {
+// Only the orders marked as this person's (an Admin may look at any). The newest order of anybody, or a made-up "active shipment" (the seeded demo lot), used to be read out to whoever asked.
+function shipmentOrdersOf(db, user) {
+  const ownEmail = String(user?.email || "").trim().toLowerCase();
+  return (db?.profile?.orders || []).filter(item => user?.role === "Admin" || (ownEmail && ownerOfRecord(item).includes(ownEmail)));
+}
+const NO_SHIPMENT_REPLY = "I do not see an active crop order yet, so there is no shipment of yours to track. Say create a crop order to start one. Live carrier tracking is not connected, but I can estimate the travel time between two places: say, for example, estimate the delivery time from Stockton to Fresno.";
+// "What shipments do I have?": the person's own orders, newest first, five at most.
+function shipmentListAnswer(orders = []) {
+  if (!orders.length) return NO_SHIPMENT_REPLY;
+  const newest = [...orders].reverse();
+  const line = order => `${order.orderNumber || order.id || "an order"} for ${order.productName || order.product || order.productId || "your crop"}, stage ${order.stage || "not set"}${order.checkpoint ? `, at ${order.checkpoint}` : ""}`;
+  const more = newest.length > 5 ? ` and ${newest.length - 5} more` : "";
+  return `You have ${newest.length} order${newest.length === 1 ? "" : "s"}: ${newest.slice(0, 5).map(line).join("; ")}${more}. Say track my shipment for the latest one.`;
+}
+const SHIPMENT_LIST_QUESTION = /\b(?:what|which|show|list|see|how many|any|do i have|have i got)\b[^.?!]*\b(?:shipments|deliveries|orders)\b/i;
+function utilityShipmentEtaAnswer(db, text = "", user = null, { composite = false } = {}) {
   const { route } = activeContext(db);
+  const own = shipmentOrdersOf(db, user);
   // "where is my delivery order 1234" asks about order 1234. It used to answer with whichever order was newest (often a seeded demo lot) as if it were that one.
   const askedNumber = /\border\s*(?:no\.?|number|num|#)?\s*#?([a-z0-9][a-z0-9-]{1,30})\b/i.exec(String(text || ""));
-  const askedOrder = askedNumber ? tradeOrderNamedInText(db, text) : null;
+  const askedOrder = askedNumber ? tradeOrderNamedInText({ profile: { orders: own } }, text) : null;
   if (askedNumber && /\d/.test(askedNumber[1]) && !askedOrder) {
     return `I couldn't find an order numbered ${askedNumber[1]} in your records, so I can't tell you where it is. Please check the number, or tell me the order number again. Nothing was changed.`;
   }
-  const latestOrder = askedOrder || latestRecordByDate(db.profile.orders || [], ["createdAt", "updatedAt"]);
+  if (!askedNumber && SHIPMENT_LIST_QUESTION.test(String(text || ""))) return shipmentListAnswer(own);
+  if (!own.length) return composite ? "" : NO_SHIPMENT_REPLY;
+  const latestOrder = askedOrder || latestRecordByDate(own, ["createdAt", "updatedAt"]);
   const checkpoints = route.checkpoints || [];
   const activeCheckpoint = latestOrder?.checkpoint || db.profile.activeCheckpoint || checkpoints[0] || "pickup";
   const index = Math.max(0, checkpoints.findIndex(checkpoint => checkpoint === activeCheckpoint));
@@ -34777,7 +34800,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
                 : kind === "health-safety"
                   ? await utilityHealthSafetyAnswer(db, text, options)
       : kind === "shipment"
-        ? utilityShipmentEtaAnswer(db, text)
+        ? utilityShipmentEtaAnswer(db, text, user)
         : kind === "appointment"
           ? utilityAppointmentAnswer(db, options, user)
             : kind === "next-step"
@@ -34786,7 +34809,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
               ? `Situation Agent is active. ${utilityNextStepAnswer(db, user)}`
               : kind === "pre-provider-readiness"
                 ? preProviderModel.response
-            : `${utilityTimeAnswer(options, text)} ${utilityAppointmentAnswer(db, options, user)} ${utilityShipmentEtaAnswer(db)} ${utilityNextStepAnswer(db, user)}`;
+            : `${utilityTimeAnswer(options, text)} ${utilityAppointmentAnswer(db, options, user)} ${utilityShipmentEtaAnswer(db, "", user, { composite: true })} ${utilityNextStepAnswer(db, user)}`;
   const situationAgent = nexusSituationAgentModel(db, user, text, kind);
   const redirectSection = ["shipment", "route-delay"].includes(kind) ? "map"
     : ["appointment", "appointment-reminder", "health-safety"].includes(kind) ? "health"
