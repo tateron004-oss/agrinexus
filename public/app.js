@@ -51132,11 +51132,16 @@ function kyroArmIntakeSafetyNet() {
 // filled in without a word. Window: set when the page takes a request over, cleared when the next thing is heard.
 let kyroPageSpeaksUntil = 0;
 let kyroLastPageLine = { text: "", at: 0 };
+// The start (lower-case, letters and digits only) of each line the page has read aloud lately. The refusal watcher below must not take the page's OWN words for the voice model refusing: a guide answer such as
+// "I cannot look up addresses myself, but the official finders do it by ZIP code" matched, and when the next question began the page "recovered" by answering the PREVIOUS question again (found by the full voice run's timeline).
+let kyroRecentPageLines = [];
+const kyroLineLead = value => String(value || "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
 function kyroSpeakPageLine(text) {
   const line = String(text || "").replace(/\s+/g, " ").trim().slice(0, 500);
   if (!line || !realtimeVoiceActive()) return false;
   if (line === kyroLastPageLine.text && Date.now() - kyroLastPageLine.at < 6000) return true; // (the same words arriving twice are said once)
   kyroLastPageLine = { text: line, at: Date.now() };
+  kyroRecentPageLines = [...kyroRecentPageLines.filter(entry => Date.now() - entry.at < 180000), { lead: kyroLineLead(line), at: Date.now() }].slice(-8);
   try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch { /* nothing to cut off */ }
   // Out of band (conversation "none"): the line is spoken but is not a turn of the conversation the model then answers or repeats; the model is told afterwards, as a note, what the person was told.
   const sent = sendKyroRealtimeEvent({
@@ -51174,6 +51179,11 @@ function kyroWatchForRefusal(type, payload) {
   if (/^response\.(?:output_)?audio_transcript\.delta$/.test(kind)) kyroRefusalBuf += String(payload?.delta || "");
   else if (/^response\.(?:output_)?audio_transcript\.done$/.test(kind)) kyroRefusalBuf = String(payload?.transcript || kyroRefusalBuf);
   else return;
+  // (words the page itself is reading are not the model refusing, however they begin: it is judged again as soon as the words stop matching a line the page sent)
+  try {
+    const lead = typeof kyroLineLead === "function" ? kyroLineLead(kyroRefusalBuf) : "";
+    if (lead && typeof kyroRecentPageLines !== "undefined" && kyroRecentPageLines.some(entry => Date.now() - entry.at < 180000 && entry.lead.startsWith(lead))) return;
+  } catch { /* the watcher still works without this */ }
   if (!kyroRefusalSeenAt && (KYRO_REFUSAL.test(kyroRefusalBuf.slice(0, 160)) || KYRO_FALSE_CLAIM.test(kyroRefusalBuf.slice(0, 200)))) { kyroRefusalSeenAt = Date.now(); kyroRecoverRefusal(); }
 }
 function kyroRecoverRefusal() {
