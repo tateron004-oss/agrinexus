@@ -17,8 +17,11 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const RESULT_RETURN_MS = 10000; // an ANSWER put on the screen (a clinic list, a reading) clears this long after Kyro has finished speaking and nobody has touched or said anything
-  const AUTO_RETURN_MS = 30000;   // how long a finished answer may stay on the screen with nobody touching or saying anything
+  // Screens are cleared only when they are not in use. In use means: Kyro or the person is speaking, a hand is on the screen (mouse over it, a tap, a scroll, a key) or something on it has focus. Ten seconds was too short
+  // for anyone reading or working with a card (the owner's testing: business cards, lists and documents closed while still being used), so the quiet periods are longer, and longest for the cards people read and tap.
+  const RESULT_RETURN_MS = 30000;  // a short ANSWER card (a reading, a sentence of advice) clears this long after Kyro has finished speaking and nobody has touched or said anything
+  const LIST_RETURN_MS = 180000;   // a card of items to read and tap (a list of documents, clinics, résumés, business records) waits three minutes
+  const AUTO_RETURN_MS = 60000;    // how long any other finished answer may stay on the screen with nobody touching or saying anything
   const AUTO_RETURN_RETRY_MS = 10000; // how long to wait again when it was a bad moment (someone is speaking or typing)
 
   function normalise(text) {
@@ -122,12 +125,12 @@
     const s = snapshot || {};
     if (!s.userMode || !s.answerShowing) return { go: false, retryMs: 0 };
     if (s.workOpen) return { go: false, retryMs: AUTO_RETURN_RETRY_MS };
-    if (s.assistantSpeaking || s.userSpeaking || s.focusInField || s.pendingConfirmation || s.intakeActive) return { go: false, retryMs: AUTO_RETURN_RETRY_MS };
+    if (s.assistantSpeaking || s.userSpeaking || s.focusInField || s.pendingConfirmation || s.intakeActive || s.handOnScreen) return { go: false, retryMs: AUTO_RETURN_RETRY_MS };
     const quietFor = Number(now) - Number(s.lastActivityAt || 0);
-    const limit = s.resultShowing ? RESULT_RETURN_MS : AUTO_RETURN_MS;
+    const limit = s.resultShowing ? (s.listShowing ? LIST_RETURN_MS : RESULT_RETURN_MS) : AUTO_RETURN_MS;
     if (!(quietFor >= limit)) return { go: false, retryMs: Math.max(1000, limit - Math.max(0, quietFor)) };
     return { go: true, retryMs: 0 };
   }
 
-  return Object.freeze({ parse, shouldAutoReturn, normalise, AUTO_RETURN_MS, RESULT_RETURN_MS, AUTO_RETURN_RETRY_MS });
+  return Object.freeze({ parse, shouldAutoReturn, normalise, AUTO_RETURN_MS, RESULT_RETURN_MS, LIST_RETURN_MS, AUTO_RETURN_RETRY_MS });
 });

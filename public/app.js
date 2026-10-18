@@ -28023,6 +28023,10 @@ function kyroAutoReturnSnapshot() {
     // (the "open health" help screen is not an answer to be read in ten seconds: it keeps the usual thirty)
     resultShowing: Boolean(document.querySelector("[data-kyro-result]:not([data-kyro-result=\"help\"])")),
     workOpen: kyroWorkOpen(),
+    // A card of items to read and tap (documents, clinics, résumés, business records) is kept longer than a short answer, and any screen with the mouse over it, or with something on it in focus, is in use and is not cleared
+    // (the owner's testing: lists and business cards closed after about fourteen seconds while still being used)
+    listShowing: Boolean(document.querySelector("[data-kyro-result=\"list\"], [data-kyro-result=\"places\"]")),
+    handOnScreen: (() => { try { return Boolean(document.querySelector("[data-kyro-result]:hover, [data-kyro-result]:focus-within")); } catch { return false; } })(),
     lastActivityAt: Math.max(kyroLastActivityAt, kyroLastAssistantSpokeAt),
     assistantSpeaking,
     userSpeaking: Boolean(nexusVoiceSession?.userSpeaking),
@@ -28043,7 +28047,10 @@ function kyroAutoReturnTick() {
 }
 function startKyroAutoReturn() {
   if (kyroAutoReturnTimer || typeof document === "undefined") return;
-  for (const name of ["pointerdown", "keydown", "touchstart", "input", "wheel"]) document.addEventListener(name, kyroNoteActivity, { capture: true, passive: true });
+  // (a scroll, a click, a hand moving over the screen and focus arriving on something are all signs the person is still using what is shown)
+  for (const name of ["pointerdown", "keydown", "touchstart", "input", "wheel", "scroll", "click", "focusin"]) document.addEventListener(name, kyroNoteActivity, { capture: true, passive: true });
+  let kyroPointerNoted = 0;
+  document.addEventListener("pointermove", () => { const now = Date.now(); if (now - kyroPointerNoted > 1000) { kyroPointerNoted = now; kyroNoteActivity(); } }, { capture: true, passive: true });
   kyroAutoReturnTimer = setInterval(kyroAutoReturnTick, 3000);
 }
 startKyroAutoReturn();
