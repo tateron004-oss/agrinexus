@@ -126,8 +126,9 @@ test("a typed 'open the map' opens the map on the page, with the country it name
   assert.equal(calls.spoken.at(-1), "Here is the Kenya map.");
   assert.equal(api.kyroHandleSpokenOpen("Open the map", { typed: true }), true);
   assert.equal(calls.spoken.at(-1), "Here is the map. You can zoom and drag it.");
-  assert.equal(api.kyroHandleSpokenOpen("Open the map", {}), false, "said aloud: the map tool opens it");
-  assert.equal(calls.maps.length, 3);
+  assert.equal(api.kyroHandleSpokenOpen("Open the map", {}), true, "said aloud the page opens it too (the voice model's map tool asks for a start and a destination, so a place or a plain map used to open nothing)");
+  assert.equal(calls.maps.length, 4);
+  assert.equal(calls.spoken.at(-1), "Here is the map. You can zoom and drag it.");
 });
 
 test("if the map will not open the typed sentence is left to the usual route, and the map is wired into the typed hook only", () => {
