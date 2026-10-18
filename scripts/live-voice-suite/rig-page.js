@@ -148,8 +148,9 @@ function installKyroVoiceRig(makeEvaluator) {
       heard, tools: of("tool").map(t => t.split("\u0001")[0]), typed: of("typed-route").map(t => t.split("\u0001")[0]), pageLines: of("page-line"), modelSaid, dismissed: of("dismiss").length > 0,
       timeline: slice.filter(e => ["typed-route", "screen-call", "return-to-orb", "screen-removed", "page-line", "heard", "tick", "screen-seen"].includes(e.kind) || (e.kind === "event" && /output_audio_transcript\.done|response\.created|response\.done/.test(e.text)))
         .map(e => `${e.at}ms ${e.kind} ${e.kind === "event" ? String(e.text).replace(/\s+/g, " ").replace(/^transport_event /, "").slice(0, 90)
-          : e.kind === "heard" ? (parts => `${parts[0].slice(0, 24)} via ${parts[1]} id=${parts[2] || "none"}`)(String(e.text).split("\u0001")) : String(e.text).replace(/\s+/g, " ").slice(0, 46)}`),
+          : e.kind === "heard" ? (parts => `${parts[0].slice(0, 24)} via ${parts[1]} id=${parts[2] || "none"}`)(String(e.text).split("\u0001")) : String(e.text).replace(/\s+/g, " ").slice(0, e.kind === "tick" ? 200 : 46)}`),
       web: of("web"), screenCalls: of("screen-call"), returns: of("return-to-orb"), removals: of("screen-removed"), screens: rig.screens(), top: topKind(), intake: rig.intake(), player: rig.player(),
+      mapCenter: (() => { try { const c = typeof userMap !== "undefined" && userMap && userMap.getCenter ? userMap.getCenter() : null; return c ? { lat: Number(c.lat.toFixed(2)), lng: Number(c.lng.toFixed(2)), zoom: userMap.getZoom(), open: document.body.classList.contains("user-map-full-open") } : { open: document.body.classList.contains("user-map-full-open") }; } catch { return null; } })(),
       section: typeof currentSectionId === "function" ? currentSectionId() : "", voiceActive: typeof realtimeVoiceActive === "function" ? realtimeVoiceActive() : false,
       responding: events.filter(t => /response\.created/.test(t)).length > events.filter(t => /response\.done/.test(t)).length, now: Date.now() - rig.t0
     };
@@ -217,6 +218,12 @@ function installKyroVoiceRig(makeEvaluator) {
       else if (step.choose) { if (!(await rig.chooseFile(step.choose))) { failures.push("no file chooser on the screen"); break; } mark = rig.mark(); }
       else if (step.say) { await rig.settle(20000); mark = (await rig.say(step.say)).index; }
       else if (step.wait) await sleep(step.wait);
+      // sets something up behind the scenes with the page's own signed-in session (for example a second résumé, so a list of résumés has something to list): { post: { path, body } }
+      else if (step.post) {
+        let ok = false;
+        try { const response = await fetch(step.post.path, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(step.post.body || {}) }); ok = response.ok; } catch { ok = false; }
+        if (!ok) { failures.push(`could not set up ${step.post.path}`); break; }
+      }
       if (step.expect) {
         const { state, outcome } = await rig.until(mark, step.expect, step.timeoutMs || defaultTimeout);
         last = state; failures.push(...(outcome ? outcome.failures : ["no state"])); warnings.push(...(outcome ? outcome.warnings : []));
@@ -226,7 +233,7 @@ function installKyroVoiceRig(makeEvaluator) {
     return { failures, warnings, state: last };
   };
   // what the page did, kept with a failed case so the cause can be read from the report
-  rig.detail = state => (state ? { heard: state.heard, modelSaid: state.modelSaid.map(line => line.slice(0, 140)), tools: state.tools, typed: state.typed, pageLines: state.pageLines.map(line => line.slice(0, 100)), top: state.top, section: state.section, web: state.web.slice(-6), screenCalls: (state.screenCalls || []).map(line => line.slice(0, 80)), dismissed: state.dismissed, returns: state.returns, removals: state.removals, timeline: state.timeline } : null);
+  rig.detail = state => (state ? { heard: state.heard, modelSaid: state.modelSaid.map(line => line.slice(0, 140)), tools: state.tools, typed: state.typed, pageLines: state.pageLines.map(line => line.slice(0, 100)), top: state.top, section: state.section, web: state.web.slice(-6), screenCalls: (state.screenCalls || []).map(line => line.slice(0, 80)), dismissed: state.dismissed, returns: state.returns, removals: state.removals, timeline: state.timeline, mapCenter: state.mapCenter, modelFull: state.modelSaid.map(line => line.slice(0, 900)), screenText: (state.screens || []).map(screen => `${screen.kind}: ${screen.text.slice(0, 900)}`) } : null);
   rig.runCase = async entry => {
     const started = Date.now(); const timeout = entry.timeoutMs || 30000;
     try {

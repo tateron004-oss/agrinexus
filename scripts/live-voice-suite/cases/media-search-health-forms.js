@@ -10,7 +10,11 @@ module.exports = [
   { id: "images-open", area: "media", say: "Open images.", expect: { screen: "text", text: "what|like|see|picture" } },
   { id: "search-web-prices", area: "media", say: "Search the web for maize prices in Kenya.", timeoutMs: 50000, expect: { model: true, said: "maize|price|shilling|KES|Kenya" } },
   { id: "weather-kisumu", area: "media", say: "What is the weather in Kisumu?", timeoutMs: 45000, expect: { model: true, said: "weather|degree|rain|sun|cloud|temperature|°|forecast" } },
-  { id: "map-open", area: "media", say: "Open the map.", expect: { section: "map|dashboard", model: true } },
+  { id: "map-open", area: "media", say: "Open the map.", timeoutMs: 40000, expect: { mapOpen: true } },
+  { id: "map-us", area: "media", say: "Open the US map.", timeoutMs: 40000, expect: { mapOpen: true, mapNear: { lat: 39.8, lng: -98.6, within: 8, zoomAtMost: 6 } } },
+  { id: "map-state", area: "media", say: "Show me a map of California.", timeoutMs: 40000, expect: { mapOpen: true, mapNear: { lat: 36.8, lng: -119.4, within: 3, zoomAtLeast: 5, zoomAtMost: 8 } } },
+  { id: "map-city", area: "media", say: "Show me the city of Stockton on the map.", timeoutMs: 40000, expect: { mapOpen: true, mapNear: { lat: 37.96, lng: -121.29, within: 0.5, zoomAtLeast: 9 } } },
+  { id: "map-city-nairobi", area: "media", say: "Show me Nakuru on the map.", timeoutMs: 40000, expect: { mapOpen: true, mapNear: { lat: -0.3, lng: 36.08, within: 0.5, zoomAtLeast: 9 } } },
 
   { id: "music-play", area: "music", needs: "sound", say: "Play some music.", timeoutMs: 60000, expect: { player: { active: true } } },
   { id: "music-pause", area: "music", needs: "sound", say: "Play some music.", timeoutMs: 60000, expect: { player: { state: "playing" } }, then: [{ say: "Pause the music." }, { expect: { player: { state: "paused" } }, timeoutMs: 30000 }] },
