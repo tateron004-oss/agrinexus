@@ -53505,7 +53505,9 @@ function kyroShowTypedResult(result, text, message) {
       const pharmacy = cards.some(card => /pharmac/i.test(String(card?.category || ""))) || result.application === "pharmacy";
       answer = { response: message, [pharmacy ? "pharmacyLocations" : "mobileClinics"]: cards, locationNote: drawn.data?.locationNote };
     } else if (result.state === "completed" && result.application === "conversation" && result.outcome?.modelAnswered === false && String(message || "").trim().length >= 24) {
+      // a checked guide's answer carries the official pages it was read from: each is a button to open, and the source page lists them all
       answer = { response: message };
+      if (Array.isArray(result.plan?.sources) && result.plan.sources.length) { answer.guideSources = result.plan.sources; answer.allSources = result.plan.knowledge === "sources-page"; }
     } else if (result.state === "confirmation_required" && String(message || "").trim().length >= 12 && result.outcome?.pendingStepId && String(result.taskId || "").startsWith("tsk_")) {
       // "I can add Amina as a client. Should I go ahead?": on the screen with a Yes and a No to tap (saying yes works too), for a person who cannot type
       answer = { response: message, requiresConfirmation: true }; wantsButtons = true;

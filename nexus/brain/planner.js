@@ -30,6 +30,7 @@ const { aiToolsTopic, aiToolsAnswer } = require("../knowledge/ai-tools-for-busin
 const { womensHealthTopic } = require("../knowledge/womens-health-topics.js");
 const { womensHealthAnswer } = require("../knowledge/womens-health.js");
 const { stateEntityIntent, stateEntityAnswer, stripWakeWord } = require("../knowledge/state-entities.js");
+const { sourcesPageRequest, sourcesPageAnswer } = require("../knowledge/sources-page.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 // how a starter document is named when it is spoken back (the title in lower case, except where that reads wrongly)
 const SPOKEN_TEMPLATE_NAMES = Object.freeze({ "ai-use-policy": "AI use policy", "vendor-questions": "list of questions for a web host, designer or developer", "app-brief": "app brief" });
@@ -471,6 +472,11 @@ class OpenEndedPlanner {
       || businessVoiceDispatch.asksAboutOwnRecords(command.text);
     const askText = stripWakeWord(command.text);
     const usPerson = isUsContext({ timeZone: command.timeZone || context?.timeZone, text: askText });
+    // "Show me your sources for small business", "where does your business information come from": the source page, the official pages every guide was read from, to open and read further (see knowledge/sources-page.js).
+    if (!ownWorkspace && sourcesPageRequest(askText)) {
+      const guide = sourcesPageAnswer(askText);
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: "sources-page", sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
     // A woman's question about her own health (cervical screening, breast health, birth control, periods, menopause, prenatal and postnatal care, where to find care): a checked, sourced, plain answer (see knowledge/womens-health.js).
     // Urgent, unsafe and medicine questions are never taken (womens-health-topics.js): the safety layer and the medicine rules answer those.
     const womensTopic = ownWorkspace ? null : womensHealthTopic(askText);

@@ -18,11 +18,11 @@ const citations = [
   { title: "mail", url: "mailto:a@b.co", domain: "", publisher: "" }
 ];
 
-test("a live answer's citations become links: web addresses only, each once, named by publisher or address", () => {
+test("a live answer's citations become links: web addresses only, each once, six at most, named by publisher or address", () => {
   const links = Screen.sourceLinks({ citations });
   assert.deepEqual(JSON.parse(JSON.stringify(links.map(link => [link.label, link.url]))), [["Nation Africa", "https://www.nation.africa/prices"], ["kenyans.co.ke", "https://kenyans.co.ke/maize"]]);
   assert.deepEqual(Screen.sourceLinks({}), []);
-  assert.equal(Screen.sourceLinks({ citations: Array.from({ length: 9 }, (_, i) => ({ url: `https://site${i}.example/a`, domain: `site${i}.example` })) }).length, 4);
+  assert.equal(Screen.sourceLinks({ citations: Array.from({ length: 9 }, (_, i) => ({ url: `https://site${i}.example/a`, domain: `site${i}.example` })) }).length, 6);
   const model = Screen.buildModel({ ok: true, status: "source-backed", response: "The reported retail price is about 66 Kenyan shillings per kilogram in Nairobi. Sources: Nation Africa and kenyans.co.ke, checked just now.", citations }, { command: "price of maize flour", lang: "en" });
   assert.equal(model.links.length, 2);
   assert.equal(Screen.buildModel({ ok: true, response: "The reported retail price is about 66 Kenyan shillings per kilogram in Nairobi." }, { lang: "en" }).links, undefined, "no citations, no links");

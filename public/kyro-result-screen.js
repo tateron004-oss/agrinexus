@@ -90,17 +90,22 @@
     return clean(text).split(/(?<=[.!?])\s+(?=[A-Z"'(])/).map(part => part.trim()).filter(Boolean);
   }
 
-  // The pages behind a live answer (its citations), to open: { label, title, url }, web addresses only, four at most, each address once.
+  // The pages behind an answer, to open: { label, title, url, group }, web addresses only, each address once. A live answer's citations (title, url, publisher or site), and a checked guide's sources (name, url, and the
+  // group a source page puts them under). Six at most, or every one of them on the source page (result.allSources).
   function sourceLinks(result) {
     const seen = new Set(); const links = [];
-    for (const citation of Array.isArray(result && result.citations) ? result.citations : []) {
+    const limit = result && result.allSources === true ? 200 : 6;
+    const given = [].concat(Array.isArray(result && result.citations) ? result.citations : [], Array.isArray(result && result.guideSources) ? result.guideSources : []);
+    for (const citation of given) {
       const url = clean(citation && citation.url);
       if (!/^https?:\/\/[^\s]+$/i.test(url) || seen.has(url)) continue;
       seen.add(url);
-      const publisher = clean(citation.publisher);
-      const label = publisher && publisher.length <= 40 && !/https?:|\//i.test(publisher) ? publisher : clean(citation.domain) || url.replace(/^https?:\/\/(?:www\.)?/i, "").split("/")[0];
-      links.push({ label, title: clean(citation.title).slice(0, 140), url });
-      if (links.length === 4) break;
+      const name = clean(citation.name);
+      const host = url.replace(/^https?:\/\/(?:www\.)?/i, "").split("/")[0];
+      const publisher = clean(citation.publisher) || name;
+      const label = publisher && publisher.length <= 40 && !/https?:|\//i.test(publisher) ? publisher : clean(citation.domain) || host;
+      links.push({ label, title: (clean(citation.title) || (name && name !== label ? name : "")).slice(0, 140), url, group: clean(citation.group) });
+      if (links.length >= limit) break;
     }
     return links;
   }
@@ -171,6 +176,7 @@
 [data-kyro-result="help"] .kyro-result-name { font-weight: 500; font-size: clamp(1.1rem, 4vw, 1.35rem); color: #e2e8f0; }
 [data-kyro-result] .kyro-result-links { display: grid; gap: 10px; max-width: 34em; margin-top: 4px; }
 [data-kyro-result] .kyro-result-links a { display: block; padding: 14px 18px; border-radius: 16px; background: #14b8a6; color: #04201c; text-decoration: none; }
+[data-kyro-result] .kyro-result-group { margin: 14px 0 0; font-size: clamp(.95rem, 3.2vw, 1.1rem); font-weight: 600; color: #94a3b8; }
 [data-kyro-result] .kyro-result-link-name { display: block; font-size: clamp(1.1rem, 4vw, 1.35rem); font-weight: 700; }
 [data-kyro-result] .kyro-result-link-title { display: block; margin-top: 2px; font-size: clamp(.9rem, 3vw, 1rem); opacity: .85; }
 [data-kyro-result] .kyro-result-small { margin: 0; max-width: 34em; font-size: .9rem; color: #94a3b8; }
@@ -221,7 +227,9 @@
     if (Array.isArray(model.links) && model.links.length) {
       const nav = element(doc, "nav", "kyro-result-links");
       nav.setAttribute("aria-label", t(lang).pages);
+      let lastGroup = "";
       for (const link of model.links) {
+        if (link.group && link.group !== lastGroup) { lastGroup = link.group; nav.appendChild(element(doc, "h3", "kyro-result-group", link.group)); }
         const a = doc.createElement("a");
         a.href = link.url; a.target = "_blank"; a.rel = "noopener noreferrer";
         a.setAttribute("data-kyro-source-link", "true");
