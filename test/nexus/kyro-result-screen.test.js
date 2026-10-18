@@ -264,14 +264,19 @@ test("typed: while a lesson or practice interview is under way, 'next', 'again',
   assert.equal(Result.buildModel({ intent: "conversation.practice_interview", response: "Question two. Why do you want this job?" }).awaiting, true);
 });
 
-test("an answer clears ten seconds after Kyro has finished speaking and nobody has touched or said anything; a question waiting for a yes keeps it up", () => {
-  const now = 1_000_000; const base = { userMode: true, answerShowing: true, resultShowing: true, workOpen: false, assistantSpeaking: false, userSpeaking: false, focusInField: false, pendingConfirmation: false, intakeActive: false };
-  assert.equal(Dismiss.RESULT_RETURN_MS, 10000);
-  assert.equal(Dismiss.shouldAutoReturn({ ...base, lastActivityAt: now - 11000 }, now).go, true);
-  assert.equal(Dismiss.shouldAutoReturn({ ...base, lastActivityAt: now - 9000 }, now).go, false, "not yet");
-  assert.equal(Dismiss.shouldAutoReturn({ ...base, resultShowing: false, lastActivityAt: now - 11000 }, now).go, false, "other answers still wait thirty seconds");
-  assert.equal(Dismiss.shouldAutoReturn({ ...base, resultShowing: false, lastActivityAt: now - 31000 }, now).go, true);
-  for (const blocker of [{ assistantSpeaking: true }, { userSpeaking: true }, { pendingConfirmation: true }, { focusInField: true }, { intakeActive: true }]) assert.equal(Dismiss.shouldAutoReturn({ ...base, ...blocker, lastActivityAt: now - 60000 }, now).go, false, JSON.stringify(blocker));
+test("a screen is cleared only when it is not in use: a short answer after thirty quiet seconds, a card of items to read and tap after three minutes, never while a hand is on it; a question waiting for a yes keeps it up", () => {
+  const now = 1_000_000; const base = { userMode: true, answerShowing: true, resultShowing: true, workOpen: false, assistantSpeaking: false, userSpeaking: false, focusInField: false, pendingConfirmation: false, intakeActive: false, listShowing: false, handOnScreen: false };
+  assert.equal(Dismiss.RESULT_RETURN_MS, 30000); assert.equal(Dismiss.LIST_RETURN_MS, 180000); assert.equal(Dismiss.AUTO_RETURN_MS, 60000);
+  assert.equal(Dismiss.shouldAutoReturn({ ...base, lastActivityAt: now - 14000 }, now).go, false, "fourteen seconds is not long enough to clear anything the person may be reading (the owner's testing)");
+  assert.equal(Dismiss.shouldAutoReturn({ ...base, lastActivityAt: now - 31000 }, now).go, true);
+  assert.equal(Dismiss.shouldAutoReturn({ ...base, lastActivityAt: now - 29000 }, now).go, false, "not yet");
+  assert.equal(Dismiss.shouldAutoReturn({ ...base, listShowing: true, lastActivityAt: now - 120000 }, now).go, false, "a list of items to read and tap waits much longer");
+  assert.equal(Dismiss.shouldAutoReturn({ ...base, listShowing: true, lastActivityAt: now - 181000 }, now).go, true);
+  assert.equal(Dismiss.shouldAutoReturn({ ...base, handOnScreen: true, lastActivityAt: now - 600000 }, now).go, false, "with the mouse over it, or something on it in focus, it is in use");
+  assert.equal(Dismiss.shouldAutoReturn({ ...base, listShowing: true, handOnScreen: true, lastActivityAt: now - 600000 }, now).go, false);
+  assert.equal(Dismiss.shouldAutoReturn({ ...base, resultShowing: false, lastActivityAt: now - 31000 }, now).go, false, "other answers wait a minute");
+  assert.equal(Dismiss.shouldAutoReturn({ ...base, resultShowing: false, lastActivityAt: now - 61000 }, now).go, true);
+  for (const blocker of [{ assistantSpeaking: true }, { userSpeaking: true }, { pendingConfirmation: true }, { focusInField: true }, { intakeActive: true }, { handOnScreen: true }]) assert.equal(Dismiss.shouldAutoReturn({ ...base, ...blocker, lastActivityAt: now - 600000 }, now).go, false, JSON.stringify(blocker));
 });
 
 // Found on live: a long guide answer ("The CDC says: at ages 21 to 29, a Pap test; at 30 to 65, ...") was drawn as a list of fragments with most of its sentences hidden (a colon plus semicolons, the "Sources: a; b; c" line,
