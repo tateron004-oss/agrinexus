@@ -289,7 +289,7 @@
   const locationProblem = (error, language) => tx(language, error?.code === 1 ? "denied" : error?.code === 3 ? "slow" : "unknown");
 
   // `language` is the app's language ("en" or "sw"); a Swahili command is answered in Swahili whatever the app's language is.
-  function createNavigator({ geolocation, api, speak = () => {}, storage = null, ui = null, wakeLock = null, now = () => Date.now(), wait = (fn, ms) => setTimeout(fn, ms), language: appLanguage = "en" } = {}) {
+  function createNavigator({ geolocation, api, speak = () => {}, storage = null, ui = null, view = null, wakeLock = null, now = () => Date.now(), wait = (fn, ms) => setTimeout(fn, ms), language: appLanguage = "en" } = {}) {
     let active = null; // { route, follower, destination, mode, language, watchId, lastReroute, lastOffRouteNotice, lastFix, release }
     const appLang = languageOf(appLanguage);
     // Found live (fresh-module frontend audit): reroute() and go() each capture state, await a real routing
@@ -305,6 +305,8 @@
     // pattern already used correctly elsewhere in this codebase (nexus-genesis-voice-runtime-manager.js's
     // processTurn).
     let sessionGeneration = 0;
+    // The map and the list of steps on the screen (the page draws them); a missing or failing view never stops the spoken directions.
+    const show = (name, detail) => { try { view?.[name]?.(detail); } catch { /* the voice carries on */ } };
 
     const locate = () => new Promise((resolve, reject) => {
       if (!geolocation?.getCurrentPosition) return reject(Object.assign(new Error("no location"), { code: 2 }));
@@ -336,7 +338,7 @@
       const language = active.language;
       try { geolocation?.clearWatch?.(active.watchId); } catch { /* already gone */ }
       try { active.release?.(); } catch { /* nothing held */ }
-      ui?.hide?.(); active = null; if (!silent) speak(tx(language, "stopped"), { interrupt: true });
+      ui?.hide?.(); show("stopped", {}); active = null; if (!silent) speak(tx(language, "stopped"), { interrupt: true });
       return true;
     }
 
@@ -349,6 +351,7 @@
         const { route } = await api({ action: "route", from: { lat: fix.lat, lng: fix.lng }, to: active.destination, mode: active.mode, language });
         if (!active || generation !== sessionGeneration) return; // a newer go()/stop() replaced this session while the reroute was in flight
         active.route = route; active.follower = createRouteFollower(route, { mode: active.mode, language }); active.follower.resetOffRoute();
+        show("route", { route, from: { label: "", lat: fix.lat, lng: fix.lng }, to: active.destination, live: true, mode: active.mode, language });
         speak(tx(language, "newRoute", { about: about(route.distanceMeters, route.durationSeconds, language) }));
       } catch {
         if (active && generation === sessionGeneration && now() - active.lastOffRouteNotice > 60000) {
@@ -370,6 +373,7 @@
       if (!active) return;
       const fix = { lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy }; active.lastFix = fix;
       const result = active.follower.update(fix);
+      show("position", fix);
       for (const line of result.say) speak(line.text, { interrupt: line.urgent });
       panel(active.language, result.next.instruction, result.next.distanceMeters, result.remainingMeters, result.remainingSeconds, active.destination.label);
       if (result.arrived) { stopGuidance(true); ui?.hide?.(); return; }
@@ -389,6 +393,7 @@
       try { route = (await api({ action: "route", from: { lat: Number(start.lat), lng: Number(start.lng) }, to: { lat: Number(end.lat), lng: Number(end.lng) }, mode, language })).route; }
       catch (error) { return error?.message && !/failed|network/i.test(error.message) ? error.message : tx(language, "routeFailed"); }
       const steps = Array.isArray(route?.steps) ? route.steps.filter(step => step && step.instruction) : [];
+      show("route", { route, from: { label: fromText, lat: Number(start.lat), lng: Number(start.lng) }, to: { label: toText, lat: Number(end.lat), lng: Number(end.lng) }, live: false, mode, language });
       const shown = steps.slice(0, 8);
       return tx(language, "between", { from: fromText, to: toText, about: about(route.distanceMeters, route.durationSeconds, language),
         steps: shown.map((step, index) => `${index + 1}, ${step.instruction}.`).join(" "), more: steps.length > shown.length ? tx(language, "betweenMore", { n: steps.length - shown.length, to: toText }) : "" });
@@ -430,6 +435,8 @@
         }
       }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
       const first = active.follower.update(fix);
+      show("route", { route, from: { label: "", lat: fix.lat, lng: fix.lng }, to: target, live: true, mode, language });
+      show("position", fix);
       panel(language, first.next.instruction, first.next.distanceMeters, route.distanceMeters, route.durationSeconds, target.label);
       const told = storage?.getItem?.(DISCLOSED_KEY);
       try { storage?.setItem?.(DISCLOSED_KEY, "1"); } catch { /* fine */ }
@@ -461,7 +468,7 @@
 
   // ---------- the browser wiring: the real location, speech, storage, screen and the on-screen panel ----------
   // `locale` is the app's language ("en", "sw"); `speechLang` is the voice to speak with ("sw-KE"). Not every phone has a Swahili voice installed.
-  function forBrowser({ api, locale = "en", speechLang = "" } = {}) {
+  function forBrowser({ api, locale = "en", speechLang = "", view = null } = {}) {
     const language = languageOf(locale);
     const speakBrowser = (text, { interrupt = false } = {}) => {
       try {
@@ -508,7 +515,7 @@
     };
     const wakeLock = async () => { try { return await globalThis.navigator?.wakeLock?.request("screen"); } catch { return null; } };
     let store = null; try { store = typeof localStorage !== "undefined" ? localStorage : null; } catch { store = null; }
-    const navigator = createNavigator({ geolocation: globalThis.navigator?.geolocation, api, speak: speakBrowser, storage: store, ui, wakeLock, language });
+    const navigator = createNavigator({ geolocation: globalThis.navigator?.geolocation, api, speak: speakBrowser, storage: store, ui, view, wakeLock, language });
     return navigator;
   }
 
