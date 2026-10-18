@@ -18,6 +18,9 @@
   const SEND = new RegExp(LEAD + String.raw`(?:send|push|post|forward|log|add|share)\s+(?:this\s+|the following\s+)?(.+?)\s+(?:to|into|through|via)\s+(?:my|the)\s+(.+?)\s+${THING}\s*[.!]?$`, "i");
   // "run my <name> automation [with <words>]", "test my <name> automation"
   const RUN = new RegExp(LEAD + String.raw`(trigger|run|start|fire|test)\s+(?:my|the)\s+(.+?)\s+${THING}(?:\s+(?:with|saying|and say|that says|for)\s+(.+?))?\s*[.!]?$`, "i");
+  // "send a message to my <name> automation saying <words>", "tell my <name> automation <words>": the automation is named first and the words come after it
+  const SEND_SAYING = new RegExp(LEAD + String.raw`(?:send|push|post|forward|give)\s+(?:(?:a|the)\s+)?(?:message|text|note|request|ping|update)?\s*(?:to|into|through|via)\s+(?:my|the)\s+(.+?)\s+${THING}\s+(?:saying|that says|with the message|with the text|and say|and tell it|with)\s+(.+)$`, "i");
+  const TELL = new RegExp(LEAD + String.raw`tell\s+(?:my|the)\s+(.+?)\s+${THING}\s+(?:that\s+)?(.+)$`, "i");
   const clean = value => String(value || "").replace(/\s+/g, " ").replace(/^["“'‘]+|["”'’.!?]+$/g, "").trim();
 
   function parseTrigger(text) {
@@ -26,6 +29,11 @@
     let match = SEND.exec(said);
     if (match) {
       const words = clean(match[1]); const connection = clean(match[2]);
+      return words && connection ? { connection, text: words } : null;
+    }
+    match = SEND_SAYING.exec(said) || TELL.exec(said);
+    if (match) {
+      const connection = clean(match[1]); const words = clean(match[2]);
       return words && connection ? { connection, text: words } : null;
     }
     match = RUN.exec(said);

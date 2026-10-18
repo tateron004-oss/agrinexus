@@ -867,7 +867,11 @@ function classify(command = "") {
   const BUSINESS_WORKSPACE_NOUN = "(?:business(?:es)?|nonprofit|non-profit|ngo|church(?:es)?|congregation|parish|admin[- ]assistant|workspace)s?";
   // ("a business summary", "a summary of my business", "a business summary for Kyro Test Workspace": found by the live voice test, the voice model adds the workspace's name and this was refused as "could not tell what to do")
   const wantsBusinessDashboard = (/\b(business|nonprofit|church|congregation|parish)\b/i.test(command) && /\b(dashboard|doing|performing|performance summary|financial summary|business summary|summary of (?:my|our|the) (?:business|nonprofit|church|congregation|parish))\b/i.test(command))
-    || (/\b(?:summary|overview)\b/i.test(command) && /\bworkspace\b/i.test(command) && !/\b(?:farm|weather|health|drone|field)\b/i.test(command));
+    || (/\b(?:summary|overview)\b/i.test(command) && /\bworkspace\b/i.test(command) && !/\b(?:farm|weather|health|drone|field)\b/i.test(command))
+    // "Give me a quick rundown of the business", "an overview of my nonprofit", "a snapshot of our business" (the owner's own records: "an overview of business structures" is not this)
+    || /\b(?:run-?down|overview|snapshot|round-?up)\s+of\s+(?:my|our|the)\s+(?:business|nonprofit|church|congregation|parish)\b/i.test(command);
+  // "We were promised a grant of 3000 dollars from the Hope Foundation due next March", "we were awarded a grant": a grant said as news is a grant to log (it still asks for a yes)
+  const saysGotGrant = /\b(?:we|i)\s+(?:were|was|got|received|have been|won|have won|are getting|will get|were told we(?:'ll| will) get)\b[^.?!]{0,25}\b(?:promised|awarded|given|offered|a|an)\s+(?:a |an )?(?:grant|funding)\b/i.test(command) && !/\?/.test(command);
   // "Open the business workspace" / "go to my nonprofit" (found on production: refused with "I could not tell what to do with that in your business records"): it is answered with the person's
   // workspaces, the same as "show my business workspace". Only the business-type words count here, not the bare word "workspace" ("open the farm workspace" is the farm window).
   const wantsOpenBusiness = /\b(?:open|go to)\s+(?:the|my)\s+(?:business(?:es)?|nonprofit|non-profit|ngo|church(?:es)?|congregation|parish)\b/i.test(command);
@@ -900,6 +904,7 @@ function classify(command = "") {
   const wantsCreateInvoice = !wantsAddInvoiceItem && !wantsGenerateInvoicePdf && /\b(invoice|receipt)\b/i.test(command) && /\b(?:create|add|start|open|new)\b/i.test(command);
   // ("add a contract with City Parks for 20000 dollars" tracks a contract as a funding opportunity; "create a service contract" is a document, so only add/track/log/record and a named counterparty count)
   const wantsAddGrant = (/\b(?:add|create|new|log|track)\b/i.test(command) && /\b(grant|funding)\b/i.test(command))
+    || saysGotGrant
     || (/\b(?:add|track|log|record)\b/i.test(command) && /\b(?:contract|rfp|bid|tender)\b\s+(?:with|from|for|at)\b/i.test(command) && !/\b(?:agreement|template|form|document)\b/i.test(command));
   const wantsUpdateGrantStatus = /\b(?:mark|update|set|change)\b/i.test(command) && /\bgrant\b/i.test(command);
   const wantsAddTask = /\b(?:add|create|new)\b/i.test(command) && /\btask\b/i.test(command);

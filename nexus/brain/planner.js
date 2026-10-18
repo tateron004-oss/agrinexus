@@ -1766,9 +1766,10 @@ function completeRemainingWorkspacePlan(text, catalog) {
   // Every phrase parseAssistantReminderTime (nexus/reminders/time-phrase.js) understands must route here.
   // "in 2 minutes" and weekdays used to be missing, so "Remind me to ... in 2 minutes" fell through to the
   // AI planner, whose invented input shape was ignored and which was silently scheduled for tomorrow.
-  if (/\b(remind|reminder)\b/i.test(goal) &&
+  // ("Wake me up tomorrow at six with a reminder to check the irrigation": "reminder" is not "remind", and "wake me up" is a reminder too; a bare "six" is asked about, not guessed)
+  if (/\b(remind|reminder|wake me up)\b/i.test(goal) &&
       hasReminderTimePhrase(goal) &&
-      /\b(save|schedule|remind)\b/i.test(goal)) {
+      /\b(save|schedule|remind|reminder|wake me up)\b/i.test(goal)) {
     const scheduled = plan("reminders", "reminders.schedule", "Persist governed reminder", { reminder: goal, when: goal });
     // A time that is unclear ("at 6": morning or evening?) is asked about instead of being set at a guess.
     return scheduled && (clarifyReminderTime(goal) || scheduled);

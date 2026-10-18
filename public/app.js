@@ -52021,8 +52021,10 @@ function kyroOpenUploadScreen(said, lang) {
 }
 // The name of the one saved document a person asks to open ("Sales Plan"), or "" for anything else: "open documents", "open my saved documents" and "open the document" name no document.
 const KYRO_NAMED_DOCUMENT = /^(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:open|show|read|pull up|bring up|display)(?:\s+me)?\s+(?:the\s+|my\s+)?(.{2,60}?)\s+(?:document|doc|file)[.?!]*$/i;
+// ("What does my Farm Rules document say?", "what's in the Sales Plan file": asking for the words of one named document opens it, where they are)
+const KYRO_NAMED_DOCUMENT_ASK = /^(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:what(?:'s| is| does)|tell me what(?:'s| is| does)?|can you tell me what(?:'s| is| does)?)\s+(?:in\s+)?(?:the\s+|my\s+)?(.{2,60}?)\s+(?:document|doc|file)(?:\s+(?:say|says|contain|contains|have|has))?[.?!]*$/i;
 function kyroNamedDocument(text) {
-  const named = KYRO_NAMED_DOCUMENT.exec(String(text || "").trim());
+  const named = KYRO_NAMED_DOCUMENT.exec(String(text || "").trim()) || KYRO_NAMED_DOCUMENT_ASK.exec(String(text || "").trim());
   const name = String(named?.[1] || "").trim();
   return name && !/^(?:saved|all|some|my|the|new|last saved|a|an|each|every|these|those)$/i.test(name) ? name : "";
 }

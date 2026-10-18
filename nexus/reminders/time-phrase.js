@@ -369,6 +369,8 @@ const FILLER_PATTERN = new RegExp(`^(?:(?:${FILLER_WORDS})(?![a-z])[,\\s]*|${ASK
 const ANYWHERE_LEAD = /\b(?:remind\s+(?:me|us|you)\s+(to|about|that|of)|notify\s+me\s+(to|about|that)|set\s+(?:a\s+)?reminder\s+(to|about|that|for)|remember\s+(to)|follow\s+up\s+(to|about)|(?:ni|u)?kumbush(?:e|ie)\s+(kwamba|kuhusu|ya)|(?:niwekee|weka)\s+kikumbusho\s+(cha|kwamba|kuhusu|ya))(?![a-z])\s+(.+)/i;
 
 function extractAssistantReminderTask(text = "") {
+  // "Wake me up tomorrow at six with a reminder to check the irrigation" is "remind me tomorrow at six to check the irrigation" (only when a task follows: a plain "wake me up at six" stays as it is)
+  if (/\bwake me up\b(?=.*\b(?:reminder|to)\s+\w)/i.test(String(text))) text = String(text).replace(/\bwake me up\b/i, "remind me").replace(/\s+with a reminder\b/i, "");
   const fixed = fixTimeSpelling(text);
   const grammar = scanTime(fixed, { bareDurations: isReminderFragment(fixed) });
   const source = blank(fixed, grammar.spans);
