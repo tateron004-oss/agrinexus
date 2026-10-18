@@ -23720,6 +23720,24 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     return null;
   }
   if (toolName === "nexus_health_preparation") {
+    // "What are the side effects of ibuprofen?", "what is metformin used for?": general facts about a medicine, read from MedlinePlus, DailyMed or the official label, said with their sources and a plain reminder. These used to
+    // be answered with a draft of questions for a pharmacist and the voice said "I can't see the specific side-effect list from here, so I don't want to guess". A question about the person's own dose, symptoms, pregnancy,
+    // allergy or an overdose is not general information and is left to the rules below (and the safety layer).
+    const asksMedicineFacts = (/\b(?:side effects?|adverse effects?)\b/i.test(command) || /^\s*(?:what|what's)\s+(?:is|are)\s+[a-z][a-z0-9 -]{2,40}\s+(?:used|taken)\s+for\b/i.test(command))
+      && !/\b(?:i|my|me|mine|we)\b[^.?!]*\b(?:taking|took|take|dose|doses|pregnant|overdos\w*|swallowed|allergic|allergy|reaction|symptoms?|having|feel|feeling)\b/i.test(command);
+    if (asksMedicineFacts) {
+      const medicine = await nexusLiveKnowledgeAllModesQuery(db, {
+        query: `${command} Use MedlinePlus, DailyMed or the manufacturer's official label.`,
+        command, domain: "health", mode: "openai-native-agent"
+      }, user, process.env);
+      if (medicine.status === "source-backed" && String(medicine.summary || medicine.answer || "").trim()) {
+        return {
+          ...common, capability: "health-medicine-facts", status: "source-backed", providerAttempted: true, providerSucceeded: true,
+          response: `${medicine.summary || medicine.answer}${liveKnowledgeSourcesLine(medicine.citations)} This is general information, not advice for your own situation: ask a pharmacist or doctor about your own case, and get urgent help for severe symptoms such as trouble breathing, swelling of the face or a severe rash.`,
+          citations: medicine.citations || [], sources: medicine.sources || [], missingEnvVars: medicine.missingEnvVars || [], localOnly: true
+        };
+      }
+    }
     // Confirmed: every real-record write below (vitals, training plans,
     // workout logs, RTM activity/adherence notes, navigation summaries,
     // saved providers) hardcoded confirmed: true regardless of what the
