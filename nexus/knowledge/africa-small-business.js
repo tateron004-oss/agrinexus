@@ -90,7 +90,7 @@ function africaCountry({ timeZone = "", country = "", text = "" } = {}) {
 // does the question itself name a Kenyan or Nigerian agency or place?
 function africaNamed(text) { return KENYA_WORDS.test(String(text || "")) || NIGERIA_WORDS.test(String(text || "")); }
 
-const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|am|will|would|tell me|explain|help me|i need|i want|i('| a)m looking for|any|give me (?:info|information|advice)|find (?:me|a|an|the|my)|show me|recommend|suggest)\b)/i;
+const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|am|will|would|tell me|look up|search (?:the web |the internet |online )?for|find out|research|look into|google|explain|help me|i need|i want|i('| a)m looking for|any|give me (?:info|information|advice)|find (?:me|a|an|the|my)|show me|recommend|suggest)\b)/i;
 const RECORD_OR_DRAFT = /^(?:please\s+)?(?:sold|bought|log|record|add|save|remind|set|create|draft|write|make|mark|list|delete|forget|call|text|send|play|open|start|translate|export|convert|build)\b/i;
 const MATCHERS = [
   ["register", /\b(?:regist\w+|incorporat\w+|business name|company name|licen[cs]e|permit|formali[sz]\w+|legal (?:form|structure)|type of business|sole proprietor\w*|partnership|limited company|company limited|ltd|llc)\b/i],

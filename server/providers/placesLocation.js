@@ -158,9 +158,11 @@ const NEARBY_KIND = [
 ];
 const NEARBY_VERB = /\b(?:find|search|show|locate|look(?:ing)? for|where(?:'s| is| are)?|get me|take me to|need|want|tafuta|nionyeshe|onyesha|wapi|nipe|ninahitaji|nataka)\b/i;
 const NEARBY_CUE = /\b(?:near ?by|nearest|closest|near me|karibu|around here|near)\b/i;
+// (a vet, an animal clinic or a livestock service is not a clinic for people: the list here is of health clinics for people, and answered a request for a vet in Nakuru with a human health post)
+const ANIMAL_SERVICE = /\b(?:veterinar\w*|vets?|animal|animals|livestock|cattle|cows?|dairy|poultry|goats?|sheep|pets?|dog|dogs|cat|cats)\b/i;
 function parseNearbyPlacesRequest(text) {
   const goal = clean(text);
-  if (!goal || goal.length > 200 || /\bmobile\s+clinic\b/i.test(goal) || !NEARBY_VERB.test(goal) || /\b(?:safety|sources?|medication|metformin|stock|jobs?|vacanc\w*|price|cost)\b/i.test(goal)) return null;
+  if (!goal || goal.length > 200 || ANIMAL_SERVICE.test(goal) || /\bmobile\s+clinic\b/i.test(goal) || !NEARBY_VERB.test(goal) || /\b(?:safety|sources?|medication|metformin|stock|jobs?|vacanc\w*|price|cost)\b/i.test(goal)) return null;
   const kind = NEARBY_KIND.find(([, pattern]) => pattern.test(goal))?.[0];
   if (!kind) return null;
   const place = namedPlaceIn(goal);
