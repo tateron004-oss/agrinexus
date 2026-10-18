@@ -59,7 +59,7 @@ test("a delivery-time question is answered honestly, and a shipment lookup is re
   const estimate = await said("How long will delivery to Nakuru take", { name: "nexus_marketplace_logistics" });
   assert.match(estimate, /^I can't estimate a delivery time without an order or a route to work from\./, "a person with no order of their own is not told about the old orders in the seed data");
   assert.doesNotMatch(estimate, /AgriTrade|sample listing|AN-ORD-/i);
-  assert.match(await said("Track my shipment", { name: "nexus_marketplace_logistics" }), /^I do not see an active crop order yet\./);
+  assert.match(await said("Track my shipment", { name: "nexus_marketplace_logistics" }), /^I do not see an active crop order yet, so there is no shipment of yours to track\./);
   // an order marked as another account's is not read out; one marked as this person's is
   const state = (await post("/api/agent/command", { command: "hello", conversational: true }, "user")).json;
   assert.ok(state, "state is readable");
