@@ -20,12 +20,12 @@
 
   const TEXT = {
     en: {
-      close: "Close", say: "You can say:", clinics: "Clinics near you", mobile: "Mobile clinics near you", pharmacies: "Pharmacies near you",
+      close: "Close", open: "Open", pages: "Pages behind this answer", say: "You can say:", clinics: "Clinics near you", mobile: "Mobile clinics near you", pharmacies: "Pharmacies near you",
       sourceNote: source => `From ${source}. Opening hours may be out of date. This is not a medical referral.`,
       hours: hours => `Open ${hours}`
     },
     sw: {
-      close: "Funga", say: "Unaweza kusema:", clinics: "Kliniki karibu nawe", mobile: "Kliniki zinazotembea karibu nawe", pharmacies: "Maduka ya dawa karibu nawe",
+      close: "Funga", open: "Fungua", pages: "Kurasa nyuma ya jibu hili", say: "Unaweza kusema:", clinics: "Kliniki karibu nawe", mobile: "Kliniki zinazotembea karibu nawe", pharmacies: "Maduka ya dawa karibu nawe",
       sourceNote: source => `Kutoka ${source}. Saa za kufungua zinaweza kuwa zimepitwa na wakati. Huu si uhamisho wa kimatibabu.`,
       hours: hours => `Wazi ${hours}`
     }
@@ -90,7 +90,34 @@
     return clean(text).split(/(?<=[.!?])\s+(?=[A-Z"'(])/).map(part => part.trim()).filter(Boolean);
   }
 
+  // The pages behind an answer, to open: { label, title, url, group }, web addresses only, each address once. A live answer's citations (title, url, publisher or site), and a checked guide's sources (name, url, and the
+  // group a source page puts them under). Six at most, or every one of them on the source page (result.allSources).
+  function sourceLinks(result) {
+    const seen = new Set(); const links = [];
+    const limit = result && result.allSources === true ? 200 : 6;
+    const given = [].concat(Array.isArray(result && result.citations) ? result.citations : [], Array.isArray(result && result.guideSources) ? result.guideSources : []);
+    for (const citation of given) {
+      const url = clean(citation && citation.url);
+      if (!/^https?:\/\/[^\s]+$/i.test(url) || seen.has(url)) continue;
+      seen.add(url);
+      const name = clean(citation.name);
+      const host = url.replace(/^https?:\/\/(?:www\.)?/i, "").split("/")[0];
+      const publisher = clean(citation.publisher) || name;
+      const label = publisher && publisher.length <= 40 && !/https?:|\//i.test(publisher) ? publisher : clean(citation.domain) || host;
+      links.push({ label, title: (clean(citation.title) || (name && name !== label ? name : "")).slice(0, 140), url, group: clean(citation.group) });
+      if (links.length >= limit) break;
+    }
+    return links;
+  }
+
   function buildModel(result, options = {}) {
+    const model = buildBaseModel(result, options);
+    if (!model) return model;
+    const links = sourceLinks(result);
+    return links.length ? { ...model, links } : model;
+  }
+
+  function buildBaseModel(result, options = {}) {
     if (!result || typeof result !== "object") return null;
     const lang = options.lang === "sw" ? "sw" : "en";
     const command = clean(options.command).toLowerCase();
@@ -147,6 +174,11 @@
 [data-kyro-result="help"] ul { gap: 6px; }
 [data-kyro-result="help"] li { padding: 0; background: none; }
 [data-kyro-result="help"] .kyro-result-name { font-weight: 500; font-size: clamp(1.1rem, 4vw, 1.35rem); color: #e2e8f0; }
+[data-kyro-result] .kyro-result-links { display: grid; gap: 10px; max-width: 34em; margin-top: 4px; }
+[data-kyro-result] .kyro-result-links a { display: block; padding: 14px 18px; border-radius: 16px; background: #14b8a6; color: #04201c; text-decoration: none; }
+[data-kyro-result] .kyro-result-group { margin: 14px 0 0; font-size: clamp(.95rem, 3.2vw, 1.1rem); font-weight: 600; color: #94a3b8; }
+[data-kyro-result] .kyro-result-link-name { display: block; font-size: clamp(1.1rem, 4vw, 1.35rem); font-weight: 700; }
+[data-kyro-result] .kyro-result-link-title { display: block; margin-top: 2px; font-size: clamp(.9rem, 3vw, 1rem); opacity: .85; }
 [data-kyro-result] .kyro-result-small { margin: 0; max-width: 34em; font-size: .9rem; color: #94a3b8; }
 [data-kyro-result] .kyro-result-close { position: absolute; top: 12px; right: 12px; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.10); color: #f1f5f9; font-size: 1.7rem; line-height: 1; cursor: pointer; }
 `;
@@ -191,6 +223,23 @@
       screen.appendChild(list);
     }
     if (model.kind !== "help") for (const note of model.notes || []) screen.appendChild(element(doc, "p", model.kind === "places" ? "kyro-result-small" : "kyro-result-note", note));
+    // the pages behind a live answer, each one a real link to tap (a page cannot be opened for a person by voice alone: a browser only opens one when it is tapped)
+    if (Array.isArray(model.links) && model.links.length) {
+      const nav = element(doc, "nav", "kyro-result-links");
+      nav.setAttribute("aria-label", t(lang).pages);
+      let lastGroup = "";
+      for (const link of model.links) {
+        if (link.group && link.group !== lastGroup) { lastGroup = link.group; nav.appendChild(element(doc, "h3", "kyro-result-group", link.group)); }
+        const a = doc.createElement("a");
+        a.href = link.url; a.target = "_blank"; a.rel = "noopener noreferrer";
+        a.setAttribute("data-kyro-source-link", "true");
+        a.appendChild(element(doc, "span", "kyro-result-link-name", `${t(lang).open} ${link.label}`));
+        if (link.title) a.appendChild(element(doc, "span", "kyro-result-link-title", link.title));
+        nav.appendChild(a);
+      }
+      screen.appendChild(nav);
+      screen.setAttribute("data-kyro-keep", "true"); // (a page to tap: the screen stays until it is closed)
+    }
     const close = element(doc, "button", "kyro-result-close", "×");
     close.type = "button"; close.setAttribute("aria-label", t(lang).close);
     close.addEventListener("click", () => { if (handlers && typeof handlers.onClose === "function") handlers.onClose(); });
@@ -206,5 +255,5 @@
     return screens.length > 0;
   }
 
-  return Object.freeze({ buildModel, helpModel, show, remove, isAwaiting, distanceText, TEXT });
+  return Object.freeze({ buildModel, helpModel, show, remove, isAwaiting, distanceText, sourceLinks, TEXT });
 });

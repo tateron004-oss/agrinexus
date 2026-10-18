@@ -22705,7 +22705,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       status: liveKnowledge.status,
       providerAttempted: Boolean(liveKnowledge.status === "source-backed" || liveKnowledge.status === "provider-error"),
       providerSucceeded: liveKnowledge.status === "source-backed",
-      response: liveKnowledge.summary || liveKnowledge.answer,
+      // (the sources are said and shown too: a live answer used to name none, only "recent reporting")
+      response: `${liveKnowledge.summary || liveKnowledge.answer || ""}${liveKnowledge.status === "source-backed" ? liveKnowledgeSourcesLine(liveKnowledge.citations) : ""}`,
       citations: liveKnowledge.citations || [],
       sources: liveKnowledge.sources || [],
       missingEnvVars: liveKnowledge.missingEnvVars || [],
@@ -39921,6 +39922,20 @@ function nexusProviderPathwayOffer(db, category = "general", question = "") {
     noLiveProviderClaimUnlessConfigured: true,
     question: sanitizePilotText(question, 400)
   };
+}
+
+// "Sources: Nation Africa and kenyans.co.ke, checked just now." from a live answer's citations: up to three different publishers (the site's name when it is short, else its address), said and shown at the end.
+function liveKnowledgeSourcesLine(citations = []) {
+  const names = [];
+  for (const citation of Array.isArray(citations) ? citations : []) {
+    const publisher = String(citation?.publisher || "").trim();
+    const name = publisher && publisher.length <= 40 && !/https?:|\//i.test(publisher) ? publisher : String(citation?.domain || "").trim();
+    if (name && !names.some(existing => existing.toLowerCase() === name.toLowerCase())) names.push(name);
+    if (names.length === 3) break;
+  }
+  if (!names.length) return "";
+  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return ` Sources: ${list}, checked just now.`;
 }
 
 function normalizeNexusKnowledgeCitations(results = []) {
