@@ -15,6 +15,8 @@ module.exports = [
   { id: "map-state", area: "media", say: "Show me a map of California.", timeoutMs: 40000, expect: { mapOpen: true, mapNear: { lat: 36.8, lng: -119.4, within: 3, zoomAtLeast: 5, zoomAtMost: 8 } } },
   { id: "map-city", area: "media", say: "Show me the city of Stockton on the map.", timeoutMs: 40000, expect: { mapOpen: true, mapNear: { lat: 37.96, lng: -121.29, within: 0.5, zoomAtLeast: 9 } } },
   { id: "map-city-nairobi", area: "media", say: "Show me Nakuru on the map.", timeoutMs: 40000, expect: { mapOpen: true, mapNear: { lat: -0.3, lng: 36.08, within: 0.5, zoomAtLeast: 9 } } },
+  { id: "route-steps-stockton-sacramento", area: "media", say: "Give me directions from Stockton to Sacramento.", timeoutMs: 45000, expect: { mapOpen: true, routeSteps: "Stockton → Sacramento: 78 kilometers.*Head west on East Fremont", mapNear: { lat: 38.3, lng: -121.4, within: 1 } } },
+  { id: "route-steps-nairobi-mombasa", area: "media", say: "How do I get from Nairobi to Mombasa?", timeoutMs: 45000, expect: { mapOpen: true, routeSteps: "Nairobi → Mombasa: 48[0-9] kilometers", mapNear: { lat: -1.2, lng: 38.24, within: 1 } } },
 
   { id: "music-play", area: "music", needs: "sound", say: "Play some music.", timeoutMs: 60000, expect: { player: { active: true } } },
   { id: "music-pause", area: "music", needs: "sound", say: "Play some music.", timeoutMs: 60000, expect: { player: { state: "playing" } }, then: [{ say: "Pause the music." }, { expect: { player: { state: "paused" } }, timeoutMs: 30000 }] },

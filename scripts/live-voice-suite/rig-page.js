@@ -150,6 +150,7 @@ function installKyroVoiceRig(makeEvaluator) {
         .map(e => `${e.at}ms ${e.kind} ${e.kind === "event" ? String(e.text).replace(/\s+/g, " ").replace(/^transport_event /, "").slice(0, 90)
           : e.kind === "heard" ? (parts => `${parts[0].slice(0, 24)} via ${parts[1]} id=${parts[2] || "none"}`)(String(e.text).split("\u0001")) : String(e.text).replace(/\s+/g, " ").slice(0, e.kind === "tick" ? 200 : 46)}`),
       web: of("web"), screenCalls: of("screen-call"), returns: of("return-to-orb"), removals: of("screen-removed"), screens: rig.screens(), top: topKind(), intake: rig.intake(), player: rig.player(),
+      routeSteps: (() => { try { const sheet = document.querySelector("[data-kyro-route-steps]"); return sheet ? sheet.innerText.replace(/\s+/g, " ").trim().slice(0, 600) : ""; } catch { return ""; } })(),
       mapCenter: (() => { try { const c = typeof userMap !== "undefined" && userMap && userMap.getCenter ? userMap.getCenter() : null; return c ? { lat: Number(c.lat.toFixed(2)), lng: Number(c.lng.toFixed(2)), zoom: userMap.getZoom(), open: document.body.classList.contains("user-map-full-open"), where: document.body.dataset.genesisMapLocation || "" } : { open: document.body.classList.contains("user-map-full-open"), where: document.body.dataset.genesisMapLocation || "" }; } catch { return null; } })(),
       section: typeof currentSectionId === "function" ? currentSectionId() : "", voiceActive: typeof realtimeVoiceActive === "function" ? realtimeVoiceActive() : false,
       responding: events.filter(t => /response\.created/.test(t)).length > events.filter(t => /response\.done/.test(t)).length, now: Date.now() - rig.t0
@@ -233,7 +234,7 @@ function installKyroVoiceRig(makeEvaluator) {
     return { failures, warnings, state: last };
   };
   // what the page did, kept with a failed case so the cause can be read from the report
-  rig.detail = state => (state ? { heard: state.heard, modelSaid: state.modelSaid.map(line => line.slice(0, 140)), tools: state.tools, typed: state.typed, pageLines: state.pageLines.map(line => line.slice(0, 100)), top: state.top, section: state.section, web: state.web.slice(-6), screenCalls: (state.screenCalls || []).map(line => line.slice(0, 80)), dismissed: state.dismissed, returns: state.returns, removals: state.removals, timeline: state.timeline, mapCenter: state.mapCenter, modelFull: state.modelSaid.map(line => line.slice(0, 900)), screenText: (state.screens || []).map(screen => `${screen.kind}: ${screen.text.slice(0, 900)}`) } : null);
+  rig.detail = state => (state ? { heard: state.heard, modelSaid: state.modelSaid.map(line => line.slice(0, 140)), tools: state.tools, typed: state.typed, pageLines: state.pageLines.map(line => line.slice(0, 100)), top: state.top, section: state.section, web: state.web.slice(-6), screenCalls: (state.screenCalls || []).map(line => line.slice(0, 80)), dismissed: state.dismissed, returns: state.returns, removals: state.removals, timeline: state.timeline, mapCenter: state.mapCenter, routeSteps: state.routeSteps, modelFull: state.modelSaid.map(line => line.slice(0, 900)), screenText: (state.screens || []).map(screen => `${screen.kind}: ${screen.text.slice(0, 900)}`) } : null);
   rig.runCase = async entry => {
     const started = Date.now(); const timeout = entry.timeoutMs || 30000;
     try {
