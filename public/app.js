@@ -50628,6 +50628,10 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   // The sign-in has ended: nothing can be opened or saved, and the model must say so rather than "it is on the screen".
   if (typeof kyroSignInEnded !== "undefined" && kyroSignInEnded) return { ok: false, status: "signin_ended", response: `The person's sign-in has ended, so nothing can be opened, listed or saved until they sign in again. Tell them exactly this in one short sentence: ${KYRO_SIGNIN_ENDED_LINE}`, executionVerified: false, blockedReason: "signin_ended" };
   kyroToolCalledAt = Date.now(); // (what the model has acted on: see kyroRecoverRefusal)
+  // The page has just opened this map itself (a place, a country, or the plain map): the model's own map tool, which asks for a start and a destination, is not asked as well.
+  if (toolName === "nexus_maps_route" && kyroPageJustOpened(command) && (kyroOpenMapRequest(kyroWithoutPoliteTail(command)) || kyroMapPlace(command))) {
+    return { ok: true, status: "completed", response: "Kyro already opened the map and said so. Say nothing more.", executionVerified: false, blockedReason: null };
+  }
   // A Kyro voice intake (e.g. the résumé interview) already owns this turn -- don't let the
   // model's own tool call (which would otherwise open a workforce workspace for "résumé"-shaped
   // text) run alongside it. See routeKyroVoiceIntakeTranscript for the transcript-level guard.
@@ -51983,6 +51987,46 @@ function kyroOpenMapRequest(text) {
   const said = String(text || "").trim();
   return KYRO_OPEN_MAP.test(said) && !KYRO_OPEN_MAP_NOT.test(said);
 }
+// "Show me the city of Stockton on the map", "show me California on the map", "open a map of Stockton", "open the Stockton map": the PLACE asked for, or "" when none is named. The map used to open only for a country or one of four
+// Kenyan cities, and by voice it was left to the map tool, which wants a start and a destination: "Stockton" and "California" got nothing (found by the owner's own voice test).
+const KYRO_MAP_PLACE_ON = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:me\\s+)?(?:the\\s+)?(?:(?:city|town|state|county|region|village|province|district) of\\s+)?([a-z][a-z.' -]{1,40}?)\\s+(?:on|in)\\s+(?:the\\s+|a\\s+)?(?:street\\s+|live\\s+|full\\s+|big\\s+)?maps?[.?!]*$`, "i");
+const KYRO_MAP_PLACE_OF = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:me\\s+)?(?:(?:the|a|an|my)\\s+)?(?:(?:street|live|full|big|world|interactive)\\s+)?maps?\\s+(?:of|for|in|around)\\s+(?:the\\s+)?(?:(?:city|town|state|county|region|village|province|district) of\\s+)?([a-z][a-z.,' -]{1,40}?)[.?!]*$`, "i");
+const KYRO_MAP_PLACE_NAMED = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:me\\s+)?(?:the\\s+)?([a-z][a-z.' -]{1,30}?)\\s+maps?[.?!]*$`, "i");
+// (words that are not a place: the map itself, kinds of map, and the person's own things, which are not found on a map by name)
+const KYRO_MAP_NOT_A_PLACE = /^(?:the|a|an|my|me|this|that|it|here|there|full|big|world|street|live|interactive|map|maps|current location|clients?|customers?|farms?|fields?|crops?|animals?|jobs?|shipments?|deliveries|orders|donors|volunteers|friends|family|home|work|everything|all)$/i;
+function kyroMapPlace(text) {
+  const said = kyroWithoutPoliteTail(String(text || "").trim());
+  if (!said || KYRO_OPEN_MAP_NOT.test(said)) return "";
+  const match = KYRO_MAP_PLACE_ON.exec(said) || KYRO_MAP_PLACE_OF.exec(said) || KYRO_MAP_PLACE_NAMED.exec(said);
+  const place = String(match?.[1] || "").replace(/\s+/g, " ").replace(/^(?:the )/i, "").trim();
+  if (!place || place.split(" ").length > 4 || KYRO_MAP_NOT_A_PLACE.test(place) || /^(?:my|our|your|their|his|her) /i.test(place)) return "";
+  return place;
+}
+const KYRO_US_STATES = new Set(["alabama", "alaska", "arizona", "arkansas", "california", "colorado", "connecticut", "delaware", "florida", "georgia", "hawaii", "idaho", "illinois", "indiana", "iowa", "kansas", "kentucky", "louisiana", "maine", "maryland", "massachusetts", "michigan", "minnesota", "mississippi", "missouri", "montana", "nebraska", "nevada", "new hampshire", "new jersey", "new mexico", "new york", "north carolina", "north dakota", "ohio", "oklahoma", "oregon", "pennsylvania", "rhode island", "south carolina", "south dakota", "tennessee", "texas", "utah", "vermont", "virginia", "washington", "west virginia", "wisconsin", "wyoming"]);
+// Opens the map and centres it on the place: found by the server's place search (the same OpenStreetMap search the GPS uses), a state or a country-sized place wide, anything else at city size.
+async function kyroOpenMapAtPlace(place, said, lang) {
+  const name = String(place).replace(/\b[a-z]/g, letter => letter.toUpperCase());
+  const say = line => { try { setVoiceResponse(line, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the map is on the screen */ } };
+  let found = null;
+  try {
+    const out = await request("/api/nexus/runtime/navigation", { method: "POST", body: { action: "search", query: place } });
+    found = (Array.isArray(out?.places) ? out.places : []).find(item => Number.isFinite(Number(item?.lat)) && Number.isFinite(Number(item?.lng))) || null;
+  } catch { found = null; }
+  let opened = false;
+  try { opened = dispatchGenesisWorkspaceAction({ type: "genesis.workspace.open", workspace: "map", requestId: `typed-map-${Date.now().toString(36)}`, payload: { query: said, country: "" } }, {}, { suppressAcknowledgement: true }); } catch { opened = false; }
+  if (!opened) { say(lang === "sw" ? "Siwezi kufungua ramani sasa." : "I could not open the map just now."); return false; }
+  if (!found) { say(lang === "sw" ? `Sikuweza kupata ${name} kwenye ramani, kwa hiyo hii ni ramani ya kawaida.` : `I could not find ${name} on the map, so here is the map.`); return true; }
+  const zoom = KYRO_US_STATES.has(String(place).toLowerCase()) ? 6 : 11;
+  try { document.body.dataset.genesisMapLocation = name; } catch { /* a label only */ }
+  waitForStableUserMapCanvas().then(() => {
+    if (!userMap) return;
+    userMap.setView([Number(found.lat), Number(found.lng)], zoom);
+    try { userMapLayers.markers?.clearLayers?.(); if (zoom >= 10) L.marker([Number(found.lat), Number(found.lng)]).addTo(userMapLayers.markers).bindPopup(`<strong>${escapeHtml(name)}</strong>`); } catch { /* the map is centred without a marker */ }
+    safeInvalidateLeafletMap(userMap);
+  }).catch(() => {});
+  say(lang === "sw" ? `Hii ni ramani ya ${name}. Unaweza kuikuza na kuisogeza.` : `Here is ${name} on the map. You can zoom and drag it.`);
+  return true;
+}
 // "Open YouTube", "open Spotify", "play something on YouTube": found testing by voice, these were answered "I'm not sure what you'd like me to do". Kyro asks what to play and the next short answer is played.
 // (Spotify is not connected here, so it is said plainly and the music comes from YouTube.)
 // "I need help with my maize crop", "help me with my farm": the crop and farm help screen, which has the box to ask in and the farm log.
@@ -52290,9 +52334,12 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
     void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
     return true;
   }
-  // typed: the map opens on the page (said aloud, the map tool does it)
-  if (options.typed && kyroOpenMapRequest(said)) {
+  // The map opens on the page, typed or said aloud (said aloud it used to be left to the voice model's map tool, which asks for a start and a destination, so "the US", "California" and "Stockton" opened nothing).
+  const mapPlace = kyroMapPlace(said);
+  if (kyroOpenMapRequest(said) || mapPlace) {
+    if (!options.typed) { try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ } }
     const country = africanMapCountryTarget(said) || kyroWorldMapTarget(said);
+    if (!country && mapPlace) { void kyroOpenMapAtPlace(mapPlace, said, lang); return true; }
     let opened = false;
     try { opened = dispatchGenesisWorkspaceAction({ type: "genesis.workspace.open", workspace: "map", requestId: `typed-map-${Date.now().toString(36)}`, payload: { query: said, country: "" } }, {}, { suppressAcknowledgement: true }) === true; } catch { opened = false; }
     if (!opened) return false;

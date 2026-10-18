@@ -14,7 +14,7 @@ const { findChrome, chromeArguments } = require(path.join(suite, "chrome.js"));
 const { buildInstallScript } = require(path.join(suite, "rig-page.js"));
 
 const STEP_KEYS = new Set(["tap", "nth", "type", "choose", "say", "wait", "expect", "timeoutMs"]);
-const EXPECT_KEYS = new Set(["screen", "app", "text", "notText", "keep", "buttons", "fields", "images", "frames", "links", "download", "intake", "orb", "said", "notSaid", "player", "model", "tool", "typed", "heard", "section", "allowRefusal"]);
+const EXPECT_KEYS = new Set(["screen", "app", "text", "notText", "keep", "buttons", "fields", "images", "frames", "links", "download", "intake", "orb", "said", "notSaid", "player", "model", "tool", "typed", "heard", "section", "allowRefusal", "mapOpen", "mapNear"]);
 
 test("every case has a unique id, an area, something to say, and an expectation that only uses known fields", () => {
   const ids = new Set();

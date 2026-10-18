@@ -50,6 +50,15 @@ function makeEvaluator() {
     if (expect.tool !== undefined) check((state.tools || []).some(tool => asRegex(expect.tool).test(tool)), `the model called no tool matching ${asRegex(expect.tool)} (called: ${(state.tools || []).join(", ") || "none"})`);
     if (expect.typed !== undefined) check((state.typed || []).some(route => asRegex(expect.typed).test(route)), `the page answered no typed route matching ${asRegex(expect.typed)} (answered: ${(state.typed || []).join(" / ") || "none"})`);
     if (expect.section !== undefined) check(asRegex(expect.section).test(state.section || ""), `expected the page section ${asRegex(expect.section)}, it is "${state.section || "none"}"`);
+    // the full map really is open (not merely the home screen), and, when asked, centred near a place: { lat, lng, within: degrees, zoomAtLeast, zoomAtMost }
+    if (expect.mapOpen !== undefined) check(Boolean(state.mapCenter && state.mapCenter.open) === Boolean(expect.mapOpen), `expected the map to be ${expect.mapOpen ? "open" : "closed"}, it is ${state.mapCenter && state.mapCenter.open ? "open" : "closed"}`);
+    if (expect.mapNear) {
+      const c = state.mapCenter; const near = expect.mapNear; const within = near.within || 1.5;
+      const okCentre = Boolean(c && Number.isFinite(c.lat) && Math.abs(c.lat - near.lat) <= within && Math.abs(c.lng - near.lng) <= within);
+      check(okCentre, `expected the map centred near ${near.lat}, ${near.lng}; it is ${c && Number.isFinite(c.lat) ? `${c.lat}, ${c.lng}` : "not centred"}`);
+      if (near.zoomAtLeast !== undefined) check(Boolean(c && c.zoom >= near.zoomAtLeast), `expected the map zoomed in to at least ${near.zoomAtLeast}, it is ${c ? c.zoom : "none"}`);
+      if (near.zoomAtMost !== undefined) check(Boolean(c && c.zoom <= near.zoomAtMost), `expected the map zoomed out to at most ${near.zoomAtMost}, it is ${c ? c.zoom : "none"}`);
+    }
     if (expect.player) {
       const player = state.player || {};
       if (expect.player.active !== undefined) check(Boolean(player.active) === Boolean(expect.player.active), `expected the player ${expect.player.active ? "to be playing something" : "to be off"} (state: ${player.state || "none"}, ${player.status || ""})`);
