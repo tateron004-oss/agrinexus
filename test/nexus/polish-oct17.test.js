@@ -168,10 +168,10 @@ test("the model's own refusal is still caught, including one that begins like a 
   assert.equal(second.calls.typed.length, 1, "once the words differ from the page's line it is a refusal");
 });
 
-test("the idle watcher tells the timer when a list card is showing and when a hand is on the screen, and a scroll, a click, focus and a moving pointer all count as use", () => {
+test("the idle watcher tells the timer when a list card is showing (and a resting mouse never holds a screen), and a scroll, a click, focus and a moving pointer all count as use", () => {
   const snapshot = appSource.slice(appSource.indexOf("function kyroAutoReturnSnapshot()"), appSource.indexOf("function kyroAutoReturnTick()"));
   assert.match(snapshot, /listShowing: Boolean\(document\.querySelector\("\[data-kyro-result=\\"list\\"\], \[data-kyro-result=\\"places\\"\]"\)\)/);
-  assert.match(snapshot, /handOnScreen: .*\[data-kyro-result\]:hover, \[data-kyro-result\]:focus-within/);
+  assert.doesNotMatch(snapshot, /handOnScreen|:hover/, "a resting mouse is not use: a full-screen card is always under it and was held open for ever");
   assert.match(appSource, /for \(const name of \["pointerdown", "keydown", "touchstart", "input", "wheel", "scroll", "click", "focusin"\]\) document\.addEventListener\(name, kyroNoteActivity/);
   assert.match(appSource, /document\.addEventListener\("pointermove", \(\) => \{ const now = Date\.now\(\); if \(now - kyroPointerNoted > 1000\)/);
 });

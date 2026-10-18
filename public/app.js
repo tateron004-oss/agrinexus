@@ -28023,10 +28023,10 @@ function kyroAutoReturnSnapshot() {
     // (the "open health" help screen is not an answer to be read in ten seconds: it keeps the usual thirty)
     resultShowing: Boolean(document.querySelector("[data-kyro-result]:not([data-kyro-result=\"help\"])")),
     workOpen: kyroWorkOpen(),
-    // A card of items to read and tap (documents, clinics, résumés, business records) is kept longer than a short answer, and any screen with the mouse over it, or with something on it in focus, is in use and is not cleared
+    // A card of items to read and tap (documents, clinics, résumés, business records) is kept longer than a short answer; use is judged by what the person does (a move of the pointer, a scroll, a click, a key, speech),
+    // never by where the mouse happens to be resting: a full-screen card is always under it, which held a list open for ever (found by the stay-open voice test)
     // (the owner's testing: lists and business cards closed after about fourteen seconds while still being used)
     listShowing: Boolean(document.querySelector("[data-kyro-result=\"list\"], [data-kyro-result=\"places\"]")),
-    handOnScreen: (() => { try { return Boolean(document.querySelector("[data-kyro-result]:hover, [data-kyro-result]:focus-within")); } catch { return false; } })(),
     lastActivityAt: Math.max(kyroLastActivityAt, kyroLastAssistantSpokeAt),
     assistantSpeaking,
     userSpeaking: Boolean(nexusVoiceSession?.userSpeaking),
