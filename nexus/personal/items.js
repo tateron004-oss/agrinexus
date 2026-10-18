@@ -22,7 +22,8 @@ const MAX_NAMED_LISTS = 12;
 // { action, ...details } or null. `today` is the person's local day, used to read days in calendar requests.
 function readRequest(text, today) {
   // The one front door (speech/normalise.js) has usually cleaned this already; it is cheap and idempotent, so a caller that did not is covered too.
-  const t = normaliseSpoken(text).text.replace(/[’]/g, "'");
+  // ("Put tomatoes on my shopping list as well": the closing "as well", "too" or "also" is not part of any item or name)
+  const t = normaliseSpoken(text).text.replace(/[’]/g, "'").replace(/\s+(?:as well|too|also)(?=[.!?]*$)/i, "");
   if (!t || t.length > 260) return null;
   const lower = t.toLowerCase().replace(/[.!?]+$/g, "");
   let m;
@@ -57,7 +58,7 @@ function readRequest(text, today) {
   if (/^(?:what(?:'s| are| is)|show|read|list|tell me) (?:me )?(?:all )?(?:of )?(?:my )?notes$/.test(lower) || /^(?:show|read|list) me my notes$/.test(lower)
       // "What notes do I have?", "do I have any notes", "what notes have I saved": found by the live voice audit, where the first was sent to the checklists and answered "I couldn't get your notes"
       || /^(?:what|which) notes (?:do i have|have i (?:saved|made|written|taken|kept|got)|are (?:saved|there)|did i (?:save|make|take|write))(?: saved)?$/.test(lower) || /^do i have any notes(?: saved)?$/.test(lower)) return { action: "note-list" };
-  if ((m = /^(?:what did i note|what notes do i have|find my notes?|what(?:'s| is| are) my notes?) (?:about|on|for|regarding)\s+(.+)$/i.exec(lower))) return { action: "note-find", query: clean(m[1]) };
+  if ((m = /^(?:what did i (?:note|jot|write|put|save|say)(?: it)?(?: down)?|what notes do i have|find my notes?|what(?:'s| is| are) my notes?) (?:about|on|for|regarding)\s+(.+)$/i.exec(lower))) return { action: "note-find", query: clean(m[1]) };
   if ((m = /^(?:delete|remove|forget|erase) my notes? (?:about|on|for|regarding)\s+(.+)$/i.exec(lower))) return { action: "note-remove", query: clean(m[1]) };
 
   return null;

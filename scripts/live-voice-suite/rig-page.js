@@ -25,7 +25,7 @@ function installKyroVoiceRig(makeEvaluator) {
     wrapped.__rigWrapped = true; window[name] = wrapped; return true;
   };
   wrap("handleOpenAiAgentsRealtimeEvent", a => { const type = String((a[1] && a[1].type) || ""); if (SKIP.test(type) || SKIP.test(String(a[0]))) return null; return `${a[0]}${type ? " " + type : ""} ${textOf(a[1])}${type === "response.done" ? " meta=" + JSON.stringify((a[1].response && a[1].response.metadata) || null) : ""}`; }, "event");
-  wrap("routeKyroVoiceIntakeTranscript", a => `${(a[0] && a[0].transcript) || ""}\u0001${(a[0] && a[0].source) || ""}`, "heard");
+  wrap("routeKyroVoiceIntakeTranscript", a => `${(a[0] && a[0].transcript) || ""}\u0001${(a[0] && a[0].source) || ""}\u0001${(a[0] && a[0].utteranceId) || ""}`, "heard");
   wrap("handleNexusUnifiedBrainRuntimeCommand", a => `${a[0]}\u0001${(a[1] && a[1].source) || ""}`, "typed-route");
   wrap("callNexusOpenAiRealtimeTool", a => `${(a[0] && (a[0].name || a[0])) || ""}\u0001${JSON.stringify(a[1] || (a[0] && a[0].arguments) || "").slice(0, 160)}`, "tool");
   wrap("kyroSpeakPageLine", a => String(a[0] || ""), "page-line");
@@ -111,6 +111,16 @@ function installKyroVoiceRig(makeEvaluator) {
     }
     return "orb";
   };
+  // what is on the screen over time (kind and first words, noted only when it changes), so a case that fails after its screen has already cleared can still say what the screen was
+  try {
+    let lastSeen = "";
+    setInterval(() => {
+      try {
+        const now = [...document.querySelectorAll("[data-kyro-result]")].filter(visible).map(node => `${node.getAttribute("data-kyro-result")}|${node.innerText.replace(/\s+/g, " ").trim().slice(0, 70)}`).join(" || ");
+        if (now !== lastSeen) { lastSeen = now; add("screen-seen", now || "(no screen)"); }
+      } catch { /* describing never breaks the page */ }
+    }, 700);
+  } catch { /* the rig still works without it */ }
   rig.screens = () => [...document.querySelectorAll("[data-kyro-result]")].filter(visible).map(node => ({
     kind: node.getAttribute("data-kyro-result"), app: node.getAttribute("data-kyro-app") || "", keep: node.hasAttribute("data-kyro-keep"),
     text: node.innerText.replace(/\s+/g, " ").trim().slice(0, 1500),
@@ -136,8 +146,9 @@ function installKyroVoiceRig(makeEvaluator) {
     const modelSaid = events.filter(t => /output_audio_transcript\.done/.test(t)).map(t => t.replace(/^.*transport_event response\.output_audio_transcript\.done\s*/, "").trim()).filter(Boolean);
     return {
       heard, tools: of("tool").map(t => t.split("\u0001")[0]), typed: of("typed-route").map(t => t.split("\u0001")[0]), pageLines: of("page-line"), modelSaid, dismissed: of("dismiss").length > 0,
-      timeline: slice.filter(e => ["typed-route", "screen-call", "return-to-orb", "screen-removed", "page-line", "heard", "tick"].includes(e.kind) || (e.kind === "event" && /output_audio_transcript\.done|response\.created|response\.done/.test(e.text)))
-        .map(e => `${e.at}ms ${e.kind} ${e.kind === "event" ? String(e.text).replace(/\s+/g, " ").replace(/^transport_event /, "").slice(0, 90) : String(e.text).replace(/\s+/g, " ").slice(0, 46)}`),
+      timeline: slice.filter(e => ["typed-route", "screen-call", "return-to-orb", "screen-removed", "page-line", "heard", "tick", "screen-seen"].includes(e.kind) || (e.kind === "event" && /output_audio_transcript\.done|response\.created|response\.done/.test(e.text)))
+        .map(e => `${e.at}ms ${e.kind} ${e.kind === "event" ? String(e.text).replace(/\s+/g, " ").replace(/^transport_event /, "").slice(0, 90)
+          : e.kind === "heard" ? (parts => `${parts[0].slice(0, 24)} via ${parts[1]} id=${parts[2] || "none"}`)(String(e.text).split("\u0001")) : String(e.text).replace(/\s+/g, " ").slice(0, 46)}`),
       web: of("web"), screenCalls: of("screen-call"), returns: of("return-to-orb"), removals: of("screen-removed"), screens: rig.screens(), top: topKind(), intake: rig.intake(), player: rig.player(),
       section: typeof currentSectionId === "function" ? currentSectionId() : "", voiceActive: typeof realtimeVoiceActive === "function" ? realtimeVoiceActive() : false,
       responding: events.filter(t => /response\.created/.test(t)).length > events.filter(t => /response\.done/.test(t)).length, now: Date.now() - rig.t0

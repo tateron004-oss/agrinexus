@@ -118,3 +118,52 @@ test("a reply the voice service has opened keeps the answer card up until its do
   context.note("response.output_audio_transcript.done"); assert.equal(context.open(), 0, "other events are ignored");
   assert.match(appSource, /try \{ kyroNoteReplyEvent\(eventType\); \} catch/, "the transport events feed it");
 });
+
+// Found by the full voice run's timeline: the page read a guide answer aloud ("I cannot look up addresses myself, but the official finders do it by ZIP code ..."), the refusal watcher took those words for the voice model
+// refusing, and when the next question began the page "recovered" by answering the PREVIOUS question again.
+function refusalApi() {
+  const calls = { typed: [], takeover: 0 };
+  const lineLead = appSource.slice(appSource.indexOf("let kyroRecentPageLines = [];"), appSource.indexOf("function kyroSpeakPageLine("));
+  const start = appSource.indexOf("// ---- When the voice model refuses something the page can do ----");
+  const block = appSource.slice(start, appSource.indexOf("function speakKyroIntakeLine(", start));
+  const plain = (() => { const s = appSource.indexOf("function kyroPlainText("); return appSource.slice(s, appSource.indexOf("\n}\n", s) + 3); })();
+  const sandbox = { kyroActiveVoiceIntake: null, Date, String, Array, Object, Promise, JSON, setTimeout, kyroTakeOverTurn: () => { calls.takeover++; }, kyroSpeakPageLine: () => true,
+    handleNexusUnifiedBrainRuntimeCommand: async (text, options) => { calls.typed.push([text, options.source]); return true; } };
+  vm.createContext(sandbox);
+  vm.runInContext(`let kyroPageSpeaksUntil = 0;\n${plain}\n${lineLead}\n${block}\nthis.api = { kyroWatchForRefusal, setHeard: v => { kyroHeard = v; }, pageSaid: line => { kyroRecentPageLines.push({ lead: kyroLineLead(line), at: Date.now() }); }, seen: () => kyroRefusalSeenAt };`, sandbox);
+  return { api: sandbox.api, calls };
+}
+const heardJustNow = text => ({ key: text.toLowerCase(), text, at: Date.now() - 500, recovered: false });
+const settleSoon = () => new Promise(resolve => setImmediate(resolve));
+
+test("a guide answer the page reads aloud that happens to say 'I cannot ...' is not taken for the voice model refusing, so the previous question is not answered again", async () => {
+  const line = "For ZIP code 30303: I cannot look up addresses myself, but the official finders do it by ZIP code. At sba.gov/local-assistance, enter your ZIP code to find your nearest centre.";
+  const { api, calls } = refusalApi();
+  api.setHeard(heardJustNow("Find a SCORE mentor near zip code 30303."));
+  api.pageSaid(line);
+  api.kyroWatchForRefusal("response.created", {});
+  for (const piece of ["For ZIP", " code 30303", ": I cannot", " look up addresses myself", ", but the official finders do it by ZIP code."]) api.kyroWatchForRefusal("response.output_audio_transcript.delta", { delta: piece });
+  api.kyroWatchForRefusal("response.output_audio_transcript.done", { transcript: line });
+  await settleSoon();
+  assert.equal(api.seen(), 0, "not a refusal");
+  assert.equal(calls.typed.length, 0, "nothing is answered a second time");
+});
+
+test("the model's own refusal is still caught, including one that begins like a line the page read", async () => {
+  const { api, calls } = refusalApi();
+  api.pageSaid("I cannot look up addresses myself, but the official finders do it by ZIP code.");
+  api.setHeard(heardJustNow("What's on my to-do list?"));
+  api.kyroWatchForRefusal("response.created", {});
+  api.kyroWatchForRefusal("response.output_audio_transcript.delta", { delta: "I can’t see a current to-do list from here." });
+  await settleSoon();
+  assert.equal(calls.typed.length, 1, "a different sentence is judged as before");
+  const second = refusalApi();
+  second.api.pageSaid("I cannot look up addresses myself, but the official finders do it by ZIP code.");
+  second.api.setHeard(heardJustNow("What's on my to-do list?"));
+  second.api.kyroWatchForRefusal("response.created", {});
+  second.api.kyroWatchForRefusal("response.output_audio_transcript.delta", { delta: "I cannot" });
+  assert.equal(second.api.seen(), 0, "so far it could be the page's line");
+  second.api.kyroWatchForRefusal("response.output_audio_transcript.delta", { delta: " see a current to-do list from here." });
+  await settleSoon();
+  assert.equal(second.calls.typed.length, 1, "once the words differ from the page's line it is a refusal");
+});

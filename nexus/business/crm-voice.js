@@ -10,7 +10,7 @@
 const { extractDay, describeDay } = require("../personal/dates.js");
 
 const LEAD_NOUNS = "customers?|clients?|donors?|sponsors?|volunteers?|buyers?|sellers?|tenants?|landlords?|members?|congregants?|leads?";
-const READ_WORDS = "list|show|read|tell me|give me|who|what|which|how many|do i have|have i got|any";
+const READ_WORDS = "list|show|read|tell me|give me|who|what|which|how many|do i have|have i got|any|is anybody|is anyone|is somebody|is someone|are my|are any";
 const WRITE_WORDS = /\b(?:add|create|new|log|track|start|generate|print|export|make|sync|schedule|book|mark|update|set|change|remove|delete)\b/i;
 
 // -> an intent name or null. Deliberately narrow: only phrasings that are unmistakably a request to READ the workspace, or to mark an invoice paid / set a follow-up day.
@@ -29,7 +29,9 @@ function classifyCrm(command = "") {
   if (WRITE_WORDS.test(text)) return null;
   const asks = new RegExp(`\\b(?:${READ_WORDS})\\b`, "i").test(text);
   if (!asks) return null;
-  if (/\binvoices?\b/i.test(text) || /\bwho\s+(?:owes?|still owes?|has(?:n'?t| not)\s+paid|hasn'?t\s+paid)\b/i.test(text) || /\b(?:unpaid|outstanding|overdue)\b[^.?!]{0,15}\b(?:bills?|payments?)\b/i.test(text)) return "listInvoices";
+  if (/\binvoices?\b/i.test(text) || /\bwho\s+(?:owes?|still owes?|has(?:n'?t| not)\s+paid|hasn'?t\s+paid)\b/i.test(text) || /\b(?:unpaid|outstanding|overdue)\b[^.?!]{0,15}\b(?:bills?|payments?)\b/i.test(text)
+    // "Is anybody late paying me?", "Who is behind on their payments?", "Are any of my customers slow to pay?"
+    || /\b(?:who|is anybody|is anyone|is somebody|is someone|are any (?:of my )?(?:customers|clients|buyers)|are my (?:customers|clients|buyers))\b[^.?!]{0,30}\b(?:late|behind|slow)\b[^.?!]{0,25}\b(?:paying|pay|payments?|bills?)\b/i.test(text)) return "listInvoices";
   if (/\bgrants?\b/i.test(text) && /\b(?:my|our|the|how many|which|what)\b/i.test(text)) return "listGrants";
   if (/\bappointments?\b/i.test(text) && /\b(?:my|our|the|how many|which|what|any)\b/i.test(text)) return "listAppointments";
   if (/\btasks?\b/i.test(text) && /\b(?:my|our|the|how many|which|what|any|open)\b/i.test(text)) return "listTasks";
@@ -88,7 +90,7 @@ function readCrm(intent, { command, editable, workspace, today, formatMoney }) {
     const invoices = editable.invoices || [];
     const items = editable.invoiceItems || [];
     if (!invoices.length) return `${name} has no invoices yet. Say something like "create an invoice for Grace Otieno" to start one.`;
-    const unpaidOnly = /\b(?:unpaid|not paid|outstanding|overdue|owes?|owing|hasn'?t paid|has not paid|haven'?t paid|yet to pay)\b/i.test(command);
+    const unpaidOnly = /\b(?:unpaid|not paid|outstanding|overdue|owes?|owing|hasn'?t paid|has not paid|haven'?t paid|yet to pay|late (?:paying|payments?)|behind on (?:their |his |her )?(?:payments?|paying|bills?)|slow to pay)\b/i.test(command);
     const rows = unpaidOnly ? invoices.filter(invoice => !isPaid(invoice)) : invoices;
     if (!rows.length) return `Every invoice in ${name} is marked paid.`;
     const lines = rows.map(invoice => {

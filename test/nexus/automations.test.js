@@ -193,8 +193,8 @@ test("the page loads the shared words, opens the screen by voice, and answers se
   assert.match(app, /window\.KyroAutomationCommands\?\.isOpen\?\.\(said\)\) \{\s+kyroTakeOverTurn\(\);\s+void kyroShowAutomationsScreen\(\);/);
   assert.match(app, /typeof kyroAutomationRequest === "function" && kyroAutomationRequest\(trimmed\)\) \{\s+if \(!heardAgain\) \{[^]*?handleNexusUnifiedBrainRuntimeCommand\(trimmed, \{ source: "typed", kyroDirect: true \}\);[^]*?\}\s+return true;/);
   assert.match(app, /"\/api\/nexus\/runtime\/automations"/);
-  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8").includes('src="/kyro-automation-commands.js?v=kyro-automation-commands-1"'));
-  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8").includes("/kyro-automation-commands.js?v=kyro-automation-commands-1"));
+  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8").includes('src="/kyro-automation-commands.js?v=kyro-automation-commands-2"'));
+  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8").includes("/kyro-automation-commands.js?v=kyro-automation-commands-2"));
 });
 
 test("the runtime registers the executor and the routes exist", () => {

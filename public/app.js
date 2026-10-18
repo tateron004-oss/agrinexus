@@ -51132,11 +51132,16 @@ function kyroArmIntakeSafetyNet() {
 // filled in without a word. Window: set when the page takes a request over, cleared when the next thing is heard.
 let kyroPageSpeaksUntil = 0;
 let kyroLastPageLine = { text: "", at: 0 };
+// The start (lower-case, letters and digits only) of each line the page has read aloud lately. The refusal watcher below must not take the page's OWN words for the voice model refusing: a guide answer such as
+// "I cannot look up addresses myself, but the official finders do it by ZIP code" matched, and when the next question began the page "recovered" by answering the PREVIOUS question again (found by the full voice run's timeline).
+let kyroRecentPageLines = [];
+const kyroLineLead = value => String(value || "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
 function kyroSpeakPageLine(text) {
   const line = String(text || "").replace(/\s+/g, " ").trim().slice(0, 500);
   if (!line || !realtimeVoiceActive()) return false;
   if (line === kyroLastPageLine.text && Date.now() - kyroLastPageLine.at < 6000) return true; // (the same words arriving twice are said once)
   kyroLastPageLine = { text: line, at: Date.now() };
+  try { kyroRecentPageLines = [...kyroRecentPageLines.filter(entry => Date.now() - entry.at < 180000), { lead: kyroLineLead(line), at: Date.now() }].slice(-8); } catch { /* noting the line is only for the refusal watcher */ }
   try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch { /* nothing to cut off */ }
   // Out of band (conversation "none"): the line is spoken but is not a turn of the conversation the model then answers or repeats; the model is told afterwards, as a note, what the person was told.
   const sent = sendKyroRealtimeEvent({
@@ -51174,6 +51179,11 @@ function kyroWatchForRefusal(type, payload) {
   if (/^response\.(?:output_)?audio_transcript\.delta$/.test(kind)) kyroRefusalBuf += String(payload?.delta || "");
   else if (/^response\.(?:output_)?audio_transcript\.done$/.test(kind)) kyroRefusalBuf = String(payload?.transcript || kyroRefusalBuf);
   else return;
+  // (words the page itself is reading are not the model refusing, however they begin: it is judged again as soon as the words stop matching a line the page sent)
+  try {
+    const lead = typeof kyroLineLead === "function" ? kyroLineLead(kyroRefusalBuf) : "";
+    if (lead && typeof kyroRecentPageLines !== "undefined" && kyroRecentPageLines.some(entry => Date.now() - entry.at < 180000 && entry.lead.startsWith(lead))) return;
+  } catch { /* the watcher still works without this */ }
   if (!kyroRefusalSeenAt && (KYRO_REFUSAL.test(kyroRefusalBuf.slice(0, 160)) || KYRO_FALSE_CLAIM.test(kyroRefusalBuf.slice(0, 200)))) { kyroRefusalSeenAt = Date.now(); kyroRecoverRefusal(); }
 }
 function kyroRecoverRefusal() {
@@ -52021,8 +52031,10 @@ function kyroOpenUploadScreen(said, lang) {
 }
 // The name of the one saved document a person asks to open ("Sales Plan"), or "" for anything else: "open documents", "open my saved documents" and "open the document" name no document.
 const KYRO_NAMED_DOCUMENT = /^(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:open|show|read|pull up|bring up|display)(?:\s+me)?\s+(?:the\s+|my\s+)?(.{2,60}?)\s+(?:document|doc|file)[.?!]*$/i;
+// ("What does my Farm Rules document say?", "what's in the Sales Plan file": asking for the words of one named document opens it, where they are)
+const KYRO_NAMED_DOCUMENT_ASK = /^(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:what(?:'s| is| does)|tell me what(?:'s| is| does)?|can you tell me what(?:'s| is| does)?)\s+(?:in\s+)?(?:the\s+|my\s+)?(.{2,60}?)\s+(?:document|doc|file)(?:\s+(?:say|says|contain|contains|have|has))?[.?!]*$/i;
 function kyroNamedDocument(text) {
-  const named = KYRO_NAMED_DOCUMENT.exec(String(text || "").trim());
+  const named = KYRO_NAMED_DOCUMENT.exec(String(text || "").trim()) || KYRO_NAMED_DOCUMENT_ASK.exec(String(text || "").trim());
   const name = String(named?.[1] || "").trim();
   return name && !/^(?:saved|all|some|my|the|new|last saved|a|an|each|every|these|those)$/i.test(name) ? name : "";
 }
