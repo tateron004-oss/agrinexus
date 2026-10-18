@@ -17,7 +17,8 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  // Screens are cleared only when they are not in use. In use means: Kyro or the person is speaking, a hand is on the screen (mouse over it, a tap, a scroll, a key) or something on it has focus. Ten seconds was too short
+  // Screens are cleared only when they are not in use. In use means: Kyro or the person is speaking, or the person touched the screen lately (a tap, a click, a scroll, a key, a moving pointer; a resting mouse is not use,
+  // since a full-screen card is always under it). Ten seconds was too short
   // for anyone reading or working with a card (the owner's testing: business cards, lists and documents closed while still being used), so the quiet periods are longer, and longest for the cards people read and tap.
   const RESULT_RETURN_MS = 30000;  // a short ANSWER card (a reading, a sentence of advice) clears this long after Kyro has finished speaking and nobody has touched or said anything
   const LIST_RETURN_MS = 180000;   // a card of items to read and tap (a list of documents, clinics, résumés, business records) waits three minutes
@@ -125,7 +126,7 @@
     const s = snapshot || {};
     if (!s.userMode || !s.answerShowing) return { go: false, retryMs: 0 };
     if (s.workOpen) return { go: false, retryMs: AUTO_RETURN_RETRY_MS };
-    if (s.assistantSpeaking || s.userSpeaking || s.focusInField || s.pendingConfirmation || s.intakeActive || s.handOnScreen) return { go: false, retryMs: AUTO_RETURN_RETRY_MS };
+    if (s.assistantSpeaking || s.userSpeaking || s.focusInField || s.pendingConfirmation || s.intakeActive) return { go: false, retryMs: AUTO_RETURN_RETRY_MS };
     const quietFor = Number(now) - Number(s.lastActivityAt || 0);
     const limit = s.resultShowing ? (s.listShowing ? LIST_RETURN_MS : RESULT_RETURN_MS) : AUTO_RETURN_MS;
     if (!(quietFor >= limit)) return { go: false, retryMs: Math.max(1000, limit - Math.max(0, quietFor)) };
