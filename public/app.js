@@ -51141,7 +51141,7 @@ function kyroSpeakPageLine(text) {
   if (!line || !realtimeVoiceActive()) return false;
   if (line === kyroLastPageLine.text && Date.now() - kyroLastPageLine.at < 6000) return true; // (the same words arriving twice are said once)
   kyroLastPageLine = { text: line, at: Date.now() };
-  kyroRecentPageLines = [...kyroRecentPageLines.filter(entry => Date.now() - entry.at < 180000), { lead: kyroLineLead(line), at: Date.now() }].slice(-8);
+  try { kyroRecentPageLines = [...kyroRecentPageLines.filter(entry => Date.now() - entry.at < 180000), { lead: kyroLineLead(line), at: Date.now() }].slice(-8); } catch { /* noting the line is only for the refusal watcher */ }
   try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch { /* nothing to cut off */ }
   // Out of band (conversation "none"): the line is spoken but is not a turn of the conversation the model then answers or repeats; the model is told afterwards, as a note, what the person was told.
   const sent = sendKyroRealtimeEvent({
