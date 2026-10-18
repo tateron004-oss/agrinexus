@@ -52,6 +52,7 @@ function makeEvaluator() {
     if (expect.section !== undefined) check(asRegex(expect.section).test(state.section || ""), `expected the page section ${asRegex(expect.section)}, it is "${state.section || "none"}"`);
     // the full map really is open (not merely the home screen), and, when asked, centred near a place: { lat, lng, within: degrees, zoomAtLeast, zoomAtMost }
     if (expect.mapOpen !== undefined) check(Boolean(state.mapCenter && state.mapCenter.open) === Boolean(expect.mapOpen), `expected the map to be ${expect.mapOpen ? "open" : "closed"}, it is ${state.mapCenter && state.mapCenter.open ? "open" : "closed"}`);
+    if (expect.routeSteps !== undefined) check(asRegex(expect.routeSteps).test(state.routeSteps || ""), `expected the list of route steps on the screen to match ${asRegex(expect.routeSteps)}, it is "${state.routeSteps || "not showing"}"`);
     if (expect.mapNear) {
       const c = state.mapCenter; const near = expect.mapNear; const within = near.within || 1.5;
       const okCentre = Boolean(c && Number.isFinite(c.lat) && Math.abs(c.lat - near.lat) <= within && Math.abs(c.lng - near.lng) <= within);

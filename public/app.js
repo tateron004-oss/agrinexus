@@ -60645,6 +60645,7 @@ function kyroFitRouteBelowSteps(points, live = false) {
   userMap.fitBounds(points, { paddingTopLeft: [24, (sheet?.offsetHeight || 0) + 24], paddingBottomRight: [24, live ? 140 : 24] });
 }
 function kyroDrawRouteOnMap(points, origin, destination, live = false) {
+  try { document.body.dataset.genesisMapLocation = `${origin} to ${destination}`; } catch { /* a label only */ }
   userMapLayers.route?.clearLayers?.();
   userMapLayers.markers?.clearLayers?.();
   L.polyline(points, { color: "#14b8a6", weight: 5, opacity: 0.9 }).addTo(userMapLayers.route);
