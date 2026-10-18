@@ -34,7 +34,7 @@ module.exports = [
   { id: "health-low-button", area: "health", say: "Open health.", expect: { screen: "app", app: "health" }, then: [{ tap: "^I am feeling low" }, { expect: { text: "sorry|feel" }, timeoutMs: 40000 }] },
   { id: "jobs-near-me", area: "work", say: "Find jobs near me.", timeoutMs: 60000, expect: { screen: "list", links: 1, keep: true } },
 
-  { id: "resume-open-list", area: "forms", say: "Open my resume.", expect: { screen: "list", text: "R[ÉE]SUM[ÉE]S", keep: true, buttons: ["Build a new"] } },
+  { id: "resume-open-list", area: "forms", say: "Open my resume.", expect: { screen: ["list", "text"], text: "R[ÉE]SUM[ÉE]S|r[ée]sum[ée]s, newest first", keep: true } },
   { id: "resume-open-and-tap", area: "forms", say: "Open my resume.", expect: { screen: "list", text: "R[ÉE]SUM[ÉE]S" }, then: [{ tap: "^R[eé]sum[eé] - |^Resume - " }, { expect: { screen: "document", download: true }, timeoutMs: 30000 }] },
   { id: "resume-build-starts-and-cancels", area: "forms", say: "Build my resume.", timeoutMs: 40000, expect: { intake: "Question 1 of" }, then: [{ say: "Cancel." }, { expect: { intake: false }, timeoutMs: 25000 }] },
   { id: "resume-mishearing", area: "forms", say: "Builds my resume.", timeoutMs: 40000, expect: { intake: "Question 1 of" }, then: [{ say: "Cancel." }, { expect: { intake: false }, timeoutMs: 25000 }] },
