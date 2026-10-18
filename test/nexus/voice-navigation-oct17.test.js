@@ -35,9 +35,9 @@ test("the page takes a spoken navigation request itself, but not a request to op
 });
 
 test("the spoken route starts the guidance and cuts off the model, and the model's own map tool is not asked as well", () => {
-  assert.match(app, /if \(kyroSpokenNavigation\(trimmed\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \} catch \{[^}]*\}\s+kyroPageSpeaksUntil = Date\.now\(\) \+ 40000;\s+kyroLastNavigationSaid = \{ key: kyroNavigationKey\(trimmed\), at: Date\.now\(\) \};\s+void handleKyroNavigationCommand\(trimmed, \{ source: "voice" \}\);/);
+  assert.match(app, /if \(trimmed && typeof kyroSpokenNavigation === "function" && kyroSpokenNavigation\(trimmed\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \} catch \{[^}]*\}\s+kyroPageSpeaksUntil = Date\.now\(\) \+ 40000;\s+kyroLastNavigationSaid = \{ key: kyroNavigationKey\(trimmed\), at: Date\.now\(\) \};\s+void handleKyroNavigationCommand\(trimmed, \{ source: "voice" \}\);/);
   assert.match(app, /if \(toolName === "nexus_maps_route" && kyroLastNavigationSaid\.key && kyroLastNavigationSaid\.key === kyroNavigationKey\(kyroWithoutPoliteTail\(command\)\)/);
-  const spoken = app.indexOf("if (kyroHandleSpokenOpen(trimmed, {}))"); const nav = app.indexOf("if (kyroSpokenNavigation(trimmed))");
+  const spoken = app.indexOf("if (kyroHandleSpokenOpen(trimmed, {}))"); const nav = app.indexOf("typeof kyroSpokenNavigation === \"function\" && kyroSpokenNavigation(trimmed)");
   assert.ok(spoken > 0 && nav > spoken, "a request to open a screen is taken first");
 });
 

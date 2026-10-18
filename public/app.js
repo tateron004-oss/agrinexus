@@ -51643,7 +51643,7 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     if (kyroHandleSpokenOpen(trimmed, {})) { kyroPageSpeaksUntil = Date.now() + 30000; return true; }
     // "Take me to Sacramento", "navigate to Nairobi", "start navigation to the airport", "where am I", "stop navigation": the phone's own GPS guidance (public/kyro-navigation.js), which starts from where the person is.
     // Said aloud these went to the voice model's map tool, which asks for a start and a destination ("I'm missing your starting point") because it cannot know where the person is (found by the owner's own testing).
-    if (kyroSpokenNavigation(trimmed)) {
+    if (trimmed && typeof kyroSpokenNavigation === "function" && kyroSpokenNavigation(trimmed)) {
       if (!heardAgain) {
         try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
         kyroPageSpeaksUntil = Date.now() + 40000;
