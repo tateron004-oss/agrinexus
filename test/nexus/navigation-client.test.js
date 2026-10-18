@@ -315,7 +315,7 @@ test("repeat, how far, stop and losing permission while guiding", async () => {
 });
 
 test("the page loads the GPS, the offline shell caches it, and the words are handled on the phone before anything is sent", () => {
-  const html = fs.readFileSync(path.join(ROOT, "public", "index.html"), "utf8"); assert.match(html, /<script src="\/kyro-navigation\.js\?v=kyro-navigation-1"><\/script>/);
+  const html = fs.readFileSync(path.join(ROOT, "public", "index.html"), "utf8"); assert.match(html, /<script src="\/kyro-navigation\.js\?v=kyro-navigation-2"><\/script>/);
   assert.ok(html.indexOf("kyro-navigation.js") < html.indexOf('src="/app.js'), "loaded before the app");
   assert.match(fs.readFileSync(path.join(ROOT, "public", "sw.js"), "utf8"), /kyro-navigation\.js/);
   const app = fs.readFileSync(path.join(ROOT, "public", "app.js"), "utf8");
