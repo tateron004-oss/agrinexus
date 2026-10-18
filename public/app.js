@@ -27888,13 +27888,26 @@ function kyroParkLiveMusicCard(shell) {
   shell.setAttribute("aria-hidden", "true");
   shell.style.cssText = "position:fixed;left:-9999px;top:0;width:320px;height:240px;overflow:hidden;opacity:0;pointer-events:none;";
 }
+// The music card's YouTube player starts at full volume; "louder" and "quieter" move it in steps of twenty. Returns what was done and what to say ({ say }), or nothing when there is no music card.
+let kyroLiveMusicVolume = 100;
 function kyroLiveMusicCardControl(control) {
   const frame = document.querySelector("[data-nexus-live-music-frame]");
-  if (!frame) return;
+  if (!frame) return null;
   const shell = frame.closest("[data-nexus-visual-shell]");
-  if (control === "stop") { shell?.remove(); return; }
+  if (control === "stop") { shell?.remove(); kyroLiveMusicVolume = 100; return null; }
+  const send = (func, args = []) => { try { frame.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args }), "https://www.youtube-nocookie.com"); } catch { /* the card's own buttons still work */ } };
+  if (control === "volume-up" || control === "volume-down") {
+    const before = kyroLiveMusicVolume;
+    kyroLiveMusicVolume = Math.max(0, Math.min(100, before + (control === "volume-up" ? 20 : -20)));
+    send("unMute"); send("setVolume", [kyroLiveMusicVolume]);
+    if (kyroLiveMusicVolume === before) return { say: control === "volume-up" ? "That is as loud as the music goes. Turn up your device volume for more." : "That is as quiet as the music goes." };
+    return { say: `Volume ${kyroLiveMusicVolume} percent.` };
+  }
+  if (control === "mute") { send("mute"); return { say: "Muted." }; }
+  if (control === "unmute") { send("unMute"); send("setVolume", [kyroLiveMusicVolume]); return { say: "Sound is back on." }; }
   const func = control === "pause" ? "pauseVideo" : control === "resume" || control === "play" ? "playVideo" : "";
-  if (func) { try { frame.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args: [] }), "https://www.youtube-nocookie.com"); } catch { /* the card's own buttons still work */ } }
+  if (func) send(func);
+  return null;
 }
 // "close the weather card" and the quiet-spell return take the screens down but leave any music playing; "back to the orb" / "I'm done" also stop the music, a call's navigation and any video.
 function kyroTearDownScreens(options = {}) {
@@ -59883,7 +59896,14 @@ function kyroMediaCommandSeen(command) {
 async function kyroMediaCommand(command, options = {}) {
   const player = window.KyroMediaPlayerController;
   if (!player) return false;
-  try { const parsed = window.KyroMediaCommands?.parse?.(command); if (parsed?.type === "control") kyroLiveMusicCardControl(parsed.control); } catch (_) { /* the player's own handling below still runs */ }
+  try {
+    const parsed = window.KyroMediaCommands?.parse?.(command);
+    if (parsed?.type === "control") {
+      const cardDid = kyroLiveMusicCardControl(parsed.control);
+      // the music card's own volume and mute: said, and taken (the player below has nothing playing, so it would answer "nothing is playing")
+      if (cardDid?.say && !player.isActive?.()) { setVoiceResponse(cardDid.say, true); return true; }
+    }
+  } catch (_) { /* the player's own handling below still runs */ }
   try { return await player.handleCommand(command, { lang: languageCode() }); } catch (error) {
     nexusGenesisVoiceDebugLog("kyro-media-command-failed", { error: String(error?.message || error).slice(0, 200) });
     return false;
@@ -59894,7 +59914,10 @@ async function kyroMediaCommand(command, options = {}) {
 function kyroMediaControlInstruction(control, language) {
   const player = window.KyroMediaPlayerController;
   if (!player) return false;
-  try { kyroLiveMusicCardControl(String(control || "")); } catch (_) { /* the player's own handling below still runs */ }
+  try {
+    const cardDid = kyroLiveMusicCardControl(String(control || ""));
+    if (cardDid?.say && !player.isActive?.()) { setVoiceResponse(cardDid.say, true); return true; }
+  } catch (_) { /* the player's own handling below still runs */ }
   const result = player.control(String(control || ""), { lang: language || languageCode() });
   if (result && result.handled === false && result.message) setVoiceResponse(result.message, true);
   return true;
