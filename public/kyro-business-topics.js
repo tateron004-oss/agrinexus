@@ -10,7 +10,7 @@
   "use strict";
 
 // A question, or a request for help: "how do I", "what is", "where can I", "I need a loan", "tell me about", "help me get certified"
-  const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|am|will|would|tell me|explain|help me|i need|i want|i('| a)m looking for|any|give me (?:info|information|advice)|find (?:me|a|an|the|my)|show me|look(?:ing)? for|search for)\b)/i;
+  const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|am|will|would|tell me|look up|search (?:the web |the internet |online )?for|find out|research|look into|google|explain|help me|i need|i want|i('| a)m looking for|any|give me (?:info|information|advice)|find (?:me|a|an|the|my)|show me|look(?:ing)? for|search for)\b)/i;
   const RECORD_OR_DRAFT = /^(?:please\s+)?(?:sold|bought|log|record|add|save|remind|set|create|draft|write|make|mark|list|delete|forget|call|text|send|play|open|start|translate|export|convert)\b/i;
   
   const STRUCTURE_TERMS = [/\bllc\b/i, /\bs[- ]?corp/i, /\bc[- ]?corp/i, /\bnon-?profit/i, /\bfor[- ]profit/i, /\bsole proprietor/i, /\bpartnership/i];

@@ -58,7 +58,7 @@ function stateFromText(text) {
 }
 
 // ---- which question --------------------------------------------------------------------------------------------------------------------------------------------------------------
-const ASKS = /(?:[?]|^(?:please\s+|can you\s+|could you\s+)?(?:how|what|which|where|when|why|who|should|can|could|do|does|is|are|am|will|would|tell me|explain|help me|walk me through|show me|i need|i want|i'd like|i would like|i('| a)m (?:looking|trying|ready|planning|going)|give me|list|looking|steps|find (?:me|out))\b)/i;
+const ASKS = /(?:[?]|^(?:please\s+|can you\s+|could you\s+)?(?:how|what|which|where|when|why|who|should|can|could|do|does|is|are|am|will|would|tell me|look up|search (?:the web |the internet |online )?for|find out|research|look into|google|explain|help me|walk me through|show me|i need|i want|i'd like|i would like|i('| a)m (?:looking|trying|ready|planning|going)|give me|list|looking|steps|find (?:me|out))\b)/i;
 const NOT_A_QUESTION = /^(?:please\s+)?(?:sold|bought|log|record|add|save|remind|draft|write|send|call|text|play|translate|export|convert|delete|forget)\b|\bworkspace\b/i;
 const ACTION = /\b(?:register(?:ing|ed)?|form(?:ing)?|file|filing|set(?:ting)? up|start(?:ing)?|open(?:ing)?|establish(?:ing)?|incorporat\w*|creat(?:e|ing)|launch(?:ing)?|become|apply(?:ing)? for|organi[sz]e|make it official|make (?:my|the|our) \w+ (?:legal|official))\b/i;
 const FEES = /\b(?:costs?|fees?|price|prices|pricing|how much|charges?|pay|renew\w*|annual (?:report|fee|tax)|franchise tax|requirements?|steps?|process|checklist|what do i need|what does it take)\b/i;
