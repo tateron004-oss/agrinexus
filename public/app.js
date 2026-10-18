@@ -27880,7 +27880,7 @@ function kyroNoteActivity() { kyroLastActivityAt = Date.now(); }
 // Everything that can sit on top of the orb apart from the function window: the full-screen cards the browser action controller puts straight on the page body (weather, map, music,
 // pilot dashboard, provider card), the rich-data overlay, the provider question report, the classic workflow modal, the Ask panel and caption panel, and any section other than the home screen
 // (the full map is one). The home screen's own "orb only" marker is present even while one of these covers it, so only an explicit return (or this list) can say what to take down.
-const KYRO_BODY_SCREEN_SELECTOR = "[data-nexus-live-weather-shell], [data-nexus-visual-shell], [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], #nexusRichDataOverlay, [data-kyro-result], [data-kyro-capture]";
+const KYRO_BODY_SCREEN_SELECTOR = "[data-nexus-live-weather-shell], [data-nexus-visual-shell], [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], #nexusRichDataOverlay, [data-kyro-route-steps], [data-kyro-result], [data-kyro-capture]";
 // The live music card holds the YouTube player itself: taking it off the page ends the song. So "close the card" and the quiet-spell return only park it out of sight (it keeps playing);
 // it is removed when the person asks for the music to stop ("stop the music", "go back to the orb", "I'm done") or when another card replaces it.
 function kyroParkLiveMusicCard(shell) {
@@ -60626,13 +60626,80 @@ function kyroSpokenNavigation(text) {
 }
 async function handleKyroNavigationCommand(text, options = {}) {
   const navigation = window.KyroNavigation; if (!navigation) return false;
-  if (!kyroNavigator) kyroNavigator = navigation.forBrowser({ locale: languageCode(), speechLang: voiceLocale(), api: body => requestWithTimeout("/api/nexus/runtime/navigation", { method: "POST", body }, 25000) });
+  if (!kyroNavigator) kyroNavigator = navigation.forBrowser({ locale: languageCode(), speechLang: voiceLocale(), view: kyroRouteView, api: body => requestWithTimeout("/api/nexus/runtime/navigation", { method: "POST", body }, 25000) });
   let reply = null;
   try { reply = await kyroNavigator.handle(text); } catch { reply = null; }
   if (reply === null || reply === undefined) return false;
   setVoiceResponse(reply, true, { allowHandoff: false, command: text, source: "kyro-navigation" });
   return true;
 }
+
+// The route on the map with its steps listed (kyro-navigation.js hands it over): a spoken direction can be followed by eye as well as by ear. A missing map or a failed draw never stops the spoken directions.
+let kyroRouteYouMarker = null;
+function kyroRoutePoints(route) {
+  return (Array.isArray(route?.geometry) ? route.geometry : []).map(pair => [Number(pair?.[1]), Number(pair?.[0])]).filter(pair => Number.isFinite(pair[0]) && Number.isFinite(pair[1]) && Math.abs(pair[0]) <= 90 && Math.abs(pair[1]) <= 180);
+}
+// The whole route in view, below the list of steps at the top (and above the guidance panel at the bottom while being guided).
+function kyroFitRouteBelowSteps(points, live = false) {
+  const sheet = document.querySelector("[data-kyro-route-steps]");
+  userMap.fitBounds(points, { paddingTopLeft: [24, (sheet?.offsetHeight || 0) + 24], paddingBottomRight: [24, live ? 140 : 24] });
+}
+function kyroDrawRouteOnMap(points, origin, destination, live = false) {
+  userMapLayers.route?.clearLayers?.();
+  userMapLayers.markers?.clearLayers?.();
+  L.polyline(points, { color: "#14b8a6", weight: 5, opacity: 0.9 }).addTo(userMapLayers.route);
+  L.marker(points[0]).addTo(userMapLayers.markers).bindPopup(`<strong>${escapeHtml(origin)}</strong>`);
+  L.marker(points[points.length - 1]).addTo(userMapLayers.markers).bindPopup(`<strong>${escapeHtml(destination)}</strong>`);
+  kyroFitRouteBelowSteps(points, live);
+  safeInvalidateLeafletMap(userMap);
+  if (kyroRouteYouMarker) { try { kyroRouteYouMarker.addTo(userMap); } catch { /* the marker returns with the next reading */ } }
+}
+function kyroShowRouteSteps({ route, origin, destination, language }) {
+  const nav = window.KyroNavigation; const sw = language === "sw";
+  document.querySelectorAll("[data-kyro-route-steps]").forEach(old => old.remove());
+  const steps = (Array.isArray(route?.steps) ? route.steps : []).filter(step => step && step.instruction);
+  if (!steps.length) return;
+  const sheet = document.createElement("div");
+  sheet.setAttribute("data-kyro-route-steps", "true"); sheet.setAttribute("role", "region"); sheet.setAttribute("aria-label", sw ? "Hatua za njia" : "Steps of the route");
+  sheet.style.cssText = "position:fixed;left:8px;right:8px;top:8px;z-index:2147482000;max-height:38vh;overflow:auto;background:#0f2a26;color:#fff;border-radius:12px;padding:10px 14px;font:500 16px/1.35 system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.4)";
+  const about = nav ? `${nav.sayDistance(route.distanceMeters, sw ? "sw" : "en")}, ${nav.sayDuration(route.durationSeconds, sw ? "sw" : "en")}` : "";
+  const head = document.createElement("div"); head.style.cssText = "display:flex;gap:10px;align-items:center;justify-content:space-between;font-weight:700";
+  const title = document.createElement("span"); title.textContent = `${origin} → ${destination}${about ? `: ${about}` : ""}`;
+  const close = document.createElement("button"); close.type = "button"; close.textContent = sw ? "Funga" : "Close";
+  close.style.cssText = "padding:6px 12px;border-radius:8px;border:0;background:#fff;color:#0f2a26;font:600 15px system-ui,sans-serif";
+  close.addEventListener("click", () => sheet.remove());
+  head.append(title, close);
+  const list = document.createElement("ol"); list.style.cssText = "margin:8px 0 0;padding-left:22px";
+  steps.forEach(step => { const item = document.createElement("li"); item.textContent = step.instruction; list.append(item); });
+  sheet.append(head, list);
+  document.body.appendChild(sheet);
+  // The list belongs to the map: it goes when the map does.
+  const watch = setInterval(() => { if (!sheet.isConnected) clearInterval(watch); else if (!document.body.classList.contains("user-map-full-open")) { sheet.remove(); clearInterval(watch); } }, 1500);
+}
+const kyroRouteView = {
+  route({ route, from, to, live, language } = {}) {
+    const points = kyroRoutePoints(route); if (points.length < 2) return;
+    const sw = language === "sw";
+    const origin = from?.label || (live ? (sw ? "Ulipo" : "You") : (sw ? "Mwanzo" : "Start")); const destination = to?.label || (sw ? "Unakoenda" : "Destination");
+    if (document.body.classList.contains("user-map-full-open") && userMap) {
+      kyroShowRouteSteps({ route, origin, destination, language });
+      try { kyroDrawRouteOnMap(points, origin, destination, live); } catch { /* the steps still show */ }
+    } else {
+      openGenesisRealtimeMapWorkspace({ origin, destination, routeGeometry: points, distanceMeters: route.distanceMeters, durationSeconds: route.durationSeconds }, "");
+      kyroShowRouteSteps({ route, origin, destination, language });
+      waitForStableUserMapCanvas().then(() => { if (userMap) kyroFitRouteBelowSteps(points, live); }).catch(() => {});
+    }
+  },
+  position(fix) {
+    if (!userMap || !document.body.classList.contains("user-map-full-open") || !Number.isFinite(fix?.lat) || !Number.isFinite(fix?.lng)) return;
+    const at = [fix.lat, fix.lng];
+    if (!kyroRouteYouMarker) kyroRouteYouMarker = L.circleMarker(at, { radius: 9, color: "#fff", weight: 3, fillColor: "#2563eb", fillOpacity: 1 }).bindTooltip("You");
+    kyroRouteYouMarker.setLatLng(at);
+    if (!userMap.hasLayer(kyroRouteYouMarker)) kyroRouteYouMarker.addTo(userMap);
+    if (!userMap.getBounds().contains(at)) userMap.panTo(at);
+  },
+  stopped() { try { kyroRouteYouMarker?.remove?.(); } catch { /* already gone */ } kyroRouteYouMarker = null; }
+};
 
 async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {}) {
   const text = String(command || "").trim();
