@@ -53292,11 +53292,11 @@ function kyroShowHelpScreen(workspace, context = null) {
 // and the answer is shown on the screen and spoken, the same as when it is said. Returns the tool's name, or "".
 // "What shipments do I have?", "Track my shipment.", "Where is my order?": the voice tool reads the person's own orders (and says plainly when there are none). Through the typed route these went to the AI planner, which asked
 // for "a town, county or region" to search in. A request naming both places ("track my shipment from Nairobi to Nakuru") is left to the route that estimates it.
-const KYRO_SHIPMENT_QUESTION = /^(?:please\s+)?(?:(?:track|check on)\s+(?:my\s+)?(?:shipments?|deliver(?:y|ies)|packages?|parcels?|orders?)|where(?:'s| is| are)\s+my\s+(?:shipments?|deliver(?:y|ies)|packages?|parcels?|orders?)|(?:what|which)\s+(?:shipments?|deliveries)\s+do i have|do i have any\s+(?:shipments?|deliveries)|(?:show|list|see)\s+(?:me\s+)?my\s+(?:shipments?|deliveries))[.?!]*$/i;
-const KYRO_VOICE_TOOL_ANSWERS = new RegExp(`\\bprovider summary\\b|\\bsummary (?:for|of) my (?:provider|doctor|nurse)\\b|${KYRO_SHIPMENT_QUESTION.source.replace(/^\^/, "^\\s*")}`, "i");
+// (each of the two below holds the whole pattern, so each can be read and tested on its own)
+const KYRO_VOICE_TOOL_ANSWERS = /\bprovider summary\b|\bsummary (?:for|of) my (?:provider|doctor|nurse)\b|^\s*(?:please\s+)?(?:(?:track|check on)\s+(?:my\s+)?(?:shipments?|deliver(?:y|ies)|packages?|parcels?|orders?)|where(?:'s| is| are)\s+my\s+(?:shipments?|deliver(?:y|ies)|packages?|parcels?|orders?)|(?:what|which)\s+(?:shipments?|deliveries)\s+do i have|do i have any\s+(?:shipments?|deliveries)|(?:show|list|see)\s+(?:me\s+)?my\s+(?:shipments?|deliveries))[.?!]*$/i;
 function kyroTypedToolFor(text) {
   const t = String(text || "").trim().toLowerCase().replace(/[.!?]+$/g, "");
-  if (KYRO_SHIPMENT_QUESTION.test(t)) return "nexus_marketplace_logistics";
+  if (/^(?:please\s+)?(?:(?:track|check on)\s+(?:my\s+)?(?:shipments?|deliver(?:y|ies)|packages?|parcels?|orders?)|where(?:'s| is| are)\s+my\s+(?:shipments?|deliver(?:y|ies)|packages?|parcels?|orders?)|(?:what|which)\s+(?:shipments?|deliveries)\s+do i have|do i have any\s+(?:shipments?|deliveries)|(?:show|list|see)\s+(?:me\s+)?my\s+(?:shipments?|deliveries))$/.test(t)) return "nexus_marketplace_logistics";
   if (/^(?:please\s+)?(?:prepare|make|give me|create|write)\s+(?:me\s+)?(?:a\s+|my\s+)?(?:provider|doctor|nurse|clinic)\s+summary(?:\s+(?:of|for)\s+my\s+(?:readings?|blood pressure|health|chronic readings?))?$|^(?:please\s+)?summary for my (?:provider|doctor|nurse)$/.test(t)) return "nexus_health_preparation";
   if (/^(?:please\s+)?(?:teach me|nifundishe)\s+(?:the\s+)?(?:letters|herufi|maths?|math|hesabu|numbers|counting|adding)$/.test(t)) return "nexus_workforce_learning";
   if (/^(?:please\s+)?(?:start|begin)\s+(?:the\s+)?ai basics(?:\s+course)?$/.test(t)) return "nexus_workforce_learning";

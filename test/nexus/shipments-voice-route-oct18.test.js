@@ -10,11 +10,11 @@ const vm = require("node:vm");
 const app = fs.readFileSync(path.join(__dirname, "../../public/app.js"), "utf8");
 
 function load() {
-  const start = app.indexOf("const KYRO_SHIPMENT_QUESTION = ");
+  const start = app.indexOf("const KYRO_VOICE_TOOL_ANSWERS = ");
   const end = app.indexOf("// Asks the voice route (where the lessons");
   assert.ok(start > 0 && end > start, "the shipment routing is in app.js");
   const context = {};
-  vm.runInNewContext(`${app.slice(start, end)}\nthis.question = KYRO_SHIPMENT_QUESTION; this.answers = KYRO_VOICE_TOOL_ANSWERS; this.toolFor = kyroTypedToolFor;`, context);
+  vm.runInNewContext(`${app.slice(start, end)}\nthis.answers = KYRO_VOICE_TOOL_ANSWERS; this.toolFor = kyroTypedToolFor;`, context);
   return context;
 }
 
