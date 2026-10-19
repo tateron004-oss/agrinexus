@@ -511,7 +511,7 @@ class OpenEndedPlanner {
     // Games): the checked California guide (see knowledge/california-business.js), asked before the state formation guide below, which answers "how do I register an LLC in California".
     const caTopic = !ownWorkspace && !techTopic ? californiaTopic(askText) : null;
     if (caTopic) {
-      const guide = californiaAnswer(caTopic, { question: askText });
+      const guide = californiaAnswer(caTopic, { question: askText, lang: guideLanguage(askText) }); // (the language of the words asked: a question in Spanish is answered in Spanish)
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `california-business:${caTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // "How do I register an LLC in California?", "what does a nonprofit cost to start in Texas?", "I want to set up my business in Ohio": the state's own fees and steps (see knowledge/state-entities.js). It is a question about forming an
