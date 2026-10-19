@@ -216,5 +216,17 @@
     return US_WALK_TOPICS.includes(id) ? id : null;
   }
 
-  return Object.freeze({ topic: usSmallBusinessTopic, californiaTopic, walkthroughAsk, walkTopic, isUsContext, isBusinessQuestion, language });
+  // "Show me your sources for small business", "where does your information come from", "the source page": a request for the page that gathers the official pages the guides are built from (nexus/knowledge/sources-page.js
+  // answers it). The words are here so the page can take such a request itself, as it does a business question: left to the voice model it improvised ("I don't have any sources to show") before the page answered.
+  // Not "sources of funding" or "sources for my report".
+  const SOURCE_PAGE_WORDS = "small business(?:es)?|minority|start-?ups?|nonprofits?|non-profits?|business(?:es)?|entrepreneurs?|owners?|veterans?|older adults?|seniors?|community";
+  const ASKS_SOURCES = new RegExp(`\\b(?:your|the)\\s+(?:(?:business|small[- ]business|minority[- ]owned|start-?up|nonprofit|non-profit|checked|official)\\s+)*(?:sources?|references)\\b(?!\\s+of\\b)(?!\\s+for\\s+(?!(?:${SOURCE_PAGE_WORDS})\\b))|\\bsources? page\\b|\\bsources?\\s+for\\s+(?:small[- ]business(?:es)?|minority[- ]owned (?:business(?:es)?)|non-?profits?|start-?ups?)$`, "i");
+  const ASKS_WHERE_FROM = /\bwhere (?:does|do|did) (?:your|the|this) (?:(?:business|small business|nonprofit|non-profit|start-?up|minority(?:-owned)?)\s+)*(?:information|info|answers?|guidance|advice|guides?) (?:come|came) from\b/i;
+  function sourcesRequest(text) {
+    const said = String(text || "").trim().replace(/[.?!]+$/, "");
+    if (!said || said.length > 110) return false;
+    return ASKS_SOURCES.test(said) || ASKS_WHERE_FROM.test(said);
+  }
+
+  return Object.freeze({ topic: usSmallBusinessTopic, californiaTopic, walkthroughAsk, walkTopic, sourcesRequest, isUsContext, isBusinessQuestion, language });
 });
