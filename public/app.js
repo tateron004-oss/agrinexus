@@ -60569,9 +60569,9 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
   // (all of them replace an earlier copy). A map and the music player are not drawn into this window and are left alone. Found testing production.
   // Answer-first, typed as spoken: a list of clinics, or a plain answer, fills the screen instead of being dumped into the window as raw fields (see kyroShowTypedResult).
   const answerOnScreen = kyroShowTypedResult(result, text, message);
-  if (answerOnScreen && result.plan?.walkthrough && kyroWalkthroughOpening) { message = kyroWalkthroughOpening; kyroWalkthroughOpening = ""; }
   // (the answer is on the screen, so the card window the renderer opened for the same result -- "Live Knowledge Research" behind a checklist, a raw card behind a web answer -- is closed: it would sit behind the answer and show when the answer is closed)
   if (answerOnScreen) { try { if (document.querySelector("#nexus-workspace")) closeNexusFunctionWindow({ command: "" }); } catch { /* nothing to close */ } }
+  if (answerOnScreen && result.plan?.walkthrough && kyroWalkthroughOpening) { message = kyroWalkthroughOpening; kyroWalkthroughOpening = ""; }
   // (and the reminders list is read out as the list, not as the status line the server sends with it)
   if (result.render?.presentation?.kind === "reminder") message = kyroReminderListLine(result.render.data) || message;
   try {
