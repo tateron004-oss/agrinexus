@@ -32,6 +32,7 @@ const { womensHealthAnswer } = require("../knowledge/womens-health.js");
 const { stateEntityIntent, stateEntityAnswer, stripWakeWord } = require("../knowledge/state-entities.js");
 const { sourcesPageRequest, sourcesPageAnswer } = require("../knowledge/sources-page.js");
 const { californiaTopic, californiaAnswer } = require("../knowledge/california-business.js");
+const { californiaWalkthrough, walkthroughAsk } = require("../knowledge/california-walkthroughs.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 // how a starter document is named when it is spoken back (the title in lower case, except where that reads wrongly)
 const SPOKEN_TEMPLATE_NAMES = Object.freeze({ "ai-use-policy": "AI use policy", "vendor-questions": "list of questions for a web host, designer or developer", "app-brief": "app brief" });
@@ -511,6 +512,12 @@ class OpenEndedPlanner {
     // Games): the checked California guide (see knowledge/california-business.js), asked before the state formation guide below, which answers "how do I register an LLC in California".
     const caTopic = !ownWorkspace && !techTopic ? californiaTopic(askText) : null;
     if (caTopic) {
+      // "Walk me through ...": the same process one step at a time, for the person to do themselves (the page shows each step with its official page and reads it out; see public/kyro-walkthrough.js). Kyro never applies for them.
+      const walk = walkthroughAsk(askText) ? californiaWalkthrough(caTopic) : null;
+      if (walk) {
+        const intro = `Okay, I will walk you through ${walk.title}, one step at a time. There are ${walk.steps.length} steps. I only guide you: you do each step yourself, and I never apply for you.`;
+        return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: intro, sourceRequired: false, knowledge: `california-business:walkthrough:${walk.id}`, sources: walk.sources, walkthrough: walk, guardrail: "professional-advice", planningAttempts: 0 });
+      }
       const guide = californiaAnswer(caTopic, { question: askText, lang: guideLanguage(askText) }); // (the language of the words asked: a question in Spanish is answered in Spanish)
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `california-business:${caTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
