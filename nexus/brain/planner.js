@@ -33,6 +33,7 @@ const { stateEntityIntent, stateEntityAnswer, stripWakeWord } = require("../know
 const { sourcesPageRequest, sourcesPageAnswer } = require("../knowledge/sources-page.js");
 const { californiaTopic, californiaAnswer } = require("../knowledge/california-business.js");
 const { californiaWalkthrough, walkthroughAsk } = require("../knowledge/california-walkthroughs.js");
+const { feedRequest, grantsAnswer, rulesAnswer } = require("../knowledge/live-feeds.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 // how a starter document is named when it is spoken back (the title in lower case, except where that reads wrongly)
 const SPOKEN_TEMPLATE_NAMES = Object.freeze({ "ai-use-policy": "AI use policy", "vendor-questions": "list of questions for a web host, designer or developer", "app-brief": "app brief" });
@@ -55,9 +56,9 @@ const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, maxRepairAttempts });
   }
 
   // The no-workspace answer for a business/nonprofit request, or null when the person has a workspace (or this cannot be told: then the request goes on as before and the executor's own check still applies).
@@ -520,6 +521,16 @@ class OpenEndedPlanner {
       }
       const guide = californiaAnswer(caTopic, { question: askText, lang: guideLanguage(askText) }); // (the language of the words asked: a question in Spanish is answered in Spanish)
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `california-business:${caTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
+    // "What federal grants are open right now for nonprofits?", "what is the latest SBA notice?": a real-time list from two free government feeds (Grants.gov and the Federal Register: see knowledge/live-feeds.js), with each listing's own page.
+    // It costs nothing per lookup, so it is not metered; if the feed does not answer, the request goes on to the checked guide below. Not for the spoken-only caller, which leaves live lookups to its own route.
+    const feed = this.liveFeeds && context?.deterministicOnly !== true && !ownWorkspace ? feedRequest(askText) : null;
+    if (feed) {
+      try {
+        const result = feed.kind === "grants" ? await this.liveFeeds.grants({ keyword: feed.keyword, audience: feed.audience }) : await this.liveFeeds.rules({ term: feed.term, agency: feed.agency });
+        const answer = feed.kind === "grants" ? grantsAnswer(result, feed) : rulesAnswer(result, feed);
+        return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: answer.text, sourceRequired: false, knowledge: `live-feeds:${feed.kind}`, sources: answer.sources, guardrail: "professional-advice", planningAttempts: 0 });
+      } catch { /* the feed did not answer: the checked guide below answers instead */ }
     }
     // "How do I register an LLC in California?", "what does a nonprofit cost to start in Texas?", "I want to set up my business in Ohio": the state's own fees and steps (see knowledge/state-entities.js). It is a question about forming an
     // entity, so a "my business" in it is not a request for the person's own workspace; a question that names a Kenyan or Nigerian agency, or has no state on a device outside the United States, is left to the guides below.
