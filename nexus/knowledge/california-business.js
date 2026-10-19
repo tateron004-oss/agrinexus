@@ -11,6 +11,7 @@
 // californiaAnswer(id, { question }) -> { topic, title, text, sources: [{ name, url }] } or null
 
 const business = require("./us-small-business.js");
+const spanishGuide = require("./california-business-es.js");
 const { californiaTopic } = require("../../public/kyro-business-topics.js");
 
 const CHECKED_ON = "19 October 2026";
@@ -76,23 +77,26 @@ const CLOSING = "This is general information, not legal, tax or financial advice
 // (a DBE question is answered with the certification topic, which covers the state's and the DBE programme)
 const ALIASES = Object.freeze({ "ca-dbe": "ca-certification" });
 
-function californiaAnswer(requested, { question = "" } = {}) {
+function californiaAnswer(requested, { question = "", lang = "en" } = {}) {
   const id = ALIASES[requested] || requested;
   const topic = TOPICS[id];
   if (!topic) return null;
   const sources = topic.sources.map(key => SOURCES[key]);
-  let body = topic.text;
+  // Spanish (a preliminary translation, see california-business-es.js): the same facts, sources and date, in Spanish words, with a plain note that it is a translation.
+  const spanish = lang === "es" && spanishGuide.TOPICS_ES[id];
+  let body = spanish ? spanish.text : topic.text;
   let all = sources;
   // the state's own offices first, then the United States guide's answer on the same subject (federal and private certifications, federal grants), with its sources
   if (topic.plus) {
-    const general = business.usSmallBusinessAnswer(topic.plus, { question });
+    const general = business.usSmallBusinessAnswer(topic.plus, { question, lang: spanish ? "es" : "en" });
     if (general) {
-      const generalText = String(general.text || "").replace(/\s*Sources:[\s\S]*$/, "").trim();
-      body = `${topic.text} Beyond California: ${generalText}`;
+      const generalText = String(general.text || "").replace(/\s*(?:Sources|Fuentes):[\s\S]*$/, "").trim();
+      body = `${body} ${spanish ? spanishGuide.BEYOND : "Beyond California:"} ${generalText}`;
       const seen = new Set(sources.map(source => source.url));
       all = [...sources, ...general.sources.filter(source => !seen.has(source.url))];
     }
   }
+  if (spanish) return { topic: id, title: spanish.title, text: `${body} ${spanishGuide.SOURCES_LABEL}: ${all.map(source => source.name).join("; ")} (revisado el ${spanishGuide.CHECKED_ON_ES}). ${spanishGuide.PRELIMINARY} ${spanishGuide.CLOSING}`, sources: all, language: "es" };
   return { topic: id, title: topic.title, text: `${body} Sources: ${all.map(source => source.name).join("; ")} (checked ${CHECKED_ON}). ${CLOSING}`, sources: all };
 }
 

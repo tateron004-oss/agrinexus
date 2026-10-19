@@ -163,8 +163,31 @@
     ["ca-grants", /\b(?:grants?|micro-?grants?|dream fund|funding)\b/i],
     ["ca-free-help", /(?=.*\b(?:free|no[- ]cost|low[- ]cost)\b)(?=.*\b(?:help|advice|counsel\w*|consult\w*|mentor\w*|training|assistance|support|classes|workshops?)\b)|\b(?:calosba|technical assistance centers?|sbdc|small business development centers?)\b/i]
   ];
+  // The same California topics asked in Spanish (accents taken off before matching, as the Spanish matchers above do).
+  const CA_CUE_ES = /\b(?:california|calif|cal ?eprocure|caleprocure|cdtfa|calosba|caltrans|cucp|la ?28|juegos olimpicos|olimpiadas?|ramp ?la|rampla)\b/;
+  const CA_MATCHERS_ES = [
+    ["ca-la28", /\b(?:la ?28|juegos olimpicos|olimpiadas?|ramp ?la|rampla)\b/],
+    ["ca-seller-permit", /\b(?:permiso de (?:vendedor|ventas|reventa)|seller'?s? permit|cdtfa)\b/],
+    ["ca-dbe", /\b(?:dbe|empresa en desventaja|cucp|caltrans)\b/],
+    ["ca-nonprofit-state", /(?=.*\b(?:sin fines de lucro|organizacion(?:es)? benefica|caridad|501\s?\(?c\)?\s?\(?3\)?)\b)(?=.*\b(?:procurador|procuraduria|attorney general|registro|exencion|exenta|exento|ftb|junta de impuestos|3500a?|ct-?1|recaudar|suspendid\w+)\b)/],
+    ["ca-state-vendor", /\bcal ?eprocure\b|\bcaleprocure\b|(?=.*\b(?:proveedor\w*|vender\w*|contratos?|licitar|licitacion\w*)\b)(?=.*\b(?:estado de california|gobierno de california|agencias? estatales?|gobierno estatal|contratos? estatales?)\b)/],
+    ["ca-certification", /\b(?:certific\w+|microempresa|micro negocio|dgs|osds)\b/],
+    ["ca-grants", /\b(?:subvenci\w+|becas?|microsubvenci\w+|dream fund|fondos|financiamiento)\b/],
+    ["ca-free-help", /(?=.*\b(?:gratis|gratuit\w+|sin costo|bajo costo)\b)(?=.*\b(?:ayuda|asesoria|consultoria|mentoria|capacitacion|asistencia|apoyo|clases|talleres)\b)|\b(?:calosba|centros? de asistencia tecnica|sbdc)\b/]
+  ];
+  function californiaTopicSpanish(text) {
+    const value = fold(String(text || "").replace(/\s+/g, " ").trim());
+    if (!value || value.length > 300 || !CA_CUE_ES.test(value)) return null;
+    if (RECORD_OR_DRAFT_ES.test(value) || !(ASKS_ES.test(value) || /\?/.test(String(text || "")))) return null;
+    const aboutBusiness = /\b(?:negocios?|empresas?|emprend\w+|sin fines de lucro|proveedor\w*|duen[oa]s?|autonom\w+)\b/.test(value);
+    for (const [topic, pattern] of CA_MATCHERS_ES) {
+      if (pattern.test(value) && (aboutBusiness || ["ca-la28", "ca-seller-permit", "ca-dbe", "ca-state-vendor", "ca-nonprofit-state"].includes(topic))) return topic;
+    }
+    return null;
+  }
   function californiaTopic(text) {
     const value = String(text || "").replace(/\s+/g, " ").trim();
+    if (value && language(value) === "es") return californiaTopicSpanish(value);
     if (!value || value.length > 300 || !CA_CUE.test(value)) return null;
     if (RECORD_OR_DRAFT.test(value) || !(ASKS.test(value) || /\?/.test(value))) return null;
     const aboutBusiness = /\b(?:business(?:es)?|start-?ups?|non-?profits?|entrepreneurs?|owners?|compan(?:y|ies)|self[- ]employed|vendors?|suppliers?)\b/i.test(value);
