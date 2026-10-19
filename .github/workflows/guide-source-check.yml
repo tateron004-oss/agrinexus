@@ -1,0 +1,40 @@
+name: Guide source check
+
+# Once a week (and on demand): goes back to every official page the checked guides cite and reports which ones disappeared, moved or changed a long way since the last snapshot, so a "checked on" date is not left over a page that
+# has since changed. No model and no paid search: one web request per page. The job fails only when a page that used to work is now broken. See scripts/check-guide-sources.js.
+# After reading the changed pages and updating the answers, run `node scripts/check-guide-sources.js --update` (or download the "source-snapshot" file this job attaches) and commit nexus/knowledge/source-snapshot.json.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 15 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guide-source-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Pages the guides cite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check the checker
+        run: node --test test/nexus/guide-source-check.test.js
+      - name: Check the pages
+        run: node scripts/check-guide-sources.js --report source-report.md --candidate source-snapshot.json
+      - name: Keep the report and the new snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guide-source-check
+          path: |
+            source-report.md
+            source-snapshot.json
+          if-no-files-found: ignore

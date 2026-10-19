@@ -1,0 +1,5022 @@
+{
+ "takenAt": "2026-10-19T08:38:30.297Z",
+ "count": 500,
+ "pages": {
+  "https://988lifeline.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e6155fd44bf13f51",
+   "bytes": 3533,
+   "checkedAt": "2026-10-19T08:35:33.092Z",
+   "guides": [
+    "us-community-support",
+    "womens-health"
+   ]
+  },
+  "https://acl.gov/programs/protection-and-advocacy-systems/what-if-i-suspect-abuse-neglect-or-exploitation": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f4867603caed2221",
+   "bytes": 13231,
+   "checkedAt": "2026-10-19T08:35:33.586Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://africa.unwomen.org/en/stories/news/2024/10/kenyas-national-toll-free-helpline-1195-a-lifeline-for-gender-based-violence-survivors": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "deb602a305736026",
+   "bytes": 13511,
+   "checkedAt": "2026-10-19T08:35:33.223Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://ag.hawaii.gov/tax/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6d882921dfe429c6",
+   "bytes": 3165,
+   "checkedAt": "2026-10-19T08:35:33.444Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://ag.louisiana.gov/Charities": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e5efc39b1add7f5f",
+   "bytes": 3443,
+   "checkedAt": "2026-10-19T08:35:34.017Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://ago.vermont.gov/attorney-generals-office-divisions-and-unit/charities-and-paid-fundraisers": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "ae3c59ab8836c3ac",
+   "bytes": 5815,
+   "checkedAt": "2026-10-19T08:35:34.292Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://apps.dfi.wi.gov/apps/corpformation/directions.aspx?type=12": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:33.899Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://arizonabusinesscenter.azcc.gov": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:34.732Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://asbtdc.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "321d5addabf63f93",
+   "bytes": 5886,
+   "checkedAt": "2026-10-19T08:35:34.376Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://azcc.gov/corporations/home": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "53a71512821b706a",
+   "bytes": 4345,
+   "checkedAt": "2026-10-19T08:35:34.759Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://azcc.gov/docs/default-source/corps-files/instructions/l010i-instructions-articles-of-organization.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:34.655Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://azdor.gov/transaction-privilege-tax/tpt-license/applying-tpt-license": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "18961c561a873b83",
+   "bytes": 9094,
+   "checkedAt": "2026-10-19T08:35:34.957Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://azsos.gov/business/other-services/veterans-charities-organizations": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:35.000Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://benefitscheckup.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:35.017Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://biz.sosmt.gov/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:35.210Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://bizfileonline.sos.ca.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 82,
+   "checkedAt": "2026-10-19T08:35:35.209Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://bizfilings.vermont.gov/homepage": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:35.602Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://bizhub.nv.gov": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:35.496Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://bizhub.nv.gov/cms-webhook-bff/uploads/bizhub/Annual_List_and_State_Business_License_Corps_Final_2aebeed395.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:35.456Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://bizhub.nv.gov/cms-webhook-bff/uploads/bizhub/LLC_Formation_V4_1_9e5c396592.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:35.622Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://bizhub.nv.gov/cms-webhook-bff/uploads/bizhub/Nonprofit_Corp_Arts_V4_21e224f540.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:35.712Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://boss.dc.gov": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 26,
+   "checkedAt": "2026-10-19T08:35:36.030Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://bpd.cdn.sos.ca.gov/bizfile/bizfile-brochure.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:35.901Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://brs.go.ke/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "adc92ed5df90c09f",
+   "bytes": 11724,
+   "checkedAt": "2026-10-19T08:35:39.013Z",
+   "guides": [
+    "africa-small-business"
+   ]
+  },
+  "https://bsd.sos.mo.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "60671918d0e1a0cd",
+   "bytes": 1835,
+   "checkedAt": "2026-10-19T08:35:36.680Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://business.ct.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "41b5a161dd859679",
+   "bytes": 6178,
+   "checkedAt": "2026-10-19T08:35:37.742Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://business.ct.gov/knowledge-base/articles/domestic-limited-liability-companies-forms-and-fees": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6132205c82941d73",
+   "bytes": 4747,
+   "checkedAt": "2026-10-19T08:35:37.589Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://business.ct.gov/knowledge-base/articles/domestic-nonstock-corporations-forms-and-fees": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4135215c09941d13",
+   "bytes": 4577,
+   "checkedAt": "2026-10-19T08:35:38.023Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://business.ct.gov/knowledge-base/articles/domestic-stock-corporations-forms-and-fees": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6170a65c0a941d73",
+   "bytes": 4853,
+   "checkedAt": "2026-10-19T08:35:38.321Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://business.ct.gov/start-your-business/register-your-business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "49b30255a7168b73",
+   "bytes": 2803,
+   "checkedAt": "2026-10-19T08:35:38.471Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://business.idaho.gov/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "dc6385e526b9ad67",
+   "bytes": 2177,
+   "checkedAt": "2026-10-19T08:35:39.612Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://business.nj.gov/pages/register-your-business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "cc53cee326c98aea",
+   "bytes": 6639,
+   "checkedAt": "2026-10-19T08:35:39.153Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://business.sos.ri.gov/corp/loginsystem/login_form.asp": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:39.791Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://business4.wv.gov/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "05c931323d962a5d",
+   "bytes": 5444,
+   "checkedAt": "2026-10-19T08:35:40.343Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://businessexpress.maryland.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b9a7c7837388f695",
+   "bytes": 2140,
+   "checkedAt": "2026-10-19T08:35:40.347Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://businessfilings.sc.gov/businessfiling": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "420ebbd55c4e2853",
+   "bytes": 4250,
+   "checkedAt": "2026-10-19T08:35:40.501Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://businessfilings.sc.gov/BusinessFiling/Entity/DownloadForm?formName=F0001&entityType=1&filingType=Articles+of+Incorporation": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:40.868Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://businessfilings.sc.gov/BusinessFiling/Home/DownloadForms?pdfCategoryId=1&category=Starting+a+Business+in+South+Carolina": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "47c1f8cbd35d13b7",
+   "bytes": 7502,
+   "checkedAt": "2026-10-19T08:35:41.249Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://businessregistration.utah.gov/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:40.725Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://calosba.ca.gov/centers-search/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ad03d73962696a18",
+   "bytes": 47956,
+   "checkedAt": "2026-10-19T08:35:41.778Z",
+   "guides": [
+    "california-business"
+   ]
+  },
+  "https://calosba.ca.gov/funding-grants-incentives/california-dream-fund-program/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ad2bd739e2eb6218",
+   "bytes": 52819,
+   "checkedAt": "2026-10-19T08:35:42.080Z",
+   "guides": [
+    "california-business"
+   ]
+  },
+  "https://calosba.ca.gov/local-direct-assistance/small-business-centers/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "ac03d7396eeb629c",
+   "bytes": 47402,
+   "checkedAt": "2026-10-19T08:35:42.658Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://cca.hawaii.gov/breg/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "855be742979a7588",
+   "bytes": 9396,
+   "checkedAt": "2026-10-19T08:35:42.113Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://cca.hawaii.gov/breg/registration/dllc/fees/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "946be310732f518a",
+   "bytes": 5370,
+   "checkedAt": "2026-10-19T08:35:42.288Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://cca.hawaii.gov/breg/registration/dnc/fees/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9423e162732f51a0",
+   "bytes": 5437,
+   "checkedAt": "2026-10-19T08:35:42.367Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://cca.hawaii.gov/breg/registration/dpc/fees/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "94236402f32a51a0",
+   "bytes": 6090,
+   "checkedAt": "2026-10-19T08:35:42.482Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://cdtfa.ca.gov/formspubs/pub107/applying-for-a-sellers-permit.htm": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d6e37e6af99e1c11",
+   "bytes": 6450,
+   "checkedAt": "2026-10-19T08:35:42.716Z",
+   "guides": [
+    "california-business"
+   ]
+  },
+  "https://charitable.ohioago.gov/Charity-Registration/Starting-a-Charity-in-Ohio": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "950f0aec20e0ce2b",
+   "bytes": 7614,
+   "checkedAt": "2026-10-19T08:35:43.211Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://childhelphotline.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "70eca05fa3455861",
+   "bytes": 9582,
+   "checkedAt": "2026-10-19T08:35:42.953Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://cis.scc.virginia.gov/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "d12cf4e1c1517a39",
+   "bytes": 248,
+   "checkedAt": "2026-10-19T08:35:43.751Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://codes.ohio.gov/ohio-revised-code/section-111.16": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d777bd9b1049681a",
+   "bytes": 12865,
+   "checkedAt": "2026-10-19T08:35:43.510Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://commerce.utah.gov/corporations/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "79c525ac911cdc66",
+   "bytes": 2271,
+   "checkedAt": "2026-10-19T08:35:43.475Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://commerce.utah.gov/dcp/for-businesses/fundraisers/frequently-asked-questions/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e9ab45acfb029b1d",
+   "bytes": 9802,
+   "checkedAt": "2026-10-19T08:35:43.655Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://commerce.utah.gov/wp-content/uploads/2023/04/currentfees.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:43.840Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://comptroller.texas.gov/taxes/permit/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d3dcbd9c254978b5",
+   "bytes": 10217,
+   "checkedAt": "2026-10-19T08:35:44.016Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/how-avoid-scholarship-and-financial-aid-scams": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:44.039Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://consumer.sd.gov/fastfacts/charity.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "322cdcff5abca50a",
+   "bytes": 5604,
+   "checkedAt": "2026-10-19T08:35:44.304Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://corp.delaware.gov/document-upload-service-information/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b9c50b79d047c344",
+   "bytes": 3865,
+   "checkedAt": "2026-10-19T08:35:44.695Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://corp.delaware.gov/howtoform/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "99871daad0bda2d8",
+   "bytes": 8817,
+   "checkedAt": "2026-10-19T08:35:44.713Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://corp.sec.state.ma.us/corpweb/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 82,
+   "checkedAt": "2026-10-19T08:35:44.526Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://corp.sos.ms.gov/corp/portal/c/page/login/portal.aspx": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:44.792Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://corpfiles.delaware.gov/Fee_Schedule/AugustFee2026.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:45.270Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://csrc.nist.gov/pubs/sp/1300/final": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "27fe8f0f110f3867",
+   "bytes": 4236,
+   "checkedAt": "2026-10-19T08:35:46.458Z",
+   "guides": [
+    "small-business-technology"
+   ]
+  },
+  "https://ctsbdc.uconn.edu/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "62b4c18390878e8b",
+   "bytes": 11376,
+   "checkedAt": "2026-10-19T08:35:46.770Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dat.maryland.gov/businesses/Pages/default.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "987f92f9fcf7fe79",
+   "bytes": 6879,
+   "checkedAt": "2026-10-19T08:35:45.784Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dat.maryland.gov/Documents/Accessible%20Documents/Charter%20-%20Create%20or%20Start%20a%20Business/Articles%20of%20Incorporation%20for%20Nonstock%20Corporation_0326-A.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:46.102Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dat.maryland.gov/Documents/Accessible%20Documents/Charter%20-%20Create%20or%20Start%20a%20Business/Articles%20of%20Incorporation%20for%20Stock%20Corporation_0326-A.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:46.438Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dat.maryland.gov/Documents/Accessible%20Documents/Charter%20-%20Create%20or%20Start%20a%20Business/Articles%20of%20Organization%20for%20a%20Limited%20Liability%20Company_0526-A.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:46.953Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dceo.illinois.gov/smallbizassistance/beginhere/sbdc.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f200f5c6c11f42d2",
+   "bytes": 3186,
+   "checkedAt": "2026-10-19T08:35:46.703Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://department.va.gov/homeless/nationalcallcenter/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "bd477b1da121b0f3",
+   "bytes": 17022,
+   "checkedAt": "2026-10-19T08:35:47.297Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://dfi.wi.gov/Pages/BusinessServices/BusinessEntities/Fees.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "bf8da8e9ca83a0a4",
+   "bytes": 12076,
+   "checkedAt": "2026-10-19T08:35:47.698Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dfi.wi.gov/Pages/BusinessServices/BusinessEntities/FileOnline.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1785e0a46e03f035",
+   "bytes": 13381,
+   "checkedAt": "2026-10-19T08:35:47.942Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dfi.wi.gov/Pages/BusinessServices/CharitableProfessionalOrganizations/GeneralInformation.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "978d88a5e811b08c",
+   "bytes": 9360,
+   "checkedAt": "2026-10-19T08:35:48.425Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dlcp.dc.gov/node/1614386": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "4bf9b7d6122d7804",
+   "bytes": 6134,
+   "checkedAt": "2026-10-19T08:35:48.057Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dlcp.dc.gov/node/1618416": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "4bf955d1323d387e",
+   "bytes": 3863,
+   "checkedAt": "2026-10-19T08:35:48.174Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dlcp.dc.gov/node/1621906": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "50dfdf99b14db416",
+   "bytes": 9177,
+   "checkedAt": "2026-10-19T08:35:48.272Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dlcp.dc.gov/node/1621921": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "0f7c2f9a13369068",
+   "bytes": 5309,
+   "checkedAt": "2026-10-19T08:35:48.417Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dlcp.dc.gov/node/1621926": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "75df7fd2c3be7d50",
+   "bytes": 5554,
+   "checkedAt": "2026-10-19T08:35:48.514Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dlcp.dc.gov/service/small-business-resource-center-sbrc-0": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "3b63865e2ab63872",
+   "bytes": 6505,
+   "checkedAt": "2026-10-19T08:35:48.625Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dor.georgia.gov/tax-exempt-nonprofit-organizations": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "459a79fc35b0a81e",
+   "bytes": 5291,
+   "checkedAt": "2026-10-19T08:35:49.369Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dor.georgia.gov/taxes/register-new-business-georgia": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "05b0f1f538f4881e",
+   "bytes": 7626,
+   "checkedAt": "2026-10-19T08:35:49.044Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dor.mo.gov/register-business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "868cf10c45616cc9",
+   "bytes": 7365,
+   "checkedAt": "2026-10-19T08:35:49.112Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dor.sc.gov/businesses/apply-business-tax-account": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a44453ff79fd9ea3",
+   "bytes": 9064,
+   "checkedAt": "2026-10-19T08:35:49.432Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dor.sd.gov/online-services/tax-license-application/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "a2cdc7e5ef960399",
+   "bytes": 3087,
+   "checkedAt": "2026-10-19T08:36:09.158Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dor.wa.gov/open-business/apply-business-license": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "848e228f193891ff",
+   "bytes": 5788,
+   "checkedAt": "2026-10-19T08:35:50.215Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dos.fl.gov/sunbiz/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1f79038e5c0cd257",
+   "bytes": 5021,
+   "checkedAt": "2026-10-19T08:35:49.771Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dos.fl.gov/sunbiz/forms/fees/corporate-fees/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "7e1b47de5cacc653",
+   "bytes": 3911,
+   "checkedAt": "2026-10-19T08:35:50.064Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dos.fl.gov/sunbiz/forms/fees/llc-fees/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "7d19c79e5cacc571",
+   "bytes": 3372,
+   "checkedAt": "2026-10-19T08:35:50.328Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dos.fl.gov/sunbiz/start-business/efile/fl-llc/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2779c35b717cf851",
+   "bytes": 7186,
+   "checkedAt": "2026-10-19T08:35:50.473Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dos.ny.gov/fee-schedules": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "7067a3a054c48635",
+   "bytes": 8380,
+   "checkedAt": "2026-10-19T08:35:50.646Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dos.ny.gov/forming-limited-liability-company-new-york": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f3705a1b0e2d673c",
+   "bytes": 14813,
+   "checkedAt": "2026-10-19T08:35:50.812Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dot.ca.gov/programs/civil-rights/dbe-certification-information": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "213e0962fd4caa53",
+   "bytes": 3626,
+   "checkedAt": "2026-10-19T08:35:51.022Z",
+   "guides": [
+    "california-business"
+   ]
+  },
+  "https://dot.ca.gov/programs/civil-rights/dbe-reevaluation": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "65fc6e84d7632f87",
+   "bytes": 7803,
+   "checkedAt": "2026-10-19T08:35:51.195Z",
+   "guides": [
+    "california-business"
+   ]
+  },
+  "https://ecorp.sos.ga.gov/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:51.358Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://eldercare.acl.gov/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "94e03c3fb183e7d7",
+   "bytes": 1949,
+   "checkedAt": "2026-10-19T08:35:52.149Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://enterprise.sos.nm.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:51.629Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://excise-tax-div.wyo.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "88d40ad891a00d64",
+   "bytes": 2243,
+   "checkedAt": "2026-10-19T08:36:12.025Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://file.dos.pa.gov": {
+   "state": "broken",
+   "status": 999,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:52.532Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://findahealthcenter.hrsa.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:52.905Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://firststop.sos.nd.gov": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:53.327Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://floridarevenue.com/taxes/businesses/Pages/nonprofit.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a6f403846b308df0",
+   "bytes": 6292,
+   "checkedAt": "2026-10-19T08:35:54.136Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://floridarevenue.com/taxes/eservices/Pages/registration.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1b927c5c049f85ae",
+   "bytes": 12100,
+   "checkedAt": "2026-10-19T08:35:54.481Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://floridasbdc.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "372655dddd1113a5",
+   "bytes": 4713,
+   "checkedAt": "2026-10-19T08:35:54.883Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://forms.in.gov/Download.aspx?id=16989": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:55.176Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://forms.in.gov/Download.aspx?id=16996": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:55.676Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://forms.in.gov/Download.aspx?id=16998": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:35:55.964Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://gc.nh.gov/rsa/html/XXVII/292/292-5.htm": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "bfcbafd42d4eb30b",
+   "bytes": 702,
+   "checkedAt": "2026-10-19T08:35:56.385Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://gc.nh.gov/rsa/html/XXVII/293-A/293-A-122.htm": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "77892994edcfaf61",
+   "bytes": 3182,
+   "checkedAt": "2026-10-19T08:35:56.605Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://gc.nh.gov/rsa/html/XXVIII/304-C/304-C-191.htm": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "723d3cfa44787445",
+   "bytes": 3323,
+   "checkedAt": "2026-10-19T08:35:56.824Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://geauxbiz.sos.la.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ccc126975969da96",
+   "bytes": 6220,
+   "checkedAt": "2026-10-19T08:35:58.028Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://georgia.gov/register-corporation": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e64d9d8e59970f12",
+   "bytes": 8092,
+   "checkedAt": "2026-10-19T08:35:58.587Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://georgia.gov/register-llc": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "465758ca58978b2e",
+   "bytes": 7222,
+   "checkedAt": "2026-10-19T08:35:58.818Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://georgiasbdc.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "bbd18846870f502e",
+   "bytes": 4290,
+   "checkedAt": "2026-10-19T08:35:59.096Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://gov.texas.gov/business/page/small-business-portal": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9a11e2c298bd5a7f",
+   "bytes": 3743,
+   "checkedAt": "2026-10-19T08:36:01.496Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://hbe.ehawaii.gov/BizEx/home.eb": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "68a2960d9665e00b",
+   "bytes": 249,
+   "checkedAt": "2026-10-19T08:36:01.795Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://humantraffickinghotline.org/en/get-help": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a32287d5387fe605",
+   "bytes": 5522,
+   "checkedAt": "2026-10-19T08:36:02.111Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://idahosbdc.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "653acede1dd6af63",
+   "bytes": 5572,
+   "checkedAt": "2026-10-19T08:36:03.100Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://inbiz.in.gov/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "a2b62063b2ee4621",
+   "bytes": 4526,
+   "checkedAt": "2026-10-19T08:36:03.933Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://iowasbdc.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "3ab5c68538bf033a",
+   "bytes": 1461710,
+   "checkedAt": "2026-10-19T08:36:05.072Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://isbdc.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fe9e48d6affacdc4",
+   "bytes": 4501,
+   "checkedAt": "2026-10-19T08:36:05.888Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://kentuckysbdc.com/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "7416d5cbb181653e",
+   "bytes": 8436,
+   "checkedAt": "2026-10-19T08:36:07.332Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://ksbiz.kansas.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a1130b66d2d0a975",
+   "bytes": 2368,
+   "checkedAt": "2026-10-19T08:36:08.042Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://la28.org/content/dam/latwentyeight/downloads/LA28ProcurementPlan2026.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:08.561Z",
+   "guides": [
+    "california-business"
+   ]
+  },
+  "https://la28.org/en/newsroom/la28-details-procurement-strategy-to-boost-regional-economy.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a1dbd386e88c77ff",
+   "bytes": 9042,
+   "checkedAt": "2026-10-19T08:36:08.787Z",
+   "guides": [
+    "california-business"
+   ]
+  },
+  "https://la28.supplierone.co/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 20,
+   "checkedAt": "2026-10-19T08:36:09.370Z",
+   "guides": [
+    "california-business"
+   ]
+  },
+  "https://labor.alaska.gov/estax/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5c1423b860fdf4ee",
+   "bytes": 3382,
+   "checkedAt": "2026-10-19T08:36:09.679Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://law.alaska.gov/department/civil/consumer/charityreg.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "abb2994affc74a24",
+   "bytes": 16575,
+   "checkedAt": "2026-10-19T08:36:09.686Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/alabama": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d4e4af6fa62e0a14",
+   "bytes": 3333,
+   "checkedAt": "2026-10-19T08:36:10.082Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/oklahoma": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "94e4ef6a6e2c823e",
+   "bytes": 2571,
+   "checkedAt": "2026-10-19T08:36:10.088Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/philadelphia": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b4e4fe25369ee36e",
+   "bytes": 2067,
+   "checkedAt": "2026-10-19T08:36:10.240Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/portland": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "86e6ee7f3caec39e",
+   "bytes": 3065,
+   "checkedAt": "2026-10-19T08:36:10.251Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/rhode-island": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "94e6766dfe2e226c",
+   "bytes": 3084,
+   "checkedAt": "2026-10-19T08:36:10.398Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://louisianasbdc.org/locations/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e6352784cdc4a3af",
+   "bytes": 6348,
+   "checkedAt": "2026-10-19T08:36:10.669Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://marylandtaxes.gov/forms/current_forms/CRA.pdf": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:11.267Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://mblsportal.sos.mn.gov/": {
+   "state": "broken",
+   "status": 0,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:11.609Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://mibusinessregistry.lara.state.mi.us/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:11.554Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://mybiz.colorado.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:11.792Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://mytax.dc.gov": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 85,
+   "checkedAt": "2026-10-19T08:36:12.331Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://nmdoj.gov/get-help/charities/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:12.018Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://nmonesource.com/nmos/nmsa/en/4400/1/document.do": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:12.828Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://nmsdc.org/news/statement-from-nmsdc-ceo-and-president-ying-mcguire-regarding-the-mbda-termination-letters": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "67fa849364dba12c",
+   "bytes": 11003,
+   "checkedAt": "2026-10-19T08:36:14.615Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://oag.ca.gov/charities/initial-reg": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c4b31b1854bd661a",
+   "bytes": 24325,
+   "checkedAt": "2026-10-19T08:36:12.974Z",
+   "guides": [
+    "california-business",
+    "state-entities"
+   ]
+  },
+  "https://oedit.colorado.gov/colorado-small-business-development-center-network": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6b3af38f40eaa103",
+   "bytes": 3303,
+   "checkedAt": "2026-10-19T08:36:13.262Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://oktap.tax.ok.gov/OkTAP/Web/_/": {
+   "state": "broken",
+   "status": 0,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:18.817Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://onestop.delaware.gov": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c0e0d4b7e98d8953",
+   "bytes": 3727,
+   "checkedAt": "2026-10-19T08:36:14.053Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://onestop.ky.gov/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "5eafe9ab6de3422d",
+   "bytes": 1452,
+   "checkedAt": "2026-10-19T08:36:16.821Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://opa-fpclinicdb.hhs.gov/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:15.969Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://opa.hhs.gov/grant-programs/title-x-service-grants": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b4708c5f80c143de",
+   "bytes": 5490,
+   "checkedAt": "2026-10-19T08:36:16.781Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://ovc.ojp.gov/program/stop-elder-fraud/providing-help-restoring-hope": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b360fe1661cbf2d0",
+   "bytes": 4717,
+   "checkedAt": "2026-10-19T08:36:17.186Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://portal.ct.gov/dcp/charities/general-information-on-the-connecticut-solicitation-of-charitable-funds-act": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "95e1c03167838a71",
+   "bytes": 17747,
+   "checkedAt": "2026-10-19T08:36:17.751Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://portal.ct.gov/drs/sales-tax/tax-information": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fa89c8683f81c63d",
+   "bytes": 10179,
+   "checkedAt": "2026-10-19T08:36:17.770Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://quickstart.sos.nh.gov/online/Account/SFALogin": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:18.124Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://reportfraud.ftc.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:18.071Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://revenue.delaware.gov/business-tax-forms/fundraisers-and-charitable-solicitations/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b5cd719951916415",
+   "bytes": 3316,
+   "checkedAt": "2026-10-19T08:36:18.699Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://revenue.iowa.gov/permits-licensing/business-permit-registration": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "aab4c8d707f58c1b",
+   "bytes": 14284,
+   "checkedAt": "2026-10-19T08:36:18.875Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://revenue.ky.gov/Business/Pages/default.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "8f1482d8857f58d9",
+   "bytes": 3788,
+   "checkedAt": "2026-10-19T08:36:19.994Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://revenue.louisiana.gov/businesses/general-resources/business-registration/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6e309067e8422310",
+   "bytes": 8379,
+   "checkedAt": "2026-10-19T08:36:19.757Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://revenue.mt.gov/taxes/withholding-tax/accounts": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6415e3c9e5d89c40",
+   "bytes": 5242,
+   "checkedAt": "2026-10-19T08:36:19.435Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sam.gov/content/duns-uei": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "b4e38f017fc22dae",
+   "bytes": 4844,
+   "checkedAt": "2026-10-19T08:36:19.980Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://sam.gov/entity-registration": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b4e38f017fc22dae",
+   "bytes": 4844,
+   "checkedAt": "2026-10-19T08:36:19.917Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://sbdc.mt.gov": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "5a07079892673d20",
+   "bytes": 16156,
+   "checkedAt": "2026-10-19T08:36:21.326Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sbsd.virginia.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6fa9e6e172d5d17b",
+   "bytes": 6215,
+   "checkedAt": "2026-10-19T08:36:21.900Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://scsbdc.com": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "134d73d37945c703",
+   "bytes": 3960,
+   "checkedAt": "2026-10-19T08:36:20.785Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sdsos.gov": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "868ba6ecf7ff1991",
+   "bytes": 6948,
+   "checkedAt": "2026-10-19T08:36:21.285Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sdsos.gov/general-information/filing-fees.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "58ef35b4791bdf47",
+   "bytes": 17377,
+   "checkedAt": "2026-10-19T08:36:21.545Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://secure.sos.state.or.us/cbrmanager/index.action": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c22fb880a6d72698",
+   "bytes": 2741,
+   "checkedAt": "2026-10-19T08:36:21.759Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://smedan.gov.ng/about-us/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "df2c065a4bf105dc",
+   "bytes": 6051,
+   "checkedAt": "2026-10-19T08:36:22.415Z",
+   "guides": [
+    "africa-small-business"
+   ]
+  },
+  "https://smedan.gov.ng/onestopshop/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "53305d8517f41aa6",
+   "bytes": 7752,
+   "checkedAt": "2026-10-19T08:36:22.768Z",
+   "guides": [
+    "africa-small-business"
+   ]
+  },
+  "https://smedan.gov.ng/smedan-cac-free-registration-for-msmes/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6cb4ced887eb7da0",
+   "bytes": 2064,
+   "checkedAt": "2026-10-19T08:36:22.465Z",
+   "guides": [
+    "africa-small-business"
+   ]
+  },
+  "https://sos.idaho.gov/business-forms/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "27e1198a71fcd412",
+   "bytes": 14287,
+   "checkedAt": "2026-10-19T08:36:22.824Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.idaho.gov/business-services/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "8a2b0396d816de59",
+   "bytes": 8812,
+   "checkedAt": "2026-10-19T08:36:22.904Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.iowa.gov/businesses/business-entity-forms-and-fees": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "28e6b8576cb4aaa9",
+   "bytes": 12452,
+   "checkedAt": "2026-10-19T08:36:23.700Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.ks.gov/forms/business_services/AI.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:23.331Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.ks.gov/forms/business_services/LAO.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:23.313Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.maryland.gov/Charity/pages/registering-charity.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b45790aef85f269f",
+   "bytes": 9439,
+   "checkedAt": "2026-10-19T08:36:24.860Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.ms.gov/sites/default/files/fees_and_forms/Services%20%26%20Fees%20Document.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:24.114Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.nd.gov/business/business-services/business-structures/corporations/general-business-corporation/general-business-corporation-fees.html": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "2aa421cc3d87c872",
+   "bytes": 23516,
+   "checkedAt": "2026-10-19T08:36:25.149Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.nebraska.gov/business-services/forms-and-fee-information": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "bd7c006e9d865269",
+   "bytes": 17975,
+   "checkedAt": "2026-10-19T08:36:24.614Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.nebraska.gov/business-services/new-business-information": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "cc793ed7611f0d7f",
+   "bytes": 13838,
+   "checkedAt": "2026-10-19T08:36:24.889Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.nebraska.gov/licensing/information-charitable-solicitors": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "48c559cc4f3b85fd",
+   "bytes": 3300,
+   "checkedAt": "2026-10-19T08:36:25.128Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.oregon.gov/business": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "12b7e8cc7824a321",
+   "bytes": 4004,
+   "checkedAt": "2026-10-19T08:36:27.069Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.oregon.gov/business/Documents/business-registry-forms/br-fee-schedule.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:25.907Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.oregon.gov/business/documents/business-registry-forms/llc-articles.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:26.182Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.oregon.gov/business/documents/business-registry-forms/np-articles.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:26.984Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.ri.gov/divisions/business-services": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fc4af301ab5adf4f",
+   "bytes": 4425,
+   "checkedAt": "2026-10-19T08:36:27.142Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.ri.gov/divisions/business-services/non-profit/start-a-non-profit-corporation": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "7d6309f133b71e6f",
+   "bytes": 4616,
+   "checkedAt": "2026-10-19T08:36:27.328Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.ri.gov/divisions/business-services/ri-business/start-your-rhode-island-business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fd6a0351bd9dd643",
+   "bytes": 7185,
+   "checkedAt": "2026-10-19T08:36:27.482Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.sc.gov/online-filings/business-entities": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "83e4bbc5afd41e73",
+   "bytes": 3291,
+   "checkedAt": "2026-10-19T08:36:27.432Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.sc.gov/online-filings/charities-pfrs-and-raffles/charities": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "3b25f975aace1953",
+   "bytes": 4343,
+   "checkedAt": "2026-10-19T08:36:27.514Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.tn.gov/businesses": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ab855a833f89bc27",
+   "bytes": 2393,
+   "checkedAt": "2026-10-19T08:36:27.882Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.tn.gov/businesses/services/business-forms-fees": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "742b43a0cf3c1149",
+   "bytes": 25460,
+   "checkedAt": "2026-10-19T08:36:27.974Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.tn.gov/charities/faqs": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9daa8b8044cc9e35",
+   "bytes": 22394,
+   "checkedAt": "2026-10-19T08:36:27.940Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.vermont.gov/business-services/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4ae7d24868f01954",
+   "bytes": 1132,
+   "checkedAt": "2026-10-19T08:36:29.529Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.vermont.gov/business-services/fees-statutes": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9082138c47c45bea",
+   "bytes": 27159,
+   "checkedAt": "2026-10-19T08:36:28.474Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.wv.gov/business/charities/charitable-organizations": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "840b5d948c8b2422",
+   "bytes": 9127,
+   "checkedAt": "2026-10-19T08:36:28.397Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.wv.gov/register-new-wv-business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e31d51868c8b0220",
+   "bytes": 8939,
+   "checkedAt": "2026-10-19T08:36:28.583Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.wv.gov/start-WV-business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c41d5494c8870428",
+   "bytes": 7821,
+   "checkedAt": "2026-10-19T08:36:28.648Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.wyo.gov/business/docs/businessfees.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:29.098Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sos.wyo.gov/Business/StartABusiness.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b0125bf5d63c60fe",
+   "bytes": 3019,
+   "checkedAt": "2026-10-19T08:36:29.099Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sosbiz.idaho.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:29.547Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sosenterprise.sd.gov/BusinessServices/Business/RegistrationInstr.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6ee5906ed0732172",
+   "bytes": 1540,
+   "checkedAt": "2026-10-19T08:36:29.790Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sosmt.gov/business/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:29.801Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sosmt.gov/business/fees/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:29.808Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://sosnc.gov/fees/by_title/_Business_Registration/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a607c175099e714d",
+   "bytes": 9962,
+   "checkedAt": "2026-10-19T08:36:30.582Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://startup.utah.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "698d056ac89cd957",
+   "bytes": 3756,
+   "checkedAt": "2026-10-19T08:36:30.100Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://static.sos.la.gov/shared/fee_changes_2026.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:30.367Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://studentaid.ed.gov/sa/types/scams": {
+   "state": "broken",
+   "status": 0,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:30.266Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://tax.hawaii.gov/geninfo/get/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "e0d7905357be7ffd",
+   "bytes": 6778,
+   "checkedAt": "2026-10-19T08:36:32.569Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://tax.illinois.gov/businesses/registration.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "70f2c78a15622600",
+   "bytes": 6510,
+   "checkedAt": "2026-10-19T08:36:31.277Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://tax.illinois.gov/forms/reg/stax-1.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2298ce64607faa84",
+   "bytes": 2311,
+   "checkedAt": "2026-10-19T08:36:30.928Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://tax.nv.gov/Registration": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "04d12b97008ed8c9",
+   "bytes": 3115,
+   "checkedAt": "2026-10-19T08:36:33.235Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://tax.utah.gov/business/create-manage/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "eac110effd8c594e",
+   "bytes": 1812,
+   "checkedAt": "2026-10-19T08:36:32.130Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://tax.vermont.gov/business/register": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "17d15e85da648771",
+   "bytes": 6113,
+   "checkedAt": "2026-10-19T08:36:32.548Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://tax.wv.gov/Business/BusinessRegistration/Pages/BusinessRegistration.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b9e5595410e6492a",
+   "bytes": 7558,
+   "checkedAt": "2026-10-19T08:36:33.304Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://taxportal.ri.gov/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "2374e9eefcb6f5ff",
+   "bytes": 2778,
+   "checkedAt": "2026-10-19T08:36:34.265Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://tncab.tnsos.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "af499ab289d9b502",
+   "bytes": 5803,
+   "checkedAt": "2026-10-19T08:36:33.847Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://tntap.tn.gov/eservices/_/": {
+   "state": "broken",
+   "status": 0,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:37.138Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://webserver.rilegislature.gov/Statutes/TITLE5/5-53.1/5-53.1-2.htm": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ed990b113c5659fd",
+   "bytes": 7014,
+   "checkedAt": "2026-10-19T08:36:34.417Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://wisconsinsbdc.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4b36fb624b22bc63",
+   "bytes": 5300,
+   "checkedAt": "2026-10-19T08:36:35.050Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://wvsbdc.com/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "bf8014e4c1848196",
+   "bytes": 4966,
+   "checkedAt": "2026-10-19T08:36:34.693Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.1800runaway.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ac7e27ffa3640755",
+   "bytes": 5589,
+   "checkedAt": "2026-10-19T08:36:35.117Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.afro.who.int/countries/kenya/news/kenya-launches-national-cervical-cancer-elimination-action-plan-2026-2030": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "765f7125b1209c44",
+   "bytes": 6463,
+   "checkedAt": "2026-10-19T08:36:36.036Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.afro.who.int/photo-story/cervical-cancer-elimination-kenya-transitions-single-dose-hpv-vaccination-schedule": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "43ea56c590379874",
+   "bytes": 8094,
+   "checkedAt": "2026-10-19T08:36:36.699Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.ag.state.mn.us/Charity/InfoCharitableorgandTrusts.asp": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "eba698bde4f532a5",
+   "bytes": 12142,
+   "checkedAt": "2026-10-19T08:36:36.922Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.alabamaag.gov/licensing-registration/charitable-organizations/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "7c771bc62e6764f6",
+   "bytes": 6348,
+   "checkedAt": "2026-10-19T08:36:37.090Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.alabamainteractive.org": {
+   "state": "broken",
+   "status": 0,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:37.909Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.ark.org/sos/corpfilings/index.php": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "b1a9d914e3648618",
+   "bytes": 6966,
+   "checkedAt": "2026-10-19T08:36:38.375Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.azcc.gov/docs/default-source/corps-files/fee-schedules/fee-schedule-corporations6def4cc74b1a47129d16c2b1c3851bda.pdf?sfvrsn=2d6fbddb_5": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:37.495Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.business.wa.gov/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "0f2b62dae1ed034f",
+   "bytes": 24530,
+   "checkedAt": "2026-10-19T08:36:38.277Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.businessexpress.ny.gov": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4c2690eafbbd5544",
+   "bytes": 2654,
+   "checkedAt": "2026-10-19T08:36:38.945Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.cac.gov.ng/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "0796d678bcee653a",
+   "bytes": 4387,
+   "checkedAt": "2026-10-19T08:36:38.800Z",
+   "guides": [
+    "africa-small-business"
+   ]
+  },
+  "https://www.cac.gov.ng/services/company-registration": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "0d0f486821e88cfa",
+   "bytes": 2710,
+   "checkedAt": "2026-10-19T08:36:38.670Z",
+   "guides": [
+    "africa-small-business"
+   ]
+  },
+  "https://www.cdc.gov/breast-cancer/screening/index.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "57c25163aa2c3375",
+   "bytes": 8197,
+   "checkedAt": "2026-10-19T08:36:38.979Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://www.cdc.gov/cervical-cancer/screening/index.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5d8aed66aeb902b6",
+   "bytes": 9606,
+   "checkedAt": "2026-10-19T08:36:39.040Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://www.cdc.gov/contraception/about/index.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "56e5d8c61c9f925e",
+   "bytes": 11779,
+   "checkedAt": "2026-10-19T08:36:39.899Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://www.cdc.gov/hearher/maternal-warning-signs/index.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2746ad7e2ab9aef3",
+   "bytes": 10097,
+   "checkedAt": "2026-10-19T08:36:39.983Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://www.cdc.gov/hearher/pregnant-postpartum/index.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "274db9e622b98af2",
+   "bytes": 7526,
+   "checkedAt": "2026-10-19T08:36:40.362Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://www.cdc.gov/hpv/vaccines/index.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fde458c6d8a0c867",
+   "bytes": 9204,
+   "checkedAt": "2026-10-19T08:36:40.089Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://www.cdc.gov/nchs/w2w/index.htm": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "55650413e70b6648",
+   "bytes": 3467,
+   "checkedAt": "2026-10-19T08:36:40.751Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.cdfifund.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2000fa8d6f194fd8",
+   "bytes": 10593,
+   "checkedAt": "2026-10-19T08:36:49.415Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.cdtfa.ca.gov/services/registration.htm": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d0c3644bafef193a",
+   "bytes": 9578,
+   "checkedAt": "2026-10-19T08:36:40.896Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.charitiesnys.com/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:41.335Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.coloradosos.gov/biz/FileDoc.do": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2f17ce17e0f4dc76",
+   "bytes": 1732,
+   "checkedAt": "2026-10-19T08:36:41.332Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.commerce.alaska.gov/web/cbpl/Corporations": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:41.756Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.commerce.alaska.gov/web/cbpl/Corporations/CorporationFormsFees": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:41.767Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.commerce.alaska.gov/web/Portals/5/pub/corp0400.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:41.988Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.commerce.alaska.gov/web/Portals/5/pub/corp0438.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:42.019Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.commerce.alaska.gov/web/Portals/5/pub/corp0484.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:42.372Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.councilofnonprofits.org/find-your-state-association": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:42.243Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.crisistextline.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "344833ed1d73c702",
+   "bytes": 6441,
+   "checkedAt": "2026-10-19T08:36:42.887Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.delawaresbdc.org/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:43.034Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.dfa.arkansas.gov/office/taxes/excise-tax-administration/sales-use-tax/register-for-a-tax-account/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f589e599efcc89c8",
+   "bytes": 7171,
+   "checkedAt": "2026-10-19T08:36:43.607Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.dgs.ca.gov/PD/Services/Page-Content/Procurement-Division-Services-List-Folder/Apply-for-or-Re-apply-as-Small-Business-Disabled-Veteran-Business-Enterprise": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a8da7a168913916c",
+   "bytes": 15576,
+   "checkedAt": "2026-10-19T08:36:43.526Z",
+   "guides": [
+    "california-business"
+   ]
+  },
+  "https://www.doj.nh.gov/charitable-trusts": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:43.793Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.doj.state.or.us/charitable-activities/starting-or-closing-a-charity/registering-a-new-charity/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d3cf21cf42db7eaf",
+   "bytes": 6022,
+   "checkedAt": "2026-10-19T08:36:44.708Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.dol.gov/agencies/vets": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d5c48acd15277180",
+   "bytes": 4826,
+   "checkedAt": "2026-10-19T08:36:44.134Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.dol.gov/agencies/whd/fact-sheets/43-child-labor-non-agriculture": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "3c986bb404a3bb87",
+   "bytes": 22600,
+   "checkedAt": "2026-10-19T08:36:44.328Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.dol.gov/agencies/whd/youthrules": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "54a031204eb2f261",
+   "bytes": 6145,
+   "checkedAt": "2026-10-19T08:36:44.517Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.dor.ms.gov/business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d16ba02999d0fd77",
+   "bytes": 7485,
+   "checkedAt": "2026-10-19T08:36:45.289Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.fdacs.gov/Consumer-Resources/Solicitation-of-Contributions": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5ef978853c4f20cb",
+   "bytes": 291,
+   "checkedAt": "2026-10-19T08:36:45.359Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.federalregister.gov/documents/2026/08/11/2026-16370/reforms-to-13-cfr-124103-to-remove-sbas-8a-programs-rebuttable-presumption-of-social-disadvantage": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6a939236a966beeb",
+   "bytes": 47835,
+   "checkedAt": "2026-10-19T08:36:45.830Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.fincen.gov/boi": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "dd34f0742b35f625",
+   "bytes": 12541,
+   "checkedAt": "2026-10-19T08:36:55.686Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.ftb.ca.gov/file/business/types/charities-nonprofits/help-with-charities-nonprofits.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "38ec83c4699d2071",
+   "bytes": 18926,
+   "checkedAt": "2026-10-19T08:36:46.145Z",
+   "guides": [
+    "california-business"
+   ]
+  },
+  "https://www.ftc.gov/business-guidance/blog/2023/03/chatbots-deepfakes-voice-clones-ai-deception-sale": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:46.432Z",
+   "guides": [
+    "small-business-technology"
+   ]
+  },
+  "https://www.ftc.gov/business-guidance/resources/consumer-reviews-testimonials-rule-questions-answers": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:46.581Z",
+   "guides": [
+    "ai-tools-for-business",
+    "small-business-technology"
+   ]
+  },
+  "https://www.ftc.gov/business-guidance/small-businesses/cybersecurity": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:46.763Z",
+   "guides": [
+    "small-business-technology"
+   ]
+  },
+  "https://www.ftc.gov/industry/technology/artificial-intelligence": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:46.927Z",
+   "guides": [
+    "ai-tools-for-business",
+    "small-business-technology"
+   ]
+  },
+  "https://www.ftc.gov/policy/advocacy-research/tech-at-ftc/2024/01/ai-companies-uphold-your-privacy-confidentiality-commitments": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:47.080Z",
+   "guides": [
+    "ai-tools-for-business",
+    "small-business-technology"
+   ]
+  },
+  "https://www.funds.smedan.gov.ng/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:47.635Z",
+   "guides": [
+    "africa-small-business"
+   ]
+  },
+  "https://www.gao.gov/products/gao-26-107718": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:47.963Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.grants.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9ac56d43b5b72e41",
+   "bytes": 2542,
+   "checkedAt": "2026-10-19T08:36:48.391Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.grants.gov/applicants/applicant-registration": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9cdfea29f8d46ad8",
+   "bytes": 4816,
+   "checkedAt": "2026-10-19T08:36:48.563Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.gsa.gov/about-gsa/newsroom/news-releases/gsa-systems-switch-to-unique-entity-id-sam-on-april-4-2022-03162022": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9492bf1b03fe69cb",
+   "bytes": 16711,
+   "checkedAt": "2026-10-19T08:36:48.979Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.health.go.ke/kenya-intensifies-efforts-combat-cervical-cancer-amid-rising-burden": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b6e867acddb5d004",
+   "bytes": 4396,
+   "checkedAt": "2026-10-19T08:36:51.134Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.healthcare.gov/medicaid-chip/eligibility/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "2d682e1abe911fa0",
+   "bytes": 9955,
+   "checkedAt": "2026-10-19T08:36:49.868Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.healthcare.gov/medicaid-chip/getting-medicaid-chip/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2d682e1abe911fa0",
+   "bytes": 9955,
+   "checkedAt": "2026-10-19T08:36:50.112Z",
+   "guides": [
+    "us-community-support",
+    "womens-health"
+   ]
+  },
+  "https://www.hustlerfund.go.ke/": {
+   "state": "broken",
+   "status": 0,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:52.127Z",
+   "guides": [
+    "africa-small-business"
+   ]
+  },
+  "https://www.hustlerfund.go.ke/personal-loan": {
+   "state": "broken",
+   "status": 0,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:36:52.471Z",
+   "guides": [
+    "africa-small-business"
+   ]
+  },
+  "https://www.ilsos.gov/departments/business_services/home.html": {
+   "state": "broken",
+   "status": 0,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:32.280Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.ilsos.gov/departments/business-services/organization/llc-instructions.html": {
+   "state": "broken",
+   "status": 0,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:32.609Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.in.gov/sos/business/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1fdb907efac26316",
+   "bytes": 2930,
+   "checkedAt": "2026-10-19T08:36:56.439Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "bc3418011817ca5b",
+   "bytes": 8338,
+   "checkedAt": "2026-10-19T08:36:57.065Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.irs.gov/businesses/small-businesses-self-employed/business-structures": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d6240a232317c2d9",
+   "bytes": 6043,
+   "checkedAt": "2026-10-19T08:36:57.338Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.irs.gov/businesses/small-businesses-self-employed/estimated-taxes": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e6970d237a1ecad8",
+   "bytes": 12620,
+   "checkedAt": "2026-10-19T08:36:57.522Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.irs.gov/businesses/small-businesses-self-employed/forming-a-corporation": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b5279003611742d8",
+   "bytes": 7634,
+   "checkedAt": "2026-10-19T08:36:57.761Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.irs.gov/businesses/small-businesses-self-employed/llc-filing-as-a-corporation-or-partnership": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "922618016b06c1d9",
+   "bytes": 9480,
+   "checkedAt": "2026-10-19T08:36:57.989Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.irs.gov/businesses/small-businesses-self-employed/s-corporations": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f6a79823011ac248",
+   "bytes": 8686,
+   "checkedAt": "2026-10-19T08:36:58.260Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.irs.gov/businesses/small-businesses-self-employed/self-employed-individuals-tax-center": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b7a708214657c1d9",
+   "bytes": 12096,
+   "checkedAt": "2026-10-19T08:36:58.515Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.irs.gov/businesses/small-businesses-self-employed/single-member-limited-liability-companies": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d06188216d47c6d8",
+   "bytes": 11448,
+   "checkedAt": "2026-10-19T08:36:58.700Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.irs.gov/charities-non-profits/annual-electronic-filing-requirement-for-small-exempt-organizations-form-990-n-e-postcard": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b4f5a81b301083fe",
+   "bytes": 10667,
+   "checkedAt": "2026-10-19T08:36:58.967Z",
+   "guides": [
+    "state-entities",
+    "us-community-support"
+   ]
+  },
+  "https://www.irs.gov/charities-non-profits/applying-for-tax-exempt-status": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9116180122b243d8",
+   "bytes": 7727,
+   "checkedAt": "2026-10-19T08:36:59.140Z",
+   "guides": [
+    "state-entities",
+    "us-community-support",
+    "us-small-business"
+   ]
+  },
+  "https://www.irs.gov/charities-non-profits/charitable-organizations/charitable-organizations-substantiation-and-disclosure-requirements": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9c862a2b63164ad8",
+   "bytes": 7603,
+   "checkedAt": "2026-10-19T08:36:59.385Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.irs.gov/charities-non-profits/charitable-organizations/charitable-solicitation-state-requirements": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b434aa0b6113c2d9",
+   "bytes": 7045,
+   "checkedAt": "2026-10-19T08:36:59.672Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.irs.gov/charities-non-profits/charitable-organizations/exemption-requirements-501c3-organizations": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9494aa0123164249",
+   "bytes": 7962,
+   "checkedAt": "2026-10-19T08:36:59.926Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.irs.gov/charities-non-profits/form-1023-and-1023-ez-amount-of-user-fee": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d49638232316c3d8",
+   "bytes": 5868,
+   "checkedAt": "2026-10-19T08:37:00.189Z",
+   "guides": [
+    "state-entities",
+    "us-community-support"
+   ]
+  },
+  "https://www.irs.gov/charities-non-profits/tax-exempt-organization-search": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:00.358Z",
+   "guides": [
+    "state-entities",
+    "us-community-support"
+   ]
+  },
+  "https://www.irs.gov/charities-non-profits/unrelated-business-income-tax": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9404982b21074258",
+   "bytes": 6824,
+   "checkedAt": "2026-10-19T08:37:00.705Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.irs.gov/individuals/free-tax-return-preparation-for-qualifying-taxpayers": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d734182a330f4349",
+   "bytes": 9742,
+   "checkedAt": "2026-10-19T08:37:00.937Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.irs.gov/instructions/i2553": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5488880e62071cdf",
+   "bytes": 36126,
+   "checkedAt": "2026-10-19T08:37:01.241Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.irs.gov/pub/irs-pdf/f1040es.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:01.501Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.irs.gov/pub/irs-pdf/p1771.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:01.797Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.irs.gov/pub/irs-pdf/p4839.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:02.082Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.irs.gov/pub/irs-tege/governance_practices.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:02.356Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.irs.gov/publications/p557": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9cb54f9ae839a85e",
+   "bytes": 600793,
+   "checkedAt": "2026-10-19T08:37:02.741Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.jobcorps.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "7676cba07a464802",
+   "bytes": 2608,
+   "checkedAt": "2026-10-19T08:37:03.649Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.kra.go.ke/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "14410dae546739e5",
+   "bytes": 8730,
+   "checkedAt": "2026-10-19T08:37:06.662Z",
+   "guides": [
+    "africa-small-business"
+   ]
+  },
+  "https://www.kra.go.ke/individual/filing-paying/types-of-taxes/turnover-tax-tot": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1c518cac4573b1a4",
+   "bytes": 10377,
+   "checkedAt": "2026-10-19T08:37:07.503Z",
+   "guides": [
+    "africa-small-business"
+   ]
+  },
+  "https://www.ksrevenue.gov/prpecentitylearnmore.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e364575a5dac28dd",
+   "bytes": 4786,
+   "checkedAt": "2026-10-19T08:37:08.189Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.maine.gov/pfr/professionallicensing/professions/charitable-solicitations-act/licensing/charitable-organizations": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9c35bcf8954947f8",
+   "bytes": 12908,
+   "checkedAt": "2026-10-19T08:37:08.711Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.maine.gov/revenue/taxes/sales-use-service-provider-tax": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5dcc7e2adce817e5",
+   "bytes": 2399,
+   "checkedAt": "2026-10-19T08:37:09.260Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.maine.gov/sos/corporations-commissions/information-about-entities/entity-types/corporations-commissions/business-corporations": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "46bfd399c7da571b",
+   "bytes": 15997,
+   "checkedAt": "2026-10-19T08:37:09.814Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.maine.gov/sos/sites/maine.gov.sos/files/inline-files/mbca6.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:10.121Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.maine.gov/sos/sites/maine.gov.sos/files/inline-files/mllc6.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:10.366Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.maine.gov/sos/sites/maine.gov.sos/files/inline-files/mnpca6.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:10.709Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.mainesbdc.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b1052326e9460dd3",
+   "bytes": 1553,
+   "checkedAt": "2026-10-19T08:37:11.722Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.marylandsbdc.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "bf738de09da27a8f",
+   "bytes": 4172,
+   "checkedAt": "2026-10-19T08:37:13.146Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.mass.gov/info-details/register-your-business-with-masstaxconnect": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d48e76b82e8f5ded",
+   "bytes": 12792,
+   "checkedAt": "2026-10-19T08:37:13.677Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.mass.gov/info-details/registering-a-public-charity": {
+   "state": "broken",
+   "status": 404,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:14.132Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.mbda.gov/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:14.422Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.medicare.gov/talk-to-someone": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5db3a2f9bd083086",
+   "bytes": 2322,
+   "checkedAt": "2026-10-19T08:37:14.861Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.michigan.gov/-/media/Project/Websites/lara/cscl/Folder6/Filing_Fees.pdf?rev=c74f2002f79e442a8095eaa6a5d3d5f4": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:15.141Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.michigan.gov/consumerprotection/charities/charitable-organizations": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:15.357Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.michigan.gov/lara/-/media/Project/Websites/lara/cscl/NonImages_new/Corps/forms/llc/700-0725.pdf": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:15.585Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.michigan.gov/lara/bureau-list/cscl/corps": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:15.831Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.michigan.gov/taxes/business-taxes/new-biz": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:16.106Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.michigansbdc.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fd8c7683c7900c1d",
+   "bytes": 7444,
+   "checkedAt": "2026-10-19T08:37:17.068Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.mndor.state.mn.us/tp/eservices/_/?link=NewBusinessReg": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "d329162d8f104f70",
+   "bytes": 1212,
+   "checkedAt": "2026-10-19T08:37:18.637Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.msea.go.ke/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "3f8c4a3870fda42f",
+   "bytes": 3911,
+   "checkedAt": "2026-10-19T08:37:22.894Z",
+   "guides": [
+    "africa-small-business"
+   ]
+  },
+  "https://www.nasconet.org/resources": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5c64de3d6abfb091",
+   "bytes": 3442,
+   "checkedAt": "2026-10-19T08:37:23.580Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.ncdor.gov/taxes-forms/register-business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "55d8e0a1afcbaf72",
+   "bytes": 5159,
+   "checkedAt": "2026-10-19T08:37:24.138Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.nebraska.gov/apps-sos-edocs/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2a4d5b435a9f9ec1",
+   "bytes": 3115,
+   "checkedAt": "2026-10-19T08:37:24.905Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.nevadasbdc.org": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "12c0876b9a83f231",
+   "bytes": 8054,
+   "checkedAt": "2026-10-19T08:37:25.977Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.nhsbdc.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "214c60707945588f",
+   "bytes": 5326,
+   "checkedAt": "2026-10-19T08:37:27.250Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.nimh.nih.gov/health/publications/perinatal-depression": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2b24ed37110e636f",
+   "bytes": 20891,
+   "checkedAt": "2026-10-19T08:37:28.094Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://www.nj.gov/treasury/revenue/fees.shtml": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e9df603694f7e156",
+   "bytes": 11066,
+   "checkedAt": "2026-10-19T08:37:28.742Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.njportal.com": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "8175913837772b17",
+   "bytes": 1928,
+   "checkedAt": "2026-10-19T08:37:29.537Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.njportal.com/DOR/BusinessRegistration": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "050f56b49fb4890e",
+   "bytes": 3994,
+   "checkedAt": "2026-10-19T08:37:29.757Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.nmsbdc.org": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6311569c8bc68bc0",
+   "bytes": 4232,
+   "checkedAt": "2026-10-19T08:37:32.700Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.nmsdc.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e7539486449eb124",
+   "bytes": 12396,
+   "checkedAt": "2026-10-19T08:37:32.867Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.nrs.gov.ng/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:33.753Z",
+   "guides": [
+    "africa-small-business"
+   ]
+  },
+  "https://www.nrs.gov.ng/taxpayer-services/get-a-tax-id": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "451c555bf1cdbef8",
+   "bytes": 1983,
+   "checkedAt": "2026-10-19T08:37:33.810Z",
+   "guides": [
+    "africa-small-business"
+   ]
+  },
+  "https://www.nvsos.gov": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:33.129Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.ohiosos.gov/business/business-filing-forms": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:33.459Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.oregon.gov/dor/programs/businesses/pages/starting-payroll-taxes.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "99f6d2afeaf7871a",
+   "bytes": 4744,
+   "checkedAt": "2026-10-19T08:37:34.101Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.pa.gov/agencies/dos/programs/business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "0df5597b09974bf2",
+   "bytes": 19514,
+   "checkedAt": "2026-10-19T08:37:34.371Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.pa.gov/agencies/dos/programs/business/fees-and-payments": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ba290835398cccb2",
+   "bytes": 25225,
+   "checkedAt": "2026-10-19T08:37:34.355Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.pa.gov/services/dos/register-a-charity": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "47731523dfd5a1a7",
+   "bytes": 9151,
+   "checkedAt": "2026-10-19T08:37:34.400Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.pa.gov/services/revenue/register-my-business-for-taxes": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e1281e8999c69f16",
+   "bytes": 6034,
+   "checkedAt": "2026-10-19T08:37:34.779Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.rampla.org/s/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 46,
+   "checkedAt": "2026-10-19T08:37:34.874Z",
+   "guides": [
+    "california-business"
+   ]
+  },
+  "https://www.rampla.org/s/procurement-announcement-details?id=a1NQl0000043nczMAA": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 46,
+   "checkedAt": "2026-10-19T08:37:34.871Z",
+   "guides": [
+    "california-business"
+   ]
+  },
+  "https://www.revenue.alabama.gov/entity-registration/register-a-business/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "48a3a492a93e7da6",
+   "bytes": 2695,
+   "checkedAt": "2026-10-19T08:37:35.121Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.revenue.wi.gov/Pages/Businesses/New-Business-home.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ff77e763b1a78827",
+   "bytes": 2022,
+   "checkedAt": "2026-10-19T08:37:36.098Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.revisor.mn.gov/statutes/cite/302A.153": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "609eb368c8341130",
+   "bytes": 5958,
+   "checkedAt": "2026-10-19T08:37:35.680Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.revisor.mn.gov/statutes/cite/317A.151": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "62dbb7e8ca3411b0",
+   "bytes": 5895,
+   "checkedAt": "2026-10-19T08:37:35.665Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.revisor.mn.gov/statutes/cite/322C.0201": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "7290f761983e7124",
+   "bytes": 7288,
+   "checkedAt": "2026-10-19T08:37:36.037Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/about-sba/sba-locations/headquarters-offices/office-veterans-business-development": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "f8ce768c4cb81079",
+   "bytes": 5825,
+   "checkedAt": "2026-10-19T08:37:37.288Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.sba.gov/business-guide": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "95a821c082d40059",
+   "bytes": 7733,
+   "checkedAt": "2026-10-19T08:37:36.586Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/business-guide/10-steps-start-your-business": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "95a821c082d40059",
+   "bytes": 7733,
+   "checkedAt": "2026-10-19T08:37:36.752Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/grow-your-business": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "c2cee668fabafc90",
+   "bytes": 50905,
+   "checkedAt": "2026-10-19T08:37:37.029Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/launch-your-business/apply-licenses-permits": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T08:37:36.978Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/launch-your-business/choose-business-structure": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T08:37:37.233Z",
+   "guides": [
+    "state-entities",
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/launch-your-business/choose-your-business-name": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T08:37:37.261Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/launch-your-business/get-business-insurance": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T08:37:37.682Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/launch-your-business/get-federal-state-tax-id-numbers": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T08:37:37.483Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/launch-your-business/open-business-bank-account": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T08:37:37.542Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/launch-your-business/pick-your-business-location": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T08:37:37.879Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/launch-your-business/register-your-business": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T08:37:38.007Z",
+   "guides": [
+    "state-entities",
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/manage-your-business/ai-small-business": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "fbc6d2c86b86471d",
+   "bytes": 79060,
+   "checkedAt": "2026-10-19T08:37:37.924Z",
+   "guides": [
+    "ai-tools-for-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/manage-your-business/hire-manage-employees": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "fbc6d2c86b86471d",
+   "bytes": 79060,
+   "checkedAt": "2026-10-19T08:37:38.090Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/manage-your-business/manage-your-finances": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "fbc6d2c86b86471d",
+   "bytes": 79060,
+   "checkedAt": "2026-10-19T08:37:38.352Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/manage-your-business/marketing-sales": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "fbc6d2c86b86471d",
+   "bytes": 79060,
+   "checkedAt": "2026-10-19T08:37:38.223Z",
+   "guides": [
+    "ai-tools-for-business",
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/manage-your-business/pay-taxes": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "fbc6d2c86b86471d",
+   "bytes": 79060,
+   "checkedAt": "2026-10-19T08:37:38.709Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/plan-your-business/buy-existing-business-or-franchise": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "872a724ed24c82d7",
+   "bytes": 45543,
+   "checkedAt": "2026-10-19T08:37:38.799Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/plan-your-business/calculate-your-startup-costs": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "872a724ed24c82d7",
+   "bytes": 45543,
+   "checkedAt": "2026-10-19T08:37:38.577Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/plan-your-business/establish-business-credit": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "872a724ed24c82d7",
+   "bytes": 45543,
+   "checkedAt": "2026-10-19T08:37:39.016Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/plan-your-business/fund-your-business": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "872a724ed24c82d7",
+   "bytes": 45543,
+   "checkedAt": "2026-10-19T08:37:39.269Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/plan-your-business/market-research-competitive-analysis": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "872a724ed24c82d7",
+   "bytes": 45543,
+   "checkedAt": "2026-10-19T08:37:39.208Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/business-guide/plan-your-business/write-your-business-plan": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "872a724ed24c82d7",
+   "bytes": 45543,
+   "checkedAt": "2026-10-19T08:37:39.472Z",
+   "guides": [
+    "ai-tools-for-business",
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/certifications/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "20fc7242b8ea23db",
+   "bytes": 26693,
+   "checkedAt": "2026-10-19T08:37:39.393Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/district/alaska": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "94ec9e6ace0dab1e",
+   "bytes": 3374,
+   "checkedAt": "2026-10-19T08:37:40.247Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/district/arizona": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "84e4afed6e0e0bd5",
+   "bytes": 3495,
+   "checkedAt": "2026-10-19T08:37:41.287Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/district/hawaii": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "84e5f76c2f0c623e",
+   "bytes": 2610,
+   "checkedAt": "2026-10-19T08:37:40.447Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/district/massachusetts": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "9cec9f692e0e272d",
+   "bytes": 3169,
+   "checkedAt": "2026-10-19T08:37:42.744Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/district/minnesota": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "84e47e6f6f4e293a",
+   "bytes": 3468,
+   "checkedAt": "2026-10-19T08:37:41.069Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/district/mississippi": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "14e4e76a4f2e3b5f",
+   "bytes": 3345,
+   "checkedAt": "2026-10-19T08:37:41.644Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/district/new-jersey": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "94ce9e6f3fac2e16",
+   "bytes": 2844,
+   "checkedAt": "2026-10-19T08:37:43.736Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/district/north-carolina": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "94aebf686f5c8f7a",
+   "bytes": 3744,
+   "checkedAt": "2026-10-19T08:37:43.343Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/district/north-dakota": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "8ce6ee6b1f1ea33e",
+   "bytes": 2813,
+   "checkedAt": "2026-10-19T08:37:44.062Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/district/ohio": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "14e4ee44272e620b",
+   "bytes": 3442,
+   "checkedAt": "2026-10-19T08:37:45.831Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/district/st-louis": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "8466be6e2f8ca09e",
+   "bytes": 2921,
+   "checkedAt": "2026-10-19T08:37:45.801Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/federal-contracting/contracting-assistance-programs/8a-business-development-program": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "20fc7242b8ea23db",
+   "bytes": 26693,
+   "checkedAt": "2026-10-19T08:37:44.442Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/funding-programs": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "7d6c2740c499caa9",
+   "bytes": 4997,
+   "checkedAt": "2026-10-19T08:37:44.657Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/funding-programs/loans": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "7d6c2740c499caa9",
+   "bytes": 4997,
+   "checkedAt": "2026-10-19T08:37:44.821Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/local-assistance": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "f54e2744ddf08b51",
+   "bytes": 3238,
+   "checkedAt": "2026-10-19T08:37:45.016Z",
+   "guides": [
+    "state-entities",
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/local-assistance/resource-partners": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "baf871d6c43225d3",
+   "bytes": 15771,
+   "checkedAt": "2026-10-19T08:37:45.186Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.scc.virginia.gov/businesses/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "911dda75c57ca314",
+   "bytes": 3623,
+   "checkedAt": "2026-10-19T08:37:45.796Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.scc.virginia.gov/businesses/forms-and-fees/virginia-limited-liability-companies/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "752c985df3a6a953",
+   "bytes": 4382,
+   "checkedAt": "2026-10-19T08:37:46.069Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.scc.virginia.gov/businesses/forms-and-fees/virginia-nonstock-corporations/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b1ec9c59c7b4a913",
+   "bytes": 4550,
+   "checkedAt": "2026-10-19T08:37:46.410Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.scc.virginia.gov/media/sccvirginiagov-home/business-home/start-a-new-business/business-types/cht_fee.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:46.187Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.score.org/score-faqs": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:46.406Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sec.gov/resources-small-businesses/exempt-offerings": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:46.494Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sec.gov/resources-small-businesses/small-business-compliance-guides/regulation-crowdfunding-guidance-issuers": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:46.582Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sec.state.ma.us/divisions/corporations/corporations-idx.htm": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:46.715Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sec.state.ma.us/divisions/corporations/download/Fee_Schedule.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:46.892Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.shiphelp.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "195d1f7339baf001",
+   "bytes": 3109,
+   "checkedAt": "2026-10-19T08:37:46.893Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.sos.alabama.gov/business-entities": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e20bfe5b7f89a1db",
+   "bytes": 5080,
+   "checkedAt": "2026-10-19T08:37:47.092Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.alabama.gov/business-entities/domestic-corporations": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e20bee5b3788301b",
+   "bytes": 4173,
+   "checkedAt": "2026-10-19T08:37:47.190Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.alabama.gov/business-entities/llcs": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c219ce5af689d091",
+   "bytes": 4766,
+   "checkedAt": "2026-10-19T08:37:47.181Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.arkansas.gov/business-commercial-services-bcs/for-new-business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "cafe4a0782fe9198",
+   "bytes": 5793,
+   "checkedAt": "2026-10-19T08:37:48.241Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.arkansas.gov/business-commercial-services-bcs/forms-fees/corporations": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ca5f482fb0feb908",
+   "bytes": 7524,
+   "checkedAt": "2026-10-19T08:37:48.148Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.arkansas.gov/business-commercial-services-bcs/forms-fees/llc": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ca7e5a07b4fe9908",
+   "bytes": 7088,
+   "checkedAt": "2026-10-19T08:37:48.165Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.arkansas.gov/business-commercial-services-bcs/nonprofit-charitable-entities": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "dafe5b2ad2fe99ba",
+   "bytes": 7596,
+   "checkedAt": "2026-10-19T08:37:48.921Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.arkansas.gov/business-commercial-services-bcs/nonprofit-charitable-entities/charitable-entities/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "defe486586ee910a",
+   "bytes": 6451,
+   "checkedAt": "2026-10-19T08:37:49.004Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.ca.gov/business-programs/business-entities/starting-business-checklist/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2d6ba1e01dc8a01e",
+   "bytes": 2975,
+   "checkedAt": "2026-10-19T08:37:48.505Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.ks.gov/businesses/register-a-business.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "42cacb72bcd76411",
+   "bytes": 8377,
+   "checkedAt": "2026-10-19T08:37:48.972Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.ky.gov/bus/business-filings/Pages/default.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6ee7df9739256dd1",
+   "bytes": 7136,
+   "checkedAt": "2026-10-19T08:37:50.014Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.ky.gov/bus/business-filings/Pages/Fees.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "20af45cbf9865355",
+   "bytes": 8826,
+   "checkedAt": "2026-10-19T08:37:51.986Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.la.gov/business-services/file-business-documents": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "37ca9a57dbe7cab1",
+   "bytes": 16864,
+   "checkedAt": "2026-10-19T08:37:49.912Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.mn.gov/business-liens/": {
+   "state": "broken",
+   "status": 502,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:51.254Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.mo.gov/business/corporations/startBusiness": {
+   "state": "broken",
+   "status": 0,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:38:30.167Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.mo.gov/CMSImages/Business/fees.pdf?v=2025": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:51.674Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.ms.gov/business-services": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "1faa9dd4f76b2303",
+   "bytes": 5327,
+   "checkedAt": "2026-10-19T08:37:53.826Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.ms.gov/charities/charity-online-registration": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1fa2dc44f6ef2333",
+   "bytes": 4492,
+   "checkedAt": "2026-10-19T08:37:53.617Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.nd.gov/business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "0c8310d9d527d506",
+   "bytes": 7492,
+   "checkedAt": "2026-10-19T08:37:54.344Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.nd.gov/business/business-services/business-structures/limited-liability-company-llc": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "0ea124da3f07c07a",
+   "bytes": 22456,
+   "checkedAt": "2026-10-19T08:37:54.584Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.nd.gov/business/nonprofit-services/charitable-organizations": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "cea30818f835ef34",
+   "bytes": 17643,
+   "checkedAt": "2026-10-19T08:37:54.752Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.nd.gov/business/nonprofit-services/register-nonprofit/north-dakota-nonprofit": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "0f9b08d37927c523",
+   "bytes": 22121,
+   "checkedAt": "2026-10-19T08:37:54.973Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.nh.gov": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:55.068Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.nm.gov/business-services/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b3ade8b1066b8df4",
+   "bytes": 3824,
+   "checkedAt": "2026-10-19T08:37:55.350Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.ok.gov/business/default.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "81ec3af3bc60b297",
+   "bytes": 2982,
+   "checkedAt": "2026-10-19T08:37:55.562Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.ok.gov/business/fees.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fb4f7cb3c1d960fa",
+   "bytes": 6978,
+   "checkedAt": "2026-10-19T08:37:55.860Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.ok.gov/charity/Default.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "845cfee6ddc51417",
+   "bytes": 2592,
+   "checkedAt": "2026-10-19T08:37:55.803Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.ok.gov/corp/filing.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "3b6044d660ae82cc",
+   "bytes": 2693,
+   "checkedAt": "2026-10-19T08:37:56.021Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.ok.gov/forms/FM0001.PDF": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:56.224Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.ok.gov/forms/FM0008.PDF": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:56.476Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.state.co.us/pubs/business/businessHome.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "57fe6b75094a0dfd",
+   "bytes": 4649,
+   "checkedAt": "2026-10-19T08:37:56.612Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.state.co.us/pubs/charities/charitableHome.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "dfaee963cb022c7f",
+   "bytes": 6832,
+   "checkedAt": "2026-10-19T08:37:56.892Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.state.co.us/pubs/info_center/fees/business.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b22b4275a04fed4b",
+   "bytes": 10457,
+   "checkedAt": "2026-10-19T08:37:56.826Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.state.tx.us/corp/index.shtml": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4a8c0252b1e3e660",
+   "bytes": 4284,
+   "checkedAt": "2026-10-19T08:37:57.399Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.state.tx.us/corp/instructions/201.shtml": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "826d89d731df4a42",
+   "bytes": 13736,
+   "checkedAt": "2026-10-19T08:37:57.543Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.state.tx.us/corp/instructions/202.shtml": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "82ad19552ddf42c2",
+   "bytes": 18810,
+   "checkedAt": "2026-10-19T08:37:57.766Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.state.tx.us/corp/instructions/205.shtml": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "82adb8d7705f4240",
+   "bytes": 13491,
+   "checkedAt": "2026-10-19T08:37:57.916Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.state.tx.us/corp/sosda/index.shtml": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6a9b305090eba2e1",
+   "bytes": 2846,
+   "checkedAt": "2026-10-19T08:37:58.154Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.wa.gov/corporations-charities": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c2bf5cc8edd5346b",
+   "bytes": 27628,
+   "checkedAt": "2026-10-19T08:37:58.258Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.wa.gov/corporations-charities/business-entities/online-filing-instructions/start-domestic-wa-limited-liability-company-llc-online": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c7ab6cccc9d56d63",
+   "bytes": 27346,
+   "checkedAt": "2026-10-19T08:37:58.418Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.wa.gov/corporations-charities/business-entities/online-filing-instructions/start-domestic-wa-nonprofit-corporation-online": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c4ab38ece9d56563",
+   "bytes": 29726,
+   "checkedAt": "2026-10-19T08:37:58.619Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.wa.gov/corporations-charities/frequently-asked-questions-faqs/fee-schedules-priority-services": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "8aae7ccddd873557",
+   "bytes": 27913,
+   "checkedAt": "2026-10-19T08:37:58.765Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.wa.gov/corporations-charities/nonprofits-charities/charities": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "46af2ceec8953d6f",
+   "bytes": 24246,
+   "checkedAt": "2026-10-19T08:37:58.897Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sosnc.gov/divisions/business_registration": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a67dfbfdc0cdac7b",
+   "bytes": 4977,
+   "checkedAt": "2026-10-19T08:37:59.310Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sosnc.gov/fees/by_title/_Business_Registration_Nonprofit_Corporations": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e295c9ed07d92869",
+   "bytes": 2510,
+   "checkedAt": "2026-10-19T08:37:59.279Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sosnc.gov/frequently_asked_questions/by_title/_charities": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "06c9ce5fafd7c70b",
+   "bytes": 42559,
+   "checkedAt": "2026-10-19T08:37:59.785Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sosnc.gov/online_filing/filing/creation": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:59.465Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.ssa.gov/contact/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:37:59.783Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.ssa.gov/medicare/part-d-extra-help": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T08:38:00.007Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.tax.newmexico.gov/businesses/who-must-register-a-business/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c7256c36b494415f",
+   "bytes": 12068,
+   "checkedAt": "2026-10-19T08:38:01.421Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.tax.virginia.gov/register-business-virginia": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e5aeee237b48ef4d",
+   "bytes": 11600,
+   "checkedAt": "2026-10-19T08:38:00.912Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.texasattorneygeneral.gov/divisions/charitable-trusts/registration-and-filings": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "82d94c4c8fcfe651",
+   "bytes": 7447,
+   "checkedAt": "2026-10-19T08:38:01.755Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.thehotline.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4141e1741767ca69",
+   "bytes": 10334,
+   "checkedAt": "2026-10-19T08:38:02.001Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://www.thetrevorproject.org/get-help/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e2d8e3db2e9826ba",
+   "bytes": 10138,
+   "checkedAt": "2026-10-19T08:38:03.498Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.tn.gov/ecd/small-business/bero-home.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "8f41bb6329d7fc4c",
+   "bytes": 2621,
+   "checkedAt": "2026-10-19T08:38:02.512Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.unomaha.edu/nebraska-business-development-center/index.php": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2d4f1ac59a3fc25e",
+   "bytes": 3721,
+   "checkedAt": "2026-10-19T08:38:03.062Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.usa.gov/emergency-food-assistance": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "0085695c73b06b57",
+   "bytes": 3669,
+   "checkedAt": "2026-10-19T08:38:03.561Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.usa.gov/food-stamps": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9084626c1298831f",
+   "bytes": 3941,
+   "checkedAt": "2026-10-19T08:38:03.648Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.usa.gov/help-with-energy-bills": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "18d36f1e7adaa955",
+   "bytes": 4197,
+   "checkedAt": "2026-10-19T08:38:03.723Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.usd.edu/sbdc": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a565fb430bc78f53",
+   "bytes": 5829,
+   "checkedAt": "2026-10-19T08:38:04.624Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/breast-cancer-screening": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c0e5e8a811b50149",
+   "bytes": 93893,
+   "checkedAt": "2026-10-19T08:38:04.548Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/cervical-cancer-screening": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f42778da51b3c371",
+   "bytes": 76047,
+   "checkedAt": "2026-10-19T08:38:05.016Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://www.uspto.gov/trademarks/basics/what-trademark": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b9bc62e61d3e3321",
+   "bytes": 12226,
+   "checkedAt": "2026-10-19T08:38:04.983Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.va.gov/contact-us/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "eb0f4ca51a49e06b",
+   "bytes": 6443,
+   "checkedAt": "2026-10-19T08:38:05.387Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.va.gov/disability/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1e8f11e4bcccb088",
+   "bytes": 3179,
+   "checkedAt": "2026-10-19T08:38:05.412Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.va.gov/education/about-gi-bill-benefits/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4118b6f0ac243b26",
+   "bytes": 6149,
+   "checkedAt": "2026-10-19T08:38:05.599Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.va.gov/get-help-from-accredited-representative/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fb8b73e9bb79b88b",
+   "bytes": 4541,
+   "checkedAt": "2026-10-19T08:38:05.606Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.va.gov/health-care/eligibility/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f20fcff77bed54c3",
+   "bytes": 9924,
+   "checkedAt": "2026-10-19T08:38:05.815Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.va.gov/housing-assistance/home-loans/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e1b49696154ca1f4",
+   "bytes": 2506,
+   "checkedAt": "2026-10-19T08:38:05.805Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.va.gov/resources/gi-bill-and-other-va-education-benefit-payments-faqs/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "35a8ff8d0901036d",
+   "bytes": 3784,
+   "checkedAt": "2026-10-19T08:38:06.253Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.va.gov/resources/helpful-va-phone-numbers/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4ead29a0a7030779",
+   "bytes": 3934,
+   "checkedAt": "2026-10-19T08:38:06.257Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.vdacs.virginia.gov/food-charitable-solicitation.shtml": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "dfe3d2b7b2402758",
+   "bytes": 13280,
+   "checkedAt": "2026-10-19T08:38:06.888Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.vetcenter.va.gov/media/Call-Center-PSA.asp": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "480cc18ecb2db108",
+   "bytes": 6760,
+   "checkedAt": "2026-10-19T08:38:06.960Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.veteranscrisisline.net/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "201013b6bc82b4f0",
+   "bytes": 3112,
+   "checkedAt": "2026-10-19T08:38:07.491Z",
+   "guides": [
+    "us-community-support"
+   ]
+  },
+  "https://www.vtsbdc.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "aa933ea50817cbd4",
+   "bytes": 3683,
+   "checkedAt": "2026-10-19T08:38:08.211Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.who.int/news-room/fact-sheets/detail/breast-cancer": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c8e17c560f9fc1cf",
+   "bytes": 15011,
+   "checkedAt": "2026-10-19T08:38:07.746Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.who.int/news-room/fact-sheets/detail/cervical-cancer": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c15f9fd833f5d108",
+   "bytes": 14324,
+   "checkedAt": "2026-10-19T08:38:07.940Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.who.int/news-room/fact-sheets/detail/emergency-contraception": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c2e1badc8a9ecc08",
+   "bytes": 14325,
+   "checkedAt": "2026-10-19T08:38:08.123Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.who.int/news-room/fact-sheets/detail/family-planning-contraception": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1b378a589edecd38",
+   "bytes": 8869,
+   "checkedAt": "2026-10-19T08:38:08.567Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.who.int/news-room/fact-sheets/detail/maternal-mortality": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f1c6e2012f02e8ff",
+   "bytes": 13721,
+   "checkedAt": "2026-10-19T08:38:08.450Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.who.int/news-room/fact-sheets/detail/menopause": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "abe58250e27d896e",
+   "bytes": 13287,
+   "checkedAt": "2026-10-19T08:38:08.634Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.who.int/news-room/fact-sheets/detail/menstrual-health": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f195b27d6577d826",
+   "bytes": 15651,
+   "checkedAt": "2026-10-19T08:38:08.743Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.who.int/news-room/fact-sheets/detail/newborn-mortality": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d3b37ae1a2ef581e",
+   "bytes": 12062,
+   "checkedAt": "2026-10-19T08:38:08.812Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.who.int/news-room/fact-sheets/detail/pre-eclampsia": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d68782b58d99594e",
+   "bytes": 9608,
+   "checkedAt": "2026-10-19T08:38:08.948Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.who.int/news/item/07-11-2016-new-guidelines-on-antenatal-care-for-a-positive-pregnancy-experience": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "3a437b2ae7b45527",
+   "bytes": 11099,
+   "checkedAt": "2026-10-19T08:38:09.349Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.who.int/news/item/19-09-2022-launch-of-the-who-guide-for-integration-of-perinatal-mental-health": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d2450ecd41b7496e",
+   "bytes": 5139,
+   "checkedAt": "2026-10-19T08:38:10.181Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.who.int/news/item/30-03-2022-who-urges-quality-care-for-women-and-newborns-in-critical-first-weeks-after-childbirth": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "dbfd4af96491840e",
+   "bytes": 8283,
+   "checkedAt": "2026-10-19T08:38:09.541Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.who.int/tools/your-life-your-health/life-phase/pregnancy--birth-and-after-childbirth/getting-the-health-services-you-need-after-childbirth": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d1f88a495377486a",
+   "bytes": 6839,
+   "checkedAt": "2026-10-19T08:38:12.788Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.who.int/tools/your-life-your-health/life-phase/pregnancy--birth-and-after-childbirth/getting-the-health-services-you-need-during-pregnancy": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5198a8493176c8ea",
+   "bytes": 6817,
+   "checkedAt": "2026-10-19T08:38:15.200Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.who.int/tools/your-life-your-health/life-phase/pregnancy--birth-and-after-childbirth/keeping-well-during-pregnancy-and-after-childbirth": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5138ba49317fe8a2",
+   "bytes": 6623,
+   "checkedAt": "2026-10-19T08:38:16.607Z",
+   "guides": [
+    "womens-health:who"
+   ]
+  },
+  "https://www.womenshealth.gov/menopause/menopause-basics": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2bfa57f417b1ea7d",
+   "bytes": 13433,
+   "checkedAt": "2026-10-19T08:38:16.720Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://www.womenshealth.gov/menstrual-cycle/your-menstrual-cycle": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d20f60b0b773883b",
+   "bytes": 18976,
+   "checkedAt": "2026-10-19T08:38:17.176Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://www.womenshealth.gov/pregnancy/youre-pregnant-now-what/prenatal-care-and-tests": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "21607ff6befc9323",
+   "bytes": 29247,
+   "checkedAt": "2026-10-19T08:38:17.608Z",
+   "guides": [
+    "womens-health"
+   ]
+  },
+  "https://wyobiz.wyo.gov": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "f1009bd5571f605c",
+   "bytes": 3970,
+   "checkedAt": "2026-10-19T08:38:18.606Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://wyomingsbdc.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c006f8285811eea5",
+   "bytes": 9617,
+   "checkedAt": "2026-10-19T08:38:18.611Z",
+   "guides": [
+    "state-entities"
+   ]
+  }
+ }
+}
