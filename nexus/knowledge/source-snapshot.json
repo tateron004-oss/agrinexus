@@ -1,13 +1,13 @@
 {
- "takenAt": "2026-10-19T08:38:30.297Z",
- "count": 500,
+ "takenAt": "2026-10-19T18:31:32.291Z",
+ "count": 504,
  "pages": {
   "https://988lifeline.org/": {
    "state": "ok",
    "status": 200,
    "fingerprint": "e6155fd44bf13f51",
    "bytes": 3533,
-   "checkedAt": "2026-10-19T08:35:33.092Z",
+   "checkedAt": "2026-10-19T18:29:18.586Z",
    "guides": [
     "us-community-support",
     "womens-health"
@@ -18,7 +18,7 @@
    "status": 200,
    "fingerprint": "f4867603caed2221",
    "bytes": 13231,
-   "checkedAt": "2026-10-19T08:35:33.586Z",
+   "checkedAt": "2026-10-19T18:29:18.916Z",
    "guides": [
     "us-community-support"
    ]
@@ -26,9 +26,9 @@
   "https://africa.unwomen.org/en/stories/news/2024/10/kenyas-national-toll-free-helpline-1195-a-lifeline-for-gender-based-violence-survivors": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "deb602a305736026",
+   "fingerprint": "ceb602a305736826",
    "bytes": 13511,
-   "checkedAt": "2026-10-19T08:35:33.223Z",
+   "checkedAt": "2026-10-19T18:29:20.599Z",
    "guides": [
     "womens-health:who"
    ]
@@ -38,7 +38,7 @@
    "status": 200,
    "fingerprint": "6d882921dfe429c6",
    "bytes": 3165,
-   "checkedAt": "2026-10-19T08:35:33.444Z",
+   "checkedAt": "2026-10-19T18:29:18.694Z",
    "guides": [
     "state-entities"
    ]
@@ -48,17 +48,17 @@
    "status": 200,
    "fingerprint": "e5efc39b1add7f5f",
    "bytes": 3443,
-   "checkedAt": "2026-10-19T08:35:34.017Z",
+   "checkedAt": "2026-10-19T18:29:19.082Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://ago.vermont.gov/attorney-generals-office-divisions-and-unit/charities-and-paid-fundraisers": {
-   "state": "moved",
+  "https://ago.vermont.gov/attorney-generals-office-divisions-and-units/consumer-protection/charities-and-paid-fundraisers": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "ae3c59ab8836c3ac",
    "bytes": 5815,
-   "checkedAt": "2026-10-19T08:35:34.292Z",
+   "checkedAt": "2026-10-19T18:29:18.870Z",
    "guides": [
     "state-entities"
    ]
@@ -68,7 +68,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:33.899Z",
+   "checkedAt": "2026-10-19T18:29:19.078Z",
    "guides": [
     "state-entities"
    ]
@@ -78,7 +78,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:34.732Z",
+   "checkedAt": "2026-10-19T18:29:19.526Z",
    "guides": [
     "state-entities"
    ]
@@ -88,7 +88,7 @@
    "status": 200,
    "fingerprint": "321d5addabf63f93",
    "bytes": 5886,
-   "checkedAt": "2026-10-19T08:35:34.376Z",
+   "checkedAt": "2026-10-19T18:29:19.252Z",
    "guides": [
     "state-entities"
    ]
@@ -98,7 +98,7 @@
    "status": 200,
    "fingerprint": "53a71512821b706a",
    "bytes": 4345,
-   "checkedAt": "2026-10-19T08:35:34.759Z",
+   "checkedAt": "2026-10-19T18:29:19.385Z",
    "guides": [
     "state-entities"
    ]
@@ -108,7 +108,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:34.655Z",
+   "checkedAt": "2026-10-19T18:29:19.358Z",
    "guides": [
     "state-entities"
    ]
@@ -118,7 +118,7 @@
    "status": 200,
    "fingerprint": "18961c561a873b83",
    "bytes": 9094,
-   "checkedAt": "2026-10-19T08:35:34.957Z",
+   "checkedAt": "2026-10-19T18:29:19.456Z",
    "guides": [
     "state-entities"
    ]
@@ -128,7 +128,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:35.000Z",
+   "checkedAt": "2026-10-19T18:29:19.660Z",
    "guides": [
     "state-entities"
    ]
@@ -138,7 +138,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:35.017Z",
+   "checkedAt": "2026-10-19T18:29:19.675Z",
    "guides": [
     "us-community-support"
    ]
@@ -148,7 +148,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:35.210Z",
+   "checkedAt": "2026-10-19T18:29:19.843Z",
    "guides": [
     "state-entities"
    ]
@@ -157,10 +157,21 @@
    "state": "ok",
    "status": 200,
    "fingerprint": "",
-   "bytes": 82,
-   "checkedAt": "2026-10-19T08:35:35.209Z",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T18:29:19.688Z",
    "guides": [
+    "california-business",
     "state-entities"
+   ]
+  },
+  "https://bizfileonline.sos.ca.gov/search/business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T18:29:19.734Z",
+   "guides": [
+    "california-business"
    ]
   },
   "https://bizfilings.vermont.gov/homepage": {
@@ -168,7 +179,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:35.602Z",
+   "checkedAt": "2026-10-19T18:29:20.190Z",
    "guides": [
     "state-entities"
    ]
@@ -178,7 +189,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:35.496Z",
+   "checkedAt": "2026-10-19T18:29:19.967Z",
    "guides": [
     "state-entities"
    ]
@@ -188,7 +199,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:35.456Z",
+   "checkedAt": "2026-10-19T18:29:19.957Z",
    "guides": [
     "state-entities"
    ]
@@ -198,7 +209,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:35.622Z",
+   "checkedAt": "2026-10-19T18:29:19.979Z",
    "guides": [
     "state-entities"
    ]
@@ -208,7 +219,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:35.712Z",
+   "checkedAt": "2026-10-19T18:29:20.094Z",
    "guides": [
     "state-entities"
    ]
@@ -218,7 +229,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 26,
-   "checkedAt": "2026-10-19T08:35:36.030Z",
+   "checkedAt": "2026-10-19T18:29:21.100Z",
    "guides": [
     "state-entities"
    ]
@@ -228,8 +239,9 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:35.901Z",
+   "checkedAt": "2026-10-19T18:29:20.285Z",
    "guides": [
+    "california-business",
     "state-entities"
    ]
   },
@@ -238,7 +250,7 @@
    "status": 200,
    "fingerprint": "adc92ed5df90c09f",
    "bytes": 11724,
-   "checkedAt": "2026-10-19T08:35:39.013Z",
+   "checkedAt": "2026-10-19T18:29:23.297Z",
    "guides": [
     "africa-small-business"
    ]
@@ -248,7 +260,7 @@
    "status": 200,
    "fingerprint": "60671918d0e1a0cd",
    "bytes": 1835,
-   "checkedAt": "2026-10-19T08:35:36.680Z",
+   "checkedAt": "2026-10-19T18:29:20.969Z",
    "guides": [
     "state-entities"
    ]
@@ -258,7 +270,7 @@
    "status": 200,
    "fingerprint": "41b5a161dd859679",
    "bytes": 6178,
-   "checkedAt": "2026-10-19T08:35:37.742Z",
+   "checkedAt": "2026-10-19T18:29:21.424Z",
    "guides": [
     "state-entities"
    ]
@@ -268,7 +280,7 @@
    "status": 200,
    "fingerprint": "6132205c82941d73",
    "bytes": 4747,
-   "checkedAt": "2026-10-19T08:35:37.589Z",
+   "checkedAt": "2026-10-19T18:29:21.418Z",
    "guides": [
     "state-entities"
    ]
@@ -278,7 +290,7 @@
    "status": 200,
    "fingerprint": "4135215c09941d13",
    "bytes": 4577,
-   "checkedAt": "2026-10-19T08:35:38.023Z",
+   "checkedAt": "2026-10-19T18:29:21.515Z",
    "guides": [
     "state-entities"
    ]
@@ -288,7 +300,7 @@
    "status": 200,
    "fingerprint": "6170a65c0a941d73",
    "bytes": 4853,
-   "checkedAt": "2026-10-19T08:35:38.321Z",
+   "checkedAt": "2026-10-19T18:29:21.991Z",
    "guides": [
     "state-entities"
    ]
@@ -298,17 +310,17 @@
    "status": 200,
    "fingerprint": "49b30255a7168b73",
    "bytes": 2803,
-   "checkedAt": "2026-10-19T08:35:38.471Z",
+   "checkedAt": "2026-10-19T18:29:22.065Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://business.idaho.gov/": {
-   "state": "moved",
+   "state": "ok",
    "status": 200,
    "fingerprint": "dc6385e526b9ad67",
    "bytes": 2177,
-   "checkedAt": "2026-10-19T08:35:39.612Z",
+   "checkedAt": "2026-10-19T18:29:23.127Z",
    "guides": [
     "state-entities"
    ]
@@ -318,7 +330,7 @@
    "status": 200,
    "fingerprint": "cc53cee326c98aea",
    "bytes": 6639,
-   "checkedAt": "2026-10-19T08:35:39.153Z",
+   "checkedAt": "2026-10-19T18:29:22.106Z",
    "guides": [
     "state-entities"
    ]
@@ -328,17 +340,17 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:39.791Z",
+   "checkedAt": "2026-10-19T18:29:22.264Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://business4.wv.gov/": {
-   "state": "moved",
+   "state": "ok",
    "status": 200,
    "fingerprint": "05c931323d962a5d",
    "bytes": 5444,
-   "checkedAt": "2026-10-19T08:35:40.343Z",
+   "checkedAt": "2026-10-19T18:29:23.015Z",
    "guides": [
     "state-entities"
    ]
@@ -348,7 +360,7 @@
    "status": 200,
    "fingerprint": "b9a7c7837388f695",
    "bytes": 2140,
-   "checkedAt": "2026-10-19T08:35:40.347Z",
+   "checkedAt": "2026-10-19T18:29:23.287Z",
    "guides": [
     "state-entities"
    ]
@@ -358,7 +370,7 @@
    "status": 200,
    "fingerprint": "420ebbd55c4e2853",
    "bytes": 4250,
-   "checkedAt": "2026-10-19T08:35:40.501Z",
+   "checkedAt": "2026-10-19T18:29:22.797Z",
    "guides": [
     "state-entities"
    ]
@@ -368,7 +380,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:40.868Z",
+   "checkedAt": "2026-10-19T18:29:22.825Z",
    "guides": [
     "state-entities"
    ]
@@ -378,7 +390,7 @@
    "status": 200,
    "fingerprint": "47c1f8cbd35d13b7",
    "bytes": 7502,
-   "checkedAt": "2026-10-19T08:35:41.249Z",
+   "checkedAt": "2026-10-19T18:29:23.508Z",
    "guides": [
     "state-entities"
    ]
@@ -388,7 +400,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:40.725Z",
+   "checkedAt": "2026-10-19T18:29:23.165Z",
    "guides": [
     "state-entities"
    ]
@@ -398,9 +410,19 @@
    "status": 200,
    "fingerprint": "ad03d73962696a18",
    "bytes": 47956,
-   "checkedAt": "2026-10-19T08:35:41.778Z",
+   "checkedAt": "2026-10-19T18:29:24.006Z",
    "guides": [
     "california-business"
+   ]
+  },
+  "https://calosba.ca.gov/for-small-businesses-and-non-profits/small-business-centers/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ac03d7396eeb629c",
+   "bytes": 47402,
+   "checkedAt": "2026-10-19T18:29:24.240Z",
+   "guides": [
+    "state-entities"
    ]
   },
   "https://calosba.ca.gov/funding-grants-incentives/california-dream-fund-program/": {
@@ -408,19 +430,9 @@
    "status": 200,
    "fingerprint": "ad2bd739e2eb6218",
    "bytes": 52819,
-   "checkedAt": "2026-10-19T08:35:42.080Z",
+   "checkedAt": "2026-10-19T18:29:24.344Z",
    "guides": [
     "california-business"
-   ]
-  },
-  "https://calosba.ca.gov/local-direct-assistance/small-business-centers/": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "ac03d7396eeb629c",
-   "bytes": 47402,
-   "checkedAt": "2026-10-19T08:35:42.658Z",
-   "guides": [
-    "state-entities"
    ]
   },
   "https://cca.hawaii.gov/breg/": {
@@ -428,7 +440,7 @@
    "status": 200,
    "fingerprint": "855be742979a7588",
    "bytes": 9396,
-   "checkedAt": "2026-10-19T08:35:42.113Z",
+   "checkedAt": "2026-10-19T18:29:23.630Z",
    "guides": [
     "state-entities"
    ]
@@ -438,7 +450,7 @@
    "status": 200,
    "fingerprint": "946be310732f518a",
    "bytes": 5370,
-   "checkedAt": "2026-10-19T08:35:42.288Z",
+   "checkedAt": "2026-10-19T18:29:24.985Z",
    "guides": [
     "state-entities"
    ]
@@ -448,7 +460,7 @@
    "status": 200,
    "fingerprint": "9423e162732f51a0",
    "bytes": 5437,
-   "checkedAt": "2026-10-19T08:35:42.367Z",
+   "checkedAt": "2026-10-19T18:29:25.009Z",
    "guides": [
     "state-entities"
    ]
@@ -458,7 +470,7 @@
    "status": 200,
    "fingerprint": "94236402f32a51a0",
    "bytes": 6090,
-   "checkedAt": "2026-10-19T08:35:42.482Z",
+   "checkedAt": "2026-10-19T18:29:25.060Z",
    "guides": [
     "state-entities"
    ]
@@ -468,9 +480,19 @@
    "status": 200,
    "fingerprint": "d6e37e6af99e1c11",
    "bytes": 6450,
-   "checkedAt": "2026-10-19T08:35:42.716Z",
+   "checkedAt": "2026-10-19T18:29:24.427Z",
    "guides": [
     "california-business"
+   ]
+  },
+  "https://certifications.sba.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b5f2eb45b7904b62",
+   "bytes": 772,
+   "checkedAt": "2026-10-19T18:29:24.698Z",
+   "guides": [
+    "us-small-business"
    ]
   },
   "https://charitable.ohioago.gov/Charity-Registration/Starting-a-Charity-in-Ohio": {
@@ -478,7 +500,7 @@
    "status": 200,
    "fingerprint": "950f0aec20e0ce2b",
    "bytes": 7614,
-   "checkedAt": "2026-10-19T08:35:43.211Z",
+   "checkedAt": "2026-10-19T18:29:25.035Z",
    "guides": [
     "state-entities"
    ]
@@ -488,7 +510,7 @@
    "status": 200,
    "fingerprint": "70eca05fa3455861",
    "bytes": 9582,
-   "checkedAt": "2026-10-19T08:35:42.953Z",
+   "checkedAt": "2026-10-19T18:29:24.722Z",
    "guides": [
     "us-community-support"
    ]
@@ -498,7 +520,7 @@
    "status": 200,
    "fingerprint": "d12cf4e1c1517a39",
    "bytes": 248,
-   "checkedAt": "2026-10-19T08:35:43.751Z",
+   "checkedAt": "2026-10-19T18:29:26.954Z",
    "guides": [
     "state-entities"
    ]
@@ -508,7 +530,17 @@
    "status": 200,
    "fingerprint": "d777bd9b1049681a",
    "bytes": 12865,
-   "checkedAt": "2026-10-19T08:35:43.510Z",
+   "checkedAt": "2026-10-19T18:29:26.179Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://commerce.mt.gov/Business/Programs-and-Services/Small-Business-Development-Center/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5a07079892673d20",
+   "bytes": 16156,
+   "checkedAt": "2026-10-19T18:29:25.764Z",
    "guides": [
     "state-entities"
    ]
@@ -518,7 +550,7 @@
    "status": 200,
    "fingerprint": "79c525ac911cdc66",
    "bytes": 2271,
-   "checkedAt": "2026-10-19T08:35:43.475Z",
+   "checkedAt": "2026-10-19T18:29:25.327Z",
    "guides": [
     "state-entities"
    ]
@@ -528,7 +560,7 @@
    "status": 200,
    "fingerprint": "e9ab45acfb029b1d",
    "bytes": 9802,
-   "checkedAt": "2026-10-19T08:35:43.655Z",
+   "checkedAt": "2026-10-19T18:29:25.342Z",
    "guides": [
     "state-entities"
    ]
@@ -538,7 +570,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:43.840Z",
+   "checkedAt": "2026-10-19T18:29:25.440Z",
    "guides": [
     "state-entities"
    ]
@@ -546,21 +578,31 @@
   "https://comptroller.texas.gov/taxes/permit/": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "d3dcbd9c254978b5",
-   "bytes": 10217,
-   "checkedAt": "2026-10-19T08:35:44.016Z",
+   "fingerprint": "c35cbc942569f895",
+   "bytes": 9448,
+   "checkedAt": "2026-10-19T18:29:25.726Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://consumer.ftc.gov/articles/how-avoid-scholarship-and-financial-aid-scams": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:44.039Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "17577368acafeabf",
+   "bytes": 12881,
+   "checkedAt": "2026-10-19T18:29:26.715Z",
    "guides": [
     "us-community-support"
+   ]
+  },
+  "https://consumer.ftc.gov/consumer-alerts/2023/03/scammers-use-ai-enhance-their-family-emergency-schemes": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "3b7c56ac47cd82ff",
+   "bytes": 18850,
+   "checkedAt": "2026-10-19T18:29:26.735Z",
+   "guides": [
+    "small-business-technology"
    ]
   },
   "https://consumer.sd.gov/fastfacts/charity.aspx": {
@@ -568,7 +610,7 @@
    "status": 200,
    "fingerprint": "322cdcff5abca50a",
    "bytes": 5604,
-   "checkedAt": "2026-10-19T08:35:44.304Z",
+   "checkedAt": "2026-10-19T18:29:26.215Z",
    "guides": [
     "state-entities"
    ]
@@ -578,7 +620,7 @@
    "status": 200,
    "fingerprint": "b9c50b79d047c344",
    "bytes": 3865,
-   "checkedAt": "2026-10-19T08:35:44.695Z",
+   "checkedAt": "2026-10-19T18:29:26.479Z",
    "guides": [
     "state-entities"
    ]
@@ -588,7 +630,7 @@
    "status": 200,
    "fingerprint": "99871daad0bda2d8",
    "bytes": 8817,
-   "checkedAt": "2026-10-19T08:35:44.713Z",
+   "checkedAt": "2026-10-19T18:29:26.727Z",
    "guides": [
     "state-entities"
    ]
@@ -597,8 +639,8 @@
    "state": "ok",
    "status": 200,
    "fingerprint": "",
-   "bytes": 82,
-   "checkedAt": "2026-10-19T08:35:44.526Z",
+   "bytes": 80,
+   "checkedAt": "2026-10-19T18:29:26.513Z",
    "guides": [
     "state-entities"
    ]
@@ -608,7 +650,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:44.792Z",
+   "checkedAt": "2026-10-19T18:29:26.807Z",
    "guides": [
     "state-entities"
    ]
@@ -618,7 +660,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:45.270Z",
+   "checkedAt": "2026-10-19T18:29:27.056Z",
    "guides": [
     "state-entities"
    ]
@@ -628,7 +670,7 @@
    "status": 200,
    "fingerprint": "27fe8f0f110f3867",
    "bytes": 4236,
-   "checkedAt": "2026-10-19T08:35:46.458Z",
+   "checkedAt": "2026-10-19T18:29:27.215Z",
    "guides": [
     "small-business-technology"
    ]
@@ -638,7 +680,7 @@
    "status": 200,
    "fingerprint": "62b4c18390878e8b",
    "bytes": 11376,
-   "checkedAt": "2026-10-19T08:35:46.770Z",
+   "checkedAt": "2026-10-19T18:29:29.266Z",
    "guides": [
     "state-entities"
    ]
@@ -648,7 +690,7 @@
    "status": 200,
    "fingerprint": "987f92f9fcf7fe79",
    "bytes": 6879,
-   "checkedAt": "2026-10-19T08:35:45.784Z",
+   "checkedAt": "2026-10-19T18:29:27.470Z",
    "guides": [
     "state-entities"
    ]
@@ -658,7 +700,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:46.102Z",
+   "checkedAt": "2026-10-19T18:29:27.500Z",
    "guides": [
     "state-entities"
    ]
@@ -668,7 +710,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:46.438Z",
+   "checkedAt": "2026-10-19T18:29:27.628Z",
    "guides": [
     "state-entities"
    ]
@@ -678,7 +720,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:46.953Z",
+   "checkedAt": "2026-10-19T18:29:27.729Z",
    "guides": [
     "state-entities"
    ]
@@ -688,7 +730,7 @@
    "status": 200,
    "fingerprint": "f200f5c6c11f42d2",
    "bytes": 3186,
-   "checkedAt": "2026-10-19T08:35:46.703Z",
+   "checkedAt": "2026-10-19T18:29:27.956Z",
    "guides": [
     "state-entities"
    ]
@@ -697,8 +739,8 @@
    "state": "ok",
    "status": 200,
    "fingerprint": "bd477b1da121b0f3",
-   "bytes": 17022,
-   "checkedAt": "2026-10-19T08:35:47.297Z",
+   "bytes": 17080,
+   "checkedAt": "2026-10-19T18:29:28.043Z",
    "guides": [
     "us-community-support"
    ]
@@ -708,7 +750,7 @@
    "status": 200,
    "fingerprint": "bf8da8e9ca83a0a4",
    "bytes": 12076,
-   "checkedAt": "2026-10-19T08:35:47.698Z",
+   "checkedAt": "2026-10-19T18:29:28.708Z",
    "guides": [
     "state-entities"
    ]
@@ -718,7 +760,7 @@
    "status": 200,
    "fingerprint": "1785e0a46e03f035",
    "bytes": 13381,
-   "checkedAt": "2026-10-19T08:35:47.942Z",
+   "checkedAt": "2026-10-19T18:29:28.585Z",
    "guides": [
     "state-entities"
    ]
@@ -728,77 +770,67 @@
    "status": 200,
    "fingerprint": "978d88a5e811b08c",
    "bytes": 9360,
-   "checkedAt": "2026-10-19T08:35:48.425Z",
+   "checkedAt": "2026-10-19T18:29:29.705Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://dlcp.dc.gov/node/1614386": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "4bf9b7d6122d7804",
-   "bytes": 6134,
-   "checkedAt": "2026-10-19T08:35:48.057Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://dlcp.dc.gov/node/1618416": {
-   "state": "moved",
+  "https://dlcp.dc.gov/page/charitable-services-business-0": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "4bf955d1323d387e",
    "bytes": 3863,
-   "checkedAt": "2026-10-19T08:35:48.174Z",
+   "checkedAt": "2026-10-19T18:29:28.933Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://dlcp.dc.gov/node/1621906": {
-   "state": "moved",
+  "https://dlcp.dc.gov/page/corporations-0": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4bf9b7d6122d7804",
+   "bytes": 6134,
+   "checkedAt": "2026-10-19T18:29:28.511Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dlcp.dc.gov/page/corporations-division-fees-business-corporation": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "50dfdf99b14db416",
    "bytes": 9177,
-   "checkedAt": "2026-10-19T08:35:48.272Z",
+   "checkedAt": "2026-10-19T18:29:29.349Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://dlcp.dc.gov/node/1621921": {
-   "state": "moved",
+  "https://dlcp.dc.gov/page/corporations-division-fees-limited-liability-company": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "0f7c2f9a13369068",
    "bytes": 5309,
-   "checkedAt": "2026-10-19T08:35:48.417Z",
+   "checkedAt": "2026-10-19T18:29:29.610Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://dlcp.dc.gov/node/1621926": {
-   "state": "moved",
+  "https://dlcp.dc.gov/page/corporations-division-fees-nonprofit-corporation": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "75df7fd2c3be7d50",
    "bytes": 5554,
-   "checkedAt": "2026-10-19T08:35:48.514Z",
+   "checkedAt": "2026-10-19T18:29:29.378Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://dlcp.dc.gov/service/small-business-resource-center-sbrc-0": {
-   "state": "moved",
+  "https://dlcp.dc.gov/service/business-resource-center-brc": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "3b63865e2ab63872",
    "bytes": 6505,
-   "checkedAt": "2026-10-19T08:35:48.625Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://dor.georgia.gov/tax-exempt-nonprofit-organizations": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "459a79fc35b0a81e",
-   "bytes": 5291,
-   "checkedAt": "2026-10-19T08:35:49.369Z",
+   "checkedAt": "2026-10-19T18:29:29.694Z",
    "guides": [
     "state-entities"
    ]
@@ -808,7 +840,17 @@
    "status": 200,
    "fingerprint": "05b0f1f538f4881e",
    "bytes": 7626,
-   "checkedAt": "2026-10-19T08:35:49.044Z",
+   "checkedAt": "2026-10-19T18:29:30.026Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://dor.georgia.gov/taxes/sales-use-tax/tax-exempt-nonprofit-organizations": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "459a79fc35b0a81e",
+   "bytes": 5291,
+   "checkedAt": "2026-10-19T18:29:29.809Z",
    "guides": [
     "state-entities"
    ]
@@ -818,7 +860,7 @@
    "status": 200,
    "fingerprint": "868cf10c45616cc9",
    "bytes": 7365,
-   "checkedAt": "2026-10-19T08:35:49.112Z",
+   "checkedAt": "2026-10-19T18:29:30.279Z",
    "guides": [
     "state-entities"
    ]
@@ -828,7 +870,7 @@
    "status": 200,
    "fingerprint": "a44453ff79fd9ea3",
    "bytes": 9064,
-   "checkedAt": "2026-10-19T08:35:49.432Z",
+   "checkedAt": "2026-10-19T18:29:30.009Z",
    "guides": [
     "state-entities"
    ]
@@ -838,7 +880,7 @@
    "status": 200,
    "fingerprint": "a2cdc7e5ef960399",
    "bytes": 3087,
-   "checkedAt": "2026-10-19T08:36:09.158Z",
+   "checkedAt": "2026-10-19T18:29:30.633Z",
    "guides": [
     "state-entities"
    ]
@@ -848,7 +890,7 @@
    "status": 200,
    "fingerprint": "848e228f193891ff",
    "bytes": 5788,
-   "checkedAt": "2026-10-19T08:35:50.215Z",
+   "checkedAt": "2026-10-19T18:29:30.546Z",
    "guides": [
     "state-entities"
    ]
@@ -858,7 +900,7 @@
    "status": 200,
    "fingerprint": "1f79038e5c0cd257",
    "bytes": 5021,
-   "checkedAt": "2026-10-19T08:35:49.771Z",
+   "checkedAt": "2026-10-19T18:29:30.285Z",
    "guides": [
     "state-entities"
    ]
@@ -868,7 +910,7 @@
    "status": 200,
    "fingerprint": "7e1b47de5cacc653",
    "bytes": 3911,
-   "checkedAt": "2026-10-19T08:35:50.064Z",
+   "checkedAt": "2026-10-19T18:29:30.371Z",
    "guides": [
     "state-entities"
    ]
@@ -878,7 +920,7 @@
    "status": 200,
    "fingerprint": "7d19c79e5cacc571",
    "bytes": 3372,
-   "checkedAt": "2026-10-19T08:35:50.328Z",
+   "checkedAt": "2026-10-19T18:29:30.363Z",
    "guides": [
     "state-entities"
    ]
@@ -888,7 +930,7 @@
    "status": 200,
    "fingerprint": "2779c35b717cf851",
    "bytes": 7186,
-   "checkedAt": "2026-10-19T08:35:50.473Z",
+   "checkedAt": "2026-10-19T18:29:30.539Z",
    "guides": [
     "state-entities"
    ]
@@ -898,7 +940,7 @@
    "status": 200,
    "fingerprint": "7067a3a054c48635",
    "bytes": 8380,
-   "checkedAt": "2026-10-19T08:35:50.646Z",
+   "checkedAt": "2026-10-19T18:29:30.695Z",
    "guides": [
     "state-entities"
    ]
@@ -908,7 +950,7 @@
    "status": 200,
    "fingerprint": "f3705a1b0e2d673c",
    "bytes": 14813,
-   "checkedAt": "2026-10-19T08:35:50.812Z",
+   "checkedAt": "2026-10-19T18:29:30.715Z",
    "guides": [
     "state-entities"
    ]
@@ -918,7 +960,7 @@
    "status": 200,
    "fingerprint": "213e0962fd4caa53",
    "bytes": 3626,
-   "checkedAt": "2026-10-19T08:35:51.022Z",
+   "checkedAt": "2026-10-19T18:29:30.712Z",
    "guides": [
     "california-business"
    ]
@@ -928,7 +970,7 @@
    "status": 200,
    "fingerprint": "65fc6e84d7632f87",
    "bytes": 7803,
-   "checkedAt": "2026-10-19T08:35:51.195Z",
+   "checkedAt": "2026-10-19T18:29:30.904Z",
    "guides": [
     "california-business"
    ]
@@ -938,17 +980,17 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:51.358Z",
+   "checkedAt": "2026-10-19T18:29:31.004Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://eldercare.acl.gov/": {
-   "state": "moved",
+  "https://eldercare.acl.gov/home": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "94e03c3fb183e7d7",
    "bytes": 1949,
-   "checkedAt": "2026-10-19T08:35:52.149Z",
+   "checkedAt": "2026-10-19T18:29:31.142Z",
    "guides": [
     "us-community-support"
    ]
@@ -958,7 +1000,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:51.629Z",
+   "checkedAt": "2026-10-19T18:29:31.042Z",
    "guides": [
     "state-entities"
    ]
@@ -968,7 +1010,7 @@
    "status": 200,
    "fingerprint": "88d40ad891a00d64",
    "bytes": 2243,
-   "checkedAt": "2026-10-19T08:36:12.025Z",
+   "checkedAt": "2026-10-19T18:29:31.245Z",
    "guides": [
     "state-entities"
    ]
@@ -978,7 +1020,7 @@
    "status": 999,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:52.532Z",
+   "checkedAt": "2026-10-19T18:29:31.344Z",
    "guides": [
     "state-entities"
    ]
@@ -988,7 +1030,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:52.905Z",
+   "checkedAt": "2026-10-19T18:29:31.685Z",
    "guides": [
     "womens-health"
    ]
@@ -998,7 +1040,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:53.327Z",
+   "checkedAt": "2026-10-19T18:29:31.452Z",
    "guides": [
     "state-entities"
    ]
@@ -1008,7 +1050,7 @@
    "status": 200,
    "fingerprint": "a6f403846b308df0",
    "bytes": 6292,
-   "checkedAt": "2026-10-19T08:35:54.136Z",
+   "checkedAt": "2026-10-19T18:29:37.450Z",
    "guides": [
     "state-entities"
    ]
@@ -1018,7 +1060,7 @@
    "status": 200,
    "fingerprint": "1b927c5c049f85ae",
    "bytes": 12100,
-   "checkedAt": "2026-10-19T08:35:54.481Z",
+   "checkedAt": "2026-10-19T18:29:35.910Z",
    "guides": [
     "state-entities"
    ]
@@ -1028,7 +1070,7 @@
    "status": 200,
    "fingerprint": "372655dddd1113a5",
    "bytes": 4713,
-   "checkedAt": "2026-10-19T08:35:54.883Z",
+   "checkedAt": "2026-10-19T18:29:31.603Z",
    "guides": [
     "state-entities"
    ]
@@ -1038,7 +1080,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:55.176Z",
+   "checkedAt": "2026-10-19T18:29:31.811Z",
    "guides": [
     "state-entities"
    ]
@@ -1048,7 +1090,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:55.676Z",
+   "checkedAt": "2026-10-19T18:29:31.912Z",
    "guides": [
     "state-entities"
    ]
@@ -1058,7 +1100,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:35:55.964Z",
+   "checkedAt": "2026-10-19T18:29:32.082Z",
    "guides": [
     "state-entities"
    ]
@@ -1068,7 +1110,7 @@
    "status": 200,
    "fingerprint": "bfcbafd42d4eb30b",
    "bytes": 702,
-   "checkedAt": "2026-10-19T08:35:56.385Z",
+   "checkedAt": "2026-10-19T18:29:32.131Z",
    "guides": [
     "state-entities"
    ]
@@ -1078,7 +1120,7 @@
    "status": 200,
    "fingerprint": "77892994edcfaf61",
    "bytes": 3182,
-   "checkedAt": "2026-10-19T08:35:56.605Z",
+   "checkedAt": "2026-10-19T18:29:32.215Z",
    "guides": [
     "state-entities"
    ]
@@ -1088,7 +1130,7 @@
    "status": 200,
    "fingerprint": "723d3cfa44787445",
    "bytes": 3323,
-   "checkedAt": "2026-10-19T08:35:56.824Z",
+   "checkedAt": "2026-10-19T18:29:32.353Z",
    "guides": [
     "state-entities"
    ]
@@ -1098,7 +1140,7 @@
    "status": 200,
    "fingerprint": "ccc126975969da96",
    "bytes": 6220,
-   "checkedAt": "2026-10-19T08:35:58.028Z",
+   "checkedAt": "2026-10-19T18:29:33.289Z",
    "guides": [
     "state-entities"
    ]
@@ -1108,7 +1150,7 @@
    "status": 200,
    "fingerprint": "e64d9d8e59970f12",
    "bytes": 8092,
-   "checkedAt": "2026-10-19T08:35:58.587Z",
+   "checkedAt": "2026-10-19T18:29:32.587Z",
    "guides": [
     "state-entities"
    ]
@@ -1118,7 +1160,7 @@
    "status": 200,
    "fingerprint": "465758ca58978b2e",
    "bytes": 7222,
-   "checkedAt": "2026-10-19T08:35:58.818Z",
+   "checkedAt": "2026-10-19T18:29:32.735Z",
    "guides": [
     "state-entities"
    ]
@@ -1126,9 +1168,9 @@
   "https://georgiasbdc.org/": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "bbd18846870f502e",
-   "bytes": 4290,
-   "checkedAt": "2026-10-19T08:35:59.096Z",
+   "fingerprint": "a9b092c3650f103e",
+   "bytes": 4176,
+   "checkedAt": "2026-10-19T18:29:32.723Z",
    "guides": [
     "state-entities"
    ]
@@ -1138,7 +1180,7 @@
    "status": 200,
    "fingerprint": "9a11e2c298bd5a7f",
    "bytes": 3743,
-   "checkedAt": "2026-10-19T08:36:01.496Z",
+   "checkedAt": "2026-10-19T18:29:51.728Z",
    "guides": [
     "state-entities"
    ]
@@ -1148,7 +1190,7 @@
    "status": 200,
    "fingerprint": "68a2960d9665e00b",
    "bytes": 249,
-   "checkedAt": "2026-10-19T08:36:01.795Z",
+   "checkedAt": "2026-10-19T18:29:33.034Z",
    "guides": [
     "state-entities"
    ]
@@ -1158,7 +1200,7 @@
    "status": 200,
    "fingerprint": "a32287d5387fe605",
    "bytes": 5522,
-   "checkedAt": "2026-10-19T08:36:02.111Z",
+   "checkedAt": "2026-10-19T18:29:33.044Z",
    "guides": [
     "us-community-support"
    ]
@@ -1166,9 +1208,9 @@
   "https://idahosbdc.org/": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "653acede1dd6af63",
-   "bytes": 5572,
-   "checkedAt": "2026-10-19T08:36:03.100Z",
+   "fingerprint": "753acede1dd6af63",
+   "bytes": 5577,
+   "checkedAt": "2026-10-19T18:29:35.307Z",
    "guides": [
     "state-entities"
    ]
@@ -1178,7 +1220,7 @@
    "status": 200,
    "fingerprint": "a2b62063b2ee4621",
    "bytes": 4526,
-   "checkedAt": "2026-10-19T08:36:03.933Z",
+   "checkedAt": "2026-10-19T18:29:33.924Z",
    "guides": [
     "state-entities"
    ]
@@ -1188,7 +1230,7 @@
    "status": 200,
    "fingerprint": "3ab5c68538bf033a",
    "bytes": 1461710,
-   "checkedAt": "2026-10-19T08:36:05.072Z",
+   "checkedAt": "2026-10-19T18:29:34.441Z",
    "guides": [
     "state-entities"
    ]
@@ -1198,7 +1240,7 @@
    "status": 200,
    "fingerprint": "fe9e48d6affacdc4",
    "bytes": 4501,
-   "checkedAt": "2026-10-19T08:36:05.888Z",
+   "checkedAt": "2026-10-19T18:29:34.688Z",
    "guides": [
     "state-entities"
    ]
@@ -1208,7 +1250,7 @@
    "status": 200,
    "fingerprint": "7416d5cbb181653e",
    "bytes": 8436,
-   "checkedAt": "2026-10-19T08:36:07.332Z",
+   "checkedAt": "2026-10-19T18:29:35.943Z",
    "guides": [
     "state-entities"
    ]
@@ -1218,7 +1260,7 @@
    "status": 200,
    "fingerprint": "a1130b66d2d0a975",
    "bytes": 2368,
-   "checkedAt": "2026-10-19T08:36:08.042Z",
+   "checkedAt": "2026-10-19T18:29:35.659Z",
    "guides": [
     "state-entities"
    ]
@@ -1228,7 +1270,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:08.561Z",
+   "checkedAt": "2026-10-19T18:29:35.902Z",
    "guides": [
     "california-business"
    ]
@@ -1238,7 +1280,7 @@
    "status": 200,
    "fingerprint": "a1dbd386e88c77ff",
    "bytes": 9042,
-   "checkedAt": "2026-10-19T08:36:08.787Z",
+   "checkedAt": "2026-10-19T18:29:35.867Z",
    "guides": [
     "california-business"
    ]
@@ -1248,7 +1290,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 20,
-   "checkedAt": "2026-10-19T08:36:09.370Z",
+   "checkedAt": "2026-10-19T18:29:36.626Z",
    "guides": [
     "california-business"
    ]
@@ -1258,7 +1300,7 @@
    "status": 200,
    "fingerprint": "5c1423b860fdf4ee",
    "bytes": 3382,
-   "checkedAt": "2026-10-19T08:36:09.679Z",
+   "checkedAt": "2026-10-19T18:29:36.309Z",
    "guides": [
     "state-entities"
    ]
@@ -1268,7 +1310,7 @@
    "status": 200,
    "fingerprint": "abb2994affc74a24",
    "bytes": 16575,
-   "checkedAt": "2026-10-19T08:36:09.686Z",
+   "checkedAt": "2026-10-19T18:29:36.299Z",
    "guides": [
     "state-entities"
    ]
@@ -1278,7 +1320,7 @@
    "status": 200,
    "fingerprint": "d4e4af6fa62e0a14",
    "bytes": 3333,
-   "checkedAt": "2026-10-19T08:36:10.082Z",
+   "checkedAt": "2026-10-19T18:29:37.149Z",
    "guides": [
     "state-entities"
    ]
@@ -1288,7 +1330,7 @@
    "status": 200,
    "fingerprint": "94e4ef6a6e2c823e",
    "bytes": 2571,
-   "checkedAt": "2026-10-19T08:36:10.088Z",
+   "checkedAt": "2026-10-19T18:29:37.842Z",
    "guides": [
     "state-entities"
    ]
@@ -1298,7 +1340,7 @@
    "status": 200,
    "fingerprint": "b4e4fe25369ee36e",
    "bytes": 2067,
-   "checkedAt": "2026-10-19T08:36:10.240Z",
+   "checkedAt": "2026-10-19T18:29:37.571Z",
    "guides": [
     "state-entities"
    ]
@@ -1308,7 +1350,7 @@
    "status": 200,
    "fingerprint": "86e6ee7f3caec39e",
    "bytes": 3065,
-   "checkedAt": "2026-10-19T08:36:10.251Z",
+   "checkedAt": "2026-10-19T18:29:37.805Z",
    "guides": [
     "state-entities"
    ]
@@ -1316,9 +1358,9 @@
   "https://legacy.sba.gov/district/rhode-island": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "94e6766dfe2e226c",
-   "bytes": 3084,
-   "checkedAt": "2026-10-19T08:36:10.398Z",
+   "fingerprint": "94e2b769ff2e233c",
+   "bytes": 3048,
+   "checkedAt": "2026-10-19T18:29:38.139Z",
    "guides": [
     "state-entities"
    ]
@@ -1328,17 +1370,7 @@
    "status": 200,
    "fingerprint": "e6352784cdc4a3af",
    "bytes": 6348,
-   "checkedAt": "2026-10-19T08:36:10.669Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://marylandtaxes.gov/forms/current_forms/CRA.pdf": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:11.267Z",
+   "checkedAt": "2026-10-19T18:29:37.886Z",
    "guides": [
     "state-entities"
    ]
@@ -1348,7 +1380,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:11.609Z",
+   "checkedAt": "2026-10-19T18:29:38.227Z",
    "guides": [
     "state-entities"
    ]
@@ -1358,7 +1390,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:11.554Z",
+   "checkedAt": "2026-10-19T18:29:38.205Z",
    "guides": [
     "state-entities"
    ]
@@ -1368,17 +1400,17 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:11.792Z",
+   "checkedAt": "2026-10-19T18:29:38.085Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://mytax.dc.gov": {
-   "state": "moved",
+   "state": "ok",
    "status": 200,
    "fingerprint": "",
    "bytes": 85,
-   "checkedAt": "2026-10-19T08:36:12.331Z",
+   "checkedAt": "2026-10-19T18:29:38.660Z",
    "guides": [
     "state-entities"
    ]
@@ -1388,7 +1420,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:12.018Z",
+   "checkedAt": "2026-10-19T18:29:38.472Z",
    "guides": [
     "state-entities"
    ]
@@ -1398,9 +1430,39 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:12.828Z",
+   "checkedAt": "2026-10-19T18:29:38.970Z",
    "guides": [
     "state-entities"
+   ]
+  },
+  "https://nmsdc.org/about/regional-affiliates/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "33788ba740d5814c",
+   "bytes": 12940,
+   "checkedAt": "2026-10-19T18:29:38.631Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://nmsdc.org/certifications/certification-process/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e6f680a6c1982124",
+   "bytes": 17938,
+   "checkedAt": "2026-10-19T18:29:38.491Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://nmsdc.org/certifications/definition-of-an-mbe/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e7708717419aa164",
+   "bytes": 12395,
+   "checkedAt": "2026-10-19T18:29:38.694Z",
+   "guides": [
+    "us-small-business"
    ]
   },
   "https://nmsdc.org/news/statement-from-nmsdc-ceo-and-president-ying-mcguire-regarding-the-mbda-termination-letters": {
@@ -1408,7 +1470,7 @@
    "status": 200,
    "fingerprint": "67fa849364dba12c",
    "bytes": 11003,
-   "checkedAt": "2026-10-19T08:36:14.615Z",
+   "checkedAt": "2026-10-19T18:29:38.793Z",
    "guides": [
     "us-small-business"
    ]
@@ -1418,7 +1480,7 @@
    "status": 200,
    "fingerprint": "c4b31b1854bd661a",
    "bytes": 24325,
-   "checkedAt": "2026-10-19T08:36:12.974Z",
+   "checkedAt": "2026-10-19T18:29:39.001Z",
    "guides": [
     "california-business",
     "state-entities"
@@ -1429,7 +1491,7 @@
    "status": 200,
    "fingerprint": "6b3af38f40eaa103",
    "bytes": 3303,
-   "checkedAt": "2026-10-19T08:36:13.262Z",
+   "checkedAt": "2026-10-19T18:29:38.961Z",
    "guides": [
     "state-entities"
    ]
@@ -1439,7 +1501,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:18.817Z",
+   "checkedAt": "2026-10-19T18:29:44.305Z",
    "guides": [
     "state-entities"
    ]
@@ -1449,29 +1511,19 @@
    "status": 200,
    "fingerprint": "c0e0d4b7e98d8953",
    "bytes": 3727,
-   "checkedAt": "2026-10-19T08:36:14.053Z",
+   "checkedAt": "2026-10-19T18:29:39.696Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://onestop.ky.gov/": {
-   "state": "moved",
+   "state": "ok",
    "status": 200,
    "fingerprint": "5eafe9ab6de3422d",
    "bytes": 1452,
-   "checkedAt": "2026-10-19T08:36:16.821Z",
+   "checkedAt": "2026-10-19T18:29:40.798Z",
    "guides": [
     "state-entities"
-   ]
-  },
-  "https://opa-fpclinicdb.hhs.gov/": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:15.969Z",
-   "guides": [
-    "womens-health"
    ]
   },
   "https://opa.hhs.gov/grant-programs/title-x-service-grants": {
@@ -1479,7 +1531,7 @@
    "status": 200,
    "fingerprint": "b4708c5f80c143de",
    "bytes": 5490,
-   "checkedAt": "2026-10-19T08:36:16.781Z",
+   "checkedAt": "2026-10-19T18:29:39.396Z",
    "guides": [
     "womens-health"
    ]
@@ -1489,7 +1541,7 @@
    "status": 200,
    "fingerprint": "b360fe1661cbf2d0",
    "bytes": 4717,
-   "checkedAt": "2026-10-19T08:36:17.186Z",
+   "checkedAt": "2026-10-19T18:29:39.456Z",
    "guides": [
     "us-community-support"
    ]
@@ -1499,7 +1551,7 @@
    "status": 200,
    "fingerprint": "95e1c03167838a71",
    "bytes": 17747,
-   "checkedAt": "2026-10-19T08:36:17.751Z",
+   "checkedAt": "2026-10-19T18:29:40.379Z",
    "guides": [
     "state-entities"
    ]
@@ -1509,17 +1561,17 @@
    "status": 200,
    "fingerprint": "fa89c8683f81c63d",
    "bytes": 10179,
-   "checkedAt": "2026-10-19T08:36:17.770Z",
+   "checkedAt": "2026-10-19T18:29:40.195Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://quickstart.sos.nh.gov/online/Account/SFALogin": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:18.124Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6213149cdc516662",
+   "bytes": 626,
+   "checkedAt": "2026-10-19T18:29:40.972Z",
    "guides": [
     "state-entities"
    ]
@@ -1529,9 +1581,19 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:18.071Z",
+   "checkedAt": "2026-10-19T18:29:40.535Z",
    "guides": [
     "us-community-support"
+   ]
+  },
+  "https://reproductivehealthservices.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T18:29:41.021Z",
+   "guides": [
+    "womens-health"
    ]
   },
   "https://revenue.delaware.gov/business-tax-forms/fundraisers-and-charitable-solicitations/": {
@@ -1539,17 +1601,17 @@
    "status": 200,
    "fingerprint": "b5cd719951916415",
    "bytes": 3316,
-   "checkedAt": "2026-10-19T08:36:18.699Z",
+   "checkedAt": "2026-10-19T18:29:41.127Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://revenue.iowa.gov/permits-licensing/business-permit-registration": {
-   "state": "moved",
+  "https://revenue.iowa.gov/taxes/business-permit-registration": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "aab4c8d707f58c1b",
    "bytes": 14284,
-   "checkedAt": "2026-10-19T08:36:18.875Z",
+   "checkedAt": "2026-10-19T18:29:41.227Z",
    "guides": [
     "state-entities"
    ]
@@ -1559,7 +1621,7 @@
    "status": 200,
    "fingerprint": "8f1482d8857f58d9",
    "bytes": 3788,
-   "checkedAt": "2026-10-19T08:36:19.994Z",
+   "checkedAt": "2026-10-19T18:29:42.268Z",
    "guides": [
     "state-entities"
    ]
@@ -1569,7 +1631,7 @@
    "status": 200,
    "fingerprint": "6e309067e8422310",
    "bytes": 8379,
-   "checkedAt": "2026-10-19T08:36:19.757Z",
+   "checkedAt": "2026-10-19T18:29:41.761Z",
    "guides": [
     "state-entities"
    ]
@@ -1579,19 +1641,9 @@
    "status": 200,
    "fingerprint": "6415e3c9e5d89c40",
    "bytes": 5242,
-   "checkedAt": "2026-10-19T08:36:19.435Z",
+   "checkedAt": "2026-10-19T18:29:41.605Z",
    "guides": [
     "state-entities"
-   ]
-  },
-  "https://sam.gov/content/duns-uei": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "b4e38f017fc22dae",
-   "bytes": 4844,
-   "checkedAt": "2026-10-19T08:36:19.980Z",
-   "guides": [
-    "us-small-business"
    ]
   },
   "https://sam.gov/entity-registration": {
@@ -1599,27 +1651,18 @@
    "status": 200,
    "fingerprint": "b4e38f017fc22dae",
    "bytes": 4844,
-   "checkedAt": "2026-10-19T08:36:19.917Z",
+   "checkedAt": "2026-10-19T18:29:41.459Z",
    "guides": [
-    "us-community-support"
-   ]
-  },
-  "https://sbdc.mt.gov": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "5a07079892673d20",
-   "bytes": 16156,
-   "checkedAt": "2026-10-19T08:36:21.326Z",
-   "guides": [
-    "state-entities"
+    "us-community-support",
+    "us-small-business"
    ]
   },
   "https://sbsd.virginia.gov/": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "6fa9e6e172d5d17b",
-   "bytes": 6215,
-   "checkedAt": "2026-10-19T08:36:21.900Z",
+   "fingerprint": "6faba6e372d5d17b",
+   "bytes": 6243,
+   "checkedAt": "2026-10-19T18:29:43.453Z",
    "guides": [
     "state-entities"
    ]
@@ -1629,7 +1672,7 @@
    "status": 200,
    "fingerprint": "134d73d37945c703",
    "bytes": 3960,
-   "checkedAt": "2026-10-19T08:36:20.785Z",
+   "checkedAt": "2026-10-19T18:29:42.242Z",
    "guides": [
     "state-entities"
    ]
@@ -1639,7 +1682,7 @@
    "status": 200,
    "fingerprint": "868ba6ecf7ff1991",
    "bytes": 6948,
-   "checkedAt": "2026-10-19T08:36:21.285Z",
+   "checkedAt": "2026-10-19T18:29:42.344Z",
    "guides": [
     "state-entities"
    ]
@@ -1649,7 +1692,7 @@
    "status": 200,
    "fingerprint": "58ef35b4791bdf47",
    "bytes": 17377,
-   "checkedAt": "2026-10-19T08:36:21.545Z",
+   "checkedAt": "2026-10-19T18:29:42.705Z",
    "guides": [
     "state-entities"
    ]
@@ -1659,7 +1702,7 @@
    "status": 200,
    "fingerprint": "c22fb880a6d72698",
    "bytes": 2741,
-   "checkedAt": "2026-10-19T08:36:21.759Z",
+   "checkedAt": "2026-10-19T18:29:42.632Z",
    "guides": [
     "state-entities"
    ]
@@ -1669,7 +1712,7 @@
    "status": 200,
    "fingerprint": "df2c065a4bf105dc",
    "bytes": 6051,
-   "checkedAt": "2026-10-19T08:36:22.415Z",
+   "checkedAt": "2026-10-19T18:29:43.212Z",
    "guides": [
     "africa-small-business"
    ]
@@ -1679,7 +1722,7 @@
    "status": 200,
    "fingerprint": "53305d8517f41aa6",
    "bytes": 7752,
-   "checkedAt": "2026-10-19T08:36:22.768Z",
+   "checkedAt": "2026-10-19T18:29:43.226Z",
    "guides": [
     "africa-small-business"
    ]
@@ -1689,9 +1732,19 @@
    "status": 200,
    "fingerprint": "6cb4ced887eb7da0",
    "bytes": 2064,
-   "checkedAt": "2026-10-19T08:36:22.465Z",
+   "checkedAt": "2026-10-19T18:29:43.289Z",
    "guides": [
     "africa-small-business"
+   ]
+  },
+  "https://sos-corpfilings.ark.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b1a9d914e3648618",
+   "bytes": 6966,
+   "checkedAt": "2026-10-19T18:29:44.520Z",
+   "guides": [
+    "state-entities"
    ]
   },
   "https://sos.idaho.gov/business-forms/": {
@@ -1699,17 +1752,17 @@
    "status": 200,
    "fingerprint": "27e1198a71fcd412",
    "bytes": 14287,
-   "checkedAt": "2026-10-19T08:36:22.824Z",
+   "checkedAt": "2026-10-19T18:29:43.676Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://sos.idaho.gov/business-services/": {
-   "state": "moved",
+  "https://sos.idaho.gov/business-resources/": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "8a2b0396d816de59",
    "bytes": 8812,
-   "checkedAt": "2026-10-19T08:36:22.904Z",
+   "checkedAt": "2026-10-19T18:29:43.593Z",
    "guides": [
     "state-entities"
    ]
@@ -1719,7 +1772,7 @@
    "status": 200,
    "fingerprint": "28e6b8576cb4aaa9",
    "bytes": 12452,
-   "checkedAt": "2026-10-19T08:36:23.700Z",
+   "checkedAt": "2026-10-19T18:29:44.137Z",
    "guides": [
     "state-entities"
    ]
@@ -1729,7 +1782,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:23.331Z",
+   "checkedAt": "2026-10-19T18:29:44.175Z",
    "guides": [
     "state-entities"
    ]
@@ -1739,7 +1792,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:23.313Z",
+   "checkedAt": "2026-10-19T18:29:44.207Z",
    "guides": [
     "state-entities"
    ]
@@ -1749,7 +1802,7 @@
    "status": 200,
    "fingerprint": "b45790aef85f269f",
    "bytes": 9439,
-   "checkedAt": "2026-10-19T08:36:24.860Z",
+   "checkedAt": "2026-10-19T18:29:44.987Z",
    "guides": [
     "state-entities"
    ]
@@ -1759,17 +1812,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:24.114Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://sos.nd.gov/business/business-services/business-structures/corporations/general-business-corporation/general-business-corporation-fees.html": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "2aa421cc3d87c872",
-   "bytes": 23516,
-   "checkedAt": "2026-10-19T08:36:25.149Z",
+   "checkedAt": "2026-10-19T18:29:44.925Z",
    "guides": [
     "state-entities"
    ]
@@ -1779,7 +1822,7 @@
    "status": 200,
    "fingerprint": "bd7c006e9d865269",
    "bytes": 17975,
-   "checkedAt": "2026-10-19T08:36:24.614Z",
+   "checkedAt": "2026-10-19T18:29:44.530Z",
    "guides": [
     "state-entities"
    ]
@@ -1789,7 +1832,7 @@
    "status": 200,
    "fingerprint": "cc793ed7611f0d7f",
    "bytes": 13838,
-   "checkedAt": "2026-10-19T08:36:24.889Z",
+   "checkedAt": "2026-10-19T18:29:44.617Z",
    "guides": [
     "state-entities"
    ]
@@ -1799,17 +1842,17 @@
    "status": 200,
    "fingerprint": "48c559cc4f3b85fd",
    "bytes": 3300,
-   "checkedAt": "2026-10-19T08:36:25.128Z",
+   "checkedAt": "2026-10-19T18:29:44.750Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://sos.oregon.gov/business": {
-   "state": "moved",
+   "state": "ok",
    "status": 200,
-   "fingerprint": "12b7e8cc7824a321",
-   "bytes": 4004,
-   "checkedAt": "2026-10-19T08:36:27.069Z",
+   "fingerprint": "12b7fa4c7824a721",
+   "bytes": 4007,
+   "checkedAt": "2026-10-19T18:29:46.673Z",
    "guides": [
     "state-entities"
    ]
@@ -1819,7 +1862,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:25.907Z",
+   "checkedAt": "2026-10-19T18:29:45.362Z",
    "guides": [
     "state-entities"
    ]
@@ -1829,7 +1872,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:26.182Z",
+   "checkedAt": "2026-10-19T18:29:45.464Z",
    "guides": [
     "state-entities"
    ]
@@ -1839,7 +1882,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:26.984Z",
+   "checkedAt": "2026-10-19T18:29:46.063Z",
    "guides": [
     "state-entities"
    ]
@@ -1849,7 +1892,7 @@
    "status": 200,
    "fingerprint": "fc4af301ab5adf4f",
    "bytes": 4425,
-   "checkedAt": "2026-10-19T08:36:27.142Z",
+   "checkedAt": "2026-10-19T18:29:46.149Z",
    "guides": [
     "state-entities"
    ]
@@ -1859,7 +1902,7 @@
    "status": 200,
    "fingerprint": "7d6309f133b71e6f",
    "bytes": 4616,
-   "checkedAt": "2026-10-19T08:36:27.328Z",
+   "checkedAt": "2026-10-19T18:29:46.196Z",
    "guides": [
     "state-entities"
    ]
@@ -1869,7 +1912,7 @@
    "status": 200,
    "fingerprint": "fd6a0351bd9dd643",
    "bytes": 7185,
-   "checkedAt": "2026-10-19T08:36:27.482Z",
+   "checkedAt": "2026-10-19T18:29:46.202Z",
    "guides": [
     "state-entities"
    ]
@@ -1879,7 +1922,7 @@
    "status": 200,
    "fingerprint": "83e4bbc5afd41e73",
    "bytes": 3291,
-   "checkedAt": "2026-10-19T08:36:27.432Z",
+   "checkedAt": "2026-10-19T18:29:46.400Z",
    "guides": [
     "state-entities"
    ]
@@ -1889,7 +1932,7 @@
    "status": 200,
    "fingerprint": "3b25f975aace1953",
    "bytes": 4343,
-   "checkedAt": "2026-10-19T08:36:27.514Z",
+   "checkedAt": "2026-10-19T18:29:46.424Z",
    "guides": [
     "state-entities"
    ]
@@ -1899,7 +1942,7 @@
    "status": 200,
    "fingerprint": "ab855a833f89bc27",
    "bytes": 2393,
-   "checkedAt": "2026-10-19T08:36:27.882Z",
+   "checkedAt": "2026-10-19T18:29:46.771Z",
    "guides": [
     "state-entities"
    ]
@@ -1909,7 +1952,7 @@
    "status": 200,
    "fingerprint": "742b43a0cf3c1149",
    "bytes": 25460,
-   "checkedAt": "2026-10-19T08:36:27.974Z",
+   "checkedAt": "2026-10-19T18:29:46.888Z",
    "guides": [
     "state-entities"
    ]
@@ -1919,7 +1962,7 @@
    "status": 200,
    "fingerprint": "9daa8b8044cc9e35",
    "bytes": 22394,
-   "checkedAt": "2026-10-19T08:36:27.940Z",
+   "checkedAt": "2026-10-19T18:29:46.903Z",
    "guides": [
     "state-entities"
    ]
@@ -1929,7 +1972,7 @@
    "status": 200,
    "fingerprint": "4ae7d24868f01954",
    "bytes": 1132,
-   "checkedAt": "2026-10-19T08:36:29.529Z",
+   "checkedAt": "2026-10-19T18:29:46.863Z",
    "guides": [
     "state-entities"
    ]
@@ -1939,7 +1982,7 @@
    "status": 200,
    "fingerprint": "9082138c47c45bea",
    "bytes": 27159,
-   "checkedAt": "2026-10-19T08:36:28.474Z",
+   "checkedAt": "2026-10-19T18:29:46.870Z",
    "guides": [
     "state-entities"
    ]
@@ -1949,7 +1992,7 @@
    "status": 200,
    "fingerprint": "840b5d948c8b2422",
    "bytes": 9127,
-   "checkedAt": "2026-10-19T08:36:28.397Z",
+   "checkedAt": "2026-10-19T18:29:47.137Z",
    "guides": [
     "state-entities"
    ]
@@ -1959,7 +2002,7 @@
    "status": 200,
    "fingerprint": "e31d51868c8b0220",
    "bytes": 8939,
-   "checkedAt": "2026-10-19T08:36:28.583Z",
+   "checkedAt": "2026-10-19T18:29:47.178Z",
    "guides": [
     "state-entities"
    ]
@@ -1969,7 +2012,7 @@
    "status": 200,
    "fingerprint": "c41d5494c8870428",
    "bytes": 7821,
-   "checkedAt": "2026-10-19T08:36:28.648Z",
+   "checkedAt": "2026-10-19T18:29:47.210Z",
    "guides": [
     "state-entities"
    ]
@@ -1979,7 +2022,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:29.098Z",
+   "checkedAt": "2026-10-19T18:29:47.351Z",
    "guides": [
     "state-entities"
    ]
@@ -1989,7 +2032,7 @@
    "status": 200,
    "fingerprint": "b0125bf5d63c60fe",
    "bytes": 3019,
-   "checkedAt": "2026-10-19T08:36:29.099Z",
+   "checkedAt": "2026-10-19T18:29:47.352Z",
    "guides": [
     "state-entities"
    ]
@@ -1999,7 +2042,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:29.547Z",
+   "checkedAt": "2026-10-19T18:29:47.750Z",
    "guides": [
     "state-entities"
    ]
@@ -2009,7 +2052,7 @@
    "status": 200,
    "fingerprint": "6ee5906ed0732172",
    "bytes": 1540,
-   "checkedAt": "2026-10-19T08:36:29.790Z",
+   "checkedAt": "2026-10-19T18:29:47.780Z",
    "guides": [
     "state-entities"
    ]
@@ -2019,7 +2062,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:29.801Z",
+   "checkedAt": "2026-10-19T18:29:47.815Z",
    "guides": [
     "state-entities"
    ]
@@ -2029,7 +2072,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:29.808Z",
+   "checkedAt": "2026-10-19T18:29:47.873Z",
    "guides": [
     "state-entities"
    ]
@@ -2039,7 +2082,7 @@
    "status": 200,
    "fingerprint": "a607c175099e714d",
    "bytes": 9962,
-   "checkedAt": "2026-10-19T08:36:30.582Z",
+   "checkedAt": "2026-10-19T18:29:48.247Z",
    "guides": [
     "state-entities"
    ]
@@ -2049,7 +2092,7 @@
    "status": 200,
    "fingerprint": "698d056ac89cd957",
    "bytes": 3756,
-   "checkedAt": "2026-10-19T08:36:30.100Z",
+   "checkedAt": "2026-10-19T18:29:48.287Z",
    "guides": [
     "state-entities"
    ]
@@ -2059,27 +2102,27 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:30.367Z",
+   "checkedAt": "2026-10-19T18:29:48.387Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://studentaid.ed.gov/sa/types/scams": {
+  "https://studentaid.gov/resources/scams": {
    "state": "broken",
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:30.266Z",
+   "checkedAt": "2026-10-19T18:31:17.973Z",
    "guides": [
     "us-community-support"
    ]
   },
-  "https://tax.hawaii.gov/geninfo/get/": {
-   "state": "moved",
+  "https://tax.hawaii.gov/get/FAQ/": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "e0d7905357be7ffd",
    "bytes": 6778,
-   "checkedAt": "2026-10-19T08:36:32.569Z",
+   "checkedAt": "2026-10-19T18:29:49.226Z",
    "guides": [
     "state-entities"
    ]
@@ -2089,7 +2132,7 @@
    "status": 200,
    "fingerprint": "70f2c78a15622600",
    "bytes": 6510,
-   "checkedAt": "2026-10-19T08:36:31.277Z",
+   "checkedAt": "2026-10-19T18:29:48.789Z",
    "guides": [
     "state-entities"
    ]
@@ -2099,17 +2142,17 @@
    "status": 200,
    "fingerprint": "2298ce64607faa84",
    "bytes": 2311,
-   "checkedAt": "2026-10-19T08:36:30.928Z",
+   "checkedAt": "2026-10-19T18:29:48.624Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://tax.nv.gov/Registration": {
-   "state": "moved",
+  "https://tax.nv.gov/manage-a-business/start-run-a-business/": {
+   "state": "ok",
    "status": 200,
-   "fingerprint": "04d12b97008ed8c9",
-   "bytes": 3115,
-   "checkedAt": "2026-10-19T08:36:33.235Z",
+   "fingerprint": "97cb5fe5483534e7",
+   "bytes": 5915,
+   "checkedAt": "2026-10-19T18:29:48.798Z",
    "guides": [
     "state-entities"
    ]
@@ -2119,7 +2162,7 @@
    "status": 200,
    "fingerprint": "eac110effd8c594e",
    "bytes": 1812,
-   "checkedAt": "2026-10-19T08:36:32.130Z",
+   "checkedAt": "2026-10-19T18:29:49.026Z",
    "guides": [
     "state-entities"
    ]
@@ -2129,7 +2172,7 @@
    "status": 200,
    "fingerprint": "17d15e85da648771",
    "bytes": 6113,
-   "checkedAt": "2026-10-19T08:36:32.548Z",
+   "checkedAt": "2026-10-19T18:29:49.477Z",
    "guides": [
     "state-entities"
    ]
@@ -2139,7 +2182,7 @@
    "status": 200,
    "fingerprint": "b9e5595410e6492a",
    "bytes": 7558,
-   "checkedAt": "2026-10-19T08:36:33.304Z",
+   "checkedAt": "2026-10-19T18:29:49.551Z",
    "guides": [
     "state-entities"
    ]
@@ -2149,7 +2192,7 @@
    "status": 200,
    "fingerprint": "2374e9eefcb6f5ff",
    "bytes": 2778,
-   "checkedAt": "2026-10-19T08:36:34.265Z",
+   "checkedAt": "2026-10-19T18:29:50.511Z",
    "guides": [
     "state-entities"
    ]
@@ -2157,9 +2200,9 @@
   "https://tncab.tnsos.gov/": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "af499ab289d9b502",
-   "bytes": 5803,
-   "checkedAt": "2026-10-19T08:36:33.847Z",
+   "fingerprint": "af499c8089c9b422",
+   "bytes": 6018,
+   "checkedAt": "2026-10-19T18:29:49.882Z",
    "guides": [
     "state-entities"
    ]
@@ -2169,7 +2212,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:37.138Z",
+   "checkedAt": "2026-10-19T18:29:53.456Z",
    "guides": [
     "state-entities"
    ]
@@ -2179,7 +2222,7 @@
    "status": 200,
    "fingerprint": "ed990b113c5659fd",
    "bytes": 7014,
-   "checkedAt": "2026-10-19T08:36:34.417Z",
+   "checkedAt": "2026-10-19T18:29:50.220Z",
    "guides": [
     "state-entities"
    ]
@@ -2189,7 +2232,7 @@
    "status": 200,
    "fingerprint": "4b36fb624b22bc63",
    "bytes": 5300,
-   "checkedAt": "2026-10-19T08:36:35.050Z",
+   "checkedAt": "2026-10-19T18:29:50.776Z",
    "guides": [
     "state-entities"
    ]
@@ -2199,7 +2242,7 @@
    "status": 200,
    "fingerprint": "bf8014e4c1848196",
    "bytes": 4966,
-   "checkedAt": "2026-10-19T08:36:34.693Z",
+   "checkedAt": "2026-10-19T18:29:50.692Z",
    "guides": [
     "state-entities"
    ]
@@ -2209,7 +2252,7 @@
    "status": 200,
    "fingerprint": "ac7e27ffa3640755",
    "bytes": 5589,
-   "checkedAt": "2026-10-19T08:36:35.117Z",
+   "checkedAt": "2026-10-19T18:29:50.952Z",
    "guides": [
     "us-community-support"
    ]
@@ -2217,19 +2260,19 @@
   "https://www.afro.who.int/countries/kenya/news/kenya-launches-national-cervical-cancer-elimination-action-plan-2026-2030": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "765f7125b1209c44",
-   "bytes": 6463,
-   "checkedAt": "2026-10-19T08:36:36.036Z",
+   "fingerprint": "723f7907b1269c44",
+   "bytes": 6599,
+   "checkedAt": "2026-10-19T18:29:51.723Z",
    "guides": [
     "womens-health:who"
    ]
   },
-  "https://www.afro.who.int/photo-story/cervical-cancer-elimination-kenya-transitions-single-dose-hpv-vaccination-schedule": {
-   "state": "moved",
+  "https://www.afro.who.int/countries/kenya/photo-story/cervical-cancer-elimination-kenya-transitions-single-dose-hpv": {
+   "state": "ok",
    "status": 200,
-   "fingerprint": "43ea56c590379874",
-   "bytes": 8094,
-   "checkedAt": "2026-10-19T08:36:36.699Z",
+   "fingerprint": "0a2b76cd11379974",
+   "bytes": 8230,
+   "checkedAt": "2026-10-19T18:29:51.849Z",
    "guides": [
     "womens-health:who"
    ]
@@ -2239,7 +2282,7 @@
    "status": 200,
    "fingerprint": "eba698bde4f532a5",
    "bytes": 12142,
-   "checkedAt": "2026-10-19T08:36:36.922Z",
+   "checkedAt": "2026-10-19T18:29:51.568Z",
    "guides": [
     "state-entities"
    ]
@@ -2249,7 +2292,7 @@
    "status": 200,
    "fingerprint": "7c771bc62e6764f6",
    "bytes": 6348,
-   "checkedAt": "2026-10-19T08:36:37.090Z",
+   "checkedAt": "2026-10-19T18:29:51.918Z",
    "guides": [
     "state-entities"
    ]
@@ -2259,17 +2302,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:37.909Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.ark.org/sos/corpfilings/index.php": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "b1a9d914e3648618",
-   "bytes": 6966,
-   "checkedAt": "2026-10-19T08:36:38.375Z",
+   "checkedAt": "2026-10-19T18:29:52.693Z",
    "guides": [
     "state-entities"
    ]
@@ -2279,7 +2312,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:37.495Z",
+   "checkedAt": "2026-10-19T18:29:52.051Z",
    "guides": [
     "state-entities"
    ]
@@ -2289,7 +2322,7 @@
    "status": 200,
    "fingerprint": "0f2b62dae1ed034f",
    "bytes": 24530,
-   "checkedAt": "2026-10-19T08:36:38.277Z",
+   "checkedAt": "2026-10-19T18:29:52.648Z",
    "guides": [
     "state-entities"
    ]
@@ -2299,7 +2332,7 @@
    "status": 200,
    "fingerprint": "4c2690eafbbd5544",
    "bytes": 2654,
-   "checkedAt": "2026-10-19T08:36:38.945Z",
+   "checkedAt": "2026-10-19T18:29:53.009Z",
    "guides": [
     "state-entities"
    ]
@@ -2309,7 +2342,7 @@
    "status": 200,
    "fingerprint": "0796d678bcee653a",
    "bytes": 4387,
-   "checkedAt": "2026-10-19T08:36:38.800Z",
+   "checkedAt": "2026-10-19T18:29:52.362Z",
    "guides": [
     "africa-small-business"
    ]
@@ -2319,9 +2352,19 @@
    "status": 200,
    "fingerprint": "0d0f486821e88cfa",
    "bytes": 2710,
-   "checkedAt": "2026-10-19T08:36:38.670Z",
+   "checkedAt": "2026-10-19T18:29:52.557Z",
    "guides": [
     "africa-small-business"
+   ]
+  },
+  "https://www.calgold.ca.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d3b62957dcca5917",
+   "bytes": 32229,
+   "checkedAt": "2026-10-19T18:29:52.989Z",
+   "guides": [
+    "california-business"
    ]
   },
   "https://www.cdc.gov/breast-cancer/screening/index.html": {
@@ -2329,7 +2372,7 @@
    "status": 200,
    "fingerprint": "57c25163aa2c3375",
    "bytes": 8197,
-   "checkedAt": "2026-10-19T08:36:38.979Z",
+   "checkedAt": "2026-10-19T18:29:53.011Z",
    "guides": [
     "womens-health"
    ]
@@ -2339,7 +2382,7 @@
    "status": 200,
    "fingerprint": "5d8aed66aeb902b6",
    "bytes": 9606,
-   "checkedAt": "2026-10-19T08:36:39.040Z",
+   "checkedAt": "2026-10-19T18:29:52.947Z",
    "guides": [
     "womens-health"
    ]
@@ -2349,7 +2392,7 @@
    "status": 200,
    "fingerprint": "56e5d8c61c9f925e",
    "bytes": 11779,
-   "checkedAt": "2026-10-19T08:36:39.899Z",
+   "checkedAt": "2026-10-19T18:29:53.199Z",
    "guides": [
     "womens-health"
    ]
@@ -2359,7 +2402,7 @@
    "status": 200,
    "fingerprint": "2746ad7e2ab9aef3",
    "bytes": 10097,
-   "checkedAt": "2026-10-19T08:36:39.983Z",
+   "checkedAt": "2026-10-19T18:29:53.253Z",
    "guides": [
     "womens-health"
    ]
@@ -2369,7 +2412,7 @@
    "status": 200,
    "fingerprint": "274db9e622b98af2",
    "bytes": 7526,
-   "checkedAt": "2026-10-19T08:36:40.362Z",
+   "checkedAt": "2026-10-19T18:29:53.284Z",
    "guides": [
     "womens-health"
    ]
@@ -2379,7 +2422,7 @@
    "status": 200,
    "fingerprint": "fde458c6d8a0c867",
    "bytes": 9204,
-   "checkedAt": "2026-10-19T08:36:40.089Z",
+   "checkedAt": "2026-10-19T18:29:53.309Z",
    "guides": [
     "womens-health"
    ]
@@ -2389,7 +2432,7 @@
    "status": 200,
    "fingerprint": "55650413e70b6648",
    "bytes": 3467,
-   "checkedAt": "2026-10-19T08:36:40.751Z",
+   "checkedAt": "2026-10-19T18:29:53.556Z",
    "guides": [
     "us-community-support"
    ]
@@ -2399,7 +2442,7 @@
    "status": 200,
    "fingerprint": "2000fa8d6f194fd8",
    "bytes": 10593,
-   "checkedAt": "2026-10-19T08:36:49.415Z",
+   "checkedAt": "2026-10-19T18:30:04.023Z",
    "guides": [
     "us-small-business"
    ]
@@ -2409,7 +2452,7 @@
    "status": 200,
    "fingerprint": "d0c3644bafef193a",
    "bytes": 9578,
-   "checkedAt": "2026-10-19T08:36:40.896Z",
+   "checkedAt": "2026-10-19T18:29:53.895Z",
    "guides": [
     "state-entities"
    ]
@@ -2419,7 +2462,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:41.335Z",
+   "checkedAt": "2026-10-19T18:29:54.017Z",
    "guides": [
     "state-entities"
    ]
@@ -2429,7 +2472,7 @@
    "status": 200,
    "fingerprint": "2f17ce17e0f4dc76",
    "bytes": 1732,
-   "checkedAt": "2026-10-19T08:36:41.332Z",
+   "checkedAt": "2026-10-19T18:29:53.886Z",
    "guides": [
     "state-entities"
    ]
@@ -2439,7 +2482,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:41.756Z",
+   "checkedAt": "2026-10-19T18:29:54.176Z",
    "guides": [
     "state-entities"
    ]
@@ -2449,7 +2492,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:41.767Z",
+   "checkedAt": "2026-10-19T18:29:54.303Z",
    "guides": [
     "state-entities"
    ]
@@ -2459,7 +2502,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:41.988Z",
+   "checkedAt": "2026-10-19T18:29:54.244Z",
    "guides": [
     "state-entities"
    ]
@@ -2469,7 +2512,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:42.019Z",
+   "checkedAt": "2026-10-19T18:29:54.248Z",
    "guides": [
     "state-entities"
    ]
@@ -2479,7 +2522,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:42.372Z",
+   "checkedAt": "2026-10-19T18:29:54.378Z",
    "guides": [
     "state-entities"
    ]
@@ -2489,7 +2532,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:42.243Z",
+   "checkedAt": "2026-10-19T18:29:54.753Z",
    "guides": [
     "us-community-support"
    ]
@@ -2499,7 +2542,7 @@
    "status": 200,
    "fingerprint": "344833ed1d73c702",
    "bytes": 6441,
-   "checkedAt": "2026-10-19T08:36:42.887Z",
+   "checkedAt": "2026-10-19T18:29:55.017Z",
    "guides": [
     "us-community-support"
    ]
@@ -2509,7 +2552,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:43.034Z",
+   "checkedAt": "2026-10-19T18:29:55.267Z",
    "guides": [
     "state-entities"
    ]
@@ -2519,7 +2562,7 @@
    "status": 200,
    "fingerprint": "f589e599efcc89c8",
    "bytes": 7171,
-   "checkedAt": "2026-10-19T08:36:43.607Z",
+   "checkedAt": "2026-10-19T18:29:54.936Z",
    "guides": [
     "state-entities"
    ]
@@ -2529,17 +2572,17 @@
    "status": 200,
    "fingerprint": "a8da7a168913916c",
    "bytes": 15576,
-   "checkedAt": "2026-10-19T08:36:43.526Z",
+   "checkedAt": "2026-10-19T18:29:55.320Z",
    "guides": [
     "california-business"
    ]
   },
-  "https://www.doj.nh.gov/charitable-trusts": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:43.793Z",
+  "https://www.doj.nh.gov/bureaus/charitable-trusts-unit": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "23aea86bd0e28485",
+   "bytes": 4566,
+   "checkedAt": "2026-10-19T18:29:55.555Z",
    "guides": [
     "state-entities"
    ]
@@ -2549,7 +2592,7 @@
    "status": 200,
    "fingerprint": "d3cf21cf42db7eaf",
    "bytes": 6022,
-   "checkedAt": "2026-10-19T08:36:44.708Z",
+   "checkedAt": "2026-10-19T18:29:56.158Z",
    "guides": [
     "state-entities"
    ]
@@ -2559,7 +2602,7 @@
    "status": 200,
    "fingerprint": "d5c48acd15277180",
    "bytes": 4826,
-   "checkedAt": "2026-10-19T08:36:44.134Z",
+   "checkedAt": "2026-10-19T18:29:55.633Z",
    "guides": [
     "us-community-support"
    ]
@@ -2569,7 +2612,7 @@
    "status": 200,
    "fingerprint": "3c986bb404a3bb87",
    "bytes": 22600,
-   "checkedAt": "2026-10-19T08:36:44.328Z",
+   "checkedAt": "2026-10-19T18:29:55.706Z",
    "guides": [
     "us-community-support"
    ]
@@ -2579,7 +2622,7 @@
    "status": 200,
    "fingerprint": "54a031204eb2f261",
    "bytes": 6145,
-   "checkedAt": "2026-10-19T08:36:44.517Z",
+   "checkedAt": "2026-10-19T18:29:55.773Z",
    "guides": [
     "us-community-support"
    ]
@@ -2589,7 +2632,7 @@
    "status": 200,
    "fingerprint": "d16ba02999d0fd77",
    "bytes": 7485,
-   "checkedAt": "2026-10-19T08:36:45.289Z",
+   "checkedAt": "2026-10-19T18:29:56.453Z",
    "guides": [
     "state-entities"
    ]
@@ -2599,7 +2642,7 @@
    "status": 200,
    "fingerprint": "5ef978853c4f20cb",
    "bytes": 291,
-   "checkedAt": "2026-10-19T08:36:45.359Z",
+   "checkedAt": "2026-10-19T18:29:56.569Z",
    "guides": [
     "state-entities"
    ]
@@ -2607,9 +2650,9 @@
   "https://www.federalregister.gov/documents/2026/08/11/2026-16370/reforms-to-13-cfr-124103-to-remove-sbas-8a-programs-rebuttable-presumption-of-social-disadvantage": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "6a939236a966beeb",
+   "fingerprint": "6a93d236a966beeb",
    "bytes": 47835,
-   "checkedAt": "2026-10-19T08:36:45.830Z",
+   "checkedAt": "2026-10-19T18:29:56.339Z",
    "guides": [
     "us-small-business"
    ]
@@ -2619,7 +2662,7 @@
    "status": 200,
    "fingerprint": "dd34f0742b35f625",
    "bytes": 12541,
-   "checkedAt": "2026-10-19T08:36:55.686Z",
+   "checkedAt": "2026-10-19T18:30:05.728Z",
    "guides": [
     "state-entities"
    ]
@@ -2629,59 +2672,49 @@
    "status": 200,
    "fingerprint": "38ec83c4699d2071",
    "bytes": 18926,
-   "checkedAt": "2026-10-19T08:36:46.145Z",
+   "checkedAt": "2026-10-19T18:29:56.680Z",
    "guides": [
     "california-business"
    ]
   },
-  "https://www.ftc.gov/business-guidance/blog/2023/03/chatbots-deepfakes-voice-clones-ai-deception-sale": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:46.432Z",
-   "guides": [
-    "small-business-technology"
-   ]
-  },
   "https://www.ftc.gov/business-guidance/resources/consumer-reviews-testimonials-rule-questions-answers": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:46.581Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "cdd1ce274ba0254a",
+   "bytes": 38976,
+   "checkedAt": "2026-10-19T18:29:57.643Z",
    "guides": [
     "ai-tools-for-business",
     "small-business-technology"
    ]
   },
   "https://www.ftc.gov/business-guidance/small-businesses/cybersecurity": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:46.763Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "47569669648e016d",
+   "bytes": 45458,
+   "checkedAt": "2026-10-19T18:29:57.438Z",
    "guides": [
     "small-business-technology"
    ]
   },
   "https://www.ftc.gov/industry/technology/artificial-intelligence": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:46.927Z",
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "05450cb67b0e3b36",
+   "bytes": 18691,
+   "checkedAt": "2026-10-19T18:29:57.908Z",
    "guides": [
     "ai-tools-for-business",
     "small-business-technology"
    ]
   },
   "https://www.ftc.gov/policy/advocacy-research/tech-at-ftc/2024/01/ai-companies-uphold-your-privacy-confidentiality-commitments": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:47.080Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "03efa6a3790b6bbe",
+   "bytes": 17058,
+   "checkedAt": "2026-10-19T18:30:02.374Z",
    "guides": [
     "ai-tools-for-business",
     "small-business-technology"
@@ -2692,17 +2725,17 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:47.635Z",
+   "checkedAt": "2026-10-19T18:29:58.390Z",
    "guides": [
     "africa-small-business"
    ]
   },
   "https://www.gao.gov/products/gao-26-107718": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:47.963Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "784dc8cc2bfd61a9",
+   "bytes": 7557,
+   "checkedAt": "2026-10-19T18:29:58.614Z",
    "guides": [
     "us-small-business"
    ]
@@ -2712,7 +2745,7 @@
    "status": 200,
    "fingerprint": "9ac56d43b5b72e41",
    "bytes": 2542,
-   "checkedAt": "2026-10-19T08:36:48.391Z",
+   "checkedAt": "2026-10-19T18:29:58.779Z",
    "guides": [
     "us-small-business"
    ]
@@ -2722,9 +2755,19 @@
    "status": 200,
    "fingerprint": "9cdfea29f8d46ad8",
    "bytes": 4816,
-   "checkedAt": "2026-10-19T08:36:48.563Z",
+   "checkedAt": "2026-10-19T18:29:58.827Z",
    "guides": [
     "us-community-support"
+   ]
+  },
+  "https://www.grants.gov/quick-start-guide/applicants": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6c5974a1e2e2cfeb",
+   "bytes": 13959,
+   "checkedAt": "2026-10-19T18:29:58.964Z",
+   "guides": [
+    "us-small-business"
    ]
   },
   "https://www.gsa.gov/about-gsa/newsroom/news-releases/gsa-systems-switch-to-unique-entity-id-sam-on-april-4-2022-03162022": {
@@ -2732,7 +2775,7 @@
    "status": 200,
    "fingerprint": "9492bf1b03fe69cb",
    "bytes": 16711,
-   "checkedAt": "2026-10-19T08:36:48.979Z",
+   "checkedAt": "2026-10-19T18:29:59.071Z",
    "guides": [
     "us-small-business"
    ]
@@ -2742,17 +2785,17 @@
    "status": 200,
    "fingerprint": "b6e867acddb5d004",
    "bytes": 4396,
-   "checkedAt": "2026-10-19T08:36:51.134Z",
+   "checkedAt": "2026-10-19T18:30:00.440Z",
    "guides": [
     "womens-health:who"
    ]
   },
-  "https://www.healthcare.gov/medicaid-chip/eligibility/": {
-   "state": "moved",
+  "https://www.healthcare.gov/medicaid-chip/": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "2d682e1abe911fa0",
    "bytes": 9955,
-   "checkedAt": "2026-10-19T08:36:49.868Z",
+   "checkedAt": "2026-10-19T18:29:59.448Z",
    "guides": [
     "us-community-support"
    ]
@@ -2762,7 +2805,7 @@
    "status": 200,
    "fingerprint": "2d682e1abe911fa0",
    "bytes": 9955,
-   "checkedAt": "2026-10-19T08:36:50.112Z",
+   "checkedAt": "2026-10-19T18:29:59.671Z",
    "guides": [
     "us-community-support",
     "womens-health"
@@ -2773,7 +2816,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:52.127Z",
+   "checkedAt": "2026-10-19T18:30:01.734Z",
    "guides": [
     "africa-small-business"
    ]
@@ -2783,17 +2826,17 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:36:52.471Z",
+   "checkedAt": "2026-10-19T18:30:02.005Z",
    "guides": [
     "africa-small-business"
    ]
   },
-  "https://www.ilsos.gov/departments/business_services/home.html": {
+  "https://www.ilsos.gov/departments/business-services.html": {
    "state": "broken",
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:32.280Z",
+   "checkedAt": "2026-10-19T18:31:31.890Z",
    "guides": [
     "state-entities"
    ]
@@ -2803,7 +2846,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:32.609Z",
+   "checkedAt": "2026-10-19T18:31:32.155Z",
    "guides": [
     "state-entities"
    ]
@@ -2813,17 +2856,7 @@
    "status": 200,
    "fingerprint": "1fdb907efac26316",
    "bytes": 2930,
-   "checkedAt": "2026-10-19T08:36:56.439Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "bc3418011817ca5b",
-   "bytes": 8338,
-   "checkedAt": "2026-10-19T08:36:57.065Z",
+   "checkedAt": "2026-10-19T18:30:02.911Z",
    "guides": [
     "state-entities"
    ]
@@ -2833,7 +2866,7 @@
    "status": 200,
    "fingerprint": "d6240a232317c2d9",
    "bytes": 6043,
-   "checkedAt": "2026-10-19T08:36:57.338Z",
+   "checkedAt": "2026-10-19T18:30:03.235Z",
    "guides": [
     "us-small-business"
    ]
@@ -2843,7 +2876,7 @@
    "status": 200,
    "fingerprint": "e6970d237a1ecad8",
    "bytes": 12620,
-   "checkedAt": "2026-10-19T08:36:57.522Z",
+   "checkedAt": "2026-10-19T18:30:03.519Z",
    "guides": [
     "us-small-business"
    ]
@@ -2853,9 +2886,19 @@
    "status": 200,
    "fingerprint": "b5279003611742d8",
    "bytes": 7634,
-   "checkedAt": "2026-10-19T08:36:57.761Z",
+   "checkedAt": "2026-10-19T18:30:03.800Z",
    "guides": [
     "us-small-business"
+   ]
+  },
+  "https://www.irs.gov/businesses/small-businesses-self-employed/get-an-employer-identification-number": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "bc3418011817ca5b",
+   "bytes": 8338,
+   "checkedAt": "2026-10-19T18:30:03.982Z",
+   "guides": [
+    "state-entities"
    ]
   },
   "https://www.irs.gov/businesses/small-businesses-self-employed/llc-filing-as-a-corporation-or-partnership": {
@@ -2863,7 +2906,7 @@
    "status": 200,
    "fingerprint": "922618016b06c1d9",
    "bytes": 9480,
-   "checkedAt": "2026-10-19T08:36:57.989Z",
+   "checkedAt": "2026-10-19T18:30:04.268Z",
    "guides": [
     "us-small-business"
    ]
@@ -2873,7 +2916,7 @@
    "status": 200,
    "fingerprint": "f6a79823011ac248",
    "bytes": 8686,
-   "checkedAt": "2026-10-19T08:36:58.260Z",
+   "checkedAt": "2026-10-19T18:30:04.357Z",
    "guides": [
     "us-small-business"
    ]
@@ -2883,7 +2926,7 @@
    "status": 200,
    "fingerprint": "b7a708214657c1d9",
    "bytes": 12096,
-   "checkedAt": "2026-10-19T08:36:58.515Z",
+   "checkedAt": "2026-10-19T18:30:04.520Z",
    "guides": [
     "us-small-business"
    ]
@@ -2893,7 +2936,7 @@
    "status": 200,
    "fingerprint": "d06188216d47c6d8",
    "bytes": 11448,
-   "checkedAt": "2026-10-19T08:36:58.700Z",
+   "checkedAt": "2026-10-19T18:30:04.599Z",
    "guides": [
     "us-small-business"
    ]
@@ -2903,7 +2946,7 @@
    "status": 200,
    "fingerprint": "b4f5a81b301083fe",
    "bytes": 10667,
-   "checkedAt": "2026-10-19T08:36:58.967Z",
+   "checkedAt": "2026-10-19T18:30:04.697Z",
    "guides": [
     "state-entities",
     "us-community-support"
@@ -2914,8 +2957,9 @@
    "status": 200,
    "fingerprint": "9116180122b243d8",
    "bytes": 7727,
-   "checkedAt": "2026-10-19T08:36:59.140Z",
+   "checkedAt": "2026-10-19T18:30:04.975Z",
    "guides": [
+    "california-business",
     "state-entities",
     "us-community-support",
     "us-small-business"
@@ -2926,7 +2970,7 @@
    "status": 200,
    "fingerprint": "9c862a2b63164ad8",
    "bytes": 7603,
-   "checkedAt": "2026-10-19T08:36:59.385Z",
+   "checkedAt": "2026-10-19T18:30:04.983Z",
    "guides": [
     "us-community-support"
    ]
@@ -2936,7 +2980,7 @@
    "status": 200,
    "fingerprint": "b434aa0b6113c2d9",
    "bytes": 7045,
-   "checkedAt": "2026-10-19T08:36:59.672Z",
+   "checkedAt": "2026-10-19T18:30:05.740Z",
    "guides": [
     "us-community-support"
    ]
@@ -2946,7 +2990,7 @@
    "status": 200,
    "fingerprint": "9494aa0123164249",
    "bytes": 7962,
-   "checkedAt": "2026-10-19T08:36:59.926Z",
+   "checkedAt": "2026-10-19T18:30:05.246Z",
    "guides": [
     "us-small-business"
    ]
@@ -2956,18 +3000,18 @@
    "status": 200,
    "fingerprint": "d49638232316c3d8",
    "bytes": 5868,
-   "checkedAt": "2026-10-19T08:37:00.189Z",
+   "checkedAt": "2026-10-19T18:30:05.533Z",
    "guides": [
     "state-entities",
     "us-community-support"
    ]
   },
   "https://www.irs.gov/charities-non-profits/tax-exempt-organization-search": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:00.358Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f4842a012103c3d9",
+   "bytes": 6542,
+   "checkedAt": "2026-10-19T18:30:05.819Z",
    "guides": [
     "state-entities",
     "us-community-support"
@@ -2978,7 +3022,7 @@
    "status": 200,
    "fingerprint": "9404982b21074258",
    "bytes": 6824,
-   "checkedAt": "2026-10-19T08:37:00.705Z",
+   "checkedAt": "2026-10-19T18:30:06.550Z",
    "guides": [
     "us-small-business"
    ]
@@ -2988,7 +3032,7 @@
    "status": 200,
    "fingerprint": "d734182a330f4349",
    "bytes": 9742,
-   "checkedAt": "2026-10-19T08:37:00.937Z",
+   "checkedAt": "2026-10-19T18:30:05.960Z",
    "guides": [
     "us-community-support"
    ]
@@ -2998,7 +3042,7 @@
    "status": 200,
    "fingerprint": "5488880e62071cdf",
    "bytes": 36126,
-   "checkedAt": "2026-10-19T08:37:01.241Z",
+   "checkedAt": "2026-10-19T18:30:06.139Z",
    "guides": [
     "state-entities"
    ]
@@ -3008,7 +3052,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:01.501Z",
+   "checkedAt": "2026-10-19T18:30:06.197Z",
    "guides": [
     "us-small-business"
    ]
@@ -3018,7 +3062,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:01.797Z",
+   "checkedAt": "2026-10-19T18:30:06.464Z",
    "guides": [
     "us-community-support"
    ]
@@ -3028,7 +3072,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:02.082Z",
+   "checkedAt": "2026-10-19T18:30:06.519Z",
    "guides": [
     "us-community-support"
    ]
@@ -3038,7 +3082,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:02.356Z",
+   "checkedAt": "2026-10-19T18:30:06.736Z",
    "guides": [
     "us-community-support"
    ]
@@ -3048,7 +3092,7 @@
    "status": 200,
    "fingerprint": "9cb54f9ae839a85e",
    "bytes": 600793,
-   "checkedAt": "2026-10-19T08:37:02.741Z",
+   "checkedAt": "2026-10-19T18:30:06.951Z",
    "guides": [
     "us-community-support"
    ]
@@ -3058,7 +3102,7 @@
    "status": 200,
    "fingerprint": "7676cba07a464802",
    "bytes": 2608,
-   "checkedAt": "2026-10-19T08:37:03.649Z",
+   "checkedAt": "2026-10-19T18:30:07.172Z",
    "guides": [
     "us-community-support"
    ]
@@ -3068,7 +3112,7 @@
    "status": 200,
    "fingerprint": "14410dae546739e5",
    "bytes": 8730,
-   "checkedAt": "2026-10-19T08:37:06.662Z",
+   "checkedAt": "2026-10-19T18:30:09.841Z",
    "guides": [
     "africa-small-business"
    ]
@@ -3078,7 +3122,7 @@
    "status": 200,
    "fingerprint": "1c518cac4573b1a4",
    "bytes": 10377,
-   "checkedAt": "2026-10-19T08:37:07.503Z",
+   "checkedAt": "2026-10-19T18:30:09.835Z",
    "guides": [
     "africa-small-business"
    ]
@@ -3088,7 +3132,7 @@
    "status": 200,
    "fingerprint": "e364575a5dac28dd",
    "bytes": 4786,
-   "checkedAt": "2026-10-19T08:37:08.189Z",
+   "checkedAt": "2026-10-19T18:30:08.481Z",
    "guides": [
     "state-entities"
    ]
@@ -3098,7 +3142,7 @@
    "status": 200,
    "fingerprint": "9c35bcf8954947f8",
    "bytes": 12908,
-   "checkedAt": "2026-10-19T08:37:08.711Z",
+   "checkedAt": "2026-10-19T18:30:09.000Z",
    "guides": [
     "state-entities"
    ]
@@ -3108,17 +3152,17 @@
    "status": 200,
    "fingerprint": "5dcc7e2adce817e5",
    "bytes": 2399,
-   "checkedAt": "2026-10-19T08:37:09.260Z",
+   "checkedAt": "2026-10-19T18:30:09.576Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://www.maine.gov/sos/corporations-commissions/information-about-entities/entity-types/corporations-commissions/business-corporations": {
-   "state": "moved",
+  "https://www.maine.gov/sos/corporations-commissions/corporations-business-services/business-corporations": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "46bfd399c7da571b",
    "bytes": 15997,
-   "checkedAt": "2026-10-19T08:37:09.814Z",
+   "checkedAt": "2026-10-19T18:30:09.893Z",
    "guides": [
     "state-entities"
    ]
@@ -3128,7 +3172,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:10.121Z",
+   "checkedAt": "2026-10-19T18:30:10.314Z",
    "guides": [
     "state-entities"
    ]
@@ -3138,7 +3182,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:10.366Z",
+   "checkedAt": "2026-10-19T18:30:10.393Z",
    "guides": [
     "state-entities"
    ]
@@ -3148,7 +3192,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:10.709Z",
+   "checkedAt": "2026-10-19T18:30:10.374Z",
    "guides": [
     "state-entities"
    ]
@@ -3158,7 +3202,17 @@
    "status": 200,
    "fingerprint": "b1052326e9460dd3",
    "bytes": 1553,
-   "checkedAt": "2026-10-19T08:37:11.722Z",
+   "checkedAt": "2026-10-19T18:30:11.353Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.marylandcomptroller.gov/content/dam/mdcomp/tax/forms/2023/CRA.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-19T18:30:10.704Z",
    "guides": [
     "state-entities"
    ]
@@ -3168,7 +3222,17 @@
    "status": 200,
    "fingerprint": "bf738de09da27a8f",
    "bytes": 4172,
-   "checkedAt": "2026-10-19T08:37:13.146Z",
+   "checkedAt": "2026-10-19T18:30:11.641Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.mass.gov/info-details/non-profit-organizationspublic-charities-forms": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "92a837ae0d8d4ffe",
+   "bytes": 9079,
+   "checkedAt": "2026-10-19T18:30:11.123Z",
    "guides": [
     "state-entities"
    ]
@@ -3178,17 +3242,7 @@
    "status": 200,
    "fingerprint": "d48e76b82e8f5ded",
    "bytes": 12792,
-   "checkedAt": "2026-10-19T08:37:13.677Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.mass.gov/info-details/registering-a-public-charity": {
-   "state": "broken",
-   "status": 404,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:14.132Z",
+   "checkedAt": "2026-10-19T18:30:11.430Z",
    "guides": [
     "state-entities"
    ]
@@ -3198,7 +3252,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:14.422Z",
+   "checkedAt": "2026-10-19T18:30:11.692Z",
    "guides": [
     "state-entities"
    ]
@@ -3208,57 +3262,57 @@
    "status": 200,
    "fingerprint": "5db3a2f9bd083086",
    "bytes": 2322,
-   "checkedAt": "2026-10-19T08:37:14.861Z",
+   "checkedAt": "2026-10-19T18:30:11.794Z",
    "guides": [
     "us-community-support"
    ]
   },
   "https://www.michigan.gov/-/media/Project/Websites/lara/cscl/Folder6/Filing_Fees.pdf?rev=c74f2002f79e442a8095eaa6a5d3d5f4": {
-   "state": "blocked",
-   "status": 403,
+   "state": "ok",
+   "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:15.141Z",
+   "checkedAt": "2026-10-19T18:30:12.855Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://www.michigan.gov/consumerprotection/charities/charitable-organizations": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:15.357Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c84c4ac6da9e1051",
+   "bytes": 16050,
+   "checkedAt": "2026-10-19T18:30:12.302Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://www.michigan.gov/lara/-/media/Project/Websites/lara/cscl/NonImages_new/Corps/forms/llc/700-0725.pdf": {
-   "state": "blocked",
-   "status": 403,
+   "state": "ok",
+   "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:15.585Z",
+   "checkedAt": "2026-10-19T18:30:12.881Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://www.michigan.gov/lara/bureau-list/cscl/corps": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:15.831Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "3eeb94435bac9968",
+   "bytes": 24694,
+   "checkedAt": "2026-10-19T18:30:12.643Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://www.michigan.gov/taxes/business-taxes/new-biz": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:16.106Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ca252b7132e5af35",
+   "bytes": 18100,
+   "checkedAt": "2026-10-19T18:30:12.985Z",
    "guides": [
     "state-entities"
    ]
@@ -3268,7 +3322,7 @@
    "status": 200,
    "fingerprint": "fd8c7683c7900c1d",
    "bytes": 7444,
-   "checkedAt": "2026-10-19T08:37:17.068Z",
+   "checkedAt": "2026-10-19T18:30:13.570Z",
    "guides": [
     "state-entities"
    ]
@@ -3276,9 +3330,9 @@
   "https://www.mndor.state.mn.us/tp/eservices/_/?link=NewBusinessReg": {
    "state": "moved",
    "status": 200,
-   "fingerprint": "d329162d8f104f70",
-   "bytes": 1212,
-   "checkedAt": "2026-10-19T08:37:18.637Z",
+   "fingerprint": "0e17be06446de086",
+   "bytes": 963,
+   "checkedAt": "2026-10-19T18:30:14.377Z",
    "guides": [
     "state-entities"
    ]
@@ -3288,7 +3342,7 @@
    "status": 200,
    "fingerprint": "3f8c4a3870fda42f",
    "bytes": 3911,
-   "checkedAt": "2026-10-19T08:37:22.894Z",
+   "checkedAt": "2026-10-19T18:30:16.841Z",
    "guides": [
     "africa-small-business"
    ]
@@ -3298,7 +3352,7 @@
    "status": 200,
    "fingerprint": "5c64de3d6abfb091",
    "bytes": 3442,
-   "checkedAt": "2026-10-19T08:37:23.580Z",
+   "checkedAt": "2026-10-19T18:30:14.301Z",
    "guides": [
     "us-community-support"
    ]
@@ -3308,7 +3362,7 @@
    "status": 200,
    "fingerprint": "55d8e0a1afcbaf72",
    "bytes": 5159,
-   "checkedAt": "2026-10-19T08:37:24.138Z",
+   "checkedAt": "2026-10-19T18:30:14.692Z",
    "guides": [
     "state-entities"
    ]
@@ -3318,7 +3372,7 @@
    "status": 200,
    "fingerprint": "2a4d5b435a9f9ec1",
    "bytes": 3115,
-   "checkedAt": "2026-10-19T08:37:24.905Z",
+   "checkedAt": "2026-10-19T18:30:15.090Z",
    "guides": [
     "state-entities"
    ]
@@ -3328,7 +3382,7 @@
    "status": 200,
    "fingerprint": "12c0876b9a83f231",
    "bytes": 8054,
-   "checkedAt": "2026-10-19T08:37:25.977Z",
+   "checkedAt": "2026-10-19T18:30:15.963Z",
    "guides": [
     "state-entities"
    ]
@@ -3338,7 +3392,7 @@
    "status": 200,
    "fingerprint": "214c60707945588f",
    "bytes": 5326,
-   "checkedAt": "2026-10-19T08:37:27.250Z",
+   "checkedAt": "2026-10-19T18:30:16.142Z",
    "guides": [
     "state-entities"
    ]
@@ -3348,7 +3402,7 @@
    "status": 200,
    "fingerprint": "2b24ed37110e636f",
    "bytes": 20891,
-   "checkedAt": "2026-10-19T08:37:28.094Z",
+   "checkedAt": "2026-10-19T18:30:16.374Z",
    "guides": [
     "womens-health"
    ]
@@ -3358,7 +3412,7 @@
    "status": 200,
    "fingerprint": "e9df603694f7e156",
    "bytes": 11066,
-   "checkedAt": "2026-10-19T08:37:28.742Z",
+   "checkedAt": "2026-10-19T18:30:16.735Z",
    "guides": [
     "state-entities"
    ]
@@ -3368,7 +3422,7 @@
    "status": 200,
    "fingerprint": "8175913837772b17",
    "bytes": 1928,
-   "checkedAt": "2026-10-19T08:37:29.537Z",
+   "checkedAt": "2026-10-19T18:30:17.085Z",
    "guides": [
     "state-entities"
    ]
@@ -3378,7 +3432,7 @@
    "status": 200,
    "fingerprint": "050f56b49fb4890e",
    "bytes": 3994,
-   "checkedAt": "2026-10-19T08:37:29.757Z",
+   "checkedAt": "2026-10-19T18:30:17.245Z",
    "guides": [
     "state-entities"
    ]
@@ -3388,7 +3442,7 @@
    "status": 200,
    "fingerprint": "6311569c8bc68bc0",
    "bytes": 4232,
-   "checkedAt": "2026-10-19T08:37:32.700Z",
+   "checkedAt": "2026-10-19T18:30:18.344Z",
    "guides": [
     "state-entities"
    ]
@@ -3398,7 +3452,7 @@
    "status": 200,
    "fingerprint": "e7539486449eb124",
    "bytes": 12396,
-   "checkedAt": "2026-10-19T08:37:32.867Z",
+   "checkedAt": "2026-10-19T18:30:17.880Z",
    "guides": [
     "us-small-business"
    ]
@@ -3408,7 +3462,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:33.753Z",
+   "checkedAt": "2026-10-19T18:30:18.426Z",
    "guides": [
     "africa-small-business"
    ]
@@ -3418,7 +3472,7 @@
    "status": 200,
    "fingerprint": "451c555bf1cdbef8",
    "bytes": 1983,
-   "checkedAt": "2026-10-19T08:37:33.810Z",
+   "checkedAt": "2026-10-19T18:30:18.983Z",
    "guides": [
     "africa-small-business"
    ]
@@ -3427,8 +3481,8 @@
    "state": "ok",
    "status": 200,
    "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:33.129Z",
+   "bytes": 81,
+   "checkedAt": "2026-10-19T18:30:18.706Z",
    "guides": [
     "state-entities"
    ]
@@ -3438,7 +3492,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:33.459Z",
+   "checkedAt": "2026-10-19T18:30:24.210Z",
    "guides": [
     "state-entities"
    ]
@@ -3448,7 +3502,7 @@
    "status": 200,
    "fingerprint": "99f6d2afeaf7871a",
    "bytes": 4744,
-   "checkedAt": "2026-10-19T08:37:34.101Z",
+   "checkedAt": "2026-10-19T18:30:19.225Z",
    "guides": [
     "state-entities"
    ]
@@ -3458,7 +3512,7 @@
    "status": 200,
    "fingerprint": "0df5597b09974bf2",
    "bytes": 19514,
-   "checkedAt": "2026-10-19T08:37:34.371Z",
+   "checkedAt": "2026-10-19T18:30:19.848Z",
    "guides": [
     "state-entities"
    ]
@@ -3468,7 +3522,7 @@
    "status": 200,
    "fingerprint": "ba290835398cccb2",
    "bytes": 25225,
-   "checkedAt": "2026-10-19T08:37:34.355Z",
+   "checkedAt": "2026-10-19T18:30:20.039Z",
    "guides": [
     "state-entities"
    ]
@@ -3478,7 +3532,7 @@
    "status": 200,
    "fingerprint": "47731523dfd5a1a7",
    "bytes": 9151,
-   "checkedAt": "2026-10-19T08:37:34.400Z",
+   "checkedAt": "2026-10-19T18:30:20.287Z",
    "guides": [
     "state-entities"
    ]
@@ -3488,7 +3542,7 @@
    "status": 200,
    "fingerprint": "e1281e8999c69f16",
    "bytes": 6034,
-   "checkedAt": "2026-10-19T08:37:34.779Z",
+   "checkedAt": "2026-10-19T18:30:20.308Z",
    "guides": [
     "state-entities"
    ]
@@ -3498,7 +3552,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 46,
-   "checkedAt": "2026-10-19T08:37:34.874Z",
+   "checkedAt": "2026-10-19T18:30:20.786Z",
    "guides": [
     "california-business"
    ]
@@ -3508,7 +3562,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 46,
-   "checkedAt": "2026-10-19T08:37:34.871Z",
+   "checkedAt": "2026-10-19T18:30:20.770Z",
    "guides": [
     "california-business"
    ]
@@ -3518,7 +3572,7 @@
    "status": 200,
    "fingerprint": "48a3a492a93e7da6",
    "bytes": 2695,
-   "checkedAt": "2026-10-19T08:37:35.121Z",
+   "checkedAt": "2026-10-19T18:30:21.093Z",
    "guides": [
     "state-entities"
    ]
@@ -3528,7 +3582,7 @@
    "status": 200,
    "fingerprint": "ff77e763b1a78827",
    "bytes": 2022,
-   "checkedAt": "2026-10-19T08:37:36.098Z",
+   "checkedAt": "2026-10-19T18:30:21.855Z",
    "guides": [
     "state-entities"
    ]
@@ -3538,7 +3592,7 @@
    "status": 200,
    "fingerprint": "609eb368c8341130",
    "bytes": 5958,
-   "checkedAt": "2026-10-19T08:37:35.680Z",
+   "checkedAt": "2026-10-19T18:30:21.562Z",
    "guides": [
     "state-entities"
    ]
@@ -3548,7 +3602,7 @@
    "status": 200,
    "fingerprint": "62dbb7e8ca3411b0",
    "bytes": 5895,
-   "checkedAt": "2026-10-19T08:37:35.665Z",
+   "checkedAt": "2026-10-19T18:30:21.795Z",
    "guides": [
     "state-entities"
    ]
@@ -3558,243 +3612,19 @@
    "status": 200,
    "fingerprint": "7290f761983e7124",
    "bytes": 7288,
-   "checkedAt": "2026-10-19T08:37:36.037Z",
+   "checkedAt": "2026-10-19T18:30:22.014Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://www.sba.gov/about-sba/sba-locations/headquarters-offices/office-veterans-business-development": {
-   "state": "moved",
+  "https://www.sba.gov/about-sba/sba-locations/headquarters/office-of-veterans-business-development/": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "f8ce768c4cb81079",
    "bytes": 5825,
-   "checkedAt": "2026-10-19T08:37:37.288Z",
+   "checkedAt": "2026-10-19T18:30:23.180Z",
    "guides": [
     "us-community-support"
-   ]
-  },
-  "https://www.sba.gov/business-guide": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "95a821c082d40059",
-   "bytes": 7733,
-   "checkedAt": "2026-10-19T08:37:36.586Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.sba.gov/business-guide/10-steps-start-your-business": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "95a821c082d40059",
-   "bytes": 7733,
-   "checkedAt": "2026-10-19T08:37:36.752Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/grow-your-business": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "c2cee668fabafc90",
-   "bytes": 50905,
-   "checkedAt": "2026-10-19T08:37:37.029Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/launch-your-business/apply-licenses-permits": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "a5caee0ce19dc259",
-   "bytes": 47125,
-   "checkedAt": "2026-10-19T08:37:36.978Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/launch-your-business/choose-business-structure": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "a5caee0ce19dc259",
-   "bytes": 47125,
-   "checkedAt": "2026-10-19T08:37:37.233Z",
-   "guides": [
-    "state-entities",
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/launch-your-business/choose-your-business-name": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "a5caee0ce19dc259",
-   "bytes": 47125,
-   "checkedAt": "2026-10-19T08:37:37.261Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/launch-your-business/get-business-insurance": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "a5caee0ce19dc259",
-   "bytes": 47125,
-   "checkedAt": "2026-10-19T08:37:37.682Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/launch-your-business/get-federal-state-tax-id-numbers": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "a5caee0ce19dc259",
-   "bytes": 47125,
-   "checkedAt": "2026-10-19T08:37:37.483Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/launch-your-business/open-business-bank-account": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "a5caee0ce19dc259",
-   "bytes": 47125,
-   "checkedAt": "2026-10-19T08:37:37.542Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/launch-your-business/pick-your-business-location": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "a5caee0ce19dc259",
-   "bytes": 47125,
-   "checkedAt": "2026-10-19T08:37:37.879Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/launch-your-business/register-your-business": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "a5caee0ce19dc259",
-   "bytes": 47125,
-   "checkedAt": "2026-10-19T08:37:38.007Z",
-   "guides": [
-    "state-entities",
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/manage-your-business/ai-small-business": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "fbc6d2c86b86471d",
-   "bytes": 79060,
-   "checkedAt": "2026-10-19T08:37:37.924Z",
-   "guides": [
-    "ai-tools-for-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/manage-your-business/hire-manage-employees": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "fbc6d2c86b86471d",
-   "bytes": 79060,
-   "checkedAt": "2026-10-19T08:37:38.090Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/manage-your-business/manage-your-finances": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "fbc6d2c86b86471d",
-   "bytes": 79060,
-   "checkedAt": "2026-10-19T08:37:38.352Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/manage-your-business/marketing-sales": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "fbc6d2c86b86471d",
-   "bytes": 79060,
-   "checkedAt": "2026-10-19T08:37:38.223Z",
-   "guides": [
-    "ai-tools-for-business",
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/manage-your-business/pay-taxes": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "fbc6d2c86b86471d",
-   "bytes": 79060,
-   "checkedAt": "2026-10-19T08:37:38.709Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/plan-your-business/buy-existing-business-or-franchise": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "872a724ed24c82d7",
-   "bytes": 45543,
-   "checkedAt": "2026-10-19T08:37:38.799Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/plan-your-business/calculate-your-startup-costs": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "872a724ed24c82d7",
-   "bytes": 45543,
-   "checkedAt": "2026-10-19T08:37:38.577Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/plan-your-business/establish-business-credit": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "872a724ed24c82d7",
-   "bytes": 45543,
-   "checkedAt": "2026-10-19T08:37:39.016Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/plan-your-business/fund-your-business": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "872a724ed24c82d7",
-   "bytes": 45543,
-   "checkedAt": "2026-10-19T08:37:39.269Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/plan-your-business/market-research-competitive-analysis": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "872a724ed24c82d7",
-   "bytes": 45543,
-   "checkedAt": "2026-10-19T08:37:39.208Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/business-guide/plan-your-business/write-your-business-plan": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "872a724ed24c82d7",
-   "bytes": 45543,
-   "checkedAt": "2026-10-19T08:37:39.472Z",
-   "guides": [
-    "ai-tools-for-business",
-    "us-small-business"
    ]
   },
   "https://www.sba.gov/certifications/": {
@@ -3802,7 +3632,253 @@
    "status": 200,
    "fingerprint": "20fc7242b8ea23db",
    "bytes": 26693,
-   "checkedAt": "2026-10-19T08:37:39.393Z",
+   "checkedAt": "2026-10-19T18:30:22.282Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/certifications/#8a-program": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "20fc7242b8ea23db",
+   "bytes": 26693,
+   "checkedAt": "2026-10-19T18:30:22.455Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/#business-guide": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "95a821c082d40059",
+   "bytes": 7733,
+   "checkedAt": "2026-10-19T18:30:22.635Z",
+   "guides": [
+    "state-entities",
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/grow-your-business/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c2cee668fabafc90",
+   "bytes": 50905,
+   "checkedAt": "2026-10-19T18:30:22.798Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/launch-your-business/#bank-account": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T18:30:23.024Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/launch-your-business/#business-insurance": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T18:30:23.212Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/launch-your-business/#business-location": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T18:30:23.385Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/launch-your-business/#business-name": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T18:30:23.411Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/launch-your-business/#business-structure": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T18:30:23.567Z",
+   "guides": [
+    "state-entities",
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/launch-your-business/#licenses-permits": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T18:30:23.598Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/launch-your-business/#register-business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T18:30:23.755Z",
+   "guides": [
+    "state-entities",
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/launch-your-business/#tax-ids": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a5caee0ce19dc259",
+   "bytes": 47125,
+   "checkedAt": "2026-10-19T18:30:23.781Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/local-assistance/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f54e2744ddf08b51",
+   "bytes": 3238,
+   "checkedAt": "2026-10-19T18:30:23.945Z",
+   "guides": [
+    "state-entities",
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/local-assistance/resource-partners/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "baf871d6c43225d3",
+   "bytes": 15771,
+   "checkedAt": "2026-10-19T18:30:23.976Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sba.gov/counseling/manage-your-business/#ai-for-small-business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fbc6d2c86b86471d",
+   "bytes": 79060,
+   "checkedAt": "2026-10-19T18:30:24.125Z",
+   "guides": [
+    "ai-tools-for-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/manage-your-business/#hire-and-manage": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fbc6d2c86b86471d",
+   "bytes": 79060,
+   "checkedAt": "2026-10-19T18:30:24.170Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/manage-your-business/#manage-your-finances": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fbc6d2c86b86471d",
+   "bytes": 79060,
+   "checkedAt": "2026-10-19T18:30:24.336Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/manage-your-business/#marketing-and-sales": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fbc6d2c86b86471d",
+   "bytes": 79060,
+   "checkedAt": "2026-10-19T18:30:24.391Z",
+   "guides": [
+    "ai-tools-for-business",
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/manage-your-business/#pay-taxes": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fbc6d2c86b86471d",
+   "bytes": 79060,
+   "checkedAt": "2026-10-19T18:30:24.524Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/plan-your-business/#business-credit": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "872a724ed24c82d7",
+   "bytes": 45543,
+   "checkedAt": "2026-10-19T18:30:24.567Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/plan-your-business/#business-plan": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "872a724ed24c82d7",
+   "bytes": 45543,
+   "checkedAt": "2026-10-19T18:30:24.598Z",
+   "guides": [
+    "ai-tools-for-business",
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/plan-your-business/#buy-franchise": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "872a724ed24c82d7",
+   "bytes": 45543,
+   "checkedAt": "2026-10-19T18:30:24.717Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/plan-your-business/#fund-business": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "872a724ed24c82d7",
+   "bytes": 45543,
+   "checkedAt": "2026-10-19T18:30:24.748Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/plan-your-business/#market-research": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "872a724ed24c82d7",
+   "bytes": 45543,
+   "checkedAt": "2026-10-19T18:30:24.775Z",
+   "guides": [
+    "us-small-business"
+   ]
+  },
+  "https://www.sba.gov/counseling/plan-your-business/#startup-costs": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "872a724ed24c82d7",
+   "bytes": 45543,
+   "checkedAt": "2026-10-19T18:30:24.918Z",
    "guides": [
     "us-small-business"
    ]
@@ -3812,7 +3888,7 @@
    "status": 200,
    "fingerprint": "94ec9e6ace0dab1e",
    "bytes": 3374,
-   "checkedAt": "2026-10-19T08:37:40.247Z",
+   "checkedAt": "2026-10-19T18:30:26.180Z",
    "guides": [
     "state-entities"
    ]
@@ -3822,7 +3898,7 @@
    "status": 200,
    "fingerprint": "84e4afed6e0e0bd5",
    "bytes": 3495,
-   "checkedAt": "2026-10-19T08:37:41.287Z",
+   "checkedAt": "2026-10-19T18:30:26.270Z",
    "guides": [
     "state-entities"
    ]
@@ -3832,7 +3908,7 @@
    "status": 200,
    "fingerprint": "84e5f76c2f0c623e",
    "bytes": 2610,
-   "checkedAt": "2026-10-19T08:37:40.447Z",
+   "checkedAt": "2026-10-19T18:30:26.178Z",
    "guides": [
     "state-entities"
    ]
@@ -3840,9 +3916,9 @@
   "https://www.sba.gov/district/massachusetts": {
    "state": "moved",
    "status": 200,
-   "fingerprint": "9cec9f692e0e272d",
-   "bytes": 3169,
-   "checkedAt": "2026-10-19T08:37:42.744Z",
+   "fingerprint": "86e4776fb60ea31d",
+   "bytes": 3160,
+   "checkedAt": "2026-10-19T18:30:27.765Z",
    "guides": [
     "state-entities"
    ]
@@ -3852,7 +3928,7 @@
    "status": 200,
    "fingerprint": "84e47e6f6f4e293a",
    "bytes": 3468,
-   "checkedAt": "2026-10-19T08:37:41.069Z",
+   "checkedAt": "2026-10-19T18:30:27.690Z",
    "guides": [
     "state-entities"
    ]
@@ -3860,9 +3936,9 @@
   "https://www.sba.gov/district/mississippi": {
    "state": "moved",
    "status": 200,
-   "fingerprint": "14e4e76a4f2e3b5f",
-   "bytes": 3345,
-   "checkedAt": "2026-10-19T08:37:41.644Z",
+   "fingerprint": "04e4e76a4f2e335f",
+   "bytes": 3328,
+   "checkedAt": "2026-10-19T18:30:27.128Z",
    "guides": [
     "state-entities"
    ]
@@ -3872,7 +3948,7 @@
    "status": 200,
    "fingerprint": "94ce9e6f3fac2e16",
    "bytes": 2844,
-   "checkedAt": "2026-10-19T08:37:43.736Z",
+   "checkedAt": "2026-10-19T18:30:28.682Z",
    "guides": [
     "state-entities"
    ]
@@ -3882,7 +3958,7 @@
    "status": 200,
    "fingerprint": "94aebf686f5c8f7a",
    "bytes": 3744,
-   "checkedAt": "2026-10-19T08:37:43.343Z",
+   "checkedAt": "2026-10-19T18:30:29.265Z",
    "guides": [
     "state-entities"
    ]
@@ -3892,7 +3968,7 @@
    "status": 200,
    "fingerprint": "8ce6ee6b1f1ea33e",
    "bytes": 2813,
-   "checkedAt": "2026-10-19T08:37:44.062Z",
+   "checkedAt": "2026-10-19T18:30:30.062Z",
    "guides": [
     "state-entities"
    ]
@@ -3902,7 +3978,7 @@
    "status": 200,
    "fingerprint": "14e4ee44272e620b",
    "bytes": 3442,
-   "checkedAt": "2026-10-19T08:37:45.831Z",
+   "checkedAt": "2026-10-19T18:30:29.909Z",
    "guides": [
     "state-entities"
    ]
@@ -3910,62 +3986,22 @@
   "https://www.sba.gov/district/st-louis": {
    "state": "moved",
    "status": 200,
-   "fingerprint": "8466be6e2f8ca09e",
-   "bytes": 2921,
-   "checkedAt": "2026-10-19T08:37:45.801Z",
+   "fingerprint": "9446eece0faea03a",
+   "bytes": 3009,
+   "checkedAt": "2026-10-19T18:30:30.608Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://www.sba.gov/federal-contracting/contracting-assistance-programs/8a-business-development-program": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "20fc7242b8ea23db",
-   "bytes": 26693,
-   "checkedAt": "2026-10-19T08:37:44.442Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/funding-programs": {
-   "state": "moved",
+  "https://www.sba.gov/loans/": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "7d6c2740c499caa9",
    "bytes": 4997,
-   "checkedAt": "2026-10-19T08:37:44.657Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.sba.gov/funding-programs/loans": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "7d6c2740c499caa9",
-   "bytes": 4997,
-   "checkedAt": "2026-10-19T08:37:44.821Z",
-   "guides": [
-    "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/local-assistance": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "f54e2744ddf08b51",
-   "bytes": 3238,
-   "checkedAt": "2026-10-19T08:37:45.016Z",
+   "checkedAt": "2026-10-19T18:30:30.069Z",
    "guides": [
     "state-entities",
     "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/local-assistance/resource-partners": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "baf871d6c43225d3",
-   "bytes": 15771,
-   "checkedAt": "2026-10-19T08:37:45.186Z",
-   "guides": [
-    "state-entities"
    ]
   },
   "https://www.scc.virginia.gov/businesses/": {
@@ -3973,7 +4009,7 @@
    "status": 200,
    "fingerprint": "911dda75c57ca314",
    "bytes": 3623,
-   "checkedAt": "2026-10-19T08:37:45.796Z",
+   "checkedAt": "2026-10-19T18:30:30.707Z",
    "guides": [
     "state-entities"
    ]
@@ -3983,7 +4019,7 @@
    "status": 200,
    "fingerprint": "752c985df3a6a953",
    "bytes": 4382,
-   "checkedAt": "2026-10-19T08:37:46.069Z",
+   "checkedAt": "2026-10-19T18:30:30.717Z",
    "guides": [
     "state-entities"
    ]
@@ -3993,7 +4029,7 @@
    "status": 200,
    "fingerprint": "b1ec9c59c7b4a913",
    "bytes": 4550,
-   "checkedAt": "2026-10-19T08:37:46.410Z",
+   "checkedAt": "2026-10-19T18:30:31.048Z",
    "guides": [
     "state-entities"
    ]
@@ -4003,37 +4039,37 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:46.187Z",
+   "checkedAt": "2026-10-19T18:30:31.034Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://www.score.org/score-faqs": {
+  "https://www.score.org/score-faqs-business-mentoring-resources-support/": {
    "state": "blocked",
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:46.406Z",
+   "checkedAt": "2026-10-19T18:30:31.050Z",
    "guides": [
     "us-small-business"
    ]
   },
   "https://www.sec.gov/resources-small-businesses/exempt-offerings": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:46.494Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "210c8f8bbb72a0bb",
+   "bytes": 6532,
+   "checkedAt": "2026-10-19T18:30:31.563Z",
    "guides": [
     "us-small-business"
    ]
   },
   "https://www.sec.gov/resources-small-businesses/small-business-compliance-guides/regulation-crowdfunding-guidance-issuers": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:46.582Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "af765d99fdbd83f2",
+   "bytes": 31451,
+   "checkedAt": "2026-10-19T18:30:31.447Z",
    "guides": [
     "us-small-business"
    ]
@@ -4042,8 +4078,8 @@
    "state": "ok",
    "status": 200,
    "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:46.715Z",
+   "bytes": 82,
+   "checkedAt": "2026-10-19T18:30:31.293Z",
    "guides": [
     "state-entities"
    ]
@@ -4053,7 +4089,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:46.892Z",
+   "checkedAt": "2026-10-19T18:30:32.081Z",
    "guides": [
     "state-entities"
    ]
@@ -4063,7 +4099,7 @@
    "status": 200,
    "fingerprint": "195d1f7339baf001",
    "bytes": 3109,
-   "checkedAt": "2026-10-19T08:37:46.893Z",
+   "checkedAt": "2026-10-19T18:30:31.774Z",
    "guides": [
     "us-community-support"
    ]
@@ -4073,7 +4109,7 @@
    "status": 200,
    "fingerprint": "e20bfe5b7f89a1db",
    "bytes": 5080,
-   "checkedAt": "2026-10-19T08:37:47.092Z",
+   "checkedAt": "2026-10-19T18:30:31.943Z",
    "guides": [
     "state-entities"
    ]
@@ -4083,7 +4119,7 @@
    "status": 200,
    "fingerprint": "e20bee5b3788301b",
    "bytes": 4173,
-   "checkedAt": "2026-10-19T08:37:47.190Z",
+   "checkedAt": "2026-10-19T18:30:32.081Z",
    "guides": [
     "state-entities"
    ]
@@ -4093,7 +4129,7 @@
    "status": 200,
    "fingerprint": "c219ce5af689d091",
    "bytes": 4766,
-   "checkedAt": "2026-10-19T08:37:47.181Z",
+   "checkedAt": "2026-10-19T18:30:32.188Z",
    "guides": [
     "state-entities"
    ]
@@ -4103,7 +4139,7 @@
    "status": 200,
    "fingerprint": "cafe4a0782fe9198",
    "bytes": 5793,
-   "checkedAt": "2026-10-19T08:37:48.241Z",
+   "checkedAt": "2026-10-19T18:30:33.232Z",
    "guides": [
     "state-entities"
    ]
@@ -4113,7 +4149,7 @@
    "status": 200,
    "fingerprint": "ca5f482fb0feb908",
    "bytes": 7524,
-   "checkedAt": "2026-10-19T08:37:48.148Z",
+   "checkedAt": "2026-10-19T18:30:33.240Z",
    "guides": [
     "state-entities"
    ]
@@ -4123,7 +4159,7 @@
    "status": 200,
    "fingerprint": "ca7e5a07b4fe9908",
    "bytes": 7088,
-   "checkedAt": "2026-10-19T08:37:48.165Z",
+   "checkedAt": "2026-10-19T18:30:33.080Z",
    "guides": [
     "state-entities"
    ]
@@ -4133,7 +4169,7 @@
    "status": 200,
    "fingerprint": "dafe5b2ad2fe99ba",
    "bytes": 7596,
-   "checkedAt": "2026-10-19T08:37:48.921Z",
+   "checkedAt": "2026-10-19T18:30:34.015Z",
    "guides": [
     "state-entities"
    ]
@@ -4143,7 +4179,7 @@
    "status": 200,
    "fingerprint": "defe486586ee910a",
    "bytes": 6451,
-   "checkedAt": "2026-10-19T08:37:49.004Z",
+   "checkedAt": "2026-10-19T18:30:34.048Z",
    "guides": [
     "state-entities"
    ]
@@ -4153,8 +4189,9 @@
    "status": 200,
    "fingerprint": "2d6ba1e01dc8a01e",
    "bytes": 2975,
-   "checkedAt": "2026-10-19T08:37:48.505Z",
+   "checkedAt": "2026-10-19T18:30:33.880Z",
    "guides": [
+    "california-business",
     "state-entities"
    ]
   },
@@ -4163,7 +4200,7 @@
    "status": 200,
    "fingerprint": "42cacb72bcd76411",
    "bytes": 8377,
-   "checkedAt": "2026-10-19T08:37:48.972Z",
+   "checkedAt": "2026-10-19T18:30:34.414Z",
    "guides": [
     "state-entities"
    ]
@@ -4173,7 +4210,7 @@
    "status": 200,
    "fingerprint": "6ee7df9739256dd1",
    "bytes": 7136,
-   "checkedAt": "2026-10-19T08:37:50.014Z",
+   "checkedAt": "2026-10-19T18:30:35.189Z",
    "guides": [
     "state-entities"
    ]
@@ -4183,7 +4220,7 @@
    "status": 200,
    "fingerprint": "20af45cbf9865355",
    "bytes": 8826,
-   "checkedAt": "2026-10-19T08:37:51.986Z",
+   "checkedAt": "2026-10-19T18:30:35.216Z",
    "guides": [
     "state-entities"
    ]
@@ -4193,27 +4230,27 @@
    "status": 200,
    "fingerprint": "37ca9a57dbe7cab1",
    "bytes": 16864,
-   "checkedAt": "2026-10-19T08:37:49.912Z",
+   "checkedAt": "2026-10-19T18:30:35.055Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://www.sos.mn.gov/business-liens/": {
-   "state": "broken",
-   "status": 502,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:51.254Z",
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "4928a54098f78479",
+   "bytes": 672,
+   "checkedAt": "2026-10-19T18:30:36.787Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://www.sos.mo.gov/business/corporations/startBusiness": {
-   "state": "broken",
-   "status": 0,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:38:30.167Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "125499f2d7a88569",
+   "bytes": 16017,
+   "checkedAt": "2026-10-19T18:30:35.664Z",
    "guides": [
     "state-entities"
    ]
@@ -4223,17 +4260,17 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:51.674Z",
+   "checkedAt": "2026-10-19T18:30:35.655Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://www.sos.ms.gov/business-services": {
-   "state": "moved",
+  "https://www.sos.ms.gov/business-services-external-affairs": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "1faa9dd4f76b2303",
    "bytes": 5327,
-   "checkedAt": "2026-10-19T08:37:53.826Z",
+   "checkedAt": "2026-10-19T18:30:36.542Z",
    "guides": [
     "state-entities"
    ]
@@ -4243,7 +4280,7 @@
    "status": 200,
    "fingerprint": "1fa2dc44f6ef2333",
    "bytes": 4492,
-   "checkedAt": "2026-10-19T08:37:53.617Z",
+   "checkedAt": "2026-10-19T18:30:36.242Z",
    "guides": [
     "state-entities"
    ]
@@ -4253,7 +4290,17 @@
    "status": 200,
    "fingerprint": "0c8310d9d527d506",
    "bytes": 7492,
-   "checkedAt": "2026-10-19T08:37:54.344Z",
+   "checkedAt": "2026-10-19T18:30:37.148Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.sos.nd.gov/business/business-services/business-structures/corporation": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2aa421cc3d87c872",
+   "bytes": 23516,
+   "checkedAt": "2026-10-19T18:30:37.327Z",
    "guides": [
     "state-entities"
    ]
@@ -4263,7 +4310,7 @@
    "status": 200,
    "fingerprint": "0ea124da3f07c07a",
    "bytes": 22456,
-   "checkedAt": "2026-10-19T08:37:54.584Z",
+   "checkedAt": "2026-10-19T18:30:37.525Z",
    "guides": [
     "state-entities"
    ]
@@ -4273,7 +4320,7 @@
    "status": 200,
    "fingerprint": "cea30818f835ef34",
    "bytes": 17643,
-   "checkedAt": "2026-10-19T08:37:54.752Z",
+   "checkedAt": "2026-10-19T18:30:37.546Z",
    "guides": [
     "state-entities"
    ]
@@ -4283,17 +4330,17 @@
    "status": 200,
    "fingerprint": "0f9b08d37927c523",
    "bytes": 22121,
-   "checkedAt": "2026-10-19T08:37:54.973Z",
+   "checkedAt": "2026-10-19T18:30:37.775Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://www.sos.nh.gov": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:55.068Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "334cf944580f0567",
+   "bytes": 1917423,
+   "checkedAt": "2026-10-19T18:30:38.353Z",
    "guides": [
     "state-entities"
    ]
@@ -4303,7 +4350,7 @@
    "status": 200,
    "fingerprint": "b3ade8b1066b8df4",
    "bytes": 3824,
-   "checkedAt": "2026-10-19T08:37:55.350Z",
+   "checkedAt": "2026-10-19T18:30:37.868Z",
    "guides": [
     "state-entities"
    ]
@@ -4313,7 +4360,7 @@
    "status": 200,
    "fingerprint": "81ec3af3bc60b297",
    "bytes": 2982,
-   "checkedAt": "2026-10-19T08:37:55.562Z",
+   "checkedAt": "2026-10-19T18:30:38.551Z",
    "guides": [
     "state-entities"
    ]
@@ -4323,7 +4370,7 @@
    "status": 200,
    "fingerprint": "fb4f7cb3c1d960fa",
    "bytes": 6978,
-   "checkedAt": "2026-10-19T08:37:55.860Z",
+   "checkedAt": "2026-10-19T18:30:38.249Z",
    "guides": [
     "state-entities"
    ]
@@ -4333,7 +4380,7 @@
    "status": 200,
    "fingerprint": "845cfee6ddc51417",
    "bytes": 2592,
-   "checkedAt": "2026-10-19T08:37:55.803Z",
+   "checkedAt": "2026-10-19T18:30:38.548Z",
    "guides": [
     "state-entities"
    ]
@@ -4343,7 +4390,7 @@
    "status": 200,
    "fingerprint": "3b6044d660ae82cc",
    "bytes": 2693,
-   "checkedAt": "2026-10-19T08:37:56.021Z",
+   "checkedAt": "2026-10-19T18:30:38.671Z",
    "guides": [
     "state-entities"
    ]
@@ -4353,7 +4400,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:56.224Z",
+   "checkedAt": "2026-10-19T18:30:38.704Z",
    "guides": [
     "state-entities"
    ]
@@ -4363,7 +4410,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:56.476Z",
+   "checkedAt": "2026-10-19T18:30:38.717Z",
    "guides": [
     "state-entities"
    ]
@@ -4373,7 +4420,7 @@
    "status": 200,
    "fingerprint": "57fe6b75094a0dfd",
    "bytes": 4649,
-   "checkedAt": "2026-10-19T08:37:56.612Z",
+   "checkedAt": "2026-10-19T18:30:39.144Z",
    "guides": [
     "state-entities"
    ]
@@ -4383,7 +4430,7 @@
    "status": 200,
    "fingerprint": "dfaee963cb022c7f",
    "bytes": 6832,
-   "checkedAt": "2026-10-19T08:37:56.892Z",
+   "checkedAt": "2026-10-19T18:30:39.137Z",
    "guides": [
     "state-entities"
    ]
@@ -4393,7 +4440,7 @@
    "status": 200,
    "fingerprint": "b22b4275a04fed4b",
    "bytes": 10457,
-   "checkedAt": "2026-10-19T08:37:56.826Z",
+   "checkedAt": "2026-10-19T18:30:39.149Z",
    "guides": [
     "state-entities"
    ]
@@ -4403,7 +4450,7 @@
    "status": 200,
    "fingerprint": "4a8c0252b1e3e660",
    "bytes": 4284,
-   "checkedAt": "2026-10-19T08:37:57.399Z",
+   "checkedAt": "2026-10-19T18:30:39.714Z",
    "guides": [
     "state-entities"
    ]
@@ -4413,7 +4460,7 @@
    "status": 200,
    "fingerprint": "826d89d731df4a42",
    "bytes": 13736,
-   "checkedAt": "2026-10-19T08:37:57.543Z",
+   "checkedAt": "2026-10-19T18:30:39.717Z",
    "guides": [
     "state-entities"
    ]
@@ -4423,7 +4470,7 @@
    "status": 200,
    "fingerprint": "82ad19552ddf42c2",
    "bytes": 18810,
-   "checkedAt": "2026-10-19T08:37:57.766Z",
+   "checkedAt": "2026-10-19T18:30:39.726Z",
    "guides": [
     "state-entities"
    ]
@@ -4433,7 +4480,7 @@
    "status": 200,
    "fingerprint": "82adb8d7705f4240",
    "bytes": 13491,
-   "checkedAt": "2026-10-19T08:37:57.916Z",
+   "checkedAt": "2026-10-19T18:30:40.100Z",
    "guides": [
     "state-entities"
    ]
@@ -4443,7 +4490,7 @@
    "status": 200,
    "fingerprint": "6a9b305090eba2e1",
    "bytes": 2846,
-   "checkedAt": "2026-10-19T08:37:58.154Z",
+   "checkedAt": "2026-10-19T18:30:40.097Z",
    "guides": [
     "state-entities"
    ]
@@ -4453,7 +4500,7 @@
    "status": 200,
    "fingerprint": "c2bf5cc8edd5346b",
    "bytes": 27628,
-   "checkedAt": "2026-10-19T08:37:58.258Z",
+   "checkedAt": "2026-10-19T18:30:40.154Z",
    "guides": [
     "state-entities"
    ]
@@ -4463,7 +4510,7 @@
    "status": 200,
    "fingerprint": "c7ab6cccc9d56d63",
    "bytes": 27346,
-   "checkedAt": "2026-10-19T08:37:58.418Z",
+   "checkedAt": "2026-10-19T18:30:40.374Z",
    "guides": [
     "state-entities"
    ]
@@ -4473,7 +4520,7 @@
    "status": 200,
    "fingerprint": "c4ab38ece9d56563",
    "bytes": 29726,
-   "checkedAt": "2026-10-19T08:37:58.619Z",
+   "checkedAt": "2026-10-19T18:30:46.898Z",
    "guides": [
     "state-entities"
    ]
@@ -4483,7 +4530,7 @@
    "status": 200,
    "fingerprint": "8aae7ccddd873557",
    "bytes": 27913,
-   "checkedAt": "2026-10-19T08:37:58.765Z",
+   "checkedAt": "2026-10-19T18:30:45.903Z",
    "guides": [
     "state-entities"
    ]
@@ -4493,7 +4540,7 @@
    "status": 200,
    "fingerprint": "46af2ceec8953d6f",
    "bytes": 24246,
-   "checkedAt": "2026-10-19T08:37:58.897Z",
+   "checkedAt": "2026-10-19T18:30:47.093Z",
    "guides": [
     "state-entities"
    ]
@@ -4503,7 +4550,7 @@
    "status": 200,
    "fingerprint": "a67dfbfdc0cdac7b",
    "bytes": 4977,
-   "checkedAt": "2026-10-19T08:37:59.310Z",
+   "checkedAt": "2026-10-19T18:30:46.569Z",
    "guides": [
     "state-entities"
    ]
@@ -4513,7 +4560,7 @@
    "status": 200,
    "fingerprint": "e295c9ed07d92869",
    "bytes": 2510,
-   "checkedAt": "2026-10-19T08:37:59.279Z",
+   "checkedAt": "2026-10-19T18:30:47.042Z",
    "guides": [
     "state-entities"
    ]
@@ -4523,7 +4570,7 @@
    "status": 200,
    "fingerprint": "06c9ce5fafd7c70b",
    "bytes": 42559,
-   "checkedAt": "2026-10-19T08:37:59.785Z",
+   "checkedAt": "2026-10-19T18:30:47.425Z",
    "guides": [
     "state-entities"
    ]
@@ -4533,27 +4580,27 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:59.465Z",
+   "checkedAt": "2026-10-19T18:30:47.338Z",
    "guides": [
     "state-entities"
    ]
   },
-  "https://www.ssa.gov/contact/": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:37:59.783Z",
+  "https://www.ssa.gov/agency/contact/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1d566e62a21068bb",
+   "bytes": 2737,
+   "checkedAt": "2026-10-19T18:30:47.534Z",
    "guides": [
     "us-community-support"
    ]
   },
   "https://www.ssa.gov/medicare/part-d-extra-help": {
-   "state": "blocked",
-   "status": 403,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-19T08:38:00.007Z",
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c26df8e9397023fe",
+   "bytes": 2883,
+   "checkedAt": "2026-10-19T18:30:47.700Z",
    "guides": [
     "us-community-support"
    ]
@@ -4563,7 +4610,7 @@
    "status": 200,
    "fingerprint": "c7256c36b494415f",
    "bytes": 12068,
-   "checkedAt": "2026-10-19T08:38:01.421Z",
+   "checkedAt": "2026-10-19T18:30:48.895Z",
    "guides": [
     "state-entities"
    ]
@@ -4573,7 +4620,7 @@
    "status": 200,
    "fingerprint": "e5aeee237b48ef4d",
    "bytes": 11600,
-   "checkedAt": "2026-10-19T08:38:00.912Z",
+   "checkedAt": "2026-10-19T18:30:48.559Z",
    "guides": [
     "state-entities"
    ]
@@ -4583,7 +4630,7 @@
    "status": 200,
    "fingerprint": "82d94c4c8fcfe651",
    "bytes": 7447,
-   "checkedAt": "2026-10-19T08:38:01.755Z",
+   "checkedAt": "2026-10-19T18:30:48.445Z",
    "guides": [
     "state-entities"
    ]
@@ -4593,7 +4640,7 @@
    "status": 200,
    "fingerprint": "4141e1741767ca69",
    "bytes": 10334,
-   "checkedAt": "2026-10-19T08:38:02.001Z",
+   "checkedAt": "2026-10-19T18:30:49.076Z",
    "guides": [
     "womens-health"
    ]
@@ -4603,7 +4650,7 @@
    "status": 200,
    "fingerprint": "e2d8e3db2e9826ba",
    "bytes": 10138,
-   "checkedAt": "2026-10-19T08:38:03.498Z",
+   "checkedAt": "2026-10-19T18:30:50.254Z",
    "guides": [
     "us-community-support"
    ]
@@ -4613,7 +4660,7 @@
    "status": 200,
    "fingerprint": "8f41bb6329d7fc4c",
    "bytes": 2621,
-   "checkedAt": "2026-10-19T08:38:02.512Z",
+   "checkedAt": "2026-10-19T18:30:49.587Z",
    "guides": [
     "state-entities"
    ]
@@ -4623,7 +4670,7 @@
    "status": 200,
    "fingerprint": "2d4f1ac59a3fc25e",
    "bytes": 3721,
-   "checkedAt": "2026-10-19T08:38:03.062Z",
+   "checkedAt": "2026-10-19T18:30:49.721Z",
    "guides": [
     "state-entities"
    ]
@@ -4633,7 +4680,7 @@
    "status": 200,
    "fingerprint": "0085695c73b06b57",
    "bytes": 3669,
-   "checkedAt": "2026-10-19T08:38:03.561Z",
+   "checkedAt": "2026-10-19T18:30:49.919Z",
    "guides": [
     "us-community-support"
    ]
@@ -4643,7 +4690,7 @@
    "status": 200,
    "fingerprint": "9084626c1298831f",
    "bytes": 3941,
-   "checkedAt": "2026-10-19T08:38:03.648Z",
+   "checkedAt": "2026-10-19T18:30:49.926Z",
    "guides": [
     "us-community-support"
    ]
@@ -4653,7 +4700,7 @@
    "status": 200,
    "fingerprint": "18d36f1e7adaa955",
    "bytes": 4197,
-   "checkedAt": "2026-10-19T08:38:03.723Z",
+   "checkedAt": "2026-10-19T18:30:50.074Z",
    "guides": [
     "us-community-support"
    ]
@@ -4663,7 +4710,7 @@
    "status": 200,
    "fingerprint": "a565fb430bc78f53",
    "bytes": 5829,
-   "checkedAt": "2026-10-19T08:38:04.624Z",
+   "checkedAt": "2026-10-19T18:30:51.081Z",
    "guides": [
     "state-entities"
    ]
@@ -4673,7 +4720,7 @@
    "status": 200,
    "fingerprint": "c0e5e8a811b50149",
    "bytes": 93893,
-   "checkedAt": "2026-10-19T08:38:04.548Z",
+   "checkedAt": "2026-10-19T18:30:50.744Z",
    "guides": [
     "womens-health"
    ]
@@ -4683,7 +4730,7 @@
    "status": 200,
    "fingerprint": "f42778da51b3c371",
    "bytes": 76047,
-   "checkedAt": "2026-10-19T08:38:05.016Z",
+   "checkedAt": "2026-10-19T18:30:51.179Z",
    "guides": [
     "womens-health"
    ]
@@ -4693,7 +4740,7 @@
    "status": 200,
    "fingerprint": "b9bc62e61d3e3321",
    "bytes": 12226,
-   "checkedAt": "2026-10-19T08:38:04.983Z",
+   "checkedAt": "2026-10-19T18:30:51.099Z",
    "guides": [
     "us-small-business"
    ]
@@ -4703,7 +4750,7 @@
    "status": 200,
    "fingerprint": "eb0f4ca51a49e06b",
    "bytes": 6443,
-   "checkedAt": "2026-10-19T08:38:05.387Z",
+   "checkedAt": "2026-10-19T18:30:51.470Z",
    "guides": [
     "us-community-support"
    ]
@@ -4713,7 +4760,7 @@
    "status": 200,
    "fingerprint": "1e8f11e4bcccb088",
    "bytes": 3179,
-   "checkedAt": "2026-10-19T08:38:05.412Z",
+   "checkedAt": "2026-10-19T18:30:51.489Z",
    "guides": [
     "us-community-support"
    ]
@@ -4723,7 +4770,7 @@
    "status": 200,
    "fingerprint": "4118b6f0ac243b26",
    "bytes": 6149,
-   "checkedAt": "2026-10-19T08:38:05.599Z",
+   "checkedAt": "2026-10-19T18:30:51.569Z",
    "guides": [
     "us-community-support"
    ]
@@ -4733,7 +4780,7 @@
    "status": 200,
    "fingerprint": "fb8b73e9bb79b88b",
    "bytes": 4541,
-   "checkedAt": "2026-10-19T08:38:05.606Z",
+   "checkedAt": "2026-10-19T18:30:51.669Z",
    "guides": [
     "us-community-support"
    ]
@@ -4743,7 +4790,7 @@
    "status": 200,
    "fingerprint": "f20fcff77bed54c3",
    "bytes": 9924,
-   "checkedAt": "2026-10-19T08:38:05.815Z",
+   "checkedAt": "2026-10-19T18:30:51.711Z",
    "guides": [
     "us-community-support"
    ]
@@ -4753,7 +4800,7 @@
    "status": 200,
    "fingerprint": "e1b49696154ca1f4",
    "bytes": 2506,
-   "checkedAt": "2026-10-19T08:38:05.805Z",
+   "checkedAt": "2026-10-19T18:30:51.779Z",
    "guides": [
     "us-community-support"
    ]
@@ -4763,7 +4810,7 @@
    "status": 200,
    "fingerprint": "35a8ff8d0901036d",
    "bytes": 3784,
-   "checkedAt": "2026-10-19T08:38:06.253Z",
+   "checkedAt": "2026-10-19T18:30:51.877Z",
    "guides": [
     "us-community-support"
    ]
@@ -4773,7 +4820,7 @@
    "status": 200,
    "fingerprint": "4ead29a0a7030779",
    "bytes": 3934,
-   "checkedAt": "2026-10-19T08:38:06.257Z",
+   "checkedAt": "2026-10-19T18:30:51.927Z",
    "guides": [
     "us-community-support"
    ]
@@ -4783,7 +4830,7 @@
    "status": 200,
    "fingerprint": "dfe3d2b7b2402758",
    "bytes": 13280,
-   "checkedAt": "2026-10-19T08:38:06.888Z",
+   "checkedAt": "2026-10-19T18:30:52.439Z",
    "guides": [
     "state-entities"
    ]
@@ -4793,7 +4840,7 @@
    "status": 200,
    "fingerprint": "480cc18ecb2db108",
    "bytes": 6760,
-   "checkedAt": "2026-10-19T08:38:06.960Z",
+   "checkedAt": "2026-10-19T18:30:52.594Z",
    "guides": [
     "us-community-support"
    ]
@@ -4803,7 +4850,7 @@
    "status": 200,
    "fingerprint": "201013b6bc82b4f0",
    "bytes": 3112,
-   "checkedAt": "2026-10-19T08:38:07.491Z",
+   "checkedAt": "2026-10-19T18:30:52.499Z",
    "guides": [
     "us-community-support"
    ]
@@ -4813,7 +4860,7 @@
    "status": 200,
    "fingerprint": "aa933ea50817cbd4",
    "bytes": 3683,
-   "checkedAt": "2026-10-19T08:38:08.211Z",
+   "checkedAt": "2026-10-19T18:30:53.502Z",
    "guides": [
     "state-entities"
    ]
@@ -4823,7 +4870,7 @@
    "status": 200,
    "fingerprint": "c8e17c560f9fc1cf",
    "bytes": 15011,
-   "checkedAt": "2026-10-19T08:38:07.746Z",
+   "checkedAt": "2026-10-19T18:30:53.196Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4833,7 +4880,7 @@
    "status": 200,
    "fingerprint": "c15f9fd833f5d108",
    "bytes": 14324,
-   "checkedAt": "2026-10-19T08:38:07.940Z",
+   "checkedAt": "2026-10-19T18:30:52.995Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4843,7 +4890,7 @@
    "status": 200,
    "fingerprint": "c2e1badc8a9ecc08",
    "bytes": 14325,
-   "checkedAt": "2026-10-19T08:38:08.123Z",
+   "checkedAt": "2026-10-19T18:30:53.205Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4853,7 +4900,7 @@
    "status": 200,
    "fingerprint": "1b378a589edecd38",
    "bytes": 8869,
-   "checkedAt": "2026-10-19T08:38:08.567Z",
+   "checkedAt": "2026-10-19T18:30:53.522Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4863,7 +4910,7 @@
    "status": 200,
    "fingerprint": "f1c6e2012f02e8ff",
    "bytes": 13721,
-   "checkedAt": "2026-10-19T08:38:08.450Z",
+   "checkedAt": "2026-10-19T18:30:53.402Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4873,7 +4920,7 @@
    "status": 200,
    "fingerprint": "abe58250e27d896e",
    "bytes": 13287,
-   "checkedAt": "2026-10-19T08:38:08.634Z",
+   "checkedAt": "2026-10-19T18:30:53.677Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4883,7 +4930,7 @@
    "status": 200,
    "fingerprint": "f195b27d6577d826",
    "bytes": 15651,
-   "checkedAt": "2026-10-19T08:38:08.743Z",
+   "checkedAt": "2026-10-19T18:30:53.693Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4893,7 +4940,7 @@
    "status": 200,
    "fingerprint": "d3b37ae1a2ef581e",
    "bytes": 12062,
-   "checkedAt": "2026-10-19T08:38:08.812Z",
+   "checkedAt": "2026-10-19T18:30:53.787Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4903,7 +4950,7 @@
    "status": 200,
    "fingerprint": "d68782b58d99594e",
    "bytes": 9608,
-   "checkedAt": "2026-10-19T08:38:08.948Z",
+   "checkedAt": "2026-10-19T18:30:54.000Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4913,7 +4960,7 @@
    "status": 200,
    "fingerprint": "3a437b2ae7b45527",
    "bytes": 11099,
-   "checkedAt": "2026-10-19T08:38:09.349Z",
+   "checkedAt": "2026-10-19T18:30:53.900Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4923,7 +4970,7 @@
    "status": 200,
    "fingerprint": "d2450ecd41b7496e",
    "bytes": 5139,
-   "checkedAt": "2026-10-19T08:38:10.181Z",
+   "checkedAt": "2026-10-19T18:30:53.986Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4933,7 +4980,7 @@
    "status": 200,
    "fingerprint": "dbfd4af96491840e",
    "bytes": 8283,
-   "checkedAt": "2026-10-19T08:38:09.541Z",
+   "checkedAt": "2026-10-19T18:30:54.404Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4943,7 +4990,7 @@
    "status": 200,
    "fingerprint": "d1f88a495377486a",
    "bytes": 6839,
-   "checkedAt": "2026-10-19T08:38:12.788Z",
+   "checkedAt": "2026-10-19T18:30:54.240Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4953,7 +5000,7 @@
    "status": 200,
    "fingerprint": "5198a8493176c8ea",
    "bytes": 6817,
-   "checkedAt": "2026-10-19T08:38:15.200Z",
+   "checkedAt": "2026-10-19T18:30:54.173Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4963,7 +5010,7 @@
    "status": 200,
    "fingerprint": "5138ba49317fe8a2",
    "bytes": 6623,
-   "checkedAt": "2026-10-19T08:38:16.607Z",
+   "checkedAt": "2026-10-19T18:30:54.410Z",
    "guides": [
     "womens-health:who"
    ]
@@ -4971,9 +5018,9 @@
   "https://www.womenshealth.gov/menopause/menopause-basics": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "2bfa57f417b1ea7d",
-   "bytes": 13433,
-   "checkedAt": "2026-10-19T08:38:16.720Z",
+   "fingerprint": "f85411d43738abbf",
+   "bytes": 7549,
+   "checkedAt": "2026-10-19T18:30:55.573Z",
    "guides": [
     "womens-health"
    ]
@@ -4983,7 +5030,7 @@
    "status": 200,
    "fingerprint": "d20f60b0b773883b",
    "bytes": 18976,
-   "checkedAt": "2026-10-19T08:38:17.176Z",
+   "checkedAt": "2026-10-19T18:30:55.590Z",
    "guides": [
     "womens-health"
    ]
@@ -4993,7 +5040,7 @@
    "status": 200,
    "fingerprint": "21607ff6befc9323",
    "bytes": 29247,
-   "checkedAt": "2026-10-19T08:38:17.608Z",
+   "checkedAt": "2026-10-19T18:30:55.708Z",
    "guides": [
     "womens-health"
    ]
@@ -5003,7 +5050,7 @@
    "status": 200,
    "fingerprint": "f1009bd5571f605c",
    "bytes": 3970,
-   "checkedAt": "2026-10-19T08:38:18.606Z",
+   "checkedAt": "2026-10-19T18:30:56.459Z",
    "guides": [
     "state-entities"
    ]
@@ -5011,9 +5058,9 @@
   "https://wyomingsbdc.org/": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "c006f8285811eea5",
-   "bytes": 9617,
-   "checkedAt": "2026-10-19T08:38:18.611Z",
+   "fingerprint": "c004f8284851eead",
+   "bytes": 9586,
+   "checkedAt": "2026-10-19T18:30:56.102Z",
    "guides": [
     "state-entities"
    ]

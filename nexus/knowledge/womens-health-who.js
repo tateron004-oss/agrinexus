@@ -22,7 +22,7 @@ const SOURCES = Object.freeze({
   whoNewborn: { name: "WHO: newborn mortality fact sheet", url: "https://www.who.int/news-room/fact-sheets/detail/newborn-mortality" },
   whoPerinatalMentalHealth: { name: "WHO: guide for integration of perinatal mental health (2022)", url: "https://www.who.int/news/item/19-09-2022-launch-of-the-who-guide-for-integration-of-perinatal-mental-health" },
   kenyaPlan: { name: "WHO Africa: Kenya's National Cervical Cancer Elimination Action Plan 2026-2030", url: "https://www.afro.who.int/countries/kenya/news/kenya-launches-national-cervical-cancer-elimination-action-plan-2026-2030" },
-  kenyaSingleDose: { name: "WHO Africa: Kenya moves to a single-dose HPV schedule", url: "https://www.afro.who.int/photo-story/cervical-cancer-elimination-kenya-transitions-single-dose-hpv-vaccination-schedule" },
+  kenyaSingleDose: { name: "WHO Africa: Kenya moves to a single-dose HPV schedule", url: "https://www.afro.who.int/countries/kenya/photo-story/cervical-cancer-elimination-kenya-transitions-single-dose-hpv" },
   kenyaMoh: { name: "Kenya Ministry of Health: efforts to combat cervical cancer (February 2025)", url: "https://www.health.go.ke/kenya-intensifies-efforts-combat-cervical-cancer-amid-rising-burden" },
   unwomen1195: { name: "UN Women Africa: Kenya's national toll-free helpline 1195", url: "https://africa.unwomen.org/en/stories/news/2024/10/kenyas-national-toll-free-helpline-1195-a-lifeline-for-gender-based-violence-survivors" }
 });

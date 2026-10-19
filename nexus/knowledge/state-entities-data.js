@@ -7,7 +7,7 @@ module.exports = Object.freeze({
   federal: {
     "ein": {
       "fee": 0,
-      "url": "https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online",
+      "url": "https://www.irs.gov/businesses/small-businesses-self-employed/get-an-employer-identification-number",
       "scamWarning": "IRS page says you can get an EIN directly from the IRS for free and warns: Beware of websites that charge for an EIN. You never have to pay a fee for an EIN."
     },
     "form1023": {
@@ -34,10 +34,10 @@ module.exports = Object.freeze({
     },
     "nonprofitAnnualFilingDeadlineNote": "IRS: Form 990-N is due every year by the 15th day of the 5th month after the tax year ends (May 15 for a December 31 year end; moves to the next business day if it falls on a weekend or holiday). Failing to file a Form 990, 990-EZ or 990-N for three consecutive years results in automatic revocation of tax-exempt status.",
     "irsTaxExemptSearchUrl": "https://www.irs.gov/charities-non-profits/tax-exempt-organization-search",
-    "sbaStartBusinessUrl": "https://www.sba.gov/business-guide",
-    "sbaFundingProgramsUrl": "https://www.sba.gov/funding-programs",
-    "sbdcLocatorUrl": "https://www.sba.gov/local-assistance",
-    "scoreMentorsUrl": "https://www.sba.gov/local-assistance/resource-partners",
+    "sbaStartBusinessUrl": "https://www.sba.gov/counseling/#business-guide",
+    "sbaFundingProgramsUrl": "https://www.sba.gov/loans/",
+    "sbdcLocatorUrl": "https://www.sba.gov/counseling/local-assistance/",
+    "scoreMentorsUrl": "https://www.sba.gov/counseling/local-assistance/resource-partners/",
     "womenOwnedAndMinorityHelp": {
       "mbdaUrl": "https://www.mbda.gov/",
       "name": "Minority Business Development Agency (MBDA), U.S. Department of Commerce",
@@ -234,7 +234,7 @@ module.exports = Object.freeze({
       "name": "Arkansas",
       "agency": "Arkansas Secretary of State, Business & Commercial Services Division",
       "agencyUrl": "https://www.sos.arkansas.gov/business-commercial-services-bcs/for-new-business",
-      "onlineFilingUrl": "https://www.ark.org/sos/corpfilings/index.php",
+      "onlineFilingUrl": "https://sos-corpfilings.ark.org/",
       "llc": {
         "formationDocument": "Certificate of Organization (Form LL-01), filed with a Franchise Tax Registration",
         "filingFee": 50,
@@ -341,7 +341,7 @@ module.exports = Object.freeze({
       },
       "smallBusinessHelp": {
         "name": "California Office of the Small Business Advocate (CalOSBA, in GO-Biz) small business centers network (150+ centers)",
-        "url": "https://calosba.ca.gov/local-direct-assistance/small-business-centers/"
+        "url": "https://calosba.ca.gov/for-small-businesses-and-non-profits/small-business-centers/"
       },
       "checkedOn": "2026-10-10"
     },
@@ -523,7 +523,7 @@ module.exports = Object.freeze({
       "code": "DC",
       "name": "District of Columbia",
       "agency": "Department of Licensing and Consumer Protection (DLCP), Corporations Division",
-      "agencyUrl": "https://dlcp.dc.gov/node/1614386",
+      "agencyUrl": "https://dlcp.dc.gov/page/corporations-0",
       "onlineFilingUrl": "https://boss.dc.gov",
       "llc": {
         "formationDocument": "Certificate of Organization",
@@ -537,7 +537,7 @@ module.exports = Object.freeze({
         },
         "otherStateTaxNote": "Unincorporated business franchise tax (OTR) applies to LLCs taxed as partnerships/sole proprietorships with DC gross receipts over $12,000: rate 8.25% (listed for 2018-2025), minimum tax $250 if DC gross receipts are $1 million or less, $1,000 if more; 30% owner salary allowance and $5,000 exemption are deducted from net income. Exempt if more than 80% of gross income is from personal services of members and capital is not a material income-producing factor.",
         "publicationRequirement": null,
-        "source": "https://dlcp.dc.gov/node/1621921"
+        "source": "https://dlcp.dc.gov/page/corporations-division-fees-limited-liability-company"
       },
       "corporation": {
         "formationDocument": "Articles of Incorporation (domestic business corporation)",
@@ -547,7 +547,7 @@ module.exports = Object.freeze({
           "fee": 300,
           "due": "April 1. The first report is due April 1 of the calendar year after registration, then every two years on April 1. Late fee $100 if filed after April 1."
         },
-        "source": "https://dlcp.dc.gov/node/1621906"
+        "source": "https://dlcp.dc.gov/page/corporations-division-fees-business-corporation"
       },
       "nonprofit": {
         "formationDocument": "Articles of Incorporation (domestic nonprofit corporation)",
@@ -557,11 +557,11 @@ module.exports = Object.freeze({
           "fee": 80,
           "due": "April 1. The first report is due April 1 of the calendar year after registration, then every two years on April 1. Late fee $50 if filed after April 1."
         },
-        "source": "https://dlcp.dc.gov/node/1621926",
+        "source": "https://dlcp.dc.gov/page/corporations-division-fees-nonprofit-corporation",
         "stateTaxExemptionNote": "IRS recognition does not automatically exempt an organization under DC law. Per OTR: first register with OTR using Form FR-500, then file Form FR-164 (Application for Exemption) on MyTax.DC.gov. Most IRS-exempt organizations (except 501(c)(7) social clubs) can qualify for franchise (income) tax exemption; semipublic institutions (charitable, religious, scientific, educational organizations) with a location or office in DC may qualify for sales tax exemption on purchases but must still collect DC sales tax on their own taxable sales. 501(c)(3) organizations may also qualify for personal property tax exemption. Exemption certificates now carry an expiration date and are renewed on MyTax.DC.gov. No fee is mentioned on the OTR pages. Sources: https://otr.cfo.dc.gov/node/1794941 and https://otr.cfo.dc.gov/page/exemptions-audit-division",
         "charitableSolicitationRegistration": {
           "agency": "DLCP, Business Licensing Division (Basic Business License, category Charitable Services)",
-          "url": "https://dlcp.dc.gov/node/1618416",
+          "url": "https://dlcp.dc.gov/page/charitable-services-business-0",
           "feeNote": "DLCP lists two Charitable Services license types applied for through BOSS: 'Charitable Exempt' at $0 and 'Charitable Solicitation' at $99 (2-year) or $198 (4-year). Documents listed: Certificate of Occupancy or Home Occupation Permit, corporate registration (if applicable), IRS determination letter, FR-164 exemption certificate, tax registration and Clean Hands certificate. The DLCP page does not state which organizations fall under Exempt versus Solicitation, so the owner should confirm with DLCP at (202) 671-4500."
         }
       },
@@ -573,7 +573,7 @@ module.exports = Object.freeze({
       },
       "smallBusinessHelp": {
         "name": "DLCP Small Business Resource Center (free workshops and one-on-one sessions) and DC Department of Small and Local Business Development (DSLBD)",
-        "url": "https://dlcp.dc.gov/service/small-business-resource-center-sbrc-0"
+        "url": "https://dlcp.dc.gov/service/business-resource-center-brc"
       },
       "checkedOn": "2026-10-10"
     },
@@ -684,7 +684,7 @@ module.exports = Object.freeze({
         },
         "source": "https://georgia.gov/register-corporation",
         "stateTaxExemptionNote": "Georgia Department of Revenue page says churches, religious, charitable, civic and other nonprofits generally get NO general sales/use tax exemption on purchases; only specific listed types (e.g. licensed nonprofit hospitals, private schools grades 1-12, food banks, orphanages) qualify, and certain nonprofits' qualifying fundraising sales need not collect tax. The page does not give an application form. Income-tax exemption process not confirmed.",
-        "stateTaxExemptionUrl": "https://dor.georgia.gov/tax-exempt-nonprofit-organizations",
+        "stateTaxExemptionUrl": "https://dor.georgia.gov/taxes/sales-use-tax/tax-exempt-nonprofit-organizations",
         "charitableSolicitationRegistration": {
           "agency": null,
           "url": null,
@@ -756,7 +756,7 @@ module.exports = Object.freeze({
       "businessLicenseNote": "Hawaii's Business Action Center (DCCA) is the state hub for starting a business, covering registering entities, reserving trade names and applying for licenses: https://cca.hawaii.gov/bac/",
       "stateTaxRegistration": {
         "agency": "Hawaii Department of Taxation (Form BB-1 Basic Business Application, one-time $20 fee; online via Hawaii Tax Online; covers general excise tax license and other tax types)",
-        "url": "https://tax.hawaii.gov/geninfo/get/"
+        "url": "https://tax.hawaii.gov/get/FAQ/"
       },
       "smallBusinessHelp": {
         "name": "U.S. Small Business Administration, Hawaii District Office",
@@ -768,7 +768,7 @@ module.exports = Object.freeze({
       "code": "ID",
       "name": "Idaho",
       "agency": "Idaho Secretary of State, Business Services",
-      "agencyUrl": "https://sos.idaho.gov/business-services/",
+      "agencyUrl": "https://sos.idaho.gov/business-resources/",
       "onlineFilingUrl": "https://sosbiz.idaho.gov/",
       "llc": {
         "formationDocument": "Certificate of Organization",
@@ -829,7 +829,7 @@ module.exports = Object.freeze({
       "code": "IL",
       "name": "Illinois",
       "agency": "Illinois Secretary of State, Business Services Department",
-      "agencyUrl": "https://www.ilsos.gov/departments/business_services/home.html",
+      "agencyUrl": "https://www.ilsos.gov/departments/business-services.html",
       "onlineFilingUrl": "https://www.ilsos.gov/departments/business-services/organization/llc-instructions.html",
       "llc": {
         "formationDocument": "Articles of Organization",
@@ -1002,7 +1002,7 @@ module.exports = Object.freeze({
       "businessLicenseNote": null,
       "stateTaxRegistration": {
         "agency": "Iowa Department of Revenue (Business Permit Registration through GovConnectIowa or paper form 78-005; covers sales/use tax and withholding permits)",
-        "url": "https://revenue.iowa.gov/permits-licensing/business-permit-registration"
+        "url": "https://revenue.iowa.gov/taxes/business-permit-registration"
       },
       "smallBusinessHelp": {
         "name": "America's Small Business Development Center Iowa (no-cost business counseling)",
@@ -1194,7 +1194,7 @@ module.exports = Object.freeze({
       "code": "ME",
       "name": "Maine",
       "agency": "Maine Secretary of State, Bureau of Corporations, Elections and Commissions (Division of Corporations)",
-      "agencyUrl": "https://www.maine.gov/sos/corporations-commissions/information-about-entities/entity-types/corporations-commissions/business-corporations",
+      "agencyUrl": "https://www.maine.gov/sos/corporations-commissions/corporations-business-services/business-corporations",
       "onlineFilingUrl": null,
       "llc": {
         "formationDocument": "Certificate of Formation (Form MLLC-6)",
@@ -1300,7 +1300,7 @@ module.exports = Object.freeze({
       "businessLicenseNote": "Maryland Business Express walks new businesses through registering, applying for tax accounts and insurance, and researching and obtaining licenses and permits. https://businessexpress.maryland.gov/",
       "stateTaxRegistration": {
         "agency": "Comptroller of Maryland - Combined Registration Application (sales and use tax, employer withholding)",
-        "url": "https://marylandtaxes.gov/forms/current_forms/CRA.pdf"
+        "url": "https://www.marylandcomptroller.gov/content/dam/mdcomp/tax/forms/2023/CRA.pdf"
       },
       "smallBusinessHelp": {
         "name": "Maryland Small Business Development Center (SBDC) Network, funded in part by the U.S. SBA",
@@ -1351,8 +1351,8 @@ module.exports = Object.freeze({
         "stateTaxExemptionNote": null,
         "charitableSolicitationRegistration": {
           "agency": "Massachusetts Attorney General, Non-Profit Organizations/Public Charities Division (Online Charity Portal)",
-          "url": "https://www.mass.gov/info-details/registering-a-public-charity",
-          "feeNote": "Not confirmed: the mass.gov pages returned HTTP 403 to my fetch, so the fee amounts are not stated here. Search-result snippets indicated that most charities must register and file Form PC annually through the AG's portal, but this was not verified."
+          "url": "https://www.mass.gov/info-details/non-profit-organizationspublic-charities-forms",
+          "feeNote": "The Attorney General's forms page (read 19 October 2026) says all public charities doing business in Massachusetts must register with the Non-Profits/Public Charities Division and then file annual financial reports (Form PC, through the AG's online charity filing portal); the AG assigns an Attorney General Account Number, and a charity that wants to solicit funds must also obtain a Certificate for Solicitation first. The fee amounts are not stated here: they are on the portal pages."
         }
       },
       "registeredAgentNote": null,
@@ -1490,7 +1490,7 @@ module.exports = Object.freeze({
       "code": "MS",
       "name": "Mississippi",
       "agency": "Mississippi Secretary of State, Business Services",
-      "agencyUrl": "https://www.sos.ms.gov/business-services",
+      "agencyUrl": "https://www.sos.ms.gov/business-services-external-affairs",
       "onlineFilingUrl": "https://corp.sos.ms.gov/corp/portal/c/page/login/portal.aspx",
       "llc": {
         "formationDocument": "Certificate of Formation",
@@ -1657,7 +1657,7 @@ module.exports = Object.freeze({
       },
       "smallBusinessHelp": {
         "name": "Montana Department of Commerce - Small Business Development Center",
-        "url": "https://sbdc.mt.gov"
+        "url": "https://commerce.mt.gov/Business/Programs-and-Services/Small-Business-Development-Center/"
       },
       "checkedOn": "2026-10-10"
     },
@@ -1778,7 +1778,7 @@ module.exports = Object.freeze({
       "businessLicenseNote": "Nevada's state business license is applied for and renewed with the Secretary of State filing, and the Department of Taxation also points to its online business license portal at https://tax.nv.gov/silverflume.",
       "stateTaxRegistration": {
         "agency": "Nevada Department of Taxation (My Nevada Tax / Nevada Tax Center)",
-        "url": "https://tax.nv.gov/Registration"
+        "url": "https://tax.nv.gov/manage-a-business/start-run-a-business/"
       },
       "smallBusinessHelp": {
         "name": "Nevada Small Business Development Center (University of Nevada, Reno; SBA-funded)",
@@ -1828,7 +1828,7 @@ module.exports = Object.freeze({
         "stateTaxExemptionNote": null,
         "charitableSolicitationRegistration": {
           "agency": "New Hampshire Department of Justice, Charitable Trusts Unit",
-          "url": "https://www.doj.nh.gov/charitable-trusts",
+          "url": "https://www.doj.nh.gov/bureaus/charitable-trusts-unit",
           "feeNote": "Not confirmed: the page returned 403 to automated fetch, so the requirement and fees were not verified."
         }
       },
@@ -2095,7 +2095,7 @@ module.exports = Object.freeze({
           "fee": 25,
           "due": "every year by August 1 (domestic corporations)"
         },
-        "source": "https://sos.nd.gov/business/business-services/business-structures/corporations/general-business-corporation/general-business-corporation-fees.html"
+        "source": "https://www.sos.nd.gov/business/business-services/business-structures/corporation"
       },
       "nonprofit": {
         "formationDocument": "Articles of Incorporation (nonprofit corporation)",
@@ -2742,7 +2742,7 @@ module.exports = Object.freeze({
         "stateTaxExemptionNote": "Vermont Department of Taxes says a nonprofit with federal tax-exempt status is exempt from Vermont corporate and business income taxes (tax still due on unrelated business income); no separate income-tax exemption form is listed. Sales and use tax exemption is limited to nonprofits that meet specific Vermont criteria; the nonprofit registers with the Department of Taxes (myVTax, through the Secretary of State portal, or Form BR-400) and sends a copy of its IRS determination letter. The SOS notes that registering as a Vermont nonprofit does not itself confer federal tax-exempt status.",
         "charitableSolicitationRegistration": {
           "agency": "Vermont Attorney General's Office (paid fundraisers); Vermont Secretary of State (out-of-state charities)",
-          "url": "https://ago.vermont.gov/attorney-generals-office-divisions-and-unit/charities-and-paid-fundraisers",
+          "url": "https://ago.vermont.gov/attorney-generals-office-divisions-and-units/consumer-protection/charities-and-paid-fundraisers",
           "feeNote": "The official pages found describe registration for paid fundraisers and paid solicitors (annual registration with the Attorney General, notice of solicitation, $20,000 bond) and a Certificate of Authority from the Secretary of State for out-of-state charities. A general registration requirement or fee for an in-state charity raising money itself could not be confirmed; confirm with the Attorney General's Charities unit."
         }
       },

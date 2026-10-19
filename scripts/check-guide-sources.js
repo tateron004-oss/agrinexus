@@ -17,6 +17,8 @@ const path = require("node:path");
 const ROOT = path.resolve(__dirname, "..");
 const DEFAULT_SNAPSHOT = path.join(ROOT, "nexus", "knowledge", "source-snapshot.json");
 const USER_AGENT = "Mozilla/5.0 (compatible; KyroSourceCheck/1.0; +https://github.com/tateron004-oss/agrinexus)";
+// (a site that refuses the program above is tried once more as an ordinary browser: many government sites turn away anything that names itself a bot and answer a person; one that still refuses is "blocked")
+const BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 const GUIDES = ["us-small-business", "us-community-support", "small-business-technology", "africa-small-business", "ai-tools-for-business", "california-business", "womens-health"];
 
 // Every https address the guides cite, with the guides that cite it.
@@ -61,15 +63,21 @@ function hamming(a, b) { let x = BigInt(`0x${a}`) ^ BigInt(`0x${b}`); let n = 0;
 
 const CHANGED_BITS = 10; // out of 64: more than this is a page that was rewritten, not just re-dated
 
-async function readPage(url, fetchImpl, timeoutMs) {
+async function readPage(url, fetchImpl, timeoutMs, userAgent = USER_AGENT) {
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(url, { redirect: "follow", signal: controller.signal, headers: { "user-agent": USER_AGENT, accept: "text/html,application/xhtml+xml,application/pdf;q=0.8,*/*;q=0.5" } });
+    const response = await fetchImpl(url, { redirect: "follow", signal: controller.signal, headers: { "user-agent": userAgent, accept: "text/html,application/xhtml+xml,application/pdf;q=0.8,*/*;q=0.5", ...(userAgent === BROWSER_USER_AGENT ? { "accept-language": "en-US,en;q=0.9" } : {}) } });
     const type = String(response.headers && response.headers.get ? response.headers.get("content-type") || "" : "");
     let text = "";
     if (response.ok && /html|text|xml|json/i.test(type || "text/html")) text = normalizeText((await response.text()).slice(0, 2000000));
     return { status: response.status, finalUrl: String(response.url || url), type, text, bytes: text.length };
   } finally { clearTimeout(timer); }
+}
+
+// An address with the things that do not make it a different page taken off: the www, a trailing slash, a #fragment and ?query (a site that adds a session tag or a language to the address), and a default page name
+// ("/Pages/default.aspx", "/index.html"), which is the same page as the folder.
+function plainAddress(url) {
+  return String(url || "").replace(/[#?].*$/, "").replace(/\/+$/, "").replace(/\/(?:pages\/)?(?:default\.aspx?|index\.(?:html?|php|aspx?))$/i, "").replace(/\/+$/, "").replace(/^https?:\/\/(?:www\.)?/i, "");
 }
 
 // One address: read it (twice if it fails), classify it against what the snapshot says.
@@ -78,11 +86,14 @@ async function checkOne(entry, previous, { fetchImpl, timeoutMs, now }) {
   for (let attempt = 1; attempt <= 2 && !page; attempt += 1) {
     try { const read = await readPage(entry.url, fetchImpl, timeoutMs); if (read.status >= 500 && attempt === 1) continue; page = read; } catch (e) { error = String((e && e.message) || e).slice(0, 120); }
   }
+  if (page && [401, 403, 429].includes(page.status)) {
+    try { const again = await readPage(entry.url, fetchImpl, timeoutMs, BROWSER_USER_AGENT); if (again.status < 400) page = again; } catch { /* still refused: it stays blocked below */ }
+  }
   const base = { url: entry.url, guides: entry.guides, checkedAt: new Date(now()).toISOString() };
   if (!page) return { ...base, state: "broken", status: 0, error: error || "no answer" };
   if ([401, 403, 429].includes(page.status)) return { ...base, state: "blocked", status: page.status };
   if (page.status >= 400) return { ...base, state: "broken", status: page.status };
-  const sameAddress = page.finalUrl.replace(/\/+$/, "").replace(/^https?:\/\/(?:www\.)?/i, "") === entry.url.replace(/\/+$/, "").replace(/^https?:\/\/(?:www\.)?/i, "");
+  const sameAddress = plainAddress(page.finalUrl) === plainAddress(entry.url);
   const fingerprint = page.text.length >= 200 ? simhash(page.text) : "";
   const result = { ...base, state: "ok", status: page.status, bytes: page.bytes, fingerprint, ...(sameAddress ? {} : { finalUrl: page.finalUrl }) };
   if (!sameAddress) result.state = "moved";
@@ -92,7 +103,7 @@ async function checkOne(entry, previous, { fetchImpl, timeoutMs, now }) {
   return result;
 }
 
-async function checkAll(entries, snapshot, { fetchImpl = (...args) => fetch(...args), concurrency = 3, timeoutMs = 20000, now = () => Date.now(), pauseMs = 120, onProgress = () => {} } = {}) {
+async function checkAll(entries, snapshot, { fetchImpl = (...args) => fetch(...args), concurrency = 3, timeoutMs = 45000, now = () => Date.now(), pauseMs = 120, onProgress = () => {} } = {}) {
   const results = new Array(entries.length); let next = 0;
   const worker = async () => {
     for (;;) {

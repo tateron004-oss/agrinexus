@@ -27,13 +27,13 @@ const SOURCES = Object.freeze({
   vaHomeless: { name: "VA Homeless Programs: National Call Center for Homeless Veterans", url: "https://department.va.gov/homeless/nationalcallcenter/" },
   vaAccredited: { name: "VA.gov: get help from a VA accredited representative or VSO", url: "https://www.va.gov/get-help-from-accredited-representative/" },
   dolVets: { name: "U.S. Department of Labor: Veterans' Employment and Training Service", url: "https://www.dol.gov/agencies/vets" },
-  sbaOvbd: { name: "SBA: Office of Veterans Business Development", url: "https://www.sba.gov/about-sba/sba-locations/headquarters-offices/office-veterans-business-development" },
+  sbaOvbd: { name: "SBA: Office of Veterans Business Development", url: "https://www.sba.gov/about-sba/sba-locations/headquarters/office-of-veterans-business-development/" },
   // older adults
-  eldercare: { name: "Eldercare Locator (Administration for Community Living)", url: "https://eldercare.acl.gov/" },
+  eldercare: { name: "Eldercare Locator (Administration for Community Living)", url: "https://eldercare.acl.gov/home" },
   medicareTalk: { name: "Medicare.gov: talk to someone", url: "https://www.medicare.gov/talk-to-someone" },
   shiphelp: { name: "SHIP: State Health Insurance Assistance Programs", url: "https://www.shiphelp.org/" },
   ssaExtraHelp: { name: "Social Security: Extra Help with Medicare prescription drug plan costs", url: "https://www.ssa.gov/medicare/part-d-extra-help" },
-  ssaContact: { name: "Social Security: contact us", url: "https://www.ssa.gov/contact/" },
+  ssaContact: { name: "Social Security: contact us", url: "https://www.ssa.gov/agency/contact/" },
   benefitsCheckUp: { name: "BenefitsCheckUp (National Council on Aging)", url: "https://benefitscheckup.org/" },
   elderFraud: { name: "U.S. Department of Justice, Office for Victims of Crime: National Elder Fraud Hotline", url: "https://ovc.ojp.gov/program/stop-elder-fraud/providing-help-restoring-hope" },
   ftcReport: { name: "FTC: ReportFraud.ftc.gov", url: "https://reportfraud.ftc.gov/" },
@@ -48,7 +48,7 @@ const SOURCES = Object.freeze({
   jobCorps: { name: "Job Corps", url: "https://www.jobcorps.gov/" },
   dolYouth: { name: "U.S. Department of Labor: YouthRules", url: "https://www.dol.gov/agencies/whd/youthrules" },
   dolFact43: { name: "U.S. Department of Labor: Fact Sheet #43, child labor in non-farm jobs", url: "https://www.dol.gov/agencies/whd/fact-sheets/43-child-labor-non-agriculture" },
-  studentAidScams: { name: "Federal Student Aid: avoiding scams", url: "https://studentaid.ed.gov/sa/types/scams" },
+  studentAidScams: { name: "Federal Student Aid: avoiding scams", url: "https://studentaid.gov/resources/scams" },
   ftcAidScams: { name: "FTC: how to avoid scholarship and financial aid scams", url: "https://consumer.ftc.gov/articles/how-avoid-scholarship-and-financial-aid-scams" },
   // nonprofits
   irsApplyExempt: { name: "IRS: applying for tax-exempt status", url: "https://www.irs.gov/charities-non-profits/applying-for-tax-exempt-status" },
@@ -70,7 +70,7 @@ const SOURCES = Object.freeze({
   usaSnap: { name: "USA.gov: SNAP (food stamps)", url: "https://www.usa.gov/food-stamps" },
   usaEnergy: { name: "USA.gov: help with energy bills (LIHEAP)", url: "https://www.usa.gov/help-with-energy-bills" },
   healthcareMedicaidApply: { name: "HealthCare.gov: how to apply for Medicaid and CHIP", url: "https://www.healthcare.gov/medicaid-chip/getting-medicaid-chip/" },
-  healthcareMedicaidWho: { name: "HealthCare.gov: Medicaid and CHIP eligibility", url: "https://www.healthcare.gov/medicaid-chip/eligibility/" },
+  healthcareMedicaidWho: { name: "HealthCare.gov: Medicaid and CHIP eligibility", url: "https://www.healthcare.gov/medicaid-chip/" },
   irsVita: { name: "IRS: free tax return preparation for qualifying taxpayers", url: "https://www.irs.gov/individuals/free-tax-return-preparation-for-qualifying-taxpayers" },
   cdcVitalRecords: { name: "CDC: where to write for vital records", url: "https://www.cdc.gov/nchs/w2w/index.htm" }
 });
