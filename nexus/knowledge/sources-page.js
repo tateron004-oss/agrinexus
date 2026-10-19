@@ -14,16 +14,9 @@ const africa = require("./africa-small-business.js");
 const states = require("./state-entities.js");
 const california = require("./california-business.js");
 
-const BUSINESS_WORDS = "small business(?:es)?|minority|start-?ups?|nonprofits?|non-profits?|business(?:es)?|entrepreneurs?|owners?|veterans?|older adults?|seniors?|community";
-// "your sources", "the sources you use", "the small business sources", "your sources for nonprofits", "the source page"; not "sources of funding" or "sources for my report"
-const ASKS_SOURCES = new RegExp(`\\b(?:your|the)\\s+(?:(?:business|small[- ]business|minority[- ]owned|start-?up|nonprofit|non-profit|checked|official)\\s+)*(?:sources?|references)\\b(?!\\s+of\\b)(?!\\s+for\\s+(?!(?:${BUSINESS_WORDS})\\b))|\\bsources? page\\b`, "i");
-const ASKS_WHERE_FROM = /\bwhere (?:does|do|did) (?:your|the|this) (?:(?:business|small business|nonprofit|non-profit|start-?up|minority(?:-owned)?)\s+)*(?:information|info|answers?|guidance|advice|guides?) (?:come|came) from\b/i;
-
-function sourcesPageRequest(text) {
-  const said = String(text || "").trim().replace(/[.?!]+$/, "");
-  if (!said || said.length > 110) return false;
-  return ASKS_SOURCES.test(said) || ASKS_WHERE_FROM.test(said);
-}
+// "your sources", "the sources you use", "the small business sources", "your sources for nonprofits", "the source page", "where does your information come from"; not "sources of funding" or "sources for my report".
+// (the words are shared with the page, public/kyro-business-topics.js, which takes such a request itself instead of leaving it to the voice model)
+const { sourcesRequest: sourcesPageRequest } = require("../../public/kyro-business-topics.js");
 
 function group(label, checked, sources) {
   return { label, checked, sources: Object.values(sources || {}).filter(item => item && /^https:\/\//.test(item.url || "") && item.name) };

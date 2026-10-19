@@ -52916,6 +52916,8 @@ function kyroBusinessQuestion(text) {
     const topics = window.KyroBusinessTopics;
     // (a question that names California and a California office or programme is the California guide's, on any device)
     if (topics && typeof topics.californiaTopic === "function" && topics.californiaTopic(text)) return true;
+    // ("show me your sources for small business", "where does your information come from": the page that gathers the official pages, on any device. Left to the voice model it said "I don't have any sources to show" first, twice, and the page answered 13 seconds later.)
+    if (topics && typeof topics.sourcesRequest === "function" && topics.sourcesRequest(text)) return true;
     // ("walk me through the SBA 8(a) program", "walk me through applying for a federal grant on Grants.gov": a walkthrough of a United States process)
     if (topics && typeof topics.walkTopic === "function" && topics.walkTopic(text)) return topics.isUsContext({ timeZone: kyroDeviceTimeZone(), text });
     if (!topics || !topics.topic(text) || !topics.isBusinessQuestion(text)) return false;
