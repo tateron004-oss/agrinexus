@@ -295,6 +295,9 @@ const rateBuckets = new Map();
 // in the admin endpoint's own response, not hidden.
 const RECENT_SERVER_ERRORS_CAP = 200;
 const recentServerErrors = [];
+// The meter for live web lookups (the searches that cost money each time): a saved-answer cache, a daily cap per person and for everyone, and the numbers for the owner (GET /api/admin/system/lookups). See nexus/observability/lookup-meter.js.
+const { createLookupMeter } = require("./nexus/observability/lookup-meter.js");
+const lookupMeter = createLookupMeter();
 
 function recordServerError({ source, message, context = {} }) {
   recentServerErrors.unshift({
@@ -27221,6 +27224,16 @@ async function fetchProviderBridgeKnowledge(query, command) {
 
 async function liveKnowledgeContextForCommand(db, user, command = "") {
   const query = extractKnowledgeSearchQuery(command);
+  // (metered like the lookups above: a saved answer costs nothing, and a person or everyone past the day's limit is not charged for another)
+  const meterKey = lookupMeter.cacheKey(query);
+  const savedLookup = lookupMeter.cached(meterKey);
+  if (savedLookup) { lookupMeter.hit(); return { ...savedLookup, fromSavedAnswer: true }; }
+  const room = lookupMeter.allow(String(user?.id || user?.email || ""));
+  if (!room.allowed) {
+    lookupMeter.blocked(room.reason);
+    return { ok: false, query, provider: "limit-reached", answer: "", results: [], checkedAt: new Date().toISOString(), limitReached: room.reason, reason: "The day's limit for live web lookups has been reached. The checked guides and the rest of Kyro still work.", noExecutionAuthorized: true, noLocationPermissionRequested: true, noDispatchAuthorized: true, noFakeCitations: true };
+  }
+  lookupMeter.record(String(user?.id || user?.email || ""));
   const attempts = [
     () => fetchTavilyKnowledge(query),
     () => fetchBraveKnowledge(query),
@@ -27242,7 +27255,9 @@ async function liveKnowledgeContextForCommand(db, user, command = "") {
           metadata: { query, provider: result.provider, resultCount: result.results?.length || 0 },
           dispatch: false
         });
-        return { ok: true, query, ...result, checkedAt: new Date().toISOString() };
+        const found = { ok: true, query, ...result, checkedAt: new Date().toISOString() };
+        lookupMeter.save(meterKey, found);
+        return found;
       }
     } catch (error) {
       errors.push(error.message || String(error));
@@ -39953,7 +39968,11 @@ function liveKnowledgeSourcesLine(citations = []) {
   }
   if (!names.length) return "";
   const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
-  return ` Sources: ${list}, checked just now.`;
+  // (an answer kept from an earlier lookup says how long ago the pages were read, not "just now")
+  const readAt = Date.parse(String((Array.isArray(citations) ? citations : []).map(citation => citation?.retrievedAt).find(Boolean) || ""));
+  const minutes = Number.isFinite(readAt) ? Math.max(0, Math.round((Date.now() - readAt) / 60000)) : 0;
+  const when = minutes < 3 ? "checked just now" : minutes < 90 ? `checked ${minutes} minutes ago` : `checked ${Math.round(minutes / 60)} hours ago`;
+  return ` Sources: ${list}, ${when}.`;
 }
 
 function normalizeNexusKnowledgeCitations(results = []) {
@@ -41055,7 +41074,24 @@ async function nexusIntelligenceAsk(db, body = {}, user = null, env = process.en
   };
 }
 
-async function runNexusLiveKnowledgeProviderQuery(query = "", provider = "auto", env = process.env) {
+// A live web search, metered: the same question asked again within the saved-answer time costs nothing (a question with an e-mail address or an ID number in it is never kept), and a person (or everyone) who has used up the
+// day's lookups is told so instead of being charged for another. `person` is who is asking ("" = nobody in particular, counted only against the all-people limit).
+async function runNexusLiveKnowledgeProviderQuery(query = "", provider = "auto", env = process.env, { person = "" } = {}) {
+  const key = lookupMeter.cacheKey(query);
+  const saved = lookupMeter.cached(key);
+  if (saved) { lookupMeter.hit(); return { ...saved, fromSavedAnswer: true }; }
+  const room = lookupMeter.allow(person);
+  if (!room.allowed) {
+    lookupMeter.blocked(room.reason);
+    return { ok: false, provider: String(provider || "auto"), query, providerStatus: "limit-reached", limitReached: room.reason, providerError: "The day's limit for live web lookups has been reached.", retrievedAt: new Date().toISOString() };
+  }
+  lookupMeter.record(person);
+  const result = await runNexusLiveKnowledgeProviderQueryUncached(query, provider, env);
+  if (result && result.ok) lookupMeter.save(key, result);
+  return result;
+}
+
+async function runNexusLiveKnowledgeProviderQueryUncached(query = "", provider = "auto", env = process.env) {
   const selectedProvider = String(provider || "auto").toLowerCase();
   const status = nexusKnowledgeProviderStatus(env);
   const chosen = selectedProvider === "auto" || selectedProvider === "not-configured" ? status.provider : selectedProvider;
@@ -41240,9 +41276,15 @@ async function nexusLiveKnowledgeAllModesQuery(db, body = {}, user = null, env =
   } else if (!status.configured) {
     responseStatus = "credential-blocked";
   } else {
-    const providerResult = await runNexusLiveKnowledgeProviderQuery(query, status.selectedProvider, env);
+    const providerResult = await runNexusLiveKnowledgeProviderQuery(query, status.selectedProvider, env, { person: String(user?.id || user?.email || "") });
     provider = providerResult.provider || provider;
-    if (providerResult.ok && providerResult.citations?.length) {
+    if (providerResult.limitReached) {
+      // the day's live lookups are used up: said plainly, and the checked guides and the rest of Kyro still work
+      responseStatus = "limit-reached";
+      summary = providerResult.limitReached === "total"
+        ? "Live web lookups have reached today's limit, so I cannot search the web for new answers until tomorrow. I can still answer from my checked guides."
+        : "You have used today's live web lookups, so I cannot search the web for new answers until tomorrow. I can still answer from my checked guides.";
+    } else if (providerResult.ok && providerResult.citations?.length) {
       responseStatus = "source-backed";
       summary = providerResult.answer || "Nexus retrieved source-backed information. Review citations before using it downstream.";
       citations = providerResult.citations;
@@ -54918,6 +54960,11 @@ async function api(req, res, url) {
     return send(res, 200, publicState(db, user));
   }
 
+  // The numbers for live web lookups (they cost money each time): how many today, how many were answered from a saved copy, how many were stopped by a limit, and the limits. People are counted, never named.
+  if (url.pathname === "/api/admin/system/lookups" && req.method === "GET") {
+    if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow viewing lookup usage" });
+    return send(res, 200, { ok: true, ...lookupMeter.snapshot(), note: "Live web lookups since this server last started (a restart empties the saved answers and today's counts). Change the limits with NEXUS_LIVE_LOOKUPS_PER_USER_PER_DAY, NEXUS_LIVE_LOOKUPS_PER_DAY_TOTAL and NEXUS_LIVE_LOOKUP_CACHE_MINUTES ('off' turns a limit off)." });
+  }
   if (url.pathname === "/api/admin/system/errors" && req.method === "GET") {
     if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow viewing system error logs" });
     return send(res, 200, {
