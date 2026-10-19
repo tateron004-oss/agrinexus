@@ -187,7 +187,11 @@ function installKyroVoiceRig(makeEvaluator) {
   // starts the live voice session the way a person does: tap the microphone (sometimes twice: the page wants a microphone it has already been given)
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
   rig.startVoice = async () => {
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
+    for (let attempt = 1; attempt <= 6; attempt += 1) {
+      // The page starts a voice session by itself after sign-in, with no microphone yet ("Nexus Realtime requires one preverified microphone stream"), and while that start is in flight a tap on the microphone is answered
+      // "already starting" and nothing starts. Wait for that start to finish (or give up on it) before tapping, so the tap is the one that starts the session.
+      for (let i = 0; i < 24; i += 1) { if (typeof realtimeVoiceStarting === "undefined" || !realtimeVoiceStarting) break; await sleep(750); }
+      try { if (typeof realtimeVoiceStarting !== "undefined" && realtimeVoiceStarting) realtimeVoiceStarting = false; } catch { /* not ours to reset */ }
       const button = document.getElementById("nexusPermanentMicrophoneBtn"); if (button) button.click();
       for (let i = 0; i < 40; i += 1) { await sleep(750); if (typeof realtimeVoiceActive === "function" && realtimeVoiceActive()) { await sleep(2500); return true; } }
     }
