@@ -264,6 +264,8 @@
       if (from && to && !NOT_A_PLACE.test(from) && !NOT_A_PLACE.test(to)) return { type: "between", from, to, mode };
     }
     if ((m = /^(?:please )?(navigate|start navigation|start navigating|begin navigation|take me|drive me|guide me|walk me|lead me|directions|give me directions|show me the way)\b\s*(.*)$/i.exec(t))) {
+      // "walk me through getting a seller's permit", "guide me through the steps", "take me through it": to be guided through a process, one step at a time, not to a place (found by voice-testing the walkthroughs: it answered "I can't see your location")
+      if (/^through\b/i.test(m[2])) return null;
       let rest = m[2]; const mode = WALK_WORDS.test(`${m[1]} ${rest}`) || /^walk me/i.test(m[1]) ? "walk" : "drive"; WALK_WORDS.lastIndex = 0;
       rest = rest.replace(WALK_WORDS, " ").replace(/\s+/g, " ").trim().replace(/^(?:to|towards|toward|me to|for|back to|back)\s+/i, "").replace(/^(?:the )?/, match => match).trim();
       if (/\bfrom\b/i.test(rest)) return null; // "directions from A to B" is a route between two named places, handled elsewhere

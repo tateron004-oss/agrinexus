@@ -77,3 +77,14 @@ test("the steps between two places are found without reading the person's locati
   const missing = navigation.createNavigator({ geolocation: {}, api: async () => ({ places: [] }), speak() {}, storage: null });
   assert.equal(await missing.handle("Give me directions from Zzyzxville to Sacramento"), "I couldn't find Zzyzxville on the map.");
 });
+
+// Found by voice-testing the walkthroughs on the live site: "Walk me through getting a seller's permit in California" was taken as a request to be guided on foot and answered "I can't see your location".
+test("'walk me through ...', 'guide me through ...' and 'take me through ...' ask to be guided through a process, not to a place; 'walk me to the market' and 'take me home' still are", () => {
+  for (const say of ["Walk me through getting a seller's permit in California.", "Guide me through DBE certification", "Take me through the steps", "Lead me through it", "Take me through", "Please walk me through becoming an LA28 supplier"]) assert.equal(navigation.parseCommand(say), null, say);
+  assert.deepEqual(navigation.parseCommand("Walk me to the market"), { type: "go", destination: "the market", mode: "walk" });
+  assert.deepEqual(navigation.parseCommand("Walk me home"), { type: "go", destination: "home", mode: "walk" });
+  assert.deepEqual(navigation.parseCommand("Take me to Sacramento."), { type: "go", destination: "Sacramento", mode: "drive" });
+  const api = spokenApi();
+  assert.equal(api.nav("Walk me through getting a seller's permit in California."), false, "the page does not take it as navigation");
+  assert.equal(api.nav("Walk me to the market"), true);
+});
