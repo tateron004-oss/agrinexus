@@ -52916,6 +52916,8 @@ function kyroBusinessQuestion(text) {
     const topics = window.KyroBusinessTopics;
     // (a question that names California and a California office or programme is the California guide's, on any device)
     if (topics && typeof topics.californiaTopic === "function" && topics.californiaTopic(text)) return true;
+    // ("walk me through the SBA 8(a) program", "walk me through applying for a federal grant on Grants.gov": a walkthrough of a United States process)
+    if (topics && typeof topics.walkTopic === "function" && topics.walkTopic(text)) return topics.isUsContext({ timeZone: kyroDeviceTimeZone(), text });
     if (!topics || !topics.topic(text) || !topics.isBusinessQuestion(text)) return false;
     return topics.isUsContext({ timeZone: kyroDeviceTimeZone(), text });
   } catch { return false; }
