@@ -77,6 +77,7 @@ const { WellnessRepository } = require("../wellness/store.js");
 const { RepeatReminderRepository } = require("../reminders/repeat-store.js");
 const { createRepeatReminderService } = require("../reminders/repeat-service.js");
 const { CommunityRepository } = require("../community/store.js");
+const { createLiveFeeds } = require("../knowledge/live-feeds.js");
 const { WeatherAlertSettingsRepository } = require("../alerts/settings.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
@@ -209,6 +210,8 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     farmWork: { store: farmRecords, notifications, nameOf: args => circleRepository.userName(args) },
     healthWork: { store: healthRecords, notifications, nameOf: args => circleRepository.userName(args) },
     healthReadings: { records },
+    // Open federal grants and the newest Federal Register notices, live from two free government feeds (no key, no cost per lookup): see knowledge/live-feeds.js.
+    liveFeeds: createLiveFeeds(),
     // The person's saved documents, so "Export it as a PDF" can find the latest one (see planner.js exportLatestDocumentPlan).
     documents,
     // How many business/nonprofit workspaces the person has, read the way the business tools read them (same access check); lets the planner say "no workspace yet" before it asks for a yes.
