@@ -94,7 +94,7 @@
   // group a source page puts them under). Six at most, or every one of them on the source page (result.allSources).
   function sourceLinks(result) {
     const seen = new Set(); const links = [];
-    const limit = result && result.allSources === true ? 200 : 6;
+    const limit = result && result.allSources === true ? 200 : 40;
     const given = [].concat(Array.isArray(result && result.citations) ? result.citations : [], Array.isArray(result && result.guideSources) ? result.guideSources : []);
     for (const citation of given) {
       const url = clean(citation && citation.url);
@@ -104,7 +104,7 @@
       const host = url.replace(/^https?:\/\/(?:www\.)?/i, "").split("/")[0];
       const publisher = clean(citation.publisher) || name;
       const label = publisher && publisher.length <= 40 && !/https?:|\//i.test(publisher) ? publisher : clean(citation.domain) || host;
-      links.push({ label, title: (clean(citation.title) || (name && name !== label ? name : "")).slice(0, 140), url, group: clean(citation.group) });
+      links.push({ label, title: (clean(citation.title) || (name && name !== label ? name : "")).slice(0, 140), url, host, group: clean(citation.group) });
       if (links.length >= limit) break;
     }
     return links;
@@ -178,6 +178,7 @@
 [data-kyro-result] .kyro-result-links a { display: block; padding: 14px 18px; border-radius: 16px; background: #14b8a6; color: #04201c; text-decoration: none; }
 [data-kyro-result] .kyro-result-group { margin: 14px 0 0; font-size: clamp(.95rem, 3.2vw, 1.1rem); font-weight: 600; color: #94a3b8; }
 [data-kyro-result] .kyro-result-link-name { display: block; font-size: clamp(1.1rem, 4vw, 1.35rem); font-weight: 700; }
+[data-kyro-result] .kyro-result-link-host { display: block; margin-top: 2px; font-size: clamp(.85rem, 2.8vw, .95rem); font-weight: 600; opacity: .75; letter-spacing: .01em; }
 [data-kyro-result] .kyro-result-link-title { display: block; margin-top: 2px; font-size: clamp(.9rem, 3vw, 1rem); opacity: .85; }
 [data-kyro-result] .kyro-result-small { margin: 0; max-width: 34em; font-size: .9rem; color: #94a3b8; }
 [data-kyro-result] .kyro-result-close { position: absolute; top: 12px; right: 12px; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.10); color: #f1f5f9; font-size: 1.7rem; line-height: 1; cursor: pointer; }
@@ -235,6 +236,7 @@
         a.setAttribute("data-kyro-source-link", "true");
         a.appendChild(element(doc, "span", "kyro-result-link-name", `${t(lang).open} ${link.label}`));
         if (link.title) a.appendChild(element(doc, "span", "kyro-result-link-title", link.title));
+        if (link.host) a.appendChild(element(doc, "span", "kyro-result-link-host", link.host)); // (the website itself, so the person can see where the button goes)
         nav.appendChild(a);
       }
       screen.appendChild(nav);
