@@ -127,7 +127,7 @@ function installKyroVoiceRig(makeEvaluator) {
     buttons: [...node.querySelectorAll("button,a,label[data-kyro-upload-button]")].map(b => b.innerText.trim()).filter(Boolean).slice(0, 40),
     fields: [...node.querySelectorAll("input,textarea,select")].map(n => n.name || n.type || "").slice(0, 20),
     images: node.querySelectorAll("img").length, frames: node.querySelectorAll("iframe,video").length,
-    links: node.querySelectorAll("[data-kyro-listing-links] a").length, hasDownload: [...node.querySelectorAll("button,a")].some(b => /download/i.test(b.innerText))
+    links: node.querySelectorAll("[data-kyro-listing-links] a, a[data-kyro-source-link]").length, hasDownload: [...node.querySelectorAll("button,a")].some(b => /download/i.test(b.innerText))
   }));
   rig.player = () => {
     try {
