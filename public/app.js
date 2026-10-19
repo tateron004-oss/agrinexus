@@ -52171,6 +52171,57 @@ function kyroHandleSpokenOpen(text, options = {}) {
   if (handled && spokenKey) kyroLastSpokenOpen = { key: spokenKey, at: Date.now() };
   return handled;
 }
+// A walkthrough (public/kyro-walkthrough.js): Kyro walks the person through a process one step at a time and the person does each step; Kyro never applies for them. The server sends the steps with the answer
+// (plan.walkthrough, each from an official page); the screen shows one step with its official page, and "next", "back", "say it again" and "start over" work by voice, by typing and by the buttons. The place is kept for 30 days.
+let kyroWalkthrough = null; // { walk, lang }
+let kyroWalkthroughOpening = "";
+function kyroWalkthroughLang() { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } }
+function kyroWalkthroughDraw() {
+  const lib = window.KyroWalkthrough; if (!lib || !kyroWalkthrough) return false;
+  const { walk, lang } = kyroWalkthrough;
+  lib.show(document, walk.snapshot(), {
+    onNext: () => kyroWalkthroughMove("next"), onBack: () => kyroWalkthroughMove("back"), onRepeat: () => kyroWalkthroughMove("repeat"),
+    onClose: () => { kyroWalkthrough = null; void kyroReturnToOrb({ reason: "done", source: "walkthrough" }); }
+  }, lang);
+  try { kyroNoteActivity(); } catch { /* the screen is up */ }
+  return true;
+}
+function kyroOpenWalkthrough(raw, introLine = "") {
+  try {
+    const lib = window.KyroWalkthrough; if (!lib) return false;
+    let storage = null; try { storage = window.localStorage; } catch { storage = null; }
+    const walk = lib.createWalkthrough(raw, { storage }); if (!walk) return false;
+    const lang = kyroWalkthroughLang();
+    kyroWalkthrough = { walk, lang };
+    if (!kyroWalkthroughDraw()) return false;
+    const words = lib.TEXT[lang];
+    kyroWalkthroughOpening = [String(introLine || "").trim(), walk.resumed ? words.resumed(walk.snapshot().number) : "", lib.sayStep(walk.snapshot(), lang)].filter(Boolean).join(" ");
+    return true;
+  } catch { return false; }
+}
+// "next", "back", "say it again", "start over", "where am I" while a walkthrough is on the screen. True when it was one of those.
+function kyroWalkthroughMove(kind) {
+  const lib = window.KyroWalkthrough; if (!lib || !kyroWalkthrough) return false;
+  const { walk, lang } = kyroWalkthrough;
+  let snap;
+  if (kind === "next") snap = walk.next();
+  else if (kind === "back") snap = walk.back();
+  else if (kind === "restart") snap = walk.restart();
+  else snap = walk.snapshot(); // repeat, where
+  kyroWalkthroughDraw();
+  try { setVoiceResponse(lib.sayStep(snap, lang), true, { allowHandoff: false, source: "kyro-walkthrough", longForm: true }); } catch { /* the step is on the screen */ }
+  return true;
+}
+function kyroWalkthroughCommand(text, options = {}) {
+  try {
+    const lib = window.KyroWalkthrough;
+    if (!lib || !kyroWalkthrough || !document.querySelector('[data-kyro-result="walkthrough"]')) return false;
+    const kind = lib.parseControl(text);
+    if (!kind) return false;
+    if (!options.typed) { try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ } }
+    return kyroWalkthroughMove(kind);
+  } catch { return false; }
+}
 // The pages behind the answer on the screen (see kyro-result-screen.js): "open the page", "open the first source". A browser opens a page only when it is tapped, so by voice the page is tried and, when the
 // browser will not, the person is told which button to tap.
 let kyroSourceLinks = [];
@@ -52194,6 +52245,7 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
   const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
+  if (typeof kyroWalkthroughCommand === "function" && kyroWalkthroughCommand(said, options)) return true;
   if (typeof kyroOpenSourcePage === "function" && kyroOpenSourcePage(said, lang, options)) return true;
   // the short answer to "what would you like to see?"
   if (kyroPendingMedia) {
@@ -53473,6 +53525,8 @@ function kyroPlainRenderMessage(result, message) {
 // a screen, a question waiting for a yes or a no stays in the Ask window, and the map, music, video, documents, pictures and checklists are drawn as before. True when it drew one.
 function kyroShowTypedResult(result, text, message) {
   try {
+    // a walkthrough ("walk me through getting a seller's permit"): one step at a time, with its official page; the opening line and the first step are read out (see kyroWalkthroughOpening)
+    if (result && result.plan && result.plan.walkthrough && typeof kyroOpenWalkthrough === "function" && kyroOpenWalkthrough(result.plan.walkthrough, message)) return true;
     if (!window.KyroResultScreen || !result || typeof result !== "object") return false;
     if (kyroExplicitOpenCard(text)) return false;
     const drawn = result.render;
@@ -60517,6 +60571,7 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
   const answerOnScreen = kyroShowTypedResult(result, text, message);
   // (the answer is on the screen, so the card window the renderer opened for the same result -- "Live Knowledge Research" behind a checklist, a raw card behind a web answer -- is closed: it would sit behind the answer and show when the answer is closed)
   if (answerOnScreen) { try { if (document.querySelector("#nexus-workspace")) closeNexusFunctionWindow({ command: "" }); } catch { /* nothing to close */ } }
+  if (answerOnScreen && result.plan?.walkthrough && kyroWalkthroughOpening) { message = kyroWalkthroughOpening; kyroWalkthroughOpening = ""; }
   // (and the reminders list is read out as the list, not as the status line the server sends with it)
   if (result.render?.presentation?.kind === "reminder") message = kyroReminderListLine(result.render.data) || message;
   try {

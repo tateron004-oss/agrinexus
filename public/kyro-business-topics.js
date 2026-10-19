@@ -185,11 +185,14 @@
     }
     return null;
   }
+  // "Walk me through getting certified in California", "step by step, how do I get a seller's permit", "what are the steps to ...", "help me register ...": asking to be guided through a process, one step at a time
+  const WALK = /^(?:please\s+)?(?:(?:kyro,?\s+)?(?:walk|guide|talk|take|lead) (?:me|us) through|help (?:me|us) (?:get|apply|register|certify|become|start|do|file|set up|sign up|join)|(?:show|tell) (?:me|us) the steps|what (?:are|is) the steps?|step[- ]by[- ]step)\b|\bstep[- ]by[- ]step\b/i;
+  function walkthroughAsk(text) { return WALK.test(String(text || "").trim()); }
   function californiaTopic(text) {
     const value = String(text || "").replace(/\s+/g, " ").trim();
     if (value && language(value) === "es") return californiaTopicSpanish(value);
     if (!value || value.length > 300 || !CA_CUE.test(value)) return null;
-    if (RECORD_OR_DRAFT.test(value) || !(ASKS.test(value) || /\?/.test(value))) return null;
+    if (RECORD_OR_DRAFT.test(value) || !(ASKS.test(value) || /\?/.test(value) || WALK.test(value))) return null;
     const aboutBusiness = /\b(?:business(?:es)?|start-?ups?|non-?profits?|entrepreneurs?|owners?|compan(?:y|ies)|self[- ]employed|vendors?|suppliers?)\b/i.test(value);
     for (const [topic, pattern] of CA_MATCHERS) {
       // (a grant or free help "in California" is for a business only when the words are about one: "college grants in California" is not)
@@ -198,5 +201,5 @@
     return null;
   }
 
-  return Object.freeze({ topic: usSmallBusinessTopic, californiaTopic, isUsContext, isBusinessQuestion, language });
+  return Object.freeze({ topic: usSmallBusinessTopic, californiaTopic, walkthroughAsk, isUsContext, isBusinessQuestion, language });
 });
