@@ -110,11 +110,23 @@
     return links;
   }
 
+  // What Kyro offers to do next after a checked guide's answer (from the plan: see nexus/knowledge/offers.js): { id, label, command }, a few at most.
+  function offerButtons(result) {
+    const offers = [];
+    for (const offer of Array.isArray(result && result.offers) ? result.offers : []) {
+      const label = clean(offer && offer.label).slice(0, 60); const command = clean(offer && offer.command).slice(0, 240); const id = clean(offer && offer.id).replace(/[^a-z0-9-]/gi, "").slice(0, 24);
+      if (label && command && id && !offers.some(item => item.id === id)) offers.push({ id, label, command, say: Array.isArray(offer.say) ? offer.say.map(phrase => clean(phrase).toLowerCase()).filter(Boolean).slice(0, 12) : [] });
+      if (offers.length === 4) break;
+    }
+    return offers;
+  }
+
   function buildModel(result, options = {}) {
     const model = buildBaseModel(result, options);
     if (!model) return model;
     const links = sourceLinks(result);
-    return links.length ? { ...model, links } : model;
+    const offers = offerButtons(result);
+    return { ...model, ...(links.length ? { links } : {}), ...(offers.length ? { offers } : {}) };
   }
 
   function buildBaseModel(result, options = {}) {
@@ -178,6 +190,8 @@
 [data-kyro-result] .kyro-result-links a { display: block; padding: 14px 18px; border-radius: 16px; background: #14b8a6; color: #04201c; text-decoration: none; }
 [data-kyro-result] .kyro-result-group { margin: 14px 0 0; font-size: clamp(.95rem, 3.2vw, 1.1rem); font-weight: 600; color: #94a3b8; }
 [data-kyro-result] .kyro-result-link-name { display: block; font-size: clamp(1.1rem, 4vw, 1.35rem); font-weight: 700; }
+[data-kyro-result] .kyro-result-offers { display: flex; flex-wrap: wrap; gap: 10px; max-width: 36em; margin-top: 6px; }
+[data-kyro-result] .kyro-result-offer { padding: 14px 22px; border: 0; border-radius: 14px; background: #f1f5f9; color: #080b10; font-size: clamp(1rem, 3.6vw, 1.2rem); font-weight: 700; cursor: pointer; }
 [data-kyro-result] .kyro-result-link-host { display: block; margin-top: 2px; font-size: clamp(.85rem, 2.8vw, .95rem); font-weight: 600; opacity: .75; letter-spacing: .01em; }
 [data-kyro-result] .kyro-result-link-title { display: block; margin-top: 2px; font-size: clamp(.9rem, 3vw, 1rem); opacity: .85; }
 [data-kyro-result] .kyro-result-small { margin: 0; max-width: 34em; font-size: .9rem; color: #94a3b8; }
@@ -242,6 +256,18 @@
       screen.appendChild(nav);
       screen.setAttribute("data-kyro-keep", "true"); // (a page to tap: the screen stays until it is closed)
     }
+    // what to do next: each button sends the same command the person could say ("Walk me through it", "Save the steps as a checklist")
+    if (Array.isArray(model.offers) && model.offers.length) {
+      const row = element(doc, "div", "kyro-result-offers");
+      for (const offer of model.offers) {
+        const button = element(doc, "button", "kyro-result-offer", offer.label);
+        button.type = "button"; button.setAttribute("data-kyro-offer", offer.id);
+        button.addEventListener("click", () => { if (handlers && typeof handlers.onOffer === "function") handlers.onOffer(offer); });
+        row.appendChild(button);
+      }
+      screen.appendChild(row);
+      screen.setAttribute("data-kyro-keep", "true"); // (a choice to make: the screen stays until it is closed)
+    }
     const close = element(doc, "button", "kyro-result-close", "×");
     close.type = "button"; close.setAttribute("aria-label", t(lang).close);
     close.addEventListener("click", () => { if (handlers && typeof handlers.onClose === "function") handlers.onClose(); });
@@ -257,5 +283,5 @@
     return screens.length > 0;
   }
 
-  return Object.freeze({ buildModel, helpModel, show, remove, isAwaiting, distanceText, sourceLinks, TEXT });
+  return Object.freeze({ buildModel, helpModel, show, remove, isAwaiting, distanceText, sourceLinks, offerButtons, TEXT });
 });

@@ -33,6 +33,7 @@ const { stateEntityIntent, stateEntityAnswer, stripWakeWord } = require("../know
 const { sourcesPageRequest, sourcesPageAnswer } = require("../knowledge/sources-page.js");
 const { californiaTopic, californiaAnswer } = require("../knowledge/california-business.js");
 const { californiaWalkthrough, walkthroughAsk } = require("../knowledge/california-walkthroughs.js");
+const { offersFor, offerLine, checklistAsk } = require("../knowledge/offers.js");
 const { feedRequest, grantsAnswer, rulesAnswer } = require("../knowledge/live-feeds.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 // how a starter document is named when it is spoken back (the title in lower case, except where that reads wrongly)
@@ -281,9 +282,14 @@ class OpenEndedPlanner {
 
   // The plan keeps the words the person actually said as its goal (the readers saw the cleaned request; see speech/normalise.js).
   async plan(args) {
-    const plan = await this.planCleaned(args);
+    let plan = await this.planCleaned(args);
     const said = normaliseSpoken(args?.command?.text);
-    if (plan && typeof plan === "object" && said.changed && plan.goal === said.text) return Object.freeze({ ...plan, goal: said.clean });
+    if (plan && typeof plan === "object" && said.changed && plan.goal === said.text) plan = Object.freeze({ ...plan, goal: said.clean });
+    // what to offer next after a checked guide's answer (buttons on the screen, phrases to say): see knowledge/offers.js
+    if (plan && typeof plan === "object" && plan.knowledge && !plan.offers) {
+      const offers = offersFor(plan, { lang: guideLanguage(String(args?.command?.text || "")) });
+      if (offers.length) plan = Object.freeze({ ...plan, offers, ...(offerLine(offers) ? { offerLine: offerLine(offers) } : {}) });
+    }
     return plan;
   }
 
@@ -736,6 +742,9 @@ class OpenEndedPlanner {
     if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
     const listUpdate = listUpdatePlan(command.text, catalog);
     if (listUpdate) return Object.freeze({ ...listUpdate, planningAttempts: 1 });
+    // "Save the steps for getting a seller's permit in California as a checklist" (the offer after the answer): the walkthrough's steps as a real checklist, made the way any checklist is made
+    const walkChecklist = walkthroughChecklistPlan(command.text, catalog);
+    if (walkChecklist) return Object.freeze({ ...walkChecklist, planningAttempts: 1 });
     const completeLists = completeListsPlan(command.text, catalog);
     if (completeLists) return Object.freeze({ ...completeLists, planningAttempts: 1 });
     const completeCommunication = completeCommunicationPlan(command.text, catalog);
@@ -1661,6 +1670,18 @@ function listUpdatePlan(text, catalog) {
   if (!input) return null;
   return { goal, application: "lists", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "update-list", title, toolId: "lists.update", input, dependsOn: [], fallbackToolIds: [] }] };
+}
+
+// The steps of a California walkthrough as a checklist: the title is the process, the items are the steps (each one the person ticks off when they have done it).
+function walkthroughChecklistPlan(text, catalog) {
+  const ask = checklistAsk(text);
+  if (!ask) return null;
+  const topic = californiaTopic(`How do I ${ask.rest}`);
+  const walk = topic ? californiaWalkthrough(topic) : null;
+  if (!walk) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "lists.create") || !catalog.applications.some(app => app.applicationId === "lists")) return null;
+  return { goal: String(text || "").trim(), application: "lists", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "create-list", title: "Create a checklist of the steps", toolId: "lists.create", input: { title: walk.title.slice(0, 120), items: walk.steps.map(step => step.title), command: String(text || "").trim() }, dependsOn: [], fallbackToolIds: [] }] };
 }
 
 function completeListsPlan(text, catalog) {
