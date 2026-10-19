@@ -62,7 +62,13 @@ const SOURCES = Object.freeze({
   sbaFinances: { name: "SBA: manage your finances", url: "https://www.sba.gov/business-guide/manage-your-business/manage-your-finances" },
   sbaTaxes: { name: "SBA: pay taxes", url: "https://www.sba.gov/business-guide/manage-your-business/pay-taxes" },
   gsaUei: { name: "GSA news release: SAM.gov switches to the Unique Entity ID (16 March 2022)", url: "https://www.gsa.gov/about-gsa/newsroom/news-releases/gsa-systems-switch-to-unique-entity-id-sam-on-april-4-2022-03162022" },
-  samUei: { name: "SAM.gov: Get a Unique Entity ID", url: "https://sam.gov/content/duns-uei" }
+  samUei: { name: "SAM.gov: Get a Unique Entity ID", url: "https://sam.gov/content/duns-uei" },
+  // the walkthroughs (us-walkthroughs.js): where to apply, and the steps for a federal grant
+  sbaCertPortal: { name: "SBA Certifications (certifications.sba.gov)", url: "https://certifications.sba.gov/" },
+  nmsdcDefinition: { name: "NMSDC: definition of a Minority Business Enterprise (MBE)", url: "https://nmsdc.org/certifications/definition-of-an-mbe/" },
+  nmsdcProcess: { name: "NMSDC: the certification process", url: "https://nmsdc.org/certifications/certification-process/" },
+  nmsdcCouncils: { name: "NMSDC: find your regional council", url: "https://nmsdc.org/about/operations/regional-affiliates/" },
+  grantsQuickStart: { name: "Grants.gov: quick start guide for applicants", url: "https://www.grants.gov/quick-start-guide/applicants" }
 });
 
 const TOPICS = Object.freeze({

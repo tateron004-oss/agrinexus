@@ -33,6 +33,7 @@ const { stateEntityIntent, stateEntityAnswer, stripWakeWord } = require("../know
 const { sourcesPageRequest, sourcesPageAnswer } = require("../knowledge/sources-page.js");
 const { californiaTopic, californiaAnswer } = require("../knowledge/california-business.js");
 const { californiaWalkthrough, walkthroughAsk } = require("../knowledge/california-walkthroughs.js");
+const { usWalkthrough, usWalkTopic } = require("../knowledge/us-walkthroughs.js");
 const { offersFor, offerLine, checklistAsk } = require("../knowledge/offers.js");
 const { feedRequest, grantsAnswer, rulesAnswer } = require("../knowledge/live-feeds.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
@@ -527,6 +528,13 @@ class OpenEndedPlanner {
       }
       const guide = californiaAnswer(caTopic, { question: askText, lang: guideLanguage(askText) }); // (the language of the words asked: a question in Spanish is answered in Spanish)
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `california-business:${caTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
+    // "Walk me through the SBA 8(a) program", "step by step, how do I apply for a federal grant on Grants.gov": the same kind of walkthrough for the United States guide's certification and grant processes (see knowledge/us-walkthroughs.js)
+    const usWalkId = !ownWorkspace && !techTopic && usPerson ? usWalkTopic(askText) : null;
+    if (usWalkId) {
+      const walk = usWalkthrough(usWalkId);
+      const intro = `Okay, I will walk you through ${walk.title}, one step at a time. There are ${walk.steps.length} steps. I only guide you: you do each step yourself, and I never apply for you.`;
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: intro, sourceRequired: false, knowledge: `us-small-business:walkthrough:${walk.id}`, sources: walk.sources, walkthrough: walk, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // "What federal grants are open right now for nonprofits?", "what is the latest SBA notice?": a real-time list from two free government feeds (Grants.gov and the Federal Register: see knowledge/live-feeds.js), with each listing's own page.
     // It costs nothing per lookup, so it is not metered; if the feed does not answer, the request goes on to the checked guide below. Not for the spoken-only caller, which leaves live lookups to its own route.
@@ -1676,8 +1684,11 @@ function listUpdatePlan(text, catalog) {
 function walkthroughChecklistPlan(text, catalog) {
   const ask = checklistAsk(text);
   if (!ask) return null;
-  const topic = californiaTopic(`How do I ${ask.rest}`);
-  const walk = topic ? californiaWalkthrough(topic) : null;
+  // (the process is found the way a request to be walked through it is: a California one first, then the United States guide's)
+  const asked = `Walk me through ${ask.rest}`;
+  const topic = californiaTopic(asked);
+  const usTopic = topic ? null : usWalkTopic(asked);
+  const walk = topic ? californiaWalkthrough(topic) : usTopic ? usWalkthrough(usTopic) : null;
   if (!walk) return null;
   if (!catalog.tools.some(tool => tool.toolId === "lists.create") || !catalog.applications.some(app => app.applicationId === "lists")) return null;
   return { goal: String(text || "").trim(), application: "lists", riskTier: "low", clarification: null,

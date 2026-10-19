@@ -29,7 +29,14 @@ const SOURCES = Object.freeze({
   la28Plan: { name: "LA28 Procurement Plan (March 2026)", url: "https://la28.org/content/dam/latwentyeight/downloads/LA28ProcurementPlan2026.pdf" },
   rampLa: { name: "RAMP LA (City of Los Angeles procurement marketplace)", url: "https://www.rampla.org/s/" },
   rampFood: { name: "RAMP LA: LA28 Food Small Business Integration vendor pool (PA-00128)", url: "https://www.rampla.org/s/procurement-announcement-details?id=a1NQl0000043nczMAA" },
-  la28Supplier: { name: "LA28 supplier portal", url: "https://la28.supplierone.co/" }
+  la28Supplier: { name: "LA28 supplier portal", url: "https://la28.supplierone.co/" },
+  // forming a business in California (the walkthroughs for an LLC and a nonprofit corporation)
+  sosBrochure: { name: "California Secretary of State: Starting a New Business in California (brochure)", url: "https://bpd.cdn.sos.ca.gov/bizfile/bizfile-brochure.pdf" },
+  sosChecklist: { name: "California Secretary of State: starting a business checklist", url: "https://www.sos.ca.gov/business-programs/business-entities/starting-business-checklist/" },
+  bizfile: { name: "bizfile Online (California Secretary of State filing portal)", url: "https://bizfileonline.sos.ca.gov/" },
+  bizSearch: { name: "California Business Search (a preliminary name check)", url: "https://bizfileonline.sos.ca.gov/search/business" },
+  calgold: { name: "CalGold: California permit and license finder", url: "https://www.calgold.ca.gov/" },
+  irsExempt: { name: "IRS: applying for tax-exempt status", url: "https://www.irs.gov/charities-non-profits/applying-for-tax-exempt-status" }
 });
 
 const TOPICS = Object.freeze({

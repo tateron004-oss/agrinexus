@@ -61,10 +61,11 @@
     ["free-help", /\b(free (?:business )?(?:help|counsel(?:ing|ling|or|ors)|mentor(?:ing|s)?|advice|training)|sbdc|small business development center|score (?:mentor|mentors|chapter|business mentoring)|score\.org|women'?s business center|veterans? business outreach|business mentor|business mentoring|where can i get help (?:with|for) (?:my |a )?business|help (?:with|for) my (?:small )?business)\b/i]
   ];
   
-  function topicEnglish(text) {
+  // (walk: the words ask to be walked through a process, "walk me through the 8(a) program": that is a request too, though it opens with no question word)
+  function topicEnglish(text, { walk = false } = {}) {
     const value = String(text || "").replace(/\s+/g, " ").trim();
     if (!value || value.length > 300) return null;
-    if (RECORD_OR_DRAFT.test(value) || !ASKS.test(value)) return null;
+    if (RECORD_OR_DRAFT.test(value) || !(walk || ASKS.test(value))) return null;
     // three or more kinds of business named at once ("LLC, S corp or C corp? for-profit or nonprofit?") is the question "what type of business should I be": the overview answers it
     if (STRUCTURE_TERMS.filter(pattern => pattern.test(value)).length >= 3) return "business-structure";
     for (const [topic, pattern] of MATCHERS) if (pattern.test(value)) return topic;
@@ -142,7 +143,7 @@
   // When is this United States guide the right one? A person's time zone is the best signal the page and the phone line give; the words of the question can also say so ("SBA", "IRS", "8(a)", "NMSDC", "SBDC",
   // "SAM.gov", "United States"). Without either, the question is left to the general guardrail, which names no country-specific agency.
   const US_TIME_ZONES = /^(?:America\/(?:New_York|Chicago|Denver|Los_Angeles|Phoenix|Anchorage|Detroit|Boise|Juneau|Sitka|Nome|Adak|Metlakatla|Yakutat|Menominee|North_Dakota\/.+|Indiana\/.+|Kentucky\/.+)|Pacific\/Honolulu|US\/.+)$/;
-  const US_WORDS = /\b(?:sba|irs|ftc|nist|cisa|mbda|nmsdc|sbdc|8a|hubzone|wosb|sdvosb|sam\.gov|cdfi|1099|1040|schedule c|united states|usa|llc|s[- ]?corp|c[- ]?corp|ein|uspto|secretary of state|form 2553)\b|\b8\s?\(\s?a\s?\)|\b501\s?\(\s?c\s?\)|\bu\.s\./i;
+  const US_WORDS = /\b(?:sba|irs|ftc|nist|cisa|mbda|nmsdc|sbdc|8a|hubzone|wosb|sdvosb|sam\.gov|cdfi|grants\.gov|1099|1040|schedule c|united states|usa|llc|s[- ]?corp|c[- ]?corp|ein|uspto|secretary of state|form 2553)\b|\b8\s?\(\s?a\s?\)|\b501\s?\(\s?c\s?\)|\bu\.s\./i;
   function isUsContext({ timeZone = "", text = "" } = {}) {
     return US_TIME_ZONES.test(String(timeZone || "")) || US_WORDS.test(String(text || ""));
   }
@@ -159,6 +160,9 @@
     ["ca-dbe", /\b(?:dbe|disadvantaged business enterprise|cucp|caltrans)\b/i],
     ["ca-nonprofit-state", /(?=.*\b(?:non-?profit|charit\w*|501\s?\(?c\)?\s?\(?3\)?)\b)(?=.*\b(?:attorney general|registry|tax[- ]exempt|exemption|exempt status|ftb|franchise tax|3500a?|ct-?1|solicit\w*|fundrais\w*|suspended)\b)/i],
     ["ca-state-vendor", /\bcal ?eprocure\b|\bcaleprocure\b|(?=.*\b(?:vendor|supplier|contract\w*|bid\w*|sell(?:ing)?)\b)(?=.*\b(?:state of california|california state|state agenc\w*|state government|california government|state contracts?)\b)/i],
+    // forming a business in California: asked only as a walkthrough (a plain "how do I register an LLC in California" is answered by the state formation guide, state-entities.js, with the state's fees)
+    ["ca-nonprofit-form", /(?=.*\b(?:non-?profit|charit\w*|501\s?\(?c\)?\s?\(?3\)?)\b)(?=.*\b(?:form\w*|start\w*|incorporat\w*|set(?:ting)? up|creat\w*|register\w*|establish\w*|open\w*|launch\w*)\b)/i],
+    ["ca-llc", /^(?=.*\b(?:llc|limited liability compan\w+)\b)(?!.*\bcertif)/i],
     ["ca-certification", /\b(?:certif\w+|micro-?business|dgs|osds)\b/i],
     ["ca-grants", /\b(?:grants?|micro-?grants?|dream fund|funding)\b/i],
     ["ca-free-help", /(?=.*\b(?:free|no[- ]cost|low[- ]cost)\b)(?=.*\b(?:help|advice|counsel\w*|consult\w*|mentor\w*|training|assistance|support|classes|workshops?)\b)|\b(?:calosba|technical assistance centers?|sbdc|small business development centers?)\b/i]
@@ -188,18 +192,29 @@
   // "Walk me through getting certified in California", "step by step, how do I get a seller's permit", "what are the steps to ...", "help me register ...": asking to be guided through a process, one step at a time
   const WALK = /^(?:please\s+)?(?:(?:kyro,?\s+)?(?:walk|guide|talk|take|lead) (?:me|us) through|help (?:me|us) (?:get|apply|register|certify|become|start|do|file|set up|sign up|join)|(?:show|tell) (?:me|us) the steps|what (?:are|is) the steps?|step[- ]by[- ]step)\b|\bstep[- ]by[- ]step\b/i;
   function walkthroughAsk(text) { return WALK.test(String(text || "").trim()); }
+  const CA_WALK_ONLY = ["ca-nonprofit-form", "ca-llc"];
+  // the United States guide's topics that have a walkthrough (nexus/knowledge/us-walkthroughs.js)
+  const US_WALK_TOPICS = ["8a", "nmsdc", "certification", "grants"];
   function californiaTopic(text) {
     const value = String(text || "").replace(/\s+/g, " ").trim();
     if (value && language(value) === "es") return californiaTopicSpanish(value);
     if (!value || value.length > 300 || !CA_CUE.test(value)) return null;
     if (RECORD_OR_DRAFT.test(value) || !(ASKS.test(value) || /\?/.test(value) || WALK.test(value))) return null;
-    const aboutBusiness = /\b(?:business(?:es)?|start-?ups?|non-?profits?|entrepreneurs?|owners?|compan(?:y|ies)|self[- ]employed|vendors?|suppliers?)\b/i.test(value);
+    const aboutBusiness = /\b(?:business(?:es)?|start-?ups?|non-?profits?|entrepreneurs?|owners?|compan(?:y|ies)|self[- ]employed|vendors?|suppliers?|llcs?)\b/i.test(value);
     for (const [topic, pattern] of CA_MATCHERS) {
+      if (CA_WALK_ONLY.includes(topic) && !WALK.test(value)) continue;
       // (a grant or free help "in California" is for a business only when the words are about one: "college grants in California" is not)
-      if (pattern.test(value) && (aboutBusiness || ["ca-la28", "ca-seller-permit", "ca-dbe", "ca-state-vendor", "ca-nonprofit-state"].includes(topic))) return topic;
+      if (pattern.test(value) && (aboutBusiness || ["ca-la28", "ca-seller-permit", "ca-dbe", "ca-state-vendor", "ca-nonprofit-state", ...CA_WALK_ONLY].includes(topic))) return topic;
     }
     return null;
   }
+  // "Walk me through the SBA 8(a) program", "step by step, how do I apply for a federal grant on Grants.gov": the United States guide's topic for a walkthrough request (nexus/knowledge/us-walkthroughs.js has the ones that exist), or null
+  function walkTopic(text) {
+    const value = String(text || "").replace(/\s+/g, " ").trim();
+    if (!value || !WALK.test(value) || language(value) === "es") return null;
+    const id = topicEnglish(value, { walk: true });
+    return US_WALK_TOPICS.includes(id) ? id : null;
+  }
 
-  return Object.freeze({ topic: usSmallBusinessTopic, californiaTopic, walkthroughAsk, isUsContext, isBusinessQuestion, language });
+  return Object.freeze({ topic: usSmallBusinessTopic, californiaTopic, walkthroughAsk, walkTopic, isUsContext, isBusinessQuestion, language });
 });

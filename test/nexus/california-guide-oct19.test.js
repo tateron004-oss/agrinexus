@@ -96,7 +96,9 @@ test("through the planner, with no AI model: California questions get the Califo
 test("the source page lists the California pages, and the page treats a California question as the guide's, on any device", () => {
   const page = sourcesPageAnswer("Show me your sources for small business");
   const californiaGroup = page.sources.filter(source => /^California:/.test(source.group));
-  assert.equal(californiaGroup.length, Object.keys(california.SOURCES).length);
+  // (a page the United States guide already lists is shown once, under that guide)
+  const listedBefore = new Set(Object.values(require("../../nexus/knowledge/us-small-business.js").SOURCES).map(source => source.url));
+  assert.equal(californiaGroup.length, Object.values(california.SOURCES).filter(source => !listedBefore.has(source.url)).length);
   assert.ok(californiaGroup.some(source => /rampla\.org/.test(source.url)));
   assert.match(app, /typeof topics\.californiaTopic === "function" && topics\.californiaTopic\(text\)\) return true;/);
 });

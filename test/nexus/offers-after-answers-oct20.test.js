@@ -27,13 +27,13 @@ test("a California answer with a walkthrough offers the walkthrough and a checkl
     const checklist = list.find(offer => offer.id === "checklist");
     const ask = offers.checklistAsk(checklist.command);
     assert.ok(ask, `${id}: "${checklist.command}" asks for a checklist`);
-    assert.equal(topics.californiaTopic(`How do I ${ask.rest}`), id, `${id}: the checklist is for the same process`);
+    assert.equal(topics.californiaTopic(`Walk me through ${ask.rest}`), id, `${id}: the checklist is for the same process`);
   }
 });
 
 test("the other checked guides offer the sources; nothing is offered for Spanish, the source page, the live lists, a walkthrough or an answer that is not a guide", () => {
   assert.deepEqual(offers.offersFor({ knowledge: "us-small-business:loans" }).map(offer => offer.id), ["sources"]);
-  assert.deepEqual(offers.offersFor({ knowledge: "state-entities:state-entity:llc:CA" }).map(offer => offer.id), ["sources"]);
+  assert.deepEqual(offers.offersFor({ knowledge: "state-entities:state-entity:llc:TX" }).map(offer => offer.id), ["sources"]);
   assert.deepEqual(offers.offersFor({ knowledge: "california-business:ca-free-help" }).map(offer => offer.id), ["sources"], "no walkthrough for free help");
   for (const plan of [{ knowledge: "california-business:ca-seller-permit" }, { knowledge: "us-small-business:loans" }]) assert.deepEqual(offers.offersFor(plan, { lang: "es" }), [], "the walkthroughs and the source page are English only");
   for (const knowledge of ["sources-page", "live-feeds:grants", "california-business:walkthrough:ca-seller-permit", "womens-health:x", ""]) assert.deepEqual(offers.offersFor({ knowledge }), [], knowledge);

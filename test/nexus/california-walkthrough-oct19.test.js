@@ -49,7 +49,10 @@ test("through the planner, with no AI model: 'walk me through' carries the steps
   assert.match(walk.response, /^Okay, I will walk you through A California seller's permit, one step at a time\. There are 4 steps\. I only guide you: you do each step yourself, and I never apply for you\.$/);
   assert.ok(walk.sources.length >= 1);
   assert.equal((await ask("How do I get a seller's permit in California?")).walkthrough, undefined);
-  assert.equal((await ask("Walk me through registering a nonprofit in California")).knowledge, "state-entities:state-entity:nonprofit:CA");
+  // (forming has its own walkthroughs now; the plain question about forming is still the state formation guide's, with the state's fees)
+  assert.equal((await ask("Walk me through registering a nonprofit in California")).knowledge, "california-business:walkthrough:ca-nonprofit-form");
+  assert.equal((await ask("How do I register a nonprofit in California?")).knowledge, "state-entities:state-entity:nonprofit:CA");
+  assert.equal((await ask("How do I register an LLC in California?")).knowledge, "state-entities:state-entity:llc:CA");
 });
 
 test("the library keeps the place, goes back and forward, stops on the last step and says the walk is the person's own", () => {
