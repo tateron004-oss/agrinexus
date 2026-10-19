@@ -52222,6 +52222,24 @@ function kyroWalkthroughCommand(text, options = {}) {
     return kyroWalkthroughMove(kind);
   } catch { return false; }
 }
+// What Kyro offers after a checked guide's answer ("Walk me through it", "Save the steps as a checklist", "Show all my sources"): buttons on the answer, and the same words said. Each is a command Kyro already runs.
+let kyroPendingOffers = [];
+function kyroRunOffer(offer, options = {}) {
+  try {
+    if (!offer || !offer.command) return false;
+    if (!options.typed) { try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ } }
+    void handleNexusUnifiedBrainRuntimeCommand(offer.command, { source: "typed", kyroDirect: true });
+    return true;
+  } catch { return false; }
+}
+function kyroOfferCommand(text, options = {}) {
+  try {
+    if (!kyroPendingOffers.length || !document.querySelector("[data-kyro-result] [data-kyro-offer]")) return false;
+    const said = String(text || "").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+(?:please|now|thanks)$/, "").replace(/\s+/g, " ").trim();
+    const offer = said && kyroPendingOffers.find(item => Array.isArray(item.say) && item.say.includes(said));
+    return offer ? kyroRunOffer(offer, options) : false;
+  } catch { return false; }
+}
 // The pages behind the answer on the screen (see kyro-result-screen.js): "open the page", "open the first source". A browser opens a page only when it is tapped, so by voice the page is tried and, when the
 // browser will not, the person is told which button to tap.
 let kyroSourceLinks = [];
@@ -52246,6 +52264,7 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   if (!said) return false;
   const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
   if (typeof kyroWalkthroughCommand === "function" && kyroWalkthroughCommand(said, options)) return true;
+  if (typeof kyroOfferCommand === "function" && kyroOfferCommand(said, options)) return true;
   if (typeof kyroOpenSourcePage === "function" && kyroOpenSourcePage(said, lang, options)) return true;
   // the short answer to "what would you like to see?"
   if (kyroPendingMedia) {
@@ -53303,8 +53322,9 @@ function kyroShowResultScreen(toolName, command, result) {
     if (result && typeof result.response === "string") result = { ...result, response: kyroPlainText(result.response) };
     const model = window.KyroResultScreen.buildModel(result, { command, lang });
     if (!model) return false;
-    window.KyroResultScreen.show(document, model, { onClose: () => { void kyroReturnToOrb({ reason: "done", source: "result-screen" }); } }, lang);
+    window.KyroResultScreen.show(document, model, { onClose: () => { void kyroReturnToOrb({ reason: "done", source: "result-screen" }); }, onOffer: offer => kyroRunOffer(offer, { typed: true }) }, lang);
     kyroSourceLinks = Array.isArray(model.links) ? model.links : [];
+    kyroPendingOffers = Array.isArray(model.offers) ? model.offers : [];
     kyroNoteActivity();
     return true;
   } catch { return false; }
@@ -53566,6 +53586,7 @@ function kyroShowTypedResult(result, text, message) {
       // a checked guide's answer carries the official pages it was read from: each is a button to open, and the source page lists them all
       answer = { response: message };
       if (Array.isArray(result.plan?.sources) && result.plan.sources.length) { answer.guideSources = result.plan.sources; answer.allSources = result.plan.knowledge === "sources-page"; }
+      if (Array.isArray(result.plan?.offers) && result.plan.offers.length) answer.offers = result.plan.offers;
     } else if (result.state === "confirmation_required" && String(message || "").trim().length >= 12 && result.outcome?.pendingStepId && String(result.taskId || "").startsWith("tsk_")) {
       // "I can add Amina as a client. Should I go ahead?": on the screen with a Yes and a No to tap (saying yes works too), for a person who cannot type
       answer = { response: message, requiresConfirmation: true }; wantsButtons = true;
@@ -60572,6 +60593,8 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
   // (the answer is on the screen, so the card window the renderer opened for the same result -- "Live Knowledge Research" behind a checklist, a raw card behind a web answer -- is closed: it would sit behind the answer and show when the answer is closed)
   if (answerOnScreen) { try { if (document.querySelector("#nexus-workspace")) closeNexusFunctionWindow({ command: "" }); } catch { /* nothing to close */ } }
   if (answerOnScreen && result.plan?.walkthrough && kyroWalkthroughOpening) { message = kyroWalkthroughOpening; kyroWalkthroughOpening = ""; }
+  // (a checked guide's answer ends by saying what Kyro can do next, as the buttons on the screen offer)
+  if (answerOnScreen && result.plan?.offerLine && !result.plan?.walkthrough) message = `${message} ${result.plan.offerLine}`;
   // (and the reminders list is read out as the list, not as the status line the server sends with it)
   if (result.render?.presentation?.kind === "reminder") message = kyroReminderListLine(result.render.data) || message;
   try {
