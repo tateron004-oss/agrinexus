@@ -31,6 +31,7 @@ const { womensHealthTopic } = require("../knowledge/womens-health-topics.js");
 const { womensHealthAnswer } = require("../knowledge/womens-health.js");
 const { stateEntityIntent, stateEntityAnswer, stripWakeWord } = require("../knowledge/state-entities.js");
 const { sourcesPageRequest, sourcesPageAnswer } = require("../knowledge/sources-page.js");
+const { californiaTopic, californiaAnswer } = require("../knowledge/california-business.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 // how a starter document is named when it is spoken back (the title in lower case, except where that reads wrongly)
 const SPOKEN_TEMPLATE_NAMES = Object.freeze({ "ai-use-policy": "AI use policy", "vendor-questions": "list of questions for a web host, designer or developer", "app-brief": "app brief" });
@@ -505,6 +506,13 @@ class OpenEndedPlanner {
     if (communityId) {
       const guide = communityAnswer(communityId);
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-community-support:${communityId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
+    // A question that names California and is about a business or nonprofit there beyond forming it (state certification, selling to the state, the seller's permit, what a nonprofit does after it is formed, free help, grants, the 2028
+    // Games): the checked California guide (see knowledge/california-business.js), asked before the state formation guide below, which answers "how do I register an LLC in California".
+    const caTopic = !ownWorkspace && !techTopic ? californiaTopic(askText) : null;
+    if (caTopic) {
+      const guide = californiaAnswer(caTopic, { question: askText });
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `california-business:${caTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // "How do I register an LLC in California?", "what does a nonprofit cost to start in Texas?", "I want to set up my business in Ohio": the state's own fees and steps (see knowledge/state-entities.js). It is a question about forming an
     // entity, so a "my business" in it is not a request for the person's own workspace; a question that names a Kenyan or Nigerian agency, or has no state on a device outside the United States, is left to the guides below.

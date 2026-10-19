@@ -78,6 +78,6 @@ test("the page answers a spoken business question from the guide on a US device 
   const route = app.slice(app.indexOf("function routeKyroVoiceIntakeTranscript("));
   assert.match(route, /typeof kyroBusinessQuestion === "function" && kyroBusinessQuestion\(trimmed\)\) \{\s+if \(!heardAgain\) \{[^]*?handleNexusUnifiedBrainRuntimeCommand\(trimmed, \{ source: "typed", kyroDirect: true \}\);[^]*?\}\s+return true;/);
   assert.ok(route.indexOf("kyroCommunityQuestion(trimmed)") < route.indexOf("kyroBusinessQuestion(trimmed)"), "veteran-owned business questions still go to the veterans' guide first");
-  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8").includes('src="/kyro-business-topics.js?v=kyro-business-topics-4"'));
-  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8").includes("/kyro-business-topics.js?v=kyro-business-topics-4"));
+  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8").includes('src="/kyro-business-topics.js?v=kyro-business-topics-5"'));
+  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8").includes("/kyro-business-topics.js?v=kyro-business-topics-5"));
 });
