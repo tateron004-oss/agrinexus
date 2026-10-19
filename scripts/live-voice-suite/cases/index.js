@@ -6,8 +6,9 @@ const resourcesForPeople = require("./resources-for-people.js");
 const minorityAndStartupBusiness = require("./minority-and-startup-business.js");
 const spanishBusiness = require("./spanish-business.js");
 const automations = require("./automations.js");
+const californiaBusiness = require("./california-business.js");
 
-const ALL = Object.freeze([...documentsAndLists, ...businessAndApps, ...mediaSearchHealthForms, ...resourcesForPeople, ...minorityAndStartupBusiness, ...spanishBusiness, ...automations]);
+const ALL = Object.freeze([...documentsAndLists, ...businessAndApps, ...mediaSearchHealthForms, ...resourcesForPeople, ...minorityAndStartupBusiness, ...spanishBusiness, ...automations, ...californiaBusiness]);
 
 // Which cases run: by default the ones that change nothing on the account; --writes adds the ones that save something, --risky the emergency words,
 // --only a,b (ids) or --area documents,lists (areas) narrows it, and --no-sound leaves out the ones that need sound to start.
