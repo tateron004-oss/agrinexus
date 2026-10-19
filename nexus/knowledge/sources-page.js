@@ -12,6 +12,7 @@ const community = require("./us-community-support.js");
 const technology = require("./small-business-technology.js");
 const africa = require("./africa-small-business.js");
 const states = require("./state-entities.js");
+const california = require("./california-business.js");
 
 const BUSINESS_WORDS = "small business(?:es)?|minority|start-?ups?|nonprofits?|non-profits?|business(?:es)?|entrepreneurs?|owners?|veterans?|older adults?|seniors?|community";
 // "your sources", "the sources you use", "the small business sources", "your sources for nonprofits", "the source page"; not "sources of funding" or "sources for my report"
@@ -33,6 +34,7 @@ const COMMUNITY_ASKED = /\b(?:veterans?|older adults?|seniors?|elder(?:ly|care)?
 function groups(withCommunity = false) {
   return [
     group("Small business, minority-owned business, start-ups and nonprofits (United States)", business.CHECKED_ON, business.SOURCES),
+    group("California: state certification, selling to the state, the seller's permit, nonprofits, free help and the 2028 Games", california.CHECKED_ON, california.SOURCES),
     group("Forming a business or nonprofit in a state", "", states.SOURCES),
     ...(withCommunity ? [group("Help for veterans, older adults, young people and community groups", community.CHECKED_ON, community.SOURCES)] : []),
     group("Technology and AI for a business", technology.CHECKED_ON, technology.SOURCES),

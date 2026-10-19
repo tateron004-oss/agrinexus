@@ -52843,6 +52843,8 @@ function kyroCommunityQuestion(text) {
 function kyroBusinessQuestion(text) {
   try {
     const topics = window.KyroBusinessTopics;
+    // (a question that names California and a California office or programme is the California guide's, on any device)
+    if (topics && typeof topics.californiaTopic === "function" && topics.californiaTopic(text)) return true;
     if (!topics || !topics.topic(text) || !topics.isBusinessQuestion(text)) return false;
     return topics.isUsContext({ timeZone: kyroDeviceTimeZone(), text });
   } catch { return false; }

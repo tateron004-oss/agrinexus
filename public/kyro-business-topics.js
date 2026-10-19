@@ -150,5 +150,30 @@
   const BUSINESS_WORDS = /\b8\s?\(\s?a\s?\)|\b(?:duns|uei|unique entity|bookkeep\w*|accountants?|accounting|business(?:es)?|compan(?:y|ies)|start-?ups?|llc|s[- ]?corp|c[- ]?corp|non-?profits?|self[- ]employed|entrepreneur\w*|sba|sbdc|score|mbda|nmsdc|8a|mbe|wosb|edwosb|hubzone|sdvosb|vosb|sam\.gov|ein|1099|investors?|franchis\w*|payroll|employees?|customers|contractors?|catering|restaurant|shop|store|sell(?:ing)?|cdfi|grants?|loans?)\b/i;
   function isBusinessQuestion(text) { return BUSINESS_WORDS.test(String(text || "")) || BUSINESS_WORDS_ES.test(fold(text)); }
 
-  return Object.freeze({ topic: usSmallBusinessTopic, isUsContext, isBusinessQuestion, language });
+  // ---- California (public/kyro-business-topics.js is shared with the page; the answers are in nexus/knowledge/california-business.js) ----
+  // A question that names California, a California office (Cal eProcure, CDTFA, CalOSBA, Caltrans, CUCP) or the 2028 Games: first match wins, most specific first. Beyond the formation of an entity (state-entities.js answers that).
+  const CA_CUE = /\b(?:california|calif\.?|cal ?eprocure|caleprocure|cdtfa|calosba|caltrans|cucp|la ?28|2028 (?:olympic|paralympic|games)|olympics?|ramp ?la|rampla)\b/i;
+  const CA_MATCHERS = [
+    ["ca-la28", /\b(?:la ?28|2028 (?:olympic|paralympic|games)|olympics?|ramp ?la|rampla)\b/i],
+    ["ca-seller-permit", /\b(?:seller'?s? permit|resale (?:permit|certificate)|sales tax permit|cdtfa)\b/i],
+    ["ca-dbe", /\b(?:dbe|disadvantaged business enterprise|cucp|caltrans)\b/i],
+    ["ca-nonprofit-state", /(?=.*\b(?:non-?profit|charit\w*|501\s?\(?c\)?\s?\(?3\)?)\b)(?=.*\b(?:attorney general|registry|tax[- ]exempt|exemption|exempt status|ftb|franchise tax|3500a?|ct-?1|solicit\w*|fundrais\w*|suspended)\b)/i],
+    ["ca-state-vendor", /\bcal ?eprocure\b|\bcaleprocure\b|(?=.*\b(?:vendor|supplier|contract\w*|bid\w*|sell(?:ing)?)\b)(?=.*\b(?:state of california|california state|state agenc\w*|state government|california government|state contracts?)\b)/i],
+    ["ca-certification", /\b(?:certif\w+|micro-?business|dgs|osds)\b/i],
+    ["ca-grants", /\b(?:grants?|micro-?grants?|dream fund|funding)\b/i],
+    ["ca-free-help", /(?=.*\b(?:free|no[- ]cost|low[- ]cost)\b)(?=.*\b(?:help|advice|counsel\w*|consult\w*|mentor\w*|training|assistance|support|classes|workshops?)\b)|\b(?:calosba|technical assistance centers?|sbdc|small business development centers?)\b/i]
+  ];
+  function californiaTopic(text) {
+    const value = String(text || "").replace(/\s+/g, " ").trim();
+    if (!value || value.length > 300 || !CA_CUE.test(value)) return null;
+    if (RECORD_OR_DRAFT.test(value) || !(ASKS.test(value) || /\?/.test(value))) return null;
+    const aboutBusiness = /\b(?:business(?:es)?|start-?ups?|non-?profits?|entrepreneurs?|owners?|compan(?:y|ies)|self[- ]employed|vendors?|suppliers?)\b/i.test(value);
+    for (const [topic, pattern] of CA_MATCHERS) {
+      // (a grant or free help "in California" is for a business only when the words are about one: "college grants in California" is not)
+      if (pattern.test(value) && (aboutBusiness || ["ca-la28", "ca-seller-permit", "ca-dbe", "ca-state-vendor", "ca-nonprofit-state"].includes(topic))) return topic;
+    }
+    return null;
+  }
+
+  return Object.freeze({ topic: usSmallBusinessTopic, californiaTopic, isUsContext, isBusinessQuestion, language });
 });
