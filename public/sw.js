@@ -39,7 +39,7 @@ const APP_SHELL = [
   `/kyro-accessibility-commands.js?v=kyro-accessibility-commands-1`,
   `/kyro-task-stage.js?v=kyro-task-stage-1`,
   `/kyro-answer-card.js?v=kyro-answer-card-1`,
-  `/kyro-result-screen.js?v=kyro-result-screen-3`,
+  `/kyro-result-screen.js?v=kyro-result-screen-4`,
   `/kyro-media-player.js?v=kyro-media-player-1`
 ];
 

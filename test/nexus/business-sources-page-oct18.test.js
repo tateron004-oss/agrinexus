@@ -48,7 +48,7 @@ test("through the planner, with no AI model: the source page answer carries the 
   assert.notEqual(funding.knowledge, "sources-page");
 });
 
-test("a guide's answer shows its sources as buttons (six at most), and the source page shows them all, under their groups", () => {
+test("a guide's answer shows its sources as buttons (forty at most), and the source page shows them all, under their groups", () => {
   const guide = business.usSmallBusinessAnswer("loans", { question: "How do I get an SBA microloan?" });
   const answer = Screen.buildModel({ ok: true, status: "completed", response: guide.text, guideSources: guide.sources }, { lang: "en" });
   assert.equal(answer.links.length, guide.sources.length);
@@ -56,7 +56,7 @@ test("a guide's answer shows its sources as buttons (six at most), and the sourc
   assert.equal(answer.links[0].label, "SBA loans");
   const page = sourcesPageAnswer("sources");
   const capped = Screen.buildModel({ ok: true, status: "completed", response: page.text, guideSources: page.sources }, { lang: "en" });
-  assert.equal(capped.links.length, 6);
+  assert.equal(capped.links.length, Math.min(40, page.sources.length), "every source of a guide answer is shown (forty at most); the source page shows them all");
   const all = Screen.buildModel({ ok: true, status: "completed", response: page.text, guideSources: page.sources, allSources: true }, { lang: "en" });
   assert.equal(all.links.length, page.sources.length);
   assert.ok(all.links.every(link => link.group));

@@ -18,11 +18,11 @@ const citations = [
   { title: "mail", url: "mailto:a@b.co", domain: "", publisher: "" }
 ];
 
-test("a live answer's citations become links: web addresses only, each once, six at most, named by publisher or address", () => {
+test("a live answer's citations become links: web addresses only, each once, named by publisher or address", () => {
   const links = Screen.sourceLinks({ citations });
   assert.deepEqual(JSON.parse(JSON.stringify(links.map(link => [link.label, link.url]))), [["Nation Africa", "https://www.nation.africa/prices"], ["kenyans.co.ke", "https://kenyans.co.ke/maize"]]);
   assert.deepEqual(Screen.sourceLinks({}), []);
-  assert.equal(Screen.sourceLinks({ citations: Array.from({ length: 9 }, (_, i) => ({ url: `https://site${i}.example/a`, domain: `site${i}.example` })) }).length, 6);
+  assert.equal(Screen.sourceLinks({ citations: Array.from({ length: 9 }, (_, i) => ({ url: `https://site${i}.example/a`, domain: `site${i}.example` })) }).length, 9);
   const model = Screen.buildModel({ ok: true, status: "source-backed", response: "The reported retail price is about 66 Kenyan shillings per kilogram in Nairobi. Sources: Nation Africa and kenyans.co.ke, checked just now.", citations }, { command: "price of maize flour", lang: "en" });
   assert.equal(model.links.length, 2);
   assert.equal(Screen.buildModel({ ok: true, response: "The reported retail price is about 66 Kenyan shillings per kilogram in Nairobi." }, { lang: "en" }).links, undefined, "no citations, no links");
@@ -91,4 +91,16 @@ test("with no page on the screen, or for any other sentence, nothing is opened a
   assert.deepEqual(page.openedUrls, []);
   assert.match(app, /if \(typeof kyroOpenSourcePage === "function" && kyroOpenSourcePage\(said, lang, options\)\) return true;/);
   assert.match(app, /kyroSourceLinks = Array\.isArray\(model\.links\) \? model\.links : \[\];/);
+});
+
+// Asked by the owner: "make sure Kyro shows the website and sources along with the assistance it provides". The button names the page and shows the website itself, and no guide answer loses a source (the longest has seven).
+test("each button shows the website's address, and a guide answer shows every one of its sources", () => {
+  const links = Screen.sourceLinks({ citations });
+  assert.deepEqual(JSON.parse(JSON.stringify(links.map(link => link.host))), ["nation.africa/prices".split("/")[0], "kenyans.co.ke"]);
+  const doc = fakeDocument();
+  const screen = Screen.show(doc, Screen.buildModel({ ok: true, response: "The reported retail price is about 66 Kenyan shillings per kilogram in Nairobi.", citations }, { lang: "en" }), {}, "en");
+  const hosts = find(screen, node => node.className === "kyro-result-link-host").map(node => node.textContent);
+  assert.deepEqual(hosts, ["nation.africa", "kenyans.co.ke"]);
+  const seven = Array.from({ length: 7 }, (_, i) => ({ name: `Official page ${i + 1}`, url: `https://site${i}.gov/page` }));
+  assert.equal(Screen.sourceLinks({ guideSources: seven }).length, 7);
 });
