@@ -12,12 +12,12 @@
 const { CHECKED_ON, SOURCES: TECH_SOURCES } = require("./small-business-technology.js");
 
 const SOURCES = Object.freeze({
-  sbaAi: { name: "SBA: AI for small business", url: "https://www.sba.gov/business-guide/manage-your-business/ai-small-business" },
+  sbaAi: { name: "SBA: AI for small business", url: "https://www.sba.gov/counseling/manage-your-business/#ai-for-small-business" },
   ftcAi: TECH_SOURCES.ftcAi,
   ftcPrivacyAi: TECH_SOURCES.ftcPrivacyAi,
   ftcReviews: TECH_SOURCES.ftcReviews,
-  sbaPlan: { name: "SBA: write your business plan", url: "https://www.sba.gov/business-guide/plan-your-business/write-your-business-plan" },
-  sbaMarketing: { name: "SBA: marketing and sales (make a marketing plan)", url: "https://www.sba.gov/business-guide/manage-your-business/marketing-sales" }
+  sbaPlan: { name: "SBA: write your business plan", url: "https://www.sba.gov/counseling/plan-your-business/#business-plan" },
+  sbaMarketing: { name: "SBA: marketing and sales (make a marketing plan)", url: "https://www.sba.gov/counseling/manage-your-business/#marketing-and-sales" }
 });
 
 const TOPICS = Object.freeze({

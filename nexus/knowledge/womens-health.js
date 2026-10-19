@@ -29,7 +29,7 @@ const SOURCES = Object.freeze({
   lifeline988: { name: "988 Suicide and Crisis Lifeline", url: "https://988lifeline.org/" },
   hrsaFinder: { name: "HRSA: find a health center", url: "https://findahealthcenter.hrsa.gov/" },
   titleX: { name: "HHS Office of Population Affairs: Title X service grants", url: "https://opa.hhs.gov/grant-programs/title-x-service-grants" },
-  titleXFind: { name: "HHS Office of Population Affairs: Family Planning Clinic Locator", url: "https://opa-fpclinicdb.hhs.gov/" },
+  titleXFind: { name: "HHS Office of Population Affairs: Family Planning Clinic Locator", url: "https://reproductivehealthservices.gov/" },
   healthcareGov: { name: "HealthCare.gov: Medicaid and CHIP", url: "https://www.healthcare.gov/medicaid-chip/getting-medicaid-chip/" },
   hotline: { name: "National Domestic Violence Hotline", url: "https://www.thehotline.org/" }
 });
@@ -71,7 +71,9 @@ const TOPICS = {
     title: "Menopause",
     us: {
       sources: ["owhMenopause"],
-      text: "Menopause is when your periods stop for good and you can no longer get pregnant; it is confirmed after 12 months in a row with no period, including spotting. The Office on Women's Health says the average age in the US is 52, with a usual range of about 45 to 58. The change before it, perimenopause, often starts in the mid to late 40s and lasts about 4 years on average. Common signs are irregular periods, hot flashes, trouble sleeping, mood swings, vaginal dryness and less interest in sex; some women have few or none. Talk with a provider if symptoms bother you, or if your periods stop before age 40. Vaginal bleeding after menopause is not normal, so see a provider as soon as you can. If you do not want to get pregnant, keep using birth control until a full year after your last period."
+      // (this page changed on 19 October 2026 and was read again that day: the usual ages are now 45 to 55, and the signs are on a separate page)
+      checkedOn: "19 October 2026",
+      text: "Menopause is when your periods stop for 12 months in a row, including no spotting. After it, your ovaries make very little estrogen and progesterone and stop releasing eggs, and you can no longer get pregnant. The Office on Women's Health says the change usually happens between ages 45 and 55, and the average age in the US is 52. The time before it, perimenopause, usually begins in the mid to late 40s, though some women notice symptoms in their mid to late 30s. It lasts about four years on average but can last up to 10, and your periods may become irregular while you can still get pregnant. Symptoms vary from person to person, and the hormone changes can affect sleep, mood, hair, skin, bones, joints, muscles, bladder, genital tissue and weight. Hot flashes and night sweats last 7 to 12 years on average. Your provider can usually tell whether you are in perimenopause from your age, your symptoms and changes in your periods; blood hormone tests are not usually needed. If your periods stop before age 40, you can ask about testing. Vaginal bleeding after menopause is not normal: see a provider right away. You can still get pregnant during perimenopause, so talk with your provider about birth control, and know that menopause does not protect you from sexually transmitted infections."
     }
   },
   "prenatal-care": {
@@ -118,7 +120,7 @@ function womensHealthAnswer(id, { us = true, country = null } = {}) {
   }
   if (!version) return null;
   const sources = version.sources.map(key => allSources[key]);
-  const cited = sources.length ? ` Sources: ${sources.map(source => source.name).join("; ")} (checked ${CHECKED_ON}).` : "";
+  const cited = sources.length ? ` Sources: ${sources.map(source => source.name).join("; ")} (checked ${version.checkedOn || CHECKED_ON}).` : "";
   return { topic: id, title: topic.title, text: `${version.text}${cited} ${CLOSING}`, sources };
 }
 

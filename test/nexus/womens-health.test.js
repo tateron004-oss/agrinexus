@@ -28,13 +28,14 @@ test("urgent, unsafe, medicine, worker, record and business sentences are never 
 });
 
 test("every answer, in the US, WHO and Kenya versions, names pages on official sites and the date, says it is general information, and gives no dose or diagnosis", () => {
-  const official = /^https:\/\/(?:www\.)?(?:cdc\.gov|womenshealth\.gov|nimh\.nih\.gov|uspreventiveservicestaskforce\.org|988lifeline\.org|findahealthcenter\.hrsa\.gov|opa\.hhs\.gov|opa-fpclinicdb\.hhs\.gov|healthcare\.gov|thehotline\.org|who\.int|afro\.who\.int|africa\.unwomen\.org|health\.go\.ke)\//;
+  const official = /^https:\/\/(?:www\.)?(?:cdc\.gov|womenshealth\.gov|nimh\.nih\.gov|uspreventiveservicestaskforce\.org|988lifeline\.org|findahealthcenter\.hrsa\.gov|opa\.hhs\.gov|opa-fpclinicdb\.hhs\.gov|reproductivehealthservices\.gov|healthcare\.gov|thehotline\.org|who\.int|afro\.who\.int|africa\.unwomen\.org|health\.go\.ke)\//;
   for (const id of ALL) for (const options of [{ us: true }, { us: false }, { us: false, country: "ke" }]) {
     const answer = guide.womensHealthAnswer(id, options);
     assert.ok(answer, `${id} ${JSON.stringify(options)}`); assert.equal(answer.topic, id);
     for (const source of answer.sources) assert.match(source.url, official, `${id}: ${source.url}`);
     if (id !== "womens-health-overview" && !(id === "finding-care" && !options.us && !options.country)) assert.ok(answer.sources.length >= 1, id);
-    if (answer.sources.length) assert.match(answer.text, /\(checked 13 October 2026\)/, id);
+    // (the menopause page changed on 19 October 2026 and was read again that day: its answer carries that date)
+    if (answer.sources.length) assert.match(answer.text, id === "menopause" && options.us ? /\(checked 19 October 2026\)/ : /\(checked 13 October 2026\)/, id);
     assert.match(answer.text, /This is general information, not medical advice\. For your own health, talk to a doctor, nurse or health worker\.$/, id);
     assert.doesNotMatch(answer.text, /\byou have (?:cancer|an infection|a condition|endometriosis|pcos)\b|\byou should take\b|\btake \d+ ?(?:mg|tablets?|pills?)\b|\b\d+ ?mg\b|\bI recommend\b|\bI diagnose\b/i, id);
   }

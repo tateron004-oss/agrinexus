@@ -29,7 +29,7 @@ test("which questions reach which topic, and which are records, drafts or other 
 });
 
 test("every topic has a plain answer, official sources with web addresses, the date checked, and the warning", () => {
-  const OFFICIAL = /^https:\/\/(?:www\.)?(?:[a-z0-9-]+\.)*(?:va|veteranscrisisline|vetcenter\.va|dol|sba|acl|medicare|shiphelp|ssa|ojp|ftc|ed|988lifeline|crisistextline|childhelphotline|1800runaway|thetrevorproject|humantraffickinghotline|jobcorps|irs|nasconet|sam|grants|councilofnonprofits|benefitscheckup|usa|healthcare|cdc)\.(?:gov|org|net)\//;
+  const OFFICIAL = /^https:\/\/(?:www\.)?(?:[a-z0-9-]+\.)*(?:va|veteranscrisisline|vetcenter\.va|dol|sba|acl|medicare|shiphelp|ssa|ojp|ftc|ed|988lifeline|crisistextline|childhelphotline|1800runaway|thetrevorproject|humantraffickinghotline|jobcorps|irs|nasconet|sam|grants|studentaid|councilofnonprofits|benefitscheckup|usa|healthcare|cdc)\.(?:gov|org|net)\//;
   assert.ok(Object.keys(guide.TOPICS).length >= 30);
   for (const id of Object.keys(guide.TOPICS)) {
     const answer = guide.communityAnswer(id);

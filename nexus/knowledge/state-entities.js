@@ -16,10 +16,10 @@ const STATES = DATA.states || [];
 const BY_CODE = Object.freeze(Object.fromEntries(STATES.map(record => [record.code, record])));
 
 const SOURCES = Object.freeze({
-  sbaRegister: { name: "SBA: register your business", url: "https://www.sba.gov/business-guide/launch-your-business/register-your-business" },
-  sbaStructure: { name: "SBA: choose a business structure", url: "https://www.sba.gov/business-guide/launch-your-business/choose-business-structure" },
+  sbaRegister: { name: "SBA: register your business", url: "https://www.sba.gov/counseling/launch-your-business/#register-business" },
+  sbaStructure: { name: "SBA: choose a business structure", url: "https://www.sba.gov/counseling/launch-your-business/#business-structure" },
   irsExempt: { name: "IRS: applying for tax-exempt status", url: "https://www.irs.gov/charities-non-profits/applying-for-tax-exempt-status" },
-  irsEin: { name: "IRS: apply for an employer identification number (EIN)", url: "https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online" }
+  irsEin: { name: "IRS: apply for an employer identification number (EIN)", url: "https://www.irs.gov/businesses/small-businesses-self-employed/get-an-employer-identification-number" }
 });
 
 const STATE_NAMES = Object.freeze(STATES.map(record => record.name));

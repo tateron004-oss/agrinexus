@@ -16,7 +16,8 @@ const SOURCES = Object.freeze({
   ftcCyber: { name: "FTC: Cybersecurity for Small Business (September 2025)", url: "https://www.ftc.gov/business-guidance/small-businesses/cybersecurity" },
   ftcAi: { name: "FTC: Artificial Intelligence", url: "https://www.ftc.gov/industry/technology/artificial-intelligence" },
   ftcReviews: { name: "FTC: The Consumer Reviews and Testimonials Rule, Questions and Answers", url: "https://www.ftc.gov/business-guidance/resources/consumer-reviews-testimonials-rule-questions-answers" },
-  ftcDeepfakes: { name: "FTC business blog: Chatbots, deepfakes, and voice clones: AI deception for sale (20 March 2023)", url: "https://www.ftc.gov/business-guidance/blog/2023/03/chatbots-deepfakes-voice-clones-ai-deception-sale" },
+  // (the FTC business blog post on deepfakes and voice clones is no longer on the FTC's site; this consumer alert says the same thing about cloned voices and verifying a request)
+  ftcDeepfakes: { name: "FTC consumer alert: Scammers use AI to enhance their family emergency schemes (20 March 2023)", url: "https://consumer.ftc.gov/consumer-alerts/2023/03/scammers-use-ai-enhance-their-family-emergency-schemes" },
   ftcPrivacyAi: { name: "FTC: AI Companies: Uphold Your Privacy and Confidentiality Commitments (January 2024)", url: "https://www.ftc.gov/policy/advocacy-research/tech-at-ftc/2024/01/ai-companies-uphold-your-privacy-confidentiality-commitments" },
   nistQuick: { name: "NIST SP 1300: Cybersecurity Framework 2.0 Small Business Quick-Start Guide (February 2024)", url: "https://csrc.nist.gov/pubs/sp/1300/final" }
 });
@@ -29,7 +30,7 @@ const TOPICS = Object.freeze({
   },
   "ai-scams": {
     title: "AI scams and \"AI income\" offers",
-    text: "Be careful with \"AI\" offers and AI-made messages. The FTC has taken action against sellers of \"AI-powered\" business opportunities that promised big earnings or passive income to small businesses and entrepreneurs: Air AI and its owners agreed in March 2026 to be banned from marketing business opportunities, and other operators of AI-linked online store schemes have been banned too. Warning signs are guaranteed earnings, passive income from a tool, pressure to pay up front, and refund promises that are hard to use. The FTC also warns that AI can make scams more convincing, including fake voices and fake messages: if someone asks for money, a wire transfer or account details, verify the request through a phone number or contact you already know before you act. Report scams at ReportFraud.ftc.gov.",
+    text: "Be careful with \"AI\" offers and AI-made messages. The FTC has taken action against sellers of \"AI-powered\" business opportunities that promised big earnings or passive income to small businesses and entrepreneurs: Air AI and its owners agreed in March 2026 to be banned from marketing business opportunities, and other operators of AI-linked online store schemes have been banned too. Warning signs are guaranteed earnings, passive income from a tool, pressure to pay up front, and refund promises that are hard to use. The FTC also warns that AI can make scams more convincing, including cloned voices: if someone asks for money, a wire transfer or account details, verify the request through a phone number or contact you already know before you act. Report scams at ReportFraud.ftc.gov.",
     sources: ["ftcAi", "ftcDeepfakes", "ftcCyber"]
   },
   "fake-reviews": {

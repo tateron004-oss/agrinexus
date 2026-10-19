@@ -25,7 +25,7 @@ test("every topic has a plain answer; outside sources are official pages with th
   for (const id of Object.keys(tech.TOPICS)) {
     const answer = tech.technologyAnswer(id);
     assert.equal(answer.topic, id);
-    for (const source of answer.sources) { assert.match(source.url, /^https:\/\/(?:www\.)?(?:ftc\.gov|csrc\.nist\.gov)\//, `${id}: ${source.url}`); assert.ok(source.name); }
+    for (const source of answer.sources) { assert.match(source.url, /^https:\/\/(?:www\.|consumer\.)?(?:ftc\.gov|csrc\.nist\.gov)\//, `${id}: ${source.url}`); assert.ok(source.name); }
     assert.match(answer.text, /This is general information, not legal, tax, financial or security-audit advice, and things change, so confirm on the official site\. I cannot buy, publish, file or change anything for you\.$/, id);
     if (answer.sources.length) assert.match(answer.text, new RegExp(`\\(checked ${tech.CHECKED_ON}\\)`), id);
   }

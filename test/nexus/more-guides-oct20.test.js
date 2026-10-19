@@ -141,7 +141,7 @@ test("the page asks the server about a spoken walkthrough of a United States pro
 
 test("the new pages are in the weekly source check, and the source page lists them", () => {
   const urls = collectSources().map(entry => entry.url);
-  for (const url of ["https://bpd.cdn.sos.ca.gov/bizfile/bizfile-brochure.pdf", "https://bizfileonline.sos.ca.gov/", "https://www.calgold.ca.gov/", "https://certifications.sba.gov/", "https://www.grants.gov/quick-start-guide/applicants", "https://nmsdc.org/about/operations/regional-affiliates/"]) assert.ok(urls.includes(url), url);
+  for (const url of ["https://bpd.cdn.sos.ca.gov/bizfile/bizfile-brochure.pdf", "https://bizfileonline.sos.ca.gov/", "https://www.calgold.ca.gov/", "https://certifications.sba.gov/", "https://www.grants.gov/quick-start-guide/applicants", "https://nmsdc.org/about/regional-affiliates/"]) assert.ok(urls.includes(url), url);
   const { sourcesPageAnswer } = require("../../nexus/knowledge/sources-page.js");
   const page = sourcesPageAnswer("show me your sources for small business").sources.map(source => source.url);
   assert.ok(page.includes("https://bpd.cdn.sos.ca.gov/bizfile/bizfile-brochure.pdf") && page.includes("https://www.grants.gov/quick-start-guide/applicants"));
