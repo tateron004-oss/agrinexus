@@ -28,8 +28,17 @@ const SOURCES = Object.freeze({
   whoPostRape: { name: "WHO: availability of post-rape care (indicator definition)", url: "https://www.who.int/data/gho/indicator-metadata-registry/imr-details/availability-of-post-rape-care" },
   childlineKenya: { name: "Childline Kenya: the child helpline 116", url: "https://www.childlinekenya.co.ke/" },
   unwomen1195: { name: "UN Women Africa: Kenya's national toll-free helpline 1195", url: "https://africa.unwomen.org/en/stories/news/2024/10/kenyas-national-toll-free-helpline-1195-a-lifeline-for-gender-based-violence-survivors" },
-  childHelplineDirectory: { name: "Child Helpline International: find your local child helpline", url: "https://www.childhelplineinternational.org/helplines/" }
+  childHelplineDirectory: { name: "Child Helpline International: find your local child helpline", url: "https://www.childhelplineinternational.org/helplines/" },
+  ncaModel: { name: "National Children's Alliance: how a Children's Advocacy Center works", url: "https://www.nationalchildrensalliance.org/cac-model/" },
+  ncaFind: { name: "National Children's Alliance: find a Children's Advocacy Center near you", url: "https://www.nationalchildrensalliance.org/nca-members/" },
+  hrsaFind: { name: "HRSA: find a health center near you", url: "https://findahealthcenter.hrsa.gov/" }
 });
+
+// Finding help near the family, United States only: the two official finders, read on CHECKED_ON. Kenya and the rest of Africa have none here, because no official finder there could be opened and read; the child helplines and the
+// health facility are the way. National Children's Alliance says that when police or child protective services believe a child may be experiencing abuse, a caregiver or other safe adult brings the child to a Children's Advocacy Center, where the
+// child tells their story once to a trained interviewer, and that centers offer therapy, medical exams, courtroom preparation and victim advocacy. HRSA says it funds about 1,400 health centers, with more than 16,000 service sites, in every state.
+const NEAR_YOU_CAC = " Near you: the National Children's Alliance says a Children's Advocacy Center is a child-focused place where, when police or child protective services believe a child may be experiencing abuse, a caregiver or other safe adult brings the child, who tells their story once to a trained interviewer; centers offer therapy, medical exams, courtroom preparation and victim advocacy. Its finder shows the centers near you.";
+const NEAR_YOU_HEALTH = " For health care near you, HRSA funds about 1,400 health centers, with more than 16,000 service sites, in every state; its Find a Health Center tool shows the nearest. Ask the center about cost before you go.";
 
 // what a person outside the United States is told where a number is concerned: Kenya's two lines (read from Childline Kenya and UN Women), and for any other country the directory of child helplines
 const KENYA_LINES = " In Kenya, Childline Kenya, the national child helpline, is 116: it is free from a mobile phone, open 24 hours, and takes calls from children and from adults, who can also report on a child's behalf, confidentially and anonymously; it can also be reached by call or text on 0724 555 251, 0725 352 107 or 0732 263 554, or by WhatsApp on +254 722 116 116. Childline Kenya says it gives counselling and refers children to child protection services, medical support, legal aid, rescue and temporary shelter. Kenya's national helpline 1195 is also toll-free and open 24 hours, with trained counsellors; UN Women says it can connect you with shelters, legal aid, health providers and the police.";
@@ -110,6 +119,12 @@ const TOPICS = Object.freeze({
   }
 });
 
+const NEAR_YOU = Object.freeze({
+  "child-tells-you": { text: `${NEAR_YOU_CAC}${NEAR_YOU_HEALTH}`, sources: ["ncaModel", "ncaFind", "hrsaFind"] },
+  "get-help-now": { text: NEAR_YOU_CAC, sources: ["ncaModel", "ncaFind"] },
+  "young-girl-pregnant": { text: `${NEAR_YOU_HEALTH}${NEAR_YOU_CAC}`, sources: ["hrsaFind", "ncaModel", "ncaFind"] }
+});
+
 const CLOSING = "This is general information, not medical or legal advice, and it does not replace a doctor, a child protection service or the police. If a child may be in danger, get help now.";
 
 function parentsGuideAnswer(id, { us = true, country = null } = {}) {
@@ -118,9 +133,11 @@ function parentsGuideAnswer(id, { us = true, country = null } = {}) {
   const version = us ? topic.us : topic.who;
   if (!version) return null;
   const kenya = !us && country === "ke" && topic.kenya ? topic.kenya : null;
-  const keys = [...version.sources, ...(kenya ? kenya.sources : [])];
+  // (United States only; see NEAR_YOU_CAC)
+  const near = us ? NEAR_YOU[id] : null;
+  const keys = [...version.sources, ...(kenya ? kenya.sources : []), ...(near ? near.sources : [])];
   const sources = keys.map(key => SOURCES[key]);
-  const body = `${version.text}${kenya ? kenya.text : ""}`;
+  const body = `${version.text}${kenya ? kenya.text : ""}${near ? near.text : ""}`;
   const cited = sources.length ? ` Sources: ${sources.map(source => source.name).join("; ")} (checked ${CHECKED_ON}).` : "";
   return { topic: id, title: topic.title, text: `${body}${cited} ${CLOSING}`, sources };
 }

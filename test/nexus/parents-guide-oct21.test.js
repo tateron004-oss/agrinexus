@@ -33,7 +33,7 @@ test("a child speaking for themselves, harm to a child or to oneself, records, a
     "How do I talk to my boss about a raise?", "How do I talk to my daughter about her homework?", "What are the signs of diabetes?", "Log that my daughter had her period", "My patients who were abused", "Who do I call about a broken pipe?", "What is child support?", "", "x".repeat(400)]) assert.equal(topics.parentsTopic(text), null, text);
 });
 
-const official = /^https:\/\/(?:www\.)?(?:cdc\.gov|childhelphotline\.org|acf\.gov|unicef\.org|who\.int|childlinekenya\.co\.ke|africa\.unwomen\.org|childhelplineinternational\.org)\//;
+const official = /^https:\/\/(?:www\.)?(?:cdc\.gov|childhelphotline\.org|acf\.gov|unicef\.org|who\.int|childlinekenya\.co\.ke|africa\.unwomen\.org|childhelplineinternational\.org|nationalchildrensalliance\.org|findahealthcenter\.hrsa\.gov)\//;
 
 test("every answer, in the United States, WHO and Kenya versions, names official pages that open, the date read and the closing line, and gives no legal or medical instruction beyond the pages", () => {
   for (const id of ALL) for (const options of [{ us: true }, { us: false }, { us: false, country: "ke" }]) {
@@ -79,7 +79,7 @@ const ask = (text, timeZone, country) => planner().plan({ command: { text, tenan
 test("through the planner, with no AI model: the United States version in the US, the Africa version elsewhere, Kenya's lines in Kenya; a child speaking for themselves and an adult are not taken; the plain 'who do I call' about a child is this guide's", async () => {
   const us = await ask("My daughter told me she was raped", "America/Chicago");
   assert.equal(us.knowledge, "parents-guide:child-tells-you"); assert.deepEqual(us.steps, []); assert.equal(us.guardrail, "child-safety-information");
-  assert.ok(us.sources.length >= 3 && us.sources.every(source => /cdc\.gov|childhelphotline\.org|acf\.gov|who\.int/.test(source.url))); assert.match(us.response, /checked 19 October 2026/); assert.match(us.response, /call 911/);
+  assert.ok(us.sources.length >= 3 && us.sources.every(source => /cdc\.gov|childhelphotline\.org|acf\.gov|who\.int|nationalchildrensalliance\.org|findahealthcenter\.hrsa\.gov/.test(source.url))); assert.match(us.response, /checked 19 October 2026/); assert.match(us.response, /call 911/);
   const lagos = await ask("My daughter told me she was raped", "Africa/Lagos");
   assert.equal(lagos.knowledge, "parents-guide:child-tells-you"); assert.doesNotMatch(lagos.response, /call 911|Childline Kenya, the national/);
   const kenya = await ask("My daughter is 11 and pregnant. Who do I call?", "Africa/Nairobi", "ke");
@@ -110,9 +110,9 @@ test("on the page and the server: the parents' question is the page's own and th
   assert.ok(server.includes('const { parentsTopic } = require("./public/kyro-parents-topics.js");'));
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  const tag = '<script src="/kyro-parents-topics.js?v=kyro-parents-topics-2"></script>';
+  const tag = '<script src="/kyro-parents-topics.js?v=kyro-parents-topics-3"></script>';
   assert.ok(index.includes(tag) && index.indexOf(tag) < index.search(/<script[^>]+src="\/app\.js/), "before app.js");
-  assert.ok(sw.includes("`/kyro-parents-topics.js?v=kyro-parents-topics-2`"));
+  assert.ok(sw.includes("`/kyro-parents-topics.js?v=kyro-parents-topics-3`"));
 });
 
 test("when a person says a child is being abused, the safety response keeps the Childhelp line, adds Kenya's 116, and points to the guide", () => {
@@ -163,4 +163,26 @@ test("on the page, a parent's question that only the local abuse card would have
   const skip = app.indexOf("if (kyroParentsAbuseQuestion(text)) return false;", card);
   const build = app.indexOf("runtime.buildSupportPacket(text", card);
   assert.ok(card > 0 && skip > card && skip < build, "the skip comes before the local card is built");
+});
+
+// Finding help near the family: the two official United States finders, read on 19 October 2026. Nothing for Kenya or elsewhere: no official finder there could be opened and read.
+test("in the United States a parent is also pointed to the Children's Advocacy Center finder and the health center finder, with the pages they came from; elsewhere nothing is invented", () => {
+  const cac = /National Children's Alliance says a Children's Advocacy Center is a child-focused place where, when police or child protective services believe a child may be experiencing abuse, a caregiver or other safe adult brings the child/;
+  const hrsa = /HRSA funds about 1,400 health centers, with more than 16,000 service sites, in every state/;
+  for (const [id, wantCac, wantHrsa] of [["child-tells-you", true, true], ["get-help-now", true, false], ["young-girl-pregnant", true, true]]) {
+    const answer = guide.parentsGuideAnswer(id, { us: true });
+    assert.equal(cac.test(answer.text), wantCac, id); assert.equal(hrsa.test(answer.text), wantHrsa, id);
+    const urls = answer.sources.map(source => source.url);
+    assert.ok(urls.includes("https://www.nationalchildrensalliance.org/nca-members/") && urls.includes("https://www.nationalchildrensalliance.org/cac-model/"), id);
+    assert.equal(urls.includes("https://findahealthcenter.hrsa.gov/"), wantHrsa, id);
+    const added = answer.text.slice(answer.text.indexOf("Near you:"), answer.text.indexOf(" Sources:"));
+    assert.ok(added.length > 100, id); assert.doesNotMatch(added, /\bfree\b|no cost|sliding|afford|insur/i, "no claim about cost that the pages did not make");
+  }
+  for (const id of ["parents-overview", "talk-with-your-child", "signs-of-abuse"]) assert.doesNotMatch(guide.parentsGuideAnswer(id, { us: true }).text, /Children's Advocacy Center is|HRSA funds/, id);
+  for (const options of [{ us: false }, { us: false, country: "ke" }, { us: false, country: "ng" }]) for (const id of ALL) {
+    const answer = guide.parentsGuideAnswer(id, options);
+    if (answer) assert.doesNotMatch(answer.text, /Children's Advocacy|HRSA|health center/i, `${id} ${JSON.stringify(options)}: no United States finder for someone elsewhere`);
+  }
+  for (const text of ["Is there a place near me that helps a child who was abused?", "Where is a Children's Advocacy Center in my area for my daughter who was molested?", "Where can I take my daughter near me, she was raped"]) assert.equal(topics.parentsTopic(text), "get-help-now", text);
+  for (const text of ["Find a clinic near me", "Is there a daycare near me", "Where is the nearest pharmacy"]) assert.equal(topics.parentsTopic(text), null, text);
 });
