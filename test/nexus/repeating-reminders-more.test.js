@@ -44,7 +44,7 @@ test("every N hours runs inside a window (8 am to 8 pm unless the person says an
 });
 
 test("what stays unsupported is still said plainly, and the plain cases are unchanged", () => {
-  for (const text of ["remind me every few days to call mama", "remind me every 3 months to service the tractor", "remind me yearly to renew the licence"]) assert.deepEqual(readRepeatRequest(text), { action: "unsupported" }, text);
+  for (const text of ["remind me every few days to call mama", "remind me every minute to blink"]) assert.deepEqual(readRepeatRequest(text), { action: "unsupported" }, text);
   add("remind me every morning at 8 to check the water pump", "check the water pump", ["08:00"], "daily");
   add("Every Monday at 9 remind me to call the buyer", "call the buyer", ["09:00"], [1]);
   assert.deepEqual(readRepeatRequest("remind me every other day"), { action: "need-task" });

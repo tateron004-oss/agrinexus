@@ -15,12 +15,14 @@ const { addDays, weekdayOf } = require("../personal/dates.js");
 // "days" says which days a reminder runs: "daily", "weekdays", a list of weekdays ([1, 4]), or one of
 //   { unit: "day",   every: N, anchor }                     every other day / every 3 days, counted from the anchor day
 //   { unit: "week",  every: N, weekdays: [..], anchor }     every other Monday / every 2 weeks on Friday
-//   { unit: "month", every: 1, dayOfMonth, last }           on the 15th of every month (a shorter month uses its last day)
+//   { unit: "month", every: N, dayOfMonth, last, anchor }   on the 15th of every month, or of every Nth month counted from the anchor (a shorter month uses its last day)
+//   { unit: "year",  every: 1, month, dayOfMonth }          on 15 October every year (29 February uses 28 February in a year without one)
 const CAP_WORDS = 20;
 const cap = text => (text ? text.charAt(0).toUpperCase() + text.slice(1) : text);
 
 const dayList = days => { const names = days.map(number => cap(DAY_NAMES[number])); return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`; };
 const ordinal = number => `${number}${[11, 12, 13].includes(number % 100) ? "th" : { 1: "st", 2: "nd", 3: "rd" }[number % 10] || "th"}`;
+const MONTH_WORDS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const isRule = days => days && typeof days === "object" && !Array.isArray(days);
 
 // "every day", "every other Monday", "on the 15th of every month": the days part of a reminder in words.
@@ -31,7 +33,11 @@ function daysWords(days) {
   if (isRule(days)) {
     if (days.unit === "day") return days.every === 2 ? "every other day" : `every ${days.every} days`;
     if (days.unit === "week") return days.every === 2 ? `every other ${dayList(days.weekdays)}` : `every ${days.every} weeks on ${dayList(days.weekdays)}`;
-    if (days.unit === "month") return days.last ? "on the last day of every month" : `on the ${ordinal(days.dayOfMonth)} of every month`;
+    if (days.unit === "month") {
+      const each = days.every === 2 ? "every other month" : days.every > 2 ? `every ${days.every} months` : "every month";
+      return days.last ? `on the last day of ${each}` : `on the ${ordinal(days.dayOfMonth)} of ${each}`;
+    }
+    if (days.unit === "year") return `every year on ${days.dayOfMonth} ${MONTH_WORDS[days.month - 1]}`;
   }
   return "every day";
 }
@@ -52,7 +58,7 @@ function firstDay(zone, now, firstTime) {
   return target !== null && clock.minutes < target ? clock.day : addDays(clock.day, 1);
 }
 function withAnchor(days, zone, now, firstTime) {
-  if (!isRule(days) || days.unit === "month") return days;
+  if (!isRule(days) || days.unit === "year" || (days.unit === "month" && !(days.every > 1))) return days;
   let anchor = firstDay(zone, now, firstTime);
   if (days.unit === "week") for (let guard = 0; guard < 7 && !days.weekdays.includes(weekdayOf(anchor)); guard += 1) anchor = addDays(anchor, 1);
   return { ...days, anchor };
@@ -66,11 +72,12 @@ async function repeatReminderTurn({ text, store, tenantId, userId, timeZone, now
   try {
     const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
     switch (request.action) {
-      case "unsupported": return 'I can repeat a reminder every day, every weekday, on named days, every other day or every 3 days, every other week, on a day of the month, every 2 hours, or several times a day, for example "remind me every morning at 8 to check the pump". I can\'t do yearly, every few months, or vague repeats like "every few days". Nothing was set.';
+      case "unsupported": return 'I can repeat a reminder every day, every weekday, on named days, every other day or every 3 days, every other week, on a day of the month, every 3 months, every year on a date, every 2 hours, or several times a day, for example "remind me every morning at 8 to check the pump". I can\'t do yearly, every few months, or vague repeats like "every few days". Nothing was set.';
       case "unsupported-nth": return 'I can\'t do "every first Thursday" or "the last Friday of the month" yet. I can remind you on a date each month ("remind me on the 5th of every month to pay the loan") or every week on a day ("remind me every Thursday at 9 to pay the loan"). Nothing was set.';
       case "unsupported-two": return 'I can set one time at a time for a single day. Say it as two reminders, for example "remind me tomorrow morning to check the pump" and then "remind me tomorrow evening to check the pump". For every day, say "remind me every morning and evening to check the pump". Nothing was set.';
       case "need-times": return `You said ${request.count === 2 ? "twice" : request.count === 3 ? "three times" : "four times"} a day with one time. Which ${request.count} times? For example, say "remind me ${request.count === 2 ? "twice a day at 9 and 5" : "three times a day at 8, 1 and 6"} to take my pills". Nothing was set yet.`;
       case "need-day": return 'Which day of the week? For example, say "remind me every Monday at 9 to call the buyer". Nothing was set yet.';
+      case "need-date": return 'Which date each year? For example, say "remind me every year on 15 October to renew the licence". Nothing was set yet.';
       case "need-day-of-month": return 'Which day of the month? For example, say "remind me on the 15th of every month to pay rent". Nothing was set yet.';
       case "need-task": return 'What should I remind you about? For example, say "remind me every morning at 8 to check the pump". Nothing was set yet.';
       case "add": {
@@ -139,7 +146,18 @@ function runsOn(days, day) {
       const weeks = Math.round(daysBetween(mondayOf(days.anchor), mondayOf(day)) / 7);
       return weeks >= 0 && weeks % days.every === 0;
     }
-    if (days.unit === "month") { const last = daysInMonth(day); const want = days.last ? last : Math.min(days.dayOfMonth, last); return Number(day.slice(8, 10)) === want; }
+    if (days.unit === "month") {
+      const last = daysInMonth(day); const want = days.last ? last : Math.min(days.dayOfMonth, last);
+      if (Number(day.slice(8, 10)) !== want) return false;
+      if (!(days.every > 1)) return true;
+      if (!days.anchor || day < days.anchor) return false;
+      const months = (Number(day.slice(0, 4)) - Number(days.anchor.slice(0, 4))) * 12 + (Number(day.slice(5, 7)) - Number(days.anchor.slice(5, 7)));
+      return months >= 0 && months % days.every === 0;
+    }
+    if (days.unit === "year") {
+      if (Number(day.slice(5, 7)) !== days.month) return false;
+      return Number(day.slice(8, 10)) === Math.min(days.dayOfMonth, daysInMonth(day));
+    }
   }
   return false;
 }

@@ -16,7 +16,7 @@ const PART_OF_DAY = { morning: 8, afternoon: 14, evening: 18, night: 21 };
 const ASKS_FOR_REMINDER = /\b(?:remind(?:\s+(?:me|us))?|reminder|notify me|alert me|nudge me|ping me)\b/i;
 // A question ABOUT reminders is not a request for one.
 const QUESTION = /^\s*(?:how|what|why|can i|could i|is it|is there|do you|does it|are you able)\b/i;
-const UNSUPPORTED = /\b(?:every (?:few|several)\b|every (?:year|minute)\b|each year\b|(?:yearly|annually)\b|every (?:other|second|third|fourth|\d+) (?:months?|minutes?|years?)\b|every \d+ (?:months?|minutes?|years?)\b|twice a (?:week|month)|(?:three|four|five|\d+) times (?:a|per|each) (?:week|month)\b|once a (?:month|year)\b|every (?:other|second|third|fourth) (?:morning|afternoon|evening|night)\b|every 1 (?:days?|weeks?|hours?)\b)/i;
+const UNSUPPORTED = /\b(?:every (?:few|several)\b|every minute\b|every (?:other|second|third|fourth|\d+) (?:minutes?|years?)\b|every \d+ (?:minutes?|years?)\b|twice a (?:week|month)|(?:three|four|five|\d+) times (?:a|per|each) (?:week|month)\b|every (?:other|second|third|fourth) (?:morning|afternoon|evening|night)\b|every 1 (?:days?|weeks?|hours?)\b)/i;
 const REPEAT_COUNT_WORD = { other: 2, second: 2, third: 3, fourth: 4 };
 const repeatCount = word => (/^\d+$/.test(String(word)) ? Number(word) : REPEAT_COUNT_WORD[String(word)] || 0);
 const MINUTES = (hour, minute) => hour * 60 + minute;
@@ -86,6 +86,11 @@ function windowTime(hourText, minuteText, suffixText, defaultAfternoonBelow = 7)
 }
 const WINDOW = /(?:from|between)\s+(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\s*(?:to|and|until|till|-)\s*(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?/i;
 const MONTH_DAY = /\b(?:on\s+)?the\s+(\d{1,2})(?:st|nd|rd|th)\b(?:\s+of\s+(?:every|each|the)\s+month)?|\b(?:every|each)\s+month\s+(?:on\s+)?(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?\b/i;
+const MONTH_NAMES = "january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept|sep|oct|nov|dec";
+const MONTH_NUMBER = name => { const index = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(String(name).slice(0, 3).toLowerCase()); return index < 0 ? 0 : index + 1; };
+const DAYS_IN = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+// "15 October", "15th of October", "October 15", "October 15th": a date with no year, for a reminder that comes back every year
+const YEAR_DATE = new RegExp(`\\b(?:on\\s+)?(?:the\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?(${MONTH_NAMES})\\b|\\b(?:on\\s+)?(${MONTH_NAMES})\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b`, "i");
 const LAST_DAY = /\b(?:on\s+)?the last day of (?:every|each|the) month\b|\blast day of (?:every|each) month\b/i;
 
 // Repeats beyond daily / weekdays / named days. Returns { kind, ... }, { action: "need-day" | "need-day-of-month" | "unsupported" } or null.
@@ -131,8 +136,27 @@ function readUnusualRepeat(lower) {
     if (!weekdays.length) return { action: "need-day" };
     return { kind: "interval", unit: "week", every, weekdays };
   }
+  // every other month, every 3 months, quarterly: on a day of the month, counted from the month the reminder is set
+  if ((m = /\bevery\s+(other|second|third|fourth|\d+)\s+months?\b|\b(quarterly)\b/.exec(lower))) {
+    const every = m[2] ? 3 : repeatCount(m[1]);
+    if (!(every >= 2 && every <= 12)) return { action: "unsupported" };
+    if (LAST_DAY.test(lower)) return { kind: "monthly", every, dayOfMonth: 31, last: true };
+    const day = MONTH_DAY.exec(lower);
+    const number = day ? Number(day[1] || day[2]) : 0;
+    if (number >= 1 && number <= 31) return { kind: "monthly", every, dayOfMonth: number, last: false };
+    return { action: "need-day-of-month" };
+  }
+  // every year, yearly, annually, once a year: on a date (a month and a day)
+  if (/\byearly\b|\bannually\b|\b(?:every|each)\s+year\b|\bonce a year\b/.test(lower)) {
+    const date = YEAR_DATE.exec(lower);
+    if (!date) return { action: "need-date" };
+    const month = MONTH_NUMBER(date[2] || date[3]);
+    const dayOfMonth = Number(date[1] || date[4]);
+    if (!(month >= 1 && dayOfMonth >= 1 && dayOfMonth <= DAYS_IN[month - 1])) return { action: "unsupported" };
+    return { kind: "yearly", month, dayOfMonth };
+  }
   // monthly, on the 15th of every month, on the last day of the month
-  if (/\bmonthly\b|\b(?:every|each)\s+month\b/.test(lower) || LAST_DAY.test(lower) || /\bof (?:every|each) month\b/.test(lower)) {
+  if (/\bmonthly\b|\b(?:every|each)\s+month\b|\bonce a month\b/.test(lower) || LAST_DAY.test(lower) || /\bof (?:every|each) month\b/.test(lower)) {
     if (LAST_DAY.test(lower)) return { kind: "monthly", dayOfMonth: 31, last: true };
     const day = MONTH_DAY.exec(lower);
     const number = day ? Number(day[1] || day[2]) : 0;
@@ -172,7 +196,7 @@ const NTH_WEEKDAY = new RegExp(`\\b(?:every|each)\\s+(?:first|last|1st)\\s+${DAY
 
 const STRIP = [
   new RegExp(TWO_PARTS.source, "ig"),
-  /\bevery\s+(?:other|second|third|fourth|\d+)\s+(?:days?|weeks?|hours?)\b/ig,
+  /\bevery\s+(?:other|second|third|fourth|\d+)\s+(?:days?|weeks?|hours?|months?)\b/ig, /\b(?:quarterly|yearly|annually|once a (?:month|year))\b/ig, /\b(?:every|each)\s+year\b/ig,
   new RegExp(`\\bevery\\s+(?:other|second|third|fourth|\\d+)\\s+${DAY_WORD}s?\\b`, "ig"),
   /\b(?:on\s+)?the\s+\d{1,2}(?:st|nd|rd|th)\b(?:\s+of\s+(?:every|each|the)\s+month)?/ig, /\b(?:on\s+)?the last day of (?:every|each|the) month\b/ig, /\bof (?:every|each) month\b/ig,
   /\b(?:every|each)\s+(?:month|hour)\b/ig, /\b(?:hourly|monthly|fortnightly|bi-?weekly)\b/ig,
@@ -236,7 +260,8 @@ function readRepeatRequest(rawText) {
   const unusual = readUnusualRepeat(lower);
   if (unusual?.action) return unusual;
   if (unusual) {
-    const task = taskFrom(text);
+    // (a date in the year belongs to the schedule only for a yearly reminder, so it is taken out of the task there and nowhere else)
+    const task = taskFrom(unusual.kind === "yearly" ? text.replace(new RegExp(YEAR_DATE.source, "ig"), " ") : text);
     if (!task) return { action: "need-task" };
     const part = (/\b(morning|afternoon|evening|night)\b/.exec(lower) || [])[1] || "";
     const calm = pickDays(lower);
@@ -251,7 +276,8 @@ function readRepeatRequest(rawText) {
       else if (!times.length) times = [clock(PART_OF_DAY[part] === undefined ? 9 : PART_OF_DAY[part], 0)];
     }
     const days = unusual.kind === "times" || unusual.kind === "hourly" ? outer
-      : unusual.kind === "monthly" ? { unit: "month", every: 1, dayOfMonth: unusual.dayOfMonth, last: unusual.last }
+      : unusual.kind === "monthly" ? { unit: "month", every: unusual.every || 1, dayOfMonth: unusual.dayOfMonth, last: unusual.last }
+      : unusual.kind === "yearly" ? { unit: "year", every: 1, month: unusual.month, dayOfMonth: unusual.dayOfMonth }
       : unusual.unit === "week" ? { unit: "week", every: unusual.every, weekdays: unusual.weekdays } : { unit: "day", every: unusual.every };
     return { action: "add", task, times: times.slice(0, 16), days, ...(unusual.kind === "hourly" ? { hourly: { every: unusual.every, from: unusual.from, to: unusual.to, defaultWindow: unusual.defaultWindow } } : {}) };
   }
