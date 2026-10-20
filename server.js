@@ -21783,23 +21783,33 @@ function stripTrailingArrivalTimeClause(value = "") {
 
 function nexusOpenAiNativeExtractRouteArgs(command = "", args = {}) {
   const text = String(command || "");
-  const between = text.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:\s+(?:via|through|stopping at|stopping by|by way of)\s+.+?)?(?:[.!?]|$)/i);
+  // (speech writes "to Nakuru, via Naivasha" with a comma: the stops clause may follow one)
+  const between = text.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:,?\s+(?:via|through|stopping at|stopping by|by way of)\s+.+?)?(?:[.!?]|$)/i);
   // "How far is Nakuru from Nairobi?" (the first place is where you end up) and "distance between Nairobi and Nakuru": two places without a "to". Found by the live voice audit, where the first was answered
   // "it needs the origin and destination written out clearly".
   const farFrom = between ? null : text.match(/\bhow far (?:is|are)\s+(?:it\s+)?(?:from\s+)?(.+?)\s+from\s+(.+?)[.!?\s]*$/i);
   const betweenAnd = between || farFrom ? null : text.match(/\b(?:distance|how far(?: is it)?)\s+between\s+(.+?)\s+and\s+(.+?)[.!?\s]*$/i);
   const viaMatch = text.match(/\b(?:via|through|stopping at|stopping by|by way of)\s+(.+?)(?:\s+to\s+|[.!?]|$)/i);
+  const splitStops = value => String(value || "").split(/\s*,\s*(?:and\s+)?|\s+and\s+/i).map(item => item.trim()).filter(Boolean);
   const waypoints = Array.isArray(args.waypoints) && args.waypoints.length
     ? args.waypoints
-    : (viaMatch ? viaMatch[1].split(/\s*,\s*|\s+and\s+/i) : []);
+    : (viaMatch ? splitStops(viaMatch[1]) : []);
+  // a place the model or the speech reader left with the stops attached ("Nakuru, via Naivasha") is split: the first part is the place, the rest are stops
+  const STOPS_TAIL = /[,\s]+(?:via|through|stopping at|stopping by|by way of)\s+(.+)$/i;
+  const cleanPlace = value => {
+    const tail = STOPS_TAIL.exec(String(value || ""));
+    if (!tail) return String(value || "");
+    if (!(Array.isArray(args.waypoints) && args.waypoints.length) && !viaMatch) waypoints.push(...splitStops(tail[1].replace(/[.!?\s]+$/, "")));
+    return String(value).slice(0, tail.index);
+  };
   return {
     // args.location is a generic single-place field shared with other tools
     // (e.g. weather) and can't reliably represent a multi-place route -- the
     // model sometimes packs "A; B; C" into it when it has no origin/
     // destination/waypoints fields to use instead, so it's tried last here,
     // after the command-text regex.
-    origin: sanitizePilotText(args.origin || args.from || args.start || (between ? stripTrailingArrivalTimeClause(between[1]) : "") || (farFrom ? farFrom[2] : "") || (betweenAnd ? betweenAnd[1] : "") || args.location, 160),
-    destination: sanitizePilotText(args.destination || args.to || args.end || (between ? stripTrailingArrivalTimeClause(between[2]) : "") || (farFrom ? farFrom[1] : "") || (betweenAnd ? betweenAnd[2] : ""), 160),
+    origin: sanitizePilotText(cleanPlace(args.origin || args.from || args.start || (between ? stripTrailingArrivalTimeClause(between[1]) : "") || (farFrom ? farFrom[2] : "") || (betweenAnd ? betweenAnd[1] : "") || args.location), 160),
+    destination: sanitizePilotText(cleanPlace(args.destination || args.to || args.end || (between ? stripTrailingArrivalTimeClause(between[2]) : "") || (farFrom ? farFrom[1] : "") || (betweenAnd ? betweenAnd[2] : "")), 160),
     waypoints: waypoints.map(item => sanitizePilotText(item, 160)).filter(Boolean).slice(0, 8)
   };
 }
