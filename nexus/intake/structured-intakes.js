@@ -2,6 +2,7 @@
 
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js");
 const { prBriefDocument, KEYS: PR_BRIEF_KEYS } = require("../knowledge/pr-brief.js");
+const { businessPlanDocument, KEYS: BUSINESS_PLAN_KEYS } = require("../knowledge/business-plan-doc.js");
 
 // A small, explicit allowlist turning a completed voice intake (public/kyro-voice-intake.js +
 // public/kyro-intake-forms.js) into a plan step, in exactly the shape nexus/brain/planner.js's
@@ -23,6 +24,13 @@ const STRUCTURED_INTAKES = Object.freeze({
     toolId: "documents.create",
     title: "Save your PR and events brief",
     keys: PR_BRIEF_KEYS
+  }),
+  // A one-page lean business plan (public/kyro-intake-forms.js "businessPlan"): built on the server from the answers only, word for word (nexus/knowledge/business-plan-doc.js), saved as a Word document.
+  "business-plan": Object.freeze({
+    application: "documents",
+    toolId: "documents.create",
+    title: "Save your business plan",
+    keys: BUSINESS_PLAN_KEYS
   })
 });
 
@@ -70,6 +78,17 @@ function structuredIntakePlan(intakeId, values) {
       riskTier: "low",
       clarification: null,
       steps: [{ clientStepId: "create-pr-brief", title: definition.title, toolId: definition.toolId, input: { title: made.title, content: made.content, format: "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }]
+    };
+  }
+  if (intakeId === "business-plan") {
+    const made = businessPlanDocument(input);
+    if (!made) throw new NexusRuntimeError("business_plan_incomplete", "A business plan needs what the business is and who its customers are.", 422);
+    return {
+      goal: made.title,
+      application: definition.application,
+      riskTier: "low",
+      clarification: null,
+      steps: [{ clientStepId: "create-business-plan", title: definition.title, toolId: definition.toolId, input: { title: made.title, content: made.content, format: "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }]
     };
   }
   const name = clean(input.name);

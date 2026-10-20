@@ -69,7 +69,7 @@ function loadGlue(overrides = {}) {
 test("kyro-voice-intake.js and kyro-intake-forms.js are registered for offline caching and load before app.js", () => {
   const html = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   assert.match(html, /<script src="\/kyro-voice-intake\.js\?v=kyro-voice-intake-1"><\/script>/);
-  assert.match(html, /<script src="\/kyro-intake-forms\.js\?v=kyro-intake-forms-2"><\/script>/);
+  assert.match(html, /<script src="\/kyro-intake-forms\.js\?v=kyro-intake-forms-3"><\/script>/);
   assert.ok(html.indexOf("kyro-voice-intake.js") < html.indexOf('src="/app.js'), "must load before app.js");
   assert.ok(html.indexOf("kyro-intake-forms.js") < html.indexOf('src="/app.js'), "must load before app.js");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
