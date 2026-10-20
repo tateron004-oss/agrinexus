@@ -17,7 +17,12 @@
   const MY_CHILD = new RegExp(`\\b(?:my|our)\\s+(?:[\\w-]+\\s+){0,3}${CHILD}\\b|\\b(?:my|our)\\s+\\d{1,2}[- ]?(?:years?|yrs?)?[- ]?old\\b`, "i");
   const ANY_CHILD = new RegExp(`\\b${CHILD}\\b`, "i");
   const YOUNG = /\b(?:(?:[5-9]|1[0-5])[- ]?(?:years?|yrs?)?[- ]?old|(?:is|was|turned|just turned|are) (?:[5-9]|1[0-5])\b|(?:five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen)(?:[- ]years?[- ]old)?|pre-?teens?|little girl|young girl|young daughter|only a (?:kid|child|girl)|a child)\b/i;
-  const ABUSE = /\b(?:rap(?:e|ed|ist)|molest\w*|incest|sexual(?:ly)? (?:abus\w+|assault\w*|exploit\w*|touch\w*)|sexual abuse|abus\w+|assault\w*|groom\w*|touched (?:her|him|them)|forced (?:her|him|them))\b|\btouch\w*\b.{0,20}\bsexual\w*|\bsexual\w*.{0,20}\btouch\w*/i;
+  const ABUSE = /\b(?:rap(?:e|ed|ist)|molest\w*|incest|sexual(?:ly)? (?:abus\w+|assault\w*|exploit\w*|touch\w*)|sexual abuse|abus\w+|assault\w*|groom\w*|forced (?:her|him|them))\b|\btouch\w*\b.{0,20}\bsexual\w*|\bsexual\w*.{0,20}\btouch\w*/i;
+
+  // A child's words as a parent repeats them, with no big word in them: "my daughter says her uncle touches her", "my son told me his coach makes him take his clothes off".
+  // ("touches her hair" and "touched her toys" are not this: the words after "her" must end the sentence or name the body.)
+  const SAID_IT = /\b(?:tell|tells|told|telling|said|says|confided|opened up|admitted|complain\w*)\b/i;
+  const TOUCHING = /\b(?:touch(?:es|ed|ing)|fondl(?:es|ed|ing)|grop(?:es|ed|ing))\s+(?:her|him|them)\s*(?:$|[.,!?;]|in\b|on (?:her|his|their) (?:private|body|chest|breasts?|bottom)|inappropriately|where|down|there|at night)|\b(?:forces?|forced|makes?|made)\s+(?:her|him|them)\s+(?:to\s+)?(?:have sex|sleep with|take (?:off )?(?:her|his|their) clothes|undress|touch)|\b(?:private parts|privates)\b/i;
 
   const POSITIVE = [
     // a young girl is pregnant: the parent's question or statement
@@ -25,7 +30,7 @@
     // signs of abuse or grooming (before "a child has told": "how do I know if my child is being abused?" is a question about signs)
     ["signs-of-abuse", text => ABUSE.test(text) && ANY_CHILD.test(text) && /\b(?:signs?|symptoms?|warning|red flags?|how (?:do|can|would|will) (?:i|you|we) (?:know|tell|spot|recogni[sz]e|find out)|is (?:my|the|a) [\w ]{0,20}being|could (?:my|the) [\w ]{0,20}be)\b/i.test(text), true],
     // a child has told, or a parent says a child was abused
-    ["child-tells-you", text => MY_CHILD.test(text) && (/\b(?:tell|tells|told|telling|said|says|disclos\w+|confided|opened up|admitted)\b/i.test(text) && ABUSE.test(text) || new RegExp(`\\b(?:my|our)\\s+(?:[\\w-]+\\s+){0,3}${CHILD}\\s+(?:was|got|has been|is being|is)\\s+(?:rap(?:e|ed)|molest\\w*|sexually (?:abus\\w+|assault\\w*)|abus\\w+|assault\\w*|touched)`, "i").test(text) || /\bwhat (?:do|should|can) (?:i|we) do if\b.{0,40}\b(?:abus\w+|molest\w+|rap(?:e|ed))\b/i.test(text)), false],
+    ["child-tells-you", text => MY_CHILD.test(text) && (/\b(?:tell|tells|told|telling|said|says|disclos\w+|confided|opened up|admitted)\b/i.test(text) && ABUSE.test(text) || new RegExp(`\\b(?:my|our)\\s+(?:[\\w-]+\\s+){0,3}${CHILD}\\s+(?:was|got|has been|is being|is)\\s+(?:rap(?:e|ed)|molest\\w*|sexually (?:abus\\w+|assault\\w*)|abus\\w+|assault\\w*|touched)`, "i").test(text) || SAID_IT.test(text) && TOUCHING.test(text) || /\bwhat (?:do|should|can) (?:i|we) do if\b.{0,40}\b(?:abus\w+|molest\w+|rap(?:e|ed))\b/i.test(text)), false],
     // who to call, where to report
     ["get-help-now", text => ANY_CHILD.test(text) && ABUSE.test(text) && /\b(?:who (?:do|can|should|would) (?:i|we) (?:call|contact|report|tell|ask)|where (?:do|can|should) (?:i|we) (?:call|go|report|get help|find help)|how (?:do|can|should) (?:i|we) report|helplines?|hotlines?|child protect\w+|cps|report(?:ing)? (?:child )?abuse)\b/i.test(text), true],
     // talking with a child about the body, growing up, relationships and safety
