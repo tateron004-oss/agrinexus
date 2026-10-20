@@ -52,22 +52,41 @@ async function fetchJson(fetchImpl, url, headers = {}) {
   return payload;
 }
 
-async function geocodeLocation(locationText, fetchImpl) {
+// Places already looked up are remembered for a day, so a route that names the same town again (or a town several people ask about) does not ask the free service again.
+const GEOCODE_CACHE = new Map();
+const GEOCODE_CACHE_MS = 24 * 60 * 60 * 1000;
+const GEOCODE_CACHE_MAX = 500;
+const sleepMs = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function geocodeLocation(locationText, fetchImpl, env = process.env) {
+  // Only the real network is remembered and paced; a stand-in fetch (tests, previews) always gets asked.
+  const real = fetchImpl === globalThis.fetch;
+  const key = String(locationText || "").trim().toLowerCase();
+  const cached = real ? GEOCODE_CACHE.get(key) : null;
+  if (cached && Date.now() - cached.at < GEOCODE_CACHE_MS) return cached.value;
   const url = new URL(NOMINATIM_SEARCH_URL);
   url.searchParams.set("q", locationText);
   url.searchParams.set("format", "jsonv2");
   url.searchParams.set("limit", "1");
-  const payload = await fetchJson(fetchImpl, url, {
-    accept: "application/json",
-    "user-agent": "AgriNexus/1.0 route-readonly-validation"
-  });
+  // One more try after a short wait when the free service is busy or does not answer (it limits how often one address may ask): "not found" is an answer and is not tried again.
+  let payload;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      payload = await fetchJson(fetchImpl, url, { accept: "application/json", "user-agent": "AgriNexus/1.0 route-readonly-validation" });
+      break;
+    } catch (error) {
+      if (attempt >= 1) throw error;
+      if (real) await sleepMs(Number(env?.NEXUS_MAPS_GEOCODE_RETRY_MS ?? 1500));
+    }
+  }
   const match = Array.isArray(payload) ? payload[0] : null;
   if (!match || !match.lat || !match.lon) throw new Error(`location-not-found:${locationText}`);
-  return {
-    label: clean(match.display_name || locationText),
-    lat: Number(match.lat),
-    lon: Number(match.lon)
-  };
+  const value = { label: clean(match.display_name || locationText), lat: Number(match.lat), lon: Number(match.lon) };
+  if (real) {
+    if (GEOCODE_CACHE.size >= GEOCODE_CACHE_MAX) GEOCODE_CACHE.delete(GEOCODE_CACHE.keys().next().value);
+    GEOCODE_CACHE.set(key, { value, at: Date.now() });
+  }
+  return value;
 }
 
 function simplifyGeometry(coordinates, maxPoints = 120) {
@@ -88,7 +107,16 @@ async function publicOsmRoute(origin, destination, fallbackUrl, env = process.en
   const fetchImpl = mapsFetch(env);
   if (typeof fetchImpl !== "function") return null;
   const cleanedWaypoints = cleanWaypoints(waypoints);
-  const stops = await Promise.all([origin, ...cleanedWaypoints, destination].map(location => geocodeLocation(location, fetchImpl)));
+  // One place at a time, not all at once: the free place-finding service allows about one request a second from one address, and a route with stops asked for three or four together was refused as too many (a route of two places
+  // got through, one with a stop did not). A place already remembered costs nothing; a new one waits a moment after the one before.
+  const stops = [];
+  const gap = fetchImpl === globalThis.fetch ? Number(env?.NEXUS_MAPS_GEOCODE_GAP_MS ?? 1100) : 0;
+  for (const location of [origin, ...cleanedWaypoints, destination]) {
+    const known = GEOCODE_CACHE.get(String(location || "").trim().toLowerCase());
+    if (!known && stops.some(stop => !stop.cached) && gap > 0) await sleepMs(gap);
+    const found = await geocodeLocation(location, fetchImpl, env);
+    stops.push({ ...found, cached: Boolean(known) });
+  }
   if (stops.some(stop => !Number.isFinite(stop.lat) || !Number.isFinite(stop.lon))) {
     throw new Error("route-geocode-invalid");
   }
@@ -149,7 +177,14 @@ async function route(body = {}, env = process.env) {
       const publicRoute = await publicOsmRoute(origin, destination, fallbackUrl, env, waypoints);
       if (publicRoute) return publicRoute;
     } catch (error) {
-      // Fall through to the safe credential-blocked Google result with route URL fallback.
+      // The free service was asked and could not answer for these places: say which place, or that it did not answer, instead of saying a setup is missing (nothing is missing: the free service is what is used without a key).
+      const notFound = /^location-not-found:(.+)$/.exec(String(error?.message || ""));
+      const reason = notFound
+        ? `I could not find "${notFound[1]}" on the map. Try the town with its country, for example "${notFound[1]}, Kenya".`
+        : "The free map service did not answer for every place just now. Try again in a moment.";
+      const unavailable = failedResponse(provider, action, new Error(reason));
+      unavailable.body.data = { origin, destination, waypoints, routeUrl: fallbackUrl, noLocationPermissionRequested: true, providerError: true };
+      return unavailable;
     }
     const response = missingConfigResponse(provider, action, missing);
     response.body.data = { origin, destination, routeUrl: fallbackUrl, noLocationPermissionRequested: true };
