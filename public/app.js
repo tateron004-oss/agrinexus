@@ -51613,6 +51613,19 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       }
       return true;
     }
+    // A memory said in two parts: "Add to my memory book." and then, as the next sentence, the memory itself (speech recognition splits what is said at a pause, found on the live site). The next sentence is joined to the request,
+    // so the server sees one complete "add to my memory book: ..." (it keeps no wait of its own).
+    if (trimmed && typeof kyroMemoryBookFollowUp === "function") {
+      const completed = kyroMemoryBookFollowUp(trimmed);
+      if (completed) {
+        if (!heardAgain) {
+          try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+          kyroPageSpeaksUntil = Date.now() + 40000;
+          void handleNexusUnifiedBrainRuntimeCommand(completed, { source: "typed", kyroDirect: true });
+        }
+        return true;
+      }
+    }
     // "Start the AI basics course", "teach me about AI": the six-lesson course, which lives in Kyro's own route (it was sent to the learning tool, which does not know it and said a lesson was open when nothing was).
     // "What are my birth control options?", "how often should I get a Pap smear?": the checked women's health guide, with its official sources. The voice model reworded such a question when it called a tool, and the reworded
     // one was sometimes answered from memory with no sources.
@@ -52959,6 +52972,28 @@ function kyroParentsQuestion(text) {
 }
 // A request about the MEMORY BOOK (public/kyro-memory-book.js, shared with the server): add a memory, hear one, see the list, remove one, say who may add. The page takes such a turn itself so that the voice model never makes up a memory:
 // a memory is read back exactly as it was written, from the book, or not at all.
+// "Add to my memory book." said on its own opens a short wait (three minutes, one sentence): the NEXT thing said is the memory, unless it is another request or "never mind". It returns the whole command to send
+// ("Add to my memory book: <the memory>"), or "" when the sentence is not a memory to save. Nothing is saved from here: the server saves it, with all its checks.
+let kyroMemoryBookPending = null;
+let kyroMemoryBookDone = null;
+function kyroMemoryBookFollowUp(text) {
+  try {
+    const book = window.KyroMemoryBook;
+    const said = String(text || "").trim();
+    if (!said || !book || typeof book.readMemoryBookRequest !== "function") return "";
+    const asked = book.readMemoryBookRequest(said);
+    if (asked && asked.action === "add" && !asked.text) { kyroMemoryBookPending = { who: asked.who || null, held: Boolean(asked.held), until: Date.now() + 180000 }; return ""; }
+    // (the same sentence can reach this more than once, as it does for every other claim: the second time it is the same answer, so it is still claimed and not sent to the voice model)
+    if (kyroMemoryBookDone && kyroMemoryBookDone.said === said && Date.now() - kyroMemoryBookDone.at < 15000) return kyroMemoryBookDone.completed;
+    const pending = kyroMemoryBookPending;
+    if (!pending) return "";
+    kyroMemoryBookPending = null;
+    if (Date.now() > pending.until || asked || /^(?:never ?mind|cancel|stop|forget (?:it|that)|no thanks?|not now)\b/i.test(said)) return "";
+    const completed = `Add ${pending.held ? "a sensitive memory " : ""}to ${pending.who ? `${pending.who}'s` : "my"} memory book: ${said}`;
+    kyroMemoryBookDone = { said, completed, at: Date.now() };
+    return completed;
+  } catch { return ""; }
+}
 function kyroMemoryBookRequest(text) {
   try { return Boolean(window.KyroMemoryBook && typeof window.KyroMemoryBook.readMemoryBookRequest === "function" && window.KyroMemoryBook.readMemoryBookRequest(text)); } catch { return false; }
 }

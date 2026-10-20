@@ -141,3 +141,50 @@ test("in the companion, the notification is a push to the other allowed person's
   assert.equal(queued[0].userId, "u-peter"); assert.equal(queued[0].channel, "push"); assert.equal(queued[0].content.kind, "circle"); assert.match(queued[0].content.body, /You grew up by the lake with your four sisters/);
   assert.match(queued[0].idempotencyKey, /^memory-book:e1:u-peter$/);
 });
+
+// Found on the live site: said aloud, "Add a sensitive memory to my memory book. My husband Joseph died..." has a full stop where a typed request has a colon, was not read as a request, and the voice model made a document of it.
+test("said aloud, an add has a full stop, a comma, a dash or nothing after 'memory book', and still saves; punctuation alone is no memory", () => {
+  for (const sep of [":", ".", ",", " -", ";", "", "!"]) {
+    assert.deepEqual(readMemoryBookRequest(`Add to my memory book${sep} My sister Akinyi sang while she cooked.`), { action: "add", who: null, text: "My sister Akinyi sang while she cooked." }, JSON.stringify(sep));
+    assert.deepEqual(readMemoryBookRequest(`Add a sensitive memory to my memory book${sep} My husband Joseph died in 1990.`), { action: "add", who: null, text: "My husband Joseph died in 1990.", held: true }, JSON.stringify(sep));
+    assert.deepEqual(readMemoryBookRequest(`Add to Mom's memory book${sep} You grew up by the lake.`), { action: "add", who: "Mom", text: "You grew up by the lake." }, JSON.stringify(sep));
+  }
+  assert.deepEqual(readMemoryBookRequest("Add to my memory book."), { action: "add", who: null, text: "" }, "a full stop alone is nothing to save");
+  assert.deepEqual(readMemoryBookRequest("Add to my memory book!!"), { action: "add", who: null, text: "" });
+  assert.equal(readMemoryBookRequest("Add to my memory bookshelf the red one"), null, "a different word is not the memory book");
+});
+
+// Found on the live site: speech recognition split "Add a sensitive memory to my memory book. My husband Joseph died..." into two sentences, so the request had no memory in it and the voice model made a document of it. The page now keeps a short wait.
+test("on the page, a bare 'add to my memory book' makes the NEXT sentence the memory; another request, 'never mind', a late sentence and a repeat are handled", () => {
+  const fs = require("node:fs"); const path = require("node:path"); const vm = require("node:vm");
+  const app = fs.readFileSync(path.join(__dirname, "../../public/app.js"), "utf8");
+  const start = app.indexOf("let kyroMemoryBookPending = null;"); const end = app.indexOf("function kyroMemoryBookRequest(text) {");
+  assert.ok(start > 0 && end > start);
+  let now = 1000000;
+  const context = { window: { KyroMemoryBook: { readMemoryBookRequest } }, Date: { now: () => now } };
+  vm.runInNewContext(`${app.slice(start, end)}\nthis.f = kyroMemoryBookFollowUp; this.reset = () => { kyroMemoryBookPending = null; kyroMemoryBookDone = null; };`, context);
+  const f = context.f; const reset = context.reset;
+  // nothing is waiting: an ordinary sentence is nobody's memory
+  assert.equal(f("My husband Joseph died in 1990."), "");
+  // "add to my memory book." opens the wait (and is itself left to the normal claim), and the next sentence completes it
+  assert.equal(f("Add to my memory book."), "");
+  assert.equal(f("My sister Akinyi sang while she cooked every evening."), "Add to my memory book: My sister Akinyi sang while she cooked every evening.");
+  assert.equal(f("My sister Akinyi sang while she cooked every evening."), "Add to my memory book: My sister Akinyi sang while she cooked every evening.", "the same sentence heard again is still the same answer");
+  assert.equal(f("Another sentence with nothing waiting."), "", "one sentence only");
+  // sensitive and someone else's book
+  reset(); assert.equal(f("Add a sensitive memory to my memory book."), "");
+  assert.equal(f("My husband Joseph died in 1990."), "Add a sensitive memory to my memory book: My husband Joseph died in 1990.");
+  reset(); assert.equal(f("Add a memory to Grace's memory book"), "");
+  assert.equal(f("You grew up by the lake."), "Add to grace's memory book: You grew up by the lake.");
+  // another request, or "never mind", or too late: not a memory
+  reset(); f("Add to my memory book."); assert.equal(f("Tell me a memory"), "", "another request ends the wait");
+  assert.equal(f("My sister sang while she cooked."), "", "and nothing is waiting any more");
+  reset(); f("Add to my memory book."); assert.equal(f("Never mind"), ""); assert.equal(f("My sister sang while she cooked."), "");
+  reset(); f("Add to my memory book."); now += 181000; assert.equal(f("My sister sang while she cooked."), "", "after three minutes the wait is over");
+  // no reader loaded: nothing happens
+  const none = { window: {}, Date: { now: () => now } };
+  vm.runInNewContext(`${app.slice(start, end)}\nthis.f = kyroMemoryBookFollowUp;`, none);
+  assert.equal(none.f("Add to my memory book."), "");
+  // and the page uses it before the other claims
+  assert.ok(app.indexOf("kyroMemoryBookFollowUp(trimmed)") > 0 && app.indexOf("kyroMemoryBookFollowUp(trimmed)") < app.indexOf("kyroMemoryBookRequest(trimmed)"));
+});
