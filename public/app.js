@@ -51559,7 +51559,7 @@ function startKyroVoiceIntake(definition, options = {}) {
 
 function kyroVoiceIntakeOwnsTurn(command) {
   if (kyroActiveVoiceIntake && kyroActiveVoiceIntake.engine.phase !== "paused") return true;
-  return Boolean(window.KyroIntakeForms?.isResumeBuildRequest?.(command) || window.KyroIntakeForms?.isSaleRequest?.(command) || window.KyroIntakeForms?.isTelehealthRequest?.(command) || window.KyroCapture?.isLookRequest?.(command) || kyroSpokenOpenOwns(command));
+  return Boolean(window.KyroPrTopics?.isPrBriefRequest?.(command) || window.KyroIntakeForms?.isResumeBuildRequest?.(command) || window.KyroIntakeForms?.isSaleRequest?.(command) || window.KyroIntakeForms?.isTelehealthRequest?.(command) || window.KyroCapture?.isLookRequest?.(command) || kyroSpokenOpenOwns(command));
 }
 
 // Returns true when the transcript was consumed by a Kyro voice intake (caller must skip its own
@@ -51705,6 +51705,11 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     }
     // "Look at this", "what is wrong with this plant", "read this letter": the camera opens, the picture is taken and described
     if (window.KyroCapture?.isLookRequest?.(trimmed) && startKyroCapture(trimmed, { source })) return true;
+    // "Write me a PR brief", "help me write a brief for an event company": the ten-question interview that ends with a document
+    if (window.KyroPrTopics?.isPrBriefRequest?.(trimmed)) {
+      startKyroPrBriefIntake({ seedUtterance: { id: utteranceId, text: trimmed }, source });
+      return true;
+    }
     // "I want to sell 50 bags of maize": Kyro asks only for what is missing and posts it to the board after a yes
     if (window.KyroIntakeForms?.isSaleRequest?.(trimmed)) {
       startKyroSaleIntake({ seedUtterance: { id: utteranceId, text: trimmed }, source });
@@ -51814,6 +51819,39 @@ function startKyroResumeIntake(options = {}) {
   startKyroVoiceIntake(window.KyroIntakeForms.resume, { ...options, onComplete: submitKyroResumeIntake });
 }
 
+// A brief for a PR or event firm by voice ("write me a PR brief"): ten short questions, read back, and after a yes saved as a Word document the owner can edit and send. The document is built on the server from the answers only, word for word
+// (nexus/knowledge/pr-brief.js). Kyro does not send it to anyone, choose a firm or contact one.
+function startKyroPrBriefIntake(options = {}) {
+  if (!window.KyroIntakeForms?.prBrief) return;
+  startKyroVoiceIntake(window.KyroIntakeForms.prBrief, { ...options, onComplete: submitKyroPrBriefIntake });
+}
+
+async function submitKyroPrBriefIntake(values, context = {}) {
+  const language = context.language || languageCode();
+  const request = window.KyroIntakeForms?.prBrief?.toRequest?.(values) || {};
+  try {
+    const response = await kyroFetchWithTimeout("/api/nexus/runtime/behavior/intake", {
+      method: "POST", credentials: "same-origin", cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ intakeId: "pr-brief", values: request, channel: "voice", locale: languageCode(), conversationId: typeof nexusAuthoritativeConversationId === "function" ? nexusAuthoritativeConversationId() : undefined, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })
+    }, 30000);
+    const result = await response.json().catch(() => ({}));
+    if (response.status === 401) return { ok: false, say: kyroIntakeText("signIn", language) };
+    if (!response.ok) {
+      if (result.code === "pr_brief_incomplete") return { ok: false, fieldKey: "goal", say: "I need the name of your business and what you want the work to achieve." };
+      return { ok: false, say: result.error || kyroIntakeText("failedRetry", language) };
+    }
+    if (typeof processNexusAuthoritativeBehaviorResult === "function") {
+      await processNexusAuthoritativeBehaviorResult(result, "PR brief interview", { source: "kyro-voice-intake" }).catch(() => {});
+    }
+    return { ok: true, say: "Done. Your brief is saved and on the screen. You can change it there and download it as a Word document to send to a firm. I have not sent it to anyone, and I cannot choose a firm for you.",
+      contextNote: `The PR brief interview finished. A brief for ${values.business || "the business"} was saved and is shown on screen with a Download button. It was not sent to anyone.` };
+  } catch (error) {
+    nexusGenesisVoiceDebugLog("kyro-voice-intake-submit-network-error", { message: error?.message || "unknown" });
+    return { ok: false, say: kyroIntakeText("offline", language) };
+  }
+}
+
 // Selling by voice: what the first sentence said (the product, the amount, the price) is kept, only what is missing is asked, it is read back, and after a yes it is posted to the community board the same way
 // "post for sale: 50 bags of maize at 3000 per bag" posts it (the voice tool route, so the answer is the same and is shown on the screen). Nothing is bought, paid or delivered from here.
 function startKyroSaleIntake(options = {}) {
@@ -51892,6 +51930,7 @@ function kyroIntakeBusyLine(command) {
   const forms = window.KyroIntakeForms;
   if (!kyroActiveVoiceIntake && window.KyroCapture?.isLookRequest?.(command)) return "Kyro is opening the camera for the person to show it, and will describe it. Say nothing now.";
   if (!kyroActiveVoiceIntake && kyroSpokenOpenOwns(command)) return "Kyro is showing that on the screen by itself (it lists the documents, asks what to look for, or makes the document). Say nothing now.";
+  if (id === "pr-brief" || (!kyroActiveVoiceIntake && window.KyroPrTopics?.isPrBriefRequest?.(command))) return "Kyro is already asking the person the questions for a brief to give a PR or event firm, one at a time. Say nothing now.";
   if (id === "sale" || (!kyroActiveVoiceIntake && forms?.isSaleRequest?.(command))) return "Kyro is already asking the person about what they want to sell, one question at a time. Say nothing now.";
   if (id === "telehealth" || (!kyroActiveVoiceIntake && forms?.isTelehealthRequest?.(command))) return "Kyro is already asking the person a few short questions for a telehealth request, one at a time. Say nothing now.";
   return "Kyro is already asking the person their résumé questions one at a time. Say nothing now.";
@@ -60951,6 +60990,11 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   if (!options.kyroDirect && !kyroActiveVoiceIntake && kyroHandleSpokenOpen(text, { typed: true })) return true;
   // "Look at this", typed: the camera opens too
   if (!kyroActiveVoiceIntake && window.KyroCapture?.isLookRequest?.(text) && startKyroCapture(text, { source: options.source || "typed" })) return true;
+  // "Write me a PR brief", typed: the same interview as by voice
+  if (!kyroActiveVoiceIntake && window.KyroPrTopics?.isPrBriefRequest?.(text)) {
+    startKyroPrBriefIntake({ seedUtterance: { id: "", text }, source: options.source || "typed" });
+    return true;
+  }
   // "I want to sell 50 bags of maize", typed: the same short interview as by voice
   if (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isSaleRequest?.(text)) {
     startKyroSaleIntake({ seedUtterance: { id: "", text }, source: options.source || "typed" });

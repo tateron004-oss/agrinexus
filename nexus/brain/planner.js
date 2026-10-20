@@ -36,6 +36,7 @@ const { parentsGuideAnswer } = require("../knowledge/parents-guide.js");
 const { readSafetyDetailed } = require("../companion/safety.js");
 const { prTopic } = require("../../public/kyro-pr-topics.js");
 const { prEventsAnswer } = require("../knowledge/pr-events-guide.js");
+const { prWalkthrough, WALK_OF_TOPIC: PR_WALK_OF_TOPIC } = require("../knowledge/pr-walkthroughs.js");
 const { childHelpTopic } = require("../../public/kyro-child-help.js");
 const { childHelpAnswer } = require("../knowledge/child-help.js");
 const { stateEntityIntent, stateEntityAnswer, stripWakeWord } = require("../knowledge/state-entities.js");
@@ -543,6 +544,13 @@ class OpenEndedPlanner {
     // technology guide's) and any personal emergency are never taken here.
     const prId = prTopic(askText);
     const prAnswer = prId ? prEventsAnswer(prId) : null;
+    // "Walk me through planning an event", "step by step, how do I prepare a crisis statement": the same process one step at a time for the person to do themselves (see knowledge/pr-walkthroughs.js; the page shows each step with its official
+    // page and reads it out). Kyro never sends, books or publishes anything for them.
+    const prWalk = prAnswer && walkthroughAsk(askText) && PR_WALK_OF_TOPIC[prId] ? prWalkthrough(PR_WALK_OF_TOPIC[prId]) : null;
+    if (prWalk) {
+      const intro = `Okay, I will walk you through ${prWalk.title.toLowerCase()}, one step at a time. There are ${prWalk.steps.length} steps. I only guide you: you do each step yourself, and I never send, book or publish anything for you.`;
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: intro, sourceRequired: false, knowledge: `pr-events-guide:walkthrough:${prWalk.id}`, sources: prWalk.sources, walkthrough: prWalk, guardrail: "professional-advice", planningAttempts: 0 });
+    }
     if (prAnswer) {
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: prAnswer.text, sourceRequired: false, knowledge: `pr-events-guide:${prId}`, sources: prAnswer.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }

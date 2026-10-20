@@ -24,7 +24,7 @@ test("which questions get which topic", () => {
     ["How do I write a crisis communication plan?", "crisis-communication"], ["What do I say when my business gets bad press?", "crisis-communication"], ["Help me with a holding statement", "crisis-communication"],
     ["How do I plan an event for my business?", "event-planning"], ["How do I plan a grand opening?", "event-planning"], ["Give me an event checklist", "event-planning"], ["What is a run of show?", "event-planning"],
     ["Do I need a permit for a street fair event?", "event-permits"], ["How do I make my event accessible?", "event-accessibility"], ["Do I need a sign language interpreter at my event?", "event-accessibility"],
-    ["How do I hire a PR firm?", "hire-pr-firm"], ["What should I ask an event production company?", "hire-pr-firm"], ["Write me a PR brief", "hire-pr-firm"],
+    ["How do I hire a PR firm?", "hire-pr-firm"], ["What should I ask an event production company?", "hire-pr-firm"], ["What goes in a PR brief?", "hire-pr-firm"],
     ["How do I measure PR results?", "measure-results"], ["How do I know if my event worked?", "measure-results"], ["How do I engage my stakeholders?", "stakeholder-engagement"],
     ["What is a brand strategy?", "brand-strategy"], ["How do I build my brand?", "brand-strategy"]
   ];
@@ -103,9 +103,9 @@ test("on the page and the server: the question is the page's own, the server tri
   assert.ok(server.includes('const { prTopic } = require("./public/kyro-pr-topics.js");'));
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  const tag = '<script src="/kyro-pr-topics.js?v=kyro-pr-topics-1"></script>';
+  const tag = '<script src="/kyro-pr-topics.js?v=kyro-pr-topics-2"></script>';
   assert.ok(index.includes(tag) && index.indexOf(tag) < index.search(/<script[^>]+src="\/app\.js/));
-  assert.ok(sw.includes("`/kyro-pr-topics.js?v=kyro-pr-topics-1`"));
+  assert.ok(sw.includes("`/kyro-pr-topics.js?v=kyro-pr-topics-2`"));
   const urls = collectSources().map(entry => entry.url);
   for (const source of Object.values(guide.SOURCES)) assert.ok(urls.includes(source.url), source.url);
   assert.ok(collectSources().some(entry => entry.guides.includes("pr-events-guide")));
