@@ -22432,6 +22432,20 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         clientAction: { type: "return-to-orb" }, executionAttempted: false, executionVerified: false };
     }
   }
+  // A reminder that REPEATS ("every 3 months on the 15th", "every year on 15 October", "every morning at 8") is set, listed or stopped by the reminder code whichever tool the voice model picked. Found testing by voice: the model sent
+  // "remind me every 3 months ..." to the communications tool, which said the account could not do that, and nothing was set. The person's own words are tried first. Nothing is answered here that the reminder code does not handle itself.
+  // (typeof guards: several tests evaluate this function's source alone, in a sandbox that has none of server.js's other names.)
+  if (typeof classifyRepeatRequest === "function" && typeof assistantReminderCommandResponse === "function") {
+    const repeatAsk = rawCallerText && classifyRepeatRequest(rawCallerText) ? rawCallerText : command;
+    if (classifyRepeatRequest(repeatAsk) && effectiveMentalHealthSignal.state !== "medical_emergency") {
+      const repeatOptions = { language: canonicalVoiceLanguage(language), timeZone: resolveReminderTimeZoneDetail({ requested: context.timeZone, user }).zone, correlationId: context.correlationId };
+      const repeatTurn = await assistantReminderCommandResponse(db, user, repeatAsk, repeatAsk.toLowerCase(), repeatOptions);
+      if (repeatTurn?.response) {
+        return { ...common, capability: "reminders", status: repeatTurn.status === "needs-input" ? "needs-input" : "completed", intent: repeatTurn.intent, response: repeatTurn.response,
+          executionAttempted: true, executionVerified: /^Okay\. I will/.test(repeatTurn.response) };
+      }
+    }
+  }
   // A CHILD who says "I am 12 and pregnant", "my uncle touches me" or "how do I tell my mom something happened" is told where a child can get help (the free hotlines and the pages they come from, nexus/knowledge/child-help.js),
   // whichever tool the model picked, with the child's own words tried first. The voice model had improvised an answer with no number and no source. A crisis answered above (wanting to die, to hurt someone) is never taken here.
   const childAsk = typeof childHelpTopic === "function" && rawCallerText && childHelpTopic(rawCallerText) ? rawCallerText : command;

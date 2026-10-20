@@ -83,8 +83,10 @@ test("a genuine send request still reaches the real send path, unaffected by the
 // no indication to the user that it would not actually recur.
 test("a recurring reminder request is honestly told it is one-time only, not silently treated as recurring", async () => {
   const result = await callTool("nexus_automation_reminder", "Remind me every morning at 6am to check the irrigation pump.", { confirmed: true });
-  assert.match(result.response, /one-time reminder/i);
-  assert.match(result.response, /not (?:a recurring one|every day)/i);
+  // Repeating reminders are real now (nexus/reminders/repeat-service.js), and a repeat is handled by that code whichever tool the voice model picked: it is either set as the repeat it is, or, when the delivery store cannot be
+  // reached (as here, with no store), said plainly that NOTHING was saved. It is never quietly saved as a one-time reminder in disguise, which is what this test was written to prevent.
+  assert.match(result.response, /nothing was saved|Okay\. I will remind you to check the irrigation pump every day at 6:00 am/i);
+  assert.doesNotMatch(result.response, /one-time reminder (?:right now|for)/i, "never a one-time reminder in disguise");
 });
 
 test("a plain one-time reminder request is unaffected by the recurring-language caveat", async () => {
