@@ -188,3 +188,16 @@ test("on the page, a bare 'add to my memory book' makes the NEXT sentence the me
   // and the page uses it before the other claims
   assert.ok(app.indexOf("kyroMemoryBookFollowUp(trimmed)") > 0 && app.indexOf("kyroMemoryBookFollowUp(trimmed)") < app.indexOf("kyroMemoryBookRequest(trimmed)"));
 });
+
+// Found on the live site: a misheard "Hold back" ("Fold back") was not read, the voice model answered, and it said it had adjusted a memory when it had done nothing.
+test("anything that names the memory book but is not understood gets an honest 'I did not catch that' and changes nothing; ordinary talk is left alone", async () => {
+  assert.deepEqual(readMemoryBookRequest("Fold back the memory about Joseph."), { action: "hold", about: "joseph", who: null }, "a common mishearing of 'hold back'");
+  for (const text of ["Do something with my memory book", "Mark the first memory in my memory book as private", "Grace's memory book is nice"]) assert.deepEqual(readMemoryBookRequest(text), { action: "unclear" }, text);
+  for (const text of ["I love my sister", "Tell me a story", "My sister kept a memory book for years and it was lovely", "I treasure the memory of my father"]) assert.equal(readMemoryBookRequest(text), null, text);
+  const w = world();
+  await w.margaret("Add to my memory book: My sister Akinyi sang while she cooked every evening.");
+  const before = JSON.stringify(w.store.rows);
+  const said = await w.margaret("Mark the first memory in my memory book as private");
+  assert.match(said, /^I did not catch that, so I have not changed anything in the memory book\. You can say:/);
+  assert.equal(JSON.stringify(w.store.rows), before, "nothing was changed");
+});
