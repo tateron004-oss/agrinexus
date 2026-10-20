@@ -51600,6 +51600,27 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       }
       return true;
     }
+    // "Done", "skip", "no", "next" while a checklist, a lesson or the AI basics course is asking its question: the answer to that question, not a music command ("skip" with nothing playing said "Nothing is playing") and not
+    // something left to the voice model.
+    if (trimmed && typeof kyroGuidedReply === "function" && kyroGuidedReply(trimmed)) {
+      if (!heardAgain) {
+        try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+        kyroPageSpeaksUntil = Date.now() + 40000;
+        void handleNexusUnifiedBrainRuntimeCommand(trimmed, { source: "typed", kyroDirect: true, kyroGuidedReply: true });
+      }
+      return true;
+    }
+    // "Start the AI basics course", "teach me about AI": the six-lesson course, which lives in Kyro's own route (it was sent to the learning tool, which does not know it and said a lesson was open when nothing was).
+    // "What are my birth control options?", "how often should I get a Pap smear?": the checked women's health guide, with its official sources. The voice model reworded such a question when it called a tool, and the reworded
+    // one was sometimes answered from memory with no sources.
+    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)))) {
+      if (!heardAgain) {
+        try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+        kyroPageSpeaksUntil = Date.now() + 40000;
+        void handleNexusUnifiedBrainRuntimeCommand(trimmed, { source: "typed", kyroDirect: true });
+      }
+      return true;
+    }
     // "What is the Veterans Crisis Line?", "who can help my grandmother who is being scammed?", "do I have to give donors a receipt?": a question about official help for veterans, older adults, young people or nonprofits is answered
     // from Kyro's checked guide (with its official phone numbers and sources), as typing it is. The voice model had answered these from memory, "depending on the country", with no number (found by the live voice test).
     if (trimmed && typeof kyroCommunityQuestion === "function" && kyroCommunityQuestion(trimmed)) {
@@ -52909,6 +52930,20 @@ function kyroCommunityQuestion(text) {
     return topics.isCommunityUs(text) || topics.usTimeZone(kyroDeviceTimeZone());
   } catch { return false; }
 }
+// A guided checklist, lesson or course (nexus/farmwork/walkthroughs.js, digital-check.js) asks one question at a time and takes short replies. The page notes when its last answer was such a question (a long answer from the
+// toolkit that is not a guide or a guardrail answer) so that "done", "skip", "no" and "next" are taken as replies to it for ten minutes.
+let kyroGuidedOpenAt = 0;
+const KYRO_GUIDED_REPLY = /^(?:please\s+)?(?:done|finished|finish|next|skip|skip it|skip this|cancel|yes|no|yeah|yep|nope|ok|okay|not sure|i don'?t know|continue|did it|all done|complete|completed|got it)[.!?]*$/i;
+function kyroGuidedReply(text) {
+  return Boolean(kyroGuidedOpenAt && Date.now() - kyroGuidedOpenAt < 600000 && KYRO_GUIDED_REPLY.test(String(text || "").trim()));
+}
+// The words that start the AI basics course (the same words as COURSE in nexus/farmwork/walkthroughs.js; a test keeps the two equal).
+const KYRO_AI_COURSE = /^(?:please\s+)?(?:(?:start|begin|take|open|run|do)\s+(?:the\s+|an?\s+|my\s+)?(?:ai basics|ai literacy|ai(?: basics)?)\s+(?:mini[- ]?)?(?:course|lessons?|class)|teach me (?:about )?ai(?: basics)?|ai basics)$/i;
+function kyroGuidedCourseRequest(text) { return KYRO_AI_COURSE.test(String(text || "").trim().replace(/[.!?]+$/g, "")); }
+// A woman's health question for the checked guide (public/kyro-womens-topics.js, shared with the server): urgent, unsafe and medicine questions are never taken by it.
+function kyroWomensHealthQuestion(text) {
+  try { return Boolean(window.KyroWomensTopics && typeof window.KyroWomensTopics.womensHealthTopic === "function" && window.KyroWomensTopics.womensHealthTopic(text)); } catch { return false; }
+}
 // A question for the checked small-business guide (public/kyro-business-topics.js): minority-owned businesses, startups, loans, grants, certification, taxes. Only when it is about a business at all, and on a device in the
 // United States or naming a US programme (SBA, 8(a), NMSDC ...); "how do I grow a garden" is left to the voice model.
 function kyroBusinessQuestion(text) {
@@ -53400,7 +53435,7 @@ function kyroTypedToolFor(text) {
   if (/^(?:please\s+)?(?:what|what's)\s+(?:are|is)\s+(?:the\s+)?(?:common\s+)?(?:side effects?|adverse effects?)\s+(?:of|for|from)\s+[a-z][a-z0-9 -]{2,40}$/.test(t)) return "nexus_health_preparation";
   if (/^(?:please\s+)?(?:prepare|make|give me|create|write)\s+(?:me\s+)?(?:a\s+|my\s+)?(?:provider|doctor|nurse|clinic)\s+summary(?:\s+(?:of|for)\s+my\s+(?:readings?|blood pressure|health|chronic readings?))?$|^(?:please\s+)?summary for my (?:provider|doctor|nurse)$/.test(t)) return "nexus_health_preparation";
   if (/^(?:please\s+)?(?:teach me|nifundishe)\s+(?:the\s+)?(?:letters|herufi|maths?|math|hesabu|numbers|counting|adding)$/.test(t)) return "nexus_workforce_learning";
-  if (/^(?:please\s+)?(?:start|begin)\s+(?:the\s+)?ai basics(?:\s+course)?$/.test(t)) return "nexus_workforce_learning";
+  // ("start the AI basics course" is not here: the course is in Kyro's own route, which the learning tool does not know: see kyroGuidedCourseRequest)
   if (/^(?:please\s+)?(?:give me|start|begin)\s+(?:a\s+)?(?:job\s+)?(?:practice interview|interview practice)$/.test(t) || /^practi[sc]e\s+(?:a\s+)?job interview$/.test(t)) return "nexus_workforce_learning";
   return "";
 }
@@ -60599,6 +60634,8 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
   if (answerOnScreen && result.plan?.walkthrough && kyroWalkthroughOpening) { message = kyroWalkthroughOpening; kyroWalkthroughOpening = ""; }
   // (a checked guide's answer ends by saying what Kyro can do next, as the buttons on the screen offer)
   if (answerOnScreen && result.plan?.offerLine && !result.plan?.walkthrough) message = `${message} ${result.plan.offerLine}`;
+  // (a guided checklist, lesson or course question is open when the answer is a long one that is neither a guide nor a guardrail answer: the short replies that follow are for it)
+  kyroGuidedOpenAt = result.plan?.longForm && !result.plan?.knowledge && !result.plan?.guardrail ? Date.now() : 0;
   // (and the reminders list is read out as the list, not as the status line the server sends with it)
   if (result.render?.presentation?.kind === "reminder") message = kyroReminderListLine(result.render.data) || message;
   try {
@@ -60867,7 +60904,7 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   // Music, radio and video, typed or spoken, English or Kiswahili ("play ...", "weka redio ...", "watch ...", and pause/next/volume while something plays):
   // handled on the phone by the real player (public/kyro-media-player.js) before the sentence is sent anywhere. Controls only act when a player is open
   // or the sentence names music ("pause the music"), so a bare "pause" with nothing playing still reaches the rest of Kyro.
-  if (typeof kyroMediaCommand === "function" && await kyroMediaCommand(text, options)) return true;
+  if (typeof kyroMediaCommand === "function" && !options.kyroGuidedReply && !kyroGuidedReply(text) && await kyroMediaCommand(text, options)) return true;
   if (handleNexusVisualProviderQuestionReportCommand(text, options)) return true;
   if (/\b(show the source|who published|source current|when was this verified|source blocked|conflicting guidelines|conflicting sources|professional version|clinician version)\b/i.test(text)
       && handleNexusEnterpriseHealthEvidenceTrustCommand(text, options)) return true;

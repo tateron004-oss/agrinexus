@@ -213,7 +213,7 @@ test("server.js: the catch-all conversation tool (the voice tool the production 
   assert.ok(at("buildSupportPacket") < bridgeAt, "a crisis is answered before the bridge");
   assert.ok(at("healthReadingsReply(db, user, command") < bridgeAt, "health readings keep their own route");
   assert.ok(bridgeAt < at("const routed = await runCompanionSafeAgentCommand"), "the bridge runs before the older pipeline");
-  assert.ok(at("buildSupportPacket") < at("womensHealthTopic(command)"), "a crisis is answered before the women's health guide too");
+  assert.ok(at("buildSupportPacket") < at("womensHealthTopic(womensAsk)"), "a crisis is answered before the women's health guide too");
 });
 
 // Found testing the orb by voice: a United States owner asking "How do I write a business plan?" got "I couldn't do that one", because the voice route never told the planner where the person is (the typed route

@@ -22432,9 +22432,12 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   // tool the model picked: it is general information from official sources, it saves and sends nothing, so a guest or a restricted account hears it too. Found testing by voice: the model picked the health tool, a guest was refused with
   // "Sign in with a full account", and no answer appeared; picked another tool, it got a menu or an unsourced answer. (An urgent, unsafe or medicine question is never taken by this: womens-health-topics.js leaves those alone.)
   // (typeof guards: several tests evaluate this function's source alone, in a sandbox that has none of server.js's other names.)
-  if (typeof womensHealthTopic === "function" && womensHealthTopic(command) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
+  // (the person's own words are tried first: the voice model rewords a question when it calls a tool ("What are my birth control options?" came as "... advise consulting a clinician to choose based on medical history ..."), and the extra words
+  // made the guide's matcher skip it, so a covered question was answered from memory with no sources.)
+  const womensAsk = typeof womensHealthTopic === "function" && rawCallerText && womensHealthTopic(rawCallerText) ? rawCallerText : command;
+  if (typeof womensHealthTopic === "function" && womensHealthTopic(womensAsk) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
     const guideUser = await authoritativeRuntimeUser(user).catch(() => null);
-    const guide = guideUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: guideUser, text: command, language, timeZone: args?.timeZone }) : null;
+    const guide = guideUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: guideUser, text: womensAsk, language, timeZone: args?.timeZone }) : null;
     if (guide) {
       return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: guide.response,
         executionAttempted: true, executionVerified: guide.verified === true };
