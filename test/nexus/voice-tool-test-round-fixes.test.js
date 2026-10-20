@@ -42,7 +42,7 @@ test("a woman's health question is answered from the guide before any account re
   assert.ok(guide > 0 && restriction > guide, "the guide is answered before the account restriction is checked");
   assert.ok(planner > 0);
   const block = server.slice(guide, restriction);
-  assert.ok(block.includes("womensHealthTopic(command)") && block.includes('effectiveMentalHealthSignal.state !== "medical_emergency"') && block.includes("deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime"), "only a women's health question, never a medical emergency, through the planner");
+  assert.ok(block.includes("womensHealthTopic(womensAsk)") && block.includes('effectiveMentalHealthSignal.state !== "medical_emergency"') && block.includes("deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime"), "only a women's health question, never a medical emergency, through the planner");
   assert.ok(!block.includes("toolName ==="), "for every tool, not one");
   assert.ok(server.includes('const { womensHealthTopic } = require("./nexus/knowledge/womens-health-topics.js");'));
   const { womensHealthTopic } = require("../../nexus/knowledge/womens-health-topics.js");

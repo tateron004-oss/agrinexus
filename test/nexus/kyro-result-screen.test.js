@@ -240,8 +240,9 @@ test("a note that mentions buying is an answer; a trade or telehealth form the s
 
 test("typed lessons go to the route that teaches them, not to the AI model", () => {
   const api = typedApi([]);
-  for (const text of ["Teach me letters", "teach me maths", "Teach me the letters.", "Nifundishe herufi", "Nifundishe hesabu", "Start the AI basics course", "start ai basics", "Give me a practice interview", "practise a job interview", "please teach me counting"]) assert.equal(api.kyroTypedToolFor(text), "nexus_workforce_learning", text);
-  for (const text of ["", "teach me to cook", "teach me letters and then call my sister", "what are letters", "open learning", "I want a job", "next", "stop"]) assert.equal(api.kyroTypedToolFor(text), "", text);
+  for (const text of ["Teach me letters", "teach me maths", "Teach me the letters.", "Nifundishe herufi", "Nifundishe hesabu", "Give me a practice interview", "practise a job interview", "please teach me counting"]) assert.equal(api.kyroTypedToolFor(text), "nexus_workforce_learning", text);
+  // (the AI basics course is in Kyro's own route, not the learning tool: voice-guides-oct21.test.js)
+  for (const text of ["Start the AI basics course", "start ai basics", "", "teach me to cook", "teach me letters and then call my sister", "what are letters", "open learning", "I want a job", "next", "stop"]) assert.equal(api.kyroTypedToolFor(text), "", text);
 });
 
 test("typed: while a lesson or practice interview is under way, 'next', 'again', 'stop' and a one- or two-word answer are for it; it ends when the person leaves it or the reply is not the lesson's", () => {
