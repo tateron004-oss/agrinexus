@@ -99,7 +99,7 @@ test("on the page: a diabetes or blood pressure question is the page's own, a re
   const none = { window: {} };
   vm.runInNewContext(`${app.slice(start, end)}\nthis.ask = kyroChronicQuestion;`, none);
   assert.equal(none.ask("What is diabetes?"), false, "no matcher loaded, no claim");
-  assert.match(app, /\(typeof kyroChronicQuestion === "function" && kyroChronicQuestion\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
+  assert.match(app, /\(typeof kyroChronicQuestion === "function" && kyroChronicQuestion\(trimmed\)\)[^{]*\{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
   const tag = '<script src="/kyro-chronic-topics.js?v=kyro-chronic-topics-1"></script>';

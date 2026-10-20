@@ -81,6 +81,7 @@ const { replyLanguage } = require("./nexus/i18n/reply-language.js");
 const { parseNearbyPlacesRequest, namedPlaceIn: namedPlaceInRequest } = require("./server/providers/placesLocation.js");
 const { womensHealthTopic } = require("./nexus/knowledge/womens-health-topics.js");
 const { chronicTopic } = require("./public/kyro-chronic-topics.js");
+const { parentsTopic } = require("./public/kyro-parents-topics.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
@@ -22427,6 +22428,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (dismissal) {
       return { ...common, capability: "screen", status: "completed", intent: "screen.return_to_orb", response: dismissal.lang === "sw" || language === "sw" ? "Sawa." : "Okay.",
         clientAction: { type: "return-to-orb" }, executionAttempted: false, executionVerified: false };
+    }
+  }
+  // A parent's question about their child's growing up and safety (how to talk with a child about the body and relationships, the signs of abuse, what to do if a child tells you, a young girl who is pregnant, who to call) is answered from
+  // the checked guide (nexus/knowledge/parents-guide.js) whichever tool the model picked, with the person's own words tried first, and before the women's health guide below ("how do I explain a period to my daughter" is this guide's). It is
+  // asked after a crisis has been answered above. A child speaking for themselves, and anything about harming a child or oneself, is never taken (public/kyro-parents-topics.js).
+  const parentsAsk = typeof parentsTopic === "function" && rawCallerText && parentsTopic(rawCallerText) ? rawCallerText : command;
+  if (typeof parentsTopic === "function" && parentsTopic(parentsAsk) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
+    const parentsUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const parentsGuide = parentsUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: parentsUser, text: parentsAsk, language, timeZone: args?.timeZone }) : null;
+    if (parentsGuide) {
+      return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: parentsGuide.response,
+        executionAttempted: true, executionVerified: parentsGuide.verified === true };
     }
   }
   // A woman's question about her own health (cervical screening, birth control, periods, menopause, prenatal and postnatal care, where to find care) is answered from the checked guide (nexus/knowledge/womens-health.js) whichever
