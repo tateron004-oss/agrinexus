@@ -51613,7 +51613,8 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // "Start the AI basics course", "teach me about AI": the six-lesson course, which lives in Kyro's own route (it was sent to the learning tool, which does not know it and said a lesson was open when nothing was).
     // "What are my birth control options?", "how often should I get a Pap smear?": the checked women's health guide, with its official sources. The voice model reworded such a question when it called a tool, and the reworded
     // one was sometimes answered from memory with no sources.
-    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)))) {
+    // "What is type 2 diabetes?", "how do I keep track of my blood sugar?", "how can I lower my blood pressure?": the checked diabetes and high blood pressure guide, with its sources (a person's own reading, symptoms or a medicine are never taken).
+    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)))) {
       if (!heardAgain) {
         try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
         kyroPageSpeaksUntil = Date.now() + 40000;
@@ -52943,6 +52944,10 @@ function kyroGuidedCourseRequest(text) { return KYRO_AI_COURSE.test(String(text 
 // A woman's health question for the checked guide (public/kyro-womens-topics.js, shared with the server): urgent, unsafe and medicine questions are never taken by it.
 function kyroWomensHealthQuestion(text) {
   try { return Boolean(window.KyroWomensTopics && typeof window.KyroWomensTopics.womensHealthTopic === "function" && window.KyroWomensTopics.womensHealthTopic(text)); } catch { return false; }
+}
+// A diabetes or high blood pressure question for the checked guide (public/kyro-chronic-topics.js, shared with the server): a person's own reading, a reading with symptoms, a medicine or a dose is never taken by it.
+function kyroChronicQuestion(text) {
+  try { return Boolean(window.KyroChronicTopics && typeof window.KyroChronicTopics.chronicTopic === "function" && window.KyroChronicTopics.chronicTopic(text)); } catch { return false; }
 }
 // A question for the checked small-business guide (public/kyro-business-topics.js): minority-owned businesses, startups, loans, grants, certification, taxes. Only when it is about a business at all, and on a device in the
 // United States or naming a US programme (SBA, 8(a), NMSDC ...); "how do I grow a garden" is left to the voice model.
