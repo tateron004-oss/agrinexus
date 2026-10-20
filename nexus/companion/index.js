@@ -1,7 +1,9 @@
 "use strict";
 
 const { circleTurn, readCircleRequest } = require("./circle.js");
-const { safetyTurn, safeTurn, readSafety, readSafe } = require("./safety.js");
+const { safetyTurn, safeTurn, readSafety, readSafe, readSafetyDetailed } = require("./safety.js");
+const { createMemoryBookService } = require("./memory-book.js");
+const { readMemoryBookRequest } = require("../../public/kyro-memory-book.js");
 const { createEmergencyLocation } = require("./emergency-location.js");
 const { createCheckinService, parseCheckinControl, readCheckinAnswer, MIN_GRACE_HOURS, MAX_GRACE_HOURS } = require("./checkins.js");
 const { createMedicationService, readMedicationRequest } = require("./medications.js");
@@ -12,7 +14,14 @@ const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 
 // The companion core: a person's trusted circle, daily check-ins, and emergency handling, as one service the planner asks first (safety
 // before anything else). Every answer is a plain conversational reply; the worker sweep does the proactive part (see checkins.js).
-function createCompanion({ circle, checkinSettings, checkinState, medicationStore = null, memory = null, notifications, devices = null, autonomyControl = null, logger = null, now = () => new Date() } = {}) {
+// What a memory is NOT allowed to contain for it to be saved as a memory: words that need the safety reply instead (wanting to die, an emergency, hurting someone, abuse). A memory that mentions a death, a burn or a hard
+// year is fine; those get no block. When one of these is found, nothing is saved and the safety reader answers the whole message as it always does.
+const URGENT_KINDS = new Set(["emergency", "ask", "self_harm", "harm_others", "baby_at_risk", "abuse", "abuse_other", "friend_crisis"]);
+
+// (each sentence is read on its own as well: the safety reader looks only at short messages, and a long memory is many sentences)
+const hasUrgentWords = text => [text, ...String(text).split(/(?<=[.!?])\s+/)].some(part => URGENT_KINDS.has(readSafetyDetailed(part)?.kind));
+
+function createCompanion({ circle, checkinSettings, checkinState, medicationStore = null, memoryBookStore = null, memory = null, notifications, devices = null, autonomyControl = null, logger = null, now = () => new Date() } = {}) {
   // Every push names its tenant explicitly: links never cross communities, and nothing here is shared between concurrent requests.
   const checkins = createCheckinService({ settings: checkinSettings, state: checkinState, circle, notifications, devices, autonomyControl, logger, now,
     push: ({ tenantId, userId, title, body, key }) => notifications.enqueue({ tenantId, userId, channel: "push", scheduledAt: now(), idempotencyKey: key, content: { title, body, kind: "circle" } }),
@@ -20,6 +29,8 @@ function createCompanion({ circle, checkinSettings, checkinState, medicationStor
   const medications = medicationStore ? createMedicationService({ store: medicationStore, circle, notifications, devices, autonomyControl, logger, now,
     push: ({ tenantId, userId, title, body, key }) => notifications.enqueue({ tenantId, userId, channel: "push", scheduledAt: now(), idempotencyKey: key, content: { title, body, kind: "medication" } }),
     memoryUserName: args => circle.userName(args) }) : null;
+
+  const memoryBook = memoryBookStore ? createMemoryBookService({ store: memoryBookStore, circle }) : null;
 
   // A push that opens a page when tapped (the emergency location opens a map).
   const pushWithLink = ({ tenantId, toUserId, title, body, url, key }) => notifications.enqueue({ tenantId, userId: toUserId, channel: "push", scheduledAt: now(), idempotencyKey: key, content: { title, body, url, kind: "circle" } });
@@ -51,13 +62,21 @@ function createCompanion({ circle, checkinSettings, checkinState, medicationStor
       // Most messages are nothing for the companion: decide from the words alone, before any lookup.
       // ("I'm a veteran and I'm homeless, what can I do?" is a question the checked guide answers, with the numbers: the plain introduction is only for a statement)
       const audienceKind = communityTopic(command.text) ? null : readAudienceIntro(command.text);
-      const needsName = Boolean(readSafety(command.text) || readSafe(command.text) || readCheckinAnswer(command.text) || parseCheckinControl(command.text) || readCircleRequest(command.text));
+      const memoryRequest = memoryBook ? readMemoryBookRequest(command.text) : null;
+      const needsName = Boolean(readSafety(command.text) || readSafe(command.text) || readCheckinAnswer(command.text) || parseCheckinControl(command.text) || readCircleRequest(command.text) || memoryRequest);
       if (!needsName && !audienceKind && !(medications && readMedicationRequest(command.text))) return null;
       const tenantId = command.tenantId; const userId = command.actorId;
       // The person's display name is only looked up when what they said needs it (an alert, an invitation); "I had lunch" does not.
       const userName = needsName ? await circle.userName({ tenantId, userId }) : "";
       const scope = { tenantId, userId, userName };
       const send = (toUserId, title, body, key) => notifications.enqueue({ tenantId, userId: toUserId, channel: "push", scheduledAt: now(), idempotencyKey: key, content: { title, body, kind: "circle" } });
+
+      // A memory being ADDED is the writer's own text about someone's life ("Dad died in 1990", "her hands were burned in the fire"), so the safety readers must not take its words for a crisis: it is saved first, unless the text holds words
+      // that need the safety reply (see URGENT_KINDS), in which case nothing is saved and the safety reader answers below as it always does.
+      if (memoryRequest?.action === "add" && memoryRequest.text && !hasUrgentWords(memoryRequest.text)) {
+        const saved = await memoryBook.turn({ text: command.text, ...scope });
+        if (saved) return saved;
+      }
 
       // "I'm safe" only means something while an alert of theirs is open; otherwise it falls through to an ordinary answer.
       const allClear = await safeTurn({ text: command.text, circle, push: send, ...scope, now: now(), outcome, locale: command.locale });
@@ -69,13 +88,16 @@ function createCompanion({ circle, checkinSettings, checkinState, medicationStor
       // A veteran or elderly person self-identifying: real, already-built features surfaced honestly (see audience.js) -- never a
       // fabricated persona or crisis script. Checked after safety (so an actual emergency is never shadowed by this) and before
       // the check-in/circle handlers, since it is its own distinct statement, not an answer to something else Kyro asked.
-      if (audienceKind) return audienceIntroReply(audienceKind, { hasMedications: Boolean(medications) });
+      if (audienceKind) return audienceIntroReply(audienceKind, { hasMedications: Boolean(medications), hasMemoryBook: Boolean(memoryBook) });
 
       const answered = await checkins.answer({ ...scope, text: command.text, at: now() });
       if (answered) return answered;
 
       const medicine = medications ? await medications.turn({ ...scope, text: command.text, timeZone: context?.timeZone, at: now() }) : null;
       if (medicine) return medicine;
+
+      // The rest of the memory book (read a memory, the list, remove, who may add, what it is) and an "add" that had nothing after it.
+      if (memoryRequest) { const words = await memoryBook.turn({ text: command.text, ...scope }); if (words) return words; }
 
       const control = parseCheckinControl(command.text);
       if (control) {

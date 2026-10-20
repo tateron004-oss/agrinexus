@@ -13,7 +13,7 @@ const { createId } = require("../contracts/identifiers.js");
 // Links are within one community (tenant): both people must belong to the same one.
 const MAX_MEMBERS = 8;
 const MAX_LINKS_AS_MEMBER = 20;
-const SHARE_KEYS = Object.freeze(["checkins", "medications", "emergencyLocation"]);
+const SHARE_KEYS = Object.freeze(["checkins", "medications", "emergencyLocation", "memoryBook"]);
 // An emergency alert the person triggered is remembered for an hour, so their location can follow it (see emergency-location.js).
 const ALERT_MINUTES = 60;
 const PLACEHOLDER_VECTOR = `[1${",0".repeat(1535)}]`;
