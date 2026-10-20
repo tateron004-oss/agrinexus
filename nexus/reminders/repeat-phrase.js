@@ -214,10 +214,14 @@ const STRIP = [
   /\b(?:in the|during the)\s+(?:morning|afternoon|evening|night)\b/ig
 ];
 function taskFrom(text) {
-  let rest = String(text);
+  // A date with a month name ("the 15 October meeting", "the 15th of March visit") is never the SCHEDULE of a repeating reminder (a yearly one has its date taken out before this is called), so it belongs to the task. The reminder-time
+  // reader would take it for the day the reminder fires and blank it out of the task, and the schedule words below would strip "the 15th"; each date is kept safe, as a letters-only token, and put back at the end.
+  const keptDates = [];
+  let rest = String(text).replace(new RegExp(YEAR_DATE.source, "ig"), whole => { keptDates.push(whole.trim()); return ` QQDATE${String.fromCharCode(96 + keptDates.length)}QQ `; });
   for (const pattern of STRIP) rest = rest.replace(pattern, " ");
   rest = rest.replace(/\band\s+(?=to\b)/ig, " ").replace(/\s+/g, " ").replace(/\s+([.,!?;:])/g, "$1").trim();
-  const task = extractAssistantReminderTask(rest).replace(/[\s,;:.!?-]+$/g, "").trim();
+  let task = extractAssistantReminderTask(rest).replace(/[\s,;:.!?-]+$/g, "").trim();
+  task = task.replace(/QQDATE([a-z])QQ/ig, (whole, letter) => keptDates[letter.toLowerCase().charCodeAt(0) - 97] || "").replace(/\s+/g, " ").trim();
   return task && !/^(?:follow up|remind me|remind us|a reminder|reminder|set a reminder|set reminder|me)$/i.test(task) ? task : "";
 }
 

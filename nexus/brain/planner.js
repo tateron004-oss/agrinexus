@@ -1903,9 +1903,13 @@ function completeRemainingWorkspacePlan(text, catalog) {
   if (/\b(find|search|show|looking for|apply for)\b/i.test(goal) && /\b(jobs?|work|opportunities)\b/i.test(goal) && /\b(select|listing|sources?|near me|available|openings?|hiring|in\s+\w+|for\s+\w+)\b/i.test(goal))
     return plan("workforce", "jobs.search", "Find governed workforce listings", { query: goal, selectListing: true });
   if (/\b(show|map|route|directions?|get|take|travel)\b/i.test(goal) && /\bfrom\b/i.test(goal) && /\bto\b/i.test(goal)) {
-    const endpoints = goal.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:\s+with\b|[,.]|$)/i);
+    // "...to Nakuru via Naivasha", "...through Naivasha and Gilgil", "...stopping at Nakuru and Kericho": the places named after the stopping words are the stops, in order, not part of the destination
+    // (the spoken route has always read them; typed, "Nakuru via Naivasha" was looked up as one place and nothing came back).
+    const viaClause = /[,\s]+(?:via|through|by way of|passing through|stopping (?:at|by|in)|with (?:a )?stops? (?:at|in))\s+(.+?)(?:\s+(?:by|at|before)\s+\d.*)?[.!?\s]*$/i.exec(goal);
+    const stops = viaClause ? viaClause[1].split(/\s*,\s*(?:and\s+)?|\s+and\s+/i).map(item => item.trim()).filter(Boolean).slice(0, 8) : [];
+    const endpoints = (viaClause ? goal.slice(0, viaClause.index) : goal).match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:\s+with\b|[,.]|$)/i);
     return plan("maps", "maps.view", "Render governed route", { origin: endpoints?.[1]?.trim() || "Nairobi",
-      destination: endpoints?.[2]?.trim() || "Nakuru", requireRouteGeometry: true });
+      destination: endpoints?.[2]?.trim() || "Nakuru", ...(stops.length ? { waypoints: stops } : {}), requireRouteGeometry: true });
   }
   // Every phrase parseAssistantReminderTime (nexus/reminders/time-phrase.js) understands must route here.
   // "in 2 minutes" and weekdays used to be missing, so "Remind me to ... in 2 minutes" fell through to the
