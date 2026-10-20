@@ -31,13 +31,22 @@ const SOURCES = Object.freeze({
   titleX: { name: "HHS Office of Population Affairs: Title X service grants", url: "https://opa.hhs.gov/grant-programs/title-x-service-grants" },
   titleXFind: { name: "HHS Office of Population Affairs: Family Planning Clinic Locator", url: "https://reproductivehealthservices.gov/" },
   healthcareGov: { name: "HealthCare.gov: Medicaid and CHIP", url: "https://www.healthcare.gov/medicaid-chip/getting-medicaid-chip/" },
-  hotline: { name: "National Domestic Violence Hotline", url: "https://www.thehotline.org/" }
+  hotline: { name: "National Domestic Violence Hotline", url: "https://www.thehotline.org/" },
+  // read again on 19 October 2026 for the topics added then: check-ups by age, STIs and HIV, PCOS, heart health and breastfeeding
+  owhScreenings: { name: "Office on Women's Health: your health journey, screenings and discussions for every stage of life (2026)", url: "https://womenshealth.gov/sites/default/files/_documents/2026/nwhw/health_screenings_508_final.pdf" },
+  owhHivTesting: { name: "Office on Women's Health: HIV testing", url: "https://womenshealth.gov/hiv-and-aids/hiv-and-aids-basics/hiv-testing" },
+  owhHivPrevention: { name: "Office on Women's Health: HIV prevention", url: "https://womenshealth.gov/hiv-and-aids/hiv-prevention" },
+  owhSti: { name: "Office on Women's Health: sexually transmitted infections", url: "https://womenshealth.gov/a-z-topics/sexually-transmitted-infections" },
+  owhPcos: { name: "Office on Women's Health: polycystic ovary syndrome (PCOS)", url: "https://womenshealth.gov/a-z-topics/polycystic-ovary-syndrome" },
+  cdcHeartWomen: { name: "CDC: women and heart disease", url: "https://www.cdc.gov/heart-disease/about/women-and-heart-disease.html" },
+  cdcBreastfeeding: { name: "CDC: breastfeeding frequently asked questions", url: "https://www.cdc.gov/breastfeeding/php/faq/faq.html" }
 });
+const NEW_TOPICS_CHECKED_ON = "19 October 2026";
 
 const TOPICS = {
   "womens-health-overview": {
     title: "Women's health: what I can help with",
-    us: { sources: [], text: "I can explain, in plain words and with the official source, cervical screening and the HPV vaccine, breast health, birth control and family planning, periods, menopause, prenatal care, the time after a birth, and where to find care. Ask in your own words, for example: how often should I get a Pap smear, what are my birth control options, or where can I get low-cost family planning. I cannot diagnose, advise on medicines or doses, or keep a record of your cycle. If you have heavy bleeding, you are in labour, the baby has stopped moving, or you are in danger, get help now: call your local emergency number. I can also remind you about a check-up or an appointment: say something like remind me about my check-up on 3 March at 9 am. The notification on your phone will say only that you have a private reminder." }
+    us: { sources: [], text: "I can explain, in plain words and with the official source, cervical screening and the HPV vaccine, breast health, birth control and family planning, periods, polycystic ovary syndrome, menopause, prenatal care, the time after a birth, breastfeeding, sexually transmitted infections and HIV, heart health, which check-ups and screenings to have at each age, and where to find care. Ask in your own words, for example: how often should I get a Pap smear, what are my birth control options, or where can I get low-cost family planning. I cannot diagnose, advise on medicines or doses, or keep a record of your cycle. If you have heavy bleeding, you are in labour, the baby has stopped moving, or you are in danger, get help now: call your local emergency number. I can also remind you about a check-up or an appointment: say something like remind me about my check-up on 3 March at 9 am. The notification on your phone will say only that you have a private reminder." }
   },
   "cervical-screening": {
     title: "Cervical screening and the HPV vaccine",
@@ -94,7 +103,47 @@ const TOPICS = {
     title: "Where to get women's health care",
     us: {
       sources: ["hrsaFinder", "titleX", "titleXFind", "healthcareGov", "hotline"],
-      text: "Two places to look. Health centers: the HRSA locator at findahealthcenter.hrsa.gov finds one near you; ask the center about its fees. Family planning clinics: the Title X program, run by the Office of Population Affairs, covers birth control counselling, pregnancy testing, breast and cervical cancer screening, and testing and treatment for STIs and HIV, and mainly serves people with low incomes or no insurance; find one at opa-fpclinicdb.hhs.gov and ask the clinic about cost. Coverage: Medicaid and CHIP cover low-income adults and families, including pregnant women; you can apply any time of year at HealthCare.gov or through your state Medicaid agency, rules vary by state, and applying is worth it even if you think you may not qualify. If someone is hurting you, the National Domestic Violence Hotline is free, confidential and open 24 hours: call 1-800-799-7233 or text START to 88788. I cannot tell which clinics offer which service, so ask when you call. To see clinics on a map, say: find a clinic near, and then your town."
+      text: "Two places to look. Health centers: the HRSA locator at findahealthcenter.hrsa.gov finds one near you; ask the center about its fees. Family planning clinics: the Title X program, run by the Office of Population Affairs, covers birth control counselling, pregnancy testing, breast and cervical cancer screening, and testing and treatment for STIs and HIV, and mainly serves people with low incomes or no insurance; find one at reproductivehealthservices.gov and ask the clinic about cost. Coverage: Medicaid and CHIP cover low-income adults and families, including pregnant women; you can apply any time of year at HealthCare.gov or through your state Medicaid agency, rules vary by state, and applying is worth it even if you think you may not qualify. If someone is hurting you, the National Domestic Violence Hotline is free, confidential and open 24 hours: call 1-800-799-7233 or text START to 88788. I cannot tell which clinics offer which service, so ask when you call. To see clinics on a map, say: find a clinic near, and then your town."
+    }
+  },
+  "checkups": {
+    title: "Check-ups and screenings by age",
+    us: {
+      sources: ["owhScreenings", "owhHivTesting"],
+      checkedOn: NEW_TOPICS_CHECKED_ON,
+      text: "The Office on Women's Health says to see your health care provider every year: the visit can cover your heart health, your safety and well-being, your birth control needs, sun exposure, and your use of tobacco, alcohol and other substances. Its chart of screenings, which are meant to be repeated through life and may change with age or family history, lists: a Pap test for cervical cancer at 21 and every 3 years after, with a talk with your provider after 30 because the advice changes; testing for sexually transmitted infections every year, or sooner if symptoms appear or you have a new partner; cholesterol screening every 5 years; a mammogram every 1 to 2 years starting at 40 for women at average risk; colon cancer screening at 45; lung cancer screening at 50 for women with a smoking history; and a bone measurement test at 65 and older. It also lists talks about your breast health, your personal and family health history, menopause and its symptoms, and urinary leaking if it is a problem. If you have a BRCA1 or BRCA2 gene change or a strong family history of breast or ovarian cancer, your provider may advise starting breast screening earlier and more often. The Office on Women's Health also says all women and girls older than 15 need an HIV test at least once, and every pregnant woman should be tested as early as possible in her pregnancy. The chart is a starting point, not a personal plan: ask your provider what is right for you. My breast health answer gives the US Preventive Services Task Force's mammogram schedule, which differs a little. To be reminded of a check-up, say something like remind me about my check-up on 3 March at 9 am."
+    }
+  },
+  "sti-hiv": {
+    title: "Sexually transmitted infections and HIV",
+    us: {
+      sources: ["owhSti", "owhHivPrevention", "owhHivTesting"],
+      checkedOn: NEW_TOPICS_CHECKED_ON,
+      text: "An STI is an infection passed from one person to another through sexual contact. The Office on Women's Health says many STIs cause only mild symptoms or none, so testing is the main way to know. Some STIs can be cured and some cannot; for the ones that cannot, such as herpes or HIV, medicines can help manage them. To lower your risk: condoms are the best way to prevent STIs when you have sex, and male latex condoms are the most effective way to prevent HIV and other STIs (hormonal birth control and diaphragms do not protect against STIs); make sure you and your partner are tested; your risk goes up with the number of partners; and there are vaccines against HPV and hepatitis B. For HIV: PrEP is a pill taken every day by people without HIV who are at high risk, for example with a partner who has HIV; PEP must be started within three days of exposure and is taken for 28 days, so if that applies to you, get care right away; and do not share needles. All women and girls older than 15 need an HIV test at least once, and every pregnant woman should be tested as early as possible in pregnancy, because early HIV treatment in pregnancy can greatly lower the chance of passing the virus to the baby. Untreated syphilis in pregnancy results in infant death up to 40% of the time, so tell your provider if you are pregnant or planning to be. If you think you were exposed to HIV, get tested: antibodies usually appear 3 to 12 weeks after infection, so a test taken too soon can miss an early infection, and newer tests can find the virus 9 to 11 days after exposure. Many clinics offer free or low-cost testing: ask me where to find care."
+    }
+  },
+  "pcos": {
+    title: "Polycystic ovary syndrome (PCOS)",
+    us: {
+      sources: ["owhPcos"],
+      checkedOn: NEW_TOPICS_CHECKED_ON,
+      text: "PCOS is a common health problem caused by an imbalance of reproductive hormones. It can keep eggs from developing or being released normally and can cause missed or irregular periods. The Office on Women's Health says about 1 in 10 women of childbearing age have it, women of all races and ethnicities can develop it, and the risk may be higher with obesity or a family history of PCOS. Signs and symptoms: irregular or infrequent periods, extra hair on the face or body, acne, thinning scalp hair, weight gain or trouble losing weight, darkened skin in body creases, and skin tags. There is no single test: a doctor reviews your medical history, examines you, may order an ultrasound, and runs blood tests to rule out other causes; a diagnosis generally needs at least two of these: irregular periods, signs of high androgens, high androgen levels in the blood, or multiple ovarian cysts. PCOS is linked to diabetes or prediabetes, high blood pressure, unhealthy cholesterol, sleep apnea, depression and anxiety, and cancer of the uterine lining; researchers do not yet know whether PCOS causes these problems or they cause PCOS. There is no cure, but symptoms can be managed with a plan made for you: healthy eating and regular activity (even a 10% weight loss helps), options for unwanted hair such as creams, laser treatment or electrolysis, hormonal birth control to regulate periods and improve acne and hair growth, and anti-androgen medicines or metformin, which a doctor may use although the FDA has not approved them for PCOS. PCOS is one of the most common treatable causes of infertility: ask your doctor about the options, and about reaching a healthy weight and blood sugar before pregnancy, because PCOS is linked to higher rates of miscarriage, gestational diabetes, preeclampsia and C-section. A doctor should guide diagnosis and treatment. The Office on Women's Health Helpline, 1-800-994-9662 (Monday to Friday, 9 a.m. to 6 p.m. Eastern), gives information but not medical advice."
+    }
+  },
+  "heart-health": {
+    title: "Heart health in women",
+    us: {
+      sources: ["cdcHeartWomen"],
+      checkedOn: NEW_TOPICS_CHECKED_ON,
+      text: "The CDC says heart disease caused about 1 in 5 female deaths in the United States in 2023, and more than 60 million women (44%) are living with some form of heart disease. Some women have no symptoms. Others may feel angina, a dull or heavy chest discomfort, or pain in the neck, jaw, throat, upper belly or back, and may have nausea, vomiting or tiredness that does not go away. Risk factors: high blood pressure, which the CDC says is often underdiagnosed in women and has no symptoms; high LDL cholesterol; smoking; diabetes; overweight; an unhealthy diet; being inactive; heavy drinking; and stress or depression. Some are linked to reproduction and pregnancy: an early first period, early menopause, polycystic ovary syndrome, gestational diabetes, preterm delivery, and high blood pressure in pregnancy, and the CDC says pregnant women with high blood pressure have twice the risk of heart disease later in life. To lower your risk: check your blood pressure regularly and tell your care team about high readings, get at least 150 minutes of physical activity a week, do not smoke (ask about ways to quit), and talk with your doctor about diabetes screening, cholesterol and triglyceride checks, healthy eating, moderate alcohol use and managing stress. If you have chest pain, shortness of breath, palpitations, sudden tiredness, or swelling in your feet, ankles, legs or belly, the CDC says to call 9-1-1 right away."
+    }
+  },
+  "breastfeeding": {
+    title: "Breastfeeding",
+    us: {
+      sources: ["cdcBreastfeeding"],
+      checkedOn: NEW_TOPICS_CHECKED_ON,
+      text: "The CDC says the Dietary Guidelines for Americans, the American Academy of Pediatrics and WHO recommend exclusive breastfeeding for about the first 6 months, then adding other foods from around 6 months while continuing to breastfeed until the child is 2 years or older. It says breast milk is the best source of nutrition for most babies; breastfed babies have a lower risk of conditions including asthma, obesity, type 1 diabetes and sudden infant death syndrome, and for mothers breastfeeding is linked to a lower risk of breast cancer, ovarian cancer, type 2 diabetes and high blood pressure. Only a few medicines are not recommended while breastfeeding, and most that pass into breast milk have little or no effect on the baby or the milk supply; your provider can weigh the risks and benefits of a medicine, and the LactMed database covers specific medicines. There are rare situations where breastfeeding is not recommended, and the CDC says breast milk has been implicated in passing HIV from mother to baby, so if you have HIV, talk with your provider about feeding your baby before the birth. For help: the Office on Women's Health has information for going back to work or school, and WIC clinics, WIC Breastfeeding Support, lactation consultants and the American Academy of Pediatrics offer support."
     }
   }
 };
@@ -112,7 +161,7 @@ function womensHealthAnswer(id, { us = true, country = null } = {}) {
     const who = WHO.TOPICS[id];
     if (who) {
       const kenya = country === "ke" && who.kenya ? who.kenya : null;
-      version = { text: `${who.text}${kenya ? kenya.text : ""}`, sources: [...who.sources, ...(kenya ? kenya.sources : [])] };
+      version = { text: `${who.text}${kenya ? kenya.text : ""}`, sources: [...who.sources, ...(kenya ? kenya.sources : [])], checkedOn: who.checkedOn };
       allSources = WHO.SOURCES;
     } else if (id !== "womens-health-overview") {
       return null;

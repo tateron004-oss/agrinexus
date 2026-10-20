@@ -24,8 +24,14 @@ const SOURCES = Object.freeze({
   kenyaPlan: { name: "WHO Africa: Kenya's National Cervical Cancer Elimination Action Plan 2026-2030", url: "https://www.afro.who.int/countries/kenya/news/kenya-launches-national-cervical-cancer-elimination-action-plan-2026-2030" },
   kenyaSingleDose: { name: "WHO Africa: Kenya moves to a single-dose HPV schedule", url: "https://www.afro.who.int/countries/kenya/photo-story/cervical-cancer-elimination-kenya-transitions-single-dose-hpv" },
   kenyaMoh: { name: "Kenya Ministry of Health: efforts to combat cervical cancer (February 2025)", url: "https://www.health.go.ke/kenya-intensifies-efforts-combat-cervical-cancer-amid-rising-burden" },
-  unwomen1195: { name: "UN Women Africa: Kenya's national toll-free helpline 1195", url: "https://africa.unwomen.org/en/stories/news/2024/10/kenyas-national-toll-free-helpline-1195-a-lifeline-for-gender-based-violence-survivors" }
+  unwomen1195: { name: "UN Women Africa: Kenya's national toll-free helpline 1195", url: "https://africa.unwomen.org/en/stories/news/2024/10/kenyas-national-toll-free-helpline-1195-a-lifeline-for-gender-based-violence-survivors" },
+  // read again on 19 October 2026 for the topics added then
+  whoSti: { name: "WHO: sexually transmitted infections (STIs) fact sheet", url: "https://www.who.int/news-room/fact-sheets/detail/sexually-transmitted-infections-(stis)" },
+  whoPcos: { name: "WHO: polycystic ovary syndrome fact sheet", url: "https://www.who.int/news-room/fact-sheets/detail/polycystic-ovary-syndrome" },
+  whoCvd: { name: "WHO: cardiovascular diseases fact sheet", url: "https://www.who.int/news-room/fact-sheets/detail/cardiovascular-diseases-(cvds)" },
+  whoInfantFeeding: { name: "WHO: infant and young child feeding fact sheet", url: "https://www.who.int/news-room/fact-sheets/detail/infant-and-young-child-feeding" }
 });
+const NEW_TOPICS_CHECKED_ON = "19 October 2026";
 
 const TOPICS = Object.freeze({
   "cervical-screening": {
@@ -61,6 +67,31 @@ const TOPICS = Object.freeze({
     sources: [],
     text: "Go to your nearest public health facility or clinic and ask for the service by name, for example family planning, antenatal care, cervical screening or care after a birth. If you are in danger or have been hurt, go to the nearest health facility. I cannot tell which clinics offer which service, so ask when you call. To see clinics on a map, say: find a clinic near, and then your town.",
     kenya: { sources: ["kenyaPlan", "unwomen1195"], text: " In Kenya, WHO says the national cervical cancer plan brings services to primary health care level and reaches all 47 counties. If you or someone you know is facing violence, the national helpline 1195 is toll-free, open 24 hours, with trained counsellors; UN Women says it can connect you with shelters, legal aid, health providers and the police, and takes reports by SMS in several languages including Swahili." }
+  },
+  "checkups": {
+    sources: ["whoCervical", "whoBreast", "whoSti", "whoAnc"],
+    checkedOn: NEW_TOPICS_CHECKED_ON,
+    text: "Which checks you can get depends on your country's health programme, so ask a health worker which ones are available to you. WHO says: for cervical cancer, an HPV test every 5 to 10 years from age 30, and every 3 to 5 years from age 25 for women living with HIV. For breast cancer, mammography screening is usually for women aged 50 to 69 but is not practical in many countries at present, so knowing the signs and getting a prompt check matter most. For sexually transmitted infections, screening of people without symptoms is recommended in selected priority populations and settings. In pregnancy, WHO recommends at least 8 antenatal contacts with a health worker, the first within the first 12 weeks. For more on any of these, ask me about cervical screening, breast health, sexually transmitted infections or prenatal care. To be reminded of a check-up, say something like remind me about my check-up on 3 March at 9 am."
+  },
+  "sti-hiv": {
+    sources: ["whoSti"],
+    checkedOn: NEW_TOPICS_CHECKED_ON,
+    text: "WHO says STIs are often without symptoms, and when symptoms occur they can be non-specific. In 2020 there were an estimated 374 million new infections in people aged 15 to 49. Four STIs are currently curable: syphilis, gonorrhoea, chlamydia and trichomoniasis; herpes and HIV can be managed with antiviral medicines but not cured. Condoms offer one of the most effective methods of protection against STIs, including HIV, but they do not protect against infections that cause sores outside the genitals, such as syphilis or genital herpes. Safe and highly effective vaccines are available for two viral STIs, hepatitis B and HPV. WHO recommends screening for STIs without symptoms in selected priority populations and settings, so ask a health worker which tests apply to you. In women, gonorrhoea and chlamydia are major causes of pelvic inflammatory disease and infertility, and HPV infection causes cervical and other cancers. Mother-to-child transmission of STIs can result in stillbirth, neonatal death, low birth weight and prematurity, and syphilis in pregnancy is a major cause of poor birth outcomes: tell a health worker if you are pregnant or planning to be."
+  },
+  "pcos": {
+    sources: ["whoPcos"],
+    checkedOn: NEW_TOPICS_CHECKED_ON,
+    text: "WHO says polycystic ovary syndrome (PCOS) is a common hormonal disorder that affects women during their reproductive years and beyond, and that an estimated 10 to 13% of women worldwide are thought to have it, with up to 70% of those women not diagnosed. Symptoms vary and can change over time: irregular, unpredictable or absent periods, difficulty becoming pregnant, extra hair on the face or body, hair thinning, and acne or oily skin. Diagnosis needs at least two of these, once other causes have been excluded: signs of high androgens or a high testosterone level, irregular or absent periods, and polycystic ovaries on an ultrasound; ovarian cysts are not required for a diagnosis. Women with PCOS have a higher risk of obesity, type 2 diabetes, high blood pressure, high cholesterol, heart and blood vessel disease, sleep apnoea, and thickening or cancer of the lining of the womb, and PCOS can affect mental health. There is no cure, but treatment can improve quality of life and lower the long-term risks. Healthy eating and physical activity matter for every woman with PCOS, even without weight loss; combined birth control pills can help regulate the menstrual cycle; other medicines can treat extra hair or acne; and fertility treatments include lifestyle changes, medicines or surgery to start ovulation, and assisted reproduction such as IVF. WHO says seeking care early to manage symptoms can help women protect their health, and recommends that women newly diagnosed have blood tests for insulin resistance and heart and blood vessel risk."
+  },
+  "heart-health": {
+    sources: ["whoCvd"],
+    checkedOn: NEW_TOPICS_CHECKED_ON,
+    text: "WHO says the main behaviours that raise the risk of heart and blood vessel disease are an unhealthy diet, being inactive, using tobacco and harmful use of alcohol; air pollution also raises it. For a heart attack, the key sign is pain or discomfort in the centre of the chest; it can also be felt in the arms, shoulder, jaw or back, with breathlessness, nausea, light-headedness, a cold sweat or paleness. WHO says women are more likely than men to have shortness of breath, nausea, vomiting, and back or jaw pain. For a stroke, the most common sign is sudden weakness of the face, arm or leg, usually on one side of the body; others are sudden numbness, confusion or trouble speaking, vision problems, loss of balance, a severe headache with no cause, or fainting. People with these symptoms should seek medical care immediately. To lower your risk: stop using tobacco, eat less salt, eat more fruit and vegetables, be active regularly, and avoid harmful use of alcohol. High blood pressure is one of the measurable risk factors, and WHO says medicines for it are necessary to lower the risk of heart attacks and strokes in people who have it, so get your blood pressure checked."
+  },
+  "breastfeeding": {
+    sources: ["whoInfantFeeding"],
+    checkedOn: NEW_TOPICS_CHECKED_ON,
+    text: "WHO and UNICEF recommend that babies start breastfeeding within 1 hour of birth, are fed only breast milk for the first 6 months, and then, from 6 months, also get safe complementary foods while breastfeeding continues up to 2 years of age or beyond. WHO says mothers and families need to be supported to breastfeed: health services should give feeding counselling at routine contacts such as antenatal, postnatal and immunization visits, and community support includes mother support groups. For mothers living with HIV, WHO says they should breastfeed for at least 12 months and may continue for up to 24 months or longer, with full support to take their antiretroviral treatment; babies of mothers on lifelong treatment can safely begin breastfeeding in the first hour after birth. Ask a health worker about feeding your baby, especially if you have HIV."
   }
 });
 
