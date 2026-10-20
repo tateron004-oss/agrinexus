@@ -24,7 +24,8 @@ const FAMILY_WORDS = /^(?:mom|mum|mama|mother|dad|daddy|papa|father|grandma|gran
 const titleOf = text => { const sentence = clean(text).split(/(?<=[.!?])\s/)[0]; return sentence.length > 70 ? `${sentence.slice(0, 67).trimEnd()}...` : sentence; };
 const relation = value => clean(value).replace(/^(?:my|his|her|their)\s+/i, "");
 
-function createMemoryBookService({ store, circle, pick = Math.random }) {
+// push: ({ tenantId, userId, title, body, key }) tells another person; used only to tell the OTHER people the person allowed to add (see notifyOthers), and failures never stop a memory being saved.
+function createMemoryBookService({ store, circle, push = null, pick = Math.random }) {
   const lastRead = new Map();
   const remember = (userId, memoryId) => { if (lastRead.size > 1000) lastRead.clear(); lastRead.set(userId, memoryId); };
 
@@ -43,7 +44,10 @@ function createMemoryBookService({ store, circle, pick = Math.random }) {
         case "read": {
           const entries = await store.list(mine);
           if (!entries.length) return emptyBook();
-          const others = entries.length > 1 ? entries.filter(entry => entry.memoryId !== lastRead.get(userId)) : entries;
+          // A held memory is never read out on its own: only when it is asked for by what it is about.
+          const open = entries.filter(entry => !entry.held);
+          if (!open.length) return `Every memory in your book is being held back, so I will not read one out on my own. Say "read me the memory about" and a few words to hear one, or "stop holding back the memory about" and a few words to let it be read again.`;
+          const others = open.length > 1 ? open.filter(entry => entry.memoryId !== lastRead.get(userId)) : open;
           const chosen = others[Math.min(Math.floor(pick() * others.length), others.length - 1)];
           remember(userId, chosen.memoryId);
           return `${readOut(chosen)}\n\nSay "another memory" to hear one more.`;
@@ -60,10 +64,11 @@ function createMemoryBookService({ store, circle, pick = Math.random }) {
         case "list": {
           const entries = await store.list(mine);
           if (!entries.length) return emptyBook();
-          const shown = entries.slice(0, MAX_LIST).map((entry, index) => `${index + 1}. ${entry.title}${entry.source === "family" && entry.addedByName ? ` (from ${first(entry.addedByName)})` : ""}`).join("\n");
+          const shown = entries.slice(0, MAX_LIST).map((entry, index) => `${index + 1}. ${entry.title}${entry.source === "family" && entry.addedByName ? ` (from ${first(entry.addedByName)})` : ""}${entry.held ? " (held back)" : ""}`).join("\n");
           return `Your memory book has ${entries.length} ${entries.length === 1 ? "memory" : "memories"}:\n${shown}${entries.length > MAX_LIST ? `\nand ${entries.length - MAX_LIST} more.` : ""}\n\nSay "tell me a memory" to hear one, or "remove the memory about" and a few words to take one out.`;
         }
         case "remove": return await remove({ request, tenantId, userId });
+        case "hold": case "release": return await hold({ request, tenantId, userId });
         case "allow": case "disallow": return await allow({ request, tenantId, userId });
         case "allowed": {
           const links = (await circle.listFor(mine)).filter(link => link.role === "person" && link.status === "active" && link.shares?.memoryBook);
@@ -96,12 +101,55 @@ function createMemoryBookService({ store, circle, pick = Math.random }) {
     // The writer's own words, kept as written (only spaces and line breaks are tidied).
     const text = String(request.text).replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
     const saved = await store.addUnlessCapped({ tenantId, userId: ownerId, maxEntries: MAX_ENTRIES,
-      content: { title: titleOf(text), text, addedById: userId, addedByName: clean(userName), relationship: clean(relationship), source } });
+      content: { title: titleOf(text), text, addedById: userId, addedByName: clean(userName), relationship: clean(relationship), source, ...(request.held ? { held: true } : {}) } });
     if (saved.capped) return `The memory book is full (${MAX_ENTRIES} memories). Remove one you no longer want before adding another.`;
     if (saved.duplicate) return "That memory is already in the book. Nothing new was added.";
+    if (source === "family") await notifyOthers({ tenantId, ownerId, ownerName, authorId: userId, authorName: clean(userName), text, held: Boolean(request.held), memoryId: saved.memoryId });
+    const heldLine = request.held ? ' It is marked sensitive, so I will not read it out on my own: it is only read when it is asked for by name.' : "";
     return source === "family"
-      ? `Saved to ${ownerName}'s memory book, with your name on it. Tip: write it as if you are speaking to them, for example: "You grew up by the lake." They can hear it by asking me for a memory, and they can remove it at any time.`
-      : 'Saved to your memory book. Say "tell me a memory" any time to hear one.';
+      ? `Saved to ${ownerName}'s memory book, with your name on it.${heldLine} The other people ${first(ownerName)} allowed to add to the book are told what you added. Tip: write it as if you are speaking to them, for example: "You grew up by the lake." They can hear it by asking me for a memory, and they can remove it at any time.`
+      : `Saved to your memory book.${heldLine} Say "tell me a memory" any time to hear one.`;
+  }
+
+  // The OTHER people the person allowed to add to the book are told, with the words, when a family member adds a memory: a second pair of eyes, because a person who cannot always tell what is true must not be the only one who knows what was
+  // written in their book. Only people the person already allowed to write in it are told (never the wider circle), the person who wrote it is not told about their own memory, and a push that cannot be sent never stops the memory being saved.
+  async function notifyOthers({ tenantId, ownerId, ownerName, authorId, authorName, text, held, memoryId }) {
+    if (!push) return;
+    try {
+      const allowed = (await circle.listFor({ tenantId, userId: ownerId })).filter(link => link.role === "person" && link.status === "active" && link.shares?.memoryBook && link.otherId !== authorId);
+      const snippet = text.length > 280 ? `${text.slice(0, 277).trimEnd()}...` : text;
+      for (const link of allowed) {
+        try {
+          await push({ tenantId, userId: link.otherId, title: `New memory in ${first(ownerName)}'s memory book`,
+            body: `${authorName || "Someone"} added a memory to ${ownerName}'s memory book${held ? " (marked sensitive)" : ""}: "${snippet}" You are told because you can add to this book too. If anything looks wrong, tell ${first(ownerName)} or the family.`,
+            key: `memory-book:${memoryId || authorId}:${link.otherId}` });
+        } catch { /* one push failing does not stop the next, or the memory */ }
+      }
+    } catch { /* the memory is already saved */ }
+  }
+
+  // Hold back / release a memory: the person can for any memory; a family member only for what they wrote themselves (the same rule as removing).
+  async function hold({ request, tenantId, userId }) {
+    let ownerId = userId; let onlyOwn = false; let ownerName = "";
+    if (request.who) {
+      const links = (await circle.listFor({ tenantId, userId })).filter(link => link.role === "member" && link.status === "active");
+      const can = links.filter(link => link.shares?.memoryBook);
+      const picked = FAMILY_WORDS.test(clean(request.who)) && can.length === 1 ? { link: can[0] } : pickLink(links, request.who);
+      if (picked?.ambiguous) return `Which one: ${picked.ambiguous.map(link => link.otherName).join(" or ")}? Say their name.`;
+      if (!picked) return `I could not find ${clean(request.who)} among the people you look out for.`;
+      ownerId = picked.link.otherId; ownerName = picked.link.otherName; onlyOwn = true;
+    }
+    const all = await store.list({ tenantId, userId: ownerId });
+    const entries = onlyOwn ? all.filter(entry => entry.addedById === userId) : all;
+    const found = match(entries, request.about);
+    if (!found.length) return onlyOwn ? `I could not find a memory about "${request.about}" that you added to ${first(ownerName)}'s memory book.` : `I could not find a memory about "${request.about}" in your memory book. Say "what is in my memory book" to see what is there.`;
+    if (found.length > 1) return `More than one memory fits: ${found.slice(0, 6).map(entry => `"${entry.title}"`).join("; ")}. Say a few more words from the one you mean. Nothing was changed.`;
+    const holding = request.action === "hold";
+    await store.setHeld({ tenantId, userId: ownerId, memoryId: found[0].memoryId, held: holding });
+    const where = onlyOwn ? `${first(ownerName)}'s memory book` : "your memory book";
+    return holding
+      ? `Done. "${found[0].title}" stays in ${where}, but I will not read it out on my own. It is only read when it is asked for by name. Say "stop holding back the memory about" and a few words to let it be read again.`
+      : `Done. "${found[0].title}" can be read out again with the other memories in ${where}.`;
   }
 
   async function remove({ request, tenantId, userId }) {
@@ -132,7 +180,7 @@ function createMemoryBookService({ store, circle, pick = Math.random }) {
     const value = request.action === "allow";
     await circle.setShare({ tenantId, personId: userId, linkId: picked.link.linkId, key: "memoryBook", value });
     return value
-      ? `Done. ${picked.link.otherName} can now add memories to your memory book, with their name on each one. They cannot read your book through me, and you can remove any memory. Say "stop letting ${first(picked.link.otherName)} add to my memory book" to undo this.`
+      ? `Done. ${picked.link.otherName} can now add memories to your memory book, with their name on each one. They cannot read your book through me, you can remove any memory, and when one of the people you allowed adds a memory, the others you allowed are told what was added. Say "stop letting ${first(picked.link.otherName)} add to my memory book" to undo this.`
       : `Done. ${picked.link.otherName} can no longer add to your memory book. What they already added stays unless you remove it.`;
   }
 
@@ -149,7 +197,7 @@ function createMemoryBookService({ store, circle, pick = Math.random }) {
   }
 
   function help() {
-    return 'A memory book is a place for your own life: short, true memories that you, or someone in your trusted circle whom you choose, write down. Then you can say "tell me a memory" and I read one back exactly as it was written, and tell you who wrote it. I never make a memory up, and I never test you on them. You can say "add to my memory book" and then a memory, "what is in my memory book", "remove the memory about" and a few words, or "let" a name "add to my memory book". It is a comfort and a way to keep your stories; it is not a treatment, and it does not replace the people who care for you.';
+    return 'A memory book is a place for your own life: short, true memories that you, or someone in your trusted circle whom you choose, write down. Then you can say "tell me a memory" and I read one back exactly as it was written, and tell you who wrote it. I never make a memory up, and I never test you on them. You can say "add to my memory book" and then a memory, "what is in my memory book", "remove the memory about" and a few words, "hold back the memory about" and a few words if it is a sad one that should not be read out on its own, or "let" a name "add to my memory book". When someone you allowed adds a memory, the others you allowed are told. It is a comfort and a way to keep your stories; it is not a treatment, and it does not replace the people who care for you.';
   }
 
   return Object.freeze({ turn });

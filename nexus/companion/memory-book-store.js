@@ -43,6 +43,13 @@ class MemoryBookRepository {
       where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='${PURPOSE}' and deleted_at is null returning memory_id`, [tenantId, userId, memoryId]);
     return Boolean((result.rows || result)[0]);
   }
+
+  // A held memory is kept in the book but never read out on its own (see memory-book.js). Only the "held" field changes; the writer's words are never touched.
+  async setHeld({ tenantId, userId, memoryId, held }) {
+    const result = await this.db.query(`update nexus_memory_items set content = jsonb_set(content, '{held}', to_jsonb($4::boolean)), updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='${PURPOSE}' and deleted_at is null and content->>'kind'='entry' returning memory_id`, [tenantId, userId, memoryId, Boolean(held)]);
+    return Boolean((result.rows || result)[0]);
+  }
 }
 
 module.exports = Object.freeze({ MemoryBookRepository, PURPOSE });
