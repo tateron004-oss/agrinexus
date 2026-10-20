@@ -34,8 +34,9 @@ test("every answer, in the US, WHO and Kenya versions, names pages on official s
     assert.ok(answer, `${id} ${JSON.stringify(options)}`); assert.equal(answer.topic, id);
     for (const source of answer.sources) assert.match(source.url, official, `${id}: ${source.url}`);
     if (id !== "womens-health-overview" && !(id === "finding-care" && !options.us && !options.country)) assert.ok(answer.sources.length >= 1, id);
-    // (the menopause page changed on 19 October 2026 and was read again that day: its answer carries that date)
-    if (answer.sources.length) assert.match(answer.text, id === "menopause" && options.us ? /\(checked 19 October 2026\)/ : /\(checked 13 October 2026\)/, id);
+    // (the menopause page changed on 19 October 2026 and was read again that day: its US answer carries that date; so do the topics added then, in every version)
+    const readAgain = (id === "menopause" && options.us) || ["checkups", "sti-hiv", "pcos", "heart-health", "breastfeeding"].includes(id);
+    if (answer.sources.length) assert.match(answer.text, readAgain ? /\(checked 19 October 2026\)/ : /\(checked 13 October 2026\)/, id);
     assert.match(answer.text, /This is general information, not medical advice\. For your own health, talk to a doctor, nurse or health worker\.$/, id);
     assert.doesNotMatch(answer.text, /\byou have (?:cancer|an infection|a condition|endometriosis|pcos)\b|\byou should take\b|\btake \d+ ?(?:mg|tablets?|pills?)\b|\b\d+ ?mg\b|\bI recommend\b|\bI diagnose\b/i, id);
   }
@@ -51,7 +52,7 @@ test("the facts that matter, as the pages gave them", () => {
   assert.match(us("menopause"), /average age in the US is 52/); assert.match(us("menopause"), /Vaginal bleeding after menopause is not normal/);
   assert.match(us("prenatal-care"), /fewer than 10 movements in two hours/); assert.match(us("prenatal-care"), /100\.4 F/);
   assert.match(us("postpartum"), /1-833-852-6262/); assert.match(us("postpartum"), /call or text 988/);
-  assert.match(us("finding-care"), /findahealthcenter\.hrsa\.gov/); assert.match(us("finding-care"), /opa-fpclinicdb\.hhs\.gov/); assert.match(us("finding-care"), /1-800-799-7233/); assert.match(us("finding-care"), /88788/);
+  assert.match(us("finding-care"), /findahealthcenter\.hrsa\.gov/); assert.match(us("finding-care"), /reproductivehealthservices\.gov/); assert.match(us("finding-care"), /1-800-799-7233/); assert.match(us("finding-care"), /88788/);
   assert.match(who("cervical-screening"), /every 5 to 10 years from age 30/); assert.match(who("cervical-screening"), /reliable as one taken by a health worker/);
   assert.match(who("prenatal-care"), /20, 26, 30, 34, 36, 38 and 40 weeks/);
   assert.match(who("postpartum"), /48 to 72 hours, 7 to 14 days and 6 weeks/);

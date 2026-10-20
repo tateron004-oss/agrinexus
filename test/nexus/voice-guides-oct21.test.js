@@ -95,10 +95,10 @@ test("the page wires them in the right order: guided replies first, then the cou
 test("the page loads the shared matcher before app.js and caches it", () => {
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  const tag = '<script src="/kyro-womens-topics.js?v=kyro-womens-topics-1"></script>';
+  const tag = '<script src="/kyro-womens-topics.js?v=kyro-womens-topics-2"></script>';
   assert.ok(index.includes(tag));
   assert.ok(index.indexOf(tag) < index.search(/<script[^>]+src="\/app\.js/), "before app.js");
-  assert.ok(sw.includes("`/kyro-womens-topics.js?v=kyro-womens-topics-1`"));
+  assert.ok(sw.includes("`/kyro-womens-topics.js?v=kyro-womens-topics-2`"));
   assert.ok(fs.existsSync(path.join(__dirname, "../../public/kyro-womens-topics.js")));
 });
 
