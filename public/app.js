@@ -53356,7 +53356,8 @@ function kyroShowResultScreen(toolName, command, result) {
     // A note that mentions buying seeds is not a form: it has nothing to open, so its answer is shown.
     if ((KYRO_FORM_FLOW.test(String(command || "")) && result.genesisAction) || kyroExplicitOpenCard(command)) return false;
     // a greeting, a thank-you or a "yes" is spoken back, not drawn across the whole screen
-    if (KYRO_SMALL_TALK.test(String(command || "").trim())) return false;
+    // (but not the reply "no" or "ok" to a checklist, lesson or course question: its answer, the next lesson, is the screen)
+    if (KYRO_SMALL_TALK.test(String(command || "").trim()) && !(typeof kyroGuidedReply === "function" && kyroGuidedReply(command))) return false;
     const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
     if (result && typeof result.response === "string") result = { ...result, response: kyroPlainText(result.response) };
     const model = window.KyroResultScreen.buildModel(result, { command, lang });
