@@ -83,6 +83,7 @@ const { womensHealthTopic } = require("./nexus/knowledge/womens-health-topics.js
 const { chronicTopic } = require("./public/kyro-chronic-topics.js");
 const { parentsTopic } = require("./public/kyro-parents-topics.js");
 const { childHelpTopic } = require("./public/kyro-child-help.js");
+const { prTopic } = require("./public/kyro-pr-topics.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
@@ -22440,6 +22441,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (childHelp) {
       return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: childHelp.response,
         executionAttempted: true, executionVerified: childHelp.verified === true };
+    }
+  }
+  // A small business owner's question about PUBLIC RELATIONS and EVENTS (nexus/knowledge/pr-events-guide.js) is answered from the checked guide whichever tool the model picked, with the person's own words tried first: the voice model would
+  // answer from memory with no sources and could state a rule wrongly.
+  const prAsk = typeof prTopic === "function" && rawCallerText && prTopic(rawCallerText) ? rawCallerText : command;
+  if (typeof prTopic === "function" && prTopic(prAsk) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
+    const prUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const prGuide = prUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: prUser, text: prAsk, language, timeZone: args?.timeZone }) : null;
+    if (prGuide) {
+      return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: prGuide.response,
+        executionAttempted: true, executionVerified: prGuide.verified === true };
     }
   }
   // A parent's question about their child's growing up and safety (how to talk with a child about the body and relationships, the signs of abuse, what to do if a child tells you, a young girl who is pregnant, who to call) is answered from

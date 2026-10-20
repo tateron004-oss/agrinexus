@@ -51630,7 +51630,7 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // "What are my birth control options?", "how often should I get a Pap smear?": the checked women's health guide, with its official sources. The voice model reworded such a question when it called a tool, and the reworded
     // one was sometimes answered from memory with no sources.
     // "What is type 2 diabetes?", "how do I keep track of my blood sugar?", "how can I lower my blood pressure?": the checked diabetes and high blood pressure guide, with its sources (a person's own reading, symptoms or a medicine are never taken).
-    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)) || (typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest(trimmed)))) {
+    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)) || (typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest(trimmed)) || (typeof kyroPrQuestion === "function" && kyroPrQuestion(trimmed)))) {
       if (!heardAgain) {
         try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
         kyroPageSpeaksUntil = Date.now() + 40000;
@@ -52969,6 +52969,11 @@ function kyroChronicQuestion(text) {
 // A child speaking for themselves, and anything about harming a child or oneself, is never taken by it.
 function kyroParentsQuestion(text) {
   try { return Boolean(window.KyroParentsTopics && typeof window.KyroParentsTopics.parentsTopic === "function" && window.KyroParentsTopics.parentsTopic(text)); } catch { return false; }
+}
+// A small business owner's question about public relations and events (public/kyro-pr-topics.js, shared with the server): a press release, influencer disclosure, advertising rules, a crisis communication plan, planning an event, hiring a PR firm.
+// The page takes such a question itself so the voice model does not answer a rule from memory with no sources.
+function kyroPrQuestion(text) {
+  try { return Boolean(window.KyroPrTopics && typeof window.KyroPrTopics.prTopic === "function" && window.KyroPrTopics.prTopic(text)); } catch { return false; }
 }
 // A request about the MEMORY BOOK (public/kyro-memory-book.js, shared with the server): add a memory, hear one, see the list, remove one, say who may add. The page takes such a turn itself so that the voice model never makes up a memory:
 // a memory is read back exactly as it was written, from the book, or not at all.
