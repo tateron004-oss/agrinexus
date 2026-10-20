@@ -30,7 +30,8 @@ function createCompanion({ circle, checkinSettings, checkinState, medicationStor
     push: ({ tenantId, userId, title, body, key }) => notifications.enqueue({ tenantId, userId, channel: "push", scheduledAt: now(), idempotencyKey: key, content: { title, body, kind: "medication" } }),
     memoryUserName: args => circle.userName(args) }) : null;
 
-  const memoryBook = memoryBookStore ? createMemoryBookService({ store: memoryBookStore, circle }) : null;
+  const memoryBook = memoryBookStore ? createMemoryBookService({ store: memoryBookStore, circle,
+    push: ({ tenantId, userId, title, body, key }) => notifications.enqueue({ tenantId, userId, channel: "push", scheduledAt: now(), idempotencyKey: key, content: { title, body, kind: "circle" } }) }) : null;
 
   // A push that opens a page when tapped (the emergency location opens a map).
   const pushWithLink = ({ tenantId, toUserId, title, body, url, key }) => notifications.enqueue({ tenantId, userId: toUserId, channel: "push", scheduledAt: now(), idempotencyKey: key, content: { title, body, url, kind: "circle" } });
