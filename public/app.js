@@ -51269,6 +51269,8 @@ function speakKyroIntakeLine(text, options = {}) {
     const sent = sendKyroRealtimeEvent({
       type: "response.create",
       response: {
+        // An empty input gives this response a clean slate: the model sees only the line to say, not the person's request ("Write me a PR brief" made it write a brief of its own instead of reading the interview's first line).
+        input: [],
         instructions: `You are helping a person fill in a short form, one question at a time. Say the following to them now, in ${options.language || languageCode()}, warmly, slowly and clearly, exactly as written, with nothing added, removed, or paraphrased. Do not ask anything else and do not call any tool: ${JSON.stringify(safeText)}`,
         tool_choice: "none",
         output_modalities: ["audio"],
