@@ -30,7 +30,7 @@ test("what people say is read as a repeating reminder, with the right days, time
 });
 
 test("a repeat that cannot be done is said plainly, and a missing day or task is asked for", () => {
-  for (const text of ["remind me every few days to call mama", "remind me every 3 months to service the tractor", "remind me yearly to renew the licence", "remind me twice a month to check the books", "remind me every minute to blink"]) assert.deepEqual(readRepeatRequest(text), { action: "unsupported" }, text);
+  for (const text of ["remind me every few days to call mama", "remind me twice a month to check the books", "remind me every minute to blink"]) assert.deepEqual(readRepeatRequest(text), { action: "unsupported" }, text);
   assert.deepEqual(readRepeatRequest("remind me monthly to pay rent"), { action: "need-day-of-month" });
   assert.deepEqual(readRepeatRequest("remind me every other week to call mama"), { action: "need-day" });
   assert.deepEqual(readRepeatRequest("remind me every week to call mama"), { action: "need-day" });

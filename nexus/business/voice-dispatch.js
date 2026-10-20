@@ -668,6 +668,66 @@ function extractListingArgs(command = "", args = {}) {
   };
 }
 
+// "Show my sold listings", "which houses do I have under 500k", "list my 3 bedroom properties", "listings between 200k and 400k": the words that narrow a list of listings. A status, a kind of property, a number of bedrooms
+// ("3 bedroom" is exactly 3; "at least 3", "3 or more" and "3+" are 3 or more; "at most 3" and "3 or fewer" are 3 or fewer) and a price (under / over / between). Nothing here changes a listing: it only chooses which to read out.
+function spokenAmount(raw) {
+  const text = String(raw || "").replace(/[$,]/g, "").trim().toLowerCase();
+  const match = /^(\d+(?:\.\d+)?)\s*(k|m|million|thousand)?$/.exec(text);
+  if (!match) return null;
+  const base = Number(match[1]);
+  const factor = { k: 1e3, thousand: 1e3, m: 1e6, million: 1e6 }[match[2]] || 1;
+  return Number.isFinite(base) ? base * factor : null;
+}
+function listingFilter(command = "") {
+  const text = normalizeSpokenText(String(command || "")).toLowerCase().replace(/\s+/g, " ");
+  const filter = {};
+  const status = new RegExp(`\\b${LISTING_STATUS_WORDS}\\b`).exec(text);
+  if (status) filter.status = status[1].replace(/\s+/g, "-").replace("off-market", "off-market");
+  const type = new RegExp(`\\b(${PROPERTY_TYPE_WORDS.join("|")})s?\\b`).exec(text);
+  if (type) filter.propertyType = type[1];
+  const beds = /\b(at least|at most|up to|minimum of|maximum of|more than|fewer than|less than)?\s*(\d+)\s*(\+|or more|or fewer|or less|or less)?\s*(?:bed|beds|bedroom|bedrooms|br)\b/.exec(text);
+  if (beds) {
+    const number = Number(beds[2]); const lead = beds[1] || ""; const tail = beds[3] || "";
+    if (/at most|up to|maximum|fewer|less/.test(lead) || /fewer|less/.test(tail)) filter.maxBeds = /fewer than|less than/.test(lead) ? number - 1 : number;
+    else if (/at least|minimum|more than/.test(lead) || /\+|more/.test(tail)) filter.minBeds = /more than/.test(lead) ? number + 1 : number;
+    else { filter.minBeds = number; filter.maxBeds = number; }
+  }
+  const AMOUNT = "\\$?\\s?(\\d+(?:,\\d{3})*(?:\\.\\d+)?\\s?(?:k|m|million|thousand)?)";
+  let m;
+  if ((m = new RegExp(`\\bbetween\\s+${AMOUNT}\\s+and\\s+${AMOUNT}`).exec(text))) { const a = spokenAmount(m[1]); const b = spokenAmount(m[2]); if (a !== null && b !== null) { filter.minPrice = Math.min(a, b); filter.maxPrice = Math.max(a, b); } }
+  else {
+    if ((m = new RegExp(`\\b(?:under|below|less than|cheaper than|at most|up to|no more than|maximum of)\\s+${AMOUNT}`).exec(text))) { const a = spokenAmount(m[1]); if (a !== null) filter.maxPrice = a; }
+    if ((m = new RegExp(`\\b(?:over|above|more than|at least|minimum of|no less than|from)\\s+${AMOUNT}(?!\\s?(?:bed|beds|bedroom|bedrooms|br)\\b)`).exec(text))) { const a = spokenAmount(m[1]); if (a !== null) filter.minPrice = a; }
+  }
+  return filter;
+}
+function filterWords(filter) {
+  const parts = [];
+  if (filter.status) parts.push(filter.status.replace(/-/g, " "));
+  if (filter.propertyType) parts.push(filter.propertyType);
+  if (filter.minBeds !== undefined && filter.minBeds === filter.maxBeds) parts.push(`${filter.minBeds} bedroom`);
+  else { if (filter.minBeds !== undefined) parts.push(`${filter.minBeds} or more bedrooms`); if (filter.maxBeds !== undefined) parts.push(`${filter.maxBeds} or fewer bedrooms`); }
+  if (filter.minPrice !== undefined && filter.maxPrice !== undefined) parts.push(`priced ${filter.minPrice.toLocaleString("en-US")} to ${filter.maxPrice.toLocaleString("en-US")}`);
+  else { if (filter.maxPrice !== undefined) parts.push(`priced under ${filter.maxPrice.toLocaleString("en-US")}`); if (filter.minPrice !== undefined) parts.push(`priced over ${filter.minPrice.toLocaleString("en-US")}`); }
+  return parts.join(", ");
+}
+function listingMatches(listing, filter) {
+  const status = String(listing.status || "").toLowerCase();
+  if (filter.status && !(status === filter.status || (filter.status === "pending" && status === "under-contract"))) return false;
+  if (filter.propertyType && String(listing.propertyType || "").toLowerCase() !== filter.propertyType) return false;
+  const beds = Number(listing.beds) || 0;
+  if (filter.minBeds !== undefined && beds < filter.minBeds) return false;
+  if (filter.maxBeds !== undefined && beds > filter.maxBeds) return false;
+  const price = Number(listing.price) || 0;
+  if ((filter.minPrice !== undefined || filter.maxPrice !== undefined) && !price) return false;
+  if (filter.minPrice !== undefined && price < filter.minPrice) return false;
+  if (filter.maxPrice !== undefined && price > filter.maxPrice) return false;
+  return true;
+}
+// The same address, said or typed a little differently ("123 Main St." / "123 main st"), is the same property.
+const addressKey = address => String(address || "").toLowerCase().replace(/[.,#]/g, " ").replace(/\s+/g, " ").trim();
+const RELISTABLE = new Set(["sold", "withdrawn", "expired", "off-market"]);
+
 function resolveListingIndex(listings, command = "") {
   const text = String(command || "").toLowerCase();
   // Found live: findIndex picked whichever matching address came FIRST in
@@ -896,7 +956,7 @@ function classify(command = "") {
     || (/\b(?:received|got)\b[^.?!]{0,40}\b(?:donation|gift|contribution)\b/i.test(command) && !/\b(?:pledg\w*|bill|invoice)\b/i.test(command))) && amountWithCurrency(command) !== null;
   const wantsLogTransaction = (/\b(?:log|record|add|track)\b/i.test(command) && /\b(expense|income|transaction|payment|donation|sale|revenue)\b/i.test(command)) || saysWhatHappened;
   // "How much did I spend on seed this month?", "Show me my income this week": a question about the money already logged.
-  const wantsFinanceSummary = !wantsLogTransaction && !/\b(?:log|record|track|create|start|new)\b|\badd\b(?!\s+up)/i.test(command)
+  const wantsFinanceSummary = !wantsLogTransaction && !/\b(?:listings?|propert(?:y|ies)|houses|homes|condos|apartments|townhouses|duplexes)\b/i.test(command) && !/\b(?:log|record|track|create|start|new)\b|\badd\b(?!\s+up)/i.test(command)
     && /\b(?:how much|total|summary|summari[sz]e|what (?:is|are|was|were|did|have)|show|tell me|list|give me)\b/i.test(command)
     && /\b(?:my|our|i|we)\b/i.test(command) && /\b(?:expenses?|income|sales|revenue|profit|spen[dt]|earn(?:ed|ings)?|make|made|sell|sold)\b/i.test(command);
   const wantsAddInvoiceItem = /\binvoice\b/i.test(command) && /\b(?:line[- ]?item|item)s?\b/i.test(command) && /\b(?:add|include)\b/i.test(command);
@@ -925,7 +985,7 @@ function classify(command = "") {
   // "Mark 123 Main Street as sold": a street address with a status word is a listing status change even without the word "listing".
   const wantsUpdateListingStatus = !wantsAddListing && /\b(?:mark|update|set|change)\b/i.test(command)
     && (/\b(listing|property)\b/i.test(command) || (looksLikeStreetAddress && new RegExp(`\\b${LISTING_STATUS_WORDS}\\b`, "i").test(command)));
-  const wantsListListings = !wantsAddListing && !wantsUpdateListingStatus && /\b(listings?|properties)\b/i.test(command) && /\b(?:show|list|what|which|my|do i have)\b/i.test(command);
+  const wantsListListings = !wantsAddListing && !wantsUpdateListingStatus && /\b(listings?|properties|houses|homes|condos|apartments|townhouses|duplexes)\b/i.test(command) && /\b(?:show|list|what|which|my|do i have)\b/i.test(command);
   const wantsGenerateDocuments = /\b(?:create|generate|draft|make)\b/i.test(command) && /\b(service agreement|contract|intake form|client intake|application checklist)\b/i.test(command);
   const wantsGenerateBusinessPlanPdf = /\bbusiness plan\b/i.test(command) && /\b(?:generate|print|export|make)\b/i.test(command) && /\b(pdf|document)\b/i.test(command);
   const wantsGenerateMarketing = /\b(?:create|generate|make|draft)\b/i.test(command) && /\b(flyer|newsletter|promotional email|marketing email|marketing material|marketing content|marketing draft)\b/i.test(command);
@@ -1509,6 +1569,9 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business workspace yet. Tell me its name and I can start one before adding a listing.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const status = listing.status || "active";
+    // The same property listed twice is two listings that disagree about its price and status: it is said, and nothing is added. A property that was sold, withdrawn or has expired can be listed again.
+    const already = (resolved.client.data.editable.listings || []).find(item => addressKey(item.address) === addressKey(listing.address) && !RELISTABLE.has(String(item.status || "").toLowerCase()));
+    if (already) return { status: "completed", localOnly: true, response: `${already.address} is already in "${workspaceName}" as ${already.status || "active"}${already.price ? ` at ${formatMoney(already.currency || "USD", already.price)}` : ""}. Nothing was added. To change it, say, for example, "set ${already.address} to pending" or "set ${already.address} to sold".`, summary: "That property is already listed." };
     // Found live: only $ was ever recognized, so a local-currency price (see
     // extractListingArgs' currency fix) was formatted and stored as if it
     // were dollars -- "4,500,000 shillings" displayed as "$4,500,000".
@@ -1542,10 +1605,17 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
 
   if (intent === "listListings") {
     const resolved = await resolveBusinessClient(businessRequest, command);
-    const listings = resolved.client?.data?.editable?.listings || [];
+    const everyListing = resolved.client?.data?.editable?.listings || [];
     const workspaceName = resolved.client?.data?.info?.businessName || "your workspace";
+    const filter = listingFilter(command);
+    const narrowed = Object.keys(filter).length > 0;
+    const listings = narrowed ? everyListing.filter(listing => listingMatches(listing, filter)) : everyListing;
+    if (narrowed && everyListing.length && !listings.length) {
+      const none = `No listings in "${workspaceName}" match ${filterWords(filter)}. You have ${everyListing.length} listing${everyListing.length === 1 ? "" : "s"} in all; say "show my listings" to hear them.`;
+      return { status: "completed", localOnly: true, response: none, businessListings: [], summary: none };
+    }
     const response = listings.length
-      ? `"${workspaceName}" has ${listings.length} listing${listings.length === 1 ? "" : "s"}: ${listings.map(listing => `${listing.address} (${listing.status}${listing.price ? `, ${formatMoney(listing.currency || "USD", listing.price)}` : ""})`).join("; ")}.`
+      ? `"${workspaceName}" has ${listings.length} ${narrowed ? `listing${listings.length === 1 ? "" : "s"} that match ${filterWords(filter)}` : `listing${listings.length === 1 ? "" : "s"}`}: ${listings.map(listing => `${listing.address} (${listing.status}${listing.price ? `, ${formatMoney(listing.currency || "USD", listing.price)}` : ""})`).join("; ")}.`
       : `"${workspaceName}" has no listings yet. Say something like "list 123 Main Street for $450,000" to add one.`;
     return { status: "completed", localOnly: true, response, businessListings: listings, summary: response };
   }
@@ -1654,5 +1724,5 @@ module.exports = Object.freeze({
   extractInvoiceArgs, extractInvoiceItemArgs, extractGrantArgs, extractGrantStatusArgs, resolveGrant,
   extractTaskArgs, extractTaskStatusArgs, resolveTask, extractAppointmentArgs, resolveAppointmentIndex,
   extractIntakeArgs, inferStrategyProfile, computeBusinessDashboard,
-  extractListingArgs, resolveListingIndex, nextInvoiceNumber, formatMoney, periodIn
+  extractListingArgs, listingFilter, resolveListingIndex, nextInvoiceNumber, formatMoney, periodIn
 });

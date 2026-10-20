@@ -57,9 +57,24 @@ const contactName = raw => cleanContactName(raw);
 //   United States / Canada   (404) 555-0123, 404-555-0123, 404 555 0123, 4045550123, 1-404-555-0123 -> +14045550123
 // The three cannot be mistaken for each other (a Kenyan number has 9 digits after the 0, a Nigerian one 10 after the 0, a US/Canadian one 10 digits that start 2-9 with no 0), so this needs no guess about the
 // country; the caller says the result back. Fullwidth and Arabic-Indic digits are read as the ordinary digits. null when it is not a number of any of these countries.
-function localPhoneToE164(value) {
+// A number written the national way (a 0, then nine digits) means different countries in different places: 0712 345 678 is Kenyan, Ugandan and Tanzanian numbers alike. So when the PERSON's own country is known (their profile, else the
+// time zone of their device) and it is one of these, the number is read as theirs. Without it, Kenya is assumed as before. `options.country` is an ISO code: ke, ng, us, ug, tz, rw, gh, za.
+const NATIONAL_NINE = Object.freeze({ ug: { code: "+256", name: "Uganda" }, tz: { code: "+255", name: "Tanzania" }, rw: { code: "+250", name: "Rwanda" }, gh: { code: "+233", name: "Ghana" }, za: { code: "+27", name: "South Africa" } });
+const COUNTRY_BY_ZONE = Object.freeze({ "Africa/Kampala": "ug", "Africa/Dar_es_Salaam": "tz", "Africa/Kigali": "rw", "Africa/Accra": "gh", "Africa/Johannesburg": "za", "Africa/Nairobi": "ke", "Africa/Lagos": "ng" });
+const COUNTRY_BY_NAME = Object.freeze({ uganda: "ug", tanzania: "tz", rwanda: "rw", ghana: "gh", "south africa": "za", kenya: "ke", nigeria: "ng", "united states": "us", usa: "us" });
+function countryHint({ country = "", timeZone = "" } = {}) {
+  const said = String(country || "").trim().toLowerCase();
+  if (/^[a-z]{2}$/.test(said)) return said;
+  if (COUNTRY_BY_NAME[said]) return COUNTRY_BY_NAME[said];
+  return COUNTRY_BY_ZONE[String(timeZone || "").trim()] || "";
+}
+const DEMONYM = Object.freeze({ Kenya: "Kenyan", Nigeria: "Nigerian", "United States": "United States", Uganda: "Ugandan", Tanzania: "Tanzanian", Rwanda: "Rwandan", Ghana: "Ghanaian", "South Africa": "South African" });
+
+function localPhoneToE164(value, options = {}) {
   const digits = toAsciiDigits(value).replace(/[\s().-]/g, "");
   let m;
+  const own = NATIONAL_NINE[countryHint(options)];
+  if (own && (m = /^0(\d{9})$/.exec(digits))) return { phone: `${own.code}${m[1]}`, country: own.name };
   if ((m = /^(?:0|254)?([17]\d{8})$/.exec(digits))) return { phone: `+254${m[1]}`, country: "Kenya" };
   if ((m = /^(?:0|234)((?:70|80|81|90|91)\d{8})$/.exec(digits))) return { phone: `+234${m[1]}`, country: "Nigeria" };
   // North American numbers: area code and exchange never start with 0 or 1, so a 10-digit number written without a leading 0 is one (a leading 1 is the country code)
@@ -71,11 +86,11 @@ function kenyanLocalNumber(value) {
   const local = localPhoneToE164(value);
   return local && local.country === "Kenya" ? local.phone : null;
 }
-function contactValue(raw) {
+function contactValue(raw, options = {}) {
   const value = clean(toAsciiDigits(raw)).replace(/[.,;!?]+$/g, "");
   const email = normalizeRecipient("email", value); if (email) return { email };
   const phone = normalizeRecipient("sms", value); if (phone) return { phone };
-  const local = localPhoneToE164(value);
+  const local = localPhoneToE164(value, options);
   const converted = local && normalizeRecipient("sms", local.phone);
   if (converted) return local.country === "Kenya" ? { phone: converted, assumedKenya: true } : { phone: converted, assumedCountry: local.country };
   // Digits without a country code ("0712345678") cannot be dialled or texted reliably: say so instead of saving something unusable.
@@ -83,7 +98,7 @@ function contactValue(raw) {
 }
 
 // { name, phone?, email? } for "Save Otieno's number as +254...", "Add contact Amina +254...", "Otieno's email is o@x.com"; else null.
-function extractContactStatement(text) {
+function extractContactStatement(text, options = {}) {
   const t = clean(toAsciiDigits(text));
   if (!t || t.length > 140 || /[?]/.test(t)) return null;
   const NUM = "(\\+?\\d[\\d\\s().-]{5,18}\\d|\\S+)";
@@ -102,7 +117,7 @@ function extractContactStatement(text) {
   // "save Otieno 0712345678", "save Mary Wanjiku as 0712345678", "add Mary 0712345678 to my contacts": only with save or add, and only when the number is a real one, so "save maize 5000" is not a contact.
   const loose = new RegExp(`^(?:please )?(?:save|add|hifadhi|weka) (.+?)(?: as| at| is|:| kama| ni)? ${NUM_ONLY}(?: to my contacts| in my contacts| as a contact)?$`, "i").exec(t);
   if (loose) {
-    const looseName = contactName(loose[1]); const looseValue = looseName && contactValue(loose[2]);
+    const looseName = contactName(loose[1]); const looseValue = looseName && contactValue(loose[2], options);
     if (looseValue && looseValue.phone) return { name: looseName, ...looseValue };
   }
   for (const [index, pattern] of forms.entries()) {
@@ -110,7 +125,7 @@ function extractContactStatement(text) {
     if (!match) continue;
     // the "save number ... for Name" form has the number first
     const numberFirst = index === 3;
-    const name = contactName(numberFirst ? match[2] : match[1]); const value = contactValue(numberFirst ? match[1] : match[2]);
+    const name = contactName(numberFirst ? match[2] : match[1]); const value = contactValue(numberFirst ? match[1] : match[2], options);
     // The looser forms only ever save a real number: "gate number 12345678" is not asked about as a contact.
     if (index >= 3 && !(value && !value.invalid)) return null;
     return name && value ? { name, ...value } : null;
@@ -165,4 +180,4 @@ function spokenPhone(phone) {
 
 const isContact = content => Boolean(content && typeof content === "object" && content.kind === "contact" && typeof content.name === "string" && (content.phone || content.email));
 
-module.exports = Object.freeze({ extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName, cleanContactName, isContact, localPhoneToE164, kenyanLocalNumber, spokenPhone });
+module.exports = Object.freeze({ countryHint, DEMONYM, extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName, cleanContactName, isContact, localPhoneToE164, kenyanLocalNumber, spokenPhone });

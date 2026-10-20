@@ -49,7 +49,7 @@ const { feedRequest, grantsAnswer, rulesAnswer } = require("../knowledge/live-fe
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 // how a starter document is named when it is spoken back (the title in lower case, except where that reads wrongly)
 const SPOKEN_TEMPLATE_NAMES = Object.freeze({ "ai-use-policy": "AI use policy", "vendor-questions": "list of questions for a web host, designer or developer", "app-brief": "app brief" });
-const { extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName, cleanContactName, spokenPhone, localPhoneToE164 } = require("../memory/contacts.js");
+const { DEMONYM: CONTACT_DEMONYM, extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName, cleanContactName, spokenPhone, localPhoneToE164 } = require("../memory/contacts.js");
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
 const { parseWeatherQuestion, weatherAnswer, daysNeeded } = require("../brief/weather-answer.js");
 const { validTimeZone, DEFAULT_TIME_ZONE, localDay } = require("../brief/compose.js");
@@ -208,13 +208,13 @@ class OpenEndedPlanner {
 
   // People the person has told Kyro about: "Save Otieno's number as +254...", "Who are my contacts?", "Forget Otieno". Returns an answer
   // plan, or null when the text is none of these (or contacts are unavailable), so normal planning carries on.
-  async contactsTurn(command) {
+  async contactsTurn(command, context = {}) {
     const memory = this.memory;
     if (!memory?.saveContact || !memory?.listContacts || !memory?.forgetContact) return null;
     const scope = { tenantId: command.tenantId, userId: command.actorId };
     const answer = response => ({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
     try {
-      const statement = extractContactStatement(command.text);
+      const statement = extractContactStatement(command.text, { country: context?.country, timeZone: command.timeZone || context?.timeZone });
       if (statement?.invalid) return answer(`I need ${statement.name}'s number with the country code, like +254712345678 or +14045550123, so I can dial or text it.`);
       if (statement) {
         // A number written the Kenyan way ("0712345678") is saved as +254..., and said so: the same digits could be Ugandan or Tanzanian.
@@ -222,7 +222,7 @@ class OpenEndedPlanner {
         const saved = await memory.saveContact({ ...scope, ...contact });
         if (saved.full) return answer(`You have too many saved contacts to add another. Say "forget" one first, or ask "who are my contacts?"`);
         // The number is said back so a wrong digit is heard; a number written the local way is turned into +country and that is said too.
-        const tookAs = assumedKenya ? "Kenyan" : assumedCountry === "Nigeria" ? "Nigerian" : assumedCountry === "United States" ? "United States" : "";
+        const tookAs = assumedKenya ? "Kenyan" : (CONTACT_DEMONYM[assumedCountry] || "");
         return answer(`${saved.updated ? "Updated" : "Saved"} ${statement.name}: ${describeContact(saved.contact)}.${tookAs ? ` I took it as a ${tookAs} number. For another country, say it with the country code, like "save ${statement.name}'s number as +256712345678".` : ""} Say "forget ${statement.name}" any time, or "who are my contacts?"`);
       }
       const request = extractContactRequest(command.text);
@@ -444,7 +444,7 @@ class OpenEndedPlanner {
     if (bulk) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: bulk, sourceRequired: false, planningAttempts: 0 });
     const profile = await this.profileTurn(command, context);
     if (profile) return Object.freeze({ ...profile, planningAttempts: 0 });
-    const contactsAnswer = await this.contactsTurn(command);
+    const contactsAnswer = await this.contactsTurn(command, context);
     if (contactsAnswer) return Object.freeze({ ...contactsAnswer, planningAttempts: 0 });
     const named = await this.namedContactRequest(command);
     if (named?.clarification) return Object.freeze({ goal: String(command.text || "").trim(), application: "communications", riskTier: "regulated", clarification: named.clarification, steps: [], planningAttempts: 0 });
@@ -831,9 +831,9 @@ class OpenEndedPlanner {
     if (completeLists) return Object.freeze({ ...completeLists, planningAttempts: 1 });
     const completeCommunication = completeCommunicationPlan(command.text, catalog);
     if (completeCommunication) return Object.freeze({ ...completeCommunication, planningAttempts: 1 });
-    const sendMessage = sendMessagePlan(command.text, catalog);
+    const sendMessage = sendMessagePlan(command.text, catalog, { country: context?.country, timeZone: command.timeZone || context?.timeZone });
     if (sendMessage) return Object.freeze({ ...withContactName(sendMessage, named?.contactName), planningAttempts: 1 });
-    const placeCall = callPlan(command.text, catalog);
+    const placeCall = callPlan(command.text, catalog, { country: context?.country, timeZone: command.timeZone || context?.timeZone });
     if (placeCall) return Object.freeze({ ...withContactName(placeCall, named?.contactName), planningAttempts: 1 });
     const completeRemainingWorkspace = completeRemainingWorkspacePlan(command.text, catalog);
     if (completeRemainingWorkspace) return Object.freeze({ ...withJobsPlace(completeRemainingWorkspace, command.text, context?.country), planningAttempts: 1 });
@@ -1804,15 +1804,15 @@ function completeCommunicationPlan(text, catalog) {
 const SEND_OPENER = /^\s*(?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*(?:(text|sms|whatsapp|whats app|e-?mail)\b|send\s+(?:an?\s+|the\s+)?(text(?:\s+message)?|sms|whatsapp(?:\s+message)?|e-?mail|message)\b)/i;
 const SEND_MESSAGE_CLAUSE = /(?:\b(?:saying|says|that says|to say|with the (?:message|text))\b[:,]?|:)\s*["“']?(.+?)["”']?\s*$/is;
 // A number said the way people say it at home ("0712 345 678", "08031234567") becomes +254... / +234... before the request is read, so the person is shown the full number to confirm.
-function localNumbersToInternational(goal) {
+function localNumbersToInternational(goal, where = {}) {
   if (/\+\d/.test(goal)) return goal;
-  return goal.replace(/(?<![\d+])\d[\d\s().-]{6,16}\d(?![\d])/g, run => localPhoneToE164(run)?.phone || run);
+  return goal.replace(/(?<![\d+])\d[\d\s().-]{6,16}\d(?![\d])/g, run => localPhoneToE164(run, where)?.phone || run);
 }
 const SEND_PHONE = /\+\d[\d\s().-]{6,18}\d/;
 const SEND_EMAIL = /[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+/;
 
-function sendMessagePlan(text, catalog) {
-  const goal = localNumbersToInternational(String(text || "").trim());
+function sendMessagePlan(text, catalog, where = {}) {
+  const goal = localNumbersToInternational(String(text || "").trim(), where);
   const opener = SEND_OPENER.exec(goal);
   if (!opener) return null;
   if (!catalog.tools.some(tool => tool.toolId === "communications.send") ||
@@ -1843,8 +1843,8 @@ const CALL_MESSAGE_CLAUSE = /(?:\b(?:and|then)?\s*(?:say|saying|says|tell (?:the
 // taxi", "call it a day"), which must stay untouched below.
 const PHONE_LIKE = /\b\d[\d\s().-]{6,18}\d\b/;
 
-function callPlan(text, catalog) {
-  const goal = localNumbersToInternational(String(text || "").trim());
+function callPlan(text, catalog, where = {}) {
+  const goal = localNumbersToInternational(String(text || "").trim(), where);
   if (!CALL_OPENER.test(goal)) return null;
   if (!catalog.tools.some(tool => tool.toolId === "communications.send") ||
       !catalog.applications.some(app => app.applicationId === "communications")) return null;

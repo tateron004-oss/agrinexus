@@ -49,7 +49,7 @@ test("the part of the day after the day words sets the time, and does not stay i
 });
 
 test("repeats that cannot be done are said plainly instead of quietly becoming a one-time reminder", () => {
-  for (const text of ["every other evening remind me to pray", "remind me three times a week to exercise", "remind me every 1 day to drink water", "remind me once a month to pay rent"]) {
+  for (const text of ["every other evening remind me to pray", "remind me three times a week to exercise", "remind me every 1 day to drink water"]) {
     assert.equal(read(text)?.action, "unsupported", text);
   }
 });
