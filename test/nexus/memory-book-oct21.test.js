@@ -168,7 +168,7 @@ test("the permission is a circle sharing key, ending the circle clears it, and t
   assert.match(app, /\(typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  const tag = '<script src="/kyro-memory-book.js?v=kyro-memory-book-2"></script>';
+  const tag = '<script src="/kyro-memory-book.js?v=kyro-memory-book-3"></script>';
   assert.ok(index.includes(tag) && index.indexOf(tag) < index.search(/<script[^>]+src="\/app\.js/));
-  assert.ok(sw.includes("`/kyro-memory-book.js?v=kyro-memory-book-2`"));
+  assert.ok(sw.includes("`/kyro-memory-book.js?v=kyro-memory-book-3`"));
 });

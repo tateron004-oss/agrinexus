@@ -26,16 +26,21 @@
     if (!raw || raw.length > 8000) return null; // (a memory over MAX_ENTRY is still read as an add, so that Kyro can say it is too long and save nothing)
     let m;
     // adding: the memory itself follows, and may be long and may have several sentences, so it is read from the raw text (kept as written)
+    // What follows "memory book" may be a colon, a comma, a dash, a full stop or nothing at all: a spoken sentence has no colon in it ("add to my memory book. My husband Joseph died..."), and found on the live site, a request said aloud
+    // with a full stop was not read, and the voice model made a document of it instead. Punctuation alone after "memory book" is no memory ("add to my memory book.").
+    const body = value => (/[\p{L}\p{N}]/u.test(value) ? value.trim() : "");
     for (const [prefix, held] of [[ADD, false], [ADD_HELD, true]]) {
-      if ((m = new RegExp(`^${prefix}my\\s+${BOOK}\\s*[:,\\-–—]?\\s*([\\s\\S]+)$`, "i").exec(raw))) return { action: "add", who: null, text: m[1].trim(), ...(held ? { held } : {}) };
-      if ((m = new RegExp(`^${prefix}([A-Za-z][\\w .'’-]{0,40}?)${APOS}\\s+${BOOK}\\s*[:,\\-–—]?\\s*([\\s\\S]+)$`, "i").exec(raw)) && !/^my$/i.test(clean(m[1]))) return { action: "add", who: clean(m[1]), text: m[2].trim(), ...(held ? { held } : {}) };
+      if ((m = new RegExp(`^${prefix}my\\s+${BOOK}\\b[\\s:,.;!\\-–—]*([\\s\\S]+)$`, "i").exec(raw))) return { action: "add", who: null, text: body(m[1]), ...(held ? { held } : {}) };
+      if ((m = new RegExp(`^${prefix}([A-Za-z][\\w .'’-]{0,40}?)${APOS}\\s+${BOOK}\\b[\\s:,.;!\\-–—]*([\\s\\S]+)$`, "i").exec(raw)) && !/^my$/i.test(clean(m[1]))) return { action: "add", who: clean(m[1]), text: body(m[2]), ...(held ? { held } : {}) };
     }
     const t = clean(raw).replace(/[’]/g, "'").replace(/[.!?]+$/g, "");
     if (t.length > 160) return null;
     const lower = t.toLowerCase();
     // "add to my memory book" with nothing after it: Kyro asks what to add
-    if (new RegExp(`^(?:please )?(?:add|put|save|write)(?: (?:this|a memory|a story|something))? (?:to|in|into) my ${BOOK}$`).test(lower)) return { action: "add", who: null, text: "" };
-    if ((m = new RegExp(`^(?:please )?(?:add|put|save|write)(?: (?:this|a memory|a story|something))? (?:to|in|into) (.+?)(?:'s|s') ${BOOK}$`).exec(lower)) && m[1] !== "my") return { action: "add", who: clean(m[1]), text: "" };
+    // (said aloud, a person often says this much and stops, and the memory itself comes as the next sentence: the page keeps the wait open for it, see kyroMemoryBookFollowUp in app.js)
+    const EMPTY = "(?:please )?(?:add|put|save|write)(?: (?:this|a memory|a story|something|(?:a|an) (sensitive|difficult|sad|hard|painful) (?:memory|story)))? (?:to|in|into) ";
+    if ((m = new RegExp(`^${EMPTY}my ${BOOK}$`).exec(lower))) return { action: "add", who: null, text: "", ...(m[1] ? { held: true } : {}) };
+    if ((m = new RegExp(`^${EMPTY}(.+?)(?:'s|s') ${BOOK}$`).exec(lower)) && m[2] !== "my") return { action: "add", who: clean(m[2]), text: "", ...(m[1] ? { held: true } : {}) };
     if (new RegExp(`^(?:please )?(?:tell|read|give|play)(?: me)?(?: (?:a|one|another|the next|a different)) (?:memory|memories)(?: from my ${BOOK})?$`).test(lower)
       || new RegExp(`^(?:please )?(?:tell|read) me (?:a|one|another) (?:story|memory) from (?:my life|my ${BOOK})$`).test(lower)
       || new RegExp(`^(?:please )?(?:read|open|play)(?: me)? my ${BOOK}$`).test(lower)

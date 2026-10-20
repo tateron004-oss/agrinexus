@@ -93,9 +93,10 @@ function createMemoryBookService({ store, circle, push = null, pick = Math.rando
       if (!picked.link.shares?.memoryBook) return `${picked.link.otherName} has not allowed you to add to their memory book yet. They can say "let ${first(userName) === "them" ? "them" : first(userName)} add to my memory book", or you can ask them to.`;
       ownerId = picked.link.otherId; ownerName = picked.link.otherName; source = "family"; relationship = picked.link.relationship || "";
     }
+    // Nothing after "add to my memory book": on the page, the next sentence said is taken as the memory (kyroMemoryBookFollowUp in app.js); a person typing writes it after a colon.
     if (!request.text) return request.who
-      ? `What would you like to add to ${first(ownerName || request.who)}'s memory book? Say: add to ${clean(request.who)}'s memory book, and then the memory.`
-      : 'What would you like to add? Say: add to my memory book, and then the memory, for example: add to my memory book: I grew up by the lake with my four sisters.';
+      ? `What would you like to add to ${first(ownerName || request.who)}'s memory book? Tell me the memory now, in one go, and I will save it. If you are typing, write: add to ${clean(request.who)}'s memory book: and then the memory.`
+      : `What would you like to add${request.held ? " (I will mark it sensitive)" : ""}? Tell me the memory now, in one go, and I will save it. If you are typing, write: add to my memory book: and then the memory, for example: add to my memory book: I grew up by the lake with my four sisters.`;
     if (request.text.length > MAX_ENTRY) return `That is too long for one memory (the limit is ${MAX_ENTRY} characters). Please split it into shorter memories and add them one at a time. Nothing was saved.`;
     if (clean(request.text).length < 8) return "That is very short. Please write a little more so the memory makes sense when it is read back. Nothing was saved.";
     // The writer's own words, kept as written (only spaces and line breaks are tidied).
