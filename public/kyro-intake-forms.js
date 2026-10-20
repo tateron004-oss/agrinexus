@@ -291,6 +291,43 @@
     isTelehealthRequest
   });
 
+  // --- a brief for a PR or event firm ------------------------------------------------------------
+  // "Write me a PR brief": ten short questions (the business, the goal, the audience, the message, the budget, the dates, what has been tried, who decides, languages and accessibility, what is not wanted), read back, and after a yes saved as a Word
+  // document the owner can edit and send (nexus/knowledge/pr-brief.js builds it from these answers only, word for word; nothing is added). Kyro does not send it to anyone, choose a firm or contact one. English only for now.
+  const PRBRIEF_FIELDS = [
+    { key: "business", label: "Business", question: "What is your business called, and what does it do?", required: true, kind: "text", aliases: ["business", "company", "name"] },
+    { key: "goal", label: "Goal", question: "What do you want this work to achieve? Say it in one sentence.", required: true, kind: "text", aliases: ["goal", "aim", "purpose"] },
+    { key: "audience", label: "Audience", question: "Who do you need to reach? Or say 'skip'.", required: false, kind: "text", aliases: ["audience", "who"] },
+    { key: "message", label: "Message", question: "What is the one thing you want them to know? Or say 'skip'.", required: false, kind: "text", aliases: ["message", "key message"] },
+    { key: "budget", label: "Budget", question: "What is your budget? A range is fine. Or say 'skip'.", required: false, kind: "text", aliases: ["budget", "money", "price"] },
+    { key: "timeline", label: "Dates", question: "Which dates cannot move? For example, the date of an event. Or say 'skip'.", required: false, kind: "text", aliases: ["dates", "timeline", "deadline", "date"] },
+    { key: "past", label: "Already tried", question: "What have you already tried, and what worked? Or say 'skip'.", required: false, kind: "sentences", aliases: ["tried", "past", "before", "history"] },
+    { key: "approver", label: "Who approves", question: "Who decides, and who approves anything before it goes out? Or say 'skip'.", required: false, kind: "text", aliases: ["approves", "decides", "approval"] },
+    { key: "needs", label: "Languages and access", question: "Do you need any languages or accessibility, such as Spanish, sign language or captions? Or say 'skip'.", required: false, kind: "sentences", aliases: ["languages", "accessibility", "needs"] },
+    { key: "avoid", label: "Do not want", question: "Is there anything you do not want? Or say 'skip'.", required: false, kind: "sentences", aliases: ["avoid", "not want", "dont want"] }
+  ];
+  function prBriefReadback(values) {
+    const parts = [];
+    for (const field of PRBRIEF_FIELDS) if (clean(values[field.key])) parts.push(`${field.label}: ${clean(values[field.key])}.`);
+    return `Here is what I have. ${parts.join(" ")}`;
+  }
+  function prBriefToRequest(values) {
+    const request = {};
+    for (const field of PRBRIEF_FIELDS) if (clean(values[field.key])) request[field.key] = clean(values[field.key]);
+    return request;
+  }
+  const prBrief = Object.freeze({
+    id: "pr-brief",
+    title: "Your PR and events brief",
+    intro: "I will ask you ten short questions, one at a time, for a brief you can give to a PR or event firm. You can say repeat, skip, go back, or stop at any time.",
+    confirmBeforeSubmit: true,
+    confirmTail: { en: "Shall I save it as a document you can edit and send? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuituma? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the brief.",
+    fields: PRBRIEF_FIELDS,
+    readback: prBriefReadback,
+    toRequest: prBriefToRequest
+  });
+
   const resume = Object.freeze({
     id: "resume",
     title: "Your résumé",
@@ -310,5 +347,5 @@
     isContinueRequest: isResumeContinueRequest
   });
 
-  return Object.freeze({ resume, sale, telehealth, isTelehealthRequest, isSaleRequest, parseSale, isResumeBuildRequest, isResumeContinueRequest: isResumeContinueRequest, isResumeDownloadRequest });
+  return Object.freeze({ resume, sale, telehealth, prBrief, isTelehealthRequest, isSaleRequest, parseSale, isResumeBuildRequest, isResumeContinueRequest: isResumeContinueRequest, isResumeDownloadRequest });
 });

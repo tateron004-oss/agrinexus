@@ -1,6 +1,7 @@
 "use strict";
 
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js");
+const { prBriefDocument, KEYS: PR_BRIEF_KEYS } = require("../knowledge/pr-brief.js");
 
 // A small, explicit allowlist turning a completed voice intake (public/kyro-voice-intake.js +
 // public/kyro-intake-forms.js) into a plan step, in exactly the shape nexus/brain/planner.js's
@@ -14,6 +15,14 @@ const STRUCTURED_INTAKES = Object.freeze({
     toolId: "resume.create",
     title: "Create your resume",
     keys: Object.freeze(["name", "location", "phone", "email", "skills", "experience", "education", "languages"])
+  }),
+  // A brief for a PR or event firm (public/kyro-intake-forms.js "prBrief"): the document is built on the SERVER from the sanitized answers only (nexus/knowledge/pr-brief.js), word for word, and saved with the documents tool as
+  // a Word document the owner can edit and send. The client never sends the document's text.
+  "pr-brief": Object.freeze({
+    application: "documents",
+    toolId: "documents.create",
+    title: "Save your PR and events brief",
+    keys: PR_BRIEF_KEYS
   })
 });
 
@@ -52,6 +61,17 @@ function structuredIntakePlan(intakeId, values) {
     throw new NexusRuntimeError("intake_unknown", `Unknown structured intake: ${intakeId}`, 400);
   }
   const input = sanitizeIntakeValues(definition.keys, values);
+  if (intakeId === "pr-brief") {
+    const made = prBriefDocument(input);
+    if (!made) throw new NexusRuntimeError("pr_brief_incomplete", "A brief needs the business and what you want the work to achieve.", 422);
+    return {
+      goal: made.title,
+      application: definition.application,
+      riskTier: "low",
+      clarification: null,
+      steps: [{ clientStepId: "create-pr-brief", title: definition.title, toolId: definition.toolId, input: { title: made.title, content: made.content, format: "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }]
+    };
+  }
   const name = clean(input.name);
   if (!name) {
     throw new NexusRuntimeError("resume_name_required", "A resume needs the person's name.", 422);

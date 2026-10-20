@@ -46,14 +46,26 @@
 
   const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+|nexus,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|will|would|tell me|explain|help me|i need|i want|i('| a)m looking for|i would like|i'd like|any|give me|show me|walk me|write|draft|make|create|prepare|teach me)\b)/i;
 
+  // "Write me a PR brief", "help me write a brief for an event company", "I need a brief for a PR firm": a request to MAKE the brief, which starts Kyro's voice interview (public/kyro-intake-forms.js, "prBrief") and ends with a document.
+  // A question about briefs ("what goes in a PR brief?", "how do I write a brief?") is the guide's. Both words must be there: a brief, and a PR, event, agency or communications word.
+  function isPrBriefRequest(text) {
+    const value = String(text || "").replace(/\s+/g, " ").trim();
+    if (!value || value.length > 160) return false;
+    if (/^(?:how|what|why|which|when|should|is|are|does|do)\b/i.test(value)) return false;
+    if (!/\bbrief\b/i.test(value)) return false;
+    if (!/\b(?:pr|public relations|events?|agency|firm|publicist|communications?|marketing|planner|producer)\b/i.test(value)) return false;
+    return /\b(?:write|make|create|draft|prepare|build|start|put together|give me|get me|i need|i want|i'd like|i would like|help me|let's|can you|could you|would you)\b/i.test(value);
+  }
+
   function prTopic(text) {
     const value = String(text || "").replace(/\s+/g, " ").trim();
     if (!value || value.length > 300) return null;
+    if (isPrBriefRequest(value)) return null;
     if (NOT_A_GUIDE_QUESTION.test(value) || CALENDAR_OR_RECORDS.test(value) || PERSONAL_EMERGENCY.test(value) || FAKE_REVIEWS.test(value)) return null;
     if (!ASKS.test(value)) return null;
     for (const [topic, test] of POSITIVE) if (test(value)) return topic;
     return null;
   }
 
-  return Object.freeze({ prTopic });
+  return Object.freeze({ prTopic, isPrBriefRequest });
 });
