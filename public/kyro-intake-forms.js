@@ -328,6 +328,53 @@
     toRequest: prBriefToRequest
   });
 
+  // --- a one-page business plan -------------------------------------------------------------------
+  // "Write my business plan", "help me write a business plan": ten short questions (the SBA's lean plan: what the business is, customers, why they choose you, how they find you, how you keep them, how you earn, what you do, what you need,
+  // who helps, what it costs), read back, and after a yes saved as a Word document with the owner's own words under the SBA's lean-plan headings (nexus/knowledge/business-plan-doc.js). A request for a "template" or an "outline" is still the
+  // blank template, and a question ("how do I write a business plan?") is still the guide's.
+  const BP_ORDER = /\b(?:write|make|create|draft|prepare|build|start|put together|give me|get me|i need|i want|i'd like|i would like|help me|let's|can you|could you|would you)\b/i;
+  const BP_NOT = /\b(?:template|outline|blank|example|sample|format|pdf|checklist|lean|traditional)\b|^\s*(?:how|what|why|which|when|should|is|are|does|do)\b/i;
+  function isBusinessPlanRequest(text) {
+    const value = clean(text).replace(/[’]/g, "'").replace(WAKE_LEAD, "").replace(FILLER_LEAD, "").trim();
+    if (!value || value.length > 160) return false;
+    if (!/\bbusiness plan\b/i.test(value) || BP_NOT.test(value)) return false;
+    return BP_ORDER.test(value);
+  }
+  const BP_FIELDS = [
+    { key: "business", label: "Business", question: "What is your business called, and what does it do?", required: true, kind: "text", aliases: ["business", "company", "name"] },
+    { key: "customers", label: "Customers", question: "Who are your customers?", required: true, kind: "sentences", aliases: ["customers", "clients", "buyers"] },
+    { key: "value", label: "Why they choose you", question: "Why do customers choose you instead of someone else? Or say 'skip'.", required: false, kind: "sentences", aliases: ["why", "choose", "advantage"] },
+    { key: "channels", label: "How they find you", question: "How do customers find you and buy from you? Or say 'skip'.", required: false, kind: "sentences", aliases: ["find", "channels", "sell"] },
+    { key: "relationships", label: "Keeping customers", question: "How do you keep customers coming back? Or say 'skip'.", required: false, kind: "sentences", aliases: ["keep", "relationships", "loyalty"] },
+    { key: "revenue", label: "How you earn", question: "How does your business earn money? For example, what you sell and for how much. Or say 'skip'.", required: false, kind: "sentences", aliases: ["earn", "money", "revenue", "income"] },
+    { key: "activities", label: "What you do", question: "What are the main things you do every week to run it? Or say 'skip'.", required: false, kind: "sentences", aliases: ["activities", "do", "work"] },
+    { key: "resources", label: "What you need", question: "What do you need to run it? For example, tools, a place, people or money. Or say 'skip'.", required: false, kind: "sentences", aliases: ["need", "resources", "tools"] },
+    { key: "partners", label: "Who helps you", question: "Who helps you? For example, suppliers or partners. Or say 'skip'.", required: false, kind: "sentences", aliases: ["helps", "partners", "suppliers"] },
+    { key: "costs", label: "Biggest costs", question: "What are your biggest costs? Or say 'skip'.", required: false, kind: "sentences", aliases: ["costs", "expenses", "spend"] }
+  ];
+  function bpReadback(values) {
+    const parts = [];
+    for (const field of BP_FIELDS) if (clean(values[field.key])) parts.push(`${field.label}: ${clean(values[field.key])}.`);
+    return `Here is what I have. ${parts.join(" ")}`;
+  }
+  function bpToRequest(values) {
+    const request = {};
+    for (const field of BP_FIELDS) if (clean(values[field.key])) request[field.key] = clean(values[field.key]);
+    return request;
+  }
+  const businessPlan = Object.freeze({
+    id: "business-plan",
+    title: "Your business plan",
+    intro: "I will ask you ten short questions, one at a time, for a one-page business plan. You can say repeat, skip, go back, or stop at any time.",
+    confirmBeforeSubmit: true,
+    confirmTail: { en: "Shall I save it as a document you can edit and show to others? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuwaonyesha wengine? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the business plan.",
+    fields: BP_FIELDS,
+    readback: bpReadback,
+    toRequest: bpToRequest,
+    isBusinessPlanRequest
+  });
+
   const resume = Object.freeze({
     id: "resume",
     title: "Your résumé",
@@ -347,5 +394,5 @@
     isContinueRequest: isResumeContinueRequest
   });
 
-  return Object.freeze({ resume, sale, telehealth, prBrief, isTelehealthRequest, isSaleRequest, parseSale, isResumeBuildRequest, isResumeContinueRequest: isResumeContinueRequest, isResumeDownloadRequest });
+  return Object.freeze({ resume, sale, telehealth, prBrief, businessPlan, isBusinessPlanRequest, isTelehealthRequest, isSaleRequest, parseSale, isResumeBuildRequest, isResumeContinueRequest: isResumeContinueRequest, isResumeDownloadRequest });
 });
