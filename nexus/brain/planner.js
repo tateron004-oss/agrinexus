@@ -29,6 +29,8 @@ const { technologyTopic, technologyAnswer } = require("../knowledge/small-busine
 const { aiToolsTopic, aiToolsAnswer } = require("../knowledge/ai-tools-for-business.js");
 const { womensHealthTopic } = require("../knowledge/womens-health-topics.js");
 const { womensHealthAnswer } = require("../knowledge/womens-health.js");
+const { chronicTopic } = require("../../public/kyro-chronic-topics.js");
+const { chronicConditionAnswer } = require("../knowledge/chronic-conditions.js");
 const { stateEntityIntent, stateEntityAnswer, stripWakeWord } = require("../knowledge/state-entities.js");
 const { sourcesPageRequest, sourcesPageAnswer } = require("../knowledge/sources-page.js");
 const { californiaTopic, californiaAnswer } = require("../knowledge/california-business.js");
@@ -493,6 +495,13 @@ class OpenEndedPlanner {
     const womensGuide = womensTopic ? womensHealthAnswer(womensTopic, { us: usPerson, country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
     if (womensGuide) {
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: womensGuide.text, sourceRequired: false, knowledge: `womens-health:${womensTopic}`, sources: womensGuide.sources, guardrail: "womens-health-information", planningAttempts: 0 });
+    }
+    // A question about diabetes or high blood pressure itself (what it is, the numbers, looking after yourself, checking at home): a checked, sourced, plain answer (see knowledge/chronic-conditions.js). A person's own reading,
+    // a reading with symptoms, a medicine or a dose is never taken (public/kyro-chronic-topics.js): the health tool, the safety layer and the medicine rules answer those.
+    const chronicId = ownWorkspace ? null : chronicTopic(askText);
+    const chronicGuide = chronicId ? chronicConditionAnswer(chronicId, { us: usPerson }) : null;
+    if (chronicGuide) {
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: chronicGuide.text, sourceRequired: false, knowledge: `chronic-conditions:${chronicId}`, sources: chronicGuide.sources, guardrail: "chronic-conditions-information", planningAttempts: 0 });
     }
     // The checked United States guide (free help, certifications, loans, grants, taxes, licences, selling to the government, finding local help) answers first, from official sources with the date they were checked.
     // It applies to people in the United States only (their time zone, or a question that names a US programme), never to a farmer in Kenya asking about a loan.

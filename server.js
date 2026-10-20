@@ -80,6 +80,7 @@ const { contentGuardReply } = require("./nexus/brain/content-guard.js");
 const { replyLanguage } = require("./nexus/i18n/reply-language.js");
 const { parseNearbyPlacesRequest, namedPlaceIn: namedPlaceInRequest } = require("./server/providers/placesLocation.js");
 const { womensHealthTopic } = require("./nexus/knowledge/womens-health-topics.js");
+const { chronicTopic } = require("./public/kyro-chronic-topics.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
@@ -22441,6 +22442,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (guide) {
       return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: guide.response,
         executionAttempted: true, executionVerified: guide.verified === true };
+    }
+  }
+  // A question about diabetes or high blood pressure itself (what it is, the numbers, looking after yourself, checking at home) is answered from the checked guide (nexus/knowledge/chronic-conditions.js) whichever tool the model
+  // picked, with the person's own words tried first, as above: found by the live voice test, where "How do I keep track of my blood sugar?" came back as a reminders message with no source. A person's own reading, a reading with
+  // symptoms, a medicine or a dose is never taken (public/kyro-chronic-topics.js): the health tool, the safety layer and the medicine rules answer those.
+  const chronicAsk = typeof chronicTopic === "function" && rawCallerText && chronicTopic(rawCallerText) ? rawCallerText : command;
+  if (typeof chronicTopic === "function" && chronicTopic(chronicAsk) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
+    const chronicUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const chronicGuide = chronicUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: chronicUser, text: chronicAsk, language, timeZone: args?.timeZone }) : null;
+    if (chronicGuide) {
+      return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: chronicGuide.response,
+        executionAttempted: true, executionVerified: chronicGuide.verified === true };
     }
   }
   // A restricted account (today, only self-service guest sessions --
