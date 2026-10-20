@@ -110,9 +110,9 @@ test("on the page and the server: the parents' question is the page's own and th
   assert.ok(server.includes('const { parentsTopic } = require("./public/kyro-parents-topics.js");'));
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  const tag = '<script src="/kyro-parents-topics.js?v=kyro-parents-topics-1"></script>';
+  const tag = '<script src="/kyro-parents-topics.js?v=kyro-parents-topics-2"></script>';
   assert.ok(index.includes(tag) && index.indexOf(tag) < index.search(/<script[^>]+src="\/app\.js/), "before app.js");
-  assert.ok(sw.includes("`/kyro-parents-topics.js?v=kyro-parents-topics-1`"));
+  assert.ok(sw.includes("`/kyro-parents-topics.js?v=kyro-parents-topics-2`"));
 });
 
 test("when a person says a child is being abused, the safety response keeps the Childhelp line, adds Kenya's 116, and points to the guide", () => {
@@ -129,4 +129,38 @@ test("the new pages are in the weekly source check", () => {
   const urls = collectSources().map(entry => entry.url);
   for (const source of Object.values(guide.SOURCES)) assert.ok(urls.includes(source.url), source.url);
   assert.ok(collectSources().some(entry => entry.guides.includes("parents-guide")));
+});
+
+// Found by the live voice test (21 October): the safety words came back alone, with no number and no source, for the hardest things a parent can say.
+test("a child's words repeated by a parent, with no big word in them, are this guide's; 'touches her hair' and 'touched her toys' are not", () => {
+  for (const text of ["My daughter says her uncle touches her.", "My son told me his coach makes him take his clothes off", "My daughter said a man touched her private parts", "My niece told me her stepfather comes into her room at night and touches her"]) assert.equal(topics.parentsTopic(text), "child-tells-you", text);
+  for (const text of ["My daughter said her friend touches her hair", "My daughter says her brother touched her toys", "My son told me he hurt his knee", "My daughter says her teacher touches the board a lot"]) assert.equal(topics.parentsTopic(text), null, text);
+});
+
+test("the safety words come first, unchanged, and then the guide with its sources; no emergency alert or child speaking for themselves is turned into the guide", async () => {
+  const { readSafetyDetailed } = require("../../nexus/companion/safety.js");
+  const withCompanion = extra => new OpenEndedPlanner({ model: { plan: async () => { throw new Error("must not reach the AI planning model"); }, respond: async () => { throw new Error("the guide must answer without the model"); } }, tools: { list: async () => [] }, applications: { list: () => [] },
+    companion: { handle: async ({ command }) => (readSafetyDetailed(command.text) ? { response: "SAFETY WORDS FIRST.", ...extra } : null) } });
+  const run = (text, tz = "America/Chicago", planner = withCompanion({})) => planner.plan({ command: { text, tenantId: "t1", actorId: "u1", locale: "en", channel: "typed" }, context: { timeZone: tz } });
+  for (const [text, id] of [["My daughter told me she was raped.", "child-tells-you"], ["My daughter is 11 and pregnant. Who do I call?", "young-girl-pregnant"], ["My daughter says her uncle touches her.", "child-tells-you"]]) {
+    const plan = await run(text);
+    assert.ok(plan.response.startsWith("SAFETY WORDS FIRST."), text); assert.equal(plan.knowledge, `parents-guide:${id}`, text); assert.ok(plan.sources.length >= 2, text); assert.match(plan.response, /Childhelp|1-800-422-4453|911/, text);
+  }
+  const kenya = await run("My daughter is 11 and pregnant. Who do I call?", "Africa/Nairobi");
+  assert.match(kenya.response, /Childline Kenya/); assert.ok(kenya.sources.some(source => /childlinekenya/.test(source.url)));
+  // an alert that went out is the whole answer; and a child speaking for themselves keeps the safety words alone
+  const alerted = await run("My daughter says her uncle touches her.", "America/Chicago", withCompanion({ emergency: { language: "en" } }));
+  assert.equal(alerted.response, "SAFETY WORDS FIRST."); assert.equal(alerted.knowledge, undefined);
+  const child = await run("My dad touches me and I do not like it");
+  assert.equal(child.response, "SAFETY WORDS FIRST."); assert.equal(child.knowledge, undefined);
+});
+
+test("on the page, a parent's question that only the local abuse card would have answered goes on to the guide; a device with no connection and every other case keep the card", () => {
+  assert.match(app, /function kyroParentsAbuseQuestion\(text\)/);
+  assert.match(app, /navigator\.onLine === false \|\| !kyroParentsQuestion\(text\)/);
+  assert.match(app, /classifyState\(text, \{\}\)\?\.state === "abuse_or_safeguarding_concern"/);
+  const card = app.indexOf("function handleNexusMentalHealthBehavioralWellnessCommand(");
+  const skip = app.indexOf("if (kyroParentsAbuseQuestion(text)) return false;", card);
+  const build = app.indexOf("runtime.buildSupportPacket(text", card);
+  assert.ok(card > 0 && skip > card && skip < build, "the skip comes before the local card is built");
 });

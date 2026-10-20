@@ -33,6 +33,7 @@ const { chronicTopic } = require("../../public/kyro-chronic-topics.js");
 const { chronicConditionAnswer } = require("../knowledge/chronic-conditions.js");
 const { parentsTopic } = require("../../public/kyro-parents-topics.js");
 const { parentsGuideAnswer } = require("../knowledge/parents-guide.js");
+const { readSafetyDetailed } = require("../companion/safety.js");
 const { stateEntityIntent, stateEntityAnswer, stripWakeWord } = require("../knowledge/state-entities.js");
 const { sourcesPageRequest, sourcesPageAnswer } = require("../knowledge/sources-page.js");
 const { californiaTopic, californiaAnswer } = require("../knowledge/california-business.js");
@@ -319,6 +320,19 @@ class OpenEndedPlanner {
         const companionResult = this.companion.handle
           ? await this.companion.handle({ command: companionCommand, context }).catch(() => null)
           : await this.companion.turn({ command: companionCommand, context }).then(words => (words ? { response: words } : null)).catch(() => null);
+        // A parent who says "my daughter told me she was raped" or "my daughter is 11 and pregnant, who do I call?" gets the safety words FIRST (unchanged), and then the parents' guide: who to call, what to do now, with its
+        // official sources to open. The safety words alone named no number and no source (found by the live voice test). Only when the words are a parent's about a child (public/kyro-parents-topics.js never takes a child
+        // speaking for themselves, or anything about harming a child), and never when an emergency alert went out.
+        if (companionResult?.response && !companionResult.emergency && ["abuse_other", "abuse"].includes(readSafetyDetailed(safetyText)?.kind)) {
+          const parentsSafetyId = parentsTopic(safetyText);
+          const parentsSafetyAnswer = parentsSafetyId ? parentsGuideAnswer(parentsSafetyId, {
+            us: isUsContext({ timeZone: command.timeZone || context?.timeZone, text: safetyText }),
+            country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: safetyText })
+          }) : null;
+          if (parentsSafetyAnswer) {
+            return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: `${companionResult.response}\n\n${parentsSafetyAnswer.text}`, sourceRequired: false, knowledge: `parents-guide:${parentsSafetyId}`, sources: parentsSafetyAnswer.sources, guardrail: "child-safety-information", planningAttempts: 0 });
+          }
+        }
         if (companionResult?.response) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: companionResult.response, ...(companionResult.emergency ? { emergency: Object.freeze({ ...companionResult.emergency }) } : {}), sourceRequired: false, planningAttempts: 0 });
       }
     }
