@@ -51617,7 +51617,7 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // "What are my birth control options?", "how often should I get a Pap smear?": the checked women's health guide, with its official sources. The voice model reworded such a question when it called a tool, and the reworded
     // one was sometimes answered from memory with no sources.
     // "What is type 2 diabetes?", "how do I keep track of my blood sugar?", "how can I lower my blood pressure?": the checked diabetes and high blood pressure guide, with its sources (a person's own reading, symptoms or a medicine are never taken).
-    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)))) {
+    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)))) {
       if (!heardAgain) {
         try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
         kyroPageSpeaksUntil = Date.now() + 40000;
@@ -52957,10 +52957,15 @@ function kyroChronicQuestion(text) {
 function kyroParentsQuestion(text) {
   try { return Boolean(window.KyroParentsTopics && typeof window.KyroParentsTopics.parentsTopic === "function" && window.KyroParentsTopics.parentsTopic(text)); } catch { return false; }
 }
-// A parent's question the local safety card would otherwise answer alone (the "abuse or safeguarding concern" card): the guide answers it instead, and the server puts its own safety words first.
+// A CHILD speaking for themselves ("I am 12 and pregnant", "my uncle touches me", "how do I tell my mom something happened"; public/kyro-child-help.js, shared with the server): told where a child can get help, with the free hotlines and the
+// pages they come from. A parent, an adult remembering childhood, and anything about wanting to die or to hurt someone is never taken by it.
+function kyroChildHelpQuestion(text) {
+  try { return Boolean(window.KyroChildHelp && typeof window.KyroChildHelp.childHelpTopic === "function" && window.KyroChildHelp.childHelpTopic(text)); } catch { return false; }
+}
+// A parent's (or child's) words the local safety card would otherwise answer alone (the "abuse or safeguarding concern" card): the guide answers it instead, and the server puts its own safety words first.
 function kyroParentsAbuseQuestion(text) {
   try {
-    if (navigator.onLine === false || !kyroParentsQuestion(text)) return false;
+    if (navigator.onLine === false || !(kyroParentsQuestion(text) || kyroChildHelpQuestion(text))) return false;
     const runtime = window.NexusMentalHealthBehavioralWellness;
     return Boolean(runtime && runtime.shouldHandle?.(text) && runtime.classifyState(text, {})?.state === "abuse_or_safeguarding_concern");
   } catch { return false; }

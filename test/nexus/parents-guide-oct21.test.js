@@ -88,7 +88,7 @@ test("through the planner, with no AI model: the United States version in the US
   assert.equal((await ask("Who do I call to report child abuse?", "America/Chicago")).knowledge, "parents-guide:get-help-now");
   assert.equal((await ask("How do I talk to my daughter about her first period?", "America/Chicago")).knowledge, "parents-guide:talk-with-your-child", "before the women's health cycle answer");
   assert.equal((await ask("What are the signs of child sexual abuse?", "Africa/Nairobi", "ke")).knowledge, "parents-guide:signs-of-abuse");
-  for (const text of ["I am 12 and pregnant", "I was raped, who do I call?", "I want to hurt my daughter"]) await assert.rejects(ask(text, "America/Chicago"), /must not reach the AI planning model|guide must answer/, text);
+  for (const text of ["I was raped, who do I call?", "I want to hurt my daughter"]) await assert.rejects(ask(text, "America/Chicago"), /must not reach the AI planning model|guide must answer/, text);
 });
 
 test("on the page and the server: the parents' question is the page's own and the server tries the person's own words first, before the women's guide; the script is loaded before app.js and cached", () => {
@@ -102,7 +102,7 @@ test("on the page and the server: the parents' question is the page's own and th
   const none = { window: {} };
   vm.runInNewContext(`${app.slice(start, end)}\nthis.ask = kyroParentsQuestion;`, none);
   assert.equal(none.ask("My daughter told me she was raped"), false, "no matcher loaded, no claim");
-  assert.match(app, /\(typeof kyroParentsQuestion === "function" && kyroParentsQuestion\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
+  assert.match(app, /\(typeof kyroParentsQuestion === "function" && kyroParentsQuestion\(trimmed\)\) \|\| \(typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
   assert.match(server, /const parentsAsk = typeof parentsTopic === "function" && rawCallerText && parentsTopic\(rawCallerText\) \? rawCallerText : command;/);
   assert.match(server, /parentsTopic\(parentsAsk\) && effectiveMentalHealthSignal\.state !== "medical_emergency"/);
   assert.match(server, /text: parentsAsk, language, timeZone: args\?\.timeZone/);
@@ -152,12 +152,12 @@ test("the safety words come first, unchanged, and then the guide with its source
   const alerted = await run("My daughter says her uncle touches her.", "America/Chicago", withCompanion({ emergency: { language: "en" } }));
   assert.equal(alerted.response, "SAFETY WORDS FIRST."); assert.equal(alerted.knowledge, undefined);
   const child = await run("My dad touches me and I do not like it");
-  assert.equal(child.response, "SAFETY WORDS FIRST."); assert.equal(child.knowledge, undefined);
+  assert.ok(child.response.startsWith("SAFETY WORDS FIRST.")); assert.equal(child.knowledge, "child-help:child-hurt", "a child gets the safety words and then where a child can get help (child-help-oct21.test.js), never the parents' guide");
 });
 
 test("on the page, a parent's question that only the local abuse card would have answered goes on to the guide; a device with no connection and every other case keep the card", () => {
   assert.match(app, /function kyroParentsAbuseQuestion\(text\)/);
-  assert.match(app, /navigator\.onLine === false \|\| !kyroParentsQuestion\(text\)/);
+  assert.match(app, /navigator\.onLine === false \|\| !\(kyroParentsQuestion\(text\) \|\| kyroChildHelpQuestion\(text\)\)/);
   assert.match(app, /classifyState\(text, \{\}\)\?\.state === "abuse_or_safeguarding_concern"/);
   const card = app.indexOf("function handleNexusMentalHealthBehavioralWellnessCommand(");
   const skip = app.indexOf("if (kyroParentsAbuseQuestion(text)) return false;", card);

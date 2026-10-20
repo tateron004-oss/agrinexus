@@ -82,6 +82,7 @@ const { parseNearbyPlacesRequest, namedPlaceIn: namedPlaceInRequest } = require(
 const { womensHealthTopic } = require("./nexus/knowledge/womens-health-topics.js");
 const { chronicTopic } = require("./public/kyro-chronic-topics.js");
 const { parentsTopic } = require("./public/kyro-parents-topics.js");
+const { childHelpTopic } = require("./public/kyro-child-help.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
@@ -22428,6 +22429,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (dismissal) {
       return { ...common, capability: "screen", status: "completed", intent: "screen.return_to_orb", response: dismissal.lang === "sw" || language === "sw" ? "Sawa." : "Okay.",
         clientAction: { type: "return-to-orb" }, executionAttempted: false, executionVerified: false };
+    }
+  }
+  // A CHILD who says "I am 12 and pregnant", "my uncle touches me" or "how do I tell my mom something happened" is told where a child can get help (the free hotlines and the pages they come from, nexus/knowledge/child-help.js),
+  // whichever tool the model picked, with the child's own words tried first. The voice model had improvised an answer with no number and no source. A crisis answered above (wanting to die, to hurt someone) is never taken here.
+  const childAsk = typeof childHelpTopic === "function" && rawCallerText && childHelpTopic(rawCallerText) ? rawCallerText : command;
+  if (typeof childHelpTopic === "function" && childHelpTopic(childAsk) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
+    const childUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const childHelp = childUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: childUser, text: childAsk, language, timeZone: args?.timeZone }) : null;
+    if (childHelp) {
+      return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: childHelp.response,
+        executionAttempted: true, executionVerified: childHelp.verified === true };
     }
   }
   // A parent's question about their child's growing up and safety (how to talk with a child about the body and relationships, the signs of abuse, what to do if a child tells you, a young girl who is pregnant, who to call) is answered from

@@ -34,6 +34,8 @@ const { chronicConditionAnswer } = require("../knowledge/chronic-conditions.js")
 const { parentsTopic } = require("../../public/kyro-parents-topics.js");
 const { parentsGuideAnswer } = require("../knowledge/parents-guide.js");
 const { readSafetyDetailed } = require("../companion/safety.js");
+const { childHelpTopic } = require("../../public/kyro-child-help.js");
+const { childHelpAnswer } = require("../knowledge/child-help.js");
 const { stateEntityIntent, stateEntityAnswer, stripWakeWord } = require("../knowledge/state-entities.js");
 const { sourcesPageRequest, sourcesPageAnswer } = require("../knowledge/sources-page.js");
 const { californiaTopic, californiaAnswer } = require("../knowledge/california-business.js");
@@ -332,9 +334,29 @@ class OpenEndedPlanner {
           if (parentsSafetyAnswer) {
             return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: `${companionResult.response}\n\n${parentsSafetyAnswer.text}`, sourceRequired: false, knowledge: `parents-guide:${parentsSafetyId}`, sources: parentsSafetyAnswer.sources, guardrail: "child-safety-information", planningAttempts: 0 });
           }
+          // The same for a CHILD speaking for themselves ("my uncle touches me"): the safety words first, then where a child can get help, with the hotlines' own pages to open (nexus/knowledge/child-help.js).
+          const childSafetyId = childHelpTopic(safetyText);
+          const childSafetyAnswer = childSafetyId ? childHelpAnswer(childSafetyId, {
+            us: isUsContext({ timeZone: command.timeZone || context?.timeZone, text: safetyText }),
+            country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: safetyText })
+          }) : null;
+          if (childSafetyAnswer) {
+            return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: `${companionResult.response}\n\n${childSafetyAnswer.text}`, sourceRequired: false, knowledge: `child-help:${childSafetyId}`, sources: childSafetyAnswer.sources, guardrail: "child-safety-information", planningAttempts: 0 });
+          }
         }
         if (companionResult?.response) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: companionResult.response, ...(companionResult.emergency ? { emergency: Object.freeze({ ...companionResult.emergency }) } : {}), sourceRequired: false, planningAttempts: 0 });
       }
+    }
+    // A child who says "I am 12 and pregnant", "my uncle touches me" or "how do I tell my mom something happened": where a child can get help, in plain words, with the free hotlines and the pages they come from (see knowledge/child-help.js).
+    // The safety reader above answers first when it has words for what was said; this is for what it has none for. Asked before every toolkit, because a pregnancy or a touching is never a record to keep or a task to run.
+    // (public/kyro-child-help.js takes only a child speaking for themselves, never a parent, never an adult remembering, never anything about wanting to die or to hurt someone.)
+    for (const childSaid of safetyTexts) {
+      const childHelpId = childHelpTopic(childSaid);
+      const childHelp = childHelpId ? childHelpAnswer(childHelpId, {
+        us: isUsContext({ timeZone: command.timeZone || context?.timeZone, text: childSaid }),
+        country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: childSaid })
+      }) : null;
+      if (childHelp) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: childHelp.text, sourceRequired: false, knowledge: `child-help:${childHelpId}`, sources: childHelp.sources, guardrail: "child-safety-information", planningAttempts: 0 });
     }
     // Requests for sexual or explicit material, betting tips, and tricks to hack, fake or scam are answered plainly with what Kyro can do instead, before any tool or AI model sees them (see content-guard.js).
     const guarded = safetyTexts.map(contentGuardReply).find(Boolean);
