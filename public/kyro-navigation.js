@@ -259,6 +259,8 @@
         || (m = /^how (?:do|can|would|should) (?:i|we) (?:get|go|drive|walk|travel)\s+from\s+(.+?)\s+(?:to|towards)\s+(.+)$/i.exec(t))) {
       const from = m[1].replace(/\s+/g, " ").trim(); const to = m[2].replace(/\s+/g, " ").trim().replace(/[.?!]+$/, "");
       const mode = /\bwalk(?:ing)?\b|\bon foot\b/i.test(t) ? "walk" : "drive";
+      // "...to Kisumu, stopping at Nakuru and Kericho", "...via Naivasha": a route with stops is the map route's (it takes the stops in order); the steps read out here are between two places only
+      if (/[,\s](?:via|through|stopping (?:at|by|in)|by way of|passing through)\s/i.test(" " + to)) return null;
       // "from here" is from where the person is: guidance from their own location
       if (/^(?:here|my (?:current )?location|where i am|current location|me)$/i.test(from) && to && !NOT_A_PLACE.test(to)) return { type: "go", destination: to, mode };
       if (from && to && !NOT_A_PLACE.test(from) && !NOT_A_PLACE.test(to)) return { type: "between", from, to, mode };
