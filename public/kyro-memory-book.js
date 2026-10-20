@@ -53,7 +53,7 @@
       return { action: "remove", about: clean(m[1]), who: whose && whose[1] ? clean(whose[1]) : null };
     }
     // holding back / releasing a memory by what it is about; "in Margaret's memory book" when it is someone else's book
-    if ((m = new RegExp(`^(?:please )?(?:hold back|hold|keep back|do not read|don't read|stop reading)(?: out)? the (?:memory|story) (?:about|called|named|of) (.+?)(?: (?:unless i ask(?: for it)?|unless asked|on its own|unprompted|by itself))?(?: (?:in|from) (?:my|(.+?)${APOS}) ${BOOK})?$`).exec(lower))) {
+    if ((m = new RegExp(`^(?:please )?(?:hold back|fold back|hold|keep back|do not read|don't read|stop reading)(?: out)? the (?:memory|story) (?:about|called|named|of) (.+?)(?: (?:unless i ask(?: for it)?|unless asked|on its own|unprompted|by itself))?(?: (?:in|from) (?:my|(.+?)${APOS}) ${BOOK})?$`).exec(lower))) {
       const whose = /(?:in|from) (?:my|(.+?)(?:'s|s')) memory\s*book$/.exec(lower);
       return { action: "hold", about: clean(m[1]), who: whose && whose[1] ? clean(whose[1]) : null };
     }
@@ -65,6 +65,9 @@
     if ((m = new RegExp(`^(?:stop letting|do not let|don't let|do not allow|don't allow) (.+?) add (?:memories |a memory |things )?to my ${BOOK}$`).exec(lower))) return { action: "disallow", who: clean(m[1]) };
     if (new RegExp(`^who can add (?:memories )?to my ${BOOK}$`).test(lower)) return { action: "allowed" };
     if (new RegExp(`^(?:what is|what's|how does) (?:a |the |my )?${BOOK}(?: work)?$`).test(lower) || new RegExp(`^(?:tell me about|explain) (?:the |my )?${BOOK}$`).test(lower)) return { action: "help" };
+    // Anything else that names the memory book is still the memory book's: Kyro says plainly that it did not understand and what it can do, so the voice model never answers it from memory (found on the live site: a
+    // misheard "hold back" was answered by the model, which said it had adjusted a memory when it had done nothing).
+    if (new RegExp(`\\b(?:my|the|[a-z]+'s) ${BOOK}\\b`).test(lower)) return { action: "unclear" };
     return null;
   }
 

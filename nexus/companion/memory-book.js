@@ -77,6 +77,7 @@ function createMemoryBookService({ store, circle, push = null, pick = Math.rando
             : 'Nobody can add to your memory book except you. To let someone in your trusted circle add memories, say "let" and their name, then "add to my memory book".';
         }
         case "help": return help();
+        case "unclear": return 'I did not catch that, so I have not changed anything in the memory book. You can say: "tell me a memory", "add to my memory book", "what is in my memory book", "remove the memory about" and a few words, or "hold back the memory about" and a few words.';
         default: return null;
       }
     } catch { return null; }

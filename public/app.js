@@ -52988,7 +52988,7 @@ function kyroMemoryBookFollowUp(text) {
     const pending = kyroMemoryBookPending;
     if (!pending) return "";
     kyroMemoryBookPending = null;
-    if (Date.now() > pending.until || asked || /^(?:never ?mind|cancel|stop|forget (?:it|that)|no thanks?|not now)\b/i.test(said)) return "";
+    if (Date.now() > pending.until || (asked && asked.action !== "unclear") || /^(?:never ?mind|cancel|stop|forget (?:it|that)|no thanks?|not now)\b/i.test(said)) return "";
     const completed = `Add ${pending.held ? "a sensitive memory " : ""}to ${pending.who ? `${pending.who}'s` : "my"} memory book: ${said}`;
     kyroMemoryBookDone = { said, completed, at: Date.now() };
     return completed;
