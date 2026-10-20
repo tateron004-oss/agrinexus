@@ -34,6 +34,8 @@ const { chronicConditionAnswer } = require("../knowledge/chronic-conditions.js")
 const { parentsTopic } = require("../../public/kyro-parents-topics.js");
 const { parentsGuideAnswer } = require("../knowledge/parents-guide.js");
 const { readSafetyDetailed } = require("../companion/safety.js");
+const { prTopic } = require("../../public/kyro-pr-topics.js");
+const { prEventsAnswer } = require("../knowledge/pr-events-guide.js");
 const { childHelpTopic } = require("../../public/kyro-child-help.js");
 const { childHelpAnswer } = require("../knowledge/child-help.js");
 const { stateEntityIntent, stateEntityAnswer, stripWakeWord } = require("../knowledge/state-entities.js");
@@ -535,6 +537,14 @@ class OpenEndedPlanner {
     const parentsAnswer = parentsId ? parentsGuideAnswer(parentsId, { us: usPerson, country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
     if (parentsAnswer) {
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: parentsAnswer.text, sourceRequired: false, knowledge: `parents-guide:${parentsId}`, sources: parentsAnswer.sources, guardrail: "child-safety-information", planningAttempts: 0 });
+    }
+    // A small business owner's question about PUBLIC RELATIONS and EVENTS (a press release and the media, influencer disclosure, the FTC's advertising rules, a crisis communication plan, planning an event and its permits and accessibility, brand, stakeholders,
+    // measuring results, hiring a PR or event firm): a checked, sourced, plain answer (see knowledge/pr-events-guide.js). Only a question that names the thing is taken (public/kyro-pr-topics.js); the calendar, a person's records, fake reviews (the
+    // technology guide's) and any personal emergency are never taken here.
+    const prId = prTopic(askText);
+    const prAnswer = prId ? prEventsAnswer(prId) : null;
+    if (prAnswer) {
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: prAnswer.text, sourceRequired: false, knowledge: `pr-events-guide:${prId}`, sources: prAnswer.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // A woman's question about her own health (cervical screening, breast health, birth control, periods, menopause, prenatal and postnatal care, where to find care): a checked, sourced, plain answer (see knowledge/womens-health.js).
     // Urgent, unsafe and medicine questions are never taken (womens-health-topics.js): the safety layer and the medicine rules answer those.
