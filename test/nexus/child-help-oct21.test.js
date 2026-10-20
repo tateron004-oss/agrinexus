@@ -105,7 +105,7 @@ test("on the page and the server: a child's words are the page's own turn, the l
   const none = { window: {} };
   vm.runInNewContext(`${app.slice(start, end)}\nthis.ask = kyroChildHelpQuestion;`, none);
   assert.equal(none.ask("I am 12 and pregnant"), false, "no matcher loaded, no claim");
-  assert.match(app, /\(typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
+  assert.match(app, /\(typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion\(trimmed\)\) \|\| \(typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
   assert.match(app, /navigator\.onLine === false \|\| !\(kyroParentsQuestion\(text\) \|\| kyroChildHelpQuestion\(text\)\)/);
   assert.match(server, /const childAsk = typeof childHelpTopic === "function" && rawCallerText && childHelpTopic\(rawCallerText\) \? rawCallerText : command;/);
   assert.match(server, /childHelpTopic\(childAsk\) && effectiveMentalHealthSignal\.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function"/);

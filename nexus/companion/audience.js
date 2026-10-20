@@ -36,11 +36,13 @@ function readAudienceIntro(text) {
 }
 
 // hasMedications: whether this tenant has a real medication store configured (medications is null otherwise, see index.js).
-function audienceIntroReply(kind, { hasMedications = false } = {}) {
+function audienceIntroReply(kind, { hasMedications = false, hasMemoryBook = false } = {}) {
   const shared = 'I can check in on you every day ("check in on me every morning at 8"), and if you don\'t answer for a while I can quietly let someone you trust know -- only that, never what you told me. Say "add name@example.com to my circle" to bring someone in, or "alert my circle" any time you need help right now.';
   const medicationLine = hasMedications ? ' I can also remind you to take medication ("add medication metformin 500mg at 8am and 8pm") and let you confirm each dose.' : "";
   if (kind === "veteran") return `Thank you for telling me. ${shared}${medicationLine} I'm not a counselor or a veterans' service -- if you ever need to talk to one, please call your local emergency number or a crisis line in your country.`;
-  return `Good to know. ${shared}${medicationLine}`;
+  // an older person (not a veteran) is also told about the memory book, in plain words, when it is switched on
+  const memoryLine = hasMemoryBook ? ' I can also keep a memory book for you: short true memories that you, or someone you trust, write down, and I read them back to you exactly as written. Say "what is a memory book" to hear more.' : "";
+  return `Good to know. ${shared}${medicationLine}${memoryLine}`;
 }
 
 module.exports = Object.freeze({ readAudienceIntro, audienceIntroReply });

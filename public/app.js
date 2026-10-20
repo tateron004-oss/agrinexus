@@ -51617,7 +51617,7 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // "What are my birth control options?", "how often should I get a Pap smear?": the checked women's health guide, with its official sources. The voice model reworded such a question when it called a tool, and the reworded
     // one was sometimes answered from memory with no sources.
     // "What is type 2 diabetes?", "how do I keep track of my blood sugar?", "how can I lower my blood pressure?": the checked diabetes and high blood pressure guide, with its sources (a person's own reading, symptoms or a medicine are never taken).
-    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)))) {
+    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)) || (typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest(trimmed)))) {
       if (!heardAgain) {
         try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
         kyroPageSpeaksUntil = Date.now() + 40000;
@@ -52956,6 +52956,11 @@ function kyroChronicQuestion(text) {
 // A child speaking for themselves, and anything about harming a child or oneself, is never taken by it.
 function kyroParentsQuestion(text) {
   try { return Boolean(window.KyroParentsTopics && typeof window.KyroParentsTopics.parentsTopic === "function" && window.KyroParentsTopics.parentsTopic(text)); } catch { return false; }
+}
+// A request about the MEMORY BOOK (public/kyro-memory-book.js, shared with the server): add a memory, hear one, see the list, remove one, say who may add. The page takes such a turn itself so that the voice model never makes up a memory:
+// a memory is read back exactly as it was written, from the book, or not at all.
+function kyroMemoryBookRequest(text) {
+  try { return Boolean(window.KyroMemoryBook && typeof window.KyroMemoryBook.readMemoryBookRequest === "function" && window.KyroMemoryBook.readMemoryBookRequest(text)); } catch { return false; }
 }
 // A CHILD speaking for themselves ("I am 12 and pregnant", "my uncle touches me", "how do I tell my mom something happened"; public/kyro-child-help.js, shared with the server): told where a child can get help, with the free hotlines and the
 // pages they come from. A parent, an adult remembering childhood, and anything about wanting to die or to hurt someone is never taken by it.

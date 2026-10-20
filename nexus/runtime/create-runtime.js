@@ -73,6 +73,7 @@ const { FarmRecordRepository } = require("../farmwork/store.js");
 const { HealthRecordRepository } = require("../healthwork/store.js");
 const { CheckinSettingsRepository, CheckinStateRepository } = require("../companion/checkin-store.js");
 const { MedicationRepository } = require("../companion/medication-store.js");
+const { MemoryBookRepository } = require("../companion/memory-book-store.js");
 const { WellnessRepository } = require("../wellness/store.js");
 const { RepeatReminderRepository } = require("../reminders/repeat-store.js");
 const { createRepeatReminderService } = require("../reminders/repeat-service.js");
@@ -204,7 +205,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const alerts = createWeatherAlertService({ notifications, settings: new WeatherAlertSettingsRepository(db), memory, devices, autonomyControl });
   const weekly = createWeeklySummaryService({ notifications, settings: new WeeklySummarySettingsRepository(db), memory, devices, autonomyControl });
   const circleRepository = new CircleRepository(db);
-  const companion = createCompanion({ circle: circleRepository, checkinSettings: new CheckinSettingsRepository(db), checkinState: new CheckinStateRepository(db), medicationStore: new MedicationRepository(db), memory, notifications, devices, autonomyControl });
+  const companion = createCompanion({ circle: circleRepository, checkinSettings: new CheckinSettingsRepository(db), checkinState: new CheckinStateRepository(db), medicationStore: new MedicationRepository(db), memoryBookStore: new MemoryBookRepository(db), memory, notifications, devices, autonomyControl });
   const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory, brief, alerts, weekly, companion, automationRecords: records, wellnessStore: wellnessRecords, repeatReminders: repeatReminderRecords,
     community: { store: new CommunityRepository(db), notifications, nameOf: args => circleRepository.userName(args) },
     farmWork: { store: farmRecords, notifications, nameOf: args => circleRepository.userName(args) },
