@@ -101,3 +101,22 @@ test("the page loads the shared matcher before app.js and caches it", () => {
   assert.ok(sw.includes("`/kyro-womens-topics.js?v=kyro-womens-topics-1`"));
   assert.ok(fs.existsSync(path.join(__dirname, "../../public/kyro-womens-topics.js")));
 });
+
+test("a spoken reply such as 'no' or 'ok' to a lesson is not treated as small talk: the next lesson is drawn, while a plain 'no' stays spoken", () => {
+  const code = slice("function kyroShowResultScreen(toolName, command, result) {", "// The flows that really are forms");
+  const small = slice("const KYRO_SMALL_TALK =", "const KYRO_FORM_FLOW =");
+  const drawn = [];
+  const context = {
+    Date, window: { KyroResultScreen: { buildModel: (result) => ({ response: result.response }), show: (doc, model) => drawn.push(model.response) } }, document: {},
+    kyroResultScreenEligible: () => true, kyroExplicitOpenCard: () => false, KYRO_FORM_FLOW: /never/, kyroPlainText: text => text, languageCode: () => "en", kyroReturnToOrb() {}, kyroRunOffer() {}, kyroNoteActivity() {},
+    kyroSourceLinks: [], kyroPendingOffers: []
+  };
+  vm.runInNewContext(`${small}\n${code}\nlet kyroGuidedOpenAt = 0; function kyroGuidedReply(text) { return Boolean(kyroGuidedOpenAt && /^(?:no|yes|ok|okay|done)[.!?]*$/i.test(String(text).trim())); }\nthis.show = kyroShowResultScreen; this.openGuided = () => { kyroGuidedOpenAt = Date.now(); }; this.closeGuided = () => { kyroGuidedOpenAt = 0; };`, context);
+  const lesson = { ok: true, status: "completed", response: "Lesson 2 of 6, What to keep out. Never type passwords into an AI tool." };
+  assert.equal(context.show("nexus_everyday_records", "No.", lesson), false, "a plain no is spoken, not drawn");
+  context.openGuided();
+  assert.equal(context.show("nexus_everyday_records", "No.", lesson), true, "a reply to a lesson is drawn");
+  assert.equal(context.show("nexus_everyday_records", "Hello Kyro", lesson), false, "a greeting is still small talk");
+  assert.equal(drawn.length, 1);
+  assert.match(app, /KYRO_SMALL_TALK\.test\(String\(command \|\| ""\)\.trim\(\)\) && !\(typeof kyroGuidedReply === "function" && kyroGuidedReply\(command\)\)/);
+});
