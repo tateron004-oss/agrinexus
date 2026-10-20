@@ -31,6 +31,8 @@ const { womensHealthTopic } = require("../knowledge/womens-health-topics.js");
 const { womensHealthAnswer } = require("../knowledge/womens-health.js");
 const { chronicTopic } = require("../../public/kyro-chronic-topics.js");
 const { chronicConditionAnswer } = require("../knowledge/chronic-conditions.js");
+const { parentsTopic } = require("../../public/kyro-parents-topics.js");
+const { parentsGuideAnswer } = require("../knowledge/parents-guide.js");
 const { stateEntityIntent, stateEntityAnswer, stripWakeWord } = require("../knowledge/state-entities.js");
 const { sourcesPageRequest, sourcesPageAnswer } = require("../knowledge/sources-page.js");
 const { californiaTopic, californiaAnswer } = require("../knowledge/california-business.js");
@@ -488,6 +490,15 @@ class OpenEndedPlanner {
     if (!ownWorkspace && sourcesPageRequest(askText)) {
       const guide = sourcesPageAnswer(askText);
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: "sources-page", sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
+    // A parent's question about their child's growing up and safety (how to talk with a child about the body and relationships, the signs of abuse, what to do if a child tells you, a young girl who is pregnant, who to call): a checked,
+    // sourced, plain answer (see knowledge/parents-guide.js). Asked before the women's health guide below, because "how do I explain a period to my daughter" is this guide's and not the cycle answer. A child speaking for themselves,
+    // and anything about harming a child or oneself, is never taken (public/kyro-parents-topics.js); the safety layer, which comes first, answers a person who says they are being hurt.
+    // (not held back by the workspace words: "who do I call" in "my daughter is 11 and pregnant, who do I call?" is a question about a child, not a request to the person's own records)
+    const parentsId = parentsTopic(askText);
+    const parentsAnswer = parentsId ? parentsGuideAnswer(parentsId, { us: usPerson, country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
+    if (parentsAnswer) {
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: parentsAnswer.text, sourceRequired: false, knowledge: `parents-guide:${parentsId}`, sources: parentsAnswer.sources, guardrail: "child-safety-information", planningAttempts: 0 });
     }
     // A woman's question about her own health (cervical screening, breast health, birth control, periods, menopause, prenatal and postnatal care, where to find care): a checked, sourced, plain answer (see knowledge/womens-health.js).
     // Urgent, unsafe and medicine questions are never taken (womens-health-topics.js): the safety layer and the medicine rules answer those.

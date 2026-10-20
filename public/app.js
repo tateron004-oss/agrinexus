@@ -51614,7 +51614,7 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // "What are my birth control options?", "how often should I get a Pap smear?": the checked women's health guide, with its official sources. The voice model reworded such a question when it called a tool, and the reworded
     // one was sometimes answered from memory with no sources.
     // "What is type 2 diabetes?", "how do I keep track of my blood sugar?", "how can I lower my blood pressure?": the checked diabetes and high blood pressure guide, with its sources (a person's own reading, symptoms or a medicine are never taken).
-    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)))) {
+    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)))) {
       if (!heardAgain) {
         try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
         kyroPageSpeaksUntil = Date.now() + 40000;
@@ -52948,6 +52948,11 @@ function kyroWomensHealthQuestion(text) {
 // A diabetes or high blood pressure question for the checked guide (public/kyro-chronic-topics.js, shared with the server): a person's own reading, a reading with symptoms, a medicine or a dose is never taken by it.
 function kyroChronicQuestion(text) {
   try { return Boolean(window.KyroChronicTopics && typeof window.KyroChronicTopics.chronicTopic === "function" && window.KyroChronicTopics.chronicTopic(text)); } catch { return false; }
+}
+// A parent's question about their child's growing up and safety (public/kyro-parents-topics.js, shared with the server): how to talk with a child, the signs of abuse, what to do if a child tells you, a young girl who is pregnant, who to call.
+// A child speaking for themselves, and anything about harming a child or oneself, is never taken by it.
+function kyroParentsQuestion(text) {
+  try { return Boolean(window.KyroParentsTopics && typeof window.KyroParentsTopics.parentsTopic === "function" && window.KyroParentsTopics.parentsTopic(text)); } catch { return false; }
 }
 // A question for the checked small-business guide (public/kyro-business-topics.js): minority-owned businesses, startups, loans, grants, certification, taxes. Only when it is about a business at all, and on a device in the
 // United States or naming a US programme (SBA, 8(a), NMSDC ...); "how do I grow a garden" is left to the voice model.
