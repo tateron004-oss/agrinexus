@@ -21265,6 +21265,7 @@ function nexusOpenAiNativeToolSchemas() {
       destination: { type: "string", description: "The ending place for a route, when the user asked for directions, a route, or travel time between two or more places." },
       waypoints: { type: "array", items: { type: "string" }, description: "Intermediate stops between origin and destination, in visiting order, when the user named one or more places to route through (e.g. \"via X\", \"through Y\")." },
       confirmed: { type: "boolean", description: "True only when the user explicitly confirmed a gated action in the current turn." },
+      part: { type: "integer", description: "For an uploaded Word or Excel file that is read in parts: which part to read (1 is the first; ask for 2, 3 and so on to continue). Leave out for the first part." },
       title: { type: "string", description: "A short title, when the user named one, for a document, export, event, listing, reminder, or business/nonprofit workspace." },
       content: { type: "string", description: "The full body text the user wants exported, drafted, or sent, when it is longer or more specific than the plain command." },
       format: { type: "string", description: "The file format the user asked for (e.g. pdf, docx, txt, md, json), when exporting a document." }
@@ -22861,6 +22862,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const documentResult = await nexusRealProviders.documents.analyze({
       fileId,
       text: args.text || args.content,
+      part: args.part,
       command
     }, process.env, user);
     // Found live: the real extracted PDF text / real vision description
@@ -50083,7 +50085,7 @@ async function api(req, res, url) {
       const messages = {
         payload_too_large: "That file is too large.",
         file_too_large: `That file is larger than the ${Math.round(nexusUploads.maxUploadBytes(process.env) / (1024 * 1024))}MB limit.`,
-        unsupported_file_type: `Only ${nexusUploads.acceptedTypes().join(", ")} are accepted.`,
+        unsupported_file_type: "Only pictures (JPEG, PNG or WebP), PDF files, Word (.docx) and Excel (.xlsx) files can be uploaded. For an older .doc or .xls file, open it and save it as .docx or .xlsx first.",
         content_does_not_match_declared_type: "The file's contents did not match its declared type.",
         storage_quota_exceeded: "Nexus file storage is full. Please try again later or contact support.",
         user_quota_exceeded: `Your storage is full (${Math.round(nexusUploads.userQuotaBytes(process.env) / (1024 * 1024))} MB per person). Remove files you no longer need, then try again.`,

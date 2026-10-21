@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const busboy = require("busboy");
+const officeText = require("./officeText.js");
 
 // Real file uploads, wired to land in exactly the directory
 // documentProvider.js's resolveLocalFile() already reads from
@@ -17,11 +18,26 @@ const ACCEPTED_TYPES = Object.freeze({
   "image/jpeg": { ext: ".jpg", magic: [[0, [0xff, 0xd8, 0xff]]] },
   "image/png": { ext: ".png", magic: [[0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]]] },
   "image/webp": { ext: ".webp", magic: [[0, [0x52, 0x49, 0x46, 0x46]], [8, [0x57, 0x45, 0x42, 0x50]]] },
-  "application/pdf": { ext: ".pdf", magic: [[0, [0x25, 0x50, 0x44, 0x46]]] }
+  "application/pdf": { ext: ".pdf", magic: [[0, [0x25, 0x50, 0x44, 0x46]]] },
+  // Word and Excel (the current .docx and .xlsx, which are ZIP packages: "PK" at the start, and the right parts inside, checked in parseAndStoreUpload). Macro-enabled (.docm, .xlsm) and the older .doc and .xls are not accepted.
+  [officeText.DOCX_TYPE]: { ext: ".docx", magic: [[0, [0x50, 0x4b, 0x03, 0x04]]], office: "docx" },
+  [officeText.XLSX_TYPE]: { ext: ".xlsx", magic: [[0, [0x50, 0x4b, 0x03, 0x04]]], office: "xlsx" }
 });
 
 function acceptedTypes() {
   return Object.keys(ACCEPTED_TYPES);
+}
+
+// The accepted type of an upload. Most browsers say what a .docx or .xlsx is, but one on a computer with no Office installed often says nothing (the multipart reader then reports "text/plain"), "application/octet-stream" or "application/zip": for those the
+// file's own ending decides, and the file's contents are checked all the same (so a renamed file of another kind is still refused).
+const OFFICE_BY_EXTENSION = Object.freeze({ ".docx": officeText.DOCX_TYPE, ".xlsx": officeText.XLSX_TYPE });
+function resolveDeclaredType(declaredType, filename) {
+  const declared = String(declaredType || "").toLowerCase();
+  if (ACCEPTED_TYPES[declared]) return declared;
+  if (!declared || /^(?:application\/(?:octet-stream|zip|x-zip-compressed)|text\/plain)$/.test(declared)) {
+    return OFFICE_BY_EXTENSION[path.extname(String(filename || "")).toLowerCase()] || declared;
+  }
+  return declared;
 }
 
 function uploadDir(env = process.env) {
@@ -238,7 +254,7 @@ function parseAndStoreUpload(req, { env = process.env, userId, space = "default"
       // this the finish handler below would race it and wrongly reject with
       // "no file in request" even though a real file was present.
       handled = true;
-      const declaredType = String(info.mimeType || "").toLowerCase();
+      const declaredType = resolveDeclaredType(info.mimeType, info.filename);
       const spec = ACCEPTED_TYPES[declaredType];
       if (!spec) {
         stream.resume();
@@ -265,6 +281,10 @@ function parseAndStoreUpload(req, { env = process.env, userId, space = "default"
           if (fileTooLarge) throw Object.assign(new Error("file_too_large"), { maxBytes });
           const head = Buffer.concat(chunks);
           if (!magicBytesMatch(head, declaredType)) {
+            throw Object.assign(new Error("content_does_not_match_declared_type"), { declaredType });
+          }
+          // A Word or Excel file must really be one: a ZIP with the main part of a Word document or an Excel workbook inside (any other ZIP, or one renamed to .docx, is refused).
+          if (spec.office && officeText.officeKind(fs.readFileSync(tmpPath)) !== spec.office) {
             throw Object.assign(new Error("content_does_not_match_declared_type"), { declaredType });
           }
           // Found live (uploads/document-handling audit): by this point tmpPath (this very upload's own
@@ -328,6 +348,7 @@ function parseAndStoreUpload(req, { env = process.env, userId, space = "default"
 module.exports = Object.freeze({
   ACCEPTED_TYPES,
   acceptedTypes,
+  resolveDeclaredType,
   uploadDir,
   maxUploadBytes,
   totalQuotaBytes,

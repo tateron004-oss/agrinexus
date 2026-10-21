@@ -285,7 +285,7 @@ test("the business applications, the résumés and the uploads open", () => {
   for (const text of ["Open uploads", "Upload a document", "I want to upload a photo", "attach a file", "open the file upload"]) {
     const { api, calls } = load();
     assert.equal(api.kyroHandleSpokenOpen(text, {}), true, text);
-    assert.match(calls.screens.at(-1), /Choose a picture or a PDF \(up to 10 MB\)/, text);
+    assert.match(calls.screens.at(-1), /Choose a picture, a PDF, a Word document or an Excel file \(up to 10 MB\)/, text);
   }
   for (const text of ["how do I find grants", "show me grants for women farmers", "build my resume", "how do I upload a photo", "download my document", "open a business"]) assert.equal(load().api.kyroSpokenOpenOwns(text), false, text);
   assert.match(app, /function kyroOpenUploadScreen\(said, lang\)[^]*?data-kyro-upload-button[^]*?kyroAskAboutPicture\(file/, "the screen has a real button that sends the file and reads it out");

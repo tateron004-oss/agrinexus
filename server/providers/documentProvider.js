@@ -13,6 +13,10 @@ const {
 } = require("./providerUtils");
 const nexusUploads = require("../uploads.js");
 const businessSpaces = require("../businessSpaces.js");
+const officeText = require("../officeText.js");
+
+// A Word or Excel file is read out about this much at a time (a long one is read in parts: "part 2", "the next part").
+const OFFICE_PART_CHARACTERS = 6000;
 
 function status(env = process.env) {
   const localEnabled = envEnabled("NEXUS_FILE_UPLOAD_ENABLED", env);
@@ -125,11 +129,29 @@ async function analyze(body = {}, env = process.env, user = null) {
       return blockedResponse(readiness.provider, action, "You do not have access to that uploaded file.");
     }
     const stats = fs.statSync(filePath);
-    if (stats.size > Number(env.NEXUS_FILE_ANALYSIS_MAX_BYTES || 5_000_000)) {
+    const mimeType = meta.mimeType || "";
+    const officeKind = mimeType === officeText.DOCX_TYPE ? "docx" : mimeType === officeText.XLSX_TYPE ? "xlsx" : "";
+    // (a Word or Excel file may be as big as an upload may: it is only read as text, with its own caps, not sent anywhere)
+    const sizeLimit = officeKind ? Math.max(Number(env.NEXUS_FILE_ANALYSIS_MAX_BYTES || 5_000_000), nexusUploads.maxUploadBytes(env)) : Number(env.NEXUS_FILE_ANALYSIS_MAX_BYTES || 5_000_000);
+    if (stats.size > sizeLimit) {
       return blockedResponse(readiness.provider, action, "The referenced document exceeds the configured analysis size limit.");
     }
-    const mimeType = meta.mimeType || "";
     const source = `uploaded-file:${meta.originalFilename || path.basename(filePath)}`;
+    if (officeKind) {
+      const read = officeText.readOfficeFile(fs.readFileSync(filePath), officeKind);
+      if (!read.ok) return blockedResponse(readiness.provider, action, read.reason);
+      const parts = officeText.textParts(read.text, OFFICE_PART_CHARACTERS);
+      const part = Math.min(Math.max(Math.trunc(Number(body.part)) || 1, 1), parts.length);
+      const what = officeKind === "docx" ? "Word document" : "Excel spreadsheet";
+      const hidden = read.hiddenSheets ? ` ${read.hiddenSheets} hidden sheet${read.hiddenSheets === 1 ? " was" : "s were"} not read.` : "";
+      return providerResponse({
+        provider: readiness.provider, action, status: "completed",
+        message: `${what} read from a real, user-uploaded file.${parts.length > 1 ? ` It is long: this is part ${part} of ${parts.length}.${part < parts.length ? ` Ask for part ${part + 1} to continue.` : " That is the last part."}` : ""}${hidden}`,
+        data: { source, kind: officeKind, characters: read.text.length, words: read.words, excerpt: parts[part - 1], part, parts: parts.length,
+          ...(read.sheets ? { sheets: read.sheets } : {}),
+          citations: [{ title: source, snippet: parts[part - 1].slice(0, 180), sourceType: "user-supplied-document" }], providerVerified: true }
+      });
+    }
     if (mimeType === "application/pdf") {
       const extracted = await extractPdfText(fs.readFileSync(filePath));
       if (!extracted) return blockedResponse(readiness.provider, action, "Nexus could not extract any text from that PDF -- it may be a scanned image with no selectable text.");
