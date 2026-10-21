@@ -545,7 +545,8 @@ class OpenEndedPlanner {
     // allowance, the payroll-tax choice, political campaigns): a checked, sourced, plain answer from the IRS's pages (see knowledge/church-guide.js). Asked before the guides below so a church is not given the general nonprofit
     // answer (apply for exemption, file a Form 990), which a church need not do. Outside the United States no rule is stated. The person's own records ("show my church donors") are never taken (public/kyro-church-topics.js).
     const churchId = ownWorkspace && businessVoiceDispatch.asksAboutOwnRecords(askText) ? null : churchTopic(askText);
-    const churchGuide = churchId ? churchAnswer(churchId, { us: usPerson, country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
+    // (a question that names Kenya or Nigeria is about a church there, whatever time zone the device is in: the IRS's rules are not stated for it)
+    const churchGuide = churchId ? churchAnswer(churchId, { us: usPerson && !africaNamed(askText), country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
     if (churchGuide) {
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: churchGuide.text, sourceRequired: false, knowledge: `church-guide:${churchId}`, sources: churchGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }

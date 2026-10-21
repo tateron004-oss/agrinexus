@@ -82,6 +82,11 @@ test("through the planner, with no AI model; a church is not given the general n
     assert.ok(plan.sources.length >= 1 && plan.sources.every(source => /^https:\/\/(?:www\.)?(?:irs\.gov|nasconet\.org|cac\.gov\.ng)\//.test(source.url))); assert.match(plan.response, /checked 21 October 2026/);
     assert.doesNotMatch(plan.response, /^These are United States rules/, "in the United States");
   }
+  // a US phone, but the question names Nigeria or Kenya: the answer is not given as if the IRS's rules applied there
+  const named = await ask("Does our church in Nigeria have to file a Form 990?", { timeZone: "America/Los_Angeles" });
+  assert.match(named.response, /^These are United States rules, from the IRS\./);
+  assert.ok(named.sources.some(source => source.url === "https://www.cac.gov.ng/"));
+  assert.match((await ask("How do we register our church in Kenya?", { timeZone: "America/Chicago" })).response, /Kenya/);
   const nigeria = await ask("Does our church file a Form 990?", { timeZone: "Africa/Lagos" });
   assert.equal(nigeria.knowledge, "church-guide:church-990");
   assert.match(nigeria.response, /^These are United States rules, from the IRS\./);
