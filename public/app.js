@@ -32951,7 +32951,7 @@ function renderNexusTrueCommandComposer(options = {}) {
       <button type="button" class="nexus-upload-trigger" data-nexus-file-upload-trigger="true" onclick="document.querySelector('[data-nexus-file-upload-input]')?.click()" aria-label="${escapeHtml(translateText("Upload a document or photo for Nexus to read"))}" title="${escapeHtml(translateText("Upload a document or photo"))}">
         ${escapeHtml(translateText("Upload"))}
       </button>
-      <input type="file" data-nexus-file-upload-input="true" accept="application/pdf,image/png,image/jpeg,image/webp" hidden onchange="return handleNexusFileUploadInputChange(event)" />
+      <input type="file" data-nexus-file-upload-input="true" accept="application/pdf,image/png,image/jpeg,image/webp,.docx,.xlsx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onchange="return handleNexusFileUploadInputChange(event)" />
       <span class="sr-only" data-nexus-file-upload-status="true" aria-live="polite"></span>
     </div>
     ${renderNexusVoiceFirstPresenceControls()}
@@ -32972,6 +32972,14 @@ async function handleNexusFileUploadInputChange(event) {
   if (!file) return false;
   const statusEl = input.closest("[data-nexus-file-upload-control]")?.querySelector("[data-nexus-file-upload-status]");
   const setStatus = text => { if (statusEl) statusEl.textContent = text; };
+  // an older .doc or .xls is said plainly, before anything is sent
+  if (typeof KYRO_OLD_OFFICE_FILE !== "undefined" && KYRO_OLD_OFFICE_FILE.test(file.name)) {
+    const older = "That is an older kind of Word or Excel file that I cannot read. Open it, choose Save As, save it as .docx or .xlsx, and then choose it again.";
+    setStatus(older);
+    setVoiceResponse?.(older, false, { allowHandoff: false, source: "nexus-file-upload" });
+    input.value = "";
+    return false;
+  }
   setStatus(translateText("Uploading..."));
   try {
     const formData = new FormData();
@@ -52007,6 +52015,62 @@ function kyroPictureClosing(command) {
   return "";
 }
 
+// The Word or Excel file just read out: how far it got, so "the next part", "part 3" or "read the rest" goes on from there. These words mean this only for half an hour after a file was read; at any other time they mean
+// nothing here and go where they went before (a long file is read a part at a time: kyroContinueFileReading).
+let kyroLastFileReading = { at: 0, part: 0, parts: 0 };
+const KYRO_PART_WORDS = { first: 1, one: 1, second: 2, two: 2, third: 3, three: 3, fourth: 4, four: 4, fifth: 5, five: 5, sixth: 6, six: 6, seventh: 7, seven: 7, eighth: 8, eight: 8, ninth: 9, nine: 9, tenth: 10, ten: 10 };
+const KYRO_FILE_LEAD = "^(?:(?:please|kyro|nexus|hey kyro)[, ]+)*(?:(?:can|could|would) you\\s+)?(?:(?:read|tell|give|show|play|go to|skip to|jump to|continue with)(?: me)?\\s+)?(?:(?:the|that|this)\\s+)?";
+const KYRO_FILE_OF = "(?:\\s+(?:of|from|in)\\s+(?:that|this|the|my)\\s+(?:document|file|spreadsheet|sheet|doc))?";
+const KYRO_FILE_PART = new RegExp(`${KYRO_FILE_LEAD}(?:part\\s+([a-z0-9]+)|([a-z0-9]+)\\s+part)${KYRO_FILE_OF}$`, "i");
+const KYRO_FILE_ON = /^(?:(?:please|kyro|nexus|hey kyro)[, ]+)*(?:read (?:on|more|the rest(?: of it)?)|continue reading|keep reading)$/i;
+// The part asked for ("the next part", "part 3", "read the third part", "read on"), or 0 when this is not that.
+function kyroFileReadingMore(text) {
+  const reading = kyroLastFileReading;
+  if (!reading.parts || Date.now() - reading.at > 30 * 60 * 1000) return 0;
+  const said = String(text || "").trim().replace(/[.?!,]+$/g, "").trim();
+  if (KYRO_FILE_ON.test(said)) return reading.part + 1;
+  const match = KYRO_FILE_PART.exec(said);
+  if (!match) return 0;
+  const word = String(match[1] || match[2]).toLowerCase();
+  if (word === "next") return reading.part + 1;
+  if (word === "previous") return Math.max(1, reading.part - 1);
+  if (word === "last" || word === "final") return reading.parts;
+  if (/^\d{1,3}(?:st|nd|rd|th)?$/.test(word)) return parseInt(word, 10) || 0;
+  return KYRO_PART_WORDS[word] || 0;
+}
+async function kyroContinueFileReading(part, lang) {
+  const reading = kyroLastFileReading;
+  const say = text => { try { setVoiceResponse(text, true, { allowHandoff: false, command: `part ${part}`, source: "kyro-capture" }); } catch { /* nothing else to do */ } };
+  if (part < 1 || part > reading.parts) {
+    say(reading.parts === 1
+      ? (lang === "sw" ? "Faili hiyo ina sehemu moja tu, na nimeisoma yote." : "That file has only one part, and I have read all of it.")
+      : part === reading.parts + 1
+        ? (lang === "sw" ? "Hiyo ilikuwa sehemu ya mwisho: nimesoma faili lote." : "That was the last part: I have read all of the file.")
+        : (lang === "sw" ? `Faili hiyo ina sehemu ${reading.parts} tu.` : `That file has only ${reading.parts} parts.`));
+    return false;
+  }
+  const command = lang === "sw" ? `Soma sehemu ya ${part} ya faili` : `Read part ${part} of the file`;
+  try {
+    const response = await kyroFetchWithTimeout("/api/voice/realtime/tool", {
+      method: "POST", credentials: "same-origin", cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ name: "nexus_file_document_analysis", correlationId: `part-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, arguments: { command, part, language: lang }, language: lang })
+    }, 60000);
+    const result = await response.json().catch(() => ({}));
+    const described = kyroPlainText(String(result?.response || "").trim()).replace(/^(?:Word document|Excel spreadsheet) read from a real, user-uploaded file\.\s*/i, "").trim();
+    if (!response.ok || !described) { say(lang === "sw" ? "Siwezi kusoma sehemu hiyo sasa." : "I can't read that part right now."); return false; }
+    kyroLastFileReading = { at: Date.now(), part: Number(result?.providerData?.part) || part, parts: Number(result?.providerData?.parts) || reading.parts };
+    if (kyroShowResultScreen("nexus_file_document_analysis", command, { ...result, ok: true, status: "completed", response: described })) {
+      try { document.querySelector("[data-kyro-result]")?.setAttribute("data-kyro-keep", "true"); } catch { /* the words are said too */ }
+    }
+    say(described);
+    return true;
+  } catch {
+    say(lang === "sw" ? "Siwezi kufikia seva sasa." : "I can't reach the server right now.");
+    return false;
+  }
+}
+
 async function kyroAskAboutPicture(blob, command, filename) {
   const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
   const say = text => { try { setVoiceResponse(text, true, { allowHandoff: false, command, source: "kyro-capture" }); } catch { /* nothing else to do */ } };
@@ -52024,8 +52088,10 @@ async function kyroAskAboutPicture(blob, command, filename) {
     }, 60000);
     const result = await response.json().catch(() => ({}));
     // (the server's own first sentence about how it was made is for its receipts, not for the person: the description, or the words in the file, are what they asked for)
-    const described = kyroPlainText(String(result?.response || "").trim()).replace(/^(?:Image described by a real vision model call|PDF text extracted and analy[sz]ed[^.]*)\.\s*(?:This is a description, not a diagnosis\.\s*)?/i, "").trim();
+    const described = kyroPlainText(String(result?.response || "").trim()).replace(/^(?:Image described by a real vision model call|PDF text extracted and analy[sz]ed[^.]*|(?:Word document|Excel spreadsheet) read from a real, user-uploaded file)\.\s*(?:This is a description, not a diagnosis\.\s*)?/i, "").trim();
     if (!response.ok || !described) { say(lang === "sw" ? "Siwezi kuchambua picha hiyo sasa." : "I can't look at that picture right now."); return false; }
+    // (a Word or Excel file read in parts: where it got to, so "the next part" goes on from here)
+    kyroLastFileReading = { at: Date.now(), part: Number(result?.providerData?.part) || 0, parts: Number(result?.providerData?.parts) || 0 };
     const answer = `${described}${kyroPictureClosing(command)}`;
     if (kyroShowResultScreen("nexus_file_document_analysis", command, { ...result, ok: true, status: "completed", response: answer })) {
       try { document.querySelector("[data-kyro-result]")?.setAttribute("data-kyro-keep", "true"); } catch { /* the answer is said too */ } // (a description, or the words in a file, take time to read: it stays until closed)
@@ -52200,10 +52266,12 @@ let kyroLastSpokenOpen = { key: "", at: 0 }; // the sentence the page last answe
 const KYRO_OPEN_OFFLINE = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|check|see|view)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:offline\\s+(?:queue|work|notes|changes|sync(?:\\s+status)?)|(?:sync|offline)\\s+status|queued\\s+(?:offline\\s+)?(?:work|changes|notes))(?:\\s+(?:screen|page|section|list))?[.?!]*$`, "i");
 const KYRO_OPEN_RESUMES = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|see|view|list|find|get)\\s+(?:me\\s+)?(?:(?:my|the|our)\\s+)?(?:saved\\s+)?(?:resumes?|résumés?|resumés?|cvs?)[.?!]*$`, "i");
 const KYRO_OPEN_BIZ = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|go to|pull up|bring up|see|view|launch|start)\\s+(?:me\\s+)?(?:(?:my|the|our)\\s+)?(?:(?:business|customer)\\s+)?(?:(crm|clients?|customers?|contacts|customer list|client list)|(donors?|donations|fundraising)|(grants?|funding|grant (?:writing|tracker|deadlines))|(invoices?|billing)|(expenses?|income|finances?|financials?|books|bookkeeping|accounting|sales|profit))[.?!]*$`, "i");
-const KYRO_OPEN_UPLOAD = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|show|start|go to)\\s+(?:the\\s+|my\\s+)?(?:file\\s+|document\\s+|photo\\s+)?uploads?|(?:i\\s+(?:want|need)\\s+to\\s+|let me\\s+|help me\\s+|i'd like to\\s+)?(?:upload|attach)(?:\\s+(?:a|an|my|the|some))?(?:\\s+(?:files?|documents?|pictures?|photos?|pdfs?|images?|letters?))?(?:\\s+(?:of|for|from|to|about|showing)\\s+[a-z' -]{1,60})?)[.?!]*$`, "i");
-// A screen with a real button (a file can only be chosen from a tap): the picture or PDF is sent and read out, as "look at this" does.
+const KYRO_OPEN_UPLOAD = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|show|start|go to)\\s+(?:the\\s+|my\\s+)?(?:file\\s+|document\\s+|photo\\s+)?uploads?|(?:i\\s+(?:want|need)\\s+to\\s+|let me\\s+|help me\\s+|i'd like to\\s+)?(?:upload|attach)(?:\\s+(?:a|an|my|the|some))?(?:\\s+(?:files?|documents?|docs?|pictures?|photos?|pdfs?|images?|letters?|spreadsheets?|sheets?|(?:ms\\s+)?(?:word|excel)(?:\\s+(?:files?|documents?|docs?|spreadsheets?|sheets?))?|docx|xlsx))?(?:\\s+(?:of|for|from|to|about|showing)\\s+[a-z' -]{1,60})?)[.?!]*$`, "i");
+// A screen with a real button (a file can only be chosen from a tap): the picture, PDF, Word or Excel file is sent and read out, as "look at this" does.
+// (the older .doc and .xls formats are not read: said plainly, with what to do, before anything is sent)
+const KYRO_OLD_OFFICE_FILE = /\.(?:doc|xls|dot|xlt|rtf|ppt)$/i;
 function kyroOpenUploadScreen(said, lang) {
-  const ask = lang === "sw" ? "Chagua picha au PDF (hadi MB 10) nikusomee. Gusa kitufe hapa chini." : "Choose a picture or a PDF (up to 10 MB) and I will read it to you. Tap the button below.";
+  const ask = lang === "sw" ? "Chagua picha, PDF, hati ya Word au faili ya Excel (hadi MB 10) nikusomee. Gusa kitufe hapa chini." : "Choose a picture, a PDF, a Word document or an Excel file (up to 10 MB) and I will read it to you. Tap the button below.";
   if (!kyroShowResultScreen("typed", said, { ok: true, status: "completed", response: ask })) return false;
   try {
     const screen = document.querySelector("[data-kyro-result]");
@@ -52213,12 +52281,17 @@ function kyroOpenUploadScreen(said, lang) {
     label.textContent = lang === "sw" ? "Chagua faili" : "Choose a file";
     label.style.cssText = "display:inline-block;align-self:flex-start;padding:16px 28px;border-radius:16px;background:#06a77d;color:#fff;font-size:1.25rem;font-weight:600;cursor:pointer;position:relative;z-index:1";
     const input = document.createElement("input");
-    input.type = "file"; input.accept = "image/jpeg,image/png,image/webp,application/pdf"; input.hidden = true;
+    input.type = "file"; input.accept = "image/jpeg,image/png,image/webp,application/pdf,.docx,.xlsx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"; input.hidden = true;
     input.addEventListener("change", () => {
       const file = input.files && input.files[0];
       if (!file) return;
       if (file.size > 10 * 1024 * 1024) { setVoiceResponse(lang === "sw" ? "Faili hiyo ni kubwa kuliko MB 10." : "That file is bigger than 10 MB.", true, { allowHandoff: false, command: said, source: "kyro-upload" }); return; }
-      void kyroAskAboutPicture(file, lang === "sw" ? "Soma faili hii na uniambie inasema nini" : "Read this file and tell me what it says", file.name);
+      if (KYRO_OLD_OFFICE_FILE.test(file.name)) {
+        setVoiceResponse(lang === "sw" ? "Hiyo ni aina ya zamani ya faili ambayo siwezi kusoma. Ifungue, chagua Hifadhi Kama, ihifadhi kama .docx au .xlsx, kisha uichague tena." : "That is an older kind of Word or Excel file that I cannot read. Open it, choose Save As, save it as .docx or .xlsx, and then choose it again.", true, { allowHandoff: false, command: said, source: "kyro-upload" });
+        return;
+      }
+      const sheet = /\.xlsx$/i.test(file.name);
+      void kyroAskAboutPicture(file, sheet ? (lang === "sw" ? "Soma jedwali hili na uniambie lina nini" : "Read this spreadsheet and tell me what is in it") : (lang === "sw" ? "Soma faili hii na uniambie inasema nini" : "Read this file and tell me what it says"), file.name);
     });
     label.append(input);
     screen?.append(label);
@@ -52253,7 +52326,7 @@ async function kyroOpenNamedDocument(name) {
 function kyroSpokenOpenOwns(text) {
   const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
-  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_ACTIVITY.test(said) || window.KyroAutomationCommands?.isOpen?.(said) || KYRO_ASK_MEMORY.test(said) || KYRO_OPEN_DOCS.test(said) || kyroNamedDocument(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
+  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || (typeof kyroFileReadingMore === "function" && kyroFileReadingMore(said)) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_ACTIVITY.test(said) || window.KyroAutomationCommands?.isOpen?.(said) || KYRO_ASK_MEMORY.test(said) || KYRO_OPEN_DOCS.test(said) || kyroNamedDocument(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
 }
 // A card or interview left open by an earlier request (the AgriTrade card a "sell" opened, a telehealth card) stays in front of everything after it: the quiet-spell return never closes work the person is "in". A new
 // request closes it first; if the new request opens a workspace of its own, that opens after this.
@@ -52381,6 +52454,9 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
   const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
+  // "The next part", "part 3", "read on": the next part of the Word or Excel file just read out
+  const filePart = typeof kyroFileReadingMore === "function" ? kyroFileReadingMore(said) : 0;
+  if (filePart) { kyroTakeOverTurn(); void kyroContinueFileReading(filePart, lang); return true; }
   if (typeof kyroWalkthroughCommand === "function" && kyroWalkthroughCommand(said, options)) return true;
   if (typeof kyroOfferCommand === "function" && kyroOfferCommand(said, options)) return true;
   if (typeof kyroOpenSourcePage === "function" && kyroOpenSourcePage(said, lang, options)) return true;

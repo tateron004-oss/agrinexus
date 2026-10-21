@@ -160,9 +160,11 @@ test("'Go my notes' (heard for 'Show my notes') is the request to show them, and
 
 test("a picture or file description is shown without the server's own first sentence about how it was made, and stays until it is closed", () => {
   const fn = sliceFn("async function kyroAskAboutPicture(");
-  assert.match(fn, /\.replace\(\/\^\(\?:Image described by a real vision model call\|PDF text extracted and analy\[sz\]ed\[\^\.\]\*\)/);
+  assert.match(fn, /\.replace\(\/\^\(\?:Image described by a real vision model call\|PDF text extracted and analy\[sz\]ed\[\^\.\]\*\|\(\?:Word document\|Excel spreadsheet\) read from a real, user-uploaded file\)/);
   assert.match(fn, /setAttribute\("data-kyro-keep", "true"\)/);
-  const strip = text => text.replace(/^(?:Image described by a real vision model call|PDF text extracted and analy[sz]ed[^.]*)\.\s*(?:This is a description, not a diagnosis\.\s*)?/i, "").trim();
+  const strip = text => text.replace(/^(?:Image described by a real vision model call|PDF text extracted and analy[sz]ed[^.]*|(?:Word document|Excel spreadsheet) read from a real, user-uploaded file)\.\s*(?:This is a description, not a diagnosis\.\s*)?/i, "").trim();
+  assert.equal(strip("Word document read from a real, user-uploaded file. Farm Plan 2027"), "Farm Plan 2027");
+  assert.equal(strip("Excel spreadsheet read from a real, user-uploaded file. Sheet \"Budget\": 3 rows"), "Sheet \"Budget\": 3 rows");
   assert.equal(strip("Image described by a real vision model call. This is a description, not a diagnosis. A page with the words MAIZE PRICE 50 KES."), "A page with the words MAIZE PRICE 50 KES.");
   assert.equal(strip("PDF text extracted and analyzed locally. Dear Sir, I am writing about my loan."), "Dear Sir, I am writing about my loan.");
 });
