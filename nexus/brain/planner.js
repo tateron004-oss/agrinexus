@@ -854,11 +854,20 @@ class OpenEndedPlanner {
       conversationHistory: conversationHistory.slice(-24).map(safeTurn),
       memories: memories.map(safeMemory), catalog };
     let feedback = [];
+    let emptyPlans = 0;
+    let attemptsUsed = 0;
     for (let attempt = 0; attempt <= this.maxRepairAttempts; attempt += 1) {
+      attemptsUsed = attempt + 1;
       const candidate = canonicalizeExplicitApplication(await this.model.plan({ ...request, feedback, attempt }), command.text, catalog);
       const validation = validatePlan(candidate, catalog, context);
       if (validation.valid) return Object.freeze({ ...personalizedSearch(withClearReminderTime(validation.plan, command.text, locale), known.byKind), planningAttempts: attempt + 1 });
       feedback = validation.errors;
+      // A plan with no steps and no question means the model found no tool that fits. It is asked once more with that feedback (it may then pick a tool), but a second empty plan is the answer: asking a third time
+      // (each one a full model call, measured at about 3 to 5 seconds) only delays the direct answer below.
+      if (Array.isArray(candidate?.steps) && !candidate.steps.length && !String(candidate?.clarification || "").trim()) {
+        emptyPlans += 1;
+        if (emptyPlans >= 2) break;
+      }
     }
     // No registered application or tool fits (a general question, arithmetic, "what do you remember about me").
     // That is not an error for the person asking: answer it directly, without tools and without claiming any
@@ -869,7 +878,7 @@ class OpenEndedPlanner {
         capabilities: catalog.applications.map(app => app.applicationId) }).catch(() => null);
       if (typeof answer === "string" && answer.trim()) {
         return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [],
-          response: answer.trim(), sourceRequired: false, modelAnswered: true, planningAttempts: this.maxRepairAttempts + 1 });
+          response: answer.trim(), sourceRequired: false, modelAnswered: true, planningAttempts: attemptsUsed });
       }
     }
     throw new NexusRuntimeError("plan_invalid", "Nexus could not produce a safe executable plan.", 422, { feedback });

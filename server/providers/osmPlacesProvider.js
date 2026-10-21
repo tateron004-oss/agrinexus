@@ -115,17 +115,50 @@ async function geocodePlace(locationText, fetcher, countryCode = "") {
 // osmFilters: an array of Overpass tag-match strings, e.g. ['"amenity"="pharmacy"'].
 // fallbackTerm (optional): a plain word such as "pharmacy" for the Nominatim fallback above.
 // countryCode (optional): prefer a named place in this country. coords (optional, { lat, lon }): the device's own position, handed over by the browser with permission; no lookup needed.
+// A named place keeps its coordinates for a day, and a search for a kind of place near it keeps its answer for ten minutes. Overpass and Nominatim are shared public services that answer in 1 to 9 seconds, and the same
+// few searches ("a pharmacy near Nairobi") are asked again and again, so a repeat is answered at once. Only the real network is remembered (a stand-in fetch, as in the tests, is always asked), only a search that found
+// something, and nothing is kept for a search from a device's own position.
+const GEOCODE_CACHE = new Map();
+const PLACES_CACHE = new Map();
+const GEOCODE_CACHE_MS = 24 * 60 * 60 * 1000;
+const PLACES_CACHE_MS = 10 * 60 * 1000;
+const CACHE_ENTRIES = 200;
+function recall(cache, key, ttlMs) {
+  const hit = cache.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.at >= ttlMs) { cache.delete(key); return null; }
+  return hit.value;
+}
+function remember(cache, key, value) {
+  if (cache.size >= CACHE_ENTRIES) cache.delete(cache.keys().next().value);
+  cache.set(key, { at: Date.now(), value });
+}
+
 async function findNearbyPlaces({ locationText, osmFilters, radiusMeters = 8000, limit = 8, fetchImpl, env = process.env, fallbackTerm = "", countryCode = "", coords = null }) {
   const fetcher = fetchImpl || mapsFetch(env);
   if (typeof fetcher !== "function") throw new Error("no-fetch-available");
-  const origin = coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lon)
-    ? { label: "your device location", lat: coords.lat, lon: coords.lon, country: "", countryCode: "" }
-    : await geocodePlace(locationText, fetcher, countryCode);
-  if (!fallbackTerm) return overpassPlaces({ origin, osmFilters, radiusMeters, limit, fetcher });
+  const real = fetcher === globalThis.fetch;
+  const fromDevice = Boolean(coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lon));
+  const searchKey = real && !fromDevice ? JSON.stringify([String(locationText || "").trim().toLowerCase(), countryCode, osmFilters, radiusMeters, limit, fallbackTerm]) : "";
+  const known = searchKey ? recall(PLACES_CACHE, searchKey, PLACES_CACHE_MS) : null;
+  if (known) return { ...known, origin: { ...known.origin }, places: known.places.map(place => ({ ...place })) };
+  let origin;
+  if (fromDevice) origin = { label: "your device location", lat: coords.lat, lon: coords.lon, country: "", countryCode: "" };
+  else {
+    const placeKey = real ? `${String(locationText || "").trim().toLowerCase()}|${countryCode}` : "";
+    const cachedOrigin = placeKey ? recall(GEOCODE_CACHE, placeKey, GEOCODE_CACHE_MS) : null;
+    origin = cachedOrigin ? { ...cachedOrigin } : null;
+    if (!origin) {
+      origin = await geocodePlace(locationText, fetcher, countryCode);
+      if (placeKey) remember(GEOCODE_CACHE, placeKey, { ...origin });
+    }
+  }
+  const keep = found => { if (searchKey && found.places.length) remember(PLACES_CACHE, searchKey, found); return found; };
+  if (!fallbackTerm) return keep(await overpassPlaces({ origin, osmFilters, radiusMeters, limit, fetcher }));
   let result = { origin, places: [] };
   try { result = await overpassPlaces({ origin, osmFilters, radiusMeters, limit, fetcher }); } catch { /* fall through to Nominatim */ }
-  if (result.places.length) return result;
-  try { return { origin, places: await nominatimPlaces({ origin, term: fallbackTerm, limit, radiusMeters, fetcher }) }; }
+  if (result.places.length) return keep(result);
+  try { return keep({ origin, places: await nominatimPlaces({ origin, term: fallbackTerm, limit, radiusMeters, fetcher }) }); }
   catch { return result; }
 }
 
