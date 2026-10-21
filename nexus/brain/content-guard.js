@@ -21,7 +21,12 @@ const BETTING_TIPS = /\b(?:tips?|predict(?:ion|ions)?|predict|sure|guaranteed|fi
 const GAMBLING_PROBLEM = /\b(?:addict(?:ed|ion)?|can'?t stop|cannot stop|stop (?:betting|gambling)|quit (?:betting|gambling)|lost (?:all|everything|my (?:money|salary|fees|rent))|in debt|debt|problem|borrowed|loan(?:s)? to bet|hooked)\b/;
 
 // ---- hacking, faking, scams ----
-const FRAUD_REQUEST = /\b(?:hack(?:ing)?|crack(?:ing)?|steal(?:ing)?|clone|cloning|bypass|reverse)\b[^.!?]{0,40}\b(?:m-?pesa|airtel money|t-?kash|bank|account|sim|phone|wi-?fi|password|pin|facebook|instagram|whatsapp|tiktok|someone'?s|(?:friend|teacher|ex|girlfriend|boyfriend|neighbou?r|boss)'?s?)\b|\bfake (?:m-?pesa|receipts?|messages?|sms|transactions?|payments?|certificates?|results|ids?|passports?|documents?)\b|\bforge(?:d)?\b|\bfree (?:data|bundles?|airtime)\b[^.!?]{0,30}\b(?:hack|trick|cheat|code|generator)\b|\bswap(?:ping)? sim\b|\bsim swap\b|\bflash (?:m-?pesa|money|usdt|btc)\b|\bcredit card generator\b/;
+const FRAUD_REQUEST = /\b(?:hack(?:ing)?|crack(?:ing)?|steal(?:ing)?|clone|cloning|bypass|reverse)\b[^.!?]{0,40}\b(?:m-?pesa|airtel money|t-?kash|bank|account|sim|phone|wi-?fi|password|pin|facebook|instagram|whatsapp|tiktok|someone'?s|(?:friend|teacher|ex|girlfriend|boyfriend|neighbou?r|boss)'?s?)\b|\bfake (?:m-?pesa|receipts?|messages?|sms|transactions?|payments?|certificates?|results|ids?|passports?|documents?)\b|\bforge(?:d)?\b|\bfree (?:data|bundles?|airtime)\b[^.!?]{0,30}\b(?:hack|trick|cheat|code|generator)\b|\bswap(?:ping)? (?:(?:someone|somebody|a person|a friend|his|her|their)(?:'?s)? )?sim\b|\bsim swap\b|\bflash (?:m-?pesa|money|usdt|btc)\b|\bcredit card generator\b/;
+// The same words are used by the people these tricks happen TO: "how do I reverse an M-Pesa payment I sent to the wrong number", "how do I spot a fake M-Pesa message", "someone swapped my SIM, how do I report it", "how can I tell if a
+// certificate is forged". Those are protective questions and are answered normally (the AI prompts still carry the rule that Kyro never helps do the trick). A request to DO it ("how do I make fake mpesa messages", "hack my friend's
+// mpesa") has none of these frames, and a sentence that also asks not to be caught is never treated as protective.
+const PROTECTIVE = /\bhow (?:do|can|could|should|to) (?:i|we|you|one)\s+(?:tell|spot|know|check|identify|recogni[sz]e|verify|confirm|report|stop|prevent|protect|secure|recover|reverse|undo|reclaim|block|avoid|detect|trace)\b|\b(?:protect|prevent|secure|recover|report|block|detect|spot) (?:my|our|the|a|an|against|from|people|someone)\b|\b(?:warning signs?|red flags?|how (?:does|do) (?:it|they|this|that) work|what (?:is|are|does) (?:a |an |the )?(?:sim swap|flash|forged?|fake|scam))\b|\b(?:is|was) (?:this|it|that|my|the)\b[^.!?]{0,30}\b(?:fake|forged|a scam|genuine|real)\b|\b(?:by mistake|wrong number|mistakenly|accidentally|wrongly)\b|\bmy\b[^.!?]{0,25}\b(?:was|got|has been|is being|were)\s+(?:hacked|cloned|stolen|swapped|used)\b|\bsomeone\b[^.!?]{0,20}\b(?:is using|has|have|used|swapped|cloned|hacked|stole|stolen)\b[^.!?]{0,25}\bmy\b|\bmy (?:own )?(?:phone|sim|wi-?fi|router|laptop)\b[^.!?]{0,30}\b(?:data|contacts|photos|backup|new phone)\b|\bto (?:my )?new phone\b|\b(?:sent|gave|showed|received|got|forwarded) (?:me|us)\b[^.!?]{0,30}\b(?:fake|forged)\b|\bwhat (?:do|should|can|must) (?:i|we) do\b/;
+const NOT_CAUGHT = /\b(?:without (?:getting |being )?(?:caught|detected|traced|noticed|found out)|(?:avoid|escape|dodge) (?:getting )?(?:caught|detection|the police|being traced)|untraceable|leave no trace|so (?:that )?(?:no one|nobody|they|the police) (?:can|will|knows?|finds?))\b/;
 const SCHEME = /\bdouble (?:my|your|the) money\b|\b(?:send|pay|deposit)\s+(?:ksh\.?\s*)?\d[\d,]*\s*(?:and|to)\s+(?:get|receive|win)\s+(?:ksh\.?\s*)?\d[\d,]*\b|\bget rich quick\b|\bmoney flipping\b|\b(?:easy|fast|quick) money (?:online|trick|scheme)\b|\bpyramid scheme\b|\bearn \d[\d,]*\s*(?:a|per|every)\s*day (?:from|with|doing)\b|\bforex (?:signals?|trading) (?:earn|make|guaranteed)\b/;
 
 const REPLIES = Object.freeze({
@@ -37,6 +42,9 @@ function contentGuardReply(text) {
   const found = englishContentGuardReply(text);
   // A request in Kiswahili that the English wording also recognises ("sportpesa tips za leo") is answered in Kiswahili; one only the Kiswahili wording recognises ("je, ninunue bitcoin?") is found here.
   if (found) return !found.language && swahili.isSwahili(text) ? swahili.inSwahili(found) : found;
+  // (a protective question in English is not handed to the Kiswahili wording, which also knows "sim swap" and would refuse it in Kiswahili)
+  const said = clean(text);
+  if (!swahili.isSwahili(text) && PROTECTIVE.test(said) && !NOT_CAUGHT.test(said)) return null;
   return swahili.swahiliGuardReply(text);
 }
 
@@ -48,7 +56,7 @@ function englishContentGuardReply(text) {
     if (GAMBLING_PROBLEM.test(t)) return { kind: "gambling-problem", reply: REPLIES.gamblingProblem };
     if (BETTING_TIPS.test(t)) return { kind: "betting", reply: REPLIES.betting };
   }
-  if (FRAUD_REQUEST.test(t)) return { kind: "fraud", reply: REPLIES.fraud };
+  if (FRAUD_REQUEST.test(t) && (!PROTECTIVE.test(t) || NOT_CAUGHT.test(t))) return { kind: "fraud", reply: REPLIES.fraud };
   if (SCHEME.test(t)) return { kind: "scheme", reply: REPLIES.scheme };
   // Someone asking for a PIN, password or one-time code, a fee to get a job, a loan or a prize, or an ID copy going to a stranger (see scam-guard.js).
   const scam = scamGuardReply(text);
