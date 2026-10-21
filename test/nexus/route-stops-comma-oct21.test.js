@@ -49,3 +49,30 @@ test("the route is said with its stops: on the page and in the voice tool's repl
   assert.match(server, /From \$\{routeData\.originResolved \|\| routeArgs\.origin\}\$\{routeArgs\.waypoints\?\.length \? ` via \$\{routeArgs\.waypoints\.join\(" and "\)\}` : ""\} to /);
   assert.match(server, /\.\.\.\(routeArgs\.waypoints\?\.length \? \{ waypoints: routeArgs\.waypoints \} : \{\}\),\s+routeGeometry: routeData\.routeGeometry/);
 });
+
+test("each stop is marked on the map: the provider gives its point, the page reads it and draws a named dot", async () => {
+  const mapsProvider = require("../../server/providers/googleMapsProvider.js");
+  const coordinates = { nairobi: [36.82, -1.29], naivasha: [36.43, -0.72], gilgil: [36.32, -0.5], nakuru: [36.07, -0.3] };
+  const fetchImpl = async url => {
+    const text = String(url);
+    if (/nominatim/.test(text)) {
+      const [lon, lat] = coordinates[new URL(text).searchParams.get("q").toLowerCase()];
+      return { ok: true, text: async () => JSON.stringify([{ lat: String(lat), lon: String(lon), display_name: "somewhere" }]) };
+    }
+    return { ok: true, text: async () => JSON.stringify({ code: "Ok", routes: [{ distance: 157600, duration: 7000, geometry: { coordinates: [[36.82, -1.29], [36.07, -0.3]] } }] }) };
+  };
+  const result = await mapsProvider.publicOsmRoute("Nairobi", "Nakuru", "https://example.test/link", { NEXUS_MAPS_FETCH_IMPL: fetchImpl }, ["Naivasha", "Gilgil"]);
+  assert.deepEqual(result.body.data.waypointPoints, [{ name: "Naivasha", lat: -0.72, lng: 36.43 }, { name: "Gilgil", lat: -0.5, lng: 36.32 }]);
+  const direct = await mapsProvider.publicOsmRoute("Nairobi", "Nakuru", "https://example.test/link", { NEXUS_MAPS_FETCH_IMPL: fetchImpl }, []);
+  assert.deepEqual(direct.body.data.waypointPoints, []);
+
+  const app = fs.readFileSync(path.join(__dirname, "..", "..", "public", "app.js"), "utf8");
+  const road = new vm.Script(`${slice(app, "function genesisRoadRoute(")}\ngenesisRoadRoute`).runInNewContext({});
+  const read = JSON.parse(JSON.stringify(road({ origin: "Nairobi", destination: "Nakuru", routeGeometry: [[-1.28, 36.81], [-0.3, 36.07]], waypointPoints: [{ name: "Naivasha", lat: -0.72, lng: 36.43 }, { name: "Bad", lat: "x", lng: 1 }, { name: "Off", lat: 95, lng: 1 }] })));
+  assert.deepEqual(read.stopPoints, [{ name: "Naivasha", lat: -0.72, lng: 36.43 }], "only stops with a real point on the earth are marked");
+  assert.deepEqual(JSON.parse(JSON.stringify(road({ origin: "A", destination: "B", routeGeometry: [[1, 1], [2, 2]] }))).stopPoints, []);
+  assert.match(app, /road\.stopPoints\.forEach\(\(stop, index\) => \{[^]*?L\.marker\(\[stop\.lat, stop\.lng\], \{ icon: L\.divIcon\([^]*?escapeHtml\(label\)[^]*?bindPopup/);
+  // the map is sized before it is fitted to the road
+  assert.match(app, /setAttribute\("open", "true"\);\s+safeInvalidateLeafletMap\(userMap\);\s+userMap\.fitBounds\(road\.points/);
+  assert.match(server, /\.\.\.\(routeData\.waypointPoints\?\.length \? \{ waypointPoints: routeData\.waypointPoints \} : \{\}\)/);
+});

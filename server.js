@@ -22772,7 +22772,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     return Array.isArray(routeData.routeGeometry) && routeData.routeGeometry.length > 1
       ? { ...routeToolResult, mapRoute: { origin: routeData.originResolved || routeArgs.origin, destination: routeData.destinationResolved || routeArgs.destination,
           ...(routeArgs.waypoints?.length ? { waypoints: routeArgs.waypoints } : {}),
-          routeGeometry: routeData.routeGeometry, distanceMeters: routeData.distanceMeters ?? null, durationSeconds: routeData.durationSeconds ?? null } }
+          routeGeometry: routeData.routeGeometry, distanceMeters: routeData.distanceMeters ?? null, durationSeconds: routeData.durationSeconds ?? null,
+          ...(routeData.waypointPoints?.length ? { waypointPoints: routeData.waypointPoints } : {}) } }
       : routeToolResult;
   }
   if (toolName === "nexus_live_knowledge") {
