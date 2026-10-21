@@ -57859,7 +57859,9 @@ function genesisRoadRoute(payload = {}) {
     const minutes = Math.max(1, Math.round(seconds / 60));
     parts.push(`around ${minutes >= 60 ? `${Math.floor(minutes / 60)} h${minutes % 60 ? ` ${minutes % 60} min` : ""}` : `${minutes} min`} by road`);
   }
-  return { points, origin: String(payload.origin || "the start").trim().slice(0, 80), destination: String(payload.destination || "the end").trim().slice(0, 80), summary: parts.join(", ") };
+  // the stops the person named ("via Naivasha"), in order, said with the route so they know it was read
+  const stops = (Array.isArray(payload.waypoints) ? payload.waypoints : []).map(stop => String(stop || "").trim().slice(0, 60)).filter(Boolean).slice(0, 8);
+  return { points, origin: String(payload.origin || "the start").trim().slice(0, 80), destination: String(payload.destination || "the end").trim().slice(0, 80), stops, summary: parts.join(", ") };
 }
 
 function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
@@ -57868,7 +57870,7 @@ function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
   const road = hasRouteEndpoints ? genesisRoadRoute(payload) : null;
   const target = hasRouteEndpoints ? null : genesisRealtimeMapTarget(payload);
   const response = road
-    ? `I opened the map with the road route from ${road.origin} to ${road.destination}${road.summary ? `: ${road.summary}` : ""}.`
+    ? `I opened the map with the road route from ${road.origin}${road.stops?.length ? ` via ${road.stops.join(" and ")}` : ""} to ${road.destination}${road.summary ? `: ${road.summary}` : ""}.`
     : target
     ? `I opened the real map centered on ${target.name}${payload.country ? `, ${payload.country}` : ""}.`
     : "I opened the real map. You can zoom, drag, inspect places, and plan a route.";

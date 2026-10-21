@@ -106,7 +106,7 @@ test("with no geometry the older straight line between two known cities is still
 });
 
 test("the spoken route tool hands the computed road to the screen, and the screen reads it", () => {
-  assert.match(serverSource, /mapRoute: \{ origin: routeData\.originResolved \|\| routeArgs\.origin, destination: routeData\.destinationResolved \|\| routeArgs\.destination,\s*routeGeometry: routeData\.routeGeometry/);
+  assert.match(serverSource, /mapRoute: \{ origin: routeData\.originResolved \|\| routeArgs\.origin, destination: routeData\.destinationResolved \|\| routeArgs\.destination,\s*(?:\.\.\.\(routeArgs\.waypoints\?\.length \? \{ waypoints: routeArgs\.waypoints \} : \{\}\),\s*)?routeGeometry: routeData\.routeGeometry/);
   assert.match(appSource, /openGenesisRealtimeMapWorkspace\(result\?\.mapRoute && typeof result\.mapRoute === "object" \? \{ \.\.\.payload, \.\.\.result\.mapRoute \} : payload, command\)/);
   assert.match(appSource, /openGenesisRealtimeMapWorkspace\(data, outcome\.response\)/, "the typed (authoritative) route already passes the outcome data, which carries the geometry");
 });

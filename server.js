@@ -22764,12 +22764,13 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // nexus_visual_analysis.
     const routeData = routeResult?.body?.data || {};
     const routeResponseOverride = Number.isFinite(routeData.distanceMeters)
-      ? `${routeResult.body.message} From ${routeData.originResolved || routeArgs.origin} to ${routeData.destinationResolved || routeArgs.destination}: ${(routeData.distanceMeters / 1000).toFixed(1)} km, about ${Math.round((routeData.durationSeconds || 0) / 60)} minute(s).`
+      ? `${routeResult.body.message} From ${routeData.originResolved || routeArgs.origin}${routeArgs.waypoints?.length ? ` via ${routeArgs.waypoints.join(" and ")}` : ""} to ${routeData.destinationResolved || routeArgs.destination}: ${(routeData.distanceMeters / 1000).toFixed(1)} km, about ${Math.round((routeData.durationSeconds || 0) / 60)} minute(s).`
       : "";
     const routeToolResult = nexusOpenAiNativeProviderToolResult(db, common, routeResult, routeResponseOverride ? { responseOverride: routeResponseOverride } : {});
     // The road the provider really computed, so the map the person is shown draws it (a straight line between two known cities is only the fallback).
     return Array.isArray(routeData.routeGeometry) && routeData.routeGeometry.length > 1
       ? { ...routeToolResult, mapRoute: { origin: routeData.originResolved || routeArgs.origin, destination: routeData.destinationResolved || routeArgs.destination,
+          ...(routeArgs.waypoints?.length ? { waypoints: routeArgs.waypoints } : {}),
           routeGeometry: routeData.routeGeometry, distanceMeters: routeData.distanceMeters ?? null, durationSeconds: routeData.durationSeconds ?? null } }
       : routeToolResult;
   }
