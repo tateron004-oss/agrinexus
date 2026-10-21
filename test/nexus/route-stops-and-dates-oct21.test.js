@@ -59,3 +59,19 @@ test("a route with stops is worked out in order from one place at a time", async
   assert.deepEqual(asked, ["nairobi", "naivasha", "nakuru"]);
   assert.equal(result.body.status, "completed");
 });
+
+test("a routing service that is busy once and then answers still gives the route (one more try), and one that never answers is said plainly", async () => {
+  const geocode = text => ({ ok: true, text: async () => JSON.stringify([{ lat: "-1.29", lon: "36.82", display_name: text }]) });
+  let osrmCalls = 0;
+  const flaky = async url => {
+    if (/nominatim/.test(String(url))) return geocode("place");
+    osrmCalls += 1;
+    if (osrmCalls === 1) return { ok: false, status: 429, text: async () => "too many requests" };
+    return { ok: true, text: async () => JSON.stringify({ code: "Ok", routes: [{ distance: 157600, duration: 7000, geometry: { coordinates: [[36.82, -1.29], [36.07, -0.3]] } }] }) };
+  };
+  const env = { NEXUS_MAPS_ENABLED: "true", NEXUS_MAPS_GEOCODE_GAP_MS: "0", NEXUS_MAPS_GEOCODE_RETRY_MS: "0" };
+  const ok = await mapsProvider.route({ origin: "Nairobi", destination: "Nakuru", waypoints: ["Naivasha"] }, { ...env, NEXUS_MAPS_FETCH_IMPL: flaky });
+  assert.equal(ok.body.status, "completed"); assert.equal(osrmCalls, 2);
+  const never = await mapsProvider.route({ origin: "Nairobi", destination: "Nakuru" }, { ...env, NEXUS_MAPS_FETCH_IMPL: async url => (/nominatim/.test(String(url)) ? geocode("place") : { ok: false, status: 503, text: async () => "down" }) });
+  assert.notEqual(never.body.status, "completed"); assert.match(JSON.stringify(never.body), /did not answer/i);
+});
