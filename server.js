@@ -2,6 +2,10 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+// How long each call out to another service (the AI model, speech, the map and weather services ...) and each request to Kyro's own routes takes. Installed first, so every later call is timed; read at /api/admin/system/timings.
+const kyroCallTimingsModule = require("./nexus/observability/call-timings.js");
+const kyroCallTimings = kyroCallTimingsModule.createCallTimings();
+kyroCallTimingsModule.installFetchTiming(kyroCallTimings);
 const net = require("net");
 const tls = require("tls");
 const { WebSocketServer } = require("ws");
@@ -55058,6 +55062,12 @@ async function api(req, res, url) {
     if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow viewing lookup usage" });
     return send(res, 200, { ok: true, ...lookupMeter.snapshot(), note: "Live web lookups since this server last started (a restart empties the saved answers and today's counts). Change the limits with NEXUS_LIVE_LOOKUPS_PER_USER_PER_DAY, NEXUS_LIVE_LOOKUPS_PER_DAY_TOTAL and NEXUS_LIVE_LOOKUP_CACHE_MINUTES ('off' turns a limit off)." });
   }
+  // Where the time goes: for each outside service (the AI model, speech, maps, weather ...) and each of Kyro's own routes, how many calls, how many failed or timed out, and how long they took (mean, median, slowest tenth, longest),
+  // with the time OpenAI itself says it spent next to the time Kyro waited. Only names, times and statuses are kept (never an address with its query, a key, a body or a person), in memory, from the last restart.
+  if (url.pathname === "/api/admin/system/timings" && req.method === "GET") {
+    if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow viewing call timings" });
+    return send(res, 200, { ok: true, ...kyroCallTimings.snapshot(), note: "Times are in milliseconds. 'outbound' is every call out to another service: the time is how long it took to start answering (for an AI answer, the whole answer); 'serviceSaidMs' is the time OpenAI says it spent, so the difference is network and queueing. 'routes' is every request to Kyro's own /api routes, start to finish. This is process-local: it empties on every restart or deploy." });
+  }
   if (url.pathname === "/api/admin/system/errors" && req.method === "GET") {
     if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow viewing system error logs" });
     return send(res, 200, {
@@ -60733,6 +60743,10 @@ const server = http.createServer(async (req, res) => {
   applySecurityHeaders(req, res);
   const url = parseRequestUrl(req);
   if (!url) return send(res, 400, { error: "Bad request" });
+  if (/^\/api\//.test(url.pathname)) {
+    const routeStarted = performance.now();
+    res.on("finish", () => { try { kyroCallTimings.recordRoute(req.method, url.pathname, performance.now() - routeStarted, res.statusCode); } catch { /* timing never breaks a request */ } });
+  }
   // Answers from the API and the export download can carry personal data: by default nothing may store them. A route that sets its own cache-control still wins.
   if (/^\/(api|exports)\//.test(url.pathname)) res.setHeader("cache-control", "no-store");
   try {
