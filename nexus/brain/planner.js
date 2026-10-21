@@ -36,6 +36,8 @@ const { parentsGuideAnswer } = require("../knowledge/parents-guide.js");
 const { readSafetyDetailed } = require("../companion/safety.js");
 const { prTopic } = require("../../public/kyro-pr-topics.js");
 const { prEventsAnswer } = require("../knowledge/pr-events-guide.js");
+const { churchTopic } = require("../../public/kyro-church-topics.js");
+const { churchAnswer } = require("../knowledge/church-guide.js");
 const { prWalkthrough, WALK_OF_TOPIC: PR_WALK_OF_TOPIC } = require("../knowledge/pr-walkthroughs.js");
 const { childHelpTopic } = require("../../public/kyro-child-help.js");
 const { childHelpAnswer } = require("../knowledge/child-help.js");
@@ -538,6 +540,14 @@ class OpenEndedPlanner {
     const parentsAnswer = parentsId ? parentsGuideAnswer(parentsId, { us: usPerson, country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
     if (parentsAnswer) {
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: parentsAnswer.text, sourceRequired: false, knowledge: `parents-guide:${parentsId}`, sources: parentsAnswer.sources, guardrail: "child-safety-information", planningAttempts: 0 });
+    }
+    // A church leader's or member's question about the church as an organization (does a church have to apply for tax-exempt status, forming one, the annual return, income from a business, receipts for gifts, a pastor's pay and housing
+    // allowance, the payroll-tax choice, political campaigns): a checked, sourced, plain answer from the IRS's pages (see knowledge/church-guide.js). Asked before the guides below so a church is not given the general nonprofit
+    // answer (apply for exemption, file a Form 990), which a church need not do. Outside the United States no rule is stated. The person's own records ("show my church donors") are never taken (public/kyro-church-topics.js).
+    const churchId = ownWorkspace && businessVoiceDispatch.asksAboutOwnRecords(askText) ? null : churchTopic(askText);
+    const churchGuide = churchId ? churchAnswer(churchId, { us: usPerson, country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
+    if (churchGuide) {
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: churchGuide.text, sourceRequired: false, knowledge: `church-guide:${churchId}`, sources: churchGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // A small business owner's question about PUBLIC RELATIONS and EVENTS (a press release and the media, influencer disclosure, the FTC's advertising rules, a crisis communication plan, planning an event and its permits and accessibility, brand, stakeholders,
     // measuring results, hiring a PR or event firm): a checked, sourced, plain answer (see knowledge/pr-events-guide.js). Only a question that names the thing is taken (public/kyro-pr-topics.js); the calendar, a person's records, fake reviews (the
