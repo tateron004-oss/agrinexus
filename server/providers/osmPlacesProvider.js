@@ -134,7 +134,8 @@ function remember(cache, key, value) {
   cache.set(key, { at: Date.now(), value });
 }
 
-async function findNearbyPlaces({ locationText, osmFilters, radiusMeters = 8000, limit = 8, fetchImpl, env = process.env, fallbackTerm = "", countryCode = "", coords = null }) {
+const HEDGE_MS = 3000;
+async function findNearbyPlaces({ locationText, osmFilters, radiusMeters = 8000, limit = 8, fetchImpl, env = process.env, fallbackTerm = "", countryCode = "", coords = null, hedgeMs = HEDGE_MS }) {
   const fetcher = fetchImpl || mapsFetch(env);
   if (typeof fetcher !== "function") throw new Error("no-fetch-available");
   const real = fetcher === globalThis.fetch;
@@ -155,11 +156,21 @@ async function findNearbyPlaces({ locationText, osmFilters, radiusMeters = 8000,
   }
   const keep = found => { if (searchKey && found.places.length) remember(PLACES_CACHE, searchKey, found); return found; };
   if (!fallbackTerm) return keep(await overpassPlaces({ origin, osmFilters, radiusMeters, limit, fetcher }));
-  let result = { origin, places: [] };
-  try { result = await overpassPlaces({ origin, osmFilters, radiusMeters, limit, fetcher }); } catch { /* fall through to Nominatim */ }
-  if (result.places.length) return keep(result);
-  try { return keep({ origin, places: await nominatimPlaces({ origin, term: fallbackTerm, limit, radiusMeters, fetcher }) }); }
-  catch { return result; }
+  // Overpass has the richer answer (phone, opening hours) but is a shared service that answers in 1 to 9 seconds, or times out, and Nominatim answers the same question in under a second. So Overpass is asked first and
+  // given hedgeMs; if it has not answered with places by then (or failed, or found nothing) Nominatim is asked as well, and whichever answers first with places wins. A slow Overpass no longer costs its whole 9 seconds.
+  const overpass = overpassPlaces({ origin, osmFilters, radiusMeters, limit, fetcher }).then(found => found, () => null);
+  let hedgeTimer;
+  const early = await Promise.race([overpass, new Promise(resolve => { hedgeTimer = setTimeout(() => resolve("slow"), hedgeMs); })]);
+  clearTimeout(hedgeTimer);
+  if (early && early !== "slow" && early.places.length) return keep(early);
+  const nominatim = nominatimPlaces({ origin, term: fallbackTerm, limit, radiusMeters, fetcher }).then(places => ({ origin, places }), () => null);
+  const useful = promise => promise.then(found => (found && found.places.length ? found : new Promise(() => {})));
+  let winner = await Promise.race([useful(overpass), useful(nominatim), Promise.all([overpass, nominatim]).then(() => null)]);
+  if (!winner) {
+    const [first, second] = await Promise.all([overpass, nominatim]);
+    winner = first && first.places.length ? first : second && second.places.length ? second : null;
+  }
+  return winner ? keep(winner) : { origin, places: [] };
 }
 
 async function overpassPlaces({ origin, osmFilters, radiusMeters, limit, fetcher }) {

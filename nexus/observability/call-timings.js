@@ -37,6 +37,8 @@ function classifyOutbound(input) {
   if (host.endsWith("twilio.com")) return "phone.twilio";
   if (host.endsWith("sendgrid.com")) return "email.sendgrid";
   if (host.endsWith("amazonaws.com")) return "storage.s3";
+  // Kyro's own sibling service on Render: told apart by what it is asked (the first two parts of the path), so a slow or failing one can be named.
+  if (host.includes("provider-engines")) return `engines:${path.split("/").filter(Boolean).slice(0, 2).join("/") || "root"}`;
   return `other:${host}`;
 }
 
@@ -58,6 +60,7 @@ function createCallTimings({ ringSize = RING, now = () => Date.now() } = {}) {
   const startedAt = now();
   const outbound = new Map();
   const routes = new Map();
+  const steps = new Map();
   const slowest = [];
 
   const bucket = (map, key) => {
@@ -90,6 +93,13 @@ function createCallTimings({ ringSize = RING, now = () => Date.now() } = {}) {
       if (!Number.isFinite(ms)) return;
       add(bucket(routes, routeKey(method, pathname)), ms, { ok: status < 500, status });
     },
+    // one step of Kyro's own work inside a request (reading or saving the stored state, building the state sent back, the speech step of a spoken reply). `bytes` is how big the thing worked on was, when that is known.
+    recordStep(name, ms, { bytes = null } = {}) {
+      if (!name || !Number.isFinite(ms)) return;
+      const entry = bucket(steps, name);
+      add(entry, ms, { ok: true });
+      if (Number.isFinite(bytes)) { entry.bytesLast = bytes; entry.bytesMax = Math.max(entry.bytesMax || 0, bytes); }
+    },
     classify: classifyOutbound,
     snapshot() {
       const lines = map => [...map.entries()].map(([name, entry]) => {
@@ -99,10 +109,11 @@ function createCallTimings({ ringSize = RING, now = () => Date.now() } = {}) {
         return { name, count: entry.count, errors: entry.errors, timeouts: entry.timeouts,
           ms: { mean: mean === null ? null : Math.round(mean), p50: percentile(sorted, 0.5), p90: percentile(sorted, 0.9), max: sorted.length ? sorted[sorted.length - 1] : null },
           ...(processing.length ? { serviceSaidMs: { p50: percentile(processing, 0.5), p90: percentile(processing, 0.9) } } : {}),
+          ...(entry.bytesMax !== undefined ? { bytes: { last: entry.bytesLast, max: entry.bytesMax } } : {}),
           last: entry.last };
       }).sort((a, b) => (b.ms.p90 ?? 0) - (a.ms.p90 ?? 0));
       return { since: new Date(startedAt).toISOString(), upSeconds: Math.round((now() - startedAt) / 1000), keptPerLine: ringSize,
-        outbound: lines(outbound), routes: lines(routes), slowest: [...slowest] };
+        outbound: lines(outbound), routes: lines(routes), steps: lines(steps), slowest: [...slowest] };
     }
   };
 }
