@@ -84,6 +84,7 @@ const { chronicTopic } = require("./public/kyro-chronic-topics.js");
 const { parentsTopic } = require("./public/kyro-parents-topics.js");
 const { childHelpTopic } = require("./public/kyro-child-help.js");
 const { prTopic } = require("./public/kyro-pr-topics.js");
+const { churchTopic } = require("./public/kyro-church-topics.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
@@ -22466,6 +22467,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (childHelp) {
       return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: childHelp.response,
         executionAttempted: true, executionVerified: childHelp.verified === true };
+    }
+  }
+  // A church leader's or member's question about the church as an organization (nexus/knowledge/church-guide.js: tax-exempt status, the annual return, receipts for gifts, a pastor's pay and housing allowance, payroll taxes, political
+  // campaigns) is answered from the checked guide whichever tool the model picked, with the person's own words tried first: the voice model answered from memory with no sources, or with the general nonprofit rules a church does not follow.
+  const churchAsk = typeof churchTopic === "function" && rawCallerText && churchTopic(rawCallerText) ? rawCallerText : command;
+  if (typeof churchTopic === "function" && churchTopic(churchAsk) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
+    const churchUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const churchGuide = churchUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: churchUser, text: churchAsk, language, timeZone: args?.timeZone }) : null;
+    if (churchGuide) {
+      return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: churchGuide.response,
+        executionAttempted: true, executionVerified: churchGuide.verified === true };
     }
   }
   // A small business owner's question about PUBLIC RELATIONS and EVENTS (nexus/knowledge/pr-events-guide.js) is answered from the checked guide whichever tool the model picked, with the person's own words tried first: the voice model would
