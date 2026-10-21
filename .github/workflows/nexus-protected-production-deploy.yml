@@ -169,10 +169,14 @@ jobs:
           cache: npm
       - name: Install immutable deployment controller
         run: npm ci --ignore-scripts
+      # The browser goes in its own folder and is linked in, the same way the candidate job above does it. Installing it into the project with --no-package-lock threw away the lockfile and resolved every dependency again,
+      # so a brief npm registry lag (a new @aws-sdk/client-s3 listed before its @aws-sdk/types had propagated) failed the install and stopped the deploy of an already merged release (21 October 2026).
       - name: Install production verification browser
         run: |
-          npm install --no-save --no-package-lock playwright@1.55.0
-          npx playwright install --with-deps chromium
+          npm install --prefix /tmp/nexus-playwright --no-save --no-package-lock playwright@1.55.0
+          ln -s /tmp/nexus-playwright/node_modules/playwright node_modules/playwright
+          ln -s /tmp/nexus-playwright/node_modules/playwright-core node_modules/playwright-core
+          /tmp/nexus-playwright/node_modules/.bin/playwright install --with-deps chromium
 
       - name: Confirm target is current main
         env:
