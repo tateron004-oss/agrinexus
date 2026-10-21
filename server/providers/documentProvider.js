@@ -130,7 +130,7 @@ async function analyze(body = {}, env = process.env, user = null) {
     }
     const stats = fs.statSync(filePath);
     const mimeType = meta.mimeType || "";
-    const officeKind = mimeType === officeText.DOCX_TYPE ? "docx" : mimeType === officeText.XLSX_TYPE ? "xlsx" : "";
+    const officeKind = ({ [officeText.DOCX_TYPE]: "docx", [officeText.XLSX_TYPE]: "xlsx", [officeText.DOC_TYPE]: "doc", [officeText.XLS_TYPE]: "xls" })[mimeType] || "";
     // (a Word or Excel file may be as big as an upload may: it is only read as text, with its own caps, not sent anywhere)
     const sizeLimit = officeKind ? Math.max(Number(env.NEXUS_FILE_ANALYSIS_MAX_BYTES || 5_000_000), nexusUploads.maxUploadBytes(env)) : Number(env.NEXUS_FILE_ANALYSIS_MAX_BYTES || 5_000_000);
     if (stats.size > sizeLimit) {
@@ -142,7 +142,7 @@ async function analyze(body = {}, env = process.env, user = null) {
       if (!read.ok) return blockedResponse(readiness.provider, action, read.reason);
       const parts = officeText.textParts(read.text, OFFICE_PART_CHARACTERS);
       const part = Math.min(Math.max(Math.trunc(Number(body.part)) || 1, 1), parts.length);
-      const what = officeKind === "docx" ? "Word document" : "Excel spreadsheet";
+      const what = officeKind === "docx" || officeKind === "doc" ? "Word document" : "Excel spreadsheet";
       const hidden = read.hiddenSheets ? ` ${read.hiddenSheets} hidden sheet${read.hiddenSheets === 1 ? " was" : "s were"} not read.` : "";
       return providerResponse({
         provider: readiness.provider, action, status: "completed",
