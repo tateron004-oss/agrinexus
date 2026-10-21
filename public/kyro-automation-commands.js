@@ -10,7 +10,8 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const LEAD = String.raw`^(?:please\s+|kyro,?\s+|nexus,?\s+|hey kyro,?\s+|can you\s+|could you\s+)?`;
+  // (the ways people begin: "please", "Kyro,", "can you", and "I want to", "I need to", "I'd like to", "let me", "help me", one after another)
+  const LEAD = String.raw`^(?:(?:please|kyro,?|nexus,?|hey kyro,?|can you|could you|i\s+(?:want|need|would\s+like|'d\s+like)\s+to|i'd\s+like\s+to|let\s+me|help\s+me)\s+)*`;
   // (only words that mean an automation: "workflow" and "flow" are everyday business words and are left alone)
   const THING = String.raw`(?:automations?|zaps?|webhooks?)`;
 
@@ -49,7 +50,7 @@
   const LIST = new RegExp(LEAD + String.raw`(?:(?:show|list|read|see|view)(?:\s+me)?\s+(?:all\s+)?(?:of\s+)?(?:my|the)\s+(?:outside\s+tool\s+)?automations?|what\s+automations?\s+(?:do\s+i|have\s+i|are\s+(?:there|set\s+up))(?:\s+(?:have|got|set up))?|which\s+automations?\s+(?:do\s+i|have\s+i)(?:\s+have)?|do\s+i\s+have\s+(?:any\s+)?automations?)\s*[?.!]*$`, "i");
   function isList(text) { return LIST.test(String(text || "").replace(/\s+/g, " ").trim()); }
 
-  const OPEN = new RegExp(LEAD + String.raw`(?:(?:open|manage|show)\s+(?:the\s+|my\s+)?(?:outside\s+tool\s+)?automations?(?:\s+(?:screen|page|settings))?|(?:set\s*up|setup|add|connect|create|link)\s+(?:an?\s+|my\s+|the\s+|new\s+)?(?:outside\s+tool\s+)?(?:new\s+)?automations?|(?:set\s*up|setup|connect|link)\s+(?:my\s+business\s+to\s+)?(?:zapier|make\.com|make|n8n|ifttt))\s*[.!]*$`, "i");
+  const OPEN = new RegExp(LEAD + String.raw`(?:(?:open|manage|show)\s+(?:the\s+|my\s+)?(?:outside\s+tool\s+)?automations?(?:\s+(?:screen|page|settings))?|(?:set\s*up|setup|add|connect|create|link)\s+(?:an?\s+|my\s+|the\s+|new\s+)?(?:outside\s+tool\s+)?(?:new\s+)?automations?|(?:set\s*up|setup|connect|link)\s+(?:(?:to|with|up)\s+)?(?:(?:my\s+business|my\s+account|kyro)\s+(?:to|with)\s+)?(?:zapier|make\.com|make|n8n|ifttt))\s*[.!?]*$`, "i");
   function isOpen(text) {
     const said = String(text || "").replace(/\s+/g, " ").trim();
     return OPEN.test(said) && !LIST.test(said);
