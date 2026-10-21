@@ -2477,7 +2477,17 @@ async function ensurePostgresState() {
 // Real load test (scripts/load-test.js) confirmed the size-dependent cost:
 // throughput roughly halved and p50 latency roughly doubled going from a
 // 300KB to a 1.2MB state file under the same concurrent load.
+// The stored state is one document that every request reads and every save writes whole. How long each takes, and how big the document is, shows at /api/admin/system/timings (the steps db.read and db.write).
+function stateBytes(state) {
+  try { return state && typeof state === "object" ? dbReadSnapshots.get(state)?.length : undefined; } catch { return undefined; }
+}
 async function readDb() {
+  const startedAt = performance.now();
+  let state;
+  try { state = await readDbUntimed(); return state; }
+  finally { kyroCallTimings.recordStep("db.read", performance.now() - startedAt, { bytes: stateBytes(state) }); }
+}
+async function readDbUntimed() {
   const space = businessSpaces.currentSpace();
   if (usingPostgresState()) {
     await ensurePostgresState();
@@ -2516,6 +2526,11 @@ function mergeStoredState(baseText, mine, latestText) {
 }
 
 async function writeDb(db) {
+  const startedAt = performance.now();
+  try { return await writeDbUntimed(db); }
+  finally { kyroCallTimings.recordStep("db.write", performance.now() - startedAt, { bytes: stateBytes(db) }); }
+}
+async function writeDbUntimed(db) {
   const stamping = profileOwnerStamping.getStore();
   if (stamping && stamping.db === db && stamping.email) {
     try { stampNewProfileRecordsWithOwner(db, stamping.snapshot, stamping.email); } catch { /* a stamping problem must never block a save */ }
@@ -6484,7 +6499,11 @@ function profileForUserByRole(profile, user) {
 }
 
 // What /api/state sends. Other people's addresses and names are masked in the fields that say who did something (see maskOtherPeopleInState).
-function publicState(db, user) { return maskOtherPeopleInState(publicStateUnmasked(db, user), user, db); }
+function publicState(db, user) {
+  const startedAt = performance.now();
+  try { return maskOtherPeopleInState(publicStateUnmasked(db, user), user, db); }
+  finally { kyroCallTimings.recordStep("publicState", performance.now() - startedAt); }
+}
 function publicStateUnmasked(db, user) {
   const providers = runtimeProviders(db);
   ensureOperationsProfile(db.profile);
@@ -20061,7 +20080,10 @@ async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
   const requestedVoice = voice || process.env.OPENAI_TTS_VOICE || "verse";
   const createSpeech = selectedVoice => {
     const controller = new AbortController();
-    const timeoutMs = Number(process.env.OPENAI_TTS_TIMEOUT_MS || 25000);
+    // 8 seconds, and a second more for each 400 characters said (at most 20): OpenAI's speech answers in about a second, and a call that has not answered by then is one that hung (the old limit, 25 seconds, left the person
+    // hearing nothing for that long). OPENAI_TTS_TIMEOUT_MS still sets it by hand.
+    const configuredTimeout = Number(process.env.OPENAI_TTS_TIMEOUT_MS);
+    const timeoutMs = configuredTimeout > 0 ? configuredTimeout : Math.min(20000, 8000 + Math.ceil(spokenText.length / 400) * 1000);
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     return fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
@@ -20079,7 +20101,18 @@ async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
       })
     }).finally(() => clearTimeout(timeout));
   };
-  let response = await createSpeech(requestedVoice);
+  // A call that hangs or gets a server error is tried once more: a hung connection is usually a one-off, so the second try usually answers in about a second.
+  const createSpeechOnce = async selectedVoice => {
+    try {
+      const attempt = await createSpeech(selectedVoice);
+      if (attempt.status >= 500 || attempt.status === 429) return await createSpeech(selectedVoice);
+      return attempt;
+    } catch (error) {
+      if (!/abort|timeout|fetch failed|network|socket|reset/i.test(`${error?.name || ""} ${error?.message || ""}`)) throw error;
+      return createSpeech(selectedVoice);
+    }
+  };
+  let response = await createSpeechOnce(requestedVoice);
   let finalVoice = requestedVoice;
   if (!response.ok && requestedVoice !== "coral") {
     response = await createSpeech("coral");
@@ -60066,11 +60099,14 @@ async function api(req, res, url) {
           sanitizedLength: text.length,
           sourceFunction: "openAiSpeechAudio"
         });
-        audio = await openAiSpeechAudio({
-          text,
-          voice: body.voice || process.env.OPENAI_TTS_VOICE,
-          responseFormat: body.responseFormat || "mp3"
-        });
+        const speechStartedAt = performance.now();
+        try {
+          audio = await openAiSpeechAudio({
+            text,
+            voice: body.voice || process.env.OPENAI_TTS_VOICE,
+            responseFormat: body.responseFormat || "mp3"
+          });
+        } finally { kyroCallTimings.recordStep("voice.speak.tts", performance.now() - speechStartedAt, { bytes: text.length }); }
         provider = audio?.provider || "openai";
         safeGenesisVoiceStageEvent(db, {
           correlationId,
