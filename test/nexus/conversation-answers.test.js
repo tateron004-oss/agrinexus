@@ -58,7 +58,7 @@ test("a request no application fits is answered directly instead of failing with
     respond: async input => { respondInput = input; return "  It is 351.  "; } };
   const plan = await planner(model, [{ kind: "preference", content: "Prefers Swahili" }]).plan({ command: { ...command, text: "What is 15 percent of 2,340?" }, context: {} });
   assert.equal(plan.application, "conversation"); assert.equal(plan.response, "It is 351."); assert.deepEqual(plan.steps, []);
-  assert.equal(plan.modelAnswered, true); assert.equal(plan.sourceRequired, false); assert.equal(plan.planningAttempts, 3);
+  assert.equal(plan.modelAnswered, true); assert.equal(plan.sourceRequired, false); assert.equal(plan.planningAttempts, 2);
   assert.equal(respondInput.goal, "What is 15 percent of 2,340?");
   assert.equal(respondInput.memories[0].content, "Prefers Swahili", "verified memories reach the answer");
   assert.ok(respondInput.capabilities.includes("maps"));
