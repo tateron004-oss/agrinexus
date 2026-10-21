@@ -57,6 +57,22 @@ const GEOCODE_CACHE = new Map();
 const GEOCODE_CACHE_MS = 24 * 60 * 60 * 1000;
 const GEOCODE_CACHE_MAX = 500;
 const sleepMs = ms => new Promise(resolve => setTimeout(resolve, ms));
+// Roads already worked out are remembered for ten minutes (the same trip asked again, or by the voice model trying again, does not go back to the free routing service).
+const ROUTE_CACHE = new Map();
+const ROUTE_CACHE_MS = 10 * 60 * 1000;
+const ROUTE_CACHE_MAX = 100;
+
+// One more try after a short wait when a free service is busy or does not answer (they limit how often one address may ask); an answer, even "not found", is not tried again.
+async function fetchJsonRetry(fetchImpl, url, headers, env = process.env) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await fetchJson(fetchImpl, url, headers);
+    } catch (error) {
+      if (attempt >= 1) throw error;
+      if (fetchImpl === globalThis.fetch) await sleepMs(Number(env?.NEXUS_MAPS_GEOCODE_RETRY_MS ?? 1500));
+    }
+  }
+}
 
 async function geocodeLocation(locationText, fetchImpl, env = process.env) {
   // Only the real network is remembered and paced; a stand-in fetch (tests, previews) always gets asked.
@@ -68,17 +84,7 @@ async function geocodeLocation(locationText, fetchImpl, env = process.env) {
   url.searchParams.set("q", locationText);
   url.searchParams.set("format", "jsonv2");
   url.searchParams.set("limit", "1");
-  // One more try after a short wait when the free service is busy or does not answer (it limits how often one address may ask): "not found" is an answer and is not tried again.
-  let payload;
-  for (let attempt = 0; ; attempt += 1) {
-    try {
-      payload = await fetchJson(fetchImpl, url, { accept: "application/json", "user-agent": "AgriNexus/1.0 route-readonly-validation" });
-      break;
-    } catch (error) {
-      if (attempt >= 1) throw error;
-      if (real) await sleepMs(Number(env?.NEXUS_MAPS_GEOCODE_RETRY_MS ?? 1500));
-    }
-  }
+  const payload = await fetchJsonRetry(fetchImpl, url, { accept: "application/json", "user-agent": "AgriNexus/1.0 route-readonly-validation" }, env);
   const match = Array.isArray(payload) ? payload[0] : null;
   if (!match || !match.lat || !match.lon) throw new Error(`location-not-found:${locationText}`);
   const value = { label: clean(match.display_name || locationText), lat: Number(match.lat), lon: Number(match.lon) };
@@ -124,8 +130,14 @@ async function publicOsmRoute(origin, destination, fallbackUrl, env = process.en
   const end = stops[stops.length - 1];
   const coordinatePath = stops.map(stop => `${stop.lon},${stop.lat}`).join(";");
   const routeUrl = `${OSRM_ROUTE_URL}/${coordinatePath}?overview=full&geometries=geojson&alternatives=false&steps=false`;
-  const payload = await fetchJson(fetchImpl, routeUrl, { accept: "application/json" });
+  const real = fetchImpl === globalThis.fetch;
+  const remembered = real ? ROUTE_CACHE.get(coordinatePath) : null;
+  const payload = remembered && Date.now() - remembered.at < ROUTE_CACHE_MS ? remembered.payload : await fetchJsonRetry(fetchImpl, routeUrl, { accept: "application/json" }, env);
   const route = Array.isArray(payload.routes) ? payload.routes[0] : null;
+  if (real && route && payload !== remembered?.payload) {
+    if (ROUTE_CACHE.size >= ROUTE_CACHE_MAX) ROUTE_CACHE.delete(ROUTE_CACHE.keys().next().value);
+    ROUTE_CACHE.set(coordinatePath, { payload, at: Date.now() });
+  }
   if (!route) throw new Error("route-not-found");
   const geometry = simplifyGeometry(route.geometry?.coordinates);
   return providerResponse({
