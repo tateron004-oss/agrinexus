@@ -19,9 +19,12 @@ const ACCEPTED_TYPES = Object.freeze({
   "image/png": { ext: ".png", magic: [[0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]]] },
   "image/webp": { ext: ".webp", magic: [[0, [0x52, 0x49, 0x46, 0x46]], [8, [0x57, 0x45, 0x42, 0x50]]] },
   "application/pdf": { ext: ".pdf", magic: [[0, [0x25, 0x50, 0x44, 0x46]]] },
-  // Word and Excel (the current .docx and .xlsx, which are ZIP packages: "PK" at the start, and the right parts inside, checked in parseAndStoreUpload). Macro-enabled (.docm, .xlsm) and the older .doc and .xls are not accepted.
+  // Word and Excel: the current .docx and .xlsx (ZIP packages: "PK" at the start, and the right parts inside) and the older .doc and .xls (compound files: the signature below, and a Word or Excel stream inside), all checked in
+  // parseAndStoreUpload. Macro-enabled files (.docm, .xlsm, or a .doc or .xls that carries macros) and password-protected modern files are not accepted.
   [officeText.DOCX_TYPE]: { ext: ".docx", magic: [[0, [0x50, 0x4b, 0x03, 0x04]]], office: "docx" },
-  [officeText.XLSX_TYPE]: { ext: ".xlsx", magic: [[0, [0x50, 0x4b, 0x03, 0x04]]], office: "xlsx" }
+  [officeText.XLSX_TYPE]: { ext: ".xlsx", magic: [[0, [0x50, 0x4b, 0x03, 0x04]]], office: "xlsx" },
+  [officeText.DOC_TYPE]: { ext: ".doc", magic: [[0, [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]]], office: "doc" },
+  [officeText.XLS_TYPE]: { ext: ".xls", magic: [[0, [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]]], office: "xls" }
 });
 
 function acceptedTypes() {
@@ -30,7 +33,7 @@ function acceptedTypes() {
 
 // The accepted type of an upload. Most browsers say what a .docx or .xlsx is, but one on a computer with no Office installed often says nothing (the multipart reader then reports "text/plain"), "application/octet-stream" or "application/zip": for those the
 // file's own ending decides, and the file's contents are checked all the same (so a renamed file of another kind is still refused).
-const OFFICE_BY_EXTENSION = Object.freeze({ ".docx": officeText.DOCX_TYPE, ".xlsx": officeText.XLSX_TYPE });
+const OFFICE_BY_EXTENSION = Object.freeze({ ".docx": officeText.DOCX_TYPE, ".xlsx": officeText.XLSX_TYPE, ".doc": officeText.DOC_TYPE, ".xls": officeText.XLS_TYPE });
 function resolveDeclaredType(declaredType, filename) {
   const declared = String(declaredType || "").toLowerCase();
   if (ACCEPTED_TYPES[declared]) return declared;
@@ -283,7 +286,7 @@ function parseAndStoreUpload(req, { env = process.env, userId, space = "default"
           if (!magicBytesMatch(head, declaredType)) {
             throw Object.assign(new Error("content_does_not_match_declared_type"), { declaredType });
           }
-          // A Word or Excel file must really be one: a ZIP with the main part of a Word document or an Excel workbook inside (any other ZIP, or one renamed to .docx, is refused).
+          // A Word or Excel file must really be one: a ZIP with the main part of a Word document or an Excel workbook inside, or an older compound file with a Word or Excel stream (any other file, or one renamed to .docx, is refused).
           if (spec.office && officeText.officeKind(fs.readFileSync(tmpPath)) !== spec.office) {
             throw Object.assign(new Error("content_does_not_match_declared_type"), { declaredType });
           }

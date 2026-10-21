@@ -98,10 +98,11 @@ test("a file that only says it is Word or Excel is refused, and nothing is kept:
   await refuse("fake.xlsx", officeText.XLSX_TYPE, Buffer.from("just some text, not a spreadsheet"), "content_does_not_match_declared_type");
   await refuse("swapped.docx", officeText.DOCX_TYPE, makeXlsx([{ name: "A", rows: [["x"]] }]), "content_does_not_match_declared_type");
   await refuse("macro.docx", officeText.DOCX_TYPE, makeZip({ "[Content_Types].xml": "<Types/>", "word/document.xml": "<w:document/>", "word/vbaProject.bin": "x" }), "content_does_not_match_declared_type");
-  await refuse("old.doc", "application/msword", Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]), "unsupported_file_type");
-  await refuse("old.xls", "application/vnd.ms-excel", Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]), "unsupported_file_type");
+  // (the older .doc and .xls are accepted now, but only a real one: the signature alone, or a ZIP renamed .doc, is refused; see legacy-office-oct21.test.js)
+  await refuse("old.doc", "application/msword", Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]), "content_does_not_match_declared_type");
+  await refuse("old.xls", "application/vnd.ms-excel", Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]), "content_does_not_match_declared_type");
   await refuse("macro.docm", "application/vnd.ms-word.document.macroEnabled.12", makeDocx(["x"]), "unsupported_file_type");
-  await refuse("old.doc", "application/octet-stream", makeDocx(["x"]), "unsupported_file_type");
+  await refuse("old.doc", "application/octet-stream", makeDocx(["x"]), "content_does_not_match_declared_type");
   assert.deepEqual(fs.readdirSync(dir), [], "nothing is left behind by a refused file");
 });
 
@@ -153,8 +154,11 @@ test("the page offers Word and Excel files, hears 'upload a Word document' and '
   const w = new vm.Script(sliceConst("const KYRO_OPEN_LEAD") + sliceConst("const KYRO_OPEN_UPLOAD") + sliceConst("const KYRO_OLD_OFFICE_FILE") + "({ KYRO_OPEN_UPLOAD, KYRO_OLD_OFFICE_FILE })").runInNewContext({});
   for (const said of ["Upload a Word document.", "I want to upload an Excel file", "Upload my spreadsheet", "Upload a docx", "attach an excel spreadsheet", "Upload a Word document for my loan", "Upload a picture of my crop.", "Open uploads"]) assert.ok(w.KYRO_OPEN_UPLOAD.test(said), said);
   for (const said of ["Upload speed test", "How do I upload?", "Upload a word of thanks to the team and then call Amina tomorrow morning please"]) assert.ok(!w.KYRO_OPEN_UPLOAD.test(said), said);
-  for (const name of ["old report.doc", "budget.XLS", "letter.rtf", "template.dot"]) assert.ok(w.KYRO_OLD_OFFICE_FILE.test(name), name);
-  for (const name of ["report.docx", "budget.xlsx", "photo.jpg", "scan.pdf", "document.docm"]) assert.ok(!w.KYRO_OLD_OFFICE_FILE.test(name), name);
+  // (the older .doc and .xls are read now; the other older kinds and macro-enabled files are still said plainly not to be)
+  for (const name of ["letter.rtf", "template.dot", "template.xlt", "slides.ppt", "macro.docm", "macro.XLSM"]) assert.ok(w.KYRO_OLD_OFFICE_FILE.test(name), name);
+  for (const name of ["report.docx", "budget.xlsx", "old report.doc", "budget.XLS", "photo.jpg", "scan.pdf"]) assert.ok(!w.KYRO_OLD_OFFICE_FILE.test(name), name);
+  assert.match(app, /accept="application\/pdf,image\/png,image\/jpeg,image\/webp,\.docx,\.xlsx,\.doc,\.xls,/);
+  assert.match(app, /input\.accept = "image\/jpeg,image\/png,image\/webp,application\/pdf,\.docx,\.xlsx,\.doc,\.xls,/);
   assert.match(app, /input\.accept = "image\/jpeg,image\/png,image\/webp,application\/pdf,\.docx,\.xlsx,/);
   assert.match(app, /data-nexus-file-upload-input="true" accept="application\/pdf,image\/png,image\/jpeg,image\/webp,\.docx,\.xlsx,/);
   assert.match(app, /\(\?:Word document\|Excel spreadsheet\) read from a real, user-uploaded file/);
@@ -163,7 +167,7 @@ test("the page offers Word and Excel files, hears 'upload a Word document' and '
 test("the voice tool passes the part to read, and the upload refusal says in plain words what can be uploaded", () => {
   assert.match(server, /part: \{ type: "integer", description: "For an uploaded Word or Excel file that is read in parts/);
   assert.match(server, /text: args\.text \|\| args\.content,\s+part: args\.part,/);
-  assert.match(server, /unsupported_file_type: "Only pictures \(JPEG, PNG or WebP\), PDF files, Word \(\.docx\) and Excel \(\.xlsx\) files can be uploaded\./);
+  assert.match(server, /unsupported_file_type: "Only pictures \(JPEG, PNG or WebP\), PDF files, and Word \(\.docx or \.doc\) and Excel \(\.xlsx or \.xls\) files can be uploaded\./);
 });
 
 test("the last part of a long file says it is the last, not 'ask for part 1'", async () => {

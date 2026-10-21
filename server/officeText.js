@@ -1,12 +1,15 @@
 "use strict";
 const zlib = require("node:zlib");
+const legacy = require("./legacyOffice.js");
 
-// Reads the text of a Word (.docx) or Excel (.xlsx) file a person uploaded, so Kyro can read it to them. Both are ZIP packages of XML parts. Nothing here runs or opens anything inside the file: a macro is never
+// Reads the text of a Word (.docx) or Excel (.xlsx) file a person uploaded, so Kyro can read it to them. Both are ZIP packages of XML parts. (The older .doc and .xls are read by legacyOffice.js.) Nothing here runs or opens anything inside the file: a macro is never
 // run (macro-enabled .docm/.xlsm are not accepted at all), a link to another file or web address is never followed, and the XML is read with plain pattern matching, not an XML parser (so no external
 // entity or "billion laughs" tricks). Every size is capped against zip bombs: how many parts, how big any one part is when unpacked, and how much is unpacked in total.
 
 const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const DOC_TYPE = "application/msword";
+const XLS_TYPE = "application/vnd.ms-excel";
 
 const MAX_ENTRIES = 3000;
 const MAX_PART_BYTES = 25 * 1024 * 1024;
@@ -83,8 +86,9 @@ function openPackage(buffer) {
   };
 }
 
-// Which kind of Office file this is, by what is inside (not by what the file says it is): "docx", "xlsx", or "" for anything else (including a ZIP that is neither, or a macro-enabled file).
+// Which kind of Office file this is, by what is inside (not by what the file says it is): "docx", "xlsx", the older "doc" or "xls", or "" for anything else (including a ZIP that is neither, or a macro-enabled or password-protected file).
 function officeKind(buffer) {
+  if (legacy.isCompoundFile(buffer)) return legacy.legacyKind(buffer);
   const pack = openPackage(buffer);
   if (!pack || !pack.has("[Content_Types].xml")) return "";
   // a file that carries macros (a macro-enabled file renamed .docx or .xlsx) is not accepted
@@ -251,6 +255,7 @@ function xlsxRead(pack) {
 
 // What is in the file, as plain text Kyro can read out: { ok, kind, text, words, sheets? } or { ok: false, reason } with a plain reason for the person.
 function readOfficeFile(buffer, kind) {
+  if (kind === "doc" || kind === "xls") return legacy.readLegacyFile(buffer, kind, serialToDate);
   const pack = openPackage(buffer);
   if (!pack) return { ok: false, reason: "That file could not be opened. It may be damaged, or not a real Word or Excel file." };
   if (kind === "docx") {
@@ -283,4 +288,4 @@ function textParts(text, size = 6000) {
   return parts;
 }
 
-module.exports = { DOCX_TYPE, XLSX_TYPE, officeKind, readOfficeFile, textParts, openPackage, docxText, serialToDate };
+module.exports = { DOCX_TYPE, XLSX_TYPE, DOC_TYPE, XLS_TYPE, officeKind, readOfficeFile, textParts, openPackage, docxText, serialToDate };

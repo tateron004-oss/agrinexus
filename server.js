@@ -50097,7 +50097,7 @@ async function api(req, res, url) {
       const messages = {
         payload_too_large: "That file is too large.",
         file_too_large: `That file is larger than the ${Math.round(nexusUploads.maxUploadBytes(process.env) / (1024 * 1024))}MB limit.`,
-        unsupported_file_type: "Only pictures (JPEG, PNG or WebP), PDF files, Word (.docx) and Excel (.xlsx) files can be uploaded. For an older .doc or .xls file, open it and save it as .docx or .xlsx first.",
+        unsupported_file_type: "Only pictures (JPEG, PNG or WebP), PDF files, and Word (.docx or .doc) and Excel (.xlsx or .xls) files can be uploaded. A file with macros, or one that is password-protected, cannot be read.",
         content_does_not_match_declared_type: "The file's contents did not match its declared type.",
         storage_quota_exceeded: "Nexus file storage is full. Please try again later or contact support.",
         user_quota_exceeded: `Your storage is full (${Math.round(nexusUploads.userQuotaBytes(process.env) / (1024 * 1024))} MB per person). Remove files you no longer need, then try again.`,

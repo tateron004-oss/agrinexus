@@ -32951,7 +32951,7 @@ function renderNexusTrueCommandComposer(options = {}) {
       <button type="button" class="nexus-upload-trigger" data-nexus-file-upload-trigger="true" onclick="document.querySelector('[data-nexus-file-upload-input]')?.click()" aria-label="${escapeHtml(translateText("Upload a document or photo for Nexus to read"))}" title="${escapeHtml(translateText("Upload a document or photo"))}">
         ${escapeHtml(translateText("Upload"))}
       </button>
-      <input type="file" data-nexus-file-upload-input="true" accept="application/pdf,image/png,image/jpeg,image/webp,.docx,.xlsx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onchange="return handleNexusFileUploadInputChange(event)" />
+      <input type="file" data-nexus-file-upload-input="true" accept="application/pdf,image/png,image/jpeg,image/webp,.docx,.xlsx,.doc,.xls,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.ms-excel" hidden onchange="return handleNexusFileUploadInputChange(event)" />
       <span class="sr-only" data-nexus-file-upload-status="true" aria-live="polite"></span>
     </div>
     ${renderNexusVoiceFirstPresenceControls()}
@@ -32974,7 +32974,7 @@ async function handleNexusFileUploadInputChange(event) {
   const setStatus = text => { if (statusEl) statusEl.textContent = text; };
   // an older .doc or .xls is said plainly, before anything is sent
   if (typeof KYRO_OLD_OFFICE_FILE !== "undefined" && KYRO_OLD_OFFICE_FILE.test(file.name)) {
-    const older = "That is an older kind of Word or Excel file that I cannot read. Open it, choose Save As, save it as .docx or .xlsx, and then choose it again.";
+    const older = "I can read Word (.docx or .doc) and Excel (.xlsx or .xls) files, but not that kind. Open it, choose Save As, save it as .docx or .xlsx, and then choose it again.";
     setStatus(older);
     setVoiceResponse?.(older, false, { allowHandoff: false, source: "nexus-file-upload" });
     input.value = "";
@@ -52269,7 +52269,7 @@ const KYRO_OPEN_BIZ = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|go to|pull up|br
 const KYRO_OPEN_UPLOAD = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|show|start|go to)\\s+(?:the\\s+|my\\s+)?(?:file\\s+|document\\s+|photo\\s+)?uploads?|(?:i\\s+(?:want|need)\\s+to\\s+|let me\\s+|help me\\s+|i'd like to\\s+)?(?:upload|attach)(?:\\s+(?:a|an|my|the|some))?(?:\\s+(?:files?|documents?|docs?|pictures?|photos?|pdfs?|images?|letters?|spreadsheets?|sheets?|(?:ms\\s+)?(?:word|excel)(?:\\s+(?:files?|documents?|docs?|spreadsheets?|sheets?))?|docx|xlsx))?(?:\\s+(?:of|for|from|to|about|showing)\\s+[a-z' -]{1,60})?)[.?!]*$`, "i");
 // A screen with a real button (a file can only be chosen from a tap): the picture, PDF, Word or Excel file is sent and read out, as "look at this" does.
 // (the older .doc and .xls formats are not read: said plainly, with what to do, before anything is sent)
-const KYRO_OLD_OFFICE_FILE = /\.(?:doc|xls|dot|xlt|rtf|ppt)$/i;
+const KYRO_OLD_OFFICE_FILE = /\.(?:dot|xlt|rtf|ppt|pptx|docm|xlsm)$/i;
 function kyroOpenUploadScreen(said, lang) {
   const ask = lang === "sw" ? "Chagua picha, PDF, hati ya Word au faili ya Excel (hadi MB 10) nikusomee. Gusa kitufe hapa chini." : "Choose a picture, a PDF, a Word document or an Excel file (up to 10 MB) and I will read it to you. Tap the button below.";
   if (!kyroShowResultScreen("typed", said, { ok: true, status: "completed", response: ask })) return false;
@@ -52281,16 +52281,16 @@ function kyroOpenUploadScreen(said, lang) {
     label.textContent = lang === "sw" ? "Chagua faili" : "Choose a file";
     label.style.cssText = "display:inline-block;align-self:flex-start;padding:16px 28px;border-radius:16px;background:#06a77d;color:#fff;font-size:1.25rem;font-weight:600;cursor:pointer;position:relative;z-index:1";
     const input = document.createElement("input");
-    input.type = "file"; input.accept = "image/jpeg,image/png,image/webp,application/pdf,.docx,.xlsx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"; input.hidden = true;
+    input.type = "file"; input.accept = "image/jpeg,image/png,image/webp,application/pdf,.docx,.xlsx,.doc,.xls,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.ms-excel"; input.hidden = true;
     input.addEventListener("change", () => {
       const file = input.files && input.files[0];
       if (!file) return;
       if (file.size > 10 * 1024 * 1024) { setVoiceResponse(lang === "sw" ? "Faili hiyo ni kubwa kuliko MB 10." : "That file is bigger than 10 MB.", true, { allowHandoff: false, command: said, source: "kyro-upload" }); return; }
       if (KYRO_OLD_OFFICE_FILE.test(file.name)) {
-        setVoiceResponse(lang === "sw" ? "Hiyo ni aina ya zamani ya faili ambayo siwezi kusoma. Ifungue, chagua Hifadhi Kama, ihifadhi kama .docx au .xlsx, kisha uichague tena." : "That is an older kind of Word or Excel file that I cannot read. Open it, choose Save As, save it as .docx or .xlsx, and then choose it again.", true, { allowHandoff: false, command: said, source: "kyro-upload" });
+        setVoiceResponse(lang === "sw" ? "Naweza kusoma faili za Word (.docx au .doc) na Excel (.xlsx au .xls), lakini si aina hiyo. Ifungue, chagua Hifadhi Kama, ihifadhi kama .docx au .xlsx, kisha uichague tena." : "I can read Word (.docx or .doc) and Excel (.xlsx or .xls) files, but not that kind. Open it, choose Save As, save it as .docx or .xlsx, and then choose it again.", true, { allowHandoff: false, command: said, source: "kyro-upload" });
         return;
       }
-      const sheet = /\.xlsx$/i.test(file.name);
+      const sheet = /\.xlsx?$/i.test(file.name);
       void kyroAskAboutPicture(file, sheet ? (lang === "sw" ? "Soma jedwali hili na uniambie lina nini" : "Read this spreadsheet and tell me what is in it") : (lang === "sw" ? "Soma faili hii na uniambie inasema nini" : "Read this file and tell me what it says"), file.name);
     });
     label.append(input);
