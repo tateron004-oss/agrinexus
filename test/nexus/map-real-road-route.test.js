@@ -24,8 +24,10 @@ function load() {
     userMapLayers: { route: layer(), markers: layer() },
     L: {
       polyline: (points, style) => { calls.polylines.push([points, style]); return { addTo: () => {} }; },
-      marker: point => { const entry = { point, popup: "" }; calls.markers.push(entry); return { addTo() { return this; }, bindPopup(html) { entry.popup = html; return this; }, openPopup() { return this; } }; }
+      marker: (point, options) => { const entry = { point, popup: "", icon: options?.icon || null }; calls.markers.push(entry); return { addTo() { return this; }, bindPopup(html) { entry.popup = html; return this; }, openPopup() { return this; } }; },
+      divIcon: options => options
     },
+    setTimeout: () => 0,
     escapeHtml: value => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"),
     safeInvalidateLeafletMap: () => {},
     waitForStableUserMapCanvas: () => Promise.resolve(),
@@ -109,4 +111,15 @@ test("the spoken route tool hands the computed road to the screen, and the scree
   assert.match(serverSource, /mapRoute: \{ origin: routeData\.originResolved \|\| routeArgs\.origin, destination: routeData\.destinationResolved \|\| routeArgs\.destination,\s*(?:\.\.\.\(routeArgs\.waypoints\?\.length \? \{ waypoints: routeArgs\.waypoints \} : \{\}\),\s*)?routeGeometry: routeData\.routeGeometry/);
   assert.match(appSource, /openGenesisRealtimeMapWorkspace\(result\?\.mapRoute && typeof result\.mapRoute === "object" \? \{ \.\.\.payload, \.\.\.result\.mapRoute \} : payload, command\)/);
   assert.match(appSource, /openGenesisRealtimeMapWorkspace\(data, outcome\.response\)/, "the typed (authoritative) route already passes the outcome data, which carries the geometry");
+});
+
+test("the stops of a route are marked, in order, each with its own name, between the start and the end", async () => {
+  const { open, calls } = load();
+  open({ origin: "Nairobi", destination: "Nakuru", routeGeometry: GEOMETRY, distanceMeters: 158400, durationSeconds: 11400, waypoints: ["Naivasha"], waypointPoints: [{ name: "Naivasha", lat: -0.72, lng: 36.43 }] }, "route via Naivasha");
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls.markers.length, 3, "start, one stop, end");
+  assert.equal(JSON.stringify(calls.markers[1].point), JSON.stringify([-0.72, 36.43]));
+  assert.match(calls.markers[1].popup, /Stop 1: Naivasha/);
+  assert.match(calls.markers[1].icon.html, /Stop 1: Naivasha/);
+  assert.equal(calls.fit.length, 1, "fitted to the road once now (and once more shortly after, by timer)");
 });
