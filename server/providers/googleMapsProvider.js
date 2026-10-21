@@ -154,6 +154,8 @@ async function publicOsmRoute(origin, destination, fallbackUrl, env = process.en
       originResolved: start.label,
       destinationResolved: end.label,
       waypointsResolved: stops.slice(1, -1).map(stop => stop.label),
+      // where each stop is, so the map can mark it: the name the person said, and the point the map service found for it
+      waypointPoints: stops.slice(1, -1).map((stop, index) => ({ name: cleanedWaypoints[index], lat: stop.lat, lng: stop.lon })),
       originLat: start.lat,
       originLng: start.lon,
       destinationLat: end.lat,

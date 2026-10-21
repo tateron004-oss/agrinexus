@@ -57861,7 +57861,11 @@ function genesisRoadRoute(payload = {}) {
   }
   // the stops the person named ("via Naivasha"), in order, said with the route so they know it was read
   const stops = (Array.isArray(payload.waypoints) ? payload.waypoints : []).map(stop => String(stop || "").trim().slice(0, 60)).filter(Boolean).slice(0, 8);
-  return { points, origin: String(payload.origin || "the start").trim().slice(0, 80), destination: String(payload.destination || "the end").trim().slice(0, 80), stops, summary: parts.join(", ") };
+  // where each stop is, when the server found them: marked on the map
+  const stopPoints = (Array.isArray(payload.waypointPoints) ? payload.waypointPoints : [])
+    .map(stop => ({ name: String(stop?.name || "").trim().slice(0, 60), lat: Number(stop?.lat), lng: Number(stop?.lng) }))
+    .filter(stop => Number.isFinite(stop.lat) && Number.isFinite(stop.lng) && Math.abs(stop.lat) <= 90 && Math.abs(stop.lng) <= 180).slice(0, 8);
+  return { points, origin: String(payload.origin || "the start").trim().slice(0, 80), destination: String(payload.destination || "the end").trim().slice(0, 80), stops, stopPoints, summary: parts.join(", ") };
 }
 
 function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
@@ -57888,11 +57892,22 @@ function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
       userMapLayers.markers?.clearLayers?.();
       L.polyline(road.points, { color: "#14b8a6", weight: 5, opacity: 0.9 }).addTo(userMapLayers.route);
       L.marker(road.points[0]).addTo(userMapLayers.markers).bindPopup(`<strong>${escapeHtml(road.origin)}</strong>`);
+      // the stops, in order, each marked and named (a round dot, so they are not mistaken for the start and the end)
+      road.stopPoints.forEach((stop, index) => {
+        const label = `Stop ${index + 1}${stop.name ? `: ${stop.name}` : ""}`;
+        // (a marker with its own dot and label, not a Leaflet tooltip: this page's map styles do not draw tooltips, they land under the map)
+        const dot = `<div style="position:absolute;left:-8px;top:-8px;width:16px;height:16px;box-sizing:border-box;border-radius:50%;background:#fff;border:3px solid #0f766e"></div>`;
+        const tag = `<div style="position:absolute;left:12px;top:-12px;white-space:nowrap;background:#fff;color:#0f172a;border:1px solid #0f766e;border-radius:6px;padding:1px 6px;font:600 12px system-ui,sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.3)">${escapeHtml(label)}</div>`;
+        L.marker([stop.lat, stop.lng], { icon: L.divIcon({ className: "kyro-stop-marker", iconSize: [0, 0], html: dot + tag }), title: label }).addTo(userMapLayers.markers)
+          .bindPopup(`<strong>${escapeHtml(label)}</strong>`);
+      });
       L.marker(road.points[road.points.length - 1]).addTo(userMapLayers.markers)
         .bindPopup(`<strong>${escapeHtml(road.destination)}</strong>${road.summary ? `<br>${escapeHtml(road.summary)}` : ""}`).openPopup();
-      userMap.fitBounds(road.points, { padding: [32, 32] });
-      safeInvalidateLeafletMap(userMap);
+      // The map is given its real size before it is fitted to the road: fitted while the panel was still closed (no size yet) it came out at street level on the middle of the route, with the road and the stops out of sight.
       document.querySelector("#map .user-simple-module > details.user-module-more")?.setAttribute("open", "true");
+      safeInvalidateLeafletMap(userMap);
+      userMap.fitBounds(road.points, { padding: [32, 32] });
+      setTimeout(() => { try { if (userMap) { safeInvalidateLeafletMap(userMap); userMap.fitBounds(road.points, { padding: [32, 32] }); } } catch { /* the map is already showing the road */ } }, 600);
     });
   } else if (hasRouteEndpoints) {
     const places = africanCityLocationCatalog();
