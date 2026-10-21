@@ -8,6 +8,7 @@ const financeVoice = require("./finance-voice.js");
 const programsVoice = require("./programs-voice.js");
 const operationsVoice = require("./operations-voice.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
+const automationCommands = require("../../public/kyro-automation-commands.js");
 const { whenOf, parseEachPrice, parseQuantity, parseCount } = require("../farmwork/parse.js");
 
 // Shared classify+extract+execute logic for business/nonprofit voice and
@@ -904,6 +905,9 @@ const INSIGHT_READS = insights.INSIGHT_INTENTS.filter(intent => intent !== "howA
 const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS, ...financeVoice.FINANCE_READ_INTENTS, ...programsVoice.PROGRAM_READ_INTENTS, ...operationsVoice.OPERATIONS_READ_INTENTS]);
 
 function classify(command = "") {
+  // A request about the person's own outside-tool automations ("send new customer Grace to my sales sheet automation", "show my automations", "connect Zapier") is the automations', never a business request: the
+  // words "new customer" in it read as adding a customer, and a person with no business workspace was told they had nowhere to put it.
+  if (automationCommands.parseTrigger(command) || automationCommands.isList(command) || automationCommands.isOpen(command)) return null;
   // Questions about how the organisation is doing, money to cover expenses, who needs a follow-up, funding deadlines, people served and volunteer hours come before the general word-matching below, which
   // would otherwise read "customers or donors" as a list request and "log 3 volunteer hours for Joy" as a new person called by that whole phrase.
   const insight = insights.classifyInsight(command);
