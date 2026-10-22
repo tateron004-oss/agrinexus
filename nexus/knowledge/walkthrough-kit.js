@@ -9,7 +9,7 @@
 //       gather  what to have in hand before the step         key     the guide's SOURCES key whose page says it, shown as the step's button (null for a step of Kyro's own working practice)
 //       done    "You are finished with this step when ..."  so a person who has never done this knows when to stop and go on     words   [W(term, meaning)] the plain meaning of any word they will meet in the step
 //   family({ prefix, label, SOURCES, CHECKED_ON, DEFS, topicOf }) -> { prefix, label, WALKTHROUGHS, WALK_OF_TOPIC, PHRASE_OF_TOPIC, walkthrough(id), walkthroughFor(text), topicOf }
-//       DEFS    { id: { title, topic, phrase, steps: [S(...)] } }     topic: the guide's topic the walkthrough goes with       phrase: the words after "Walk me through ..." (the topic matcher must take them as that topic; a test checks)
+//       DEFS    { id: { title, topic, phrase, us?, steps: [S(...)] } }     us: true when the steps are rules or programs of the United States (the plan carries the walkthrough only for a person in the United States context; anyone else gets the guide's ordinary answer)     topic: the guide's topic the walkthrough goes with       phrase: the words after "Walk me through ..." (the topic matcher must take them as that topic; a test checks)
 //       label   the first part of the plan's knowledge label ("church-guide" in "church-guide:church-forming")
 
 const OWN = "This step is Kyro's own working practice, not an official page. ";
@@ -26,7 +26,7 @@ function family({ prefix, label, SOURCES, CHECKED_ON, DEFS, topicOf }) {
     if (!def) return null;
     const keys = [...new Set(def.steps.map(step => step.key).filter(Boolean))];
     return {
-      id: `${prefix}-${id}`, title: def.title, checkedOn: CHECKED_ON,
+      id: `${prefix}-${id}`, title: def.title, checkedOn: CHECKED_ON, us: def.us === true,
       steps: def.steps.map(step => ({ title: step.title, text: step.text, gather: step.gather.slice(), done: step.done, words: step.words.map(word => ({ term: word.term, means: word.means })), link: step.key ? link(step.key) : null })),
       sources: keys.map(link)
     };

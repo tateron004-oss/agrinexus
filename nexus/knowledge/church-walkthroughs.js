@@ -12,7 +12,7 @@ const DEFS = {
   // the model every other walkthrough follows: plain words, why each step matters, what to have ready, how the person knows the step is finished, what the new words mean, and an official page for the step (or a plain statement that it is Kyro's own practice)
   "setting-up": {
     title: "Setting up a church and finding out what it must do",
-    topic: "church-register", phrase: "setting up and registering a church",
+    topic: "church-register", phrase: "setting up and registering a church", us: true,
     steps: [
       S("Keep two questions apart", "Setting up a church involves two different questions. One is tax: does the church pay income tax? The other is legal: what kind of organization is it, and does your state want it registered? The IRS answers the first. Your state answers the second. Take them one at a time.", ["Paper and a pen to write each question at the top of a page"], "irsChurchStatus", "you have written both questions, tax and legal, at the top of two separate pages.", [W("Tax exempt", "not required to pay income tax."), W("Legal organization", "the form your church takes under your state's law, for example a nonprofit corporation.")]),
       S("Know what the IRS says about tax", "The IRS says a church that meets the section 501(c)(3) rules is automatically treated as tax exempt and does not have to apply to the IRS to be exempt. That is the IRS's rule for churches. Many people think they must apply, and the IRS page says they need not.", ["The IRS page, open to read"], "irsNotRequired1023", "you can say in your own words that a church does not have to apply to the IRS to be tax exempt.", [W("501(c)(3)", "the part of the tax law that describes charities and churches that are exempt from income tax.")]),
