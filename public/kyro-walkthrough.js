@@ -2,7 +2,7 @@
 // answer, each from an official page, with the date it was checked); this file only turns them into a short spoken line and a screen, and keeps the person's place.
 //
 //   parseControl(text) -> "next" | "back" | "repeat" | "restart" | "where" | null     (short phrases only: "next", "go back", "say that again", "start over")
-//   sanitize(raw) -> { id, title, checkedOn, sources: [{ name, url }], steps: [{ title, text, gather: [], link: { name, url } | null }] } | null     (what the server sent, cleaned; null when there is nothing to walk through)
+//   sanitize(raw) -> { id, title, checkedOn, sources: [{ name, url }], steps: [{ title, text, gather: [], done, words: [{ term, means }], link: { name, url } | null }] } | null     (what the server sent, cleaned; null when there is nothing to walk through)
 //   createWalkthrough(def, { storage, now }) -> { snapshot(), next(), back(), restart(), resumed }     (the place is kept in storage for 30 days, per walkthrough, so the person can come back)
 //   sayStep(snapshot, lang) -> the line to read aloud for the current step
 //   show(doc, snapshot, handlers, lang) -> element     (section[data-kyro-result="walkthrough"], kept on the screen until closed)   remove(doc) -> boolean
@@ -17,13 +17,13 @@
 
   const TEXT = {
     en: {
-      step: (n, total) => `Step ${n} of ${total}`, you: "You will need:", open: "Open", next: "Next step", back: "Back", repeat: "Say it again", close: "Close",
+      step: (n, total) => `Step ${n} of ${total}`, you: "You will need:", done: "You are finished with this step when:", words: "Words you will meet:", open: "Open", next: "Next step", back: "Back", repeat: "Say it again", close: "Close",
       last: "That was the last step. You submit it yourself: I never apply for you. Say start over to go through it again.", sayNext: "Say next when you have done this.", lastStep: "This is the last step. You do it yourself; I never apply for you.",
       resumed: n => `Welcome back. You were on step ${n}.`, started: "I only guide you: you do each step yourself, and I never apply for you.", checked: date => `Checked ${date}`, finished: "All steps shown", note: "You do each step yourself. I never apply for you.",
       pages: "Official page for this step", sources: "Sources"
     },
     sw: {
-      step: (n, total) => `Hatua ya ${n} kati ya ${total}`, you: "Utahitaji:", open: "Fungua", next: "Hatua inayofuata", back: "Rudi", repeat: "Sema tena", close: "Funga",
+      step: (n, total) => `Hatua ya ${n} kati ya ${total}`, you: "Utahitaji:", done: "Umemaliza hatua hii wakati:", words: "Maneno utakayokutana nayo:", open: "Fungua", next: "Hatua inayofuata", back: "Rudi", repeat: "Sema tena", close: "Funga",
       last: "Hiyo ilikuwa hatua ya mwisho. Unawasilisha mwenyewe: sikuombei kamwe. Sema anza upya kuipitia tena.", sayNext: "Sema inayofuata ukimaliza hili.", lastStep: "Hii ni hatua ya mwisho. Unafanya mwenyewe; sikuombei kamwe.",
       resumed: n => `Karibu tena. Ulikuwa kwenye hatua ya ${n}.`, started: "Ninakuongoza tu: unafanya kila hatua mwenyewe, na sikuombei kamwe.", checked: date => `Imekaguliwa ${date}`, finished: "Hatua zote zimeonyeshwa", note: "Unafanya kila hatua mwenyewe. Sikuombei kamwe.",
       pages: "Ukurasa rasmi wa hatua hii", sources: "Vyanzo"
@@ -57,7 +57,9 @@
       if (!title || !text) return null;
       const url = clean(step.link && step.link.url);
       const link = /^https:\/\/[^\s]+$/i.test(url) ? { name: clean(step.link.name).slice(0, 140) || url, url } : null;
-      return { title, text, gather: (Array.isArray(step.gather) ? step.gather : []).map(item => clean(item).slice(0, 160)).filter(Boolean).slice(0, 12), link };
+      const done = clean(step.done).slice(0, 220);
+      const words = (Array.isArray(step.words) ? step.words : []).map(word => ({ term: clean(word && word.term).slice(0, 60), means: clean(word && word.means).slice(0, 220) })).filter(word => word.term && word.means).slice(0, 4);
+      return { title, text, gather: (Array.isArray(step.gather) ? step.gather : []).map(item => clean(item).slice(0, 160)).filter(Boolean).slice(0, 12), done, words, link };
     }).filter(Boolean);
     const id = clean(raw.id).replace(/[^a-z0-9-]/gi, "").slice(0, 60);
     if (!id || !steps.length) return null;
@@ -96,7 +98,10 @@
     const words = t(lang);
     if (snap.finished) return words.last;
     const gather = snap.step.gather.length ? ` ${words.you} ${snap.step.gather.join("; ")}.` : "";
-    return `${words.step(snap.number, snap.total)}. ${snap.step.title}. ${snap.step.text}${gather} ${snap.isLast ? words.lastStep : words.sayNext}`;
+    // (a person who has never done this is told when they have finished the step, and what the new words mean: nothing is left for them to guess)
+    const done = snap.step.done ? ` ${words.done} ${snap.step.done}` : "";
+    const meant = (snap.step.words || []).length ? ` ${words.words} ${snap.step.words.map(word => `${word.term} means ${word.means}`).join(" ")}` : "";
+    return `${words.step(snap.number, snap.total)}. ${snap.step.title}. ${snap.step.text}${meant}${gather}${done} ${snap.isLast ? words.lastStep : words.sayNext}`;
   }
 
   const STYLE_ID = "kyro-walkthrough-style";
@@ -113,6 +118,12 @@
 [data-kyro-result="walkthrough"] .kyro-wt-gather { margin: 0; padding: 12px 18px; border-radius: 16px; background: rgba(255,255,255,.07); max-width: 34em; }
 [data-kyro-result="walkthrough"] .kyro-wt-gather strong { display: block; margin-bottom: 4px; color: #94a3b8; font-weight: 600; }
 [data-kyro-result="walkthrough"] .kyro-wt-gather ul { margin: 0; padding-left: 20px; }
+[data-kyro-result="walkthrough"] .kyro-wt-done, [data-kyro-result="walkthrough"] .kyro-wt-words { margin: 0; padding: 12px 18px; border-radius: 16px; max-width: 34em; }
+[data-kyro-result="walkthrough"] .kyro-wt-done { background: rgba(20,184,166,.14); }
+[data-kyro-result="walkthrough"] .kyro-wt-words { background: rgba(255,255,255,.07); }
+[data-kyro-result="walkthrough"] .kyro-wt-done strong, [data-kyro-result="walkthrough"] .kyro-wt-words strong { display: block; margin-bottom: 4px; color: #94a3b8; font-weight: 600; }
+[data-kyro-result="walkthrough"] .kyro-wt-words dt { font-weight: 700; margin-top: 6px; }
+[data-kyro-result="walkthrough"] .kyro-wt-words dd { margin: 0; }
 [data-kyro-result="walkthrough"] .kyro-wt-link { display: block; max-width: 34em; padding: 14px 18px; border-radius: 16px; background: #14b8a6; color: #04201c; text-decoration: none; font-weight: 700; font-size: clamp(1.05rem, 3.8vw, 1.3rem); }
 [data-kyro-result="walkthrough"] .kyro-wt-link-name { display: block; }
 [data-kyro-result="walkthrough"] .kyro-wt-link-host { display: block; margin-top: 2px; font-size: .9rem; font-weight: 600; opacity: .75; }
@@ -169,6 +180,14 @@
       const box = element(doc, "div", "kyro-wt-gather"); box.appendChild(element(doc, "strong", "", words.you));
       const list = doc.createElement("ul"); for (const item of snap.step.gather) list.appendChild(element(doc, "li", "", item));
       box.appendChild(list); screen.appendChild(box);
+    }
+    if ((snap.step.words || []).length) {
+      const box = element(doc, "div", "kyro-wt-words"); box.appendChild(element(doc, "strong", "", words.words));
+      const list = doc.createElement("dl"); for (const word of snap.step.words) { list.appendChild(element(doc, "dt", "", word.term)); list.appendChild(element(doc, "dd", "", word.means)); }
+      box.appendChild(list); screen.appendChild(box);
+    }
+    if (snap.step.done) {
+      const box = element(doc, "div", "kyro-wt-done"); box.appendChild(element(doc, "strong", "", words.done)); box.appendChild(element(doc, "span", "", snap.step.done)); screen.appendChild(box);
     }
     if (snap.step.link) {
       const a = doc.createElement("a");
