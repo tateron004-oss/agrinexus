@@ -13,7 +13,7 @@
   //   anything that sounds urgent or unsafe (bleeding, labour, a baby not moving, a fit, harm by another person, thoughts of self-harm) are NOT taken: those belong to the safety layer (public/kyro-care-phrases.js,
   //   nexus/companion/safety.js), the medicine rules and the health worker's own tool, which come first and must never be answered with a general guide.
 
-  const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+|nexus,?\s+)?(?:how|what|which|when|where|why|should|can|could|do|does|is|are|am|will|would|tell me|explain|help me|i need|i want|i('| a)m looking for|i would like|i'd like|any|give me|find\b|show me|look(?:ing)? for|search for|teach me)\b)/i;
+  const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+|nexus,?\s+)?(?:how|what|which|when|where|why|should|can|could|do|does|is|are|am|will|would|tell me|explain|help me|i need|i want|i('| a)m looking for|i would like|i'd like|any|give me|find\b|show me|look(?:ing)? for|search for|teach me|walk me|walk us|take me through|guide me through|talk me through|step[- ]by[- ]step|what are the steps)\b)/i;
   const RECORD_OR_DRAFT = /^(?:please\s+)?(?:log|record|add|save|remind|set|create|draft|write|make|mark|delete|forget|call|text|send|play|open|start|translate|export|convert|register)\b/i;
   // a health worker asking about the people they follow, or noting one
   // ("which screenings should I have at 45?" is a woman's own question, not a worker asking which of her patients is due)
