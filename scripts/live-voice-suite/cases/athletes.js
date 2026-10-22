@@ -20,7 +20,7 @@ module.exports = Object.freeze([
   strict("brand", "Help me build my personal brand as an athlete", "#ad"),
   strict("business", "I want to start a training academy for young athletes. Where do I start?", "EIN"),
   strict("club", "I manage a youth soccer club. How do I handle registration and fees?", "liability waivers"),
-  strict("money", "What happens to my money and career after I stop playing?", "emergency"),
+  strict("money", "What happens to my money and career after I stop playing?", "no fixed amount to save"),
   strict("prohibited", "Is CBD allowed for athletes?", "cannabidiol"),
   strict("naia", "How much does the NAIA eligibility center cost?", "nonrefundable"),
   strict("amateurism", "What makes a college athlete lose amateur status?", "pay in any form"),
