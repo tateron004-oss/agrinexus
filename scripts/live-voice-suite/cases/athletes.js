@@ -27,5 +27,16 @@ module.exports = Object.freeze([
   strict("house", "What is the House settlement?", "NIL Go"),
   strict("agent-eligibility", "Can I sign with an agent and keep playing college football?", "Bylaw 12.3.1"),
   strict("waiver", "Can parents sign a waiver for their kids in a sports league?", "differ by state"),
-  strict("pension", "How does the NFL pension work?", "three credited seasons")
+  strict("pension", "How does the NFL pension work?", "three credited seasons"),
+  strict("wa-reps", "Do I need a licensed agent under World Athletics rules?", "14 August 2023"),
+  strict("allegiance", "How does transfer of allegiance work in athletics?", "only a member federation can apply"),
+  strict("whereabouts", "What are whereabouts for athletes?", "60-minute slot"),
+  strict("kenya-registration", "How does a Kenyan athlete register with Athletics Kenya?", "three stages"),
+  strict("kenya-money", "How is a runner's prize money taxed in Kenya?", "288,000 shillings"),
+  strict("nigeria", "How does the Athletics Federation of Nigeria license athletes?", "Roster Athletics"),
+  strict("nigeria-money", "How is an athlete taxed in Nigeria on prize money?", "Nigeria Tax Act"),
+  strict("abroad-visa", "How does a Kenyan runner get a student visa for a US college?", "$185"),
+  strict("abroad-eligibility", "What does the NCAA need from a Nigerian student athlete?", "word-for-word"),
+  strict("abroad-tax", "Do international student athletes pay tax on a scholarship in the US?", "Form 1040-NR"),
+  strict("abroad-scams", "How do I avoid visa scams as an international athlete?", "gift cards")
 ]);
