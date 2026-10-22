@@ -14,7 +14,7 @@ const CHECKED_ON = "9 October 2026";
 
 const SOURCES = Object.freeze({
   ftcCyber: { name: "FTC: Cybersecurity for Small Business (September 2025)", url: "https://www.ftc.gov/business-guidance/small-businesses/cybersecurity" },
-  ftcAi: { name: "FTC: Artificial Intelligence", url: "https://www.ftc.gov/industry/technology/artificial-intelligence" },
+  ftcAi: { name: "FTC: Artificial Intelligence (the FTC now titles this page Super Intelligence)", url: "https://www.ftc.gov/industry/technology/super-intelligence" },
   ftcReviews: { name: "FTC: The Consumer Reviews and Testimonials Rule, Questions and Answers", url: "https://www.ftc.gov/business-guidance/resources/consumer-reviews-testimonials-rule-questions-answers" },
   // (the FTC business blog post on deepfakes and voice clones is no longer on the FTC's site; this consumer alert says the same thing about cloned voices and verifying a request)
   ftcDeepfakes: { name: "FTC consumer alert: Scammers use AI to enhance their family emergency schemes (20 March 2023)", url: "https://consumer.ftc.gov/consumer-alerts/2023/03/scammers-use-ai-enhance-their-family-emergency-schemes" },

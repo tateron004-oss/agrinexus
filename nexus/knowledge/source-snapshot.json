@@ -1,13 +1,13 @@
 {
- "takenAt": "2026-10-22T03:54:09.042Z",
- "count": 677,
+ "takenAt": "2026-10-22T06:17:01.467Z",
+ "count": 684,
  "pages": {
   "https://988lifeline.org/": {
    "state": "ok",
    "status": 200,
    "fingerprint": "e6155fd44bf13f51",
    "bytes": 3533,
-   "checkedAt": "2026-10-22T03:51:40.454Z",
+   "checkedAt": "2026-10-22T06:14:06.069Z",
    "guides": [
     "us-community-support",
     "womens-health"
@@ -18,7 +18,7 @@
    "status": 200,
    "fingerprint": "281c7dd4d9d53f11",
    "bytes": 5782,
-   "checkedAt": "2026-10-22T03:51:40.464Z",
+   "checkedAt": "2026-10-22T06:14:06.078Z",
    "guides": [
     "athlete-guide"
    ]
@@ -28,7 +28,7 @@
    "status": 200,
    "fingerprint": "95747efd6787ea20",
    "bytes": 3690,
-   "checkedAt": "2026-10-22T03:51:40.733Z",
+   "checkedAt": "2026-10-22T06:14:06.623Z",
    "guides": [
     "parents-guide"
    ]
@@ -38,7 +38,7 @@
    "status": 200,
    "fingerprint": "f4867603caed2221",
    "bytes": 13231,
-   "checkedAt": "2026-10-22T03:51:41.010Z",
+   "checkedAt": "2026-10-22T06:14:06.531Z",
    "guides": [
     "us-community-support"
    ]
@@ -46,9 +46,9 @@
   "https://africa.unwomen.org/en/stories/news/2024/10/kenyas-national-toll-free-helpline-1195-a-lifeline-for-gender-based-violence-survivors": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "ceb623a305736826",
-   "bytes": 13537,
-   "checkedAt": "2026-10-22T03:51:42.353Z",
+   "fingerprint": "deb603a345736826",
+   "bytes": 13542,
+   "checkedAt": "2026-10-22T06:14:07.760Z",
    "guides": [
     "parents-guide",
     "womens-health:who"
@@ -59,7 +59,7 @@
    "status": 200,
    "fingerprint": "6d882921dfe429c6",
    "bytes": 3165,
-   "checkedAt": "2026-10-22T03:51:40.737Z",
+   "checkedAt": "2026-10-22T06:14:06.429Z",
    "guides": [
     "state-entities"
    ]
@@ -69,7 +69,7 @@
    "status": 200,
    "fingerprint": "e5efc39b1add7f5f",
    "bytes": 3443,
-   "checkedAt": "2026-10-22T03:51:41.269Z",
+   "checkedAt": "2026-10-22T06:14:06.824Z",
    "guides": [
     "state-entities"
    ]
@@ -79,7 +79,7 @@
    "status": 200,
    "fingerprint": "ae3c59ab8836c3ac",
    "bytes": 5815,
-   "checkedAt": "2026-10-22T03:51:41.272Z",
+   "checkedAt": "2026-10-22T06:14:07.202Z",
    "guides": [
     "state-entities"
    ]
@@ -89,7 +89,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:41.758Z",
+   "checkedAt": "2026-10-22T06:14:07.505Z",
    "guides": [
     "athlete-guide"
    ]
@@ -99,7 +99,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:41.443Z",
+   "checkedAt": "2026-10-22T06:14:07.201Z",
    "guides": [
     "state-entities"
    ]
@@ -109,7 +109,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:42.025Z",
+   "checkedAt": "2026-10-22T06:14:07.771Z",
    "guides": [
     "state-entities"
    ]
@@ -119,7 +119,7 @@
    "status": 200,
    "fingerprint": "321d5addabf63f93",
    "bytes": 5886,
-   "checkedAt": "2026-10-22T03:51:41.637Z",
+   "checkedAt": "2026-10-22T06:14:07.653Z",
    "guides": [
     "state-entities"
    ]
@@ -129,7 +129,7 @@
    "status": 200,
    "fingerprint": "53a71512821b706a",
    "bytes": 4345,
-   "checkedAt": "2026-10-22T03:51:41.894Z",
+   "checkedAt": "2026-10-22T06:14:07.693Z",
    "guides": [
     "state-entities"
    ]
@@ -139,7 +139,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:41.923Z",
+   "checkedAt": "2026-10-22T06:14:07.789Z",
    "guides": [
     "state-entities"
    ]
@@ -149,7 +149,7 @@
    "status": 200,
    "fingerprint": "18961c561a873b83",
    "bytes": 9094,
-   "checkedAt": "2026-10-22T03:51:42.149Z",
+   "checkedAt": "2026-10-22T06:14:08.056Z",
    "guides": [
     "state-entities"
    ]
@@ -159,7 +159,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:42.275Z",
+   "checkedAt": "2026-10-22T06:14:08.265Z",
    "guides": [
     "state-entities"
    ]
@@ -169,7 +169,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:42.201Z",
+   "checkedAt": "2026-10-22T06:14:08.430Z",
    "guides": [
     "us-community-support"
    ]
@@ -179,7 +179,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:42.461Z",
+   "checkedAt": "2026-10-22T06:14:08.445Z",
    "guides": [
     "state-entities"
    ]
@@ -188,8 +188,8 @@
    "state": "ok",
    "status": 200,
    "fingerprint": "",
-   "bytes": 82,
-   "checkedAt": "2026-10-22T03:51:42.402Z",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T06:14:08.267Z",
    "guides": [
     "california-business",
     "state-entities"
@@ -199,8 +199,8 @@
    "state": "ok",
    "status": 200,
    "fingerprint": "",
-   "bytes": 81,
-   "checkedAt": "2026-10-22T03:51:42.407Z",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T06:14:08.287Z",
    "guides": [
     "california-business"
    ]
@@ -210,7 +210,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:42.815Z",
+   "checkedAt": "2026-10-22T06:14:08.881Z",
    "guides": [
     "state-entities"
    ]
@@ -220,7 +220,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:43.014Z",
+   "checkedAt": "2026-10-22T06:14:08.732Z",
    "guides": [
     "state-entities"
    ]
@@ -230,7 +230,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:42.707Z",
+   "checkedAt": "2026-10-22T06:14:08.547Z",
    "guides": [
     "state-entities"
    ]
@@ -240,7 +240,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:42.731Z",
+   "checkedAt": "2026-10-22T06:14:08.925Z",
    "guides": [
     "state-entities"
    ]
@@ -250,7 +250,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:42.722Z",
+   "checkedAt": "2026-10-22T06:14:08.724Z",
    "guides": [
     "state-entities"
    ]
@@ -260,7 +260,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 26,
-   "checkedAt": "2026-10-22T03:51:43.734Z",
+   "checkedAt": "2026-10-22T06:14:09.746Z",
    "guides": [
     "state-entities"
    ]
@@ -270,7 +270,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:43.019Z",
+   "checkedAt": "2026-10-22T06:14:09.018Z",
    "guides": [
     "california-business",
     "state-entities"
@@ -281,7 +281,7 @@
    "status": 200,
    "fingerprint": "adc92ed5df90c09f",
    "bytes": 11724,
-   "checkedAt": "2026-10-22T03:51:45.636Z",
+   "checkedAt": "2026-10-22T06:14:11.865Z",
    "guides": [
     "africa-small-business"
    ]
@@ -291,7 +291,7 @@
    "status": 200,
    "fingerprint": "60671918d0e1a0cd",
    "bytes": 1835,
-   "checkedAt": "2026-10-22T03:51:43.289Z",
+   "checkedAt": "2026-10-22T06:14:09.315Z",
    "guides": [
     "state-entities"
    ]
@@ -301,7 +301,7 @@
    "status": 200,
    "fingerprint": "41b5a161dd859679",
    "bytes": 6178,
-   "checkedAt": "2026-10-22T03:51:44.131Z",
+   "checkedAt": "2026-10-22T06:14:14.570Z",
    "guides": [
     "state-entities"
    ]
@@ -311,7 +311,7 @@
    "status": 200,
    "fingerprint": "6132205c82941d73",
    "bytes": 4747,
-   "checkedAt": "2026-10-22T03:51:44.090Z",
+   "checkedAt": "2026-10-22T06:14:09.999Z",
    "guides": [
     "state-entities"
    ]
@@ -321,7 +321,7 @@
    "status": 200,
    "fingerprint": "4135215c09941d13",
    "bytes": 4577,
-   "checkedAt": "2026-10-22T03:51:44.064Z",
+   "checkedAt": "2026-10-22T06:14:10.135Z",
    "guides": [
     "state-entities"
    ]
@@ -331,7 +331,7 @@
    "status": 200,
    "fingerprint": "6170a65c0a941d73",
    "bytes": 4853,
-   "checkedAt": "2026-10-22T03:51:44.496Z",
+   "checkedAt": "2026-10-22T06:14:10.479Z",
    "guides": [
     "state-entities"
    ]
@@ -341,7 +341,7 @@
    "status": 200,
    "fingerprint": "49b30255a7168b73",
    "bytes": 2803,
-   "checkedAt": "2026-10-22T03:51:44.500Z",
+   "checkedAt": "2026-10-22T06:14:14.438Z",
    "guides": [
     "state-entities"
    ]
@@ -351,7 +351,7 @@
    "status": 200,
    "fingerprint": "dc6385e526b9ad67",
    "bytes": 2177,
-   "checkedAt": "2026-10-22T03:51:45.296Z",
+   "checkedAt": "2026-10-22T06:14:11.310Z",
    "guides": [
     "state-entities"
    ]
@@ -361,7 +361,7 @@
    "status": 200,
    "fingerprint": "cc53cee326c98aea",
    "bytes": 6639,
-   "checkedAt": "2026-10-22T03:51:44.734Z",
+   "checkedAt": "2026-10-22T06:14:11.170Z",
    "guides": [
     "state-entities"
    ]
@@ -371,7 +371,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:45.305Z",
+   "checkedAt": "2026-10-22T06:14:12.017Z",
    "guides": [
     "state-entities"
    ]
@@ -381,7 +381,7 @@
    "status": 200,
    "fingerprint": "05c931323d962a5d",
    "bytes": 5444,
-   "checkedAt": "2026-10-22T03:51:45.519Z",
+   "checkedAt": "2026-10-22T06:14:12.533Z",
    "guides": [
     "state-entities"
    ]
@@ -391,7 +391,7 @@
    "status": 200,
    "fingerprint": "b9a7c7837388f695",
    "bytes": 2140,
-   "checkedAt": "2026-10-22T03:51:45.553Z",
+   "checkedAt": "2026-10-22T06:14:12.628Z",
    "guides": [
     "state-entities"
    ]
@@ -401,7 +401,7 @@
    "status": 200,
    "fingerprint": "420ebbd55c4e2853",
    "bytes": 4250,
-   "checkedAt": "2026-10-22T03:51:46.183Z",
+   "checkedAt": "2026-10-22T06:14:12.845Z",
    "guides": [
     "state-entities"
    ]
@@ -411,7 +411,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:45.987Z",
+   "checkedAt": "2026-10-22T06:14:13.102Z",
    "guides": [
     "state-entities"
    ]
@@ -421,7 +421,7 @@
    "status": 200,
    "fingerprint": "47c1f8cbd35d13b7",
    "bytes": 7502,
-   "checkedAt": "2026-10-22T03:51:46.921Z",
+   "checkedAt": "2026-10-22T06:14:13.728Z",
    "guides": [
     "state-entities"
    ]
@@ -431,7 +431,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:45.853Z",
+   "checkedAt": "2026-10-22T06:14:13.171Z",
    "guides": [
     "state-entities"
    ]
@@ -441,7 +441,7 @@
    "status": 200,
    "fingerprint": "ad03d73962696a18",
    "bytes": 47956,
-   "checkedAt": "2026-10-22T03:51:46.791Z",
+   "checkedAt": "2026-10-22T06:14:14.191Z",
    "guides": [
     "california-business"
    ]
@@ -451,7 +451,7 @@
    "status": 200,
    "fingerprint": "ac03d7396eeb629c",
    "bytes": 47402,
-   "checkedAt": "2026-10-22T03:51:47.013Z",
+   "checkedAt": "2026-10-22T06:14:14.143Z",
    "guides": [
     "state-entities"
    ]
@@ -461,7 +461,7 @@
    "status": 200,
    "fingerprint": "ad2bd739e2eb6218",
    "bytes": 52819,
-   "checkedAt": "2026-10-22T03:51:47.138Z",
+   "checkedAt": "2026-10-22T06:14:14.755Z",
    "guides": [
     "california-business"
    ]
@@ -471,7 +471,7 @@
    "status": 200,
    "fingerprint": "855be742931a7588",
    "bytes": 9398,
-   "checkedAt": "2026-10-22T03:51:46.466Z",
+   "checkedAt": "2026-10-22T06:14:14.477Z",
    "guides": [
     "state-entities"
    ]
@@ -481,7 +481,7 @@
    "status": 200,
    "fingerprint": "946be310732f518a",
    "bytes": 5370,
-   "checkedAt": "2026-10-22T03:51:46.663Z",
+   "checkedAt": "2026-10-22T06:14:14.489Z",
    "guides": [
     "state-entities"
    ]
@@ -491,7 +491,7 @@
    "status": 200,
    "fingerprint": "9423e162732f51a0",
    "bytes": 5437,
-   "checkedAt": "2026-10-22T03:51:46.866Z",
+   "checkedAt": "2026-10-22T06:14:14.618Z",
    "guides": [
     "state-entities"
    ]
@@ -501,7 +501,7 @@
    "status": 200,
    "fingerprint": "94236402f32a51a0",
    "bytes": 6090,
-   "checkedAt": "2026-10-22T03:51:47.048Z",
+   "checkedAt": "2026-10-22T06:14:14.784Z",
    "guides": [
     "state-entities"
    ]
@@ -511,7 +511,7 @@
    "status": 200,
    "fingerprint": "d6e37e6af99e1c11",
    "bytes": 6450,
-   "checkedAt": "2026-10-22T03:51:47.229Z",
+   "checkedAt": "2026-10-22T06:14:14.894Z",
    "guides": [
     "california-business"
    ]
@@ -521,7 +521,7 @@
    "status": 200,
    "fingerprint": "b5f2eb45b7904b62",
    "bytes": 772,
-   "checkedAt": "2026-10-22T03:51:47.438Z",
+   "checkedAt": "2026-10-22T06:14:15.067Z",
    "guides": [
     "us-small-business"
    ]
@@ -531,7 +531,7 @@
    "status": 200,
    "fingerprint": "950f0aec20e0ce2b",
    "bytes": 7614,
-   "checkedAt": "2026-10-22T03:51:47.769Z",
+   "checkedAt": "2026-10-22T06:14:15.459Z",
    "guides": [
     "state-entities"
    ]
@@ -541,7 +541,7 @@
    "status": 200,
    "fingerprint": "70eca05fa3455861",
    "bytes": 9582,
-   "checkedAt": "2026-10-22T03:51:47.327Z",
+   "checkedAt": "2026-10-22T06:14:15.130Z",
    "guides": [
     "child-help",
     "us-community-support"
@@ -552,7 +552,7 @@
    "status": 200,
    "fingerprint": "784ca017e3455861",
    "bytes": 15306,
-   "checkedAt": "2026-10-22T03:51:47.427Z",
+   "checkedAt": "2026-10-22T06:14:15.225Z",
    "guides": [
     "parents-guide"
    ]
@@ -562,7 +562,7 @@
    "status": 200,
    "fingerprint": "bee050632538590b",
    "bytes": 33563,
-   "checkedAt": "2026-10-22T03:51:47.411Z",
+   "checkedAt": "2026-10-22T06:14:15.301Z",
    "guides": [
     "parents-guide"
    ]
@@ -572,7 +572,7 @@
    "status": 200,
    "fingerprint": "d12cf4e1c1517a39",
    "bytes": 248,
-   "checkedAt": "2026-10-22T03:51:48.168Z",
+   "checkedAt": "2026-10-22T06:14:15.973Z",
    "guides": [
     "state-entities"
    ]
@@ -582,7 +582,7 @@
    "status": 200,
    "fingerprint": "d777bd9b1049681a",
    "bytes": 12865,
-   "checkedAt": "2026-10-22T03:51:48.224Z",
+   "checkedAt": "2026-10-22T06:14:15.761Z",
    "guides": [
     "state-entities"
    ]
@@ -592,7 +592,7 @@
    "status": 200,
    "fingerprint": "5a07079892673d20",
    "bytes": 16156,
-   "checkedAt": "2026-10-22T03:51:48.064Z",
+   "checkedAt": "2026-10-22T06:14:15.955Z",
    "guides": [
     "state-entities"
    ]
@@ -602,7 +602,7 @@
    "status": 200,
    "fingerprint": "79c525ac911cdc66",
    "bytes": 2271,
-   "checkedAt": "2026-10-22T03:51:47.808Z",
+   "checkedAt": "2026-10-22T06:14:15.706Z",
    "guides": [
     "state-entities"
    ]
@@ -612,7 +612,7 @@
    "status": 200,
    "fingerprint": "e9ab45acfb029b1d",
    "bytes": 9802,
-   "checkedAt": "2026-10-22T03:51:47.967Z",
+   "checkedAt": "2026-10-22T06:14:16.157Z",
    "guides": [
     "state-entities"
    ]
@@ -622,7 +622,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:48.141Z",
+   "checkedAt": "2026-10-22T06:14:15.980Z",
    "guides": [
     "state-entities"
    ]
@@ -632,7 +632,7 @@
    "status": 200,
    "fingerprint": "c35cbc942569f8b5",
    "bytes": 9422,
-   "checkedAt": "2026-10-22T03:51:48.233Z",
+   "checkedAt": "2026-10-22T06:14:16.113Z",
    "guides": [
     "state-entities"
    ]
@@ -642,7 +642,7 @@
    "status": 200,
    "fingerprint": "17577368acafeabf",
    "bytes": 12881,
-   "checkedAt": "2026-10-22T03:51:48.964Z",
+   "checkedAt": "2026-10-22T06:14:18.443Z",
    "guides": [
     "us-community-support"
    ]
@@ -652,7 +652,7 @@
    "status": 200,
    "fingerprint": "3b7c56ac47cd82ff",
    "bytes": 18850,
-   "checkedAt": "2026-10-22T03:51:50.496Z",
+   "checkedAt": "2026-10-22T06:14:19.013Z",
    "guides": [
     "small-business-technology"
    ]
@@ -662,7 +662,7 @@
    "status": 200,
    "fingerprint": "322cdcff5abca50a",
    "bytes": 5604,
-   "checkedAt": "2026-10-22T03:51:48.654Z",
+   "checkedAt": "2026-10-22T06:14:16.530Z",
    "guides": [
     "state-entities"
    ]
@@ -672,7 +672,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:48.596Z",
+   "checkedAt": "2026-10-22T06:14:16.435Z",
    "guides": [
     "athlete-guide"
    ]
@@ -682,7 +682,7 @@
    "status": 200,
    "fingerprint": "b9c50b79d047c344",
    "bytes": 3865,
-   "checkedAt": "2026-10-22T03:51:48.907Z",
+   "checkedAt": "2026-10-22T06:14:16.837Z",
    "guides": [
     "state-entities"
    ]
@@ -692,7 +692,7 @@
    "status": 200,
    "fingerprint": "99871daad0bda2d8",
    "bytes": 8817,
-   "checkedAt": "2026-10-22T03:51:49.151Z",
+   "checkedAt": "2026-10-22T06:14:17.102Z",
    "guides": [
     "state-entities"
    ]
@@ -701,8 +701,8 @@
    "state": "ok",
    "status": 200,
    "fingerprint": "",
-   "bytes": 82,
-   "checkedAt": "2026-10-22T03:51:48.936Z",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T06:14:16.843Z",
    "guides": [
     "state-entities"
    ]
@@ -712,7 +712,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:49.243Z",
+   "checkedAt": "2026-10-22T06:14:17.302Z",
    "guides": [
     "state-entities"
    ]
@@ -722,7 +722,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:49.509Z",
+   "checkedAt": "2026-10-22T06:14:17.521Z",
    "guides": [
     "state-entities"
    ]
@@ -732,7 +732,7 @@
    "status": 200,
    "fingerprint": "27fe8f0f110f3867",
    "bytes": 4236,
-   "checkedAt": "2026-10-22T03:51:50.318Z",
+   "checkedAt": "2026-10-22T06:14:18.225Z",
    "guides": [
     "small-business-technology"
    ]
@@ -742,7 +742,7 @@
    "status": 200,
    "fingerprint": "62b4c18390878e8b",
    "bytes": 11376,
-   "checkedAt": "2026-10-22T03:51:51.190Z",
+   "checkedAt": "2026-10-22T06:14:18.239Z",
    "guides": [
     "state-entities"
    ]
@@ -752,7 +752,7 @@
    "status": 200,
    "fingerprint": "987f92f9fcf7fe79",
    "bytes": 6879,
-   "checkedAt": "2026-10-22T03:51:50.133Z",
+   "checkedAt": "2026-10-22T06:14:18.408Z",
    "guides": [
     "state-entities"
    ]
@@ -762,7 +762,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:50.206Z",
+   "checkedAt": "2026-10-22T06:14:19.082Z",
    "guides": [
     "state-entities"
    ]
@@ -772,7 +772,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:50.806Z",
+   "checkedAt": "2026-10-22T06:14:18.880Z",
    "guides": [
     "state-entities"
    ]
@@ -782,7 +782,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:50.737Z",
+   "checkedAt": "2026-10-22T06:14:19.066Z",
    "guides": [
     "state-entities"
    ]
@@ -792,7 +792,7 @@
    "status": 200,
    "fingerprint": "f200f5c6c11f42d2",
    "bytes": 3186,
-   "checkedAt": "2026-10-22T03:51:50.716Z",
+   "checkedAt": "2026-10-22T06:14:19.062Z",
    "guides": [
     "state-entities"
    ]
@@ -802,7 +802,7 @@
    "status": 200,
    "fingerprint": "bd477b1da121b0f3",
    "bytes": 17080,
-   "checkedAt": "2026-10-22T03:51:51.133Z",
+   "checkedAt": "2026-10-22T06:14:19.472Z",
    "guides": [
     "us-community-support"
    ]
@@ -812,7 +812,7 @@
    "status": 200,
    "fingerprint": "bf8da8e9ca83a0a4",
    "bytes": 12076,
-   "checkedAt": "2026-10-22T03:51:51.975Z",
+   "checkedAt": "2026-10-22T06:14:20.345Z",
    "guides": [
     "state-entities"
    ]
@@ -822,7 +822,7 @@
    "status": 200,
    "fingerprint": "1785e0a46e03f035",
    "bytes": 13381,
-   "checkedAt": "2026-10-22T03:51:52.499Z",
+   "checkedAt": "2026-10-22T06:14:20.768Z",
    "guides": [
     "state-entities"
    ]
@@ -832,7 +832,7 @@
    "status": 200,
    "fingerprint": "978d88a5e811b08c",
    "bytes": 9360,
-   "checkedAt": "2026-10-22T03:51:51.849Z",
+   "checkedAt": "2026-10-22T06:14:20.547Z",
    "guides": [
     "state-entities"
    ]
@@ -842,7 +842,7 @@
    "status": 200,
    "fingerprint": "4bf955d1323d387e",
    "bytes": 3863,
-   "checkedAt": "2026-10-22T03:51:51.486Z",
+   "checkedAt": "2026-10-22T06:14:19.430Z",
    "guides": [
     "state-entities"
    ]
@@ -852,7 +852,7 @@
    "status": 200,
    "fingerprint": "4bf9b7d6122d7804",
    "bytes": 6134,
-   "checkedAt": "2026-10-22T03:51:51.472Z",
+   "checkedAt": "2026-10-22T06:14:19.795Z",
    "guides": [
     "state-entities"
    ]
@@ -862,7 +862,7 @@
    "status": 200,
    "fingerprint": "50dfdf99b14db416",
    "bytes": 9177,
-   "checkedAt": "2026-10-22T03:51:51.771Z",
+   "checkedAt": "2026-10-22T06:14:19.756Z",
    "guides": [
     "state-entities"
    ]
@@ -872,7 +872,7 @@
    "status": 200,
    "fingerprint": "0f7c2f9a13369068",
    "bytes": 5309,
-   "checkedAt": "2026-10-22T03:51:51.739Z",
+   "checkedAt": "2026-10-22T06:14:19.982Z",
    "guides": [
     "state-entities"
    ]
@@ -882,7 +882,7 @@
    "status": 200,
    "fingerprint": "75df7fd2c3be7d50",
    "bytes": 5554,
-   "checkedAt": "2026-10-22T03:51:51.934Z",
+   "checkedAt": "2026-10-22T06:14:20.185Z",
    "guides": [
     "state-entities"
    ]
@@ -892,7 +892,7 @@
    "status": 200,
    "fingerprint": "3b63865e2ab63872",
    "bytes": 6505,
-   "checkedAt": "2026-10-22T03:51:51.984Z",
+   "checkedAt": "2026-10-22T06:14:20.436Z",
    "guides": [
     "state-entities"
    ]
@@ -902,7 +902,7 @@
    "status": 200,
    "fingerprint": "05b0f1f538f4881e",
    "bytes": 7626,
-   "checkedAt": "2026-10-22T03:51:52.465Z",
+   "checkedAt": "2026-10-22T06:14:20.811Z",
    "guides": [
     "state-entities"
    ]
@@ -912,7 +912,7 @@
    "status": 200,
    "fingerprint": "459a79fc35b0a81e",
    "bytes": 5291,
-   "checkedAt": "2026-10-22T03:51:52.489Z",
+   "checkedAt": "2026-10-22T06:14:20.848Z",
    "guides": [
     "state-entities"
    ]
@@ -922,7 +922,7 @@
    "status": 200,
    "fingerprint": "868cf10c45616cc9",
    "bytes": 7365,
-   "checkedAt": "2026-10-22T03:51:52.574Z",
+   "checkedAt": "2026-10-22T06:14:21.028Z",
    "guides": [
     "state-entities"
    ]
@@ -932,7 +932,7 @@
    "status": 200,
    "fingerprint": "a444537f79fd9ea3",
    "bytes": 9074,
-   "checkedAt": "2026-10-22T03:51:52.340Z",
+   "checkedAt": "2026-10-22T06:14:20.915Z",
    "guides": [
     "state-entities"
    ]
@@ -942,7 +942,7 @@
    "status": 200,
    "fingerprint": "a2cdc7e5ef960399",
    "bytes": 3087,
-   "checkedAt": "2026-10-22T03:51:53.244Z",
+   "checkedAt": "2026-10-22T06:14:21.663Z",
    "guides": [
     "state-entities"
    ]
@@ -952,7 +952,7 @@
    "status": 200,
    "fingerprint": "848e228f193891ff",
    "bytes": 5788,
-   "checkedAt": "2026-10-22T03:51:53.204Z",
+   "checkedAt": "2026-10-22T06:14:21.616Z",
    "guides": [
     "state-entities"
    ]
@@ -962,7 +962,7 @@
    "status": 200,
    "fingerprint": "1f79038e5c0cd257",
    "bytes": 5021,
-   "checkedAt": "2026-10-22T03:51:52.825Z",
+   "checkedAt": "2026-10-22T06:14:21.485Z",
    "guides": [
     "state-entities"
    ]
@@ -972,7 +972,7 @@
    "status": 200,
    "fingerprint": "7e1b47de5cacc653",
    "bytes": 3911,
-   "checkedAt": "2026-10-22T03:51:52.829Z",
+   "checkedAt": "2026-10-22T06:14:21.272Z",
    "guides": [
     "state-entities"
    ]
@@ -982,7 +982,7 @@
    "status": 200,
    "fingerprint": "7d19c79e5cacc571",
    "bytes": 3372,
-   "checkedAt": "2026-10-22T03:51:52.909Z",
+   "checkedAt": "2026-10-22T06:14:21.571Z",
    "guides": [
     "state-entities"
    ]
@@ -992,7 +992,7 @@
    "status": 200,
    "fingerprint": "2779c35b717cf851",
    "bytes": 7186,
-   "checkedAt": "2026-10-22T03:51:53.112Z",
+   "checkedAt": "2026-10-22T06:14:21.552Z",
    "guides": [
     "state-entities"
    ]
@@ -1002,7 +1002,7 @@
    "status": 200,
    "fingerprint": "7067a3a054c48635",
    "bytes": 8380,
-   "checkedAt": "2026-10-22T03:51:53.290Z",
+   "checkedAt": "2026-10-22T06:14:21.888Z",
    "guides": [
     "state-entities"
    ]
@@ -1012,7 +1012,7 @@
    "status": 200,
    "fingerprint": "f3705a1b0e2d673c",
    "bytes": 14813,
-   "checkedAt": "2026-10-22T03:51:53.275Z",
+   "checkedAt": "2026-10-22T06:14:21.897Z",
    "guides": [
     "state-entities"
    ]
@@ -1022,7 +1022,7 @@
    "status": 200,
    "fingerprint": "213e0962fd4caa53",
    "bytes": 3626,
-   "checkedAt": "2026-10-22T03:51:53.503Z",
+   "checkedAt": "2026-10-22T06:14:22.050Z",
    "guides": [
     "california-business"
    ]
@@ -1032,7 +1032,7 @@
    "status": 200,
    "fingerprint": "65fc6e84d7632f87",
    "bytes": 7803,
-   "checkedAt": "2026-10-22T03:51:53.636Z",
+   "checkedAt": "2026-10-22T06:14:22.104Z",
    "guides": [
     "california-business"
    ]
@@ -1042,7 +1042,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:53.711Z",
+   "checkedAt": "2026-10-22T06:14:22.196Z",
    "guides": [
     "state-entities"
    ]
@@ -1052,7 +1052,7 @@
    "status": 200,
    "fingerprint": "94e03c3fb183e7d7",
    "bytes": 1949,
-   "checkedAt": "2026-10-22T03:51:53.781Z",
+   "checkedAt": "2026-10-22T06:14:22.456Z",
    "guides": [
     "us-community-support"
    ]
@@ -1062,7 +1062,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:53.774Z",
+   "checkedAt": "2026-10-22T06:14:22.311Z",
    "guides": [
     "state-entities"
    ]
@@ -1072,7 +1072,7 @@
    "status": 200,
    "fingerprint": "88d40ad891a00d64",
    "bytes": 2243,
-   "checkedAt": "2026-10-22T03:51:53.947Z",
+   "checkedAt": "2026-10-22T06:14:22.476Z",
    "guides": [
     "state-entities"
    ]
@@ -1082,7 +1082,7 @@
    "status": 999,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:54.062Z",
+   "checkedAt": "2026-10-22T06:14:22.530Z",
    "guides": [
     "state-entities"
    ]
@@ -1092,7 +1092,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:53.958Z",
+   "checkedAt": "2026-10-22T06:14:22.526Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1102,7 +1102,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:54.349Z",
+   "checkedAt": "2026-10-22T06:14:22.690Z",
    "guides": [
     "parents-guide",
     "womens-health"
@@ -1113,7 +1113,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:54.251Z",
+   "checkedAt": "2026-10-22T06:14:22.929Z",
    "guides": [
     "state-entities"
    ]
@@ -1123,7 +1123,7 @@
    "status": 200,
    "fingerprint": "a6f403846b308df0",
    "bytes": 6292,
-   "checkedAt": "2026-10-22T03:51:54.712Z",
+   "checkedAt": "2026-10-22T06:14:23.642Z",
    "guides": [
     "state-entities"
    ]
@@ -1133,7 +1133,7 @@
    "status": 200,
    "fingerprint": "1b927c5c049f85ae",
    "bytes": 12100,
-   "checkedAt": "2026-10-22T03:51:54.794Z",
+   "checkedAt": "2026-10-22T06:14:23.646Z",
    "guides": [
     "state-entities"
    ]
@@ -1143,7 +1143,7 @@
    "status": 200,
    "fingerprint": "372655dddd1113a5",
    "bytes": 4713,
-   "checkedAt": "2026-10-22T03:51:54.365Z",
+   "checkedAt": "2026-10-22T06:14:23.275Z",
    "guides": [
     "state-entities"
    ]
@@ -1151,9 +1151,9 @@
   "https://fmino.gov.ng/federal-government-inaugurates-technical-board-of-nigeria-anti-doping-centre-reaffirms-commitment-to-excellence-in-sporting-activities/": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "543502402b6ca74d",
-   "bytes": 13736,
-   "checkedAt": "2026-10-22T03:51:57.437Z",
+   "fingerprint": "541502402b6aa34d",
+   "bytes": 13846,
+   "checkedAt": "2026-10-22T06:14:24.584Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1163,7 +1163,7 @@
    "status": 200,
    "fingerprint": "5c658470f264cf5d",
    "bytes": 11420,
-   "checkedAt": "2026-10-22T03:51:57.599Z",
+   "checkedAt": "2026-10-22T06:14:23.345Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1173,7 +1173,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:54.853Z",
+   "checkedAt": "2026-10-22T06:14:23.594Z",
    "guides": [
     "state-entities"
    ]
@@ -1183,7 +1183,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:55.189Z",
+   "checkedAt": "2026-10-22T06:14:23.721Z",
    "guides": [
     "state-entities"
    ]
@@ -1193,7 +1193,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:55.272Z",
+   "checkedAt": "2026-10-22T06:14:23.889Z",
    "guides": [
     "state-entities"
    ]
@@ -1203,7 +1203,7 @@
    "status": 200,
    "fingerprint": "bfcbafd42d4eb30b",
    "bytes": 702,
-   "checkedAt": "2026-10-22T03:51:55.280Z",
+   "checkedAt": "2026-10-22T06:14:24.084Z",
    "guides": [
     "state-entities"
    ]
@@ -1213,7 +1213,7 @@
    "status": 200,
    "fingerprint": "77892994edcfaf61",
    "bytes": 3182,
-   "checkedAt": "2026-10-22T03:51:55.405Z",
+   "checkedAt": "2026-10-22T06:14:24.110Z",
    "guides": [
     "state-entities"
    ]
@@ -1223,7 +1223,7 @@
    "status": 200,
    "fingerprint": "723d3cfa44787445",
    "bytes": 3323,
-   "checkedAt": "2026-10-22T03:51:55.687Z",
+   "checkedAt": "2026-10-22T06:14:24.162Z",
    "guides": [
     "state-entities"
    ]
@@ -1233,7 +1233,7 @@
    "status": 200,
    "fingerprint": "ccc126975969da96",
    "bytes": 6220,
-   "checkedAt": "2026-10-22T03:51:56.547Z",
+   "checkedAt": "2026-10-22T06:14:25.143Z",
    "guides": [
     "state-entities"
    ]
@@ -1243,7 +1243,7 @@
    "status": 200,
    "fingerprint": "e64d9d8e59970f12",
    "bytes": 8092,
-   "checkedAt": "2026-10-22T03:51:56.025Z",
+   "checkedAt": "2026-10-22T06:14:24.706Z",
    "guides": [
     "state-entities"
    ]
@@ -1253,7 +1253,7 @@
    "status": 200,
    "fingerprint": "465758ca58978b2e",
    "bytes": 7222,
-   "checkedAt": "2026-10-22T03:51:56.250Z",
+   "checkedAt": "2026-10-22T06:14:24.637Z",
    "guides": [
     "state-entities"
    ]
@@ -1263,7 +1263,7 @@
    "status": 200,
    "fingerprint": "a9b092c3650f103e",
    "bytes": 4176,
-   "checkedAt": "2026-10-22T03:51:56.329Z",
+   "checkedAt": "2026-10-22T06:14:24.594Z",
    "guides": [
     "state-entities"
    ]
@@ -1273,7 +1273,7 @@
    "status": 200,
    "fingerprint": "9a11e2c298bd5a7f",
    "bytes": 3743,
-   "checkedAt": "2026-10-22T03:51:59.393Z",
+   "checkedAt": "2026-10-22T06:14:32.241Z",
    "guides": [
     "state-entities"
    ]
@@ -1283,7 +1283,7 @@
    "status": 200,
    "fingerprint": "68a2960d9665e00b",
    "bytes": 249,
-   "checkedAt": "2026-10-22T03:51:56.643Z",
+   "checkedAt": "2026-10-22T06:14:24.914Z",
    "guides": [
     "state-entities"
    ]
@@ -1293,7 +1293,7 @@
    "status": 200,
    "fingerprint": "a32287d5387fe605",
    "bytes": 5522,
-   "checkedAt": "2026-10-22T03:51:56.917Z",
+   "checkedAt": "2026-10-22T06:14:25.014Z",
    "guides": [
     "us-community-support"
    ]
@@ -1302,8 +1302,8 @@
    "state": "ok",
    "status": 200,
    "fingerprint": "753acede1dd6af63",
-   "bytes": 5577,
-   "checkedAt": "2026-10-22T03:51:57.478Z",
+   "bytes": 5574,
+   "checkedAt": "2026-10-22T06:14:26.093Z",
    "guides": [
     "state-entities"
    ]
@@ -1313,7 +1313,7 @@
    "status": 200,
    "fingerprint": "a2b62063b2ee4621",
    "bytes": 4526,
-   "checkedAt": "2026-10-22T03:51:57.708Z",
+   "checkedAt": "2026-10-22T06:14:26.376Z",
    "guides": [
     "state-entities"
    ]
@@ -1323,7 +1323,7 @@
    "status": 200,
    "fingerprint": "3ab5c68538bf033a",
    "bytes": 1461710,
-   "checkedAt": "2026-10-22T03:51:58.677Z",
+   "checkedAt": "2026-10-22T06:14:26.130Z",
    "guides": [
     "state-entities"
    ]
@@ -1333,7 +1333,7 @@
    "status": 200,
    "fingerprint": "fe9e48d6affacdc4",
    "bytes": 4501,
-   "checkedAt": "2026-10-22T03:51:58.037Z",
+   "checkedAt": "2026-10-22T06:14:25.707Z",
    "guides": [
     "state-entities"
    ]
@@ -1343,7 +1343,7 @@
    "status": 200,
    "fingerprint": "7436ddc99183257a",
    "bytes": 10083,
-   "checkedAt": "2026-10-22T03:51:58.924Z",
+   "checkedAt": "2026-10-22T06:14:27.365Z",
    "guides": [
     "state-entities"
    ]
@@ -1353,7 +1353,7 @@
    "status": 200,
    "fingerprint": "a1130b66d2d0a975",
    "bytes": 2368,
-   "checkedAt": "2026-10-22T03:51:58.919Z",
+   "checkedAt": "2026-10-22T06:14:27.228Z",
    "guides": [
     "state-entities"
    ]
@@ -1363,7 +1363,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:51:58.580Z",
+   "checkedAt": "2026-10-22T06:14:27.061Z",
    "guides": [
     "california-business"
    ]
@@ -1373,7 +1373,7 @@
    "status": 200,
    "fingerprint": "a1dbd386e88c77ff",
    "bytes": 9042,
-   "checkedAt": "2026-10-22T03:51:59.018Z",
+   "checkedAt": "2026-10-22T06:14:27.049Z",
    "guides": [
     "california-business"
    ]
@@ -1383,7 +1383,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 20,
-   "checkedAt": "2026-10-22T03:51:59.460Z",
+   "checkedAt": "2026-10-22T06:14:27.707Z",
    "guides": [
     "california-business"
    ]
@@ -1393,7 +1393,7 @@
    "status": 200,
    "fingerprint": "5c1423b860fdf4ee",
    "bytes": 3382,
-   "checkedAt": "2026-10-22T03:51:59.318Z",
+   "checkedAt": "2026-10-22T06:14:27.527Z",
    "guides": [
     "state-entities"
    ]
@@ -1403,7 +1403,7 @@
    "status": 200,
    "fingerprint": "abb2994affc74a24",
    "bytes": 16575,
-   "checkedAt": "2026-10-22T03:51:59.272Z",
+   "checkedAt": "2026-10-22T06:14:27.624Z",
    "guides": [
     "state-entities"
    ]
@@ -1413,7 +1413,107 @@
    "status": 200,
    "fingerprint": "c4e4af6fae4e2a14",
    "bytes": 3262,
-   "checkedAt": "2026-10-22T03:51:59.360Z",
+   "checkedAt": "2026-10-22T06:14:28.114Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/alaska": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "94e4ae686e0fab1e",
+   "bytes": 3407,
+   "checkedAt": "2026-10-22T06:14:28.089Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/arizona": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "84e4af6cee3e0b4c",
+   "bytes": 3590,
+   "checkedAt": "2026-10-22T06:14:28.301Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/hawaii": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "84c4f7ec1f0c282e",
+   "bytes": 3103,
+   "checkedAt": "2026-10-22T06:14:28.173Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/massachusetts": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "94e45f6a7e0eb11d",
+   "bytes": 3115,
+   "checkedAt": "2026-10-22T06:14:29.098Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/minnesota": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "84e6ee6f478e2b3e",
+   "bytes": 3430,
+   "checkedAt": "2026-10-22T06:14:28.498Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/mississippi": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "04e4ef6a5f3e391e",
+   "bytes": 3365,
+   "checkedAt": "2026-10-22T06:14:28.577Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/new-jersey": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "94ce9e6f3fac2e16",
+   "bytes": 2844,
+   "checkedAt": "2026-10-22T06:14:28.776Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/north-carolina": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "94eeff696f7ea77e",
+   "bytes": 3860,
+   "checkedAt": "2026-10-22T06:14:28.828Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/north-dakota": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "8ce6ee6b1f1ea33e",
+   "bytes": 2813,
+   "checkedAt": "2026-10-22T06:14:29.096Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/ohio": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "94e4ae6e7e26320e",
+   "bytes": 3386,
+   "checkedAt": "2026-10-22T06:14:29.164Z",
    "guides": [
     "state-entities"
    ]
@@ -1423,7 +1523,7 @@
    "status": 200,
    "fingerprint": "94e4ef6a6e2c823e",
    "bytes": 2571,
-   "checkedAt": "2026-10-22T03:51:59.435Z",
+   "checkedAt": "2026-10-22T06:14:29.230Z",
    "guides": [
     "state-entities"
    ]
@@ -1433,7 +1533,7 @@
    "status": 200,
    "fingerprint": "b4e4fe25369ee36e",
    "bytes": 2067,
-   "checkedAt": "2026-10-22T03:51:59.468Z",
+   "checkedAt": "2026-10-22T06:14:29.457Z",
    "guides": [
     "state-entities"
    ]
@@ -1443,7 +1543,7 @@
    "status": 200,
    "fingerprint": "86e6ee7f3caec39e",
    "bytes": 3065,
-   "checkedAt": "2026-10-22T03:51:59.516Z",
+   "checkedAt": "2026-10-22T06:14:29.499Z",
    "guides": [
     "state-entities"
    ]
@@ -1453,17 +1553,27 @@
    "status": 200,
    "fingerprint": "94f03669ef2c213c",
    "bytes": 3140,
-   "checkedAt": "2026-10-22T03:51:59.543Z",
+   "checkedAt": "2026-10-22T06:14:29.604Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://legacy.sba.gov/district/st-louis": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9ce4fe6e2f2ea11e",
+   "bytes": 3029,
+   "checkedAt": "2026-10-22T06:14:29.601Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://legislature.mi.gov/Laws/MCL?objectName=mcl-700-5109": {
-   "state": "ok",
-   "status": 200,
-   "fingerprint": "712b456798ab8786",
-   "bytes": 4203,
-   "checkedAt": "2026-10-22T03:52:00.859Z",
+   "state": "broken",
+   "status": 502,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T06:15:32.330Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1473,7 +1583,7 @@
    "status": 200,
    "fingerprint": "e6352784cdc4a3af",
    "bytes": 6348,
-   "checkedAt": "2026-10-22T03:52:01.157Z",
+   "checkedAt": "2026-10-22T06:14:31.047Z",
    "guides": [
     "state-entities"
    ]
@@ -1483,7 +1593,7 @@
    "status": 200,
    "fingerprint": "f672d9b287d4d25d",
    "bytes": 3856,
-   "checkedAt": "2026-10-22T03:51:59.756Z",
+   "checkedAt": "2026-10-22T06:14:30.006Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1493,7 +1603,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:00.307Z",
+   "checkedAt": "2026-10-22T06:14:30.293Z",
    "guides": [
     "state-entities"
    ]
@@ -1503,7 +1613,7 @@
    "status": 200,
    "fingerprint": "c73db829527a1947",
    "bytes": 2942,
-   "checkedAt": "2026-10-22T03:52:00.075Z",
+   "checkedAt": "2026-10-22T06:14:30.600Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1513,7 +1623,7 @@
    "status": 200,
    "fingerprint": "d11694174a0aa3e2",
    "bytes": 6286,
-   "checkedAt": "2026-10-22T03:52:00.002Z",
+   "checkedAt": "2026-10-22T06:14:30.971Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1523,7 +1633,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:00.513Z",
+   "checkedAt": "2026-10-22T06:14:31.078Z",
    "guides": [
     "state-entities"
    ]
@@ -1533,7 +1643,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:00.350Z",
+   "checkedAt": "2026-10-22T06:14:31.231Z",
    "guides": [
     "state-entities"
    ]
@@ -1543,7 +1653,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 85,
-   "checkedAt": "2026-10-22T03:52:01.009Z",
+   "checkedAt": "2026-10-22T06:14:31.771Z",
    "guides": [
     "state-entities"
    ]
@@ -1553,7 +1663,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:00.888Z",
+   "checkedAt": "2026-10-22T06:14:31.585Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1563,7 +1673,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:01.003Z",
+   "checkedAt": "2026-10-22T06:14:31.720Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1573,7 +1683,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:01.417Z",
+   "checkedAt": "2026-10-22T06:14:32.102Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1583,7 +1693,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:01.414Z",
+   "checkedAt": "2026-10-22T06:14:32.214Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1593,7 +1703,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:01.493Z",
+   "checkedAt": "2026-10-22T06:14:32.253Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1603,7 +1713,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:01.492Z",
+   "checkedAt": "2026-10-22T06:14:32.625Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1613,7 +1723,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:01.616Z",
+   "checkedAt": "2026-10-22T06:14:32.711Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1623,7 +1733,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:01.910Z",
+   "checkedAt": "2026-10-22T06:14:32.779Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1633,7 +1743,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:01.940Z",
+   "checkedAt": "2026-10-22T06:14:32.760Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1643,7 +1753,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:02.022Z",
+   "checkedAt": "2026-10-22T06:14:33.118Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1653,7 +1763,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:01.980Z",
+   "checkedAt": "2026-10-22T06:14:33.196Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1663,7 +1773,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:02.121Z",
+   "checkedAt": "2026-10-22T06:14:33.233Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1673,7 +1783,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:02.409Z",
+   "checkedAt": "2026-10-22T06:14:33.279Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1683,7 +1793,7 @@
    "status": 200,
    "fingerprint": "1af37f0a401269cd",
    "bytes": 17686,
-   "checkedAt": "2026-10-22T03:52:02.524Z",
+   "checkedAt": "2026-10-22T06:14:33.784Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1693,7 +1803,7 @@
    "status": 200,
    "fingerprint": "92c27f0bc882e482",
    "bytes": 6327,
-   "checkedAt": "2026-10-22T03:52:02.536Z",
+   "checkedAt": "2026-10-22T06:14:33.756Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1703,7 +1813,7 @@
    "status": 200,
    "fingerprint": "42ed45c8dbb25628",
    "bytes": 6465,
-   "checkedAt": "2026-10-22T03:52:03.602Z",
+   "checkedAt": "2026-10-22T06:14:34.692Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1713,7 +1823,7 @@
    "status": 200,
    "fingerprint": "c6a656fbb39500fe",
    "bytes": 1983,
-   "checkedAt": "2026-10-22T03:52:03.175Z",
+   "checkedAt": "2026-10-22T06:14:34.325Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1723,7 +1833,7 @@
    "status": 200,
    "fingerprint": "d0cee4e9f0802e9f",
    "bytes": 9773,
-   "checkedAt": "2026-10-22T03:52:03.606Z",
+   "checkedAt": "2026-10-22T06:14:34.862Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1733,7 +1843,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:02.895Z",
+   "checkedAt": "2026-10-22T06:14:34.178Z",
    "guides": [
     "state-entities"
    ]
@@ -1743,7 +1853,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:03.385Z",
+   "checkedAt": "2026-10-22T06:14:34.998Z",
    "guides": [
     "state-entities"
    ]
@@ -1753,7 +1863,7 @@
    "status": 200,
    "fingerprint": "33788ba740d5814c",
    "bytes": 12940,
-   "checkedAt": "2026-10-22T03:52:03.179Z",
+   "checkedAt": "2026-10-22T06:14:36.539Z",
    "guides": [
     "us-small-business"
    ]
@@ -1763,7 +1873,7 @@
    "status": 200,
    "fingerprint": "e6f680a6c1982124",
    "bytes": 17938,
-   "checkedAt": "2026-10-22T03:52:03.624Z",
+   "checkedAt": "2026-10-22T06:14:35.110Z",
    "guides": [
     "us-small-business"
    ]
@@ -1773,7 +1883,7 @@
    "status": 200,
    "fingerprint": "e7708717419aa164",
    "bytes": 12395,
-   "checkedAt": "2026-10-22T03:52:04.513Z",
+   "checkedAt": "2026-10-22T06:14:35.200Z",
    "guides": [
     "us-small-business"
    ]
@@ -1783,7 +1893,7 @@
    "status": 200,
    "fingerprint": "67fa849364dba12c",
    "bytes": 11003,
-   "checkedAt": "2026-10-22T03:52:03.694Z",
+   "checkedAt": "2026-10-22T06:14:38.130Z",
    "guides": [
     "us-small-business"
    ]
@@ -1793,7 +1903,7 @@
    "status": 200,
    "fingerprint": "c4b31b1854bd661a",
    "bytes": 24325,
-   "checkedAt": "2026-10-22T03:52:04.150Z",
+   "checkedAt": "2026-10-22T06:14:35.726Z",
    "guides": [
     "california-business",
     "state-entities"
@@ -1804,7 +1914,7 @@
    "status": 200,
    "fingerprint": "6b3af38f40eaa103",
    "bytes": 3303,
-   "checkedAt": "2026-10-22T03:52:04.035Z",
+   "checkedAt": "2026-10-22T06:14:36.296Z",
    "guides": [
     "state-entities"
    ]
@@ -1814,7 +1924,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:09.423Z",
+   "checkedAt": "2026-10-22T06:14:41.430Z",
    "guides": [
     "state-entities"
    ]
@@ -1824,7 +1934,7 @@
    "status": 200,
    "fingerprint": "c0c0d4b7e98d8351",
    "bytes": 3753,
-   "checkedAt": "2026-10-22T03:52:04.476Z",
+   "checkedAt": "2026-10-22T06:14:37.076Z",
    "guides": [
     "state-entities"
    ]
@@ -1834,7 +1944,7 @@
    "status": 200,
    "fingerprint": "5eafe9ab6de3422d",
    "bytes": 1452,
-   "checkedAt": "2026-10-22T03:52:06.167Z",
+   "checkedAt": "2026-10-22T06:14:38.869Z",
    "guides": [
     "state-entities"
    ]
@@ -1844,7 +1954,7 @@
    "status": 200,
    "fingerprint": "a470855f0b8143de",
    "bytes": 9728,
-   "checkedAt": "2026-10-22T03:52:04.682Z",
+   "checkedAt": "2026-10-22T06:14:37.487Z",
    "guides": [
     "womens-health"
    ]
@@ -1854,7 +1964,7 @@
    "status": 200,
    "fingerprint": "b360fe1661cbf2d0",
    "bytes": 4717,
-   "checkedAt": "2026-10-22T03:52:04.863Z",
+   "checkedAt": "2026-10-22T06:14:37.878Z",
    "guides": [
     "us-community-support"
    ]
@@ -1864,7 +1974,7 @@
    "status": 200,
    "fingerprint": "1f25c2bc9eb87840",
    "bytes": 2591,
-   "checkedAt": "2026-10-22T03:52:05.113Z",
+   "checkedAt": "2026-10-22T06:14:38.455Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1874,7 +1984,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:05.073Z",
+   "checkedAt": "2026-10-22T06:14:38.495Z",
    "guides": [
     "athlete-guide"
    ]
@@ -1884,7 +1994,7 @@
    "status": 200,
    "fingerprint": "95e1c03167838a71",
    "bytes": 17747,
-   "checkedAt": "2026-10-22T03:52:05.784Z",
+   "checkedAt": "2026-10-22T06:14:39.381Z",
    "guides": [
     "state-entities"
    ]
@@ -1894,7 +2004,7 @@
    "status": 200,
    "fingerprint": "fa89c8683f81c63d",
    "bytes": 10179,
-   "checkedAt": "2026-10-22T03:52:05.570Z",
+   "checkedAt": "2026-10-22T06:14:39.328Z",
    "guides": [
     "state-entities"
    ]
@@ -1904,7 +2014,7 @@
    "status": 200,
    "fingerprint": "6213149cdc516662",
    "bytes": 626,
-   "checkedAt": "2026-10-22T03:52:05.605Z",
+   "checkedAt": "2026-10-22T06:14:39.376Z",
    "guides": [
     "state-entities"
    ]
@@ -1914,7 +2024,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:05.893Z",
+   "checkedAt": "2026-10-22T06:14:39.703Z",
    "guides": [
     "child-help"
    ]
@@ -1924,7 +2034,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:05.873Z",
+   "checkedAt": "2026-10-22T06:14:39.611Z",
    "guides": [
     "child-help"
    ]
@@ -1934,7 +2044,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:05.993Z",
+   "checkedAt": "2026-10-22T06:14:39.643Z",
    "guides": [
     "child-help"
    ]
@@ -1944,7 +2054,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:06.085Z",
+   "checkedAt": "2026-10-22T06:14:39.789Z",
    "guides": [
     "child-help"
    ]
@@ -1954,7 +2064,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:06.165Z",
+   "checkedAt": "2026-10-22T06:14:39.951Z",
    "guides": [
     "us-community-support"
    ]
@@ -1964,7 +2074,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:06.413Z",
+   "checkedAt": "2026-10-22T06:14:40.288Z",
    "guides": [
     "womens-health"
    ]
@@ -1974,7 +2084,7 @@
    "status": 200,
    "fingerprint": "b5cd719951916415",
    "bytes": 3316,
-   "checkedAt": "2026-10-22T03:52:06.685Z",
+   "checkedAt": "2026-10-22T06:14:40.369Z",
    "guides": [
     "state-entities"
    ]
@@ -1984,7 +2094,7 @@
    "status": 200,
    "fingerprint": "aab4c8d707f58c1b",
    "bytes": 14284,
-   "checkedAt": "2026-10-22T03:52:06.481Z",
+   "checkedAt": "2026-10-22T06:14:40.314Z",
    "guides": [
     "state-entities"
    ]
@@ -1994,7 +2104,7 @@
    "status": 200,
    "fingerprint": "8f1482d8857f58d9",
    "bytes": 3788,
-   "checkedAt": "2026-10-22T03:52:07.627Z",
+   "checkedAt": "2026-10-22T06:14:41.649Z",
    "guides": [
     "state-entities"
    ]
@@ -2004,7 +2114,7 @@
    "status": 200,
    "fingerprint": "7e309067c80a2710",
    "bytes": 8469,
-   "checkedAt": "2026-10-22T03:52:07.154Z",
+   "checkedAt": "2026-10-22T06:14:41.037Z",
    "guides": [
     "state-entities"
    ]
@@ -2014,7 +2124,7 @@
    "status": 200,
    "fingerprint": "6415e3c9e5d89c40",
    "bytes": 5242,
-   "checkedAt": "2026-10-22T03:52:06.999Z",
+   "checkedAt": "2026-10-22T06:14:40.902Z",
    "guides": [
     "state-entities"
    ]
@@ -2024,7 +2134,7 @@
    "status": 200,
    "fingerprint": "b4e38f017fc22dae",
    "bytes": 4844,
-   "checkedAt": "2026-10-22T03:52:07.491Z",
+   "checkedAt": "2026-10-22T06:14:41.176Z",
    "guides": [
     "us-community-support",
     "us-small-business"
@@ -2035,7 +2145,7 @@
    "status": 200,
    "fingerprint": "6faba6e372d5d17b",
    "bytes": 6243,
-   "checkedAt": "2026-10-22T03:52:08.973Z",
+   "checkedAt": "2026-10-22T06:14:44.031Z",
    "guides": [
     "state-entities"
    ]
@@ -2045,7 +2155,7 @@
    "status": 200,
    "fingerprint": "134d73d37965c743",
    "bytes": 3959,
-   "checkedAt": "2026-10-22T03:52:07.873Z",
+   "checkedAt": "2026-10-22T06:14:41.933Z",
    "guides": [
     "state-entities"
    ]
@@ -2055,7 +2165,7 @@
    "status": 200,
    "fingerprint": "868be6ecb7ff5991",
    "bytes": 6833,
-   "checkedAt": "2026-10-22T03:52:07.977Z",
+   "checkedAt": "2026-10-22T06:14:41.988Z",
    "guides": [
     "state-entities"
    ]
@@ -2065,7 +2175,7 @@
    "status": 200,
    "fingerprint": "58cf15b4791bdf43",
    "bytes": 17378,
-   "checkedAt": "2026-10-22T03:52:08.136Z",
+   "checkedAt": "2026-10-22T06:14:42.176Z",
    "guides": [
     "state-entities"
    ]
@@ -2073,9 +2183,9 @@
   "https://secure.sos.state.or.us/cbrmanager/index.action": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "c22fb080a6d72698",
+   "fingerprint": "c22fb880a7d70698",
    "bytes": 2741,
-   "checkedAt": "2026-10-22T03:52:08.256Z",
+   "checkedAt": "2026-10-22T06:14:42.369Z",
    "guides": [
     "state-entities"
    ]
@@ -2085,7 +2195,7 @@
    "status": 200,
    "fingerprint": "df2c065a4bf105dc",
    "bytes": 6051,
-   "checkedAt": "2026-10-22T03:52:08.494Z",
+   "checkedAt": "2026-10-22T06:14:42.635Z",
    "guides": [
     "africa-small-business"
    ]
@@ -2095,7 +2205,7 @@
    "status": 200,
    "fingerprint": "53305d8517f41aa6",
    "bytes": 7752,
-   "checkedAt": "2026-10-22T03:52:08.519Z",
+   "checkedAt": "2026-10-22T06:14:42.777Z",
    "guides": [
     "africa-small-business"
    ]
@@ -2105,7 +2215,7 @@
    "status": 200,
    "fingerprint": "6cb4ced887eb7da0",
    "bytes": 2064,
-   "checkedAt": "2026-10-22T03:52:08.680Z",
+   "checkedAt": "2026-10-22T06:14:42.737Z",
    "guides": [
     "africa-small-business"
    ]
@@ -2115,7 +2225,7 @@
    "status": 200,
    "fingerprint": "b1a9d914e3648618",
    "bytes": 6966,
-   "checkedAt": "2026-10-22T03:52:09.776Z",
+   "checkedAt": "2026-10-22T06:14:43.261Z",
    "guides": [
     "state-entities"
    ]
@@ -2125,7 +2235,7 @@
    "status": 200,
    "fingerprint": "27e1198271fcd412",
    "bytes": 14286,
-   "checkedAt": "2026-10-22T03:52:08.816Z",
+   "checkedAt": "2026-10-22T06:14:43.118Z",
    "guides": [
     "state-entities"
    ]
@@ -2135,7 +2245,7 @@
    "status": 200,
    "fingerprint": "8c2b1396d816de59",
    "bytes": 8811,
-   "checkedAt": "2026-10-22T03:52:08.938Z",
+   "checkedAt": "2026-10-22T06:14:43.110Z",
    "guides": [
     "state-entities"
    ]
@@ -2145,7 +2255,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:09.132Z",
+   "checkedAt": "2026-10-22T06:14:43.465Z",
    "guides": [
     "state-entities"
    ]
@@ -2155,7 +2265,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:09.388Z",
+   "checkedAt": "2026-10-22T06:14:43.849Z",
    "guides": [
     "state-entities"
    ]
@@ -2165,7 +2275,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:09.395Z",
+   "checkedAt": "2026-10-22T06:14:43.925Z",
    "guides": [
     "state-entities"
    ]
@@ -2175,7 +2285,7 @@
    "status": 200,
    "fingerprint": "b45790aef85f269f",
    "bytes": 9439,
-   "checkedAt": "2026-10-22T03:52:09.957Z",
+   "checkedAt": "2026-10-22T06:14:44.390Z",
    "guides": [
     "state-entities"
    ]
@@ -2185,7 +2295,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:09.928Z",
+   "checkedAt": "2026-10-22T06:14:44.363Z",
    "guides": [
     "state-entities"
    ]
@@ -2195,7 +2305,7 @@
    "status": 200,
    "fingerprint": "bd7c006e9d865269",
    "bytes": 17975,
-   "checkedAt": "2026-10-22T03:52:09.734Z",
+   "checkedAt": "2026-10-22T06:14:44.245Z",
    "guides": [
     "state-entities"
    ]
@@ -2205,7 +2315,7 @@
    "status": 200,
    "fingerprint": "cc793ed7611f0d7f",
    "bytes": 13838,
-   "checkedAt": "2026-10-22T03:52:09.760Z",
+   "checkedAt": "2026-10-22T06:14:44.345Z",
    "guides": [
     "state-entities"
    ]
@@ -2215,7 +2325,7 @@
    "status": 200,
    "fingerprint": "48c559cc4f3b85fd",
    "bytes": 3300,
-   "checkedAt": "2026-10-22T03:52:10.015Z",
+   "checkedAt": "2026-10-22T06:14:44.507Z",
    "guides": [
     "state-entities"
    ]
@@ -2225,7 +2335,7 @@
    "status": 200,
    "fingerprint": "02a7facc7834a721",
    "bytes": 4007,
-   "checkedAt": "2026-10-22T03:52:10.899Z",
+   "checkedAt": "2026-10-22T06:14:45.535Z",
    "guides": [
     "state-entities"
    ]
@@ -2235,7 +2345,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:10.254Z",
+   "checkedAt": "2026-10-22T06:14:44.879Z",
    "guides": [
     "state-entities"
    ]
@@ -2245,7 +2355,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:10.369Z",
+   "checkedAt": "2026-10-22T06:14:44.870Z",
    "guides": [
     "state-entities"
    ]
@@ -2255,7 +2365,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:10.429Z",
+   "checkedAt": "2026-10-22T06:14:45.013Z",
    "guides": [
     "state-entities"
    ]
@@ -2265,7 +2375,7 @@
    "status": 200,
    "fingerprint": "fc4af301ab5adf4f",
    "bytes": 4425,
-   "checkedAt": "2026-10-22T03:52:11.049Z",
+   "checkedAt": "2026-10-22T06:14:45.889Z",
    "guides": [
     "state-entities"
    ]
@@ -2275,7 +2385,7 @@
    "status": 200,
    "fingerprint": "7d6309f133b71e6f",
    "bytes": 4616,
-   "checkedAt": "2026-10-22T03:52:11.123Z",
+   "checkedAt": "2026-10-22T06:14:45.886Z",
    "guides": [
     "state-entities"
    ]
@@ -2285,7 +2395,7 @@
    "status": 200,
    "fingerprint": "fd6a0351bd9dd643",
    "bytes": 7185,
-   "checkedAt": "2026-10-22T03:52:11.042Z",
+   "checkedAt": "2026-10-22T06:14:45.881Z",
    "guides": [
     "state-entities"
    ]
@@ -2295,7 +2405,7 @@
    "status": 200,
    "fingerprint": "83e4bbc5afd41e73",
    "bytes": 3291,
-   "checkedAt": "2026-10-22T03:52:10.722Z",
+   "checkedAt": "2026-10-22T06:14:45.868Z",
    "guides": [
     "state-entities"
    ]
@@ -2305,7 +2415,7 @@
    "status": 200,
    "fingerprint": "3b25f975aace1953",
    "bytes": 4343,
-   "checkedAt": "2026-10-22T03:52:10.891Z",
+   "checkedAt": "2026-10-22T06:14:46.046Z",
    "guides": [
     "state-entities"
    ]
@@ -2315,7 +2425,7 @@
    "status": 200,
    "fingerprint": "ab855a833f89bc27",
    "bytes": 2393,
-   "checkedAt": "2026-10-22T03:52:11.313Z",
+   "checkedAt": "2026-10-22T06:14:46.409Z",
    "guides": [
     "state-entities"
    ]
@@ -2325,7 +2435,7 @@
    "status": 200,
    "fingerprint": "742b43a0cf3c1149",
    "bytes": 25296,
-   "checkedAt": "2026-10-22T03:52:11.563Z",
+   "checkedAt": "2026-10-22T06:14:46.303Z",
    "guides": [
     "state-entities"
    ]
@@ -2335,7 +2445,7 @@
    "status": 200,
    "fingerprint": "9daa8b8044cc9e35",
    "bytes": 22394,
-   "checkedAt": "2026-10-22T03:52:11.518Z",
+   "checkedAt": "2026-10-22T06:14:46.251Z",
    "guides": [
     "state-entities"
    ]
@@ -2345,7 +2455,7 @@
    "status": 200,
    "fingerprint": "4ae7d24868f01954",
    "bytes": 1132,
-   "checkedAt": "2026-10-22T03:52:11.579Z",
+   "checkedAt": "2026-10-22T06:14:47.430Z",
    "guides": [
     "state-entities"
    ]
@@ -2355,7 +2465,7 @@
    "status": 200,
    "fingerprint": "9082138c47c45bea",
    "bytes": 27159,
-   "checkedAt": "2026-10-22T03:52:11.436Z",
+   "checkedAt": "2026-10-22T06:14:46.774Z",
    "guides": [
     "state-entities"
    ]
@@ -2365,7 +2475,7 @@
    "status": 200,
    "fingerprint": "840b5d948c8b2422",
    "bytes": 9127,
-   "checkedAt": "2026-10-22T03:52:11.660Z",
+   "checkedAt": "2026-10-22T06:14:46.716Z",
    "guides": [
     "state-entities"
    ]
@@ -2375,7 +2485,7 @@
    "status": 200,
    "fingerprint": "e31d51868c8b0220",
    "bytes": 8939,
-   "checkedAt": "2026-10-22T03:52:11.704Z",
+   "checkedAt": "2026-10-22T06:14:46.721Z",
    "guides": [
     "state-entities"
    ]
@@ -2385,7 +2495,7 @@
    "status": 200,
    "fingerprint": "c41d5494c8870428",
    "bytes": 7821,
-   "checkedAt": "2026-10-22T03:52:11.767Z",
+   "checkedAt": "2026-10-22T06:14:46.946Z",
    "guides": [
     "state-entities"
    ]
@@ -2395,7 +2505,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:12.034Z",
+   "checkedAt": "2026-10-22T06:14:47.269Z",
    "guides": [
     "state-entities"
    ]
@@ -2405,7 +2515,7 @@
    "status": 200,
    "fingerprint": "b0125bf5d63c60fe",
    "bytes": 3019,
-   "checkedAt": "2026-10-22T03:52:12.035Z",
+   "checkedAt": "2026-10-22T06:14:47.270Z",
    "guides": [
     "state-entities"
    ]
@@ -2415,7 +2525,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:12.083Z",
+   "checkedAt": "2026-10-22T06:14:47.477Z",
    "guides": [
     "state-entities"
    ]
@@ -2425,7 +2535,7 @@
    "status": 200,
    "fingerprint": "6ee5906ed0732172",
    "bytes": 1540,
-   "checkedAt": "2026-10-22T03:52:12.236Z",
+   "checkedAt": "2026-10-22T06:14:47.765Z",
    "guides": [
     "state-entities"
    ]
@@ -2435,7 +2545,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:12.211Z",
+   "checkedAt": "2026-10-22T06:14:47.724Z",
    "guides": [
     "state-entities"
    ]
@@ -2445,7 +2555,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:12.268Z",
+   "checkedAt": "2026-10-22T06:14:47.701Z",
    "guides": [
     "state-entities"
    ]
@@ -2455,7 +2565,7 @@
    "status": 200,
    "fingerprint": "a607c175099e714d",
    "bytes": 9962,
-   "checkedAt": "2026-10-22T03:52:12.847Z",
+   "checkedAt": "2026-10-22T06:14:48.337Z",
    "guides": [
     "state-entities"
    ]
@@ -2465,7 +2575,7 @@
    "status": 200,
    "fingerprint": "698d056ac89cd957",
    "bytes": 3756,
-   "checkedAt": "2026-10-22T03:52:12.366Z",
+   "checkedAt": "2026-10-22T06:14:48.069Z",
    "guides": [
     "state-entities"
    ]
@@ -2475,7 +2585,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:12.922Z",
+   "checkedAt": "2026-10-22T06:14:48.112Z",
    "guides": [
     "state-entities"
    ]
@@ -2485,7 +2595,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:53:42.373Z",
+   "checkedAt": "2026-10-22T06:16:17.907Z",
    "guides": [
     "us-community-support"
    ]
@@ -2495,7 +2605,7 @@
    "status": 200,
    "fingerprint": "e0d7905357be7ffd",
    "bytes": 6778,
-   "checkedAt": "2026-10-22T03:52:13.024Z",
+   "checkedAt": "2026-10-22T06:14:48.824Z",
    "guides": [
     "state-entities"
    ]
@@ -2505,7 +2615,7 @@
    "status": 200,
    "fingerprint": "70f2c78a15622600",
    "bytes": 6510,
-   "checkedAt": "2026-10-22T03:52:12.749Z",
+   "checkedAt": "2026-10-22T06:14:49.879Z",
    "guides": [
     "state-entities"
    ]
@@ -2515,7 +2625,7 @@
    "status": 200,
    "fingerprint": "2298ce64607faa84",
    "bytes": 2311,
-   "checkedAt": "2026-10-22T03:52:12.966Z",
+   "checkedAt": "2026-10-22T06:14:48.741Z",
    "guides": [
     "state-entities"
    ]
@@ -2525,7 +2635,7 @@
    "status": 200,
    "fingerprint": "97cb5fe5483534e7",
    "bytes": 5915,
-   "checkedAt": "2026-10-22T03:52:13.351Z",
+   "checkedAt": "2026-10-22T06:14:49.244Z",
    "guides": [
     "state-entities"
    ]
@@ -2535,7 +2645,7 @@
    "status": 200,
    "fingerprint": "eac110effd8c594e",
    "bytes": 1812,
-   "checkedAt": "2026-10-22T03:52:13.240Z",
+   "checkedAt": "2026-10-22T06:14:49.119Z",
    "guides": [
     "state-entities"
    ]
@@ -2545,7 +2655,7 @@
    "status": 200,
    "fingerprint": "17d15e85da648771",
    "bytes": 6113,
-   "checkedAt": "2026-10-22T03:52:13.364Z",
+   "checkedAt": "2026-10-22T06:14:49.589Z",
    "guides": [
     "state-entities"
    ]
@@ -2555,7 +2665,7 @@
    "status": 200,
    "fingerprint": "b9e5595410e6492a",
    "bytes": 7558,
-   "checkedAt": "2026-10-22T03:52:14.049Z",
+   "checkedAt": "2026-10-22T06:14:50.194Z",
    "guides": [
     "state-entities"
    ]
@@ -2563,9 +2673,9 @@
   "https://taxportal.ri.gov/": {
    "state": "moved",
    "status": 200,
-   "fingerprint": "2374e9eefcb6f5ff",
+   "fingerprint": "23b4e9eefcb6f5ff",
    "bytes": 2778,
-   "checkedAt": "2026-10-22T03:52:14.934Z",
+   "checkedAt": "2026-10-22T06:14:51.060Z",
    "guides": [
     "state-entities"
    ]
@@ -2575,7 +2685,7 @@
    "status": 200,
    "fingerprint": "af499ab289d9b522",
    "bytes": 5797,
-   "checkedAt": "2026-10-22T03:52:13.941Z",
+   "checkedAt": "2026-10-22T06:14:50.460Z",
    "guides": [
     "state-entities"
    ]
@@ -2585,7 +2695,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:17.386Z",
+   "checkedAt": "2026-10-22T06:14:54.555Z",
    "guides": [
     "state-entities"
    ]
@@ -2595,7 +2705,7 @@
    "status": 200,
    "fingerprint": "da3e32ad32fc250a",
    "bytes": 5051,
-   "checkedAt": "2026-10-22T03:52:14.299Z",
+   "checkedAt": "2026-10-22T06:14:50.805Z",
    "guides": [
     "athlete-guide"
    ]
@@ -2605,7 +2715,7 @@
    "status": 200,
    "fingerprint": "0a0624750cc4bf5a",
    "bytes": 7226,
-   "checkedAt": "2026-10-22T03:52:14.386Z",
+   "checkedAt": "2026-10-22T06:14:51.043Z",
    "guides": [
     "athlete-guide"
    ]
@@ -2615,7 +2725,7 @@
    "status": 200,
    "fingerprint": "2d498730407f9862",
    "bytes": 18151,
-   "checkedAt": "2026-10-22T03:52:14.921Z",
+   "checkedAt": "2026-10-22T06:14:51.480Z",
    "guides": [
     "athlete-guide"
    ]
@@ -2625,7 +2735,7 @@
    "status": 200,
    "fingerprint": "ed990b113c5659fd",
    "bytes": 7014,
-   "checkedAt": "2026-10-22T03:52:15.006Z",
+   "checkedAt": "2026-10-22T06:14:51.649Z",
    "guides": [
     "state-entities"
    ]
@@ -2635,7 +2745,7 @@
    "status": 200,
    "fingerprint": "4b36fb624b22bc63",
    "bytes": 5300,
-   "checkedAt": "2026-10-22T03:52:15.746Z",
+   "checkedAt": "2026-10-22T06:14:52.401Z",
    "guides": [
     "state-entities"
    ]
@@ -2645,7 +2755,7 @@
    "status": 200,
    "fingerprint": "722c61b73561ec32",
    "bytes": 20353,
-   "checkedAt": "2026-10-22T03:52:15.577Z",
+   "checkedAt": "2026-10-22T06:14:52.319Z",
    "guides": [
     "womens-health"
    ]
@@ -2655,7 +2765,7 @@
    "status": 200,
    "fingerprint": "680ae9d53b292619",
    "bytes": 15359,
-   "checkedAt": "2026-10-22T03:52:15.566Z",
+   "checkedAt": "2026-10-22T06:14:52.598Z",
    "guides": [
     "womens-health"
    ]
@@ -2665,7 +2775,7 @@
    "status": 200,
    "fingerprint": "302e61d4a7b1babb",
    "bytes": 8513,
-   "checkedAt": "2026-10-22T03:52:15.855Z",
+   "checkedAt": "2026-10-22T06:14:52.967Z",
    "guides": [
     "womens-health"
    ]
@@ -2675,7 +2785,7 @@
    "status": 200,
    "fingerprint": "520681d475e3a35c",
    "bytes": 17351,
-   "checkedAt": "2026-10-22T03:52:15.836Z",
+   "checkedAt": "2026-10-22T06:14:52.912Z",
    "guides": [
     "womens-health"
    ]
@@ -2685,7 +2795,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:15.965Z",
+   "checkedAt": "2026-10-22T06:14:53.138Z",
    "guides": [
     "womens-health"
    ]
@@ -2695,7 +2805,7 @@
    "status": 200,
    "fingerprint": "bf8014e4c1848196",
    "bytes": 4966,
-   "checkedAt": "2026-10-22T03:52:16.174Z",
+   "checkedAt": "2026-10-22T06:14:53.300Z",
    "guides": [
     "state-entities"
    ]
@@ -2705,7 +2815,7 @@
    "status": 200,
    "fingerprint": "ac7e27ffa3640755",
    "bytes": 5589,
-   "checkedAt": "2026-10-22T03:52:16.266Z",
+   "checkedAt": "2026-10-22T06:14:54.247Z",
    "guides": [
     "us-community-support"
    ]
@@ -2715,7 +2825,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:16.264Z",
+   "checkedAt": "2026-10-22T06:14:53.879Z",
    "guides": [
     "athlete-guide"
    ]
@@ -2725,7 +2835,7 @@
    "status": 200,
    "fingerprint": "512d682ddf5ccd22",
    "bytes": 8478,
-   "checkedAt": "2026-10-22T03:52:16.601Z",
+   "checkedAt": "2026-10-22T06:14:54.271Z",
    "guides": [
     "pr-events-guide"
    ]
@@ -2735,7 +2845,7 @@
    "status": 200,
    "fingerprint": "ed67c63e9fb5e128",
    "bytes": 12700,
-   "checkedAt": "2026-10-22T03:52:16.570Z",
+   "checkedAt": "2026-10-22T06:14:54.496Z",
    "guides": [
     "pr-events-guide"
    ]
@@ -2745,7 +2855,7 @@
    "status": 200,
    "fingerprint": "59acf695ba158d9a",
    "bytes": 6584,
-   "checkedAt": "2026-10-22T03:52:22.886Z",
+   "checkedAt": "2026-10-22T06:14:59.428Z",
    "guides": [
     "athlete-guide"
    ]
@@ -2755,7 +2865,7 @@
    "status": 200,
    "fingerprint": "45a97285a2b7a49a",
    "bytes": 8388,
-   "checkedAt": "2026-10-22T03:52:22.568Z",
+   "checkedAt": "2026-10-22T06:14:59.284Z",
    "guides": [
     "athlete-guide"
    ]
@@ -2763,9 +2873,9 @@
   "https://www.afro.who.int/countries/kenya/news/kenya-launches-national-cervical-cancer-elimination-action-plan-2026-2030": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "705f7925a1229c44",
-   "bytes": 6585,
-   "checkedAt": "2026-10-22T03:52:17.771Z",
+   "fingerprint": "765d7905e1229c44",
+   "bytes": 6587,
+   "checkedAt": "2026-10-22T06:14:56.068Z",
    "guides": [
     "womens-health:who"
    ]
@@ -2773,9 +2883,9 @@
   "https://www.afro.who.int/countries/kenya/photo-story/cervical-cancer-elimination-kenya-transitions-single-dose-hpv": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "426a7ac511279df4",
-   "bytes": 8216,
-   "checkedAt": "2026-10-22T03:52:18.352Z",
+   "fingerprint": "62687ac511779df4",
+   "bytes": 8218,
+   "checkedAt": "2026-10-22T06:14:56.393Z",
    "guides": [
     "womens-health:who"
    ]
@@ -2785,7 +2895,7 @@
    "status": 200,
    "fingerprint": "eba698bde4f532a5",
    "bytes": 12142,
-   "checkedAt": "2026-10-22T03:52:18.530Z",
+   "checkedAt": "2026-10-22T06:14:57.203Z",
    "guides": [
     "state-entities"
    ]
@@ -2795,7 +2905,7 @@
    "status": 200,
    "fingerprint": "7c771bc62e6764f6",
    "bytes": 6348,
-   "checkedAt": "2026-10-22T03:52:18.728Z",
+   "checkedAt": "2026-10-22T06:14:57.561Z",
    "guides": [
     "state-entities"
    ]
@@ -2805,7 +2915,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:19.542Z",
+   "checkedAt": "2026-10-22T06:14:58.603Z",
    "guides": [
     "state-entities"
    ]
@@ -2815,7 +2925,7 @@
    "status": 200,
    "fingerprint": "6ef0cf611a7152ef",
    "bytes": 3724,
-   "checkedAt": "2026-10-22T03:52:19.644Z",
+   "checkedAt": "2026-10-22T06:14:59.542Z",
    "guides": [
     "athlete-guide"
    ]
@@ -2825,7 +2935,7 @@
    "status": 200,
    "fingerprint": "59c553c239738ac7",
    "bytes": 4883,
-   "checkedAt": "2026-10-22T03:52:19.964Z",
+   "checkedAt": "2026-10-22T06:15:00.034Z",
    "guides": [
     "athlete-guide"
    ]
@@ -2835,7 +2945,7 @@
    "status": 200,
    "fingerprint": "6bebda6358b0a7f7",
    "bytes": 7039,
-   "checkedAt": "2026-10-22T03:52:20.371Z",
+   "checkedAt": "2026-10-22T06:14:59.842Z",
    "guides": [
     "athlete-guide"
    ]
@@ -2845,7 +2955,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:20.331Z",
+   "checkedAt": "2026-10-22T06:14:59.918Z",
    "guides": [
     "state-entities"
    ]
@@ -2855,7 +2965,7 @@
    "status": 200,
    "fingerprint": "0f2b62dae1ed034f",
    "bytes": 24530,
-   "checkedAt": "2026-10-22T03:52:21.254Z",
+   "checkedAt": "2026-10-22T06:15:01.042Z",
    "guides": [
     "state-entities"
    ]
@@ -2865,7 +2975,7 @@
    "status": 200,
    "fingerprint": "4c2690eafbbd5544",
    "bytes": 2654,
-   "checkedAt": "2026-10-22T03:52:21.692Z",
+   "checkedAt": "2026-10-22T06:15:01.295Z",
    "guides": [
     "state-entities"
    ]
@@ -2875,7 +2985,7 @@
    "status": 200,
    "fingerprint": "0796d678bcee653a",
    "bytes": 4387,
-   "checkedAt": "2026-10-22T03:52:21.509Z",
+   "checkedAt": "2026-10-22T06:15:00.347Z",
    "guides": [
     "africa-small-business",
     "church-guide"
@@ -2886,7 +2996,7 @@
    "status": 200,
    "fingerprint": "0d0f486821e88cfa",
    "bytes": 2710,
-   "checkedAt": "2026-10-22T03:52:21.701Z",
+   "checkedAt": "2026-10-22T06:15:00.563Z",
    "guides": [
     "africa-small-business"
    ]
@@ -2896,7 +3006,7 @@
    "status": 200,
    "fingerprint": "d3b62957dcca5917",
    "bytes": 32229,
-   "checkedAt": "2026-10-22T03:52:22.136Z",
+   "checkedAt": "2026-10-22T06:15:01.165Z",
    "guides": [
     "california-business"
    ]
@@ -2906,7 +3016,7 @@
    "status": 200,
    "fingerprint": "57c25163aa2c3375",
    "bytes": 8197,
-   "checkedAt": "2026-10-22T03:52:21.957Z",
+   "checkedAt": "2026-10-22T06:15:01.343Z",
    "guides": [
     "womens-health"
    ]
@@ -2916,7 +3026,7 @@
    "status": 200,
    "fingerprint": "48f544322aa39ee9",
    "bytes": 14253,
-   "checkedAt": "2026-10-22T03:52:22.121Z",
+   "checkedAt": "2026-10-22T06:15:02.247Z",
    "guides": [
     "womens-health"
    ]
@@ -2926,7 +3036,7 @@
    "status": 200,
    "fingerprint": "fdff0802a923897f",
    "bytes": 5304,
-   "checkedAt": "2026-10-22T03:52:22.280Z",
+   "checkedAt": "2026-10-22T06:15:02.068Z",
    "guides": [
     "pr-events-guide"
    ]
@@ -2936,7 +3046,7 @@
    "status": 200,
    "fingerprint": "7777c8328820bedb",
    "bytes": 3665,
-   "checkedAt": "2026-10-22T03:52:22.390Z",
+   "checkedAt": "2026-10-22T06:15:02.620Z",
    "guides": [
     "pr-events-guide"
    ]
@@ -2946,7 +3056,7 @@
    "status": 200,
    "fingerprint": "5d8aed66aeb902b6",
    "bytes": 9606,
-   "checkedAt": "2026-10-22T03:52:23.394Z",
+   "checkedAt": "2026-10-22T06:15:02.291Z",
    "guides": [
     "womens-health"
    ]
@@ -2956,7 +3066,7 @@
    "status": 200,
    "fingerprint": "b5a63827ac97e6df",
    "bytes": 11486,
-   "checkedAt": "2026-10-22T03:52:22.573Z",
+   "checkedAt": "2026-10-22T06:15:03.028Z",
    "guides": [
     "parents-guide"
    ]
@@ -2966,7 +3076,7 @@
    "status": 200,
    "fingerprint": "ed36e42eb0ca6cd9",
    "bytes": 7433,
-   "checkedAt": "2026-10-22T03:52:22.747Z",
+   "checkedAt": "2026-10-22T06:15:03.035Z",
    "guides": [
     "parents-guide"
    ]
@@ -2976,7 +3086,7 @@
    "status": 200,
    "fingerprint": "56e5d8c61c9f925e",
    "bytes": 11779,
-   "checkedAt": "2026-10-22T03:52:22.807Z",
+   "checkedAt": "2026-10-22T06:15:03.687Z",
    "guides": [
     "womens-health"
    ]
@@ -2986,7 +3096,7 @@
    "status": 200,
    "fingerprint": "cdf08935a4680e76",
    "bytes": 7665,
-   "checkedAt": "2026-10-22T03:52:22.930Z",
+   "checkedAt": "2026-10-22T06:15:04.146Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -2996,7 +3106,7 @@
    "status": 200,
    "fingerprint": "ecb0cd8520ac5b71",
    "bytes": 8761,
-   "checkedAt": "2026-10-22T03:52:22.988Z",
+   "checkedAt": "2026-10-22T06:15:03.917Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -3006,7 +3116,7 @@
    "status": 200,
    "fingerprint": "ddb089218cc8cf67",
    "bytes": 6957,
-   "checkedAt": "2026-10-22T03:52:23.068Z",
+   "checkedAt": "2026-10-22T06:15:04.321Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -3016,7 +3126,7 @@
    "status": 200,
    "fingerprint": "cdb0890158688e5f",
    "bytes": 6315,
-   "checkedAt": "2026-10-22T03:52:23.104Z",
+   "checkedAt": "2026-10-22T06:15:04.785Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -3026,7 +3136,7 @@
    "status": 200,
    "fingerprint": "c1ddced6e3eaf7d1",
    "bytes": 10064,
-   "checkedAt": "2026-10-22T03:52:23.160Z",
+   "checkedAt": "2026-10-22T06:15:05.262Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3036,7 +3146,7 @@
    "status": 200,
    "fingerprint": "c183ced5c587a6f9",
    "bytes": 17507,
-   "checkedAt": "2026-10-22T03:52:23.235Z",
+   "checkedAt": "2026-10-22T06:15:05.336Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3046,7 +3156,7 @@
    "status": 200,
    "fingerprint": "4d8bcfd6e7acb2eb",
    "bytes": 5699,
-   "checkedAt": "2026-10-22T03:52:23.274Z",
+   "checkedAt": "2026-10-22T06:15:05.979Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3056,7 +3166,7 @@
    "status": 200,
    "fingerprint": "4d48ce87c6abe9b3",
    "bytes": 8302,
-   "checkedAt": "2026-10-22T03:52:23.388Z",
+   "checkedAt": "2026-10-22T06:15:05.469Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3066,7 +3176,7 @@
    "status": 200,
    "fingerprint": "49c9ba52e129eaeb",
    "bytes": 4866,
-   "checkedAt": "2026-10-22T03:52:23.452Z",
+   "checkedAt": "2026-10-22T06:15:06.294Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3076,7 +3186,7 @@
    "status": 200,
    "fingerprint": "fd436a63b4b18ceb",
    "bytes": 8813,
-   "checkedAt": "2026-10-22T03:52:23.446Z",
+   "checkedAt": "2026-10-22T06:15:06.475Z",
    "guides": [
     "parents-guide"
    ]
@@ -3086,7 +3196,7 @@
    "status": 200,
    "fingerprint": "2746ad7e2ab9aef3",
    "bytes": 10097,
-   "checkedAt": "2026-10-22T03:52:23.571Z",
+   "checkedAt": "2026-10-22T06:15:06.721Z",
    "guides": [
     "womens-health"
    ]
@@ -3096,7 +3206,7 @@
    "status": 200,
    "fingerprint": "274db9e622b98af2",
    "bytes": 7526,
-   "checkedAt": "2026-10-22T03:52:23.567Z",
+   "checkedAt": "2026-10-22T06:15:07.412Z",
    "guides": [
     "womens-health"
    ]
@@ -3106,7 +3216,7 @@
    "status": 200,
    "fingerprint": "73e1f401eb2db23c",
    "bytes": 12081,
-   "checkedAt": "2026-10-22T03:52:23.626Z",
+   "checkedAt": "2026-10-22T06:15:07.051Z",
    "guides": [
     "womens-health"
    ]
@@ -3116,7 +3226,7 @@
    "status": 200,
    "fingerprint": "fbaea1569a9defff",
    "bytes": 6130,
-   "checkedAt": "2026-10-22T03:52:23.622Z",
+   "checkedAt": "2026-10-22T06:15:07.613Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3126,7 +3236,7 @@
    "status": 200,
    "fingerprint": "f7f19f80943de774",
    "bytes": 9309,
-   "checkedAt": "2026-10-22T03:52:23.763Z",
+   "checkedAt": "2026-10-22T06:15:07.762Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -3136,7 +3246,7 @@
    "status": 200,
    "fingerprint": "f7f1bf821c38e95d",
    "bytes": 8391,
-   "checkedAt": "2026-10-22T03:52:23.754Z",
+   "checkedAt": "2026-10-22T06:15:08.083Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -3146,7 +3256,7 @@
    "status": 200,
    "fingerprint": "f771bce29a78c305",
    "bytes": 8099,
-   "checkedAt": "2026-10-22T03:52:23.792Z",
+   "checkedAt": "2026-10-22T06:15:08.237Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -3156,7 +3266,7 @@
    "status": 200,
    "fingerprint": "fde458c6d8a0c867",
    "bytes": 9204,
-   "checkedAt": "2026-10-22T03:52:23.842Z",
+   "checkedAt": "2026-10-22T06:15:08.590Z",
    "guides": [
     "womens-health"
    ]
@@ -3166,7 +3276,7 @@
    "status": 200,
    "fingerprint": "55650413e70b6648",
    "bytes": 3467,
-   "checkedAt": "2026-10-22T03:52:23.950Z",
+   "checkedAt": "2026-10-22T06:15:09.002Z",
    "guides": [
     "us-community-support"
    ]
@@ -3176,7 +3286,7 @@
    "status": 200,
    "fingerprint": "4dd78d2ad0ecfe7e",
    "bytes": 7342,
-   "checkedAt": "2026-10-22T03:52:23.953Z",
+   "checkedAt": "2026-10-22T06:15:09.412Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3186,7 +3296,7 @@
    "status": 200,
    "fingerprint": "dbade02605a6aee3",
    "bytes": 6695,
-   "checkedAt": "2026-10-22T03:52:23.964Z",
+   "checkedAt": "2026-10-22T06:15:09.800Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3196,7 +3306,7 @@
    "status": 200,
    "fingerprint": "4ebfc413e922a8e3",
    "bytes": 6027,
-   "checkedAt": "2026-10-22T03:52:24.019Z",
+   "checkedAt": "2026-10-22T06:15:09.185Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3206,7 +3316,7 @@
    "status": 200,
    "fingerprint": "c40399602ea2175c",
    "bytes": 7857,
-   "checkedAt": "2026-10-22T03:52:24.125Z",
+   "checkedAt": "2026-10-22T06:15:10.817Z",
    "guides": [
     "pr-events-guide"
    ]
@@ -3216,7 +3326,7 @@
    "status": 200,
    "fingerprint": "c5dc8de3b0b2e87a",
    "bytes": 5885,
-   "checkedAt": "2026-10-22T03:52:24.130Z",
+   "checkedAt": "2026-10-22T06:15:09.628Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3226,7 +3336,7 @@
    "status": 200,
    "fingerprint": "f231311736bfb6f2",
    "bytes": 17916,
-   "checkedAt": "2026-10-22T03:52:24.150Z",
+   "checkedAt": "2026-10-22T06:15:10.377Z",
    "guides": [
     "parents-guide"
    ]
@@ -3236,7 +3346,7 @@
    "status": 200,
    "fingerprint": "2000fa8d4d1d4fd8",
    "bytes": 10462,
-   "checkedAt": "2026-10-22T03:52:32.641Z",
+   "checkedAt": "2026-10-22T06:15:20.573Z",
    "guides": [
     "us-small-business"
    ]
@@ -3246,7 +3356,7 @@
    "status": 200,
    "fingerprint": "d0c3644bafef193a",
    "bytes": 9578,
-   "checkedAt": "2026-10-22T03:52:24.701Z",
+   "checkedAt": "2026-10-22T06:15:11.000Z",
    "guides": [
     "state-entities"
    ]
@@ -3256,7 +3366,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:24.803Z",
+   "checkedAt": "2026-10-22T06:15:11.429Z",
    "guides": [
     "state-entities"
    ]
@@ -3266,29 +3376,49 @@
    "status": 200,
    "fingerprint": "9b14a6c6f511b283",
    "bytes": 10763,
-   "checkedAt": "2026-10-22T03:52:27.606Z",
+   "checkedAt": "2026-10-22T06:15:14.923Z",
    "guides": [
     "child-help",
     "parents-guide"
    ]
   },
   "https://www.childlinekenya.co.ke/": {
-   "state": "moved",
+   "state": "ok",
    "status": 200,
-   "fingerprint": "",
-   "bytes": 102,
-   "checkedAt": "2026-10-22T03:52:27.094Z",
+   "fingerprint": "7340a30597e3823f",
+   "bytes": 6785,
+   "checkedAt": "2026-10-22T06:15:12.548Z",
    "guides": [
     "child-help",
     "parents-guide"
    ]
   },
-  "https://www.coloradosos.gov/biz/FileDoc.do": {
+  "https://www.collegesportscommission.org/about": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "2f17ce17e0f4dc76",
-   "bytes": 1732,
-   "checkedAt": "2026-10-22T03:52:25.237Z",
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T06:15:12.825Z",
+   "guides": [
+    "athlete-guide"
+   ]
+  },
+  "https://www.collegesportscommission.org/revenue-sharing": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T06:15:12.997Z",
+   "guides": [
+    "athlete-guide"
+   ]
+  },
+  "https://www.coloradosos.gov/biz/FileDoc.do": {
+   "state": "broken",
+   "status": 500,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T06:15:13.680Z",
    "guides": [
     "state-entities"
    ]
@@ -3298,7 +3428,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:25.787Z",
+   "checkedAt": "2026-10-22T06:15:14.304Z",
    "guides": [
     "state-entities"
    ]
@@ -3308,7 +3438,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:26.067Z",
+   "checkedAt": "2026-10-22T06:15:14.557Z",
    "guides": [
     "state-entities"
    ]
@@ -3318,7 +3448,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:26.299Z",
+   "checkedAt": "2026-10-22T06:15:14.773Z",
    "guides": [
     "state-entities"
    ]
@@ -3328,7 +3458,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:26.516Z",
+   "checkedAt": "2026-10-22T06:15:14.974Z",
    "guides": [
     "state-entities"
    ]
@@ -3338,7 +3468,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:26.854Z",
+   "checkedAt": "2026-10-22T06:15:15.286Z",
    "guides": [
     "state-entities"
    ]
@@ -3348,7 +3478,7 @@
    "status": 200,
    "fingerprint": "849a800169efcc6e",
    "bytes": 12141,
-   "checkedAt": "2026-10-22T03:52:27.112Z",
+   "checkedAt": "2026-10-22T06:15:15.332Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3358,7 +3488,7 @@
    "status": 200,
    "fingerprint": "14e3c9537b97916b",
    "bytes": 5085,
-   "checkedAt": "2026-10-22T03:52:27.269Z",
+   "checkedAt": "2026-10-22T06:15:15.502Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3368,7 +3498,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:27.414Z",
+   "checkedAt": "2026-10-22T06:15:15.668Z",
    "guides": [
     "us-community-support"
    ]
@@ -3378,7 +3508,7 @@
    "status": 200,
    "fingerprint": "344833ed1d73c702",
    "bytes": 6441,
-   "checkedAt": "2026-10-22T03:52:27.888Z",
+   "checkedAt": "2026-10-22T06:15:16.220Z",
    "guides": [
     "us-community-support"
    ]
@@ -3388,7 +3518,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:28.222Z",
+   "checkedAt": "2026-10-22T06:15:16.471Z",
    "guides": [
     "state-entities"
    ]
@@ -3398,7 +3528,7 @@
    "status": 200,
    "fingerprint": "f589e599efcc89c8",
    "bytes": 7171,
-   "checkedAt": "2026-10-22T03:52:28.320Z",
+   "checkedAt": "2026-10-22T06:15:16.749Z",
    "guides": [
     "state-entities"
    ]
@@ -3408,7 +3538,7 @@
    "status": 200,
    "fingerprint": "a8da7a168913916c",
    "bytes": 15576,
-   "checkedAt": "2026-10-22T03:52:28.456Z",
+   "checkedAt": "2026-10-22T06:15:16.963Z",
    "guides": [
     "california-business"
    ]
@@ -3418,7 +3548,7 @@
    "status": 200,
    "fingerprint": "23aea86bd0e28485",
    "bytes": 4566,
-   "checkedAt": "2026-10-22T03:52:29.314Z",
+   "checkedAt": "2026-10-22T06:15:17.374Z",
    "guides": [
     "state-entities"
    ]
@@ -3428,7 +3558,7 @@
    "status": 200,
    "fingerprint": "d3cf21cf42db7eaf",
    "bytes": 6022,
-   "checkedAt": "2026-10-22T03:52:29.446Z",
+   "checkedAt": "2026-10-22T06:15:18.235Z",
    "guides": [
     "state-entities"
    ]
@@ -3438,7 +3568,7 @@
    "status": 200,
    "fingerprint": "3c89afc10ad3f50c",
    "bytes": 52230,
-   "checkedAt": "2026-10-22T03:52:28.814Z",
+   "checkedAt": "2026-10-22T06:15:17.778Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3448,7 +3578,7 @@
    "status": 200,
    "fingerprint": "74a123830cdeb9ec",
    "bytes": 81169,
-   "checkedAt": "2026-10-22T03:52:29.128Z",
+   "checkedAt": "2026-10-22T06:15:18.288Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3458,7 +3588,7 @@
    "status": 200,
    "fingerprint": "d5c48acd15277180",
    "bytes": 4826,
-   "checkedAt": "2026-10-22T03:52:29.406Z",
+   "checkedAt": "2026-10-22T06:15:18.714Z",
    "guides": [
     "us-community-support"
    ]
@@ -3468,7 +3598,7 @@
    "status": 200,
    "fingerprint": "3c986bb404a3bb87",
    "bytes": 22600,
-   "checkedAt": "2026-10-22T03:52:29.569Z",
+   "checkedAt": "2026-10-22T06:15:18.699Z",
    "guides": [
     "us-community-support"
    ]
@@ -3478,7 +3608,7 @@
    "status": 200,
    "fingerprint": "54a031204eb2f261",
    "bytes": 6145,
-   "checkedAt": "2026-10-22T03:52:29.688Z",
+   "checkedAt": "2026-10-22T06:15:19.006Z",
    "guides": [
     "us-community-support"
    ]
@@ -3488,7 +3618,7 @@
    "status": 200,
    "fingerprint": "d16ba02999d0fd77",
    "bytes": 7485,
-   "checkedAt": "2026-10-22T03:52:30.111Z",
+   "checkedAt": "2026-10-22T06:15:19.420Z",
    "guides": [
     "state-entities"
    ]
@@ -3498,7 +3628,7 @@
    "status": 200,
    "fingerprint": "86513ab9e72df7eb",
    "bytes": 9639,
-   "checkedAt": "2026-10-22T03:52:30.635Z",
+   "checkedAt": "2026-10-22T06:15:19.910Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3508,7 +3638,7 @@
    "status": 200,
    "fingerprint": "a84130b8e5af76e3",
    "bytes": 12664,
-   "checkedAt": "2026-10-22T03:52:30.569Z",
+   "checkedAt": "2026-10-22T06:15:20.283Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3518,7 +3648,7 @@
    "status": 200,
    "fingerprint": "5ef978853c4f20cb",
    "bytes": 291,
-   "checkedAt": "2026-10-22T03:52:30.633Z",
+   "checkedAt": "2026-10-22T06:15:20.467Z",
    "guides": [
     "state-entities"
    ]
@@ -3526,9 +3656,9 @@
   "https://www.federalregister.gov/documents/2026/08/11/2026-16370/reforms-to-13-cfr-124103-to-remove-sbas-8a-programs-rebuttable-presumption-of-social-disadvantage": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "6a939236a966beeb",
-   "bytes": 47836,
-   "checkedAt": "2026-10-22T03:52:30.951Z",
+   "fingerprint": "6a93d236a966beeb",
+   "bytes": 47835,
+   "checkedAt": "2026-10-22T06:15:20.793Z",
    "guides": [
     "us-small-business"
    ]
@@ -3538,7 +3668,7 @@
    "status": 200,
    "fingerprint": "dd34f0742b35f625",
    "bytes": 12541,
-   "checkedAt": "2026-10-22T03:52:40.118Z",
+   "checkedAt": "2026-10-22T06:15:29.831Z",
    "guides": [
     "state-entities"
    ]
@@ -3548,7 +3678,7 @@
    "status": 200,
    "fingerprint": "0f1df6eabbbab78e",
    "bytes": 11614,
-   "checkedAt": "2026-10-22T03:52:30.978Z",
+   "checkedAt": "2026-10-22T06:15:20.964Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3558,7 +3688,7 @@
    "status": 200,
    "fingerprint": "3a5ff7822ffea8c6",
    "bytes": 41674,
-   "checkedAt": "2026-10-22T03:52:31.221Z",
+   "checkedAt": "2026-10-22T06:15:21.168Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3568,7 +3698,7 @@
    "status": 200,
    "fingerprint": "0f319784bbbcb9ca",
    "bytes": 11317,
-   "checkedAt": "2026-10-22T03:52:31.337Z",
+   "checkedAt": "2026-10-22T06:15:21.234Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3578,7 +3708,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:32.043Z",
+   "checkedAt": "2026-10-22T06:15:22.275Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3588,7 +3718,7 @@
    "status": 200,
    "fingerprint": "38ec83c4699d2071",
    "bytes": 18926,
-   "checkedAt": "2026-10-22T03:52:31.631Z",
+   "checkedAt": "2026-10-22T06:15:21.571Z",
    "guides": [
     "california-business"
    ]
@@ -3596,9 +3726,9 @@
   "https://www.ftc.gov/business-guidance/advertising-marketing": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "004d86e3619e69be",
-   "bytes": 11248,
-   "checkedAt": "2026-10-22T03:52:32.344Z",
+   "fingerprint": "004d86c3619c69be",
+   "bytes": 11278,
+   "checkedAt": "2026-10-22T06:15:22.655Z",
    "guides": [
     "pr-events-guide"
    ]
@@ -3606,9 +3736,9 @@
   "https://www.ftc.gov/business-guidance/resources/consumer-reviews-testimonials-rule-questions-answers": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "c9d1ce274ba0254a",
+   "fingerprint": "cdd1ce274ba0254a",
    "bytes": 38976,
-   "checkedAt": "2026-10-22T03:52:32.563Z",
+   "checkedAt": "2026-10-22T06:15:23.397Z",
    "guides": [
     "ai-tools-for-business",
     "pr-events-guide",
@@ -3618,9 +3748,9 @@
   "https://www.ftc.gov/business-guidance/resources/disclosures-101-social-media-influencers": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "cb0594e361025fae",
-   "bytes": 12626,
-   "checkedAt": "2026-10-22T03:52:33.083Z",
+   "fingerprint": "c9059ce361025fae",
+   "bytes": 12656,
+   "checkedAt": "2026-10-22T06:15:23.174Z",
    "guides": [
     "athlete-guide",
     "pr-events-guide"
@@ -3630,8 +3760,8 @@
    "state": "ok",
    "status": 200,
    "fingerprint": "a094a66095af63bd",
-   "bytes": 96057,
-   "checkedAt": "2026-10-22T03:52:33.095Z",
+   "bytes": 96087,
+   "checkedAt": "2026-10-22T06:15:23.917Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3640,18 +3770,18 @@
    "state": "ok",
    "status": 200,
    "fingerprint": "4356966864ce016d",
-   "bytes": 45488,
-   "checkedAt": "2026-10-22T03:52:33.265Z",
+   "bytes": 45458,
+   "checkedAt": "2026-10-22T06:15:24.049Z",
    "guides": [
     "small-business-technology"
    ]
   },
-  "https://www.ftc.gov/industry/technology/artificial-intelligence": {
-   "state": "moved",
+  "https://www.ftc.gov/industry/technology/super-intelligence": {
+   "state": "ok",
    "status": 200,
    "fingerprint": "05450cb67b0e3b36",
    "bytes": 18691,
-   "checkedAt": "2026-10-22T03:52:34.619Z",
+   "checkedAt": "2026-10-22T06:15:24.414Z",
    "guides": [
     "ai-tools-for-business",
     "small-business-technology"
@@ -3662,7 +3792,7 @@
    "status": 200,
    "fingerprint": "01c584e3610a6bbe",
    "bytes": 8278,
-   "checkedAt": "2026-10-22T03:52:33.997Z",
+   "checkedAt": "2026-10-22T06:15:26.884Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3672,7 +3802,7 @@
    "status": 200,
    "fingerprint": "03efa6a3790b6bbe",
    "bytes": 17058,
-   "checkedAt": "2026-10-22T03:52:34.042Z",
+   "checkedAt": "2026-10-22T06:15:24.873Z",
    "guides": [
     "ai-tools-for-business",
     "small-business-technology"
@@ -3683,7 +3813,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:34.645Z",
+   "checkedAt": "2026-10-22T06:15:25.587Z",
    "guides": [
     "africa-small-business"
    ]
@@ -3693,7 +3823,7 @@
    "status": 200,
    "fingerprint": "784dc8cc2bfd61a9",
    "bytes": 7557,
-   "checkedAt": "2026-10-22T03:52:34.634Z",
+   "checkedAt": "2026-10-22T06:15:26.188Z",
    "guides": [
     "us-small-business"
    ]
@@ -3701,9 +3831,9 @@
   "https://www.globaldro.com/Home": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "f553b1f785269328",
-   "bytes": 1076,
-   "checkedAt": "2026-10-22T03:52:35.115Z",
+   "fingerprint": "f553b1f78526bf28",
+   "bytes": 1074,
+   "checkedAt": "2026-10-22T06:15:26.626Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3713,7 +3843,7 @@
    "status": 200,
    "fingerprint": "1ae36b440222868e",
    "bytes": 18526,
-   "checkedAt": "2026-10-22T03:52:34.974Z",
+   "checkedAt": "2026-10-22T06:15:26.980Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3723,7 +3853,7 @@
    "status": 200,
    "fingerprint": "9ac56d43b5b72e49",
    "bytes": 2543,
-   "checkedAt": "2026-10-22T03:52:35.079Z",
+   "checkedAt": "2026-10-22T06:15:27.309Z",
    "guides": [
     "us-small-business"
    ]
@@ -3733,7 +3863,7 @@
    "status": 200,
    "fingerprint": "9cdfea29f8d46ad8",
    "bytes": 4816,
-   "checkedAt": "2026-10-22T03:52:35.153Z",
+   "checkedAt": "2026-10-22T06:15:27.311Z",
    "guides": [
     "us-community-support"
    ]
@@ -3743,7 +3873,7 @@
    "status": 200,
    "fingerprint": "6c5974a1e2e2cfeb",
    "bytes": 13959,
-   "checkedAt": "2026-10-22T03:52:35.238Z",
+   "checkedAt": "2026-10-22T06:15:27.484Z",
    "guides": [
     "us-small-business"
    ]
@@ -3753,7 +3883,7 @@
    "status": 200,
    "fingerprint": "9492ff1b03fe69eb",
    "bytes": 16759,
-   "checkedAt": "2026-10-22T03:52:35.487Z",
+   "checkedAt": "2026-10-22T06:15:27.634Z",
    "guides": [
     "us-small-business"
    ]
@@ -3763,7 +3893,7 @@
    "status": 200,
    "fingerprint": "b6e867acddb5d004",
    "bytes": 4396,
-   "checkedAt": "2026-10-22T03:52:36.608Z",
+   "checkedAt": "2026-10-22T06:15:29.252Z",
    "guides": [
     "womens-health:who"
    ]
@@ -3773,7 +3903,7 @@
    "status": 200,
    "fingerprint": "2d682e1abe911fa0",
    "bytes": 9955,
-   "checkedAt": "2026-10-22T03:52:35.684Z",
+   "checkedAt": "2026-10-22T06:15:27.999Z",
    "guides": [
     "us-community-support"
    ]
@@ -3783,7 +3913,7 @@
    "status": 200,
    "fingerprint": "2d682e1abe911fa0",
    "bytes": 9955,
-   "checkedAt": "2026-10-22T03:52:35.899Z",
+   "checkedAt": "2026-10-22T06:15:28.229Z",
    "guides": [
     "us-community-support",
     "womens-health"
@@ -3794,7 +3924,7 @@
    "status": 200,
    "fingerprint": "7be8b5309aea2a8b",
    "bytes": 9519,
-   "checkedAt": "2026-10-22T03:52:36.501Z",
+   "checkedAt": "2026-10-22T06:15:28.940Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3804,7 +3934,7 @@
    "status": 200,
    "fingerprint": "ded087481c8c5be3",
    "bytes": 5558,
-   "checkedAt": "2026-10-22T03:52:36.512Z",
+   "checkedAt": "2026-10-22T06:15:29.512Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3814,7 +3944,7 @@
    "status": 200,
    "fingerprint": "d38fca602be655e1",
    "bytes": 6082,
-   "checkedAt": "2026-10-22T03:52:37.137Z",
+   "checkedAt": "2026-10-22T06:15:29.897Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3824,7 +3954,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:38.753Z",
+   "checkedAt": "2026-10-22T06:15:31.199Z",
    "guides": [
     "africa-small-business"
    ]
@@ -3834,7 +3964,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:38.778Z",
+   "checkedAt": "2026-10-22T06:15:31.188Z",
    "guides": [
     "africa-small-business"
    ]
@@ -3844,7 +3974,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:54:07.264Z",
+   "checkedAt": "2026-10-22T06:17:00.046Z",
    "guides": [
     "state-entities"
    ]
@@ -3854,7 +3984,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:54:08.906Z",
+   "checkedAt": "2026-10-22T06:17:01.339Z",
    "guides": [
     "state-entities"
    ]
@@ -3864,9 +3994,19 @@
    "status": 200,
    "fingerprint": "1fdb907efac26316",
    "bytes": 2930,
-   "checkedAt": "2026-10-22T03:52:39.442Z",
+   "checkedAt": "2026-10-22T06:15:31.850Z",
    "guides": [
     "state-entities"
+   ]
+  },
+  "https://www.investor.gov/introduction-investing": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "400cfc6cfe45d274",
+   "bytes": 13446,
+   "checkedAt": "2026-10-22T06:15:32.596Z",
+   "guides": [
+    "athlete-guide"
    ]
   },
   "https://www.irs.gov/businesses/small-businesses-self-employed/business-structures": {
@@ -3874,7 +4014,7 @@
    "status": 200,
    "fingerprint": "d6240a232317c2d9",
    "bytes": 6043,
-   "checkedAt": "2026-10-22T03:52:39.790Z",
+   "checkedAt": "2026-10-22T06:15:32.680Z",
    "guides": [
     "us-small-business"
    ]
@@ -3884,7 +4024,7 @@
    "status": 200,
    "fingerprint": "e6970d237a1ecad8",
    "bytes": 12620,
-   "checkedAt": "2026-10-22T03:52:40.048Z",
+   "checkedAt": "2026-10-22T06:15:32.820Z",
    "guides": [
     "athlete-guide",
     "us-small-business"
@@ -3895,7 +4035,7 @@
    "status": 200,
    "fingerprint": "b5279003611742d8",
    "bytes": 7634,
-   "checkedAt": "2026-10-22T03:52:40.288Z",
+   "checkedAt": "2026-10-22T06:15:33.052Z",
    "guides": [
     "us-small-business"
    ]
@@ -3905,7 +4045,7 @@
    "status": 200,
    "fingerprint": "bc3418011817ca5b",
    "bytes": 8338,
-   "checkedAt": "2026-10-22T03:52:40.432Z",
+   "checkedAt": "2026-10-22T06:15:33.045Z",
    "guides": [
     "athlete-guide",
     "church-guide",
@@ -3917,7 +4057,7 @@
    "status": 200,
    "fingerprint": "922618016b06c1d9",
    "bytes": 9480,
-   "checkedAt": "2026-10-22T03:52:40.521Z",
+   "checkedAt": "2026-10-22T06:15:33.312Z",
    "guides": [
     "us-small-business"
    ]
@@ -3927,7 +4067,7 @@
    "status": 200,
    "fingerprint": "f115be313005e258",
    "bytes": 14136,
-   "checkedAt": "2026-10-22T03:52:40.668Z",
+   "checkedAt": "2026-10-22T06:15:33.322Z",
    "guides": [
     "athlete-guide"
    ]
@@ -3937,7 +4077,7 @@
    "status": 200,
    "fingerprint": "f6a79823011ac248",
    "bytes": 8686,
-   "checkedAt": "2026-10-22T03:52:40.784Z",
+   "checkedAt": "2026-10-22T06:15:33.554Z",
    "guides": [
     "us-small-business"
    ]
@@ -3947,7 +4087,7 @@
    "status": 200,
    "fingerprint": "b7a708214657c1d9",
    "bytes": 12096,
-   "checkedAt": "2026-10-22T03:52:40.902Z",
+   "checkedAt": "2026-10-22T06:15:33.585Z",
    "guides": [
     "us-small-business"
    ]
@@ -3957,7 +4097,7 @@
    "status": 200,
    "fingerprint": "d06188216d47c6d8",
    "bytes": 11448,
-   "checkedAt": "2026-10-22T03:52:41.045Z",
+   "checkedAt": "2026-10-22T06:15:33.811Z",
    "guides": [
     "us-small-business"
    ]
@@ -3967,7 +4107,7 @@
    "status": 200,
    "fingerprint": "b4f5a81b301083fe",
    "bytes": 10667,
-   "checkedAt": "2026-10-22T03:52:41.153Z",
+   "checkedAt": "2026-10-22T06:15:33.855Z",
    "guides": [
     "church-guide",
     "state-entities",
@@ -3979,7 +4119,7 @@
    "status": 200,
    "fingerprint": "9116180122b243d8",
    "bytes": 7727,
-   "checkedAt": "2026-10-22T03:52:41.276Z",
+   "checkedAt": "2026-10-22T06:15:34.084Z",
    "guides": [
     "california-business",
     "church-guide",
@@ -3993,7 +4133,7 @@
    "status": 200,
    "fingerprint": "9c862a2b63164ad8",
    "bytes": 7603,
-   "checkedAt": "2026-10-22T03:52:41.411Z",
+   "checkedAt": "2026-10-22T06:15:34.130Z",
    "guides": [
     "church-guide",
     "us-community-support"
@@ -4004,7 +4144,7 @@
    "status": 200,
    "fingerprint": "b434aa0b6113c2d9",
    "bytes": 7045,
-   "checkedAt": "2026-10-22T03:52:41.512Z",
+   "checkedAt": "2026-10-22T06:15:34.316Z",
    "guides": [
     "church-guide",
     "us-community-support"
@@ -4015,7 +4155,7 @@
    "status": 200,
    "fingerprint": "94240a01231243c9",
    "bytes": 6504,
-   "checkedAt": "2026-10-22T03:52:41.654Z",
+   "checkedAt": "2026-10-22T06:15:34.388Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4025,7 +4165,7 @@
    "status": 200,
    "fingerprint": "9494aa0123164249",
    "bytes": 7962,
-   "checkedAt": "2026-10-22T03:52:41.754Z",
+   "checkedAt": "2026-10-22T06:15:34.583Z",
    "guides": [
     "us-small-business"
    ]
@@ -4035,7 +4175,7 @@
    "status": 200,
    "fingerprint": "94040a0133034359",
    "bytes": 6342,
-   "checkedAt": "2026-10-22T03:52:41.911Z",
+   "checkedAt": "2026-10-22T06:15:34.708Z",
    "guides": [
     "church-guide"
    ]
@@ -4045,7 +4185,7 @@
    "status": 200,
    "fingerprint": "d4a418296357c249",
    "bytes": 7532,
-   "checkedAt": "2026-10-22T03:52:41.990Z",
+   "checkedAt": "2026-10-22T06:15:34.804Z",
    "guides": [
     "church-guide"
    ]
@@ -4055,7 +4195,7 @@
    "status": 200,
    "fingerprint": "b41e9a29674743dd",
    "bytes": 8188,
-   "checkedAt": "2026-10-22T03:52:42.176Z",
+   "checkedAt": "2026-10-22T06:15:34.979Z",
    "guides": [
     "church-guide"
    ]
@@ -4065,7 +4205,7 @@
    "status": 200,
    "fingerprint": "b4260a290342c349",
    "bytes": 6923,
-   "checkedAt": "2026-10-22T03:52:42.226Z",
+   "checkedAt": "2026-10-22T06:15:35.089Z",
    "guides": [
     "church-guide"
    ]
@@ -4075,7 +4215,7 @@
    "status": 200,
    "fingerprint": "9c260801224642d8",
    "bytes": 8449,
-   "checkedAt": "2026-10-22T03:52:42.424Z",
+   "checkedAt": "2026-10-22T06:15:35.247Z",
    "guides": [
     "church-guide"
    ]
@@ -4085,7 +4225,7 @@
    "status": 200,
    "fingerprint": "d40528210313c2c9",
    "bytes": 6413,
-   "checkedAt": "2026-10-22T03:52:42.455Z",
+   "checkedAt": "2026-10-22T06:15:35.380Z",
    "guides": [
     "church-guide"
    ]
@@ -4095,7 +4235,7 @@
    "status": 200,
    "fingerprint": "d49638232316c3d8",
    "bytes": 5868,
-   "checkedAt": "2026-10-22T03:52:42.662Z",
+   "checkedAt": "2026-10-22T06:15:35.530Z",
    "guides": [
     "state-entities",
     "us-community-support"
@@ -4106,7 +4246,7 @@
    "status": 200,
    "fingerprint": "d694982921176a9d",
    "bytes": 10796,
-   "checkedAt": "2026-10-22T03:52:42.688Z",
+   "checkedAt": "2026-10-22T06:15:35.651Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4116,7 +4256,7 @@
    "status": 200,
    "fingerprint": "f4842a012103c3d9",
    "bytes": 6542,
-   "checkedAt": "2026-10-22T03:52:43.026Z",
+   "checkedAt": "2026-10-22T06:15:35.814Z",
    "guides": [
     "state-entities",
     "us-community-support"
@@ -4127,7 +4267,7 @@
    "status": 200,
    "fingerprint": "9404982b21074258",
    "bytes": 6824,
-   "checkedAt": "2026-10-22T03:52:42.921Z",
+   "checkedAt": "2026-10-22T06:15:36.046Z",
    "guides": [
     "church-guide",
     "us-small-business"
@@ -4138,7 +4278,7 @@
    "status": 200,
    "fingerprint": "d734182a330f4349",
    "bytes": 9741,
-   "checkedAt": "2026-10-22T03:52:43.249Z",
+   "checkedAt": "2026-10-22T06:15:36.089Z",
    "guides": [
     "us-community-support"
    ]
@@ -4148,7 +4288,7 @@
    "status": 200,
    "fingerprint": "5488880e62071cdf",
    "bytes": 36126,
-   "checkedAt": "2026-10-22T03:52:43.267Z",
+   "checkedAt": "2026-10-22T06:15:36.224Z",
    "guides": [
     "state-entities"
    ]
@@ -4158,7 +4298,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:43.509Z",
+   "checkedAt": "2026-10-22T06:15:36.271Z",
    "guides": [
     "us-small-business"
    ]
@@ -4168,7 +4308,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:43.543Z",
+   "checkedAt": "2026-10-22T06:15:36.489Z",
    "guides": [
     "church-guide",
     "us-community-support"
@@ -4179,7 +4319,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:43.758Z",
+   "checkedAt": "2026-10-22T06:15:36.594Z",
    "guides": [
     "church-guide"
    ]
@@ -4189,7 +4329,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:43.840Z",
+   "checkedAt": "2026-10-22T06:15:36.785Z",
    "guides": [
     "us-community-support"
    ]
@@ -4199,7 +4339,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:44.073Z",
+   "checkedAt": "2026-10-22T06:15:36.921Z",
    "guides": [
     "us-community-support"
    ]
@@ -4209,7 +4349,7 @@
    "status": 200,
    "fingerprint": "a9751ab8eeb38cf5",
    "bytes": 121376,
-   "checkedAt": "2026-10-22T03:52:44.196Z",
+   "checkedAt": "2026-10-22T06:15:37.186Z",
    "guides": [
     "church-guide"
    ]
@@ -4219,7 +4359,7 @@
    "status": 200,
    "fingerprint": "9cb54f9ae839a85e",
    "bytes": 600793,
-   "checkedAt": "2026-10-22T03:52:44.421Z",
+   "checkedAt": "2026-10-22T06:15:37.274Z",
    "guides": [
     "athlete-guide",
     "us-community-support"
@@ -4230,7 +4370,7 @@
    "status": 200,
    "fingerprint": "a5bce06f5ec6464d",
    "bytes": 378123,
-   "checkedAt": "2026-10-22T03:52:44.814Z",
+   "checkedAt": "2026-10-22T06:15:37.662Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4240,7 +4380,7 @@
    "status": 200,
    "fingerprint": "92b62ea142124ad8",
    "bytes": 9943,
-   "checkedAt": "2026-10-22T03:52:44.997Z",
+   "checkedAt": "2026-10-22T06:15:37.852Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4250,7 +4390,7 @@
    "status": 200,
    "fingerprint": "d4dd1a010b93c0d9",
    "bytes": 10709,
-   "checkedAt": "2026-10-22T03:52:45.264Z",
+   "checkedAt": "2026-10-22T06:15:38.128Z",
    "guides": [
     "church-guide"
    ]
@@ -4260,7 +4400,7 @@
    "status": 200,
    "fingerprint": "d10eb6012b13cb5c",
    "bytes": 8287,
-   "checkedAt": "2026-10-22T03:52:45.248Z",
+   "checkedAt": "2026-10-22T06:15:38.157Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4270,7 +4410,7 @@
    "status": 200,
    "fingerprint": "d77c2ea14107c359",
    "bytes": 11067,
-   "checkedAt": "2026-10-22T03:52:45.507Z",
+   "checkedAt": "2026-10-22T06:15:38.395Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4280,7 +4420,7 @@
    "status": 200,
    "fingerprint": "d47eb2093a034359",
    "bytes": 8831,
-   "checkedAt": "2026-10-22T03:52:45.529Z",
+   "checkedAt": "2026-10-22T06:15:38.421Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4290,7 +4430,7 @@
    "status": 200,
    "fingerprint": "7676cba07a464802",
    "bytes": 2608,
-   "checkedAt": "2026-10-22T03:52:45.956Z",
+   "checkedAt": "2026-10-22T06:15:38.811Z",
    "guides": [
     "us-community-support"
    ]
@@ -4300,7 +4440,7 @@
    "status": 200,
    "fingerprint": "14410dae546739e5",
    "bytes": 8730,
-   "checkedAt": "2026-10-22T03:52:47.648Z",
+   "checkedAt": "2026-10-22T06:15:41.227Z",
    "guides": [
     "africa-small-business"
    ]
@@ -4310,7 +4450,7 @@
    "status": 200,
    "fingerprint": "1c518cac4573b1a4",
    "bytes": 10377,
-   "checkedAt": "2026-10-22T03:52:47.641Z",
+   "checkedAt": "2026-10-22T06:15:41.234Z",
    "guides": [
     "africa-small-business"
    ]
@@ -4320,7 +4460,7 @@
    "status": 200,
    "fingerprint": "e364575a5dac28dd",
    "bytes": 4786,
-   "checkedAt": "2026-10-22T03:52:48.214Z",
+   "checkedAt": "2026-10-22T06:15:41.792Z",
    "guides": [
     "state-entities"
    ]
@@ -4330,7 +4470,7 @@
    "status": 200,
    "fingerprint": "dc35bcf8954947f8",
    "bytes": 12976,
-   "checkedAt": "2026-10-22T03:52:48.010Z",
+   "checkedAt": "2026-10-22T06:15:41.743Z",
    "guides": [
     "state-entities"
    ]
@@ -4340,7 +4480,7 @@
    "status": 200,
    "fingerprint": "5dcc7e2adce817e5",
    "bytes": 2399,
-   "checkedAt": "2026-10-22T03:52:48.182Z",
+   "checkedAt": "2026-10-22T06:15:42.325Z",
    "guides": [
     "state-entities"
    ]
@@ -4350,7 +4490,7 @@
    "status": 200,
    "fingerprint": "46bfd399c7da571b",
    "bytes": 15997,
-   "checkedAt": "2026-10-22T03:52:48.335Z",
+   "checkedAt": "2026-10-22T06:15:42.202Z",
    "guides": [
     "state-entities"
    ]
@@ -4360,7 +4500,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:48.584Z",
+   "checkedAt": "2026-10-22T06:15:42.584Z",
    "guides": [
     "state-entities"
    ]
@@ -4370,7 +4510,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:48.868Z",
+   "checkedAt": "2026-10-22T06:15:42.743Z",
    "guides": [
     "state-entities"
    ]
@@ -4380,7 +4520,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:49.045Z",
+   "checkedAt": "2026-10-22T06:15:43.109Z",
    "guides": [
     "state-entities"
    ]
@@ -4390,7 +4530,7 @@
    "status": 200,
    "fingerprint": "900d2726c9464dd3",
    "bytes": 1574,
-   "checkedAt": "2026-10-22T03:52:49.564Z",
+   "checkedAt": "2026-10-22T06:15:43.683Z",
    "guides": [
     "state-entities"
    ]
@@ -4400,7 +4540,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:49.665Z",
+   "checkedAt": "2026-10-22T06:15:43.965Z",
    "guides": [
     "state-entities"
    ]
@@ -4410,7 +4550,7 @@
    "status": 200,
    "fingerprint": "bf738de09da27a8f",
    "bytes": 4172,
-   "checkedAt": "2026-10-22T03:52:50.827Z",
+   "checkedAt": "2026-10-22T06:15:45.206Z",
    "guides": [
     "state-entities"
    ]
@@ -4420,7 +4560,7 @@
    "status": 200,
    "fingerprint": "92a837ae0d8d4ffe",
    "bytes": 9079,
-   "checkedAt": "2026-10-22T03:52:50.148Z",
+   "checkedAt": "2026-10-22T06:15:44.575Z",
    "guides": [
     "state-entities"
    ]
@@ -4430,7 +4570,7 @@
    "status": 200,
    "fingerprint": "d48e76b82e8f5ded",
    "bytes": 12792,
-   "checkedAt": "2026-10-22T03:52:50.470Z",
+   "checkedAt": "2026-10-22T06:15:44.873Z",
    "guides": [
     "state-entities"
    ]
@@ -4440,7 +4580,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:50.752Z",
+   "checkedAt": "2026-10-22T06:15:45.242Z",
    "guides": [
     "state-entities"
    ]
@@ -4450,7 +4590,7 @@
    "status": 200,
    "fingerprint": "5db3a2f9bd083086",
    "bytes": 2322,
-   "checkedAt": "2026-10-22T03:52:51.341Z",
+   "checkedAt": "2026-10-22T06:15:45.644Z",
    "guides": [
     "us-community-support"
    ]
@@ -4460,7 +4600,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:51.256Z",
+   "checkedAt": "2026-10-22T06:15:45.906Z",
    "guides": [
     "state-entities"
    ]
@@ -4470,7 +4610,7 @@
    "status": 200,
    "fingerprint": "c84c4ac6da9e1051",
    "bytes": 16050,
-   "checkedAt": "2026-10-22T03:52:51.646Z",
+   "checkedAt": "2026-10-22T06:15:46.675Z",
    "guides": [
     "state-entities"
    ]
@@ -4480,7 +4620,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:51.684Z",
+   "checkedAt": "2026-10-22T06:15:46.429Z",
    "guides": [
     "state-entities"
    ]
@@ -4490,7 +4630,7 @@
    "status": 200,
    "fingerprint": "3eeb94435bac9968",
    "bytes": 24694,
-   "checkedAt": "2026-10-22T03:52:52.055Z",
+   "checkedAt": "2026-10-22T06:15:46.814Z",
    "guides": [
     "state-entities"
    ]
@@ -4500,7 +4640,7 @@
    "status": 200,
    "fingerprint": "ca252b7132e5af35",
    "bytes": 18100,
-   "checkedAt": "2026-10-22T03:52:52.071Z",
+   "checkedAt": "2026-10-22T06:15:47.850Z",
    "guides": [
     "state-entities"
    ]
@@ -4510,17 +4650,27 @@
    "status": 200,
    "fingerprint": "fd8c7683c7900c1d",
    "bytes": 7444,
-   "checkedAt": "2026-10-22T03:52:52.759Z",
+   "checkedAt": "2026-10-22T06:15:47.706Z",
    "guides": [
     "state-entities"
+   ]
+  },
+  "https://www.mlbplayers.com/frequently-asked-questions": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ae3723352efdacbe",
+   "bytes": 19511,
+   "checkedAt": "2026-10-22T06:15:48.001Z",
+   "guides": [
+    "athlete-guide"
    ]
   },
   "https://www.mndor.state.mn.us/tp/eservices/_/?link=NewBusinessReg": {
    "state": "moved",
    "status": 200,
-   "fingerprint": "7c28e1e09abc6acc",
-   "bytes": 1513,
-   "checkedAt": "2026-10-22T03:52:53.373Z",
+   "fingerprint": "e83acf034df36501",
+   "bytes": 1458,
+   "checkedAt": "2026-10-22T06:15:49.303Z",
    "guides": [
     "state-entities"
    ]
@@ -4530,7 +4680,7 @@
    "status": 200,
    "fingerprint": "3f8c4a3870fda42f",
    "bytes": 3911,
-   "checkedAt": "2026-10-22T03:52:56.372Z",
+   "checkedAt": "2026-10-22T06:15:52.516Z",
    "guides": [
     "africa-small-business"
    ]
@@ -4540,7 +4690,7 @@
    "status": 200,
    "fingerprint": "425360886ebb2ac7",
    "bytes": 8816,
-   "checkedAt": "2026-10-22T03:52:54.971Z",
+   "checkedAt": "2026-10-22T06:15:50.855Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4550,7 +4700,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:55.143Z",
+   "checkedAt": "2026-10-22T06:15:51.022Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4560,7 +4710,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:55.527Z",
+   "checkedAt": "2026-10-22T06:15:51.257Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4570,7 +4720,7 @@
    "status": 200,
    "fingerprint": "5c74ce3d6abfb099",
    "bytes": 3445,
-   "checkedAt": "2026-10-22T03:52:56.031Z",
+   "checkedAt": "2026-10-22T06:15:51.809Z",
    "guides": [
     "church-guide",
     "us-community-support"
@@ -4581,7 +4731,7 @@
    "status": 200,
    "fingerprint": "5a7b331a9047c2f5",
    "bytes": 9455,
-   "checkedAt": "2026-10-22T03:52:56.365Z",
+   "checkedAt": "2026-10-22T06:15:52.164Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4591,7 +4741,7 @@
    "status": 200,
    "fingerprint": "31a59e975806240a",
    "bytes": 14262,
-   "checkedAt": "2026-10-22T03:52:56.819Z",
+   "checkedAt": "2026-10-22T06:15:53.628Z",
    "guides": [
     "parents-guide"
    ]
@@ -4601,9 +4751,19 @@
    "status": 200,
    "fingerprint": "0aed7978547d3f0e",
    "bytes": 190105,
-   "checkedAt": "2026-10-22T03:52:56.916Z",
+   "checkedAt": "2026-10-22T06:15:56.135Z",
    "guides": [
     "parents-guide"
+   ]
+  },
+  "https://www.nationaleatingdisorders.org/get-help/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T06:15:53.983Z",
+   "guides": [
+    "athlete-guide"
    ]
   },
   "https://www.nationaleatingdisorders.org/wp-content/uploads/2025/10/CoachAthleticTrainerToolkit.pdf": {
@@ -4611,7 +4771,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:52:57.122Z",
+   "checkedAt": "2026-10-22T06:15:54.210Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4621,7 +4781,7 @@
    "status": 200,
    "fingerprint": "b25a5df31411a049",
    "bytes": 2176,
-   "checkedAt": "2026-10-22T03:52:57.585Z",
+   "checkedAt": "2026-10-22T06:15:54.684Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4631,7 +4791,7 @@
    "status": 200,
    "fingerprint": "0b6caecebd1d904d",
    "bytes": 17906,
-   "checkedAt": "2026-10-22T03:52:57.383Z",
+   "checkedAt": "2026-10-22T06:15:55.054Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4641,7 +4801,7 @@
    "status": 200,
    "fingerprint": "cbc4eec6f51af441",
    "bytes": 20160,
-   "checkedAt": "2026-10-22T03:52:57.569Z",
+   "checkedAt": "2026-10-22T06:15:55.351Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4651,7 +4811,7 @@
    "status": 200,
    "fingerprint": "0b4caf8ef5141469",
    "bytes": 16902,
-   "checkedAt": "2026-10-22T03:52:57.786Z",
+   "checkedAt": "2026-10-22T06:15:55.571Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4661,7 +4821,7 @@
    "status": 200,
    "fingerprint": "0f6c6e8efd16b569",
    "bytes": 16206,
-   "checkedAt": "2026-10-22T03:52:57.852Z",
+   "checkedAt": "2026-10-22T06:15:56.224Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4671,7 +4831,7 @@
    "status": 200,
    "fingerprint": "0f0caecefd10b069",
    "bytes": 15936,
-   "checkedAt": "2026-10-22T03:52:57.994Z",
+   "checkedAt": "2026-10-22T06:15:56.467Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4681,7 +4841,7 @@
    "status": 200,
    "fingerprint": "0a6caeeeb51c34a1",
    "bytes": 17213,
-   "checkedAt": "2026-10-22T03:52:58.050Z",
+   "checkedAt": "2026-10-22T06:15:56.480Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4691,7 +4851,7 @@
    "status": 200,
    "fingerprint": "8d6ceee6fd14b955",
    "bytes": 18960,
-   "checkedAt": "2026-10-22T03:52:58.177Z",
+   "checkedAt": "2026-10-22T06:15:57.037Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4701,7 +4861,7 @@
    "status": 200,
    "fingerprint": "2b6caecebd141021",
    "bytes": 14094,
-   "checkedAt": "2026-10-22T03:52:58.249Z",
+   "checkedAt": "2026-10-22T06:15:57.054Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4711,7 +4871,7 @@
    "status": 200,
    "fingerprint": "0feca6cebd15b915",
    "bytes": 17392,
-   "checkedAt": "2026-10-22T03:52:58.440Z",
+   "checkedAt": "2026-10-22T06:15:57.287Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4721,7 +4881,7 @@
    "status": 200,
    "fingerprint": "0f2caeceb514506d",
    "bytes": 16837,
-   "checkedAt": "2026-10-22T03:52:58.430Z",
+   "checkedAt": "2026-10-22T06:15:57.567Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4731,7 +4891,7 @@
    "status": 200,
    "fingerprint": "3c3896a835021489",
    "bytes": 33360,
-   "checkedAt": "2026-10-22T03:52:58.641Z",
+   "checkedAt": "2026-10-22T06:15:57.879Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4741,7 +4901,7 @@
    "status": 200,
    "fingerprint": "55d8e0b097cbaf52",
    "bytes": 5630,
-   "checkedAt": "2026-10-22T03:52:58.928Z",
+   "checkedAt": "2026-10-22T06:15:58.120Z",
    "guides": [
     "state-entities"
    ]
@@ -4751,7 +4911,7 @@
    "status": 200,
    "fingerprint": "2a4d5b435a9f9ec1",
    "bytes": 3115,
-   "checkedAt": "2026-10-22T03:52:59.458Z",
+   "checkedAt": "2026-10-22T06:15:58.667Z",
    "guides": [
     "state-entities"
    ]
@@ -4761,7 +4921,7 @@
    "status": 200,
    "fingerprint": "12c0876aba83f231",
    "bytes": 7959,
-   "checkedAt": "2026-10-22T03:53:00.042Z",
+   "checkedAt": "2026-10-22T06:15:59.337Z",
    "guides": [
     "state-entities"
    ]
@@ -4769,9 +4929,9 @@
   "https://www.nhl.com/news/nhl-nhlpa-alumni-association-unveil-healthcare-and-wellness-fund-for-retirees": {
    "state": "ok",
    "status": 200,
-   "fingerprint": "da9d9092cc075644",
-   "bytes": 8139,
-   "checkedAt": "2026-10-22T03:52:59.841Z",
+   "fingerprint": "da9d90b2dc8f5764",
+   "bytes": 8136,
+   "checkedAt": "2026-10-22T06:15:59.519Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4781,7 +4941,7 @@
    "status": 200,
    "fingerprint": "b467312b4b9b6da2",
    "bytes": 4382,
-   "checkedAt": "2026-10-22T03:53:00.311Z",
+   "checkedAt": "2026-10-22T06:15:59.794Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -4791,7 +4951,7 @@
    "status": 200,
    "fingerprint": "a15775e6caab41a2",
    "bytes": 6544,
-   "checkedAt": "2026-10-22T03:53:00.459Z",
+   "checkedAt": "2026-10-22T06:15:59.821Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -4801,7 +4961,7 @@
    "status": 200,
    "fingerprint": "210d60707945508f",
    "bytes": 5365,
-   "checkedAt": "2026-10-22T03:53:01.215Z",
+   "checkedAt": "2026-10-22T06:16:00.882Z",
    "guides": [
     "state-entities"
    ]
@@ -4811,7 +4971,7 @@
    "status": 200,
    "fingerprint": "a2359896a9aca25d",
    "bytes": 23529,
-   "checkedAt": "2026-10-22T03:53:00.889Z",
+   "checkedAt": "2026-10-22T06:16:00.833Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -4821,7 +4981,7 @@
    "status": 200,
    "fingerprint": "6bf78135cdb278f9",
    "bytes": 14087,
-   "checkedAt": "2026-10-22T03:53:01.485Z",
+   "checkedAt": "2026-10-22T06:16:01.035Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -4831,7 +4991,7 @@
    "status": 200,
    "fingerprint": "32048096cdfde6bc",
    "bytes": 16804,
-   "checkedAt": "2026-10-22T03:53:01.476Z",
+   "checkedAt": "2026-10-22T06:16:01.609Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -4841,7 +5001,7 @@
    "status": 200,
    "fingerprint": "0ef180a730fa86ba",
    "bytes": 12974,
-   "checkedAt": "2026-10-22T03:53:01.672Z",
+   "checkedAt": "2026-10-22T06:16:01.652Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -4851,7 +5011,7 @@
    "status": 200,
    "fingerprint": "ab248d37118e636f",
    "bytes": 20770,
-   "checkedAt": "2026-10-22T03:53:02.017Z",
+   "checkedAt": "2026-10-22T06:16:02.126Z",
    "guides": [
     "womens-health"
    ]
@@ -4861,7 +5021,7 @@
    "status": 200,
    "fingerprint": "0b2049b67104a25d",
    "bytes": 13005,
-   "checkedAt": "2026-10-22T03:53:02.136Z",
+   "checkedAt": "2026-10-22T06:16:02.079Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4871,7 +5031,7 @@
    "status": 200,
    "fingerprint": "e9df603694f7e156",
    "bytes": 11066,
-   "checkedAt": "2026-10-22T03:53:02.452Z",
+   "checkedAt": "2026-10-22T06:16:02.779Z",
    "guides": [
     "state-entities"
    ]
@@ -4881,7 +5041,7 @@
    "status": 200,
    "fingerprint": "8175913837772b17",
    "bytes": 1928,
-   "checkedAt": "2026-10-22T03:53:02.771Z",
+   "checkedAt": "2026-10-22T06:16:02.859Z",
    "guides": [
     "state-entities"
    ]
@@ -4891,7 +5051,7 @@
    "status": 200,
    "fingerprint": "050f56b49fb4890e",
    "bytes": 3994,
-   "checkedAt": "2026-10-22T03:53:02.963Z",
+   "checkedAt": "2026-10-22T06:16:03.015Z",
    "guides": [
     "state-entities"
    ]
@@ -4901,7 +5061,7 @@
    "status": 200,
    "fingerprint": "6311569c8bc68bc0",
    "bytes": 4232,
-   "checkedAt": "2026-10-22T03:53:04.868Z",
+   "checkedAt": "2026-10-22T06:16:04.306Z",
    "guides": [
     "state-entities"
    ]
@@ -4911,7 +5071,7 @@
    "status": 200,
    "fingerprint": "e7539486449eb124",
    "bytes": 12396,
-   "checkedAt": "2026-10-22T03:53:03.666Z",
+   "checkedAt": "2026-10-22T06:16:03.917Z",
    "guides": [
     "us-small-business"
    ]
@@ -4921,7 +5081,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:53:04.803Z",
+   "checkedAt": "2026-10-22T06:16:05.063Z",
    "guides": [
     "africa-small-business"
    ]
@@ -4931,7 +5091,7 @@
    "status": 200,
    "fingerprint": "451c555bf1cdbef8",
    "bytes": 1983,
-   "checkedAt": "2026-10-22T03:53:05.569Z",
+   "checkedAt": "2026-10-22T06:16:05.401Z",
    "guides": [
     "africa-small-business"
    ]
@@ -4940,8 +5100,8 @@
    "state": "ok",
    "status": 200,
    "fingerprint": "",
-   "bytes": 82,
-   "checkedAt": "2026-10-22T03:53:05.153Z",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T06:16:05.313Z",
    "guides": [
     "state-entities"
    ]
@@ -4951,7 +5111,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:53:05.622Z",
+   "checkedAt": "2026-10-22T06:16:05.756Z",
    "guides": [
     "state-entities"
    ]
@@ -4961,7 +5121,7 @@
    "status": 200,
    "fingerprint": "99f6d2afeaf7871a",
    "bytes": 4744,
-   "checkedAt": "2026-10-22T03:53:06.199Z",
+   "checkedAt": "2026-10-22T06:16:06.017Z",
    "guides": [
     "state-entities"
    ]
@@ -4971,7 +5131,7 @@
    "status": 200,
    "fingerprint": "628dc92067db642d",
    "bytes": 13928,
-   "checkedAt": "2026-10-22T03:53:06.114Z",
+   "checkedAt": "2026-10-22T06:16:06.267Z",
    "guides": [
     "athlete-guide"
    ]
@@ -4981,7 +5141,7 @@
    "status": 200,
    "fingerprint": "0df5597b09974bf2",
    "bytes": 19569,
-   "checkedAt": "2026-10-22T03:53:06.494Z",
+   "checkedAt": "2026-10-22T06:16:06.391Z",
    "guides": [
     "state-entities"
    ]
@@ -4991,7 +5151,7 @@
    "status": 200,
    "fingerprint": "ba290835398cccb2",
    "bytes": 25280,
-   "checkedAt": "2026-10-22T03:53:06.559Z",
+   "checkedAt": "2026-10-22T06:16:06.795Z",
    "guides": [
     "state-entities"
    ]
@@ -5001,7 +5161,7 @@
    "status": 200,
    "fingerprint": "47731523dfd5a1a7",
    "bytes": 9151,
-   "checkedAt": "2026-10-22T03:53:06.942Z",
+   "checkedAt": "2026-10-22T06:16:07.004Z",
    "guides": [
     "state-entities"
    ]
@@ -5011,7 +5171,7 @@
    "status": 200,
    "fingerprint": "e1281e8999c69f16",
    "bytes": 6034,
-   "checkedAt": "2026-10-22T03:53:06.805Z",
+   "checkedAt": "2026-10-22T06:16:07.065Z",
    "guides": [
     "state-entities"
    ]
@@ -5021,7 +5181,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 46,
-   "checkedAt": "2026-10-22T03:53:07.290Z",
+   "checkedAt": "2026-10-22T06:16:07.487Z",
    "guides": [
     "california-business"
    ]
@@ -5031,7 +5191,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 46,
-   "checkedAt": "2026-10-22T03:53:07.404Z",
+   "checkedAt": "2026-10-22T06:16:07.487Z",
    "guides": [
     "california-business"
    ]
@@ -5041,7 +5201,7 @@
    "status": 200,
    "fingerprint": "48a3a492a93e7da6",
    "bytes": 2695,
-   "checkedAt": "2026-10-22T03:53:07.715Z",
+   "checkedAt": "2026-10-22T06:16:07.937Z",
    "guides": [
     "state-entities"
    ]
@@ -5051,7 +5211,7 @@
    "status": 200,
    "fingerprint": "ff77e763b1a78827",
    "bytes": 2022,
-   "checkedAt": "2026-10-22T03:53:08.354Z",
+   "checkedAt": "2026-10-22T06:16:08.611Z",
    "guides": [
     "state-entities"
    ]
@@ -5061,7 +5221,7 @@
    "status": 200,
    "fingerprint": "609eb368c8341130",
    "bytes": 5958,
-   "checkedAt": "2026-10-22T03:53:08.383Z",
+   "checkedAt": "2026-10-22T06:16:08.678Z",
    "guides": [
     "state-entities"
    ]
@@ -5071,7 +5231,7 @@
    "status": 200,
    "fingerprint": "62dbb7e8ca3411b0",
    "bytes": 5895,
-   "checkedAt": "2026-10-22T03:53:08.585Z",
+   "checkedAt": "2026-10-22T06:16:08.893Z",
    "guides": [
     "state-entities"
    ]
@@ -5081,7 +5241,7 @@
    "status": 200,
    "fingerprint": "7290f761983e7124",
    "bytes": 7288,
-   "checkedAt": "2026-10-22T03:53:08.765Z",
+   "checkedAt": "2026-10-22T06:16:09.119Z",
    "guides": [
     "state-entities"
    ]
@@ -5091,7 +5251,7 @@
    "status": 200,
    "fingerprint": "00d74c69dff2f772",
    "bytes": 47305,
-   "checkedAt": "2026-10-22T03:53:09.517Z",
+   "checkedAt": "2026-10-22T06:16:09.725Z",
    "guides": [
     "athlete-guide"
    ]
@@ -5101,7 +5261,7 @@
    "status": 200,
    "fingerprint": "f8ce768c4cb81079",
    "bytes": 5825,
-   "checkedAt": "2026-10-22T03:53:09.050Z",
+   "checkedAt": "2026-10-22T06:16:10.259Z",
    "guides": [
     "us-community-support"
    ]
@@ -5111,7 +5271,7 @@
    "status": 200,
    "fingerprint": "20fc7242b8ea23db",
    "bytes": 26693,
-   "checkedAt": "2026-10-22T03:53:09.237Z",
+   "checkedAt": "2026-10-22T06:16:10.029Z",
    "guides": [
     "us-small-business"
    ]
@@ -5121,7 +5281,7 @@
    "status": 200,
    "fingerprint": "20fc7242b8ea23db",
    "bytes": 26693,
-   "checkedAt": "2026-10-22T03:53:09.439Z",
+   "checkedAt": "2026-10-22T06:16:10.201Z",
    "guides": [
     "us-small-business"
    ]
@@ -5131,7 +5291,7 @@
    "status": 200,
    "fingerprint": "958821c882d40059",
    "bytes": 7888,
-   "checkedAt": "2026-10-22T03:53:10.678Z",
+   "checkedAt": "2026-10-22T06:16:10.402Z",
    "guides": [
     "state-entities",
     "us-small-business"
@@ -5142,7 +5302,7 @@
    "status": 200,
    "fingerprint": "c2cee668fabafc90",
    "bytes": 49676,
-   "checkedAt": "2026-10-22T03:53:11.703Z",
+   "checkedAt": "2026-10-22T06:16:10.434Z",
    "guides": [
     "us-small-business"
    ]
@@ -5152,7 +5312,7 @@
    "status": 200,
    "fingerprint": "a5caee0ce19dc259",
    "bytes": 47125,
-   "checkedAt": "2026-10-22T03:53:10.866Z",
+   "checkedAt": "2026-10-22T06:16:10.590Z",
    "guides": [
     "us-small-business"
    ]
@@ -5162,7 +5322,7 @@
    "status": 200,
    "fingerprint": "a5caee0ce19dc259",
    "bytes": 47125,
-   "checkedAt": "2026-10-22T03:53:11.062Z",
+   "checkedAt": "2026-10-22T06:16:10.617Z",
    "guides": [
     "athlete-guide",
     "us-small-business"
@@ -5173,7 +5333,7 @@
    "status": 200,
    "fingerprint": "a5caee0ce19dc259",
    "bytes": 47125,
-   "checkedAt": "2026-10-22T03:53:11.247Z",
+   "checkedAt": "2026-10-22T06:16:10.792Z",
    "guides": [
     "us-small-business"
    ]
@@ -5183,7 +5343,7 @@
    "status": 200,
    "fingerprint": "a5caee0ce19dc259",
    "bytes": 47125,
-   "checkedAt": "2026-10-22T03:53:11.461Z",
+   "checkedAt": "2026-10-22T06:16:10.819Z",
    "guides": [
     "us-small-business"
    ]
@@ -5193,7 +5353,7 @@
    "status": 200,
    "fingerprint": "a5caee0ce19dc259",
    "bytes": 47125,
-   "checkedAt": "2026-10-22T03:53:11.677Z",
+   "checkedAt": "2026-10-22T06:16:10.988Z",
    "guides": [
     "athlete-guide",
     "state-entities",
@@ -5205,7 +5365,7 @@
    "status": 200,
    "fingerprint": "a5caee0ce19dc259",
    "bytes": 47125,
-   "checkedAt": "2026-10-22T03:53:11.925Z",
+   "checkedAt": "2026-10-22T06:16:11.017Z",
    "guides": [
     "athlete-guide",
     "pr-events-guide",
@@ -5217,7 +5377,7 @@
    "status": 200,
    "fingerprint": "a5caee0ce19dc259",
    "bytes": 47125,
-   "checkedAt": "2026-10-22T03:53:12.049Z",
+   "checkedAt": "2026-10-22T06:16:11.191Z",
    "guides": [
     "athlete-guide",
     "state-entities",
@@ -5229,7 +5389,7 @@
    "status": 200,
    "fingerprint": "a5caee0ce19dc259",
    "bytes": 47125,
-   "checkedAt": "2026-10-22T03:53:12.105Z",
+   "checkedAt": "2026-10-22T06:16:11.219Z",
    "guides": [
     "us-small-business"
    ]
@@ -5239,7 +5399,7 @@
    "status": 200,
    "fingerprint": "f54e2744ddf08b51",
    "bytes": 3238,
-   "checkedAt": "2026-10-22T03:53:12.239Z",
+   "checkedAt": "2026-10-22T06:16:11.399Z",
    "guides": [
     "state-entities",
     "us-small-business"
@@ -5250,7 +5410,7 @@
    "status": 200,
    "fingerprint": "baf871d6c43225d3",
    "bytes": 15771,
-   "checkedAt": "2026-10-22T03:53:12.286Z",
+   "checkedAt": "2026-10-22T06:16:12.313Z",
    "guides": [
     "state-entities"
    ]
@@ -5260,7 +5420,7 @@
    "status": 200,
    "fingerprint": "fbc6d2c86b86471d",
    "bytes": 79060,
-   "checkedAt": "2026-10-22T03:53:12.428Z",
+   "checkedAt": "2026-10-22T06:16:11.576Z",
    "guides": [
     "ai-tools-for-business"
    ]
@@ -5270,7 +5430,7 @@
    "status": 200,
    "fingerprint": "fbc6d2c86b86471d",
    "bytes": 79060,
-   "checkedAt": "2026-10-22T03:53:12.579Z",
+   "checkedAt": "2026-10-22T06:16:11.789Z",
    "guides": [
     "us-small-business"
    ]
@@ -5280,7 +5440,7 @@
    "status": 200,
    "fingerprint": "fbc6d2c86b86471d",
    "bytes": 79060,
-   "checkedAt": "2026-10-22T03:53:12.651Z",
+   "checkedAt": "2026-10-22T06:16:11.996Z",
    "guides": [
     "us-small-business"
    ]
@@ -5290,7 +5450,7 @@
    "status": 200,
    "fingerprint": "fbc6d2c86b86471d",
    "bytes": 79060,
-   "checkedAt": "2026-10-22T03:53:12.799Z",
+   "checkedAt": "2026-10-22T06:16:12.212Z",
    "guides": [
     "ai-tools-for-business",
     "pr-events-guide",
@@ -5302,7 +5462,7 @@
    "status": 200,
    "fingerprint": "fbc6d2c86b86471d",
    "bytes": 79060,
-   "checkedAt": "2026-10-22T03:53:12.893Z",
+   "checkedAt": "2026-10-22T06:16:12.419Z",
    "guides": [
     "us-small-business"
    ]
@@ -5312,7 +5472,7 @@
    "status": 200,
    "fingerprint": "872a724ed24c82d7",
    "bytes": 45543,
-   "checkedAt": "2026-10-22T03:53:13.020Z",
+   "checkedAt": "2026-10-22T06:16:12.507Z",
    "guides": [
     "us-small-business"
    ]
@@ -5322,7 +5482,7 @@
    "status": 200,
    "fingerprint": "872a724ed24c82d7",
    "bytes": 45543,
-   "checkedAt": "2026-10-22T03:53:13.103Z",
+   "checkedAt": "2026-10-22T06:16:12.623Z",
    "guides": [
     "ai-tools-for-business",
     "us-small-business"
@@ -5333,7 +5493,7 @@
    "status": 200,
    "fingerprint": "872a724ed24c82d7",
    "bytes": 45543,
-   "checkedAt": "2026-10-22T03:53:13.216Z",
+   "checkedAt": "2026-10-22T06:16:12.677Z",
    "guides": [
     "us-small-business"
    ]
@@ -5343,7 +5503,7 @@
    "status": 200,
    "fingerprint": "872a724ed24c82d7",
    "bytes": 45543,
-   "checkedAt": "2026-10-22T03:53:13.297Z",
+   "checkedAt": "2026-10-22T06:16:12.842Z",
    "guides": [
     "us-small-business"
    ]
@@ -5353,7 +5513,7 @@
    "status": 200,
    "fingerprint": "872a724ed24c82d7",
    "bytes": 45543,
-   "checkedAt": "2026-10-22T03:53:13.424Z",
+   "checkedAt": "2026-10-22T06:16:12.869Z",
    "guides": [
     "us-small-business"
    ]
@@ -5363,119 +5523,9 @@
    "status": 200,
    "fingerprint": "872a724ed24c82d7",
    "bytes": 45543,
-   "checkedAt": "2026-10-22T03:53:13.487Z",
+   "checkedAt": "2026-10-22T06:16:13.037Z",
    "guides": [
     "us-small-business"
-   ]
-  },
-  "https://www.sba.gov/district/alaska": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "94e4ae686e0fab1e",
-   "bytes": 3407,
-   "checkedAt": "2026-10-22T03:53:13.733Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.sba.gov/district/arizona": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "84e4af6cee3e0b4c",
-   "bytes": 3590,
-   "checkedAt": "2026-10-22T03:53:13.748Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.sba.gov/district/hawaii": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "84c4f7ec1f0c282e",
-   "bytes": 3103,
-   "checkedAt": "2026-10-22T03:53:13.915Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.sba.gov/district/massachusetts": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "94e45f6a7e0eb11d",
-   "bytes": 3115,
-   "checkedAt": "2026-10-22T03:53:13.924Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.sba.gov/district/minnesota": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "84e6ee6f478e2b3e",
-   "bytes": 3430,
-   "checkedAt": "2026-10-22T03:53:14.095Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.sba.gov/district/mississippi": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "04e4ef6a5f3e391e",
-   "bytes": 3365,
-   "checkedAt": "2026-10-22T03:53:14.104Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.sba.gov/district/new-jersey": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "94ce9e6f3fac2e16",
-   "bytes": 2844,
-   "checkedAt": "2026-10-22T03:53:14.283Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.sba.gov/district/north-carolina": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "94eeff696f7ea77e",
-   "bytes": 3860,
-   "checkedAt": "2026-10-22T03:53:14.281Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.sba.gov/district/north-dakota": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "8ce6ee6b1f1ea33e",
-   "bytes": 2813,
-   "checkedAt": "2026-10-22T03:53:14.451Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.sba.gov/district/ohio": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "94e4ae6e7e26320e",
-   "bytes": 3386,
-   "checkedAt": "2026-10-22T03:53:14.479Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
-  "https://www.sba.gov/district/st-louis": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "9ce4fe6e2f2ea11e",
-   "bytes": 3029,
-   "checkedAt": "2026-10-22T03:53:14.625Z",
-   "guides": [
-    "state-entities"
    ]
   },
   "https://www.sba.gov/loans/": {
@@ -5483,7 +5533,7 @@
    "status": 200,
    "fingerprint": "7d6c2740c499caa9",
    "bytes": 4997,
-   "checkedAt": "2026-10-22T03:53:14.652Z",
+   "checkedAt": "2026-10-22T06:16:13.062Z",
    "guides": [
     "state-entities",
     "us-small-business"
@@ -5494,7 +5544,7 @@
    "status": 200,
    "fingerprint": "911dda75c57ca314",
    "bytes": 3623,
-   "checkedAt": "2026-10-22T03:53:15.238Z",
+   "checkedAt": "2026-10-22T06:16:19.524Z",
    "guides": [
     "state-entities"
    ]
@@ -5504,7 +5554,7 @@
    "status": 200,
    "fingerprint": "752c985df3a6a953",
    "bytes": 4382,
-   "checkedAt": "2026-10-22T03:53:14.997Z",
+   "checkedAt": "2026-10-22T06:16:13.684Z",
    "guides": [
     "state-entities"
    ]
@@ -5514,7 +5564,7 @@
    "status": 200,
    "fingerprint": "b1ec9c59c7b4a913",
    "bytes": 4550,
-   "checkedAt": "2026-10-22T03:53:15.151Z",
+   "checkedAt": "2026-10-22T06:16:19.467Z",
    "guides": [
     "state-entities"
    ]
@@ -5524,7 +5574,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:53:15.313Z",
+   "checkedAt": "2026-10-22T06:16:19.344Z",
    "guides": [
     "state-entities"
    ]
@@ -5534,7 +5584,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:53:15.569Z",
+   "checkedAt": "2026-10-22T06:16:19.775Z",
    "guides": [
     "us-small-business"
    ]
@@ -5544,7 +5594,7 @@
    "status": 200,
    "fingerprint": "75c3fa10eab0243d",
    "bytes": 13350,
-   "checkedAt": "2026-10-22T03:53:15.911Z",
+   "checkedAt": "2026-10-22T06:16:20.027Z",
    "guides": [
     "athlete-guide"
    ]
@@ -5554,7 +5604,7 @@
    "status": 200,
    "fingerprint": "210c8f8bbb72a0bb",
    "bytes": 6532,
-   "checkedAt": "2026-10-22T03:53:16.106Z",
+   "checkedAt": "2026-10-22T06:16:19.934Z",
    "guides": [
     "us-small-business"
    ]
@@ -5564,7 +5614,7 @@
    "status": 200,
    "fingerprint": "af765d99fdbd83f2",
    "bytes": 31451,
-   "checkedAt": "2026-10-22T03:53:16.244Z",
+   "checkedAt": "2026-10-22T06:16:20.215Z",
    "guides": [
     "us-small-business"
    ]
@@ -5573,8 +5623,8 @@
    "state": "ok",
    "status": 200,
    "fingerprint": "",
-   "bytes": 81,
-   "checkedAt": "2026-10-22T03:53:16.400Z",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T06:16:20.233Z",
    "guides": [
     "state-entities"
    ]
@@ -5584,7 +5634,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:53:16.546Z",
+   "checkedAt": "2026-10-22T06:16:20.345Z",
    "guides": [
     "state-entities"
    ]
@@ -5594,7 +5644,7 @@
    "status": 200,
    "fingerprint": "115c5bd039bef001",
    "bytes": 3157,
-   "checkedAt": "2026-10-22T03:53:16.685Z",
+   "checkedAt": "2026-10-22T06:16:20.506Z",
    "guides": [
     "us-community-support"
    ]
@@ -5604,7 +5654,7 @@
    "status": 200,
    "fingerprint": "e26ade5a7180089b",
    "bytes": 4105,
-   "checkedAt": "2026-10-22T03:53:16.972Z",
+   "checkedAt": "2026-10-22T06:16:20.636Z",
    "guides": [
     "athlete-guide"
    ]
@@ -5614,7 +5664,7 @@
    "status": 200,
    "fingerprint": "e20bfe5b7f89a1db",
    "bytes": 5080,
-   "checkedAt": "2026-10-22T03:53:16.989Z",
+   "checkedAt": "2026-10-22T06:16:20.639Z",
    "guides": [
     "state-entities"
    ]
@@ -5624,7 +5674,7 @@
    "status": 200,
    "fingerprint": "e20bee5b3788301b",
    "bytes": 4173,
-   "checkedAt": "2026-10-22T03:53:17.213Z",
+   "checkedAt": "2026-10-22T06:16:20.796Z",
    "guides": [
     "state-entities"
    ]
@@ -5634,7 +5684,7 @@
    "status": 200,
    "fingerprint": "c219ce5af689d091",
    "bytes": 4766,
-   "checkedAt": "2026-10-22T03:53:17.269Z",
+   "checkedAt": "2026-10-22T06:16:20.873Z",
    "guides": [
     "state-entities"
    ]
@@ -5644,7 +5694,7 @@
    "status": 200,
    "fingerprint": "cafe4a0782fe9198",
    "bytes": 5793,
-   "checkedAt": "2026-10-22T03:53:18.309Z",
+   "checkedAt": "2026-10-22T06:16:21.864Z",
    "guides": [
     "state-entities"
    ]
@@ -5654,7 +5704,7 @@
    "status": 200,
    "fingerprint": "ca5f482fb0feb908",
    "bytes": 7524,
-   "checkedAt": "2026-10-22T03:53:18.261Z",
+   "checkedAt": "2026-10-22T06:16:21.887Z",
    "guides": [
     "state-entities"
    ]
@@ -5664,7 +5714,7 @@
    "status": 200,
    "fingerprint": "ca7e5a07b4fe9908",
    "bytes": 7088,
-   "checkedAt": "2026-10-22T03:53:19.223Z",
+   "checkedAt": "2026-10-22T06:16:21.842Z",
    "guides": [
     "state-entities"
    ]
@@ -5674,7 +5724,7 @@
    "status": 200,
    "fingerprint": "dafe5b2ad2fe99ba",
    "bytes": 7596,
-   "checkedAt": "2026-10-22T03:53:19.297Z",
+   "checkedAt": "2026-10-22T06:16:22.769Z",
    "guides": [
     "state-entities"
    ]
@@ -5684,7 +5734,7 @@
    "status": 200,
    "fingerprint": "defe486586ee910a",
    "bytes": 6451,
-   "checkedAt": "2026-10-22T03:53:20.210Z",
+   "checkedAt": "2026-10-22T06:16:22.788Z",
    "guides": [
     "state-entities"
    ]
@@ -5694,7 +5744,7 @@
    "status": 200,
    "fingerprint": "2d6ba1e01dc8a01e",
    "bytes": 2975,
-   "checkedAt": "2026-10-22T03:53:19.771Z",
+   "checkedAt": "2026-10-22T06:16:22.287Z",
    "guides": [
     "california-business",
     "state-entities"
@@ -5705,7 +5755,7 @@
    "status": 200,
    "fingerprint": "42cacb72bcd76411",
    "bytes": 8377,
-   "checkedAt": "2026-10-22T03:53:20.308Z",
+   "checkedAt": "2026-10-22T06:16:22.783Z",
    "guides": [
     "state-entities"
    ]
@@ -5715,7 +5765,7 @@
    "status": 200,
    "fingerprint": "6ee7df9739256dd1",
    "bytes": 7136,
-   "checkedAt": "2026-10-22T03:53:21.398Z",
+   "checkedAt": "2026-10-22T06:16:23.925Z",
    "guides": [
     "state-entities"
    ]
@@ -5725,7 +5775,7 @@
    "status": 200,
    "fingerprint": "20af45cbf9865355",
    "bytes": 8826,
-   "checkedAt": "2026-10-22T03:53:21.386Z",
+   "checkedAt": "2026-10-22T06:16:24.046Z",
    "guides": [
     "state-entities"
    ]
@@ -5735,17 +5785,17 @@
    "status": 200,
    "fingerprint": "b7ca9a57dbe7cab1",
    "bytes": 16908,
-   "checkedAt": "2026-10-22T03:53:21.883Z",
+   "checkedAt": "2026-10-22T06:16:23.914Z",
    "guides": [
     "state-entities"
    ]
   },
   "https://www.sos.mn.gov/business-liens/": {
-   "state": "moved",
-   "status": 200,
-   "fingerprint": "4928ad408853847d",
-   "bytes": 672,
-   "checkedAt": "2026-10-22T03:53:22.259Z",
+   "state": "broken",
+   "status": 502,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T06:16:25.233Z",
    "guides": [
     "state-entities"
    ]
@@ -5755,7 +5805,7 @@
    "status": 200,
    "fingerprint": "125499f2d7a88569",
    "bytes": 16017,
-   "checkedAt": "2026-10-22T03:53:22.462Z",
+   "checkedAt": "2026-10-22T06:16:24.411Z",
    "guides": [
     "state-entities"
    ]
@@ -5765,7 +5815,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:53:22.686Z",
+   "checkedAt": "2026-10-22T06:16:24.488Z",
    "guides": [
     "state-entities"
    ]
@@ -5775,7 +5825,7 @@
    "status": 200,
    "fingerprint": "1faa9dd4f76b2303",
    "bytes": 5327,
-   "checkedAt": "2026-10-22T03:53:23.443Z",
+   "checkedAt": "2026-10-22T06:16:25.211Z",
    "guides": [
     "state-entities"
    ]
@@ -5785,7 +5835,7 @@
    "status": 200,
    "fingerprint": "1fa2dc44f6ef2333",
    "bytes": 4492,
-   "checkedAt": "2026-10-22T03:53:23.186Z",
+   "checkedAt": "2026-10-22T06:16:24.938Z",
    "guides": [
     "state-entities"
    ]
@@ -5795,7 +5845,7 @@
    "status": 200,
    "fingerprint": "0c8310d9d527d506",
    "bytes": 7492,
-   "checkedAt": "2026-10-22T03:53:24.001Z",
+   "checkedAt": "2026-10-22T06:16:25.835Z",
    "guides": [
     "state-entities"
    ]
@@ -5805,7 +5855,7 @@
    "status": 200,
    "fingerprint": "2aa421cc3d87c872",
    "bytes": 23516,
-   "checkedAt": "2026-10-22T03:53:24.189Z",
+   "checkedAt": "2026-10-22T06:16:25.966Z",
    "guides": [
     "state-entities"
    ]
@@ -5815,7 +5865,7 @@
    "status": 200,
    "fingerprint": "0ea124da3f07c07a",
    "bytes": 22456,
-   "checkedAt": "2026-10-22T03:53:24.392Z",
+   "checkedAt": "2026-10-22T06:16:26.039Z",
    "guides": [
     "state-entities"
    ]
@@ -5825,7 +5875,7 @@
    "status": 200,
    "fingerprint": "cea30818f835ef34",
    "bytes": 17643,
-   "checkedAt": "2026-10-22T03:53:24.571Z",
+   "checkedAt": "2026-10-22T06:16:26.199Z",
    "guides": [
     "state-entities"
    ]
@@ -5835,7 +5885,7 @@
    "status": 200,
    "fingerprint": "0f9b08d37927c523",
    "bytes": 22121,
-   "checkedAt": "2026-10-22T03:53:24.774Z",
+   "checkedAt": "2026-10-22T06:16:26.431Z",
    "guides": [
     "state-entities"
    ]
@@ -5845,7 +5895,7 @@
    "status": 200,
    "fingerprint": "334cf944580f0567",
    "bytes": 1917423,
-   "checkedAt": "2026-10-22T03:53:25.166Z",
+   "checkedAt": "2026-10-22T06:16:26.763Z",
    "guides": [
     "state-entities"
    ]
@@ -5855,7 +5905,7 @@
    "status": 200,
    "fingerprint": "b3ade8b1066b8df4",
    "bytes": 3824,
-   "checkedAt": "2026-10-22T03:53:25.258Z",
+   "checkedAt": "2026-10-22T06:16:26.583Z",
    "guides": [
     "state-entities"
    ]
@@ -5865,7 +5915,7 @@
    "status": 200,
    "fingerprint": "81ec3af3bc60b297",
    "bytes": 2982,
-   "checkedAt": "2026-10-22T03:53:25.838Z",
+   "checkedAt": "2026-10-22T06:16:27.103Z",
    "guides": [
     "state-entities"
    ]
@@ -5875,7 +5925,7 @@
    "status": 200,
    "fingerprint": "fb4f7cb3c1d960fa",
    "bytes": 6978,
-   "checkedAt": "2026-10-22T03:53:26.020Z",
+   "checkedAt": "2026-10-22T06:16:27.252Z",
    "guides": [
     "state-entities"
    ]
@@ -5885,7 +5935,7 @@
    "status": 200,
    "fingerprint": "845cfee6ddc51417",
    "bytes": 2592,
-   "checkedAt": "2026-10-22T03:53:26.066Z",
+   "checkedAt": "2026-10-22T06:16:27.404Z",
    "guides": [
     "state-entities"
    ]
@@ -5895,7 +5945,7 @@
    "status": 200,
    "fingerprint": "3b6044d660ae82cc",
    "bytes": 2693,
-   "checkedAt": "2026-10-22T03:53:26.255Z",
+   "checkedAt": "2026-10-22T06:16:27.332Z",
    "guides": [
     "state-entities"
    ]
@@ -5905,7 +5955,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:53:26.229Z",
+   "checkedAt": "2026-10-22T06:16:27.703Z",
    "guides": [
     "state-entities"
    ]
@@ -5915,7 +5965,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:53:26.782Z",
+   "checkedAt": "2026-10-22T06:16:27.535Z",
    "guides": [
     "state-entities"
    ]
@@ -5925,7 +5975,7 @@
    "status": 200,
    "fingerprint": "57fe6b75094a0dfd",
    "bytes": 4649,
-   "checkedAt": "2026-10-22T03:53:26.702Z",
+   "checkedAt": "2026-10-22T06:16:27.894Z",
    "guides": [
     "state-entities"
    ]
@@ -5935,7 +5985,7 @@
    "status": 200,
    "fingerprint": "dfaee963cb022c7f",
    "bytes": 6832,
-   "checkedAt": "2026-10-22T03:53:26.918Z",
+   "checkedAt": "2026-10-22T06:16:27.947Z",
    "guides": [
     "state-entities"
    ]
@@ -5945,7 +5995,7 @@
    "status": 200,
    "fingerprint": "b22b4275a04fed4b",
    "bytes": 10457,
-   "checkedAt": "2026-10-22T03:53:27.164Z",
+   "checkedAt": "2026-10-22T06:16:27.965Z",
    "guides": [
     "state-entities"
    ]
@@ -5955,7 +6005,7 @@
    "status": 200,
    "fingerprint": "4a8c0252b1e3e660",
    "bytes": 4284,
-   "checkedAt": "2026-10-22T03:53:27.591Z",
+   "checkedAt": "2026-10-22T06:16:28.448Z",
    "guides": [
     "state-entities"
    ]
@@ -5965,7 +6015,7 @@
    "status": 200,
    "fingerprint": "826d89d731df4a42",
    "bytes": 13736,
-   "checkedAt": "2026-10-22T03:53:27.582Z",
+   "checkedAt": "2026-10-22T06:16:28.484Z",
    "guides": [
     "state-entities"
    ]
@@ -5975,7 +6025,7 @@
    "status": 200,
    "fingerprint": "82ad19552ddf42c2",
    "bytes": 18810,
-   "checkedAt": "2026-10-22T03:53:27.975Z",
+   "checkedAt": "2026-10-22T06:16:28.425Z",
    "guides": [
     "state-entities"
    ]
@@ -5985,7 +6035,7 @@
    "status": 200,
    "fingerprint": "82adb8d7705f4240",
    "bytes": 13491,
-   "checkedAt": "2026-10-22T03:53:27.958Z",
+   "checkedAt": "2026-10-22T06:16:28.810Z",
    "guides": [
     "state-entities"
    ]
@@ -5995,7 +6045,7 @@
    "status": 200,
    "fingerprint": "6a9b305090eba2e1",
    "bytes": 2846,
-   "checkedAt": "2026-10-22T03:53:28.333Z",
+   "checkedAt": "2026-10-22T06:16:28.808Z",
    "guides": [
     "state-entities"
    ]
@@ -6005,7 +6055,7 @@
    "status": 200,
    "fingerprint": "4227b342b3cf7681",
    "bytes": 6408,
-   "checkedAt": "2026-10-22T03:53:28.358Z",
+   "checkedAt": "2026-10-22T06:16:28.871Z",
    "guides": [
     "athlete-guide"
    ]
@@ -6015,7 +6065,7 @@
    "status": 200,
    "fingerprint": "c2bf5cccedd5746b",
    "bytes": 27581,
-   "checkedAt": "2026-10-22T03:53:28.648Z",
+   "checkedAt": "2026-10-22T06:16:29.241Z",
    "guides": [
     "state-entities"
    ]
@@ -6025,7 +6075,7 @@
    "status": 200,
    "fingerprint": "c6abeccc49d56d63",
    "bytes": 27299,
-   "checkedAt": "2026-10-22T03:53:28.631Z",
+   "checkedAt": "2026-10-22T06:16:29.258Z",
    "guides": [
     "state-entities"
    ]
@@ -6035,7 +6085,7 @@
    "status": 200,
    "fingerprint": "c4ab38ece9d56563",
    "bytes": 29679,
-   "checkedAt": "2026-10-22T03:53:28.851Z",
+   "checkedAt": "2026-10-22T06:16:29.350Z",
    "guides": [
     "state-entities"
    ]
@@ -6045,7 +6095,7 @@
    "status": 200,
    "fingerprint": "8a8e7ccd9d87b553",
    "bytes": 27866,
-   "checkedAt": "2026-10-22T03:53:28.898Z",
+   "checkedAt": "2026-10-22T06:16:29.516Z",
    "guides": [
     "state-entities"
    ]
@@ -6055,7 +6105,7 @@
    "status": 200,
    "fingerprint": "468f2ceec8d52d6b",
    "bytes": 24092,
-   "checkedAt": "2026-10-22T03:53:29.065Z",
+   "checkedAt": "2026-10-22T06:16:29.586Z",
    "guides": [
     "state-entities"
    ]
@@ -6065,7 +6115,7 @@
    "status": 200,
    "fingerprint": "a67dfbfdc0cdac7b",
    "bytes": 4977,
-   "checkedAt": "2026-10-22T03:53:29.485Z",
+   "checkedAt": "2026-10-22T06:16:29.927Z",
    "guides": [
     "state-entities"
    ]
@@ -6075,7 +6125,7 @@
    "status": 200,
    "fingerprint": "e295c9ed07d92869",
    "bytes": 2510,
-   "checkedAt": "2026-10-22T03:53:29.475Z",
+   "checkedAt": "2026-10-22T06:16:29.937Z",
    "guides": [
     "state-entities"
    ]
@@ -6085,7 +6135,7 @@
    "status": 200,
    "fingerprint": "06c9ce5fafd7c70b",
    "bytes": 42559,
-   "checkedAt": "2026-10-22T03:53:29.985Z",
+   "checkedAt": "2026-10-22T06:16:30.177Z",
    "guides": [
     "state-entities"
    ]
@@ -6095,7 +6145,7 @@
    "status": 403,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:53:29.739Z",
+   "checkedAt": "2026-10-22T06:16:30.098Z",
    "guides": [
     "state-entities"
    ]
@@ -6105,9 +6155,19 @@
    "status": 200,
    "fingerprint": "1d566e62a21068bb",
    "bytes": 2737,
-   "checkedAt": "2026-10-22T03:53:30.110Z",
+   "checkedAt": "2026-10-22T06:16:30.878Z",
    "guides": [
     "us-community-support"
+   ]
+  },
+  "https://www.ssa.gov/benefits/disability/qualify.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2fb87d3c211eac53",
+   "bytes": 14362,
+   "checkedAt": "2026-10-22T06:16:30.410Z",
+   "guides": [
+    "athlete-guide"
    ]
   },
   "https://www.ssa.gov/medicare/part-d-extra-help": {
@@ -6115,7 +6175,7 @@
    "status": 200,
    "fingerprint": "c26df8e9397023fe",
    "bytes": 2883,
-   "checkedAt": "2026-10-22T03:53:30.325Z",
+   "checkedAt": "2026-10-22T06:16:30.536Z",
    "guides": [
     "us-community-support"
    ]
@@ -6125,7 +6185,7 @@
    "status": 200,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:53:30.548Z",
+   "checkedAt": "2026-10-22T06:16:30.877Z",
    "guides": [
     "athlete-guide"
    ]
@@ -6135,7 +6195,7 @@
    "status": 200,
    "fingerprint": "c7256c36b494415f",
    "bytes": 12068,
-   "checkedAt": "2026-10-22T03:53:32.018Z",
+   "checkedAt": "2026-10-22T06:16:32.341Z",
    "guides": [
     "state-entities"
    ]
@@ -6145,7 +6205,7 @@
    "status": 200,
    "fingerprint": "e5aeee237b48ef4d",
    "bytes": 11600,
-   "checkedAt": "2026-10-22T03:53:31.549Z",
+   "checkedAt": "2026-10-22T06:16:32.058Z",
    "guides": [
     "state-entities"
    ]
@@ -6155,7 +6215,7 @@
    "status": 200,
    "fingerprint": "6531e9d82d53c873",
    "bytes": 18395,
-   "checkedAt": "2026-10-22T03:53:31.903Z",
+   "checkedAt": "2026-10-22T06:16:31.228Z",
    "guides": [
     "athlete-guide"
    ]
@@ -6165,7 +6225,7 @@
    "status": 200,
    "fingerprint": "82d94c4c8fcfe651",
    "bytes": 7447,
-   "checkedAt": "2026-10-22T03:53:32.452Z",
+   "checkedAt": "2026-10-22T06:16:31.809Z",
    "guides": [
     "state-entities"
    ]
@@ -6175,7 +6235,7 @@
    "status": 200,
    "fingerprint": "4141e1741767ca69",
    "bytes": 10334,
-   "checkedAt": "2026-10-22T03:53:32.556Z",
+   "checkedAt": "2026-10-22T06:16:32.421Z",
    "guides": [
     "womens-health"
    ]
@@ -6185,7 +6245,7 @@
    "status": 200,
    "fingerprint": "e2d8e3db2e9826ba",
    "bytes": 10138,
-   "checkedAt": "2026-10-22T03:53:34.103Z",
+   "checkedAt": "2026-10-22T06:16:34.379Z",
    "guides": [
     "us-community-support"
    ]
@@ -6195,7 +6255,7 @@
    "status": 0,
    "fingerprint": "",
    "bytes": 0,
-   "checkedAt": "2026-10-22T03:53:32.877Z",
+   "checkedAt": "2026-10-22T06:16:32.696Z",
    "guides": [
     "state-entities"
    ]
@@ -6205,7 +6265,7 @@
    "status": 200,
    "fingerprint": "955872c7573d33d6",
    "bytes": 12920,
-   "checkedAt": "2026-10-22T03:53:33.222Z",
+   "checkedAt": "2026-10-22T06:16:32.731Z",
    "guides": [
     "parents-guide"
    ]
@@ -6215,7 +6275,7 @@
    "status": 200,
    "fingerprint": "2ae25a990a01d8f8",
    "bytes": 1896,
-   "checkedAt": "2026-10-22T03:53:34.281Z",
+   "checkedAt": "2026-10-22T06:16:34.024Z",
    "guides": [
     "athlete-guide"
    ]
@@ -6225,7 +6285,7 @@
    "status": 200,
    "fingerprint": "2d4f1ac59a3fc25e",
    "bytes": 3721,
-   "checkedAt": "2026-10-22T03:53:34.717Z",
+   "checkedAt": "2026-10-22T06:16:33.337Z",
    "guides": [
     "state-entities"
    ]
@@ -6235,7 +6295,7 @@
    "status": 200,
    "fingerprint": "0085695c73b06b57",
    "bytes": 3669,
-   "checkedAt": "2026-10-22T03:53:34.623Z",
+   "checkedAt": "2026-10-22T06:16:33.699Z",
    "guides": [
     "us-community-support"
    ]
@@ -6245,7 +6305,7 @@
    "status": 200,
    "fingerprint": "9084626c1298831f",
    "bytes": 3941,
-   "checkedAt": "2026-10-22T03:53:34.914Z",
+   "checkedAt": "2026-10-22T06:16:33.888Z",
    "guides": [
     "us-community-support"
    ]
@@ -6255,7 +6315,7 @@
    "status": 200,
    "fingerprint": "18d36f1e7adaa955",
    "bytes": 4197,
-   "checkedAt": "2026-10-22T03:53:34.920Z",
+   "checkedAt": "2026-10-22T06:16:34.049Z",
    "guides": [
     "us-community-support"
    ]
@@ -6265,7 +6325,7 @@
    "status": 200,
    "fingerprint": "0d4e6b7eb198a18d",
    "bytes": 6036,
-   "checkedAt": "2026-10-22T03:53:35.064Z",
+   "checkedAt": "2026-10-22T06:16:34.202Z",
    "guides": [
     "athlete-guide"
    ]
@@ -6275,7 +6335,7 @@
    "status": 200,
    "fingerprint": "5fce728a7d352cd7",
    "bytes": 31835,
-   "checkedAt": "2026-10-22T03:53:35.326Z",
+   "checkedAt": "2026-10-22T06:16:34.491Z",
    "guides": [
     "athlete-guide"
    ]
@@ -6285,7 +6345,7 @@
    "status": 200,
    "fingerprint": "5949670bfa5702d3",
    "bytes": 7175,
-   "checkedAt": "2026-10-22T03:53:35.466Z",
+   "checkedAt": "2026-10-22T06:16:34.614Z",
    "guides": [
     "athlete-guide"
    ]
@@ -6295,7 +6355,7 @@
    "status": 200,
    "fingerprint": "5b7f47a97a57b6c3",
    "bytes": 8177,
-   "checkedAt": "2026-10-22T03:53:35.657Z",
+   "checkedAt": "2026-10-22T06:16:36.248Z",
    "guides": [
     "athlete-guide"
    ]
@@ -6305,7 +6365,7 @@
    "status": 200,
    "fingerprint": "79ee8f42314622d0",
    "bytes": 23560,
-   "checkedAt": "2026-10-22T03:53:35.784Z",
+   "checkedAt": "2026-10-22T06:16:34.823Z",
    "guides": [
     "athlete-guide"
    ]
@@ -6315,7 +6375,7 @@
    "status": 200,
    "fingerprint": "596d4709f0478ed2",
    "bytes": 16277,
-   "checkedAt": "2026-10-22T03:53:35.952Z",
+   "checkedAt": "2026-10-22T06:16:34.968Z",
    "guides": [
     "athlete-guide"
    ]
@@ -6325,7 +6385,7 @@
    "status": 200,
    "fingerprint": "107b6e5173d680c3",
    "bytes": 28589,
-   "checkedAt": "2026-10-22T03:53:36.130Z",
+   "checkedAt": "2026-10-22T06:16:36.765Z",
    "guides": [
     "athlete-guide"
    ]
@@ -6335,7 +6395,7 @@
    "status": 200,
    "fingerprint": "a565fb430bc78f53",
    "bytes": 5829,
-   "checkedAt": "2026-10-22T03:53:36.891Z",
+   "checkedAt": "2026-10-22T06:16:35.795Z",
    "guides": [
     "state-entities"
    ]
@@ -6345,7 +6405,7 @@
    "status": 200,
    "fingerprint": "c0e5e8a811b50149",
    "bytes": 93893,
-   "checkedAt": "2026-10-22T03:53:36.819Z",
+   "checkedAt": "2026-10-22T06:16:36.546Z",
    "guides": [
     "womens-health"
    ]
@@ -6355,7 +6415,7 @@
    "status": 200,
    "fingerprint": "f42778da51b3c371",
    "bytes": 76047,
-   "checkedAt": "2026-10-22T03:53:37.363Z",
+   "checkedAt": "2026-10-22T06:16:36.909Z",
    "guides": [
     "womens-health"
    ]
@@ -6365,7 +6425,7 @@
    "status": 200,
    "fingerprint": "9b8a86031bff2b01",
    "bytes": 22530,
-   "checkedAt": "2026-10-22T03:53:37.183Z",
+   "checkedAt": "2026-10-22T06:16:36.992Z",
    "guides": [
     "athlete-guide"
    ]
@@ -6375,7 +6435,7 @@
    "status": 200,
    "fingerprint": "b9bc62e61d3e3321",
    "bytes": 12226,
-   "checkedAt": "2026-10-22T03:53:37.343Z",
+   "checkedAt": "2026-10-22T06:16:37.080Z",
    "guides": [
     "athlete-guide",
     "us-small-business"
@@ -6386,7 +6446,7 @@
    "status": 200,
    "fingerprint": "1d0cf2c61bee2323",
    "bytes": 11084,
-   "checkedAt": "2026-10-22T03:53:37.503Z",
+   "checkedAt": "2026-10-22T06:16:37.196Z",
    "guides": [
     "athlete-guide"
    ]
@@ -6396,7 +6456,7 @@
    "status": 200,
    "fingerprint": "eb0f4ca51a49e069",
    "bytes": 6429,
-   "checkedAt": "2026-10-22T03:53:37.790Z",
+   "checkedAt": "2026-10-22T06:16:37.791Z",
    "guides": [
     "us-community-support"
    ]
@@ -6406,7 +6466,7 @@
    "status": 200,
    "fingerprint": "1e8f11e4bcccb088",
    "bytes": 3179,
-   "checkedAt": "2026-10-22T03:53:37.830Z",
+   "checkedAt": "2026-10-22T06:16:37.874Z",
    "guides": [
     "us-community-support"
    ]
@@ -6416,7 +6476,7 @@
    "status": 200,
    "fingerprint": "4118b6f0ac243b26",
    "bytes": 6149,
-   "checkedAt": "2026-10-22T03:53:38.023Z",
+   "checkedAt": "2026-10-22T06:16:38.006Z",
    "guides": [
     "us-community-support"
    ]
@@ -6426,7 +6486,7 @@
    "status": 200,
    "fingerprint": "fb8b73e9bb79b88b",
    "bytes": 4541,
-   "checkedAt": "2026-10-22T03:53:38.028Z",
+   "checkedAt": "2026-10-22T06:16:38.102Z",
    "guides": [
     "us-community-support"
    ]
@@ -6436,7 +6496,7 @@
    "status": 200,
    "fingerprint": "f20fcff77bed54c3",
    "bytes": 9924,
-   "checkedAt": "2026-10-22T03:53:38.225Z",
+   "checkedAt": "2026-10-22T06:16:38.253Z",
    "guides": [
     "us-community-support"
    ]
@@ -6446,7 +6506,7 @@
    "status": 200,
    "fingerprint": "e1b49696154ca1f4",
    "bytes": 2506,
-   "checkedAt": "2026-10-22T03:53:38.234Z",
+   "checkedAt": "2026-10-22T06:16:38.301Z",
    "guides": [
     "us-community-support"
    ]
@@ -6456,7 +6516,7 @@
    "status": 200,
    "fingerprint": "35a8ff8d0901036d",
    "bytes": 3784,
-   "checkedAt": "2026-10-22T03:53:38.444Z",
+   "checkedAt": "2026-10-22T06:16:38.400Z",
    "guides": [
     "us-community-support"
    ]
@@ -6466,7 +6526,7 @@
    "status": 200,
    "fingerprint": "4ead29a0a7030779",
    "bytes": 3934,
-   "checkedAt": "2026-10-22T03:53:38.437Z",
+   "checkedAt": "2026-10-22T06:16:38.555Z",
    "guides": [
     "us-community-support"
    ]
@@ -6476,7 +6536,7 @@
    "status": 200,
    "fingerprint": "dfe3d2b7b2402758",
    "bytes": 13280,
-   "checkedAt": "2026-10-22T03:53:39.121Z",
+   "checkedAt": "2026-10-22T06:16:39.006Z",
    "guides": [
     "state-entities"
    ]
@@ -6486,7 +6546,7 @@
    "status": 200,
    "fingerprint": "480cc18ecb2db108",
    "bytes": 6760,
-   "checkedAt": "2026-10-22T03:53:39.194Z",
+   "checkedAt": "2026-10-22T06:16:39.130Z",
    "guides": [
     "us-community-support"
    ]
@@ -6496,7 +6556,7 @@
    "status": 200,
    "fingerprint": "201013b6bc82b4f0",
    "bytes": 3112,
-   "checkedAt": "2026-10-22T03:53:39.808Z",
+   "checkedAt": "2026-10-22T06:16:39.160Z",
    "guides": [
     "us-community-support"
    ]
@@ -6506,7 +6566,7 @@
    "status": 200,
    "fingerprint": "aa933ea5c997c3d4",
    "bytes": 3686,
-   "checkedAt": "2026-10-22T03:53:40.279Z",
+   "checkedAt": "2026-10-22T06:16:40.536Z",
    "guides": [
     "state-entities"
    ]
@@ -6516,7 +6576,17 @@
    "status": 200,
    "fingerprint": "d66ce688c15a76e6",
    "bytes": 58792,
-   "checkedAt": "2026-10-22T03:53:40.434Z",
+   "checkedAt": "2026-10-22T06:16:39.437Z",
+   "guides": [
+    "athlete-guide"
+   ]
+  },
+  "https://www.wada-ama.org/en/what-we-do/science-medicine/therapeutic-use-exemptions": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d4adcc50a823213a",
+   "bytes": 7988,
+   "checkedAt": "2026-10-22T06:16:39.467Z",
    "guides": [
     "athlete-guide"
    ]
@@ -6526,7 +6596,7 @@
    "status": 200,
    "fingerprint": "47200e9daedd2db6",
    "bytes": 8119,
-   "checkedAt": "2026-10-22T03:53:40.561Z",
+   "checkedAt": "2026-10-22T06:16:39.732Z",
    "guides": [
     "parents-guide"
    ]
@@ -6536,7 +6606,7 @@
    "status": 200,
    "fingerprint": "7ab1f0cdc516c0eb",
    "bytes": 13886,
-   "checkedAt": "2026-10-22T03:53:40.692Z",
+   "checkedAt": "2026-10-22T06:16:39.715Z",
    "guides": [
     "child-help",
     "parents-guide"
@@ -6547,7 +6617,7 @@
    "status": 200,
    "fingerprint": "c8e17c560f9fc1cf",
    "bytes": 15011,
-   "checkedAt": "2026-10-22T03:53:40.803Z",
+   "checkedAt": "2026-10-22T06:16:40.150Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6557,7 +6627,7 @@
    "status": 200,
    "fingerprint": "2319c851af0ec5ae",
    "bytes": 13034,
-   "checkedAt": "2026-10-22T03:53:40.921Z",
+   "checkedAt": "2026-10-22T06:16:40.166Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6567,7 +6637,7 @@
    "status": 200,
    "fingerprint": "c15f9fd833f5d108",
    "bytes": 14324,
-   "checkedAt": "2026-10-22T03:53:40.988Z",
+   "checkedAt": "2026-10-22T06:16:40.721Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6577,7 +6647,7 @@
    "status": 200,
    "fingerprint": "1308ce4907fb4cdf",
    "bytes": 12404,
-   "checkedAt": "2026-10-22T03:53:41.166Z",
+   "checkedAt": "2026-10-22T06:16:40.359Z",
    "guides": [
     "parents-guide"
    ]
@@ -6587,7 +6657,7 @@
    "status": 200,
    "fingerprint": "d0049e95d0622d6e",
    "bytes": 11259,
-   "checkedAt": "2026-10-22T03:53:41.178Z",
+   "checkedAt": "2026-10-22T06:16:40.667Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -6597,7 +6667,7 @@
    "status": 200,
    "fingerprint": "c2e1badc8a9ecc08",
    "bytes": 14325,
-   "checkedAt": "2026-10-22T03:53:41.363Z",
+   "checkedAt": "2026-10-22T06:16:40.775Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6607,7 +6677,7 @@
    "status": 200,
    "fingerprint": "1b378a589edecd38",
    "bytes": 8869,
-   "checkedAt": "2026-10-22T03:53:41.394Z",
+   "checkedAt": "2026-10-22T06:16:40.865Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6617,7 +6687,7 @@
    "status": 200,
    "fingerprint": "384d963145764401",
    "bytes": 12161,
-   "checkedAt": "2026-10-22T03:53:41.560Z",
+   "checkedAt": "2026-10-22T06:16:41.167Z",
    "guides": [
     "chronic-conditions"
    ]
@@ -6627,7 +6697,7 @@
    "status": 200,
    "fingerprint": "a49d1e644de5cc04",
    "bytes": 16491,
-   "checkedAt": "2026-10-22T03:53:41.669Z",
+   "checkedAt": "2026-10-22T06:16:41.338Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6637,7 +6707,7 @@
    "status": 200,
    "fingerprint": "f0d6e2012f82e8fe",
    "bytes": 13731,
-   "checkedAt": "2026-10-22T03:53:41.749Z",
+   "checkedAt": "2026-10-22T06:16:41.044Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6647,7 +6717,7 @@
    "status": 200,
    "fingerprint": "abe58250e27d896e",
    "bytes": 13287,
-   "checkedAt": "2026-10-22T03:53:41.908Z",
+   "checkedAt": "2026-10-22T06:16:41.875Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6657,7 +6727,7 @@
    "status": 200,
    "fingerprint": "f195b27d6577d826",
    "bytes": 15651,
-   "checkedAt": "2026-10-22T03:53:41.956Z",
+   "checkedAt": "2026-10-22T06:16:41.350Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6667,7 +6737,7 @@
    "status": 200,
    "fingerprint": "d3b37ae1a2ef581e",
    "bytes": 12062,
-   "checkedAt": "2026-10-22T03:53:42.112Z",
+   "checkedAt": "2026-10-22T06:16:41.546Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6677,7 +6747,7 @@
    "status": 200,
    "fingerprint": "5ff95ed98de68836",
    "bytes": 10858,
-   "checkedAt": "2026-10-22T03:53:42.189Z",
+   "checkedAt": "2026-10-22T06:16:41.556Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6687,7 +6757,7 @@
    "status": 200,
    "fingerprint": "d68782b58d99594e",
    "bytes": 9608,
-   "checkedAt": "2026-10-22T03:53:42.313Z",
+   "checkedAt": "2026-10-22T06:16:41.723Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6697,7 +6767,7 @@
    "status": 200,
    "fingerprint": "fb9cc0fd65755d5e",
    "bytes": 14539,
-   "checkedAt": "2026-10-22T03:53:42.383Z",
+   "checkedAt": "2026-10-22T06:16:41.742Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6707,7 +6777,7 @@
    "status": 200,
    "fingerprint": "2231eb1c455fec4c",
    "bytes": 12254,
-   "checkedAt": "2026-10-22T03:53:42.522Z",
+   "checkedAt": "2026-10-22T06:16:42.273Z",
    "guides": [
     "parents-guide"
    ]
@@ -6717,7 +6787,7 @@
    "status": 200,
    "fingerprint": "3a437b2ae7b45527",
    "bytes": 11099,
-   "checkedAt": "2026-10-22T03:53:42.593Z",
+   "checkedAt": "2026-10-22T06:16:41.914Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6727,7 +6797,7 @@
    "status": 200,
    "fingerprint": "d2450ecd41b7496e",
    "bytes": 5139,
-   "checkedAt": "2026-10-22T03:53:42.624Z",
+   "checkedAt": "2026-10-22T06:16:42.054Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6737,7 +6807,7 @@
    "status": 200,
    "fingerprint": "dbfd4af96491840e",
    "bytes": 8283,
-   "checkedAt": "2026-10-22T03:53:42.727Z",
+   "checkedAt": "2026-10-22T06:16:42.087Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6747,7 +6817,7 @@
    "status": 200,
    "fingerprint": "f1f88a591367692a",
    "bytes": 6872,
-   "checkedAt": "2026-10-22T03:53:42.795Z",
+   "checkedAt": "2026-10-22T06:16:42.222Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6757,7 +6827,7 @@
    "status": 200,
    "fingerprint": "51b888493167c8aa",
    "bytes": 6875,
-   "checkedAt": "2026-10-22T03:53:42.823Z",
+   "checkedAt": "2026-10-22T06:16:42.281Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6767,7 +6837,7 @@
    "status": 200,
    "fingerprint": "71b8ba4931f768a2",
    "bytes": 6681,
-   "checkedAt": "2026-10-22T03:53:42.933Z",
+   "checkedAt": "2026-10-22T06:16:42.411Z",
    "guides": [
     "womens-health:who"
    ]
@@ -6777,7 +6847,7 @@
    "status": 200,
    "fingerprint": "f85411d43738abbf",
    "bytes": 7549,
-   "checkedAt": "2026-10-22T03:53:44.057Z",
+   "checkedAt": "2026-10-22T06:16:43.473Z",
    "guides": [
     "womens-health"
    ]
@@ -6787,7 +6857,7 @@
    "status": 200,
    "fingerprint": "d20f60b0b773883b",
    "bytes": 18976,
-   "checkedAt": "2026-10-22T03:53:44.074Z",
+   "checkedAt": "2026-10-22T06:16:43.497Z",
    "guides": [
     "womens-health"
    ]
@@ -6797,7 +6867,7 @@
    "status": 200,
    "fingerprint": "21607ff6befc9323",
    "bytes": 29247,
-   "checkedAt": "2026-10-22T03:53:44.155Z",
+   "checkedAt": "2026-10-22T06:16:43.781Z",
    "guides": [
     "womens-health"
    ]
@@ -6807,7 +6877,7 @@
    "status": 200,
    "fingerprint": "f0028bd5571ee05c",
    "bytes": 3970,
-   "checkedAt": "2026-10-22T03:53:44.940Z",
+   "checkedAt": "2026-10-22T06:16:45.173Z",
    "guides": [
     "state-entities"
    ]
@@ -6817,7 +6887,7 @@
    "status": 200,
    "fingerprint": "c004f8284851eead",
    "bytes": 9586,
-   "checkedAt": "2026-10-22T03:53:44.489Z",
+   "checkedAt": "2026-10-22T06:16:44.083Z",
    "guides": [
     "state-entities"
    ]
