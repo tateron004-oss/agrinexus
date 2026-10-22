@@ -89,6 +89,7 @@ const { parentsTopic } = require("./public/kyro-parents-topics.js");
 const { childHelpTopic } = require("./public/kyro-child-help.js");
 const { prTopic } = require("./public/kyro-pr-topics.js");
 const { churchTopic } = require("./public/kyro-church-topics.js");
+const { athleteTopic } = require("./public/kyro-athlete-topics.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
@@ -22515,6 +22516,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (churchGuide) {
       return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: churchGuide.response,
         executionAttempted: true, executionVerified: churchGuide.verified === true };
+    }
+  }
+  // An athlete's question (nexus/knowledge/athlete-guide.js: food and drink, supplements and doping, training, sleep and a strained muscle, a concussion, heat, pressure, abuse in sport, eligibility, name-image-likeness deals, agents, taxes,
+  // endorsements, starting a business, a youth club, money after sport) is answered from the checked guide whichever tool the model picked, with the person's own words tried first: the voice model answered from memory with no sources.
+  const athleteAsk = typeof athleteTopic === "function" && rawCallerText && athleteTopic(rawCallerText) ? rawCallerText : command;
+  if (typeof athleteTopic === "function" && athleteTopic(athleteAsk) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
+    const athleteUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const athleteGuide = athleteUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: athleteUser, text: athleteAsk, language, timeZone: args?.timeZone }) : null;
+    if (athleteGuide) {
+      return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: athleteGuide.response,
+        executionAttempted: true, executionVerified: athleteGuide.verified === true };
     }
   }
   // A small business owner's question about PUBLIC RELATIONS and EVENTS (nexus/knowledge/pr-events-guide.js) is answered from the checked guide whichever tool the model picked, with the person's own words tried first: the voice model would

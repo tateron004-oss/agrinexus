@@ -38,6 +38,8 @@ const { prTopic } = require("../../public/kyro-pr-topics.js");
 const { prEventsAnswer } = require("../knowledge/pr-events-guide.js");
 const { churchTopic } = require("../../public/kyro-church-topics.js");
 const { churchAnswer } = require("../knowledge/church-guide.js");
+const { athleteTopic } = require("../../public/kyro-athlete-topics.js");
+const { athleteAnswer } = require("../knowledge/athlete-guide.js");
 const { prWalkthrough, WALK_OF_TOPIC: PR_WALK_OF_TOPIC } = require("../knowledge/pr-walkthroughs.js");
 const { childHelpTopic } = require("../../public/kyro-child-help.js");
 const { childHelpAnswer } = require("../knowledge/child-help.js");
@@ -549,6 +551,14 @@ class OpenEndedPlanner {
     const churchGuide = churchId ? churchAnswer(churchId, { us: usPerson && !africaNamed(askText), country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
     if (churchGuide) {
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: churchGuide.text, sourceRequired: false, knowledge: `church-guide:${churchId}`, sources: churchGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
+    // An athlete's question (from a school team to a professional): what to eat and drink, supplements and doping, how much to train, sleep and a strained muscle, a concussion, heat, pressure, abuse in sport, eligibility and recruiting, name-image-
+    // likeness deals, agents, taxes, endorsements, starting a business, a youth club, money after sport: a checked, sourced, plain answer from the official pages (see knowledge/athlete-guide.js). Orders ("make me a meal plan", "log a workout") and the
+    // person's own records are never taken (public/kyro-athlete-topics.js), so those still do what they did. Outside the United States only what an official page says is stated.
+    const athleteId = ownWorkspace && businessVoiceDispatch.asksAboutOwnRecords(askText) ? null : athleteTopic(askText);
+    const athleteGuide = athleteId ? athleteAnswer(athleteId, { us: usPerson && !africaNamed(askText), country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
+    if (athleteGuide) {
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: athleteGuide.text, sourceRequired: false, knowledge: `athlete-guide:${athleteId}`, sources: athleteGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // A small business owner's question about PUBLIC RELATIONS and EVENTS (a press release and the media, influencer disclosure, the FTC's advertising rules, a crisis communication plan, planning an event and its permits and accessibility, brand, stakeholders,
     // measuring results, hiring a PR or event firm): a checked, sourced, plain answer (see knowledge/pr-events-guide.js). Only a question that names the thing is taken (public/kyro-pr-topics.js); the calendar, a person's records, fake reviews (the
