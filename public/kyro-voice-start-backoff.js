@@ -10,8 +10,9 @@
   // start that failed or ended within a short time: 5 s, 10 s, 20 s ... up to 2 minutes. A start the person asks for (tapping the orb or the microphone) is never held, and it clears the wait.
   const DEFAULTS = Object.freeze({ baseMs: 5000, maxMs: 120000, shortLivedMs: 30000 });
   // The sources the page itself uses when it starts voice again (stall-watchdog-restart, bounded-realtime-recovery, voice-recovery, genesis-visible-resume, genesis-speech-finished-restart ...). A tap on the orb or the
-  // microphone has sources such as "nexus-primary-visible-voice-button", which must never match.
-  const AUTOMATIC_SOURCE = /(?:^|-)(?:recovery|restart|resume)(?:-|$)|watchdog/i;
+  // microphone has sources such as "nexus-primary-visible-voice-button", which must never match. "genesis-home-permission-granted-auto-start" is the page starting voice by itself the moment the browser says the microphone is
+  // allowed: found counting the live page's requests (a browser with no microphone), it was read as a tap and cleared the wait, so the 5 s, 10 s, 20 s ... back-off started over every minute.
+  const AUTOMATIC_SOURCE = /(?:^|-)(?:recovery|restart|resume)(?:-|$)|watchdog|(?:^|-)auto-start(?:-|$)/i;
 
   // Is this start one the page made by itself?
   function isAutomaticStart(options = {}) {
