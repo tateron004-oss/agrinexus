@@ -6,9 +6,8 @@
 
 const { SOURCES, CHECKED_ON } = require("./athlete-guide.js");
 const { athleteTopic } = require("../../public/kyro-athlete-topics.js");
-const { S, W, OWN, family } = require("./walkthrough-kit.js");
+const { family } = require("./walkthrough-kit.js");
 
-const DEFS = {
-};
+const DEFS = { ...require("./athlete-more-defs-a.js"), ...require("./athlete-more-defs-b.js") };
 
 module.exports = family({ prefix: "athlete", label: "athlete-guide", SOURCES, CHECKED_ON, DEFS, topicOf: athleteTopic });

@@ -6,9 +6,8 @@
 
 const { SOURCES, CHECKED_ON } = require("./us-community-support.js");
 const { communityTopic } = require("../../public/kyro-community-topics.js");
-const { S, W, OWN, family } = require("./walkthrough-kit.js");
+const { family } = require("./walkthrough-kit.js");
 
-const DEFS = {
-};
+const DEFS = { ...require("./community-defs-a.js"), ...require("./community-defs-b.js") };
 
 module.exports = family({ prefix: "community", label: "us-community-support", SOURCES: SOURCES, CHECKED_ON, DEFS, topicOf: communityTopic });

@@ -5,9 +5,8 @@
 // Kyro's own working practice says so (OWN). What the pages do not say is not here. See walkthrough-kit.js for how a step is written, and guide-walkthroughs.js for how the walkthroughs are found.
 
 const { SOURCES, CHECKED_ON, usSmallBusinessTopic } = require("./us-small-business.js");
-const { S, W, OWN, family } = require("./walkthrough-kit.js");
+const { family } = require("./walkthrough-kit.js");
 
-const DEFS = {
-};
+const DEFS = { ...require("./us-business-defs-a.js"), ...require("./us-business-defs-b.js") };
 
 module.exports = family({ prefix: "us-business", label: "us-small-business", SOURCES: SOURCES, CHECKED_ON, DEFS, topicOf: usSmallBusinessTopic });
