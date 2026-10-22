@@ -1,6 +1,6 @@
 {
- "takenAt": "2026-10-22T18:42:30.448Z",
- "count": 852,
+ "takenAt": "2026-10-22T20:11:44.749Z",
+ "count": 924,
  "pages": {
   "https://988lifeline.org/": {
    "state": "ok",
@@ -8577,6 +8577,726 @@
    "checkedAt": "2026-10-22T18:42:01.778Z",
    "guides": [
     "state-entities"
+   ]
+  },
+  "https://fccpc.gov.ng/consumers/complaint-handling/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d1348161ff01131a",
+   "bytes": 5992,
+   "checkedAt": "2026-10-22T20:11:00.382Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://fccpc.gov.ng/fccpc-resumes-digital-lending-regulation/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f03880e36f01901a",
+   "bytes": 7323,
+   "checkedAt": "2026-10-22T20:11:00.393Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://fccpc.gov.ng/registration-of-digital-money-lenders/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5756b64f5613d8d1",
+   "bytes": 82983,
+   "checkedAt": "2026-10-22T20:11:00.628Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://fccpc.gov.ng/registration-of-digital-money-lenders/approvals-of-dmls/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5756b64f5611d8d1",
+   "bytes": 81910,
+   "checkedAt": "2026-10-22T20:11:01.023Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://fccpc.gov.ng/wp-content/uploads/2025/11/DEON-Consumer-Lending-Guidelines-2025.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:00.690Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://fccpc.gov.ng/wp-content/uploads/2025/11/Digital-Electronic-Online-or-Non-Traditional-Consumer-Lending-Regulations-2025.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:00.966Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://kdic.go.ke/deposit-insurance": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "713e8b293f9997f7",
+   "bytes": 15516,
+   "checkedAt": "2026-10-22T20:11:01.582Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://kdic.go.ke/faqs": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b017b221a0227d1e",
+   "bytes": 8329,
+   "checkedAt": "2026-10-22T20:11:01.677Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://kdic.go.ke/member-institutions": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d8eded67efbb00e5",
+   "bytes": 7519,
+   "checkedAt": "2026-10-22T20:11:01.783Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://ndic.gov.ng/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2825c6047d6057f1",
+   "bytes": 2217,
+   "checkedAt": "2026-10-22T20:11:02.262Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://ndic.gov.ng/article?id=21": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "686dbc102a793291",
+   "bytes": 4122,
+   "checkedAt": "2026-10-22T20:11:02.937Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://ndic.gov.ng/article?slug=ndic-has-commenced-payment-of-46-6-billion-as-first-tranche-of-liquidation-dividends-to-depositors-with-funds-above-the-insured-limit": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2d9d9203cc28005d",
+   "bytes": 3731,
+   "checkedAt": "2026-10-22T20:11:02.913Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://ndic.gov.ng/article?slug=resolution-of-failed-banks-ndic-commences-process-to-conclude-the-liquidation-of-89-mfbs-pmb": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "daf0ce57cf6619a5",
+   "bytes": 8451,
+   "checkedAt": "2026-10-22T20:11:03.121Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://ndic.gov.ng/contact": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "400e1747bedbbe1c",
+   "bytes": 793,
+   "checkedAt": "2026-10-22T20:11:03.215Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://ndic.gov.ng/faq": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b9c64945772885cc",
+   "bytes": 7077,
+   "checkedAt": "2026-10-22T20:11:03.253Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://ndic.gov.ng/insured-banks": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1889528d1250946d",
+   "bytes": 2061,
+   "checkedAt": "2026-10-22T20:11:03.428Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://ndic.gov.ng/storage/cms/media/ndic-act-2023-latest-14ab1a0a-82c7-4e05-9419-4b6e0afbfbc8.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:03.499Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://ndic.gov.ng/your-claims": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "934d63007702d8af",
+   "bytes": 48280,
+   "checkedAt": "2026-10-22T20:11:03.608Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://new.kenyalaw.org/akn/ke/act/1997/12/eng@2022-12-31/source.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:04.468Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://new.kenyalaw.org/akn/ke/act/2008/14/eng@2022-12-31/source.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:04.930Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://new.kenyalaw.org/akn/ke/act/2013/45/eng@2022-12-31/source.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:05.411Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://new.kenyalaw.org/akn/ke/act/2022/30/eng@2022-12-31/source.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:05.893Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://ngxgroup.com/exchange/trade/becoming-an-investor/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "652565552204b7f0",
+   "bytes": 5939,
+   "checkedAt": "2026-10-22T20:11:09.722Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://sec.gov.ng/about/contact-us/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ad1388079af1faa8",
+   "bytes": 4037,
+   "checkedAt": "2026-10-22T20:11:06.199Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://sec.gov.ng/enforcements/information-for-harmed-investors/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a449c8648ae87a84",
+   "bytes": 7340,
+   "checkedAt": "2026-10-22T20:11:06.777Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://sec.gov.ng/for-investors/find-a-registered-operator/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1bd9a8819edaa8f8",
+   "bytes": 16988,
+   "checkedAt": "2026-10-22T20:11:06.943Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://sec.gov.ng/for-investors/known-investment-scams/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c0895953b8f8c31c",
+   "bytes": 7805,
+   "checkedAt": "2026-10-22T20:11:07.457Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://sec.gov.ng/for-investors/whistleblowing/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4dc788e39b29d9cc",
+   "bytes": 8904,
+   "checkedAt": "2026-10-22T20:11:07.467Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://sec.gov.ng/our-mandate/development/investor-education/investor-protection/understanding-wonder-banks-or-ponzipyramid-schemes/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "0c51a8c498f9f288",
+   "bytes": 3869,
+   "checkedAt": "2026-10-22T20:11:07.929Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://tat.gov.ng/Nigeria-Tax-Act-2025.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:07.821Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.cak.go.ke/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ece12eac39afd5c9",
+   "bytes": 9429,
+   "checkedAt": "2026-10-22T20:11:08.652Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.cbn.gov.ng/FinInc/FinLit/LodgeComplaint.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "bdc5afdd4de1f472",
+   "bytes": 2949,
+   "checkedAt": "2026-10-22T20:11:10.822Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.cbn.gov.ng/PaymentsSystem/BVN.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f1912b0f7a464c3b",
+   "bytes": 6078,
+   "checkedAt": "2026-10-22T20:11:10.295Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.cbn.gov.ng/PaymentsSystem/PSPs.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d7db270b5dc9cdb0",
+   "bytes": 13439,
+   "checkedAt": "2026-10-22T20:11:10.327Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.cbn.gov.ng/supervision/crms.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "af6dad47c4f07ab7",
+   "bytes": 4935,
+   "checkedAt": "2026-10-22T20:11:10.603Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.cbn.gov.ng/supervision/finstitutions.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4493562713a40255",
+   "bytes": 457,
+   "checkedAt": "2026-10-22T20:11:10.635Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.centralbank.go.ke/bank-supervision/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a7dd442d6304a288",
+   "bytes": 18394,
+   "checkedAt": "2026-10-22T20:11:10.762Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.centralbank.go.ke/fraud-safety/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c5e40289fb4094f7",
+   "bytes": 11771,
+   "checkedAt": "2026-10-22T20:11:10.807Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.centralbank.go.ke/national-payments-system/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a251140d10247c73",
+   "bytes": 17730,
+   "checkedAt": "2026-10-22T20:11:10.912Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.centralbank.go.ke/national-payments-system/mobile-payments/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "aee98504bb20040b",
+   "bytes": 13417,
+   "checkedAt": "2026-10-22T20:11:10.962Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.centralbank.go.ke/securities/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fae5091fb6aca61d",
+   "bytes": 10131,
+   "checkedAt": "2026-10-22T20:11:10.975Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.centralbank.go.ke/wp-content/uploads/2018/12/NPSRegulationsNew2014-1.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:11.062Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.centralbank.go.ke/wp-content/uploads/2022/03/L-.N.-No.-46-Central-Bank-of-Kenya-Digital-Credit-Providers-Regulations-2022.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:11.109Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.centralbank.go.ke/wp-content/uploads/2022/11/Directory-of-Licensed-CRBs-November-2022.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:11.148Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.centralbank.go.ke/wp-content/uploads/2024/06/AuctionRulesGuidelines.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:11.233Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.centralbank.go.ke/wp-content/uploads/2026/03/The-Banking-Credit-Reference-Bureau-Regulations.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:11.267Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.centralbank.go.ke/wp-content/uploads/2026/04/Consumer-Protection-Framework-March-2026.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:11.297Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.centralbank.go.ke/wp-content/uploads/2026/09/Directory-of-Authorized-Payment-Service-Providers-August-10-2026.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:11.387Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.centralbank.go.ke/wp-content/uploads/2026/09/Directory-of-Digital-Credit-Providers-September-2026.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:11.414Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.cma.or.ke/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "912eb15986fc8bd2",
+   "bytes": 6538,
+   "checkedAt": "2026-10-22T20:11:16.443Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.cma.or.ke/complaints-procedure/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9126e582935a7896",
+   "bytes": 3853,
+   "checkedAt": "2026-10-22T20:11:15.766Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.cma.or.ke/download/15/brochures/5495/investor-protection.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:15.368Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.cma.or.ke/download/15/brochures/5496/collective-investment-scheme.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:18.348Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.cma.or.ke/public-caution-against-investment-scams/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "8305e538cedc4887",
+   "bytes": 4312,
+   "checkedAt": "2026-10-22T20:11:17.434Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.dmo.gov.ng/6092-fgn-savings-bond-offer-for-subscription-october-2026/file": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:17.249Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.dmo.gov.ng/fgn-bonds/savings-bond": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "93e1ed05c06887e9",
+   "bytes": 6045,
+   "checkedAt": "2026-10-22T20:11:19.404Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.efcc.gov.ng/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:18.101Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.kra.go.ke/file-my-returns": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d5711daa7067a944",
+   "bytes": 14546,
+   "checkedAt": "2026-10-22T20:11:19.750Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.kra.go.ke/individual/filing-paying/types-of-taxes/paye": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "80cb84ae1575a9b4",
+   "bytes": 15671,
+   "checkedAt": "2026-10-22T20:11:19.980Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.kra.go.ke/popular-links/finance-act-2026-what-it-means-for-you": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "cd109c2c37233de0",
+   "bytes": 19097,
+   "checkedAt": "2026-10-22T20:11:21.243Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.nse.co.ke/faqs/": {
+   "state": "broken",
+   "status": 0,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:21.204Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.nse.co.ke/m-akiba/": {
+   "state": "broken",
+   "status": 0,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:21.399Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.nssf.or.ke/benefits": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "23905a21191f0cb3",
+   "bytes": 6599,
+   "checkedAt": "2026-10-22T20:11:23.081Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.nssf.or.ke/faqs": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "46caba409ad185f3",
+   "bytes": 6730,
+   "checkedAt": "2026-10-22T20:11:23.119Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.odpc.go.ke/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "47967c3678e3d01b",
+   "bytes": 3310,
+   "checkedAt": "2026-10-22T20:11:24.372Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.pencom.gov.ng/contact-us/": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "93ccfc6de139b277",
+   "bytes": 4608,
+   "checkedAt": "2026-10-22T20:11:24.484Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.pencom.gov.ng/wp-content/uploads/2023/09/FREQUENTLY-ASK-QUESTION-2023-Final.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-22T20:11:23.319Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.sasra.go.ke/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "460016206d75edf9",
+   "bytes": 5953,
+   "checkedAt": "2026-10-22T20:11:27.682Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.sasra.go.ke/frequently-asked-questions/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2dc1e42257b0542c",
+   "bytes": 8524,
+   "checkedAt": "2026-10-22T20:11:28.309Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.sasra.go.ke/licensed-dt-saccos/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4e50ccecde3a4d44",
+   "bytes": 3098,
+   "checkedAt": "2026-10-22T20:11:44.623Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.sasra.go.ke/regulated-saccos/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4681706c4ed34ca6",
+   "bytes": 2098,
+   "checkedAt": "2026-10-22T20:11:29.518Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.sha.go.ke/premium-rates": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b44907fcf38cb464",
+   "bytes": 2668,
+   "checkedAt": "2026-10-22T20:11:29.814Z",
+   "guides": [
+    "money-guide"
    ]
   }
  }
