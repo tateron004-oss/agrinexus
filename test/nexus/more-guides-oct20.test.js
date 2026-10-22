@@ -136,7 +136,7 @@ test("the page asks the server about a spoken walkthrough of a United States pro
   assert.match(app, /typeof topics\.walkTopic === "function" && topics\.walkTopic\(text\)\) return topics\.isUsContext\(\{ timeZone: kyroDeviceTimeZone\(\), text \}\);/);
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  assert.ok(index.includes("/kyro-business-topics.js?v=kyro-business-topics-8") && sw.includes("/kyro-business-topics.js?v=kyro-business-topics-8"));
+  assert.ok(index.includes("/kyro-business-topics.js?v=kyro-business-topics-9") && sw.includes("/kyro-business-topics.js?v=kyro-business-topics-9"));
 });
 
 test("the new pages are in the weekly source check, and the source page lists them", () => {
