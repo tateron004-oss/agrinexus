@@ -15,7 +15,7 @@ module.exports = Object.freeze([
   strict("ke-scams", "How do I spot an investment scam in Kenya?", "public caution"),
   strict("ke-chama", "What is a chama?", "table banking"),
   strict("ng-bank", "How much does the NDIC cover?", "will not pick one"),
-  strict("ng-microfinance", "What is ajo?", "Central Bank lists microfinance banks"),
+  strict("ng-microfinance", "What is a microfinance bank in Nigeria?", "Central Bank lists microfinance banks"),
   strict("ng-mobile-money", "How do I complain about a wrong transfer in Nigeria?", "licensed names"),
   strict("ng-digital-loans", "How do I check a loan app in Nigeria?", "watchlist"),
   strict("ng-credit", "How do I get my credit report in Nigeria?", "credit register"),

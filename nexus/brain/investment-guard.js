@@ -52,6 +52,8 @@ const REPLIES = Object.freeze({
 const A_PICK = /\b(?:stocks?|shares?|funds?|etfs?|companies|company|coins?|tokens?|brokers?|apps?|platforms?|exchanges?|banks?|picks?|tips?|tickers?)\b/;
 // "what should I invest in", "where should I invest my savings", "what is the safest investment", "how do I choose investments", "should I invest": open, general, naming nothing to buy and no price
 const OPEN_GENERAL = /\b(?:(?:what|where|which)\b[^.!?]{0,30}\binvest(?:ing)?\b|(?:safest|best|good|right|smart)\b[^.!?]{0,25}\b(?:investments?|way to invest)\b|how (?:do|should|can) (?:i|we) (?:choose|pick|decide|select) (?:my |an? |the )?(?:right )?investments?\b|should (?:i|we) invest\b)/;
+// "how do I buy Treasury bills in Kenya", "how can I buy FGN savings bonds": how a government security is bought is the mechanics the money guide teaches, not a pick; "which bond should I buy" still is
+const HOW_TO_BUY_GOVERNMENT_SECURITY = /\bhow (?:do|can|would|does|could) (?:i|we|someone|a person|one)\s+(?:buy|purchase|get|start (?:buying|investing in)|invest in)\b[^.!?]{0,30}\b(?:treasury (?:bills?|bonds?)|t-?bills?|government (?:bonds?|securities)|savings bonds?|fgn (?:savings )?bonds?|m-?akiba|infrastructure bonds?)\b/;
 function isOpenInvestingQuestion(t) {
   if (ASSET.test(t) || A_PICK.test(t) || WHICH_PLATFORM.test(t) || PRICE_CALL.test(t) || PRICE_FORECAST.test(t) || TRADING_TOOLS.test(t) || GET_RICH.test(t) || RETURN_PROMISE.test(t) || BORROW_TO_INVEST.test(t)) return false;
   return OPEN_GENERAL.test(t) && !/\binvest(?:ing)?\s+in\s+(?:a|an|my|our|the)\s+(?:water|tank|farm|goat|cow|shop|business|school|house|land|tractor|pump|irrigation|greenhouse|chicken|hens?|seeds?|fertili|machine|equipment|stock of)/.test(t);
@@ -67,6 +69,7 @@ function investmentGuardReply(text) {
   if (GET_RICH.test(t)) return { kind: "get-rich", reply: REPLIES.getRich };
   if (TRADING_TOOLS.test(t)) return { kind: "investment-advice", reply: REPLIES.investment };
   if (isOpenInvestingQuestion(t)) return null;
+  if (HOW_TO_BUY_GOVERNMENT_SECURITY.test(t) && !A_PICK.test(t) && !PRICE_CALL.test(t)) return null;
   if (WHICH_PLATFORM.test(t) || BEST_PICK.test(t) || PRICE_CALL.test(t) || INVEST_OPEN.test(t)) return { kind: "investment-advice", reply: REPLIES.investment };
   if (assetTalk && (WHAT_TO_DO.test(t) || SAFE_TO_PUT.test(t) || PRICE_FORECAST.test(t))) return { kind: "investment-advice", reply: REPLIES.investment };
   return null;

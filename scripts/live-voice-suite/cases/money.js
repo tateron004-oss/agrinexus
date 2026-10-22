@@ -16,7 +16,7 @@ module.exports = Object.freeze([
   strict("costly-borrowing", "What is a payday loan?", "almost 400 percent"),
   strict("overdraft-bnpl", "How does buy now pay later work?", "no grace period"),
   strict("debt-collectors", "A debt collector keeps calling me, what are my rights?", "validation notice"),
-  strict("student-loans", "How do I repay my student loans?", "loan servicers"),
+  strict("student-loans", "Tell me about repaying my student loans.", "loan servicers"),
   strict("homeownership", "What are closing costs?", "Loan Estimate"),
   strict("housing-trouble", "I'm behind on my mortgage, what can I do?", "HOPE Hotline"),
   strict("investing-basics", "What is the difference between saving and investing?", "compound interest"),
