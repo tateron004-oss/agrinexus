@@ -4,7 +4,12 @@
 // fund will go up, which exchange, broker or app to use, or what a price will do, and it never promises a return. Many of the people it serves (young people, seniors, people rebuilding after hard
 // times, farmers and small traders) are the ones scammers and bad advice reach first, and most people who trade lose money. These are the plain requests; the AI prompts carry the same rule
 // (nexus/brain/crisis-rule.js) for everything else. The wording must be reviewed by a licensed financial educator and a lawyer in each country before it is relied on.
-const clean = value => String(value ?? "").replace(/[’]/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
+//
+// One change, decided by the owner on 22 October 2026: the OPEN question ("what should I invest in?", "where should I invest my savings?", "what is the safest investment for my savings?", "how do I choose investments?") is not a request
+// for a pick. It is a request to learn how to choose, and the money guide (nexus/knowledge/money-guide.js, "money-what-to-invest") answers it from Investor.gov and the other official pages: goal, time horizon and ability to handle losses,
+// the kinds of account and fund, fees, and who to ask. This guard now leaves that question alone. It still refuses, as before, anything that names a stock, share, fund, ETF, coin, company, bank, broker, app, platform or exchange to
+// choose, any price call, any plan to get rich or to borrow in order to invest, and any promised return.
+const clean =value => String(value ?? "").replace(/[’]/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
 
 // Things people trade or invest in, said plainly. Farm produce, animals, tools and everyday goods are NOT here: "should I sell my maize now" is a farm question and is answered as one.
 const ASSET = /\b(?:bitcoin|btc|ethereum|ether|eth|crypto(?:currency|currencies|s)?|altcoins?|coins?|tokens?|dogecoin|doge|shiba|solana|xrp|usdt|tether|usdc|stablecoins?|nfts?|binance|coinbase|bybit|kucoin|luno|yellow card|forex|fx|currency pairs?|stocks|stock market|stock exchange|shares|share price|equit(?:y|ies)|etfs?|mutual funds?|unit trusts?|money market funds?|bonds?|t-?bills?|treasury (?:bills?|bonds?)|commodit(?:y|ies) trading|futures|options trading|cfds?|day ?trading|swing ?trading|trading)\b/;
@@ -43,6 +48,15 @@ const REPLIES = Object.freeze({
   returnPromise: "Be careful: nobody can guarantee a return, and an offer of guaranteed or very high returns, like a percentage every day, week or month, is almost always a scam, and the money you pay in is usually not returned. Never send money to get money, and never share your PIN, password or keys. I can't check whether an offer is real. Ask whether the firm is licensed in your country, and tell someone you trust before you do anything."
 });
 
+// the kinds of thing a pick is made of: if one is named, the question is a request for a pick and stays refused
+const A_PICK = /\b(?:stocks?|shares?|funds?|etfs?|companies|company|coins?|tokens?|brokers?|apps?|platforms?|exchanges?|banks?|picks?|tips?|tickers?)\b/;
+// "what should I invest in", "where should I invest my savings", "what is the safest investment", "how do I choose investments", "should I invest": open, general, naming nothing to buy and no price
+const OPEN_GENERAL = /\b(?:(?:what|where|which)\b[^.!?]{0,30}\binvest(?:ing)?\b|(?:safest|best|good|right|smart)\b[^.!?]{0,25}\b(?:investments?|way to invest)\b|how (?:do|should|can) (?:i|we) (?:choose|pick|decide|select) (?:my |an? |the )?(?:right )?investments?\b|should (?:i|we) invest\b)/;
+function isOpenInvestingQuestion(t) {
+  if (ASSET.test(t) || A_PICK.test(t) || WHICH_PLATFORM.test(t) || PRICE_CALL.test(t) || PRICE_FORECAST.test(t) || TRADING_TOOLS.test(t) || GET_RICH.test(t) || RETURN_PROMISE.test(t) || BORROW_TO_INVEST.test(t)) return false;
+  return OPEN_GENERAL.test(t) && !/\binvest(?:ing)?\s+in\s+(?:a|an|my|our|the)\s+(?:water|tank|farm|goat|cow|shop|business|school|house|land|tractor|pump|irrigation|greenhouse|chicken|hens?|seeds?|fertili|machine|equipment|stock of)/.test(t);
+}
+
 // -> { kind, reply } or null. Questions that only explain ("what is bitcoin", "how does forex work", "is crypto legal in Kenya", "how do I spot a fake exchange") are NOT caught.
 function investmentGuardReply(text) {
   const t = clean(text);
@@ -52,6 +66,7 @@ function investmentGuardReply(text) {
   if (BORROW_TO_INVEST.test(t) && assetTalk) return { kind: "borrow-to-invest", reply: REPLIES.borrowToInvest };
   if (GET_RICH.test(t)) return { kind: "get-rich", reply: REPLIES.getRich };
   if (TRADING_TOOLS.test(t)) return { kind: "investment-advice", reply: REPLIES.investment };
+  if (isOpenInvestingQuestion(t)) return null;
   if (WHICH_PLATFORM.test(t) || BEST_PICK.test(t) || PRICE_CALL.test(t) || INVEST_OPEN.test(t)) return { kind: "investment-advice", reply: REPLIES.investment };
   if (assetTalk && (WHAT_TO_DO.test(t) || SAFE_TO_PUT.test(t) || PRICE_FORECAST.test(t))) return { kind: "investment-advice", reply: REPLIES.investment };
   return null;

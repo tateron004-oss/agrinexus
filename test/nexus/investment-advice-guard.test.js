@@ -14,8 +14,8 @@ const kind = text => investmentGuardReply(text)?.kind || null;
 test("asking what to buy, sell, trade or invest in, or what a price will do, is answered without advice", () => {
   for (const text of ["should I buy bitcoin", "which coin should I invest in", "what crypto should I buy right now", "best crypto to buy today", "will bitcoin go up this year", "bitcoin price prediction for 2027",
     "which exchange should I use", "is binance safe to put my money in", "recommend a good trading platform", "which broker is best for forex", "give me forex signals", "I want a trading bot", "copy trading, who should I copy",
-    "should I sell my shares", "what stocks should I buy", "what is the best stock to buy", "tell me what to invest in", "where should I invest my savings", "should I put my savings in ethereum",
-    "do you think dogecoin will double", "will the shilling crash against the dollar", "what is the safest investment for my savings", "should I buy more sacco shares"]) assert.equal(kind(text), "investment-advice", text);
+    "should I sell my shares", "what stocks should I buy", "what is the best stock to buy", "which fund should I invest in", "what funds should I invest in", "should I put my savings in ethereum",
+    "do you think dogecoin will double", "will the shilling crash against the dollar", "what is the safest fund for my savings", "should I buy more sacco shares"]) assert.equal(kind(text), "investment-advice", text);
 });
 
 test("a plan to get rich, and borrowing or selling land to invest, are answered with care", () => {

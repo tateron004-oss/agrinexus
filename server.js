@@ -90,6 +90,7 @@ const { childHelpTopic } = require("./public/kyro-child-help.js");
 const { prTopic } = require("./public/kyro-pr-topics.js");
 const { churchTopic } = require("./public/kyro-church-topics.js");
 const { athleteTopic } = require("./public/kyro-athlete-topics.js");
+const { moneyTopic } = require("./public/kyro-money-topics.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
@@ -22552,6 +22553,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (athleteGuide) {
       return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: athleteGuide.response,
         executionAttempted: true, executionVerified: athleteGuide.verified === true };
+    }
+  }
+  // A person's own money (nexus/knowledge/money-guide.js: a spending plan, income that changes, a bank account, savings, credit, debt and collectors, costly loans, student loans, buying a home, investing and how to choose, fees, retirement
+  // accounts, brokerage and children's accounts, scams and keeping accounts safe) is answered from the checked guide whichever tool the model picked, with the person's own words tried first: the voice model answered from memory with no sources.
+  const moneyAsk = typeof moneyTopic === "function" && rawCallerText && moneyTopic(rawCallerText) ? rawCallerText : command;
+  if (typeof moneyTopic === "function" && moneyTopic(moneyAsk) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
+    const moneyUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const moneyGuide = moneyUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: moneyUser, text: moneyAsk, language, timeZone: args?.timeZone }) : null;
+    if (moneyGuide) {
+      return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: moneyGuide.response,
+        executionAttempted: true, executionVerified: moneyGuide.verified === true };
     }
   }
   // A small business owner's question about PUBLIC RELATIONS and EVENTS (nexus/knowledge/pr-events-guide.js) is answered from the checked guide whichever tool the model picked, with the person's own words tried first: the voice model would
