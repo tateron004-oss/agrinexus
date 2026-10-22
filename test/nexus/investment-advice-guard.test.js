@@ -61,3 +61,8 @@ test("it runs before anything else answers: through the content guard, the plann
   const voice = await ask("I want to get rich with forex trading");
   assert.match(voice.response, /no plan that guarantees getting rich/);
 });
+
+test("how a government security is bought is explained; which one to buy is still refused", () => {
+  for (const text of ["How do I buy Treasury bills in Kenya?", "How do I buy FGN savings bonds?", "how can I buy M-Akiba", "how do I purchase a government bond in Nigeria"]) assert.equal(kind(text), null, text);
+  for (const text of ["which treasury bill should I buy", "should I buy treasury bills or bitcoin", "how do I buy bitcoin and will it go up", "which bond fund should I buy"]) assert.equal(kind(text), "investment-advice", text);
+});
