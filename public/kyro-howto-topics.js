@@ -38,7 +38,7 @@
     ["howto-bp-log", /\blog(?:ging)? (?:my )?blood pressure\b|\bblood pressure (?:log|diary|readings? in kyro)\b|\brecord(?:ing)? (?:my )?blood pressure (?:in|with) kyro\b/i],
     ["howto-sugar-log", /\blog(?:ging)? (?:my )?blood sugar\b|\bblood sugar (?:log|diary|readings? in kyro)\b|\brecord(?:ing)? (?:my )?blood sugar (?:in|with) kyro\b/i],
     ["howto-wellbeing-log", /\b(?:sleep|mood|water|weight|workout)\b[^.!?]{0,30}\b(?:log|logging|tracking|track)\b|\b(?:log|logging|tracking|track)\b[^.!?]{0,30}\b(?:sleep|mood|water|weight|workouts?)\b/i],
-    ["howto-medicine-reminders", /\b(?:medicine|medication|pill) reminders?\b/i],
+    ["howto-medicine-reminders", /\b(?:medicine|medication|pill) reminders?\b|\bmedic(?:ine|ation)s? in kyro\b/i],
     ["howto-checkins", /\bcheck-?ins?\b|\bdaily check ?in\b/i],
     ["howto-circle", /\btrusted circle\b|\bemergency (?:alerts?|contacts?)\b|\bmy circle\b/i],
     ["howto-health-worker", /\bhealth worker (?:record book|records?|book)\b|\bcommunity health worker records?\b/i],
