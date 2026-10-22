@@ -51,7 +51,7 @@ test("by default only the cases that change nothing run; --writes, --risky, --on
   assert.deepEqual(select({ only: "docs-open,hello" }).map(entry => entry.id), ["docs-open", "hello"]);
   assert.ok(select({ area: "music" }).every(entry => entry.area === "music") && select({ area: "music" }).length >= 5);
   assert.ok(select({ sound: false }).every(entry => entry.needs !== "sound"));
-  assert.ok(select({ only: "biz-plan-write" }).length === 1, "an id named with --only runs even if it writes");
+  assert.ok(select({ only: "docs-create" }).length === 1, "an id named with --only runs even if it writes");
 });
 
 const screen = (over = {}) => ({ kind: "list", app: "", keep: true, text: "YOUR SAVED DOCUMENTS 1, Field Notes", buttons: ["×", "Save document", "Field Notes"], fields: ["title", "textarea"], images: 0, frames: 0, links: 0, hasDownload: false, ...over });

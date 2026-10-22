@@ -11,7 +11,8 @@ module.exports = [
   { id: "biz-summary", area: "business", say: "Give me a business summary.", expect: { screen: ["text", "list"], text: "Summary" } },
   { id: "biz-followup", area: "business", say: "Who needs a follow up.", expect: { screen: "text", text: "follow" } },
   { id: "biz-income", area: "business", say: "Show me my income.", expect: { screen: ["text", "list"], text: "Income" } },
-  { id: "biz-plan-write", area: "business", writes: true, say: "Write a business plan for a poultry farm in Kisumu.", timeoutMs: 60000, expect: { screen: "document", text: "BUSINESS PLAN", download: true } },
+  // A business plan by voice is now a ten-question interview (public/kyro-intake-forms.js), read back and saved as a Word document only after a yes; it used to be written in one go. The interview starts and is cancelled here, so nothing is saved.
+  { id: "biz-plan-starts-and-cancels", area: "business", say: "Write a business plan for a poultry farm in Kisumu.", timeoutMs: 60000, expect: { intake: "Question 1 of" }, then: [{ say: "Cancel." }, { expect: { intake: false }, timeoutMs: 25000 }] },
   { id: "biz-plan-show", area: "business", say: "Show my business plan.", expect: { screen: "list", text: "BUSINESS PLAN" } },
   { id: "biz-add-client-asks", area: "business", say: "Add a client named Suite Person phone +254700000002.", timeoutMs: 40000, expect: { screen: "text", text: "go ahead", buttons: ["^Yes", "^No"] },
     then: [{ tap: "^No" }, { expect: { text: "did not proceed" } }] },
