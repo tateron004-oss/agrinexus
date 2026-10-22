@@ -152,15 +152,4 @@ module.exports = {
     ]
   },
 
-  "duns-uei": {
-    title: "Getting a Unique Entity ID instead of a DUNS number",
-    topic: "duns-uei", phrase: "getting a unique entity ID", us: true,
-    steps: [
-      S("Know that the DUNS number is no longer asked for", "The federal government no longer asks for a DUNS number. On 4 April 2022, SAM.gov and the other General Services Administration systems switched to the Unique Entity ID. So you do not need to look for a DUNS number for a federal award.", ["The official government news page, open to read"], "gsaUei", "you can say that the federal government now uses the Unique Entity ID, not the DUNS number.", [W("DUNS number", "an older nine-digit business number that the federal government used until April 2022.")]),
-      S("Learn what the Unique Entity ID is", "The Unique Entity ID is the number that identifies your business in SAM.gov. SAM.gov itself assigns it. Registering your business at SAM.gov gives you one.", ["The official SAM.gov page, open to read"], "samUei", "you can say who assigns the Unique Entity ID.", [W("Unique Entity ID", "the number SAM.gov assigns to identify your business.")]),
-      S("Choose how you will get it", "You can register your business at SAM.gov and get one that way. You can also ask for a Unique Entity ID without registering, using only your legal business name and physical address. But with only the ID, you cannot apply directly for federal awards. So choose based on what you want to do.", ["Your legal business name", "Your physical business address"], "samUei", "you know whether you will register fully or ask for the ID alone, and why.", [W("Federal award", "money or a contract given by a federal agency.")]),
-      S("Start on the official page", "The place to start is the official SAM.gov page. Open it and read what it asks. You do the steps yourself, and I will not ask you for any private numbers.", ["The official SAM.gov page, open to read"], "samUei", "you have the official page open and have read what it asks for first.", []),
-      S("Ask about the cost", "The guide does not say whether getting the ID costs anything. Read the official page, or ask a free Small Business Development Center counselor, before you pay anyone.", ["Paper and a pen"], null, "you have written down who you will ask about the cost, or you have already asked.", [])
-    ]
-  }
 };

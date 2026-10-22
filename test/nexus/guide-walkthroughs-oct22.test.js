@@ -73,7 +73,7 @@ test("the words that ask for each walkthrough are a walkthrough request, are tak
     const say = `Walk me through ${def.phrase}`;
     assert.equal(walkthroughAsk(say), true, say);
     assert.equal(family.topicOf(say), def.topic, say);
-    assert.equal(registry.walkthroughForText(say)?.id, `${family.prefix}-${id}`, say);
+    assert.equal((registry.walkthroughForText(say) || registry.walkthroughForText(say, { late: true }))?.id, `${family.prefix}-${id}`, say);
     assert.equal(walkthroughAsk(def.phrase), false, def.phrase);
     for (const other of ["Take me through", "Guide me through", "Step by step, how do I do"]) assert.equal(walkthroughAsk(`${other} ${def.phrase}`), true, `${other} ${def.phrase}`);
   }
@@ -135,7 +135,7 @@ test("the rig has a live case for walkthroughs of each guide: it opens, shows it
   const cases = require("../../scripts/live-voice-suite/cases/walkthroughs-guides.js");
   const all = require("../../scripts/live-voice-suite/cases/index.js").ALL.map(entry => entry.id);
   for (const entry of cases) {
-    const walk = registry.walkthroughForText(entry.say);
+    const walk = registry.walkthroughForText(entry.say) || registry.walkthroughForText(entry.say, { late: true });
     assert.ok(walk, entry.say);
     assert.ok(walk.steps[0].title.includes(entry.expect.text), `${entry.id}: ${entry.expect.text}`);
     assert.match(entry.expect.text, /^[A-Za-z0-9 ,.'’:;!&%-]+$/, `${entry.id}: no regular-expression characters in a case key`);

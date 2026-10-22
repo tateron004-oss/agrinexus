@@ -188,7 +188,7 @@ module.exports = {
 
   "medicine-reminders": {
     title: "Using medicine reminders to remember each dose",
-    topic: "howto-medicine-reminders", phrase: "keeping track of my medicines in kyro",
+    topic: "howto-medicine-reminders", phrase: "using medicine reminders",
     steps: [
       S("Learn what medicine reminders do", `Kyro can remind you to take a medicine at times you choose, and you can tell it each time you took it. It only repeats what you say your clinic prescribed, and it cannot check doses. The sheets mark this part as needing review, and say the check for amounts that look too big is from a short table that a pharmacist should review. Reminders work in English only.`, ["Your phone or computer with Kyro open and signed in"], null, "you can say that Kyro repeats what you tell it and cannot check doses.", [KYRO, W("Reminder", "a message that tells you something at the time you chose."), W("Dose", "the amount of a medicine you take at one time.")]),
       S("Get your medicine details from your label or clinic", `Before you tell Kyro, have the name, the amount and the times exactly as your clinic or pharmacist told you or as printed on the label. Do not guess, and do not change anything because of Kyro. If you are not sure, ask your pharmacist or clinic. Kyro cannot check what you tell it.`, ["Your medicine label or clinic paper", "A pen and paper"], null, "you have the medicine name, the amount and the times written on paper from your label.", []),

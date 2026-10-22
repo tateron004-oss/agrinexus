@@ -8,16 +8,6 @@ const { S, W, OWN } = require("./walkthrough-kit.js");
 module.exports = {
   // ---- young people ----
   // (the three safety topics: step 1 is always the hotline or the emergency number the guide gives, and everything after it is only what the guide says)
-  "child-abuse-hotline": {
-    title: "What to do about child abuse: calling the Childhelp hotline",
-    topic: "yt-abuse", phrase: "reporting child abuse", us: true,
-    steps: [
-      S("Call 911 or the Childhelp hotline", "If a child is in danger right now, call 911. If you are worried about a child, or you are the one being hurt, you can call the Childhelp National Child Abuse Hotline at 800-422-4453, or text GO to that same number. The hotline is not connected to 911, so in an emergency always call 911.", ["A phone"], "childhelp", "you know that 911 is for an emergency and that the Childhelp number is 800-422-4453.", [W("Hotline", "a phone line, or a text number, where trained people answer and help.")]),
-      S("Know who can use the hotline", "The hotline is for anyone concerned about or affected by child abuse. That means a child who is being hurt, and it also means a grown-up who is worried about a child. There is also a live chat on the Childhelp website. The guide does not say what hours the line is open; check the official page.", ["The Childhelp page, open to read"], "childhelp", "you can say who the hotline is for and name the three ways to reach it: call, text, or chat.", [W("Child abuse", "when a child is being harmed. The guide gives no longer meaning, so ask the hotline if you are not sure.")]),
-      S("Know what Childhelp may share", "Childhelp says that if a child under 18 is being harmed, it may have to share that information with the appropriate authorities. It is better to know this before you call, so that nothing is a surprise. If you have questions about this, you can ask the hotline.", ["The Childhelp page, open to read"], "childhelp", "you can say in your own words that Childhelp may have to share what it hears about a child under 18 who is being harmed.", [W("Authorities", "the officials whose job is to protect children.")]),
-      S("Keep the number where you can find it", OWN + "Write the number 800-422-4453 on a piece of paper and keep it somewhere safe and private. If it is safe to do so, tell one grown-up you trust that you have it. Remember that 911 comes first in an emergency.", ["A pen and a piece of paper"], null, "the number is written down and kept somewhere you can find it.")
-    ]
-  },
   "running-away-safeline": {
     title: "Running away or in an unsafe home: the National Runaway Safeline",
     topic: "yt-runaway", phrase: "running away from an unsafe home", us: true,

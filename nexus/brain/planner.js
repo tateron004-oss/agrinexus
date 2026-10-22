@@ -1847,7 +1847,7 @@ function walkthroughChecklistPlan(text, catalog) {
   const asked = `Walk me through ${ask.rest}`;
   const topic = californiaTopic(asked);
   const usTopic = topic ? null : usWalkTopic(asked);
-  const walk = topic ? californiaWalkthrough(topic) : usTopic ? usWalkthrough(usTopic) : (moneyWalkthroughFor(asked) || athleteWalkthroughFor(asked) || guideWalkthroughForText(asked));
+  const walk = topic ? californiaWalkthrough(topic) : usTopic ? usWalkthrough(usTopic) : (guideWalkthroughForText(asked) || moneyWalkthroughFor(asked) || athleteWalkthroughFor(asked) || guideWalkthroughForText(asked, { late: true }));
   if (!walk) return null;
   if (!catalog.tools.some(tool => tool.toolId === "lists.create") || !catalog.applications.some(app => app.applicationId === "lists")) return null;
   return { goal: String(text || "").trim(), application: "lists", riskTier: "low", clarification: null,

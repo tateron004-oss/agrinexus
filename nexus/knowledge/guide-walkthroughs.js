@@ -7,19 +7,20 @@
 //   phraseOfKnowledge(knowledge) -> the words that ask for the walkthrough that goes with a plan's knowledge label ("church-guide:church-forming"), or null
 //   walkthroughForText(text) -> the walkthrough the words ask for ("walk me through forming a church"), or null
 
+// (in the order the planner asks the guides, so that the words find the same walkthrough that the planner would carry)
 const FAMILIES = Object.freeze([
   require("./howto-walkthroughs.js"),
-  require("./community-walkthroughs.js"),
-  require("./church-walkthroughs.js"),
   require("./parents-walkthroughs.js"),
+  require("./church-walkthroughs.js"),
+  require("./athlete-more-walkthroughs.js"),
+  require("./pr-more-walkthroughs.js"),
   require("./womens-walkthroughs.js"),
   require("./chronic-walkthroughs.js"),
   require("./technology-walkthroughs.js"),
   require("./ai-tools-walkthroughs.js"),
+  require("./community-walkthroughs.js"),
   require("./africa-walkthroughs.js"),
-  require("./us-business-walkthroughs.js"),
-  require("./pr-more-walkthroughs.js"),
-  require("./athlete-more-walkthroughs.js")
+  require("./us-business-walkthroughs.js")
 ]);
 const BY_LABEL = Object.freeze(Object.fromEntries(FAMILIES.map(family => [family.label, family])));
 
@@ -35,8 +36,10 @@ function phraseOfKnowledge(knowledge) {
   return family && family.PHRASE_OF_TOPIC[match[2]] ? family.PHRASE_OF_TOPIC[match[2]] : null;
 }
 
-function walkthroughForText(text) {
-  for (const family of FAMILIES) {
+// (the Kenya and Nigeria and United States small business guides are asked AFTER the money guide, so their walkthroughs are looked for after the money guide's: pass { late: true } for those)
+const LATE = new Set(["africa-small-business", "us-small-business"]);
+function walkthroughForText(text, { late = false } = {}) {
+  for (const family of FAMILIES.filter(entry => LATE.has(entry.label) === late)) {
     const found = family.walkthroughFor(text);
     if (found) return found;
   }
