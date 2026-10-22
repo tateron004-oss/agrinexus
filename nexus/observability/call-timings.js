@@ -10,6 +10,7 @@
 const RING = 200;
 const MAX_LABELS = 150;
 const SLOWEST = 12;
+const VOICE_START_KEPT = 400;
 
 // A web address -> the service it is for. Anything not known is "other:<host>" (host only).
 function classifyOutbound(input) {
@@ -51,6 +52,35 @@ function routeKey(method, pathname) {
   return `${String(method || "GET").toUpperCase()} ${path}`;
 }
 
+// A short label for who is starting a voice session, for finding a client that starts one over and over (1,293 starts in 3.7 hours, about one every ten seconds, from nobody who could be found). Only a few broad kinds
+// are kept, picked from fixed lists: never the browser's full identification text, an address, a name, an account or a device. "page" is what the page itself says about the start (see clientHint in the page).
+const PAGE_STARTS = new Set(["user", "auto", "none"]);
+const PAGE_VISIBILITY = new Set(["visible", "hidden", "none"]);
+function clientLabel({ userAgent = "", account = "none", newGuest = false, pageStart = "", pageVisibility = "" } = {}) {
+  const ua = String(userAgent || "");
+  let browser = "unknown";
+  if (!ua) browser = "no-agent";
+  else if (/headlesschrome|playwright|puppeteer|phantomjs|selenium|webdriver|cypress/i.test(ua)) browser = "automation";
+  else if (/^(?:node|undici|axios|python|curl|wget|go-http|okhttp|java|ruby|php|postman|insomnia|got|libwww)/i.test(ua) || /\b(?:curl|wget|python-requests|node-fetch|axios|go-http-client|okhttp|httpclient)\b/i.test(ua)) browser = "script";
+  else if (/bot|crawler|spider|monitor|uptime|pingdom|lighthouse/i.test(ua)) browser = "bot";
+  else if (/\bEdg(?:e|A|iOS)?\//.test(ua)) browser = "edge";
+  else if (/\bOPR\/|Opera/.test(ua)) browser = "opera";
+  else if (/\b(?:Chrome|CriOS)\//.test(ua)) browser = "chrome";
+  else if (/\b(?:Firefox|FxiOS)\//.test(ua)) browser = "firefox";
+  else if (/\bSafari\//.test(ua)) browser = "safari";
+  let system = "other";
+  if (/android/i.test(ua)) system = "android";
+  else if (/iphone|ipad|ipod/i.test(ua)) system = "ios";
+  else if (/windows/i.test(ua)) system = "windows";
+  else if (/mac os x|macintosh/i.test(ua)) system = "mac";
+  else if (/linux|x11|cros/i.test(ua)) system = "linux";
+  else if (!ua) system = "none";
+  const who = account === "signed-in" ? "signed-in" : account === "guest" ? (newGuest ? "new-guest" : "guest") : "no-account";
+  const start = PAGE_STARTS.has(pageStart) ? pageStart : "none";
+  const seen = PAGE_VISIBILITY.has(pageVisibility) ? pageVisibility : "none";
+  return `${browser}/${system}/${who}/start:${start}/tab:${seen}`;
+}
+
 function percentile(sorted, fraction) {
   if (!sorted.length) return null;
   return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * fraction) - 1))];
@@ -61,6 +91,7 @@ function createCallTimings({ ringSize = RING, now = () => Date.now() } = {}) {
   const outbound = new Map();
   const routes = new Map();
   const steps = new Map();
+  const starts = new Map();
   const slowest = [];
 
   const bucket = (map, key) => {
@@ -100,8 +131,28 @@ function createCallTimings({ ringSize = RING, now = () => Date.now() } = {}) {
       add(entry, ms, { ok: true });
       if (Number.isFinite(bytes)) { entry.bytesLast = bytes; entry.bytesMax = Math.max(entry.bytesMax || 0, bytes); }
     },
+    // one start of a voice session, by label (see clientLabel). Kept: when each one came (for the count in the last minute, ten minutes and hour, and the usual gap between them), and nothing else.
+    recordVoiceStart(label) {
+      if (!label) return;
+      let entry = starts.get(label);
+      if (!entry) {
+        if (starts.size >= MAX_LABELS) label = "other";
+        entry = starts.get(label) || { count: 0, at: [] };
+        starts.set(label, entry);
+      }
+      entry.count += 1;
+      entry.at.push(now());
+      if (entry.at.length > VOICE_START_KEPT) entry.at.shift();
+    },
     classify: classifyOutbound,
     snapshot() {
+      const voiceStarts = [...starts.entries()].map(([label, entry]) => {
+        const clock = now();
+        const within = ms => entry.at.filter(time => clock - time <= ms).length;
+        const gaps = entry.at.slice(1).map((time, index) => (time - entry.at[index]) / 1000).sort((a, b) => a - b);
+        return { label, count: entry.count, lastMinute: within(60_000), last10Minutes: within(600_000), lastHour: within(3_600_000),
+          ...(gaps.length ? { typicalGapSeconds: Math.round(percentile(gaps, 0.5)) } : {}), last: new Date(entry.at[entry.at.length - 1]).toISOString() };
+      }).sort((a, b) => b.count - a.count);
       const lines = map => [...map.entries()].map(([name, entry]) => {
         const sorted = [...entry.times].sort((a, b) => a - b);
         const mean = sorted.length ? sorted.reduce((sum, value) => sum + value, 0) / sorted.length : null;
@@ -113,7 +164,7 @@ function createCallTimings({ ringSize = RING, now = () => Date.now() } = {}) {
           last: entry.last };
       }).sort((a, b) => (b.ms.p90 ?? 0) - (a.ms.p90 ?? 0));
       return { since: new Date(startedAt).toISOString(), upSeconds: Math.round((now() - startedAt) / 1000), keptPerLine: ringSize,
-        outbound: lines(outbound), routes: lines(routes), steps: lines(steps), slowest: [...slowest] };
+        outbound: lines(outbound), routes: lines(routes), steps: lines(steps), voiceStarts, slowest: [...slowest] };
     }
   };
 }
@@ -145,4 +196,4 @@ function installFetchTiming(timings, target = globalThis) {
   return true;
 }
 
-module.exports = Object.freeze({ createCallTimings, installFetchTiming, classifyOutbound, routeKey, percentile });
+module.exports = Object.freeze({ createCallTimings, installFetchTiming, classifyOutbound, clientLabel, routeKey, percentile });

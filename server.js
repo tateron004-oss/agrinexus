@@ -59689,8 +59689,8 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/voice/realtime/session" && req.method === "POST") {
-    if (!(accountableUser(user) ? perUserRateLimit(req, user, "voice-session", 30, 60_000, 10) : rateLimit(req, 30, 60_000))) return send(res, 429, { error: "Too many OpenAI Realtime session requests", category: "rate-limited" });
-    if (!nexusGenesisVoiceOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
+    if (!(accountableUser(user) ? perUserRateLimit(req, user, "voice-session", 30, 60_000, 10) : rateLimit(req, 30, 60_000))) { kyroCallTimings.recordVoiceStart("refused/too-many"); return send(res, 429, { error: "Too many OpenAI Realtime session requests", category: "rate-limited" }); }
+    if (!nexusGenesisVoiceOriginAllowed(req)) { kyroCallTimings.recordVoiceStart("refused/origin"); return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" }); }
     const body = await readBody(req);
     const authContext = resolveGenesisVoiceAuthContext(req, db, user, {
       language: body.language || url.searchParams.get("language") || user?.language || "en",
@@ -59700,6 +59700,16 @@ async function api(req, res, url) {
       "cache-control": "no-store, no-cache, must-revalidate, private",
       ...(authContext.setCookie ? { "set-cookie": authContext.setCookie } : {})
     };
+    // Who is starting voice sessions, as a few broad kinds only (see clientLabel): shown at /api/admin/system/timings under voiceStarts.
+    try {
+      kyroCallTimings.recordVoiceStart(kyroCallTimingsModule.clientLabel({
+        userAgent: req.headers["user-agent"],
+        account: authContext.authMechanism === "agrinexus_sid_cookie" ? "signed-in" : authContext.authMechanism === "bounded_genesis_voice_guest_cookie" ? "guest" : "none",
+        newGuest: Boolean(authContext.setCookie),
+        pageStart: String(req.headers["x-kyro-start"] || "").toLowerCase(),
+        pageVisibility: String(req.headers["x-kyro-tab"] || "").toLowerCase()
+      }));
+    } catch { /* the record is optional */ }
     if (!authContext.authenticated) {
       await writeDb(db);
       return send(res, 401, {
@@ -59737,24 +59747,28 @@ async function api(req, res, url) {
       const session = await openAiRealtimeClientSecret({ user: authContext.user, language });
       const mintMs = Date.now() - mintStartedAt;
       if (mintMs > 4000) console.warn("[voice-session-slow]", JSON.stringify({ phase: "client-secret", ms: mintMs, at: new Date().toISOString() }));
-      voiceRecord(db, authContext.user, "openai-agents-realtime", "OpenAI Agents Realtime voice session authorized.", {
-        provider: session.provider,
-        model: session.model,
-        voice: session.voice,
-        transport: session.transport,
-        language,
-        authMechanism: authContext.authMechanism
-      });
-      logIntegration(db, {
-        providerId: "openai",
-        module: "AI Voice",
-        action: "voice.openai_agents_realtime_session_authorized",
-        status: "success",
-        detail: "OpenAI Agents Realtime client secret issued for Nexus live voice.",
-        metadata: { model: session.model, voice: session.voice, transport: session.transport, authMechanism: authContext.authMechanism },
-        dispatch: false
-      });
-      await writeDb(db);
+      // Every save writes the whole stored document (about 5 MB, half a second), and a voice start used to pay that for a one-line audit entry. A signed-in person's session is still written down; an anonymous voice guest's
+      // (no name, no account, held in memory, counted by the timing record's voiceStarts) no longer rewrites everything for it, so repeated starts do not pile up writes of the whole document.
+      if (authContext.authMechanism !== "bounded_genesis_voice_guest_cookie") {
+        voiceRecord(db, authContext.user, "openai-agents-realtime", "OpenAI Agents Realtime voice session authorized.", {
+          provider: session.provider,
+          model: session.model,
+          voice: session.voice,
+          transport: session.transport,
+          language,
+          authMechanism: authContext.authMechanism
+        });
+        logIntegration(db, {
+          providerId: "openai",
+          module: "AI Voice",
+          action: "voice.openai_agents_realtime_session_authorized",
+          status: "success",
+          detail: "OpenAI Agents Realtime client secret issued for Nexus live voice.",
+          metadata: { model: session.model, voice: session.voice, transport: session.transport, authMechanism: authContext.authMechanism },
+          dispatch: false
+        });
+        await writeDb(db);
+      }
       return send(res, 200, {
         ok: true,
         runtime: "realtime",
