@@ -13,12 +13,19 @@ module.exports = Object.freeze([
   strict("heat", "How do I stay safe running in the heat?", "cool first and transport second"),
   strict("mental", "I am a high school athlete and the pressure is getting to me", "988"),
   strict("safesport", "How do I report a coach who touches players inappropriately?", "833-587-7233"),
-  strict("eligibility", "What is the NCAA Eligibility Center?", "$85"),
+  strict("eligibility", "What is the NCAA Eligibility Center?", "certification fee"),
   strict("nil", "I am a college athlete, can I take a sponsorship deal?", "valid business purpose"),
   strict("agent", "How do I choose a sports agent and what should be in the contract?", "Sports Agent Responsibility and Trust Act"),
-  strict("taxes", "I am a pro athlete, how do taxes work when I play games in other states?", "$2,000"),
+  strict("taxes", "I am a pro athlete, how do taxes work when I play games in other states?", "2,000 or more"),
   strict("brand", "Help me build my personal brand as an athlete", "#ad"),
   strict("business", "I want to start a training academy for young athletes. Where do I start?", "EIN"),
   strict("club", "I manage a youth soccer club. How do I handle registration and fees?", "liability waivers"),
-  strict("money", "What happens to my money and career after I stop playing?", "emergency")
+  strict("money", "What happens to my money and career after I stop playing?", "emergency"),
+  strict("prohibited", "Is CBD allowed for athletes?", "cannabidiol"),
+  strict("naia", "How much does the NAIA eligibility center cost?", "nonrefundable"),
+  strict("amateurism", "What makes a college athlete lose amateur status?", "pay in any form"),
+  strict("house", "What is the House settlement?", "NIL Go"),
+  strict("agent-eligibility", "Can I sign with an agent and keep playing college football?", "Bylaw 12.3.1"),
+  strict("waiver", "Can parents sign a waiver for their kids in a sports league?", "differ by state"),
+  strict("pension", "How does the NFL pension work?", "three credited seasons")
 ]);

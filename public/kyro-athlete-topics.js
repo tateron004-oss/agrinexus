@@ -10,7 +10,7 @@
   "use strict";
 
   // athleteTopic(text) -> "athlete-overview" | "athlete-nutrition" | "athlete-energy" | "athlete-supplements" | "athlete-training" | "athlete-recovery" | "athlete-concussion" | "athlete-heat" | "athlete-mental" | "athlete-safesport"
-  //   | "athlete-eligibility" | "athlete-nil" | "athlete-agent" | "athlete-taxes" | "athlete-brand" | "athlete-business" | "athlete-club" | "athlete-money" | null.
+  //   | "athlete-eligibility" | "athlete-prohibited" | "athlete-naia" | "athlete-amateurism" | "athlete-house" | "athlete-nil" | "athlete-agent-eligibility" | "athlete-agent" | "athlete-waiver" | "athlete-pension" | "athlete-taxes" | "athlete-brand" | "athlete-business" | "athlete-club" | "athlete-money" | null.
   // A pure text matcher: no sources, no answers, no records.
   const NOT_A_GUIDE_QUESTION = /^(?:please\s+)?(?:log|record|add|save|remind|set|mark|delete|remove|forget|call|text|send|play|open|translate|export|cancel|schedule|email|message|read|make|build|create|write|draft|generate|design|show|list|undo|start (?:a|my) (?:timer|stopwatch|workout log))\b/i;
   const CALENDAR_OR_RECORDS = /\b(?:my calendar|my schedule|my appointments?|my invoices?|my customers?|my leads?|on my list|my training log|my workout log|my notes?|my stats|my scores?)\b/i;
@@ -23,10 +23,24 @@
   const POSITIVE = [
     // taxes on what an athlete earns or is given
     ["athlete-taxes", text => /\b(?:tax(?:es|ed|able|ation)?|1099|w-?2|w-?9|irs|self[- ]employ\w*|estimated (?:tax|payments?)|write[- ]?offs?|deduct\w*|jock tax|multi[- ]state|other states|nonresident|1040|schedule c)\b/i.test(text) && (ATHLETE.test(text) || /\b(?:scholarship|nil|sponsorship|signing bonus|prize money|appearance fees?|endorsement)\b/i.test(text))],
+    // the NAIA: its fees, its thresholds, its aid
+    ["athlete-naia", text => /\b(?:naia|play ?naia)\b/i.test(text) && /\b(?:fees?|cost|costs|eligib\w+|gpa|act|sat|requirements?|scholarships?|aid|register\w*|registration|transfer\w*|rank|core courses?|waivers?|amateur\w*|thresholds?|rules?)\b/i.test(text)],
+    // what makes a college athlete lose amateur status: pay, prizes, tryouts, the pro draft
+    ["athlete-amateurism", text => (/\bamateur(?:ism|s)?\b|\bprize money\b|\b(?:enter|entering|declare|declaring|withdraw|withdrawing) (?:for |from )?(?:the )?(?:nba |nfl |mlb |nhl )?(?:draft|early entry)\b|\bearly entry\b|\bpro(?:fessional)? tryouts?\b|\bprofessional contract\b|\bundergraduate advisory committee\b|\blose (?:my |his |her )?(?:college )?eligibility\b/i.test(text)) && (ATHLETE.test(text) || /\b(?:college|ncaa|draft|eligibility)\b/i.test(text))],
+    // the House settlement: the revenue-sharing cap, NIL Go, the College Sports Commission
+    ["athlete-house", text => /\b(?:house (?:settlement|v\.? ncaa)|revenue[- ]shar\w+|benefits cap|nil go|college sports commission|csc|direct payments? to (?:college )?athletes|pay(?:ing)? (?:college |student )?athletes directly|salary cap (?:for|in) college)\b/i.test(text)],
+    // what an agent does to a college athlete's eligibility (the NCAA's bylaws)
+    ["athlete-agent-eligibility", text => /\b(?:agents?|sports agent|athlete agent|representation|advisor|adviser)\b/i.test(text) && /\b(?:eligib\w+|ncaa|amateur\w*|keep playing|still play|lose|oral(?:ly)?|bylaws?|before (?:i |we )?(?:sign|enroll)|college)\b/i.test(text) && (ATHLETE.test(text) || /\b(?:college|ncaa|draft)\b/i.test(text)) && !/\b(?:real estate|travel|insurance|customer service)\b/i.test(text)],
+    // liability waivers and releases for a youth or athletic program
+    ["athlete-waiver", text => /\b(?:liability waivers?|waivers? of liability|release of liability|liability releases?|liability forms?|exculpatory|(?:sign(?:ing)?|have (?:the )?parents? sign|need) (?:a )?(?:waivers?|releases?)|waivers? (?:for|from) (?:parents?|minors?|kids?|children|players?|athletes?))\b/i.test(text) && !/\bfee waivers?\b/i.test(text) && (ATHLETE.test(text) || /\b(?:youth|club|league|camps?|academy|academies|gym|team|kids?|minors?|children|parents?|program)\b/i.test(text))],
+    // pensions, league benefits and disability cover
+    ["athlete-pension", text => /\b(?:pensions?|retirement plans?|vest(?:ed|ing)|benefit plans?|annuity|401\s*\(?k\)?|health (?:insurance|coverage) (?:after|when) (?:i |we )?retire\w*|disability (?:insurance|benefits?|cover|coverage)|ssdi|career[- ]ending (?:injury|disability|injuries)|players?'? ?(?:association|union)|union benefits?|credited seasons?)\b/i.test(text) || /\b(?:nfl|nba|mlb|nhl|wnba|mls)\b[^?.!]*\bbenefits?\b|\bbenefits?\b[^?.!]*\b(?:nfl|nba|mlb|nhl|wnba|mls)\b/i.test(text) && (ATHLETE.test(text) || /\b(?:nfl|nba|mlb|nhl|wnba|mls|pro|professional|league|players)\b/i.test(text))],
     // being hit in the head
     ["athlete-concussion", text => /\b(?:concussions?|head injur\w+|blow to the head|hit (?:in|on) the head|hit (?:my|his|her|their) head|bump(?:ed)? (?:my|his|her|their) head|knocked out|dizzy after|return[- ]to[- ]play|heads up)\b/i.test(text) && (ATHLETE.test(text) || TRAINING_WORD.test(text) || /\bconcussions?\b/i.test(text))],
     // heat illness
     ["athlete-heat", text => /\b(?:heat (?:illness|exhaustion|stroke|cramps?)|heatstroke|overheat\w*|in the heat|in (?:hot|humid) weather|hot weather|hot day|humidity)\b/i.test(text) && (ATHLETE.test(text) || TRAINING_WORD.test(text))],
+    // what the prohibited list is and what is on it (WADA's own page)
+    ["athlete-prohibited", text => /\b(?:prohibited (?:list|substances?|methods?)|banned (?:list|substances?)|wada|world anti[- ]doping|cannabis|marijuana|cbd|thc|clenbuterol|glucocorticoids?|cortisone|corticosteroids?|steroid injections?|specified substances?|what(?:'s| is| are) (?:banned|prohibited)|washouts?)\b/i.test(text) && (ATHLETE.test(text) || TRAINING_WORD.test(text) || /\b(?:anti[- ]doping|drug test\w*|doping|wada)\b/i.test(text))],
     // doping, banned substances, supplements
     ["athlete-supplements", text => (/\b(?:dop(?:e|ing)|anti[- ]doping|banned (?:substances?|list)|prohibited (?:substances?|list)|drug test\w*|tue|therapeutic use exemptions?|usada|wada|aiu|adak|global dro|athletics integrity|failed (?:a )?drug test)\b/i.test(text)
         || /\b(?:supplements?|creatine|pre[- ]workout|protein powders?|energy drinks?|steroids?|stimulants?|performance[- ]enhancing)\b/i.test(text) && (ATHLETE.test(text) || TRAINING_WORD.test(text)))],
