@@ -8,7 +8,7 @@
   "use strict";
 
   // parentsTopic(text) -> "parents-overview" | "talk-with-your-child" | "signs-of-abuse" | "child-tells-you" | "young-girl-pregnant" | "get-help-now" | null. A pure text matcher: no sources, no answers, no records.
-  const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+|nexus,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|am|will|would|tell me|explain|help me|i need|i want|i('| a)m looking for|i would like|i'd like|any|give me|find\b|show me|look(?:ing)? for|search for|teach me)\b)/i;
+  const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+|nexus,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|am|will|would|tell me|explain|help me|i need|i want|i('| a)m looking for|i would like|i'd like|any|give me|find\b|show me|look(?:ing)? for|search for|teach me|walk me|walk us|take me through|guide me through|talk me through|step[- ]by[- ]step|what are the steps)\b)/i;
   const RECORD_OR_DRAFT = /^(?:please\s+)?(?:log|record|add|save|remind|set|create|draft|write|make|mark|delete|forget|call|text|send|play|open|start|translate|export|convert|register)\b/i;
   const WORKER_TALK = /\b(?:my patients?|my clients?|my cases?|my caseload|patients? with|on my (?:list|register|caseload))\b/i;
   // never: harm to oneself, or to a child by the speaker

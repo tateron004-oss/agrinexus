@@ -110,9 +110,9 @@ test("on the page and the server: the parents' question is the page's own and th
   assert.ok(server.includes('const { parentsTopic } = require("./public/kyro-parents-topics.js");'));
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  const tag = '<script src="/kyro-parents-topics.js?v=kyro-parents-topics-3"></script>';
+  const tag = '<script src="/kyro-parents-topics.js?v=kyro-parents-topics-4"></script>';
   assert.ok(index.includes(tag) && index.indexOf(tag) < index.search(/<script[^>]+src="\/app\.js/), "before app.js");
-  assert.ok(sw.includes("`/kyro-parents-topics.js?v=kyro-parents-topics-3`"));
+  assert.ok(sw.includes("`/kyro-parents-topics.js?v=kyro-parents-topics-4`"));
 });
 
 test("when a person says a child is being abused, the safety response keeps the Childhelp line, adds Kenya's 116, and points to the guide", () => {
