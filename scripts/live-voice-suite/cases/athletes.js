@@ -35,7 +35,7 @@ module.exports = Object.freeze([
   strict("kenya-money", "How is a runner's prize money taxed in Kenya?", "288,000 shillings"),
   strict("nigeria", "How does the Athletics Federation of Nigeria license athletes?", "Roster Athletics"),
   strict("nigeria-money", "How is an athlete taxed in Nigeria on prize money?", "Nigeria Tax Act"),
-  strict("abroad-visa", "How does a Kenyan runner get a student visa for a US college?", "$185"),
+  strict("abroad-visa", "How does a Kenyan runner get a student visa for a US college?", "185 and non-refundable"),
   strict("abroad-eligibility", "What does the NCAA need from a Nigerian student athlete?", "word-for-word"),
   strict("abroad-tax", "Do international student athletes pay tax on a scholarship in the US?", "Form 1040-NR"),
   strict("abroad-scams", "How do I avoid visa scams as an international athlete?", "gift cards")
