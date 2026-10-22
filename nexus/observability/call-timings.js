@@ -125,9 +125,10 @@ function createCallTimings({ ringSize = RING, now = () => Date.now() } = {}) {
       add(bucket(routes, routeKey(method, pathname)), ms, { ok: status < 500, status });
     },
     // one step of Kyro's own work inside a request (reading or saving the stored state, building the state sent back, the speech step of a spoken reply). `bytes` is how big the thing worked on was, when that is known.
-    recordStep(name, ms, { bytes = null } = {}) {
+    // `skipped` counts the step apart (as "<name>.skipped"): the work was not needed, so its time must not be mixed with the times of the work that was done.
+    recordStep(name, ms, { bytes = null, skipped = false } = {}) {
       if (!name || !Number.isFinite(ms)) return;
-      const entry = bucket(steps, name);
+      const entry = bucket(steps, skipped ? `${name}.skipped` : name);
       add(entry, ms, { ok: true });
       if (Number.isFinite(bytes)) { entry.bytesLast = bytes; entry.bytesMax = Math.max(entry.bytesMax || 0, bytes); }
     },

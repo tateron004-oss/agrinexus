@@ -2482,6 +2482,26 @@ async function ensurePostgresState() {
 function stateBytes(state) {
   try { return state && typeof state === "object" ? dbReadSnapshots.get(state)?.length : undefined; } catch { return undefined; }
 }
+// The size of the stored state and of its biggest parts, by name and count only (see /api/admin/system/state-size). A name is shown only when it is a plain identifier; anything else (an email, an id) is counted under "other keys".
+function describeStateSize(state, { top = 25, profileTop = 40 } = {}) {
+  const size = value => { try { const text = JSON.stringify(value); return text === undefined ? 0 : Buffer.byteLength(text, "utf8"); } catch { return 0; } };
+  const plain = key => /^[A-Za-z][A-Za-z0-9_]{0,60}$/.test(key);
+  const describe = (object, limit) => {
+    const rows = []; let other = { keys: 0, bytes: 0 };
+    for (const [key, value] of Object.entries(object && typeof object === "object" ? object : {})) {
+      const bytes = size(value);
+      if (!plain(key)) { other.keys += 1; other.bytes += bytes; continue; }
+      const row = { key, bytes };
+      if (Array.isArray(value)) { row.items = value.length; row.avgBytes = value.length ? Math.round(bytes / value.length) : 0; }
+      else if (value && typeof value === "object") row.entries = Object.keys(value).length;
+      rows.push(row);
+    }
+    rows.sort((a, b) => b.bytes - a.bytes);
+    return { rows: rows.slice(0, limit), otherKeys: other };
+  };
+  const parts = describe(state, top); const profile = describe(state && state.profile, profileTop);
+  return { totalBytes: size(state), parts: parts.rows, otherKeys: parts.otherKeys, profile: profile.rows, profileOtherKeys: profile.otherKeys };
+}
 async function readDb() {
   const startedAt = performance.now();
   let state;
@@ -2526,10 +2546,12 @@ function mergeStoredState(baseText, mine, latestText) {
   }
 }
 
+// A save of a state that this request did not change writes nothing (writeDbUntimed says "unchanged"); the record counts those apart, as db.write.skipped, so the saves that were avoided can be read.
 async function writeDb(db) {
   const startedAt = performance.now();
-  try { return await writeDbUntimed(db); }
-  finally { kyroCallTimings.recordStep("db.write", performance.now() - startedAt, { bytes: stateBytes(db) }); }
+  let skipped = false;
+  try { skipped = (await writeDbUntimed(db)) === "unchanged"; }
+  finally { kyroCallTimings.recordStep("db.write", performance.now() - startedAt, { bytes: stateBytes(db), skipped }); }
 }
 async function writeDbUntimed(db) {
   const stamping = profileOwnerStamping.getStore();
@@ -2543,6 +2565,8 @@ async function writeDbUntimed(db) {
     const space = businessSpaces.currentSpace();
     const baseText = dbMergeEnabled() && db && typeof db === "object" ? dbReadSnapshots.get(db) : undefined;
     const text = JSON.stringify(db);
+    // This request changed nothing, so there is nothing to save: the whole document (about 5 MB) is not sent back and compared in the database for no reason, and another request's save cannot be overwritten by it.
+    if (baseText !== undefined && text === baseText) return "unchanged";
     if (baseText === undefined) {
       await getPgPool().query("update agrinexus_app_state set state = $2::jsonb, updated_at = now() where id = $1", [space, text]);
       return;
@@ -2587,6 +2611,7 @@ async function writeDbUntimed(db) {
     const text = JSON.stringify(db, null, 2) + "\n";
     let toWrite = text;
     const baseText = dbMergeEnabled() && db && typeof db === "object" ? dbReadSnapshots.get(db) : undefined;
+    if (baseText !== undefined && baseText === text) return "unchanged"; // nothing changed in this request: nothing to save
     if (baseText !== undefined) {
       // (writes go one at a time here, so the file read now is exactly what is stored)
       let latestText = null;
@@ -55112,6 +55137,12 @@ async function api(req, res, url) {
   if (url.pathname === "/api/admin/system/timings" && req.method === "GET") {
     if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow viewing call timings" });
     return send(res, 200, { ok: true, ...kyroCallTimings.snapshot(), note: "Times are in milliseconds. 'outbound' is every call out to another service: the time is how long it took to start answering (for an AI answer, the whole answer); 'serviceSaidMs' is the time OpenAI says it spent, so the difference is network and queueing. 'routes' is every request to Kyro's own /api routes, start to finish. This is process-local: it empties on every restart or deploy." });
+  }
+  // Where the stored state's bytes are: the size of the whole document and of its biggest parts, as names, sizes and counts only (never contents). Every request reads this document and every changed save writes it whole, so this is what to
+  // look at before deciding what to trim. A part is named only when its name is a plain identifier (a key that could be an email address or an id is counted under "other keys"). Platform owner only.
+  if (url.pathname === "/api/admin/system/state-size" && req.method === "GET") {
+    if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow viewing the stored state's size" });
+    return send(res, 200, { ok: true, ...describeStateSize(db), note: "Sizes are in bytes of the stored JSON. 'parts' are the top-level collections of the document and 'profile' the biggest parts of the profile; 'items' is how many entries an array holds and 'avgBytes' what one costs. Only plain names are shown." });
   }
   if (url.pathname === "/api/admin/system/errors" && req.method === "GET") {
     if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow viewing system error logs" });
