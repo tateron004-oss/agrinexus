@@ -106,7 +106,7 @@
     ["money-overview", text => /\b(?:financial (?:education|literacy|planning|wellness|health|coaching|basics|help)|money (?:management|skills|help|education|basics|coaching|lessons?|classes?)|personal finances?|learn (?:about |how to manage )?(?:money|finances?|finance)|teach me (?:about )?(?:money|finances?|managing money)|(?:manage|managing|handle|handling) (?:my )?(?:money|finances)|how (?:does|do) money work|how is money made|how (?:do|can) i (?:make|earn|grow|keep) (?:my )?money|where (?:do|should) i (?:start|begin) with (?:my )?(?:money|finances)|what can you (?:do|help)[^.!?]{0,20}\b(?:money|finances?)|help (?:me )?with (?:my )?(?:money|finances))\b/i.test(text) && !BUSINESS_MONEY.test(text)]
   ];
 
-  const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+|nexus,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|will|would|tell me|explain|help me|i need|i want|i('| a)m looking for|i would like|i'd like|any|give me|walk me|teach me|my|our|i am|i'm|we are|we're|we have|i have|i just|i was|i had|i can'?t|i don'?t|i do not|learn)\b)/i;
+  const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+|nexus,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|will|would|tell me|explain|help me|i need|i want|i('| a)m looking for|i would like|i'd like|any|give me|walk me|walk us|take me through|guide me through|talk me through|step[- ]by[- ]step|what are the steps|teach me|my|our|i am|i'm|we are|we're|we have|i have|i just|i was|i had|i can'?t|i don'?t|i do not|learn)\b)/i;
 
   function moneyTopic(text) {
     const value = String(text || "").replace(/[’]/g, "'").replace(/\s+/g, " ").trim();

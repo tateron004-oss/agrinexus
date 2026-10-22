@@ -9,6 +9,8 @@
 
 const { WALKTHROUGHS } = require("./california-walkthroughs.js");
 const US_WALKTHROUGHS = require("./us-walkthroughs.js").WALKTHROUGHS;
+const MONEY_PHRASE_OF_TOPIC = require("./money-walkthroughs.js").PHRASE_OF_TOPIC;
+const ATHLETE_PHRASE_OF_TOPIC = require("./athlete-walkthroughs.js").PHRASE_OF_TOPIC;
 
 // The words that ask for each walkthrough and for its checklist: each must be taken by the California topic matcher (public/kyro-business-topics.js), and a test checks that they are.
 const PHRASES = Object.freeze({
@@ -43,13 +45,18 @@ function processOf(knowledge) {
   if (entity) return { phrase: PHRASES[entity[1] === "llc" ? "ca-llc" : "ca-nonprofit-form"] };
   const us = /^us-small-business:([a-z0-9-]+)$/.exec(value);
   if (us && US_PHRASES[us[1]] && US_WALKTHROUGHS[us[1]]) return { phrase: US_PHRASES[us[1]] };
+  // the money guide (a person's own money, in the United States, Kenya and Nigeria) and the athlete guide: a topic with a walkthrough
+  const money = /^money-guide:([a-z0-9-]+)$/.exec(value);
+  if (money && MONEY_PHRASE_OF_TOPIC[money[1]]) return { phrase: MONEY_PHRASE_OF_TOPIC[money[1]] };
+  const athlete = /^athlete-guide:([a-z0-9-]+)$/.exec(value);
+  if (athlete && ATHLETE_PHRASE_OF_TOPIC[athlete[1]]) return { phrase: ATHLETE_PHRASE_OF_TOPIC[athlete[1]] };
   return null;
 }
 
 function offersFor(plan, { lang = "en" } = {}) {
   if (!plan || typeof plan !== "object" || lang === "es") return [];
   const knowledge = String(plan.knowledge || "");
-  if (!knowledge || plan.walkthrough || /^(?:sources-page|live-feeds|california-business:walkthrough)/.test(knowledge)) return [];
+  if (!knowledge || plan.walkthrough || /^(?:sources-page|live-feeds|california-business:walkthrough|money-guide:walkthrough|athlete-guide:walkthrough)/.test(knowledge)) return [];
   const offers = [];
   const process = processOf(knowledge);
   if (process) {

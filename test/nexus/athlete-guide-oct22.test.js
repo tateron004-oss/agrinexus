@@ -181,9 +181,9 @@ test("on the page and the server: the question is the page's own, the server tri
   assert.ok(server.includes('const { athleteTopic } = require("./public/kyro-athlete-topics.js");'));
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  const tag = '<script src="/kyro-athlete-topics.js?v=kyro-athlete-topics-2"></script>';
+  const tag = '<script src="/kyro-athlete-topics.js?v=kyro-athlete-topics-3"></script>';
   assert.ok(index.includes(tag) && index.indexOf(tag) < index.search(/<script[^>]+src="\/app\.js/));
-  assert.match(sw, /`\/kyro-athlete-topics\.js\?v=kyro-athlete-topics-2`/);
+  assert.match(sw, /`\/kyro-athlete-topics\.js\?v=kyro-athlete-topics-3`/);
   const check = fs.readFileSync(path.join(__dirname, "../../scripts/check-guide-sources.js"), "utf8");
   assert.match(check, /const GUIDES = \[[^\]]*"athlete-guide"/);
   const collected = collectSources(path.join(__dirname, "../../nexus/knowledge"));
