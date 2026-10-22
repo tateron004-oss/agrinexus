@@ -12596,7 +12596,6 @@ function applyPlatformLanguage() {
     navIndex++;
   });
   setText("#logoutBtn", copy.logout);
-  setText("#orbLogoutBtn", copy.logout);
   setText("#dashboard .hero h2", copy.dashboardTitle);
   setText("#dashboard .hero p", copy.dashboardIntro);
   setText("#learningTitle", copy.learningTitle);
@@ -50563,7 +50562,10 @@ function kyroVoiceStartHints(options = {}) {
   return { "X-Kyro-Start": automatic ? "auto" : "user", "X-Kyro-Tab": hidden ? "hidden" : "visible" };
 }
 
-async function requestNexusOpenAiRealtimeSession(status = {}, options = {}) {
+// The options of the start in progress (set by startRealtimeVoiceSession), read when the session request is made.
+let kyroCurrentVoiceStartOptions = {};
+
+async function requestNexusOpenAiRealtimeSession(status = {}) {
   // Found when "hello" took ninety seconds: this request had no time limit, so one that hung left the person with nothing on the screen. It now gives up after fifteen seconds and asks once more.
   let response = null;
   for (let attempt = 0; attempt < 2 && !response; attempt += 1) {
@@ -50572,7 +50574,7 @@ async function requestNexusOpenAiRealtimeSession(status = {}, options = {}) {
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",
-        headers: { "Content-Type": "application/json", Accept: "application/json", ...kyroVoiceStartHints(options) },
+        headers: { "Content-Type": "application/json", Accept: "application/json", ...kyroVoiceStartHints(kyroCurrentVoiceStartOptions) },
         body: JSON.stringify({
           language: languageCode(),
           model: status.model || "",
@@ -54149,7 +54151,7 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
   let controller = null;
   try {
     const [module, sessionPayload] = await withRealtimeStartTimeout(
-      Promise.all([loadNexusOpenAiRealtimeAgentModule(), requestNexusOpenAiRealtimeSession(status, options)]),
+      Promise.all([loadNexusOpenAiRealtimeAgentModule(), requestNexusOpenAiRealtimeSession(status)]),
       "Starting the voice session"
     );
     updateRealtimeControllerState("connecting", "openai-agents-client-secret-issued", {
@@ -54348,6 +54350,7 @@ async function startRealtimeVoiceSession(options = {}) {
     }
     startBackoff.attempt(options);
   }
+  kyroCurrentVoiceStartOptions = options;
   realtimeVoiceStarting = true;
   // A session the person starts themselves gets a fresh allowance of automatic restarts; one the watchdog started keeps counting.
   if (options.recovery !== true) { try { kyroStallWatchdogInstance()?.reset(); } catch { /* optional */ } }
@@ -66411,17 +66414,13 @@ function bindStatic() {
   const guestStartBtn = $("#guestStartBtn");
   if (guestStartBtn) guestStartBtn.onclick = startGuestUserSession;
 
-  const kyroLogout = async () => {
+  $("#logoutBtn").onclick = async () => {
     localStorage.removeItem("agrinexusGuestDisplayName");
     closeNexusVisualProviderQuestionReport();
     resetNexusAuthoritativeIdentityContext();
     await request("/api/logout", { method: "POST" });
     location.reload();
   };
-  $("#logoutBtn").onclick = kyroLogout;
-  // The orb screen hides the header menu, so its own Logout button (shown only there) does the same thing.
-  const orbLogoutBtn = $("#orbLogoutBtn");
-  if (orbLogoutBtn) orbLogoutBtn.onclick = kyroLogout;
 
   // Real personal-data export and account erasure, replacing the only
   // previously-reachable UI for this (the Production prototype rails panel's

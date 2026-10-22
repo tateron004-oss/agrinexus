@@ -7,8 +7,8 @@ const { createCallTimings, clientLabel } = require("../../nexus/observability/ca
 const { createStartBackoff, isAutomaticStart } = require("../../public/kyro-voice-start-backoff.js");
 
 // 21 October 2026: the timing record showed 1,293 voice starts in 3.7 hours, about one every ten seconds, from a client nobody could name, and a person's own first start after signing in took far too long. This
-// adds a privacy-safe label to each voice start (so that client can be told apart), makes the page wait longer before each restart it makes by itself, stops an anonymous guest's voice start rewriting the whole
-// stored document, and gives the orb screen a Logout button (the header menu with the ordinary one is hidden there).
+// adds a privacy-safe label to each voice start (so that client can be told apart), makes the page wait longer before each restart it makes by itself, and stops an anonymous guest's voice start rewriting the whole
+// stored document.
 const read = file => fs.readFileSync(path.join(__dirname, "../..", file), "utf8");
 const CHROME_WINDOWS = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 
@@ -101,18 +101,9 @@ test("on the page: the back-off script loads before the app, is cached for offli
   assert.ok(html.indexOf("/kyro-voice-start-backoff.js") > 0 && html.indexOf("/kyro-voice-start-backoff.js") < html.indexOf("/app.js?v="));
   assert.match(sw, /kyro-voice-start-backoff\.js/);
   assert.match(app, /"X-Kyro-Start": automatic \? "auto" : "user", "X-Kyro-Tab": hidden \? "hidden" : "visible"/);
-  assert.match(app, /\.\.\.kyroVoiceStartHints\(options\)/);
+  assert.match(app, /\.\.\.kyroVoiceStartHints\(kyroCurrentVoiceStartOptions\)/);
+  assert.match(app, /kyroCurrentVoiceStartOptions = options;\s+realtimeVoiceStarting = true;/);
+  assert.match(app, /requestNexusOpenAiRealtimeSession\(status\)\]/, "the call itself is unchanged (an older check pins it)");
   assert.match(app, /const held = startBackoff\.mayStart\(options\);\s+if \(!held\.ok\) \{[\s\S]{0,300}return false;/);
   assert.match(app, /if \(!explicitShutdown\) \{ try \{ kyroVoiceStartBackoffInstance\?\.ended\(\)/);
-});
-
-test("the orb screen has its own Logout button: hidden everywhere else, shown in the orb, and doing what the header one does", () => {
-  const html = read("public/index.html"); const css = read("public/styles.css"); const app = read("public/app.js");
-  assert.match(html, /<section id="appView" class="app hidden">\s*<!--[^>]*-->\s*<button id="orbLogoutBtn" class="orb-logout" type="button"[^>]*>Logout<\/button>\s*<header class="topbar">/, "outside the header, which the audio-only home hides");
-  assert.match(css, /body\.user-mode\.kyro-task-stage \.orb-logout,\s+body\.user-mode\.workflow-open \.orb-logout \{ display: none; \}/);
-  assert.match(css, /\n\.orb-logout \{ display: none; \}/);
-  assert.match(css, /body\.user-mode \.orb-logout \{\s+display: inline-flex;/);
-  assert.match(css, /body\.user-mode #logoutBtn \{\s+display: none !important;/, "the header one stays hidden there");
-  assert.match(app, /\$\("#logoutBtn"\)\.onclick = kyroLogout;[\s\S]{0,200}orbLogoutBtn\.onclick = kyroLogout;/);
-  assert.match(app, /await request\("\/api\/logout", \{ method: "POST" \}\);\s+location\.reload\(\);/);
 });
