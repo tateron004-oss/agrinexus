@@ -102,9 +102,9 @@ test("on the page: a diabetes or blood pressure question is the page's own, a re
   assert.match(app, /\(typeof kyroChronicQuestion === "function" && kyroChronicQuestion\(trimmed\)\)[^{]*\{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  const tag = '<script src="/kyro-chronic-topics.js?v=kyro-chronic-topics-1"></script>';
+  const tag = '<script src="/kyro-chronic-topics.js?v=kyro-chronic-topics-2"></script>';
   assert.ok(index.includes(tag) && index.indexOf(tag) < index.search(/<script[^>]+src="\/app\.js/), "before app.js");
-  assert.ok(sw.includes("`/kyro-chronic-topics.js?v=kyro-chronic-topics-1`"));
+  assert.ok(sw.includes("`/kyro-chronic-topics.js?v=kyro-chronic-topics-2`"));
 });
 
 test("the server tries the person's own words first for this guide too, after a crisis and before any account restriction", () => {
