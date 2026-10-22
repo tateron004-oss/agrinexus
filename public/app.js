@@ -51588,7 +51588,7 @@ function startKyroVoiceIntake(definition, options = {}) {
 
 function kyroVoiceIntakeOwnsTurn(command) {
   if (kyroActiveVoiceIntake && kyroActiveVoiceIntake.engine.phase !== "paused") return true;
-  return Boolean(window.KyroIntakeForms?.isBusinessPlanRequest?.(command) || window.KyroPrTopics?.isPrBriefRequest?.(command) || window.KyroIntakeForms?.isResumeBuildRequest?.(command) || window.KyroIntakeForms?.isSaleRequest?.(command) || window.KyroIntakeForms?.isTelehealthRequest?.(command) || window.KyroCapture?.isLookRequest?.(command) || kyroSpokenOpenOwns(command));
+  return Boolean(window.KyroIntakeForms?.isBusinessPlanRequest?.(command) || window.KyroPrTopics?.isPrBriefRequest?.(command) || window.KyroIntakeForms?.isSponsorshipProposalRequest?.(command) || window.KyroIntakeForms?.isTeamPacketRequest?.(command) || window.KyroIntakeForms?.isResumeBuildRequest?.(command) || window.KyroIntakeForms?.isSaleRequest?.(command) || window.KyroIntakeForms?.isTelehealthRequest?.(command) || window.KyroCapture?.isLookRequest?.(command) || kyroSpokenOpenOwns(command));
 }
 
 // Returns true when the transcript was consumed by a Kyro voice intake (caller must skip its own
@@ -51645,6 +51645,15 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // "Write my business plan", "help me write a business plan": the ten-question interview that ends with a document (asked before the guides below, so the order is not taken for a question about business plans)
     if (trimmed && window.KyroIntakeForms?.isBusinessPlanRequest?.(trimmed)) {
       startKyroBusinessPlanIntake({ seedUtterance: { id: utteranceId, text: trimmed }, source });
+      return true;
+    }
+    // "Write my sponsorship proposal", "build a team registration packet": the same kind of interview for an athlete or a coach (a question, a template or an example is still the athlete guide's)
+    if (trimmed && window.KyroIntakeForms?.isSponsorshipProposalRequest?.(trimmed)) {
+      startKyroAthleteDocIntake("sponsorshipProposal", { seedUtterance: { id: utteranceId, text: trimmed }, source });
+      return true;
+    }
+    if (trimmed && window.KyroIntakeForms?.isTeamPacketRequest?.(trimmed)) {
+      startKyroAthleteDocIntake("teamPacket", { seedUtterance: { id: utteranceId, text: trimmed }, source });
       return true;
     }
     // A memory said in two parts: "Add to my memory book." and then, as the next sentence, the memory itself (speech recognition splits what is said at a pause, found on the live site). The next sentence is joined to the request,
@@ -51919,6 +51928,55 @@ async function submitKyroBusinessPlanIntake(values, context = {}) {
   }
 }
 
+// A sponsorship proposal for an athlete and a registration packet for a team or club, by voice: ten short questions, read back, and after a yes saved as a Word document with the person's own words (nexus/knowledge/athlete-docs.js builds it
+// on the server from the answers only). Kyro sends it to no sponsor, league or family and collects no money.
+const KYRO_ATHLETE_DOCS = Object.freeze({
+  sponsorshipProposal: Object.freeze({
+    intakeId: "sponsorship-proposal", label: "Sponsorship proposal interview", incompleteCode: "sponsorship_incomplete", incompleteField: "ask",
+    incompleteSay: "I need who the proposal is for and what you are asking a sponsor for.",
+    done: "Done. Your sponsorship proposal is saved and on the screen. You can change it there and download it as a Word document. Where it says Not decided yet, you can fill it in later. I have not sent it to anyone.",
+    note: values => `The sponsorship proposal interview finished. A sponsorship proposal for ${values.athlete || "the athlete"} was saved and is shown on screen with a Download button. It was not sent to anyone.`
+  }),
+  teamPacket: Object.freeze({
+    intakeId: "team-packet", label: "Team packet interview", incompleteCode: "team_packet_incomplete", incompleteField: "team",
+    incompleteSay: "I need the name of your team or club.",
+    done: "Done. Your team packet is saved and on the screen. You can change it there and download it as a Word document. Where it says Not decided yet, you can fill it in later. I have not sent it to anyone or collected any money.",
+    note: values => `The team packet interview finished. A team and club packet for ${values.team || "the team"} was saved and is shown on screen with a Download button. It was not sent to anyone and no money was collected.`
+  })
+});
+
+function startKyroAthleteDocIntake(kind, options = {}) {
+  const form = window.KyroIntakeForms?.[kind];
+  if (!form || !KYRO_ATHLETE_DOCS[kind]) return;
+  startKyroVoiceIntake(form, { ...options, onComplete: (values, context) => submitKyroAthleteDocIntake(kind, values, context) });
+}
+
+async function submitKyroAthleteDocIntake(kind, values, context = {}) {
+  const language = context.language || languageCode();
+  const doc = KYRO_ATHLETE_DOCS[kind];
+  const request = window.KyroIntakeForms?.[kind]?.toRequest?.(values) || {};
+  try {
+    const response = await kyroFetchWithTimeout("/api/nexus/runtime/behavior/intake", {
+      method: "POST", credentials: "same-origin", cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ intakeId: doc.intakeId, values: request, channel: "voice", locale: languageCode(), conversationId: typeof nexusAuthoritativeConversationId === "function" ? nexusAuthoritativeConversationId() : undefined, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })
+    }, 30000);
+    const result = await response.json().catch(() => ({}));
+    if (response.status === 401) return { ok: false, say: kyroIntakeText("signIn", language) };
+    if (!response.ok) {
+      if (result.code === doc.incompleteCode) return { ok: false, fieldKey: doc.incompleteField, say: doc.incompleteSay };
+      return { ok: false, say: result.error || kyroIntakeText("failedRetry", language) };
+    }
+    if (typeof processNexusAuthoritativeBehaviorResult === "function") {
+      await processNexusAuthoritativeBehaviorResult(result, doc.label, { source: "kyro-voice-intake" }).catch(() => {});
+    }
+    return { ok: true, say: doc.done, contextNote: doc.note(values) };
+  } catch (error) {
+    nexusGenesisVoiceDebugLog("kyro-voice-intake-submit-network-error", { message: error?.message || "unknown" });
+    return { ok: false, say: kyroIntakeText("offline", language) };
+  }
+}
+
 // Selling by voice: what the first sentence said (the product, the amount, the price) is kept, only what is missing is asked, it is read back, and after a yes it is posted to the community board the same way
 // "post for sale: 50 bags of maize at 3000 per bag" posts it (the voice tool route, so the answer is the same and is shown on the screen). Nothing is bought, paid or delivered from here.
 function startKyroSaleIntake(options = {}) {
@@ -51998,6 +52056,8 @@ function kyroIntakeBusyLine(command) {
   if (!kyroActiveVoiceIntake && window.KyroCapture?.isLookRequest?.(command)) return "Kyro is opening the camera for the person to show it, and will describe it. Say nothing now.";
   if (!kyroActiveVoiceIntake && kyroSpokenOpenOwns(command)) return "Kyro is showing that on the screen by itself (it lists the documents, asks what to look for, or makes the document). Say nothing now.";
   if (id === "business-plan" || (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isBusinessPlanRequest?.(command))) return "Kyro is already asking the person the questions for a one-page business plan, one at a time. Say nothing now.";
+  if (id === "sponsorship-proposal" || (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isSponsorshipProposalRequest?.(command))) return "Kyro is already asking the athlete the questions for a sponsorship proposal, one at a time. Say nothing now.";
+  if (id === "team-packet" || (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isTeamPacketRequest?.(command))) return "Kyro is already asking the coach the questions for a team and club packet, one at a time. Say nothing now.";
   if (id === "pr-brief" || (!kyroActiveVoiceIntake && window.KyroPrTopics?.isPrBriefRequest?.(command))) return "Kyro is already asking the person the questions for a brief to give a PR or event firm, one at a time. Say nothing now.";
   if (id === "sale" || (!kyroActiveVoiceIntake && forms?.isSaleRequest?.(command))) return "Kyro is already asking the person about what they want to sell, one question at a time. Say nothing now.";
   if (id === "telehealth" || (!kyroActiveVoiceIntake && forms?.isTelehealthRequest?.(command))) return "Kyro is already asking the person a few short questions for a telehealth request, one at a time. Say nothing now.";
@@ -61176,6 +61236,15 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   // "Write my business plan", typed: the same interview as by voice
   if (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isBusinessPlanRequest?.(text)) {
     startKyroBusinessPlanIntake({ seedUtterance: { id: "", text }, source: options.source || "typed" });
+    return true;
+  }
+  // "Write my sponsorship proposal" and "build a team registration packet", typed: the same interviews as by voice
+  if (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isSponsorshipProposalRequest?.(text)) {
+    startKyroAthleteDocIntake("sponsorshipProposal", { seedUtterance: { id: "", text }, source: options.source || "typed" });
+    return true;
+  }
+  if (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isTeamPacketRequest?.(text)) {
+    startKyroAthleteDocIntake("teamPacket", { seedUtterance: { id: "", text }, source: options.source || "typed" });
     return true;
   }
   // "Write me a PR brief", typed: the same interview as by voice

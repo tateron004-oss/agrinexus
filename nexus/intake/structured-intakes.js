@@ -3,6 +3,7 @@
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js");
 const { prBriefDocument, KEYS: PR_BRIEF_KEYS } = require("../knowledge/pr-brief.js");
 const { businessPlanDocument, KEYS: BUSINESS_PLAN_KEYS } = require("../knowledge/business-plan-doc.js");
+const { sponsorshipProposalDocument, teamPacketDocument, SPONSORSHIP_KEYS, TEAM_PACKET_KEYS } = require("../knowledge/athlete-docs.js");
 
 // A small, explicit allowlist turning a completed voice intake (public/kyro-voice-intake.js +
 // public/kyro-intake-forms.js) into a plan step, in exactly the shape nexus/brain/planner.js's
@@ -31,6 +32,19 @@ const STRUCTURED_INTAKES = Object.freeze({
     toolId: "documents.create",
     title: "Save your business plan",
     keys: BUSINESS_PLAN_KEYS
+  }),
+  // An athlete's sponsorship proposal and a coach's team and club packet (public/kyro-intake-forms.js "sponsorshipProposal", "teamPacket"): built on the server from the answers only, word for word (nexus/knowledge/athlete-docs.js), saved as a Word document.
+  "sponsorship-proposal": Object.freeze({
+    application: "documents",
+    toolId: "documents.create",
+    title: "Save your sponsorship proposal",
+    keys: SPONSORSHIP_KEYS
+  }),
+  "team-packet": Object.freeze({
+    application: "documents",
+    toolId: "documents.create",
+    title: "Save your team packet",
+    keys: TEAM_PACKET_KEYS
   })
 });
 
@@ -89,6 +103,22 @@ function structuredIntakePlan(intakeId, values) {
       riskTier: "low",
       clarification: null,
       steps: [{ clientStepId: "create-business-plan", title: definition.title, toolId: definition.toolId, input: { title: made.title, content: made.content, format: "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }]
+    };
+  }
+  if (intakeId === "sponsorship-proposal" || intakeId === "team-packet") {
+    const sponsorship = intakeId === "sponsorship-proposal";
+    const made = sponsorship ? sponsorshipProposalDocument(input) : teamPacketDocument(input);
+    if (!made) {
+      throw sponsorship
+        ? new NexusRuntimeError("sponsorship_incomplete", "A sponsorship proposal needs who the athlete is and what they are asking for.", 422)
+        : new NexusRuntimeError("team_packet_incomplete", "A team packet needs the name of the team or club.", 422);
+    }
+    return {
+      goal: made.title,
+      application: definition.application,
+      riskTier: "low",
+      clarification: null,
+      steps: [{ clientStepId: `create-${intakeId}`, title: definition.title, toolId: definition.toolId, input: { title: made.title, content: made.content, format: "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }]
     };
   }
   const name = clean(input.name);
