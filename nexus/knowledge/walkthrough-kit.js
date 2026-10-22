@@ -8,15 +8,16 @@
 //       title   what the step is, in a few words            text    what to do and why, in plain words, from what the guide's official pages say (a step that is Kyro's own working practice says so: OWN)
 //       gather  what to have in hand before the step         key     the guide's SOURCES key whose page says it, shown as the step's button (null for a step of Kyro's own working practice)
 //       done    "You are finished with this step when ..."  so a person who has never done this knows when to stop and go on     words   [W(term, meaning)] the plain meaning of any word they will meet in the step
-//   family({ prefix, label, SOURCES, CHECKED_ON, DEFS, topicOf }) -> { prefix, label, WALKTHROUGHS, WALK_OF_TOPIC, PHRASE_OF_TOPIC, walkthrough(id), walkthroughFor(text), topicOf }
+//   family({ prefix, label, SOURCES, CHECKED_ON, DEFS, topicOf, ownFeature }) -> { prefix, label, WALKTHROUGHS, WALK_OF_TOPIC, PHRASE_OF_TOPIC, walkthrough(id), walkthroughFor(text), topicOf }
 //       DEFS    { id: { title, topic, phrase, us?, steps: [S(...)] } }     us: true when the steps are rules or programs of the United States (the plan carries the walkthrough only for a person in the United States context; anyone else gets the guide's ordinary answer)     topic: the guide's topic the walkthrough goes with       phrase: the words after "Walk me through ..." (the topic matcher must take them as that topic; a test checks)
+//       ownFeature   true for a walkthrough that teaches a part of Kyro itself (howto-walkthroughs.js): there is no official page for it, so its steps have no link and need not say they are Kyro's own practice
 //       label   the first part of the plan's knowledge label ("church-guide" in "church-guide:church-forming")
 
 const OWN = "This step is Kyro's own working practice, not an official page. ";
 const S = (title, text, gather, key, done, words) => ({ title, text, gather, key: key || null, done: done || null, words: Array.isArray(words) ? words : [] });
 const W = (term, means) => ({ term, means });
 
-function family({ prefix, label, SOURCES, CHECKED_ON, DEFS, topicOf }) {
+function family({ prefix, label, SOURCES, CHECKED_ON, DEFS, topicOf, ownFeature = false }) {
   const link = key => {
     if (!SOURCES[key]) throw new Error(`${prefix}: no source "${key}"`);
     return { name: SOURCES[key].name, url: SOURCES[key].url };
@@ -39,7 +40,7 @@ function family({ prefix, label, SOURCES, CHECKED_ON, DEFS, topicOf }) {
     const id = topic ? WALK_OF_TOPIC[topic] : null;
     return id ? walkthrough(id) : null;
   };
-  return Object.freeze({ prefix, label, WALKTHROUGHS: Object.freeze({ ...DEFS }), WALK_OF_TOPIC, PHRASE_OF_TOPIC, walkthrough, walkthroughFor, topicOf, CHECKED_ON, SOURCES });
+  return Object.freeze({ prefix, label, WALKTHROUGHS: Object.freeze({ ...DEFS }), WALK_OF_TOPIC, PHRASE_OF_TOPIC, walkthrough, walkthroughFor, topicOf, CHECKED_ON, SOURCES, ownFeature });
 }
 
 module.exports = Object.freeze({ S, W, OWN, family });

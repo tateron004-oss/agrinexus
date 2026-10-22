@@ -173,7 +173,7 @@ test("on the page and the server: the question is the page's own, the server tri
   const none = { window: {} };
   vm.runInNewContext(`${app.slice(start, end)}\nthis.ask = kyroMoneyQuestion;`, none);
   assert.equal(none.ask("How do I make a budget?"), false, "no matcher loaded, no claim");
-  assert.match(app, /\(typeof kyroMoneyQuestion === "function" && kyroMoneyQuestion\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
+  assert.match(app, /\(typeof kyroMoneyQuestion === "function" && kyroMoneyQuestion\(trimmed\)\) \|\| \(typeof kyroHowtoQuestion === "function" && kyroHowtoQuestion\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
   assert.match(server, /const moneyAsk = typeof moneyTopic === "function" && rawCallerText && moneyTopic\(rawCallerText\) \? rawCallerText : command;/);
   assert.match(server, /moneyTopic\(moneyAsk\) && effectiveMentalHealthSignal\.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function"/);
   assert.match(server, /text: moneyAsk, language, timeZone: args\?\.timeZone/);

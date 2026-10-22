@@ -8,6 +8,7 @@
 //   walkthroughForText(text) -> the walkthrough the words ask for ("walk me through forming a church"), or null
 
 const FAMILIES = Object.freeze([
+  require("./howto-walkthroughs.js"),
   require("./community-walkthroughs.js"),
   require("./church-walkthroughs.js"),
   require("./parents-walkthroughs.js"),

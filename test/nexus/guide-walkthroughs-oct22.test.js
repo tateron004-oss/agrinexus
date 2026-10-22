@@ -24,10 +24,11 @@ const ALL = registry.FAMILIES.flatMap(family => Object.entries(family.WALKTHROUG
 test("the registry lists every guide's family once, and each walkthrough goes with a real topic of its guide", () => {
   assert.equal(new Set(registry.FAMILIES.map(family => family.label)).size, registry.FAMILIES.length, "one family for each guide");
   for (const family of registry.FAMILIES) {
+    if (family.ownFeature) continue;
     assert.ok(GUIDES[family.label], family.label);
     assert.equal(new Set(Object.values(family.WALKTHROUGHS).map(def => def.topic)).size, Object.keys(family.WALKTHROUGHS).length, `${family.label}: one walkthrough for each topic`);
   }
-  for (const { family, id, def } of ALL) {
+  for (const { family, id, def } of ALL.filter(entry => !entry.family.ownFeature)) {
     const topics = family.label === "womens-health" ? { ...GUIDES[family.label].TOPICS, ...GUIDES[family.label].WHO_TOPICS } : GUIDES[family.label].TOPICS;
     assert.ok(topics[def.topic], `${family.label}/${id}: topic ${def.topic}`);
     assert.match(id, /^[a-z0-9-]+$/);
@@ -52,13 +53,13 @@ test("every step says what to do, what to have ready, how the person knows it is
       assert.doesNotMatch(step.done, /^You are finished with this step when/i, `${walk.id}: "${step.title}" done line is the end of the sentence the page starts`);
       assert.ok(Array.isArray(step.words) && step.words.length <= 4 && step.words.every(word => word.term.length >= 2 && word.term.length <= 60 && word.means.length >= 10 && word.means.length <= 220), `${walk.id}: "${step.title}" words`);
       if (step.link) { assert.match(step.link.url, /^https:\/\/[^\s]+$/, `${walk.id}: "${step.title}" link`); assert.ok(step.link.name.length > 8); }
-      else assert.match(step.text, /Kyro's own working practice|I found no|I could not|The guide does not say/, `${walk.id}: "${step.title}" has no official page, so it says so`);
+      else if (!family.ownFeature) assert.match(step.text, /Kyro's own working practice|I found no|I could not|The guide does not say/, `${walk.id}: "${step.title}" has no official page, so it says so`);
       assert.doesNotMatch(step.text, /\byou must (?:file|apply)\b|\bI (?:will|can) (?:file|send|apply|sign|pay|transfer|invest|buy|sell|register|submit|book|call|diagnose|prescribe)\b|\bguarantee[sd]? (?:a |your )?(?:return|profit|approval|result|cure)\b/i, `${walk.id}: "${step.title}"`);
       assert.doesNotMatch(step.text + step.done + JSON.stringify(step.words), product, `${walk.id}: "${step.title}" names no company or product`);
       assert.doesNotMatch(step.gather.join(" "), /\b(?:password|PIN number|account number|social security number|card number)\b/i, `${walk.id}: "${step.title}" never asks you to gather a secret`);
       assert.doesNotMatch(step.text, /\b(?:take|taking) \d+ ?(?:mg|milligrams?|tablets?|pills?)\b|\bdose of\b/i, `${walk.id}: "${step.title}" gives no dose`);
     }
-    assert.ok(walk.sources.length >= 1, `${walk.id}: sources`);
+    assert.ok(family.ownFeature || walk.sources.length >= 1, `${walk.id}: sources`);
     assert.equal(new Set(walk.sources.map(source => source.url)).size, walk.sources.length, `${walk.id}: each source once`);
     const clean = Walkthrough.sanitize(walk);
     assert.ok(clean && clean.steps.length === walk.steps.length, `${walk.id}: the page takes it`);
@@ -92,7 +93,7 @@ test("through the planner, with no AI model: each walkthrough is carried with it
     const walk = await ask(p, `Walk me through ${def.phrase}`, zone);
     assert.equal(walk.walkthrough?.id, `${family.prefix}-${id}`, def.phrase);
     assert.equal(walk.knowledge, `${family.label}:walkthrough:${family.prefix}-${id}`, def.phrase);
-    assert.deepEqual(walk.steps, []); assert.ok(walk.sources.length >= 1); assert.equal(walk.offers, undefined);
+    assert.deepEqual(walk.steps, []); assert.ok(family.ownFeature || walk.sources.length >= 1); assert.equal(walk.offers, undefined);
     assert.match(walk.response, /^Okay, I will walk you through .+, one step at a time\. There are \d steps\. I only guide you: you do each step yourself, and I never file, apply, sign, pay or send anything for you\.$/);
   }
 });
