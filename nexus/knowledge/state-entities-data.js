@@ -167,7 +167,7 @@ module.exports = Object.freeze({
       },
       "smallBusinessHelp": {
         "name": "U.S. Small Business Administration - Alaska District Office (Anchorage)",
-        "url": "https://www.sba.gov/district/alaska"
+        "url": "https://legacy.sba.gov/district/alaska"
       },
       "checkedOn": "2026-10-10"
     },
@@ -225,7 +225,7 @@ module.exports = Object.freeze({
       },
       "smallBusinessHelp": {
         "name": "U.S. Small Business Administration, Arizona District Office (Phoenix and Tucson); see also the Arizona SBDC Network at https://arizonasbdc.com",
-        "url": "https://www.sba.gov/district/arizona"
+        "url": "https://legacy.sba.gov/district/arizona"
       },
       "checkedOn": "2026-10-10"
     },
@@ -760,7 +760,7 @@ module.exports = Object.freeze({
       },
       "smallBusinessHelp": {
         "name": "U.S. Small Business Administration, Hawaii District Office",
-        "url": "https://www.sba.gov/district/hawaii"
+        "url": "https://legacy.sba.gov/district/hawaii"
       },
       "checkedOn": "2026-10-10"
     },
@@ -1363,7 +1363,7 @@ module.exports = Object.freeze({
       },
       "smallBusinessHelp": {
         "name": "U.S. Small Business Administration - Massachusetts District Office (lists the Massachusetts SBDC network among partners)",
-        "url": "https://www.sba.gov/district/massachusetts"
+        "url": "https://legacy.sba.gov/district/massachusetts"
       },
       "checkedOn": "2026-10-10"
     },
@@ -1482,7 +1482,7 @@ module.exports = Object.freeze({
       },
       "smallBusinessHelp": {
         "name": "U.S. Small Business Administration - Minnesota District Office",
-        "url": "https://www.sba.gov/district/minnesota"
+        "url": "https://legacy.sba.gov/district/minnesota"
       },
       "checkedOn": "2026-10-10"
     },
@@ -1540,7 +1540,7 @@ module.exports = Object.freeze({
       },
       "smallBusinessHelp": {
         "name": "U.S. Small Business Administration - Mississippi District Office",
-        "url": "https://www.sba.gov/district/mississippi"
+        "url": "https://legacy.sba.gov/district/mississippi"
       },
       "checkedOn": "2026-10-10"
     },
@@ -1599,7 +1599,7 @@ module.exports = Object.freeze({
       },
       "smallBusinessHelp": {
         "name": "U.S. Small Business Administration - St. Louis District Office (also lists Small Business Development Centers); Secretary of State also lists MO SourceLink",
-        "url": "https://www.sba.gov/district/st-louis"
+        "url": "https://legacy.sba.gov/district/st-louis"
       },
       "checkedOn": "2026-10-10"
     },
@@ -1891,7 +1891,7 @@ module.exports = Object.freeze({
       },
       "smallBusinessHelp": {
         "name": "U.S. Small Business Administration - New Jersey District Office",
-        "url": "https://www.sba.gov/district/new-jersey"
+        "url": "https://legacy.sba.gov/district/new-jersey"
       },
       "checkedOn": "2026-10-10"
     },
@@ -2063,7 +2063,7 @@ module.exports = Object.freeze({
       },
       "smallBusinessHelp": {
         "name": "U.S. Small Business Administration - North Carolina District Office",
-        "url": "https://www.sba.gov/district/north-carolina"
+        "url": "https://legacy.sba.gov/district/north-carolina"
       },
       "checkedOn": "2026-10-10"
     },
@@ -2118,7 +2118,7 @@ module.exports = Object.freeze({
       "stateTaxRegistration": null,
       "smallBusinessHelp": {
         "name": "U.S. Small Business Administration - North Dakota District Office",
-        "url": "https://www.sba.gov/district/north-dakota"
+        "url": "https://legacy.sba.gov/district/north-dakota"
       },
       "checkedOn": "2026-10-10"
     },
@@ -2174,7 +2174,7 @@ module.exports = Object.freeze({
       "stateTaxRegistration": null,
       "smallBusinessHelp": {
         "name": "U.S. Small Business Administration - Ohio District Office",
-        "url": "https://www.sba.gov/district/ohio"
+        "url": "https://legacy.sba.gov/district/ohio"
       },
       "checkedOn": "2026-10-10"
     },
@@ -2515,7 +2515,7 @@ module.exports = Object.freeze({
         }
       },
       "registeredAgentNote": "The Secretary of State FAQ says 'A registered agent MUST be a resident of South Dakota, with BOTH a physical and mailing address in South Dakota' (a noncommercial agent or a commercial registered agent; an office holder is not allowed for LLCs).",
-      "businessLicenseNote": "South Dakota has no single statewide business license; the Department of Revenue's online Tax License Application covers sales, use, contractor's excise, manufacturer, wholesaler, motor fuel, alcohol and lottery licenses: https://dor.sd.gov/online-services/tax-license-application/",
+      "businessLicenseNote": "South Dakota has no single statewide business license; the Department of Revenue's online Tax License Application covers sales, use, contractor's excise, manufacturer, wholesaler, motor fuel, alcohol and lottery licenses: https://apps.sd.gov/rv23cedar/main/main.aspx",
       "stateTaxRegistration": {
         "agency": "South Dakota Department of Revenue (Tax License Application)",
         "url": "https://dor.sd.gov/online-services/tax-license-application/"
