@@ -379,7 +379,9 @@
   // "Write my sponsorship proposal", "help me build a team registration packet": ten short questions each, read back, and after a yes saved as a Word document with the person's own words under plain headings
   // (nexus/knowledge/athlete-docs.js builds it from these answers only, word for word; no number, result or promise is added). Kyro sends it to no sponsor, league or family and collects no money. A question ("how do I write a
   // sponsorship proposal?"), a "template", an "example" or an "outline" is still the athlete guide's. English only for now.
-  const ATHLETE_DOC_ORDER = /\b(?:write|make|create|draft|prepare|build|start|put together|set up|give me|get me|i need|i want|i'd like|i would like|help me|let's|can you|could you|would you)\b/i;
+  // asking to be walked through something
+  const WALK_ASK = /\b(?:walk|guide|talk|take|lead) (?:me|us) through\b|\bstep[- ]by[- ]step\b|\bwhat are the steps\b/i;
+  const ATHLETE_DOC_ORDER = /\b(?:walk me through|guide me through|take me through|talk me through|step by step|write|make|create|draft|prepare|build|start|put together|set up|give me|get me|i need|i want|i'd like|i would like|help me|let's|can you|could you|would you)\b/i;
   const ATHLETE_DOC_NOT = /\b(?:template|outline|blank|example|sample|format|pdf|checklist|samples)\b|^\s*(?:how|what|why|which|when|should|is|are|does|do)\b/i;
   function athleteDocRequest(text, subject) {
     const value = clean(text).replace(/[’]/g, "'").replace(WAKE_LEAD, "").replace(FILLER_LEAD, "").trim();
@@ -475,16 +477,18 @@
     return { ok: true, value: value.replace(/^\p{Ll}/u, letter => letter.toUpperCase()) };
   }
   const MONEY_RETRY = "Please say that again in your own words, without any account numbers, PINs, passwords or Social Security number, or say skip.";
-  const MONEY_ORDER = /\b(?:make|create|draft|write|prepare|build|put together|set up|give me|get me|i need|i want|i'd like|i would like|help me|let's|can you|could you|would you)\b/i;
+  const MONEY_ORDER = /\b(?:walk me through|guide me through|take me through|talk me through|step by step|make|create|draft|write|prepare|build|put together|set up|give me|get me|i need|i want|i'd like|i would like|help me|let's|can you|could you|would you)\b/i;
   const MONEY_NOT = /\b(?:template|worksheet|example|sample|blank|outline|format|pdf|checklist|calculator|app|spreadsheet)\b|^\s*(?:how|what|why|which|when|should|is|are|does|do)\b|\b(?:business|company|shop|store|farm|nonprofit|non-profit|church|organi[sz]ation|team|club)\b|\d/i;
   const MONEY_PLAN_SUBJECT = /\b(?:money plan|financial plan|spending plan|savings plan|debt plan|budget|90[- ]day (?:money |financial |action )?plan|plan for my (?:money|finances))\b/i;
   function isMoneyPlanRequest(text) {
     const value = clean(text).replace(/[’]/g, "'").replace(WAKE_LEAD, "").replace(FILLER_LEAD, "").trim();
     if (!value || value.length > 160) return false;
     // ("90 day" is the plan's own length; any other number in the sentence is an amount, which is a record and not an order for a plan)
+    // ("walk me through making a budget" is the CFPB's steps, the money guide's walkthrough; "walk me through making a money plan" is this interview)
+    if (WALK_ASK.test(value) && !/\b(?:money plan|financial plan|90[- ]day|savings plan|debt plan|plan for my (?:money|finances))\b/i.test(value)) return false;
     return !MONEY_NOT.test(value.replace(/\b90[- ]day\b/gi, "ninety day")) && MONEY_ORDER.test(value) && MONEY_PLAN_SUBJECT.test(value);
   }
-  const PROGRAM_ORDER = /\b(?:plan|planning|design|launch|start|starting|run|running|organi[sz]e|set up|setting up|create|build|develop|write|draft|prepare|help me|i want to|we want to|i need to|we need to|can you help|could you help)\b/i;
+  const PROGRAM_ORDER = /\b(?:walk me through|guide me through|take me through|talk me through|step by step|plan|planning|design|launch|start|starting|run|running|organi[sz]e|set up|setting up|create|build|develop|write|draft|prepare|help me|i want to|we want to|i need to|we need to|can you help|could you help)\b/i;
   const PROGRAM_NOT = /\b(?:template|worksheet|example|sample|blank|outline|pdf|checklist)\b|^\s*(?:how|what|why|which|when|should|is|are|does|do)\b|\d/i;
   const PROGRAM_SUBJECT = /\b(?:financial (?:education|literacy)|money (?:management|education)|financial coaching)\b.{0,25}\b(?:programs?|classes|class|workshops?|courses?|series|curriculum)\b|\b(?:programs?|classes|class|workshops?)\b.{0,25}\b(?:on|about|for)\b.{0,15}\b(?:financial (?:education|literacy)|money management|managing money)\b|\bcommunity financial education\b/i;
   function isProgramKitRequest(text) {

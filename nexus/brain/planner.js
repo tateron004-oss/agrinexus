@@ -42,6 +42,8 @@ const { athleteTopic } = require("../../public/kyro-athlete-topics.js");
 const { athleteAnswer } = require("../knowledge/athlete-guide.js");
 const { moneyTopic } = require("../../public/kyro-money-topics.js");
 const { moneyAnswer } = require("../knowledge/money-guide.js");
+const { moneyWalkthrough, WALK_OF_TOPIC: MONEY_WALK_OF_TOPIC, moneyWalkthroughFor } = require("../knowledge/money-walkthroughs.js");
+const { athleteWalkthrough, WALK_OF_TOPIC: ATHLETE_WALK_OF_TOPIC, athleteWalkthroughFor } = require("../knowledge/athlete-walkthroughs.js");
 const { prWalkthrough, WALK_OF_TOPIC: PR_WALK_OF_TOPIC } = require("../knowledge/pr-walkthroughs.js");
 const { childHelpTopic } = require("../../public/kyro-child-help.js");
 const { childHelpAnswer } = require("../knowledge/child-help.js");
@@ -559,6 +561,13 @@ class OpenEndedPlanner {
     // person's own records are never taken (public/kyro-athlete-topics.js), so those still do what they did. Outside the United States only what an official page says is stated.
     const athleteId = ownWorkspace && businessVoiceDispatch.asksAboutOwnRecords(askText) ? null : athleteTopic(askText);
     const athleteGuide = athleteId ? athleteAnswer(athleteId, { us: usPerson && !africaNamed(askText), country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
+    // "Walk me through registering with Athletics Kenya", "step by step, how do I get a US student visa as an athlete": the same process one step at a time for the person to do themselves (see knowledge/athlete-walkthroughs.js; the page shows each step with its
+    // official page and reads it out). Kyro never registers, applies, files or signs for them.
+    const athleteWalk = athleteGuide && walkthroughAsk(askText) && ATHLETE_WALK_OF_TOPIC[athleteId] ? athleteWalkthrough(ATHLETE_WALK_OF_TOPIC[athleteId]) : null;
+    if (athleteWalk) {
+      const intro = `Okay, I will walk you through ${athleteWalk.title.charAt(0).toLowerCase()}${athleteWalk.title.slice(1)}, one step at a time. There are ${athleteWalk.steps.length} steps. I only guide you: you do each step yourself, and I never register, apply, file or sign for you.`;
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: intro, sourceRequired: false, knowledge: `athlete-guide:walkthrough:${athleteWalk.id}`, sources: athleteWalk.sources, walkthrough: athleteWalk, guardrail: "professional-advice", planningAttempts: 0 });
+    }
     if (athleteGuide) {
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: athleteGuide.text, sourceRequired: false, knowledge: `athlete-guide:${athleteId}`, sources: athleteGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
@@ -619,6 +628,13 @@ class OpenEndedPlanner {
     // The open question "what should I invest in?" is answered here by teaching how to choose, never by naming a stock, fund, coin, broker or app (nexus/brain/investment-guard.js).
     const moneyId = ownWorkspace && businessVoiceDispatch.asksAboutOwnRecords(askText) ? null : moneyTopic(askText);
     const moneyGuide = moneyId ? moneyAnswer(moneyId, { us: usPerson && !africaNamed(askText), country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
+    // "Walk me through making a budget", "step by step, how do I check my credit report", "walk me through getting a KRA PIN": the same process, or a short lesson where the topic explains rather than asks for something to be done, one step at a
+    // time for the person to do themselves (see knowledge/money-walkthroughs.js; the page shows each step with its official page and reads it out). Kyro never files, pays, applies or moves any money, and never needs an account number or a password.
+    const moneyWalk = moneyGuide && walkthroughAsk(askText) && MONEY_WALK_OF_TOPIC[moneyGuide.topic] ? moneyWalkthrough(MONEY_WALK_OF_TOPIC[moneyGuide.topic]) : null;
+    if (moneyWalk) {
+      const intro = `Okay, I will walk you through ${moneyWalk.title.charAt(0).toLowerCase()}${moneyWalk.title.slice(1)}, one step at a time. There are ${moneyWalk.steps.length} steps. I only guide you: you do each step yourself, and I never file, apply, pay or move any money for you, and I never need an account number or a password.`;
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: intro, sourceRequired: false, knowledge: `money-guide:walkthrough:${moneyWalk.id}`, sources: moneyWalk.sources, walkthrough: moneyWalk, guardrail: "professional-advice", planningAttempts: 0 });
+    }
     if (moneyGuide) {
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: moneyGuide.text, sourceRequired: false, knowledge: `money-guide:${moneyGuide.topic}`, sources: moneyGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
@@ -1803,7 +1819,7 @@ function walkthroughChecklistPlan(text, catalog) {
   const asked = `Walk me through ${ask.rest}`;
   const topic = californiaTopic(asked);
   const usTopic = topic ? null : usWalkTopic(asked);
-  const walk = topic ? californiaWalkthrough(topic) : usTopic ? usWalkthrough(usTopic) : null;
+  const walk = topic ? californiaWalkthrough(topic) : usTopic ? usWalkthrough(usTopic) : (moneyWalkthroughFor(asked) || athleteWalkthroughFor(asked));
   if (!walk) return null;
   if (!catalog.tools.some(tool => tool.toolId === "lists.create") || !catalog.applications.some(app => app.applicationId === "lists")) return null;
   return { goal: String(text || "").trim(), application: "lists", riskTier: "low", clarification: null,

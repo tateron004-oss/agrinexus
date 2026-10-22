@@ -94,7 +94,7 @@
     ["athlete-overview", text => (ATHLETE.test(text) || /\bcoach(?:es)?\b/i.test(text)) && /\b(?:what can you (?:do|help)|how can you help|can you help|help (?:me |us )?(?:with|as)|what (?:do|does|can) kyro|(?:athlete|athletes|sports|sport) (?:tools?|capabilit\w+|help|guide|information|resources?|support)|information (?:for|about) (?:an? )?athletes?|resources? for (?:an? )?athletes?|support (?:for )?athletes?)\b/i.test(text)]
   ];
 
-  const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+|nexus,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|will|would|tell me|explain|help me|i need|i want|i('| a)m looking for|i would like|i'd like|any|give me|walk me|teach me|my|our|i am|i'm|we are|we're|we have|we run|the|as an? athlete|i play|i coach|i manage|i got|i have|i just|i was|i had)\b)/i;
+  const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+|nexus,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|will|would|tell me|explain|help me|i need|i want|i('| a)m looking for|i would like|i'd like|any|give me|walk me|walk us|take me through|guide me through|talk me through|step[- ]by[- ]step|what are the steps|teach me|my|our|i am|i'm|we are|we're|we have|we run|the|as an? athlete|i play|i coach|i manage|i got|i have|i just|i was|i had)\b)/i;
 
   function athleteTopic(text) {
     const value = String(text || "").replace(/\s+/g, " ").trim();

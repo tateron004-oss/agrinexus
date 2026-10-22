@@ -147,7 +147,7 @@ test("on the page: the order starts the interview before the guides, typed or sa
   assert.match(app, /id === "program-kit" \|\| \(!kyroActiveVoiceIntake && window\.KyroIntakeForms\?\.isProgramKitRequest\?\.\(command\)\)\) return "Kyro is already asking the organizer the questions for a financial education program plan/);
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  assert.ok(index.includes('<script src="/kyro-intake-forms.js?v=kyro-intake-forms-5"></script>')); assert.ok(sw.includes("`/kyro-intake-forms.js?v=kyro-intake-forms-5`"));
+  assert.ok(index.includes('<script src="/kyro-intake-forms.js?v=kyro-intake-forms-6"></script>')); assert.ok(sw.includes("`/kyro-intake-forms.js?v=kyro-intake-forms-6`"));
 });
 
 test("the live voice rig has a case for each: it starts the interview and cancels, so nothing is saved", () => {
