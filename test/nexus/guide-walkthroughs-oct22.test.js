@@ -101,7 +101,8 @@ test("through the planner, with no AI model: each walkthrough is carried with it
 test("every walkthrough is offered after its topic's answer, the offered words run it, and the checklist holds the walkthrough's steps", async () => {
   const p = planner();
   for (const { family, id, def } of ALL) {
-    const list = offers.offersFor({ knowledge: `${family.label}:${def.topic}` });
+    // (some guides also offer "show all my sources" after the walk and checklist offers)
+    const list = offers.offersFor({ knowledge: `${family.label}:${def.topic}` }).filter(offer => offer.id !== "sources");
     assert.deepEqual(list.map(offer => offer.id), ["walk", "checklist"], id);
     assert.equal(list[0].command, `Walk me through ${def.phrase}`, id);
     assert.equal(list[1].command, `Save the steps for ${def.phrase} as a checklist`, id);
