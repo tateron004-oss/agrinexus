@@ -51673,7 +51673,7 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // "What are my birth control options?", "how often should I get a Pap smear?": the checked women's health guide, with its official sources. The voice model reworded such a question when it called a tool, and the reworded
     // one was sometimes answered from memory with no sources.
     // "What is type 2 diabetes?", "how do I keep track of my blood sugar?", "how can I lower my blood pressure?": the checked diabetes and high blood pressure guide, with its sources (a person's own reading, symptoms or a medicine are never taken).
-    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)) || (typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest(trimmed)) || (typeof kyroPrQuestion === "function" && kyroPrQuestion(trimmed)) || (typeof kyroChurchQuestion === "function" && kyroChurchQuestion(trimmed)) || (typeof kyroAthleteQuestion === "function" && kyroAthleteQuestion(trimmed)))) {
+    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)) || (typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest(trimmed)) || (typeof kyroPrQuestion === "function" && kyroPrQuestion(trimmed)) || (typeof kyroChurchQuestion === "function" && kyroChurchQuestion(trimmed)) || (typeof kyroAthleteQuestion === "function" && kyroAthleteQuestion(trimmed)) || (typeof kyroMoneyQuestion === "function" && kyroMoneyQuestion(trimmed)))) {
       if (!heardAgain) {
         try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
         kyroPageSpeaksUntil = Date.now() + 40000;
@@ -53219,6 +53219,11 @@ function kyroChurchQuestion(text) {
 // deals, agents, taxes, endorsements, starting a business, a youth club, money after sport. The page takes such a question itself so the voice model does not answer a rule or a safety question from memory with no sources.
 function kyroAthleteQuestion(text) {
   try { return Boolean(window.KyroAthleteTopics && typeof window.KyroAthleteTopics.athleteTopic === "function" && window.KyroAthleteTopics.athleteTopic(text)); } catch { return false; }
+}
+// A question about a person's own money (public/kyro-money-topics.js, shared with the server): a spending plan, income that changes, a bank account, savings, credit, debt and collectors, costly loans, student loans, buying a home,
+// investing and how to choose, fees, retirement accounts, brokerage and children's accounts, scams and keeping accounts safe. The page takes such a question itself so the voice model does not answer a rule or a protection from memory with no sources.
+function kyroMoneyQuestion(text) {
+  try { return Boolean(window.KyroMoneyTopics && typeof window.KyroMoneyTopics.moneyTopic === "function" && window.KyroMoneyTopics.moneyTopic(text)); } catch { return false; }
 }
 // A request about the MEMORY BOOK (public/kyro-memory-book.js, shared with the server): add a memory, hear one, see the list, remove one, say who may add. The page takes such a turn itself so that the voice model never makes up a memory:
 // a memory is read back exactly as it was written, from the book, or not at all.

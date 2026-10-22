@@ -68,8 +68,12 @@ function classifyFinance(command = "") {
   if (/\b(?:profit\s+)?margins?\b|\bmark-?ups?\b/i.test(text)) return "profitMargin";
   if (/\b(?:campaign|fundrais\w+|gala|appeal|auction|walk-?a-?thon|bake sale|benefit dinner|crowdfund\w*)\b/i.test(text) && /\b(?:rais\w+|net|after (?:expenses|costs)|profit|made|cost to raise|worth it|left over|brought in)\b/i.test(text)) return "campaignNet";
   if (/\b(?:restricted|unrestricted)\b/i.test(text) && /\b(?:funds?|money|donations?|gifts?|balance|grants?|cash)\b/i.test(text)) return "fundsSummary";
-  if (/\bbudgets?\b/i.test(text)) return "budgetStatus";
-  if (/\b(?:bills?|payables?)\b/i.test(text) || /\bwhat (?:do|are) (?:we|i) (?:owe|supposed to pay|due to pay)\b/i.test(text) || /\bwho do (?:we|i) owe\b/i.test(text)) return "billsDue";
+  // (a general question about HOW MONEY WORKS -- "how do I make a budget?", "what is a bill calendar?" -- is not a read of this workspace's budgets and bills: it is the money guide's, nexus/knowledge/money-guide.js. It says nothing of "my", "our" or "we",
+  // nor of a status, a balance or what is left.)
+  const generalHowTo = /^\s*(?:please\s+)?(?:(?:kyro|nexus),?\s+)?(?:how (?:do|can|should|does) (?:i|we|you|people|someone|one)\b|what (?:is|are|does)\b|what's\b|why (?:do|should|is|are)\b|explain\b|teach me\b|help me (?:understand|learn|make|build|create|start)\b)/i.test(text)
+    && !/\b(?:my|our|mine|we|us|status|balance|left|remaining|so far|this (?:week|month|year)|over|under|due|owe)\b/i.test(text);
+  if (/\bbudgets?\b/i.test(text)) return generalHowTo ? null : "budgetStatus";
+  if (/\b(?:bills?|payables?)\b/i.test(text) || /\bwhat (?:do|are) (?:we|i) (?:owe|supposed to pay|due to pay)\b/i.test(text) || /\bwho do (?:we|i) owe\b/i.test(text)) return generalHowTo ? null : "billsDue";
   return null;
 }
 
