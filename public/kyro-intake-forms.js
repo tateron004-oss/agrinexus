@@ -375,6 +375,93 @@
     isBusinessPlanRequest
   });
 
+  // --- an athlete's sponsorship proposal and a team or club packet --------------------------------------
+  // "Write my sponsorship proposal", "help me build a team registration packet": ten short questions each, read back, and after a yes saved as a Word document with the person's own words under plain headings
+  // (nexus/knowledge/athlete-docs.js builds it from these answers only, word for word; no number, result or promise is added). Kyro sends it to no sponsor, league or family and collects no money. A question ("how do I write a
+  // sponsorship proposal?"), a "template", an "example" or an "outline" is still the athlete guide's. English only for now.
+  const ATHLETE_DOC_ORDER = /\b(?:write|make|create|draft|prepare|build|start|put together|set up|give me|get me|i need|i want|i'd like|i would like|help me|let's|can you|could you|would you)\b/i;
+  const ATHLETE_DOC_NOT = /\b(?:template|outline|blank|example|sample|format|pdf|checklist|samples)\b|^\s*(?:how|what|why|which|when|should|is|are|does|do)\b/i;
+  function athleteDocRequest(text, subject) {
+    const value = clean(text).replace(/[’]/g, "'").replace(WAKE_LEAD, "").replace(FILLER_LEAD, "").trim();
+    if (!value || value.length > 160) return false;
+    if (ATHLETE_DOC_NOT.test(value) || !ATHLETE_DOC_ORDER.test(value)) return false;
+    return subject.test(value);
+  }
+  const SPONSOR_SUBJECT = /\bsponsor(?:ship)?s?\b.{0,20}\b(?:proposals?|pitch(?:es)?|letters?|packages?|packets?|decks?)\b|\b(?:proposals?|pitch(?:es)?|letters?|packages?|packets?|decks?)\b.{0,20}\bsponsor(?:ship)?s?\b/i;
+  const TEAM_SUBJECT = /\b(?:team|club|league|squad)\b.{0,25}\b(?:registration|sign[- ]?up|roster|packets?|fee sheet|information sheet|parent packet|handbook)\b|\b(?:registration|sign[- ]?up|roster|fee sheet|parent packet|information sheet|handbook)\b.{0,25}\b(?:team|club|league|squad)\b|\b(?:team|club|parent|player) (?:registration )?packet\b/i;
+  function isSponsorshipProposalRequest(text) { return athleteDocRequest(text, SPONSOR_SUBJECT); }
+  function isTeamPacketRequest(text) { return athleteDocRequest(text, TEAM_SUBJECT); }
+  function joined(value) { return Array.isArray(value) ? value.map(clean).filter(Boolean).join("; ") : clean(value); }
+  function readbackOf(fields) {
+    return values => {
+      const parts = [];
+      for (const field of fields) if (joined(values[field.key])) parts.push(`${field.label}: ${joined(values[field.key])}.`);
+      return `Here is what I have. ${parts.join(" ")}`;
+    };
+  }
+  function requestOf(fields) {
+    return values => {
+      const request = {};
+      for (const field of fields) {
+        const value = values[field.key];
+        if (Array.isArray(value)) { const items = value.map(clean).filter(Boolean); if (items.length) request[field.key] = items; }
+        else if (clean(value)) request[field.key] = clean(value);
+      }
+      return request;
+    };
+  }
+  const SPONSOR_FIELDS = [
+    { key: "athlete", label: "Athlete", question: "Who is the proposal for? Say your name, your sport, and your level or team.", required: true, kind: "text", aliases: ["athlete", "name", "who"] },
+    { key: "ask", label: "The ask", question: "What are you asking a sponsor for? Money, gear, travel or something else, and how much if you know.", required: true, kind: "sentences", aliases: ["ask", "asking", "need", "want"] },
+    { key: "story", label: "Your story", question: "In a few sentences, what is your story? Or say 'skip'.", required: false, kind: "sentences", aliases: ["story", "about", "background"] },
+    { key: "results", label: "Results", question: "What results or milestones are you proudest of? Or say 'skip'.", required: false, kind: "sentences", aliases: ["results", "wins", "milestones", "achievements"] },
+    { key: "audience", label: "Who follows you", question: "Who follows and supports you? Give numbers only if you know them. Or say 'skip'.", required: false, kind: "sentences", aliases: ["audience", "followers", "fans", "supporters"] },
+    { key: "use", label: "What it pays for", question: "What would the support pay for? Or say 'skip'.", required: false, kind: "sentences", aliases: ["pay", "use", "spend", "costs"] },
+    { key: "offer", label: "What you offer", question: "What can you give a sponsor in return? For example, a logo on your kit, posts, appearances or a clinic. Or say 'skip'.", required: false, kind: "sentences", aliases: ["offer", "return", "give"] },
+    { key: "levels", label: "Levels", question: "Do you have sponsor levels, for example a small, medium and large amount? Or say 'skip'.", required: false, kind: "sentences", aliases: ["levels", "packages", "tiers"] },
+    { key: "contact", label: "How to reach you", question: "How should a sponsor reach you? Or say 'skip'.", required: false, kind: "text", aliases: ["contact", "reach", "phone", "email"] },
+    { key: "timeline", label: "Dates", question: "Which dates matter, such as your season, and when do you need an answer? Or say 'skip'.", required: false, kind: "text", aliases: ["dates", "timeline", "season", "deadline"] }
+  ];
+  const sponsorshipProposal = Object.freeze({
+    id: "sponsorship-proposal",
+    title: "Your sponsorship proposal",
+    intro: "I will ask you ten short questions, one at a time, for a sponsorship proposal. You can say repeat, skip, go back, or stop at any time.",
+    confirmBeforeSubmit: true,
+    confirmTail: { en: "Shall I save it as a document you can edit and send? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuituma? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the proposal.",
+    fields: SPONSOR_FIELDS,
+    readback: readbackOf(SPONSOR_FIELDS),
+    toRequest: requestOf(SPONSOR_FIELDS),
+    isSponsorshipProposalRequest
+  });
+  const TEAM_FIELDS = [
+    { key: "team", label: "Team", question: "What is your team or club called, and which sport and age group?", required: true, kind: "text", aliases: ["team", "club", "name"] },
+    { key: "season", label: "Season", question: "Which season or dates does this cover? Or say 'skip'.", required: false, kind: "text", aliases: ["season", "dates", "year"] },
+    { key: "leader", label: "Who is in charge", question: "Who is in charge, and how can families reach them? Or say 'skip'.", required: false, kind: "text", aliases: ["leader", "coach", "manager", "contact"] },
+    { key: "staff", label: "Coaches and volunteers", question: "Who are the coaches and volunteers? Or say 'skip'.", required: false, kind: "sentences", aliases: ["coaches", "staff", "volunteers", "assistants"] },
+    {
+      key: "roster", label: "Players", question: "Say the names of your players. You can say 'skip' and add them later.", required: false, kind: "sentences", aliases: ["roster", "players", "team list", "names"],
+      repeatable: { moreQuestion: "Any more players? Or say that's all.", max: 8 }
+    },
+    { key: "schedule", label: "Practices and games", question: "Where and when do you practise and play? Or say 'skip'.", required: false, kind: "sentences", aliases: ["practice", "schedule", "games", "times"] },
+    { key: "registration", label: "Registration", question: "How do families register, and by what date? Or say 'skip'.", required: false, kind: "sentences", aliases: ["registration", "register", "sign up"] },
+    { key: "fees", label: "Fees", question: "What does it cost, and when is it due? Or say 'skip'.", required: false, kind: "sentences", aliases: ["fees", "cost", "price", "dues"] },
+    { key: "travel", label: "Trips", question: "Do you have trips or tournaments? Say where, when, and how you will travel and stay. Or say 'skip'.", required: false, kind: "sentences", aliases: ["travel", "trips", "tournaments", "away"] },
+    { key: "forms", label: "Forms", question: "Which forms must families sign, such as a waiver or a medical form? Or say 'skip'.", required: false, kind: "sentences", aliases: ["forms", "waiver", "medical", "permission"] }
+  ];
+  const teamPacket = Object.freeze({
+    id: "team-packet",
+    title: "Your team packet",
+    intro: "I will ask you ten short questions, one at a time, for a team packet you can give to families. You can say repeat, skip, go back, or stop at any time.",
+    confirmBeforeSubmit: true,
+    confirmTail: { en: "Shall I save it as a document you can edit and hand out? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuigawa? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the packet.",
+    fields: TEAM_FIELDS,
+    readback: readbackOf(TEAM_FIELDS),
+    toRequest: requestOf(TEAM_FIELDS),
+    isTeamPacketRequest
+  });
+
   const resume = Object.freeze({
     id: "resume",
     title: "Your résumé",
@@ -394,5 +481,5 @@
     isContinueRequest: isResumeContinueRequest
   });
 
-  return Object.freeze({ resume, sale, telehealth, prBrief, businessPlan, isBusinessPlanRequest, isTelehealthRequest, isSaleRequest, parseSale, isResumeBuildRequest, isResumeContinueRequest: isResumeContinueRequest, isResumeDownloadRequest });
+  return Object.freeze({ resume, sale, telehealth, prBrief, businessPlan, sponsorshipProposal, teamPacket, isSponsorshipProposalRequest, isTeamPacketRequest, isBusinessPlanRequest, isTelehealthRequest, isSaleRequest, parseSale, isResumeBuildRequest, isResumeContinueRequest: isResumeContinueRequest, isResumeDownloadRequest });
 });
