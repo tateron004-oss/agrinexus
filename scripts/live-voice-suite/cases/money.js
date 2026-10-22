@@ -25,7 +25,7 @@ module.exports = Object.freeze([
   strict("what-to-invest", "What should I invest in?", "will not name a stock"),
   strict("fees", "What is an expense ratio?", "12b-1"),
   strict("retirement-accounts", "What is vesting?", "cliff vesting"),
-  strict("ira", "What is the difference between a Roth and a traditional IRA?", "sweep program"),
+  strict("ira", "What is the difference between a Roth and a traditional IRA?", "open yourself"),
   strict("brokerage-and-kids", "What is SIPC?", "margin account"),
   strict("scams", "How do I spot an investment scam?", "Affinity fraud"),
   strict("account-security", "How do I protect my accounts?", "two-factor authentication"),

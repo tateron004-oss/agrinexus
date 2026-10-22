@@ -620,7 +620,7 @@ class OpenEndedPlanner {
     const moneyId = ownWorkspace && businessVoiceDispatch.asksAboutOwnRecords(askText) ? null : moneyTopic(askText);
     const moneyGuide = moneyId ? moneyAnswer(moneyId, { us: usPerson && !africaNamed(askText), country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
     if (moneyGuide) {
-      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: moneyGuide.text, sourceRequired: false, knowledge: `money-guide:${moneyId}`, sources: moneyGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: moneyGuide.text, sourceRequired: false, knowledge: `money-guide:${moneyGuide.topic}`, sources: moneyGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // A question that names California and is about a business or nonprofit there beyond forming it (state certification, selling to the state, the seller's permit, what a nonprofit does after it is formed, free help, grants, the 2028
     // Games): the checked California guide (see knowledge/california-business.js), asked before the state formation guide below, which answers "how do I register an LLC in California".

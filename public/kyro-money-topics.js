@@ -12,7 +12,9 @@
 
   // moneyTopic(text) -> "money-overview" | "money-spending-plan" | "money-irregular-income" | "money-bank-account" | "money-savings" | "money-free-help" | "money-tax-help" | "money-credit" | "money-debt-plan" | "money-costly-borrowing"
   //   | "money-overdraft-bnpl" | "money-debt-collectors" | "money-student-loans" | "money-homeownership" | "money-housing-trouble" | "money-investing-basics" | "money-investment-types" | "money-cash-like" | "money-what-to-invest"
-  //   | "money-fees" | "money-retirement-accounts" | "money-ira" | "money-brokerage-and-kids" | "money-scams" | "money-account-security" | null
+  //   | "money-fees" | "money-retirement-accounts" | "money-ira" | "money-brokerage-and-kids" | "money-scams" | "money-account-security"
+  //   | "ke-bank-deposit-insurance" | "ke-sacco" | "ke-chama-groups" | "ke-mobile-money" | "ke-digital-loans" | "ke-credit-reference" | "ke-saving-investing" | "ke-pension-retirement" | "ke-tax-personal" | "ke-scams-fraud"
+  //   | "ng-bank-deposit-insurance" | "ng-microfinance-cooperatives" | "ng-mobile-money-fintech" | "ng-digital-loans" | "ng-credit-bureaus" | "ng-saving-investing" | "ng-pension" | "ng-tax-personal" | "ng-scams-fraud" | null
   // A pure text matcher: no sources, no answers, no records.
   const NOT_A_GUIDE_QUESTION = /^(?:please\s+)?(?:log|record|add|save|remind|set|mark|delete|remove|forget|call|text|send|play|open|translate|export|cancel|schedule|email|message|read|make|build|create|write|draft|generate|design|show|list|undo|transfer|pay|deposit|withdraw|buy|sell|lend|borrow|invoice)\b/i;
   const CALENDAR_OR_RECORDS = /\b(?:my calendar|my schedule|my appointments?|my invoices?|my customers?|my clients?|my leads?|my donors?|on my list|my notes?|how much (?:did|have) i (?:spend|spent|earn|earned|make|made|owe)|what do i owe)\b/i;
@@ -30,7 +32,31 @@
   // a pick: a named kind of thing to buy, or a company to use. These keep the open question a request for a pick, which stays with the investing guard.
   const A_PICK = /\b(?:stocks?|shares?|funds?|etfs?|companies|company|coins?|tokens?|brokers?|apps?|platforms?|exchanges?|banks?|picks?|tips?|tickers?)\b/i;
 
+  // places and institutions that name a country; a question that names one is that country's
+  const KENYA_ANY = /\b(?:kenya\w*|ksh|kes|m-?pesa|mpesa|safaricom|sacco\w*|chamas?|table banking|hustler fund|kra|nssf|shif|nhif|cbk|sasra|kdic|mbao|nairobi|mombasa|kisumu|nakuru|eldoret|crb|fuliza|m-?akiba|dhowcsd|sha (?:contribution|premium|registration|card))\b/i;
+  const NIGERIA_ANY = /\b(?:nigeria\w*|naira|cbn|ndic|bvn|pencom|ajo|esusu|lagos|abuja|opay|palmpay|moniepoint|kuda|fccpc|firs|nrs|ngx|efcc|fgn)\b/i;
   const POSITIVE = [
+    // a question that names Kenya (or a SACCO, M-Pesa, the KRA ...): the Kenyan topics, from the Kenyan regulators' own pages
+    ["ke-sacco", text => KENYA_ANY.test(text) && !NIGERIA_ANY.test(text) && /\b(?:sacco\w*|sasra)\b/i.test(text)],
+    ["ke-chama-groups", text => KENYA_ANY.test(text) && !NIGERIA_ANY.test(text) && /\b(?:chamas?|table banking|merry[- ]go[- ]round|self[- ]help groups?)\b/i.test(text)],
+    ["ke-digital-loans", text => KENYA_ANY.test(text) && !NIGERIA_ANY.test(text) && /\b(?:digital (?:loans?|lenders?|credit)|mobile loans?|loan apps?|fuliza|shylocks?)\b/i.test(text) && !/\bhustler fund\b/i.test(text)],
+    ["ke-credit-reference", text => KENYA_ANY.test(text) && !NIGERIA_ANY.test(text) && /\b(?:crb|credit reference|credit bureaus?|blacklist\w*|metropol)\b/i.test(text)],
+    ["ke-scams-fraud", text => KENYA_ANY.test(text) && !NIGERIA_ANY.test(text) && /\b(?:scams?|scammers?|fraud\w*|ponzi|pyramid|fake|conmen|con man)\b/i.test(text)],
+    ["ke-mobile-money", text => KENYA_ANY.test(text) && !NIGERIA_ANY.test(text) && /\b(?:m-?pesa|mpesa|mobile money|airtel money|t-?kash|safaricom|wrong number|reverse(?:d)? (?:a |the |my )?(?:transaction|payment|money))\b/i.test(text)],
+    ["ke-tax-personal", text => KENYA_ANY.test(text) && !NIGERIA_ANY.test(text) && /\b(?:kra|itax|paye|tax returns?|income tax|withholding|tax pin|pin certificate)\b/i.test(text) && !/\b(?:turnover|vat|corporate|corporation|compan(?:y|ies)|business(?:es)?|sole proprietor\w*|presumptive|trading licen[cs]e)\b/i.test(text)],
+    ["ke-pension-retirement", text => KENYA_ANY.test(text) && !NIGERIA_ANY.test(text) && /\b(?:nssf|rba|retirement benefits|mbao|pensions?|retire\w*|shif|nhif|sha)\b/i.test(text)],
+    ["ke-saving-investing", text => KENYA_ANY.test(text) && !NIGERIA_ANY.test(text) && /\b(?:cma|nse|nairobi securities|unit trusts?|money market funds?|treasury (?:bills?|bonds?)|dhowcsd|m-?akiba|infrastructure bonds?|invest\w*|stocks?|shares)\b/i.test(text)],
+    ["ke-bank-deposit-insurance", text => KENYA_ANY.test(text) && !NIGERIA_ANY.test(text) && /\b(?:kdic|deposit insurance|banks?|bank accounts?|deposits?|savings accounts?|microfinance|safe|insured|licen[cs]ed)\b/i.test(text)],
+    // a question that names Nigeria (or the naira, the NDIC, a BVN, ajo ...): the Nigerian topics
+    ["ng-microfinance-cooperatives", text => NIGERIA_ANY.test(text) && !KENYA_ANY.test(text) && /\b(?:ajo|esusu|thrift|cooperatives?|co-operatives?|microfinance|mfb)\b/i.test(text)],
+    ["ng-digital-loans", text => NIGERIA_ANY.test(text) && !KENYA_ANY.test(text) && /\b(?:fccpc|digital (?:loans?|lenders?|lending|credit)|loan apps?|quick loans?|instant loans?)\b/i.test(text)],
+    ["ng-credit-bureaus", text => NIGERIA_ANY.test(text) && !KENYA_ANY.test(text) && /\b(?:credit bureaus?|credit reports?|credit registry|crc|firstcentral|credit score)\b/i.test(text)],
+    ["ng-scams-fraud", text => NIGERIA_ANY.test(text) && !KENYA_ANY.test(text) && /\b(?:scams?|scammers?|fraud\w*|ponzi|pyramid|fake|efcc)\b/i.test(text)],
+    ["ng-mobile-money-fintech", text => NIGERIA_ANY.test(text) && !KENYA_ANY.test(text) && /\b(?:opay|palmpay|moniepoint|kuda|mobile money|ussd|pos agents?|agent banking|wallets?|fintech|payment service banks?|wrong transfer|reverse(?:d)? (?:a |the |my )?(?:transfer|transaction|payment))\b/i.test(text)],
+    ["ng-tax-personal", text => NIGERIA_ANY.test(text) && !KENYA_ANY.test(text) && /\b(?:nrs|firs|tin|paye|tax returns?|income tax|personal income tax|tax act|withholding)\b/i.test(text) && !/\b(?:turnover|vat|corporate|corporation|compan(?:y|ies)|business(?:es)?|sole proprietor\w*|presumptive)\b/i.test(text)],
+    ["ng-pension", text => NIGERIA_ANY.test(text) && !KENYA_ANY.test(text) && /\b(?:pencom|rsa|micro pension|pensions?|retire\w*|contributory pension)\b/i.test(text)],
+    ["ng-saving-investing", text => NIGERIA_ANY.test(text) && !KENYA_ANY.test(text) && /\b(?:sec|ngx|nigerian exchange|savings bonds?|fgn|treasury bills?|mutual funds?|collective investment|invest\w*|stocks?|shares)\b/i.test(text)],
+    ["ng-bank-deposit-insurance", text => NIGERIA_ANY.test(text) && !KENYA_ANY.test(text) && /\b(?:ndic|bvn|nin|deposit insurance|banks?|bank accounts?|deposits?|savings accounts?|safe|insured|licen[cs]ed)\b/i.test(text)],
     // fraud, scams and keeping accounts and identity safe (the only topic that may mention coins and trading, to warn about them)
     ["money-scams", text => /\b(?:investment (?:scams?|fraud\w*)|ponzi|pyramid scheme|affinity fraud|guaranteed returns?|too good to be true|romance scams?|pig butchering|check (?:out )?(?:an? )?(?:financial )?(?:adviser|advisor|broker|investment professional)|brokercheck|is (?:this|that|it) (?:investment|company|firm|offer|opportunity) (?:legit|legitimate|real|a scam|safe)|report (?:an? )?(?:investment )?(?:scam|fraud)|fake checks?|money scams?|(?:spot|avoid|recogni[sz]e) (?:an? )?(?:investment |money |crypto |romance |online )?(?:scam|fraud))/i.test(text)],
     // keeping accounts and identity safe, and beneficiaries
@@ -73,7 +99,7 @@
     // an emergency fund, saving regularly, saving goals
     ["money-savings", text => /\b(?:emergency (?:fund|savings|money)|rainy[- ]day|how much (?:should|do) i (?:save|put away|set aside)|start(?:ing)? (?:to )?sav(?:e|ing)|sav(?:e|ing) (?:more )?money|saving (?:goals?|plan|tips?)|savings (?:goals?|plan|tips?|habit)|automatic (?:transfers?|savings|saving)|pay yourself first|can'?t (?:seem to )?save|hard to save|how (?:do|can) i (?:save (?:more )?(?:money|up|for)|build (?:up )?(?:my )?savings))\b/i.test(text) && !BUSINESS_MONEY.test(text)],
     // choosing and keeping a bank or credit union account
-    ["money-bank-account", text => /\b(?:fdic|ncua|federally insured|share insurance|credit unions?|(?:open|get|need|choose|find|pick|compare)(?:ing)? (?:a |an |the )?(?:free |cheap |low[- ]cost |safe |basic |good )?(?:bank |checking |savings )?(?:account|bank)|(?:no|without a|don'?t have a|do not have a) bank account|unbanked|underbanked|bank (?:fees?|charges?)|monthly (?:maintenance |account )?fees?|minimum balance|direct deposit|prepaid (?:debit )?cards?|is my (?:money|bank|savings|deposit)s? (?:safe|insured|protected)|checking account|savings account|how (?:safe|insured) (?:is|are) my (?:money|bank|savings|deposits?))\b/i.test(text) && !BUSINESS_MONEY.test(text)],
+    ["money-bank-account", text => /\b(?:deposit insurance|fdic|ncua|federally insured|share insurance|credit unions?|(?:open|get|need|choose|find|pick|compare)(?:ing)? (?:a |an |the )?(?:free |cheap |low[- ]cost |safe |basic |good )?(?:bank |checking |savings )?(?:account|bank)|(?:no|without a|don'?t have a|do not have a) bank account|unbanked|underbanked|bank (?:fees?|charges?)|monthly (?:maintenance |account )?fees?|minimum balance|direct deposit|prepaid (?:debit )?cards?|is my (?:money|bank|savings|deposit)s? (?:safe|insured|protected)|checking account|savings account|how (?:safe|insured) (?:is|are) my (?:money|bank|savings|deposits?))\b/i.test(text) && !BUSINESS_MONEY.test(text)],
     // making a budget, a spending plan, a bill calendar
     ["money-spending-plan", text => /\b(?:budget\w*|spending plan|bill calendar|track(?:ing)? (?:my )?(?:spending|expenses|bills)|where (?:does|did) my money (?:go|went)|paycheck to paycheck|needs (?:vs\.?|versus|and) wants|pay my bills|stretch my (?:paycheck|money)|make ends meet|cut (?:my )?(?:spending|expenses|costs)|stop overspending|spend less|manage (?:my )?(?:monthly )?(?:bills|expenses)|financial goals?|money goals?)\b/i.test(text) && !BUSINESS_MONEY.test(text)],
     // what Kyro can do for a person's money

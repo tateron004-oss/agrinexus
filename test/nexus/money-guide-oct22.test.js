@@ -16,7 +16,7 @@ const { collectSources } = require("../../scripts/check-guide-sources.js");
 // say. Asked for by the owner as a community financial education program; he approved, the same day, that "what should I invest in?" is answered by teaching how to choose and never by naming a stock, fund, coin, broker or app.
 const app = fs.readFileSync(path.join(__dirname, "../../public/app.js"), "utf8");
 const server = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
-const ALL = Object.keys(guide.TOPICS);
+const ALL = Object.keys(guide.TOPICS).filter(id => id.startsWith("money-")); // the American topics; the Kenyan and Nigerian ones are in money-guide-africa-oct22.test.js
 
 test("which questions get which topic", () => {
   const yes = [
@@ -84,7 +84,7 @@ test("every answer names official pages, the date they were read, and the closin
   assert.equal(guide.moneyAnswer("nonsense"), null);
   for (const key of Object.keys(guide.SOURCES)) assert.match(guide.SOURCES[key].url, /^https:\/\//, key);
   for (const id of ALL) for (const key of guide.TOPICS[id].sources) assert.ok(guide.SOURCES[key], `${id} names an unknown source ${key}`);
-  for (const key of Object.keys(guide.SOURCES)) assert.ok(ALL.some(id => guide.TOPICS[id].sources.includes(key)), `${key} is cited by some answer`);
+  for (const key of Object.keys(guide.SOURCES)) assert.ok(Object.keys(guide.TOPICS).some(id => guide.TOPICS[id].sources.includes(key)), `${key} is cited by some answer`);
 });
 
 test("the figures are the ones the pages gave, and what a page does not say is said not to be said", () => {
@@ -128,7 +128,7 @@ test("the answer to 'what should I invest in?' teaches how to choose and names n
 });
 
 test("outside the United States only the ideas are offered, with a warning that the pages and protections are American", () => {
-  const kenya = guide.moneyAnswer("money-bank-account", { us: false, country: "ke" });
+  const kenya = guide.moneyAnswer("money-debt-collectors", { us: false, country: "ke" }); // (a topic with no Kenyan answer; the bank account topic has one)
   assert.match(kenya.text, /^These are United States rules and guidance, from American pages\./);
   const ideas = guide.moneyAnswer("money-spending-plan", { us: false, country: "ng" });
   assert.match(ideas.text, /^The ideas here hold anywhere, but the pages are from the United States/);
@@ -153,8 +153,9 @@ test("through the planner, with no AI model; a person's money question is answer
   const pick = await ask("Which coin should I invest in?");
   assert.match(pick.response, /I can't tell you what to buy, sell or trade/); assert.equal(pick.knowledge, undefined);
   // a question that names Kenya, or a device in Nairobi's time zone, is not answered as if American rules applied
-  const named = await ask("What does FDIC insurance cover in Kenya?", { timeZone: "America/Los_Angeles" });
-  assert.equal(named.knowledge, "money-guide:money-bank-account"); assert.match(named.response, /^These are United States rules and guidance/);
+  const named = await ask("A debt collector keeps calling me in Kenya, what are my rights?", { timeZone: "America/Los_Angeles" });
+  assert.equal(named.knowledge, "money-guide:money-debt-collectors"); assert.match(named.response, /^These are United States rules and guidance/);
+  // (a Kenyan bank question is the Kenyan topic's: see money-guide-africa-oct22.test.js)
   const nairobi = await ask("How do I make a budget?", { timeZone: "Africa/Nairobi" });
   assert.equal(nairobi.knowledge, "money-guide:money-spending-plan"); assert.match(nairobi.response, /^The ideas here hold anywhere/);
   // what is not the guide's keeps its own route (here it reaches the AI model, which this test forbids)
