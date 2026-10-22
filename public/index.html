@@ -64,6 +64,8 @@
   </section>
 
   <section id="appView" class="app hidden">
+    <!-- The orb screen hides the whole header (brand, Settings, Logout ...), so someone using only the orb had no way to sign out. This one small corner button is shown there and nowhere else (not in the header, which is hidden on the audio-only home). -->
+    <button id="orbLogoutBtn" class="orb-logout" type="button" data-testid="orb-logout-button">Logout</button>
     <header class="topbar">
       <div class="brand">
         <div class="brand-mark small">NX</div>
@@ -2315,6 +2317,7 @@
   <script src="/kyro-intake-forms.js?v=kyro-intake-forms-3"></script>
   <script src="/kyro-capture.js?v=kyro-capture-1"></script>
   <script src="/kyro-stall-watchdog.js?v=kyro-stall-watchdog-2"></script>
+  <script src="/kyro-voice-start-backoff.js?v=kyro-voice-start-backoff-1"></script>
   <script src="/kyro-media-commands.js?v=kyro-media-commands-1"></script>
   <script src="/kyro-dismiss-commands.js?v=kyro-dismiss-commands-2"></script>
   <script src="/kyro-accessibility-commands.js?v=kyro-accessibility-commands-1"></script>

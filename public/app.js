@@ -12596,6 +12596,7 @@ function applyPlatformLanguage() {
     navIndex++;
   });
   setText("#logoutBtn", copy.logout);
+  setText("#orbLogoutBtn", copy.logout);
   setText("#dashboard .hero h2", copy.dashboardTitle);
   setText("#dashboard .hero p", copy.dashboardIntro);
   setText("#learningTitle", copy.learningTitle);
@@ -50482,6 +50483,8 @@ function stopRealtimeVoiceSession(reason = "Realtime voice stopped.") {
   }
   updateRealtimeControllerState("closed", "controller-cleanup-entered", { reason });
   const explicitShutdown = /explicit-stop|user-stop|signed-out|logout|pagehide|beforeunload|left-genesis|security|shutdown|application-shutdown/i.test(reason);
+  // (a session that ends soon after it began counts against the next restart the page makes by itself; one the person ended does not)
+  if (!explicitShutdown) { try { kyroVoiceStartBackoffInstance?.ended(); } catch { /* optional */ } }
   const permanentStreamActive = nexusPermanentMicrophoneStream && realtimeVoiceSession.stream === nexusPermanentMicrophoneStream;
   try {
     realtimeVoiceSession.sdkController?.close?.(reason, {
@@ -50551,7 +50554,16 @@ function loadNexusOpenAiRealtimeAgentModule() {
   return nexusOpenAiRealtimeAgentModulePromise;
 }
 
-async function requestNexusOpenAiRealtimeSession(status = {}) {
+// What the page tells the server about a voice start, so the timing record can tell a person's tap from a restart the page made by itself, and a tab in view from one in the background. Two plain words, nothing else.
+function kyroVoiceStartHints(options = {}) {
+  let automatic = false;
+  try { automatic = Boolean(window.KyroVoiceStartBackoff?.isAutomaticStart(options)); } catch { /* optional */ }
+  let hidden = false;
+  try { hidden = Boolean(document.hidden); } catch { /* optional */ }
+  return { "X-Kyro-Start": automatic ? "auto" : "user", "X-Kyro-Tab": hidden ? "hidden" : "visible" };
+}
+
+async function requestNexusOpenAiRealtimeSession(status = {}, options = {}) {
   // Found when "hello" took ninety seconds: this request had no time limit, so one that hung left the person with nothing on the screen. It now gives up after fifteen seconds and asks once more.
   let response = null;
   for (let attempt = 0; attempt < 2 && !response; attempt += 1) {
@@ -50560,7 +50572,7 @@ async function requestNexusOpenAiRealtimeSession(status = {}) {
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "application/json", ...kyroVoiceStartHints(options) },
         body: JSON.stringify({
           language: languageCode(),
           model: status.model || "",
@@ -54137,7 +54149,7 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
   let controller = null;
   try {
     const [module, sessionPayload] = await withRealtimeStartTimeout(
-      Promise.all([loadNexusOpenAiRealtimeAgentModule(), requestNexusOpenAiRealtimeSession(status)]),
+      Promise.all([loadNexusOpenAiRealtimeAgentModule(), requestNexusOpenAiRealtimeSession(status, options)]),
       "Starting the voice session"
     );
     updateRealtimeControllerState("connecting", "openai-agents-client-secret-issued", {
@@ -54316,10 +54328,26 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
   }
 }
 
+// Waits longer before each restart the page makes by itself when the last starts failed or ended at once (see public/kyro-voice-start-backoff.js); a start the person asks for is never held.
+let kyroVoiceStartBackoffInstance = null;
+function kyroVoiceStartBackoff() {
+  if (!kyroVoiceStartBackoffInstance && window.KyroVoiceStartBackoff) kyroVoiceStartBackoffInstance = window.KyroVoiceStartBackoff.createStartBackoff();
+  return kyroVoiceStartBackoffInstance;
+}
+
 async function startRealtimeVoiceSession(options = {}) {
   if (!realtimeVoiceSupported()) return false;
   if (realtimeVoiceActive()) return true;
   if (realtimeVoiceStarting) return true;
+  const startBackoff = typeof kyroVoiceStartBackoff === "function" ? kyroVoiceStartBackoff() : null;
+  if (startBackoff) {
+    const held = startBackoff.mayStart(options);
+    if (!held.ok) {
+      nexusGenesisVoiceDebugLog("voice-start-held-back", { source: String(options.source || ""), waitMs: held.waitMs, ...startBackoff.snapshot() });
+      return false;
+    }
+    startBackoff.attempt(options);
+  }
   realtimeVoiceStarting = true;
   // A session the person starts themselves gets a fresh allowance of automatic restarts; one the watchdog started keeps counting.
   if (options.recovery !== true) { try { kyroStallWatchdogInstance()?.reset(); } catch { /* optional */ } }
@@ -54335,10 +54363,13 @@ async function startRealtimeVoiceSession(options = {}) {
     if (status.runtime !== "realtime") { realtimeVoiceStarting = false; return false; }
     if (!status.ready) throw new Error(status.note || "OpenAI Realtime voice is not configured.");
     if (status.transport === "agents-sdk-webrtc" || status.endpoint === "/api/voice/realtime/session") {
-      return await startOpenAiAgentsRealtimeVoiceSession(status, options);
+      const startedSession = await startOpenAiAgentsRealtimeVoiceSession(status, options);
+      if (startBackoff) { if (startedSession) startBackoff.started(); else startBackoff.failed(); }
+      return startedSession;
     }
     throw new Error("OpenAI Realtime direct SDP startup is disabled; the Agents SDK WebRTC session is the only active Nexus Realtime path.");
   } catch (error) {
+    if (startBackoff) startBackoff.failed();
     realtimeVoiceStarting = false;
     stopRealtimeVoiceSession("Realtime voice did not start.");
     const message = `Nexus Realtime voice is temporarily unavailable: ${error.message || "connection failed"}`;
@@ -66380,13 +66411,17 @@ function bindStatic() {
   const guestStartBtn = $("#guestStartBtn");
   if (guestStartBtn) guestStartBtn.onclick = startGuestUserSession;
 
-  $("#logoutBtn").onclick = async () => {
+  const kyroLogout = async () => {
     localStorage.removeItem("agrinexusGuestDisplayName");
     closeNexusVisualProviderQuestionReport();
     resetNexusAuthoritativeIdentityContext();
     await request("/api/logout", { method: "POST" });
     location.reload();
   };
+  $("#logoutBtn").onclick = kyroLogout;
+  // The orb screen hides the header menu, so its own Logout button (shown only there) does the same thing.
+  const orbLogoutBtn = $("#orbLogoutBtn");
+  if (orbLogoutBtn) orbLogoutBtn.onclick = kyroLogout;
 
   // Real personal-data export and account erasure, replacing the only
   // previously-reachable UI for this (the Production prototype rails panel's
