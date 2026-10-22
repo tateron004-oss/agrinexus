@@ -67,6 +67,17 @@ test("a tap on the orb is never held back; a restart the page makes by itself wa
   assert.equal(capped.snapshot().waitMs, 120000);
 });
 
+test("the page's own auto-start does not clear the wait the way a tap does (found on the live page: it reset the back-off every minute)", () => {
+  let clock = 0;
+  const backoff = createStartBackoff({ now: () => clock });
+  const autoStart = { source: "genesis-home-permission-granted-auto-start" };
+  for (let index = 0; index < 3; index += 1) { backoff.attempt({ recovery: true }); backoff.failed(); clock += 1000; }
+  assert.equal(backoff.snapshot().consecutiveBad, 3);
+  backoff.attempt(autoStart);
+  assert.equal(backoff.snapshot().consecutiveBad, 3, "not cleared");
+  assert.equal(backoff.mayStart(autoStart).ok, false, "and held back like any other automatic start");
+});
+
 test("a session that ends within seconds counts against the next automatic restart; one that lasted does not", () => {
   let clock = 0;
   const backoff = createStartBackoff({ now: () => clock });
@@ -78,7 +89,7 @@ test("a session that ends within seconds counts against the next automatic resta
 });
 
 test("the sources the page restarts voice with by itself are recognised, and the sources of a person's tap are not", () => {
-  for (const source of ["stall-watchdog-restart", "bounded-realtime-recovery", "voice-recovery", "genesis-visible-resume", "genesis-speech-finished-restart", "safe-local-tool-restart", "nexus-authoritative-conversation-recovery", "voice-restart"]) {
+  for (const source of ["stall-watchdog-restart", "bounded-realtime-recovery", "voice-recovery", "genesis-visible-resume", "genesis-speech-finished-restart", "safe-local-tool-restart", "nexus-authoritative-conversation-recovery", "voice-restart", "genesis-home-permission-granted-auto-start"]) {
     assert.equal(isAutomaticStart({ source }), true, source);
   }
   for (const source of ["bound-visible-voice-control", "nexus-primary-visible-voice-button", "standard-user-visible-voice-control", "automations-screen", "a100-standard-user-safe-autonomy", "start-voice-listening", ""]) {
