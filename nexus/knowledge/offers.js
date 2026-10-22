@@ -60,7 +60,7 @@ function processOf(knowledge) {
 function offersFor(plan, { lang = "en" } = {}) {
   if (!plan || typeof plan !== "object" || lang === "es") return [];
   const knowledge = String(plan.knowledge || "");
-  if (!knowledge || plan.walkthrough || /^(?:sources-page|live-feeds|california-business:walkthrough|money-guide:walkthrough|athlete-guide:walkthrough)/.test(knowledge)) return [];
+  if (!knowledge || plan.walkthrough || /^(?:sources-page|live-feeds)|^[a-z0-9-]+:walkthrough:/.test(knowledge)) return [];
   const offers = [];
   const process = processOf(knowledge);
   if (process) {
