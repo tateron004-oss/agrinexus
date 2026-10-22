@@ -50211,11 +50211,16 @@ function kyroStallReportBody(kind, detail = {}) {
 // Running totals of how spoken requests went, sent now and then as counts only (server/voice-usage.js): requests heard, and how many had a problem.
 let kyroVoiceTally = { requests: 0, refused: 0, notUnderstood: 0, stalls: 0, slowStarts: 0 };
 function kyroNoteVoice(field) { try { if (Object.prototype.hasOwnProperty.call(kyroVoiceTally, field)) kyroVoiceTally[field] += 1; } catch { /* counting never stops the voice */ } }
+// A report the page sends and does not wait for. Its reply is read and dropped: a reply nobody reads keeps the request "open" in the browser, so a page that sends such reports never looks finished to the deploy check's
+// browser (found 22 October: a headless check waited 90 seconds, twice, for a page that had loaded long before; the reports had been answered in about a second).
+function kyroSendAndForget(url, init) {
+  try { fetch(url, init).then(response => (response && typeof response.arrayBuffer === "function" ? response.arrayBuffer() : null)).catch(() => {}); } catch { /* a report must never break the voice session */ }
+}
 function kyroFlushVoiceUsage() {
   try {
     const tally = kyroVoiceTally; if (!Object.values(tally).some(value => value > 0)) return;
     kyroVoiceTally = { requests: 0, refused: 0, notUnderstood: 0, stalls: 0, slowStarts: 0 };
-    fetch("/api/voice/realtime/usage-report", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...tally, build: typeof AGRINEXUS_BUILD_VERSION !== "undefined" ? String(AGRINEXUS_BUILD_VERSION) : "" }), keepalive: true }).catch(() => {});
+    kyroSendAndForget("/api/voice/realtime/usage-report", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...tally, build: typeof AGRINEXUS_BUILD_VERSION !== "undefined" ? String(AGRINEXUS_BUILD_VERSION) : "" }), keepalive: true });
   } catch { /* a report must never break the voice session */ }
 }
 try {
@@ -50227,7 +50232,7 @@ function reportKyroVoiceStall(kind, detail = {}) {
   try { kyroNoteVoice(kind === "model-refused" ? "refused" : kind === "request-not-understood" ? "notUnderstood" : (kind === "slow-start" || kind === "start-failed") ? "slowStarts" : "stalls"); } catch { /* counted if it can be */ }
   try {
     const body = JSON.stringify(kyroStallReportBody(kind, detail));
-    fetch("/api/voice/realtime/stall-report", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body, keepalive: true }).catch(() => {});
+    kyroSendAndForget("/api/voice/realtime/stall-report", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body, keepalive: true });
   } catch { /* a report must never break the voice session */ }
 }
 // ---- voice resilience (END) ------------------------------------------------------------------------------------------------------------------
