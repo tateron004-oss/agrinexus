@@ -19,7 +19,7 @@ const DEFAULT_SNAPSHOT = path.join(ROOT, "nexus", "knowledge", "source-snapshot.
 const USER_AGENT = "Mozilla/5.0 (compatible; KyroSourceCheck/1.0; +https://github.com/tateron004-oss/agrinexus)";
 // (a site that refuses the program above is tried once more as an ordinary browser: many government sites turn away anything that names itself a bot and answer a person; one that still refuses is "blocked")
 const BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
-const GUIDES = ["us-small-business", "us-community-support", "small-business-technology", "africa-small-business", "ai-tools-for-business", "california-business", "womens-health", "chronic-conditions", "parents-guide", "child-help", "pr-events-guide", "church-guide", "athlete-guide"];
+const GUIDES = ["us-small-business", "us-community-support", "small-business-technology", "africa-small-business", "ai-tools-for-business", "california-business", "womens-health", "chronic-conditions", "parents-guide", "child-help", "pr-events-guide", "church-guide", "athlete-guide", "money-guide"];
 
 // Every https address the guides cite, with the guides that cite it.
 function collectSources(knowledgeDir = path.join(ROOT, "nexus", "knowledge")) {

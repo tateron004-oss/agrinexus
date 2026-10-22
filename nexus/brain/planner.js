@@ -40,6 +40,8 @@ const { churchTopic } = require("../../public/kyro-church-topics.js");
 const { churchAnswer } = require("../knowledge/church-guide.js");
 const { athleteTopic } = require("../../public/kyro-athlete-topics.js");
 const { athleteAnswer } = require("../knowledge/athlete-guide.js");
+const { moneyTopic } = require("../../public/kyro-money-topics.js");
+const { moneyAnswer } = require("../knowledge/money-guide.js");
 const { prWalkthrough, WALK_OF_TOPIC: PR_WALK_OF_TOPIC } = require("../knowledge/pr-walkthroughs.js");
 const { childHelpTopic } = require("../../public/kyro-child-help.js");
 const { childHelpAnswer } = require("../knowledge/child-help.js");
@@ -610,6 +612,15 @@ class OpenEndedPlanner {
     if (communityId) {
       const guide = communityAnswer(communityId);
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-community-support:${communityId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
+    // A person's own money (a spending plan, income that changes, a bank account, savings, credit, debt and collectors, costly loans, student loans, buying a home, investing and how to choose, fees, retirement accounts, brokerage and children's
+    // accounts, scams and keeping accounts safe): a checked, sourced, plain answer from the official pages (see knowledge/money-guide.js). A business's money, a person's records, an order with an amount ("log an expense of 500"), buying or
+    // trading coins and forex (the investing guard answers those first), and any personal emergency are never taken (public/kyro-money-topics.js). Asked after the community guide above, which keeps its own free-tax-help and fraud answers.
+    // The open question "what should I invest in?" is answered here by teaching how to choose, never by naming a stock, fund, coin, broker or app (nexus/brain/investment-guard.js).
+    const moneyId = ownWorkspace && businessVoiceDispatch.asksAboutOwnRecords(askText) ? null : moneyTopic(askText);
+    const moneyGuide = moneyId ? moneyAnswer(moneyId, { us: usPerson && !africaNamed(askText), country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
+    if (moneyGuide) {
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: moneyGuide.text, sourceRequired: false, knowledge: `money-guide:${moneyId}`, sources: moneyGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // A question that names California and is about a business or nonprofit there beyond forming it (state certification, selling to the state, the seller's permit, what a nonprofit does after it is formed, free help, grants, the 2028
     // Games): the checked California guide (see knowledge/california-business.js), asked before the state formation guide below, which answers "how do I register an LLC in California".
