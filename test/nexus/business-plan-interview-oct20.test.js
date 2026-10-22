@@ -83,5 +83,5 @@ test("on the page: the order starts the interview before the guides, typed or sa
   assert.match(app, /id === "business-plan" \|\| \(!kyroActiveVoiceIntake && window\.KyroIntakeForms\?\.isBusinessPlanRequest\?\.\(command\)\)\) return "Kyro is already asking the person the questions for a one-page business plan/);
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  assert.ok(index.includes('<script src="/kyro-intake-forms.js?v=kyro-intake-forms-4"></script>')); assert.ok(sw.includes("`/kyro-intake-forms.js?v=kyro-intake-forms-4`"));
+  assert.ok(index.includes('<script src="/kyro-intake-forms.js?v=kyro-intake-forms-5"></script>')); assert.ok(sw.includes("`/kyro-intake-forms.js?v=kyro-intake-forms-5`"));
 });

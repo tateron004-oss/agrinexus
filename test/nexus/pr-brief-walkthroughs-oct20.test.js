@@ -123,10 +123,10 @@ test("on the page: a spoken or typed request starts the interview, the model is 
   assert.match(app, /result\.code === "pr_brief_incomplete"/);
   assert.match(app, /if \(window\.KyroPrTopics\?\.isPrBriefRequest\?\.\(trimmed\)\) \{\s+startKyroPrBriefIntake\(\{ seedUtterance: \{ id: utteranceId, text: trimmed \}, source \}\);\s+return true;/);
   assert.match(app, /if \(!kyroActiveVoiceIntake && window\.KyroPrTopics\?\.isPrBriefRequest\?\.\(text\)\) \{\s+startKyroPrBriefIntake\(\{ seedUtterance: \{ id: "", text \}, source: options\.source \|\| "typed" \}\);/);
-  assert.match(app, /return Boolean\(window\.KyroIntakeForms\?\.isBusinessPlanRequest\?\.\(command\) \|\| window\.KyroPrTopics\?\.isPrBriefRequest\?\.\(command\) \|\| window\.KyroIntakeForms\?\.isSponsorshipProposalRequest\?\.\(command\) \|\| window\.KyroIntakeForms\?\.isTeamPacketRequest\?\.\(command\) \|\| window\.KyroIntakeForms\?\.isResumeBuildRequest/);
+  assert.match(app, /return Boolean\(window\.KyroIntakeForms\?\.isBusinessPlanRequest\?\.\(command\) \|\| window\.KyroPrTopics\?\.isPrBriefRequest\?\.\(command\) \|\| window\.KyroIntakeForms\?\.isSponsorshipProposalRequest\?\.\(command\) \|\| window\.KyroIntakeForms\?\.isTeamPacketRequest\?\.\(command\) \|\| window\.KyroIntakeForms\?\.isMoneyPlanRequest\?\.\(command\) \|\| window\.KyroIntakeForms\?\.isProgramKitRequest\?\.\(command\) \|\| window\.KyroIntakeForms\?\.isResumeBuildRequest/);
   assert.match(app, /id === "pr-brief" \|\| \(!kyroActiveVoiceIntake && window\.KyroPrTopics\?\.isPrBriefRequest\?\.\(command\)\)\) return "Kyro is already asking the person the questions for a brief/);
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  for (const tag of ['<script src="/kyro-pr-topics.js?v=kyro-pr-topics-2"></script>', '<script src="/kyro-intake-forms.js?v=kyro-intake-forms-4"></script>']) assert.ok(index.includes(tag), tag);
-  for (const entry of ["`/kyro-pr-topics.js?v=kyro-pr-topics-2`", "`/kyro-intake-forms.js?v=kyro-intake-forms-4`"]) assert.ok(sw.includes(entry), entry);
+  for (const tag of ['<script src="/kyro-pr-topics.js?v=kyro-pr-topics-2"></script>', '<script src="/kyro-intake-forms.js?v=kyro-intake-forms-5"></script>']) assert.ok(index.includes(tag), tag);
+  for (const entry of ["`/kyro-pr-topics.js?v=kyro-pr-topics-2`", "`/kyro-intake-forms.js?v=kyro-intake-forms-5`"]) assert.ok(sw.includes(entry), entry);
 });

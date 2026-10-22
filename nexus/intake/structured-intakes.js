@@ -4,6 +4,7 @@ const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js")
 const { prBriefDocument, KEYS: PR_BRIEF_KEYS } = require("../knowledge/pr-brief.js");
 const { businessPlanDocument, KEYS: BUSINESS_PLAN_KEYS } = require("../knowledge/business-plan-doc.js");
 const { sponsorshipProposalDocument, teamPacketDocument, SPONSORSHIP_KEYS, TEAM_PACKET_KEYS } = require("../knowledge/athlete-docs.js");
+const { moneyPlanDocument, programKitDocument, MONEY_PLAN_KEYS, PROGRAM_KIT_KEYS } = require("../knowledge/money-docs.js");
 
 // A small, explicit allowlist turning a completed voice intake (public/kyro-voice-intake.js +
 // public/kyro-intake-forms.js) into a plan step, in exactly the shape nexus/brain/planner.js's
@@ -45,6 +46,20 @@ const STRUCTURED_INTAKES = Object.freeze({
     toolId: "documents.create",
     title: "Save your team packet",
     keys: TEAM_PACKET_KEYS
+  }),
+  // A person's 90-day money plan and an organizer's financial education program plan (public/kyro-intake-forms.js "moneyPlan", "programKit"): built on the server from the answers only, word for word, with the steps from the official pages the
+  // money guide cites (nexus/knowledge/money-docs.js), saved as a Word document. No account number, PIN or password is ever asked for or kept.
+  "money-plan": Object.freeze({
+    application: "documents",
+    toolId: "documents.create",
+    title: "Save your money plan",
+    keys: MONEY_PLAN_KEYS
+  }),
+  "program-kit": Object.freeze({
+    application: "documents",
+    toolId: "documents.create",
+    title: "Save your program plan",
+    keys: PROGRAM_KIT_KEYS
   })
 });
 
@@ -112,6 +127,22 @@ function structuredIntakePlan(intakeId, values) {
       throw sponsorship
         ? new NexusRuntimeError("sponsorship_incomplete", "A sponsorship proposal needs who the athlete is and what they are asking for.", 422)
         : new NexusRuntimeError("team_packet_incomplete", "A team packet needs the name of the team or club.", 422);
+    }
+    return {
+      goal: made.title,
+      application: definition.application,
+      riskTier: "low",
+      clarification: null,
+      steps: [{ clientStepId: `create-${intakeId}`, title: definition.title, toolId: definition.toolId, input: { title: made.title, content: made.content, format: "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }]
+    };
+  }
+  if (intakeId === "money-plan" || intakeId === "program-kit") {
+    const plan = intakeId === "money-plan";
+    const made = plan ? moneyPlanDocument(input) : programKitDocument(input);
+    if (!made) {
+      throw plan
+        ? new NexusRuntimeError("money_plan_incomplete", "A money plan needs the first money problem to solve and what matters most.", 422)
+        : new NexusRuntimeError("program_kit_incomplete", "A program plan needs your organization and what the people you serve need first.", 422);
     }
     return {
       goal: made.title,
