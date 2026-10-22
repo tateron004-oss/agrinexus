@@ -462,6 +462,86 @@
     isTeamPacketRequest
   });
 
+  // --- a person's 90-day money plan, and a plan for a community financial education program ----------------------
+  // "Help me make a money plan", "build me a budget": ten short questions (the first problem, how income works, what matters most, what help is needed to take part, regular bills, take-home pay, debts, savings, a workplace plan, one thing this
+  // week), read back, and after a yes saved as a Word document (nexus/knowledge/money-docs.js builds it from these answers only, word for word, with the steps for the first 90 days from the official pages the money guide cites). "Help me plan a
+  // financial education program" asks ten questions of an organizer (the people served, what they need first, how to teach, partners, services, cost, funding, measures) for a program plan. A question ("how do I make a budget?"), a template or an
+  // example is still the money guide's. Neither interview takes an account number, a PIN, a password or a Social Security number: such an answer is refused and the question asked again, and what was said is not kept. English only for now.
+  const SECRET_TALK = /\b(?:passwords?|passcodes?|pin(?: number| code)?|account numbers?|routing numbers?|card numbers?|cvv|security code|social security (?:number)?|ssn|one[- ]time (?:code|passcode)|otp)\b|\b\d{9,}\b|\b(?:\d{4}[ -]){2,}\d{2,4}\b|(?:\b(?:zero|oh|one|two|three|four|five|six|seven|eight|nine)\b[\s,-]*){8,}/i;
+  function normalizeMoneyText(raw) {
+    const value = clean(raw);
+    if (!value) return { ok: false, reason: "empty" };
+    if (SECRET_TALK.test(value)) return { ok: false, reason: "secret" };
+    return { ok: true, value: value.replace(/^\p{Ll}/u, letter => letter.toUpperCase()) };
+  }
+  const MONEY_RETRY = "Please say that again in your own words, without any account numbers, PINs, passwords or Social Security number, or say skip.";
+  const MONEY_ORDER = /\b(?:make|create|draft|write|prepare|build|put together|set up|give me|get me|i need|i want|i'd like|i would like|help me|let's|can you|could you|would you)\b/i;
+  const MONEY_NOT = /\b(?:template|worksheet|example|sample|blank|outline|format|pdf|checklist|calculator|app|spreadsheet)\b|^\s*(?:how|what|why|which|when|should|is|are|does|do)\b|\b(?:business|company|shop|store|farm|nonprofit|non-profit|church|organi[sz]ation|team|club)\b|\d/i;
+  const MONEY_PLAN_SUBJECT = /\b(?:money plan|financial plan|spending plan|savings plan|debt plan|budget|90[- ]day (?:money |financial |action )?plan|plan for my (?:money|finances))\b/i;
+  function isMoneyPlanRequest(text) {
+    const value = clean(text).replace(/[’]/g, "'").replace(WAKE_LEAD, "").replace(FILLER_LEAD, "").trim();
+    if (!value || value.length > 160) return false;
+    // ("90 day" is the plan's own length; any other number in the sentence is an amount, which is a record and not an order for a plan)
+    return !MONEY_NOT.test(value.replace(/\b90[- ]day\b/gi, "ninety day")) && MONEY_ORDER.test(value) && MONEY_PLAN_SUBJECT.test(value);
+  }
+  const PROGRAM_ORDER = /\b(?:plan|planning|design|launch|start|starting|run|running|organi[sz]e|set up|setting up|create|build|develop|write|draft|prepare|help me|i want to|we want to|i need to|we need to|can you help|could you help)\b/i;
+  const PROGRAM_NOT = /\b(?:template|worksheet|example|sample|blank|outline|pdf|checklist)\b|^\s*(?:how|what|why|which|when|should|is|are|does|do)\b|\d/i;
+  const PROGRAM_SUBJECT = /\b(?:financial (?:education|literacy)|money (?:management|education)|financial coaching)\b.{0,25}\b(?:programs?|classes|class|workshops?|courses?|series|curriculum)\b|\b(?:programs?|classes|class|workshops?)\b.{0,25}\b(?:on|about|for)\b.{0,15}\b(?:financial (?:education|literacy)|money management|managing money)\b|\bcommunity financial education\b/i;
+  function isProgramKitRequest(text) {
+    const value = clean(text).replace(/[’]/g, "'").replace(WAKE_LEAD, "").replace(FILLER_LEAD, "").trim();
+    if (!value || value.length > 200) return false;
+    return !PROGRAM_NOT.test(value) && PROGRAM_ORDER.test(value) && PROGRAM_SUBJECT.test(value);
+  }
+  const money = (key, label, question, kind, aliases, required = false) => ({ key, label, question, required, kind, aliases, normalize: normalizeMoneyText, retryPrompt: MONEY_RETRY });
+  const MONEYPLAN_FIELDS = [
+    money("problem", "First problem", "What money problem do you want help with first? Say it in your own words.", "sentences", ["problem", "help", "first"], true),
+    money("income", "Income", "Is your income steady, seasonal, or unpredictable? Tell me a little about it. Or say 'skip'.", "sentences", ["income", "pay", "work"]),
+    money("priority", "What matters most", "What matters most right now: paying down debt, emergency savings, buying a home, retirement, or investing for your children?", "sentences", ["priority", "matters", "most"], true),
+    money("supports", "Help to take part", "What would help you take part: a language, class times, transportation, childcare, or help with technology? Or say 'skip'.", "sentences", ["language", "childcare", "transport", "technology", "support"]),
+    money("bills", "Regular bills", "What are your regular bills, and when are they due? Say them in your own words. Or say 'skip'.", "sentences", ["bills", "due", "rent"]),
+    money("takehome", "Take-home pay", "About how much do you take home in a typical month? A range is fine. Or say 'skip'.", "text", ["take home", "pay", "income", "monthly"]),
+    money("debts", "Debts", "Do you have any debts? Say what kind, about how much you owe, and the interest rate if you know it. Or say 'skip'.", "sentences", ["debts", "owe", "loans", "credit cards"]),
+    money("savings", "Savings", "Do you have any savings now, and what is your first savings goal? Or say 'skip'.", "sentences", ["savings", "goal", "save"]),
+    money("workplan", "Workplace plan", "Does your job offer a retirement plan or a match? Or say 'skip'.", "sentences", ["retirement", "match", "401", "plan"]),
+    money("week", "This week", "What is one thing you can do this week? Or say 'skip'.", "sentences", ["week", "first step", "action"])
+  ];
+  const PROGRAM_FIELDS = [
+    money("organization", "Organization", "Tell me about your organization and who you will serve.", "sentences", ["organization", "who", "serve"], true),
+    money("priorities", "What they need first", "What do the people you serve most want help with first? For example bills, savings, debt, a home, retirement, or investing for their children.", "sentences", ["priorities", "need", "first", "help"], true),
+    money("needs", "Needs to take part", "What languages, class times, transportation, childcare or technology help do they need? Or say 'skip'.", "sentences", ["languages", "childcare", "transport", "technology", "times"]),
+    money("format", "How you will teach", "Will you teach classes, give one-to-one coaching, or both? How often, and for how many people to start? Or say 'skip'.", "sentences", ["classes", "coaching", "format", "often"]),
+    money("educators", "Who teaches", "Who will teach, and who will give one-to-one coaching? Or say 'skip'.", "sentences", ["teach", "educator", "coach", "instructor"]),
+    money("partners", "Partners", "Which partners will you work with, such as libraries, churches, workforce programs, unions, schools or neighborhood groups? Or say 'skip'.", "sentences", ["partners", "libraries", "churches", "schools"]),
+    money("services", "Affordable services", "Which affordable services will you connect people to, such as bank accounts, tax preparation, benefits help or employment services? Or say 'skip'.", "sentences", ["services", "accounts", "tax", "benefits"]),
+    money("budget", "Cost", "What will it cost: instructor time, coordination, translation, materials, childcare, transportation, food and follow-up coaching? Say what you know. Or say 'skip'.", "sentences", ["cost", "budget", "expenses"]),
+    money("funding", "Funding", "How will you pay for it, and will you offer small savings incentives? Or say 'skip'.", "sentences", ["funding", "grants", "pay", "incentives"]),
+    money("measures", "How you will know", "How will you know it worked? For example, people who make a spending plan, start saving or reduce costly debt. Or say 'skip'.", "sentences", ["measures", "results", "worked", "progress"])
+  ];
+  const moneyPlan = Object.freeze({
+    id: "money-plan",
+    title: "Your 90-day money plan",
+    intro: "I will ask you ten short questions, one at a time, to build a plan for the next 90 days. Please do not tell me account numbers, PINs, passwords or your Social Security number. You can say repeat, skip, go back, or stop at any time.",
+    confirmBeforeSubmit: true,
+    confirmTail: { en: "Shall I save it as a document you can edit and keep? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuiweka? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the money plan.",
+    fields: MONEYPLAN_FIELDS,
+    readback: readbackOf(MONEYPLAN_FIELDS),
+    toRequest: requestOf(MONEYPLAN_FIELDS),
+    isMoneyPlanRequest
+  });
+  const programKit = Object.freeze({
+    id: "program-kit",
+    title: "Your financial education program plan",
+    intro: "I will ask you ten short questions, one at a time, for a plan for a community financial education program. Please do not tell me account numbers, PINs or passwords. You can say repeat, skip, go back, or stop at any time.",
+    confirmBeforeSubmit: true,
+    confirmTail: { en: "Shall I save it as a document you can edit and share? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kushiriki? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the program plan.",
+    fields: PROGRAM_FIELDS,
+    readback: readbackOf(PROGRAM_FIELDS),
+    toRequest: requestOf(PROGRAM_FIELDS),
+    isProgramKitRequest
+  });
+
   const resume = Object.freeze({
     id: "resume",
     title: "Your résumé",
@@ -481,5 +561,5 @@
     isContinueRequest: isResumeContinueRequest
   });
 
-  return Object.freeze({ resume, sale, telehealth, prBrief, businessPlan, sponsorshipProposal, teamPacket, isSponsorshipProposalRequest, isTeamPacketRequest, isBusinessPlanRequest, isTelehealthRequest, isSaleRequest, parseSale, isResumeBuildRequest, isResumeContinueRequest: isResumeContinueRequest, isResumeDownloadRequest });
+  return Object.freeze({ resume, sale, telehealth, prBrief, businessPlan, sponsorshipProposal, teamPacket, moneyPlan, programKit, isMoneyPlanRequest, isProgramKitRequest, isSponsorshipProposalRequest, isTeamPacketRequest, isBusinessPlanRequest, isTelehealthRequest, isSaleRequest, parseSale, isResumeBuildRequest, isResumeContinueRequest: isResumeContinueRequest, isResumeDownloadRequest });
 });
