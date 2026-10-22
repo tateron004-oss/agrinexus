@@ -136,11 +136,7 @@
     return null;
   }
   // A topic id for a question in English or in Spanish.
-<<<<<<<
-  function usSmallBusinessTopic(text) { return topicEnglish(text) || (language(text) === "es" ? topicSpanish(text) : (WALK.test(String(text || "").trim()) ? topicEnglish(text, { walk: true }) : null)); }
-=======
   function usSmallBusinessTopic(text) { return topicEnglish(text, { walk: WALK.test(String(text || "").trim()) }) || (language(text) === "es" ? topicSpanish(text) : null); } // (a request to be walked through a process is a request too)
->>>>>>>
 
   const BUSINESS_WORDS_ES = /\b(?:negocios?|empresas?|emprend\w*|startup|llc|sba|prestamos?|subvenci\w+|licencias?|permisos?|impuestos?|contad\w+|contabilidad|nomina|empleados?|inversionistas?|franquicias?|certific\w+|minorias|veteranos?|clientes?|vender|tienda|restaurante|gobierno|credito|seguro|marcas?|mentor\w*|asesor\w*|sociedad\w*|corporacion\w*|mercadeo|marketing|exportar|zonificacion|bancari\w*|comercial\w*|banco)\b/;
 
