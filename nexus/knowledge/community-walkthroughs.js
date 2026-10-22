@@ -5,7 +5,7 @@
 // Kyro's own working practice says so (OWN). What the pages do not say is not here. See walkthrough-kit.js for how a step is written, and guide-walkthroughs.js for how the walkthroughs are found.
 
 const { SOURCES, CHECKED_ON } = require("./us-community-support.js");
-const { communityTopic } = require("../../public/kyro-community-topics.js");
+const { topic: communityTopic } = require("../../public/kyro-community-topics.js");
 const { family } = require("./walkthrough-kit.js");
 
 const DEFS = { ...require("./community-defs-a.js"), ...require("./community-defs-b.js") };
