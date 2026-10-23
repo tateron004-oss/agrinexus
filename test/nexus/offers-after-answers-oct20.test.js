@@ -34,7 +34,7 @@ test("a California answer with a walkthrough offers the walkthrough and a checkl
 test("the other checked guides offer the sources; nothing is offered for Spanish, the source page, the live lists, a walkthrough or an answer that is not a guide", () => {
   assert.deepEqual(offers.offersFor({ knowledge: "us-small-business:loans" }).map(offer => offer.id), ["walk", "checklist", "sources"]);
   assert.deepEqual(offers.offersFor({ knowledge: "state-entities:state-entity:llc:TX" }).map(offer => offer.id), ["sources"]);
-  assert.deepEqual(offers.offersFor({ knowledge: "california-business:ca-free-help" }).map(offer => offer.id), ["sources"], "no walkthrough for free help");
+  assert.deepEqual(offers.offersFor({ knowledge: "california-business:ca-free-help" }).map(offer => offer.id), ["walk", "checklist", "sources"], "free help has a walkthrough since 22 October 2026");
   for (const plan of [{ knowledge: "california-business:ca-seller-permit" }, { knowledge: "us-small-business:loans" }]) assert.deepEqual(offers.offersFor(plan, { lang: "es" }), [], "the walkthroughs and the source page are English only");
   for (const knowledge of ["sources-page", "live-feeds:grants", "california-business:walkthrough:ca-seller-permit", "womens-health:x", ""]) assert.deepEqual(offers.offersFor({ knowledge }), [], knowledge);
   assert.deepEqual(offers.offersFor({ knowledge: "california-business:ca-seller-permit", walkthrough: { id: "x" } }), []);
