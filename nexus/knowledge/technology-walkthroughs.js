@@ -5,7 +5,11 @@
 // Kyro's own working practice says so (OWN). What the pages do not say is not here. See walkthrough-kit.js for how a step is written, and guide-walkthroughs.js for how the walkthroughs are found.
 
 const { SOURCES, CHECKED_ON, technologyTopic } = require("./small-business-technology.js");
+const { aiToolsTopic } = require("./ai-tools-for-business.js");
 const { S, W, OWN, family } = require("./walkthrough-kit.js");
+
+// (the planner asks the AI tools guide before it gives the general "getting started with AI" answer, so a request the AI tools guide takes ("choosing an AI tool for my business") is that guide's walkthrough, not this one)
+const topicOf = text => { const topic = technologyTopic(text); return topic === "ai-getting-started" && aiToolsTopic(text) ? null : topic; };
 
 const DEFS = {
   "ai-safe-use": {
@@ -148,7 +152,19 @@ const DEFS = {
       S("Collect real customer reviews and never fake ones", "Ask real customers for reviews and never fake ones. The FTC's rule covers fake reviews, including those written by AI, and bans buying or selling them.", ["A list of happy customers you could ask"], "ftcReviews", "you have asked at least one real customer for a review, and you know fake ones are not allowed.", [W("Review", "a customer's own words about your business.")]),
       S("Back up the site and know who can change it", "Back up the site, and know who can change it. A backup is a second copy kept somewhere else. Write down who has the login to change your site, and keep the logins for your domain, website and email in your own name.", ["A list of who can change your site"], "ftcCyber", "you have a backup of your site and a list of who can change it.", [W("Backup", "a second copy of your files kept in a different place.")])
     ]
+  },
+  "ai-getting-started": {
+    title: "Getting started with AI in your small business",
+    topic: "ai-getting-started", phrase: "starting to use ai in a small business", us: true,
+    steps: [
+      S("Choose one small job to start with", OWN + "The guide says to start small. Choose one task that takes your time and carries little risk. Its examples are drafting a first version of an email, summarising your notes, and listing the questions customers ask most. A small, low-risk job lets you learn how the tool behaves before anything important depends on it.", ["Paper and a pen", "A few minutes to think about your week"], null, "you have written down one small job that takes your time and carries little risk.", [W("AI tool", "a computer program that writes, answers or sorts things for you after you type a request."), W("Draft", "a first version that you will read and fix before anyone else sees it.")]),
+      S("Keep private information out of the tool", "Before you type in customer, employee or payment information, check the tool's privacy terms, which are the rules the company gives about what it does with what you type. Never type in passwords. Treat anything you enter as something you may not be able to take back.", ["The tool's privacy terms page, open to read"], "ftcPrivacyAi", "you have checked the privacy terms, and you know that passwords and private details stay out of the tool.", [W("Privacy terms", "the rules a company gives about what it does with the information you give it.")]),
+      S("Keep a person in charge", OWN + "The guide says to read and correct everything the tool writes before it reaches a customer. A tool can sound sure and still be wrong. You, or someone you trust, should be the one who reads it, fixes it and decides to send it.", ["The first thing the tool writes for you"], null, "you have read the tool's answer line by line and fixed anything wrong before using it.", []),
+      S("Be honest with customers about the tool", "The guide says to be honest with customers. If a chatbot answers them, say so, and do not claim it can do more than it can. The guide also points to the FTC for the rule that claims about AI need evidence.", ["The FTC page on artificial intelligence, open to read"], "ftcAi", "you can say that customers should be told when a chatbot is answering them, and that you will not claim more than the tool can do.", [W("Chatbot", "a program that answers questions by typing back, like a person in a chat.")]),
+      S("Write down what you use each tool for", OWN + "The guide says to write down what you use each tool for, so you can review it later. Keep a short list: the name of the tool, the job you give it, and the date you started. When you look back, you can keep what helps and drop what does not.", ["Paper and a pen, or a note on your phone"], null, "you have a short written list with the tool, the job and the date.", []),
+      S("Take one safe next step", OWN + "Once your first small job is going well, learn more before you add a second job. You can ask me to walk you through using AI tools safely, and through spotting AI scams. The guide does not say when to add more jobs; ask a trusted adviser.", ["Your written list of tools and jobs"], null, "you have decided what you will learn next, or you have asked me to walk you through using AI tools safely.", [])
+    ]
   }
 };
 
-module.exports = family({ prefix: "technology", label: "small-business-technology", SOURCES: SOURCES, CHECKED_ON, DEFS, topicOf: technologyTopic });
+module.exports = family({ prefix: "technology", label: "small-business-technology", SOURCES: SOURCES, CHECKED_ON, DEFS, topicOf });
