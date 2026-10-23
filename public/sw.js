@@ -38,6 +38,7 @@ const APP_SHELL = [
   `/kyro-money-topics.js?v=kyro-money-topics-2`,
   `/kyro-howto-topics.js?v=kyro-howto-topics-2`,
   `/kyro-technology-topics.js?v=kyro-technology-topics-1`,
+  `/kyro-safety-topics.js?v=kyro-safety-topics-1`,
   `/kyro-automation-commands.js?v=kyro-automation-commands-3`,
   `/kyro-navigation.js?v=kyro-navigation-7`,
   `/kyro-emergency.js?v=kyro-emergency-1`,
