@@ -45259,11 +45259,36 @@ function nexusLanguageStatus(db, env = process.env) {
   };
 }
 
+// Where uploaded files really live. On Render a file written to the container's own storage is lost at every restart and deploy; only a mounted persistent disk keeps it. The upload folder is a mounted disk when it is on a
+// different device from the root of the container (Linux). This is read from the running server (no path is shown), so anyone can see it without the Render dashboard. A tiny file is written and removed to prove the folder is
+// writable, at most once a minute.
+let uploadStorageCheckCache = { at: 0, value: null };
+function uploadStorageSelfCheck(env = process.env) {
+  const now = Date.now();
+  if (uploadStorageCheckCache.value && now - uploadStorageCheckCache.at < 60_000) return uploadStorageCheckCache.value;
+  const value = { kind: "unknown", writable: false };
+  try {
+    const dir = nexusUploads.uploadDir(env);
+    fs.mkdirSync(dir, { recursive: true });
+    const probe = path.join(dir, `.selfcheck-${process.pid}`);
+    fs.writeFileSync(probe, "ok"); fs.unlinkSync(probe);
+    value.writable = true;
+    if (process.platform === "linux") value.kind = fs.statSync(dir).dev !== fs.statSync("/").dev ? "separate-disk" : "container-storage";
+  } catch (error) { value.error = String(error && error.code || "error"); }
+  value.meaning = value.kind === "separate-disk" ? "Uploaded files are kept on a mounted disk and survive a restart or a new release."
+    : value.kind === "container-storage" ? "Uploaded files are on the container's own storage and are LOST at every restart or new release: attach a persistent disk (or move the upload folder onto one)."
+    : "Could not tell where uploaded files are kept.";
+  if (!uploadStorageCheckCache.value || uploadStorageCheckCache.value.kind !== value.kind) console.log("[uploads] storage:", value.kind, value.writable ? "(writable)" : "(not writable)");
+  uploadStorageCheckCache = { at: now, value };
+  return value;
+}
+
 function nexusUploadReadiness(db, env = process.env) {
   const enabled = nexusFlagEnabled(env, "NEXUS_FILE_UPLOAD_ENABLED");
   return {
     ok: true,
     uploadEnabled: enabled,
+    storage: uploadStorageSelfCheck(env),
     acceptedFileTypes: nexusUploads.acceptedTypes(),
     maxFileSizeMb: Math.round(nexusUploads.maxUploadBytes(env) / (1024 * 1024)),
     totalQuotaMb: Math.round(nexusUploads.totalQuotaBytes(env) / (1024 * 1024)),
@@ -48806,6 +48831,21 @@ async function api(req, res, url) {
       },
       timestamp: new Date().toISOString()
     });
+  }
+
+  // How long the server has been running and how much memory it uses, and where uploaded files live: so a restart (the time starts again) or a memory problem shows in plain numbers, with no login and no Render dashboard. Nothing private.
+  if (url.pathname === "/api/runtime" && req.method === "GET") {
+    const memory = process.memoryUsage();
+    return send(res, 200, {
+      ok: true,
+      releaseSha: NEXUS_EFFECTIVE_RELEASE_SHA,
+      startedAt: new Date(Date.now() - Math.round(process.uptime() * 1000)).toISOString(),
+      uptimeSeconds: Math.round(process.uptime()),
+      memoryMb: { rss: Math.round(memory.rss / 1048576), heapUsed: Math.round(memory.heapUsed / 1048576) },
+      node: process.version,
+      uploads: uploadStorageSelfCheck(process.env),
+      timestamp: new Date().toISOString()
+    }, { "cache-control": "no-store, no-cache, must-revalidate" });
   }
 
   if (["/api/release", "/api/version"].includes(url.pathname) && req.method === "GET") {
