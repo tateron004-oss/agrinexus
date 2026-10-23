@@ -18,6 +18,7 @@ const FAMILIES = Object.freeze([
   require("./chronic-walkthroughs.js"),
   require("./technology-walkthroughs.js"),
   require("./ai-tools-walkthroughs.js"),
+  require("./california-more-walkthroughs.js"),
   require("./community-walkthroughs.js"),
   require("./africa-walkthroughs.js"),
   require("./us-business-walkthroughs.js")

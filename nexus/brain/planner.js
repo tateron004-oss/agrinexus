@@ -661,6 +661,7 @@ class OpenEndedPlanner {
         const intro = `Okay, I will walk you through ${walk.title}, one step at a time. There are ${walk.steps.length} steps. I only guide you: you do each step yourself, and I never apply for you.`;
         return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: intro, sourceRequired: false, knowledge: `california-business:walkthrough:${walk.id}`, sources: walk.sources, walkthrough: walk, guardrail: "professional-advice", planningAttempts: 0 });
       }
+      { const stepByStep = guideWalkthroughPlan(command, askText, "california-business", caTopic, "professional-advice", true); if (stepByStep) return stepByStep; }
       const guide = californiaAnswer(caTopic, { question: askText, lang: guideLanguage(askText) }); // (the language of the words asked: a question in Spanish is answered in Spanish)
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `california-business:${caTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
