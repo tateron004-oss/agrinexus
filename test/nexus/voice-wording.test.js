@@ -32,9 +32,9 @@ test("'I'd like to watch a video on ...' and 'can I see pictures of ...' are req
 });
 
 test("'turn the music off' stops it, and a mood on its own ('play something relaxing') is searched as music; artists and other requests are unchanged", () => {
-  assert.equal(Media.parse("Turn the music off").type, "control"); assert.equal(Media.parse("Turn the music off").control, "stop");
-  assert.equal(Media.parse("switch the radio off.").control, "stop");
-  assert.equal(Media.parse("turn off the music").control, "stop");
+  assert.equal(Media.parse("Turn the music off").type, "control"); assert.equal(Media.parse("Turn the music off").control, "close");
+  assert.equal(Media.parse("switch the radio off.").control, "close");
+  assert.equal(Media.parse("turn off the music").control, "close");
   const relaxing = Media.parse("Play something relaxing");
   assert.equal(relaxing.type, "play"); assert.equal(relaxing.query, "relaxing music");
   assert.equal(Media.parse("Play something upbeat").query, "upbeat music");

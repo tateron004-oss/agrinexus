@@ -227,7 +227,13 @@ test("controls: pause, resume, volume, mute and stop act on the playing element 
   assert.equal(element.muted, true);
   world.controller.control("unmute");
   assert.equal(element.muted, false);
+  // "stop the music" holds the place like pause ("play" carries on from there); "close" puts the music away
   world.controller.control("stop");
+  assert.equal(world.controller.getState().state, "paused");
+  assert.equal(world.spoken[world.spoken.length - 1], "Stopped. Say play and I will carry on from here.");
+  world.controller.control("resume");
+  assert.equal(world.controller.getState().state, "playing");
+  world.controller.control("close");
   assert.equal(world.controller.getState().state, "idle");
   assert.equal(world.spoken[world.spoken.length - 1], "Stopped.");
   assert.equal(world.controller.control("pause").handled, false, "after stop there is nothing to pause");
@@ -317,6 +323,8 @@ test("Kiswahili: commands are understood, replies come back in Kiswahili", async
   assert.equal(await world.controller.handleCommand("ongeza sauti"), true);
   assert.match(world.spoken[world.spoken.length - 1], /^Sauti ni asilimia \d+\.$/);
   assert.equal(await world.controller.handleCommand("simamisha muziki"), true);
+  assert.equal(world.spoken[world.spoken.length - 1], "Imesimamishwa. Sema cheza niendelee hapa.");
+  assert.equal(await world.controller.handleCommand("zima muziki"), true);
   assert.equal(world.spoken[world.spoken.length - 1], "Imesimamishwa.");
   assert.equal(await world.controller.handleCommand("sitisha muziki"), true);
   assert.equal(world.spoken[world.spoken.length - 1], "Hakuna kinachochezwa sasa hivi.");

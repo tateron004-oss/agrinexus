@@ -29,7 +29,7 @@
       foundButFailed: "I found {title}, but it would not start on this device. Please try again.",
       noneFound: "I could not find anything to play for {q}.", noYoutube: "YouTube is not set up on this server.",
       resolverDown: "I could not reach the music service right now. Please try again.",
-      paused: "Paused.", resumed: "Playing again.", stopped: "Stopped.", nothingPlaying: "Nothing is playing right now.",
+      paused: "Paused.", heldPlace: "Stopped. Say play and I will carry on from here.", resumed: "Playing again.", stopped: "Stopped.", nothingPlaying: "Nothing is playing right now.",
       nextNone: "I could not find another one.", previousNone: "There is no earlier one.", volume: "Volume {pct} percent.",
       muted: "Muted.", unmuted: "Sound is back on.", ended: "That one has finished.",
       queued: "I've queued {title} on YouTube. Tap Open to play it.", queuedSearch: "I've opened a YouTube search for {title}. Tap Open to choose and play it.",
@@ -54,7 +54,7 @@
       foundButFailed: "Nimepata {title}, lakini haikuanza kwenye simu hii. Tafadhali jaribu tena.",
       noneFound: "Sikuweza kupata kitu cha kucheza kwa {q}.", noYoutube: "YouTube haijawekwa kwenye seva hii.",
       resolverDown: "Siwezi kufikia huduma ya muziki sasa hivi. Tafadhali jaribu tena.",
-      paused: "Imesitishwa.", resumed: "Inaendelea kucheza.", stopped: "Imesimamishwa.", nothingPlaying: "Hakuna kinachochezwa sasa hivi.",
+      paused: "Imesitishwa.", heldPlace: "Imesimamishwa. Sema cheza niendelee hapa.", resumed: "Inaendelea kucheza.", stopped: "Imesimamishwa.", nothingPlaying: "Hakuna kinachochezwa sasa hivi.",
       nextNone: "Sikuweza kupata nyingine.", previousNone: "Hakuna ya awali.", volume: "Sauti ni asilimia {pct}.",
       muted: "Sauti imenyamazishwa.", unmuted: "Sauti imerudi.", ended: "Imekwisha.",
       queued: "Nimeweka {title} kwenye YouTube. Gusa Fungua ili kuicheza.", queuedSearch: "Nimeandaa utafutaji wa YouTube wa {title}. Gusa Fungua ili uchague na kucheza.",
@@ -625,7 +625,9 @@
       switch (action) {
         case "pause": { const ok = pauseNow(); announce(ok ? t("paused", {}, lang) : t("nothingPlaying", {}, lang), {}); return { handled: true, ok }; }
         case "resume": { const ok = resumeNow(); announce(ok ? t("resumed", {}, lang) : t("nothingPlaying", {}, lang), {}); return { handled: true, ok }; }
-        case "stop": return { handled: true, ok: stopAll({ announce: true, lang }) };
+        // "stop the music" holds the place, like "pause" (the song is where it was left, and "play" carries on); "turn off", "close" and "end" put the music away
+        case "stop": { const ok = pauseNow(); announce(ok ? t("heldPlace", {}, lang) : t("nothingPlaying", {}, lang), {}); return { handled: true, ok }; }
+        case "close": return { handled: true, ok: stopAll({ announce: true, lang }) };
         case "next": nextTrack({ lang }); return { handled: true, ok: true, async: true };
         case "previous": previousTrack({ lang }); return { handled: true, ok: true, async: true };
         case "volume-up": case "volume-down": {
@@ -654,7 +656,7 @@
         const active = isActive() || state === "ended";
         if (!active && !parsed.explicit && state !== "resolving") return false;
         // "Pause the music" said while the song is still being found: the start is cancelled (it used to say nothing was playing and then start anyway)
-        if (!active && state === "resolving" && (parsed.control === "pause" || parsed.control === "stop")) { sessionLang = lang; stopAll({ announce: false, lang }); announce(t("stopped", {}, lang), {}); return true; }
+        if (!active && state === "resolving" && (parsed.control === "pause" || parsed.control === "stop" || parsed.control === "close")) { sessionLang = lang; stopAll({ announce: false, lang }); announce(t("stopped", {}, lang), {}); return true; }
         if (!active && !parsed.explicit) return false;
         if (!active) { sessionLang = lang; announce(t("nothingPlaying", {}, lang), {}); return true; }
         control(parsed.control, { lang });
