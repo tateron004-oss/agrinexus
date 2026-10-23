@@ -51682,7 +51682,7 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // "What are my birth control options?", "how often should I get a Pap smear?": the checked women's health guide, with its official sources. The voice model reworded such a question when it called a tool, and the reworded
     // one was sometimes answered from memory with no sources.
     // "What is type 2 diabetes?", "how do I keep track of my blood sugar?", "how can I lower my blood pressure?": the checked diabetes and high blood pressure guide, with its sources (a person's own reading, symptoms or a medicine are never taken).
-    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)) || (typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest(trimmed)) || (typeof kyroPrQuestion === "function" && kyroPrQuestion(trimmed)) || (typeof kyroChurchQuestion === "function" && kyroChurchQuestion(trimmed)) || (typeof kyroAthleteQuestion === "function" && kyroAthleteQuestion(trimmed)) || (typeof kyroMoneyQuestion === "function" && kyroMoneyQuestion(trimmed)) || (typeof kyroHowtoQuestion === "function" && kyroHowtoQuestion(trimmed)))) {
+    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)) || (typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest(trimmed)) || (typeof kyroPrQuestion === "function" && kyroPrQuestion(trimmed)) || (typeof kyroChurchQuestion === "function" && kyroChurchQuestion(trimmed)) || (typeof kyroAthleteQuestion === "function" && kyroAthleteQuestion(trimmed)) || (typeof kyroMoneyQuestion === "function" && kyroMoneyQuestion(trimmed)) || (typeof kyroHowtoQuestion === "function" && kyroHowtoQuestion(trimmed)) || (typeof kyroTechWalkQuestion === "function" && kyroTechWalkQuestion(trimmed)))) {
       if (!heardAgain) {
         try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
         kyroPageSpeaksUntil = Date.now() + 40000;
@@ -53247,6 +53247,14 @@ function kyroAthleteQuestion(text) {
 // investing and how to choose, fees, retirement accounts, brokerage and children's accounts, scams and keeping accounts safe. The page takes such a question itself so the voice model does not answer a rule or a protection from memory with no sources.
 function kyroMoneyQuestion(text) {
   try { return Boolean(window.KyroMoneyTopics && typeof window.KyroMoneyTopics.moneyTopic === "function" && window.KyroMoneyTopics.moneyTopic(text)); } catch { return false; }
+}
+// A request to be WALKED THROUGH a technology or AI-tools topic for a small business (public/kyro-technology-topics.js, shared with the server): "walk me through using AI tools safely", "take me through protecting my business email". Only
+// the request to be walked through is taken here; the plain questions are still answered as they were. The page takes it itself so the steps open on the screen and the voice model does not explain it from memory.
+function kyroTechWalkQuestion(text) {
+  try {
+    const lib = window.KyroTechnologyTopics;
+    return Boolean(lib && typeof lib.isWalkRequest === "function" && lib.isWalkRequest(text) && (lib.technologyTopic(text) || lib.aiToolsTopic(text)));
+  } catch { return false; }
 }
 // A request to be walked through USING a part of Kyro (public/kyro-howto-topics.js, shared with the server): "walk me through using the shopping list", "teach me to use the farm log", "walk me through setting up a trusted circle". The page takes it itself so the
 // voice model does not explain from memory something Kyro can or cannot do; the steps come from nexus/knowledge/howto-walkthroughs.js, one at a time.
