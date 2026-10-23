@@ -4,6 +4,7 @@ const { clean } = require("./parse.js");
 const { startGuided } = require("./guided.js");
 const { CHECKED_ON } = require("../knowledge/small-business-technology.js");
 const { isUsContext } = require("../knowledge/us-small-business.js");
+const { walkthroughForText } = require("../knowledge/guide-walkthroughs.js");
 
 // Two kinds of short guided conversation for a small business owner (typed or spoken), neither of which saves anything or changes anything:
 //   1. Step-by-step checklists ("Walk me through securing my business accounts"): one step at a time; the person says "done", "skip" (for later) or "cancel", and gets a recap at the end of what is done and what is left.
@@ -141,6 +142,8 @@ async function handle(ctx) {
   if (COURSE.test(text)) return startGuided(ctx, templates["ai-basics-course"], {});
   const id = checklistRequest(text);
   if (!id) return null;
+  // A topic with a step-by-step walkthrough on the screen (knowledge/guide-walkthroughs.js: one step at a time, with the official page, when the step is finished and what the new words mean) is taught that way; this spoken checklist is for the rest.
+  if (walkthroughForText(text) || walkthroughForText(text, { late: true })) return null;
   // The breach steps name US bodies (the FTC guide, IdentityTheft.gov, IC3.gov), so they are for people in the United States; anyone else carries on to normal conversation.
   if (CHECKLISTS[id].usOnly && !isUsContext({ timeZone: ctx.args?.timeZone, text })) return null;
   return startGuided(ctx, templates[`walk-${id}`], {});
