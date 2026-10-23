@@ -35,5 +35,5 @@ test("?kyroMic=raw turns all three off and is remembered; ?kyroMic=default turns
 test("both ways the page asks for the microphone use it", () => {
   assert.match(app, /const processing = kyroMicrophoneProcessing\(\);\s+nexusGenesisVoiceDebugLog\("microphone-processing"/);
   assert.match(app, /echoCancellation: processing\.echoCancellation,\s+noiseSuppression: processing\.noiseSuppression,\s+autoGainControl: processing\.autoGainControl/);
-  assert.match(app, /const processing = kyroMicrophoneProcessing\(\); stream = await navigator\.mediaDevices\.getUserMedia\(\{ audio: \{ echoCancellation: processing\.echoCancellation/);
+  assert.match(app, /const processing = typeof kyroMicrophoneProcessing === "function" \? kyroMicrophoneProcessing\(\) : \{ echoCancellation: true, noiseSuppression: true, autoGainControl: true \}; stream = await navigator\.mediaDevices\.getUserMedia\(\{ audio: \{ echoCancellation: processing\.echoCancellation/);
 });

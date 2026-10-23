@@ -50042,7 +50042,7 @@ async function kyroLiveMicrophoneForRestart(session) {
   if (kept && kyroMicrophoneIsLive(kept)) return kept;
   if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) return null;
   let stream = null;
-  try { const processing = kyroMicrophoneProcessing(); stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: processing.echoCancellation, noiseSuppression: processing.noiseSuppression, autoGainControl: processing.autoGainControl } }); } catch { return null; }
+  try { const processing = typeof kyroMicrophoneProcessing === "function" ? kyroMicrophoneProcessing() : { echoCancellation: true, noiseSuppression: true, autoGainControl: true }; stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: processing.echoCancellation, noiseSuppression: processing.noiseSuppression, autoGainControl: processing.autoGainControl } }); } catch { return null; }
   if (!kyroMicrophoneIsLive(stream)) {
     try { stream?.getTracks?.().forEach(track => track.stop()); } catch { /* nothing to release */ }
     return null;
