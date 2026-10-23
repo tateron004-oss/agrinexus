@@ -39,3 +39,12 @@ test("anyone can read the uptime, the memory and where uploads are kept, and no 
   assert.equal(readiness.storage.kind, body.uploads.kind);
   assert.equal(readiness.uploadEnabled, true);
 });
+
+test("saved documents, résumés and data exports are checked the same way, and the verdict names the setting to change", async () => {
+  const body = await (await fetch(`${base}/api/runtime`)).json();
+  assert.ok(["separate-disk", "container-storage", "unknown"].includes(body.exports.kind));
+  assert.equal(body.exports.writable, true);
+  assert.match(body.exports.meaning, /saved documents, résumés and data exports/i);
+  if (body.exports.kind === "container-storage") assert.match(body.exports.meaning, /NEXUS_EXPORT_DIR/);
+  assert.doesNotMatch(JSON.stringify(body), /output[\/]nexus-exports/, "no path is shown");
+});
