@@ -1,5 +1,6 @@
 "use strict";
 const test = require("node:test");
+const guideWalkthroughs = require("../../nexus/knowledge/guide-walkthroughs.js");
 const assert = require("node:assert/strict");
 const { farmWorkTurn } = require("../../nexus/farmwork/index.js");
 const { CHECKLISTS, LESSONS, checklistRequest, COURSE } = require("../../nexus/farmwork/walkthroughs.js");
@@ -49,24 +50,27 @@ test("every checklist runs to the end and says what it is; getting online says i
     const list = CHECKLISTS[id];
     const phrase = { "secure-accounts": "Walk me through securing my business accounts", "get-online": "Walk me through getting my business online", "protect-email": "Walk me through protecting my business email from spoofing", "first-ai-task": "Walk me through starting with AI", "after-breach": "Walk me through what to do after a data breach" }[id];
     const who = person("America/New_York");
+    // (a topic with a walkthrough on the screen, knowledge/guide-walkthroughs.js, is taught that way and the planner carries it; this spoken checklist is for the rest)
+    if (guideWalkthroughs.walkthroughForText(phrase) || guideWalkthroughs.walkthroughForText(phrase, { late: true })) { assert.equal(await who.say(phrase), null, `${id}: the screen walkthrough takes it`); continue; }
     assert.match(await who.say(phrase), new RegExp(`^${list.title}: ${list.steps.length} steps`), id);
     let result = "";
     for (let i = 0; i < list.steps.length; i += 1) result = await who.say("done");
     assert.match(result, new RegExp(`^You finished all ${list.steps.length} steps\\. `), id);
   }
+  // (going online has no screen walkthrough that this wording reaches, so the spoken checklist still teaches it)
   const online = person(); await online.say("Walk me through getting my business online");
   let last = ""; for (let i = 0; i < 6; i += 1) last = await online.say("done");
   assert.match(last, /common practical advice, not an official rule/);
 });
 
 test("the breach steps name US bodies, so they start only for people in the United States", async () => {
+  // the screen walkthrough (us: true, so the planner carries it only for a person in the United States) takes this request now, so the spoken checklist never starts
   const outside = person("Africa/Nairobi");
   assert.equal(await outside.say("Walk me through what to do after a data breach"), null);
   const us = person("America/Denver");
-  const first = await us.say("Walk me through what to do after a data breach");
-  assert.match(first, /^What to do after a data breach: 5 steps/);
-  for (let i = 0; i < 4; i += 1) await us.say("done");
-  assert.match(await us.say("done"), /IC3\.gov|not legal advice/);
+  assert.equal(await us.say("Walk me through what to do after a data breach"), null);
+  const walk = guideWalkthroughs.walkthroughForText("Walk me through what to do after a data breach");
+  assert.ok(walk && walk.us === true, "the breach walkthrough is for the United States");
 });
 
 test("the AI basics course: six lessons, each taught and checked, then a score with what to review", async () => {
