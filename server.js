@@ -92,6 +92,7 @@ const { churchTopic } = require("./public/kyro-church-topics.js");
 const { athleteTopic } = require("./public/kyro-athlete-topics.js");
 const { moneyTopic } = require("./public/kyro-money-topics.js");
 const { howtoTopic } = require("./public/kyro-howto-topics.js");
+const { safetyTopic } = require("./public/kyro-safety-topics.js");
 const { technologyTopic: techWalkTopic, aiToolsTopic: aiWalkTopic, isWalkRequest: isTechWalkRequest } = require("./public/kyro-technology-topics.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
@@ -22577,6 +22578,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (howtoGuide) {
       return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: howtoGuide.response,
         executionAttempted: true, executionVerified: howtoGuide.verified === true };
+    }
+  }
+  // Staying safe online and on the phone (nexus/knowledge/safety-guide.js: a fake message or call, passwords and two-step sign-in, a hijacked account, identity theft, locked files, a swapped SIM card, where to report) is answered from the checked guide
+  // whichever tool the model picked, with the person's own words tried first: the voice model answered from memory with no sources, and could give a wrong number or step in the very moment a person is in trouble.
+  const safetyAsk = typeof safetyTopic === "function" && rawCallerText && safetyTopic(rawCallerText) ? rawCallerText : command;
+  if (typeof safetyTopic === "function" && safetyTopic(safetyAsk) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
+    const safetyUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const safetyGuide = safetyUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: safetyUser, text: safetyAsk, language, timeZone: args?.timeZone }) : null;
+    if (safetyGuide) {
+      return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: safetyGuide.response,
+        executionAttempted: true, executionVerified: safetyGuide.verified === true };
     }
   }
   // A request to be WALKED THROUGH a technology or AI-tools topic (public/kyro-technology-topics.js) is answered by the planner's walkthrough whichever tool the model picked, with the person's own words tried first.

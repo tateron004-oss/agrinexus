@@ -10,6 +10,7 @@
 // (in the order the planner asks the guides, so that the words find the same walkthrough that the planner would carry)
 const FAMILIES = Object.freeze([
   require("./howto-walkthroughs.js"),
+  require("./safety-walkthroughs.js"),
   require("./parents-walkthroughs.js"),
   require("./church-walkthroughs.js"),
   require("./athlete-more-walkthroughs.js"),

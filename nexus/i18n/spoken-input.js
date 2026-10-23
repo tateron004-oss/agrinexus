@@ -77,7 +77,8 @@ function readRun(tokens, start, allowBareScale = false) {
     i += 2;
   }
   void sawAnd;
-  if (!consumedAny) return null;
+  // (a hyphenated word that begins with a number word but is not one, "two-step" or "one-time", accepts "two" and then fails on "step": no whole token was taken, and a run that ends where it began would be re-read for ever)
+  if (!consumedAny || end === start) return null;
   return { value: total + current, end };
 }
 

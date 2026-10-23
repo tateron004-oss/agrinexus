@@ -7,6 +7,7 @@ const { investmentGuardReply } = require("./investment-guard.js");
 const { scamGuardReply } = require("./scam-guard.js");
 // The same guards for someone who asks in Kiswahili: the same kinds, recognised in Kiswahili, answered in Kiswahili (content-guard-sw.js). The English wording and recognition below are unchanged.
 const swahili = require("./content-guard-sw.js");
+const { safetyTopic } = require("../../public/kyro-safety-topics.js");
 const clean = value => String(value ?? "").replace(/[’]/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
 
 // ---- explicit material ----
@@ -26,7 +27,13 @@ const FRAUD_REQUEST = /\b(?:hack(?:ing)?|crack(?:ing)?|steal(?:ing)?|clone|cloni
 // certificate is forged". Those are protective questions and are answered normally (the AI prompts still carry the rule that Kyro never helps do the trick). A request to DO it ("how do I make fake mpesa messages", "hack my friend's
 // mpesa") has none of these frames, and a sentence that also asks not to be caught is never treated as protective.
 const PROTECTIVE = /\bhow (?:do|can|could|should|to) (?:i|we|you|one)\s+(?:tell|spot|know|check|identify|recogni[sz]e|verify|confirm|report|stop|prevent|protect|secure|recover|reverse|undo|reclaim|block|avoid|detect|trace)\b|\b(?:protect|prevent|secure|recover|report|block|detect|spot) (?:my|our|the|a|an|against|from|people|someone)\b|\b(?:warning signs?|red flags?|how (?:does|do) (?:it|they|this|that) work|what (?:is|are|does) (?:a |an |the )?(?:sim swap|flash|forged?|fake|scam))\b|\b(?:is|was) (?:this|it|that|my|the)\b[^.!?]{0,30}\b(?:fake|forged|a scam|genuine|real)\b|\b(?:by mistake|wrong number|mistakenly|accidentally|wrongly)\b|\bmy\b[^.!?]{0,25}\b(?:was|got|has been|is being|were)\s+(?:hacked|cloned|stolen|swapped|used)\b|\bsomeone\b[^.!?]{0,20}\b(?:is using|has|have|used|swapped|cloned|hacked|stole|stolen)\b[^.!?]{0,25}\bmy\b|\bmy (?:own )?(?:phone|sim|wi-?fi|router|laptop)\b[^.!?]{0,30}\b(?:data|contacts|photos|backup|new phone)\b|\bto (?:my )?new phone\b|\b(?:sent|gave|showed|received|got|forwarded) (?:me|us)\b[^.!?]{0,30}\b(?:fake|forged)\b|\bwhat (?:do|should|can|must) (?:i|we) do\b/;
-const NOT_CAUGHT = /\b(?:without (?:getting |being )?(?:caught|detected|traced|noticed|found out)|(?:avoid|escape|dodge) (?:getting )?(?:caught|detection|the police|being traced)|untraceable|leave no trace|so (?:that )?(?:no one|nobody|they|the police) (?:can|will|knows?|finds?))\b/;
+// "Walk me through spotting a fake message", "is a SIM swap a crime in Kenya", "tell me about SIM swap fraud" use the same two phrases as the tricks but ask how to stay safe: the stay-safe-online guide's matcher (public/kyro-safety-topics.js, which
+// never takes a request to do the harm) takes them. The question is let through only when "fake message" or "sim swap" was the ONLY reason it looked like a request, and never when it asks not to be caught.
+const SAFETY_PHRASES = /\bsim swap(?:s|ped|ping)?\b|\bfake (?:messages?|sms)\b/g;
+function asksHowToStaySafe(cleaned, original) {
+  return !NOT_CAUGHT.test(cleaned) && !FRAUD_REQUEST.test(cleaned.replace(SAFETY_PHRASES, " ")) && Boolean(safetyTopic(String(original ?? "")));
+}
+const NOT_CAUGHT =/\b(?:without (?:getting |being )?(?:caught|detected|traced|noticed|found out)|(?:avoid|escape|dodge) (?:getting )?(?:caught|detection|the police|being traced)|untraceable|leave no trace|so (?:that )?(?:no one|nobody|they|the police) (?:can|will|knows?|finds?))\b/;
 const SCHEME = /\bdouble (?:my|your|the) money\b|\b(?:send|pay|deposit)\s+(?:ksh\.?\s*)?\d[\d,]*\s*(?:and|to)\s+(?:get|receive|win)\s+(?:ksh\.?\s*)?\d[\d,]*\b|\bget rich quick\b|\bmoney flipping\b|\b(?:easy|fast|quick) money (?:online|trick|scheme)\b|\bpyramid scheme\b|\bearn \d[\d,]*\s*(?:a|per|every)\s*day (?:from|with|doing)\b|\bforex (?:signals?|trading) (?:earn|make|guaranteed)\b/;
 
 const REPLIES = Object.freeze({
@@ -44,7 +51,7 @@ function contentGuardReply(text) {
   if (found) return !found.language && swahili.isSwahili(text) ? swahili.inSwahili(found) : found;
   // (a protective question in English is not handed to the Kiswahili wording, which also knows "sim swap" and would refuse it in Kiswahili)
   const said = clean(text);
-  if (!swahili.isSwahili(text) && PROTECTIVE.test(said) && !NOT_CAUGHT.test(said)) return null;
+  if (!swahili.isSwahili(text) && ((PROTECTIVE.test(said) && !NOT_CAUGHT.test(said)) || asksHowToStaySafe(said, text))) return null;
   return swahili.swahiliGuardReply(text);
 }
 
@@ -56,7 +63,7 @@ function englishContentGuardReply(text) {
     if (GAMBLING_PROBLEM.test(t)) return { kind: "gambling-problem", reply: REPLIES.gamblingProblem };
     if (BETTING_TIPS.test(t)) return { kind: "betting", reply: REPLIES.betting };
   }
-  if (FRAUD_REQUEST.test(t) && (!PROTECTIVE.test(t) || NOT_CAUGHT.test(t))) return { kind: "fraud", reply: REPLIES.fraud };
+  if (FRAUD_REQUEST.test(t) && (!PROTECTIVE.test(t) || NOT_CAUGHT.test(t)) && !asksHowToStaySafe(t, text)) return { kind: "fraud", reply: REPLIES.fraud };
   if (SCHEME.test(t)) return { kind: "scheme", reply: REPLIES.scheme };
   // Someone asking for a PIN, password or one-time code, a fee to get a job, a loan or a prize, or an ID copy going to a stranger (see scam-guard.js).
   const scam = scamGuardReply(text);

@@ -42,6 +42,8 @@ const { athleteTopic } = require("../../public/kyro-athlete-topics.js");
 const { athleteAnswer } = require("../knowledge/athlete-guide.js");
 const { moneyTopic } = require("../../public/kyro-money-topics.js");
 const { howtoTopic } = require("../../public/kyro-howto-topics.js");
+const { safetyTopic } = require("../../public/kyro-safety-topics.js");
+const { safetyAnswer } = require("../knowledge/safety-guide.js");
 const { moneyAnswer } = require("../knowledge/money-guide.js");
 const { moneyWalkthrough, WALK_OF_TOPIC: MONEY_WALK_OF_TOPIC, moneyWalkthroughFor } = require("../knowledge/money-walkthroughs.js");
 const { athleteWalkthrough, WALK_OF_TOPIC: ATHLETE_WALK_OF_TOPIC, athleteWalkthroughFor } = require("../knowledge/athlete-walkthroughs.js");
@@ -543,6 +545,20 @@ class OpenEndedPlanner {
     // "Walk me through using the shopping list", "teach me to use the farm log": a part of Kyro taught one step at a time (see knowledge/howto-walkthroughs.js). A part-of-Kyro word and a request to be taught are both required (public/kyro-howto-topics.js), so a guide's question
     // and the plain use of a feature ("show my notes") are never taken; without a walkthrough for the topic the request goes on as it did.
     { const howtoWalk = guideWalkthroughPlan(command, askText, "kyro-howto", howtoTopic(askText), "app-help", true); if (howtoWalk) return howtoWalk; }
+    // Staying safe online and on the phone (fake messages and calls, passwords and two-step sign-in, a hijacked account, identity theft, locked files, a swapped SIM card, where to report): a checked, sourced, plain answer from the official pages of
+    // the United States, Kenya and Nigeria (see knowledge/safety-guide.js). Asked early, before the money, technology and parents' guides, because "someone called asking for my PIN" and "how do I spot a fake text" are this guide's. The matcher
+    // (public/kyro-safety-topics.js) leaves to those guides a question about investments, loans, banks and mobile money, a business's own systems, an older person or a child, and never takes an order, a record, a request to do the harm, or a personal emergency.
+    // The device's country is given to it: "how do I spot a fake message" asked in Nairobi is the Kenyan topic.
+    {
+      const safeCountry = africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText });
+      const safeId = ownWorkspace && businessVoiceDispatch.asksAboutOwnRecords(askText) ? null : safetyTopic(askText, { country: safeCountry });
+      const safeGuide = safeId ? safetyAnswer(safeId, { us: usPerson && !africaNamed(askText), country: safeCountry }) : null;
+      if (safeGuide) {
+        const safeWalk = guideWalkthroughPlan(command, askText, "safety-guide", safeGuide.topic, "professional-advice", usPerson && !africaNamed(askText));
+        if (safeWalk) return safeWalk;
+        return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: safeGuide.text, sourceRequired: false, knowledge: `safety-guide:${safeGuide.topic}`, sources: safeGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+      }
+    }
     // A parent's question about their child's growing up and safety (how to talk with a child about the body and relationships, the signs of abuse, what to do if a child tells you, a young girl who is pregnant, who to call): a checked,
     // sourced, plain answer (see knowledge/parents-guide.js). Asked before the women's health guide below, because "how do I explain a period to my daughter" is this guide's and not the cycle answer. A child speaking for themselves,
     // and anything about harming a child or oneself, is never taken (public/kyro-parents-topics.js); the safety layer, which comes first, answers a person who says they are being hurt.

@@ -1,6 +1,6 @@
 {
- "takenAt": "2026-10-22T20:11:44.749Z",
- "count": 924,
+ "takenAt": "2026-10-23T20:30:24.538Z",
+ "count": 1006,
  "pages": {
   "https://988lifeline.org/": {
    "state": "ok",
@@ -9297,6 +9297,826 @@
    "checkedAt": "2026-10-22T20:11:29.814Z",
    "guides": [
     "money-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/are-public-wi-fi-networks-safe-what-you-need-know": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4a59d2e64cac86bc",
+   "bytes": 8543,
+   "checkedAt": "2026-10-23T20:29:20.467Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/how-avoid-government-impersonation-scam": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "48737053382b8364",
+   "bytes": 17435,
+   "checkedAt": "2026-10-23T20:29:20.495Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/how-recover-your-hacked-email-or-social-media-account": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "0b1912ea49ab83ac",
+   "bytes": 10204,
+   "checkedAt": "2026-10-23T20:29:21.158Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/how-secure-your-home-wi-fi-network": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1ad950eae8a9e7ec",
+   "bytes": 11684,
+   "checkedAt": "2026-10-23T20:29:21.169Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/how-spot-avoid-and-report-tech-support-scams": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9f1d79f2cdafc2ff",
+   "bytes": 12431,
+   "checkedAt": "2026-10-23T20:29:21.761Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/scammers-use-fake-emergencies-steal-your-money": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1a5bd5684caf8276",
+   "bytes": 10956,
+   "checkedAt": "2026-10-23T20:29:21.610Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/use-two-factor-authentication-protect-your-accounts": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5d5b590a89aececc",
+   "bytes": 13400,
+   "checkedAt": "2026-10-23T20:29:22.056Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/what-do-if-you-were-scammed": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "395d4ac63c8ec3fc",
+   "bytes": 13252,
+   "checkedAt": "2026-10-23T20:29:22.146Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/what-know-about-identity-theft": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "3ef577deacaa8edc",
+   "bytes": 16148,
+   "checkedAt": "2026-10-23T20:29:22.340Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/what-know-about-romance-scams": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "18595b624cab8ffc",
+   "bytes": 9993,
+   "checkedAt": "2026-10-23T20:29:22.729Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/consumer-alerts/2019/10/sim-swap-scams-how-protect-yourself": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d7bd5b0441c6c37c",
+   "bytes": 23083,
+   "checkedAt": "2026-10-23T20:29:22.656Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/features/how-avoid-imposter-scams": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2b7b57dee98f82fc",
+   "bytes": 10971,
+   "checkedAt": "2026-10-23T20:29:22.925Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ncc.gov.ng/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "551cfcc25c5bd823",
+   "bytes": 4149,
+   "checkedAt": "2026-10-23T20:29:24.185Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ncc.gov.ng/articles/111-do-not-disturb-dnd-service-in-nigeria": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "546cf53ad0bcf721",
+   "bytes": 4456,
+   "checkedAt": "2026-10-23T20:29:24.215Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ncc.gov.ng/articles/33-rules-on-unsolicited-calls-and-sms": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "7f8cb0d7c958c307",
+   "bytes": 2790,
+   "checkedAt": "2026-10-23T20:29:24.456Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ncc.gov.ng/articles/67-understanding-dnd": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "748c87c3995dc70f",
+   "bytes": 3700,
+   "checkedAt": "2026-10-23T20:29:25.217Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ncc.gov.ng/articles/81-wangiri-mobile-fraud-beware-of-the-missed-call-scam": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5808ed2de8311632",
+   "bytes": 1752,
+   "checkedAt": "2026-10-23T20:29:25.007Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ncc.gov.ng/articles/92-ncc-announces-final-deadline-for-nin-sim-linkage-compliance-september-14-2024": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9950c24de80b900c",
+   "bytes": 3488,
+   "checkedAt": "2026-10-23T20:29:25.240Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ncc.gov.ng/information-education/faqs/46-compliance-monitoring-and-enforcement": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1994cd58c902617d",
+   "bytes": 3890,
+   "checkedAt": "2026-10-23T20:29:25.799Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ncc.gov.ng/information-education/faqs/82-sim-nin-linkage": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2ad236bfc4530d34",
+   "bytes": 7290,
+   "checkedAt": "2026-10-23T20:29:26.016Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumercomplaints.fcc.gov/hc/en-us": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-23T20:29:25.576Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://csirt.ncc.gov.ng/index.php/resources/security-advisories": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d33e26c34eda52d3",
+   "bytes": 19713,
+   "checkedAt": "2026-10-23T20:29:27.120Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://csirt.ncc.gov.ng/index.php/resources/security-advisories/148-cyber-criminals-using-sim-swapping-attack-to-steal-millions-of-dollars-from-the-public": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f79ed535dfedf608",
+   "bytes": 4409,
+   "checkedAt": "2026-10-23T20:29:27.166Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://csirt.ncc.gov.ng/index.php/resources/security-advisories/202-cybercriminals-compromising-google-accounts-without-their-passwords": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "62b70f02a3c4a78a",
+   "bytes": 4673,
+   "checkedAt": "2026-10-23T20:29:27.274Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://csirt.ncc.gov.ng/index.php/resources/security-advisories/431-fraudulent-free-data-and-airtime-phishing-campaign-hosted-on-ibaidad-com": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "726e2c2b5ee5b806",
+   "bytes": 4382,
+   "checkedAt": "2026-10-23T20:29:28.350Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://efcc.gov.ng/SubmitPetition": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-23T20:29:27.541Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://ncc.gov.ng/consumers/child-online-protection": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e09d97c3c1318ee3",
+   "bytes": 5465,
+   "checkedAt": "2026-10-23T20:29:28.039Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://ncc.gov.ng/industry/cybersecurity": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "78121ba340d26c4d",
+   "bytes": 14533,
+   "checkedAt": "2026-10-23T20:29:28.277Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://ncc.gov.ng/media-centre/press-releases/news-release-dont-allow-your-nin-be-linked-another-persons-sim-ncc": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "509f93b32913c861",
+   "bytes": 6765,
+   "checkedAt": "2026-10-23T20:29:28.509Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://ncc.gov.ng/media-centre/press-releases/news-release-ncc-demands-mnos-agents-consumers-compliance-sim": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e09b97d34191ea63",
+   "bytes": 7168,
+   "checkedAt": "2026-10-23T20:29:28.732Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://ncc.gov.ng/sites/default/files/Keeping%20Children%20Safe%20Online.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-23T20:29:28.579Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://nccc.npf.gov.ng/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-23T20:29:29.159Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://nccc.npf.gov.ng/contact": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-23T20:29:29.195Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://nccc.npf.gov.ng/news": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-23T20:29:29.371Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://nccc.npf.gov.ng/news/october-global-cyber-awareness": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-23T20:29:29.457Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://ndpc.gov.ng/contact/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6da3dbbab78fbae9",
+   "bytes": 13300,
+   "checkedAt": "2026-10-23T20:29:33.393Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://ndpc.gov.ng/faqs/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4da3db9ab78fb8a9",
+   "bytes": 21736,
+   "checkedAt": "2026-10-23T20:29:33.190Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://ndpc.gov.ng/our-data-privacy-policy/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6dab99bb579798ed",
+   "bytes": 24188,
+   "checkedAt": "2026-10-23T20:29:33.407Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://new.kenyalaw.org/akn/ke/act/2018/5/eng@2022-12-31": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b7af5bc99c492ad5",
+   "bytes": 2514,
+   "checkedAt": "2026-10-23T20:29:34.307Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://oig.ssa.gov/report/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2c2db458e1ce3288",
+   "bytes": 3642,
+   "checkedAt": "2026-10-23T20:29:33.607Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://oig.ssa.gov/scam-alerts/2025-07-31-unexpected-call-or-message-think-scam-first/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9435b8fee1042e97",
+   "bytes": 3826,
+   "checkedAt": "2026-10-23T20:29:33.620Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://oig.ssa.gov/scam-alerts/2026-07-29-beware-of-fake-call-transfers-to-social-security-or-oig/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "782daac4fd82629a",
+   "bytes": 4245,
+   "checkedAt": "2026-10-23T20:29:33.778Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.ca.go.ke/ca-steps-public-engagements-cybersecurity-and-consumer-protection-mashujaa-day-thematic-week": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "7f3d0291e33faf6d",
+   "bytes": 5639,
+   "checkedAt": "2026-10-23T20:29:34.483Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.ca.go.ke/cyber-security": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "772e4209c107e60f",
+   "bytes": 4456,
+   "checkedAt": "2026-10-23T20:29:34.640Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.ca.go.ke/index.php/consumer-education-outreach-0": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "96bd4685b8cfeeba",
+   "bytes": 7932,
+   "checkedAt": "2026-10-23T20:29:35.198Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.ca.go.ke/index.php/our-role-your-protection": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "0f705a71f18a2056",
+   "bytes": 11754,
+   "checkedAt": "2026-10-23T20:29:34.813Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.ca.go.ke/sites/default/files/2023-06/Press-Statement-on-Forensic-Audit-on-SIM-Card-Registration1.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-23T20:29:34.949Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.ca.go.ke/sites/default/files/2025-07/Cyber%20Security%20Report%20Q4%202024-2025.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-23T20:29:35.126Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.ca.go.ke/sites/default/files/2026-07/Cyber%20Security%20Report%20Q4%202025-2026_1.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-23T20:29:35.612Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.cak.go.ke/e-services/file-consumer-complaint": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2eb21e34b1df89bd",
+   "bytes": 3075,
+   "checkedAt": "2026-10-23T20:29:40.265Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.cbn.gov.ng/supervision/cpdcomgt.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b4c09fcd6cd1d4d2",
+   "bytes": 2623,
+   "checkedAt": "2026-10-23T20:29:35.643Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.cbn.gov.ng/supervision/cpdfraudandscam.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "cc6678ea4b1d9dc3",
+   "bytes": 3898,
+   "checkedAt": "2026-10-23T20:29:35.943Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.cisa.gov/audiences/small-and-medium-businesses/secure-your-business/back-up-business-data": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "eebbea638d98b39b",
+   "bytes": 7504,
+   "checkedAt": "2026-10-23T20:29:35.859Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.cisa.gov/resources-tools/training/how-protect-data-stored-your-devices": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c28da94dc891231b",
+   "bytes": 14193,
+   "checkedAt": "2026-10-23T20:29:36.037Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5ee22a61c190037b",
+   "bytes": 8134,
+   "checkedAt": "2026-10-23T20:29:36.110Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.cisa.gov/secure-our-world/turn-mfa": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5a8628720b8d0a59",
+   "bytes": 7826,
+   "checkedAt": "2026-10-23T20:29:36.226Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.cisa.gov/secure-our-world/update-software": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "3ae54b302f852399",
+   "bytes": 7557,
+   "checkedAt": "2026-10-23T20:29:36.283Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.cisa.gov/secure-our-world/use-strong-passwords": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "3ca33a781d80a3e8",
+   "bytes": 8774,
+   "checkedAt": "2026-10-23T20:29:36.390Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.cisa.gov/stopransomware": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1150eb87b0490f27",
+   "bytes": 2851,
+   "checkedAt": "2026-10-23T20:29:36.446Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.cisa.gov/stopransomware/ive-been-hit-ransomware": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "909aeaea299b9273",
+   "bytes": 14021,
+   "checkedAt": "2026-10-23T20:29:36.558Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.cisa.gov/stopransomware/ransomware-101": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d0b28f6d1b1e2f9f",
+   "bytes": 3192,
+   "checkedAt": "2026-10-23T20:29:36.602Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.cisa.gov/stopransomware/ransomware-guide": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c196eee9dbd997d2",
+   "bytes": 60080,
+   "checkedAt": "2026-10-23T20:29:36.747Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.cma.or.ke/investor-protection/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9924ecca934008f3",
+   "bytes": 6399,
+   "checkedAt": "2026-10-23T20:29:39.194Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.efcc.gov.ng/images/pdfs/RED_ALERT_ON_SCAM.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-23T20:29:37.018Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.fcc.gov/consumers/guides/deep-fake-audio-and-video-links-make-robocalls-and-scam-texts-harder-spot": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "eb16fd40fbdccefc",
+   "bytes": 7804,
+   "checkedAt": "2026-10-23T20:29:37.375Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.fcc.gov/consumers/guides/spoofing": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4367fd092f55cb24",
+   "bytes": 9570,
+   "checkedAt": "2026-10-23T20:29:37.754Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.fcc.gov/consumers/guides/stop-unwanted-robocalls-and-texts": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "8667cdd08ebcbbd5",
+   "bytes": 11274,
+   "checkedAt": "2026-10-23T20:29:38.147Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.ic3.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9bbcbca5458bb3d7",
+   "bytes": 7053,
+   "checkedAt": "2026-10-23T20:29:38.633Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.identitytheft.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-23T20:29:38.826Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.identitytheft.gov/Info-Lost-or-Stolen": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-23T20:29:38.981Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.identitytheft.gov/Steps": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-23T20:29:39.145Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.irs.gov/help/report-fraud/report-fake-irs-treasury-or-tax-related-emails-and-messages": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a426008a915dc279",
+   "bytes": 14234,
+   "checkedAt": "2026-10-23T20:29:39.515Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.ncc.gov.ng/media-center/public-notices/unauthorised-use-telecom-subscribers-phone-numbers-and-other-personal": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "50d3b0f3c513ea61",
+   "bytes": 4684,
+   "checkedAt": "2026-10-23T20:29:39.940Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.ncc.gov.ng/media-centre/press-releases/ncc-urges-consumers-take-advantage-622-toll-free-line-and-dnd-2442": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "008f95b36133c868",
+   "bytes": 5254,
+   "checkedAt": "2026-10-23T20:29:40.069Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.odpc.go.ke/faqs/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4684d0fdcbc77c29",
+   "bytes": 18607,
+   "checkedAt": "2026-10-23T20:29:43.108Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.odpc.go.ke/file-a-complaint/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "7b82edf4ffe3c05b",
+   "bytes": 1899,
+   "checkedAt": "2026-10-23T20:29:42.790Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.odpc.go.ke/report-a-data-breach/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6340f4b1e429455f",
+   "bytes": 9271,
+   "checkedAt": "2026-10-23T20:29:43.518Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.odpc.go.ke/rights-of-a-data-subject/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ce96d675ce61a07c",
+   "bytes": 3085,
+   "checkedAt": "2026-10-23T20:29:44.072Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://www.ssa.gov/scam/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b0ebbc64345f2026",
+   "bytes": 9607,
+   "checkedAt": "2026-10-23T20:29:43.476Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/avoiding-and-reporting-gift-card-scams": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "07bc93f2aa2cc23e",
+   "bytes": 14534,
+   "checkedAt": "2026-10-23T20:30:24.323Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/how-recognize-avoid-phishing-scams": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1f1b55cc4c9b8fac",
+   "bytes": 11802,
+   "checkedAt": "2026-10-23T20:30:24.387Z",
+   "guides": [
+    "safety-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/malware-how-protect-against-detect-and-remove-it": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "0e5b5b88ed830bfc",
+   "bytes": 10586,
+   "checkedAt": "2026-10-23T20:30:24.269Z",
+   "guides": [
+    "safety-guide"
    ]
   }
  }
