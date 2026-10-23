@@ -1,6 +1,6 @@
 "use strict";
 
-// Kenya topics of the "Stay safe online" guide. Written from C:\Users\tater\vr\safety-facts-kenya.txt (pages read on 23 October 2026).
+// Kenya topics of the "Stay safe online" guide. Written from the Kenya fact sheet (official pages read on 23 October 2026).
 // Not written: ke-safe-children (the sheet has no child-safety tips, only the names of a programme and a site).
 // Not stated anywhere: the Directorate of Criminal Investigations hotline and WhatsApp numbers and the 999/112 lines (unverified leads), short code 333, anything from the unreadable
 // KE-CIRT/CC, DCI, police and Communications Authority repository pages.
