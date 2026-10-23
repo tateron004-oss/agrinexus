@@ -59,3 +59,13 @@ test("'2 million' / '3 thousand' are expanded (they were read as 2 and 3, a mill
   assert.equal(normalizeSpokenText("Record income of two million shillings."), "Record income of 2000000 shillings");
   assert.equal(normalizeSpokenText("Spent three thousand five hundred on fuel"), "Spent 3500 on fuel");
 });
+
+// Found on 23 October 2026 while writing the stay-safe-online walkthroughs: "How do I turn on two-step sign-in?" never finished. A hyphenated word that begins with a number word but is not one ("two-step", "one-time", "three-factor")
+// was read as the number and then stepped back to the same word for ever, so the question hung the conversation and ran the process out of memory.
+test("a hyphenated word that begins with a number word is left alone and does not loop", () => {
+  assert.equal(normalizeSpokenText("How do I turn on two-step sign-in?"), "How do I turn on two-step sign-in?");
+  assert.equal(normalizeSpokenText("What is a one-time code?"), "What is a one-time code?");
+  assert.equal(convertNumberWords("a three-factor check"), "a three-factor check");
+  assert.equal(convertNumberWords("two-step and forty-two bags"), "two-step and 42 bags");
+  assert.equal(normalizeSpokenText("I sold forty-five kilos"), "I sold 45 kilos");
+});

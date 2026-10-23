@@ -192,6 +192,29 @@ test("on the page and the server: the question is the page's own, the server tri
   for (const key of Object.keys(guide.SOURCES)) assert.ok(snapshot.pages[guide.SOURCES[key].url], `${key} is in the saved copy of the pages`);
 });
 
+test("a walkthrough step says no number, email or address that its guide does not already say from an official page, and gives no company or brand", () => {
+  const walks = require("../../nexus/knowledge/safety-walkthroughs.js");
+  const all = IDS.map(id => guide.TOPICS[id].text).join(" ");
+  const digits = all.replace(/\D/g, "");
+  const brand = /\b(?:Google|Gmail|Facebook|Instagram|WhatsApp|TikTok|Snapchat|Apple|Microsoft|Safaricom|Airtel|M-?Pesa|OPay|PalmPay|Moniepoint|Kuda|Paystack|Flutterwave|Norton|McAfee|Avast|Zelle|Venmo|Cash ?App|PayPal)\b/;
+  assert.ok(Object.keys(walks.WALKTHROUGHS).length >= 25, "a walkthrough for most topics");
+  for (const [id, def] of Object.entries(walks.WALKTHROUGHS)) {
+    for (const step of def.steps) {
+      const text = [step.text, step.done, ...step.words.map(word => word.means), ...step.gather].join(" ");
+      assert.doesNotMatch(text, brand, `${id}: "${step.title}" names a brand`);
+      for (const found of text.matchAll(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+|\*\d{2,4}#|\+?\d[\d\s().-]{5,}\d|\b\d{1,3}(?:,\d{3})+\b/g)) {
+        const value = found[0];
+        const ok = /@|^\*/.test(value) ? all.includes(value) : value.replace(/\D/g, "").length >= 5 ? digits.includes(value.replace(/\D/g, "")) : all.includes(value);
+        assert.ok(ok, `${id}: "${step.title}" says ${value}, which the guide does not`);
+      }
+      for (const found of text.matchAll(/\b([a-z0-9]+) at ([a-z0-9]+(?: dot [a-z0-9]+)+)\b/gi)) {
+        const email = `${found[1]}@${found[2].replace(/ dot /gi, ".")}`;
+        assert.ok(all.toLowerCase().includes(email.toLowerCase()), `${id}: "${step.title}" says ${email}, which the guide does not`);
+      }
+    }
+  }
+});
+
 test("each safety case in the live voice list is answered by the guide with the key fact it expects on the screen", () => {
   const cases = require("../../scripts/live-voice-suite/cases/safety.js");
   const seen = new Set();
