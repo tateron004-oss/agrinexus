@@ -82,7 +82,9 @@ test("the music card holds the YouTube player, so closing the card or the quiet-
 
 test("asking for the music to stop, pause or resume reaches the parked card's player too, by every route", () => {
   const control = bodyOf("function kyroLiveMusicCardControl(");
-  assert.match(control, /if \(control === "stop"\) \{ shell\?\.remove\(\); kyroLiveMusicVolume = 100; return null; \}/);
+  // (turn off and close take the card down; "stop the music" holds the place like pause, 23 October 2026)
+  assert.match(control, /if \(control === "close"\) \{ shell\?\.remove\(\); kyroLiveMusicVolume = 100; return null; \}/);
+  assert.match(control, /if \(control === "stop"\) \{ send\("pauseVideo"\);/);
   assert.match(control, /pauseVideo/);
   assert.match(control, /playVideo/);
   assert.match(control, /setVolume/, "the card also takes louder, quieter, mute and unmute");

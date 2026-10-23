@@ -43,7 +43,11 @@ test("mute, unmute, pause, resume and stop still work, and with no music card th
   assert.deepEqual(api.sent.slice(-2).map(m => m.func), ["unMute", "setVolume"]);
   assert.equal(api.control("pause"), null); assert.equal(api.sent.at(-1).func, "pauseVideo");
   assert.equal(api.control("resume"), null); assert.equal(api.sent.at(-1).func, "playVideo");
-  assert.equal(api.control("stop"), null); assert.equal(api.removed(), true); assert.equal(api.level(), 100, "a new song starts at full volume again");
+  // "stop the music" holds the place like pause: the song stays where it was, the card stays, and "play" carries on
+  assert.deepEqual(api.control("stop"), { say: "Stopped. Say play and I will carry on from here." }); assert.equal(api.sent.at(-1).func, "pauseVideo"); assert.equal(api.removed(), false);
+  assert.equal(api.control("resume"), null); assert.equal(api.sent.at(-1).func, "playVideo");
+  // "turn off" and "close" take the card down
+  assert.equal(api.control("close"), null); assert.equal(api.removed(), true); assert.equal(api.level(), 100, "a new song starts at full volume again");
   assert.equal(card({ present: false }).control("volume-up"), null);
 });
 
