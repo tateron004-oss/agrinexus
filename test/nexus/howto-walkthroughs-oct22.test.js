@@ -47,9 +47,9 @@ test("on the page and the server: the request is the page's own turn, the server
   assert.match(app, /function kyroHowtoQuestion\(text\) \{\s+try \{ return Boolean\(window\.KyroHowtoTopics/);
   assert.ok(server.includes('const { howtoTopic } = require("./public/kyro-howto-topics.js");'));
   assert.ok(server.includes("howtoTopic(howtoAsk)"));
-  const tag = '<script src="/kyro-howto-topics.js?v=kyro-howto-topics-1"></script>';
+  const tag = '<script src="/kyro-howto-topics.js?v=kyro-howto-topics-2"></script>';
   assert.ok(index.includes(tag)); assert.ok(index.indexOf(tag) < index.indexOf('<script src="/app.js'));
-  assert.match(sw, /`\/kyro-howto-topics\.js\?v=kyro-howto-topics-1`/);
+  assert.match(sw, /`\/kyro-howto-topics\.js\?v=kyro-howto-topics-2`/);
   assert.equal(registry.FAMILIES[0].label, "kyro-howto", "asked first: a part-of-Kyro word is required");
 });
 
@@ -72,4 +72,11 @@ test("a request to be walked through a technology or AI-tools topic is the page'
   const mh = require("../../public/nexus-mental-health-behavioral-wellness.js");
   for (const say of ["Walk me through getting a cervical screening.", "Tell me about breast screening", "screening for cervical cancer", "How often is bowel screening"]) assert.equal(mh.shouldHandle(say), false, say);
   for (const say of ["I need a depression screening", "a screening", "I want to hurt myself, cervical screening"]) assert.equal(mh.shouldHandle(say), true, say);
+});
+
+test("speech recognition often hears the name Kyro as Cairo, Kiro or Kairo: the lessons still start, and an ordinary place name does not", () => {
+  for (const say of ["Walk me through what Cairo remembers about you", "Walk me through asking Kiro questions, and for pictures, videos, and music", "Walk me through making a document in Kairo", "Walk me through finding a clinic or pharmacy in Cairo"]) assert.ok(matcher.howtoTopic(say), say);
+  for (const say of ["What is the weather in Cairo", "Show me Cairo on the map", "How do I get from Nairobi to Cairo"]) assert.equal(matcher.howtoTopic(say), null, say);
+  const cases = require("../../scripts/live-voice-suite/cases/walkthroughs-guides.js");
+  assert.ok(cases.every(entry => entry.allowRefusal === true), "an honest 'I cannot look up addresses' in a step is not a refusal");
 });

@@ -61,7 +61,8 @@
   function howtoTopic(text) {
     const said = String(text == null ? "" : text).replace(/\s+/g, " ").trim();
     if (!said || said.length > 220) return null;
-    const plain = said.replace(/^(?:(?:hey|hi|hello|ok|okay)[,.!]?\s+)?(?:(?:kyro|nexus)[,.:!]?\s+)?/i, "");
+    // (speech recognition often hears the name as Kiro, Kairo, Cairo or Cyro: the words are matched as Kyro. Only the matching sees this; a request still needs a request to be taught AND a part of Kyro named.)
+    const plain = said.replace(/\b(?:kiro|kairo|cairo|cyro|kyra|kayro)\b/gi, "kyro").replace(/^(?:(?:hey|hi|hello|ok|okay)[,.!]?\s+)?(?:(?:kyro|nexus)[,.:!]?\s+)?/i, "");
     if (NOT_A_GUIDE_QUESTION.test(plain) || PERSONAL_EMERGENCY.test(plain) || !ASK.test(plain)) return null;
     // a "my ..." records request is the feature, not the lesson: "walk me through my notes" is not taught as how to use notes
     if (/\b(?:through|show me|take me through)\s+(?:my|our)\s+(?!own\b)/i.test(plain) && !/\b(?:using|use|setting up|how to)\b/i.test(plain)) return null;
