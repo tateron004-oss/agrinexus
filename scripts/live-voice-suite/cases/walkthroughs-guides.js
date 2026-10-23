@@ -10,7 +10,7 @@ const CARE_LAYER_FIRST = new Set(["athlete-pressure-stress-and-mental-health", "
 const walk = (family, id, def) => {
   let first = family.walkthrough(id).steps[0].title;
   if (process.env.KYRO_WALK_ALL === "1" && !KEY.test(first)) first = (/^[A-Za-z0-9 ,.'’:;!&%-]{8,}/.exec(first) || [""])[0].trim();
-  return KEY.test(first) ? { id: `walk-${family.prefix}-${id}`, area: "walkthroughs", say: `Walk me through ${def.phrase}.`, timeoutMs: 60000, allowRefusal: true, expect: { screen: "walkthrough", text: first }, then: [{ say: "Next." }, { expect: { screen: "walkthrough", text: "Step 2 of" }, timeoutMs: 25000 }] } : null;
+  return KEY.test(first) ? { id: `walk-${family.prefix}-${id}`, area: "walkthroughs", say: `Walk me through ${def.phrase}.`, timeoutMs: 60000, expect: { screen: "walkthrough", text: first, allowRefusal: true }, then: [{ say: "Next." }, { expect: { screen: "walkthrough", text: "Step 2 of", allowRefusal: true }, timeoutMs: 25000 }] } : null;
 };
 
 const cases = [];
