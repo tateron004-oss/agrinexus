@@ -232,7 +232,8 @@
     /\b(depressed|low mood|sad|hopeless|alone|lonely|grief|lost someone|bereavement|cannot sleep|insomnia)\b/i,
     /\b(coping|cope|calm down|grounding|breathing (?:exercises?|techniques?)|counseling|counselling|therapist|therapy|psychiatrist|psychologist|social worker|(?:mental health|behaviou?ral health|counsell?ing|therapy) providers?)\b/i,
     /\b(drinking more|substance use|addiction|withdrawal|caregiver|worried about my child|mother seems depressed)\b/i,
-    /\b(phq|gad|screening|well[-\s]?being|wellbeing|safety plan|mental health|behavioral health|behavioural health)\b/i,
+    // ("screening" alone is a mental-health word, but a body screening, such as cervical, breast, bowel or HIV, is a health question for the women's health and other guides)
+    /\b(phq|gad|(?<!cervical |breast |cancer |prostate |lung |bowel |colon |colorectal |hiv |hpv |newborn |pap )screening(?! (?:for|of) (?:cervical|breast|cancer|prostate|lung|bowel|colon|colorectal|hiv|hpv))|well[-\s]?being|wellbeing|safety plan|mental health|behavioral health|behavioural health)\b/i,
     /\b(do not remember this|don't remember this|show me what you remember|delete.*mental health|stop.*check[-\s]?ins)\b/i
   ];
 

@@ -43,7 +43,7 @@ test("on the page and the server: the request is the page's own turn, the server
   const server = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  assert.match(app, /\(typeof kyroHowtoQuestion === "function" && kyroHowtoQuestion\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
+  assert.match(app, /\(typeof kyroHowtoQuestion === "function" && kyroHowtoQuestion\(trimmed\)\) \|\| \(typeof kyroTechWalkQuestion === "function" && kyroTechWalkQuestion\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
   assert.match(app, /function kyroHowtoQuestion\(text\) \{\s+try \{ return Boolean\(window\.KyroHowtoTopics/);
   assert.ok(server.includes('const { howtoTopic } = require("./public/kyro-howto-topics.js");'));
   assert.ok(server.includes("howtoTopic(howtoAsk)"));
@@ -51,4 +51,25 @@ test("on the page and the server: the request is the page's own turn, the server
   assert.ok(index.includes(tag)); assert.ok(index.indexOf(tag) < index.indexOf('<script src="/app.js'));
   assert.match(sw, /`\/kyro-howto-topics\.js\?v=kyro-howto-topics-1`/);
   assert.equal(registry.FAMILIES[0].label, "kyro-howto", "asked first: a part-of-Kyro word is required");
+});
+
+test("a request to be walked through a technology or AI-tools topic is the page's own turn (the plain question is not), and a body screening is not read as a feelings topic", () => {
+  const lib = require("../../public/kyro-technology-topics.js");
+  const app = fs.readFileSync(path.join(__dirname, "../../public/app.js"), "utf8");
+  const server = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
+  const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
+  const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
+  assert.equal(lib.isWalkRequest("Walk me through using AI tools safely"), true);
+  assert.equal(lib.technologyTopic("Walk me through using AI tools safely"), "ai-safe-use");
+  assert.equal(lib.aiToolsTopic("Walk me through using AI for marketing and social media posts"), "ai-for-marketing");
+  assert.equal(lib.isWalkRequest("Is it safe to use AI with customer data?"), false, "the plain question is answered as before");
+  assert.match(app, /\(typeof kyroTechWalkQuestion === "function" && kyroTechWalkQuestion\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
+  assert.ok(server.includes("isTechWalkRequest(techWalkAsk)"));
+  assert.ok(index.includes('<script src="/kyro-technology-topics.js?v=kyro-technology-topics-1"></script>'));
+  assert.ok(index.indexOf("/kyro-technology-topics.js") < index.indexOf('<script src="/app.js'));
+  assert.match(sw, /`\/kyro-technology-topics\.js\?v=kyro-technology-topics-1`/);
+  // "screening" alone is a mental-health word; cervical, breast and other body screenings are not, and a crisis stays a crisis
+  const mh = require("../../public/nexus-mental-health-behavioral-wellness.js");
+  for (const say of ["Walk me through getting a cervical screening.", "Tell me about breast screening", "screening for cervical cancer", "How often is bowel screening"]) assert.equal(mh.shouldHandle(say), false, say);
+  for (const say of ["I need a depression screening", "a screening", "I want to hurt myself, cervical screening"]) assert.equal(mh.shouldHandle(say), true, say);
 });

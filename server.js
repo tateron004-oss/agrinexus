@@ -92,6 +92,7 @@ const { churchTopic } = require("./public/kyro-church-topics.js");
 const { athleteTopic } = require("./public/kyro-athlete-topics.js");
 const { moneyTopic } = require("./public/kyro-money-topics.js");
 const { howtoTopic } = require("./public/kyro-howto-topics.js");
+const { technologyTopic: techWalkTopic, aiToolsTopic: aiWalkTopic, isWalkRequest: isTechWalkRequest } = require("./public/kyro-technology-topics.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
@@ -22576,6 +22577,16 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (howtoGuide) {
       return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: howtoGuide.response,
         executionAttempted: true, executionVerified: howtoGuide.verified === true };
+    }
+  }
+  // A request to be WALKED THROUGH a technology or AI-tools topic (public/kyro-technology-topics.js) is answered by the planner's walkthrough whichever tool the model picked, with the person's own words tried first.
+  const techWalkAsk = typeof isTechWalkRequest === "function" && rawCallerText && isTechWalkRequest(rawCallerText) && (techWalkTopic(rawCallerText) || aiWalkTopic(rawCallerText)) ? rawCallerText : command;
+  if (typeof isTechWalkRequest === "function" && isTechWalkRequest(techWalkAsk) && (techWalkTopic(techWalkAsk) || aiWalkTopic(techWalkAsk)) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
+    const techWalkUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const techWalkGuide = techWalkUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: techWalkUser, text: techWalkAsk, language, timeZone: args?.timeZone }) : null;
+    if (techWalkGuide) {
+      return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: techWalkGuide.response,
+        executionAttempted: true, executionVerified: techWalkGuide.verified === true };
     }
   }
   // A small business owner's question about PUBLIC RELATIONS and EVENTS (nexus/knowledge/pr-events-guide.js) is answered from the checked guide whichever tool the model picked, with the person's own words tried first: the voice model would

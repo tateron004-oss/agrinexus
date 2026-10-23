@@ -53,29 +53,7 @@ const TOPICS = Object.freeze({
   }
 });
 
-const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|am|will|would|tell me|explain|help me|walk me|take me through|guide me through|talk me through|step by step|what are the steps|i need|i want|i('| a)m looking for|any|give me (?:info|information|advice|ideas)|find (?:me|a|an|the|my)|show me|recommend|suggest)\b)/i;
-const RECORD_OR_DRAFT = /^(?:please\s+)?(?:sold|bought|log|record|add|save|remind|set|create|draft|write|make|mark|list|delete|forget|call|text|send|play|open|start|translate|export|convert|build)\b/i;
-const AI = "(?:ai|a\\.i\\.|artificial intelligence|chat ?gpt|gpt|claude|gemini|copilot|chatbots?|ai tools?)";
-const re = source => new RegExp(source, "i");
-const either = (job) => `(?:\\b${AI}\\b.{0,60}\\b(?:${job})\\b|\\b(?:${job})\\b.{0,60}\\b${AI}\\b)`;
-
-// first match wins; a question about being safe with AI, AI scams, fake reviews or advertising claims belongs to the technology guide (the planner looks there first)
-const MATCHERS = [
-  ["ai-tools-choose", re(`(?:\\b(?:choose|choosing|pick|picking|select|selecting|evaluate|evaluating|compare|comparing|vet|vetting|decide on)\\b.{0,40}\\b${AI}\\b|\\b(?:look for|check|ask)\\b.{0,30}\\b${AI}\\b.{0,12}\\b(?:tool|app|software|vendor|product)s?\\b|\\b(?:free|paid)\\b.{0,15}\\b${AI}\\b.{0,15}\\b(?:tools?|apps?)\\b|\\bhow (?:do|can|should) (?:i|we) (?:know|tell|check) (?:which|if|whether) .{0,40}\\b${AI}\\b|(?=.*\\b${AI}\\b)(?=.*\\b(?:safe|safely|privacy|private|confidential|risks?|risky|trust\\w*|legit(?:imate)?|secure)\\b))`)],
-  ["ai-for-planning", re(either("business plans?|roadmap|road map|funding|investors?|pitch(?:es| deck)?|grant (?:applications?|proposals?|writing)|financial projections?|start-?ups?|business model|market research|fundrais\\w+"))],
-  ["ai-for-customers", re(either("customer (?:service|support|questions|messages|emails?)|chatbots? for (?:my|our|the)? ?(?:website|business|customers)|answer(?:ing)? (?:my |our |the )?(?:customers?'?s?|calls|phones?|questions)|call routing|(?:reply|replies|respond(?:ing)?|responding) to (?:customers?|reviews?)|review (?:replies|responses)"))],
-  ["ai-for-marketing", re(either("market(?:ing)?|social media|content|logos?|branding|ads?|advertising|blogs?|product descriptions?|posts?|promot\\w+|photos?|videos?|visibility|find (?:more )?customers|get (?:more )?customers"))],
-  ["ai-for-operations", re(either("schedul\\w+|reminders?|inventory|restock\\w*|bookkeeping|accounting|invoices?|payroll|email (?:sorting|triage)|sort(?:ing)? (?:my )?email|summar\\w+|meeting notes|spreadsheets?|my (?:business )?data|analy[sz]\\w+|operations|hiring|job postings?|to-?do|productivity|automat\\w+|save (?:me )?time|saving time|time-?saving|efficien\\w+"))],
-  ["ai-tools-overview", re(`(?:\\b${AI}\\b.{0,25}\\b(?:tools?|apps?|software|assistants?|platforms?)\\b|\\b(?:which|what|best|good|top|recommend\\w*)\\b.{0,12}\\b${AI}\\b.{0,25}\\b(?:should|do|can|to use|would)\\b.{0,12}\\b(?:i|we|use|help)\\b)`)]
-];
-
-function aiToolsTopic(text) {
-  const value = String(text || "").replace(/\s+/g, " ").trim();
-  if (!value || value.length > 300) return null;
-  if (RECORD_OR_DRAFT.test(value) || !ASKS.test(value)) return null;
-  for (const [topic, pattern] of MATCHERS) if (pattern.test(value)) return topic;
-  return null;
-}
+const { aiToolsTopic } = require("../../public/kyro-technology-topics.js");
 
 const CLOSING = "This is general information, not legal, tax, financial or security advice, and AI tools change quickly, so check each tool's current terms. I cannot sign you up for, buy or change any tool for you.";
 const OUTSIDE_US = "These are United States government sources: laws, programmes and rules about AI and business differ in your country, so check with your local business or trade office too.";

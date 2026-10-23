@@ -96,7 +96,7 @@ test("on the page and the server: the question is the page's own, the server tri
   const none = { window: {} };
   vm.runInNewContext(`${app.slice(start, end)}\nthis.ask = kyroPrQuestion;`, none);
   assert.equal(none.ask("How do I write a press release?"), false, "no matcher loaded, no claim");
-  assert.match(app, /\(typeof kyroPrQuestion === "function" && kyroPrQuestion\(trimmed\)\) \|\| \(typeof kyroChurchQuestion === "function" && kyroChurchQuestion\(trimmed\)\) \|\| \(typeof kyroAthleteQuestion === "function" && kyroAthleteQuestion\(trimmed\)\) \|\| \(typeof kyroMoneyQuestion === "function" && kyroMoneyQuestion\(trimmed\)\) \|\| \(typeof kyroHowtoQuestion === "function" && kyroHowtoQuestion\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
+  assert.match(app, /\(typeof kyroPrQuestion === "function" && kyroPrQuestion\(trimmed\)\) \|\| \(typeof kyroChurchQuestion === "function" && kyroChurchQuestion\(trimmed\)\) \|\| \(typeof kyroAthleteQuestion === "function" && kyroAthleteQuestion\(trimmed\)\) \|\| \(typeof kyroMoneyQuestion === "function" && kyroMoneyQuestion\(trimmed\)\) \|\| \(typeof kyroHowtoQuestion === "function" && kyroHowtoQuestion\(trimmed\)\) \|\| \(typeof kyroTechWalkQuestion === "function" && kyroTechWalkQuestion\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
   assert.match(server, /const prAsk = typeof prTopic === "function" && rawCallerText && prTopic\(rawCallerText\) \? rawCallerText : command;/);
   assert.match(server, /prTopic\(prAsk\) && effectiveMentalHealthSignal\.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function"/);
   assert.match(server, /text: prAsk, language, timeZone: args\?\.timeZone/);

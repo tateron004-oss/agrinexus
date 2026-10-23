@@ -90,37 +90,7 @@ const TOPICS = Object.freeze({
   }
 });
 
-// A question, or a request for help
-const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|am|will|would|tell me|explain|help me|walk me|take me through|guide me through|talk me through|step by step|what are the steps|i need|i want|i('| a)m looking for|any|give me (?:info|information|advice)|find me|find (?:a|an|the|my)|show me|look(?:ing)? for|search for)\b)/i;
-const RECORD_OR_DRAFT = /^(?:please\s+)?(?:sold|bought|log|record|add|save|remind|set|create|draft|write|make|mark|list|delete|forget|call|text|send|play|open|start|translate|export|convert|build)\b/i;
-
-const AI = "(?:ai|a\\.i\\.|artificial intelligence|chat ?gpt|gpt|claude|gemini|copilot|chatbots?|ai tools?)";
-const matcher = source => new RegExp(source, "i");
-
-// first match wins, most specific first
-const MATCHERS = [
-  ["cyber-insurance", matcher("\\bcyber ?insurance\\b")],
-  ["email-domain", matcher("\\b(?:spf|dkim|dmarc|spoof\\w*|email authentication|someone (?:is )?(?:using|sending) (?:my|our) (?:email|domain))\\b")],
-  ["data-breach", matcher("\\b(?:data breach|breach(?:ed)?|identity theft|leaked|customer data (?:was |got |is )?(?:stolen|leaked|exposed)|got hacked|been hacked)\\b")],
-  ["phishing-ransomware", matcher("\\b(?:phishing|ransomware|business email (?:imposter|imposters|compromise)|email imposters?|tech support scams?|scam emails?|suspicious (?:email|emails|text|texts|call|calls|link|links)|fake invoices?|wire transfer scams?)\\b")],
-  ["fake-reviews", matcher(`(?:\\b(?:fake|bought|paid|purchased) (?:reviews?|testimonials?)\\b|\\b(?:write|writing|generate|generating|buy|buying|post|posting) (?:my |our |some )?(?:reviews?|testimonials?)\\b|\\breviews?\\b.*\\b${AI}\\b|\\b${AI}\\b.*\\breviews?\\b)`)],
-  ["ai-scams", matcher(`(?:(?=.*\\b(?:${AI}|deepfakes?|voice clon\\w*)\\b)(?=.*\\b(?:scams?|scammers?|fraud|fooled|tricked|con|conned)\\b)|\\b${AI} (?:income|business opportunit\\w+|side hustle|money|passive income)\\b|\\bpassive income\\b.*\\b${AI}\\b|\\b(?:deepfakes?|voice clon\\w*)\\b)`)],
-  ["ai-claims", matcher(`(?:\\b(?:advertis\\w*|market\\w*|promot\\w*|claim\\w*|say(?:ing)?|call(?:ing)?|label\\w*) (?:my|our|the|a|that)?.{0,40}\\b${AI}(?:[- ]powered)?\\b|\\b${AI}[- ]powered\\b)`)],
-  ["ai-safe-use", matcher(`(?:(?=.*\\b${AI}\\b)(?=.*\\b(?:safe|safely|safety|privacy|private|confidential|secure|risks?|risky|careful|trust|paste|type in|put in|put into|enter|share|customer data|data)\\b)|\\b(?:is|are) ${AI} (?:safe|secure|private)\\b)`)],
-  ["ai-getting-started", matcher(`(?=.*\\b${AI}\\b)(?=.*\\b(?:use|using|grow|help|helps|answer|answering|customers?|marketing|start|started|beginner|business|small business)\\b)`)],
-  ["web-host-designer", matcher("\\b(?:web ?hosts?|web hosting|hosting company|web designers?|website designers?|web developers?|app developers?|hire (?:a )?(?:web|website|app)\\b|vendor (?:contract|security))\\b")],
-  ["cybersecurity-basics", matcher("\\b(?:cyber ?security|hackers?|hacked|hacking|protect (?:my |our )?(?:business|data|computers?|website|accounts?)|nist|multi-?factor|two-?step|2fa|\\bmfa\\b|back ?ups?|strong passwords?|secure (?:my|our) )\\b")],
-  ["automation", matcher("(?:\\bautomat\\w+\\b.{0,60}\\b(?:business|invoices?|follow-?ups?|reminders?|customers?|tasks?)\\b|\\bwhat can (?:kyro|you) automate\\b|\\bbusiness automation\\b|\\bsave (?:me )?time\\b.{0,40}\\b(?:business|kyro)\\b)")],
-  ["online-presence", matcher("\\b(?:(?:get|put|take) (?:my |our )?business online|online presence|(?:start|build|make|set up|create) (?:a |my |our )?(?:website|web site)|domain names?|business emails?|google business|business listings?)\\b")]
-];
-
-function technologyTopic(text) {
-  const value = String(text || "").replace(/\s+/g, " ").trim();
-  if (!value || value.length > 300) return null;
-  if (RECORD_OR_DRAFT.test(value) || !ASKS.test(value)) return null;
-  for (const [topic, pattern] of MATCHERS) if (pattern.test(value)) return topic;
-  return null;
-}
+const { technologyTopic } = require("../../public/kyro-technology-topics.js");
 
 const CLOSING = "This is general information, not legal, tax, financial or security-audit advice, and things change, so confirm on the official site. I cannot buy, publish, file or change anything for you.";
 
