@@ -78,5 +78,5 @@ test("speech recognition often hears the name Kyro as Cairo, Kiro or Kairo: the 
   for (const say of ["Walk me through what Cairo remembers about you", "Walk me through asking Kiro questions, and for pictures, videos, and music", "Walk me through making a document in Kairo", "Walk me through finding a clinic or pharmacy in Cairo"]) assert.ok(matcher.howtoTopic(say), say);
   for (const say of ["What is the weather in Cairo", "Show me Cairo on the map", "How do I get from Nairobi to Cairo"]) assert.equal(matcher.howtoTopic(say), null, say);
   const cases = require("../../scripts/live-voice-suite/cases/walkthroughs-guides.js");
-  assert.ok(cases.every(entry => entry.allowRefusal === true), "an honest 'I cannot look up addresses' in a step is not a refusal");
+  assert.ok(cases.every(entry => entry.expect.allowRefusal === true && entry.then.every(step => !step.expect || step.expect.allowRefusal === true)), "an honest 'I cannot look up addresses' in a step is not a refusal (the rig reads allowRefusal inside each expectation)");
 });
