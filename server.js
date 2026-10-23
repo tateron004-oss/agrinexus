@@ -45262,26 +45262,31 @@ function nexusLanguageStatus(db, env = process.env) {
 // Where uploaded files really live. On Render a file written to the container's own storage is lost at every restart and deploy; only a mounted persistent disk keeps it. The upload folder is a mounted disk when it is on a
 // different device from the root of the container (Linux). This is read from the running server (no path is shown), so anyone can see it without the Render dashboard. A tiny file is written and removed to prove the folder is
 // writable, at most once a minute.
-let uploadStorageCheckCache = { at: 0, value: null };
-function uploadStorageSelfCheck(env = process.env) {
+const storageCheckCache = new Map();
+function storageSelfCheck(name, dirOf, env = process.env) {
   const now = Date.now();
-  if (uploadStorageCheckCache.value && now - uploadStorageCheckCache.at < 60_000) return uploadStorageCheckCache.value;
+  const cached = storageCheckCache.get(name);
+  if (cached && now - cached.at < 60_000) return cached.value;
   const value = { kind: "unknown", writable: false };
   try {
-    const dir = nexusUploads.uploadDir(env);
+    const dir = dirOf(env);
     fs.mkdirSync(dir, { recursive: true });
     const probe = path.join(dir, `.selfcheck-${process.pid}`);
     fs.writeFileSync(probe, "ok"); fs.unlinkSync(probe);
     value.writable = true;
     if (process.platform === "linux") value.kind = fs.statSync(dir).dev !== fs.statSync("/").dev ? "separate-disk" : "container-storage";
   } catch (error) { value.error = String(error && error.code || "error"); }
-  value.meaning = value.kind === "separate-disk" ? "Uploaded files are kept on a mounted disk and survive a restart or a new release."
-    : value.kind === "container-storage" ? "Uploaded files are on the container's own storage and are LOST at every restart or new release: attach a persistent disk (or move the upload folder onto one)."
-    : "Could not tell where uploaded files are kept.";
-  if (!uploadStorageCheckCache.value || uploadStorageCheckCache.value.kind !== value.kind) console.log("[uploads] storage:", value.kind, value.writable ? "(writable)" : "(not writable)");
-  uploadStorageCheckCache = { at: now, value };
+  const what = name === "exports" ? "Saved documents, résumés and data exports" : "Uploaded files";
+  value.meaning = value.kind === "separate-disk" ? `${what} are kept on a mounted disk and survive a restart or a new release.`
+    : value.kind === "container-storage" ? `${what} are on the container's own storage and are LOST at every restart or new release: ${name === "exports" ? "set NEXUS_EXPORT_DIR to a folder on the persistent disk (for example /var/data/exports)" : "attach a persistent disk (or move the upload folder onto one)"}.`
+    : `Could not tell where ${what.toLowerCase()} are kept.`;
+  if (!cached || cached.value.kind !== value.kind) console.log(`[${name}] storage:`, value.kind, value.writable ? "(writable)" : "(not writable)");
+  storageCheckCache.set(name, { at: now, value });
   return value;
 }
+const uploadStorageSelfCheck = env => storageSelfCheck("uploads", e => nexusUploads.uploadDir(e), env);
+// (the same folder the exports are written to and read from: NEXUS_EXPORT_DIR, else output/nexus-exports)
+const exportStorageSelfCheck = env => storageSelfCheck("exports", e => path.resolve(String(e.NEXUS_EXPORT_DIR || "").trim() || path.join(process.cwd(), "output", "nexus-exports")), env);
 
 function nexusUploadReadiness(db, env = process.env) {
   const enabled = nexusFlagEnabled(env, "NEXUS_FILE_UPLOAD_ENABLED");
@@ -48844,6 +48849,7 @@ async function api(req, res, url) {
       memoryMb: { rss: Math.round(memory.rss / 1048576), heapUsed: Math.round(memory.heapUsed / 1048576) },
       node: process.version,
       uploads: uploadStorageSelfCheck(process.env),
+      exports: exportStorageSelfCheck(process.env),
       timestamp: new Date().toISOString()
     }, { "cache-control": "no-store, no-cache, must-revalidate" });
   }

@@ -296,6 +296,9 @@ services:
         value: "true"
       - key: NEXUS_FILE_STORAGE_DIR
         value: /var/data/uploads
+      # Saved documents, resumes and data exports (the Word files and downloads Kyro makes) go on the same persistent disk, so they survive a restart or a new release.
+      - key: NEXUS_EXPORT_DIR
+        value: /var/data/exports
       - key: TRANSLATION_PROVIDER
         value: webhook
       - key: TRANSLATION_WEBHOOK_URL
