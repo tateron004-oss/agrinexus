@@ -10,7 +10,7 @@ const osm = require("../../server/providers/osmPlacesProvider.js");
 // (each a full model call) and then a fourth time for the answer. And a search for a pharmacy near a town asked the shared public map services again every time. Both are cut down here without changing any answer.
 const list = Array.isArray(defs) ? defs : Object.values(defs).find(Array.isArray) || [];
 const rows = list.map(tool => ({ tool_id: tool.toolId, domain: tool.domain, description: tool.description, risk_tier: tool.riskTier, confirmation_required: tool.confirmationRequired, consent_scope: tool.consentScope }));
-const command = { text: "How do I stay safe from scams?", tenantId: "t", actorId: "u", locale: "en", channel: "typed" };
+const command = { text: "Why should I rotate my crops?", tenantId: "t", actorId: "u", locale: "en", channel: "typed" };
 const planner = model => new OpenEndedPlanner({ model, memory: { search: async () => [] }, tools: { list: async () => rows }, applications: { list: () => defaultApplicationManifests() } });
 const empty = { goal: "x", application: "nonexistent", clarification: null, steps: [] };
 
