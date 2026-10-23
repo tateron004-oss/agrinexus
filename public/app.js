@@ -50044,7 +50044,7 @@ async function kyroLiveMicrophoneForRestart(session) {
   if (kept && kyroMicrophoneIsLive(kept)) return kept;
   if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) return null;
   let stream = null;
-  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { return null; }
+  try { const processing = typeof kyroMicrophoneProcessing === "function" ? kyroMicrophoneProcessing() : { echoCancellation: true, noiseSuppression: true, autoGainControl: true }; stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: processing.echoCancellation, noiseSuppression: processing.noiseSuppression, autoGainControl: processing.autoGainControl } }); } catch { return null; }
   if (!kyroMicrophoneIsLive(stream)) {
     try { stream?.getTracks?.().forEach(track => track.stop()); } catch { /* nothing to release */ }
     return null;
@@ -55032,6 +55032,19 @@ function startNexusAudioFallbackRecorder(stream, options = {}) {
   }
 }
 
+// How Kyro asks the browser for the microphone. By default the browser's own echo cancelling, noise suppression and automatic volume are ON (so Kyro does not hear itself and hears you over background noise). They can change how everything else the computer plays
+// sounds while the microphone is open, so for testing: open Kyro with ?kyroMic=raw to turn all three OFF (remembered on this computer), and ?kyroMic=default to turn them back on. Nothing else changes.
+function kyroMicrophoneProcessing() {
+  let mode = "";
+  try {
+    const asked = new URLSearchParams(window.location.search).get("kyroMic");
+    if (asked) { mode = asked === "raw" ? "raw" : "default"; try { window.localStorage.setItem("kyro-mic-mode", mode); } catch { /* not remembered */ } }
+    else mode = window.localStorage.getItem("kyro-mic-mode") || "";
+  } catch { mode = ""; }
+  const on = mode !== "raw";
+  return { mode: on ? "default" : "raw", echoCancellation: on, noiseSuppression: on, autoGainControl: on };
+}
+
 async function acquireNexusMicrophoneStreamForVoice(source = "nexus-os-voice-runtime") {
   if (!navigator.mediaDevices?.getUserMedia) {
     recordNexusAudioPipelineEvent("media-stream-unavailable", { reason: "getUserMedia-unavailable" });
@@ -55042,11 +55055,13 @@ async function acquireNexusMicrophoneStreamForVoice(source = "nexus-os-voice-run
   try {
     recordNexusAudioPipelineEvent("media-stream-request", { source });
     nexusGenesisVoiceDebugLog("getUserMedia-requested", { source });
+    const processing = kyroMicrophoneProcessing();
+    nexusGenesisVoiceDebugLog("microphone-processing", { source, mode: processing.mode });
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
+        echoCancellation: processing.echoCancellation,
+        noiseSuppression: processing.noiseSuppression,
+        autoGainControl: processing.autoGainControl
       }
     });
     const tracks = typeof stream.getAudioTracks === "function" ? stream.getAudioTracks() : [];
