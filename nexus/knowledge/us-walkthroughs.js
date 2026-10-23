@@ -12,6 +12,7 @@ const { SOURCES } = require("./us-small-business.js");
 const { walkTopic } = require("../../public/kyro-business-topics.js"); // (the words are shared with the page)
 
 const CHECKED_ON = "19 October 2026";
+const W = (term, means) => ({ term, means }); // (a word the person will meet in a step, in plain words: a step may carry done: "..." and words: [W(term, meaning)])
 const link = key => ({ name: SOURCES[key].name, url: SOURCES[key].url });
 
 const WALKTHROUGHS = Object.freeze({
@@ -66,7 +67,7 @@ const WALKTHROUGHS = Object.freeze({
 function usWalkthrough(topicId) {
   const def = WALKTHROUGHS[topicId];
   if (!def) return null;
-  return { id: `us-${topicId}`, title: def.title, checkedOn: CHECKED_ON, steps: def.steps.map(step => ({ title: step.title, text: step.text, gather: step.gather.slice(), link: step.link })), sources: def.sources.map(key => link(key)) };
+  return { id: `us-${topicId}`, title: def.title, checkedOn: CHECKED_ON, steps: def.steps.map(step => ({ title: step.title, text: step.text, gather: step.gather.slice(), done: step.done || null, words: (step.words || []).map(word => ({ term: word.term, means: word.means })), link: step.link })), sources: def.sources.map(key => link(key)) };
 }
 
 function usWalkTopic(text) {

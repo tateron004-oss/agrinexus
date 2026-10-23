@@ -4,7 +4,8 @@
 // person to do something (how investing works, the kinds of investment, CDs and Treasury securities, the six-step path from managing money to investing). Every step is a fact the money guide already states from the official pages it cites; a step
 // that is Kyro's own working practice says so. Nothing here asks for an account number or a password, and Kyro never moves money.
 
-const S = (title, text, gather, key) => ({ title, text, gather, key: key || null });
+const S = (title, text, gather, key, done, words) => ({ title, text, gather, key: key || null, done: done || null, words: Array.isArray(words) ? words : [] });
+const W = (term, means) => ({ term, means });
 const OWN = "This step is Kyro's own working practice, not an official page. ";
 
 module.exports = Object.freeze({

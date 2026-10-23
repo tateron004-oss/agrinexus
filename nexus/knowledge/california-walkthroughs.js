@@ -10,6 +10,7 @@
 const { CHECKED_ON, SOURCES } = require("./california-business.js");
 const { walkthroughAsk } = require("../../public/kyro-business-topics.js"); // (the words that ask to be walked through something are shared with the page)
 
+const W = (term, means) => ({ term, means }); // (a word the person will meet in a step, in plain words: a step may carry done: "..." and words: [W(term, meaning)])
 const link = key => ({ name: SOURCES[key].name, url: SOURCES[key].url });
 
 const WALKTHROUGHS = Object.freeze({
@@ -108,7 +109,7 @@ const WALKTHROUGHS = Object.freeze({
 function californiaWalkthrough(id) {
   const def = WALKTHROUGHS[id];
   if (!def) return null;
-  return { id, title: def.title, checkedOn: CHECKED_ON, steps: def.steps.map(step => ({ title: step.title, text: step.text, gather: step.gather.slice(), link: step.link })), sources: def.sources.map(key => link(key)) };
+  return { id, title: def.title, checkedOn: CHECKED_ON, steps: def.steps.map(step => ({ title: step.title, text: step.text, gather: step.gather.slice(), done: step.done || null, words: (step.words || []).map(word => ({ term: word.term, means: word.means })), link: step.link })), sources: def.sources.map(key => link(key)) };
 }
 
 module.exports = Object.freeze({ WALKTHROUGHS, californiaWalkthrough, walkthroughAsk });

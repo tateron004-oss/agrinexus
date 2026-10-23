@@ -11,7 +11,8 @@ const { SOURCES, CHECKED_ON } = require("./athlete-guide.js");
 const { athleteTopic } = require("../../public/kyro-athlete-topics.js");
 
 const link = key => ({ name: SOURCES[key].name, url: SOURCES[key].url });
-const S = (title, text, gather, key) => ({ title, text, gather, key: key || null });
+const S = (title, text, gather, key, done, words) => ({ title, text, gather, key: key || null, done: done || null, words: Array.isArray(words) ? words : [] });
+const W = (term, means) => ({ term, means });
 const OWN = "This step is Kyro's own working practice, not an official page. ";
 
 const WALKTHROUGHS = Object.freeze({
@@ -96,7 +97,7 @@ function athleteWalkthrough(id) {
   const keys = [...new Set(def.steps.map(step => step.key).filter(Boolean))];
   return {
     id: `athlete-${id}`, title: def.title, checkedOn: CHECKED_ON,
-    steps: def.steps.map(step => ({ title: step.title, text: step.text, gather: step.gather.slice(), link: step.key ? link(step.key) : null })),
+    steps: def.steps.map(step => ({ title: step.title, text: step.text, gather: step.gather.slice(), done: step.done || null, words: (step.words || []).map(word => ({ term: word.term, means: word.means })), link: step.key ? link(step.key) : null })),
     sources: keys.map(key => link(key))
   };
 }
