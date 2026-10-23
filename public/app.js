@@ -27897,7 +27897,7 @@ function kyroLiveMusicCardControl(control) {
   const frame = document.querySelector("[data-nexus-live-music-frame]");
   if (!frame) return null;
   const shell = frame.closest("[data-nexus-visual-shell]");
-  if (control === "stop") { shell?.remove(); kyroLiveMusicVolume = 100; return null; }
+  if (control === "close") { shell?.remove(); kyroLiveMusicVolume = 100; return null; }
   const send = (func, args = []) => { try { frame.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args }), "https://www.youtube-nocookie.com"); } catch { /* the card's own buttons still work */ } };
   if (control === "volume-up" || control === "volume-down") {
     const before = kyroLiveMusicVolume;
@@ -27908,6 +27908,8 @@ function kyroLiveMusicCardControl(control) {
   }
   if (control === "mute") { send("mute"); return { say: "Muted." }; }
   if (control === "unmute") { send("unMute"); send("setVolume", [kyroLiveMusicVolume]); return { say: "Sound is back on." }; }
+  // "stop the music" holds the place like "pause" (the song stays where it was and "play" carries on); "turn off" and "close" took the card down above
+  if (control === "stop") { send("pauseVideo"); return { say: "Stopped. Say play and I will carry on from here." }; }
   const func = control === "pause" ? "pauseVideo" : control === "resume" || control === "play" ? "playVideo" : "";
   if (func) send(func);
   return null;

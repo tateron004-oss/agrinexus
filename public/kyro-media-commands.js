@@ -6,7 +6,7 @@
 //
 // parse(text) -> null | one of
 //   { type: 'play', kind: 'music'|'radio'|'video', query, handoff: boolean, lang: 'en'|'sw', allowEmpty: boolean }
-//   { type: 'control', control: 'pause'|'resume'|'stop'|'next'|'previous'|'volume-up'|'volume-down'|'mute'|'unmute', explicit: boolean, lang }
+//   { type: 'control', control: 'pause'|'resume'|'stop'|'close'|'next'|'previous'|'volume-up'|'volume-down'|'mute'|'unmute', explicit: boolean, lang }
 //   { type: 'preference', key: 'audioOnly'|'playIn', value, lang }
 // `explicit` is true when the sentence itself names music/radio/video/volume ("pause the music"); a bare "pause" or "next" is only meant for
 // the player when something is already playing, so callers act on non-explicit controls only while a player is active.
@@ -42,9 +42,12 @@
     ["pause", /^(?:pause|hold on|hold it)(?:\s+(?:the |this |that |my )?(music|song|track|radio|video|playback|audio|stream|it))?$/i, 1],
     ["resume", /^(?:resume|continue|unpause|keep playing|carry on|play again|play it again)(?:\s+(?:the |this |that |my )?(music|song|track|radio|video|playback|audio|stream|playing))?$/i, 1],
     ["resume", /^(?:play|cheza)$/i, 0],
-    ["stop", /^(?:stop|end|turn off|switch off|shut off|kill|cancel|close)(?:\s+playing)?\s+(?:the |this |that |my )?(music|songs?|radio|video|playback|audio|stream|playing)$/i, 1],
+    ["resume", /^(?:play (?:the |that |this |my )(?:song|music|track)(?: again| back)?|play (?:song|music|track) again|play (?:that|this|it) (?:again|back))$/i, 0],
+    // "stop the music" and "stop playing" hold the place, like "pause": "play" carries on from there. Turning it off, closing it or ending it puts the music away.
+    ["stop", /^stop(?:\s+playing)?\s+(?:the |this |that |my )?(music|songs?|radio|video|playback|audio|stream|playing)$/i, 1],
+    ["close", /^(?:end|turn off|switch off|shut off|kill|cancel|close)(?:\s+playing)?\s+(?:the |this |that |my )?(music|songs?|radio|video|playback|audio|stream|playing)$/i, 1],
     ["stop", /^stop playing(?:\s+(?:the |this |that )?(music|songs?|radio|video))?$/i, 1],
-    ["stop", /^(?:turn|switch|shut)\s+(?:the |this |that |my )?(music|songs?|radio|video|audio|stream|playback)\s+off$/i, 1],
+    ["close", /^(?:turn|switch|shut)\s+(?:the |this |that |my )?(music|songs?|radio|video|audio|stream|playback)\s+off$/i, 1],
     ["next", /^(?:play\s+)?(?:the\s+)?(?:next|skip)(?:\s+(?:the |this )?(song|track|one|station|video|music))?$/i, 1],
     ["next", /^(?:another|a different)\s+(song|track|one|station)$/i, 1],
     ["next", /^(?:play something else|change the (?:song|station|track)|different (?:song|station))$/i, 1],
@@ -56,7 +59,8 @@
     // Kiswahili
     ["pause", /^(?:sitisha|simamisha kwa muda|pumzisha)(?:\s+(muziki|wimbo|redio|video))?$/i, 1],
     ["resume", /^(?:endelea|endeleza)(?:\s+(?:na\s+)?(muziki|wimbo|redio|video))?$/i, 1],
-    ["stop", /^(?:simamisha|zima|komesha|funga|acha(?:\s+kucheza)?)\s+(muziki|wimbo|nyimbo|redio|video)$/i, 1],
+    ["stop", /^simamisha\s+(muziki|wimbo|nyimbo|redio|video)$/i, 1],
+    ["close", /^(?:zima|komesha|funga|acha(?:\s+kucheza)?)\s+(muziki|wimbo|nyimbo|redio|video)$/i, 1],
     ["next", /^(?:(?:cheza\s+)?wimbo\s+(?:unaofuata|ufuatao|mwingine)|ruka\s+wimbo|(?:redio|stesheni)\s+nyingine|inayofuata)$/i, 1],
     ["previous", /^(?:(?:cheza\s+)?wimbo\s+(?:uliopita|uliotangulia)|ile ya kabla)$/i, 1],
     ["volume-up", /^(?:ongeza|pandisha|kuza)\s+sauti(?:\s+(?:ya\s+)?(muziki|redio|wimbo|video))?$/i, 1],
@@ -203,6 +207,9 @@
     if (preference) return preference;
     const control = handoff ? null : parseControl(text);
     if (control) return control;
+    // (speech recognition often writes the name Kyro as Kiro, Kairo, Cairo or Cyro: said before a control word, the control still works; a place name on its own never matches)
+    const named = !handoff && /^(?:(?:hey|ok|okay|hi)\s+)?(?:kiro|kairo|cairo|cyro|kyra|kayro)\b[\s,:;!-]+(.+)$/i.exec(text);
+    if (named) { const aliased = parseControl(strip(named[1])); if (aliased) return aliased; }
     const play = parsePlay(text, handoff);
     if (play) {
       // "play music on YouTube" with no song: open YouTube rather than guess.
