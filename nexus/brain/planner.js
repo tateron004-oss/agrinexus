@@ -41,6 +41,7 @@ const { churchAnswer } = require("../knowledge/church-guide.js");
 const { athleteTopic } = require("../../public/kyro-athlete-topics.js");
 const { athleteAnswer } = require("../knowledge/athlete-guide.js");
 const { moneyTopic } = require("../../public/kyro-money-topics.js");
+const { howtoTopic } = require("../../public/kyro-howto-topics.js");
 const { moneyAnswer } = require("../knowledge/money-guide.js");
 const { moneyWalkthrough, WALK_OF_TOPIC: MONEY_WALK_OF_TOPIC, moneyWalkthroughFor } = require("../knowledge/money-walkthroughs.js");
 const { athleteWalkthrough, WALK_OF_TOPIC: ATHLETE_WALK_OF_TOPIC, athleteWalkthroughFor } = require("../knowledge/athlete-walkthroughs.js");
@@ -52,6 +53,7 @@ const { sourcesPageRequest, sourcesPageAnswer } = require("../knowledge/sources-
 const { californiaTopic, californiaAnswer } = require("../knowledge/california-business.js");
 const { californiaWalkthrough, walkthroughAsk } = require("../knowledge/california-walkthroughs.js");
 const { usWalkthrough, usWalkTopic } = require("../knowledge/us-walkthroughs.js");
+const { guideWalkthrough, walkthroughForText: guideWalkthroughForText } = require("../knowledge/guide-walkthroughs.js");
 const { offersFor, offerLine, checklistAsk } = require("../knowledge/offers.js");
 const { feedRequest, grantsAnswer, rulesAnswer } = require("../knowledge/live-feeds.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
@@ -538,6 +540,9 @@ class OpenEndedPlanner {
       const guide = sourcesPageAnswer(askText);
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: "sources-page", sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
+    // "Walk me through using the shopping list", "teach me to use the farm log": a part of Kyro taught one step at a time (see knowledge/howto-walkthroughs.js). A part-of-Kyro word and a request to be taught are both required (public/kyro-howto-topics.js), so a guide's question
+    // and the plain use of a feature ("show my notes") are never taken; without a walkthrough for the topic the request goes on as it did.
+    { const howtoWalk = guideWalkthroughPlan(command, askText, "kyro-howto", howtoTopic(askText), "app-help", true); if (howtoWalk) return howtoWalk; }
     // A parent's question about their child's growing up and safety (how to talk with a child about the body and relationships, the signs of abuse, what to do if a child tells you, a young girl who is pregnant, who to call): a checked,
     // sourced, plain answer (see knowledge/parents-guide.js). Asked before the women's health guide below, because "how do I explain a period to my daughter" is this guide's and not the cycle answer. A child speaking for themselves,
     // and anything about harming a child or oneself, is never taken (public/kyro-parents-topics.js); the safety layer, which comes first, answers a person who says they are being hurt.
@@ -545,6 +550,7 @@ class OpenEndedPlanner {
     const parentsId = parentsTopic(askText);
     const parentsAnswer = parentsId ? parentsGuideAnswer(parentsId, { us: usPerson, country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
     if (parentsAnswer) {
+      { const stepByStep = guideWalkthroughPlan(command, askText, "parents-guide", parentsId, "child-safety-information", usPerson && !africaNamed(askText)); if (stepByStep) return stepByStep; }
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: parentsAnswer.text, sourceRequired: false, knowledge: `parents-guide:${parentsId}`, sources: parentsAnswer.sources, guardrail: "child-safety-information", planningAttempts: 0 });
     }
     // A church leader's or member's question about the church as an organization (does a church have to apply for tax-exempt status, forming one, the annual return, income from a business, receipts for gifts, a pastor's pay and housing
@@ -554,6 +560,7 @@ class OpenEndedPlanner {
     // (a question that names Kenya or Nigeria is about a church there, whatever time zone the device is in: the IRS's rules are not stated for it)
     const churchGuide = churchId ? churchAnswer(churchId, { us: usPerson && !africaNamed(askText), country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
     if (churchGuide) {
+      { const stepByStep = guideWalkthroughPlan(command, askText, "church-guide", churchId, "professional-advice", usPerson && !africaNamed(askText)); if (stepByStep) return stepByStep; }
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: churchGuide.text, sourceRequired: false, knowledge: `church-guide:${churchId}`, sources: churchGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // An athlete's question (from a school team to a professional): what to eat and drink, supplements and doping, how much to train, sleep and a strained muscle, a concussion, heat, pressure, abuse in sport, eligibility and recruiting, name-image-
@@ -569,6 +576,7 @@ class OpenEndedPlanner {
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: intro, sourceRequired: false, knowledge: `athlete-guide:walkthrough:${athleteWalk.id}`, sources: athleteWalk.sources, walkthrough: athleteWalk, guardrail: "professional-advice", planningAttempts: 0 });
     }
     if (athleteGuide) {
+      { const stepByStep = guideWalkthroughPlan(command, askText, "athlete-guide", athleteId, "professional-advice", usPerson && !africaNamed(askText)); if (stepByStep) return stepByStep; }
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: athleteGuide.text, sourceRequired: false, knowledge: `athlete-guide:${athleteId}`, sources: athleteGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // A small business owner's question about PUBLIC RELATIONS and EVENTS (a press release and the media, influencer disclosure, the FTC's advertising rules, a crisis communication plan, planning an event and its permits and accessibility, brand, stakeholders,
@@ -584,6 +592,7 @@ class OpenEndedPlanner {
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: intro, sourceRequired: false, knowledge: `pr-events-guide:walkthrough:${prWalk.id}`, sources: prWalk.sources, walkthrough: prWalk, guardrail: "professional-advice", planningAttempts: 0 });
     }
     if (prAnswer) {
+      { const stepByStep = guideWalkthroughPlan(command, askText, "pr-events-guide", prId, "professional-advice", usPerson && !africaNamed(askText)); if (stepByStep) return stepByStep; }
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: prAnswer.text, sourceRequired: false, knowledge: `pr-events-guide:${prId}`, sources: prAnswer.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // A woman's question about her own health (cervical screening, breast health, birth control, periods, menopause, prenatal and postnatal care, where to find care): a checked, sourced, plain answer (see knowledge/womens-health.js).
@@ -591,6 +600,7 @@ class OpenEndedPlanner {
     const womensTopic = ownWorkspace ? null : womensHealthTopic(askText);
     const womensGuide = womensTopic ? womensHealthAnswer(womensTopic, { us: usPerson, country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
     if (womensGuide) {
+      { const stepByStep = guideWalkthroughPlan(command, askText, "womens-health", womensTopic, "womens-health-information", usPerson && !africaNamed(askText)); if (stepByStep) return stepByStep; }
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: womensGuide.text, sourceRequired: false, knowledge: `womens-health:${womensTopic}`, sources: womensGuide.sources, guardrail: "womens-health-information", planningAttempts: 0 });
     }
     // A question about diabetes or high blood pressure itself (what it is, the numbers, looking after yourself, checking at home): a checked, sourced, plain answer (see knowledge/chronic-conditions.js). A person's own reading,
@@ -598,6 +608,7 @@ class OpenEndedPlanner {
     const chronicId = ownWorkspace ? null : chronicTopic(askText);
     const chronicGuide = chronicId ? chronicConditionAnswer(chronicId, { us: usPerson }) : null;
     if (chronicGuide) {
+      { const stepByStep = guideWalkthroughPlan(command, askText, "chronic-conditions", chronicId, "chronic-conditions-information", usPerson && !africaNamed(askText)); if (stepByStep) return stepByStep; }
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: chronicGuide.text, sourceRequired: false, knowledge: `chronic-conditions:${chronicId}`, sources: chronicGuide.sources, guardrail: "chronic-conditions-information", planningAttempts: 0 });
     }
     // The checked United States guide (free help, certifications, loans, grants, taxes, licences, selling to the government, finding local help) answers first, from official sources with the date they were checked.
@@ -610,6 +621,7 @@ class OpenEndedPlanner {
     const aiToolsTopicId = !ownWorkspace && (!techTopic || techTopic === "ai-getting-started") ? aiToolsTopic(askText) : null;
     if (aiToolsTopicId) {
       const guide = aiToolsAnswer(aiToolsTopicId, { us: usPerson });
+      { const stepByStep = guideWalkthroughPlan(command, askText, "ai-tools-for-business", aiToolsTopicId, "professional-advice", usPerson && !africaNamed(askText)); if (stepByStep) return stepByStep; }
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `ai-tools-for-business:${aiToolsTopicId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // The checked guide to official help for veterans, older adults, young people and nonprofits (see knowledge/us-community-support.js): a question about those, on a US device or naming a US programme (VA, Medicare, 988, the IRS ...).
@@ -620,6 +632,7 @@ class OpenEndedPlanner {
     const communityId = !techTopic && (usPerson || isCommunityUs(askText)) ? communityTopic(askText) : null;
     if (communityId) {
       const guide = communityAnswer(communityId);
+      { const stepByStep = guideWalkthroughPlan(command, askText, "us-community-support", communityId, "professional-advice", usPerson && !africaNamed(askText)); if (stepByStep) return stepByStep; }
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-community-support:${communityId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // A person's own money (a spending plan, income that changes, a bank account, savings, credit, debt and collectors, costly loans, student loans, buying a home, investing and how to choose, fees, retirement accounts, brokerage and children's
@@ -648,6 +661,7 @@ class OpenEndedPlanner {
         const intro = `Okay, I will walk you through ${walk.title}, one step at a time. There are ${walk.steps.length} steps. I only guide you: you do each step yourself, and I never apply for you.`;
         return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: intro, sourceRequired: false, knowledge: `california-business:walkthrough:${walk.id}`, sources: walk.sources, walkthrough: walk, guardrail: "professional-advice", planningAttempts: 0 });
       }
+      { const stepByStep = guideWalkthroughPlan(command, askText, "california-business", caTopic, "professional-advice", true); if (stepByStep) return stepByStep; }
       const guide = californiaAnswer(caTopic, { question: askText, lang: guideLanguage(askText) }); // (the language of the words asked: a question in Spanish is answered in Spanish)
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `california-business:${caTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
@@ -682,21 +696,25 @@ class OpenEndedPlanner {
     const africaId = !ownWorkspace && !techTopic && (!isUsContext({ text: askText }) || africaNamed(askText)) ? africaTopic(askText, { timeZone: placeZone, country: context?.country }) : null;
     if (africaId) {
       const guide = africaAnswer(africaId);
+      { const stepByStep = guideWalkthroughPlan(command, askText, "africa-small-business", africaId, "professional-advice", usPerson && !africaNamed(askText)); if (stepByStep) return stepByStep; }
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `africa-small-business:${africaId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     const universalId =!ownWorkspace && !usPerson && !techTopic ? usSmallBusinessTopic(askText) : null;
     if (universalId && UNIVERSAL_TOPICS.includes(universalId)) {
       const guide = usSmallBusinessAnswer(universalId, { question: askText, us: false, lang: guideLanguage(askText), country: africaCountry({ timeZone: placeZone, country: context?.country, text: askText }) });
+      { const stepByStep = guideWalkthroughPlan(command, askText, "us-small-business", universalId, "professional-advice", usPerson && !africaNamed(askText)); if (stepByStep) return stepByStep; }
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-small-business:${universalId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     const usTopic = !ownWorkspace && usPerson && !techTopic ? usSmallBusinessTopic(askText) : null;
     if (usTopic) {
       const guide = usSmallBusinessAnswer(usTopic, { question: askText, lang: guideLanguage(askText) }); // (the language of the words asked: a question in Spanish is answered in Spanish)
+      { const stepByStep = guideWalkthroughPlan(command, askText, "us-small-business", usTopic, "professional-advice", usPerson && !africaNamed(askText)); if (stepByStep) return stepByStep; }
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-small-business:${usTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // The checked technology and AI guide (using AI tools safely, AI scams, fake reviews, cybersecurity, phishing, email and domain protection, hiring a web host or designer, what Kyro can automate, getting online).
     if (techTopic) {
       const guide = technologyAnswer(techTopic);
+      { const stepByStep = guideWalkthroughPlan(command, askText, "small-business-technology", techTopic, "professional-advice", usPerson && !africaNamed(askText)); if (stepByStep) return stepByStep; }
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `small-business-technology:${techTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     const adviceTopic = ownWorkspace ? null : professionalAdviceTopic(command.text);
@@ -1811,6 +1829,17 @@ function listUpdatePlan(text, catalog) {
     steps: [{ clientStepId: "update-list", title, toolId: "lists.update", input, dependsOn: [], fallbackToolIds: [] }] };
 }
 
+// "Walk me through forming a church", "step by step, how do I get ready for a doctor's visit": a guide's topic with a walkthrough (see knowledge/guide-walkthroughs.js) asked for one step at a time. The person does each step; Kyro never files,
+// applies, signs, pays or sends anything for them. The plan carries the walkthrough, which the page shows one step at a time with the official page for the step, and reads out.
+function guideWalkthroughPlan(command, askText, label, topic, guardrail, usPerson) {
+  if (!topic || !walkthroughAsk(askText)) return null;
+  const walk = guideWalkthrough(label, topic);
+  // (a walkthrough of United States rules is for a person in the United States; anyone else gets the guide's ordinary answer, which says what is and is not known for their country)
+  if (!walk || (walk.us && !usPerson)) return null;
+  const intro = `Okay, I will walk you through ${walk.title.charAt(0).toLowerCase()}${walk.title.slice(1)}, one step at a time. There are ${walk.steps.length} steps. I only guide you: you do each step yourself, and I never file, apply, sign, pay or send anything for you.`;
+  return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: intro, sourceRequired: false, knowledge: `${label}:walkthrough:${walk.id}`, sources: walk.sources, walkthrough: walk, guardrail, planningAttempts: 0 });
+}
+
 // The steps of a California walkthrough as a checklist: the title is the process, the items are the steps (each one the person ticks off when they have done it).
 function walkthroughChecklistPlan(text, catalog) {
   const ask = checklistAsk(text);
@@ -1819,7 +1848,7 @@ function walkthroughChecklistPlan(text, catalog) {
   const asked = `Walk me through ${ask.rest}`;
   const topic = californiaTopic(asked);
   const usTopic = topic ? null : usWalkTopic(asked);
-  const walk = topic ? californiaWalkthrough(topic) : usTopic ? usWalkthrough(usTopic) : (moneyWalkthroughFor(asked) || athleteWalkthroughFor(asked));
+  const walk = topic ? (californiaWalkthrough(topic) || guideWalkthroughForText(asked)) : usTopic ? usWalkthrough(usTopic) : (guideWalkthroughForText(asked) || moneyWalkthroughFor(asked) || athleteWalkthroughFor(asked) || guideWalkthroughForText(asked, { late: true }));
   if (!walk) return null;
   if (!catalog.tools.some(tool => tool.toolId === "lists.create") || !catalog.applications.some(app => app.applicationId === "lists")) return null;
   return { goal: String(text || "").trim(), application: "lists", riskTier: "low", clarification: null,

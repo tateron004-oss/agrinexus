@@ -183,6 +183,6 @@ test("the page opens a walkthrough from the answer, reads the opening line, hear
   assert.match(app, /if \(answerOnScreen && result\.plan\?\.walkthrough && kyroWalkthroughOpening\) \{ message = kyroWalkthroughOpening; kyroWalkthroughOpening = ""; \}/);
   const spoken = app.indexOf('if (typeof kyroWalkthroughCommand === "function" && kyroWalkthroughCommand(said, options)) return true;');
   assert.ok(spoken > 0 && spoken < app.indexOf('typeof kyroOpenSourcePage === "function" && kyroOpenSourcePage(said, lang, options)'), "the controls are heard before anything else");
-  assert.match(fs.readFileSync(path.join(root, "public", "index.html"), "utf8"), /<script src="\/kyro-walkthrough\.js\?v=kyro-walkthrough-2"><\/script>/);
-  assert.ok(fs.readFileSync(path.join(root, "public", "sw.js"), "utf8").includes("/kyro-walkthrough.js?v=kyro-walkthrough-2"));
+  assert.match(fs.readFileSync(path.join(root, "public", "index.html"), "utf8"), /<script src="\/kyro-walkthrough\.js\?v=kyro-walkthrough-3"><\/script>/);
+  assert.ok(fs.readFileSync(path.join(root, "public", "sw.js"), "utf8").includes("/kyro-walkthrough.js?v=kyro-walkthrough-3"));
 });

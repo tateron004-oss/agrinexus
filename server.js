@@ -91,6 +91,7 @@ const { prTopic } = require("./public/kyro-pr-topics.js");
 const { churchTopic } = require("./public/kyro-church-topics.js");
 const { athleteTopic } = require("./public/kyro-athlete-topics.js");
 const { moneyTopic } = require("./public/kyro-money-topics.js");
+const { howtoTopic } = require("./public/kyro-howto-topics.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
@@ -22564,6 +22565,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (moneyGuide) {
       return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: moneyGuide.response,
         executionAttempted: true, executionVerified: moneyGuide.verified === true };
+    }
+  }
+  // A request to be walked through USING a part of Kyro (nexus/knowledge/howto-walkthroughs.js: "walk me through using the shopping list", "teach me to use the farm log") is answered by the planner's walkthrough whichever tool the model picked, with the
+  // person's own words tried first: the voice model would explain from memory what Kyro can do.
+  const howtoAsk = typeof howtoTopic === "function" && rawCallerText && howtoTopic(rawCallerText) ? rawCallerText : command;
+  if (typeof howtoTopic === "function" && howtoTopic(howtoAsk) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
+    const howtoUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const howtoGuide = howtoUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: howtoUser, text: howtoAsk, language, timeZone: args?.timeZone }) : null;
+    if (howtoGuide) {
+      return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: howtoGuide.response,
+        executionAttempted: true, executionVerified: howtoGuide.verified === true };
     }
   }
   // A small business owner's question about PUBLIC RELATIONS and EVENTS (nexus/knowledge/pr-events-guide.js) is answered from the checked guide whichever tool the model picked, with the person's own words tried first: the voice model would

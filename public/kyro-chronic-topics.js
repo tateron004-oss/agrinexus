@@ -11,7 +11,7 @@
   // Only a QUESTION or a request for help about the condition itself is taken. These are NEVER taken, and belong to the safety layer, the health tool (which keeps a person's own readings, with consent) and the medicine rules:
   // a record or a request to save or show the person's own readings or history; a reading with a number ("my blood pressure is 180 over 120", "my sugar is 350"); a statement of the person's own present state ("my blood sugar is low");
   // anything urgent or with symptoms (confusion, shaking, chest pain, trouble breathing, fainting, a seizure, vomiting); a medicine, an insulin dose or any question about changing one; pregnancy; and a health worker's list of patients.
-  const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+|nexus,?\s+)?(?:how|what|which|when|where|why|should|can|could|do|does|is|are|am|will|would|tell me|explain|help me|i need|i want|i('| a)m looking for|i would like|i'd like|any|give me|find\b|show me|look(?:ing)? for|search for|teach me)\b)/i;
+  const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+|nexus,?\s+)?(?:how|what|which|when|where|why|should|can|could|do|does|is|are|am|will|would|tell me|explain|help me|i need|i want|i('| a)m looking for|i would like|i'd like|any|give me|find\b|show me|look(?:ing)? for|search for|teach me|walk me|walk us|take me through|guide me through|talk me through|step[- ]by[- ]step|what are the steps)\b)/i;
   const RECORD_OR_DRAFT = /^(?:please\s+)?(?:log|record|add|save|remind|set|create|draft|write|make|mark|delete|forget|call|text|send|play|open|start|translate|export|convert|register)\b/i;
   const WORKER_TALK = /\b(?:my patients?|my clients?|patients? with|how many (?:\w+ )?(?:patients|clients|people)|on my (?:list|register|caseload))\b/i;
   const OWN_RECORDS = /\bmy\s+(?:(?:blood pressure|blood sugar|blood glucose|glucose|bp)\s+)?(?:readings?|history|log|records?|results?|numbers|trend)\b|\bprovider summary\b|\bsummary (?:for|of) my\b/i;
@@ -32,11 +32,13 @@
     const value = String(text || "").replace(/\s+/g, " ").trim();
     if (!value || value.length > 300) return null;
     if (RECORD_OR_DRAFT.test(value) || !ASKS.test(value) || WORKER_TALK.test(value) || OWN_RECORDS.test(value) || READING.test(value) || OWN_STATE.test(value) || NOT_FOR_A_GUIDE.test(value)) return null;
+    // (the words that ask to be walked through it are not a care word: "walk me through ..." has "walk" in it)
+    const core = value.replace(/\b(?:walk (?:me|us) through|take me through|guide me through|talk me through|step[- ]by[- ]step|what are the steps)\b/i, " ");
     const diabetes = DIABETES_WORDS.test(value);
     const pressure = BP_WORDS.test(value);
     if (diabetes && pressure) return "chronic-overview";
-    if (diabetes) return CARE.test(value) ? "diabetes-care" : "diabetes";
-    if (pressure) return HOME.test(value) ? "blood-pressure-home" : CARE.test(value) ? "blood-pressure-care" : "high-blood-pressure";
+    if (diabetes) return CARE.test(core) ? "diabetes-care" : "diabetes";
+    if (pressure) return HOME.test(core) ? "blood-pressure-home" : CARE.test(core) ? "blood-pressure-care" : "high-blood-pressure";
     return OVERVIEW.test(value) ? "chronic-overview" : null;
   }
 

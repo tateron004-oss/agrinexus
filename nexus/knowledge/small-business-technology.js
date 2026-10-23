@@ -91,7 +91,7 @@ const TOPICS = Object.freeze({
 });
 
 // A question, or a request for help
-const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|am|will|would|tell me|explain|help me|i need|i want|i('| a)m looking for|any|give me (?:info|information|advice)|find me|find (?:a|an|the|my)|show me|look(?:ing)? for|search for)\b)/i;
+const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|am|will|would|tell me|explain|help me|walk me|take me through|guide me through|talk me through|step by step|what are the steps|i need|i want|i('| a)m looking for|any|give me (?:info|information|advice)|find me|find (?:a|an|the|my)|show me|look(?:ing)? for|search for)\b)/i;
 const RECORD_OR_DRAFT = /^(?:please\s+)?(?:sold|bought|log|record|add|save|remind|set|create|draft|write|make|mark|list|delete|forget|call|text|send|play|open|start|translate|export|convert|build)\b/i;
 
 const AI = "(?:ai|a\\.i\\.|artificial intelligence|chat ?gpt|gpt|claude|gemini|copilot|chatbots?|ai tools?)";

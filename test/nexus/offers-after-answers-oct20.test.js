@@ -32,15 +32,15 @@ test("a California answer with a walkthrough offers the walkthrough and a checkl
 });
 
 test("the other checked guides offer the sources; nothing is offered for Spanish, the source page, the live lists, a walkthrough or an answer that is not a guide", () => {
-  assert.deepEqual(offers.offersFor({ knowledge: "us-small-business:loans" }).map(offer => offer.id), ["sources"]);
+  assert.deepEqual(offers.offersFor({ knowledge: "us-small-business:loans" }).map(offer => offer.id), ["walk", "checklist", "sources"]);
   assert.deepEqual(offers.offersFor({ knowledge: "state-entities:state-entity:llc:TX" }).map(offer => offer.id), ["sources"]);
-  assert.deepEqual(offers.offersFor({ knowledge: "california-business:ca-free-help" }).map(offer => offer.id), ["sources"], "no walkthrough for free help");
+  assert.deepEqual(offers.offersFor({ knowledge: "california-business:ca-free-help" }).map(offer => offer.id), ["walk", "checklist", "sources"], "free help has a walkthrough since 22 October 2026");
   for (const plan of [{ knowledge: "california-business:ca-seller-permit" }, { knowledge: "us-small-business:loans" }]) assert.deepEqual(offers.offersFor(plan, { lang: "es" }), [], "the walkthroughs and the source page are English only");
   for (const knowledge of ["sources-page", "live-feeds:grants", "california-business:walkthrough:ca-seller-permit", "womens-health:x", ""]) assert.deepEqual(offers.offersFor({ knowledge }), [], knowledge);
   assert.deepEqual(offers.offersFor({ knowledge: "california-business:ca-seller-permit", walkthrough: { id: "x" } }), []);
   assert.deepEqual(offers.offersFor(null), []);
   assert.equal(offers.offerLine(offers.offersFor({ knowledge: "california-business:ca-seller-permit" })), "Say walk me through it and I will take you through it step by step, or say save it as a checklist.");
-  assert.equal(offers.offerLine(offers.offersFor({ knowledge: "us-small-business:loans" })), "");
+  assert.equal(offers.offerLine(offers.offersFor({ knowledge: "us-small-business:loans" })), "Say walk me through it and I will take you through it step by step, or say save it as a checklist.");
 });
 
 test("'save the steps for ... as a checklist' is recognized in its wordings, and an ordinary checklist request is not", () => {
@@ -63,8 +63,8 @@ test("through the planner: a guide's answer carries its offers and the sentence 
   assert.match(answer.offerLine, /^Say walk me through it and I will take you through it step by step, or say save it as a checklist\.$/);
   assert.doesNotMatch(answer.response, /Say walk me through it/, "the answer itself is unchanged: the line is added when it is spoken");
   const loans = await ask(p, "How do I get an SBA microloan?");
-  assert.deepEqual(loans.offers.map(offer => offer.id), ["sources"]);
-  assert.equal(loans.offerLine, undefined);
+  assert.deepEqual(loans.offers.map(offer => offer.id), ["walk", "checklist", "sources"]);
+  assert.match(loans.offerLine, /^Say walk me through it and I will take you through it step by step, or say save it as a checklist.$/);
   const spanish = await ask(p, "¿Cómo obtengo un permiso de vendedor en California?");
   assert.equal(spanish.offers, undefined);
   const walk = await ask(p, "Walk me through getting a seller's permit in California");

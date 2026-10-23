@@ -51,5 +51,5 @@ test("the page takes the request before the voice model's answer: the same turn-
   assert.match(app, /typeof topics\.sourcesRequest === "function" && topics\.sourcesRequest\(text\)\) return true;/);
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  assert.ok(index.includes("/kyro-business-topics.js?v=kyro-business-topics-8") && sw.includes("/kyro-business-topics.js?v=kyro-business-topics-8"));
+  assert.ok(index.includes("/kyro-business-topics.js?v=kyro-business-topics-9") && sw.includes("/kyro-business-topics.js?v=kyro-business-topics-9"));
 });

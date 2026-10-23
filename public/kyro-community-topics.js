@@ -10,7 +10,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|am|will|would|tell me|look up|search (?:the web |the internet |online )?for|find out|research|look into|google|explain|help me|i need|i want|i('| a)m looking for|any|give me (?:info|information|advice)|find (?:me|a|an|the|my|resources|help|info|information|support|some|out)|show me|look(?:ing)? for|search for)\b)/i;
+  const ASKS = /(?:[?]|^(?:please\s+|kyro,?\s+)?(?:how|what|which|when|where|why|who|should|can|could|do|does|is|are|am|will|would|tell me|look up|search (?:the web |the internet |online )?for|find out|research|look into|google|explain|help me|i need|i want|i('| a)m looking for|any|give me (?:info|information|advice)|find (?:me|a|an|the|my|resources|help|info|information|support|some|out)|show me|walk me|walk us|take me through|guide me through|talk me through|step[- ]by[- ]step|what are the steps|look(?:ing)? for|search for)\b)/i;
   const RECORD_OR_DRAFT = /^(?:please\s+)?(?:sold|bought|log|record|add|save|remind|set|create|draft|write|make|mark|list|delete|forget|call|text|send|play|open|start|translate|export|convert)\b/i;
 
   const VET = String.raw`veterans?|vets?|service ?members?|military`;
