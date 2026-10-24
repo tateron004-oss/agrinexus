@@ -9591,6 +9591,21 @@ async function requestWithTimeout(path, options = {}, timeoutMs = 18000) {
   }
 }
 
+// Kyro is replaced by a new release now and then. For about half a minute the host answers 502 or 503 straight away, because the request never reached Kyro (it has a disk, so the old copy stops before the new one starts). A turn that failed that way
+// is sent again after 4, 8 and 15 seconds, with one short line said the first time, and only when the failure came back at once: a request that ran for a while and then failed is never repeated, so nothing is done twice.
+const KYRO_UPDATE_WAITS_MS = [4000, 8000, 15000];
+async function kyroRequestWhileUpdating(send, onWait = null, waits = KYRO_UPDATE_WAITS_MS, sleep = ms => new Promise(resolve => setTimeout(resolve, ms))) {
+  for (let attempt = 0; ; attempt += 1) {
+    const began = Date.now();
+    try { return await send(); } catch (error) {
+      const status = Number(error?.status) || 0;
+      if (![502, 503].includes(status) || Date.now() - began >= 4000 || attempt >= waits.length) throw error;
+      if (attempt === 0 && typeof onWait === "function") { try { onWait(); } catch { /* the line is a courtesy */ } }
+      await sleep(waits[attempt]);
+    }
+  }
+}
+
 function toast(message) {
   const el = $("#toast");
   el.textContent = message;
@@ -61370,7 +61385,8 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
     activeMission: nexusActiveWorkflowState?.agenticMission?.title || nexusAgenticCommandMissions[0]?.title || ""
   });
   try {
-    const result = await requestWithTimeout("/api/nexus/runtime/behavior/turn", {
+    // (while a new release replaces the old one the host answers 502 or 503 at once: the request is sent again a few times, after one short line, instead of failing)
+    const result = await kyroRequestWhileUpdating(() => requestWithTimeout("/api/nexus/runtime/behavior/turn", {
       method: "POST",
       body: {
         text: routedText,
@@ -61381,7 +61397,7 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
         // Where the person is, so times like "7am" mean their own morning.
         timeZone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; } })()
       }
-    }, 90000);
+    }, 90000), () => setVoiceResponse("One moment, Kyro is being updated. I will try again.", true, { allowHandoff: false, command: text, source: "kyro-updating", turnToken: options.turnToken }));
     if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true || result.legacyFallbackUsed !== false) {
       throw new Error("Nexus rejected an invalid behavior-spine response. No legacy route was used.");
     }
@@ -61399,7 +61415,8 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
     // A refusal or failure the server answered is now said: its own words for a request it could not understand (422/400/409), a plain sentence when the work itself failed (5xx).
     const status = Number(error?.status) || 0;
     if ([400, 409, 422, 500, 502, 503, 504].includes(status)) {
-      const reason = status >= 500 ? "I could not finish that, so nothing was saved or changed. Please try again, or say it a different way." : String(error.message || "").trim();
+      const reason = status === 502 || status === 503 ? "Kyro is being updated right now, so nothing was saved or changed. Please try again in about a minute."
+        : status >= 500 ? "I could not finish that, so nothing was saved or changed. Please try again, or say it a different way." : String(error.message || "").trim();
       if (reason) {
         // What Kyro could not do is an answer too: a refusal it explains ("I could not tell what to do with that in your business records...") fills the screen as well as being said. A failure (5xx) is only said.
         if (status < 500) kyroShowResultScreen("typed", text, { ok: true, status: "completed", response: reason });
