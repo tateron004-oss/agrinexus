@@ -38,9 +38,14 @@ test("the behavior-spine command route says an explained refusal, and says plain
   assert.equal(run(422), true);
   assert.equal(spoken[0].message, "I could not tell what to do with that in your business records.");
   assert.equal(spoken[0].opts.source, "nexus-authoritative-behavior-spine");
-  // 502: a plain sentence, never the technical verifier message
-  assert.equal(run(502), true);
+  // 500: a plain sentence, never the technical verifier message
+  assert.equal(run(500), true);
   assert.match(spoken[0].message, /^I could not finish that, so nothing was saved or changed\./);
+  // 502 and 503 (still there after the page sent the turn again a few times: a release is being swapped in): say so, and say when to try again
+  for (const status of [502, 503]) {
+    assert.equal(run(status), true);
+    assert.match(spoken[0].message, /^Kyro is being updated right now, so nothing was saved or changed\. Please try again in about a minute\./);
+  }
   // no status (network trouble) and a login problem keep their old behaviour: not handled here, nothing said
   assert.equal(run(0), false); assert.equal(spoken.length, 0);
   assert.equal(run(401), false); assert.equal(spoken.length, 0);
