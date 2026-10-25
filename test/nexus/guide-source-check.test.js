@@ -14,7 +14,8 @@ test("every https address the guides cite is collected once, with the guides tha
   assert.ok(entries.length > 300, `${entries.length} addresses`);
   assert.ok(urls.every(url => /^https:\/\/[^\s]+$/.test(url)));
   const find = part => entries.find(entry => entry.url.includes(part));
-  assert.ok(find("dgs.ca.gov").guides.includes("california-business"));
+  // (more than one guide cites pages of the same site: some address on it is the California business guide's)
+  assert.ok(entries.some(entry => entry.url.includes("dgs.ca.gov") && entry.guides.includes("california-business")));
   assert.ok(find("sba.gov/counseling/local-assistance/").guides.includes("us-small-business"));
   assert.ok(entries.some(entry => entry.guides.includes("state-entities")), "the state formation pages");
   assert.ok(entries.some(entry => entry.guides.includes("africa-small-business")));
