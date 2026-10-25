@@ -47,9 +47,9 @@ test("on the page and the server: the request is the page's own turn, the server
   assert.match(app, /function kyroHowtoQuestion\(text\) \{\s+try \{ return Boolean\(window\.KyroHowtoTopics/);
   assert.ok(server.includes('const { howtoTopic } = require("./public/kyro-howto-topics.js");'));
   assert.ok(server.includes("howtoTopic(howtoAsk)"));
-  const tag = '<script src="/kyro-howto-topics.js?v=kyro-howto-topics-2"></script>';
+  const tag = '<script src="/kyro-howto-topics.js?v=kyro-howto-topics-3"></script>';
   assert.ok(index.includes(tag)); assert.ok(index.indexOf(tag) < index.indexOf('<script src="/app.js'));
-  assert.match(sw, /`\/kyro-howto-topics\.js\?v=kyro-howto-topics-2`/);
+  assert.match(sw, /`\/kyro-howto-topics\.js\?v=kyro-howto-topics-3`/);
   assert.equal(registry.FAMILIES[0].label, "kyro-howto", "asked first: a part-of-Kyro word is required");
 });
 

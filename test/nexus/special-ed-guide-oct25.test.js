@@ -77,7 +77,11 @@ test("orders, records, a child in danger, a business, a dose with no child, and 
   // no question of any other guide is taken: every phrase that is known to work in Kyro goes to the guide it belongs to
   const phrases = require("./fixtures/verified-say-phrases.json").phrases;
   const taken = phrases.filter(say => matcher.specialEdTopic(say) || matcher.specialEdTopic(say, { country: "ke" }) || matcher.specialEdTopic(say, { country: "ng" }));
-  assert.deepEqual(taken.filter(say => !/special education|iep|504|adhd|autis|dyslexi/i.test(say)), [], "a phrase of another guide was taken");
+  // (the phrases that are this guide's own: its sample questions, its walkthroughs' words, and the lessons that teach how to use it, which the proven list also holds)
+  const norm = say => String(say).toLowerCase().replace(/[.?!,]+$/, "").replace(/\s+/g, " ").trim();
+  const walks = require("../../nexus/knowledge/special-ed-walkthroughs.js");
+  const own = new Set([...Object.values(guide.PHRASES).flat().map(norm), ...Object.values(walks.WALKTHROUGHS).map(def => norm(`Walk me through ${def.phrase}`)), ...["how do i ask the school to test my child in california", "walk me through using kyro for special education", "walk me through using kyro as a parent of a child with special needs", "walk me through using kyro as a teacher or school administrator for special education"]]);
+  assert.deepEqual(taken.filter(say => !own.has(norm(say)) && !/special education|iep|504|adhd|autis|dyslexi/i.test(say)), [], "a phrase of another guide was taken");
 });
 
 test("every answer names its official pages and the date they were read, says Kyro cannot say what happens in a case and is no lawyer or doctor, that no name is needed, and what to do if a child is in danger; none diagnoses, advises on medicine, or promises", () => {
@@ -204,4 +208,31 @@ test("each special education case in the live voice list is answered by the guid
     assert.ok(guide.specialEdAnswer(id).text.includes(entry.expect.text), `${entry.id}: ${entry.expect.text}`);
   }
   assert.equal(seen.size, IDS.length, "a case for every topic");
+});
+
+test("a walkthrough step says no number, email or phone that its guide does not already say from an official page, names no brand or medicine, and never diagnoses or asks for a child's name", () => {
+  const walks = require("../../nexus/knowledge/special-ed-walkthroughs.js");
+  const all = IDS.map(id => guide.TOPICS[id].text).join(" ");
+  const digits = all.replace(/\D/g, "");
+  const brand = /\b(?:Google|Gmail|Facebook|Instagram|WhatsApp|TikTok|Apple|Microsoft|Safaricom|Airtel|M-?Pesa|PayPal|Adderall|Ritalin|Concerta|Vyvanse|Zoom|Canvas|Blackboard|PowerSchool|Infinite Campus|Skyward)\b/;
+  assert.ok(Object.keys(walks.WALKTHROUGHS).length >= 35, "a walkthrough for every process topic");
+  const topics = new Set(Object.values(walks.WALKTHROUGHS).map(def => def.topic));
+  for (const id of IDS.filter(id => id !== "sped-overview")) assert.ok(topics.has(id), `${id} has a walkthrough`);
+  for (const [id, def] of Object.entries(walks.WALKTHROUGHS)) {
+    for (const step of def.steps) {
+      const text = [step.text, step.done, ...step.words.map(word => word.means), ...step.gather].join(" ");
+      assert.doesNotMatch(text, brand, `${id}: "${step.title}" names a brand or a medicine`);
+      assert.doesNotMatch(text, /\byour child (?:has|does not have) (?:adhd|autis\w+|dyslexi\w+)\b|\b(?:take|taking|give|giving) (?:\d+ ?)?(?:mg|milligrams?|tablets?|pills?)\b/i, `${id}: "${step.title}" diagnoses or doses`);
+      assert.doesNotMatch(step.gather.join(" "), /\b(?:child'?s name|your child'?s name|social security|ssn)\b/i, `${id}: "${step.title}" asks to gather a name or a number`);
+      for (const found of text.matchAll(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+|\+?\(?\d[\d\s().-]{5,}\d|\b\d{1,3}(?:,\d{3})+\b/g)) {
+        const value = found[0];
+        const ok = /@/.test(value) ? all.includes(value) : value.replace(/\D/g, "").length >= 5 ? digits.includes(value.replace(/\D/g, "")) : all.includes(value);
+        assert.ok(ok, `${id}: "${step.title}" says ${value}, which the guide does not`);
+      }
+      for (const found of text.matchAll(/\b([a-z0-9]+) at ([a-z0-9]+(?: dot [a-z0-9]+)+)\b/gi)) {
+        const email = `${found[1]}@${found[2].replace(/ dot /gi, ".")}`;
+        assert.ok(all.toLowerCase().includes(email.toLowerCase()), `${id}: "${step.title}" says ${email}, which the guide does not`);
+      }
+    }
+  }
 });

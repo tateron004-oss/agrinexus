@@ -9,6 +9,6 @@
 const { howtoTopic } = require("../../public/kyro-howto-topics.js");
 const { family } = require("./walkthrough-kit.js");
 
-const DEFS = { ...require("./howto-defs-a.js"), ...require("./howto-defs-b.js") };
+const DEFS = { ...require("./howto-defs-a.js"), ...require("./howto-defs-b.js"), ...require("./howto-defs-c.js") };
 
 module.exports = family({ prefix: "howto", label: "kyro-howto", SOURCES: {}, CHECKED_ON: "", DEFS, topicOf: howtoTopic, ownFeature: true });
