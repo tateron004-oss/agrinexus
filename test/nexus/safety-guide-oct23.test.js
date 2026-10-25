@@ -226,3 +226,13 @@ test("each safety case in the live voice list is answered by the guide with the 
   }
   assert.equal(seen.size, IDS.length, "a case for every topic");
 });
+
+// Found with the special education guide on 25 October 2026: the business dispatcher reads "who do I call" as the person's own follow-ups, and the planner used to step aside for it, so "Who do I call about fraud?" was not answered by this guide.
+test("'who do I call about fraud' is answered by the guide, not read as the business's follow-ups; a business question is still not taken", async () => {
+  const plan = await ask("Who do I call about fraud?");
+  assert.equal(plan.knowledge, "safety-guide:safe-report");
+  for (const text of ["Who do I need to call back today?", "Who are my donors?"]) {
+    const other = await ask(text).catch(() => null);
+    assert.notEqual(other?.knowledge?.split(":")[0], "safety-guide", text);
+  }
+});

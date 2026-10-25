@@ -236,3 +236,16 @@ test("a walkthrough step says no number, email or phone that its guide does not 
     }
   }
 });
+
+// Found live on 25 October 2026 (release 14109a3a): "My toddler is not talking yet. Who do I call?" and "Who do I call in Delaware for special education help?" were answered "You have no business or nonprofit workspace yet", because the business dispatcher reads
+// "who do I call" as the person's own follow-ups and the planner stepped aside for it. The guide's matcher already leaves out a business's own records, so the planner no longer steps aside.
+test("'who do I call' about a child or a school is answered by the guide, not read as the business's follow-ups; a business question is still not taken", async () => {
+  for (const [text, id] of [["My toddler is not talking yet. Who do I call?", "sped-early"], ["Who do I call in Delaware for special education help?", "de-sped-get-help"], ["Who can I call about special education in Delaware?", "de-sped-get-help"]]) {
+    const plan = await ask(text);
+    assert.equal(plan.knowledge, `special-ed-guide:${id}`, text);
+  }
+  for (const text of ["Who do I need to call back today?", "Who are my donors?", "Who do I call about my invoices?"]) {
+    const plan = await ask(text).catch(() => null);
+    assert.notEqual(plan?.knowledge?.split(":")[0], "special-ed-guide", text);
+  }
+});
