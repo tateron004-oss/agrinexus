@@ -553,7 +553,8 @@ class OpenEndedPlanner {
     // The device's country is given to it: "how do I spot a fake message" asked in Nairobi is the Kenyan topic.
     {
       const safeCountry = africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText });
-      const safeId = ownWorkspace && businessVoiceDispatch.asksAboutOwnRecords(askText) ? null : safetyTopic(askText, { country: safeCountry });
+      // (no step aside for the business dispatcher: it reads "who do I call" as the person's own follow-ups; the matcher itself leaves out a business's records, and never takes an order)
+      const safeId = safetyTopic(askText, { country: safeCountry });
       const safeGuide = safeId ? safetyAnswer(safeId, { us: usPerson && !africaNamed(askText), country: safeCountry }) : null;
       if (safeGuide) {
         const safeWalk = guideWalkthroughPlan(command, askText, "safety-guide", safeGuide.topic, "professional-advice", usPerson && !africaNamed(askText));
@@ -566,7 +567,7 @@ class OpenEndedPlanner {
     // gets that country's. It never says a child has a condition, never advises on medicine or a dispute, and never takes a child's name or record (public/kyro-special-ed-topics.js leaves orders, records and emergencies to the rest of Kyro).
     {
       const sedCountry = africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText });
-      const sedId = ownWorkspace && businessVoiceDispatch.asksAboutOwnRecords(askText) ? null : specialEdTopic(askText, { country: sedCountry });
+      const sedId = specialEdTopic(askText, { country: sedCountry });
       const sedPlace = specialEdPlace(askText, { country: sedCountry });
       const sedState = sedPlace === "ca" || sedPlace === "de" ? sedPlace : null;
       const sedUs = (usPerson || Boolean(sedState)) && !africaNamed(askText);
