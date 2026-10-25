@@ -93,6 +93,7 @@ const { athleteTopic } = require("./public/kyro-athlete-topics.js");
 const { moneyTopic } = require("./public/kyro-money-topics.js");
 const { howtoTopic } = require("./public/kyro-howto-topics.js");
 const { safetyTopic } = require("./public/kyro-safety-topics.js");
+const { specialEdTopic } = require("./public/kyro-special-ed-topics.js");
 const { technologyTopic: techWalkTopic, aiToolsTopic: aiWalkTopic, isWalkRequest: isTechWalkRequest } = require("./public/kyro-technology-topics.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
@@ -22589,6 +22590,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (safetyGuide) {
       return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: safetyGuide.response,
         executionAttempted: true, executionVerified: safetyGuide.verified === true };
+    }
+  }
+  // Special education and ADHD (nexus/knowledge/special-ed-guide.js: an evaluation, an IEP or a 504 plan, parent rights, a disagreement with a school, discipline, student records, birth to three, ADHD, autism, dyslexia, resources for teachers, where to get help) is answered from the checked guide
+  // whichever tool the model picked, with the person's own words tried first: the voice model answered from memory with no sources, and could state a deadline or a right wrongly for a family that is about to act on it.
+  const specialEdAsk = typeof specialEdTopic === "function" && rawCallerText && specialEdTopic(rawCallerText) ? rawCallerText : command;
+  if (typeof specialEdTopic === "function" && specialEdTopic(specialEdAsk) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
+    const specialEdUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const specialEdGuide = specialEdUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: specialEdUser, text: specialEdAsk, language, timeZone: args?.timeZone }) : null;
+    if (specialEdGuide) {
+      return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: specialEdGuide.response,
+        executionAttempted: true, executionVerified: specialEdGuide.verified === true };
     }
   }
   // A request to be WALKED THROUGH a technology or AI-tools topic (public/kyro-technology-topics.js) is answered by the planner's walkthrough whichever tool the model picked, with the person's own words tried first.
