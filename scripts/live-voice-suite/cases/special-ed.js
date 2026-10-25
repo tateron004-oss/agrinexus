@@ -1,0 +1,46 @@
+"use strict";
+// Questions about special education and ADHD from a parent, a teacher or an administrator, answered from the checked guide (nexus/knowledge/special-ed-guide.js): one for each topic, for the United States, California, Delaware, Kenya and Nigeria. Each must put its official sources and the
+// date checked on the screen, and the first thing the topic says. The California, Delaware, Kenyan and Nigerian ones name the place, because the live rig is a guest and sends no state or country of its own. They change nothing on any account and never name a child.
+const strict = (id, say, key) => ({ id: `sped-${id}`, area: "special-ed", say, timeoutMs: 45000, expect: { screen: ["text", "list"], text: key, notText: "I cannot find|not sure what you" } });
+
+module.exports = Object.freeze([
+  strict("overview", "What is special education and who qualifies?", "free appropriate public education"),
+  strict("evaluation", "How do I ask the school to test my child?", "initial evaluation"),
+  strict("iep", "What goes in an IEP?", "written statement for each child"),
+  strict("early", "My toddler is not talking yet, who do I call?", "babies and toddlers under age 3"),
+  strict("rights", "What are my rights as a parent in special education?", "rights under federal law"),
+  strict("disagree", "The school won't follow my child's IEP, what can I do?", "ways IDEA lets a parent resolve"),
+  strict("504", "What is a 504 plan and how is it different from an IEP?", "bars discrimination against a student"),
+  strict("discipline", "My child with an IEP got suspended, what are my rights?", "discipline of a child with a disability"),
+  strict("privacy", "Can I see my child's school records?", "student records under FERPA"),
+  strict("get-help", "Where do I find my state's special education office?", "find your own state's special"),
+  strict("adhd", "How do I find out if my child has ADHD?", "I cannot say whether a child has ADHD"),
+  strict("adhd-school", "My student has ADHD, what help can the school give?", "Section 504 of the Rehabilitation Act"),
+  strict("autism", "What are the early signs of autism in a toddler?", "I cannot say whether a child has autism"),
+  strict("learning-disability", "My child struggles with reading, could it be dyslexia?", "National Institute of Child Health"),
+  strict("teacher-resources", "Where can I find free training on classroom behavior?", "four federal resources"),
+  strict("de-evaluation", "How do I ask my child's school in Delaware to test my child for special education?", "45 school days or 90 calendar days"),
+  strict("de-iep", "What has to be in an IEP in Delaware?", "at least 10 school days ahead"),
+  strict("de-adhd", "Does Delaware count ADHD for special education?", "Other Health Impairment"),
+  strict("de-disagree", "What can I do in Delaware if I disagree with my child's IEP?", "IEP facilitation helps the team"),
+  strict("de-get-help", "Who do I call in Delaware for special education help?", "Exceptional Children Resources"),
+  strict("de-early", "How do I get Birth to Three in Delaware?", "Birth to Three Early Intervention"),
+  strict("de-504", "How do I get a 504 plan in Delaware?", "Section 504 is a civil rights law"),
+  strict("ca-evaluation", "How do I ask my California school to test my child?", "counts as a referral when it is written"),
+  strict("ca-iep", "Who has to be at my child's IEP meeting in California?", "you are a full member of the IEP team"),
+  strict("ca-rights", "Where do I find the parent rights notice in California?", "Notice of Procedural Safeguards"),
+  strict("ca-disagree", "I disagree with my child's IEP, what can I do in California?", "start by talking to the teacher"),
+  strict("ca-early-start", "My toddler isn't talking yet, what is Early Start?", "anyone can make a referral"),
+  strict("ca-get-help", "Who can help me with special education in California?", "There are two separate networks"),
+  strict("ca-504", "What is a 504 plan in California?", "It bars discrimination"),
+  strict("ke-rights", "Can a school in Kenya refuse my child because of a disability?", "free and compulsory basic education"),
+  strict("ke-assessment", "How do I get my child assessed for a disability in Kenya?", "assessed and placed"),
+  strict("ke-register-support", "How do I register my child with the National Council for Persons with Disabilities?", "support for learners with disabilities"),
+  strict("ke-exams", "Can my child get extra time in the national exam in Kenya?", "Kenya National Examinations Council"),
+  strict("ke-teachers", "Where can I train to teach learners with disabilities in Kenya?", "Kenya Institute of Special Education"),
+  strict("ng-inclusion-standards", "What do the national rules say about including children with disabilities in school in Nigeria?", "standard operating procedures"),
+  strict("ng-accessibility", "Does my child's school have to have a ramp in Nigeria?", "Regulation 155"),
+  strict("ng-complaints-help", "A school refused my child because of a disability, who do I complain to in Nigeria?", "step by step route"),
+  strict("ng-exams", "Can my child get extra time in WAEC?", "one and half times"),
+  strict("ng-teachers", "Where can I find sign language materials for my classroom in Nigeria?", "Instructional Sign Language")
+]);
