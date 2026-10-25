@@ -44,6 +44,8 @@ const { moneyTopic } = require("../../public/kyro-money-topics.js");
 const { howtoTopic } = require("../../public/kyro-howto-topics.js");
 const { safetyTopic } = require("../../public/kyro-safety-topics.js");
 const { safetyAnswer } = require("../knowledge/safety-guide.js");
+const { specialEdTopic, placeOf: specialEdPlace } = require("../../public/kyro-special-ed-topics.js");
+const { specialEdAnswer } = require("../knowledge/special-ed-guide.js");
 const { moneyAnswer } = require("../knowledge/money-guide.js");
 const { moneyWalkthrough, WALK_OF_TOPIC: MONEY_WALK_OF_TOPIC, moneyWalkthroughFor } = require("../knowledge/money-walkthroughs.js");
 const { athleteWalkthrough, WALK_OF_TOPIC: ATHLETE_WALK_OF_TOPIC, athleteWalkthroughFor } = require("../knowledge/athlete-walkthroughs.js");
@@ -557,6 +559,22 @@ class OpenEndedPlanner {
         const safeWalk = guideWalkthroughPlan(command, askText, "safety-guide", safeGuide.topic, "professional-advice", usPerson && !africaNamed(askText));
         if (safeWalk) return safeWalk;
         return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: safeGuide.text, sourceRequired: false, knowledge: `safety-guide:${safeGuide.topic}`, sources: safeGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+      }
+    }
+    // Special education and ADHD, for a parent, a teacher or a school administrator (an evaluation, an IEP or a 504 plan, parent rights, a disagreement with a school, discipline, student records, birth to three, ADHD, autism, dyslexia, resources for teachers, where to get help): a checked,
+    // sourced, plain answer from the official pages of the United States, California, Delaware, Kenya and Nigeria (see knowledge/special-ed-guide.js). A person who names California or Delaware gets that state's rule where the guide has one (otherwise the federal rule, with a line saying so); a device in Kenya or Nigeria
+    // gets that country's. It never says a child has a condition, never advises on medicine or a dispute, and never takes a child's name or record (public/kyro-special-ed-topics.js leaves orders, records and emergencies to the rest of Kyro).
+    {
+      const sedCountry = africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText });
+      const sedId = ownWorkspace && businessVoiceDispatch.asksAboutOwnRecords(askText) ? null : specialEdTopic(askText, { country: sedCountry });
+      const sedPlace = specialEdPlace(askText, { country: sedCountry });
+      const sedState = sedPlace === "ca" || sedPlace === "de" ? sedPlace : null;
+      const sedUs = (usPerson || Boolean(sedState)) && !africaNamed(askText);
+      const sedGuide = sedId ? specialEdAnswer(sedId, { us: sedUs, country: sedCountry, state: sedState }) : null;
+      if (sedGuide) {
+        const sedWalk = guideWalkthroughPlan(command, askText, "special-ed-guide", sedGuide.topic, "professional-advice", sedUs);
+        if (sedWalk) return sedWalk;
+        return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: sedGuide.text, sourceRequired: false, knowledge: `special-ed-guide:${sedGuide.topic}`, sources: sedGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
       }
     }
     // A parent's question about their child's growing up and safety (how to talk with a child about the body and relationships, the signs of abuse, what to do if a child tells you, a young girl who is pregnant, who to call): a checked,

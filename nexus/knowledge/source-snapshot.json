@@ -1,6 +1,6 @@
 {
- "takenAt": "2026-10-23T20:30:24.538Z",
- "count": 1006,
+ "takenAt": "2026-10-25T21:31:33.553Z",
+ "count": 1182,
  "pages": {
   "https://988lifeline.org/": {
    "state": "ok",
@@ -10117,6 +10117,1766 @@
    "checkedAt": "2026-10-23T20:30:24.269Z",
    "guides": [
     "safety-guide"
+   ]
+  },
+  "https://acl.gov/programs/pa-programs": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c424bea7f4f92b02",
+   "bytes": 25233,
+   "checkedAt": "2026-10-25T21:30:35.030Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://californiafamilyempowermentcenters.org/overview.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "aa185dc7e49836b4",
+   "bytes": 9443,
+   "checkedAt": "2026-10-25T21:30:35.131Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://dial.acl.gov/home": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "8a08ea3e97b20360",
+   "bytes": 3529,
+   "checkedAt": "2026-10-25T21:30:34.957Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://education.delaware.gov/legacy/home/instruction-and-assessment/exceptional-children/special-education/contact/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:35.358Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://education.delaware.gov/legacy/home/instruction-and-assessment/exceptional-children/special-education/for-families/rights-and-disputes/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:35.384Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://education.delaware.gov/legacy/home/instruction-and-assessment/exceptional-children/special-education/for-families/student-supports/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:35.438Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://education.delaware.gov/legacy/home/instruction-and-assessment/exceptional-children/special-education/iep-guidance/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:35.673Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://education.delaware.gov/legacy/wp-content/uploads/sites/4/2024/05/parentsarethekey.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:35.623Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://education.delaware.gov/legacy/wp-content/uploads/sites/4/2026/01/Delaware-Policies-Governing-Services-for-Children-with-Disabilities1-26-26.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:35.675Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://education.delaware.gov/legacy/wp-content/uploads/sites/4/2026/07/de-procedural-safeguards-july-2026.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:35.830Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://education.delaware.gov/legacy/wp-content/uploads/sites/4/2026/07/request-for-special-education-mediation-form%E2%80%93july2026.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:35.880Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://education.delaware.gov/legacy/wp-content/uploads/sites/4/2026/08/due-process-info-guide-july2026-003.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:35.898Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://education.delaware.gov/legacy/wp-content/uploads/sites/4/2026/08/state-complaint-info-guide-july2026-003.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:36.057Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://education.gov.ng/basic-educationdepartment": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fd54ce45b9b8e6a0",
+   "bytes": 17168,
+   "checkedAt": "2026-10-25T21:30:44.460Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://ies.ed.gov/ncee/WWC/PracticeGuide/31": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5014d9feb3566b90",
+   "bytes": 3774,
+   "checkedAt": "2026-10-25T21:30:36.676Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://intensiveintervention.org/implementation-intervention/behavior-strategies": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "02ac8987ab90e6a4",
+   "bytes": 12284,
+   "checkedAt": "2026-10-25T21:30:36.580Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://intensiveintervention.org/tools-charts/overview": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "460c87d3acb4ea00",
+   "bytes": 9914,
+   "checkedAt": "2026-10-25T21:30:36.874Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://iris.peabody.vanderbilt.edu/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "807fec85da8d9b40",
+   "bytes": 6356,
+   "checkedAt": "2026-10-25T21:30:36.982Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://kicd.ac.ke/press_releases/special-needs-education-well-catered-for-in-the-new-curriculum/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "dcc1eac857bf0e6c",
+   "bytes": 7726,
+   "checkedAt": "2026-10-25T21:30:38.620Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://kise.ac.ke/about-arc/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ad7b2ade9a768cfc",
+   "bytes": 5579,
+   "checkedAt": "2026-10-25T21:30:39.573Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://kise.ac.ke/contact/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a52b2a9e9a7e4cf8",
+   "bytes": 5666,
+   "checkedAt": "2026-10-25T21:30:40.691Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://kise.ac.ke/service/assessment/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ad7b2ace9afe4cfe",
+   "bytes": 7960,
+   "checkedAt": "2026-10-25T21:30:41.047Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://kise.ac.ke/service/educational-assessment-and-resource-centre/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2d7b2adf9e76adfd",
+   "bytes": 7060,
+   "checkedAt": "2026-10-25T21:30:42.298Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://kise.ac.ke/service/production-of-assistive-devices/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e57b2e9e9ed6acfc",
+   "bytes": 7077,
+   "checkedAt": "2026-10-25T21:30:42.531Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://kise.ac.ke/service/teacher-training/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a1792e9e9e7eecf7",
+   "bytes": 6981,
+   "checkedAt": "2026-10-25T21:30:43.819Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://kise.ac.ke/training-programs/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "297baac8baf684bf",
+   "bytes": 8731,
+   "checkedAt": "2026-10-25T21:30:44.501Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://kise.ac.ke/wp-content/uploads/2025/07/SERVICE-ENGLISH-CHARTER-2025.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:44.258Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=56029": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:44.601Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=56043": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:44.794Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=56190": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:44.816Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=56194": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:44.914Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=56195.1": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:45.093Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=56302.1": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:45.125Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=56321": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:45.218Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=56341": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:45.424Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=56341.5": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:45.435Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=56343": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:45.520Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=56344": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:45.711Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=56345": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:45.743Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=EDC&sectionNum=56500.2": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:45.808Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://ncpwd.go.ke/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9f97ec930caef4a3",
+   "bytes": 18310,
+   "checkedAt": "2026-10-25T21:30:46.303Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://ncpwd.go.ke/2027-persons-with-disabilities-scholarships/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a795cc930c2ef6a0",
+   "bytes": 12873,
+   "checkedAt": "2026-10-25T21:30:46.260Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://ncpwd.go.ke/assistive-device/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "af37cc9b0c2eb6b1",
+   "bytes": 13393,
+   "checkedAt": "2026-10-25T21:30:46.288Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://ncpwd.go.ke/download/ncpwd-how-to-self-register-on-ecitizen-as-a-pwd/?wpdmdl=17809&refresh=6684fe4d0c8151719991885": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:47.916Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://ncpwd.go.ke/education-assistance/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "af37cc930c3e7ea1",
+   "bytes": 13367,
+   "checkedAt": "2026-10-25T21:30:46.705Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://ncpwd.go.ke/scholarships/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "afb7cc930cbeb6a1",
+   "bytes": 10914,
+   "checkedAt": "2026-10-25T21:30:46.723Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://ncpwd.gov.ng/Apps/Web/contact": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "eb913aa12d07c0a7",
+   "bytes": 8224,
+   "checkedAt": "2026-10-25T21:30:48.340Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://ncpwd.gov.ng/Apps/Web/enforcement": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e9113ba12503c0af",
+   "bytes": 9035,
+   "checkedAt": "2026-10-25T21:30:48.424Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://ncpwd.gov.ng/Apps/Web/mandate": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "cb917aa10d05c0ae",
+   "bytes": 10751,
+   "checkedAt": "2026-10-25T21:30:48.591Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://ncpwd.gov.ng/pdfs/35document.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:48.611Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://ncpwd.gov.ng/pdfs/44document.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:48.657Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://nerdc.gov.ng/content_manager/cd.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b5c15a6cb1f1fa14",
+   "bytes": 4979,
+   "checkedAt": "2026-10-25T21:30:50.365Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://nerdc.gov.ng/content_manager/eiie.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "16c84e4da235e418",
+   "bytes": 2713,
+   "checkedAt": "2026-10-25T21:30:50.423Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://nerdc.gov.ng/content_manager/spc.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "54ec124c28c4f40e",
+   "bytes": 3666,
+   "checkedAt": "2026-10-25T21:30:50.357Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://new.kenyalaw.org/akn/ke/act/2010/constitution/eng@2010-09-03": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "21349f0759b61f9b",
+   "bytes": 298300,
+   "checkedAt": "2026-10-25T21:30:52.107Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://new.kenyalaw.org/akn/ke/act/2013/14": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "40fd8e2b102bd64f",
+   "bytes": 131083,
+   "checkedAt": "2026-10-25T21:30:54.752Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://new.kenyalaw.org/akn/ke/act/2025/4": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "58b45bc95429fc5f",
+   "bytes": 107032,
+   "checkedAt": "2026-10-25T21:30:53.283Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://nhrc.gov.ng/about/nhrc-mandate.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2a312a7f9290e43c",
+   "bytes": 19667,
+   "checkedAt": "2026-10-25T21:30:56.339Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://nhrc.gov.ng/contact-us.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ab122ae1f11ff66d",
+   "bytes": 4202,
+   "checkedAt": "2026-10-25T21:30:58.685Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://nhrc.gov.ng/focus-areas/right-to-education.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "0b122ea5f00eec7d",
+   "bytes": 6072,
+   "checkedAt": "2026-10-25T21:30:59.390Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://oag.ca.gov/civil/resources-ada-people": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e3a7b77575b9bc15",
+   "bytes": 10537,
+   "checkedAt": "2026-10-25T21:30:56.980Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://ocrcas.ed.gov/contact-ocr": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e2d616a90cd5a3da",
+   "bytes": 2565,
+   "checkedAt": "2026-10-25T21:30:57.374Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://ocrcas.ed.gov/contact-ocr?field_state_value=642": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e2d616a90cd5a3da",
+   "bytes": 2565,
+   "checkedAt": "2026-10-25T21:30:57.535Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://picofdel.org/contact-us/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c25fe4ff1bcc0ac1",
+   "bytes": 2404,
+   "checkedAt": "2026-10-25T21:30:58.106Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/about-idea/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:58.481Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/contacts/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:59.228Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/files/OCR-letter-07-26-2016.pdf": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:59.179Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/idea-files/2023-early-childhood-transition-questions-and-answers/": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:59.617Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/a/300.17": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:59.991Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/a/300.43": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:59.782Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/a/300.8": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:30:59.975Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/b/300.111": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:00.499Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/b/300.114": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:00.681Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/b/300.124": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:00.865Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/b/300.152": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:00.864Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/b/300.153": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:01.447Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/d/300.300": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:01.191Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/d/300.301": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:01.190Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/d/300.303": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:01.620Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/d/300.306": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:02.422Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/d/300.320": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:02.216Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/d/300.321": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:01.963Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/d/300.322": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:02.576Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/d/300.323": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:02.578Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/d/300.324": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:02.790Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/e/300.501": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:03.091Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/e/300.502": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:03.096Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/e/300.503": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:03.301Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/e/300.504": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:03.522Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/e/300.506": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:03.579Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/e/300.507": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:03.642Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/e/300.508": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:03.876Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/e/300.510": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:04.113Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/e/300.511": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:04.038Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/e/300.515": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:04.247Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/e/300.516": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:04.565Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/e/300.518": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:04.642Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/e/300.520": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:04.674Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/b/f/300.613": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:05.028Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/c/a/303.21": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:05.049Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/c/c/303.209": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:05.230Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/c/d/303.303": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:05.393Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/c/d/303.310": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:05.503Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://sites.ed.gov/idea/regs/c/d/303.321": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:05.657Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://studentprivacy.ed.gov/file-a-complaint": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "dcabb17990d69398",
+   "bytes": 7278,
+   "checkedAt": "2026-10-25T21:31:06.139Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://studentprivacy.ed.gov/resources/ferpaidea-crosswalk": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "968bed3088e617eb",
+   "bytes": 2875,
+   "checkedAt": "2026-10-25T21:31:06.177Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://studentprivacy.ed.gov/resources/parent-guide-family-educational-rights-and-privacy-act-ferpa": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "960be93108e717fb",
+   "bytes": 2951,
+   "checkedAt": "2026-10-25T21:31:06.337Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://trcn.gov.ng/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a92154a16725f354",
+   "bytes": 6979,
+   "checkedAt": "2026-10-25T21:31:07.018Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://waecnigeria.org/sites/default/files/2026-08/WASSCE%20(PC%202)%202026%20TIME%20TABLE.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:06.476Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.b23de.org/start-your-b23-journey/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4c553409481b27c9",
+   "bytes": 8173,
+   "checkedAt": "2026-10-25T21:31:06.772Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.capital.k12.de.us/departments/special-services": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "32176f3125ff9eb9",
+   "bytes": 8806,
+   "checkedAt": "2026-10-25T21:31:07.914Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.capital.k12.de.us/departments/special-services/section-504-plans": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1a3d4f59615f9fb9",
+   "bytes": 11190,
+   "checkedAt": "2026-10-25T21:31:08.093Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.capital.k12.de.us/students-with-disabilities": {
+   "state": "broken",
+   "status": 404,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:08.018Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.cdc.gov/adhd/about/index.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d4163c62f8914f8e",
+   "bytes": 10916,
+   "checkedAt": "2026-10-25T21:31:08.279Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.cdc.gov/adhd/diagnosis/index.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f55edd523a90ed75",
+   "bytes": 8089,
+   "checkedAt": "2026-10-25T21:31:08.243Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.cdc.gov/adhd/signs-symptoms/index.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fc5cdc4619a8e53d",
+   "bytes": 6259,
+   "checkedAt": "2026-10-25T21:31:08.361Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.cdc.gov/adhd/treatment/classroom.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d4dcf1e66c60a535",
+   "bytes": 15568,
+   "checkedAt": "2026-10-25T21:31:08.416Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.cdc.gov/autism/about/index.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ef93721752908ec0",
+   "bytes": 13479,
+   "checkedAt": "2026-10-25T21:31:08.475Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.cdc.gov/autism/diagnosis/index.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fcc67a039094adcd",
+   "bytes": 9923,
+   "checkedAt": "2026-10-25T21:31:09.200Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.cdc.gov/autism/signs-symptoms/index.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f4c7d15712818ae9",
+   "bytes": 6241,
+   "checkedAt": "2026-10-25T21:31:09.163Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.cdc.gov/autism/treatment/accessing-services.html": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fc55510bda948fcd",
+   "bytes": 8899,
+   "checkedAt": "2026-10-25T21:31:09.219Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.cde.ca.gov/sp/se/index.asp": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9e09a12736a893b8",
+   "bytes": 10194,
+   "checkedAt": "2026-10-25T21:31:10.542Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dds.ca.gov/general/appeals-complaints-comments/early-start-complaint-process/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c1337265997a79b5",
+   "bytes": 4191,
+   "checkedAt": "2026-10-25T21:31:09.749Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dds.ca.gov/rc/listings/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "52f36817b1c25845",
+   "bytes": 12924,
+   "checkedAt": "2026-10-25T21:31:09.791Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dds.ca.gov/rc/lookup-rcs-by-county/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a07beb3dbaf9b9cd",
+   "bytes": 2185,
+   "checkedAt": "2026-10-25T21:31:10.111Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dds.ca.gov/services/early-start/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d8e7f6b3e559f725",
+   "bytes": 25585,
+   "checkedAt": "2026-10-25T21:31:10.263Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dds.ca.gov/services/early-start/family-resource-center/regional-center-early-start-intake-and-family-resource-centers/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "cbee34ab7fd51cca",
+   "bytes": 12238,
+   "checkedAt": "2026-10-25T21:31:10.566Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dds.ca.gov/services/early-start/what-is-early-start/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e1ef5e72abfff531",
+   "bytes": 7951,
+   "checkedAt": "2026-10-25T21:31:10.686Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dds.ca.gov/wp-content/uploads/2025/12/EarlyStart_FAQ_202512-1.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:10.717Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.declasi.org/programs-and-units/disability-rights-services/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "3526269f6d16b13b",
+   "bytes": 8540,
+   "checkedAt": "2026-10-25T21:31:11.129Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dgs.ca.gov/-/media/Divisions/OAH/Special-Education/Self-Help-Section/Special-Education-Handbook-2026-Acc.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:11.077Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dgs.ca.gov/OAH/Case-Types/Special-Education": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b785323396db74f4",
+   "bytes": 3982,
+   "checkedAt": "2026-10-25T21:31:11.170Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dgs.ca.gov/OAH/Case-Types/Special-Education/Resources": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "2f8242298bcfd4f2",
+   "bytes": 5418,
+   "checkedAt": "2026-10-25T21:31:11.397Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dgs.ca.gov/OAH/Case-Types/Special-Education/Self-Help": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "27a6512d9cafdcef",
+   "bytes": 9827,
+   "checkedAt": "2026-10-25T21:31:11.549Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dgs.ca.gov/OAH/Case-Types/Special-Education/Self-Help/Due-Process-Hearings": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "81d158409a5d6b7f",
+   "bytes": 41961,
+   "checkedAt": "2026-10-25T21:31:11.573Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dgs.ca.gov/OAH/Case-Types/Special-Education/Self-Help/Process-and-Due-Process---the-Life-of-OAH-Cases": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f39a43fd06ede8af",
+   "bytes": 11686,
+   "checkedAt": "2026-10-25T21:31:11.650Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dgs.ca.gov/OAH/Case-Types/Special-Education/Self-Help/Summary-of-Educational-Rights": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6a97036e7a44207d",
+   "bytes": 23597,
+   "checkedAt": "2026-10-25T21:31:11.869Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.dgs.ca.gov/OAH/Case-Types/Special-Education/Self-Help/The-Mediation-Process-Including-Virtual-Mediations": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "bf2946b13c4dbeb7",
+   "bytes": 19600,
+   "checkedAt": "2026-10-25T21:31:11.838Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.disabilityrightsca.org/get-help/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e886a9df07259461",
+   "bytes": 4081,
+   "checkedAt": "2026-10-25T21:31:12.164Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.ecfr.gov/current/title-34/subtitle-B/chapter-I/part-104": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "3d3e96c79f77aef3",
+   "bytes": 164331,
+   "checkedAt": "2026-10-25T21:31:12.643Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.ecfr.gov/current/title-34/subtitle-B/chapter-II/part-300/subpart-A/section-300.8": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "c1095aaf8c28cea2",
+   "bytes": 14991,
+   "checkedAt": "2026-10-25T21:31:12.783Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.ecfr.gov/current/title-34/subtitle-B/chapter-III/part-300/subpart-E": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6682b1ff2865e4a3",
+   "bytes": 73693,
+   "checkedAt": "2026-10-25T21:31:12.804Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.ed.gov/about/contact-us/state-contacts": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:13.127Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.ed.gov/laws-and-policy/civil-rights-laws/disability-discrimination/frequently-asked-questions-section-504-free-appropriate-public-education-fape": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:13.446Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.ed.gov/laws-and-policy/civil-rights-laws/file-complaint/how-file-discrimination-complaint-ocr": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:13.378Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.ed.gov/laws-and-policy/civil-rights-laws/file-complaint/how-the-office-for-civil-rights-handles-complaints": {
+   "state": "blocked",
+   "status": 403,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:13.730Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.knec.ac.ke/services/registration-of-candidates/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "351f682f7f7124aa",
+   "bytes": 3158,
+   "checkedAt": "2026-10-25T21:31:16.155Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.knec.ac.ke/wp-content/uploads/2026/08/kpsea_regulations_2024.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:15.113Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.nichd.nih.gov/health/topics/learning/conditioninfo": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a81c9f7950363f15",
+   "bytes": 23826,
+   "checkedAt": "2026-10-25T21:31:15.096Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.nichd.nih.gov/health/topics/learning/conditioninfo/diagnosed": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a0189f7950367f05",
+   "bytes": 23173,
+   "checkedAt": "2026-10-25T21:31:15.599Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.nichd.nih.gov/health/topics/learning/conditioninfo/signs": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a8149f7950b63f05",
+   "bytes": 24693,
+   "checkedAt": "2026-10-25T21:31:16.130Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.nichd.nih.gov/health/topics/learning/conditioninfo/treatment": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a0189f7950361f05",
+   "bytes": 24710,
+   "checkedAt": "2026-10-25T21:31:16.013Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.nichd.nih.gov/health/topics/reading/conditioninfo/disorders": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a0189f7958361f05",
+   "bytes": 23428,
+   "checkedAt": "2026-10-25T21:31:16.351Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.ombudsman.go.ke/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "3ef08f50671728de",
+   "bytes": 4566,
+   "checkedAt": "2026-10-25T21:31:19.512Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/appeals/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9e93456c59cfe3a6",
+   "bytes": 12473,
+   "checkedAt": "2026-10-25T21:31:17.340Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/basis/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "878d09c4f241ab41",
+   "bytes": 11552,
+   "checkedAt": "2026-10-25T21:31:17.562Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/california/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9bbd15ca15cb23e1",
+   "bytes": 4871,
+   "checkedAt": "2026-10-25T21:31:18.351Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/categories/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "818b84a8d1cf16c1",
+   "bytes": 11727,
+   "checkedAt": "2026-10-25T21:31:18.730Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/disputes-landing/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "868398f8b2fdb245",
+   "bytes": 6237,
+   "checkedAt": "2026-10-25T21:31:19.353Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/ei-overview/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "80c70c78c70d9264",
+   "bytes": 21923,
+   "checkedAt": "2026-10-25T21:31:19.802Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/evaluation/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c52e1cd64bf5a981",
+   "bytes": 28373,
+   "checkedAt": "2026-10-25T21:31:21.294Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/find-your-center/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4ba5144a118923c1",
+   "bytes": 3596,
+   "checkedAt": "2026-10-25T21:31:22.650Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/findurcenter/texas/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f9275b41175c8b11",
+   "bytes": 1281,
+   "checkedAt": "2026-10-25T21:31:22.453Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/idea/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "cfc65d4813c9b3c5",
+   "bytes": 7023,
+   "checkedAt": "2026-10-25T21:31:24.050Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/manifestation/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ca07106cd4cf13d4",
+   "bytes": 15559,
+   "checkedAt": "2026-10-25T21:31:22.670Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/meetings/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "8b09526aeb942abf",
+   "bytes": 29718,
+   "checkedAt": "2026-10-25T21:31:22.872Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/preschoolers/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "16845de8311b22a1",
+   "bytes": 6812,
+   "checkedAt": "2026-10-25T21:31:26.253Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/referral/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "0940cef20a4d5ba4",
+   "bytes": 12054,
+   "checkedAt": "2026-10-25T21:31:26.352Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/schoolauthority/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ce2498eca4c9a2f4",
+   "bytes": 15621,
+   "checkedAt": "2026-10-25T21:31:28.093Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/services-discipline/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c396094f204f62d1",
+   "bytes": 13132,
+   "checkedAt": "2026-10-25T21:31:30.276Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/specialcircumstances/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "cf061dd8904d9241",
+   "bytes": 8119,
+   "checkedAt": "2026-10-25T21:31:30.632Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/the-parent-center-network/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9ba48c5a15c93705",
+   "bytes": 3696,
+   "checkedAt": "2026-10-25T21:31:31.930Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.parentcenterhub.org/transitionpreschool/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ce049462935fa307",
+   "bytes": 7047,
+   "checkedAt": "2026-10-25T21:31:33.407Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.pbis.org/pbis/what-is-pbis": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f9f8f017b58fafad",
+   "bytes": 9836,
+   "checkedAt": "2026-10-25T21:31:31.104Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.pbis.org/resource/supporting-and-responding-to-behavior-evidence-based-classroom-strategies-for-teachers": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "7acc725d8b8a6866",
+   "bytes": 3745,
+   "checkedAt": "2026-10-25T21:31:31.287Z",
+   "guides": [
+    "special-ed-guide"
+   ]
+  },
+  "https://www.waecnigeria.org/sites/default/files/2026-03/FINAL%20TIMETABLE%20WASSCE%20(SC)%202026%20-%20NIGERIA.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-25T21:31:31.732Z",
+   "guides": [
+    "special-ed-guide"
    ]
   }
  }

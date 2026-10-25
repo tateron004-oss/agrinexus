@@ -11,6 +11,7 @@
 const FAMILIES = Object.freeze([
   require("./howto-walkthroughs.js"),
   require("./safety-walkthroughs.js"),
+  require("./special-ed-walkthroughs.js"),
   require("./parents-walkthroughs.js"),
   require("./church-walkthroughs.js"),
   require("./athlete-more-walkthroughs.js"),

@@ -51699,7 +51699,7 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // "What are my birth control options?", "how often should I get a Pap smear?": the checked women's health guide, with its official sources. The voice model reworded such a question when it called a tool, and the reworded
     // one was sometimes answered from memory with no sources.
     // "What is type 2 diabetes?", "how do I keep track of my blood sugar?", "how can I lower my blood pressure?": the checked diabetes and high blood pressure guide, with its sources (a person's own reading, symptoms or a medicine are never taken).
-    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)) || (typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest(trimmed)) || (typeof kyroPrQuestion === "function" && kyroPrQuestion(trimmed)) || (typeof kyroChurchQuestion === "function" && kyroChurchQuestion(trimmed)) || (typeof kyroAthleteQuestion === "function" && kyroAthleteQuestion(trimmed)) || (typeof kyroMoneyQuestion === "function" && kyroMoneyQuestion(trimmed)) || (typeof kyroHowtoQuestion === "function" && kyroHowtoQuestion(trimmed)) || (typeof kyroTechWalkQuestion === "function" && kyroTechWalkQuestion(trimmed)) || (typeof kyroSafetyQuestion === "function" && kyroSafetyQuestion(trimmed)))) {
+    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)) || (typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest(trimmed)) || (typeof kyroPrQuestion === "function" && kyroPrQuestion(trimmed)) || (typeof kyroChurchQuestion === "function" && kyroChurchQuestion(trimmed)) || (typeof kyroAthleteQuestion === "function" && kyroAthleteQuestion(trimmed)) || (typeof kyroMoneyQuestion === "function" && kyroMoneyQuestion(trimmed)) || (typeof kyroHowtoQuestion === "function" && kyroHowtoQuestion(trimmed)) || (typeof kyroTechWalkQuestion === "function" && kyroTechWalkQuestion(trimmed)) || (typeof kyroSafetyQuestion === "function" && kyroSafetyQuestion(trimmed)) || (typeof kyroSpecialEdQuestion === "function" && kyroSpecialEdQuestion(trimmed)))) {
       if (!heardAgain) {
         try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
         kyroPageSpeaksUntil = Date.now() + 40000;
@@ -53271,6 +53271,18 @@ function kyroTechWalkQuestion(text) {
   try {
     const lib = window.KyroTechnologyTopics;
     return Boolean(lib && typeof lib.isWalkRequest === "function" && lib.isWalkRequest(text) && (lib.technologyTopic(text) || lib.aiToolsTopic(text)));
+  } catch { return false; }
+}
+// A question about special education and ADHD from a parent, a teacher or an administrator (public/kyro-special-ed-topics.js, shared with the server): an evaluation, an IEP or a 504 plan, parent rights, a disagreement with a school, discipline, student records, ADHD,
+// autism, dyslexia, resources for teachers, where to get help. The page takes it itself so the voice model does not answer a deadline or a right from memory, with no sources. A device in Nairobi or Lagos is given its country, as the server gives it; a person who names
+// California or Delaware is given that state's rule where the guide has one.
+function kyroSpecialEdQuestion(text) {
+  try {
+    const lib = window.KyroSpecialEdTopics;
+    if (!lib || typeof lib.specialEdTopic !== "function") return false;
+    let zone = "";
+    try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { zone = ""; }
+    return Boolean(lib.specialEdTopic(text, { country: zone === "Africa/Nairobi" ? "ke" : zone === "Africa/Lagos" ? "ng" : null }));
   } catch { return false; }
 }
 // A question about staying safe online and on the phone (public/kyro-safety-topics.js, shared with the server): a fake message or call, passwords and two-step sign-in, a hijacked account, identity theft, locked files, a swapped SIM card, where to report.
