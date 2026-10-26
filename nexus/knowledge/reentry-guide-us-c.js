@@ -66,13 +66,13 @@ module.exports = {
       "Can I get free or low cost internet?"
     ],
     "reentry-scams": [
-      "How can I tell if a text or a call is a scam?",
       "Somebody tricked me out of money, what do I do?",
+      "How can I tell if a text or a call is a scam?",
       "Where do I report a scam?"
     ],
     "reentry-phone-safety": [
-      "How do I keep my phone safe?",
       "How do I lock my phone so nobody else can use it?",
+      "How do I keep my phone safe?",
       "I keep getting spam calls and texts, what do I do?"
     ],
     "reentry-accounts": [

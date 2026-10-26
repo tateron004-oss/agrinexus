@@ -85,5 +85,30 @@
     return US_OF[sub] || null;
   }
 
-  return Object.freeze({ reentryTopic, placeOf, CALIFORNIA, REENTRY_CONTEXT });
+  const clean = text => String(text || "").replace(/[’]/g, "'").replace(/\s+/g, " ").trim();
+  const NOT_THIS_GUIDE = value => NOT_A_GUIDE_QUESTION.test(value) || CALENDAR_OR_NOTES.test(value) || PERSONAL_EMERGENCY.test(value) || BUSINESS_TALK.test(value) || KENYA.test(value) || NIGERIA.test(value);
+
+  // The voice system hands over what a person says in pieces, cut at a pause: "I just got out of prison." arrives first and "How do I see what is on my background check?" arrives alone, without the words that show they are coming home
+  // (found by the live voice test on 26 October 2026: the second piece was answered from memory, with no sources). The page remembers the words that showed it, for a short while, and joins them to a later question.
+  // contextOf(text) -> the sentence that shows the person is coming home, to remember, or null. A sentence that already asks about a subject was answered when it was said, and is not remembered.
+  function contextOf(text) {
+    const value = clean(text);
+    if (!value || value.length > 300 || NOT_THIS_GUIDE(value) || !REENTRY_CONTEXT.test(value)) return null;
+    const sentence = value.split(/(?<=[.?!])\s+/).find(part => REENTRY_CONTEXT.test(part)) || "";
+    if (!sentence || sentence.length > 120) return null;
+    const sub = subtopicOf(sentence);
+    return sub && sub !== "start" ? null : sentence;
+  }
+  // withContext(text, remembered, options) -> the remembered sentence and the question joined (to be asked as one), or null when the question is an order, a record, an emergency or not about a subject of this guide.
+  function withContext(text, remembered, options) {
+    const value = clean(text);
+    const before = clean(remembered);
+    if (!value || !before || value.length > 300 || NOT_THIS_GUIDE(value)) return null;
+    // (the question itself must name a subject: the remembered words alone would point to the start topic for any question at all)
+    if (!subtopicOf(value)) return null;
+    const joined = `${before} ${value}`;
+    return reentryTopic(joined, options) ? joined : null;
+  }
+
+  return Object.freeze({ reentryTopic, contextOf, withContext, placeOf, CALIFORNIA, REENTRY_CONTEXT });
 });

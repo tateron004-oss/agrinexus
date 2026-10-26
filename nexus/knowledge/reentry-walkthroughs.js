@@ -9,6 +9,10 @@ const { SOURCES, CHECKED_ON } = require("./reentry-guide.js");
 const { reentryTopic } = require("../../public/kyro-reentry-topics.js");
 const { family } = require("./walkthrough-kit.js");
 
-const DEFS = { ...require("./reentry-defs-us-a.js"), ...require("./reentry-defs-us-b.js"), ...require("./reentry-defs-us-c.js"), ...require("./reentry-defs-ca.js") };
+// (four files written by four writers: an id used in two of them would silently replace a walkthrough, as "id", "jobs" and "voting" did on 26 October 2026, so a repeated id stops the program)
+const DEFS = {};
+for (const part of [require("./reentry-defs-us-a.js"), require("./reentry-defs-us-b.js"), require("./reentry-defs-us-c.js"), require("./reentry-defs-ca.js")]) {
+  for (const [id, def] of Object.entries(part)) { if (DEFS[id]) throw new Error(`reentry walkthrough id used twice: ${id}`); DEFS[id] = def; }
+}
 
 module.exports = family({ prefix: "reentry", label: "reentry-guide", SOURCES, CHECKED_ON, DEFS, topicOf: text => reentryTopic(text) });
