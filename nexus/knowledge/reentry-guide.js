@@ -41,7 +41,7 @@ function reentryAnswer(id, { us = true, state = null } = {}) {
   const cited = sources.length ? ` Sources: ${sources.map(source => source.name).join("; ")} (checked ${CHECKED_ON}).` : "";
   const body = topic.text;
   const californiaNote = /^reentry-/.test(id) && CALIFORNIA_OF[id] && state !== "ca" && TOPICS[CALIFORNIA_OF[id]] ? "California has its own rules on this. Say California and I will read that page." : "";
-  const closing = [californiaNote, /(?:cannot|can't|could not) (?:say|tell|advise|give)|not a lawyer/i.test(body) ? "" : CANNOT_SAY, /name or anything private|do not need to tell me/i.test(body) ? "" : PRIVATE, /emergency number|\b911\b|\b988\b/i.test(body) ? "" : DANGER, CHANGE].filter(Boolean).join(" ");
+  const closing = [californiaNote, /not a lawyer/i.test(body) ? "" : CANNOT_SAY, /name or anything private|do not need to tell me/i.test(body) ? "" : PRIVATE, /emergency number|\b911\b|\b988\b/i.test(body) ? "" : DANGER, CHANGE].filter(Boolean).join(" ");
   return { topic: id, title: topic.title, text: `${lead}${body}${cited} ${closing}`, sources };
 }
 

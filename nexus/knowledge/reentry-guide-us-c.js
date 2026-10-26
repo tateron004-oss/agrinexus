@@ -5,7 +5,7 @@
 module.exports = {
   SOURCES: {
     lifelineHome: { name: "Lifeline Support, run by USAC for the FCC: home page (undated)", url: "https://www.lifelinesupport.org/" },
-    lifelineAbout: { name: "Lifeline Support, run by USAC for the FCC: About Lifeline (undated)", url: "http://www.lifelinesupport.org/about-lifeline/" },
+    lifelineAbout: { name: "Lifeline Support, run by USAC for the FCC: About Lifeline (undated)", url: "https://www.lifelinesupport.org/about-lifeline/" },
     lifelineQualify: { name: "Lifeline Support, run by USAC for the FCC: How to Qualify (undated)", url: "https://www.lifelinesupport.org/how-to-qualify/" },
     lifelineApply: { name: "Lifeline Support, run by USAC for the FCC: How to Apply (undated)", url: "https://www.lifelinesupport.org/how-to-apply/" },
     lifelineCompanies: { name: "Lifeline Support, run by USAC for the FCC: Companies Near Me (undated)", url: "https://www.lifelinesupport.org/companies-near-me/" },
