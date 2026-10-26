@@ -256,3 +256,15 @@ test("the live cases for scams and phone safety ask what only this guide answers
   assert.match(cases.find(entry => entry.id === "reentry-scams").say, /tricked me out of money/);
   assert.match(cases.find(entry => entry.id === "reentry-phone-safety").say, /lock my phone/);
 });
+
+// Found on 26 October 2026: three California walkthroughs were given the ids "id", "jobs" and "voting", which three federal walkthroughs already had, and the merge of the four files let the California ones silently replace them: 23 walkthroughs were in the app, not 26.
+test("every topic that is a process has its own walkthrough: none is lost to a repeated id, and only the overview and Kyro's own tips have none", () => {
+  const registry = require("../../nexus/knowledge/guide-walkthroughs.js");
+  const family = registry.FAMILIES.find(entry => entry.label === "reentry-guide");
+  const written = ["us-a", "us-b", "us-c", "ca"].flatMap(part => Object.keys(require(`../../nexus/knowledge/reentry-defs-${part}.js`)));
+  assert.equal(new Set(written).size, written.length, "no id is used in two files");
+  assert.equal(written.length, 26);
+  assert.equal(Object.keys(family.WALKTHROUGHS).length, written.length);
+  const walked = new Set(Object.values(family.WALKTHROUGHS).map(def => def.topic));
+  assert.deepEqual(ids.filter(id => !walked.has(id)).sort(), ["reentry-ai-basics", "reentry-library-computer", "reentry-start"]);
+});

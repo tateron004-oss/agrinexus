@@ -6,7 +6,7 @@
 const { S, W, OWN } = require("./walkthrough-kit.js");
 
 module.exports = {
-  "id": {
+  "ca-id": {
     title: "Getting a California ID card, a birth certificate and your release money, step by step",
     topic: "ca-reentry-id", phrase: "getting a california id card after prison, since I am coming home", us: true,
     steps: [
@@ -21,7 +21,7 @@ module.exports = {
     ]
   },
 
-  "medi-cal": {
+  "ca-medi-cal": {
     title: "Getting ready for Medi-Cal when you come home from prison or jail in California",
     topic: "ca-reentry-medi-cal", phrase: "getting medi-cal in california, since I am coming home from prison", us: true,
     steps: [
@@ -36,7 +36,7 @@ module.exports = {
     ]
   },
 
-  "calfresh": {
+  "ca-calfresh": {
     title: "Applying for CalFresh food help after you come home, including after a drug conviction",
     topic: "ca-reentry-calfresh", phrase: "applying for calfresh in california, since I am coming home from prison", us: true,
     steps: [
@@ -50,7 +50,7 @@ module.exports = {
     ]
   },
 
-  "jobs": {
+  "ca-jobs": {
     title: "Looking for work in California with a record, step by step",
     topic: "ca-reentry-jobs", phrase: "finding a job in california with a record, since I am coming home from prison", us: true,
     steps: [
@@ -65,7 +65,7 @@ module.exports = {
     ]
   },
 
-  "records": {
+  "ca-records": {
     title: "Getting a copy of your own California record and learning about record relief",
     topic: "ca-reentry-records", phrase: "getting a copy of my record in california after prison, since I am coming home", us: true,
     steps: [
@@ -80,7 +80,7 @@ module.exports = {
     ]
   },
 
-  "voting": {
+  "ca-voting": {
     title: "Registering to vote in California after a conviction, step by step",
     topic: "ca-reentry-voting", phrase: "registering to vote in california after prison, since I am coming home", us: true,
     steps: [
@@ -94,7 +94,7 @@ module.exports = {
     ]
   },
 
-  "lifeline": {
+  "ca-lifeline": {
     title: "Getting the California LifeLine phone discount, step by step",
     topic: "ca-reentry-lifeline", phrase: "the california lifeline phone discount after prison, since I am coming home", us: true,
     steps: [
