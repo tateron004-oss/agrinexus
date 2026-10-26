@@ -72,7 +72,7 @@ module.exports = {
     ],
     "reentry-phone-safety": [
       "How do I keep my phone safe?",
-      "What should I do before I leave a library computer?",
+      "How do I lock my phone so nobody else can use it?",
       "I keep getting spam calls and texts, what do I do?"
     ],
     "reentry-accounts": [

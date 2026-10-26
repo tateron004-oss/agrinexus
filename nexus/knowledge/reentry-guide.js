@@ -12,7 +12,7 @@
 
 const CHECKED_ON = "26 October 2026";
 
-const PARTS = [require("./reentry-guide-us-a.js"), require("./reentry-guide-us-b.js"), require("./reentry-guide-us-c.js"), require("./reentry-guide-ca.js")];
+const PARTS = [require("./reentry-guide-us-a.js"), require("./reentry-guide-us-b.js"), require("./reentry-guide-us-c.js"), require("./reentry-guide-ca.js"), require("./reentry-guide-own.js")];
 const merge = field => Object.freeze(Object.assign({}, ...PARTS.map(part => part[field])));
 const SOURCES = merge("SOURCES");
 const TOPICS = merge("TOPICS");
@@ -27,6 +27,9 @@ const CANNOT_SAY = "I am not a lawyer, and I cannot say what will happen in your
 const PRIVATE = "You do not need to tell me about your case or anything private.";
 const DANGER = "If you are in danger, call 911 or your local emergency number. If you are thinking about hurting yourself, call or text 988.";
 const CHANGE = "This is general information from official pages. Rules, numbers and websites change, so check with the office or the official page before you act.";
+// Kyro's own tips (no official page explains them: reentry-guide-own.js) say so first and last, and carry no sources
+const OWN_LEAD = "These are Kyro's own tips, not from a government page. ";
+const OWN_CLOSING = "These are simple habits, not rules. For your case, your benefits or the law, check the official page or ask a person.";
 const OUTSIDE = "These come from United States government pages. The laws, offices and numbers are American; for your own country, ask a local legal aid or reentry group.";
 
 function reentryAnswer(id, { us = true, state = null } = {}) {
@@ -37,6 +40,7 @@ function reentryAnswer(id, { us = true, state = null } = {}) {
   if (american && !us) lead = `${OUTSIDE} `;
   else if (/^reentry-/.test(id) && state === "ca" && !CALIFORNIA_OF[id]) lead = "This is the federal rule. I have not read California's own page on this, so California may add to it. ";
   else if (/^reentry-/.test(id) && state === "ca") lead = "This is the federal rule. ";
+  if (topic.kind === "own") return { topic: id, title: topic.title, text: `${OWN_LEAD}${topic.text} ${OWN_CLOSING}`, sources: [] };
   const sources = topic.sources.map(key => SOURCES[key]);
   const cited = sources.length ? ` Sources: ${sources.map(source => source.name).join("; ")} (checked ${CHECKED_ON}).` : "";
   const body = topic.text;

@@ -40,7 +40,9 @@
     ["background", /\b(?:background (?:check|report|record)s?|rap sheet|copy of my (?:own )?(?:criminal )?(?:record|history)|(?:see|get|read) my (?:own )?(?:criminal )?record|my own (?:criminal )?record|criminal history (?:report|record)|credit report|errors? on my (?:record|report)|dispute\w*|(?:see|get|ask for) (?:a copy of )?the report)\b/i],
     ["jobs", /\b(?:jobs?|(?:find|finding|get|getting|look(?:ing)? for|need|want|apply(?:ing)? for) (?:a )?work\b|workforce|employ\w+|hir(?:e|ed|es|ing)|interview\w*|resume|bonding|bonded|american job center|job center|tax credit|boss)\b/i],
     ["school", /\b(?:ged|high school equivalency|hiset|school|college|classes|class|pell|financial aid|fafsa|student (?:aid|loans?)|training|certificate program|trade school|adult education|diploma)\b/i],
-    ["phone-safety", /\b(?:passcode|lock (?:my |the )?phone|spam (?:calls?|texts?)|robocalls?|library computer|public computer|(?:safe|safely|safety)\b[^.!?]{0,30}\b(?:phone|computer|online|internet)|(?:phone|computer|online|internet)\b[^.!?]{0,30}\b(?:safe|safely|safety))\b/i],
+    ["ai", /\b(?:ai|a\.i\.|artificial intelligence|chat ?bots?|chat ?gpt|ai assistants?)\b/i],
+    ["library", /\b(?:library|public|shared) computers?\b|\bcomputers? (?:at|in) the library\b|\bat the library\b/i],
+    ["phone-safety", /\b(?:passcode|lock(?:ing)? (?:my |the )?phone|spam (?:calls?|texts?)|robocalls?|(?:safe|safely|safety)\b[^.!?]{0,30}\b(?:phone|computer|online|internet)|(?:phone|computer|online|internet)\b[^.!?]{0,30}\b(?:safe|safely|safety))\b/i],
     ["accounts", /\b(?:login\.?gov|log ?in|email (?:address|account)|e-?mail|(?:create|make|set up|open) an? (?:online )?account|sign up for|passwords?)\b/i],
     ["scams", /\b(?:scams?|scammed|fraud\w*|identity theft|fake (?:call|text|message|email|website)|phishing|trick(?:ed|s|ing) (?:me|us)|conned|cheated (?:me|us)|ripped (?:me|us) off|stole (?:my )?money|took my money)\b/i],
     ["phone", /\b(?:lifeline|free phone|phone (?:plan|service|bill)|cell ?phone|(?:free|cheap(?:er)?|low[- ]cost|affordable) (?:phone|internet)|internet (?:service|plan|access)|wi-?fi|data plan|affordable connectivity|a phone|my phone|smartphone)\b/i],
@@ -49,7 +51,7 @@
     ["start", /\b(?:where (?:do|should) i (?:start|begin)|first (?:week|thing|steps?|days?)|what (?:do|should) i do|what to do (?:first|now|next)|just (?:got|get|came|come) (?:out|home)|came home|now that i'?m (?:home|out)|take care of|coming home|re-?entry|first things|get started|getting started|need to do|after (?:prison|jail)|what now|released|when i (?:get|am) out|what do i get|i get out)\b/i]
   ];
 
-  const US_OF = { start: "reentry-start", ssn: "reentry-ssn-card", id: "reentry-id", snap: "reentry-snap", health: "reentry-health", ssi: "reentry-ssi-ssdi", housing: "reentry-housing", bank: "reentry-bank", "money-owed": "reentry-money-owed", jobs: "reentry-jobs", background: "reentry-background-check", clearing: "reentry-record-clearing", supervision: "reentry-supervision", voting: "reentry-voting", help: "reentry-help", school: "reentry-school", phone: "reentry-phone-lifeline", scams: "reentry-scams", "phone-safety": "reentry-phone-safety", accounts: "reentry-accounts" };
+  const US_OF = { start: "reentry-start", ssn: "reentry-ssn-card", id: "reentry-id", snap: "reentry-snap", health: "reentry-health", ssi: "reentry-ssi-ssdi", housing: "reentry-housing", bank: "reentry-bank", "money-owed": "reentry-money-owed", jobs: "reentry-jobs", background: "reentry-background-check", clearing: "reentry-record-clearing", supervision: "reentry-supervision", voting: "reentry-voting", help: "reentry-help", school: "reentry-school", phone: "reentry-phone-lifeline", scams: "reentry-scams", "phone-safety": "reentry-phone-safety", ai: "reentry-ai-basics", library: "reentry-library-computer", accounts: "reentry-accounts" };
   const CA_OF = { id: "ca-reentry-id", health: "ca-reentry-medi-cal", snap: "ca-reentry-calfresh", jobs: "ca-reentry-jobs", background: "ca-reentry-records", clearing: "ca-reentry-records", voting: "ca-reentry-voting", phone: "ca-reentry-lifeline" };
 
   // "background check" for a job is about an employer; the person's own report is about their record
@@ -58,6 +60,8 @@
   function subtopicOf(text) {
     for (const [key, test] of SUBTOPICS) {
       if (!test.test(text)) continue;
+      // a phone word keeps a question with phone safety ("locking my phone and using a public computer")
+      if (key === "library" && /\b(?:passcode|lock(?:ing)?|spam|robocalls?|my phone|the phone)\b/i.test(text)) continue;
       if (key === "background" && /background (?:check|report)/i.test(text) && EMPLOYER_WORDS.test(text) && !/\b(?:my own|copy of|rap sheet|dispute\w*|errors?)\b/i.test(text)) return "jobs";
       return key;
     }

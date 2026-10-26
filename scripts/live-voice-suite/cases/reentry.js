@@ -30,5 +30,7 @@ module.exports = Object.freeze([
   strict("ca-jobs", "I just got out of prison in California. Can a California employer ask about my record on the application?", "Fair Chance Act"),
   strict("ca-records", "I just got out of prison in California. How do I get a copy of my own criminal record in California?", "your own criminal record"),
   strict("ca-voting", "I just got out of prison in California. Can I vote in California if I was in prison?", "register and vote"),
-  strict("ca-lifeline", "I just got out of prison in California. How do I get a cheap phone plan in California?", "California LifeLine")
+  strict("ca-lifeline", "I just got out of prison in California. How do I get a cheap phone plan in California?", "California LifeLine"),
+  strict("ai-basics", "I just got out of prison. What is an AI assistant?", "answers questions in words"),
+  strict("library-computer", "I just got out of prison. How do I use a library computer safely?", "library computer is shared")
 ]);

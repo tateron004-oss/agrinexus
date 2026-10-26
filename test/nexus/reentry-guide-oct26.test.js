@@ -27,7 +27,7 @@ function planner() {
 const ask = (p, text, timeZone = "America/Chicago") => p.plan({ command: { text, tenantId: "t1", actorId: "u1", locale: "en" }, context: { timeZone } });
 
 test("the guide has the topics it promises, each short enough to be read aloud, with a key phrase, three ways to ask it, and only pages it names", () => {
-  assert.equal(ids.length, 27);
+  assert.equal(ids.length, 29);
   assert.deepEqual(Object.keys(guide.PHRASES).sort(), [...ids].sort());
   assert.deepEqual(Object.keys(guide.KEYS).sort(), [...ids].sort());
   for (const id of ids) {
@@ -39,7 +39,8 @@ test("the guide has the topics it promises, each short enough to be read aloud, 
     assert.ok(key.length >= 8 && key.length <= 40 && !/[^A-Za-z0-9 .,']/.test(key), `${id}: key "${key}"`);
     assert.ok(topic.text.slice(0, 700).includes(key), `${id}: the key is in the first 700 characters`);
     assert.ok(guide.PHRASES[id].length >= 3, id);
-    assert.ok(topic.sources.length >= 1, id);
+    // (Kyro's own tips have no official page: they say so at the start of the answer, and carry no sources)
+    assert.ok(topic.kind === "own" ? topic.sources.length === 0 : topic.sources.length >= 1, id);
     for (const source of topic.sources) assert.ok(guide.SOURCES[source], `${id}: source ${source}`);
   }
   for (const key of Object.keys(guide.SOURCES)) {
@@ -60,7 +61,15 @@ test("the words are kind and plain: no unkind word for a person, no 'e.g.', noth
 });
 
 test("an answer names its pages and the date they were read, says it is not legal advice, asks for nothing private, and gives the emergency lines", () => {
-  for (const id of ids) {
+  for (const id of ids.filter(entry => guide.TOPICS[entry].kind === "own")) {
+    const answer = guide.reentryAnswer(id, { us: true });
+    assert.match(answer.text, /^These are Kyro's own tips, not from a government page\. /, id);
+    assert.deepEqual(answer.sources, [], id);
+    assert.doesNotMatch(answer.text, /\(checked /, id);
+    assert.match(answer.text, /simple habits, not rules/, id);
+  }
+  assert.deepEqual(ids.filter(entry => guide.TOPICS[entry].kind === "own").sort(), ["reentry-ai-basics", "reentry-library-computer"]);
+  for (const id of ids.filter(entry => guide.TOPICS[entry].kind !== "own")) {
     const answer = guide.reentryAnswer(id, { us: true });
     assert.ok(answer.text.includes(`(checked ${guide.CHECKED_ON})`), id);
     for (const source of answer.sources) assert.ok(answer.text.includes(source.name), id);
@@ -96,9 +105,11 @@ test("a question is taken only from a person who says they are coming home, have
     "What happens to my SSI when I go to jail?": "reentry-ssi-ssdi", "How do I get health insurance after prison?": "reentry-health", "Can I get an apartment with a felony on my record?": "reentry-housing",
     "How do I open a bank account when I just got out of prison?": "reentry-bank", "Will an employer hire me with a felony?": "reentry-jobs", "Can I vote if I have a felony conviction?": "reentry-voting",
     "How do I get my record expunged?": "reentry-record-clearing", "I'm on probation and I need to know what a check-in is": "reentry-supervision", "Can I get a GED now that I'm out of prison?": "reentry-school",
-    "I just got out of jail and need a cheap phone plan": "reentry-phone-lifeline", "I just got out and someone texted me asking for money, is that a scam?": "reentry-scams", "I just got out and I want to use the library computer safely": "reentry-phone-safety",
+    "I just got out of jail and need a cheap phone plan": "reentry-phone-lifeline", "I just got out and someone texted me asking for money, is that a scam?": "reentry-scams", "I just got out and I want to use the library computer safely": "reentry-library-computer",
     "I just got out of prison in California, can I get Medi-Cal?": "ca-reentry-medi-cal", "Can I vote in California with a felony?": "ca-reentry-voting", "How do I get a California ID? I just got out of prison": "ca-reentry-id",
-    "How does probation work? I have a felony record": "reentry-supervision", "I just got out of prison. What is 211?": "reentry-help"
+    "How does probation work? I have a felony record": "reentry-supervision", "I just got out of prison. What is 211?": "reentry-help",
+    "I just got out of prison. What is an AI assistant?": "reentry-ai-basics", "I just got out of prison and I use the library computer, is it safe?": "reentry-library-computer",
+    "Walk me through locking my phone and using a public computer after prison": "reentry-phone-safety"
   };
   for (const [say, id] of Object.entries(take)) assert.equal(matcher.reentryTopic(say), id, say);
   for (const say of ["How do I replace my social security card?", "Can I get food stamps?", "How do I open a bank account?", "I want to vote", "What is the weather in prison town?", "Remind me about my parole meeting tomorrow", "Call my parole officer",
