@@ -174,7 +174,7 @@ test("on the page and the server: the question is the page's own, the server tri
   const none = { window: {} };
   vm.runInNewContext(`${app.slice(start, end)}\nthis.ask = kyroSafetyQuestion;`, none);
   assert.equal(none.ask("How do I spot a fake text message?"), false, "no matcher loaded, no claim");
-  assert.match(app, /\(typeof kyroSafetyQuestion === "function" && kyroSafetyQuestion\(trimmed\)\) \|\| \(typeof kyroSpecialEdQuestion === "function" && kyroSpecialEdQuestion\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
+  assert.match(app, /\(typeof kyroSafetyQuestion === "function" && kyroSafetyQuestion\(trimmed\)\) \|\| \(typeof kyroSpecialEdQuestion === "function" && kyroSpecialEdQuestion\(trimmed\)\) \|\| \(typeof kyroReentryQuestion === "function" && kyroReentryQuestion\(trimmed\)\)\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \}/);
   assert.match(server, /const safetyAsk = typeof safetyTopic === "function" && rawCallerText && safetyTopic\(rawCallerText\) \? rawCallerText : command;/);
   assert.match(server, /safetyTopic\(safetyAsk\) && effectiveMentalHealthSignal\.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function"/);
   assert.match(server, /text: safetyAsk, language, timeZone: args\?\.timeZone/);

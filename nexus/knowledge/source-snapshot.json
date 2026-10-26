@@ -1,6 +1,6 @@
 {
- "takenAt": "2026-10-25T21:31:33.553Z",
- "count": 1182,
+ "takenAt": "2026-10-26T16:29:48.889Z",
+ "count": 1287,
  "pages": {
   "https://988lifeline.org/": {
    "state": "ok",
@@ -11877,6 +11877,1056 @@
    "checkedAt": "2026-10-25T21:31:31.732Z",
    "guides": [
     "special-ed-guide"
+   ]
+  },
+  "https://bja.ojp.gov/news/blog/community-supervision-strategies-making-probation-and-parole-more-effective": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b205386e21f93373",
+   "bytes": 6041,
+   "checkedAt": "2026-10-26T16:28:13.133Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://bonds4jobs.com/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "736ac333403deacd",
+   "bytes": 1595,
+   "checkedAt": "2026-10-26T16:28:13.467Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://calcivilrights.ca.gov/wp-content/uploads/sites/32/2025/07/Fair-Chance-Act-Factsheet_English.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:12.985Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/employer-background-checks-and-your-rights": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5d7911ca4c868b98",
+   "bytes": 10697,
+   "checkedAt": "2026-10-26T16:28:13.932Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/how-avoid-scam": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "195fbb8e54a803ac",
+   "bytes": 9827,
+   "checkedAt": "2026-10-26T16:28:13.891Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/how-block-unwanted-calls": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4d7bd123cc9d8e8d",
+   "bytes": 15882,
+   "checkedAt": "2026-10-26T16:28:15.570Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/how-protect-your-phone-hackers": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1bdbd0b849928bac",
+   "bytes": 8119,
+   "checkedAt": "2026-10-26T16:28:14.472Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1d5b108251830bac",
+   "bytes": 10108,
+   "checkedAt": "2026-10-26T16:28:14.433Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://consumer.ftc.gov/articles/robocalls": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "6b1370fac5bbabb8",
+   "bytes": 12125,
+   "checkedAt": "2026-10-26T16:28:14.844Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://edd.ca.gov/en/jobs_and_training/step-1-register-in-caljobs/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "76997bdf70f8f53a",
+   "bytes": 7494,
+   "checkedAt": "2026-10-26T16:28:14.772Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://elections.cdn.sos.ca.gov/pdfs/voting-rights-persons-with-prior-felony-flyer-en.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:15.027Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://files.consumerfinance.gov/f/documents/cfpb_adult-fin-ed_checklist-for-opening-an-account.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:15.143Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://files.consumerfinance.gov/f/documents/cfpb_background-screening-report_handout_2021-08.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:15.421Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://files.consumerfinance.gov/f/documents/cfpb_ymyg_reentry_supplement.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:15.858Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://fsapartners.ed.gov/knowledge-center/fsa-handbook/2026-2027/vol7/ch1-student-eligibility-pell-grants": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a1cd15558756c463",
+   "bytes": 20996,
+   "checkedAt": "2026-10-26T16:28:15.827Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://fsapartners.ed.gov/knowledge-center/library/dear-colleague-letters/2023-03-29/eligibility-confined-or-incarcerated-individuals-receive-pell-grants-updated-sept-30-2024": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "dbcbb382cb66c0ba",
+   "bytes": 38706,
+   "checkedAt": "2026-10-26T16:28:15.861Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://nationalreentryresourcecenter.org/cleanslate": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "206e2851d3062388",
+   "bytes": 4017,
+   "checkedAt": "2026-10-26T16:28:16.071Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://nationalreentryresourcecenter.org/cleanslate/find-a-lawyer": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "696f28512697e408",
+   "bytes": 3104,
+   "checkedAt": "2026-10-26T16:28:37.244Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://nationalreentryresourcecenter.org/resources/reentry-spotlight-understanding-and-mitigating-impacts-juvenile-and-criminal-records": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "60a62ad5af95018b",
+   "bytes": 9915,
+   "checkedAt": "2026-10-26T16:28:36.214Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://oag.ca.gov/fingerprints/automatic-record-relief-penal-code-sections-851.93-and-1203.425": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "03d95e34f5d1fcaf",
+   "bytes": 19057,
+   "checkedAt": "2026-10-26T16:28:16.470Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://oag.ca.gov/fingerprints/record-review": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "24a38b4d73b05c15",
+   "bytes": 8251,
+   "checkedAt": "2026-10-26T16:28:16.690Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://oag.ca.gov/fingerprints/record-review/fee-waiver": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e2418f5533d2d437",
+   "bytes": 6685,
+   "checkedAt": "2026-10-26T16:28:17.219Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://octae.ed.gov/aefla/about-aefla": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d5a421e033e8c333",
+   "bytes": 2413,
+   "checkedAt": "2026-10-26T16:28:17.883Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://octae.ed.gov/contacts/state-contacts": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "c5344ba5a377af62",
+   "bytes": 2466,
+   "checkedAt": "2026-10-26T16:28:18.131Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://selfhelp.courts.ca.gov/clean-your-record": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "73346620d18a07ee",
+   "bytes": 2541,
+   "checkedAt": "2026-10-26T16:28:18.416Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://selfhelp.courts.ca.gov/clean-your-record/certificate-rehabilitation": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "49755b9a9b02b8ed",
+   "bytes": 11893,
+   "checkedAt": "2026-10-26T16:28:18.613Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://studentaid.gov/understand-aid/eligibility/requirements/criminal-convictions": {
+   "state": "broken",
+   "status": 0,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:29:48.764Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://vig.cdn.sos.ca.gov/2020/general/pdf/prop17-title-summ-analysis.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:36.527Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.careeronestop.org/LocalHelp/AmericanJobCenters/find-american-job-centers.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b6bc190dbf07a5e1",
+   "bytes": 4040,
+   "checkedAt": "2026-10-26T16:28:37.065Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cdcr.ca.gov/news/2023/11/02/cdcr-and-dmv-update-state-identification-card-application-process/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5ce39752c56e5b8d",
+   "bytes": 4715,
+   "checkedAt": "2026-10-26T16:28:37.286Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cdcr.ca.gov/ombuds/ombuds/parole/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "cc68bf48c82c692c",
+   "bytes": 11901,
+   "checkedAt": "2026-10-26T16:28:37.405Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cdcr.ca.gov/parole/2023/03/30/links-to-community-resources/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "7fd6fc50ee6d8fe1",
+   "bytes": 10478,
+   "checkedAt": "2026-10-26T16:28:37.581Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cdcr.ca.gov/regulations/wp-content/uploads/sites/171/2025/06/Adopted-Regulations-Release-Allowance.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:37.625Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cdcr.ca.gov/rehabilitation/calid/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4ef3b372b7358d3d",
+   "bytes": 2699,
+   "checkedAt": "2026-10-26T16:28:37.737Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cdph.ca.gov/Programs/CHSI/Pages/Vital-Records-Fees.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "1ffea23e39d74e7c",
+   "bytes": 31644,
+   "checkedAt": "2026-10-26T16:28:40.596Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cdph.ca.gov/Programs/CHSI/Pages/Vital-Records-Obtaining-Certified-Copies-of-Birth-Records.aspx": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "5f7fb23eb8df6efc",
+   "bytes": 29659,
+   "checkedAt": "2026-10-26T16:28:40.550Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cdss.ca.gov/benefits-services/food-nutrition-services/calfresh/frequently-asked-questions": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "468e5ce5d746cac5",
+   "bytes": 7009,
+   "checkedAt": "2026-10-26T16:28:41.601Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cdss.ca.gov/calfreshoutreach/res/pdf/RegulationQuickReference_B_PeoplewithaFelonyConviction.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:41.274Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cdss.ca.gov/lettersnotices/entres/getinfo/acl/2014/14-100.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:41.591Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cisa.gov/news-events/news/choosing-and-protecting-passwords": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "30e2abd89a098baf",
+   "bytes": 8950,
+   "checkedAt": "2026-10-26T16:28:41.931Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cisa.gov/resources-tools/training/protect-physical-security-your-digital-devices": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f6b9a9250b96a3bd",
+   "bytes": 9578,
+   "checkedAt": "2026-10-26T16:28:41.938Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cms.gov/files/document/returning-community-health-care-after-incarceration-guide-health-care-reentry-english.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:42.223Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cms.gov/marketplace/technical-assistance-resources/incarcerated-and-recently-released-consumers.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:42.302Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cms.gov/newsroom/press-releases/hhs-authorizes-five-states-provide-historic-health-care-coverage-people-transitioning-out": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "8759d0988146a67a",
+   "bytes": 8908,
+   "checkedAt": "2026-10-26T16:28:42.603Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.consumerfinance.gov/ask-cfpb/can-i-cash-a-check-at-any-bank-or-credit-union-en-931/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "94aac165f91db529",
+   "bytes": 4427,
+   "checkedAt": "2026-10-26T16:28:42.570Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.consumerfinance.gov/ask-cfpb/what-is-a-second-chance-bank-account-and-who-is-it-for-en-2153/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "94c1d044a80f9599",
+   "bytes": 4762,
+   "checkedAt": "2026-10-26T16:28:42.755Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.consumerfinance.gov/ask-cfpb/what-types-of-fees-do-prepaid-cards-typically-charge-en-2053/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "86233541faafa0ab",
+   "bytes": 9636,
+   "checkedAt": "2026-10-26T16:28:42.854Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.consumerfinance.gov/ask-cfpb/why-was-i-denied-a-checking-account-en-1113/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "d6d1a85de45591a9",
+   "bytes": 8102,
+   "checkedAt": "2026-10-26T16:28:42.916Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.consumerfinance.gov/consumer-tools/credit-reports-and-scores/consumer-reporting-companies/companies-list/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4049ac783dd34629",
+   "bytes": 12914,
+   "checkedAt": "2026-10-26T16:28:43.038Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cpuc.ca.gov/consumer-support/financial-assistance-savings-and-discounts/lifeline": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "ddbd9859bd26d7f9",
+   "bytes": 4821,
+   "checkedAt": "2026-10-26T16:28:43.655Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.cpuc.ca.gov/consumer-support/financial-assistance-savings-and-discounts/lifeline/california-lifeline-eligibility": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b4f1dbdafe019d5b",
+   "bytes": 12895,
+   "checkedAt": "2026-10-26T16:28:43.659Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.dhcs.ca.gov/calaim-transforming-medi-cal/justice-involved-reentry-initiative/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 82,
+   "checkedAt": "2026-10-26T16:28:43.903Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.dhcs.ca.gov/wp-content/uploads/2025/10/24-04.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:43.935Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.dhcs.ca.gov/wp-content/uploads/2025/10/CalAIM-JI-a11y.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:44.231Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.dhcs.ca.gov/wp-content/uploads/2026/05/CA-Reentry-Initiative-Impact-Report-March-2026.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:44.150Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.dmv.ca.gov/portal/driver-licenses-identification-cards/identification-id-cards/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "83fbbfd055f41eb7",
+   "bytes": 8512,
+   "checkedAt": "2026-10-26T16:28:44.395Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.dmv.ca.gov/portal/driver-licenses-identification-cards/licensing-fees/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "0b9ff5777cd75c76",
+   "bytes": 12753,
+   "checkedAt": "2026-10-26T16:28:44.446Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.dmv.ca.gov/portal/driver-licenses-identification-cards/reduced-no-fee-id-card-program-information-for-organizations/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a2f3b5c079d05c77",
+   "bytes": 11401,
+   "checkedAt": "2026-10-26T16:28:44.578Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.dol.gov/agencies/eta/american-job-centers": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "945fb85c0d9fd3f4",
+   "bytes": 4729,
+   "checkedAt": "2026-10-26T16:28:45.083Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.dol.gov/agencies/eta/federal-bonding-program": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9f4b245401b762d8",
+   "bytes": 3322,
+   "checkedAt": "2026-10-26T16:28:45.019Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.dol.gov/agencies/eta/wotc": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "de452bf4159372fc",
+   "bytes": 3985,
+   "checkedAt": "2026-10-26T16:28:45.255Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.ecfr.gov/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f42574b60c5c166f",
+   "bytes": 7303,
+   "checkedAt": "2026-10-26T16:28:45.458Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.eeoc.gov/arrestandconviction": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "06f1a22dbddd33fe",
+   "bytes": 11509,
+   "checkedAt": "2026-10-26T16:28:45.883Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.eeoc.gov/laws/guidance/background-checks-what-job-applicants-and-employees-should-know": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9449c31cbdd9936f",
+   "bytes": 14054,
+   "checkedAt": "2026-10-26T16:28:46.013Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.eeoc.gov/laws/guidance/enforcement-guidance-consideration-arrest-and-conviction-records-employment-decisions": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "064cf2fbbf4263ce",
+   "bytes": 157134,
+   "checkedAt": "2026-10-26T16:28:46.181Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.fcc.gov/consumers/guides/dial-211-essential-community-services": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "edb40f493499a1e2",
+   "bytes": 6272,
+   "checkedAt": "2026-10-26T16:28:46.512Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.fcc.gov/general/lifeline-program-low-income-consumers": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "bc4513a956e9edd8",
+   "bytes": 190744,
+   "checkedAt": "2026-10-26T16:28:46.639Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.fdic.gov/system/files/2024-05/how-to-open-a-bank-account.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:46.863Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.fna.usda.gov/sites/default/files/resource-files/snap-stateOptionsReport-17edition-120925.pdf": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:47.487Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.fns.usda.gov/snap/recipient/eligibility": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "6c3074851aaed2e7",
+   "bytes": 20945,
+   "checkedAt": "2026-10-26T16:28:47.206Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.fns.usda.gov/snap/state-directory": {
+   "state": "moved",
+   "status": 200,
+   "fingerprint": "c8f666d0a37319d5",
+   "bytes": 3778,
+   "checkedAt": "2026-10-26T16:28:47.579Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.healthcare.gov/incarcerated-people/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "25ea6f081f97de7a",
+   "bytes": 4646,
+   "checkedAt": "2026-10-26T16:28:47.925Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.hud.gov/helping-americans": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a5fef8fb35768482",
+   "bytes": 15783,
+   "checkedAt": "2026-10-26T16:28:48.280Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.hud.gov/sites/dfiles/PIH/documents/HCV_Guidebook_Eligibility_Determination_and_Denial_of_Assistance.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:48.410Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.hud.gov/sites/dfiles/PIH/documents/PHOG_Eligibility_Det_Denial_Assistance.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:48.654Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.irs.gov/businesses/small-businesses-self-employed/work-opportunity-tax-credit": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a6c612e1339f8251",
+   "bytes": 21498,
+   "checkedAt": "2026-10-26T16:28:48.761Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.justice.gov/crt/media/1332106/dl": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:48.903Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.justice.gov/opa/press-release/file/1580546/dl": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-10-26T16:28:49.008Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.lifelinesupport.org/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "efc2e1f763d00f12",
+   "bytes": 3898,
+   "checkedAt": "2026-10-26T16:28:49.599Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.lifelinesupport.org/about-lifeline/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "fca62307e7d44b12",
+   "bytes": 3029,
+   "checkedAt": "2026-10-26T16:28:49.657Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.lifelinesupport.org/companies-near-me/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e582ac7707a44310",
+   "bytes": 1942,
+   "checkedAt": "2026-10-26T16:28:49.825Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.lifelinesupport.org/how-to-apply/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "dfa6a60767204313",
+   "bytes": 2107,
+   "checkedAt": "2026-10-26T16:28:49.866Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.lifelinesupport.org/how-to-qualify/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "8626e345df34cc17",
+   "bytes": 4235,
+   "checkedAt": "2026-10-26T16:28:50.050Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.login.gov/help/create-account/how-do-i-create-an-account/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "e5b306c051ba0311",
+   "bytes": 5273,
+   "checkedAt": "2026-10-26T16:28:50.191Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.login.gov/what-is-login/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "98150dedf764873b",
+   "bytes": 3209,
+   "checkedAt": "2026-10-26T16:28:50.318Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.lsc.gov/about-lsc/what-legal-aid/i-need-legal-help": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9d68a922b9d0941b",
+   "bytes": 5695,
+   "checkedAt": "2026-10-26T16:28:50.592Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.samhsa.gov/mental-health/988": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "02d7cc69dba2f732",
+   "bytes": 45228,
+   "checkedAt": "2026-10-26T16:28:51.099Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.sos.ca.gov/elections/voting-rights-restored/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4fe7b5148de9ae73",
+   "bytes": 6642,
+   "checkedAt": "2026-10-26T16:28:50.879Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.ssa.gov/number-card/replace-card": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "90e7ea3b2993817e",
+   "bytes": 2574,
+   "checkedAt": "2026-10-26T16:28:51.323Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.ssa.gov/reentry/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "f2cc8f659fca9171",
+   "bytes": 11679,
+   "checkedAt": "2026-10-26T16:28:51.612Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.ssa.gov/reentry/benefits.htm": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9d7ba0ed1371a2e3",
+   "bytes": 12032,
+   "checkedAt": "2026-10-26T16:28:51.835Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.usa.gov/birth-certificate": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "94817d5235b8eb7c",
+   "bytes": 3800,
+   "checkedAt": "2026-10-26T16:28:51.950Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.usa.gov/emergency-housing": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "344b606eb2d2e156",
+   "bytes": 3736,
+   "checkedAt": "2026-10-26T16:28:51.990Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.usa.gov/medicaid-chip-insurance": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "b057f31ffc50cb71",
+   "bytes": 5424,
+   "checkedAt": "2026-10-26T16:28:52.113Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.usa.gov/real-id": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9b20f34e05b0abb9",
+   "bytes": 4479,
+   "checkedAt": "2026-10-26T16:28:52.130Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.usa.gov/replace-vital-documents": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9a21796bb0bae17c",
+   "bytes": 3758,
+   "checkedAt": "2026-10-26T16:28:52.273Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.usa.gov/social-security-card": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "35076ffd6112a279",
+   "bytes": 4554,
+   "checkedAt": "2026-10-26T16:28:52.364Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.usa.gov/state-motor-vehicle-services": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "a500412d32b8ab19",
+   "bytes": 3484,
+   "checkedAt": "2026-10-26T16:28:52.432Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.usa.gov/who-can-vote": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "11e25149929cc67b",
+   "bytes": 4286,
+   "checkedAt": "2026-10-26T16:28:52.536Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.usac.org/about/affordable-connectivity-program/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "38a776df7d4df9cc",
+   "bytes": 7989,
+   "checkedAt": "2026-10-26T16:28:54.596Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.uscourts.gov/about-federal-courts/probation-and-pretrial-services/post-conviction-supervision": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4ab10e298d17c3a2",
+   "bytes": 24199,
+   "checkedAt": "2026-10-26T16:28:52.808Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.uscourts.gov/about-federal-courts/probation-and-pretrial-services/post-conviction-supervision/overview-probation-and-supervised-release-conditions": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "4bf26e291d5cc3a2",
+   "bytes": 20164,
+   "checkedAt": "2026-10-26T16:28:53.000Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.uscourts.gov/about-federal-courts/probation-and-pretrial-services/post-conviction-supervision/overview-probation-and-supervised-release-conditions/chapter-2-initial-reporting-probation-office-probation-and": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "49f10ea90dce97e2",
+   "bytes": 25061,
+   "checkedAt": "2026-10-26T16:28:53.185Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.uscourts.gov/about-federal-courts/probation-and-pretrial-services/post-conviction-supervision/overview-probation-and-supervised-release-conditions/chapter-2-reporting-probation-officer-probation-and-supervised": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "49f36ca91d97cee2",
+   "bytes": 26312,
+   "checkedAt": "2026-10-26T16:28:53.385Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://www.va.gov/resources/how-to-create-a-logingov-account-for-va/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "8c311fc0dcf373dc",
+   "bytes": 3469,
+   "checkedAt": "2026-10-26T16:28:54.127Z",
+   "guides": [
+    "reentry-guide"
    ]
   }
  }
