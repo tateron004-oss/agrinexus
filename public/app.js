@@ -50928,6 +50928,7 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
         : "output-audio-buffer-cleared");
     }
     if (eventType === "input_audio_buffer.speech_started") {
+      try { kyroUserSpeechAt = Date.now(); } catch { /* noting it never blocks the turn */ }
       // The automatic reply being off with no interview running is never intended: put it right before this turn ends (see kyroEnsureAutoResponse).
       try { if (typeof kyroEnsureAutoResponse === "function") kyroEnsureAutoResponse("speech-started"); } catch { /* never block the turn */ }
       const turnId = nextRealtimeTurnId();
@@ -51242,6 +51243,9 @@ function kyroSpeakPageLine(text) {
 const KYRO_REFUSAL = /\bi\s+(?:can(?:'|\u2019)?t|cannot|can not|couldn(?:'|\u2019)?t|could not|am not able|am unable|was not able|wasn(?:'|\u2019)?t able|don(?:'|\u2019)?t have (?:access|a way|the ability))\b|\bi(?:'|\u2019)m\s+(?:not able|unable|not sure what you)\b|\bnot sure what you(?:'|\u2019)?d like\b/i;
 // ("Your notes should open on the screen now" said with no tool called and nothing opened: the same recovery answers it)
 const KYRO_FALSE_CLAIM = /\bshould (?:now )?(?:open|appear|show)\b[^.]{0,40}\bscreen\b|\b(?:is|are) now (?:open|showing|on (?:the|your) screen)\b|\bon (?:the|your) screen now\b|\bi(?:'|\u2019)?ve (?:opened|pulled up|brought up|put up)\b|\bi have (?:opened|pulled up|brought up)\b/i;
+// (when the person last began to speak, and when a walkthrough was last opened: the refusal recovery below must not replay old words while new ones are still being turned into text, or reopen what these very words opened)
+let kyroUserSpeechAt = 0;
+let kyroWalkthroughOpenedAt = 0;
 let kyroHeard = { key: "", text: "", at: 0, recovered: false };
 let kyroRefusalBuf = "";
 let kyroRefusalSeenAt = 0;
@@ -51267,6 +51271,12 @@ function kyroRecoverRefusal() {
   if (now - kyroHeard.at > 20000 || now - kyroRefusalSeenAt > 20000) return false;
   if (kyroToolCalledAt >= kyroHeard.at) return false; // the model did act on it: its answer stands
   if (now < kyroPageSpeaksUntil || kyroActiveVoiceIntake) return false; // the page already has this turn
+  // Found live on 25 October 2026 (walkthrough cases that failed about once in a hundred): "Next." was said right after a walkthrough opened; the voice model began to answer before the page had the words (the text takes about three seconds), began with "I can't see the next step",
+  // and this recovery replayed the LAST words it had, the request that had opened the walkthrough: the walkthrough was reopened at step 1, its screen was gone when "Next." arrived, and "Next." was answered as a new question.
+  // (1) The person has spoken since the last words the page has: the model is answering words that are still on their way, so there is nothing yet to replay.
+  try { if (typeof kyroUserSpeechAt !== "undefined" && kyroUserSpeechAt > kyroHeard.at) return false; } catch { /* the guard is only a guard */ }
+  // (2) A walkthrough that these very words opened is on the screen: the page has answered them.
+  try { if (typeof kyroWalkthroughOpenedAt !== "undefined" && kyroWalkthroughOpenedAt >= kyroHeard.at && document.querySelector('[data-kyro-result="walkthrough"]')) return false; } catch { /* the guard is only a guard */ }
   kyroHeard.recovered = true;
   const said = kyroHeard.text;
   kyroPageSpeaksUntil = now + 40000;
@@ -52503,6 +52513,7 @@ function kyroOpenWalkthrough(raw, introLine = "") {
     const walk = lib.createWalkthrough(raw, { storage }); if (!walk) return false;
     const lang = kyroWalkthroughLang();
     kyroWalkthrough = { walk, lang };
+    try { kyroWalkthroughOpenedAt = Date.now(); } catch { /* noting it never blocks the walkthrough */ }
     if (!kyroWalkthroughDraw()) return false;
     const words = lib.TEXT[lang];
     kyroWalkthroughOpening = [String(introLine || "").trim(), walk.resumed ? words.resumed(walk.snapshot().number) : "", lib.sayStep(walk.snapshot(), lang)].filter(Boolean).join(" ");
