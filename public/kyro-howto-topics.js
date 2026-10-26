@@ -16,6 +16,7 @@
   // "show me how to register my business" and the like are a guide's: a part of Kyro must be named
   const FEATURES = [
     // how to use the special education and ADHD guide (asked before "using Kyro", which would otherwise take them)
+    ["howto-reentry-start", /\b(?:using|use|getting started with) kyro (?:when|after|if|as) (?:i am|i'm|you are|someone is|i have|i just)?[^.!?]{0,30}\b(?:coming home|came home|reentry|re-entry|prison|jail|got out)\b|\bkyro (?:for|when) (?:coming home|reentry|re-entry)\b/i],
     ["howto-sped-start", /\b(?:using|use|getting started with) kyro for special education\b|\bkyro for special education\b|\bspecial education (?:help )?(?:with|in) kyro\b/i],
     ["howto-sped-parent", /\bkyro as a parent\b|\bkyro for parents\b|\bkyro (?:with|for) my child'?s (?:iep|school)\b/i],
     ["howto-sped-teacher", /\bkyro as a (?:teacher|school administrator|principal|head ?teacher)\b|\bkyro for (?:teachers|school administrators|administrators)\b/i],
