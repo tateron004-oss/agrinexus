@@ -17,7 +17,7 @@ const GUIDES = {
   "us-community-support": require("../../nexus/knowledge/us-community-support.js"), "church-guide": require("../../nexus/knowledge/church-guide.js"), "parents-guide": require("../../nexus/knowledge/parents-guide.js"),
   "womens-health": require("../../nexus/knowledge/womens-health.js"), "chronic-conditions": require("../../nexus/knowledge/chronic-conditions.js"), "small-business-technology": require("../../nexus/knowledge/small-business-technology.js"),
   "ai-tools-for-business": require("../../nexus/knowledge/ai-tools-for-business.js"), "africa-small-business": require("../../nexus/knowledge/africa-small-business.js"), "us-small-business": require("../../nexus/knowledge/us-small-business.js"),
-  "california-business": require("../../nexus/knowledge/california-business.js"), "pr-events-guide": require("../../nexus/knowledge/pr-events-guide.js"), "athlete-guide": require("../../nexus/knowledge/athlete-guide.js"), "safety-guide": require("../../nexus/knowledge/safety-guide.js"), "special-ed-guide": require("../../nexus/knowledge/special-ed-guide.js")
+  "california-business": require("../../nexus/knowledge/california-business.js"), "pr-events-guide": require("../../nexus/knowledge/pr-events-guide.js"), "athlete-guide": require("../../nexus/knowledge/athlete-guide.js"), "safety-guide": require("../../nexus/knowledge/safety-guide.js"), "special-ed-guide": require("../../nexus/knowledge/special-ed-guide.js"), "reentry-guide": require("../../nexus/knowledge/reentry-guide.js")
 };
 const ALL = registry.FAMILIES.flatMap(family => Object.entries(family.WALKTHROUGHS).map(([id, def]) => ({ family, id, def })));
 

@@ -46,6 +46,8 @@ const { safetyTopic } = require("../../public/kyro-safety-topics.js");
 const { safetyAnswer } = require("../knowledge/safety-guide.js");
 const { specialEdTopic, placeOf: specialEdPlace } = require("../../public/kyro-special-ed-topics.js");
 const { specialEdAnswer } = require("../knowledge/special-ed-guide.js");
+const { reentryTopic, placeOf: reentryPlace } = require("../../public/kyro-reentry-topics.js");
+const { reentryAnswer } = require("../knowledge/reentry-guide.js");
 const { moneyAnswer } = require("../knowledge/money-guide.js");
 const { moneyWalkthrough, WALK_OF_TOPIC: MONEY_WALK_OF_TOPIC, moneyWalkthroughFor } = require("../knowledge/money-walkthroughs.js");
 const { athleteWalkthrough, WALK_OF_TOPIC: ATHLETE_WALK_OF_TOPIC, athleteWalkthroughFor } = require("../knowledge/athlete-walkthroughs.js");
@@ -576,6 +578,21 @@ class OpenEndedPlanner {
         const sedWalk = guideWalkthroughPlan(command, askText, "special-ed-guide", sedGuide.topic, "professional-advice", sedUs);
         if (sedWalk) return sedWalk;
         return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: sedGuide.text, sourceRequired: false, knowledge: `special-ed-guide:${sedGuide.topic}`, sources: sedGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+      }
+    }
+    // Coming home after prison or jail (getting an ID and a Social Security card back, food help, health coverage, Social Security and SSI after release, housing, a bank account, work and a record, clearing a record, supervision, voting, school, a phone, scams, staying safe on a phone
+    // or a library computer, where to get help): a checked, sourced, plain answer from the official pages of the United States and California (see knowledge/reentry-guide.js). Taken ONLY when the person says they are coming home or have a record or are under supervision
+    // (public/kyro-reentry-topics.js): the same subject asked by anyone else stays with the rest of Kyro. It never gives legal advice, never says what breaks a condition of supervision, and never asks for a record or a case. Kenya and Nigeria are left to the rest of Kyro.
+    {
+      const reCountry = africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText });
+      const reId = reentryTopic(askText, { country: reCountry });
+      const reState = reentryPlace(askText) === "ca" ? "ca" : null;
+      const reUs = (usPerson || Boolean(reState)) && !africaNamed(askText);
+      const reGuide = reId ? reentryAnswer(reId, { us: reUs, state: reState }) : null;
+      if (reGuide) {
+        const reWalk = guideWalkthroughPlan(command, askText, "reentry-guide", reGuide.topic, "professional-advice", reUs);
+        if (reWalk) return reWalk;
+        return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: reGuide.text, sourceRequired: false, knowledge: `reentry-guide:${reGuide.topic}`, sources: reGuide.sources, guardrail: "professional-advice", planningAttempts: 0 });
       }
     }
     // A parent's question about their child's growing up and safety (how to talk with a child about the body and relationships, the signs of abuse, what to do if a child tells you, a young girl who is pregnant, who to call): a checked,

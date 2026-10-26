@@ -94,6 +94,7 @@ const { moneyTopic } = require("./public/kyro-money-topics.js");
 const { howtoTopic } = require("./public/kyro-howto-topics.js");
 const { safetyTopic } = require("./public/kyro-safety-topics.js");
 const { specialEdTopic } = require("./public/kyro-special-ed-topics.js");
+const { reentryTopic } = require("./public/kyro-reentry-topics.js");
 const { technologyTopic: techWalkTopic, aiToolsTopic: aiWalkTopic, isWalkRequest: isTechWalkRequest } = require("./public/kyro-technology-topics.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
@@ -22601,6 +22602,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (specialEdGuide) {
       return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: specialEdGuide.response,
         executionAttempted: true, executionVerified: specialEdGuide.verified === true };
+    }
+  }
+  // Coming home after prison or jail (nexus/knowledge/reentry-guide.js: an ID and a Social Security card, food help, health coverage, benefits, housing, a bank account, work and a record, clearing a record, supervision, voting, school, a phone, scams, where to get help) is answered from the checked guide
+  // whichever tool the model picked, with the person's own words tried first: the voice model answered from memory with no sources, and could state a rule or a deadline wrongly for a person who is about to act on it. Only when the person says they are coming home or have a record.
+  const reentryAsk = typeof reentryTopic === "function" && rawCallerText && reentryTopic(rawCallerText) ? rawCallerText : command;
+  if (typeof reentryTopic === "function" && reentryTopic(reentryAsk) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
+    const reentryUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const reentryGuide = reentryUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: reentryUser, text: reentryAsk, language, timeZone: args?.timeZone }) : null;
+    if (reentryGuide) {
+      return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: reentryGuide.response,
+        executionAttempted: true, executionVerified: reentryGuide.verified === true };
     }
   }
   // A request to be WALKED THROUGH a technology or AI-tools topic (public/kyro-technology-topics.js) is answered by the planner's walkthrough whichever tool the model picked, with the person's own words tried first.
