@@ -181,9 +181,9 @@ test("on the page and the server: the question is the page's own, the server tri
   assert.ok(server.includes('const { reentryTopic } = require("./public/kyro-reentry-topics.js");'));
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  const tag = '<script src="/kyro-reentry-topics.js?v=kyro-reentry-topics-1"></script>';
+  const tag = '<script src="/kyro-reentry-topics.js?v=kyro-reentry-topics-2"></script>';
   assert.ok(index.includes(tag) && index.indexOf(tag) < index.search(/<script[^>]+src="\/app\.js/));
-  assert.match(sw, /`\/kyro-reentry-topics\.js\?v=kyro-reentry-topics-1`/);
+  assert.match(sw, /`\/kyro-reentry-topics\.js\?v=kyro-reentry-topics-2`/);
   const check = fs.readFileSync(path.join(__dirname, "../../scripts/check-guide-sources.js"), "utf8");
   assert.match(check, /const GUIDES = \[[^\]]*"reentry-guide"/);
   const collected = collectSources(path.join(__dirname, "../../nexus/knowledge"));
@@ -200,4 +200,59 @@ test("the guide's own words hold the line: no legal advice, no word on what brea
     const text = guide.TOPICS[id].text;
     assert.doesNotMatch(text, /\byou will (?:get|be approved|qualify|win)\b|\bguarantee\b|\bwill not break your (?:parole|probation)\b|\bwill break your (?:parole|probation)\b/i, id);
   }
+});
+
+// Found by the live voice test on 26 October 2026 (6 of 29 cases failed the first time): the voice system hands over what a person says in pieces, cut at a pause. "I just got out of prison." arrived first (and got the welcome answer);
+// "How do I see what is on my background check?" arrived alone, without the words that show the person is coming home, so it was not taken and the voice model answered it from memory, with no sources. The page now remembers the words that showed it
+// for fifteen minutes and asks the later question with them in front.
+test("the words that show a person is coming home are remembered, and a later question that comes alone is asked with them in front (never an order, an emergency or a question about something else)", () => {
+  assert.equal(matcher.contextOf("I just got out of prison."), "I just got out of prison.");
+  assert.equal(matcher.contextOf("I just got out of prison. Where do I start?"), "I just got out of prison.");
+  assert.equal(matcher.contextOf("I'm on parole."), "I'm on parole.");
+  assert.equal(matcher.contextOf("I just got out of prison and need food stamps"), null, "it asks about a subject: it was answered when it was said");
+  for (const say of ["Remind me about my parole meeting", "What is the weather today?", "I want to hurt myself, I just got out of prison", "I just got out of prison in Nairobi"]) assert.equal(matcher.contextOf(say), null, say);
+  const before = "I just got out of prison.";
+  assert.equal(matcher.withContext("How do I see what is on my background check?", before), "I just got out of prison. How do I see what is on my background check?");
+  assert.equal(matcher.reentryTopic(matcher.withContext("How do I see what is on my background check?", before)), "reentry-background-check");
+  assert.equal(matcher.reentryTopic(matcher.withContext("How do I get a cheap phone plan in California?", before)), "ca-reentry-lifeline");
+  assert.equal(matcher.reentryTopic(matcher.withContext("Can I vote?", before)), "reentry-voting");
+  for (const say of ["Remind me about food stamps", "What is the weather today?", "Call my bank", "How do I make a pizza?", "I want to hurt myself", "Play some music", "Apply for food stamps for me", "How do I get food stamps in Nairobi?"]) assert.equal(matcher.withContext(say, before), null, say);
+  assert.equal(matcher.withContext("Can I vote?", ""), null, "nothing remembered");
+});
+
+test("on the page: a question that comes alone is asked with the remembered words for fifteen minutes and not after; a question with its own words, or about something else, is left to the ordinary route", () => {
+  const start = app.indexOf("let kyroReentryContext = { text: \"\", at: 0 };");
+  const end = app.indexOf("\n}\n", app.indexOf("function kyroReentryRememberedText(text) {")) + 2;
+  const qStart = app.indexOf("function kyroReentryQuestion(text) {");
+  const qEnd = app.indexOf("\n}\n", qStart) + 2;
+  assert.ok(start > 0 && end > start && qStart > 0 && qEnd > qStart);
+  let now = 1000000;
+  const context = { window: { KyroReentryTopics: matcher }, Intl: { DateTimeFormat: () => ({ resolvedOptions: () => ({ timeZone: "America/Chicago" }) }) }, Date: { now: () => now } };
+  vm.runInNewContext(`${app.slice(qStart, qEnd)}\n${app.slice(start, end)}\nthis.claim = kyroReentryQuestion; this.remembered = kyroReentryRememberedText;`, context);
+  // before anything is said: nothing to add
+  assert.equal(context.remembered("How do I see what is on my background check?"), null);
+  // the first piece is claimed by the ordinary route, and it remembers
+  assert.equal(context.claim("I just got out of prison."), true);
+  now += 4000;
+  assert.equal(context.remembered("How do I see what is on my background check?"), "I just got out of prison. How do I see what is on my background check?");
+  now += 14 * 60 * 1000;
+  assert.equal(context.remembered("Can I vote?"), "I just got out of prison. Can I vote?", "fourteen minutes later");
+  now += 2 * 60 * 1000;
+  assert.equal(context.remembered("Can I vote?"), null, "sixteen minutes after: forgotten");
+  // a question that carries its own words is the ordinary claim's, and refreshes what is remembered
+  assert.equal(context.remembered("I'm on parole. Can I vote?"), null);
+  assert.equal(context.remembered("Can I vote?"), "I'm on parole. Can I vote?");
+  for (const say of ["Remind me about food stamps", "What is the weather today?", "Call my bank"]) assert.equal(context.remembered(say), null, say);
+  const none = { window: {}, Date };
+  vm.runInNewContext(`${app.slice(start, end)}\nthis.remembered = kyroReentryRememberedText;`, none);
+  assert.equal(none.remembered("Can I vote?"), null, "no matcher loaded");
+  // wired: before the guides that follow, and sent as the ordinary turn
+  assert.match(app, /const withContext = kyroReentryRememberedText\(trimmed\);\s+if \(withContext\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \} catch \{ \/\* nothing to cut off \*\/ \}\s+kyroPageSpeaksUntil = Date\.now\(\) \+ 40000;\s+void handleNexusUnifiedBrainRuntimeCommand\(withContext, \{ source: "typed", kyroDirect: true \}\);/);
+});
+
+test("the live cases for scams and phone safety ask what only this guide answers (the older Safety guide, which comes first, answers 'how can I tell if it is a scam' and 'keep my phone safe')", () => {
+  const cases = require("../../scripts/live-voice-suite/cases/reentry.js");
+  assert.equal(cases.length, 29);
+  assert.match(cases.find(entry => entry.id === "reentry-scams").say, /tricked me out of money/);
+  assert.match(cases.find(entry => entry.id === "reentry-phone-safety").say, /lock my phone/);
 });

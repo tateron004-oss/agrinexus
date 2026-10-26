@@ -51717,6 +51717,18 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       }
       return true;
     }
+    // A question that comes alone, a moment after the person said they are coming home (see kyroReentryRememberedText): asked with their own earlier words in front of it, so it is answered from the checked guide and not from memory.
+    if (trimmed && typeof kyroReentryRememberedText === "function") {
+      const withContext = kyroReentryRememberedText(trimmed);
+      if (withContext) {
+        if (!heardAgain) {
+          try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+          kyroPageSpeaksUntil = Date.now() + 40000;
+          void handleNexusUnifiedBrainRuntimeCommand(withContext, { source: "typed", kyroDirect: true });
+        }
+        return true;
+      }
+    }
     // "What is the Veterans Crisis Line?", "who can help my grandmother who is being scammed?", "do I have to give donors a receipt?": a question about official help for veterans, older adults, young people or nonprofits is answered
     // from Kyro's checked guide (with its official phone numbers and sources), as typing it is. The voice model had answered these from memory, "depending on the country", with no number (found by the live voice test).
     if (trimmed && typeof kyroCommunityQuestion === "function" && kyroCommunityQuestion(trimmed)) {
@@ -53303,10 +53315,30 @@ function kyroReentryQuestion(text) {
   try {
     const lib = window.KyroReentryTopics;
     if (!lib || typeof lib.reentryTopic !== "function") return false;
+    try { const said = typeof lib.contextOf === "function" ? lib.contextOf(text) : null; if (said) kyroReentryContext = { text: said, at: Date.now() }; } catch { /* remembering is only a help */ }
     let zone = "";
     try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { zone = ""; }
     return Boolean(lib.reentryTopic(text, { country: zone === "Africa/Nairobi" ? "ke" : zone === "Africa/Lagos" ? "ng" : null }));
   } catch { return false; }
+}
+// What a person said that shows they are coming home, remembered for fifteen minutes (public/kyro-reentry-topics.js): the voice system hands over a sentence in pieces cut at a pause ("I just got out of prison." and then "How do I see what is on my
+// background check?"), and the second piece alone does not show it. The question is then asked with the person's own earlier words in front of it. Nothing is kept past the page, and nothing is sent anywhere but the ordinary turn.
+let kyroReentryContext = { text: "", at: 0 };
+const KYRO_REENTRY_CONTEXT_MS = 15 * 60 * 1000;
+function kyroReentryRememberedText(text) {
+  try {
+    const lib = window.KyroReentryTopics;
+    if (!lib || typeof lib.contextOf !== "function" || typeof lib.withContext !== "function") return null;
+    let zone = "";
+    try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { zone = ""; }
+    const options = { country: zone === "Africa/Nairobi" ? "ke" : zone === "Africa/Lagos" ? "ng" : null };
+    const now = Date.now();
+    const said = lib.contextOf(text);
+    if (said) kyroReentryContext = { text: said, at: now };
+    if (lib.reentryTopic(text, options)) return null; // it carries its own words: the ordinary claim takes it
+    if (!kyroReentryContext.text || now - kyroReentryContext.at > KYRO_REENTRY_CONTEXT_MS) return null;
+    return lib.withContext(text, kyroReentryContext.text, options);
+  } catch { return null; }
 }
 // A question about staying safe online and on the phone (public/kyro-safety-topics.js, shared with the server): a fake message or call, passwords and two-step sign-in, a hijacked account, identity theft, locked files, a swapped SIM card, where to report.
 // The page takes it itself so the voice model does not answer from memory, with no sources, a step or a number that a person in trouble will act on. A device in Nairobi or Lagos is given its country, as the server gives it, so that a question
