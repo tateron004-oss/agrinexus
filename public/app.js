@@ -58241,7 +58241,7 @@ function waitForStableUserMapCanvas(maxWaitMs = 900, intervalMs = 30) {
 function genesisRoadRoute(payload = {}) {
   const raw = Array.isArray(payload.routeGeometry) ? payload.routeGeometry : [];
   const points = raw.map(pair => (Array.isArray(pair) ? [Number(pair[0]), Number(pair[1])] : null))
-    .filter(pair => pair && Number.isFinite(pair[0]) && Number.isFinite(pair[1]) && Math.abs(pair[0]) <= 90 && Math.abs(pair[1]) <= 180);
+    .filter(pair => pair && Number.isFinite(pair[0]) && Number.isFinite(pair[1]) && Math.abs(pair[0]) <= 90 && Math.abs(pair[1]) <= 540);
   if (points.length < 2) return null;
   const meters = Number(payload.distanceMeters);
   const seconds = Number(payload.durationSeconds);
@@ -61348,17 +61348,23 @@ async function handleKyroNavigationCommand(text, options = {}) {
 // The route on the map with its steps listed (kyro-navigation.js hands it over): a spoken direction can be followed by eye as well as by ear. A missing map or a failed draw never stops the spoken directions.
 let kyroRouteYouMarker = null;
 function kyroRoutePoints(route) {
-  return (Array.isArray(route?.geometry) ? route.geometry : []).map(pair => [Number(pair?.[1]), Number(pair?.[0])]).filter(pair => Number.isFinite(pair[0]) && Number.isFinite(pair[1]) && Math.abs(pair[0]) <= 90 && Math.abs(pair[1]) <= 180);
+  return (Array.isArray(route?.geometry) ? route.geometry : []).map(pair => [Number(pair?.[1]), Number(pair?.[0])]).filter(pair => Number.isFinite(pair[0]) && Number.isFinite(pair[1]) && Math.abs(pair[0]) <= 90 && Math.abs(pair[1]) <= 540);
 }
 // The whole route in view, below the list of steps at the top (and above the guidance panel at the bottom while being guided).
 function kyroFitRouteBelowSteps(points, live = false) {
   const sheet = document.querySelector("[data-kyro-route-steps]");
   userMap.fitBounds(points, { paddingTopLeft: [24, (sheet?.offsetHeight || 0) + 24], paddingBottomRight: [24, live ? 140 : 24] });
 }
-// The places a trip passes through (not the first or the last, which are marked anyway), each with its name.
+// The places a trip passes through (not the first or the last, which are marked anyway), each with its name, in a group of their own so that drawing them again does not double them.
+let kyroTripStopLayer = null;
 function kyroMarkTripStops(stops) {
   try {
-    (Array.isArray(stops) ? stops : []).slice(1, -1).forEach(stop => { if (Number.isFinite(Number(stop?.lat)) && Number.isFinite(Number(stop?.lng))) L.marker([Number(stop.lat), Number(stop.lng)]).addTo(userMapLayers.markers).bindPopup(`<strong>${escapeHtml(String(stop.label || "Stop"))}</strong>`); });
+    if (kyroTripStopLayer) { try { kyroTripStopLayer.remove(); } catch { /* already gone */ } kyroTripStopLayer = null; }
+    const list = (Array.isArray(stops) ? stops : []).slice(1, -1).filter(stop => Number.isFinite(Number(stop?.lat)) && Number.isFinite(Number(stop?.lng)));
+    if (!list.length || !userMap) return;
+    const group = L.layerGroup();
+    list.forEach(stop => L.marker([Number(stop.lat), Number(stop.lng)]).addTo(group).bindPopup(`<strong>${escapeHtml(String(stop.label || "Stop"))}</strong>`));
+    group.addTo(userMap); kyroTripStopLayer = group;
   } catch { /* the line is still drawn */ }
 }
 function kyroDrawRouteOnMap(points, origin, destination, live = false) {
@@ -61405,7 +61411,14 @@ const kyroRouteView = {
     } else {
       openGenesisRealtimeMapWorkspace({ origin, destination, routeGeometry: points, distanceMeters: route.distanceMeters, durationSeconds: route.durationSeconds }, "");
       kyroShowRouteSteps({ route, origin, destination, language });
-      waitForStableUserMapCanvas().then(() => { if (userMap) { kyroFitRouteBelowSteps(points, live); kyroMarkTripStops(route.stops); } }).catch(() => {});
+      waitForStableUserMapCanvas().then(() => {
+        if (!userMap) return;
+        if (route?.mode === "trip" || route?.straightLine) {
+          // Found on the live site on 27 October 2026: the trip's route was drawn but the map stayed on its default view of Africa. Fitted before the map has its real size it cannot move, so (as the map's own road route does) the panel is opened and the map told its size first, and the fit is repeated while it settles.
+          const fitTrip = () => { try { document.querySelector("#map .user-simple-module > details.user-module-more")?.setAttribute("open", "true"); safeInvalidateLeafletMap(userMap); kyroFitRouteBelowSteps(points, live); kyroMarkTripStops(route.stops); } catch { /* the route is still drawn */ } };
+          fitTrip(); setTimeout(fitTrip, 600); setTimeout(fitTrip, 1800);
+        } else kyroFitRouteBelowSteps(points, live);
+      }).catch(() => {});
     }
   },
   position(fix) {

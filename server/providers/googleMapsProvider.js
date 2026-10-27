@@ -151,7 +151,8 @@ async function publicOsmRoute(origin, destination, fallbackUrl, env = process.en
         origin, destination, waypoints: cleanedWaypoints, originResolved: start.label, destinationResolved: end.label, waypointsResolved: stops.slice(1, -1).map(stop => stop.label),
         waypointPoints: stops.slice(1, -1).map((stop, index) => ({ name: cleanedWaypoints[index], lat: stop.lat, lng: stop.lon })),
         originLat: start.lat, originLng: start.lon, destinationLat: end.lat, destinationLng: end.lon,
-        routeGeometry: line.geometry.length > 1 ? line.geometry : null, distanceMeters: line.meters, duration: null, durationSeconds: null,
+        // [latitude, longitude], as every route this provider returns (the map reads them in that order); the great circle is made as [longitude, latitude]
+        routeGeometry: line.geometry.length > 1 ? line.geometry.map(([lon, lat]) => [lat, lon]) : null, distanceMeters: line.meters, duration: null, durationSeconds: null,
         straightLine: true, routeUrl: fallbackUrl, sourceUrl: "https://www.openstreetmap.org/", routeProvider: "straight line between the places (not a road or a flight schedule)",
         noLocationPermissionRequested: true, readOnly: true
       }

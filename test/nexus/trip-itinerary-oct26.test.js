@@ -131,6 +131,20 @@ test("the straight line between two far places is a great circle with both ends 
   assert.ok(Math.max(...line.map(pair => pair[1])) > 34.5, "it bows toward the pole, north of both ends, as a flight path does");
 });
 
+test("a path across the Pacific goes on past the date line (no jump to the other side), and the page keeps those points", async () => {
+  const line = greatCircle({ lat: 34.05, lng: -118.24 }, { lat: 35.68, lng: 139.69 });
+  for (let i = 1; i < line.length; i += 1) assert.ok(Math.abs(line[i][0] - line[i - 1][0]) < 20, `no jump at ${i}: ${line[i - 1][0]} to ${line[i][0]}`);
+  assert.ok(Math.abs(line[line.length - 1][0] - (139.69 - 360)) < 0.01, "it ends at Tokyo, 220.31 degrees west of Greenwich");
+  const start = app.indexOf("function kyroRoutePoints(route) {"); const end = app.indexOf("\n}\n", start) + 2;
+  const context = {}; vm.runInNewContext(`${app.slice(start, end)}\nthis.points = kyroRoutePoints;`, context);
+  assert.equal(context.points({ geometry: line }).length, line.length, "none dropped");
+  const city = { "los angeles": [34.05, -118.24], tokyo: [35.68, 139.69], osaka: [34.69, 135.5] };
+  const fetchImpl = async url => { url = String(url); const q = new URL(url).searchParams.get("q").toLowerCase(); const p = city[q]; return reply(200, p ? [{ lat: String(p[0]), lon: String(p[1]), name: q, display_name: q, address: { city: q } }] : []); };
+  const nav = createNavigationService({ env: {}, fetchImpl });
+  const t = (await nav.handle({ context: { userId: "u" }, body: { action: "trip", stops: ["Los Angeles", "Tokyo", "Osaka"] } })).body.route;
+  for (let i = 1; i < t.geometry.length; i += 1) assert.ok(Math.abs(t.geometry[i][0] - t.geometry[i - 1][0]) < 20, `a trip has no jump at ${i}`);
+});
+
 test("navigation: a trip is each place found by name and each leg drawn (a road where near, otherwise a straight line); far places and no-road places are a straight line and not an error; a missing place is said plainly", async () => {
   const counter = { roads: 0 };
   const nav = createNavigationService({ env: {}, fetchImpl: fakeMaps(counter) });
@@ -153,6 +167,11 @@ test("the maps provider ('show the route from Atlanta to Nairobi'): far places a
   const env = fetchImpl => ({ NEXUS_MAPS_FETCH_IMPL: fetchImpl });
   const far = await mapsProvider.route({ origin: "Atlanta", destination: "Nairobi" }, env(fakeMaps()));
   assert.equal(far.body.data.straightLine, true); assert.equal(far.body.provider, "great-circle"); assert.ok(far.body.data.routeGeometry.length > 60);
+  // [latitude, longitude]: found on the live site (27 October 2026) when Atlanta was drawn in Antarctica, because the points were [longitude, latitude]
+  const first = far.body.data.routeGeometry[0]; const last = far.body.data.routeGeometry[far.body.data.routeGeometry.length - 1];
+  assert.ok(Math.abs(first[0] - 33.749) < 0.01 && Math.abs(first[1] + 84.388) < 0.01, `starts at Atlanta as [lat, lng]: ${first}`);
+  assert.ok(Math.abs(last[0] + 1.2921) < 0.01 && Math.abs(last[1] - 36.8219) < 0.01, `ends at Nairobi as [lat, lng]: ${last}`);
+  assert.ok(far.body.data.routeGeometry.every(pair => Math.abs(pair[0]) <= 90), "every first number is a latitude");
   assert.ok(far.body.data.distanceMeters > 12_800_000 && far.body.data.distanceMeters < 13_100_000); assert.equal(far.body.data.durationSeconds, null);
   assert.match(far.body.message, /too far apart for a road route/);
   const near = await mapsProvider.route({ origin: "Nairobi", destination: "Mombasa" }, env(fakeMaps()));
@@ -189,6 +208,10 @@ test("on the page: a trip request is the page's own turn and remembers its place
   assert.match(app, /body: \{ action: "trip", stops: trip\.stops \}/);
   assert.match(app, /kyroRouteView\.route\(\{ route, from: \{ label: trip\.stops\[0\] \}, to: \{ label: trip\.stops\[trip\.stops\.length - 1\] \}/);
   assert.match(app, /function kyroMarkTripStops\(stops\)/);
+  // the stops are one group that is replaced, never added to; a trip's route is fitted after the panel is opened and the map told its size, three times
+  assert.match(app, /if \(kyroTripStopLayer\) \{ try \{ kyroTripStopLayer\.remove\(\); \} catch \{ \/\* already gone \*\/ \} kyroTripStopLayer = null; \}/);
+  assert.match(app, /if \(route\?\.mode === "trip" \|\| route\?\.straightLine\) \{\s*\/\/[^\n]*\n\s*const fitTrip = \(\) => \{ try \{ document\.querySelector\("#map \.user-simple-module > details\.user-module-more"\)\?\.setAttribute\("open", "true"\); safeInvalidateLeafletMap\(userMap\); kyroFitRouteBelowSteps\(points, live\); kyroMarkTripStops\(route\.stops\); \}/);
+  assert.match(app, /fitTrip\(\); setTimeout\(fitTrip, 600\); setTimeout\(fitTrip, 1800\);\s+\} else kyroFitRouteBelowSteps\(points, live\);/);
   assert.match(app, /Trip route: \$\{route\.stops\.map\(stop => stop\.label\)\.join\(" → "\)\}/);
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");

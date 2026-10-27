@@ -77,7 +77,8 @@ function pageApi({ mapOpen }) {
 
 test("the page turns the route's [lng, lat] line into [lat, lng] points", () => {
   const { points } = pageApi({ mapOpen: false });
-  assert.deepEqual(JSON.parse(JSON.stringify(points({ geometry: [[36.8, -1.3], [36.8, -1.29], ["x", 1], [500, 2]] }))), [[-1.3, 36.8], [-1.29, 36.8]]);
+  // (a longitude past the date line is a real point on a route across the Pacific and is kept; a nonsense one is dropped)
+  assert.deepEqual(JSON.parse(JSON.stringify(points({ geometry: [[36.8, -1.3], [36.8, -1.29], ["x", 1], [700, 2], [-220.3, 35.7]] }))), [[-1.3, 36.8], [-1.29, 36.8], [35.7, -220.3]]);
 });
 
 test("with the map closed the page opens it with the road route; with it open it redraws in place; either way the steps are listed", () => {

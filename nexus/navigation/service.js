@@ -53,6 +53,8 @@ function greatCircle(a, b, points = 64) {
     const x = A * Math.cos(lat1) * Math.cos(lon1) + B * Math.cos(lat2) * Math.cos(lon2); const y = A * Math.cos(lat1) * Math.sin(lon1) + B * Math.cos(lat2) * Math.sin(lon2); const z = A * Math.sin(lat1) + B * Math.sin(lat2);
     line.push([Number(deg(Math.atan2(y, x)).toFixed(5)), Number(deg(Math.atan2(z, Math.sqrt(x * x + y * y))).toFixed(5))]);
   }
+  // (Los Angeles to Tokyo: the path goes on past 180 degrees west instead of jumping to 180 east, which would draw a line right across the map; the map draws any longitude)
+  for (let i = 1; i < line.length; i += 1) { while (line[i][0] - line[i - 1][0] > 180) line[i][0] -= 360; while (line[i][0] - line[i - 1][0] < -180) line[i][0] += 360; }
   return line;
 }
 const kilometers = meters => Math.round(meters / 1000).toLocaleString("en-US");
@@ -174,6 +176,7 @@ function createNavigationService({ env = process.env, fetchImpl = globalThis.fet
         } catch { leg = null; }
       }
       if (!leg) leg = { geometry: greatCircle(a, b), distanceMeters: Math.round(meters), road: false };
+      if (geometry.length) { const shift = Math.round((geometry[geometry.length - 1][0] - leg.geometry[0][0]) / 360) * 360; if (shift) leg.geometry = leg.geometry.map(pair => [pair[0] + shift, pair[1]]); }
       geometry.push(...(geometry.length ? leg.geometry.slice(1) : leg.geometry));
       total += leg.distanceMeters;
       steps.push({ instruction: `${a.label} to ${b.label}: about ${kilometers(leg.distanceMeters)} kilometers${leg.road ? " by road" : " in a straight line (a flight path, not a booked flight)"}.`, distanceMeters: leg.distanceMeters, alongMeters: total, name: "", type: leg.road ? "road" : "air" });
