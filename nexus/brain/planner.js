@@ -65,6 +65,7 @@ const { guideWalkthrough, walkthroughForText: guideWalkthroughForText } = requir
 const { offersFor, offerLine, checklistAsk } = require("../knowledge/offers.js");
 const { feedRequest, grantsAnswer, rulesAnswer } = require("../knowledge/live-feeds.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
+const { handoutRequest, handoutTemplate } = require("../knowledge/handout-templates.js");
 // how a starter document is named when it is spoken back (the title in lower case, except where that reads wrongly)
 const SPOKEN_TEMPLATE_NAMES = Object.freeze({ "ai-use-policy": "AI use policy", "vendor-questions": "list of questions for a web host, designer or developer", "app-brief": "app brief" });
 const { DEMONYM: CONTACT_DEMONYM, extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName, cleanContactName, spokenPhone, localPhoneToE164 } = require("../memory/contacts.js");
@@ -950,6 +951,14 @@ class OpenEndedPlanner {
       return Object.freeze({ goal: String(command.text || "").trim(), application: "documents", riskTier: "low", clarification: null, planningAttempts: 1,
         steps: [{ clientStepId: "consulting-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: template.format, reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
     }
+    // "Make me a flyer for my bake sale on Saturday", "Create a newsletter for the church", "Write an invitation to my daughter's party": a short layout with the person's own words in it and a [bracket] for every detail they did not give, made
+    // directly with no model call (the model, asked to write a flyer for a person with no business workspace, saved a description of a flyer as the flyer). A person with a workspace asking for a flyer or newsletter already went to the workspace's own drafts above.
+    const handout = handoutRequest(command.text);
+    if (handout && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) {
+      const made = handoutTemplate(handout);
+      return Object.freeze({ goal: String(command.text || "").trim(), application: "documents", riskTier: "low", clarification: null, planningAttempts: 1,
+        steps: [{ clientStepId: "handout-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: requestedDocumentFormat(command.text) || "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
+    }
     // "Export it as a PDF" right after a document was saved: the same text again, in the file type asked for (found on production: nothing handled this sentence, so it went to the AI model).
     const exportFormat = exportLatestDocumentFormat(command.text);
     if (exportFormat && this.documents?.list && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) {
@@ -986,7 +995,7 @@ class OpenEndedPlanner {
       interactionProfile, tenantId: command.tenantId,
       conversationHistory: conversationHistory.slice(-24).map(safeTurn),
       memories: memories.map(safeMemory), catalog };
-    let feedback = marketingWithoutWorkspace ? ["This person has no business workspace, so do not use any business tool. Write the flyer, newsletter or email as a document with documents.create, from the details they gave, leaving out any detail they did not give."] : [];
+    let feedback = marketingWithoutWorkspace ? ["This person has no business workspace: use documents.create and not any business tool."] : [];
     let emptyPlans = 0;
     let attemptsUsed = 0;
     for (let attempt = 0; attempt <= this.maxRepairAttempts; attempt += 1) {

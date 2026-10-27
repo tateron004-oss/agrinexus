@@ -51,9 +51,18 @@ function planner({ workspaces, seen = [] }) {
 }
 const ask = (instance, text) => instance.plan({ command: { text, tenantId: "t1", actorId: "u1", locale: "en" }, context: { timeZone: "America/Chicago" } });
 
-test("a flyer from a person with no business workspace is written as a document (the model is told so), not answered with 'start a workspace'; with a workspace it is still the workspace's own marketing drafts", async () => {
+test("a flyer from a person with no business workspace is a saved document made from their words with blanks for the rest, with no model call; a promotional email is told to use documents, not the business tools; with a workspace a flyer is still the workspace's own marketing drafts", async () => {
   const seen = [];
-  await assert.rejects(ask(planner({ workspaces: 0, seen }), "Make me a flyer for my bake sale on Saturday."), /MODEL_REACHED/);
+  const flyer = await ask(planner({ workspaces: 0, seen }), "Make me a flyer for my bake sale on Saturday.");
+  assert.equal(seen.length, 0);
+  assert.equal(flyer.application, "documents");
+  assert.equal(flyer.steps[0].toolId, "documents.create");
+  assert.equal(flyer.steps[0].input.title, "Bake Sale Flyer");
+  assert.match(flyer.steps[0].input.content, /^BAKE SALE\n\nWhen: Saturday\nWhere: \[the place\]/);
+  assert.doesNotMatch(flyer.steps[0].input.content, /placeholders|editable|user's details/i);
+  const news = await ask(planner({ workspaces: 0 }), "Create a newsletter for the church as a PDF.");
+  assert.equal(news.steps[0].input.title, "Church Newsletter"); assert.equal(news.steps[0].input.format, "pdf");
+  await assert.rejects(ask(planner({ workspaces: 0, seen }), "Create a promotional email for my shop."), /MODEL_REACHED/);
   assert.match(seen[0].feedback.join(" "), /no business workspace[\s\S]*documents\.create/);
   const owner = await ask(planner({ workspaces: 1 }), "Make me a flyer for my bake sale on Saturday.");
   assert.equal(owner.application, "business");
@@ -77,4 +86,26 @@ test("'make a list of the documents I need to get an ID' asks what goes on it an
 
 test("the note and reminder claims run the typed route, after the list claim", () => {
   assert.match(app, /KYRO_LIST_REQUEST\.test\(said\) && !KYRO_LIST_NOT\.test\(said\)\) \{[\s\S]{0,200}return true;\s+\}\s+if \(!options\.typed && \(KYRO_NOTE_REQUEST\.test\(said\) \|\| KYRO_REMINDER_REQUEST\.test\(said\)\) && !KYRO_NOTE_NOT\.test\(said\)\) \{\s+kyroTakeOverTurn\(\);\s+void handleNexusUnifiedBrainRuntimeCommand\(said, \{ source: "typed", kyroDirect: true \}\);\s+return true;\s+\}/);
+});
+
+// The model, asked for a flyer on the live site (27 October 2026), saved "Use the user's details only; since no extra details were provided, create a simple, editable flyer with placeholders..." AS the flyer.
+// A flyer, poster, newsletter, brochure, handout or invitation is now a short fixed layout: the person's own words where they gave them, a [bracket] for everything else, nothing invented.
+const handouts = require("../../nexus/knowledge/handout-templates.js");
+test("a handout is read from what was said and made from a fixed layout with a [bracket] for every detail not given", () => {
+  assert.deepEqual({ ...handouts.handoutRequest("Make me a flyer for my bake sale on Saturday.") }, { kind: "flyer", subject: "bake sale", when: "Saturday" });
+  assert.deepEqual({ ...handouts.handoutRequest("Write an invitation to my daughter's party on Saturday at 3.") }, { kind: "invitation", subject: "daughter's party", when: "Saturday at 3" });
+  assert.deepEqual({ ...handouts.handoutRequest("Make me a flyer.") }, { kind: "flyer", subject: "", when: "" });
+  assert.equal(handouts.handoutRequest("Make a note that I paid the rent"), null);
+  assert.equal(handouts.handoutRequest("Make a list of flyers"), null);
+  assert.equal(handouts.handoutRequest("How do I make a flyer?"), null);
+  const bare = handouts.handoutTemplate(handouts.handoutRequest("Make me a flyer."));
+  assert.equal(bare.title, "Flyer");
+  assert.match(bare.content, /^\[WHAT THIS IS FOR\]\n\nWhen: \[day and time\]/);
+  for (const kind of ["flyer", "poster", "newsletter", "brochure", "handout", "invitation"]) {
+    const made = handouts.handoutTemplate({ kind, subject: "church", when: "" });
+    assert.match(made.title, new RegExp(`^Church ${kind}$`, "i"), kind);
+    assert.match(made.content, /\[[^\]]+\]/, kind);
+    assert.match(made.content, /Nothing here was looked up or added by Kyro\.$/, kind);
+    assert.doesNotMatch(made.content, /placeholders|editable/i, kind);
+  }
 });
