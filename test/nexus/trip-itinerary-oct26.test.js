@@ -182,7 +182,9 @@ test("on the page: a trip request is the page's own turn and remembers its place
   assert.equal(context.claim("Plan a trip to Africa."), true, "a region is the page's too (it is asked about)");
   assert.equal(context.claim("Open my Kenya trip itinerary."), false);
   assert.equal(context.routeAsk("Show me the route from Atlanta to Nairobi."), false);
-  assert.match(app, /if \(trimmed && typeof kyroTripQuestion === "function" && kyroTripQuestion\(trimmed\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \} catch \{ \/\* nothing to cut off \*\/ \}\s+kyroPageSpeaksUntil = Date\.now\(\) \+ 60000;\s+const wantsMap = Boolean\(kyroLastTrip\.wantsMap\);/);
+  assert.match(app, /if \(trimmed && typeof kyroTripQuestion === "function" && kyroTripQuestion\(trimmed\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \} catch \{ \/\* nothing to cut off \*\/ \}\s+kyroPageSpeaksUntil = Date\.now\(\) \+ 60000;\s+void handleNexusUnifiedBrainRuntimeCommand\(trimmed, \{ source: "typed", kyroDirect: true \}\);/);
+  // typed and spoken alike (the shared entry point): the route follow-up, and a trip that asks for the map too
+  assert.match(app, /options\.kyroTripWrapped !== true\) \{\s+try \{\s+if \(typeof kyroTripRouteAsk === "function" && kyroTripRouteAsk\(text\)\) \{ await kyroShowTripRoute\(\); return true; \}\s+if \(typeof kyroTripQuestion === "function" && kyroTripQuestion\(text\) && kyroLastTrip\.wantsMap\) \{\s+const handledTrip = await handleNexusUnifiedBrainRuntimeCommand\(command, \{ \.\.\.options, kyroTripWrapped: true \}\);\s+if \(handledTrip !== false\) void kyroShowTripRoute\(\);/);
   assert.match(app, /kyroTripRouteAsk\(trimmed\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \} catch \{ \/\* nothing to cut off \*\/ \}\s+kyroPageSpeaksUntil = Date\.now\(\) \+ 30000;\s+void kyroShowTripRoute\(\);/);
   assert.match(app, /body: \{ action: "trip", stops: trip\.stops \}/);
   assert.match(app, /kyroRouteView\.route\(\{ route, from: \{ label: trip\.stops\[0\] \}, to: \{ label: trip\.stops\[trip\.stops\.length - 1\] \}/);
