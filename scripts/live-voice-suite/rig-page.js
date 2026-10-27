@@ -123,7 +123,8 @@ function installKyroVoiceRig(makeEvaluator) {
   } catch { /* the rig still works without it */ }
   rig.screens = () => [...document.querySelectorAll("[data-kyro-result]")].filter(visible).map(node => ({
     kind: node.getAttribute("data-kyro-result"), app: node.getAttribute("data-kyro-app") || "", keep: node.hasAttribute("data-kyro-keep"),
-    text: node.innerText.replace(/\s+/g, " ").trim().slice(0, 1500),
+    // a saved document's words are in an editable box, which innerText leaves out: they are read too, so a case can tell a document from a description of one (found on 27 October 2026: a saved "Website Bio" held the instruction to write one)
+    text: [node.innerText, ...[...node.querySelectorAll("textarea")].map(box => box.value)].join(" ").replace(/\s+/g, " ").trim().slice(0, 1500),
     buttons: [...node.querySelectorAll("button,a,label[data-kyro-upload-button]")].map(b => b.innerText.trim()).filter(Boolean).slice(0, 40),
     fields: [...node.querySelectorAll("input,textarea,select")].map(n => n.name || n.type || "").slice(0, 20),
     images: node.querySelectorAll("img").length, frames: node.querySelectorAll("iframe,video").length,
