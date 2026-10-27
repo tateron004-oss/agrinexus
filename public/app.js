@@ -53359,6 +53359,21 @@ function kyroTripRouteAsk(text) {
     return Boolean(lib && typeof lib.wantsTripRoute === "function" && lib.wantsTripRoute(text) && kyroLastTrip.stops.length >= 2 && Date.now() - kyroLastTrip.at < KYRO_TRIP_MEMORY_MS);
   } catch { return false; }
 }
+// A trip that asks for its map in the same sentence ("Plan a 5 day trip to Tokyo from Los Angeles and show the route on the map"): the itinerary's card is in front, and closing it goes back to the start screen, which would take the map with it
+// (found on the live site on 27 October 2026: the map opened behind the card and was gone when the card was closed). So the map is drawn when the card is closed; the person is told so. If no card comes up, the map is drawn at once.
+async function kyroShowTripRouteAfterDocument() {
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const card = () => document.querySelector("[data-kyro-result=\"document\"]");
+  let seen = false;
+  for (let i = 0; i < 40 && !seen; i += 1) { if (card()) seen = true; else await sleep(500); }
+  if (seen) {
+    try { setVoiceResponse("Your sample itinerary is on the screen. When you close it, I will show the route on the map.", true, { allowHandoff: false, command: "show the route", source: "kyro-trip" }); } catch { /* the screen has it */ }
+    for (let i = 0; i < 600 && card(); i += 1) await sleep(1000);
+    if (card()) return false;
+    await sleep(700);
+  }
+  return kyroShowTripRoute();
+}
 // The last trip's route on the map, with each stop marked and the legs listed (a straight line where there is no road). A trip with only one place named cannot be drawn, and is told so.
 async function kyroShowTripRoute() {
   const trip = kyroLastTrip;
@@ -61444,7 +61459,7 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
       if (typeof kyroTripRouteAsk === "function" && kyroTripRouteAsk(text)) { await kyroShowTripRoute(); return true; }
       if (typeof kyroTripQuestion === "function" && kyroTripQuestion(text) && kyroLastTrip.wantsMap) {
         const handledTrip = await handleNexusUnifiedBrainRuntimeCommand(command, { ...options, kyroTripWrapped: true });
-        if (handledTrip !== false) void kyroShowTripRoute();
+        if (handledTrip !== false) void kyroShowTripRouteAfterDocument();
         return handledTrip;
       }
     } catch { /* the ordinary route below answers */ }
