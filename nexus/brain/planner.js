@@ -925,7 +925,9 @@ class OpenEndedPlanner {
     // enough that an unrelated generic document request still falls through
     // to completeDocumentPlan below, unaffected.
     const completeBusiness = completeBusinessPlan(command.text, catalog);
-    if (completeBusiness) {
+    // "Make me a flyer for my bake sale on Saturday" from a person with no business workspace: the workspace's own flyer, newsletter and email drafts need one, but a flyer is a document anyone can ask for, so it goes on to be written as one (found by the sweep on 27 October 2026: it said to start a workspace first).
+    const marketingWithoutWorkspace = completeBusiness && businessVoiceDispatch.classify(command.text) === "generateMarketing" && Boolean(await this.noBusinessWorkspaceAnswer(command.text, context));
+    if (completeBusiness && !marketingWithoutWorkspace) {
       // Found by the phrase sweep: a person with no business workspace was asked "Should I go ahead?" and only after the yes told there is none. Say it first, with no model and before any confirmation.
       const noWorkspace = await this.noBusinessWorkspaceAnswer(command.text, context);
       if (noWorkspace) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: noWorkspace, sourceRequired: false, planningAttempts: 0 });
@@ -984,7 +986,7 @@ class OpenEndedPlanner {
       interactionProfile, tenantId: command.tenantId,
       conversationHistory: conversationHistory.slice(-24).map(safeTurn),
       memories: memories.map(safeMemory), catalog };
-    let feedback = [];
+    let feedback = marketingWithoutWorkspace ? ["This person has no business workspace, so do not use any business tool. Write the flyer, newsletter or email as a document with documents.create, from the details they gave, leaving out any detail they did not give."] : [];
     let emptyPlans = 0;
     let attemptsUsed = 0;
     for (let attempt = 0; attempt <= this.maxRepairAttempts; attempt += 1) {
@@ -1945,7 +1947,9 @@ function completeListsPlan(text, catalog) {
   // (a bare "start a list for harvest tasks" is still a list called "harvest tasks"; it is "a packing list for ...", "a checklist for ...", "a travel checklist for ..." that is a list OF something)
   const namedTitle = titleAfter("called|titled|named") || (items.length || /\b(?:a|my|the|new)\s+list\s+for\b/i.test(goal) ? titleAfter("for") : undefined);
   // "Make me a checklist of what to bring to a clinic visit": no name and nothing on it. An empty list called "Nexus checklist" was made (found by the spoken-document probe on 27 October 2026); Kyro does not write the items for the person, so it asks.
-  if (!namedTitle && !items.length) return { goal, application: "lists", riskTier: "low", steps: [], clarification: "I can make that list, but I need to know what goes on it, because I do not make up the items. For example: \"Create a checklist called Clinic Visit with items ID, insurance card and medicines\". What should it be called, and what should be on it?" };
+  // "Make a list of the documents I need to get an ID": which papers a place asks for depends on the place and changes, and the checked guides send the person to the official page rather than list them, so Kyro says that and asks what goes on it.
+  const asksWhichPapers = /\b(?:documents|papers|paperwork|forms|requirements)\b[^.?!]{0,40}\b(?:i|we)\s+(?:need|must|have to|should (?:bring|have))\b/i.test(goal);
+  if (!namedTitle && !items.length) return { goal, application: "lists", riskTier: "low", steps: [], clarification: `${asksWhichPapers ? "I cannot say for certain which papers they ask for, because it depends on the place and it changes, so I would rather not guess. The official page of the office you are going to lists them (for a California ID or driver license, the DMV). Tell me what to put on your list and I will make it. " : ""}I can make that list, but I need to know what goes on it, because I do not make up the items. For example: "Create a checklist called Clinic Visit with items ID, insurance card and medicines". What should it be called, and what should be on it?` };
   return { goal, application: "lists", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "create-list", title: "Create a checklist",
       toolId: "lists.create", input: { title: namedTitle || "Nexus checklist", items, command: goal },
