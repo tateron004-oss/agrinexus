@@ -15,6 +15,7 @@ const MAX_DAYS = 14;
 // what the model is told it is, for this one job (its usual instructions are for farm questions)
 const TRIP_INSTRUCTIONS = "You are Kyro, an assistant for travel agents and travelers. Follow the request exactly and answer with only the JSON object it asks for, with no other words.";
 const MAX_FIELD = 260;
+const REMINDER = "Reminder for the travel agent: the day-by-day ideas were written by an AI from general knowledge and have not been checked against official or local sources. Please read them, and check anything that matters, before you show this to a client.";
 const OFFICIAL = [
   "Entry rules, visas, health advice and safety advisories: your own government's travel advice. For U.S. travelers that is travel.state.gov (the State Department) and wwwnc.cdc.gov/travel (the CDC's travelers' health pages).",
   "Prices, flights, hotels, tours, opening times and availability: the airline, the hotel or the tour company, on the day you book."
@@ -80,6 +81,9 @@ function tripDocument(request, content, { now = new Date(), outline = false } = 
   lines.push("# SAMPLE ITINERARY (SIMULATED)");
   lines.push(`${tripTitle(request)}`);
   lines.push("");
+  // first thing on the page, before the client sees anything: these ideas were written by an AI and have not been checked
+  lines.push(REMINDER);
+  lines.push("");
   lines.push("This is an illustration made by Kyro, not a booking or a quote. Nothing is reserved. No prices, flights, schedules, opening times or availability are shown or checked.");
   if (outline || content.outline) lines.push("The ideas for each day could not be written this time, so this is an outline for you to fill in.");
   lines.push("");
@@ -113,4 +117,4 @@ function needsPlaceAnswer(region) {
   return `I can make a sample itinerary for ${region}, but I need a country or a city so the days make sense. For example: "Plan a 7 day trip to Kenya", or "Make an itinerary for Lisbon from Atlanta". I do not have a saved trip. Which country or city should I use?`;
 }
 
-module.exports = Object.freeze({ MAX_DAYS, TRIP_INSTRUCTIONS, tripGoal, parseTripAnswer, outlineContent, tripDocument, needsPlaceAnswer, tripTitle });
+module.exports = Object.freeze({ MAX_DAYS, TRIP_INSTRUCTIONS, REMINDER, tripGoal, parseTripAnswer, outlineContent, tripDocument, needsPlaceAnswer, tripTitle });

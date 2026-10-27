@@ -60,7 +60,8 @@ test("the model's answer is checked: usable days are kept (cut to the days asked
   const doc = itinerary.tripDocument(request, parsed, { now: new Date("2026-10-26T12:00:00Z") });
   assert.equal(doc.format, "docx");
   assert.match(doc.title, /^Sample itinerary: 7 days in Kenya$/);
-  assert.match(doc.content, /^# SAMPLE ITINERARY \(SIMULATED\)/);
+  assert.match(doc.content, /^# SAMPLE ITINERARY \(SIMULATED\)\nSample itinerary: 7 days in Kenya\n\nReminder for the travel agent: the day-by-day ideas were written by an AI from general knowledge and have not been checked against official or local sources\. Please read them, and check anything that matters, before you show this to a client\.\n\nThis is an illustration made by Kyro/, "the reminder is the first thing after the title, ahead of everything else");
+  assert.equal(doc.content.split(itinerary.REMINDER).length, 2, "said once");
   assert.match(doc.content, /Nothing is reserved\. No prices, flights, schedules, opening times or availability are shown or checked\./);
   assert.match(doc.content, /- Route on the map: Atlanta → Nairobi → Kenya \(say "show the route on the map"\)/);
   assert.match(doc.content, /## Day 7: Day 7 title/);
