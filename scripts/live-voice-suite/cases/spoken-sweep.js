@@ -19,5 +19,10 @@ module.exports = Object.freeze([
   asks("interview-list", "Start a list of things to bring to my job interview."),
   { id: "sweep-show-my-lists", area: "spoken-sweep", say: "Show me my lists.", timeoutMs: 60000, expect: { screen: ["text", "list"], text: "list" } },
   { id: "sweep-what-to-pack", area: "spoken-sweep", say: "What should I pack for Kenya?", timeoutMs: 90000, expect: { screen: ["text", "list", "checklists"], text: "pack|Kenya|passport|layers" } },
-  { id: "sweep-directions-no-location", area: "spoken-sweep", say: "Give me directions to the nearest pharmacy.", timeoutMs: 60000, expect: { allowRefusal: true, screen: ["text", "list"], text: "location|where you are" } }
+  { id: "sweep-directions-no-location", area: "spoken-sweep", say: "Give me directions to the nearest pharmacy.", timeoutMs: 60000, expect: { allowRefusal: true, screen: ["text", "list"], text: "location|where you are" } },
+  { id: "sweep-flyer-no-workspace", area: "spoken-sweep", writes: true, say: "Make me a flyer for my bake sale on Saturday.", timeoutMs: 90000, expect: { screen: "document", text: "bake sale", notText: "business or nonprofit workspace", download: true } },
+  { id: "sweep-write-down", area: "spoken-sweep", writes: true, say: "Write down milk, eggs and flour.", timeoutMs: 60000, expect: { screen: ["text", "list"], text: "milk" } },
+  { id: "sweep-make-a-note", area: "spoken-sweep", writes: true, say: "Make a note that I paid the rent.", timeoutMs: 60000, expect: { screen: ["text", "list"], text: "paid the rent" } },
+  { id: "sweep-remind-bread", area: "spoken-sweep", writes: true, say: "Remind me to buy bread tomorrow.", timeoutMs: 60000, expect: { screen: ["text", "list"], text: "bread" } },
+  { id: "sweep-list-documents-for-id", area: "spoken-sweep", say: "Make a list of the documents I need to get an ID.", timeoutMs: 60000, expect: { screen: ["text", "list"], text: "what goes on it", notText: "business or nonprofit workspace" } }
 ]);

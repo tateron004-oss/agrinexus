@@ -962,7 +962,8 @@ function classify(command = "") {
   // "How much did I spend on seed this month?", "Show me my income this week": a question about the money already logged.
   const wantsFinanceSummary = !wantsLogTransaction && !/\b(?:listings?|propert(?:y|ies)|houses|homes|condos|apartments|townhouses|duplexes)\b/i.test(command) && !/\b(?:log|record|track|create|start|new)\b|\badd\b(?!\s+up)/i.test(command)
     && /\b(?:how much|total|summary|summari[sz]e|what (?:is|are|was|were|did|have)|show|tell me|list|give me)\b/i.test(command)
-    && /\b(?:my|our|i|we)\b/i.test(command) && /\b(?:expenses?|income|sales|revenue|profit|spen[dt]|earn(?:ed|ings)?|make|made|sell|sold)\b/i.test(command);
+    // "make" is a money word only in "how much do I make"; as the opening request ("Make a list of the documents I need to get an ID") it is the verb of a thing to be made (found on the live site on 27 October 2026: a guest heard that they had no business workspace)
+    && /\b(?:my|our|i|we)\b/i.test(command) && /\b(?:expenses?|income|sales|revenue|profit|spen[dt]|earn(?:ed|ings)?|make|made|sell|sold)\b/i.test(command.replace(/^\s*(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:(?:can|could|would|will) you\s+)?make\s+(?:me\s+)?(?:an?|the|my|some)\b/i, " "));
   const wantsAddInvoiceItem = /\binvoice\b/i.test(command) && /\b(?:line[- ]?item|item)s?\b/i.test(command) && /\b(?:add|include)\b/i.test(command);
   const wantsGenerateInvoicePdf = !wantsAddInvoiceItem && /\binvoice\b/i.test(command) && /\b(?:generate|print|export|make)\b/i.test(command) && /\b(pdf|receipt)\b/i.test(command);
   const wantsCreateInvoice = !wantsAddInvoiceItem && !wantsGenerateInvoicePdf && /\b(invoice|receipt)\b/i.test(command) && /\b(?:create|add|start|open|new)\b/i.test(command);
