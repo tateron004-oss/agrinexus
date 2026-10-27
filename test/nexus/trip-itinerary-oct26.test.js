@@ -203,7 +203,9 @@ test("on the page: a trip request is the page's own turn and remembers its place
   assert.equal(context.routeAsk("Show me the route from Atlanta to Nairobi."), false);
   assert.match(app, /if \(trimmed && typeof kyroTripQuestion === "function" && kyroTripQuestion\(trimmed\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \} catch \{ \/\* nothing to cut off \*\/ \}\s+kyroPageSpeaksUntil = Date\.now\(\) \+ 60000;\s+void handleNexusUnifiedBrainRuntimeCommand\(trimmed, \{ source: "typed", kyroDirect: true \}\);/);
   // typed and spoken alike (the shared entry point): the route follow-up, and a trip that asks for the map too
-  assert.match(app, /options\.kyroTripWrapped !== true\) \{\s+try \{\s+if \(typeof kyroTripRouteAsk === "function" && kyroTripRouteAsk\(text\)\) \{ await kyroShowTripRoute\(\); return true; \}\s+if \(typeof kyroTripQuestion === "function" && kyroTripQuestion\(text\) && kyroLastTrip\.wantsMap\) \{\s+const handledTrip = await handleNexusUnifiedBrainRuntimeCommand\(command, \{ \.\.\.options, kyroTripWrapped: true \}\);\s+if \(handledTrip !== false\) void kyroShowTripRoute\(\);/);
+  assert.match(app, /options\.kyroTripWrapped !== true\) \{\s+try \{\s+if \(typeof kyroTripRouteAsk === "function" && kyroTripRouteAsk\(text\)\) \{ await kyroShowTripRoute\(\); return true; \}\s+if \(typeof kyroTripQuestion === "function" && kyroTripQuestion\(text\) && kyroLastTrip\.wantsMap\) \{\s+const handledTrip = await handleNexusUnifiedBrainRuntimeCommand\(command, \{ \.\.\.options, kyroTripWrapped: true \}\);\s+if \(handledTrip !== false\) void kyroShowTripRouteAfterDocument\(\);/);
+  // the map waits for the itinerary's card to be closed (closing it goes back to the start screen, which takes a map with it), then is drawn; with no card it is drawn at once
+  assert.match(app, /async function kyroShowTripRouteAfterDocument\(\) \{[\s\S]*?const card = \(\) => document\.querySelector\("\[data-kyro-result=\\"document\\"\]"\);[\s\S]*?for \(let i = 0; i < 600 && card\(\); i \+= 1\) await sleep\(1000\);\s+if \(card\(\)\) return false;[\s\S]*?return kyroShowTripRoute\(\);\s+\}/);
   assert.match(app, /kyroTripRouteAsk\(trimmed\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \} catch \{ \/\* nothing to cut off \*\/ \}\s+kyroPageSpeaksUntil = Date\.now\(\) \+ 30000;\s+void kyroShowTripRoute\(\);/);
   assert.match(app, /body: \{ action: "trip", stops: trip\.stops \}/);
   assert.match(app, /kyroRouteView\.route\(\{ route, from: \{ label: trip\.stops\[0\] \}, to: \{ label: trip\.stops\[trip\.stops\.length - 1\] \}/);
@@ -226,4 +228,27 @@ test("a flight path has no driving time to say: the list says only the distance,
   const source = fs.readFileSync(path.join(__dirname, "../../public/kyro-navigation.js"), "utf8");
   assert.match(source, /Number\(seconds\) > 0 \? tx\(language, "about"/);
   assert.ok(nav.sayDistance(12_900_000, "en").length > 5);
+});
+
+test("a trip that asks for its map in the same sentence: the map is drawn when the itinerary's card is closed (the person is told so), at once when no card comes up, and not at all while the card is still open after ten minutes", async () => {
+  const start = app.indexOf("async function kyroShowTripRouteAfterDocument() {");
+  const end = app.indexOf("\n}\n", start) + 2;
+  assert.ok(start > 0 && end > start);
+  const make = ({ cardPolls }) => {
+    const log = []; let polls = 0;
+    const context = {
+      document: { querySelector: () => { polls += 1; return cardPolls(polls) ? {} : null; } },
+      setTimeout: fn => { fn(); return 0; }, setVoiceResponse: line => log.push(["said", line]), kyroShowTripRoute: async () => { log.push(["route"]); return true; }
+    };
+    vm.runInNewContext(`${app.slice(start, end)}\nthis.run = kyroShowTripRouteAfterDocument;`, context);
+    return { run: context.run, log };
+  };
+  const never = make({ cardPolls: () => false });
+  assert.equal(await never.run(), true); assert.deepEqual(never.log, [["route"]], "no card: the map at once, nothing said");
+  const closed = make({ cardPolls: n => n >= 3 && n <= 8 });
+  assert.equal(await closed.run(), true);
+  assert.deepEqual(closed.log.map(entry => entry[0]), ["said", "route"]);
+  assert.match(closed.log[0][1], /When you close it, I will show the route on the map\./);
+  const stays = make({ cardPolls: n => n >= 3 });
+  assert.equal(await stays.run(), false); assert.deepEqual(stays.log.map(entry => entry[0]), ["said"], "still open after ten minutes: no map");
 });
