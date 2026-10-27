@@ -63,12 +63,15 @@ test("items already on the list are not added twice, and the reply says so", asy
   assert.match(again.response, /^Those are already on your shopping list\. You have 2 open items\.$/);
 });
 
-test("lists with a name of their own, and a bare 'make a list', still go to the checklist maker", async () => {
+test("lists with a name of their own, or items, go to the checklist maker; a bare 'create a checklist' asks what goes on it instead of making an empty one (27 Oct 2026)", async () => {
   const { ask } = planner();
-  for (const text of ["Create a checklist called planting day with seeds and water", "Make a list for the market trip with maize and beans", "Create a checklist"]) {
+  for (const text of ["Create a checklist called planting day with seeds and water", "Make a list for the market trip with maize and beans"]) {
     const plan = await ask(text);
     assert.equal(plan.steps?.[0]?.toolId, "lists.create", text);
   }
+  const bare = await ask("Create a checklist");
+  assert.deepEqual(bare.steps, []);
+  assert.match(bare.clarification, /What should it be called, and what should be on it\?/);
 });
 
 test("adding one item the old way, and reading, are unchanged; several things are several items", async () => {
