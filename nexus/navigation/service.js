@@ -181,7 +181,8 @@ function createNavigationService({ env = process.env, fetchImpl = globalThis.fet
     return { distanceMeters: Math.round(total), durationSeconds: 0, geometry, steps, mode: "trip", straightLine: drove < found.length - 1, stops: found.map(item => ({ label: item.label, lat: item.lat, lng: item.lng })) };
   }
 
-  async function route({ from, to, mode, language }) {
+  // (a straight line is only drawn when the caller asks for it, to SHOW a route: turn-by-turn guidance must never follow a line across an ocean)
+  async function route({ from, to, mode, language, allowStraightLine }) {
     const start = point(from, "Where you are"); const profile = mode === "walk" ? "walk" : "drive";
     let end; let destinationLabel = "";
     if (to && Number.isFinite(Number(to.lat)) && Number.isFinite(Number(to.lng))) { end = point(to, "The destination"); destinationLabel = text(to.label, 120); }
@@ -194,10 +195,10 @@ function createNavigationService({ env = process.env, fetchImpl = globalThis.fet
     const apart = haversine([start.lng, start.lat], [end.lng, end.lat]);
     const startLabel = text(from?.label, 80) || "The start";
     const airFor = () => ({ ...airRoute(start, end, startLabel, destinationLabel), destination: { label: destinationLabel, lat: end.lat, lng: end.lng }, provider: "great-circle" });
-    if (apart >= AIR_ONLY_METERS) return airFor();
+    if (allowStraightLine === true && apart >= AIR_ONLY_METERS) return airFor();
     const url = `${urls[profile]}/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson&steps=true&alternatives=false`;
     const payload = await getJson(url);
-    if (payload.code === "NoRoute" || !Array.isArray(payload.routes) || !payload.routes[0]) { if (profile === "drive") return airFor(); throw fail(404, "no_route", "I couldn't find a way there by that route."); }
+    if (payload.code === "NoRoute" || !Array.isArray(payload.routes) || !payload.routes[0]) { if (allowStraightLine === true && profile === "drive") return airFor(); throw fail(404, "no_route", "I couldn't find a way there by that route."); }
     let built; try { built = buildRoute(payload.routes[0], { language: languageOf(language) }); } catch { throw fail(502, "navigation_provider_error", "The directions service gave me a route I couldn't follow."); }
     return { ...built, mode: profile, destination: { label: destinationLabel, lat: end.lat, lng: end.lng }, provider: profile === "walk" && urls.walk === DEFAULTS.walk ? "openstreetmap-foot" : urls.drive === DEFAULTS.drive ? "openstreetmap-osrm" : "custom" };
   }

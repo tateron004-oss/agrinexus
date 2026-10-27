@@ -139,9 +139,11 @@ test("navigation: a trip is each place found by name and each leg drawn (a road 
   assert.match(t.steps[1].instruction, /^Nairobi to Mombasa: about 480 kilometers by road\.$/);
   assert.ok(t.geometry.length > 60 && t.distanceMeters > 13_000_000);
   assert.equal(counter.roads, 1, "no road was asked for between the continents");
-  const direct = (await nav.handle({ context: { userId: "u" }, body: { action: "route", from: { lat: 33.749, lng: -84.388, label: "Atlanta" }, to: { lat: -1.2921, lng: 36.8219, label: "Nairobi" } } })).body.route;
+  const direct = (await nav.handle({ context: { userId: "u" }, body: { action: "route", allowStraightLine: true, from: { lat: 33.749, lng: -84.388, label: "Atlanta" }, to: { lat: -1.2921, lng: 36.8219, label: "Nairobi" } } })).body.route;
   assert.equal(direct.mode, "air"); assert.equal(direct.durationSeconds, 0); assert.ok(direct.geometry.length > 60);
   assert.match(direct.steps[0].instruction, /Atlanta to Nairobi: about 12,9\d\d kilometers in a straight line\. This shows the direction and the distance, not a booked flight or a schedule\./);
+  // turn-by-turn guidance never follows a straight line: without the request for one, no road is still "no route"
+  await assert.rejects(() => nav.handle({ context: { userId: "u" }, body: { action: "route", from: { lat: 33.749, lng: -84.388 }, to: { lat: -1.2921, lng: 36.8219, label: "Nairobi" } } }), error => ["no_route", "navigation_provider_error"].includes(error.code));
   await assert.rejects(() => nav.handle({ context: { userId: "u" }, body: { action: "trip", stops: ["Atlanta", "Nowhereville"] } }), error => error.code === "place_not_found" && /Nowhereville/.test(error.message));
   await assert.rejects(() => nav.handle({ context: { userId: "u" }, body: { action: "trip", stops: ["Atlanta"] } }), error => error.status === 400);
 });
