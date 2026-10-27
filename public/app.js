@@ -52341,8 +52341,12 @@ function kyroHeardOpenVerb(text) {
 const KYRO_OPEN_LEAD = "^(?:please\\s+)?(?:(?:hey\\s+)?(?:kyro|nexus)[,.]?\\s+)?(?:(?:can|could|would|will) you\\s+)?";
 const KYRO_OPEN_DOCS = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:(?:my|the|all|some)\\s+)?(?:saved\\s+)?(?:documents?|docs?|files?|papers|business plans?|letters|reports)[.?!]*$`, "i");
 const KYRO_OPEN_MEDIA = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:(?:my|the|some|any)\\s+)?(images?|pictures?|photos?|videos?|clips?)[.?!]*$`, "i");
-const KYRO_DOCUMENT_REQUEST = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:create|make|write|draft|prepare|generate|build|put together)\\s+(?:me\\s+)?(?:a|an|my|the|some)?\\s*(?:[a-z'-]+\\s+){0,3}?(?:document|letter|report|proposal|contract|agreement|roadmap|invoice|business plan|marketing plan|farm plan|financial plan|funding plan|action plan)\\b`, "i");
-const KYRO_DOCUMENT_NOT = /\b(?:resume|résumé|cv|checklist|to-?do|reminder|note|list)\b|\bas a pdf\b|^(?:how|what|why|should i|can i)\b/i;
+const KYRO_DOCUMENT_REQUEST = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:create|make|write|draft|prepare|generate|build|put together|compose|type up)\\s+(?:me\\s+)?(?:a|an|my|the|some)?\\s*(?:[a-z'-]+\\s+){0,3}?(?:document|letter|report|proposal|contract|agreement|roadmap|invoice|business plan|marketing plan|farm plan|financial plan|funding plan|action plan|agenda|e-?mail|(?:thank[- ]?you |thank-you |apology )note|bio|biography|speech|toast|meal plan|menu|schedule|timetable|table|outline|announcement|notice|statement|job description|lesson plan|workout plan|study plan)\\b`, "i");
+const KYRO_DOCUMENT_NOT = /\b(?:resume|résumé|cv|checklist|to-?do|reminder|list)\b|(?<!thank you |thank-you |thank |apology )\bnote\b|\bsend\b|\bas a pdf\b|^(?:how|what|why|should i|can i)\b/i;
+// A spoken request to make a list ("make a shopping list with milk, eggs and bread", "make me a packing list for a week in Tokyo"), to see the lists, or "what should I pack": taken by the page and answered on the screen by the typed route, which makes the list and shows it
+// (or asks what goes on it), shows the lists, or answers as a card. The voice model used to reword these into a tool call of its own, and the person was shown nothing or the wrong thing (found by the sweep of 34 spoken requests on 27 October 2026).
+const KYRO_LIST_REQUEST = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:(?:create|make|start|build|put together|write)\\s+(?:me\\s+)?(?:a|an|my|the|some)?\\s*(?:[a-z'-]+\\s+){0,3}?(?:list|checklist)\\b|(?:show|open|read|bring up|pull up)\\s+(?:me\\s+)?(?:all\\s+)?(?:of\\s+)?my\\s+(?:lists|checklists)\\b|(?:what|which)\\s+(?:should|do|can|must)\\s+(?:i|we)\\s+(?:pack|bring|take)\\b)`, "i");
+const KYRO_LIST_NOT = /^(?:how|why|should i|can i)\b|\b(?:walk|teach|guide|show)\s+(?:me\s+)?(?:how|through)\b|\b(?:what|which) (?:is|are) (?:a|the)\b/i;
 // (the answer is a subject, not another request: "find a clinic near me" or "what time is it" said next are requests of their own)
 const KYRO_NOT_A_SUBJECT = /^(?:open|find a|create|make|write|teach|play|remind|what|how|where|when|why|who|call|text|send|go|close|stop|help|hello|hi|hey|thanks|take|look|read|export|save|add|post|i need|i have|my)(?![a-z])/i;
 // "Open the map", "open US maps", "show me a map of Kenya", typed: the page opens the map (the typed route used to answer "I can't open live maps in this reply"). Only the whole sentence counts;
@@ -52798,6 +52802,11 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
     return true;
   }
   if (!options.typed && KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said)) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
+  }
+  if (!options.typed && KYRO_LIST_REQUEST.test(said) && !KYRO_LIST_NOT.test(said)) {
     kyroTakeOverTurn();
     void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
     return true;
@@ -61396,6 +61405,11 @@ async function handleKyroNavigationCommand(text, options = {}) {
   try { reply = await kyroNavigator.handle(text); } catch { reply = null; }
   if (reply === null || reply === undefined) return false;
   setVoiceResponse(reply, true, { allowHandoff: false, command: text, source: "kyro-navigation" });
+  // "I can't see your location ...": said and shown, with what to do instead (found by the sweep of spoken requests on 27 October 2026: "directions to the nearest pharmacy" showed nothing on the screen)
+  if (/^(?:I can't see your location|I couldn't get your location|I couldn't work out where you are|Siwezi kuona eneo)/i.test(String(reply))) {
+    const more = languageCode() === "sw" ? "" : " Or tell me where you are, for example: directions from Main Street to the pharmacy.";
+    try { kyroShowResultScreen("typed", text, { ok: true, status: "completed", response: String(reply) + more }); } catch { /* it is said aloud */ }
+  }
   return true;
 }
 
