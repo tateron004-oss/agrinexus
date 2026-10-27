@@ -61422,6 +61422,8 @@ const kyroRouteView = {
 async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {}) {
   const text = String(command || "").trim();
   if (!text) return false;
+  // a card left open by an earlier request does not stay in front of this one
+  kyroDismissStaleWorkspace(text);
   // The trip's route, for typed and spoken requests alike (found on the live site on 27 October 2026: typing "Show the route on the map." after a trip asked "Where should the route start and end?", because only the spoken path remembered the trip).
   // "Show the route on the map" draws the last trip's route; a trip request that also asks for the map ("...and show the route on the map") is made as a document first and then the map is opened.
   if (options.kyroTripWrapped !== true) {
@@ -61434,8 +61436,6 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
       }
     } catch { /* the ordinary route below answers */ }
   }
-  // a card left open by an earlier request does not stay in front of this one
-  kyroDismissStaleWorkspace(text);
   if (nexusPendingBehaviorConfirmation) {
     const decision = detectNexusPendingConfirmationReply(text);
     if (decision) return submitNexusPendingBehaviorConfirmation(decision === "approve", text, options);
