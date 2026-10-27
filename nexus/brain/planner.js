@@ -1940,6 +1940,8 @@ function completeListsPlan(text, catalog) {
   const namedTitle = goal.match(/(?:called|titled|named|for)\s+["']?(.+?)(?=["']?(?:,|\s+with\b|\s+including\b|\.|$))/i)?.[1]?.trim();
   const itemsClause = goal.match(/\b(?:with|including)\s+(?:items?\s*[:]?\s*)?(.+?)(?:\.|$)/i)?.[1];
   const items = itemsClause ? itemsClause.split(/,|\band\b/i).map(item => item.trim()).filter(Boolean) : [];
+  // "Make me a checklist of what to bring to a clinic visit": no name and nothing on it. An empty list called "Nexus checklist" was made (found by the spoken-document probe on 27 October 2026); Kyro does not write the items for the person, so it asks.
+  if (!namedTitle && !items.length) return { goal, application: "lists", riskTier: "low", steps: [], clarification: "I can make that list, but I need to know what goes on it, because I do not make up the items. For example: \"Create a checklist called Clinic Visit with items ID, insurance card and medicines\". What should it be called, and what should be on it?" };
   return { goal, application: "lists", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "create-list", title: "Create a checklist",
       toolId: "lists.create", input: { title: namedTitle || "Nexus checklist", items, command: goal },
