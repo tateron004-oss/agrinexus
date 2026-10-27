@@ -12,6 +12,9 @@
   // tripRequest(text) -> null | { needsPlace: true, region } | { destination, origin, stops, days, travelers, style }. A pure text matcher: no places looked up, nothing saved.
   const NOT_A_PLAN_REQUEST = /^(?:please\s+)?(?:open|remind|save|delete|remove|cancel|change|update|edit|call|text|email|message|send|book|buy|purchase|reserve|order|pay|log|add|set|schedule|forget|translate|play|read|export|print|share)\b(?!\s+(?:me|us)\s+(?:how|through)\b)/i;
   const PERSONAL_EMERGENCY = /\b(?:suicid\w*|kill (?:myself|himself|herself|themselves)|end my life|hurt(?:ing)? (?:myself|himself|herself|themselves)|self[- ]harm|overdos\w+|911|ambulance|can'?t breathe|cannot breathe|chest pain|abus(?:e[ds]?|ing)|in danger right now|being (?:hurt|attacked|threatened))\b/i;
+  // a list is not an itinerary: "make me a packing checklist for a trip to Kenya" is a checklist (found by the spoken-document probe on 27 October 2026: it was made into a seven day itinerary)
+  const LIST_WORDS = /\b(?:check ?lists?|to-?do lists?|packing lists?|shopping lists?|lists?)\b/i;
+  const PLAN_WORDS = /\b(?:itinerar(?:y|ies)|plan(?:s|ning)?|travel arrangements?|arrangements?|schedule)\b/i;
   const BOOKING_ORDER = /\b(?:book|buy|purchase|reserve|order)\b[^.!?]{0,30}\b(?:ticket|tickets|flight|flights|hotel|room|seat|car|cruise|tour)\b/i;
   // what is being asked for: a trip, an itinerary, a travel plan or the arrangements for travel
   const THING = /\b(?:itinerar(?:y|ies)|trip|trips|vacation|holiday|getaway|honeymoon|safari|tour|journey|travel(?:l?ing)? (?:plans?|arrangements?|schedule|ideas?|options?)|plan(?:s)? for (?:the |my |our )?travel|travel(?:l?ing)? to)\b/i;
@@ -81,6 +84,7 @@
     if (!value || value.length > 300) return null;
     if (NOT_A_PLAN_REQUEST.test(value) || PERSONAL_EMERGENCY.test(value) || BOOKING_ORDER.test(value)) return null;
     if (!THING.test(value) || !MAKE.test(value)) return null;
+    if (LIST_WORDS.test(value) && !PLAN_WORDS.test(value)) return null;
     // "my saved trip", "open my itinerary": not a request to make one (Kyro keeps no trips)
     const destination = destinationOf(value);
     const origin = originOf(value);

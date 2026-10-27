@@ -51717,6 +51717,15 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       }
       return true;
     }
+    // A spoken request for one of Kyro's starter documents ("Draft a website brief for Grace's Bakery"): made and shown with its Download button, as typing it is (see kyroTemplateRequest).
+    if (trimmed && typeof kyroTemplateRequest === "function" && kyroTemplateRequest(trimmed)) {
+      if (!heardAgain) {
+        try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+        kyroPageSpeaksUntil = Date.now() + 40000;
+        void handleNexusUnifiedBrainRuntimeCommand(trimmed, { source: "typed", kyroDirect: true });
+      }
+      return true;
+    }
     // A request for a sample trip itinerary, and "show the route on the map" for the last one (see kyroTripQuestion): both are answered on the screen, as typing them is.
     if (trimmed && typeof kyroTripQuestion === "function" && kyroTripQuestion(trimmed)) {
       if (!heardAgain) {
@@ -53338,6 +53347,34 @@ function kyroReentryQuestion(text) {
     return Boolean(lib.reentryTopic(text, { country: zone === "Africa/Nairobi" ? "ke" : zone === "Africa/Lagos" ? "ng" : null }));
   } catch { return false; }
 }
+// A spoken request for one of Kyro's starter documents (a website brief, a technology roadmap, an automation audit, vendor questions, an AI use policy, a growth roadmap, a funding checklist; public/kyro-template-topics.js, shared with the server).
+// The page takes it itself so the document is made and put on the screen with its Download button; the voice model used to answer "Okay." and nothing was shown (found on the live site on 27 October 2026). A business plan is left to its own interview, which asks its ten questions first.
+function kyroTemplateRequest(text) {
+  try {
+    const lib = window.KyroTemplateTopics;
+    const found = lib && typeof lib.templateRequest === "function" ? lib.templateRequest(text) : null;
+    return Boolean(found && found.kind !== "business-plan");
+  } catch { return false; }
+}
+// After "Added milk, eggs and bread to your shopping list." (one sentence, and a card with that one sentence) the list itself is put on the screen, as "show my shopping list" does (found on the live site on 27 October 2026: a spoken
+// request to make a shopping list showed nothing). The server's words and what it says are left as they are; the page asks for the list and shows it in place of the confirmation.
+async function kyroShowListAfterAdd(result, command) {
+  try {
+    const said = String(result?.response || "");
+    const match = /^(?:Added|I added|I've added)\b[^.]{0,200}?\bto your ([a-z0-9' -]{3,40}? list)\./i.exec(said);
+    if (!match) return false;
+    const noun = match[1].trim();
+    const language = languageCode();
+    const timeZone = kyroDeviceTimeZone();
+    const response = await kyroFetchWithTimeout("/api/voice/realtime/tool", {
+      method: "POST", credentials: "same-origin", cache: "no-store", headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ name: "nexus_everyday_records", correlationId: `list-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, arguments: { command: `Show my ${noun}`, language, timeZone }, language, timeZone })
+    });
+    const listed = response.ok ? await response.json().catch(() => null) : null;
+    if (!listed || !/^On your /i.test(String(listed.response || ""))) return false;
+    return kyroShowResultScreen("nexus_everyday_records", `Show my ${noun}`, listed);
+  } catch { return false; }
+}
 // A request for a sample trip itinerary (public/kyro-trip-topics.js, shared with the server's planner): "Plan a 7 day trip to Kenya", "make me a sample itinerary for Paris", "help me with my travel arrangements to Nairobi from Atlanta". The page takes it itself so the answer is
 // always put on the screen (a document with a Download button), never only talked about by the voice model, and remembers the places for "show the route on the map" (found on 26 October 2026: asked about travel arrangements to Africa, Kyro talked and showed nothing,
 // then showed the whole continent instead of the route).
@@ -53889,6 +53926,8 @@ function kyroShowResultScreen(toolName, command, result) {
     kyroSourceLinks = Array.isArray(model.links) ? model.links : [];
     kyroPendingOffers = Array.isArray(model.offers) ? model.offers : [];
     kyroNoteActivity();
+    // (a list that was just added to is shown as the list: see kyroShowListAfterAdd)
+    try { void kyroShowListAfterAdd(result, command); } catch { /* the confirmation is already showing */ }
     return true;
   } catch { return false; }
 }

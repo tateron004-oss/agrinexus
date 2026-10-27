@@ -217,9 +217,9 @@ test("on the page: a trip request is the page's own turn and remembers its place
   assert.match(app, /Trip route: \$\{route\.stops\.map\(stop => stop\.label\)\.join\(" → "\)\}/);
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  const tag = '<script src="/kyro-trip-topics.js?v=kyro-trip-topics-1"></script>';
+  const tag = '<script src="/kyro-trip-topics.js?v=kyro-trip-topics-2"></script>';
   assert.ok(index.includes(tag) && index.indexOf(tag) < index.search(/<script[^>]+src="\/app\.js/));
-  assert.match(sw, /`\/kyro-trip-topics\.js\?v=kyro-trip-topics-1`/);
+  assert.match(sw, /`\/kyro-trip-topics\.js\?v=kyro-trip-topics-2`/);
 });
 
 test("a flight path has no driving time to say: the list says only the distance, never 'less than a minute'", () => {
