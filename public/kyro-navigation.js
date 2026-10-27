@@ -142,7 +142,7 @@
     return rest ? (language === "sw" ? tx(language, "hoursMinutes", { h: hours, m: rest }) : `${hourWord} ${rest} minutes`) : hourWord;
   }
   const lowerFirst = text => `${text.charAt(0).toLowerCase()}${text.slice(1)}`;
-  const about = (meters, seconds, language) => tx(language, "about", { distance: sayDistance(meters, language), duration: sayDuration(seconds, language) });
+  const about = (meters, seconds, language) => (Number(seconds) > 0 ? tx(language, "about", { distance: sayDistance(meters, language), duration: sayDuration(seconds, language) }) : sayDistance(meters, language));
 
   // Follows one route: given a position, where along it the person is, how far off it, what is next, and what to say.
   function createRouteFollower(route, { mode = "drive", language = "en" } = {}) {

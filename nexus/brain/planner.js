@@ -48,6 +48,8 @@ const { specialEdTopic, placeOf: specialEdPlace } = require("../../public/kyro-s
 const { specialEdAnswer } = require("../knowledge/special-ed-guide.js");
 const { reentryTopic, placeOf: reentryPlace } = require("../../public/kyro-reentry-topics.js");
 const { reentryAnswer } = require("../knowledge/reentry-guide.js");
+const { tripRequest } = require("../../public/kyro-trip-topics.js");
+const { tripGoal, parseTripAnswer, outlineContent, tripDocument, needsPlaceAnswer, TRIP_INSTRUCTIONS } = require("../trips/itinerary.js");
 const { moneyAnswer } = require("../knowledge/money-guide.js");
 const { moneyWalkthrough, WALK_OF_TOPIC: MONEY_WALK_OF_TOPIC, moneyWalkthroughFor } = require("../knowledge/money-walkthroughs.js");
 const { athleteWalkthrough, WALK_OF_TOPIC: ATHLETE_WALK_OF_TOPIC, athleteWalkthroughFor } = require("../knowledge/athlete-walkthroughs.js");
@@ -549,6 +551,28 @@ class OpenEndedPlanner {
     // "Walk me through using the shopping list", "teach me to use the farm log": a part of Kyro taught one step at a time (see knowledge/howto-walkthroughs.js). A part-of-Kyro word and a request to be taught are both required (public/kyro-howto-topics.js), so a guide's question
     // and the plain use of a feature ("show my notes") are never taken; without a walkthrough for the topic the request goes on as it did.
     { const howtoWalk = guideWalkthroughPlan(command, askText, "kyro-howto", howtoTopic(askText), "app-help", true); if (howtoWalk) return howtoWalk; }
+    // A SIMULATED sample travel itinerary for anywhere ("Plan a 7 day trip to Kenya", "make me a sample itinerary for Paris for five days", "I am traveling to Nairobi from Atlanta, help me with my travel arrangements"), for a travel agent to show a client or for anyone
+    // planning a trip (see trips/itinerary.js). Made as a document with a Download button, never only talked about: the days are written by the AI model and the document says they are an illustration (nothing booked, no prices or schedules, official sources to check).
+    // A region instead of a place ("a trip to Africa") is asked about, not guessed. Typed route only: the spoken-only route leaves it to the page, which takes the request itself (public/kyro-trip-topics.js is shared with it).
+    if (context?.deterministicOnly !== true) {
+      const trip = tripRequest(askText);
+      if (trip) {
+        if (trip.needsPlace) return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: needsPlaceAnswer(trip.region), sourceRequired: false, knowledge: "trip-itinerary:needs-place", planningAttempts: 0 });
+        const tripCatalog = await this.catalog();
+        if (tripCatalog.tools.some(tool => tool.toolId === "documents.create") && tripCatalog.applications.some(app => app.applicationId === "documents")) {
+          let tripContent = null;
+          if (typeof this.model.respond === "function") {
+            const tripLocale = command.locale || "en";
+            const answer = await this.model.respond({ goal: tripGoal(trip), instructions: TRIP_INSTRUCTIONS, maxOutputTokens: 3000, locale: tripLocale, tenantId: command.tenantId,
+              interactionProfile: createInteractionProfile({ locale: tripLocale, userPreferences: context?.userPreferences || {}, channel: command.channel }), conversationHistory: [], memories: [], capabilities: [] }).catch(() => null);
+            tripContent = parseTripAnswer(answer, trip.days);
+          }
+          const made = tripDocument(trip, tripContent || outlineContent(trip), { outline: !tripContent });
+          return Object.freeze({ goal: command.spokenText || command.text, application: "documents", riskTier: "low", clarification: null, planningAttempts: 1, knowledge: "trip-itinerary",
+            steps: [{ clientStepId: "trip-itinerary", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: made.format, reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
+        }
+      }
+    }
     // Staying safe online and on the phone (fake messages and calls, passwords and two-step sign-in, a hijacked account, identity theft, locked files, a swapped SIM card, where to report): a checked, sourced, plain answer from the official pages of
     // the United States, Kenya and Nigeria (see knowledge/safety-guide.js). Asked early, before the money, technology and parents' guides, because "someone called asking for my PIN" and "how do I spot a fake text" are this guide's. The matcher
     // (public/kyro-safety-topics.js) leaves to those guides a question about investments, loans, banks and mobile money, a business's own systems, an older person or a child, and never takes an order, a record, a request to do the harm, or a personal emergency.

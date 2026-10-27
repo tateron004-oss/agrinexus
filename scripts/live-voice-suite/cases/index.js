@@ -17,8 +17,9 @@ const walkthroughsGuides = require("./walkthroughs-guides.js");
 const safety = require("./safety.js");
 const specialEd = require("./special-ed.js");
 const reentry = require("./reentry.js");
+const trips = require("./trips.js");
 
-const ALL = Object.freeze([...documentsAndLists, ...businessAndApps, ...mediaSearchHealthForms, ...resourcesForPeople, ...minorityAndStartupBusiness, ...spanishBusiness, ...automations, ...californiaBusiness, ...athletes, ...money, ...moneyAfrica, ...athleteDocuments, ...moneyDocuments, ...walkthroughs, ...walkthroughsGuides, ...safety, ...specialEd, ...reentry]);
+const ALL = Object.freeze([...documentsAndLists, ...businessAndApps, ...mediaSearchHealthForms, ...resourcesForPeople, ...minorityAndStartupBusiness, ...spanishBusiness, ...automations, ...californiaBusiness, ...athletes, ...money, ...moneyAfrica, ...athleteDocuments, ...moneyDocuments, ...walkthroughs, ...walkthroughsGuides, ...safety, ...specialEd, ...reentry, ...trips]);
 
 // Which cases run: by default the ones that change nothing on the account; --writes adds the ones that save something, --risky the emergency words,
 // --only a,b (ids) or --area documents,lists (areas) narrows it, and --no-sound leaves out the ones that need sound to start.

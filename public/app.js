@@ -51717,6 +51717,24 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       }
       return true;
     }
+    // A request for a sample trip itinerary, and "show the route on the map" for the last one (see kyroTripQuestion): both are answered on the screen, as typing them is.
+    if (trimmed && typeof kyroTripQuestion === "function" && kyroTripQuestion(trimmed)) {
+      if (!heardAgain) {
+        try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+        kyroPageSpeaksUntil = Date.now() + 60000;
+        const wantsMap = Boolean(kyroLastTrip.wantsMap);
+        void Promise.resolve(handleNexusUnifiedBrainRuntimeCommand(trimmed, { source: "typed", kyroDirect: true })).then(() => { if (wantsMap) return kyroShowTripRoute(); return null; }).catch(() => {});
+      }
+      return true;
+    }
+    if (trimmed && typeof kyroTripRouteAsk === "function" && kyroTripRouteAsk(trimmed)) {
+      if (!heardAgain) {
+        try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+        kyroPageSpeaksUntil = Date.now() + 30000;
+        void kyroShowTripRoute();
+      }
+      return true;
+    }
     // A question that comes alone, a moment after the person said they are coming home (see kyroReentryRememberedText): asked with their own earlier words in front of it, so it is answered from the checked guide and not from memory.
     if (trimmed && typeof kyroReentryRememberedText === "function") {
       const withContext = kyroReentryRememberedText(trimmed);
@@ -53320,6 +53338,44 @@ function kyroReentryQuestion(text) {
     try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { zone = ""; }
     return Boolean(lib.reentryTopic(text, { country: zone === "Africa/Nairobi" ? "ke" : zone === "Africa/Lagos" ? "ng" : null }));
   } catch { return false; }
+}
+// A request for a sample trip itinerary (public/kyro-trip-topics.js, shared with the server's planner): "Plan a 7 day trip to Kenya", "make me a sample itinerary for Paris", "help me with my travel arrangements to Nairobi from Atlanta". The page takes it itself so the answer is
+// always put on the screen (a document with a Download button), never only talked about by the voice model, and remembers the places for "show the route on the map" (found on 26 October 2026: asked about travel arrangements to Africa, Kyro talked and showed nothing,
+// then showed the whole continent instead of the route).
+let kyroLastTrip = { stops: [], at: 0, wantsMap: false };
+const KYRO_TRIP_MEMORY_MS = 60 * 60 * 1000;
+function kyroTripQuestion(text) {
+  try {
+    const lib = window.KyroTripTopics;
+    if (!lib || typeof lib.tripRequest !== "function") return false;
+    const trip = lib.tripRequest(text);
+    if (!trip) return false;
+    if (!trip.needsPlace) kyroLastTrip = { stops: [trip.origin, ...(trip.stops || []), trip.destination].filter(Boolean), at: Date.now(), wantsMap: Boolean(trip.wantsMap) };
+    return true;
+  } catch { return false; }
+}
+function kyroTripRouteAsk(text) {
+  try {
+    const lib = window.KyroTripTopics;
+    return Boolean(lib && typeof lib.wantsTripRoute === "function" && lib.wantsTripRoute(text) && kyroLastTrip.stops.length >= 2 && Date.now() - kyroLastTrip.at < KYRO_TRIP_MEMORY_MS);
+  } catch { return false; }
+}
+// The last trip's route on the map, with each stop marked and the legs listed (a straight line where there is no road). A trip with only one place named cannot be drawn, and is told so.
+async function kyroShowTripRoute() {
+  const trip = kyroLastTrip;
+  const say = line => { try { setVoiceResponse(line, true, { allowHandoff: false, command: "show the route", source: "kyro-trip" }); } catch { /* the screen has it */ } };
+  if (!Array.isArray(trip.stops) || trip.stops.length < 2) { say("To draw a route I need a start and a destination. Say, for example, plan a 7 day trip to Kenya from Atlanta, and then show the route on the map."); return false; }
+  try {
+    const answer = await requestWithTimeout("/api/nexus/runtime/navigation", { method: "POST", body: { action: "trip", stops: trip.stops } }, 45000);
+    const route = answer?.route;
+    if (!route || !Array.isArray(route.geometry) || route.geometry.length < 2) throw new Error("no route");
+    kyroRouteView.route({ route, from: { label: trip.stops[0] }, to: { label: trip.stops[trip.stops.length - 1] }, language: languageCode() });
+    say(`Here is the route for your trip: ${trip.stops.join(" to ")}. ${route.straightLine ? "Where there is no road it is drawn as a straight line. It shows the direction and the distance, not a booked flight." : ""}`.trim());
+    return true;
+  } catch (error) {
+    say(/place_not_found|couldn't find/i.test(String(error?.message || error?.code || "")) ? `I could not find one of the places on the map: ${trip.stops.join(", ")}. Try the name with its country, for example Nairobi, Kenya.` : "I could not draw the route just now. Please try again in a moment.");
+    return false;
+  }
 }
 // What a person said that shows they are coming home, remembered for fifteen minutes (public/kyro-reentry-topics.js): the voice system hands over a sentence in pieces cut at a pause ("I just got out of prison." and then "How do I see what is on my
 // background check?"), and the second piece alone does not show it. The question is then asked with the person's own earlier words in front of it. Nothing is kept past the page, and nothing is sent anywhere but the ordinary turn.
@@ -61300,6 +61356,12 @@ function kyroFitRouteBelowSteps(points, live = false) {
   const sheet = document.querySelector("[data-kyro-route-steps]");
   userMap.fitBounds(points, { paddingTopLeft: [24, (sheet?.offsetHeight || 0) + 24], paddingBottomRight: [24, live ? 140 : 24] });
 }
+// The places a trip passes through (not the first or the last, which are marked anyway), each with its name.
+function kyroMarkTripStops(stops) {
+  try {
+    (Array.isArray(stops) ? stops : []).slice(1, -1).forEach(stop => { if (Number.isFinite(Number(stop?.lat)) && Number.isFinite(Number(stop?.lng))) L.marker([Number(stop.lat), Number(stop.lng)]).addTo(userMapLayers.markers).bindPopup(`<strong>${escapeHtml(String(stop.label || "Stop"))}</strong>`); });
+  } catch { /* the line is still drawn */ }
+}
 function kyroDrawRouteOnMap(points, origin, destination, live = false) {
   try { document.body.dataset.genesisMapLocation = `${origin} to ${destination}`; } catch { /* a label only */ }
   userMapLayers.route?.clearLayers?.();
@@ -61319,9 +61381,9 @@ function kyroShowRouteSteps({ route, origin, destination, language }) {
   const sheet = document.createElement("div");
   sheet.setAttribute("data-kyro-route-steps", "true"); sheet.setAttribute("role", "region"); sheet.setAttribute("aria-label", sw ? "Hatua za njia" : "Steps of the route");
   sheet.style.cssText = "position:fixed;left:8px;right:8px;top:8px;z-index:2147482000;max-height:38vh;overflow:auto;background:#0f2a26;color:#fff;border-radius:12px;padding:10px 14px;font:500 16px/1.35 system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.4)";
-  const about = nav ? `${nav.sayDistance(route.distanceMeters, sw ? "sw" : "en")}, ${nav.sayDuration(route.durationSeconds, sw ? "sw" : "en")}` : "";
+  const about = nav ? (Number(route.durationSeconds) > 0 ? `${nav.sayDistance(route.distanceMeters, sw ? "sw" : "en")}, ${nav.sayDuration(route.durationSeconds, sw ? "sw" : "en")}` : nav.sayDistance(route.distanceMeters, sw ? "sw" : "en")) : "";
   const head = document.createElement("div"); head.style.cssText = "display:flex;gap:10px;align-items:center;justify-content:space-between;font-weight:700";
-  const title = document.createElement("span"); title.textContent = `${origin} → ${destination}${about ? `: ${about}` : ""}`;
+  const title = document.createElement("span"); title.textContent = route?.mode === "trip" && Array.isArray(route.stops) && route.stops.length > 1 ? `Trip route: ${route.stops.map(stop => stop.label).join(" → ")}${about ? `: ${about}` : ""}` : `${origin} → ${destination}${about ? `: ${about}` : ""}`;
   const close = document.createElement("button"); close.type = "button"; close.textContent = sw ? "Funga" : "Close";
   close.style.cssText = "padding:6px 12px;border-radius:8px;border:0;background:#fff;color:#0f2a26;font:600 15px system-ui,sans-serif";
   close.addEventListener("click", () => sheet.remove());
@@ -61340,11 +61402,11 @@ const kyroRouteView = {
     const origin = from?.label || (live ? (sw ? "Ulipo" : "You") : (sw ? "Mwanzo" : "Start")); const destination = to?.label || (sw ? "Unakoenda" : "Destination");
     if (document.body.classList.contains("user-map-full-open") && userMap) {
       kyroShowRouteSteps({ route, origin, destination, language });
-      try { kyroDrawRouteOnMap(points, origin, destination, live); } catch { /* the steps still show */ }
+      try { kyroDrawRouteOnMap(points, origin, destination, live); kyroMarkTripStops(route.stops); } catch { /* the steps still show */ }
     } else {
       openGenesisRealtimeMapWorkspace({ origin, destination, routeGeometry: points, distanceMeters: route.distanceMeters, durationSeconds: route.durationSeconds }, "");
       kyroShowRouteSteps({ route, origin, destination, language });
-      waitForStableUserMapCanvas().then(() => { if (userMap) kyroFitRouteBelowSteps(points, live); }).catch(() => {});
+      waitForStableUserMapCanvas().then(() => { if (userMap) { kyroFitRouteBelowSteps(points, live); kyroMarkTripStops(route.stops); } }).catch(() => {});
     }
   },
   position(fix) {
