@@ -1937,9 +1937,12 @@ function completeListsPlan(text, catalog) {
   if (!/\b(create|make|start|save)\b/i.test(goal)) return null;
   if (!catalog.tools.some(tool => tool.toolId === "lists.create") ||
       !catalog.applications.some(app => app.applicationId === "lists")) return null;
-  const namedTitle = goal.match(/(?:called|titled|named|for)\s+["']?(.+?)(?=["']?(?:,|\s+with\b|\s+including\b|\.|$))/i)?.[1]?.trim();
+  const titleAfter = words => goal.match(new RegExp(String.raw`(?:${words})\s+["']?(.+?)(?=["']?(?:,|\s+with\b|\s+including\b|\.|$))`, "i"))?.[1]?.trim();
   const itemsClause = goal.match(/\b(?:with|including)\s+(?:items?\s*[:]?\s*)?(.+?)(?:\.|$)/i)?.[1];
   const items = itemsClause ? itemsClause.split(/,|\band\b/i).map(item => item.trim()).filter(Boolean) : [];
+  // "called/titled/named X" is a name. "for X" is a name only when there are items for it ("a list for the market trip with maize and beans"): with nothing on it, "a packing list for a week in Tokyo" is a request for a list OF something, not a list whose name is the trip
+  // (found by the sweep of 34 spoken requests on 27 October 2026: empty lists called "a week in Tokyo", "opening a food truck" and "Kenya" were made).
+  const namedTitle = titleAfter("called|titled|named") || (items.length ? titleAfter("for") : undefined);
   // "Make me a checklist of what to bring to a clinic visit": no name and nothing on it. An empty list called "Nexus checklist" was made (found by the spoken-document probe on 27 October 2026); Kyro does not write the items for the person, so it asks.
   if (!namedTitle && !items.length) return { goal, application: "lists", riskTier: "low", steps: [], clarification: "I can make that list, but I need to know what goes on it, because I do not make up the items. For example: \"Create a checklist called Clinic Visit with items ID, insurance card and medicines\". What should it be called, and what should be on it?" };
   return { goal, application: "lists", riskTier: "low", clarification: null,
@@ -2055,7 +2058,8 @@ function completeRemainingWorkspacePlan(text, catalog) {
   // regardless of the words actually spoken -- the "learning" application's
   // real completion contract (nexus/apps/capability-completion-contracts.js)
   // requires it on the executor's output, not on the user's own phrasing.
-  if (/\b(create|make|prepare|help|teach|give|start|tutor)\b/i.test(goal) &&
+  // "Make a study schedule for my exam" is a schedule to write down, not learning content to search for (found by the sweep of 34 spoken requests on 27 October 2026)
+  if (/\b(create|make|prepare|help|teach|give|start|tutor)\b/i.test(goal) && !/\b(?:schedule|timetable|agenda)\b/i.test(goal) &&
       /\b(lesson|literacy|learning|education|youth|student|homework|study|tutor(?:ing)?|curriculum)\b/i.test(goal))
     return plan("learning", "knowledge.search", "Create and save governed learning content",
       { query: goal, lesson: goal, content: goal, saveProgress: true });
