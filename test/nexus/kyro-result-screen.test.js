@@ -606,7 +606,10 @@ test("a saved document is on the screen with its words and a Download button, an
   assert.equal(page.showDoc({ data: { title: "No id" } }), false);
   assert.match(app, /if \(KYRO_APP_SCREENS\[workspace\] && kyroShowAppScreen\(workspace\)\) return true;/, "the help screen is the application screen");
   assert.match(app, /if \(openApp\[1\]\) return \(typeof kyroShowAppScreen === "function" && kyroShowAppScreen\("business"\)\)/, "open business is the business screen");
-  assert.match(app, /if \(drawn\.data\?\.documentId && String\(drawn\.data\?\.title \|\| ""\)\.trim\(\) && kyroShowDocumentScreen\(drawn\)\) return true;/, "a saved document is shown on a screen");
+  assert.match(app, /if \(drawn\.data\?\.documentId && kyroShowDocumentScreen\(drawn\)\) return true;/, "a saved document is shown on a screen");
+  // a saved document whose plan gave it no title is still shown (found 27 October 2026: it was saved and said aloud as "your document" and no card was drawn)
+  assert.equal(page.showDoc({ data: { documentId: "doc_untitled", content: "Dear teacher" } }), true);
+  assert.ok(page.select("h2").some(node => node.textContent === "Your document"));
 });
 
 test("the application screens are in Kiswahili for a Kiswahili session, and still send the requests in English", () => {

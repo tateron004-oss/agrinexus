@@ -92,6 +92,22 @@ class OpenEndedPlanner {
     Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, maxRepairAttempts });
   }
 
+  // A planned document whose body is only an instruction to write it (see echoesInstruction) is written out by one more model call; if that fails, the plan is kept as it was.
+  async writeEchoedDocuments(plan, command, profile) {
+    const steps = (Array.isArray(plan?.steps) ? plan.steps : []).map(step => withDocumentTitle(step));
+    const echoed = step => step.toolId === "documents.create" && echoesInstruction(step.input?.content, command?.text);
+    if (!steps.some(echoed) || typeof this.model.respond !== "function") return { ...plan, steps };
+    const written = [];
+    for (const step of steps) {
+      if (!echoed(step)) { written.push(step); continue; }
+      const text = await this.model.respond({ goal: `${command.spokenText || command.text}\n\nThe document is called "${String(step.input?.title || "").slice(0, 120)}".`, instructions: DOCUMENT_WRITER_INSTRUCTIONS, maxOutputTokens: 1500,
+        interactionProfile: profile, tenantId: command.tenantId, conversationHistory: [], memories: [], capabilities: [] }).catch(() => null);
+      const body = typeof text === "string" ? text.trim() : "";
+      written.push(body.length >= 20 && !echoesInstruction(body, command?.text) ? { ...step, input: { ...step.input, content: body.slice(0, 4000) } } : step);
+    }
+    return { ...plan, steps: written };
+  }
+
   // The no-workspace answer for a business/nonprofit request, or null when the person has a workspace (or this cannot be told: then the request goes on as before and the executor's own check still applies).
   async noBusinessWorkspaceAnswer(text, context) {
     if (!this.businessWorkspaces?.count || context?.deterministicOnly === true) return null;
@@ -1002,7 +1018,7 @@ class OpenEndedPlanner {
       attemptsUsed = attempt + 1;
       const candidate = canonicalizeExplicitApplication(await this.model.plan({ ...request, feedback, attempt }), command.text, catalog);
       const validation = validatePlan(candidate, catalog, context);
-      if (validation.valid) return Object.freeze({ ...personalizedSearch(withClearReminderTime(validation.plan, command.text, locale), known.byKind), planningAttempts: attempt + 1 });
+      if (validation.valid) return Object.freeze({ ...personalizedSearch(withClearReminderTime(await this.writeEchoedDocuments(validation.plan, command, interactionProfile), command.text, locale), known.byKind), planningAttempts: attempt + 1 });
       feedback = validation.errors;
       // A plan with no steps and no question means the model found no tool that fits. It is asked once more with that feedback (it may then pick a tool), but a second empty plan is the answer: asking a third time
       // (each one a full model call, measured at about 3 to 5 seconds) only delays the direct answer below.
@@ -1734,6 +1750,27 @@ const DOCUMENT_FORMAT_WORDS = Object.freeze({
   pdf: "pdf", docx: "docx", "word document": "docx", word: "docx", markdown: "md", md: "md",
   txt: "txt", "text file": "txt", "plain text": "txt", json: "json"
 });
+// The AI model, planning "Make me a weekly meal plan" or "Write a short bio for my website", sometimes fills the document with its own instruction to itself ("Create a simple weekly meal plan for breakfast, lunch, and dinner for 7 days.
+// Keep it practical...") instead of the document (found on the live site on 27 October 2026: the saved Weekly Meal Plan and Website Bio held that sentence). A body that is one short instruction to write something, which the person did not
+// say themselves, is not a document: the model is asked once more, with no tools, to write it out.
+// A planned document with no title at all was saved and told to the person as "your document", and the page draws a document's card only when it has a title, so nothing was shown (found by the live smoke run on 27 October 2026:
+// "Write a short speech for my daughter's graduation" and "Draft an email to my son's teacher" saved and showed no card). The step's own name ("Create Graduation Speech") gives the title.
+function withDocumentTitle(step) {
+  if (step?.toolId !== "documents.create" || String(step.input?.title || "").trim()) return step;
+  const named = String(step.title || "").replace(/^\s*(?:create|write|save|draft|make|prepare|generate|compose)\s+(?:an?|the|your|my)?\s*/i, "").replace(/^["'\u201c]+|["'\u201d.]+$/g, "").replace(/\s+/g, " ").trim().slice(0, 80);
+  const bare = /^(?:(?:create|write|save|draft|make|prepare|generate|compose)(?:\s+(?:an?|the|your|my)?\s*(?:document|file))?|(?:document|file))$/i.test(named);
+  const title = named.length >= 3 && !bare ? named.charAt(0).toUpperCase() + named.slice(1) : "Your document";
+  return { ...step, input: { ...step.input, title } };
+}
+const WRITE_INSTRUCTION = /^\s*(?:create|write|draft|make|prepare|generate|compose|produce|build|design|give|put together)\b/i;
+const DOCUMENT_WRITER_INSTRUCTIONS = "Write the finished document the person asked for, ready to use, in their language. Use only what they told you. Where a detail is needed that they did not give, leave a [bracket] naming it; never invent names, dates, prices, places or facts about them. Write only the document itself: no introduction, no explanation, no instructions to the reader and no code fences.";
+function squash(text) { return String(text || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
+function echoesInstruction(content, said) {
+  const body = String(content || "").trim();
+  if (body.length < 8 || body.length > 600 || /\n\s*\n|\n\s*(?:[-*\d]+[.)]?)\s/.test(body) || !WRITE_INSTRUCTION.test(body)) return false;
+  return !squash(said).includes(squash(body));
+}
+
 function requestedDocumentFormat(goal) {
   const match = /\bas\s+(?:an?\s+)?(pdf|docx|word document|word|markdown|md|text file|plain text|txt|json)\b/i.exec(goal);
   return match ? DOCUMENT_FORMAT_WORDS[match[1].toLowerCase()] : null;

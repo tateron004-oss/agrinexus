@@ -53751,7 +53751,8 @@ function kyroShowAppScreen(appId) {
 function kyroShowDocumentScreen(drawn) {
   try {
     const data = drawn?.data || {};
-    if (!data.documentId || !String(data.title || "").trim()) return false;
+    if (!data.documentId) return false;
+    if (!String(data.title || "").trim()) data.title = kyroT("Your document"); // a saved document is shown even when its plan gave it no title
     const id = String(data.documentId);
     document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
     const screen = kyroMake("section", { "data-kyro-result": "document", "data-kyro-keep": "true", role: "dialog", "aria-label": String(data.title),
@@ -54182,7 +54183,7 @@ function kyroShowTypedResult(result, text, message) {
       const cards = Array.isArray(drawn.data?.cards) ? drawn.data.cards : Array.isArray(drawn.data?.data?.cards) ? drawn.data.data.cards : [];
       const drawnKind = drawn.presentation?.kind;
       // a saved document or résumé: its words and its Download button on a screen
-      if (drawn.data?.documentId && String(drawn.data?.title || "").trim() && kyroShowDocumentScreen(drawn)) return true;
+      if (drawn.data?.documentId && kyroShowDocumentScreen(drawn)) return true;
       // pictures and videos: a screen of their own; checklists: every list with its items to tick, take off and add to
       if (drawnKind === "image-gallery" || drawnKind === "video-gallery") return kyroShowGalleryScreen(drawn);
       if (drawnKind === "checklist") {
