@@ -84,7 +84,11 @@ test("a spoken document request goes the typed way (where documents are made); a
   assert.equal(api.kyroHandleSpokenOpen("create a business plan", {}), true);
   assert.deepEqual({ ...calls.typed[0].options }, { source: "typed", kyroDirect: true }); assert.equal(calls.typed[0].text, "create a business plan");
   assert.equal(api.kyroHandleSpokenOpen("create a business plan", { typed: true }), false, "typed: it is already going that way");
-  for (const text of ["create a resume", "make a checklist called Market Day", "how do I write a business plan", "what is a business plan"]) assert.equal(api.kyroHandleSpokenOpen(text, {}), false, text);
+  for (const text of ["create a resume", "how do I write a business plan", "what is a business plan"]) assert.equal(api.kyroHandleSpokenOpen(text, {}), false, text);
+  // a spoken request to make a list is taken too, and answered on the screen by the typed route (27 October 2026, see spoken-sweep-oct27.test.js)
+  const before = calls.typed.length;
+  assert.equal(api.kyroHandleSpokenOpen("make a checklist called Market Day", {}), true);
+  assert.equal(calls.typed.length, before + 1); assert.equal(calls.typed[before].text, "make a checklist called Market Day");
 });
 
 test("it is wired: the map uses the world list and its zoom, the first handler of a heard sentence and the typed route call it, and the model's own tool call is stopped for the same sentences", () => {

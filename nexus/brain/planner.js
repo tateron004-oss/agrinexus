@@ -1942,7 +1942,8 @@ function completeListsPlan(text, catalog) {
   const items = itemsClause ? itemsClause.split(/,|\band\b/i).map(item => item.trim()).filter(Boolean) : [];
   // "called/titled/named X" is a name. "for X" is a name only when there are items for it ("a list for the market trip with maize and beans"): with nothing on it, "a packing list for a week in Tokyo" is a request for a list OF something, not a list whose name is the trip
   // (found by the sweep of 34 spoken requests on 27 October 2026: empty lists called "a week in Tokyo", "opening a food truck" and "Kenya" were made).
-  const namedTitle = titleAfter("called|titled|named") || (items.length ? titleAfter("for") : undefined);
+  // (a bare "start a list for harvest tasks" is still a list called "harvest tasks"; it is "a packing list for ...", "a checklist for ...", "a travel checklist for ..." that is a list OF something)
+  const namedTitle = titleAfter("called|titled|named") || (items.length || /\b(?:a|my|the|new)\s+list\s+for\b/i.test(goal) ? titleAfter("for") : undefined);
   // "Make me a checklist of what to bring to a clinic visit": no name and nothing on it. An empty list called "Nexus checklist" was made (found by the spoken-document probe on 27 October 2026); Kyro does not write the items for the person, so it asks.
   if (!namedTitle && !items.length) return { goal, application: "lists", riskTier: "low", steps: [], clarification: "I can make that list, but I need to know what goes on it, because I do not make up the items. For example: \"Create a checklist called Clinic Visit with items ID, insurance card and medicines\". What should it be called, and what should be on it?" };
   return { goal, application: "lists", riskTier: "low", clarification: null,
