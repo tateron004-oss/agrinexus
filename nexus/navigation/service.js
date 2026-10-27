@@ -37,6 +37,25 @@ const lng = value => { const n = Number(value); if (!Number.isFinite(n) || n < -
 const point = (value, name) => { if (!value || typeof value !== "object") throw fail(400, "invalid_position", `${name} needs a position.`); return { lat: lat(value.lat), lng: lng(value.lng) }; };
 const text = (value, max = 120) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 const clampLat = value => Math.max(-90, Math.min(90, value));
+// Places this far apart (or with no road between them) are shown as a straight line over the earth's surface, a flight path: the direction and the distance, not a booked flight or a schedule.
+// Found on 26 October 2026: "Show me the route from Atlanta to Nairobi" had no road to draw, so the map showed the whole continent and no route.
+const AIR_ONLY_METERS = 2_500_000;
+const ROAD_TRIP_LEG_METERS = 800_000;
+const MAX_TRIP_STOPS = 8;
+function greatCircle(a, b, points = 64) {
+  const rad = degrees => degrees * Math.PI / 180; const deg = radians => radians * 180 / Math.PI;
+  const lat1 = rad(a.lat); const lon1 = rad(a.lng); const lat2 = rad(b.lat); const lon2 = rad(b.lng);
+  const d = 2 * Math.asin(Math.sqrt(Math.sin((lat2 - lat1) / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin((lon2 - lon1) / 2) ** 2));
+  if (!Number.isFinite(d) || d < 1e-9) return [[a.lng, a.lat], [b.lng, b.lat]];
+  const line = [];
+  for (let i = 0; i <= points; i += 1) {
+    const f = i / points; const A = Math.sin((1 - f) * d) / Math.sin(d); const B = Math.sin(f * d) / Math.sin(d);
+    const x = A * Math.cos(lat1) * Math.cos(lon1) + B * Math.cos(lat2) * Math.cos(lon2); const y = A * Math.cos(lat1) * Math.sin(lon1) + B * Math.cos(lat2) * Math.sin(lon2); const z = A * Math.sin(lat1) + B * Math.sin(lat2);
+    line.push([Number(deg(Math.atan2(y, x)).toFixed(5)), Number(deg(Math.atan2(z, Math.sqrt(x * x + y * y))).toFixed(5))]);
+  }
+  return line;
+}
+const kilometers = meters => Math.round(meters / 1000).toLocaleString("en-US");
 const clampLng = value => Math.max(-180, Math.min(180, value));
 
 function createNavigationService({ env = process.env, fetchImpl = globalThis.fetch, now = () => Date.now() } = {}) {
@@ -123,7 +142,47 @@ function createNavigationService({ env = process.env, fetchImpl = globalThis.fet
     return result;
   }
 
-  async function route({ from, to, mode, language }) {
+  // A straight-line (flight) leg between two points, in the same shape as a road route. No duration is given: a flight takes whatever the airline's schedule says.
+  function airRoute(start, end, startLabel, endLabel) {
+    const meters = Math.round(haversine([start.lng, start.lat], [end.lng, end.lat]));
+    const instruction = `${startLabel || "The start"} to ${endLabel || "the destination"}: about ${kilometers(meters)} kilometers in a straight line. This shows the direction and the distance, not a booked flight or a schedule.`;
+    return { distanceMeters: meters, durationSeconds: 0, geometry: greatCircle(start, end), steps: [{ instruction, distanceMeters: meters, alongMeters: meters, name: "", type: "air" }], mode: "air", straightLine: true };
+  }
+
+  // A trip through several named places (an itinerary's route): each place is found by name, then each leg is drawn, as a road where the places are near and a road exists, otherwise as a straight line.
+  async function trip({ stops }) {
+    const names = (Array.isArray(stops) ? stops : []).map(item => text(item, 80)).filter(Boolean).slice(0, MAX_TRIP_STOPS);
+    if (names.length < 2) throw fail(400, "invalid_query", "A trip needs a start and a destination.");
+    const found = [];
+    for (const [index, name] of names.entries()) {
+      if (index > 0 && fetchImpl === globalThis.fetch) await new Promise(resolve => setTimeout(resolve, 1100));
+      const places = await search({ query: name });
+      if (!places.length) throw fail(404, "place_not_found", `I couldn't find ${name}.`);
+      found.push({ name, label: name, lat: places[0].lat, lng: places[0].lng });
+    }
+    const geometry = []; const steps = []; let total = 0; let drove = 0;
+    for (let i = 0; i < found.length - 1; i += 1) {
+      const a = found[i]; const b = found[i + 1];
+      const meters = haversine([a.lng, a.lat], [b.lng, b.lat]);
+      let leg = null;
+      if (meters < ROAD_TRIP_LEG_METERS && meters >= 30) {
+        try {
+          const payload = await getJson(`${urls.drive}/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson&steps=false&alternatives=false`);
+          const best = Array.isArray(payload.routes) ? payload.routes[0] : null;
+          const raw = (best?.geometry?.coordinates || []).filter(pair => Array.isArray(pair) && Number.isFinite(pair[0]) && Number.isFinite(pair[1]));
+          if (best && raw.length > 1) { leg = { geometry: raw.length > 400 ? raw.filter((_, index) => index % Math.ceil(raw.length / 400) === 0 || index === raw.length - 1) : raw, distanceMeters: Math.round(best.distance || meters), road: true }; drove += 1; }
+        } catch { leg = null; }
+      }
+      if (!leg) leg = { geometry: greatCircle(a, b), distanceMeters: Math.round(meters), road: false };
+      geometry.push(...(geometry.length ? leg.geometry.slice(1) : leg.geometry));
+      total += leg.distanceMeters;
+      steps.push({ instruction: `${a.label} to ${b.label}: about ${kilometers(leg.distanceMeters)} kilometers${leg.road ? " by road" : " in a straight line (a flight path, not a booked flight)"}.`, distanceMeters: leg.distanceMeters, alongMeters: total, name: "", type: leg.road ? "road" : "air" });
+    }
+    return { distanceMeters: Math.round(total), durationSeconds: 0, geometry, steps, mode: "trip", straightLine: drove < found.length - 1, stops: found.map(item => ({ label: item.label, lat: item.lat, lng: item.lng })) };
+  }
+
+  // (a straight line is only drawn when the caller asks for it, to SHOW a route: turn-by-turn guidance must never follow a line across an ocean)
+  async function route({ from, to, mode, language, allowStraightLine }) {
     const start = point(from, "Where you are"); const profile = mode === "walk" ? "walk" : "drive";
     let end; let destinationLabel = "";
     if (to && Number.isFinite(Number(to.lat)) && Number.isFinite(Number(to.lng))) { end = point(to, "The destination"); destinationLabel = text(to.label, 120); }
@@ -133,9 +192,13 @@ function createNavigationService({ env = process.env, fetchImpl = globalThis.fet
       end = { lat: found[0].lat, lng: found[0].lng }; destinationLabel = found[0].label;
     }
     if (haversine([start.lng, start.lat], [end.lng, end.lat]) < 30) throw fail(400, "already_there", "You are already there.");
+    const apart = haversine([start.lng, start.lat], [end.lng, end.lat]);
+    const startLabel = text(from?.label, 80) || "The start";
+    const airFor = () => ({ ...airRoute(start, end, startLabel, destinationLabel), destination: { label: destinationLabel, lat: end.lat, lng: end.lng }, provider: "great-circle" });
+    if (allowStraightLine === true && apart >= AIR_ONLY_METERS) return airFor();
     const url = `${urls[profile]}/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson&steps=true&alternatives=false`;
     const payload = await getJson(url);
-    if (payload.code === "NoRoute" || !Array.isArray(payload.routes) || !payload.routes[0]) throw fail(404, "no_route", "I couldn't find a way there by that route.");
+    if (payload.code === "NoRoute" || !Array.isArray(payload.routes) || !payload.routes[0]) { if (allowStraightLine === true && profile === "drive") return airFor(); throw fail(404, "no_route", "I couldn't find a way there by that route."); }
     let built; try { built = buildRoute(payload.routes[0], { language: languageOf(language) }); } catch { throw fail(502, "navigation_provider_error", "The directions service gave me a route I couldn't follow."); }
     return { ...built, mode: profile, destination: { label: destinationLabel, lat: end.lat, lng: end.lng }, provider: profile === "walk" && urls.walk === DEFAULTS.walk ? "openstreetmap-foot" : urls.drive === DEFAULTS.drive ? "openstreetmap-osrm" : "custom" };
   }
@@ -148,10 +211,11 @@ function createNavigationService({ env = process.env, fetchImpl = globalThis.fet
       if (action === "search") return { status: 200, body: { authoritative: true, places: await search(body) } };
       if (action === "reverse") return { status: 200, body: { authoritative: true, place: await reverse(body) } };
       if (action === "route") return { status: 200, body: { authoritative: true, route: await route(body) } };
+      if (action === "trip") return { status: 200, body: { authoritative: true, route: await trip(body) } };
       throw fail(400, "invalid_action", "Unknown navigation action.");
     },
-    search, reverse, route
+    search, reverse, route, trip
   });
 }
 
-module.exports = Object.freeze({ createNavigationService, DEFAULTS, PER_MINUTE });
+module.exports = Object.freeze({ createNavigationService, DEFAULTS, PER_MINUTE, greatCircle, AIR_ONLY_METERS });

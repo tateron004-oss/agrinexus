@@ -54,7 +54,7 @@ class OpenAiPlanningModel {
     await this.assertBudget(request.tenantId);
     const response = await this.fetchFn("https://api.openai.com/v1/responses", { method: "POST",
       headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json" },
-      body: JSON.stringify({ model: this.model, instructions: RESPOND_INSTRUCTIONS, max_output_tokens: 700,
+      body: JSON.stringify({ model: this.model, instructions: typeof request.instructions === "string" && request.instructions.trim() ? request.instructions.slice(0, 2000) : RESPOND_INSTRUCTIONS, max_output_tokens: Math.min(Math.max(Number(request.maxOutputTokens) || 700, 100), 3200),
         input: JSON.stringify({ question: request.goal, interactionProfile: request.interactionProfile || null,
           conversationHistory: (request.conversationHistory || []).slice(-12), verifiedMemories: request.memories || [],
           availableCapabilities: request.capabilities || [] }) }) });

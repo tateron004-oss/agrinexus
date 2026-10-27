@@ -128,17 +128,48 @@ async function publicOsmRoute(origin, destination, fallbackUrl, env = process.en
   }
   const start = stops[0];
   const end = stops[stops.length - 1];
+  // Found on 26 October 2026: Atlanta to Nairobi has no road, so there was no route to draw and the map showed the whole continent. Places this far apart (or with no road between them) are drawn as the straight line between them,
+  // and said to be that: the direction and the distance, not a booked flight or a schedule.
+  const straightLine = () => {
+    const { greatCircle } = require("../../nexus/navigation/service.js");
+    const geometry = []; let meters = 0;
+    for (let i = 0; i < stops.length - 1; i += 1) {
+      const a = { lat: stops[i].lat, lng: stops[i].lon }; const b = { lat: stops[i + 1].lat, lng: stops[i + 1].lon };
+      const line = greatCircle(a, b); geometry.push(...(geometry.length ? line.slice(1) : line));
+      const rad = degrees => degrees * Math.PI / 180;
+      meters += 2 * 6371000 * Math.asin(Math.sqrt(Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2));
+    }
+    return { geometry, meters: Math.round(meters) };
+  };
+  const tooFar = (() => { const { AIR_ONLY_METERS } = require("../../nexus/navigation/service.js"); return stops.slice(0, -1).some((stop, i) => { const a = stop; const b = stops[i + 1]; const rad = degrees => degrees * Math.PI / 180; return 2 * 6371000 * Math.asin(Math.sqrt(Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lon - a.lon) / 2) ** 2)) >= AIR_ONLY_METERS; }); })();
+  const airResponse = far => {
+    const line = straightLine();
+    return providerResponse({
+      provider: "great-circle", action: "maps.route", status: "completed",
+      message: far ? "These places are too far apart for a road route, so the map shows the straight line between them: the direction and the distance, not a booked flight or a schedule." : "The routing service found no road route between these places, so the map shows the straight line between them: the direction and the distance, not a booked flight or a schedule.",
+      data: {
+        origin, destination, waypoints: cleanedWaypoints, originResolved: start.label, destinationResolved: end.label, waypointsResolved: stops.slice(1, -1).map(stop => stop.label),
+        waypointPoints: stops.slice(1, -1).map((stop, index) => ({ name: cleanedWaypoints[index], lat: stop.lat, lng: stop.lon })),
+        originLat: start.lat, originLng: start.lon, destinationLat: end.lat, destinationLng: end.lon,
+        routeGeometry: line.geometry.length > 1 ? line.geometry : null, distanceMeters: line.meters, duration: null, durationSeconds: null,
+        straightLine: true, routeUrl: fallbackUrl, sourceUrl: "https://www.openstreetmap.org/", routeProvider: "straight line between the places (not a road or a flight schedule)",
+        noLocationPermissionRequested: true, readOnly: true
+      }
+    });
+  };
+  if (tooFar) return airResponse(true);
   const coordinatePath = stops.map(stop => `${stop.lon},${stop.lat}`).join(";");
   const routeUrl = `${OSRM_ROUTE_URL}/${coordinatePath}?overview=full&geometries=geojson&alternatives=false&steps=false`;
   const real = fetchImpl === globalThis.fetch;
   const remembered = real ? ROUTE_CACHE.get(coordinatePath) : null;
-  const payload = remembered && Date.now() - remembered.at < ROUTE_CACHE_MS ? remembered.payload : await fetchJsonRetry(fetchImpl, routeUrl, { accept: "application/json" }, env);
+  let payload;
+  try { payload = remembered && Date.now() - remembered.at < ROUTE_CACHE_MS ? remembered.payload : await fetchJsonRetry(fetchImpl, routeUrl, { accept: "application/json" }, env); } catch (error) { if (/no ?route|impossible|bad request|http-400/i.test(String(error?.message))) return airResponse(false); throw error; }
   const route = Array.isArray(payload.routes) ? payload.routes[0] : null;
   if (real && route && payload !== remembered?.payload) {
     if (ROUTE_CACHE.size >= ROUTE_CACHE_MAX) ROUTE_CACHE.delete(ROUTE_CACHE.keys().next().value);
     ROUTE_CACHE.set(coordinatePath, { payload, at: Date.now() });
   }
-  if (!route) throw new Error("route-not-found");
+  if (!route) return airResponse(false);
   const geometry = simplifyGeometry(route.geometry?.coordinates);
   return providerResponse({
     provider: "openstreetmap-osrm",

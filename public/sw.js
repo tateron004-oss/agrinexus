@@ -41,6 +41,7 @@ const APP_SHELL = [
   `/kyro-safety-topics.js?v=kyro-safety-topics-1`,
   `/kyro-special-ed-topics.js?v=kyro-special-ed-topics-1`,
   `/kyro-reentry-topics.js?v=kyro-reentry-topics-2`,
+  `/kyro-trip-topics.js?v=kyro-trip-topics-1`,
   `/kyro-automation-commands.js?v=kyro-automation-commands-3`,
   `/kyro-navigation.js?v=kyro-navigation-7`,
   `/kyro-emergency.js?v=kyro-emergency-1`,
