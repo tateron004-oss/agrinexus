@@ -46,7 +46,23 @@ const SHARED = {
   "ai-project-management": { name: "AI Project Management", bonus: true },
   "agentic-ai-automation": { name: "Agentic AI and Workflow Automation", bonus: true },
   "ai-entrepreneurship-pathways": { name: "AI Entrepreneurship Pathways", bonus: true },
-  "ai-community-advocacy": { name: "AI for Community Advocacy", bonus: true }
+  "ai-community-advocacy": { name: "AI for Community Advocacy", bonus: true },
+  // added 28 Oct 2026 at the owner's request ("based the constant need to keep up with the world is there any courses that should add?"): life, people and career skills beyond AI
+  "mental-health-stress": { name: "Mental Health and Stress Management" },
+  "personal-finance-basics": { name: "Personal Finance Basics: Budgeting, Credit and Saving" },
+  "communication-conflict": { name: "Communication and Conflict Resolution" },
+  "emotional-intelligence": { name: "Emotional Intelligence" },
+  "time-management-goals": { name: "Time Management and Goal Setting" },
+  "critical-thinking-misinformation": { name: "Critical Thinking and Spotting Misinformation" },
+  "resume-linkedin-interviews": { name: "Resumes, LinkedIn and Job Interviews" },
+  "customer-service-excellence": { name: "Customer Service Excellence" },
+  "public-speaking": { name: "Public Speaking and Presenting" },
+  "workplace-rights-professionalism": { name: "Workplace Rights and Professionalism" },
+  "health-literacy": { name: "Health Literacy: Understanding Your Health Care" },
+  "skilled-trades-careers": { name: "Starting a Career in the Skilled Trades" },
+  "bookkeeping-basics": { name: "Bookkeeping Basics" },
+  "negotiation-skills": { name: "Negotiation Skills" },
+  "excel-spreadsheets": { name: "Excel and Spreadsheets for Work" }
 };
 
 // per category: its own courses (written in that category's folder) and the shared ones it also gets
@@ -64,9 +80,12 @@ const CATEGORIES = {
       "seniors-ai-photography": { name: "AI for Photography", bonus: true },
       "seniors-ai-travel": { name: "AI Travel Companions", bonus: true },
       "seniors-ai-memory-support": { name: "AI for Memory Support", bonus: true },
-      "seniors-ai-banking-safety": { name: "AI and Online Banking Safety", bonus: true }
+      "seniors-ai-banking-safety": { name: "AI and Online Banking Safety", bonus: true },
+      "seniors-medicare-basics": "Medicare Basics",
+      "seniors-estate-planning-wills": "Estate Planning and Wills",
+      "seniors-caregiving": "Caregiving: Caring for a Loved One"
     },
-    shared: ["intro-to-ai", "basic-computer-skills", "microsoft-365-google-docs", "internet-basics", "email-online-communication", "social-media-apps", "smartphone-tablet", "online-shopping-banking", "ride-and-food-apps", "telemedicine-portal", "crypto-and-blockchain"]
+    shared: ["intro-to-ai", "basic-computer-skills", "microsoft-365-google-docs", "internet-basics", "email-online-communication", "social-media-apps", "smartphone-tablet", "online-shopping-banking", "ride-and-food-apps", "telemedicine-portal", "crypto-and-blockchain", "mental-health-stress", "personal-finance-basics", "critical-thinking-misinformation", "health-literacy"]
   },
   "Athletes": {
     folder: "athletes",
@@ -95,7 +114,7 @@ const CATEGORIES = {
       "athletes-ai-coaching-assistants": { name: "AI Coaching Assistants", bonus: true },
       "athletes-agentic-ai-performance": { name: "Agentic AI in Sports Performance", bonus: true }
     },
-    shared: ["crypto-and-blockchain", "ai-integration-strategy"]
+    shared: ["crypto-and-blockchain", "ai-integration-strategy", "mental-health-stress", "personal-finance-basics", "communication-conflict", "emotional-intelligence", "time-management-goals", "resume-linkedin-interviews", "public-speaking", "negotiation-skills"]
   },
   "Entrepreneurs": {
     folder: "entrepreneurs",
@@ -117,7 +136,7 @@ const CATEGORIES = {
       "entrepreneurs-ai-ecommerce": { name: "AI-Powered eCommerce", bonus: true },
       "entrepreneurs-ai-creators": { name: "AI for Creators and Influencers", bonus: true }
     },
-    shared: []
+    shared: ["mental-health-stress", "personal-finance-basics", "communication-conflict", "emotional-intelligence", "time-management-goals", "public-speaking", "bookkeeping-basics", "negotiation-skills"]
   },
   "Re-Entry": {
     folder: "re-entry",
@@ -126,9 +145,12 @@ const CATEGORIES = {
       "reentry-everyday-ai-tools": "Everyday AI Tools",
       "reentry-workplace-skills": "Workplace Skills and Productivity",
       "reentry-financial-life-management": "Financial and Life Management with AI",
-      "reentry-start-small-business": "How to Set Up and Start a Small Business"
+      "reentry-start-small-business": "How to Set Up and Start a Small Business",
+      "reentry-clearing-record": "Clearing Your Record: Expungement and Record Relief",
+      "reentry-housing-jobs": "Finding Housing and Second-Chance Jobs",
+      "reentry-family-ties": "Rebuilding Family and Community Ties"
     },
-    shared: ["ai-job-readiness", "online-safety-responsible-ai", "ai-entrepreneurship-side-hustles", "digital-literacy-basics", "internet-basics", "microsoft-365-google-docs", "email-online-communication", "social-media-apps", "smartphone-tablet", "online-shopping-banking", "ride-and-food-apps", "telemedicine-portal", "intro-to-ai", "crypto-and-blockchain", "ai-certifications", "ai-remote-work", "ai-customer-service-careers", "ai-skilled-trades-logistics", "ai-entrepreneurship-pathways"],
+    shared: ["ai-job-readiness", "online-safety-responsible-ai", "ai-entrepreneurship-side-hustles", "digital-literacy-basics", "internet-basics", "microsoft-365-google-docs", "email-online-communication", "social-media-apps", "smartphone-tablet", "online-shopping-banking", "ride-and-food-apps", "telemedicine-portal", "intro-to-ai", "crypto-and-blockchain", "ai-certifications", "ai-remote-work", "ai-customer-service-careers", "ai-skilled-trades-logistics", "ai-entrepreneurship-pathways", "mental-health-stress", "personal-finance-basics", "communication-conflict", "emotional-intelligence", "time-management-goals", "critical-thinking-misinformation", "resume-linkedin-interviews", "customer-service-excellence", "workplace-rights-professionalism", "health-literacy", "skilled-trades-careers"],
     extraOwn: { "reentry-ai-continuing-education": { name: "AI and Continuing Education", bonus: true } }
   },
   "Small Business": {
@@ -146,9 +168,11 @@ const CATEGORIES = {
       "smallbiz-ai-service-business": { name: "AI for Service Businesses", bonus: true },
       "smallbiz-ai-real-estate": { name: "AI for Real Estate Agents", bonus: true },
       "smallbiz-ai-healthcare-practices": { name: "AI for Healthcare Practices", bonus: true },
-      "smallbiz-ai-agents-automation": { name: "AI Agents for Business Automation", bonus: true }
+      "smallbiz-ai-agents-automation": { name: "AI Agents for Business Automation", bonus: true },
+      "smallbiz-government-contracts": "Winning Government Contracts",
+      "smallbiz-supply-chain": "Supply Chain and Inventory Basics"
     },
-    shared: ["ai-productivity-operations", "ai-automation-workflows", "microsoft-365-google-docs", "ai-in-business", "ai-in-finance", "ai-customer-experience", "ai-chatbots-no-code", "ai-integration-strategy", "crypto-and-blockchain"]
+    shared: ["ai-productivity-operations", "ai-automation-workflows", "microsoft-365-google-docs", "ai-in-business", "ai-in-finance", "ai-customer-experience", "ai-chatbots-no-code", "ai-integration-strategy", "crypto-and-blockchain", "mental-health-stress", "communication-conflict", "time-management-goals", "customer-service-excellence", "bookkeeping-basics", "negotiation-skills", "excel-spreadsheets"]
   },
   "Non Profits": {
     folder: "non-profits",
@@ -164,9 +188,11 @@ const CATEGORIES = {
       "nonprofit-ai-donor-analytics": { name: "AI Donor Analytics", bonus: true },
       "nonprofit-ai-volunteer-recruitment": { name: "AI Volunteer Recruitment", bonus: true },
       "nonprofit-ai-impact-storytelling": { name: "AI for Social Impact Storytelling", bonus: true },
-      "nonprofit-agentic-ai-operations": { name: "Agentic AI for Nonprofit Operations", bonus: true }
+      "nonprofit-agentic-ai-operations": { name: "Agentic AI for Nonprofit Operations", bonus: true },
+      "nonprofit-board-governance": "Nonprofit Board Governance",
+      "nonprofit-volunteer-management": "Volunteer Management"
     },
-    shared: ["microsoft-365-google-docs", "intro-to-ai", "ai-productivity-operations", "ai-automation-workflows", "ai-in-business", "ai-in-finance", "ai-customer-experience", "ai-chatbots-no-code", "ai-integration-strategy", "crypto-and-blockchain", "ai-community-advocacy"]
+    shared: ["microsoft-365-google-docs", "intro-to-ai", "ai-productivity-operations", "ai-automation-workflows", "ai-in-business", "ai-in-finance", "ai-customer-experience", "ai-chatbots-no-code", "ai-integration-strategy", "crypto-and-blockchain", "ai-community-advocacy", "mental-health-stress", "communication-conflict", "emotional-intelligence", "critical-thinking-misinformation", "public-speaking", "bookkeeping-basics", "excel-spreadsheets"]
   },
   "Youth": {
     folder: "youth",
@@ -182,9 +208,12 @@ const CATEGORIES = {
       "youth-ai-music": { name: "AI Music Production", bonus: true },
       "youth-ai-video": { name: "AI Video Creation", bonus: true },
       "youth-ai-activism": { name: "AI for Activism and Social Impact", bonus: true },
-      "youth-simple-chatbots": { name: "Building Simple AI Chatbots", bonus: true }
+      "youth-simple-chatbots": { name: "Building Simple AI Chatbots", bonus: true },
+      "youth-digital-wellbeing": "Digital Wellbeing and Healthy Screen Time",
+      "youth-cyberbullying-safety": "Staying Safe from Cyberbullying",
+      "youth-college-or-trade": "Choosing College, a Trade or Work After School"
     },
-    shared: ["intro-to-ai", "microsoft-365-google-docs", "ai-programming-python", "online-safety-responsible-ai", "intro-machine-learning", "ai-in-business", "data-science-beginners", "intro-cybersecurity", "crypto-and-blockchain", "ai-chatbots-no-code", "robotics-and-automation", "cloud-computing-basics", "python-basics"]
+    shared: ["intro-to-ai", "microsoft-365-google-docs", "ai-programming-python", "online-safety-responsible-ai", "intro-machine-learning", "ai-in-business", "data-science-beginners", "intro-cybersecurity", "crypto-and-blockchain", "ai-chatbots-no-code", "robotics-and-automation", "cloud-computing-basics", "python-basics", "mental-health-stress", "personal-finance-basics", "communication-conflict", "emotional-intelligence", "time-management-goals", "critical-thinking-misinformation", "resume-linkedin-interviews", "customer-service-excellence", "public-speaking", "workplace-rights-professionalism", "health-literacy", "skilled-trades-careers"]
   },
   "Veterans (military)": {
     folder: "veterans",
@@ -199,9 +228,11 @@ const CATEGORIES = {
       "veterans-ai-certifications": { name: "AI Certifications for Veterans", bonus: true },
       "veterans-ai-cybersecurity-careers": { name: "AI and Cybersecurity Careers", bonus: true },
       "veterans-ai-logistics": { name: "AI for Logistics and Operations", bonus: true },
-      "veterans-ai-consulting": { name: "AI Consulting Opportunities", bonus: true }
+      "veterans-ai-consulting": { name: "AI Consulting Opportunities", bonus: true },
+      "veterans-va-benefits-gi-bill": "VA Benefits and the GI Bill",
+      "veterans-military-to-civilian": "From Military to Civilian Life"
     },
-    shared: ["intro-cybersecurity", "online-safety-responsible-ai", "microsoft-365-google-docs", "intro-machine-learning", "deep-learning-intro", "crypto-and-blockchain", "ai-digital-marketing", "ai-in-business", "robotics-and-automation", "cloud-computing-basics", "intro-iot", "agile-project-management", "python-basics", "ai-programming-python", "ai-project-management", "agentic-ai-automation"]
+    shared: ["intro-cybersecurity", "online-safety-responsible-ai", "microsoft-365-google-docs", "intro-machine-learning", "deep-learning-intro", "crypto-and-blockchain", "ai-digital-marketing", "ai-in-business", "robotics-and-automation", "cloud-computing-basics", "intro-iot", "agile-project-management", "python-basics", "ai-programming-python", "ai-project-management", "agentic-ai-automation", "mental-health-stress", "personal-finance-basics", "communication-conflict", "emotional-intelligence", "time-management-goals", "resume-linkedin-interviews", "public-speaking", "workplace-rights-professionalism", "health-literacy", "skilled-trades-careers", "excel-spreadsheets"]
   },
   "Workforce Development": {
     folder: "workforce",
@@ -210,9 +241,11 @@ const CATEGORIES = {
       "workforce-essential-ai-tools": "Essential AI Tools for the Workplace",
       "workforce-communication-productivity": "Workplace Communication and Productivity",
       "workforce-ai-problem-solving": "AI for Problem Solving and Decision Making",
-      "workforce-data-science-certificate": "Data Science Professional Certificate Preparation"
+      "workforce-data-science-certificate": "Data Science Professional Certificate Preparation",
+      "workforce-osha-safety": "Workplace Safety Basics (OSHA)",
+      "workforce-food-handler": "Food Handler and ServSafe Exam Preparation"
     },
-    shared: ["online-safety-responsible-ai", "ai-job-readiness", "email-online-communication", "microsoft-365-google-docs", "intro-to-ai", "intro-machine-learning", "ai-automation-workflows", "ai-programming-python", "data-science-beginners", "python-basics", "cloud-computing-basics", "intro-cybersecurity", "ai-digital-marketing", "crypto-and-blockchain", "intro-iot", "ai-in-business", "agile-project-management", "ai-certifications", "ai-remote-work", "ai-project-management", "ai-customer-service-careers", "agentic-ai-automation", "ai-skilled-trades-logistics"]
+    shared: ["online-safety-responsible-ai", "ai-job-readiness", "email-online-communication", "microsoft-365-google-docs", "intro-to-ai", "intro-machine-learning", "ai-automation-workflows", "ai-programming-python", "data-science-beginners", "python-basics", "cloud-computing-basics", "intro-cybersecurity", "ai-digital-marketing", "crypto-and-blockchain", "intro-iot", "ai-in-business", "agile-project-management", "ai-certifications", "ai-remote-work", "ai-project-management", "ai-customer-service-careers", "agentic-ai-automation", "ai-skilled-trades-logistics", "mental-health-stress", "personal-finance-basics", "communication-conflict", "emotional-intelligence", "time-management-goals", "critical-thinking-misinformation", "resume-linkedin-interviews", "customer-service-excellence", "public-speaking", "workplace-rights-professionalism", "health-literacy", "skilled-trades-careers", "negotiation-skills", "excel-spreadsheets"]
   },
   "Undeserved Community": {
     folder: "underserved",
@@ -232,7 +265,7 @@ const CATEGORIES = {
       "underserved-ai-nonprofit-leadership": { name: "AI for Nonprofit Leadership", bonus: true },
       "underserved-ai-youth-mentoring": { name: "AI for Youth Mentoring", bonus: true }
     },
-    shared: ["online-safety-responsible-ai", "email-online-communication", "digital-literacy-basics", "microsoft-365-google-docs", "cloud-computing-basics", "data-science-beginners", "azure-fundamentals", "intro-to-ai", "intro-machine-learning", "ai-digital-marketing", "crypto-and-blockchain", "ai-remote-work", "ai-community-advocacy", "ai-entrepreneurship-pathways"]
+    shared: ["online-safety-responsible-ai", "email-online-communication", "digital-literacy-basics", "microsoft-365-google-docs", "cloud-computing-basics", "data-science-beginners", "azure-fundamentals", "intro-to-ai", "intro-machine-learning", "ai-digital-marketing", "crypto-and-blockchain", "ai-remote-work", "ai-community-advocacy", "ai-entrepreneurship-pathways", "mental-health-stress", "personal-finance-basics", "communication-conflict", "emotional-intelligence", "time-management-goals", "critical-thinking-misinformation", "resume-linkedin-interviews", "customer-service-excellence", "public-speaking", "workplace-rights-professionalism", "health-literacy", "skilled-trades-careers", "excel-spreadsheets"]
   },
   "Agriculture (Africa)": {
     folder: "agriculture-africa",
@@ -251,9 +284,14 @@ const CATEGORIES = {
       "agri-drones-crop-health": "Drones for Agricultural Monitoring 3: Crop Health, Pests and Data Processing",
       "agri-drones-precision-climate": "Drones for Agricultural Monitoring 4: Precision, Climate and Livestock Monitoring",
       "agri-drones-programs": "Drones for Agricultural Monitoring 5: Data Integration, GIS and Designing Programs",
-      "agri-drones-piloting": "Drones for Agricultural Monitoring 6: Online Drone Piloting Course"
+      "agri-drones-piloting": "Drones for Agricultural Monitoring 6: Online Drone Piloting Course",
+      "agri-soil-health": "Soil Health and Fertility",
+      "agri-irrigation-water": "Irrigation and Water Management",
+      "agri-post-harvest": "Post-Harvest Handling and Storage",
+      "agri-cooperatives-markets": "Farmer Cooperatives and Getting to Market",
+      "agri-livestock-health": "Livestock Health and Management"
     },
-    shared: []
+    shared: ["mental-health-stress", "personal-finance-basics", "bookkeeping-basics"]
   },
   "Artificial Intelligence": {
     folder: "artificial-intelligence",
@@ -265,7 +303,7 @@ const CATEGORIES = {
       "agentic-multi-agent": "Multi-Agent Systems",
       "agentic-deploy-capstone": "Deploying AI Agents: Final Project and Capstone"
     },
-    shared: ["intro-to-ai"]
+    shared: ["intro-to-ai", "critical-thinking-misinformation"]
   },
   "Leadership Development": {
     folder: "leadership",
@@ -286,9 +324,13 @@ const CATEGORIES = {
       "edu-ai-differentiation": { name: "AI-Powered Differentiation", bonus: true },
       "edu-ai-stem": { name: "AI in STEM Education", bonus: true },
       "edu-ai-pbl": { name: "AI and Project-Based Learning", bonus: true },
-      "edu-ai-classroom-assistants": { name: "Building AI Classroom Assistants", bonus: true }
+      "edu-ai-classroom-assistants": { name: "Building AI Classroom Assistants", bonus: true },
+      "lead-managing-teams": "Managing Teams",
+      "lead-change-management": "Leading Change",
+      "lead-inclusive-teams": "Leading Inclusive Teams",
+      "lead-coaching-mentoring": "Coaching and Mentoring"
     },
-    shared: []
+    shared: ["mental-health-stress", "communication-conflict", "emotional-intelligence", "time-management-goals", "critical-thinking-misinformation", "public-speaking", "negotiation-skills"]
   }
 };
 
