@@ -212,3 +212,16 @@ test("both composer checks warn only for audio-only home and otherwise still fai
   assert.match(probe, /Object\.assign\(document, \{ workspaceProbes, capabilityProbes, faultProbes, scenarioFailures, typedIngressWarnings,/,
     "warnings are preserved in the evidence file, not dropped");
 });
+
+test("the in-page capture promise is never left unhandled while a scenario waits on something else", () => {
+  // Confirmed in the 27 October 2026 deploy run for c60e52e7: the music scenario's wait threw (or was still waiting) while the page's
+  // capture promise was running, then that promise rejected with "Request failed" and Node ended the whole probe run as an unhandled
+  // rejection -- the per-scenario catch never saw it, and no evidence file was written.
+  const start = probe.indexOf("const receiptPromise = page.evaluate(");
+  assert.notEqual(start, -1);
+  const afterStart = probe.slice(start);
+  const handled = afterStart.indexOf("receiptPromise.catch(");
+  const firstOtherWait = afterStart.indexOf("await player.waitFor(");
+  assert.ok(handled > -1 && handled < firstOtherWait, "the capture promise must get its own catch before anything else is awaited");
+  assert.match(afterStart, /const receipt = await receiptPromise;/, "the real await must stay, so a failed capture still fails its scenario");
+});
