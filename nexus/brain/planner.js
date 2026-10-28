@@ -66,6 +66,7 @@ const { offersFor, offerLine, checklistAsk } = require("../knowledge/offers.js")
 const { feedRequest, grantsAnswer, rulesAnswer } = require("../knowledge/live-feeds.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 const { handoutRequest, handoutTemplate } = require("../knowledge/handout-templates.js");
+const { scheduleRequest, scheduleTemplate } = require("../knowledge/schedule-templates.js");
 // how a starter document is named when it is spoken back (the title in lower case, except where that reads wrongly)
 const SPOKEN_TEMPLATE_NAMES = Object.freeze({ "ai-use-policy": "AI use policy", "vendor-questions": "list of questions for a web host, designer or developer", "app-brief": "app brief" });
 const { DEMONYM: CONTACT_DEMONYM, extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName, cleanContactName, spokenPhone, localPhoneToE164 } = require("../memory/contacts.js");
@@ -974,6 +975,14 @@ class OpenEndedPlanner {
       const made = handoutTemplate(handout);
       return Object.freeze({ goal: String(command.text || "").trim(), application: "documents", riskTier: "low", clarification: null, planningAttempts: 1,
         steps: [{ clientStepId: "handout-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: requestedDocumentFormat(command.text) || "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
+    }
+    // "Make me a weekly meal plan", "Make a study schedule for my exam", "Make me a schedule for my work week": one line per day with a [bracket] for everything the person did not say, made directly with no model call
+    // (the model gave a document on one try and a question on the next, and its question was the same blanks, asked aloud).
+    const schedule = scheduleRequest(command.text);
+    if (schedule && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) {
+      const made = scheduleTemplate(schedule);
+      return Object.freeze({ goal: String(command.text || "").trim(), application: "documents", riskTier: "low", clarification: null, planningAttempts: 1,
+        steps: [{ clientStepId: "schedule-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: requestedDocumentFormat(command.text) || "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
     }
     // "Export it as a PDF" right after a document was saved: the same text again, in the file type asked for (found on production: nothing handled this sentence, so it went to the AI model).
     const exportFormat = exportLatestDocumentFormat(command.text);

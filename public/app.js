@@ -52350,7 +52350,8 @@ const KYRO_LIST_NOT = /^(?:how|why|should i|can i)\b|\b(?:walk|teach|guide|show)
 // A spoken note or reminder ("Write down milk, eggs and flour", "Make a note that I paid the rent", "Remind me to buy bread tomorrow"): the voice model answered these aloud and the page showed nothing (found by the sweep of 34 spoken requests on 27 October 2026).
 // The typed route saves it the same way and shows "Noted: ..." or "I will remind you ..." on a card. "Remind me what ..." is a question about what was said, not a reminder.
 const KYRO_NOTE_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:write|jot|note|put|take)\s+down\s+\S|(?:make|take)\s+(?:a\s+)?note\s+(?:that|of|about)\s+\S|note\s+that\s+\S|write\s+(?:this|that)\s+down\b)`, "i");
-const KYRO_REMINDER_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`remind\s+me\s+(?:to|about|that|at|in|on|every|tomorrow|tonight|today|this)\b`, "i");
+// The same asked in Kiswahili ("Nikumbushe kesho saa tatu asubuhi kunywa dawa", "Niwekee kikumbusho cha kupiga simu"): the typed route reads these already (nexus/reminders/swahili-reminder.js); only the page's claim was English.
+const KYRO_REMINDER_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:remind\s+me\s+(?:to|about|that|at|in|on|every|tomorrow|tonight|today|this)\b|(?:tafadhali\s+)?(?:nikumbush(?:e|ie)|niwekee\s+kikumbusho|weka\s+kikumbusho)\s+\S)`, "i");
 const KYRO_NOTE_NOT = /^(?:how|what|why|should i|can i)\b|\bremind me what\b|\bwhat did i\b/i;
 // (the answer is a subject, not another request: "find a clinic near me" or "what time is it" said next are requests of their own)
 const KYRO_NOT_A_SUBJECT = /^(?:open|find a|create|make|write|teach|play|remind|what|how|where|when|why|who|call|text|send|go|close|stop|help|hello|hi|hey|thanks|take|look|read|export|save|add|post|i need|i have|my)(?![a-z])/i;

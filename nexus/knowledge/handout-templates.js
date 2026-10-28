@@ -7,10 +7,10 @@
 // handoutRequest(text) -> { kind, subject, when } | null
 // handoutTemplate({ kind, subject, when }) -> { title, content }
 
-const KINDS = Object.freeze({ flyer: "Flyer", poster: "Poster", newsletter: "Newsletter", brochure: "Brochure", handout: "Handout", invitation: "Invitation" });
+const KINDS = Object.freeze({ flyer: "Flyer", poster: "Poster", newsletter: "Newsletter", brochure: "Brochure", handout: "Handout", invitation: "Invitation", email: "Promotional Email" });
 
 const LEAD = "^\\s*(?:please\\s+)?(?:(?:hey\\s+)?(?:kyro|nexus)[,.]?\\s+)?(?:(?:can|could|would|will) you\\s+)?(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?";
-const REQUEST = new RegExp(`${LEAD}(?:create|make|write|draft|prepare|generate|build|put together|compose|type up)\\s+(?:me\\s+)?(?:an?|the|my|some)?\\s*(?:[a-z'-]+\\s+){0,2}?(flyer|poster|newsletter|brochure|handout|invitation)\\b(.*)$`, "i");
+const REQUEST = new RegExp(`${LEAD}(?:create|make|write|draft|prepare|generate|build|put together|compose|type up)\\s+(?:me\\s+)?(?:an?|the|my|some)?\\s*(?:[a-z'-]+\\s+){0,2}?(flyer|poster|newsletter|brochure|handout|invitation|(?:promotional|promo|marketing|sales|advertising)\\s+e-?mail)\\b(.*)$`, "i");
 // "for my bake sale on Saturday" / "to my daughter's party on Saturday at 3": the subject, then the day or time if one is named (kept in the person's own words)
 const SUBJECT = /^\s*(?:for|to|about)\s+(?:(?:my|our|the|a|an)\s+)?(.+?)(?:\s+((?:on|at|this|next|tomorrow|from)\b.*))?\s*$/i;
 const BLANK = (what) => `[${what}]`;
@@ -21,7 +21,7 @@ function capitalise(text) { return text.replace(/(^|\s)([a-z])/g, (_, space, let
 function handoutRequest(text) {
   const match = REQUEST.exec(String(text || "").trim());
   if (!match) return null;
-  const kind = match[1].toLowerCase();
+  const kind = /e-?mail/i.test(match[1]) ? "email" : match[1].toLowerCase();
   const rest = String(match[2] || "").replace(/\s+as\s+(?:an?\s+)?(?:pdf|word document|word|docx|markdown|md|text file|txt)\s*[.!?]*$/i, "");
   const parts = SUBJECT.exec(rest);
   let subject = parts ? clean(parts[1]) : "";
@@ -37,7 +37,12 @@ function handoutTemplate({ kind, subject = "", when = "" }) {
   const title = name ? `${name} ${label}` : label;
   const lines = [];
   const note = "Made by Kyro from what you said. Fill in each [bracket] and delete this line. Nothing here was looked up or added by Kyro.";
-  if (kind === "invitation") {
+  if (kind === "email") {
+    lines.push(`Subject: ${BLANK("a short, clear subject line")}`, "", `Hello ${BLANK("name")},`, "",
+      BLANK(subject ? `what you are offering at the ${subject}, and why they will want it` : "what you are offering, and why they will want it"), "",
+      `When: ${when || BLANK("day and time, or until when")}`, `Where: ${BLANK("the place, or the web page")}`, `Price: ${BLANK("the price, or free")}`, `To order or reply: ${BLANK("phone, email or address")}`, "",
+      "Thank you,", BLANK("your name"));
+  } else if (kind === "invitation") {
     lines.push("YOU ARE INVITED", "", name || BLANK("what the event is"), "",
       `When: ${when || BLANK("day and time")}`, `Where: ${BLANK("the place")}`, `Please tell us by ${BLANK("date")} if you can come: ${BLANK("name and phone number")}`);
   } else if (kind === "newsletter") {
