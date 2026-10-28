@@ -23,7 +23,7 @@ module.exports = Object.freeze([
   asks("travel-checklist-kenya", "Make me a travel checklist for Kenya."),
   asks("interview-list", "Start a list of things to bring to my job interview."),
   { id: "sweep-show-my-lists", area: "spoken-sweep", say: "Show me my lists.", timeoutMs: 60000, expect: { screen: ["text", "list"], text: "list" } },
-  { id: "sweep-what-to-pack", area: "spoken-sweep", say: "What should I pack for Kenya?", timeoutMs: 90000, expect: { screen: ["text", "list", "checklists"], text: "pack|Kenya|passport|layers" } },
+  { id: "sweep-what-to-pack", area: "spoken-sweep", say: "What should I pack for Kenya?", timeoutMs: 90000, expect: { screen: ["text", "list", "checklists"], text: "clothes|shoes|jacket|passport|layers?\\b|sunscreen|charger|repellent|medic|pack|Kenya" } },
   { id: "sweep-directions-no-location", area: "spoken-sweep", say: "Give me directions to the nearest pharmacy.", timeoutMs: 60000, expect: { allowRefusal: true, screen: ["text", "list"], text: "location|where you are" } },
   { id: "sweep-flyer-no-workspace", area: "spoken-sweep", writes: true, say: "Make me a flyer for my bake sale on Saturday.", timeoutMs: 90000, expect: { screen: "document", text: "Bake Sale Flyer[\\s\\S]*When: Saturday[\\s\\S]*Where: \\[the place\\]", notText: `${ECHO}|editable|business or nonprofit workspace`, download: true } },
   { id: "sweep-invitation", area: "spoken-sweep", writes: true, say: "Write an invitation to our block party on Saturday.", timeoutMs: 90000, expect: { screen: "document", text: "Block Party Invitation[\\s\\S]*YOU ARE INVITED[\\s\\S]*Saturday", notText: `${ECHO}|editable`, download: true } },

@@ -141,6 +141,16 @@
       return placesModel(places, mobile ? t(lang).mobile : t(lang).clinics, lang, locationNote);
     }
     if (Array.isArray(result.pharmacyLocations) && result.pharmacyLocations.length) return placesModel(result.pharmacyLocations, t(lang).pharmacies, lang, locationNote);
+    // A list written one item per line ("- Passport", "- Phone charger", as for "what should I pack for Kenya?"): each line is an item, a first line that is not an item is the title, and the other lines are the notes.
+    // (clean() below joins every line into one paragraph, which showed such a list as "- Passport - Phone charger - Cash ...")
+    const lines = String(result.response == null ? "" : result.response).split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    const isItem = line => /^[-•*]\s+\S/.test(line);
+    const itemLines = lines.filter(isItem);
+    if (itemLines.length >= 3 && itemLines.length >= lines.length - 3) {
+      const title = lines[0] && !isItem(lines[0]) ? clean(lines[0]) : "";
+      const notes = lines.filter(line => !isItem(line) && clean(line) !== title).map(clean).slice(0, 5);
+      return { kind: "list", title: title || (lang === "sw" ? "Orodha" : "Your list"), headline: "", items: itemLines.slice(0, 20).map(line => ({ name: clean(line.replace(/^[-•*]\s+/, "")), detail: "", extra: "" })), notes, awaiting: isAwaiting(result) };
+    }
     const response = clean(result.response);
     if (response.length < 8) return null;
     // (a lesson or a practice interview that has just asked its question is waiting for the answer, so it stays up like a yes/no question; one that has ended clears as usual)
