@@ -254,18 +254,17 @@ function lessonVideo(dir, base, kicker, lesson, L = LABELS.en, rtl = false) {
     slideBlocks(kicker, L.tryIt, [lesson.tryIt], rtl),
     slideBlocks(kicker, L.youCanNow, [lesson.youCanNow], rtl)
   ];
+  // each slide is drawn once as a picture; the video shows the pictures in turn, encoded once at a low frame rate (the slides do not move)
   const slidesDir = path.join(dir, `${base}-slides`);
   fs.mkdirSync(slidesDir, { recursive: true });
-  const clips = scenes.map((blocks, i) => {
-    const name = `${base}-${pad(i + 1)}`;
-    const words = blocks.reduce((sum, b) => sum + b.text.split(/\s+/).length, 0);
-    card(dir, name, blocks, readingSeconds(words));
+  const shown = scenes.map((blocks, i) => {
     card(slidesDir, pad(i + 1), blocks, 0, { still: true });
-    return `${name}.mp4`;
+    return { file: `${base}-slides/${pad(i + 1)}.png`, seconds: readingSeconds(blocks.reduce((sum, b) => sum + b.text.split(/\s+/).length, 0)) };
   });
-  fs.writeFileSync(path.join(dir, `${base}.list`), clips.map(c => `file '${c}'`).join("\n"));
-  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", `${base}.list`, "-c", "copy", "-movflags", "+faststart", `${base}.mp4`], { cwd: dir, stdio: "inherit" });
-  for (const c of clips) fs.unlinkSync(path.join(dir, c));
+  const list = [...shown.map(s => `file '${s.file}'\nduration ${s.seconds}`), `file '${shown[shown.length - 1].file}'`].join("\n");
+  fs.writeFileSync(path.join(dir, `${base}.list`), list);
+  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", `${base}.list`, "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
+    "-vf", "fps=5,format=yuv420p", "-c:v", "libx264", "-tune", "stillimage", "-c:a", "aac", "-b:a", "64k", "-shortest", "-movflags", "+faststart", `${base}.mp4`], { cwd: dir, stdio: "inherit" });
   fs.unlinkSync(path.join(dir, `${base}.list`));
   return { video: `${base}.mp4`, slides: `${base}-slides`, slideCount: scenes.length };
 }
