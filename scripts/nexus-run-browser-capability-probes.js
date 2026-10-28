@@ -1032,6 +1032,10 @@ async function run(env = process.env) {
           ` (state=${turn.result?.state || "missing"}, pendingStep=${Boolean(turn.result?.outcome?.pendingStepId)}, render=${Boolean(outcome)}).`);
         await ensureExactReleaseEvidenceUrl(page, releaseSha);
         const receiptPromise = page.evaluate(value => window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__(value), outcome);
+        // The music wait below can throw before `await receiptPromise`; this promise would then be left alone, and when the page's own
+        // provider request failed later ("Request failed" from playNexusProviderNeutralMusic, 27 Oct 2026) Node ended the whole run as an
+        // unhandled rejection, skipping every scenario after it and the evidence files. The await further down still throws as before.
+        receiptPromise.catch(() => {});
         if (application === "music-media") {
           const player = page.locator('[data-nexus-provider-audio="true"], [data-nexus-youtube-player] iframe').first();
           await player.waitFor({ state: "visible", timeout: 20000 });
