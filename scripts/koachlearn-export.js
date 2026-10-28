@@ -61,7 +61,7 @@ function card(dir, name, blocks, seconds, { still = false } = {}) {
     const file = `${name}.t${b}.txt`;
     fs.writeFileSync(path.join(dir, file), lines.join("\n"));
     const lineHeight = Math.round(block.size * 1.3);
-    const place = block.align === "left" ? "text_align=L:x=110" : "text_align=C:x=(w-text_w)/2";
+    const place = block.align === "left" ? "text_align=L:x=110" : block.align === "right" ? "text_align=R:x=w-text_w-110" : "text_align=C:x=(w-text_w)/2";
     filters.push(`drawtext=fontfile='${block.font || BOLD}':textfile='${file}':expansion=none:fontsize=${block.size}:fontcolor=${block.color || "white"}:line_spacing=${lineHeight - block.size}:${place}:y=${y}`);
     y += lines.length * lineHeight + (block.gap == null ? 40 : block.gap);
   });
@@ -154,12 +154,55 @@ details{background:#fff;border:1px solid #e2e8f0;border-radius:8px;margin:10px 0
 // with text, videos, and slides", "two knowledge checks ... and a 20 question quiz at the end of each course"). The shape is in scripts/koachlearn-courses/README.md; validateCourse says what every course must have.
 
 const COURSES_DIR = path.join(__dirname, "koachlearn-courses");
+const I18N_DIR = path.join(COURSES_DIR, "i18n");
+
+// Koach Learn keeps one language per course, so each translation is its own course (asked for on 27 October 2026: "the site translates to spanish, french, arabic and english. i need to courses and the videos to be able
+// to do the same"). A translation lives at i18n/<lang>/<folder>/<id>-<lang>.js with lang and translationOf (the English id); these are the words the builder itself puts on slides and pages.
+const LABELS = {
+  en: { lesson: "Lesson", of: "of", goal: "Goal:", tryIt: "Try it now", youCanNow: "You can now", byTheEnd: "By the end you will be able to", minutes: m => `about ${m} minutes`, steps: "Step by step:", words: "Words to know:", sources: "Official sources:", finalTask: "Final task:", byEndCourse: "By the end of this course you will be able to", skills: "Skills:", intro: "Introduction video" },
+  es: { lesson: "Lección", of: "de", goal: "Objetivo:", tryIt: "Pruébalo ahora", youCanNow: "Ahora puedes", byTheEnd: "Al final podrás", minutes: m => `unos ${m} minutos`, steps: "Paso a paso:", words: "Palabras clave:", sources: "Fuentes oficiales:", finalTask: "Tarea final:", byEndCourse: "Al terminar este curso podrás", skills: "Habilidades:", intro: "Video de introducción" },
+  fr: { lesson: "Leçon", of: "sur", goal: "Objectif :", tryIt: "Essayez maintenant", youCanNow: "Vous savez maintenant", byTheEnd: "À la fin, vous saurez", minutes: m => `environ ${m} minutes`, steps: "Étape par étape :", words: "Mots à connaître :", sources: "Sources officielles :", finalTask: "Tâche finale :", byEndCourse: "À la fin de ce cours, vous saurez", skills: "Compétences :", intro: "Vidéo d'introduction" },
+  ar: { lesson: "الدرس", of: "من", goal: "الهدف:", tryIt: "جرّب الآن", youCanNow: "يمكنك الآن", byTheEnd: "في النهاية ستتمكن من", minutes: m => `حوالي ${m} دقائق`, steps: "خطوة بخطوة:", words: "كلمات مهمة:", sources: "مصادر رسمية:", finalTask: "المهمة النهائية:", byEndCourse: "في نهاية هذه الدورة ستتمكن من", skills: "المهارات:", intro: "فيديو تعريفي" }
+};
+const RTL = new Set(["ar"]);
+const RLM = "‏";
+
+// the English course a translation was made from (same folder under the courses directory)
+function englishOf(file, c) {
+  const folder = path.basename(path.dirname(file));
+  return path.join(COURSES_DIR, folder, `${c.translationOf}.js`);
+}
+
+// a translation must keep the English course's structure and right answers, so the courses teach and test the same thing
+function parityProblems(c, en) {
+  const problems = [];
+  const need = (ok, what) => { if (!ok) problems.push(what); };
+  need(c.category === en.category, `category must stay "${en.category}" (the dashboard's category names are English)`);
+  need(c.id === `${en.id}-${c.lang}`, `id must be ${en.id}-${c.lang}`);
+  (en.chapters || []).forEach((ch, ci) => {
+    const t = (c.chapters || [])[ci] || { lessons: [], check: { questions: [] } };
+    ch.lessons.forEach((l, li) => {
+      const tl = t.lessons[li] || {};
+      need((tl.slides || []).length === l.slides.length, `chapter ${ci + 1} lesson ${li + 1}: ${l.slides.length} slides like the English`);
+      need((tl.steps || []).length === (l.steps || []).length, `chapter ${ci + 1} lesson ${li + 1}: ${(l.steps || []).length} steps like the English`);
+      need((tl.sources || []).length === (l.sources || []).length, `chapter ${ci + 1} lesson ${li + 1}: keep the ${(l.sources || []).length} sources`);
+    });
+    ch.check.questions.forEach((q, qi) => need(((t.check.questions || [])[qi] || {}).answer === q.answer, `chapter ${ci + 1} check question ${qi + 1}: answer must stay ${q.answer}`));
+  });
+  ((en.quiz && en.quiz.questions) || []).forEach((q, qi) => need((((c.quiz && c.quiz.questions) || [])[qi] || {}).answer === q.answer, `quiz question ${qi + 1}: answer must stay ${q.answer}`));
+  return problems;
+}
 
 function validateCourse(c) {
   const problems = [];
   const need = (ok, what) => { if (!ok) problems.push(what); };
   const text = v => typeof v === "string" && v.trim().length > 0;
   need(text(c.id) && /^[a-z0-9-]+$/.test(c.id), "id: lower-case letters, digits and dashes");
+  const lang = c.lang || "en";
+  need(LABELS[lang], `lang must be one of ${Object.keys(LABELS).join(", ")}`);
+  need(lang === "en" || text(c.translationOf), "a translation needs translationOf (the English course id)");
+  // translated words run longer than English
+  const titleMax = lang === "en" ? 60 : 72, bulletMax = lang === "en" ? 110 : 135;
   for (const k of ["category", "name", "skills", "outcome", "finalTask"]) need(text(c[k]), `${k} is missing`);
   need(Array.isArray(c.about) && c.about.length >= 2, "about: at least 2 paragraphs");
   need(Array.isArray(c.chapters) && c.chapters.length === 2, "chapters: exactly 2 (each ends with a knowledge check)");
@@ -178,8 +221,8 @@ function validateCourse(c) {
       need(Array.isArray(l.text) && l.text.length >= 2 && l.text.every(text), `${at}: text needs at least 2 paragraphs`);
       need(Array.isArray(l.slides) && l.slides.length >= 3 && l.slides.length <= 5, `${at}: 3 to 5 slides`);
       (l.slides || []).forEach((s, si) => {
-        need(text(s.title) && s.title.length <= 60, `${at} slide ${si + 1}: title of at most 60 characters`);
-        need(Array.isArray(s.bullets) && s.bullets.length >= 1 && s.bullets.length <= 4 && s.bullets.every(b => text(b) && b.length <= 110), `${at} slide ${si + 1}: 1 to 4 bullets of at most 110 characters`);
+        need(text(s.title) && s.title.length <= titleMax, `${at} slide ${si + 1}: title of at most ${titleMax} characters`);
+        need(Array.isArray(s.bullets) && s.bullets.length >= 1 && s.bullets.length <= 4 && s.bullets.every(b => text(b) && b.length <= bulletMax), `${at} slide ${si + 1}: 1 to 4 bullets of at most ${bulletMax} characters`);
       });
       need(!l.steps || (Array.isArray(l.steps) && l.steps.every(text)), `${at}: steps must be strings`);
       need(!l.words || (Array.isArray(l.words) && l.words.every(w => Array.isArray(w) && w.length === 2 && w.every(text))), `${at}: words are [term, meaning] pairs`);
@@ -195,20 +238,21 @@ function validateCourse(c) {
 const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 // one slide as a short clip; the clips of a lesson are joined into the lesson's video
-function slideBlocks(kicker, title, bullets) {
+// (Arabic reads right to left: its bullets sit on the right, and a right-to-left mark keeps the dot at the start of the line)
+function slideBlocks(kicker, title, bullets, rtl = false) {
   return [
     { text: kicker, size: 26, font: PLAIN, color: GREY, width: 70, maxLines: 1, gap: 30 },
     { text: title, size: 54, width: 34, maxLines: 2, gap: 44 },
-    ...bullets.map(b => ({ text: `•  ${b}`, size: 38, font: PLAIN, width: 52, maxLines: 3, gap: 22, align: "left" }))
+    ...bullets.map(b => ({ text: rtl ? `${RLM}•  ${b}` : `•  ${b}`, size: 38, font: PLAIN, width: 52, maxLines: 3, gap: 22, align: rtl ? "right" : "left" }))
   ];
 }
 
-function lessonVideo(dir, base, kicker, lesson) {
+function lessonVideo(dir, base, kicker, lesson, L = LABELS.en, rtl = false) {
   const scenes = [
-    [{ text: kicker, size: 28, font: PLAIN, color: GREY, width: 70, gap: 60 }, { text: lesson.title, size: 64, width: 30, maxLines: 3, gap: 50 }, { text: `Goal: ${lesson.goal}`, size: 36, font: PLAIN, color: RED, width: 56, maxLines: 3 }],
-    ...lesson.slides.map(s => slideBlocks(kicker, s.title, s.bullets)),
-    slideBlocks(kicker, "Try it now", [lesson.tryIt]),
-    slideBlocks(kicker, "You can now", [lesson.youCanNow])
+    [{ text: kicker, size: 28, font: PLAIN, color: GREY, width: 70, gap: 60 }, { text: lesson.title, size: 64, width: 30, maxLines: 3, gap: 50 }, { text: `${L.goal} ${lesson.goal}`, size: 36, font: PLAIN, color: RED, width: 56, maxLines: 3 }],
+    ...lesson.slides.map(s => slideBlocks(kicker, s.title, s.bullets, rtl)),
+    slideBlocks(kicker, L.tryIt, [lesson.tryIt], rtl),
+    slideBlocks(kicker, L.youCanNow, [lesson.youCanNow], rtl)
   ];
   const slidesDir = path.join(dir, `${base}-slides`);
   fs.mkdirSync(slidesDir, { recursive: true });
@@ -226,13 +270,13 @@ function lessonVideo(dir, base, kicker, lesson) {
   return { video: `${base}.mp4`, slides: `${base}-slides`, slideCount: scenes.length };
 }
 
-function writtenLessonHtml(lesson, n, total) {
-  const parts = [`<p><strong>Lesson ${n} of ${total} · about ${lesson.minutes || 5} minutes</strong></p>`, `<p><strong>Goal:</strong> ${esc(lesson.goal)}</p>`];
+function writtenLessonHtml(lesson, n, total, L = LABELS.en) {
+  const parts = [`<p><strong>${L.lesson} ${n} ${L.of} ${total} · ${L.minutes(lesson.minutes || 5)}</strong></p>`, `<p><strong>${L.goal}</strong> ${esc(lesson.goal)}</p>`];
   parts.push(...lesson.text.map(p => `<p>${esc(p)}</p>`));
-  if (lesson.steps && lesson.steps.length) parts.push(`<p><strong>Step by step:</strong></p><ol>${lesson.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>`);
-  if (lesson.words && lesson.words.length) parts.push(`<p><strong>Words to know:</strong></p><ul>${lesson.words.map(([t, m]) => `<li><strong>${esc(t)}:</strong> ${esc(m)}</li>`).join("")}</ul>`);
-  if (lesson.sources && lesson.sources.length) parts.push(`<p><strong>Official sources:</strong></p><ul>${lesson.sources.map(s => `<li><a href="${esc(s.url)}">${esc(s.name)}</a></li>`).join("")}</ul>`);
-  parts.push(`<p><strong>Try it now:</strong> ${esc(lesson.tryIt)}</p>`, `<p><strong>You can now</strong> ${esc(lesson.youCanNow)}</p>`);
+  if (lesson.steps && lesson.steps.length) parts.push(`<p><strong>${L.steps}</strong></p><ol>${lesson.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>`);
+  if (lesson.words && lesson.words.length) parts.push(`<p><strong>${L.words}</strong></p><ul>${lesson.words.map(([t, m]) => `<li><strong>${esc(t)}:</strong> ${esc(m)}</li>`).join("")}</ul>`);
+  if (lesson.sources && lesson.sources.length) parts.push(`<p><strong>${L.sources}</strong></p><ul>${lesson.sources.map(s => `<li><a href="${esc(s.url)}">${esc(s.name)}</a></li>`).join("")}</ul>`);
+  parts.push(`<p><strong>${L.tryIt}:</strong> ${esc(lesson.tryIt)}</p>`, `<p><strong>${L.youCanNow}</strong> ${esc(lesson.youCanNow)}</p>`);
   return parts.join("\n");
 }
 
@@ -248,7 +292,9 @@ function loadCourse(file) {
 function exportWritten(file, outRoot) {
   const c = loadCourse(file);
   const problems = validateCourse(c);
+  if (c.translationOf) problems.push(...parityProblems(c, loadCourse(englishOf(file, c))));
   if (problems.length) throw new Error(`${path.basename(file)}:\n  ${problems.join("\n  ")}`);
+  const L = LABELS[c.lang || "en"], rtl = RTL.has(c.lang);
   const dir = path.join(outRoot, slug(c.category), c.id);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
@@ -256,7 +302,7 @@ function exportWritten(file, outRoot) {
   card(dir, "intro", [
     { text: c.category.toUpperCase(), size: 30, color: RED, width: 50, gap: 40 },
     { text: c.name, size: 60, width: 32, maxLines: 3, gap: 44 },
-    { text: `By the end you will be able to ${c.outcome}`, size: 34, font: PLAIN, width: 58, maxLines: 6 }
+    { text: `${L.byTheEnd} ${c.outcome}`, size: 34, font: PLAIN, width: 58, maxLines: 6 }
   ], 14);
   const total = c.chapters.reduce((s, ch) => s + ch.lessons.length, 0);
   let n = 0;
@@ -266,27 +312,29 @@ function exportWritten(file, outRoot) {
     const lessons = ch.lessons.map(l => {
       n += 1;
       const base = pad(n);
-      const v = lessonVideo(chDir, base, `${c.name}  |  Lesson ${n} of ${total}`, l);
-      const html = writtenLessonHtml(l, n, total);
+      const v = lessonVideo(chDir, base, `${c.name}  |  ${L.lesson} ${n} ${L.of} ${total}`, l, L, rtl);
+      const html = rtl ? `<div dir="rtl">\n${writtenLessonHtml(l, n, total, L)}\n</div>` : writtenLessonHtml(l, n, total, L);
       fs.writeFileSync(path.join(chDir, `${base}.html`), html);
-      return { title: `Lesson ${n}: ${l.title}`, video: `chapter-${ci + 1}/${v.video}`, slides: `chapter-${ci + 1}/${v.slides}`, descriptionHtml: html };
+      return { title: `${L.lesson} ${n}: ${l.title}`, video: `chapter-${ci + 1}/${v.video}`, slides: `chapter-${ci + 1}/${v.slides}`, descriptionHtml: html };
     });
     fs.writeFileSync(path.join(chDir, "knowledge-check.json"), JSON.stringify(ch.check, null, 2));
     return { name: ch.name, lessons, check: ch.check };
   });
   fs.writeFileSync(path.join(dir, "quiz.json"), JSON.stringify(c.quiz, null, 2));
-  const descriptionHtml = c.about.map(p => `<p>${esc(p)}</p>`).join("\n") + `\n<p><strong>By the end of this course you will be able to</strong> ${esc(c.outcome)}</p>\n<p><strong>Final task:</strong> ${esc(c.finalTask)}</p>`;
-  const manifest = { id: c.id, category: c.category, name: c.name, skills: c.skills, picture: "picture.png", introVideo: "intro.mp4", descriptionHtml, chapters, quiz: c.quiz };
+  const about = c.about.map(p => `<p>${esc(p)}</p>`).join("\n") + `\n<p><strong>${L.byEndCourse}</strong> ${esc(c.outcome)}</p>\n<p><strong>${L.finalTask}</strong> ${esc(c.finalTask)}</p>`;
+  const descriptionHtml = rtl ? `<div dir="rtl">\n${about}\n</div>` : about;
+  const manifest = { id: c.id, lang: c.lang || "en", translationOf: c.translationOf || null, category: c.category, name: c.name, skills: c.skills, picture: "picture.png", introVideo: "intro.mp4", descriptionHtml, chapters, quiz: c.quiz };
   fs.writeFileSync(path.join(dir, "course.json"), JSON.stringify(manifest, null, 2));
   fs.writeFileSync(path.join(dir, "preview.html"), writtenPreviewHtml(manifest));
   return { dir, lessons: total };
 }
 
 function writtenPreviewHtml(m) {
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(m.name)}</title>
+  const L = LABELS[m.lang || "en"];
+  return `<!doctype html><html lang="${m.lang || "en"}" dir="${RTL.has(m.lang) ? "rtl" : "ltr"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(m.name)}</title>
 <style>body{font:16px/1.5 Arial,sans-serif;max-width:900px;margin:0 auto;padding:16px;background:#f8fafc;color:#0f172a}.cat{color:#e11d48;font-weight:bold}section{background:#fff;border:1px solid #e2e8f0;border-radius:8px;margin:14px 0;padding:8px 16px}
 .lesson{border-top:1px solid #e2e8f0;padding:12px 0}video,img{width:100%;max-width:640px;border-radius:6px}</style></head><body>
-<div class="cat">${esc(m.category)}</div><h1>${esc(m.name)}</h1><p><strong>Skills:</strong> ${esc(m.skills)}</p><img src="${m.picture}" alt=""><h2>Introduction video</h2><video src="${m.introVideo}" controls></video>${m.descriptionHtml}
+<div class="cat">${esc(m.category)}</div><h1>${esc(m.name)}</h1><p><strong>${L.skills}</strong> ${esc(m.skills)}</p><img src="${m.picture}" alt=""><h2>${L.intro}</h2><video src="${m.introVideo}" controls></video>${m.descriptionHtml}
 ${m.chapters.map(ch => `<section><h2>${esc(ch.name)}</h2>${ch.lessons.map(l => `<div class="lesson"><h3>${esc(l.title)}</h3><video src="${l.video}" controls preload="none"></video>${l.descriptionHtml}</div>`).join("")}<div class="lesson">${questionsHtml(ch.check.title, ch.check.questions)}</div></section>`).join("")}
 <section>${questionsHtml(m.quiz.title, m.quiz.questions)}</section></body></html>`;
 }
@@ -304,7 +352,15 @@ if (require.main === module) {
   if (args.includes("--check")) {
     const files = names.length ? names.map(f => path.resolve(f)) : writtenFiles();
     let bad = 0;
-    for (const f of files) { const p = validateCourse(loadCourse(f)); if (p.length) { bad++; console.log(`${path.relative(process.cwd(), f)}:\n  ${p.join("\n  ")}`); } }
+    for (const f of files) {
+      const c = loadCourse(f);
+      const p = validateCourse(c);
+      if (c.translationOf) {
+        const en = englishOf(f, c);
+        if (fs.existsSync(en)) p.push(...parityProblems(c, loadCourse(en))); else p.push(`no English course at ${path.relative(process.cwd(), en)}`);
+      }
+      if (p.length) { bad++; console.log(`${path.relative(process.cwd(), f)}:\n  ${p.join("\n  ")}`); }
+    }
     console.log(`${files.length - bad} of ${files.length} courses pass`);
     process.exit(bad ? 1 : 0);
   }

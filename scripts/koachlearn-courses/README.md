@@ -42,3 +42,17 @@ question: { q, options: [4], answer: 0-3, why (one sentence: why the right answe
 7. **Questions test the skill.** Mix "what is" with "what would you do" questions. One clearly right answer, plausible wrong ones, no "all of the above". Spread the right answers across A-D. The quiz covers all six lessons (about 3 per lesson) and may reuse a knowledge-check idea in new words.
 8. **Fit the category.** A course listed for a category uses that audience's examples (athletes: training, NIL, sponsors; nonprofits: donors, volunteers, grants; seniors: family, doctors, grandchildren). Shared courses use mixed, everyday examples.
 9. Plain ASCII quotes inside strings must be escaped (`\"`). Every file must pass `--check`.
+
+## Translations (Spanish, French, Arabic)
+
+Koach Learn keeps one language per course, so each translation is its own course (owner, 27 October 2026: "the site translates to spanish, french, arabic and english. i need to courses and the videos to be able to do the same").
+
+- File: `i18n/<lang>/<folder>/<id>-<lang>.js`, where `<folder>/<id>.js` is the English course. Languages: `es`, `fr`, `ar`.
+- Add `lang: "<lang>"` and `translationOf: "<english id>"`; set `id` to `<english id>-<lang>`. Keep `category` in English exactly (the dashboard's category names are English).
+- Translate every other string: name, skills, outcome, about, finalTask, chapter names, lesson fields, slides, words, knowledge checks, quiz.
+- Keep the structure identical: the same number of chapters, lessons, slides, steps and sources, and the SAME `answer` index on every question (translate the options in the same order). `--check` compares each translation with its English course and fails on any difference.
+- The builder adds fixed words itself. `outcome` must finish the sentence "Al final podrás ..." / "À la fin, vous saurez ..." / "في النهاية ستتمكن من ..."; `youCanNow` must finish "Ahora puedes ..." / "Vous savez maintenant ..." / "يمكنك الآن ...". Chapter names and check/quiz titles are written out in full in the target language (e.g. "Capítulo 1: ...", "Comprobación de conocimientos 1: ...", "Examen final: ...").
+- Keep as they are: URLs, product and tool names (ChatGPT, Microsoft 365, Python), code, and US agency names (IRS, FTC, SBA), with a short explanation in the target language the first time. Source `name`s may be translated; `url`s never change.
+- Spanish: clear, neutral Latin American Spanish, using "tú". French: clear international French, using "vous", understandable in Africa as well as France. Arabic: simple Modern Standard Arabic. Use Western digits (0-9) in all three.
+- Slides: titles at most 72 characters, bullets at most 135.
+- Write naturally, as a teacher who speaks the language would; don't translate word for word. Keep sentences short and plain, as in the English.
