@@ -43,6 +43,23 @@ question: { q, options: [4], answer: 0-3, why (one sentence: why the right answe
 8. **Fit the category.** A course listed for a category uses that audience's examples (athletes: training, NIL, sponsors; nonprofits: donors, volunteers, grants; seniors: family, doctors, grandchildren). Shared courses use mixed, everyday examples.
 9. Plain ASCII quotes inside strings must be escaped (`\"`). Every file must pass `--check`.
 
+## ADDIE (owner, 28 October 2026)
+
+> the courses should be utlizing the addie methodolgy. that is the standard for training ... quizzes as needed to support learning
+
+The model is the pilot, `re-entry/reentry-ai-digital-confidence.js`. Once a course has `objectives`, `--check` requires all of the following:
+
+- **Analysis** `analysis: { learners, startingPoint, gap, constraints: [..], prerequisites }`: who the learners are, what they can already do, the gap and why it matters, and the limits (reading level, devices, time, rules).
+- **Design** `objectives: [{ id: "O1", condition, action, standard }]`, 3 to 6 of them. They read as one sentence: "*condition*, you will *action*, *standard*." The action starts with a verb you can see someone do (identify, open, write, ask, check, list, explain), never understand, know or learn. It must also make sense on its own, because the intro video shows the actions alone.
+- **Lessons:** every lesson has `objectives: ["O2"]` and a `quickCheck` of exactly 2 questions taken right after it. The lesson's `goal` also starts with an observable verb.
+- **Questions:** every quick-check, knowledge-check and quiz question has `objective`. Each objective is taught by at least one lesson and tested by at least 3 check and quiz questions.
+- **Pre-test** `pretest: { title, from: [quiz question numbers, counting from 0] }`: 6 to 10 quiz questions covering every objective. Learners take it before Lesson 1, and the quiz then shows how much they gained.
+- **Rubric** for the final task: `rubric: { mastery, criteria: [{ name, objective, notYet, meets, exceeds }] }`, with 3 to 6 rows.
+- **Evaluation** `evaluation: { results: [..] }`: what to track for Kirkpatrick level 4. The builder adds the same reaction survey (level 1) and 30-day follow-up (level 3) to every course.
+- **Implementation** `implementation: { materials: [..], facilitatorNotes: [..] }`: what a learner needs, and notes for a teacher or program running the course with a group.
+
+The builder writes `design-document.html` (the ADDIE design document), `pretest.json`, `NN-quick-check.json` after each lesson, and `survey.json`. The design document lists the order to load everything on Koach Learn.
+
 ## Translations (Spanish, French, Arabic)
 
 Koach Learn keeps one language per course, so each translation is its own course (owner, 27 October 2026: "the site translates to spanish, french, arabic and english. i need to courses and the videos to be able to do the same").

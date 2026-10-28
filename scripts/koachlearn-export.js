@@ -159,10 +159,14 @@ const I18N_DIR = path.join(COURSES_DIR, "i18n");
 // Koach Learn keeps one language per course, so each translation is its own course (asked for on 27 October 2026: "the site translates to spanish, french, arabic and english. i need to courses and the videos to be able
 // to do the same"). A translation lives at i18n/<lang>/<folder>/<id>-<lang>.js with lang and translationOf (the English id); these are the words the builder itself puts on slides and pages.
 const LABELS = {
-  en: { lesson: "Lesson", of: "of", goal: "Goal:", tryIt: "Try it now", youCanNow: "You can now", byTheEnd: "By the end you will be able to", minutes: m => `about ${m} minutes`, steps: "Step by step:", words: "Words to know:", sources: "Official sources:", finalTask: "Final task:", byEndCourse: "By the end of this course you will be able to", skills: "Skills:", intro: "Introduction video" },
-  es: { lesson: "Lección", of: "de", goal: "Objetivo:", tryIt: "Pruébalo ahora", youCanNow: "Ahora puedes", byTheEnd: "Al final podrás", minutes: m => `unos ${m} minutos`, steps: "Paso a paso:", words: "Palabras clave:", sources: "Fuentes oficiales:", finalTask: "Tarea final:", byEndCourse: "Al terminar este curso podrás", skills: "Habilidades:", intro: "Video de introducción" },
-  fr: { lesson: "Leçon", of: "sur", goal: "Objectif :", tryIt: "Essayez maintenant", youCanNow: "Vous savez maintenant", byTheEnd: "À la fin, vous saurez", minutes: m => `environ ${m} minutes`, steps: "Étape par étape :", words: "Mots à connaître :", sources: "Sources officielles :", finalTask: "Tâche finale :", byEndCourse: "À la fin de ce cours, vous saurez", skills: "Compétences :", intro: "Vidéo d'introduction" },
-  ar: { lesson: "الدرس", of: "من", goal: "الهدف:", tryIt: "جرّب الآن", youCanNow: "يمكنك الآن", byTheEnd: "في النهاية ستتمكن من", minutes: m => `حوالي ${m} دقائق`, steps: "خطوة بخطوة:", words: "كلمات مهمة:", sources: "مصادر رسمية:", finalTask: "المهمة النهائية:", byEndCourse: "في نهاية هذه الدورة ستتمكن من", skills: "المهارات:", intro: "فيديو تعريفي" }
+  en: { lesson: "Lesson", of: "of", goal: "Goal:", tryIt: "Try it now", youCanNow: "You can now", byTheEnd: "By the end you will be able to", minutes: m => `about ${m} minutes`, steps: "Step by step:", words: "Words to know:", sources: "Official sources:", finalTask: "Final task:", byEndCourse: "By the end of this course you will be able to", skills: "Skills:", intro: "Introduction video",
+    objectives: "What you will be able to do:", youWill: "you will", buildsToward: "This lesson builds toward:", quickCheck: n => `Quick Check: Lesson ${n}`, rubric: "How your final task is checked:", criterion: "What we look at", notYet: "Not yet", meets: "Meets", exceeds: "Exceeds", mastery: "To pass:" },
+  es: { lesson: "Lección", of: "de", goal: "Objetivo:", tryIt: "Pruébalo ahora", youCanNow: "Ahora puedes", byTheEnd: "Al final podrás", minutes: m => `unos ${m} minutos`, steps: "Paso a paso:", words: "Palabras clave:", sources: "Fuentes oficiales:", finalTask: "Tarea final:", byEndCourse: "Al terminar este curso podrás", skills: "Habilidades:", intro: "Video de introducción",
+    objectives: "Lo que podrás hacer:", youWill: "podrás", buildsToward: "Esta lección te prepara para:", quickCheck: n => `Comprobación rápida: Lección ${n}`, rubric: "Cómo se revisa tu tarea final:", criterion: "Qué revisamos", notYet: "Todavía no", meets: "Cumple", exceeds: "Supera", mastery: "Para aprobar:" },
+  fr: { lesson: "Leçon", of: "sur", goal: "Objectif :", tryIt: "Essayez maintenant", youCanNow: "Vous savez maintenant", byTheEnd: "À la fin, vous saurez", minutes: m => `environ ${m} minutes`, steps: "Étape par étape :", words: "Mots à connaître :", sources: "Sources officielles :", finalTask: "Tâche finale :", byEndCourse: "À la fin de ce cours, vous saurez", skills: "Compétences :", intro: "Vidéo d'introduction",
+    objectives: "Ce que vous saurez faire :", youWill: "vous saurez", buildsToward: "Cette leçon vous prépare à :", quickCheck: n => `Contrôle rapide : Leçon ${n}`, rubric: "Comment votre tâche finale est évaluée :", criterion: "Ce que nous regardons", notYet: "Pas encore", meets: "Atteint", exceeds: "Dépasse", mastery: "Pour réussir :" },
+  ar: { lesson: "الدرس", of: "من", goal: "الهدف:", tryIt: "جرّب الآن", youCanNow: "يمكنك الآن", byTheEnd: "في النهاية ستتمكن من", minutes: m => `حوالي ${m} دقائق`, steps: "خطوة بخطوة:", words: "كلمات مهمة:", sources: "مصادر رسمية:", finalTask: "المهمة النهائية:", byEndCourse: "في نهاية هذه الدورة ستتمكن من", skills: "المهارات:", intro: "فيديو تعريفي",
+    objectives: "ما ستتمكن من فعله:", youWill: "ستتمكن من", buildsToward: "هذا الدرس يعدّك لـ:", quickCheck: n => `تحقق سريع: الدرس ${n}`, rubric: "كيف تُقيَّم مهمتك النهائية:", criterion: "ما ننظر إليه", notYet: "ليس بعد", meets: "يحقق", exceeds: "يتجاوز", mastery: "للنجاح:" }
 };
 const RTL = new Set(["ar"]);
 const RLM = "‏";
@@ -232,8 +236,88 @@ function validateCourse(c) {
   });
   need(c.quiz && text(c.quiz.title) && Array.isArray(c.quiz.questions) && c.quiz.questions.length === 20, "quiz: exactly 20 questions");
   ((c.quiz && c.quiz.questions) || []).forEach((q, qi) => question(q, `quiz question ${qi + 1}`));
+  if (c.objectives || c.analysis) problems.push(...addieProblems(c, question));
   return problems;
 }
+
+// ---- ADDIE (owner, 28 October 2026: "the courses should be utlizing the addie methodolgy. that is the standard for training"; "quizzes as needed to support learning") ----------------------------------------------------
+// Analysis: who the learners are and the gap. Design: measurable objectives (condition, action, standard), every lesson and every question tied to one. Development: the lessons. Implementation: materials and notes.
+// Evaluation: a pre-test (diagnostic), a 2-question quick check after every lesson and the chapter checks (formative), the quiz (summative), a rubric for the final task (performance), plus the standard
+// reaction survey (Kirkpatrick level 1) and 30-day follow-up (level 3) below and the course's own results to track (level 4).
+
+// an objective must name something a person can be seen doing, so it can be tested (Bloom's taxonomy action verbs); these verbs cannot be observed
+const VAGUE_VERBS = /^(understand|know|learn|appreciate|be aware|become aware|be familiar|become familiar|grasp|realize|believe|feel|think about|gain|have)\b/i;
+
+function addieProblems(c, question) {
+  const problems = [];
+  const need = (ok, what) => { if (!ok) problems.push(what); };
+  const text = v => typeof v === "string" && v.trim().length > 0;
+  const a = c.analysis || {};
+  for (const k of ["learners", "startingPoint", "gap"]) need(text(a[k]), `analysis.${k} is missing`);
+  need(Array.isArray(a.constraints) && a.constraints.length >= 1 && a.constraints.every(text), "analysis.constraints: at least 1 (reading level, devices, time, language)");
+  const objs = c.objectives || [];
+  need(objs.length >= 3 && objs.length <= 6, "objectives: 3 to 6");
+  const ids = new Set();
+  objs.forEach((o, i) => {
+    need(/^O[1-9]$/.test(o.id) && !ids.has(o.id), `objective ${i + 1}: id O1, O2, ... (unique)`);
+    ids.add(o.id);
+    for (const k of ["condition", "action", "standard"]) need(text(o[k]), `objective ${o.id}: ${k} is missing`);
+    need(!VAGUE_VERBS.test(String(o.action || "").trim()), `objective ${o.id}: start the action with a verb you can see someone do (not "${String(o.action).split(" ")[0]}")`);
+  });
+  const tagged = (q, where) => need(ids.has(q.objective), `${where}: objective must be one of ${[...ids].join(", ")}`);
+  const taught = new Set(), tested = {};
+  const count = q => { tested[q.objective] = (tested[q.objective] || 0) + 1; };
+  (c.chapters || []).forEach((ch, ci) => {
+    (ch.lessons || []).forEach((l, li) => {
+      const at = `chapter ${ci + 1} lesson ${li + 1}`;
+      need(Array.isArray(l.objectives) && l.objectives.length >= 1 && l.objectives.every(id => ids.has(id)), `${at}: objectives (which of ${[...ids].join(", ")} it teaches)`);
+      (l.objectives || []).forEach(id => taught.add(id));
+      need(!VAGUE_VERBS.test(String(l.goal || "").trim()), `${at}: start the goal with a verb you can see someone do`);
+      need(Array.isArray(l.quickCheck) && l.quickCheck.length === 2, `${at}: quickCheck with exactly 2 questions`);
+      (l.quickCheck || []).forEach((q, qi) => { question(q, `${at} quick check ${qi + 1}`); tagged(q, `${at} quick check ${qi + 1}`); });
+    });
+    ((ch.check && ch.check.questions) || []).forEach((q, qi) => { tagged(q, `chapter ${ci + 1} check question ${qi + 1}`); count(q); });
+  });
+  ((c.quiz && c.quiz.questions) || []).forEach((q, qi) => { tagged(q, `quiz question ${qi + 1}`); count(q); });
+  for (const id of ids) {
+    need(taught.has(id), `objective ${id}: no lesson teaches it`);
+    need((tested[id] || 0) >= 3, `objective ${id}: tested by ${tested[id] || 0} check and quiz questions (at least 3)`);
+  }
+  const quizN = ((c.quiz && c.quiz.questions) || []).length;
+  const pre = c.pretest || {};
+  need(text(pre.title) && Array.isArray(pre.from) && pre.from.length >= 6 && pre.from.length <= 10 && new Set(pre.from).size === pre.from.length && pre.from.every(i => Number.isInteger(i) && i >= 0 && i < quizN), "pretest: title and from (6 to 10 different quiz question numbers, counting from 0)");
+  const preCovers = new Set((pre.from || []).map(i => ((c.quiz.questions || [])[i] || {}).objective));
+  for (const id of ids) need(preCovers.has(id), `pretest: add a question for objective ${id}`);
+  const r = c.rubric || {};
+  need(text(r.mastery), "rubric.mastery: what counts as passing the final task");
+  need(Array.isArray(r.criteria) && r.criteria.length >= 3 && r.criteria.length <= 6, "rubric: 3 to 6 criteria");
+  (r.criteria || []).forEach((k, ki) => {
+    for (const f of ["name", "notYet", "meets", "exceeds"]) need(text(k[f]), `rubric criterion ${ki + 1}: ${f} is missing`);
+    need(ids.has(k.objective), `rubric criterion ${ki + 1}: objective must be one of ${[...ids].join(", ")}`);
+  });
+  const ev = c.evaluation || {};
+  need(Array.isArray(ev.results) && ev.results.length >= 2 && ev.results.every(text), "evaluation.results: at least 2 results to track (Kirkpatrick level 4)");
+  const im = c.implementation || {};
+  need(Array.isArray(im.materials) && im.materials.length >= 1 && im.materials.every(text), "implementation.materials: what a learner needs");
+  need(Array.isArray(im.facilitatorNotes) && im.facilitatorNotes.length >= 1 && im.facilitatorNotes.every(text), "implementation.facilitatorNotes: at least 1 note for a teacher or program running the course");
+  return problems;
+}
+
+// the same reaction survey (level 1) and 30-day follow-up (level 3) for every course; {skill} is the course's outcome
+const SURVEY = {
+  en: {
+    title: "Course survey",
+    scale: ["Strongly disagree", "Disagree", "Not sure", "Agree", "Strongly agree"],
+    rate: ["The lessons were easy to follow.", "The videos and slides helped me learn.", "The \"Try it now\" tasks helped me practise.", "The quick checks and quizzes helped me see what I had learned.", "I can use what I learned in my own life or work.", "I would recommend this course to a friend."],
+    open: ["What was the most useful part of this course?", "What should we change to make it better?"]
+  }
+};
+const FOLLOW_UP = {
+  en: {
+    title: "30 days later: are you using it?",
+    questions: ["In the last 30 days, have you used this course to {skill}? (Yes / No)", "How often? (Not yet / Once / A few times / Every week)", "Tell us one time you used it, and what happened.", "If you have not used it yet, what got in the way?", "What would help you use it more?"]
+  }
+};
 
 const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -254,7 +338,11 @@ function lessonVideo(dir, base, kicker, lesson, L = LABELS.en, rtl = false) {
     slideBlocks(kicker, L.tryIt, [lesson.tryIt], rtl),
     slideBlocks(kicker, L.youCanNow, [lesson.youCanNow], rtl)
   ];
-  // each slide is drawn once as a picture; the video shows the pictures in turn, encoded once at a low frame rate (the slides do not move)
+  return stillsVideo(dir, base, scenes);
+}
+
+// each slide is drawn once as a picture; the video shows the pictures in turn, encoded once at a low frame rate (the slides do not move)
+function stillsVideo(dir, base, scenes) {
   const slidesDir = path.join(dir, `${base}-slides`);
   fs.mkdirSync(slidesDir, { recursive: true });
   const shown = scenes.map((blocks, i) => {
@@ -269,8 +357,17 @@ function lessonVideo(dir, base, kicker, lesson, L = LABELS.en, rtl = false) {
   return { video: `${base}.mp4`, slides: `${base}-slides`, slideCount: scenes.length };
 }
 
-function writtenLessonHtml(lesson, n, total, L = LABELS.en) {
+// an objective as one sentence a learner reads: condition, action, standard
+const objectiveText = (o, L) => `${o.condition}, ${L.youWill} ${o.action}, ${o.standard}`.replace(/\.*$/, ".");
+
+function rubricHtml(r, L) {
+  const head = `<tr><th>${L.criterion}</th><th>${L.notYet}</th><th>${L.meets}</th><th>${L.exceeds}</th></tr>`;
+  return `<p><strong>${L.rubric}</strong></p><table border="1" cellpadding="6" style="border-collapse:collapse">${head}${r.criteria.map(k => `<tr><td><strong>${esc(k.name)}</strong></td><td>${esc(k.notYet)}</td><td>${esc(k.meets)}</td><td>${esc(k.exceeds)}</td></tr>`).join("")}</table><p><strong>${L.mastery}</strong> ${esc(r.mastery)}</p>`;
+}
+
+function writtenLessonHtml(lesson, n, total, L = LABELS.en, objectives = null) {
   const parts = [`<p><strong>${L.lesson} ${n} ${L.of} ${total} · ${L.minutes(lesson.minutes || 5)}</strong></p>`, `<p><strong>${L.goal}</strong> ${esc(lesson.goal)}</p>`];
+  if (objectives && lesson.objectives) parts.push(`<p><strong>${L.buildsToward}</strong> ${lesson.objectives.map(id => esc(objectiveText(objectives.find(o => o.id === id), L))).join(" ")}</p>`);
   parts.push(...lesson.text.map(p => `<p>${esc(p)}</p>`));
   if (lesson.steps && lesson.steps.length) parts.push(`<p><strong>${L.steps}</strong></p><ol>${lesson.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>`);
   if (lesson.words && lesson.words.length) parts.push(`<p><strong>${L.words}</strong></p><ul>${lesson.words.map(([t, m]) => `<li><strong>${esc(t)}:</strong> ${esc(m)}</li>`).join("")}</ul>`);
@@ -280,7 +377,7 @@ function writtenLessonHtml(lesson, n, total, L = LABELS.en) {
 }
 
 function questionsHtml(title, questions) {
-  return `<h3>${esc(title)}</h3><ol>${questions.map(q => `<li><p>${esc(q.q)}</p><ol type="A">${q.options.map((o, i) => `<li>${i === q.answer ? `<strong>${esc(o)}</strong> ✓` : esc(o)}</li>`).join("")}</ol><p><em>${esc(q.why)}</em></p></li>`).join("")}</ol>`;
+  return `<h3>${esc(title)}</h3><ol>${questions.map(q => `<li><p>${q.objective ? `<small>[${q.objective}]</small> ` : ""}${esc(q.q)}</p><ol type="A">${q.options.map((o, i) => `<li>${i === q.answer ? `<strong>${esc(o)}</strong> ✓` : esc(o)}</li>`).join("")}</ol><p><em>${esc(q.why)}</em></p></li>`).join("")}</ol>`;
 }
 
 function loadCourse(file) {
@@ -298,11 +395,18 @@ function exportWritten(file, outRoot) {
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   card(dir, "picture", [{ text: c.category.toUpperCase(), size: 34, color: RED, width: 50, gap: 60 }, { text: c.name, size: 72, width: 26, maxLines: 3 }], 0, { still: true });
-  card(dir, "intro", [
+  const introCard = [
     { text: c.category.toUpperCase(), size: 30, color: RED, width: 50, gap: 40 },
     { text: c.name, size: 60, width: 32, maxLines: 3, gap: 44 },
     { text: `${L.byTheEnd} ${c.outcome}`, size: 34, font: PLAIN, width: 58, maxLines: 6 }
-  ], 14);
+  ];
+  if (c.objectives) {
+    // ADDIE: tell learners up front what they will be able to do (the objectives' actions, three to a slide)
+    const actions = c.objectives.map(o => o.action.charAt(0).toUpperCase() + o.action.slice(1));
+    const groups = [];
+    for (let i = 0; i < actions.length; i += 3) groups.push(actions.slice(i, i + 3));
+    stillsVideo(dir, "intro", [introCard, ...groups.map(g => slideBlocks(c.name, L.objectives.replace(/\s*:$/, ""), g, rtl))]);
+  } else card(dir, "intro", introCard, 14);
   const total = c.chapters.reduce((s, ch) => s + ch.lessons.length, 0);
   let n = 0;
   const chapters = c.chapters.map((ch, ci) => {
@@ -312,17 +416,39 @@ function exportWritten(file, outRoot) {
       n += 1;
       const base = pad(n);
       const v = lessonVideo(chDir, base, `${c.name}  |  ${L.lesson} ${n} ${L.of} ${total}`, l, L, rtl);
-      const html = rtl ? `<div dir="rtl">\n${writtenLessonHtml(l, n, total, L)}\n</div>` : writtenLessonHtml(l, n, total, L);
+      let body = writtenLessonHtml(l, n, total, L, c.objectives);
+      if (c.rubric && n === total) body += "\n" + rubricHtml(c.rubric, L);
+      const html = rtl ? `<div dir="rtl">\n${body}\n</div>` : body;
       fs.writeFileSync(path.join(chDir, `${base}.html`), html);
-      return { title: `${L.lesson} ${n}: ${l.title}`, video: `chapter-${ci + 1}/${v.video}`, slides: `chapter-${ci + 1}/${v.slides}`, descriptionHtml: html };
+      const lesson = { title: `${L.lesson} ${n}: ${l.title}`, video: `chapter-${ci + 1}/${v.video}`, slides: `chapter-${ci + 1}/${v.slides}`, descriptionHtml: html };
+      if (l.quickCheck) {
+        lesson.quickCheck = { title: L.quickCheck(n), questions: l.quickCheck };
+        fs.writeFileSync(path.join(chDir, `${base}-quick-check.json`), JSON.stringify(lesson.quickCheck, null, 2));
+      }
+      return lesson;
     });
     fs.writeFileSync(path.join(chDir, "knowledge-check.json"), JSON.stringify(ch.check, null, 2));
     return { name: ch.name, lessons, check: ch.check };
   });
   fs.writeFileSync(path.join(dir, "quiz.json"), JSON.stringify(c.quiz, null, 2));
-  const about = c.about.map(p => `<p>${esc(p)}</p>`).join("\n") + `\n<p><strong>${L.byEndCourse}</strong> ${esc(c.outcome)}</p>\n<p><strong>${L.finalTask}</strong> ${esc(c.finalTask)}</p>`;
+  let about = c.about.map(p => `<p>${esc(p)}</p>`).join("\n") + `\n<p><strong>${L.byEndCourse}</strong> ${esc(c.outcome)}</p>`;
+  if (c.objectives) about += `\n<p><strong>${L.objectives}</strong></p><ul>${c.objectives.map(o => `<li>${esc(objectiveText(o, L))}</li>`).join("")}</ul>`;
+  about += `\n<p><strong>${L.finalTask}</strong> ${esc(c.finalTask)}</p>`;
+  if (c.rubric) about += "\n" + rubricHtml(c.rubric, L);
   const descriptionHtml = rtl ? `<div dir="rtl">\n${about}\n</div>` : about;
   const manifest = { id: c.id, lang: c.lang || "en", translationOf: c.translationOf || null, category: c.category, name: c.name, skills: c.skills, picture: "picture.png", introVideo: "intro.mp4", descriptionHtml, chapters, quiz: c.quiz };
+  if (c.objectives) {
+    const lang = c.lang || "en";
+    manifest.objectives = c.objectives.map(o => ({ ...o, text: objectiveText(o, L) }));
+    manifest.pretest = { title: c.pretest.title, questions: c.pretest.from.map(i => c.quiz.questions[i]) };
+    manifest.rubric = c.rubric;
+    manifest.survey = SURVEY[lang] || SURVEY.en;
+    const fu = FOLLOW_UP[lang] || FOLLOW_UP.en;
+    manifest.followUp = { title: fu.title, questions: fu.questions.map(q => q.replace("{skill}", c.outcome.replace(/[.\s]+$/, ""))) };
+    fs.writeFileSync(path.join(dir, "pretest.json"), JSON.stringify(manifest.pretest, null, 2));
+    fs.writeFileSync(path.join(dir, "survey.json"), JSON.stringify({ survey: manifest.survey, followUp: manifest.followUp }, null, 2));
+    fs.writeFileSync(path.join(dir, "design-document.html"), designDocumentHtml(c, manifest));
+  }
   fs.writeFileSync(path.join(dir, "course.json"), JSON.stringify(manifest, null, 2));
   fs.writeFileSync(path.join(dir, "preview.html"), writtenPreviewHtml(manifest));
   return { dir, lessons: total };
@@ -334,8 +460,63 @@ function writtenPreviewHtml(m) {
 <style>body{font:16px/1.5 Arial,sans-serif;max-width:900px;margin:0 auto;padding:16px;background:#f8fafc;color:#0f172a}.cat{color:#e11d48;font-weight:bold}section{background:#fff;border:1px solid #e2e8f0;border-radius:8px;margin:14px 0;padding:8px 16px}
 .lesson{border-top:1px solid #e2e8f0;padding:12px 0}video,img{width:100%;max-width:640px;border-radius:6px}</style></head><body>
 <div class="cat">${esc(m.category)}</div><h1>${esc(m.name)}</h1><p><strong>${L.skills}</strong> ${esc(m.skills)}</p><img src="${m.picture}" alt=""><h2>${L.intro}</h2><video src="${m.introVideo}" controls></video>${m.descriptionHtml}
-${m.chapters.map(ch => `<section><h2>${esc(ch.name)}</h2>${ch.lessons.map(l => `<div class="lesson"><h3>${esc(l.title)}</h3><video src="${l.video}" controls preload="none"></video>${l.descriptionHtml}</div>`).join("")}<div class="lesson">${questionsHtml(ch.check.title, ch.check.questions)}</div></section>`).join("")}
-<section>${questionsHtml(m.quiz.title, m.quiz.questions)}</section></body></html>`;
+${m.objectives ? `<p><a href="design-document.html">ADDIE design document</a></p><section>${questionsHtml(m.pretest.title, m.pretest.questions)}</section>` : ""}
+${m.chapters.map(ch => `<section><h2>${esc(ch.name)}</h2>${ch.lessons.map(l => `<div class="lesson"><h3>${esc(l.title)}</h3><video src="${l.video}" controls preload="none"></video>${l.descriptionHtml}${l.quickCheck ? questionsHtml(l.quickCheck.title, l.quickCheck.questions) : ""}</div>`).join("")}<div class="lesson">${questionsHtml(ch.check.title, ch.check.questions)}</div></section>`).join("")}
+<section>${questionsHtml(m.quiz.title, m.quiz.questions)}</section>
+${m.survey ? `<section><h3>${esc(m.survey.title)}</h3><p>${m.survey.scale.map(esc).join(" · ")}</p><ol>${[...m.survey.rate, ...m.survey.open].map(q => `<li>${esc(q)}</li>`).join("")}</ol><h3>${esc(m.followUp.title)}</h3><ol>${m.followUp.questions.map(q => `<li>${esc(q)}</li>`).join("")}</ol></section>` : ""}</body></html>`;
+}
+
+// the ADDIE design document for a course: for the owner, reviewers, funders and whoever loads the course (English labels; the course content is in the course's language)
+function designDocumentHtml(c, m) {
+  const L = LABELS[c.lang || "en"];
+  const lessons = c.chapters.flatMap((ch, ci) => ch.lessons.map((l, li) => ({ ...l, n: ci * 3 + li + 1, chapter: ci + 1 })));
+  const checkQs = c.chapters.flatMap(ch => ch.check.questions), quizQs = c.quiz.questions;
+  const quickQs = lessons.flatMap(l => l.quickCheck);
+  const seat = lessons.reduce((s, l) => s + (l.minutes || 5), 0);
+  const per = (qs, id) => qs.filter(q => q.objective === id).length;
+  let categories = [c.category];
+  try { const e = require("./koachlearn-courses/catalog.js").allCourses().find(x => x.id === (c.translationOf || c.id)); if (e) categories = e.categories; } catch (_) { /* catalog is optional */ }
+  const li = xs => `<ul>${xs.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+  const a = c.analysis;
+  const rows = (cells, th) => `<tr>${cells.map(x => th ? `<th>${x}</th>` : `<td>${x}</td>`).join("")}</tr>`;
+  const loadOrder = [`Course: picture, name, skills, intro video (intro.mp4), description (objectives, final task and rubric are in it)`,
+    ...c.chapters.flatMap((ch, ci) => [ch.name,
+      ...(ci === 0 ? [`  Knowledge check: ${c.pretest.title} (pretest.json, ${c.pretest.from.length} questions; take before Lesson 1, not graded)`] : []),
+      ...ch.lessons.flatMap((l, k) => { const n = ci * 3 + k + 1; return [`  Video: ${L.lesson} ${n}: ${l.title} (chapter-${ci + 1}/${pad(n)}.mp4, description ${pad(n)}.html)`, `  Knowledge check: ${L.quickCheck(n)} (chapter-${ci + 1}/${pad(n)}-quick-check.json, 2 questions)`]; }),
+      `  Knowledge check: ${ch.check.title} (chapter-${ci + 1}/knowledge-check.json, 5 questions)`]),
+    `Quiz: ${c.quiz.title} (quiz.json, 20 questions)`, `After the quiz: course survey and, 30 days later, the follow-up (survey.json)`];
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Design Document: ${esc(c.name)}</title>
+<style>body{font:15px/1.5 Arial,sans-serif;max-width:960px;margin:0 auto;padding:24px;color:#0f172a}h1{margin-bottom:0}h2{border-bottom:3px solid #e11d48;padding-bottom:4px;margin-top:32px}table{border-collapse:collapse;width:100%;margin:8px 0}th,td{border:1px solid #cbd5e1;padding:6px 8px;vertical-align:top;text-align:left}th{background:#f1f5f9}.sub{color:#475569}pre{white-space:pre-wrap;background:#f8fafc;padding:12px;border:1px solid #e2e8f0}@media print{h2{break-after:avoid}table{break-inside:auto}}</style></head><body>
+<h1>${esc(c.name)}</h1><p class="sub">ADDIE design document · Koach Learn · ${esc(categories.join(", "))} · language: ${esc(c.lang || "en")} · ${lessons.length} lessons, about ${seat} minutes of lessons plus practice and assessments</p>
+<h2>1. Analysis</h2>
+<table>${rows(["Learners", esc(a.learners)])}${rows(["Starting point", esc(a.startingPoint)])}${rows(["Skill gap and why it matters", esc(a.gap)])}${rows(["Constraints", li(a.constraints)])}${a.prerequisites ? rows(["Prerequisites", esc(a.prerequisites)]) : ""}${rows(["Course goal", `By the end of this course the learner will be able to ${esc(c.outcome)}`])}</table>
+<h2>2. Design</h2>
+<h3>Learning objectives</h3><p class="sub">Audience: the learner. Each objective names a condition, an action that can be observed, and the standard that counts as success.</p>
+<table>${rows(["ID", "Condition", "Action (observable)", "Standard", "Taught in", "Questions that test it"], true)}${c.objectives.map(o => rows([o.id, esc(o.condition), esc(o.action), esc(o.standard), lessons.filter(l => l.objectives.includes(o.id)).map(l => `Lesson ${l.n}`).join(", "), `pre-test ${c.pretest.from.filter(i => quizQs[i].objective === o.id).length} · quick checks ${per(quickQs, o.id)} · chapter checks ${per(checkQs, o.id)} · quiz ${per(quizQs, o.id)} · rubric ${c.rubric.criteria.filter(k => k.objective === o.id).length}`])).join("")}</table>
+<h3>Assessment plan</h3>
+<table>${rows(["Assessment", "Purpose", "Items", "When"], true)}${rows(["Pre-test", "Diagnostic: what the learner knows before starting; compared with the same questions in the quiz to measure gain", `${c.pretest.from.length} (taken from the final quiz)`, "Before Lesson 1"])}${rows(["Quick checks", "Formative: practice right after each lesson, with the reason for each answer", `${quickQs.length} (2 per lesson)`, "After every lesson"])}${rows(["Knowledge checks", "Formative: review of each chapter", `${checkQs.length} (5 per chapter)`, "End of each chapter"])}${rows(["Final quiz", "Summative: covers every objective", `${quizQs.length}`, "End of course; suggested pass mark 80% (16 of 20)"])}${rows(["Final task + rubric", "Performance: the learner does the skill", `${c.rubric.criteria.length} criteria`, "Lesson " + lessons.length])}</table>
+<h3>Lesson sequence</h3>
+<table>${rows(["#", "Lesson", "Minutes", "Lesson goal", "Objectives", "Practice (Try it now)"], true)}${lessons.map(l => rows([l.n, esc(l.title), l.minutes || 5, esc(l.goal), l.objectives.join(", "), esc(l.tryIt)])).join("")}</table>
+<p class="sub">Each lesson follows the same pattern: state the goal, teach in short text with steps and key words, show the main points on slides in the video, practise with a real task, check with 2 questions, then state what the learner can now do.</p>
+<h2>3. Development</h2>
+<table>${rows(["#", "Video", "Text", "Steps", "Key words", "Official sources"], true)}${lessons.map(l => rows([l.n, `${l.slides.length + 3} slides`, `${l.text.length} paragraphs`, (l.steps || []).length, (l.words || []).length, (l.sources || []).map(s => `<a href="${esc(s.url)}">${esc(s.name)}</a>`).join("<br>") || "none needed"])).join("")}</table>
+<p><strong>Review before release</strong> (tick when done):</p><ul><li>☐ Subject-matter review (facts, steps, safety)</li><li>☐ Plain-language and reading-level review</li><li>☐ Accessibility: videos have no sound, so all teaching is on screen and in the text; check contrast and text size on a phone</li><li>☐ Translations reviewed by a native speaker (Spanish, French, Arabic)</li><li>☐ Pilot with 3-5 learners from the audience; fix what confused them</li></ul>
+<h2>4. Implementation</h2>
+<p><strong>Delivery:</strong> self-paced on Koach Learn, on a phone or computer. A program or teacher can also run it with a group (notes below).</p>
+<p><strong>Learners need:</strong></p>${li(c.implementation.materials)}
+<p><strong>Notes for a teacher or program:</strong></p>${li(c.implementation.facilitatorNotes)}
+<p><strong>Load order on Koach Learn:</strong></p><pre>${esc(loadOrder.join("\n"))}</pre>
+<h2>5. Evaluation</h2>
+<table>${rows(["Level", "What we measure", "How"], true)}
+${rows(["1. Reaction", "Did learners find it clear and useful?", `Course survey: ${m.survey.rate.length} statements rated ${m.survey.scale[0]} to ${m.survey.scale[m.survey.scale.length - 1]}, and ${m.survey.open.length} open questions`])}
+${rows(["2. Learning", "Did they learn it?", "Pre-test compared with the same questions in the final quiz; quick checks and chapter checks; quiz pass mark 80%"])}
+${rows(["3. Behavior", "Can they do it, and do they use it?", `Final task scored with the rubric (${esc(c.rubric.mastery)}); 30-day follow-up: ${m.followUp.questions.length} questions`])}
+${rows(["4. Results", "What changed for the learner or the program?", li(c.evaluation.results)])}</table>
+<h3>Final task rubric</h3><p>${esc(c.finalTask)}</p>
+<table>${rows(["Criterion", "Objective", L.notYet, L.meets, L.exceeds], true)}${c.rubric.criteria.map(k => rows([esc(k.name), k.objective, esc(k.notYet), esc(k.meets), esc(k.exceeds)])).join("")}</table>
+<h3>Course survey</h3><ol>${[...m.survey.rate, ...m.survey.open].map(q => `<li>${esc(q)}</li>`).join("")}</ol>
+<h3>${esc(m.followUp.title)}</h3><ol>${m.followUp.questions.map(q => `<li>${esc(q)}</li>`).join("")}</ol>
+</body></html>`;
 }
 
 const writtenFiles = () => fs.existsSync(COURSES_DIR)
