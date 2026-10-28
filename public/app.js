@@ -52346,6 +52346,8 @@ const KYRO_DOCUMENT_NOT = /\b(?:resume|résumé|cv|checklist|to-?do|reminder|lis
 // A spoken request to make a list ("make a shopping list with milk, eggs and bread", "make me a packing list for a week in Tokyo"), to see the lists, or "what should I pack": taken by the page and answered on the screen by the typed route, which makes the list and shows it
 // (or asks what goes on it), shows the lists, or answers as a card. The voice model used to reword these into a tool call of its own, and the person was shown nothing or the wrong thing (found by the sweep of 34 spoken requests on 27 October 2026).
 const KYRO_LIST_REQUEST = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:(?:create|make|start|build|put together|write)\\s+(?:me\\s+)?(?:a|an|my|the|some)?\\s*(?:[a-z'-]+\\s+){0,3}?(?:list|checklist)\\b|(?:show|open|read|bring up|pull up)\\s+(?:me\\s+)?(?:all\\s+)?(?:of\\s+)?my\\s+(?:lists|checklists)\\b|(?:what|which)\\s+(?:should|do|can|must)\\s+(?:i|we)\\s+(?:pack|bring|take)\\b)`, "i");
+// The answer to "what should I pack for Kenya?" is written by the model (nexus/brain/planner.js, PACK_QUESTION); it is the one model-written answer the page also puts on a card, so the list is seen as well as heard.
+const KYRO_PACK_QUESTION = /\bwhat\s+(?:should|do|can|must)\s+(?:i|we)\s+pack\b/i;
 const KYRO_LIST_NOT = /^(?:how|why|should i|can i)\b|\b(?:walk|teach|guide|show)\s+(?:me\s+)?(?:how|through)\b|\b(?:what|which) (?:is|are) (?:a|the)\b/i;
 // A spoken note or reminder ("Write down milk, eggs and flour", "Make a note that I paid the rent", "Remind me to buy bread tomorrow"): the voice model answered these aloud and the page showed nothing (found by the sweep of 34 spoken requests on 27 October 2026).
 // The typed route saves it the same way and shows "Noted: ..." or "I will remind you ..." on a card. "Remind me what ..." is a question about what was said, not a reminder.
@@ -54205,6 +54207,8 @@ function kyroShowTypedResult(result, text, message) {
       if (drawn.presentation?.kind !== "location-list" || !cards.length || KYRO_FORM_FLOW.test(String(text || ""))) return false;
       const pharmacy = cards.some(card => /pharmac/i.test(String(card?.category || ""))) || result.application === "pharmacy";
       answer = { response: message, [pharmacy ? "pharmacyLocations" : "mobileClinics"]: cards, locationNote: drawn.data?.locationNote };
+    } else if (result.state === "completed" && result.application === "conversation" && result.outcome?.modelAnswered === true && KYRO_PACK_QUESTION.test(String(text || "")) && String(message || "").trim().length >= 24) {
+      answer = { response: message };
     } else if (result.state === "completed" && result.application === "conversation" && result.outcome?.modelAnswered === false && String(message || "").trim().length >= 24) {
       // a checked guide's answer carries the official pages it was read from: each is a button to open, and the source page lists them all
       answer = { response: message };

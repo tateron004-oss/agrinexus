@@ -68,6 +68,8 @@ const { templateRequest, consultingTemplate } = require("../knowledge/consulting
 const { handoutRequest, handoutTemplate } = require("../knowledge/handout-templates.js");
 const { scheduleRequest, scheduleTemplate } = require("../knowledge/schedule-templates.js");
 // how a starter document is named when it is spoken back (the title in lower case, except where that reads wrongly)
+// "What should I pack for Kenya?", "Kyro, what do I pack for a week in Tokyo": only "pack" (not "bring" or "take", which can be about medicine or anything else).
+const PACK_QUESTION = /^\s*(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:(?:can|could|would|will) you\s+)?(?:tell me\s+)?what\s+(?:should|do|can|must)\s+(?:i|we)\s+pack\b/i;
 const SPOKEN_TEMPLATE_NAMES = Object.freeze({ "ai-use-policy": "AI use policy", "vendor-questions": "list of questions for a web host, designer or developer", "app-brief": "app brief" });
 const { DEMONYM: CONTACT_DEMONYM, extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName, cleanContactName, spokenPhone, localPhoneToE164 } = require("../memory/contacts.js");
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
@@ -862,6 +864,18 @@ class OpenEndedPlanner {
     const translation = translationRequest(command.text);
     if (translation && typeof this.model.respond === "function") {
       const answer = await this.model.respond({ goal: `Translate this into ${translation.language} and reply with ONLY the translation, nothing else: ${translation.text}`, locale, tenantId: command.tenantId,
+        interactionProfile: createInteractionProfile({ locale, userPreferences: context.userPreferences || {}, channel: command.channel }),
+        conversationHistory: [], memories: [], capabilities: [] }).catch(() => null);
+      if (typeof answer === "string" && answer.trim()) {
+        return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [],
+          response: answer.trim(), sourceRequired: false, modelAnswered: true, planningAttempts: 0 });
+      }
+    }
+    // "What should I pack for Kenya?": a short packing list, answered directly in one model call and shown as a card. The general planner took two or three calls (about 20 seconds) and on some tries saved a document for a question
+    // or answered aloud with nothing on the screen (found by running the sweep of spoken requests against the live site on 27 October 2026). The card is drawn by the page (kyroShowResultScreen).
+    if (PACK_QUESTION.test(String(command.text || "")) && typeof this.model.respond === "function") {
+      const answer = await this.model.respond({ goal: `${command.spokenText || command.text}\n\nAnswer with a short packing list: one item per line, each line starting with "- ", at most 15 lines, then one last line suggesting they check the weather and any rules for where they are going. If they did not say where or for how long, make it a general list.`,
+        locale, tenantId: command.tenantId, maxOutputTokens: 500,
         interactionProfile: createInteractionProfile({ locale, userPreferences: context.userPreferences || {}, channel: command.channel }),
         conversationHistory: [], memories: [], capabilities: [] }).catch(() => null);
       if (typeof answer === "string" && answer.trim()) {
