@@ -5,7 +5,7 @@ const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
 const { defaultApplicationManifests } = require("../../nexus/apps/default-manifests.js");
 const { fakeMemory } = require("./farmwork-fake.js");
 
-// Found on the live site on 27 October 2026, by reading the saved documents (the live rig reads titles, not bodies): "Make me a weekly meal plan" saved a document whose text was "Create a simple weekly meal plan for breakfast, lunch, and
+// Found on the live site on 27 October 2026, by reading the saved documents (the live rig reads titles, not bodies): "Make me a weekly menu" saved a document whose text was "Create a simple weekly meal plan for breakfast, lunch, and
 // dinner for 7 days. Keep it practical, affordable, and easy to follow." and "Write a short bio for my website" saved "Write a short, polished website bio for the user..." The AI model had put its own instruction in the document instead of the
 // document. A body that is only an instruction to write something, which the person did not say, is now written out by one more model call.
 const tools = [{ tool_id: "documents.create", domain: "documents", description: "", risk_tier: "low", confirmation_required: false }];
@@ -27,11 +27,11 @@ const REAL_MEAL = "Weekly meal plan\n\nMonday\nBreakfast: porridge\nLunch: beans
 
 test("a document whose body is only the model's instruction to itself is written out by one more model call, told to use only what the person said", async () => {
   const { instance, calls } = planner(documentPlan("Weekly Meal Plan", MEAL), async () => REAL_MEAL);
-  const plan = await ask(instance, "Make me a weekly meal plan.");
+  const plan = await ask(instance, "Make me a weekly menu.");
   assert.equal(plan.steps[0].input.content, REAL_MEAL);
   assert.equal(plan.steps[0].input.title, "Weekly Meal Plan");
   assert.equal(calls.length, 1);
-  assert.match(calls[0].goal, /Make me a weekly meal plan\./);
+  assert.match(calls[0].goal, /Make me a weekly menu\./);
   assert.match(calls[0].goal, /The document is called "Weekly Meal Plan"/);
   assert.match(calls[0].instructions, /Use only what they told you/);
   assert.match(calls[0].instructions, /\[bracket\]/);
@@ -40,14 +40,14 @@ test("a document whose body is only the model's instruction to itself is written
 test("when the second call fails or returns another instruction, the plan is kept as it was and nothing is thrown", async () => {
   for (const respond of [async () => null, async () => { throw new Error("provider down"); }, async () => "Write a short, polished meal plan for the user.", async () => "ok"]) {
     const { instance } = planner(documentPlan("Weekly Meal Plan", MEAL), respond);
-    const plan = await ask(instance, "Make me a weekly meal plan.");
+    const plan = await ask(instance, "Make me a weekly menu.");
     assert.equal(plan.steps[0].input.content, MEAL);
   }
 });
 
 test("a real document is left alone, and so is a body made of the person's own words", async () => {
   const real = planner(documentPlan("Weekly Meal Plan", REAL_MEAL), async () => "never used");
-  assert.equal((await ask(real.instance, "Make me a weekly meal plan.")).steps[0].input.content, REAL_MEAL);
+  assert.equal((await ask(real.instance, "Make me a weekly menu.")).steps[0].input.content, REAL_MEAL);
   assert.equal(real.calls.length, 0);
   const said = planner(documentPlan("Bank steps", "Create a new account at the bank"), async () => "never used");
   assert.equal((await ask(said.instance, "Make me a document that says: create a new account at the bank")).steps[0].input.content, "Create a new account at the bank");
@@ -60,7 +60,7 @@ test("a real document is left alone, and so is a body made of the person's own w
 test("only the step with the echoed body is written out", async () => {
   const other = { id: "s2", title: "Create Notes", toolId: "documents.create", input: { title: "Notes", content: "Notes\n\nBuy seed on Friday." }, dependsOn: [] };
   const { instance, calls } = planner(documentPlan("Weekly Meal Plan", MEAL, [other]), async () => REAL_MEAL);
-  const plan = await ask(instance, "Make me a weekly meal plan.");
+  const plan = await ask(instance, "Make me a weekly menu.");
   assert.equal(plan.steps[0].input.content, REAL_MEAL);
   assert.equal(plan.steps[1].input.content, "Notes\n\nBuy seed on Friday.");
   assert.equal(calls.length, 1);

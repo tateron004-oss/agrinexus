@@ -62,7 +62,7 @@ test("a flyer from a person with no business workspace is a saved document made 
   assert.doesNotMatch(flyer.steps[0].input.content, /placeholders|editable|user's details/i);
   const news = await ask(planner({ workspaces: 0 }), "Create a newsletter for the church as a PDF.");
   assert.equal(news.steps[0].input.title, "Church Newsletter"); assert.equal(news.steps[0].input.format, "pdf");
-  await assert.rejects(ask(planner({ workspaces: 0, seen }), "Create a promotional email for my shop."), /MODEL_REACHED/);
+  await assert.rejects(ask(planner({ workspaces: 0, seen }), "Create marketing material for my shop."), /MODEL_REACHED/);
   assert.match(seen[0].feedback.join(" "), /no business workspace[\s\S]*documents\.create/);
   const owner = await ask(planner({ workspaces: 1 }), "Make me a flyer for my bake sale on Saturday.");
   assert.equal(owner.application, "business");

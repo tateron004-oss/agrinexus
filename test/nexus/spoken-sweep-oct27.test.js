@@ -54,12 +54,14 @@ test("a list 'for' something is named by it only when there are items for it; wi
   assert.equal(named.title, "Trip to Kenya"); assert.deepEqual(named.items, []);
 });
 
-test("'make a study schedule for my exam' is a schedule to write, so it reaches the planner's own writing; a lesson request is still a lesson", async () => {
+test("'make a study schedule for my exam' is a schedule to write, so it is made as a document and not taken for a lesson; a lesson request is still a lesson", async () => {
   const tools = [{ tool_id: "documents.create", domain: "documents", description: "", risk_tier: "low", confirmation_required: false }, { tool_id: "knowledge.search", domain: "knowledge", description: "", risk_tier: "low", confirmation_required: false }];
   const planner = () => new OpenEndedPlanner({ model: { plan: async () => { throw new Error("MODEL_REACHED"); }, respond: async () => null }, tools: { list: async () => tools }, applications: { list: () => defaultApplicationManifests() }, memory: Object.assign(fakeMemory(), { search: async () => [] }) });
   const ask = text => planner().plan({ command: { text, tenantId: "t1", actorId: "u1", locale: "en" }, context: { timeZone: "America/Chicago" } });
-  await assert.rejects(ask("Make a study schedule for my exam."), /MODEL_REACHED/);
-  await assert.rejects(ask("Make a work timetable for my study group."), /MODEL_REACHED/);
+  // (a fixed layout with blanks, made with no model call: see nexus/knowledge/schedule-templates.js and remaining-issues-oct27.test.js)
+  assert.equal((await ask("Make a study schedule for my exam.")).steps[0].toolId, "documents.create");
+  assert.equal((await ask("Make a work timetable for my study group.")).steps[0].toolId, "documents.create");
+  await assert.rejects(ask("Make a schedule for the church volunteers."), /MODEL_REACHED/);
   const lesson = await ask("Give my student a lesson on fractions.");
   assert.equal(lesson.application, "learning");
 });
