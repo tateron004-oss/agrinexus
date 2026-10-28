@@ -164,7 +164,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Analyser vos donateurs avec l'IA",
+    title: "Quiz final : Analyser vos donateurs avec l'IA",
     questions: [
       { q: "L'analyse des donateurs, c'est :", options: ["Vendre des listes de donateurs", "Étudier les registres de dons pour savoir qui donne, combien et à quelle fréquence", "Deviner qui pourrait donner", "Une sorte d'application d'IA"], answer: 1, why: "Elle utilise vos propres registres pour guider la collecte." },
       { q: "Par quoi remplacer les noms des donateurs dans votre copie de travail ?", options: ["Des identifiants comme D001", "Des surnoms", "Des numéros de téléphone", "Rien"], answer: 0, why: "Les identifiants permettent d'analyser sans montrer qui est qui." },

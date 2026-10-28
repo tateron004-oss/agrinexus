@@ -166,7 +166,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Nutrition et récupération avec l'IA",
+    title: "Quiz final : Nutrition et récupération avec l'IA",
     questions: [
       { q: "Quel aliment est surtout une protéine ?", options: ["Le riz", "Les pommes", "Les œufs", "Le pain"], answer: 2, why: "Les œufs sont un aliment protéiné." },
       { q: "Les trois parties principales d'une assiette équilibrée sont :", options: ["Glucides, protéines, fruits et légumes", "Bonbons, sodas, chips", "Seulement des protéines", "Seulement des légumes"], answer: 0, why: "Ces trois parties couvrent l'énergie, la réparation et les vitamines." },

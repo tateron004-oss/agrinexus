@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Recruter des bénévoles avec l'IA",
+    title: "Quiz final : Recruter des bénévoles avec l'IA",
     questions: [
       { q: "Une fiche de mission claire répond à :", options: ["Seulement le nom de l'organisation", "Quoi, quand, où, pourquoi et qui contacter", "Le salaire du directeur", "Rien de précis"], answer: 1, why: "Des détails clairs aident les gens à dire oui." },
       { q: "Quand une vérification des antécédents est-elle souvent nécessaire ?", options: ["Pour les missions auprès d'enfants ou de personnes vulnérables", "Pour chaque e-mail", "Jamais", "Seulement pour les donateurs"], answer: 0, why: "Les organisations exigent souvent des vérifications pour les missions auprès d'enfants ou de personnes vulnérables." },

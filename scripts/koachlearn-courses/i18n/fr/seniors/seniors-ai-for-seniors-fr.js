@@ -165,7 +165,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour les seniors : utiliser un assistant IA",
+    title: "Quiz final : L'IA pour les seniors : utiliser un assistant IA",
     questions: [
       { q: "Un assistant IA, c'est avant tout :", options: ["Une personne dans un centre d'appels", "Un programme informatique avec qui on discute", "Une compagnie de téléphone", "Un magasin"], answer: 1, why: "C'est un programme à qui vous écrivez ou parlez." },
       { q: "Lequel est un bon usage d'un assistant IA ?", options: ["Préparer un mot de remerciement pour un ami", "Décider de votre dose de médicament", "Signer des papiers à votre place", "Connaître le solde de votre compte"], answer: 0, why: "Préparer des mots et des cartes fait partie de ses points forts." },

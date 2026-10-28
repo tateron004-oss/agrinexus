@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Marketing en management du sport",
+    title: "Quiz final : Marketing en management du sport",
     questions: [
       { q: "L'offre d'un événement, c'est :", options: ["Seulement le prix du billet", "Le logo de l'équipe", "Ce que les gens obtiennent pour leur temps ou leur argent", "Le stade"], answer: 2, why: "L'offre, c'est la valeur pour le public." },
       { q: "Qui autorise les événements et les sponsors d'un établissement ?", options: ["En général le directeur sportif", "Un fan", "Un sponsor", "L'entraîneur adverse"], answer: 0, why: "Le directeur sportif dirige le programme sportif de l'établissement." },

@@ -79,7 +79,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Questions et données",
+        title: "Contrôle des connaissances 1 : Questions et données",
         questions: [
           { q: "Laquelle est une bonne question d'analyse ?", options: ["« Qui est le meilleur de tous les temps ? »", "« Qui fait le plus d'efforts ? »", "« Tirons-nous mieux à trois points à domicile ou à l'extérieur ? »", "« Le sport, c'est amusant ? »"], answer: 2, why: "Elle est précise et les données peuvent y répondre." },
           { q: "D'où doivent venir vos données ?", options: ["Des statistiques officielles de l'équipe, de la ligue ou de l'école", "Seulement de votre mémoire", "D'un commentaire au hasard", "De suppositions"], answer: 0, why: "Des sources fiables donnent des réponses fiables." },
@@ -151,7 +151,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Montrer et expliquer",
+        title: "Contrôle des connaissances 2 : Montrer et expliquer",
         questions: [
           { q: "Quel graphique convient à « les points match après match sur la saison » ?", options: ["Un camembert", "Aucun graphique", "Une carte", "Une courbe"], answer: 3, why: "Les courbes montrent l'évolution dans le temps." },
           { q: "Un bon titre de graphique :", options: ["Énonce le résultat", "Dit « Graphique 1 »", "Est vide", "Est une blague"], answer: 0, why: "Il dit au lecteur quoi regarder." },
@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Les bases de l'analyse de données sportives",
+    title: "Quiz final : Les bases de l'analyse de données sportives",
     questions: [
       { q: "L'analyse commence par :", options: ["Un tableur", "Un graphique", "Une question", "Une supposition"], answer: 2, why: "La question guide tout le reste." },
       { q: "À quelle question les données ne peuvent-elles PAS bien répondre ?", options: ["« Qui fait le plus d'efforts ? »", "« Marquons-nous plus à domicile ? »", "« Mon service est-il meilleur au set 1 ? »", "« Perdons-nous plus de ballons au 4e quart-temps ? »"], answer: 0, why: "L'effort ne se mesure pas sur les feuilles de match." },

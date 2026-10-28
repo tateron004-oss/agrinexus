@@ -164,7 +164,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour la photographie",
+    title: "Quiz final : L'IA pour la photographie",
     questions: [
       { q: "L'objectif, c'est :", options: ["L'écran", "Le petit verre à travers lequel l'appareil voit", "La batterie", "Le chargeur"], answer: 1, why: "L'objectif capte l'image." },
       { q: "Pour des photos stables, tenez le téléphone :", options: ["À deux mains, coudes serrés", "Avec un doigt", "Au-dessus de la tête", "À l'envers"], answer: 0, why: "Deux mains le gardent stable." },

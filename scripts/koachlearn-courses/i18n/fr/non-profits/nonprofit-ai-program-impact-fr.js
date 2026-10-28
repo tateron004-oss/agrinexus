@@ -162,7 +162,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour mener les programmes et mesurer leur impact",
+    title: "Quiz final : L'IA pour mener les programmes et mesurer leur impact",
     questions: [
       { q: "Une réalisation, c'est :", options: ["Un changement dans la vie des gens", "Un donateur", "Le décompte de ce que votre programme a fait", "Une question de questionnaire"], answer: 2, why: "Les réalisations comptent l'activité." },
       { q: "Un résultat, c'est :", options: ["Le nombre d'affiches imprimées", "Le budget", "L'adresse du bureau", "Un changement dans la vie des gens grâce à votre programme"], answer: 3, why: "Les résultats sont des changements pour les gens." },

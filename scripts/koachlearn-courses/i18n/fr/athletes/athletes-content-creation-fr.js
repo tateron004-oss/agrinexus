@@ -79,7 +79,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Préparer et filmer",
+        title: "Contrôle des connaissances 1 : Préparer et filmer",
         questions: [
           { q: "Qu'est-ce qu'une accroche ?", options: ["Le générique de fin", "Un type de trépied", "Les 1 à 3 premières secondes qui donnent envie de continuer à regarder", "Un hashtag"], answer: 2, why: "L'accroche décide si les gens restent." },
           { q: "Quelle accroche est forte ?", options: ["« L'exercice qui a corrigé mon tir en suspension »", "« Euh, salut, alors... »", "Une longue intro silencieuse", "Un écran noir"], answer: 0, why: "Elle promet tout de suite de la valeur." },
@@ -152,7 +152,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Monter, légender et planifier",
+        title: "Contrôle des connaissances 2 : Monter, légender et planifier",
         questions: [
           { q: "Pourquoi ajouter des sous-titres à votre vidéo ?", options: ["Ils la rallongent", "La NCAA les exige", "Pour cacher les erreurs", "Beaucoup de gens regardent sans le son"], answer: 3, why: "Les sous-titres permettent de suivre sans le son." },
           { q: "Quelle musique est la plus sûre à utiliser ?", options: ["La bibliothèque musicale sous licence de l'application", "N'importe quelle chanson de la radio", "Une chanson d'un film", "Le téléchargement d'un ami"], answer: 0, why: "Les autres chansons peuvent faire couper le son ou supprimer la vidéo." },
@@ -164,7 +164,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Création de contenu pour les athlètes",
+    title: "Quiz final : Création de contenu pour les athlètes",
     questions: [
       { q: "Combien de temps dure l'accroche ?", options: ["La dernière minute", "Toute la vidéo", "Les 1 à 3 premières secondes", "La légende"], answer: 2, why: "Les spectateurs décident vite." },
       { q: "Le milieu d'une courte vidéo doit apporter :", options: ["De la valeur : l'exercice, le moment ou le conseil", "Du silence", "Une longue intro", "Seulement votre logo"], answer: 0, why: "La valeur retient l'attention." },

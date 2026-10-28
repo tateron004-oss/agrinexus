@@ -169,7 +169,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour les entreprises de services",
+    title: "Quiz final : L'IA pour les entreprises de services",
     questions: [
       { q: "Une carte des services liste :", options: ["Les adresses des clients", "Les services, ce qui est inclus et les prix", "Les mots de passe", "Les numéros de sécurité sociale du personnel"], answer: 1, why: "Elle montre ce que vous proposez et le coût." },
       { q: "Une option, c'est :", options: ["Un avis", "Un cadeau gratuit", "Une taxe", "Un service en plus qui coûte davantage"], answer: 3, why: "Les options sont des extras." },

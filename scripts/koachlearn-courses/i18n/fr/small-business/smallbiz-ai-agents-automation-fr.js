@@ -162,7 +162,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Les agents d'IA pour automatiser votre entreprise",
+    title: "Quiz final : Les agents d'IA pour automatiser votre entreprise",
     questions: [
       { q: "Un agent d'IA, c'est :", options: ["Une personne", "Un système d'IA qui peut choisir certaines de ses propres étapes", "Une règle fixe", "Une imprimante"], answer: 1, why: "Les agents choisissent des étapes vers un but." },
       { q: "Par où une petite entreprise doit-elle commencer ?", options: ["Tout automatiser d'un coup", "Un agent entièrement autonome avec accès à la banque", "Rien", "Des automatisations fixes, puis une étape d'IA"], answer: 3, why: "Simple et prévisible d'abord." },

@@ -164,7 +164,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Construire une stratégie d'IA pour votre association",
+    title: "Quiz final : Construire une stratégie d'IA pour votre association",
     questions: [
       { q: "Le plan d'IA d'une association, c'est :", options: ["Un achat de logiciel", "Un événement de collecte de fonds", "Un court document sur comment vous utiliserez et n'utiliserez pas l'IA", "Une liste de donateurs"], answer: 2, why: "Il fixe le but, les règles et les vérifications de l'usage de l'IA." },
       { q: "La meilleure première question d'un plan d'IA est :", options: ["Quel outil est le plus connu ?", "Comment remplacer les bénévoles ?", "Combien paient les autres organisations ?", "Où notre équipe perd-elle du temps que nous pourrions rendre à notre mission ?"], answer: 3, why: "Partez de la mission et du temps, pas des outils." },

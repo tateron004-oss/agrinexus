@@ -164,7 +164,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Préparation mentale et concentration",
+    title: "Quiz final : Préparation mentale et concentration",
     questions: [
       { q: "Avoir les mains moites avant un match, c'est :", options: ["Un signe qu'il faut abandonner", "Toujours dangereux", "Un signe normal de trac", "Une infraction au règlement"], answer: 2, why: "C'est votre corps qui se prépare." },
       { q: "Les sportifs professionnels ont-ils le trac ?", options: ["Oui, ils le gèrent", "Jamais", "Seulement les débutants", "Seulement à l'entraînement"], answer: 0, why: "Tout le monde a le trac ; les pros le gèrent." },

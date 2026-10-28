@@ -167,7 +167,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour les commerces de détail",
+    title: "Quiz final : L'IA pour les commerces de détail",
     questions: [
       { q: "Une description de produit répond à :", options: ["Votre mot de passe", "Ce que c'est, pour qui, pourquoi le client le voudra", "La banque du fournisseur", "Rien"], answer: 1, why: "Ces trois éléments aident le client à décider." },
       { q: "Où vérifiez-vous les faits d'un produit ?", options: ["Chez un concurrent", "Auprès de l'IA", "Dans une publication sur les réseaux", "Sur l'étiquette ou la facture"], answer: 3, why: "L'étiquette et la facture contiennent les vrais faits." },

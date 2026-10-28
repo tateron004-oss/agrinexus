@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour les organisations religieuses",
+    title: "Quiz final : L'IA pour les organisations religieuses",
     questions: [
       { q: "Quelle tâche doit rester aux personnes, pas à l'IA ?", options: ["Rédiger une liste de préparation d'événement", "Accompagner un membre en crise", "Écrire un brouillon de bulletin", "Faire un tableau de bénévoles"], answer: 1, why: "L'accompagnement pastoral demande une personne de confiance." },
       { q: "Dans le ministère, l'IA est surtout utile pour :", options: ["Le travail d'écriture et de planification", "Entendre des confessions", "Décider qui reçoit de l'aide", "Garder les secrets de prière"], answer: 0, why: "L'IA rédige des mots et des plans ; les personnes s'occupent du soin et des décisions." },

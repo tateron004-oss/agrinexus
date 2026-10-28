@@ -84,7 +84,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Se préparer à travailler avec des marques",
+        title: "Contrôle des connaissances 1 : Se préparer à travailler avec des marques",
         questions: [
           { q: "Que signifie NIL ?", options: ["National Influencer League", "Nouvelle loi sur les revenus", "Nom, image et ressemblance", "Aucune limite d'encre"], answer: 2, why: "NIL, c'est gagner de l'argent grâce à votre nom, votre image et votre ressemblance." },
           { q: "Selon les règles de la NCAA, qu'est-ce qui n'est PAS permis ?", options: ["Être payé pour aller dans une école précise", "Des publications payées pour un magasin local", "Organiser un stage payant", "Signer des autographes contre paiement"], answer: 0, why: "C'est du pay-for-play, interdit par les règles de la NCAA." },
@@ -164,7 +164,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Propositions, contrats et mentions",
+        title: "Contrôle des connaissances 2 : Propositions, contrats et mentions",
         questions: [
           { q: "Que doit contenir une proposition ?", options: ["Une dissertation de 3 pages", "Votre mot de passe", "Une demande d'argent d'abord", "Qui vous êtes, pourquoi vous aimez la marque, votre public, une idée et votre kit média"], answer: 3, why: "Court, précis et professionnel, c'est ce qui obtient des réponses." },
           { q: "Une « marque » vous demande de payer des frais pour rejoindre son programme d'athlètes. C'est :", options: ["Un signal d'alerte", "Normal", "Exigé par la NCAA", "Une excellente affaire"], answer: 0, why: "Les vraies marques vous paient, pas l'inverse." },
@@ -176,7 +176,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Marketing d'influence pour les athlètes",
+    title: "Quiz final : Marketing d'influence pour les athlètes",
     questions: [
       { q: "Le marketing d'influence, c'est :", options: ["Acheter des abonnés", "Entraîner une équipe", "Une marque vous paie pour présenter son produit à votre public", "Vendre des billets"], answer: 2, why: "Les marques paient pour votre portée et la confiance qu'on vous accorde." },
       { q: "Les contrats NIL de la NCAA doivent avoir :", options: ["Un vrai but commercial et un paiement raisonnable", "Aucun travail demandé", "Un paiement lié aux points marqués", "Un paiement pour choisir une école"], answer: 0, why: "C'est ainsi que la NCAA décrit les contrats permis." },

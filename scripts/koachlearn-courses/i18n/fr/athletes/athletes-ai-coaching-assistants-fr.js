@@ -78,7 +78,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Configurer votre assistant de coaching",
+        title: "Contrôle des connaissances 1 : Configurer votre assistant de coaching",
         questions: [
           { q: "Quelle tâche convient bien à un assistant de coaching IA ?", options: ["Décider de la reprise du jeu après une commotion", "Sanctionner un joueur", "Rédiger un plan d'entraînement", "Juger les sentiments d'un joueur"], answer: 2, why: "L'IA rédige ; les décisions médicales et personnelles restent aux personnes." },
           { q: "Quelle est la règle de coaching pour l'IA ?", options: ["L'IA rédige, l'entraîneur décide", "L'IA décide de tout", "Ne jamais utiliser l'IA", "Les joueurs décident"], answer: 0, why: "Chaque production de l'IA est un premier brouillon." },
@@ -151,7 +151,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Communication, supports et garde-fous",
+        title: "Contrôle des connaissances 2 : Communication, supports et garde-fous",
         questions: [
           { q: "Où parler du comportement d'un joueur ?", options: ["Dans le groupe de discussion de l'équipe", "Sur les réseaux sociaux", "Dans un message de groupe écrit par l'IA", "En privé, en personne ou par téléphone"], answer: 3, why: "Les messages de groupe restent centrés sur l'équipe." },
           { q: "Une fiche d'exercice contient :", options: ["L'objectif, l'installation, les étapes et les points clés", "Les notes scolaires des joueurs", "Les notes de santé des joueurs", "Rien"], answer: 0, why: "Elle aide tout le monde à mener l'exercice de la même façon." },
@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Assistants de coaching IA",
+    title: "Quiz final : Assistants de coaching IA",
     questions: [
       { q: "Un assistant de coaching IA, c'est :", options: ["Un robot sur le banc", "Un arbitre", "Un assistant IA général utilisé pour les tâches d'entraîneur", "Un recruteur payé"], answer: 2, why: "Les entraîneurs utilisent des assistants gratuits pour leur travail." },
       { q: "Que ne peut PAS faire l'IA ?", options: ["Voir vos joueurs et connaître leurs sentiments", "Rédiger un planning", "Écrire la description d'un exercice", "Résumer des notes"], answer: 0, why: "Elle ne sait que ce que vous lui dites." },

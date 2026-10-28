@@ -169,7 +169,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour les cabinets de santé",
+    title: "Quiz final : L'IA pour les cabinets de santé",
     questions: [
       { q: "PHI veut dire :", options: ["Assurance santé publique", "Informations de santé protégées", "Inspection privée du domicile", "Indice de santé primaire"], answer: 1, why: "Ce sont des informations de santé qui identifient un patient." },
       { q: "Laquelle est une PHI ?", options: ["Une affiche générale sur la saison de la grippe", "Les horaires du cabinet", "L'itinéraire pour se garer", "Une date de naissance avec un type de rendez-vous"], answer: 3, why: "Des détails identifiants avec une information de santé sont des PHI." },

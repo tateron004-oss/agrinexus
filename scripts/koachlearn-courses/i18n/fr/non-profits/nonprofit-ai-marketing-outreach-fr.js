@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour la communication et l'action de proximité",
+    title: "Quiz final : L'IA pour la communication et l'action de proximité",
     questions: [
       { q: "Une bonne communication parle :", options: ["À tout le monde avec le même message", "À personne en particulier", "À un public à la fois", "Seulement au conseil"], answer: 2, why: "Les différents publics s'intéressent à des choses différentes." },
       { q: "Un message clé doit dire :", options: ["Toute votre histoire", "Seulement votre logo", "Votre budget", "Ce que c'est, pourquoi cela compte pour eux, et quoi faire ensuite"], answer: 3, why: "Ces éléments mènent à l'action." },

@@ -164,7 +164,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour raconter votre impact social",
+    title: "Quiz final : L'IA pour raconter votre impact social",
     questions: [
       { q: "À qui appartient l'histoire d'un bénéficiaire ?", options: ["À l'organisation", "Au bénéficiaire", "Au donateur", "À l'outil d'IA"], answer: 1, why: "C'est sa vie et son histoire." },
       { q: "Le consentement éclairé veut dire que la personne comprend :", options: ["Ce que vous allez partager, où et pour combien de temps", "Seulement qu'une photo sera prise", "Rien ; une signature suffit", "Le budget de l'organisation"], answer: 0, why: "Le consentement n'est éclairé que si elle sait comment il sera utilisé." },

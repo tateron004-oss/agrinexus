@@ -79,7 +79,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Trouver et tester une idée",
+        title: "Contrôle des connaissances 1 : Trouver et tester une idée",
         questions: [
           { q: "Les bonnes idées d'entreprise partent :", options: ["D'un joli logo", "D'un gros prêt", "D'un problème que les gens ont", "D'une application coûteuse"], answer: 2, why: "Résoudre de vrais problèmes, c'est ce pour quoi les gens paient." },
           { q: "Quelle question d'entretien est la meilleure ?", options: ["« Racontez-moi la dernière fois que c'est arrivé. »", "« Achèteriez-vous mon idée ? »", "« Mon idée n'est-elle pas géniale ? »", "« Combien paieriez-vous un jour ? »"], answer: 0, why: "Ce que les gens ont fait est plus honnête que des prédictions." },
@@ -156,7 +156,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Plan, budget et règles",
+        title: "Contrôle des connaissances 2 : Plan, budget et règles",
         questions: [
           { q: "L'IA ajoute « 1 million $ la première année » à votre plan sans aucune base. Vous :", options: ["Le gardez", "En faites 2 millions $", "Le montrez à des investisseurs", "Le retirez ou le signalez comme supposition"], answer: 3, why: "Ne gardez que des chiffres vrais ou des suppositions clairement signalées." },
           { q: "Les revenus prévus sont égaux à :", options: ["Prix multiplié par le nombre de clients prévus", "Coûts multipliés par deux", "Abonnés multipliés par les mentions J'aime", "Une supposition"], answer: 0, why: "C'est l'estimation de base des revenus." },
@@ -168,7 +168,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Entrepreneuriat et IA pour les athlètes",
+    title: "Quiz final : Entrepreneuriat et IA pour les athlètes",
     questions: [
       { q: "Un entrepreneur :", options: ["Fait seulement du sport", "Investit seulement de l'argent", "Crée une entreprise pour résoudre un problème", "Travaille pour une équipe"], answer: 2, why: "Résoudre des problèmes est l'essentiel." },
       { q: "Un point de douleur, c'est :", options: ["Un problème qui gêne assez les gens pour qu'ils veuillent le voir réglé", "Une blessure", "Un tableau d'affichage", "Une pénalité"], answer: 0, why: "Les points de douleur sont des occasions d'affaires." },

@@ -162,7 +162,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Les outils d'IA pour les sportifs",
+    title: "Quiz final : Les outils d'IA pour les sportifs",
     questions: [
       { q: "Quel type d'outil écrit, explique et planifie ?", options: ["Un chronomètre", "Seulement un tableur", "Un assistant IA", "Un appareil photo"], answer: 2, why: "Les assistants IA comme ChatGPT, Copilot et Gemini écrivent et planifient." },
       { q: "Lequel est un outil de design gratuit avec des modèles ?", options: ["Canva", "Une calculatrice", "Un tableau d'affichage", "Un cahier de tactiques"], answer: 0, why: "Canva a des modèles gratuits pour les publications et les affiches." },

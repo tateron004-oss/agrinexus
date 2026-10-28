@@ -84,7 +84,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Quoi vendre et où",
+        title: "Contrôle des connaissances 1 : Quoi vendre et où",
         questions: [
           { q: "Quel service un athlète pourrait-il vendre ?", options: ["Un T-shirt", "Un autocollant", "Des cours particuliers", "Une affiche"], answer: 2, why: "Les cours sont un service qui rémunère votre temps." },
           { q: "Que fait l'impression à la demande ?", options: ["Elle imprime et expédie les articles seulement après une commande", "Elle imprime de l'argent", "Elle vous oblige à acheter 500 T-shirts d'abord", "Elle écrit votre fiche produit"], answer: 0, why: "Elle réduit l'argent nécessaire au départ." },
@@ -156,7 +156,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Construire et lancer votre offre",
+        title: "Contrôle des connaissances 2 : Construire et lancer votre offre",
         questions: [
           { q: "La fiche produit d'un stage doit inclure :", options: ["Seulement un logo", "Votre adresse personnelle", "Des bourses garanties", "Les dates, les âges, le lieu, ce que les enfants apprennent et la politique de remboursement"], answer: 3, why: "Elle répond à ce que les acheteurs doivent savoir." },
           { q: "L'IA écrit « intégration garantie dans l'équipe première » sur votre fiche. Vous :", options: ["Le retirez", "Le gardez", "Le mettez en plus grand", "Ajoutez d'autres promesses"], answer: 0, why: "Ne promettez pas des résultats que vous ne pouvez pas garantir." },
@@ -168,7 +168,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Plateformes de commerce en ligne et IA pour les athlètes",
+    title: "Quiz final : Plateformes de commerce en ligne et IA pour les athlètes",
     questions: [
       { q: "Le commerce en ligne, c'est :", options: ["Le sport électrique", "Seulement l'e-mail", "Acheter et vendre sur Internet", "Un bus d'équipe"], answer: 2, why: "C'est la vente en ligne." },
       { q: "Lequel est un produit numérique ?", options: ["Un programme d'entraînement", "Une casquette", "Un stage", "Une affiche"], answer: 0, why: "Il se vend sous forme de fichier ou d'accès en ligne." },

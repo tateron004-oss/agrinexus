@@ -80,7 +80,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Votre histoire et vos compétences",
+        title: "Contrôle des connaissances 1 : Votre histoire et vos compétences",
         questions: [
           { q: "Laquelle est une preuve de leadership ?", options: ["« Je suis un leader »", "« Leadership ! »", "« Capitaine d'une équipe de 20 joueurs ; je dirigeais les échauffements et réglais les conflits »", "« Tout le monde m'aime »"], answer: 2, why: "Un vrai exemple prouve la compétence." },
           { q: "L'IA dit que vous avez une « certification en gestion de projet ». Vous ne l'avez pas. Vous :", options: ["La retirez", "La gardez", "En ajoutez d'autres", "La mettez en gras"], answer: 0, why: "Ne gardez que ce qui est vrai." },
@@ -152,7 +152,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : CV, LinkedIn et réseau",
+        title: "Contrôle des connaissances 2 : CV, LinkedIn et réseau",
         questions: [
           { q: "Quelle puce de CV est la plus forte ?", options: ["« J'ai fait du sport »", "« J'étais dans une équipe »", "« Travailleur »", "« Concilié 20 heures d'entraînement par semaine avec une moyenne de 3,4 sur 4 »"], answer: 3, why: "Elle utilise une action et un chiffre." },
           { q: "Que ne devez-vous PAS coller dans l'IA en créant un CV ?", options: ["Votre numéro de sécurité sociale", "Vos rôles sportifs", "Le nom de votre école", "Vos tâches au travail"], answer: 0, why: "Les numéros d'identité privés restent privés." },
@@ -164,7 +164,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Image personnelle et développement de carrière de l'athlète",
+    title: "Quiz final : Image personnelle et développement de carrière de l'athlète",
     questions: [
       { q: "Une compétence transférable, c'est :", options: ["Un échange entre équipes", "Une règle de transfert", "Une compétence utile dans de nombreux métiers", "Une boisson sportive"], answer: 2, why: "Elle vous suit d'un métier à l'autre." },
       { q: "Laquelle est une compétence transférable venue du sport ?", options: ["Gérer la pression", "Votre numéro de maillot", "Votre marque de chaussures", "Votre mascotte"], answer: 0, why: "Les employeurs apprécient la gestion de la pression." },

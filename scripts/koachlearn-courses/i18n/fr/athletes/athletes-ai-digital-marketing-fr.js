@@ -167,7 +167,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Stratégies de marketing numérique avec l'IA pour les sportifs",
+    title: "Quiz final : Stratégies de marketing numérique avec l'IA pour les sportifs",
     questions: [
       { q: "Faire du marketing, c'est :", options: ["Publier au hasard", "Acheter des abonnés", "Amener les bonnes personnes à vous connaître, à vous apprécier et à vous faire confiance", "Seulement vendre des choses"], answer: 2, why: "Il s'agit des bonnes personnes et de la confiance." },
       { q: "Que veut dire le T de SMART ?", options: ["Temporellement défini", "Tendance", "Total", "Team"], answer: 0, why: "Un objectif SMART a une échéance." },

@@ -170,7 +170,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : IA et arnaques : se protéger quand on est senior",
+    title: "Quiz final : IA et arnaques : se protéger quand on est senior",
     questions: [
       { q: "Quelle agence américaine décrit les quatre signes d'une arnaque ?", options: ["Le service météo", "La Federal Trade Commission (FTC)", "La poste", "Une compagnie de téléphone"], answer: 1, why: "La FTC protège les consommateurs contre les arnaques." },
       { q: "Un message dit que vous avez gagné un prix mais devez d'abord payer des frais. C'est :", options: ["Un signe d'arnaque", "Un prix normal", "Une règle fiscale", "Une règle de la banque"], answer: 0, why: "Un prix qui demande des frais est une arnaque fréquente." },

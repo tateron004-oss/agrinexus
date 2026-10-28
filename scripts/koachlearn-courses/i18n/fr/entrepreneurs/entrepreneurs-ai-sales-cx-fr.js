@@ -80,7 +80,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Vendre avec l'IA",
+        title: "Contrôle des connaissances 1 : Vendre avec l'IA",
         questions: [
           { q: "Quel prospect est le mieux qualifié ?", options: ["Quelqu'un qui n'a pas besoin de votre service", "Une entreprise qui a le problème, le budget, un décideur et un besoin proche", "Une adresse e-mail au hasard", "Un concurrent"], answer: 1, why: "Il remplit les quatre critères de qualification." },
           { q: "D'où doivent venir vos informations sur les prospects ?", options: ["Des dossiers privés des clients", "De données personnelles aspirées", "D'une liste d'inconnus achetée", "D'informations publiques sur les entreprises et de votre propre réseau"], answer: 3, why: "Les informations publiques évitent les problèmes de confidentialité et de marketing." },
@@ -153,7 +153,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Garder les clients satisfaits",
+        title: "Contrôle des connaissances 2 : Garder les clients satisfaits",
         questions: [
           { q: "D'où doivent venir les questions de la FAQ ?", options: ["Des vraies questions que posent les clients", "De questions inventées par l'IA", "Du site d'un concurrent", "De suppositions au hasard"], answer: 0, why: "De vraies questions font une FAQ utile." },
           { q: "Si vous utilisez un chatbot, vous devez :", options: ["Cacher vos coordonnées", "Faire croire que c'est une personne", "Le laisser promettre des remboursements", "Dire aux clients qu'il est automatisé et proposer un moyen de joindre une personne"], answer: 3, why: "L'honnêteté et un accès facile à une personne gardent la confiance." },
@@ -165,7 +165,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour la vente et l'expérience client",
+    title: "Quiz final : L'IA pour la vente et l'expérience client",
     questions: [
       { q: "Un prospect, c'est :", options: ["Un client qui a payé", "Une personne ou une entreprise qui pourrait vous acheter quelque chose", "Une réclamation", "Un produit"], answer: 1, why: "C'est la définition." },
       { q: "Les quatre questions de qualification portent sur :", options: ["Le logo, la police, le site web et l'application", "La couleur, la taille, le poids et la forme", "Le nom, l'âge, l'adresse et le téléphone", "Le problème, l'argent, la décision et le moment"], answer: 3, why: "Elles montrent qui a des chances d'acheter." },

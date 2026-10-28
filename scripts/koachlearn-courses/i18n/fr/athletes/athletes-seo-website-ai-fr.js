@@ -165,7 +165,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Référencement (SEO) et création de votre site web avec l'IA",
+    title: "Quiz final : Référencement (SEO) et création de votre site web avec l'IA",
     questions: [
       { q: "SEO veut dire :", options: ["Social everyday output", "Sports event organizer", "Search engine optimization (référencement naturel)", "Site editing online"], answer: 2, why: "Cela veut dire aider les moteurs de recherche à comprendre votre page." },
       { q: "Un site de recrutement doit montrer :", options: ["Statistiques, résultats scolaires, meilleurs moments", "Votre adresse", "Votre mot de passe", "Des ragots sur les rivaux"], answer: 0, why: "C'est ce dont les entraîneurs ont besoin." },

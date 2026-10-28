@@ -165,7 +165,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA, compagne de voyage",
+    title: "Quiz final : L'IA, compagne de voyage",
     questions: [
       { q: "Un assistant IA peut aider pour un voyage en :", options: ["Achetant des billets sans vous", "Écrivant un plan jour par jour", "Garantissant les prix", "Faisant votre valise"], answer: 1, why: "Il écrit des plans que vous adaptez et vérifiez ensuite." },
       { q: "Dire à l'IA votre rythme et vos besoins l'aide à :", options: ["Faire un plan qui vous convient", "Faire payer moins", "Réserver des hôtels", "Appeler la famille"], answer: 0, why: "Les détails rendent le plan réaliste." },

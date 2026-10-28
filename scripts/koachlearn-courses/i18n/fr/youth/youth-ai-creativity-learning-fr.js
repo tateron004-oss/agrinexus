@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Les outils d'IA pour créer et apprendre",
+    title: "Quiz final : Les outils d'IA pour créer et apprendre",
     questions: [
       { q: "Quand vous cherchez des idées avec l'IA, vous devez d'abord :", options: ["Juger chaque idée", "Demander beaucoup d'idées différentes", "Prendre la première", "Vous arrêter après une idée"], answer: 1, why: "Le remue-méninges, c'est d'abord beaucoup d'idées." },
       { q: "La meilleure façon de faire vôtre une idée de l'IA est de :", options: ["La copier exactement", "Demander à un ami de choisir", "Ne jamais utiliser les idées de l'IA", "Modifier ou combiner des idées et ajouter votre touche"], answer: 3, why: "Modifier et mélanger les idées rend le résultat à vous." },

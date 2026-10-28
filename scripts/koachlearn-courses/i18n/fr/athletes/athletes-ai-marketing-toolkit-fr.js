@@ -79,7 +79,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Votre voix et vos prompts",
+        title: "Contrôle des connaissances 1 : Votre voix et vos prompts",
         questions: [
           { q: "Pourquoi écrire un guide de ton de marque ?", options: ["Pour rallonger les publications", "Pour cacher votre nom", "Pour que l'IA et vos aides écrivent comme vous vous exprimez", "C'est exigé par les applications"], answer: 2, why: "L'IA est générique si vous ne lui donnez pas votre voix." },
           { q: "Qu'est-ce qui a sa place dans un guide de ton ?", options: ["Les mots que vous n'utilisez jamais", "Votre mot de passe", "Vos informations bancaires", "Les statistiques de votre rival"], answer: 0, why: "Cela façonne la façon dont le contenu sonne." },
@@ -155,7 +155,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Qualité, droits et résultats",
+        title: "Contrôle des connaissances 2 : Qualité, droits et résultats",
         questions: [
           { q: "Qui est responsable d'une publication écrite par l'IA que vous publiez ?", options: ["L'entreprise d'IA", "Vos abonnés", "Personne", "Vous"], answer: 3, why: "Vous répondez de ce que vous publiez." },
           { q: "Laquelle fait partie des cinq vérifications ?", options: ["Les droits", "La taille de police", "Le nombre d'émojis", "La longueur de la publication"], answer: 0, why: "Vous devez posséder ou avoir la permission pour tout ce que vous utilisez." },
@@ -167,7 +167,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Boîte à outils IA pour le marketing et l'image de marque",
+    title: "Quiz final : Boîte à outils IA pour le marketing et l'image de marque",
     questions: [
       { q: "Une boîte à outils marketing, c'est :", options: ["Le plus d'applications possible", "Un sac pour appareil photo", "Un petit ensemble d'outils avec un guide et des prompts enregistrés", "Une agence payante"], answer: 2, why: "Petit et reproductible vaut mieux que beaucoup d'applications." },
       { q: "Le ton de marque, c'est :", options: ["La personnalité et le style de votre façon d'écrire", "Votre voix chantée", "Votre volume", "Votre logo"], answer: 0, why: "C'est la façon dont vous sonnez à l'écrit." },

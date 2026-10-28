@@ -79,7 +79,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Les données de l'équipe",
+        title: "Contrôle des connaissances 1 : Les données de l'équipe",
         questions: [
           { q: "Par quoi l'analyse d'équipe doit-elle commencer ?", options: ["Ce que suivent les pros", "Toutes les statistiques possibles", "L'identité de votre équipe et la façon dont vous voulez jouer", "Les chiffres des réseaux sociaux"], answer: 2, why: "Les statistiques doivent correspondre à votre style de jeu." },
           { q: "Pourquoi écrire une définition pour chaque statistique ?", options: ["Pour que tout le monde compte de la même façon", "Pour la rallonger", "Pour embrouiller les adversaires", "Ce n'est pas nécessaire"], answer: 0, why: "Un comptage cohérent rend les données fiables." },
@@ -151,7 +151,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Scouting et communication",
+        title: "Contrôle des connaissances 2 : Scouting et communication",
         questions: [
           { q: "Quelle source est loyale pour le scouting ?", options: ["Filmer en secret leur entraînement fermé", "Pirater leur application", "Demander leurs mots de passe à leurs joueurs", "Les feuilles de match publiques et les vidéos autorisées"], answer: 3, why: "Utilisez des sources publiques et autorisées, selon les règles de la ligue." },
           { q: "L'IA ajoute un point clé qui n'est pas dans vos notes. Vous :", options: ["Le retirez ou le vérifiez vous-même", "Le gardez", "Le mettez en gras", "Dites à l'équipe que c'est vrai"], answer: 0, why: "N'utilisez que ce que vos notes confirment." },
@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour les sports collectifs",
+    title: "Quiz final : L'IA pour les sports collectifs",
     questions: [
       { q: "L'analyse d'équipe, c'est :", options: ["Seulement compter les fans", "Remplacer l'entraîneur", "Utiliser des chiffres pour comprendre et améliorer le jeu d'une équipe", "Vendre des billets"], answer: 2, why: "Elle soutient de meilleures décisions d'équipe." },
       { q: "Une équipe qui joue en contre-attaque doit suivre :", options: ["Les points en transition et les pertes de balle", "Les couleurs des maillots", "Les horaires du bus", "Le nombre de spectateurs"], answer: 0, why: "Ils correspondent au jeu de contre-attaque." },

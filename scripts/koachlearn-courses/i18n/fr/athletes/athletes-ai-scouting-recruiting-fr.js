@@ -83,7 +83,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Se préparer à être recruté",
+        title: "Contrôle des connaissances 1 : Se préparer à être recruté",
         questions: [
           { q: "Vous visez la Division I de la NCAA. Où vous inscrire pour l'admissibilité ?", options: ["Sur une application de réseau social", "À votre salle de sport", "Au NCAA Eligibility Center", "Nulle part"], answer: 2, why: "Les athlètes de DI et DII ont besoin d'un compte de certification à l'Eligibility Center." },
           { q: "Où vérifier quand les entraîneurs peuvent vous contacter ?", options: ["Sur ncaa.org et auprès de votre entraîneur ou conseiller d'orientation", "Seulement auprès d'un chatbot d'IA", "Dans un article vieux de 5 ans", "Auprès d'un rival"], answer: 0, why: "Les règles dépendent du sport et de la division et changent souvent." },
@@ -155,7 +155,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Contacter les entraîneurs et rester organisé",
+        title: "Contrôle des connaissances 2 : Contacter les entraîneurs et rester organisé",
         questions: [
           { q: "Quel objet est le meilleur pour un e-mail à un entraîneur ?", options: ["« Salut »", "« Lisez s'il vous plaît !!! »", "Vide", "« 2027 Milieu | Moyenne 3,5 | Club Metro FC »"], answer: 3, why: "Il donne les infos clés d'un coup d'œil." },
           { q: "Qui doit envoyer les e-mails aux entraîneurs universitaires ?", options: ["L'athlète", "Seulement les parents", "Un inconnu", "Un robot d'IA automatiquement"], answer: 0, why: "Les entraîneurs veulent avoir des nouvelles de l'athlète." },
@@ -167,7 +167,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Scouting et recrutement avec l'IA",
+    title: "Quiz final : Scouting et recrutement avec l'IA",
     questions: [
       { q: "Laquelle est une organisation du sport universitaire ?", options: ["La NFL", "Une marque de chaussures", "La NAIA", "Une application sociale"], answer: 2, why: "La NAIA est une association sportive universitaire." },
       { q: "Le NCAA Eligibility Center vérifie :", options: ["Les résultats scolaires et le statut amateur", "Votre nombre d'abonnés", "Seulement votre taille", "Vos goûts musicaux"], answer: 0, why: "Il certifie l'admissibilité." },

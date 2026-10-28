@@ -80,7 +80,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Penser en processus",
+        title: "Contrôle des connaissances 1 : Penser en processus",
         questions: [
           { q: "Quel processus vaut mieux automatiser en premier ?", options: ["Une décision juridique ponctuelle", "Un processus fréquent, avec les mêmes étapes et beaucoup de copie", "Quelque chose que vous faites une fois par an", "L'embauche de votre premier salarié"], answer: 1, why: "Le travail de copie fréquent et répété fait gagner le plus de temps." },
           { q: "Dans « Quand une nouvelle réponse au formulaire arrive, ajouter une ligne au tableur », quel est le déclencheur ?", options: ["Votre e-mail", "Ajouter une ligne au tableur", "Le tableur", "Une nouvelle réponse au formulaire arrive"], answer: 3, why: "Le déclencheur est l'événement qui lance l'automatisation." },
@@ -154,7 +154,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Ajouter l'IA et garder le contrôle",
+        title: "Contrôle des connaissances 2 : Ajouter l'IA et garder le contrôle",
         questions: [
           { q: "Où doit aller le brouillon de réponse de l'IA dans votre première automatisation ?", options: ["À vous pour relecture", "Directement au client", "Sur les réseaux sociaux", "Nulle part"], answer: 0, why: "Vous relisez les brouillons avant que les clients les voient." },
           { q: "Quelle information ne doit PAS passer par l'étape d'IA ?", options: ["Votre liste de services", "Le texte de la demande", "Vos horaires d'ouverture", "Le numéro de carte d'un client"], answer: 3, why: "Les numéros de carte et les informations du même genre ne doivent jamais être envoyés aux outils d'IA." },
@@ -166,7 +166,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Automatisation par l'IA et processus agentiques",
+    title: "Quiz final : Automatisation par l'IA et processus agentiques",
     questions: [
       { q: "L'automatisation, c'est :", options: ["Embaucher plus de monde", "Un ordinateur fait une tâche répétée quand un événement se produit", "Écrire chaque e-mail à la main", "Éteindre votre ordinateur"], answer: 1, why: "C'est l'idée de base." },
       { q: "La première étape avant d'automatiser est de :", options: ["Supprimer les anciennes données", "Acheter l'outil le plus cher", "Donner un accès complet à un agent", "Décrire le processus en étapes"], answer: 3, why: "On ne peut automatiser que ce qu'on comprend." },

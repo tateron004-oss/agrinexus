@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour apprendre et pour les loisirs",
+    title: "Quiz final : L'IA pour apprendre et pour les loisirs",
     questions: [
       { q: "Un assistant IA peut jouer le rôle :", options: ["De votre médecin", "D'un professeur patient", "De votre banque", "D'un pharmacien"], answer: 1, why: "Il explique les choses aussi souvent que nécessaire." },
       { q: "Quelle demande vous enseignera le mieux ?", options: ["« Je suis débutant. Apprends-moi trois choses sur les oiseaux du jardin, une à la fois. »", "« oiseaux »", "« enseigne »", "« tout »"], answer: 0, why: "Elle donne le sujet, votre niveau et le rythme." },

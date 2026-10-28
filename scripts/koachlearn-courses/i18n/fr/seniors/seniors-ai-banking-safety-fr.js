@@ -168,7 +168,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA et la sécurité de la banque en ligne",
+    title: "Quiz final : L'IA et la sécurité de la banque en ligne",
     questions: [
       { q: "La banque en ligne vous permet de :", options: ["Imprimer de l'argent", "Voir et gérer vos comptes sur une application ou un site", "Ne plus payer de factures", "Ne plus avoir de mot de passe"], answer: 1, why: "C'est votre banque, sur votre téléphone ou votre ordinateur." },
       { q: "L'endroit sûr pour obtenir l'application de votre banque est :", options: ["La boutique d'applications officielle, publiée par votre banque", "Un lien reçu par SMS", "Une fenêtre surgissante", "Une pièce jointe d'e-mail"], answer: 0, why: "Les boutiques et éditeurs officiels sont fiables." },

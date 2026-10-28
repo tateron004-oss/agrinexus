@@ -78,7 +78,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Voir le mouvement",
+        title: "Contrôle des connaissances 1 : Voir le mouvement",
         questions: [
           { q: "Qu'est-ce que la chaîne cinétique ?", options: ["Une pièce de vélo", "Une machine de musculation", "La façon dont la force passe d'une partie du corps à la suivante", "Un type de chaussure"], answer: 2, why: "La force va des jambes aux hanches, au tronc puis aux bras." },
           { q: "Quelle vue montre le mieux les genoux qui rentrent vers l'intérieur ?", options: ["La vue de face ou de dos", "Seulement la vue de côté", "Seulement la vue du dessus", "Un gros plan du visage"], answer: 0, why: "Le mouvement de gauche à droite se voit mieux de face ou de dos." },
@@ -150,7 +150,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Les outils d'IA et le vrai changement",
+        title: "Contrôle des connaissances 2 : Les outils d'IA et le vrai changement",
         questions: [
           { q: "Que fait l'estimation de posture ?", options: ["Elle diagnostique les blessures", "Elle écrit des programmes d'entraînement", "Elle compte les abonnés", "Elle trouve les points du corps dans une vidéo et dessine un bonhomme bâton"], answer: 3, why: "Elle localise les articulations sur les images." },
           { q: "Qu'est-ce qui peut tromper un outil de posture ?", options: ["Le flou et les vêtements amples", "Une bonne lumière", "Des vêtements ajustés", "Un fond dégagé"], answer: 0, why: "Le flou et les vêtements amples cachent la position des articulations." },
@@ -162,7 +162,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Biomécanique et IA",
+    title: "Quiz final : Biomécanique et IA",
     questions: [
       { q: "La biomécanique étudie :", options: ["Les finances de l'équipe", "Les réseaux sociaux", "Comment les forces et les positions du corps créent le mouvement", "La conception des stades"], answer: 2, why: "C'est la science du mouvement." },
       { q: "L'amplitude de mouvement, c'est :", options: ["Jusqu'où une articulation bouge", "La distance que vous courez", "Un tableau d'affichage", "Un type d'exercice"], answer: 0, why: "Elle décrit le mouvement d'une articulation." },

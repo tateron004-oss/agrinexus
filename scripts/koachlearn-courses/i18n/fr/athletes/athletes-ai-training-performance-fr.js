@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour l'entraînement et la performance",
+    title: "Quiz final : L'IA pour l'entraînement et la performance",
     questions: [
       { q: "« Aller plus vite » est :", options: ["Un objectif parfait", "Un carnet d'entraînement", "Un souhait, pas un objectif mesurable", "Un exercice"], answer: 2, why: "Il n'a ni chiffre, ni date, ni test." },
       { q: "Un bon objectif d'entraînement comprend :", options: ["Une seule chose, un chiffre, une date et un test", "Seulement un ressenti", "Votre mot de passe", "Dix objectifs à la fois"], answer: 0, why: "Ces éléments le rendent mesurable." },

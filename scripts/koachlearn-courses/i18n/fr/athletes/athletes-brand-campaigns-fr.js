@@ -79,7 +79,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Ce qui fait une bonne campagne éducative",
+        title: "Contrôle des connaissances 1 : Ce qui fait une bonne campagne éducative",
         questions: [
           { q: "En quoi une campagne éducative diffère-t-elle d'une publicité classique ?", options: ["Elle est toujours plus longue", "Elle n'a pas d'athlètes", "Elle enseigne d'abord quelque chose d'utile", "Elle n'a jamais de marques"], answer: 2, why: "Les campagnes enseignent ; les publicités vendent surtout." },
           { q: "Quel est un objectif d'apprentissage clair ?", options: ["« Les joueurs de collège connaîtront trois signes de commotion et préviendront un entraîneur »", "« Soyez attentifs »", "« Faites passer le mot »", "« Devenir viral »"], answer: 0, why: "Il dit qui apprend quoi et ce qu'ils font." },
@@ -153,7 +153,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Planifier et s'associer",
+        title: "Contrôle des connaissances 2 : Planifier et s'associer",
         questions: [
           { q: "De quoi parle la publication 1 de la campagne ?", options: ["Acheter le produit", "Vos statistiques", "Un concours", "Pourquoi c'est important : votre histoire"], answer: 3, why: "Votre histoire donne envie de s'intéresser." },
           { q: "Quel partenaire convient à une campagne sur la lecture ?", options: ["Une bibliothèque ou une librairie locale", "Une application de paris", "Une boisson énergisante", "Un concessionnaire automobile"], answer: 0, why: "Ils s'intéressent déjà à la lecture." },
@@ -165,7 +165,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Campagnes éducatives des marques",
+    title: "Quiz final : Campagnes éducatives des marques",
     questions: [
       { q: "Une campagne éducative sert surtout à :", options: ["Vendre des chaussures", "Montrer des moments forts", "Enseigner quelque chose d'utile", "Lister des statistiques"], answer: 2, why: "Enseigner est le but principal." },
       { q: "Pourquoi les marques font-elles appel à des athlètes pour leurs campagnes ?", options: ["Les jeunes et les familles font confiance aux athlètes", "Les athlètes travaillent gratuitement", "C'est obligatoire", "Les athlètes sont médecins"], answer: 0, why: "La confiance fait passer le message." },

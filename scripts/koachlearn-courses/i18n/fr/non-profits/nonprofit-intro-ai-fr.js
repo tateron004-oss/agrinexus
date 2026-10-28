@@ -164,7 +164,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Introduction à l'IA pour les associations",
+    title: "Quiz final : Introduction à l'IA pour les associations",
     questions: [
       { q: "Un assistant d'IA se décrit le mieux comme :", options: ["Un bénévole", "Une base de données de subventions", "Un programme informatique avec lequel on discute en mots de tous les jours", "Une banque"], answer: 2, why: "C'est un programme à qui l'on écrit ou parle et qui rédige des réponses." },
       { q: "Pour quelle tâche associative l'IA est-elle la meilleure ?", options: ["Choisir quels bénéficiaires reçoivent de l'aide", "Signer des contrats", "Approuver les salaires", "Rédiger le premier brouillon d'un bulletin"], answer: 3, why: "Les premiers brouillons sont un point fort ; les décisions restent aux personnes." },

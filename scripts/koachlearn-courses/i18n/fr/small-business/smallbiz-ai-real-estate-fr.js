@@ -171,7 +171,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour les agents immobiliers",
+    title: "Quiz final : L'IA pour les agents immobiliers",
     questions: [
       { q: "Que devez-vous donner à l'IA pour rédiger une annonce ?", options: ["Le numéro de sécurité sociale du vendeur", "Seulement des faits vérifiés", "Des suppositions", "L'annonce d'un concurrent"], answer: 1, why: "Des faits en entrée, des mots exacts en sortie." },
       { q: "MLS veut dire :", options: ["My Listing Site", "Main Loan System", "Market Law Statute", "Multiple Listing Service"], answer: 3, why: "Les agents partagent leurs annonces sur le MLS." },

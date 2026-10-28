@@ -170,7 +170,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour les restaurants",
+    title: "Quiz final : L'IA pour les restaurants",
     questions: [
       { q: "Une bonne description de plat fait environ :", options: ["200 mots", "10 à 25 mots", "Une lettre", "Une page entière"], answer: 1, why: "Une description courte se lit vite." },
       { q: "Que donnez-vous à l'IA pour écrire une description de plat ?", options: ["Rien", "Vos coordonnées bancaires", "Les noms des clients", "Les vrais ingrédients et la méthode"], answer: 3, why: "Des faits réels donnent des descriptions exactes." },

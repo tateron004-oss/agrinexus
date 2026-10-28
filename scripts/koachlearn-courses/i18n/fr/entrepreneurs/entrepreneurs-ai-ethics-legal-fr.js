@@ -81,7 +81,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Connaître les risques et vérifier le travail",
+        title: "Contrôle des connaissances 1 : Connaître les risques et vérifier le travail",
         questions: [
           { q: "Lequel est un risque d'exactitude ?", options: ["L'IA utilise vos couleurs de marque", "L'IA invente un prix que vous n'avez jamais fixé", "L'IA écrit un court e-mail", "L'IA fait une liste"], answer: 1, why: "Les faits inventés sont le risque d'exactitude." },
           { q: "Vous utilisez l'IA pour trier des candidatures. Que devez-vous vérifier en plus ?", options: ["La météo", "Seulement la police", "Rien, l'IA est neutre", "Si elle traite injustement des groupes de personnes"], answer: 3, why: "Les lois contre la discrimination s'appliquent toujours quand l'IA aide à décider." },
@@ -156,7 +156,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Affirmations honnêtes, propriété et votre politique",
+        title: "Contrôle des connaissances 2 : Affirmations honnêtes, propriété et votre politique",
         questions: [
           { q: "Votre application n'utilise pas l'IA. Pouvez-vous la présenter comme « propulsée par l'IA » ?", options: ["Non, c'est une fausse affirmation", "Oui, tout le monde le fait", "Seulement en petits caractères", "Seulement en ligne"], answer: 0, why: "Les affirmations publicitaires, y compris sur l'IA, doivent être vraies." },
           { q: "Quelle pratique d'avis la règle de la FTC interdit-elle ?", options: ["Montrer de vrais avis avec permission", "Demander des avis honnêtes aux clients", "Répondre aux avis", "Publier des avis générés par l'IA attribués à des personnes qui n'existent pas"], answer: 3, why: "La règle interdit les faux avis, y compris ceux générés par l'IA." },
@@ -168,7 +168,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Éthique, risques et aspects juridiques de l'IA",
+    title: "Quiz final : Éthique, risques et aspects juridiques de l'IA",
     questions: [
       { q: "Lequel ne fait PAS partie des cinq risques de l'IA de ce cours ?", options: ["L'exactitude", "L'autonomie de la batterie", "La vie privée", "L'équité"], answer: 1, why: "Les cinq sont l'exactitude, l'équité, la vie privée, l'honnêteté et la propriété." },
       { q: "Être éthique avec l'IA, c'est notamment :", options: ["Collecter toutes les données possibles", "Laisser l'IA tout décider", "Cacher l'usage de l'IA à tout le monde", "Garder une personne responsable"], answer: 3, why: "Une personne reste responsable de l'usage de l'IA." },

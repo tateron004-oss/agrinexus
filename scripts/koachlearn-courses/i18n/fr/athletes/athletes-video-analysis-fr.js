@@ -164,7 +164,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Analyse vidéo et intelligence de jeu",
+    title: "Quiz final : Analyse vidéo et intelligence de jeu",
     questions: [
       { q: "Tenir le téléphone à l'horizontale pour filmer s'appelle :", options: ["Le mode portrait", "Le selfie", "Le mode paysage", "Le zoom"], answer: 2, why: "Le mode paysage donne un cadre large." },
       { q: "Pourquoi filmer d'en haut ?", options: ["Pour voir toute l'action et l'espacement", "Pour se cacher", "Pour un meilleur son", "C'est une règle"], answer: 0, why: "La hauteur montre tous les joueurs impliqués." },

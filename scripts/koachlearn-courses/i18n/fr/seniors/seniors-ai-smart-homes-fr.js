@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA et la maison connectée",
+    title: "Quiz final : L'IA et la maison connectée",
     questions: [
       { q: "Un appareil connecté est :", options: ["N'importe quelle vieille lampe", "Un appareil commandé à la voix ou par téléphone via internet", "Un calendrier en papier", "Un téléphone fixe"], answer: 1, why: "Les appareils connectés sont reliés à internet." },
       { q: "Quel assistant vocal utilise Amazon Echo ?", options: ["Alexa", "Siri", "Cortana", "Bixby"], answer: 0, why: "Les enceintes Echo utilisent Alexa." },

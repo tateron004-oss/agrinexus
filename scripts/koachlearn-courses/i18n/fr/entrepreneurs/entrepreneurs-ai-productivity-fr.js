@@ -79,7 +79,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Planifier et communiquer plus vite",
+        title: "Contrôle des connaissances 1 : Planifier et communiquer plus vite",
         questions: [
           { q: "Quelles tâches méritent généralement d'être dans vos trois priorités de la semaine ?", options: ["Celles qui sont amusantes", "Celles qui rapportent de l'argent ou gardent les clients satisfaits", "Celles qui prennent 30 secondes", "Celles que quelqu'un d'autre a demandées"], answer: 1, why: "Les tâches liées à l'argent et aux clients font tourner l'entreprise." },
           { q: "Que dire à l'IA pour obtenir un plan utile en blocs de temps ?", options: ["Rien du tout", "Votre solde bancaire", "Votre mot de passe", "Vos horaires de travail et vos tâches fixes"], answer: 3, why: "L'IA a besoin de vos horaires et de vos engagements fixes pour placer les tâches." },
@@ -151,7 +151,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Des systèmes qui font gagner du temps",
+        title: "Contrôle des connaissances 2 : Des systèmes qui font gagner du temps",
         questions: [
           { q: "Qu'est-ce qu'une procédure standard ?", options: ["Une procédure écrite étape par étape pour une tâche répétée", "Un type de facture", "Une publication sur les réseaux sociaux", "Un formulaire fiscal"], answer: 0, why: "Une procédure standard permet de faire un travail de la même façon à chaque fois." },
           { q: "Comment savoir si votre procédure marche ?", options: ["Demander à l'IA si elle est bonne", "L'imprimer en couleur", "La rallonger", "La suivre mot pour mot ou la faire essayer par un aide"], answer: 3, why: "Le test montre les étapes manquantes ou confuses." },
@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour la productivité de l'entreprise",
+    title: "Quiz final : L'IA pour la productivité de l'entreprise",
     questions: [
       { q: "La première étape pour planifier une semaine avec l'IA est :", options: ["Acheter une nouvelle application", "Noter toutes les tâches", "Supprimer votre agenda", "Demander à un client"], answer: 1, why: "L'IA ne peut trier que ce que vous listez." },
       { q: "Quand vous choisissez vos trois priorités, qui décide de l'ordre final ?", options: ["Votre application de messagerie", "L'IA", "Un concurrent", "Vous"], answer: 3, why: "L'IA propose ; vous connaissez votre entreprise." },

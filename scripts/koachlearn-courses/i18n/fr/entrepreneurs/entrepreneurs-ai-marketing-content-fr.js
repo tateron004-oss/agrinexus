@@ -80,7 +80,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Savoir à qui vous parlez",
+        title: "Contrôle des connaissances 1 : Savoir à qui vous parlez",
         questions: [
           { q: "Quelle est la meilleure description de client idéal pour une pâtisserie à domicile ?", options: ["Tous ceux qui mangent", "Des parents occupés à moins de 15 km qui commandent des gâteaux d'anniversaire quelques fois par an", "Les gens sur Internet", "Les autres pâtisseries"], answer: 1, why: "Elle nomme une personne, un besoin et une zone précis." },
           { q: "L'IA a deviné ce qui inquiète vos clients. Que devez-vous faire ?", options: ["Ignorer vos clients", "Lui faire entièrement confiance", "Le publier comme un fait", "Le vérifier avec de vrais clients ou vos registres de ventes"], answer: 3, why: "L'IA devine à partir de tendances générales ; les vrais clients confirment." },
@@ -157,7 +157,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Créer, publier et respecter les règles",
+        title: "Contrôle des connaissances 2 : Créer, publier et respecter les règles",
         questions: [
           { q: "Quelle photo crée le plus de confiance dans une publication ?", options: ["Une vraie photo de votre propre travail", "Une image d'IA d'un faux client heureux", "La photo d'un concurrent", "Une image d'illustration floue"], answer: 0, why: "De vraies photos d'un vrai travail créent la confiance ; les faux clients trompent." },
           { q: "Selon le Copyright Office américain, un contenu entièrement généré par l'IA est :", options: ["Automatiquement une marque déposée", "Toujours à vous", "À votre client", "Non protégé par le droit d'auteur"], answer: 3, why: "Le droit d'auteur protège la création humaine ; vos propres retouches créatives peuvent être protégées." },
@@ -169,7 +169,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Marketing et création de contenu avec l'IA",
+    title: "Quiz final : Marketing et création de contenu avec l'IA",
     questions: [
       { q: "Votre client idéal est quelqu'un qui :", options: ["Vit n'importe où dans le monde", "A besoin de ce que vous vendez, peut payer et est facile à atteindre", "Travaille déjà pour vous", "Est votre concurrent"], answer: 1, why: "C'est la définition utilisée dans le cours." },
       { q: "Quelle demande à l'IA aide à décrire votre client idéal ?", options: ["« Trouve leurs adresses personnelles. »", "« Fais mes impôts. »", "« Invente des avis. »", "« Décris leur situation, leur plus gros problème, leurs inquiétudes et où ils passent du temps en ligne. »"], answer: 3, why: "Ces questions construisent un profil utile." },

@@ -79,7 +79,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Ce que l'IA peut faire pour votre entreprise",
+        title: "Contrôle des connaissances 1 : Ce que l'IA peut faire pour votre entreprise",
         questions: [
           { q: "Quelle est la meilleure façon de voir un assistant IA dans votre entreprise ?", options: ["Votre comptable", "Un remplaçant de votre jugement", "Une aide rapide aux premiers brouillons que vous vérifiez", "Un client"], answer: 2, why: "L'IA rédige vite, mais c'est vous qui vérifiez et décidez de ce qui sort." },
           { q: "Quelle tâche est une bonne première tâche à confier à un assistant IA ?", options: ["Rédiger une publication hebdomadaire que vous lirez d'abord", "Payer un fournisseur", "Signer un bail", "Choisir votre régime fiscal"], answer: 0, why: "Elle se répète, ce sont surtout des mots, et les erreurs se repèrent avant que quelqu'un les voie." },
@@ -154,7 +154,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Utiliser l'IA de façon sûre et efficace",
+        title: "Contrôle des connaissances 2 : Utiliser l'IA de façon sûre et efficace",
         questions: [
           { q: "Le brouillon de l'IA est trop formel pour votre petite boutique. Que faites-vous ?", options: ["Vous l'utilisez quand même", "Vous supprimez l'application d'IA", "Vous l'envoyez à un avocat", "Vous demandez : « Fais que ça sonne plus comme une petite entreprise locale. »"], answer: 3, why: "Une demande de suivi demande à l'assistant de changer le ton." },
           { q: "Un brouillon de l'IA dit « ouvert jusqu'à 21 h » mais vous fermez à 19 h. Qu'est-ce que cela montre ?", options: ["L'IA peut inventer des faits, donc vous les vérifiez", "L'IA a toujours raison", "Vos horaires sont faux", "Le client ne le remarquera pas"], answer: 0, why: "L'IA peut inventer des faits ; vous les vérifiez avec vos propres documents." },
@@ -166,7 +166,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Introduction à l'IA pour les entrepreneurs",
+    title: "Quiz final : Introduction à l'IA pour les entrepreneurs",
     questions: [
       { q: "Dans votre entreprise, un assistant IA s'utilise le mieux comme :", options: ["Votre avocat", "Une aide rapide aux premiers brouillons", "Votre banque", "Celui qui prend la décision finale"], answer: 1, why: "Il rédige ; vous vérifiez et décidez." },
       { q: "Lequel est un assistant IA gratuit et connu ?", options: ["Google Gemini", "Une caisse enregistreuse", "Une imprimante", "Une cellule de tableur"], answer: 0, why: "Gemini, ChatGPT et Copilot sont des assistants IA connus." },

@@ -165,7 +165,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Santé, bien-être et accessibilité avec la technologie",
+    title: "Quiz final : Santé, bien-être et accessibilité avec la technologie",
     questions: [
       { q: "L'application Réglages est en général représentée par :", options: ["Un appareil photo", "Une roue dentée", "Un téléphone", "Une horloge"], answer: 1, why: "Les Réglages utilisent en général une roue dentée." },
       { q: "Pour trouver vite le réglage de taille du texte, vous :", options: ["Cherchez « taille du texte » dans les Réglages", "Redémarrez le téléphone", "Ouvrez l'appareil photo", "Appelez votre banque"], answer: 0, why: "La recherche marche sur tous les téléphones." },

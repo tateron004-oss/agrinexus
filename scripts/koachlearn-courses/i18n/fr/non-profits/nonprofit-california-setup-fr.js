@@ -186,7 +186,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Créer une association à but non lucratif en Californie, coûts compris",
+    title: "Quiz final : Créer une association à but non lucratif en Californie, coûts compris",
     questions: [
       { q: "Devenir une société à but non lucratif et devenir exonéré d'impôt sont :", options: ["La même étape", "Seulement des questions fédérales", "Nécessaires seulement pour les églises", "Des étapes distinctes auprès d'administrations différentes"], answer: 3, why: "L'État crée la société ; l'IRS et le FTB accordent l'exonération séparément." },
       { q: "Qu'est-ce qui vient en premier ?", options: ["L'enregistrement auprès du Procureur général", "Le dépôt des statuts auprès du Secrétaire d'État", "Le dépôt du formulaire 3500A", "Le dépôt du RRF-1"], answer: 1, why: "La société doit exister avant les autres démarches." },

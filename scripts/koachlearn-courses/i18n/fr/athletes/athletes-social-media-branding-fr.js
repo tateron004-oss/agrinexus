@@ -167,7 +167,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Image de marque sur les réseaux sociaux pour les sportifs",
+    title: "Quiz final : Image de marque sur les réseaux sociaux pour les sportifs",
     questions: [
       { q: "Qui construit votre image de marque ?", options: ["Seulement vous", "Seulement votre entraîneur", "Les gens qui voient vos publications, commentaires et actes", "Personne"], answer: 2, why: "Votre image vit dans l'esprit des autres." },
       { q: "Une image de marque, c'est votre sport plus :", options: ["Vos valeurs et ce qui fait que vous êtes vous", "Votre mot de passe", "Votre rival", "Votre pointure"], answer: 0, why: "Les valeurs et la personnalité vous démarquent." },

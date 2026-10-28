@@ -165,7 +165,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour communiquer et garder le lien avec la famille",
+    title: "Quiz final : L'IA pour communiquer et garder le lien avec la famille",
     questions: [
       { q: "Comment un assistant IA peut-il vous aider à garder le contact avec votre famille ?", options: ["Il peut leur rendre visite à votre place", "Il peut écrire un premier brouillon de message", "Il connaît leurs numéros de téléphone", "Il envoie de l'argent pour vous"], answer: 1, why: "Préparer des messages est un point fort des assistants IA." },
       { q: "Quelle consigne donnera le meilleur message pour la famille ?", options: ["« Écris un court SMS joyeux à ma petite-fille Ava, qui a gagné son match de football. Moins de 40 mots. »", "« message »", "« SMS »", "« bonjour »"], answer: 0, why: "Elle dit qui, quoi, le ton et la longueur." },

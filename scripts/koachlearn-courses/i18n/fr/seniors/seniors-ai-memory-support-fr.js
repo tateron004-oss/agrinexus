@@ -165,7 +165,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour soutenir la mémoire",
+    title: "Quiz final : L'IA pour soutenir la mémoire",
     questions: [
       { q: "Pourquoi noter un rappel tout de suite ?", options: ["Cela économise la batterie", "Pour ne pas l'oublier", "C'est obligatoire", "Cela coûte moins cher"], answer: 1, why: "Le moment passe vite." },
       { q: "« Reporter » un rappel veut dire :", options: ["Le retarder un peu", "Le supprimer", "Le partager", "L'imprimer"], answer: 0, why: "Reporter le fait revenir plus tard." },

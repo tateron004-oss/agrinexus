@@ -78,7 +78,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Comment fonctionnent les agents IA",
+        title: "Contrôle des connaissances 1 : Comment fonctionnent les agents IA",
         questions: [
           { q: "Qu'est-ce qui distingue un agent IA d'une conversation ?", options: ["Il ne répond qu'à une question", "Il ne se trompe jamais", "Il peut planifier des étapes et utiliser des outils vers un objectif", "Il n'a besoin d'aucune instruction"], answer: 2, why: "Les agents planifient et agissent sur plusieurs étapes." },
           { q: "Avant qu'un agent puisse aider sur une tâche, vous devez :", options: ["Connaître vous-même les étapes", "Lui donner un accès complet à tout", "Sauter la planification", "Le laisser choisir l'objectif"], answer: 0, why: "Des étapes claires donnent un travail d'agent clair." },
@@ -150,7 +150,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Concevoir et tester votre agent",
+        title: "Contrôle des connaissances 2 : Concevoir et tester votre agent",
         questions: [
           { q: "Qu'est-ce que le cahier des charges d'un agent ?", options: ["Un short de sport", "Le contrat d'un agent sportif", "Une vidéo de moments forts", "Des instructions écrites : objectif, entrées, étapes, outils, limites, points de contrôle"], answer: 3, why: "Il dit exactement à l'agent quoi faire et ne pas faire." },
           { q: "Les données ont un effort ressenti vide. Un bon cahier des charges dit de :", options: ["Le signaler à une personne", "Deviner un chiffre", "Supprimer l'athlète", "Utiliser en silence la moyenne de l'équipe"], answer: 0, why: "Signaler vaut mieux que deviner." },
@@ -162,7 +162,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA agentique dans la performance sportive",
+    title: "Quiz final : L'IA agentique dans la performance sportive",
     questions: [
       { q: "Un agent IA :", options: ["Ne répond qu'à une question", "Est un agent sportif", "Planifie des étapes et utilise des outils pour atteindre un objectif", "Est un objet connecté"], answer: 2, why: "C'est le schéma de l'agent." },
       { q: "Lequel est un exemple d'outil d'agent ?", options: ["Lire un tableur", "Un sifflet", "Un plot", "Un maillot"], answer: 0, why: "Les outils sont des actions que l'agent peut faire." },

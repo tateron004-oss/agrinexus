@@ -80,7 +80,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Concevoir le produit",
+        title: "Contrôle des connaissances 1 : Concevoir le produit",
         questions: [
           { q: "Quel est le meilleur point de départ pour un service fondé sur l'IA ?", options: ["Le tout dernier outil d'IA", "Un vrai problème que les gens paient déjà pour régler", "Un nom sympa", "Un logo"], answer: 1, why: "Les produits qui résolvent de vrais problèmes pénibles se vendent." },
           { q: "À combien de vraies personnes parler avant de construire ?", options: ["Seulement à l'IA", "À aucune", "Seulement à vous-même", "Au moins trois"], answer: 3, why: "De vraies conversations confirment que le problème existe." },
@@ -154,7 +154,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : Tester, fixer le prix et lancer",
+        title: "Contrôle des connaissances 2 : Tester, fixer le prix et lancer",
         questions: [
           { q: "Quelle question devez-vous poser aux testeurs ?", options: ["« Paieriez-vous pour cela, et combien ? »", "« Quel est votre mot de passe bancaire ? »", "« Pouvez-vous m'écrire un avis contre une remise ? »", "« Aimez-vous l'IA ? »"], answer: 0, why: "Elle vous dit s'il existe un vrai marché et un prix." },
           { q: "Les vérifications humaines prennent plus de temps que de faire le travail à la main. Que faire ?", options: ["Arrêter de tester", "Retirer toutes les vérifications", "Faire payer moins", "Changer le prompt d'instructions ou les étapes"], answer: 3, why: "Améliorez le processus pour que l'IA fasse vraiment gagner du temps." },
@@ -166,7 +166,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Créer des produits et services avec l'IA",
+    title: "Quiz final : Créer des produits et services avec l'IA",
     questions: [
       { q: "L'erreur la plus courante quand on crée un produit d'IA est :", options: ["Parler aux clients", "Partir de l'IA au lieu d'un problème de clients", "Tester", "Fixer un prix"], answer: 1, why: "Partez du problème, pas de l'outil." },
       { q: "Les bons problèmes à résoudre sont :", options: ["Ceux pour lesquels personne ne paie", "Rares et vagues", "Seulement les vôtres", "Fréquents, pénibles et précis"], answer: 3, why: "Ces problèmes créent de la demande." },

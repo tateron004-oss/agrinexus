@@ -167,7 +167,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Les outils d'IA essentiels pour les associations et comment les utiliser",
+    title: "Quiz final : Les outils d'IA essentiels pour les associations et comment les utiliser",
     questions: [
       { q: "Lequel est un assistant conversationnel ?", options: ["Une imprimante", "Une cellule de tableur", "Microsoft Copilot", "Une agrafeuse"], answer: 2, why: "Copilot, ChatGPT et Gemini sont des assistants conversationnels." },
       { q: "Une suite bureautique, c'est :", options: ["Une salle de réunion", "Seulement une base de données de donateurs", "Un téléphone", "Un ensemble de programmes de travail comme la messagerie, les documents et les tableurs"], answer: 3, why: "Microsoft 365 et Google Workspace sont des suites bureautiques." },

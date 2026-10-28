@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : C'est quoi l'IA ? (pour les jeunes)",
+    title: "Quiz final : C'est quoi l'IA ? (pour les jeunes)",
     questions: [
       { q: "IA veut dire :", options: ["Internet automatique", "Intelligence artificielle", "Information avancée", "Installateur d'applications"], answer: 1, why: "IA est l'abréviation d'intelligence artificielle." },
       { q: "Qu'est-ce qui est vrai à propos de l'IA ?", options: ["Elle a des sentiments", "Elle a toujours raison", "Elle est vivante", "Elle trouve des régularités et fait sa meilleure supposition"], answer: 3, why: "L'IA devine à partir de régularités ; elle n'est pas vivante et peut se tromper." },

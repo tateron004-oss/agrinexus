@@ -173,7 +173,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour la collecte de fonds et les demandes de subvention",
+    title: "Quiz final : L'IA pour la collecte de fonds et les demandes de subvention",
     questions: [
       { q: "Une subvention, c'est :", options: ["Un prêt", "Une facture d'impôts", "De l'argent pour un but précis qui n'a pas à être remboursé", "Une liste de donateurs"], answer: 2, why: "Les subventions ne se remboursent pas." },
       { q: "NOFO veut dire :", options: ["Nouveau bureau des opérations", "Forum ouvert des associations", "Avis d'obligation financière", "Avis d'appel à financement"], answer: 3, why: "Un NOFO décrit une subvention fédérale et ses règles." },

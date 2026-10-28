@@ -162,7 +162,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA agentique pour le fonctionnement des associations",
+    title: "Quiz final : L'IA agentique pour le fonctionnement des associations",
     questions: [
       { q: "Un agent d'IA, c'est :", options: ["Une personne qui vend de l'IA", "Une IA qui reçoit un but, planifie des étapes et utilise des outils", "Une formule de tableur", "Une imprimante"], answer: 1, why: "Les agents agissent vers un but en utilisant des outils." },
       { q: "Un assistant conversationnel diffère d'un agent parce que :", options: ["Vous lisez sa réponse et décidez quoi faire", "Il envoie des e-mails tout seul", "Il modifie des fichiers tout seul", "Il signe des contrats"], answer: 0, why: "Avec un assistant conversationnel, c'est vous qui agissez." },

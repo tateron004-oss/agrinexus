@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Introduction à l'IA dans le sport",
+    title: "Quiz final : Introduction à l'IA dans le sport",
     questions: [
       { q: "L'IA, c'est avant tout :", options: ["Un nouveau type de ballon", "Un arbitre", "Des programmes qui apprennent des tendances à partir de données", "Une ligue sportive"], answer: 2, why: "L'IA apprend des tendances à partir de données et s'en sert pour répondre ou prédire." },
       { q: "Lequel n'est PAS un usage de l'IA dans le sport ?", options: ["Lacer ses chaussures", "Identifier les actions dans une vidéo de match", "Suivre ses courses avec une application", "Prédire la chance qu'un tir rentre"], answer: 0, why: "Lacer ses chaussures est le travail d'une personne ; les autres utilisent l'IA." },

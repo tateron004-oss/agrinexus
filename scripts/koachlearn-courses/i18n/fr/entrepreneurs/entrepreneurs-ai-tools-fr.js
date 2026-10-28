@@ -79,7 +79,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 1 : Les principaux types d'outils d'IA",
+        title: "Contrôle des connaissances 1 : Les principaux types d'outils d'IA",
         questions: [
           { q: "Quel outil correspond à la tâche « design » ?", options: ["Une calculatrice", "Canva", "Une boîte de réception e-mail", "Une application bancaire"], answer: 1, why: "Canva crée des prospectus, des images pour les réseaux et d'autres visuels." },
           { q: "Votre entreprise utilise Microsoft Outlook et Word. Quel assistant conversationnel est un premier choix naturel ?", options: ["Une application de cartes", "Une application de dessin", "Une application de musique", "Microsoft Copilot"], answer: 3, why: "Copilot convient aux entreprises qui utilisent déjà des comptes Microsoft." },
@@ -153,7 +153,7 @@ module.exports = {
         }
       ],
       check: {
-        title: "Vérification des connaissances 2 : L'IA dans vos outils de travail quotidiens",
+        title: "Contrôle des connaissances 2 : L'IA dans vos outils de travail quotidiens",
         questions: [
           { q: "Votre abonnement de tableur n'a pas d'aide d'IA intégrée. Que pouvez-vous faire ?", options: ["Décrire vos colonnes à un assistant conversationnel gratuit et demander une formule", "Abandonner", "Coller les numéros de carte de vos clients dans l'IA", "Acheter toutes les applications d'IA"], answer: 0, why: "Un assistant conversationnel peut écrire des formules à partir d'une description, sans données privées." },
           { q: "L'IA vous a écrit une formule de tableur. Que faire avant de lui faire confiance ?", options: ["Supprimer le tableau", "L'utiliser d'un coup sur toute l'année", "L'envoyer aux clients", "La tester sur quelques lignes que vous pouvez vérifier à la main"], answer: 3, why: "Tester sur quelques lignes repère les erreurs." },
@@ -165,7 +165,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : Les outils d'IA que tout entrepreneur devrait connaître",
+    title: "Quiz final : Les outils d'IA que tout entrepreneur devrait connaître",
     questions: [
       { q: "Les quatre tâches d'outils d'IA de ce cours sont :", options: ["Banque, expédition, embauche, impôts", "Écriture, design, documents et chiffres, réunions et notes", "Musique, jeux, films, sport", "Téléphones, ordinateurs, tablettes, montres"], answer: 1, why: "Ces quatre tâches couvrent la plupart des besoins d'une petite entreprise." },
       { q: "Lequel est un assistant conversationnel ?", options: ["Une camionnette de livraison", "Un lecteur de codes-barres", "Un tiroir-caisse", "Google Gemini"], answer: 3, why: "Gemini, ChatGPT et Copilot sont des assistants conversationnels." },

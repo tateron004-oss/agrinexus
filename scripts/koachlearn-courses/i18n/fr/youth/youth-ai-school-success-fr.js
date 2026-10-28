@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA pour réussir à l'école",
+    title: "Quiz final : L'IA pour réussir à l'école",
     questions: [
       { q: "Pour planifier votre semaine avec l'IA, listez :", options: ["Vos mots de passe", "Les tâches, les dates de remise et les horaires fixes", "Les numéros de téléphone de vos amis", "Rien"], answer: 1, why: "Ces faits permettent à l'IA de construire un vrai plan." },
       { q: "Un bon plan de semaine contient :", options: ["Aucune pause", "Seulement des jeux vidéo", "Tout le dimanche soir", "Le plus difficile en premier et des pauses"], answer: 3, why: "Les pauses et le travail difficile en premier aident à finir." },

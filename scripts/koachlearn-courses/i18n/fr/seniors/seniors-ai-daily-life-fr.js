@@ -163,7 +163,7 @@ module.exports = {
     }
   ],
   quiz: {
-    title: "Examen final : L'IA au quotidien",
+    title: "Quiz final : L'IA au quotidien",
     questions: [
       { q: "Un assistant IA peut vous aider pour les repas en :", options: ["Les cuisinant", "Proposant des idées faciles qui vous conviennent", "Faisant les courses pour vous", "Connaissant le régime donné par votre médecin"], answer: 1, why: "Il propose des idées quand vous lui dites ce qu'il vous faut." },
       { q: "Quelle demande de repas est la plus claire ?", options: ["« Je cuisine pour une personne. Propose trois dîners faciles, peu salés, prêts en moins de 30 minutes. »", "« nourriture »", "« dîner ? »", "« manger »"], answer: 0, why: "Elle donne le nombre de personnes, le temps et ce qu'il faut éviter." },
