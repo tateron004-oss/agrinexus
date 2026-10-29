@@ -15,11 +15,35 @@ module.exports = {
     "Use made-up class descriptions. Never put student names, IEP or 504 details, grades or other identifying information into a tool your district has not approved. A knowledge check closes each chapter and a 20-question quiz closes the course. This is course 3 of 8 in AI for School and Educational Leaders."
   ],
   finalTask: "Use an AI assistant to plan one complete lesson you (or a teacher you coach) will teach: objective and success criteria from a standard you choose, a hook, guided and independent practice, supports for three groups (needs more support, on level, ready for more), and a three-question exit ticket with answers. Check it with the quality checklist, record what you changed and why, and save your prompts as a template for your team.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Teachers, instructional coaches, department heads and principals in US schools who plan lessons or support teachers who do.",
+    startingPoint: "Can use a teacher prompt pattern and know the student-privacy rules from courses 1 and 2. Plan lessons by hand, and may have used AI for ideas but not for a full, checked lesson.",
+    gap: "AI can cut planning time, but fast plans are often too long, misaligned or inaccurate. Teachers and leaders need a backward-design process with AI, a quality check for accuracy, alignment and bias, and a template the team can reuse.",
+    constraints: [
+      "Use made-up class descriptions; never put student names, IEP or 504 details, grades or other identifying information into a tool the district has not approved",
+      "Standards come from the state's or district's official source, not from the AI",
+      "IEP and 504 accommodations are planned with special education colleagues and must still be provided",
+      "Devices: a computer with internet and an AI assistant",
+      "Time: short lessons fitted around a teaching day"
+    ],
+    prerequisites: "\"AI for School and Educational Leaders 2: AI Tools for Educators\"."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given a standard copied from the official source", action: "write an \"I can\" objective and three success criteria with AI's help", standard: "edited until ready for the board, before asking for activities" },
+    { id: "O2", condition: "Given your objective", action: "write a reusable prompt that gets a full lesson draft from AI", standard: "including class length, prior knowledge, materials and sections, with at least two follow-ups" },
+    { id: "O3", condition: "Given an AI lesson draft", action: "check it with the five-point quality checklist and record your changes", standard: "fixing every problem found" },
+    { id: "O4", condition: "Given a lesson and a class described by need", action: "plan supports for three groups: needs more support, on level and ready for more", standard: "with IEP and 504 accommodations confirmed with a special education colleague" },
+    { id: "O5", condition: "Given the unit your lesson belongs to", action: "draft a unit outline with AI and adjust its pacing", standard: "adding a review day and three misconceptions to plan for" },
+    { id: "O6", condition: "For your team or PLC", action: "turn your planning prompts and checklist into a team template and coach others to use it", standard: "tracking time saved and quality issues" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Planning a lesson with AI",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Start with the objective, not the activity",
           minutes: 5,
           goal: "Write a clear objective and success criteria before asking AI for activities.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Objective and success criteria", bullets: ["\"I can...\" in student-friendly words", "Two or three things students will show"] }
           ],
           tryIt: "Pick a standard for a lesson coming up. Copy it from the official source, then use AI to write an \"I can\" objective and three success criteria. Edit them until they are ready for the board.",
-          youCanNow: "start an AI-assisted lesson plan from a real standard, objective and success criteria."
+          youCanNow: "start an AI-assisted lesson plan from a real standard, objective and success criteria.",
+          quickCheck: [
+            { objective: "O1", q: "What are success criteria?", options: ["The grades students got last year", "What students will show when they meet the objective", "The list of materials", "The teacher's goals for the year"], answer: 1, why: "Success criteria describe the evidence of learning for the objective." },
+            { objective: "O1", q: "AI gives you a standard code for your objective. What would you do?", options: ["Use it, since AI knows the standards", "Ask the AI to double-check it", "Copy the standard from your state's or district's official source instead", "Leave the standard out"], answer: 2, why: "AI can misquote or invent standards, so they come from the official source." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Prompting for the full lesson",
           minutes: 6,
           goal: "Get a structured lesson plan draft from AI with a reusable prompt.",
@@ -55,9 +84,14 @@ module.exports = {
             { title: "Improve it", bullets: ["\"Connect the hook to students' lives\"", "\"Add two checks for understanding\""] }
           ],
           tryIt: "Use the prompt pattern to get a full lesson draft for your objective from Lesson 1. Ask at least two follow-ups to improve it.",
-          youCanNow: "get a usable, structured lesson draft from AI and improve it with follow-ups."
+          youCanNow: "get a usable, structured lesson draft from AI and improve it with follow-ups.",
+          quickCheck: [
+            { objective: "O2", q: "How should you treat an AI lesson draft?", options: ["As a draft from a fast but new colleague", "As a finished plan ready to teach", "As a plan approved by your district", "As something to hide from colleagues"], answer: 0, why: "AI drafts are quick but need your judgment before use." },
+            { objective: "O2", q: "The AI lesson has no check for understanding. What would you do?", options: ["Teach it as it is", "Start a new chat with a new tool", "Remove the practice activities", "Ask a follow-up: \"Add a quick check for understanding after guided practice\""], answer: 3, why: "Follow-ups fill gaps in the draft without starting again." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Checking the plan: accuracy, alignment and bias",
           minutes: 5,
           goal: "Check an AI lesson plan with a five-point quality checklist.",
@@ -74,17 +108,21 @@ module.exports = {
             { title: "Record your changes", bullets: ["Shows where AI plans go wrong", "Builds your team's judgment"] }
           ],
           tryIt: "Run your lesson draft through the five-point check. Fix every problem and list the changes you made.",
-          youCanNow: "check an AI lesson plan for accuracy, alignment, level, fairness and practicality."
+          youCanNow: "check an AI lesson plan for accuracy, alignment, level, fairness and practicality.",
+          quickCheck: [
+            { objective: "O3", q: "What does alignment mean in a lesson plan?", options: ["The lesson is printed neatly", "The lesson matches the textbook's order", "Objectives, activities and assessment all match", "The lesson uses the newest tools"], answer: 2, why: "Aligned lessons practice and assess the same thing the objective names." },
+            { objective: "O3", q: "The AI plan packs five activities into a 45-minute class. What would you change?", options: ["Cut it to fit the time, keeping the activities that practice the objective", "Keep all five and rush", "Add one more activity", "Ask students to finish at home"], answer: 0, why: "Too much content for the time is the most common problem with AI plans." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Planning a lesson with AI",
         questions: [
-          { q: "In backward design, what comes first?", options: ["A fun activity", "The worksheet", "What students should learn", "The seating chart"], answer: 2, why: "Plan from the learning goal." },
-          { q: "Where should the standard's wording come from?", options: ["Your state's or district's official source", "Whatever the AI says", "A random website", "Memory"], answer: 0, why: "AI can misquote or invent standards." },
-          { q: "Which detail helps most in a lesson-planning prompt?", options: ["The names of struggling students", "The principal's phone number", "Students' test scores by name", "Class length, objective, prior knowledge and materials"], answer: 3, why: "Context improves the plan without private data." },
-          { q: "An AI activity is fun but does not practice the objective. Which check fails?", options: ["Accurate", "Aligned", "Doable", "Fair"], answer: 1, why: "Alignment means activities serve the objective." },
-          { q: "What is the most common problem with AI lesson plans?", options: ["Too little content", "Perfect timing", "No text at all", "Too much content for the time"], answer: 3, why: "AI often overfills the time." }
+          { objective: "O1", q: "In backward design, what comes first?", options: ["A fun activity", "The worksheet", "What students should learn", "The seating chart"], answer: 2, why: "Plan from the learning goal." },
+          { objective: "O1", q: "Where should the standard's wording come from?", options: ["Your state's or district's official source", "Whatever the AI says", "A random website", "Memory"], answer: 0, why: "AI can misquote or invent standards." },
+          { objective: "O2", q: "Which detail helps most in a lesson-planning prompt?", options: ["The names of struggling students", "The principal's phone number", "Students' test scores by name", "Class length, objective, prior knowledge and materials"], answer: 3, why: "Context improves the plan without private data." },
+          { objective: "O3", q: "An AI activity is fun but does not practice the objective. Which check fails?", options: ["Accurate", "Aligned", "Doable", "Fair"], answer: 1, why: "Alignment means activities serve the objective." },
+          { objective: "O3", q: "What is the most common problem with AI lesson plans?", options: ["Too little content", "Perfect timing", "No text at all", "Too much content for the time"], answer: 3, why: "AI often overfills the time." }
         ]
       }
     },
@@ -92,6 +130,7 @@ module.exports = {
       name: "Chapter 2: Differentiation, units and team planning",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Building in differentiation",
           minutes: 6,
           goal: "Use AI to plan supports for students who need more help and challenge for those ready for more.",
@@ -109,9 +148,14 @@ module.exports = {
             { title: "IEPs and 504 plans", bullets: ["Required accommodations still apply", "AI supports never replace them"] }
           ],
           tryIt: "Add differentiation to your lesson: ask AI for three paths to the objective, check them, and confirm which IEP or 504 accommodations still need to be planned with your special education colleague.",
-          youCanNow: "plan support and challenge for different learners with AI while honoring required accommodations."
+          youCanNow: "plan support and challenge for different learners with AI while honoring required accommodations.",
+          quickCheck: [
+            { objective: "O4", q: "What is scaffolding?", options: ["Giving advanced students extra work", "Supports such as worked examples and sentence starters", "Testing students before a lesson", "Seating students in groups"], answer: 1, why: "Scaffolds help students reach the same goal with support." },
+            { objective: "O4", q: "AI suggests supports that differ from a student's IEP accommodation. What do you do?", options: ["Use the AI's supports instead", "Ask the AI to decide", "Drop both and teach as usual", "Provide the IEP accommodation and plan with your special education colleague"], answer: 3, why: "IEP and 504 accommodations must still be provided, whatever AI suggests." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "From lesson to unit",
           minutes: 5,
           goal: "Draft a unit outline with AI and check its pacing.",
@@ -128,9 +172,14 @@ module.exports = {
             { title: "Brainstorm with AI", bullets: ["Common misconceptions", "Anchor projects", "Questions that make students think"] }
           ],
           tryIt: "Ask AI for a ten-day outline of the unit your lesson belongs to. Adjust the pacing, add one review day, and list three misconceptions to plan for.",
-          youCanNow: "draft and pace a unit outline with AI."
+          youCanNow: "draft and pace a unit outline with AI.",
+          quickCheck: [
+            { objective: "O5", q: "What should a unit outline prompt include?", options: ["Standards, number of days and calendar gaps", "Students' names and grades", "Only the unit title", "The teacher's salary"], answer: 0, why: "Days and calendar gaps let AI propose realistic pacing." },
+            { objective: "O5", q: "The AI outline covers the unit in ten days with no review. What would you do?", options: ["Accept it as written", "Add three more units", "Adjust the pacing and add a review day", "Remove the assessment"], answer: 2, why: "Pacing is the first thing to check, and review time is often missing." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Coaching teams to plan with AI",
           minutes: 6,
           goal: "Turn your planning process into a template and coach a team to use it.",
@@ -147,17 +196,21 @@ module.exports = {
             { title: "Clear expectations", bullets: ["Teachers own what they teach", "Approved tools, no student info", "Track time saved and quality"] }
           ],
           tryIt: "Final task: finish your complete lesson plan (objective, success criteria, hook, guided and independent practice, three groups, exit ticket with answers), check it with the five-point checklist, record your changes, and save your four prompts and the checklist as a team template.",
-          youCanNow: "plan lessons with AI to a high standard and help a team do the same."
+          youCanNow: "plan lessons with AI to a high standard and help a team do the same.",
+          quickCheck: [
+            { objective: "O6", q: "What should a team planning template include?", options: ["Only the final lesson", "The prompts and the quality checklist", "A list of banned tools", "The AI tool's password"], answer: 1, why: "Prompts plus the checklist let others repeat the process and the checks." },
+            { objective: "O6", q: "You want to know if AI planning is helping your team. What do you track?", options: ["How many prompts each teacher writes", "Which AI tool is newest", "Nothing; ask once a year", "Time saved and quality issues found"], answer: 3, why: "Time saved and quality issues show whether the process works." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Differentiation, units and team planning",
         questions: [
-          { q: "How should you describe student groups in a prompt?", options: ["By name", "By test score and name", "By need, such as \"needs more support with multi-step problems\"", "By family income"], answer: 2, why: "Describe needs without identifying students." },
-          { q: "A student's IEP lists an accommodation. AI suggested different supports. What applies?", options: ["The IEP accommodation still must be provided", "The AI supports replace the IEP", "Neither", "Ask the AI to decide"], answer: 0, why: "Required accommodations are not replaced by AI suggestions." },
-          { q: "What is the first thing to check in an AI unit outline?", options: ["The font", "Pacing", "The title", "The colors"], answer: 1, why: "AI often packs in too much." },
-          { q: "In a PLC, why have partners check each other's AI plans?", options: ["To build shared judgment about where AI goes wrong", "To grade teachers", "To skip planning", "To use more AI"], answer: 0, why: "Discussing errors builds team judgment." },
-          { q: "Who is responsible for an AI-assisted lesson taught in class?", options: ["The AI company", "No one", "The students", "The teacher"], answer: 3, why: "Teachers stay responsible for what they teach." }
+          { objective: "O4", q: "How should you describe student groups in a prompt?", options: ["By name", "By test score and name", "By need, such as \"needs more support with multi-step problems\"", "By family income"], answer: 2, why: "Describe needs without identifying students." },
+          { objective: "O4", q: "A student's IEP lists an accommodation. AI suggested different supports. What applies?", options: ["The IEP accommodation still must be provided", "The AI supports replace the IEP", "Neither", "Ask the AI to decide"], answer: 0, why: "Required accommodations are not replaced by AI suggestions." },
+          { objective: "O5", q: "What is the first thing to check in an AI unit outline?", options: ["The font", "Pacing", "The title", "The colors"], answer: 1, why: "AI often packs in too much." },
+          { objective: "O6", q: "In a PLC, why have partners check each other's AI plans?", options: ["To build shared judgment about where AI goes wrong", "To grade teachers", "To skip planning", "To use more AI"], answer: 0, why: "Discussing errors builds team judgment." },
+          { objective: "O6", q: "Who is responsible for an AI-assisted lesson taught in class?", options: ["The AI company", "No one", "The students", "The teacher"], answer: 3, why: "Teachers stay responsible for what they teach." }
         ]
       }
     }
@@ -165,26 +218,107 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI for School and Educational Leaders 3: AI for Lesson Planning",
     questions: [
-      { q: "Backward design plans in which order?", options: ["Activities, goal, evidence", "Goal, evidence, activities", "Worksheet, test, goal", "Evidence, activities, goal"], answer: 1, why: "Start with the goal." },
-      { q: "Success criteria describe:", options: ["The room layout", "The teacher's salary", "What students will show when they meet the objective", "The bell schedule"], answer: 2, why: "They make the objective visible." },
-      { q: "An \"I can\" objective is:", options: ["A test score", "A slogan", "The objective in student-friendly words", "A rule"], answer: 2, why: "Students should understand the goal." },
-      { q: "Why not take standards codes from the AI?", options: ["AI can misquote or invent them", "They are secret", "AI never knows standards", "They are too long"], answer: 0, why: "Use the official source." },
-      { q: "A full-lesson prompt should include:", options: ["Grades by name", "Student names", "Parent emails", "Class length, objective, prior knowledge, materials, sections"], answer: 3, why: "Context, not private data." },
-      { q: "An AI lesson draft should be treated as:", options: ["The final plan", "A draft from a fast but new colleague", "A legal document", "A student's work"], answer: 1, why: "Teachers review and edit." },
-      { q: "A check for understanding is:", options: ["A parent meeting", "A bank check", "A report card", "A quick way to see if students are following"], answer: 3, why: "It catches confusion early." },
-      { q: "Which is part of the five-point check?", options: ["Longest", "Most colorful", "Fair and inclusive", "Most popular"], answer: 2, why: "Fairness and access are part of quality." },
-      { q: "Alignment means:", options: ["Objectives, activities and assessment match", "Desks in rows", "The plan is long", "The AI agreed"], answer: 0, why: "Everything serves the objective." },
-      { q: "Why record what you changed in an AI plan?", options: ["It is required by law", "It shows where AI plans go wrong", "It makes the plan longer", "To blame the AI"], answer: 1, why: "It builds judgment over time." },
-      { q: "Differentiation means:", options: ["Adjusting teaching so different students reach the same goal", "Giving different grades", "Separating classes permanently", "Using different AI tools"], answer: 0, why: "Same goal, different paths." },
-      { q: "Scaffolding includes:", options: ["Detention", "Removing all support", "A harder test", "Worked examples and sentence starters"], answer: 3, why: "Temporary supports help students reach the goal." },
-      { q: "UDL stands for:", options: ["Unit Daily Lesson", "Universal Design for Learning", "Upper Division Level", "Unified District Login"], answer: 1, why: "Planning for a wide range of learners from the start." },
-      { q: "An extension task is for students who:", options: ["Need more support", "Are absent", "Are ready for more challenge", "Finished the year"], answer: 2, why: "It deepens learning for ready students." },
-      { q: "IEP and 504 accommodations:", options: ["Go into any AI tool", "Can be replaced by AI supports", "Must still be provided, whatever AI suggests", "Are optional"], answer: 2, why: "They are required." },
-      { q: "A unit outline prompt should include:", options: ["Standards, number of days and calendar gaps", "Student names", "Staff salaries", "Nothing"], answer: 0, why: "Pacing depends on real time available." },
-      { q: "AI is especially useful in unit planning for:", options: ["Approving tools", "Deciding grades", "Writing IEPs", "Brainstorming misconceptions and anchor projects"], answer: 3, why: "Brainstorming is a strength; you decide what fits." },
-      { q: "A planning template should include:", options: ["Student data", "The prompts and the quality checklist", "Passwords", "Nothing"], answer: 1, why: "It makes good practice repeatable." },
-      { q: "PLC stands for:", options: ["Principal leadership council", "Public library card", "Planning lesson calendar", "Professional learning community"], answer: 3, why: "Teachers improving teaching together." },
-      { q: "To know if AI planning is working, leaders should track:", options: ["Nothing", "Only time saved", "Time saved and quality issues", "Number of prompts typed"], answer: 2, why: "Speed without quality is not success." }
+      { objective: "O1", q: "Backward design plans in which order?", options: ["Activities, goal, evidence", "Goal, evidence, activities", "Worksheet, test, goal", "Evidence, activities, goal"], answer: 1, why: "Start with the goal." },
+      { objective: "O1", q: "Success criteria describe:", options: ["The room layout", "The teacher's salary", "What students will show when they meet the objective", "The bell schedule"], answer: 2, why: "They make the objective visible." },
+      { objective: "O1", q: "An \"I can\" objective is:", options: ["A test score", "A slogan", "The objective in student-friendly words", "A rule"], answer: 2, why: "Students should understand the goal." },
+      { objective: "O1", q: "Why not take standards codes from the AI?", options: ["AI can misquote or invent them", "They are secret", "AI never knows standards", "They are too long"], answer: 0, why: "Use the official source." },
+      { objective: "O2", q: "A full-lesson prompt should include:", options: ["Grades by name", "Student names", "Parent emails", "Class length, objective, prior knowledge, materials, sections"], answer: 3, why: "Context, not private data." },
+      { objective: "O2", q: "An AI lesson draft should be treated as:", options: ["The final plan", "A draft from a fast but new colleague", "A legal document", "A student's work"], answer: 1, why: "Teachers review and edit." },
+      { objective: "O2", q: "A check for understanding is:", options: ["A parent meeting", "A bank check", "A report card", "A quick way to see if students are following"], answer: 3, why: "It catches confusion early." },
+      { objective: "O3", q: "Which is part of the five-point check?", options: ["Longest", "Most colorful", "Fair and inclusive", "Most popular"], answer: 2, why: "Fairness and access are part of quality." },
+      { objective: "O3", q: "Alignment means:", options: ["Objectives, activities and assessment match", "Desks in rows", "The plan is long", "The AI agreed"], answer: 0, why: "Everything serves the objective." },
+      { objective: "O3", q: "Why record what you changed in an AI plan?", options: ["It is required by law", "It shows where AI plans go wrong", "It makes the plan longer", "To blame the AI"], answer: 1, why: "It builds judgment over time." },
+      { objective: "O4", q: "Differentiation means:", options: ["Adjusting teaching so different students reach the same goal", "Giving different grades", "Separating classes permanently", "Using different AI tools"], answer: 0, why: "Same goal, different paths." },
+      { objective: "O4", q: "Scaffolding includes:", options: ["Detention", "Removing all support", "A harder test", "Worked examples and sentence starters"], answer: 3, why: "Temporary supports help students reach the goal." },
+      { objective: "O4", q: "UDL stands for:", options: ["Unit Daily Lesson", "Universal Design for Learning", "Upper Division Level", "Unified District Login"], answer: 1, why: "Planning for a wide range of learners from the start." },
+      { objective: "O4", q: "An extension task is for students who:", options: ["Need more support", "Are absent", "Are ready for more challenge", "Finished the year"], answer: 2, why: "It deepens learning for ready students." },
+      { objective: "O4", q: "IEP and 504 accommodations:", options: ["Go into any AI tool", "Can be replaced by AI supports", "Must still be provided, whatever AI suggests", "Are optional"], answer: 2, why: "They are required." },
+      { objective: "O5", q: "A unit outline prompt should include:", options: ["Standards, number of days and calendar gaps", "Student names", "Staff salaries", "Nothing"], answer: 0, why: "Pacing depends on real time available." },
+      { objective: "O5", q: "AI is especially useful in unit planning for:", options: ["Approving tools", "Deciding grades", "Writing IEPs", "Brainstorming misconceptions and anchor projects"], answer: 3, why: "Brainstorming is a strength; you decide what fits." },
+      { objective: "O6", q: "A planning template should include:", options: ["Student data", "The prompts and the quality checklist", "Passwords", "Nothing"], answer: 1, why: "It makes good practice repeatable." },
+      { objective: "O6", q: "PLC stands for:", options: ["Principal leadership council", "Public library card", "Planning lesson calendar", "Professional learning community"], answer: 3, why: "Teachers improving teaching together." },
+      { objective: "O6", q: "To know if AI planning is working, leaders should track:", options: ["Nothing", "Only time saved", "Time saved and quality issues", "Number of prompts typed"], answer: 2, why: "Speed without quality is not success." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      3,
+      4,
+      7,
+      8,
+      10,
+      14,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Objective and success criteria",
+        objective: "O1",
+        notYet: "No objective, or the standard did not come from an official source.",
+        meets: "An objective and success criteria from a standard copied from the official source.",
+        exceeds: "The objective is written as a clear \"I can\" statement students understand."
+      },
+      {
+        name: "Complete lesson",
+        objective: "O2",
+        notYet: "Missing the hook, guided or independent practice, or the exit ticket.",
+        meets: "Has a hook, guided and independent practice, and a three-question exit ticket with answers.",
+        exceeds: "Includes a check for understanding and fits the class length."
+      },
+      {
+        name: "Three groups",
+        objective: "O4",
+        notYet: "Supports for one or more groups are missing.",
+        meets: "Supports for needs more support, on level and ready for more.",
+        exceeds: "Notes which IEP or 504 accommodations still need planning with a special education colleague."
+      },
+      {
+        name: "Quality checked",
+        objective: "O3",
+        notYet: "Not checked, or changes not recorded.",
+        meets: "Checked with the five-point checklist, with each change and the reason recorded.",
+        exceeds: "The record shows patterns in where the AI plan went wrong."
+      },
+      {
+        name: "Team template",
+        objective: "O6",
+        notYet: "Prompts not saved, or no checklist.",
+        meets: "Prompts and checklist saved as a template for the team.",
+        exceeds: "A colleague has used the template on their own lesson."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Educators who finish the course and pass the final task (rubric)",
+      "Teams using the shared planning template within 30 days (follow-up survey)",
+      "Teachers who report planning time saved with no drop in lesson quality (follow-up survey)",
+      "Leaders who go on to course 4 of AI for School and Educational Leaders"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer with internet and an AI assistant, preferably one the district has approved",
+      "An upcoming standard copied from the state's or district's official source",
+      "A made-up class description",
+      "The five-point quality checklist",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Take the pre-test together, then plan one lesson as a group before teachers plan their own.",
+      "Use made-up class descriptions only; never real student names, IEP or 504 details or grades.",
+      "In a PLC, have partners check each other's AI plans with the five-point checklist.",
+      "Invite a special education colleague to the differentiation session.",
+      "Score the final task with the rubric, and ask for the change record as evidence."
     ]
   }
 };

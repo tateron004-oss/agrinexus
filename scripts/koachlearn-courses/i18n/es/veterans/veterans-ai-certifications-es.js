@@ -17,11 +17,35 @@ module.exports = {
     "Cada lección toma unos cinco minutos. Lee la lección, mira las diapositivas y luego haz la tarea \"Pruébalo ahora\". Una comprobación de conocimientos corta cierra cada capítulo y un examen de 20 preguntas cierra el curso. Las reglas de los beneficios cambian, así que cada dato de dinero te manda a la página oficial del VA para revisarlo."
   ],
   finalTask: "Haz un Plan de Certificación de una página: tu puesto militar y dos puestos civiles que coincidan, la certificación que más aparece en ofertas de empleo reales, si el VA puede pagar el costo del examen (con la página oficial que revisaste), un plan de estudio semana por semana hecho con un asistente de IA y la línea de currículum que vas a agregar cuando apruebes.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Veteranos y militares en transición que quieren una certificación civil que demuestre las habilidades que ganaron con el uniforme, a menudo en TI, logística, mantenimiento, salud o seguridad.",
+    startingPoint: "Tienen escuelas militares, insignias, licencias y formación en el trabajo, y saben usar una computadora o un teléfono inteligente. La mayoría todavía no sabe qué certificación piden los empleadores, si el VA puede pagar el costo del examen ni cómo planear el estudio junto con el trabajo y la familia.",
+    gap: "Los empleadores civiles a menudo filtran por certificaciones con nombre, y una mala elección hace perder tiempo y beneficios. Necesitan elegir la certificación que piden las ofertas de empleo reales, revisar las reglas de pago del VA en las páginas oficiales y seguir un plan de estudio realista hecho con la IA, sin atajos tramposos.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y frases cortas",
+      "Dispositivos: una computadora o un teléfono inteligente con internet y un asistente de IA gratuito",
+      "Los montos de los beneficios, los formularios y las reglas de los exámenes cambian, así que se confirman en va.gov y en el sitio web de la propia entidad certificadora",
+      "OPSEC: ningún detalle clasificado ni información de la unidad en ninguna instrucción a la IA",
+      "Tiempo: lecciones de unos 5 minutos; el plan de estudio en sí dura semanas después del curso"
+    ],
+    prerequisites: "Ninguno. \"Introducción a la IA y la fuerza laboral del futuro\" ayuda a traducir primero las funciones."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con el código de tu puesto militar", action: "identificar dos o tres puestos civiles que coinciden con tu puesto militar", standard: "usando My Next Move for Veterans y sin detalles clasificados en ninguna instrucción" },
+    { id: "O2", condition: "Con al menos cinco ofertas de empleo reales del puesto que buscas", action: "identificar la certificación que más piden los empleadores y confirmar sus reglas en el sitio web de la entidad certificadora", standard: "usando un conteo de las ofertas" },
+    { id: "O3", condition: "Para la certificación que buscas", action: "revisar en va.gov si el VA te puede devolver el costo del examen y cómo pedirlo", standard: "anotando el límite, los beneficios que califican y el formulario según la página oficial" },
+    { id: "O4", condition: "Con el temario oficial del examen, tus semanas y tus horas", action: "crear un plan de estudio semana por semana con un asistente de IA", standard: "con una meta cada semana, una semana de repaso y un examen de práctica" },
+    { id: "O5", condition: "Cuando practiques para el examen", action: "usar la IA para que te haga preguntas y te explique tus errores, revisándola con el material oficial", standard: "sin usar brain dumps ni preguntas de examen filtradas" },
+    { id: "O6", condition: "Cuando obtengas la certificación o estés trabajando para obtenerla", action: "escribir una línea de currículum que muestre la certificación y tu servicio juntos", standard: "con el nombre completo, la entidad certificadora y el año o la fecha del examen" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Elegir la certificación correcta",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Traducir tu puesto militar a puestos civiles",
           minutes: 5,
           goal: "Convertir el código de tu puesto militar en dos o tres puestos civiles.",
@@ -39,9 +63,14 @@ module.exports = {
           ],
           sources: [{ name: "My Next Move for Veterans (Departamento de Trabajo de EE. UU.)", url: "https://www.mynextmove.org/vets/" }],
           tryIt: "Busca tu propio puesto militar en mynextmove.org/vets y pídele a un asistente de IA que describa tus funciones con palabras civiles. Anota los dos puestos civiles que aparecen en los dos.",
-          youCanNow: "convertir el código de tu puesto militar en puestos civiles que un empleador reconozca."
+          youCanNow: "convertir el código de tu puesto militar en puestos civiles que un empleador reconozca.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué hace My Next Move for Veterans?", options: ["Muestra carreras civiles parecidas a tu puesto militar", "Paga tu certificación", "Escribe tu currículum por ti", "Reserva tu examen"], answer: 0, why: "Escribes tu puesto militar y te muestra carreras civiles parecidas." },
+            { objective: "O1", q: "Le pides a una IA que describa tus funciones con palabras civiles. ¿Qué dejas fuera de la instrucción?", options: ["El nombre de tu puesto", "El número de personas que supervisaste", "El tipo de equipo al que diste mantenimiento", "Los detalles clasificados y la información de la unidad"], answer: 3, why: "Las funciones generales están bien, pero los detalles clasificados y la información de la unidad nunca van en una IA pública." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Encontrar la certificación que piden los empleadores",
           minutes: 5,
           goal: "Encontrar la certificación que más aparece en ofertas de empleo reales para el puesto que buscas.",
@@ -59,9 +88,14 @@ module.exports = {
             { title: "Revisa la fuente", bullets: ["El sitio web de la entidad certificadora tiene el examen actual", "La IA puede explicar, pero puede estar desactualizada"] }
           ],
           tryIt: "Lee al menos cinco ofertas de empleo reales para uno de tus puestos civiles. Haz un conteo de las certificaciones que mencionan y encierra en un círculo la más común.",
-          youCanNow: "usar ofertas de empleo reales para elegir la certificación que más quieren los empleadores."
+          youCanNow: "usar ofertas de empleo reales para elegir la certificación que más quieren los empleadores.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué es una certificación?", options: ["Un título universitario", "Una carta de un amigo", "Una prueba de una organización externa de que aprobaste un examen de una habilidad", "Un nombre de puesto"], answer: 2, why: "Una certificación se obtiene al aprobar un examen que pone una entidad certificadora externa." },
+            { objective: "O2", q: "Tres de tus cinco ofertas de empleo nombran la misma certificación. ¿Qué haces?", options: ["Elegir otra que suene más difícil", "Marcarla como tu meta y revisar sus reglas en el sitio de la entidad certificadora", "Ignorar las ofertas y preguntarle a la IA", "Sacar todas las certificaciones a la vez"], answer: 1, why: "La certificación que más nombran las ofertas reales es la que quieren los empleadores; sus reglas actuales las da la entidad certificadora." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Revisar lo que puede pagar el GI Bill",
           minutes: 5,
           goal: "Revisar en va.gov si el VA te puede devolver el costo del examen de certificación y cómo pedirlo.",
@@ -83,17 +117,21 @@ module.exports = {
             { name: "VA: VET TEC 2.0", url: "https://www.va.gov/education/about-gi-bill-benefits/how-to-use-benefits/vettec-high-tech-program/" }
           ],
           tryIt: "Abre la página de costos de exámenes de va.gov. Anota el límite actual, qué beneficios califican y el número del formulario. Luego revisa si tienes uno de esos beneficios.",
-          youCanNow: "revisar en va.gov si el VA te puede devolver el costo de un examen de certificación y qué necesitas enviar."
+          youCanNow: "revisar en va.gov si el VA te puede devolver el costo de un examen de certificación y qué necesitas enviar.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué pasa con tu GI Bill cuando el VA te devuelve el costo de un examen?", options: ["No cambia nada", "Recibes derecho adicional", "Se cancela tu GI Bill", "La cantidad se descuenta de tu derecho"], answer: 3, why: "El reembolso del costo del examen usa parte de tu derecho del GI Bill." },
+            { objective: "O3", q: "Una publicación de un foro dice que el VA paga completo cualquier examen. ¿Qué haces?", options: ["Revisar las reglas actuales en la página oficial de va.gov sobre costos de examen", "Reservar el examen más caro", "Creerle a la publicación porque a mucha gente le gustó", "Pedirle a la IA que lo confirme"], answer: 0, why: "Las reglas y los límites de los beneficios cambian, así que los confirmas en la página oficial de va.gov." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Elegir la certificación correcta",
         questions: [
-          { q: "Un gerente de contratación no sabe qué significa tu MOS. ¿Qué deberías hacer?", options: ["Escribir el código con letras más grandes", "Quitar el puesto de tu currículum", "Traducirlo a puestos y funciones civiles", "Pedirle que lo busque"], answer: 2, why: "Los puestos y funciones civiles son palabras que el empleador ya entiende." },
-          { q: "¿Qué sitio gratuito te deja escribir un código de puesto militar y ver carreras civiles?", options: ["My Next Move for Veterans", "Una app de redes sociales", "Una tienda de videojuegos", "Un sitio del clima"], answer: 0, why: "mynextmove.org/vets es la herramienta del Departamento de Trabajo para esto." },
-          { q: "¿Cómo encuentras qué certificación quieren más los empleadores?", options: ["Eligiendo la más cara", "Preguntándole a un amigo cualquiera", "Presentando todos los exámenes a la vez", "Contando las certificaciones que mencionan las ofertas de empleo reales"], answer: 3, why: "Las ofertas de empleo muestran lo que piden los empleadores." },
-          { q: "¿Dónde revisas las reglas y el precio actuales del examen de una certificación?", options: ["Solo en un chat de IA", "En el sitio web de la propia entidad certificadora", "En una publicación vieja de un foro", "En un anuncio emergente"], answer: 1, why: "La organización que da el examen tiene los detalles actuales." },
-          { q: "Según va.gov en octubre de 2026, ¿qué es cierto sobre el pago de costos de exámenes de certificación por parte del VA?", options: ["El VA paga el documento del certificado", "El VA puede devolver hasta $2,000 por examen y usa parte de tu derecho", "No hay límite", "Cualquiera lo puede pedir sin un beneficio del GI Bill"], answer: 1, why: "La página decía no más de $2,000 por examen, descontados de tu derecho." }
+          { objective: "O1", q: "Un gerente de contratación no sabe qué significa tu MOS. ¿Qué deberías hacer?", options: ["Escribir el código con letras más grandes", "Quitar el puesto de tu currículum", "Traducirlo a puestos y funciones civiles", "Pedirle que lo busque"], answer: 2, why: "Los puestos y funciones civiles son palabras que el empleador ya entiende." },
+          { objective: "O1", q: "¿Qué sitio gratuito te deja escribir un código de puesto militar y ver carreras civiles?", options: ["My Next Move for Veterans", "Una app de redes sociales", "Una tienda de videojuegos", "Un sitio del clima"], answer: 0, why: "mynextmove.org/vets es la herramienta del Departamento de Trabajo para esto." },
+          { objective: "O2", q: "¿Cómo encuentras qué certificación quieren más los empleadores?", options: ["Eligiendo la más cara", "Preguntándole a un amigo cualquiera", "Presentando todos los exámenes a la vez", "Contando las certificaciones que mencionan las ofertas de empleo reales"], answer: 3, why: "Las ofertas de empleo muestran lo que piden los empleadores." },
+          { objective: "O2", q: "¿Dónde revisas las reglas y el precio actuales del examen de una certificación?", options: ["Solo en un chat de IA", "En el sitio web de la propia entidad certificadora", "En una publicación vieja de un foro", "En un anuncio emergente"], answer: 1, why: "La organización que da el examen tiene los detalles actuales." },
+          { objective: "O3", q: "Según va.gov en octubre de 2026, ¿qué es cierto sobre el pago de costos de exámenes de certificación por parte del VA?", options: ["El VA paga el documento del certificado", "El VA puede devolver hasta $2,000 por examen y usa parte de tu derecho", "No hay límite", "Cualquiera lo puede pedir sin un beneficio del GI Bill"], answer: 1, why: "La página decía no más de $2,000 por examen, descontados de tu derecho." }
         ]
       }
     },
@@ -101,6 +139,7 @@ module.exports = {
       name: "Capítulo 2: Obtener la certificación",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Armar un plan de estudio con IA",
           minutes: 5,
           goal: "Usar un asistente de IA para convertir el temario oficial del examen en un plan de estudio semana por semana.",
@@ -117,9 +156,14 @@ module.exports = {
             { title: "Pide un plan de verdad", bullets: ["Una meta para cada semana", "Una semana de repaso y un examen de práctica", "Luego ponlo en tu calendario"] }
           ],
           tryIt: "Consigue el temario de la certificación que buscas. Pregúntale a un asistente de IA: \"Tengo 8 semanas y 6 horas por semana. Ya sé [lo que sabes]. Haz un plan de estudio semana por semana para estos temas: [temas].\"",
-          youCanNow: "convertir un temario oficial de examen en un plan de estudio semana por semana con un asistente de IA."
+          youCanNow: "convertir un temario oficial de examen en un plan de estudio semana por semana con un asistente de IA.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué es un temario de examen?", options: ["Un examen de práctica de un sitio web", "La lista oficial de los temas que cubre el examen", "El horario de un grupo de estudio", "Una lista de respuestas de exámenes pasados"], answer: 1, why: "El temario de la entidad certificadora dice exactamente qué cubre el examen." },
+            { objective: "O4", q: "Tienes 10 semanas y 5 horas a la semana. ¿Qué le das a la IA para tu plan de estudio?", options: ["Solo \"ayúdame a aprobar\"", "Tu usuario del sitio del examen", "Los temas del examen, las 10 semanas, las 5 horas a la semana y lo que ya sabes", "El plan de estudio de un amigo"], answer: 2, why: "Los temas, el tiempo y lo que ya sabes le permiten a la IA armar un plan realista semana por semana." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Practicar con IA de la forma correcta",
           minutes: 5,
           goal: "Usar la IA para que te haga preguntas y te explique los errores, revisándola con el material oficial.",
@@ -136,9 +180,14 @@ module.exports = {
             { title: "Nada de brain dumps", bullets: ["Las preguntas copiadas del examen rompen las reglas", "Te pueden costar la certificación", "Practica para entender"] }
           ],
           tryIt: "Elige el primer tema de tu plan de estudio. Pídele a un asistente de IA que te haga cinco preguntas, una a la vez. Por cada error, pide una explicación sencilla y revísala en el material oficial.",
-          youCanNow: "usar la IA para hacerte preguntas y explicarte los errores, revisándola con el material oficial."
+          youCanNow: "usar la IA para hacerte preguntas y explicarte los errores, revisándola con el material oficial.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué es un brain dump?", options: ["Preguntas reales del examen filtradas y compartidas contra las reglas", "Un plan de estudio hecho con IA", "Un examen de práctica oficial y gratuito", "Una lista de temas del examen"], answer: 0, why: "Los brain dumps comparten preguntas reales del examen, lo que rompe las reglas y te puede costar la certificación." },
+            { objective: "O5", q: "Fallaste una pregunta de práctica de la IA. ¿Qué haces después?", options: ["Saltarte ese tema", "Memorizar la respuesta de la IA sin revisarla", "Buscar un brain dump", "Pedirle a la IA que te la explique con sencillez y revisarla en la guía oficial"], answer: 3, why: "Las explicaciones de la IA ayudan, pero la guía oficial tiene la última palabra." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Mostrarles tu certificación a los empleadores",
           minutes: 4,
           goal: "Escribir la línea de currículum y una historia corta que muestren tu certificación y tu servicio juntos.",
@@ -155,17 +204,21 @@ module.exports = {
             { title: "¿Todavía estudiando?", bullets: ["\"[Nombre], en curso, fecha del examen [mes año]\"", "Cada palabra debe ser cierta"] }
           ],
           tryIt: "Tarea final: haz tu Plan de Certificación de una página con tus puestos, la certificación que buscas, la página del VA que revisaste, tu plan de estudio hecho con IA y la línea de currículum que vas a agregar cuando apruebes.",
-          youCanNow: "planear, financiar, estudiar y mostrar una certificación que encaje con tu experiencia militar."
+          youCanNow: "planear, financiar, estudiar y mostrar una certificación que encaje con tu experiencia militar.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué va en la sección de Certificaciones de tu currículum?", options: ["Solo la sigla", "Tu puntaje del examen", "El nombre completo, la entidad certificadora y el año", "El precio que pagaste"], answer: 2, why: "Los empleadores necesitan el nombre completo, quién la otorgó y cuándo." },
+            { objective: "O6", q: "Tu examen es en marzo y todavía no apruebas. ¿Cómo la pones?", options: ["Ponerla como aprobada", "\"[Nombre], en curso, fecha del examen marzo 2027\"", "No decir que estás estudiando", "Escribir \"casi certificado\""], answer: 1, why: "Ponerla en curso con la fecha del examen es honesto y muestra tu plan." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Obtener la certificación",
         questions: [
-          { q: "¿Qué debes darle a un asistente de IA para que haga un buen plan de estudio?", options: ["Tu número de Seguro Social", "Tus datos bancarios", "Solo el nombre de la certificación", "Los temas del examen, tus semanas y tus horas por semana"], answer: 3, why: "Los temas más tu tiempo le dan a la IA lo que necesita para planear." },
-          { q: "¿Qué es un temario del examen?", options: ["La lista oficial de los temas que cubre el examen", "Una lista de respuestas", "Un examen de práctica", "Una oferta de empleo"], answer: 0, why: "La entidad certificadora lo publica para que sepas qué estudiar." },
-          { q: "La explicación de la IA no coincide con la guía de estudio oficial. ¿Qué haces?", options: ["Confiar en la IA", "Saltarte el tema", "Confiar en la guía de estudio oficial", "Pedirle a la IA que discuta"], answer: 2, why: "El material oficial es el estándar que usa el examen." },
-          { q: "Alguien te ofrece un \"brain dump\" de preguntas reales del examen. ¿Qué deberías hacer?", options: ["Usarlo la noche anterior", "Compartirlo con tus amigos", "Pagar más por uno más nuevo", "Rechazarlo: rompe las reglas y te puede costar la certificación"], answer: 3, why: "Los brain dumps rompen las reglas de la certificación." },
-          { q: "¿Qué línea de currículum relaciona mejor una certificación con tu servicio?", options: ["\"Estoy certificado.\"", "\"Bueno con las computadoras.\"", "\"Administré el acceso a la red de 300 usuarios como especialista en TI del Ejército; obtuve [certificación] en 2026.\"", "\"Ver adjunto.\""], answer: 2, why: "Muestra la habilidad en acción más la prueba." }
+          { objective: "O4", q: "¿Qué debes darle a un asistente de IA para que haga un buen plan de estudio?", options: ["Tu número de Seguro Social", "Tus datos bancarios", "Solo el nombre de la certificación", "Los temas del examen, tus semanas y tus horas por semana"], answer: 3, why: "Los temas más tu tiempo le dan a la IA lo que necesita para planear." },
+          { objective: "O4", q: "¿Qué es un temario del examen?", options: ["La lista oficial de los temas que cubre el examen", "Una lista de respuestas", "Un examen de práctica", "Una oferta de empleo"], answer: 0, why: "La entidad certificadora lo publica para que sepas qué estudiar." },
+          { objective: "O5", q: "La explicación de la IA no coincide con la guía de estudio oficial. ¿Qué haces?", options: ["Confiar en la IA", "Saltarte el tema", "Confiar en la guía de estudio oficial", "Pedirle a la IA que discuta"], answer: 2, why: "El material oficial es el estándar que usa el examen." },
+          { objective: "O5", q: "Alguien te ofrece un \"brain dump\" de preguntas reales del examen. ¿Qué deberías hacer?", options: ["Usarlo la noche anterior", "Compartirlo con tus amigos", "Pagar más por uno más nuevo", "Rechazarlo: rompe las reglas y te puede costar la certificación"], answer: 3, why: "Los brain dumps rompen las reglas de la certificación." },
+          { objective: "O6", q: "¿Qué línea de currículum relaciona mejor una certificación con tu servicio?", options: ["\"Estoy certificado.\"", "\"Bueno con las computadoras.\"", "\"Administré el acceso a la red de 300 usuarios como especialista en TI del Ejército; obtuve [certificación] en 2026.\"", "\"Ver adjunto.\""], answer: 2, why: "Muestra la habilidad en acción más la prueba." }
         ]
       }
     }
@@ -173,26 +226,106 @@ module.exports = {
   quiz: {
     title: "Examen final: Certificaciones con IA para veteranos",
     questions: [
-      { q: "¿Por qué traducir tu puesto militar a puestos civiles?", options: ["Para ocultar tu servicio", "Para que los empleadores entiendan tus habilidades", "Porque los códigos son secretos", "Para hacer más largo tu currículum"], answer: 1, why: "Los puestos civiles usan palabras que conocen los empleadores." },
-      { q: "En My Next Move for Veterans puedes:", options: ["Escribir tu puesto militar y ver carreras civiles parecidas", "Solicitar la discapacidad del VA", "Comprar vales para exámenes", "Descargar tu DD-214"], answer: 0, why: "Relaciona puestos militares con carreras civiles." },
-      { q: "¿Qué NO debes pegar en un asistente de IA al traducir tus funciones?", options: ["El nombre de tu puesto", "Funciones generales", "Detalles clasificados o información de tu unidad", "La palabra \"liderazgo\""], answer: 2, why: "Los detalles clasificados y de la unidad deben quedarse privados." },
-      { q: "Una certificación es:", options: ["Una prueba de una organización externa de que aprobaste un examen de una habilidad", "Un título universitario", "Un rango militar", "Una oferta de empleo"], answer: 0, why: "Prueba que aprobaste un examen de una habilidad." },
-      { q: "La mejor primera guía para saber qué certificación obtener es:", options: ["El examen más largo", "El examen más barato", "Un video cualquiera", "Las ofertas de empleo reales del puesto que buscas"], answer: 3, why: "Los empleadores dicen lo que quieren en las ofertas de empleo." },
-      { q: "¿Qué significa COOL?", options: ["Oficina Civil de Aprendizaje en Línea", "Credentialing Opportunities On-Line (oportunidades de acreditación en línea)", "Lista Certificada de Operaciones de Oficiales", "Opciones de Carrera a la Hora del Almuerzo"], answer: 1, why: "COOL relaciona puestos militares con credenciales civiles." },
-      { q: "¿Dónde debes confirmar el precio y las reglas actuales del examen?", options: ["En un chat de IA", "En el sitio web de la entidad certificadora", "En la memoria de un amigo", "En un comentario de redes sociales"], answer: 1, why: "La entidad certificadora tiene los detalles actuales." },
-      { q: "Según va.gov en octubre de 2026, el reembolso del VA por costos de examen tiene un límite de:", options: ["$200 por examen", "$20,000 por año", "Sin límite", "$2,000 por examen"], answer: 3, why: "La página decía no más de $2,000 por examen." },
-      { q: "Cuando el VA te devuelve el costo de un examen, ¿qué pasa con tu GI Bill?", options: ["La cantidad se descuenta de tu derecho", "Nada", "Se duplica", "Se acaba"], answer: 0, why: "El VA descuenta de tu derecho lo que te devuelve." },
-      { q: "¿Qué formulario envías para pedirle al VA que te devuelva el costo de un examen?", options: ["W-2", "DD-214", "VA Form 22-0803", "SF-86"], answer: 2, why: "va.gov menciona el VA Form 22-0803 para el reembolso de costos de exámenes." },
-      { q: "El reembolso del VA por costos de examen cubre:", options: ["El costo del documento del certificado", "Tus bocadillos para estudiar", "Tu viaje al examen", "Los costos del examen, incluidos los cargos de registro y administración"], answer: 3, why: "Cubre los costos del examen, no el certificado en sí." },
-      { q: "La mejor descripción de VET TEC 2.0 es:", options: ["Un reclamo de discapacidad", "Un préstamo para vivienda", "Un programa del VA de formación en alta tecnología con lugares limitados", "Un rango militar"], answer: 2, why: "Financia formación en alta tecnología sin título universitario, con un límite anual." },
-      { q: "Los montos de los beneficios pueden cambiar. Antes de gastar dinero deberías:", options: ["Confiar en una publicación vieja de un blog", "Revisar la página oficial de va.gov", "Preguntarle solo a la IA", "Adivinar"], answer: 1, why: "La página oficial tiene las reglas actuales." },
-      { q: "Lo primero que debes juntar para un plan de estudio con IA es:", options: ["El temario oficial del examen", "Un brain dump", "Tu contraseña", "Las notas de otra persona"], answer: 0, why: "El temario muestra lo que cubre el examen." },
-      { q: "Un buen plan de estudio incluye:", options: ["Solo la fecha del examen", "Estudiar todo la noche anterior", "Una meta cada semana, una semana de repaso y un examen de práctica", "Ningún calendario"], answer: 2, why: "Las metas semanales y el repaso te dejan listo." },
-      { q: "¿Qué instrucción es mejor para practicar?", options: ["\"Hazme 5 preguntas sobre este tema, una a la vez.\"", "\"Dame las respuestas reales del examen.\"", "\"Aprueba el examen por mí.\"", "\"Cuéntame un chiste.\""], answer: 0, why: "Te hace practicar y esperar tu respuesta." },
-      { q: "¿Por qué evitar los brain dumps?", options: ["Son demasiado largos", "Son aburridos", "Son gratis", "Rompen las reglas y te pueden costar la certificación"], answer: 3, why: "Las entidades certificadoras los prohíben." },
-      { q: "Fallaste una pregunta de práctica. Un buen siguiente paso es:", options: ["Dejar de estudiar", "Pedirle a la IA que te la explique con sencillez y revisar la guía oficial", "Saltarte todo el tema", "Cambiar la fecha de tu examen para mañana"], answer: 1, why: "Entender el error arregla el punto débil." },
-      { q: "La sección de Certificaciones de tu currículum debe mostrar:", options: ["Solo un logotipo", "El nombre completo, la entidad certificadora y el año", "Tu hoja de calificaciones del examen", "Tus horas de estudio"], answer: 1, why: "El nombre completo, la entidad y el año son lo que revisan los empleadores." },
-      { q: "Todavía no apruebas. ¿Cómo puedes poner la certificación?", options: ["Decir que ya aprobaste", "Poner una diferente", "Dejar una línea en blanco", "\"[Nombre], en curso, fecha del examen [mes año]\""], answer: 3, why: "\"En curso\" con una fecha es honesto y útil." }
+      { objective: "O1", q: "¿Por qué traducir tu puesto militar a puestos civiles?", options: ["Para ocultar tu servicio", "Para que los empleadores entiendan tus habilidades", "Porque los códigos son secretos", "Para hacer más largo tu currículum"], answer: 1, why: "Los puestos civiles usan palabras que conocen los empleadores." },
+      { objective: "O1", q: "En My Next Move for Veterans puedes:", options: ["Escribir tu puesto militar y ver carreras civiles parecidas", "Solicitar la discapacidad del VA", "Comprar vales para exámenes", "Descargar tu DD-214"], answer: 0, why: "Relaciona puestos militares con carreras civiles." },
+      { objective: "O1", q: "¿Qué NO debes pegar en un asistente de IA al traducir tus funciones?", options: ["El nombre de tu puesto", "Funciones generales", "Detalles clasificados o información de tu unidad", "La palabra \"liderazgo\""], answer: 2, why: "Los detalles clasificados y de la unidad deben quedarse privados." },
+      { objective: "O2", q: "Una certificación es:", options: ["Una prueba de una organización externa de que aprobaste un examen de una habilidad", "Un título universitario", "Un rango militar", "Una oferta de empleo"], answer: 0, why: "Prueba que aprobaste un examen de una habilidad." },
+      { objective: "O2", q: "La mejor primera guía para saber qué certificación obtener es:", options: ["El examen más largo", "El examen más barato", "Un video cualquiera", "Las ofertas de empleo reales del puesto que buscas"], answer: 3, why: "Los empleadores dicen lo que quieren en las ofertas de empleo." },
+      { objective: "O2", q: "¿Qué significa COOL?", options: ["Oficina Civil de Aprendizaje en Línea", "Credentialing Opportunities On-Line (oportunidades de acreditación en línea)", "Lista Certificada de Operaciones de Oficiales", "Opciones de Carrera a la Hora del Almuerzo"], answer: 1, why: "COOL relaciona puestos militares con credenciales civiles." },
+      { objective: "O2", q: "¿Dónde debes confirmar el precio y las reglas actuales del examen?", options: ["En un chat de IA", "En el sitio web de la entidad certificadora", "En la memoria de un amigo", "En un comentario de redes sociales"], answer: 1, why: "La entidad certificadora tiene los detalles actuales." },
+      { objective: "O3", q: "Según va.gov en octubre de 2026, el reembolso del VA por costos de examen tiene un límite de:", options: ["$200 por examen", "$20,000 por año", "Sin límite", "$2,000 por examen"], answer: 3, why: "La página decía no más de $2,000 por examen." },
+      { objective: "O3", q: "Cuando el VA te devuelve el costo de un examen, ¿qué pasa con tu GI Bill?", options: ["La cantidad se descuenta de tu derecho", "Nada", "Se duplica", "Se acaba"], answer: 0, why: "El VA descuenta de tu derecho lo que te devuelve." },
+      { objective: "O3", q: "¿Qué formulario envías para pedirle al VA que te devuelva el costo de un examen?", options: ["W-2", "DD-214", "VA Form 22-0803", "SF-86"], answer: 2, why: "va.gov menciona el VA Form 22-0803 para el reembolso de costos de exámenes." },
+      { objective: "O3", q: "El reembolso del VA por costos de examen cubre:", options: ["El costo del documento del certificado", "Tus bocadillos para estudiar", "Tu viaje al examen", "Los costos del examen, incluidos los cargos de registro y administración"], answer: 3, why: "Cubre los costos del examen, no el certificado en sí." },
+      { objective: "O3", q: "La mejor descripción de VET TEC 2.0 es:", options: ["Un reclamo de discapacidad", "Un préstamo para vivienda", "Un programa del VA de formación en alta tecnología con lugares limitados", "Un rango militar"], answer: 2, why: "Financia formación en alta tecnología sin título universitario, con un límite anual." },
+      { objective: "O3", q: "Los montos de los beneficios pueden cambiar. Antes de gastar dinero deberías:", options: ["Confiar en una publicación vieja de un blog", "Revisar la página oficial de va.gov", "Preguntarle solo a la IA", "Adivinar"], answer: 1, why: "La página oficial tiene las reglas actuales." },
+      { objective: "O4", q: "Lo primero que debes juntar para un plan de estudio con IA es:", options: ["El temario oficial del examen", "Un brain dump", "Tu contraseña", "Las notas de otra persona"], answer: 0, why: "El temario muestra lo que cubre el examen." },
+      { objective: "O4", q: "Un buen plan de estudio incluye:", options: ["Solo la fecha del examen", "Estudiar todo la noche anterior", "Una meta cada semana, una semana de repaso y un examen de práctica", "Ningún calendario"], answer: 2, why: "Las metas semanales y el repaso te dejan listo." },
+      { objective: "O5", q: "¿Qué instrucción es mejor para practicar?", options: ["\"Hazme 5 preguntas sobre este tema, una a la vez.\"", "\"Dame las respuestas reales del examen.\"", "\"Aprueba el examen por mí.\"", "\"Cuéntame un chiste.\""], answer: 0, why: "Te hace practicar y esperar tu respuesta." },
+      { objective: "O5", q: "¿Por qué evitar los brain dumps?", options: ["Son demasiado largos", "Son aburridos", "Son gratis", "Rompen las reglas y te pueden costar la certificación"], answer: 3, why: "Las entidades certificadoras los prohíben." },
+      { objective: "O5", q: "Fallaste una pregunta de práctica. Un buen siguiente paso es:", options: ["Dejar de estudiar", "Pedirle a la IA que te la explique con sencillez y revisar la guía oficial", "Saltarte todo el tema", "Cambiar la fecha de tu examen para mañana"], answer: 1, why: "Entender el error arregla el punto débil." },
+      { objective: "O6", q: "La sección de Certificaciones de tu currículum debe mostrar:", options: ["Solo un logotipo", "El nombre completo, la entidad certificadora y el año", "Tu hoja de calificaciones del examen", "Tus horas de estudio"], answer: 1, why: "El nombre completo, la entidad y el año son lo que revisan los empleadores." },
+      { objective: "O6", q: "Todavía no apruebas. ¿Cómo puedes poner la certificación?", options: ["Decir que ya aprobaste", "Poner una diferente", "Dejar una línea en blanco", "\"[Nombre], en curso, fecha del examen [mes año]\""], answer: 3, why: "\"En curso\" con una fecha es honesto y útil." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      2,
+      4,
+      6,
+      8,
+      12,
+      13,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Puestos civiles",
+        objective: "O1",
+        notYet: "No hay puestos civiles, o los puestos no coinciden con el puesto militar.",
+        meets: "El puesto militar y dos puestos civiles que coinciden.",
+        exceeds: "Los puestos aparecen tanto en My Next Move for Veterans como en la descripción de la IA."
+      },
+      {
+        name: "Certificación meta",
+        objective: "O2",
+        notYet: "La certificación se adivinó o se eligió por un anuncio.",
+        meets: "La certificación que más aparece en al menos cinco ofertas de empleo reales.",
+        exceeds: "Muestra el conteo y la página de la entidad certificadora revisada para las reglas actuales."
+      },
+      {
+        name: "Pago del VA revisado",
+        objective: "O3",
+        notYet: "No se revisó el VA, o la información salió solo de un foro o de la IA.",
+        meets: "Si el VA puede pagar el costo del examen, con la página oficial de va.gov nombrada.",
+        exceeds: "También anota el formulario y que el reembolso usa derecho del GI Bill."
+      },
+      {
+        name: "Plan de estudio",
+        objective: "O4",
+        notYet: "No hay plan, o el plan no tiene semanas ni temas.",
+        meets: "Un plan semana por semana basado en el temario oficial, con una semana de repaso y un examen de práctica.",
+        exceeds: "El plan encaja con las horas reales de la persona y tiene una fecha de examen fija."
+      },
+      {
+        name: "Línea de currículum",
+        objective: "O6",
+        notYet: "No hay línea de currículum, o dice una certificación que todavía no se obtiene.",
+        meets: "Una línea de currículum cierta con el nombre completo, la entidad y el año o la fecha del examen, relacionada con el servicio.",
+        exceeds: "Incluye una historia corta de un resultado del servicio que la certificación respalda."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Personas que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Personas que se inscriben al examen de certificación dentro de 60 días (encuesta de seguimiento)",
+      "Personas que aprueban su certificación dentro de 6 meses",
+      "Personas que se postulan a un empleo que pide la certificación dentro de 90 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Una computadora o un teléfono inteligente con internet",
+      "Un asistente de IA gratuito: ChatGPT, Microsoft Copilot o Google Gemini",
+      "Los sitios web gratuitos de My Next Move for Veterans, va.gov y la entidad certificadora, y cinco ofertas de empleo reales",
+      "Papel o un documento para el Plan de Certificación de una página",
+      "Unos 60 minutos en total para el curso; el plan de estudio continúa después"
+    ],
+    facilitatorNotes: [
+      "Agrupa a las personas por campo meta (TI, logística, mantenimiento, salud) para que compartan ofertas de empleo y temarios de examen.",
+      "Pide que confirmen cada monto y formulario en va.gov durante la sesión en vez de confiar en notas o en la IA.",
+      "Advierte con claridad contra los brain dumps; les pueden costar la certificación.",
+      "Califica el Plan de Certificación con la rúbrica y da comentarios sobre una fila en Todavía no a la vez.",
+      "Fija una revisión a los 30 días para que cada persona cuente su avance de estudio y su fecha de examen."
     ]
   }
 };

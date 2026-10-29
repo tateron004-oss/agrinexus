@@ -19,11 +19,35 @@ module.exports = {
     "Each lesson takes about five minutes. Read it, look at the slides, then do the \"Try it now\" task. There is a knowledge check after each chapter and a 20-question quiz at the end. This course is not legal advice; for legal duties, check the official sources named in the lessons or ask a qualified professional."
   ],
   finalTask: "Write a one-page \"inclusion habits\" plan for your team: one belonging habit, one bias check you will use on a real decision, three fair hiring or promotion habits, a meeting routine that makes sure every voice is heard, one accessibility improvement, and the steps you will follow if someone reports exclusion or harassment, including who you will tell and where the official rules are.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Team leads, supervisors, managers, small business owners and nonprofit leaders who want everyone on their team to contribute and be treated fairly.",
+    startingPoint: "Want to be fair and can run a team's daily work. Few have a routine for checking decisions for bias, running structured interviews, making meetings and documents accessible, or responding to a harassment report.",
+    gap: "Without simple habits, some people go quiet, hiring and promotion drift toward people who seem like us, and leaders mishandle reports of harassment. Leaders need practical habits for belonging, bias checks, fair hiring, inclusive meetings, accessibility and a clear response to exclusion or harassment.",
+    constraints: [
+      "Reading level: plain words and short sentences",
+      "Time: short lessons that fit around a working day",
+      "Laws differ by country and organization size; US learners check eeoc.gov and talk to HR or an employment lawyer about their duties",
+      "Privacy: accommodation requests and harassment reports are handled privately and follow the organization's policy",
+      "Safety: anyone in immediate danger calls emergency services"
+    ],
+    prerequisites: "None. \"Managing Teams\" is a helpful companion course."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "For a team you lead or know", action: "identify the signs of belonging and choose one habit that builds it", standard: "naming a habit you can repeat every week" },
+    { id: "O2", condition: "Given a real decision about people", action: "apply a bias check: set criteria first, write your reasons and ask whether you would decide the same for someone from a different group", standard: "before the decision is final" },
+    { id: "O3", condition: "Given a job opening or promotion", action: "plan fair hiring or promotion habits such as job-related requirements and structured interviews", standard: "judging every candidate by the same job-related standards" },
+    { id: "O4", condition: "For a regular team meeting", action: "plan a meeting routine that gives every person a fair chance to speak", standard: "including at least two tools such as going around, silent writing or asking remote people first" },
+    { id: "O5", condition: "For one part of your team's work", action: "choose one accessibility improvement and use respectful language for names and pronouns", standard: "handling requests privately" },
+    { id: "O6", condition: "When someone reports or you see exclusion or harassment", action: "list the steps you will follow, who you will tell and where the official rules are", standard: "acting right away and protecting the person from retaliation" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Belonging and fair decisions",
       lessons: [
         {
+          objectives: ["O1"],
           title: "What belonging looks like on a team",
           minutes: 5,
           goal: "Name the signs of belonging on a team and pick one habit that builds it.",
@@ -40,9 +64,14 @@ module.exports = {
             { title: "Ask, don't guess", bullets: ["\"What would make it easier for you to speak up here?\""] }
           ],
           tryIt: "For one week, notice who speaks in your team meetings and who does not. Write down one belonging habit from this lesson you will start, and one person you will ask privately what would help them speak up.",
-          youCanNow: "describe what belonging looks like and start one habit that builds it."
+          youCanNow: "describe what belonging looks like and start one habit that builds it.",
+          quickCheck: [
+            { objective: "O1", q: "What happens when people on a team feel left out?", options: ["They work harder to prove themselves", "They go quiet and the team loses their ideas", "Nothing changes", "They always leave that day"], answer: 1, why: "People who feel left out go quiet, and their ideas are lost." },
+            { objective: "O1", q: "You are not sure why a team member never speaks in meetings. What would you do?", options: ["Ask them privately what would make it easier to speak up", "Assume they have nothing to say", "Call on them first in front of everyone", "Ask the rest of the team about them"], answer: 0, why: "Ask, do not guess; a short private question tells you more." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Spotting unconscious bias",
           minutes: 5,
           goal: "Use a simple check to catch bias in a real decision.",
@@ -59,9 +88,14 @@ module.exports = {
             { title: "Build in checks", bullets: ["Criteria first, people second", "Same criteria for everyone", "Write your reasons", "\"Would I decide the same...?\" plus a second opinion"] }
           ],
           tryIt: "Think of a recent decision about people, like who got a shift, a project or a chance to speak. Write the criteria you should have used, then use the \"would I decide the same?\" question on it. Write one thing you would do differently.",
-          youCanNow: "name common biases and use a simple check to make a fairer decision."
+          youCanNow: "name common biases and use a simple check to make a fairer decision.",
+          quickCheck: [
+            { objective: "O2", q: "What is confirmation bias?", options: ["Favoring people like us", "Judging everything by one trait", "Noticing only facts that fit what we already believe", "Confirming a meeting time"], answer: 2, why: "Confirmation bias filters facts to fit our existing view." },
+            { objective: "O2", q: "You are choosing who leads a new project. What would you do first?", options: ["Pick the person you get along with best", "Decide the criteria before you look at people", "Let the loudest person choose", "Choose quickly and explain later"], answer: 1, why: "Deciding the criteria first is a check built into the decision." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Fair hiring and promotion habits",
           minutes: 6,
           goal: "Set up a hiring or promotion process that judges everyone by the same job-related standards.",
@@ -80,17 +114,21 @@ module.exports = {
           ],
           sources: [{ name: "EEOC: Employers", url: "https://www.eeoc.gov/employers" }],
           tryIt: "Pick a real or pretend job on your team. Write three must-have requirements, remove one that is not really needed, and write three interview questions you would ask every candidate, with what a strong answer looks like.",
-          youCanNow: "design a hiring or promotion process that treats every candidate by the same job-related standards and know where to check the law."
+          youCanNow: "design a hiring or promotion process that treats every candidate by the same job-related standards and know where to check the law.",
+          quickCheck: [
+            { objective: "O3", q: "What is a structured interview?", options: ["Each interviewer asks whatever they like", "A chat over lunch", "An interview with no scoring", "Every candidate gets the same job-related questions, scored on the same scale"], answer: 3, why: "Same questions and the same scale help judge everyone fairly." },
+            { objective: "O3", q: "You want to share a new opening. What would you do?", options: ["Ask only the current team's friends", "Share it widely, not only through friends of the team", "Keep it quiet until you find someone", "Post it only in one private group"], answer: 1, why: "Fair hiring shares openings widely." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Belonging and fair decisions",
         questions: [
-          { q: "Which is a sign of belonging on a team?", options: ["Only the leader talks", "People hide mistakes", "New people are left out of news", "People speak up and admit mistakes early"], answer: 3, why: "When people feel safe, they speak up and share problems early." },
-          { q: "What is affinity bias?", options: ["Favoring people who seem like us", "Liking tidy desks", "Being good at math", "Hiring only experts"], answer: 0, why: "Affinity bias pulls us toward people like ourselves." },
-          { q: "What is the best way to reduce bias in a decision?", options: ["Trust your gut", "Decide the criteria first and judge everyone against them", "Decide quickly", "Only ask your friends"], answer: 1, why: "Set criteria and checks; willpower alone does not remove bias." },
-          { q: "In a structured interview you:", options: ["Ask each person whatever comes to mind", "Ask about their family plans", "Ask every candidate the same job-related questions", "Skip scoring"], answer: 2, why: "The same questions and scoring make comparisons fair." },
-          { q: "In the US, which agency enforces federal laws against job discrimination?", options: ["The IRS", "The Postal Service", "The FAA", "The EEOC"], answer: 3, why: "The Equal Employment Opportunity Commission enforces those laws." }
+          { objective: "O1", q: "Which is a sign of belonging on a team?", options: ["Only the leader talks", "People hide mistakes", "New people are left out of news", "People speak up and admit mistakes early"], answer: 3, why: "When people feel safe, they speak up and share problems early." },
+          { objective: "O2", q: "What is affinity bias?", options: ["Favoring people who seem like us", "Liking tidy desks", "Being good at math", "Hiring only experts"], answer: 0, why: "Affinity bias pulls us toward people like ourselves." },
+          { objective: "O2", q: "What is the best way to reduce bias in a decision?", options: ["Trust your gut", "Decide the criteria first and judge everyone against them", "Decide quickly", "Only ask your friends"], answer: 1, why: "Set criteria and checks; willpower alone does not remove bias." },
+          { objective: "O3", q: "In a structured interview you:", options: ["Ask each person whatever comes to mind", "Ask about their family plans", "Ask every candidate the same job-related questions", "Skip scoring"], answer: 2, why: "The same questions and scoring make comparisons fair." },
+          { objective: "O3", q: "In the US, which agency enforces federal laws against job discrimination?", options: ["The IRS", "The Postal Service", "The FAA", "The EEOC"], answer: 3, why: "The Equal Employment Opportunity Commission enforces those laws." }
         ]
       }
     },
@@ -98,6 +136,7 @@ module.exports = {
       name: "Chapter 2: Everyday inclusion",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Running meetings where everyone is heard",
           minutes: 5,
           goal: "Run a meeting routine that gives every person a fair chance to speak.",
@@ -114,9 +153,14 @@ module.exports = {
             { title: "Step in kindly", bullets: ["\"Let's let Amina finish.\"", "\"That builds on what Luis said.\"", "Rotate the note-taker"] }
           ],
           tryIt: "Plan your next team meeting using at least three tools from this lesson. Write them on the agenda. After the meeting, note who spoke who usually does not.",
-          youCanNow: "run a meeting that gives every person a fair chance to speak and be credited."
+          youCanNow: "run a meeting that gives every person a fair chance to speak and be credited.",
+          quickCheck: [
+            { objective: "O4", q: "Why send the meeting agenda ahead?", options: ["So people can prepare", "So the meeting can be longer", "So no one needs to come", "So the leader can skip planning"], answer: 0, why: "Preparing ahead helps quieter people and second-language speakers contribute." },
+            { objective: "O4", q: "The same two people always take notes. What would you do?", options: ["Leave it; they are good at it", "Take notes yourself every time", "Rotate the note-taker role", "Stop taking notes"], answer: 2, why: "Rotating roles stops the same people from always getting background tasks." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Accessibility and respectful language",
           minutes: 5,
           goal: "Make one part of your team's work more accessible and use respectful language.",
@@ -135,9 +179,14 @@ module.exports = {
           ],
           sources: [{ name: "Job Accommodation Network (JAN)", url: "https://askjan.org/" }, { name: "EEOC: Employers", url: "https://www.eeoc.gov/employers" }],
           tryIt: "Check one thing your team uses often, such as a sign-up form, a training video or the weekly meeting. List two accessibility fixes and do one of them this week.",
-          youCanNow: "make team work more accessible, handle accommodation requests respectfully, and use respectful language."
+          youCanNow: "make team work more accessible, handle accommodation requests respectfully, and use respectful language.",
+          quickCheck: [
+            { objective: "O5", q: "Which is a simple accessibility step?", options: ["Using tiny fonts to fit more on a page", "Playing videos without sound", "Making documents image-only", "Turning on captions for videos and online meetings"], answer: 3, why: "Captions help many people, including people with hearing disabilities." },
+            { objective: "O5", q: "You are not sure how to refer to a new colleague. What would you do?", options: ["Guess and hope", "Ask politely or use their name", "Avoid talking to them", "Ask another coworker to find out"], answer: 1, why: "When unsure, ask politely or just use their name." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Responding to exclusion or harassment",
           minutes: 6,
           goal: "Respond quickly and properly when someone is excluded, mistreated or harassed.",
@@ -156,17 +205,21 @@ module.exports = {
           ],
           sources: [{ name: "EEOC: Employers (harassment, retaliation, accommodation)", url: "https://www.eeoc.gov/employers" }],
           tryIt: "Final task: write your one-page inclusion habits plan. Include one belonging habit, one bias check, three fair hiring or promotion habits, a meeting routine, one accessibility fix, and the steps you will follow if someone reports exclusion or harassment, with who you will tell and where to check the rules.",
-          youCanNow: "respond to exclusion or harassment quickly and properly, protect people who speak up, and know where to check your legal duties."
+          youCanNow: "respond to exclusion or harassment quickly and properly, protect people who speak up, and know where to check your legal duties.",
+          quickCheck: [
+            { objective: "O6", q: "Which is an example of small, everyday exclusion?", options: ["Always leaving one person off the lunch invite", "Giving clear deadlines", "Holding one-on-ones", "Sharing news with everyone at once"], answer: 0, why: "Exclusion can be small but repeated, and leaders should not ignore it." },
+            { objective: "O6", q: "Someone who raised a concern is suddenly left off a project by their manager. What is this a sign of?", options: ["Normal scheduling", "Fair promotion", "Possible retaliation, which you must stop", "A structured interview"], answer: 2, why: "No one should be punished for raising a concern." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Everyday inclusion",
         questions: [
-          { q: "A remote team member rarely speaks in hybrid meetings. What helps?", options: ["Ask remote people first", "Turn off their camera", "Stop inviting them", "Only send notes later"], answer: 0, why: "Calling on remote people first gives them a fair turn." },
-          { q: "Someone's idea is repeated by a louder colleague and praised. What do you say?", options: ["Nothing", "\"Great idea!\" to the louder person", "\"That builds on what Luis said earlier.\"", "\"Let's move on.\""], answer: 2, why: "Credit the idea to the person who said it first." },
-          { q: "Which is an accessibility step for online meetings?", options: ["Speaking faster", "Turning on captions", "Using tiny fonts", "Turning off chat"], answer: 1, why: "Captions help people who are deaf or hard of hearing, and many others." },
-          { q: "You use the wrong pronoun for a colleague. What do you do?", options: ["Argue about it", "Make a joke", "Avoid them", "Apologize briefly, correct it and move on"], answer: 3, why: "A short apology and correction is respectful without making it awkward." },
-          { q: "A team member reports harassment and asks you to keep it secret. Your policy requires reporting. You should:", options: ["Explain you must report it, then report it to HR right away", "Promise secrecy", "Ignore it", "Tell the whole team"], answer: 0, why: "Don't promise secrecy you cannot keep; follow your policy." }
+          { objective: "O4", q: "A remote team member rarely speaks in hybrid meetings. What helps?", options: ["Ask remote people first", "Turn off their camera", "Stop inviting them", "Only send notes later"], answer: 0, why: "Calling on remote people first gives them a fair turn." },
+          { objective: "O4", q: "Someone's idea is repeated by a louder colleague and praised. What do you say?", options: ["Nothing", "\"Great idea!\" to the louder person", "\"That builds on what Luis said earlier.\"", "\"Let's move on.\""], answer: 2, why: "Credit the idea to the person who said it first." },
+          { objective: "O5", q: "Which is an accessibility step for online meetings?", options: ["Speaking faster", "Turning on captions", "Using tiny fonts", "Turning off chat"], answer: 1, why: "Captions help people who are deaf or hard of hearing, and many others." },
+          { objective: "O5", q: "You use the wrong pronoun for a colleague. What do you do?", options: ["Argue about it", "Make a joke", "Avoid them", "Apologize briefly, correct it and move on"], answer: 3, why: "A short apology and correction is respectful without making it awkward." },
+          { objective: "O6", q: "A team member reports harassment and asks you to keep it secret. Your policy requires reporting. You should:", options: ["Explain you must report it, then report it to HR right away", "Promise secrecy", "Ignore it", "Tell the whole team"], answer: 0, why: "Don't promise secrecy you cannot keep; follow your policy." }
         ]
       }
     }
@@ -174,26 +227,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Leading Inclusive Teams",
     questions: [
-      { q: "Psychological safety means people:", options: ["Never disagree", "Can speak up or admit mistakes without being punished or mocked", "Work alone", "Have no deadlines"], answer: 1, why: "Safety to speak up is the core of it." },
-      { q: "Which habit builds belonging?", options: ["Sharing news with some people first", "Giving the best tasks to friends", "Mispronouncing names", "Thanking people who raise problems"], answer: 3, why: "Thanking people for raising problems makes it safe to speak up." },
-      { q: "To learn what would help someone speak up, you should:", options: ["Ask them privately", "Guess", "Ask their coworkers", "Wait"], answer: 0, why: "Asking beats assuming." },
-      { q: "Unconscious bias is:", options: ["Always on purpose", "Only a problem for bad people", "A quick judgment we make without noticing", "Against the law to have"], answer: 2, why: "Everyone has it; the problem is acting on it." },
-      { q: "The halo effect is when:", options: ["One trait colors how we judge everything else about someone", "We like bright offices", "We work late", "We hire from many places"], answer: 0, why: "One good or bad trait spreads to our whole view." },
-      { q: "A good bias check question is:", options: ["\"Do I like them?\"", "\"Would I decide the same if this person were from a different group?\"", "\"Are they like me?\"", "\"What does my gut say?\""], answer: 1, why: "It tests whether group membership changed your decision." },
-      { q: "The job ad asks for a degree, but the work doesn't need one. Fair hiring says:", options: ["Keep it to cut applicants", "Add two more degrees", "Remove requirements the job doesn't really need", "Hide the ad"], answer: 2, why: "Extra requirements shut out capable people." },
-      { q: "Which interview question should you NOT ask?", options: ["\"Tell me about a time you solved a customer problem.\"", "\"How would you handle a late delivery?\"", "\"What safety steps do you follow?\"", "\"Are you planning to have children?\""], answer: 3, why: "Family plans are not job-related and can lead to discrimination." },
-      { q: "Where can US employers check federal anti-discrimination duties?", options: ["eeoc.gov", "A social media post", "A competitor's website", "Nowhere"], answer: 0, why: "The EEOC's official site explains employer duties." },
-      { q: "Under EEOC rules, age discrimination protection covers people who are:", options: ["Under 25", "40 or older", "Over 70 only", "Any age under 18"], answer: 1, why: "The EEOC lists age 40 or older." },
-      { q: "A minute of silent writing before discussion helps because:", options: ["It ends the meeting faster", "Quieter people get time to form their ideas", "Nobody has to speak", "It replaces the agenda"], answer: 1, why: "It gives everyone time to think before louder voices take over." },
-      { q: "Why rotate the note-taker role?", options: ["So the same people don't always get background tasks", "To confuse people", "Because notes are not needed", "To punish latecomers"], answer: 0, why: "Rotating background tasks is fairer." },
-      { q: "A colleague keeps interrupting Amina. You say:", options: ["Nothing", "\"Amina, be quicker.\"", "\"Let's let Amina finish.\"", "\"Let's take a break.\""], answer: 2, why: "Stepping in kindly protects her turn." },
-      { q: "Which free US service gives confidential guidance on workplace accommodations?", options: ["A search engine ad", "The Job Accommodation Network (askjan.org)", "A video game site", "A shopping app"], answer: 1, why: "JAN gives free, confidential accommodation guidance." },
-      { q: "An employee asks for a change to do their job because of a disability. You should:", options: ["Discuss it with the whole team", "Say no right away", "Ask them to prove it publicly", "Handle it privately and follow your accommodation process"], answer: 3, why: "Requests should be private and taken seriously." },
-      { q: "When you are unsure of someone's pronouns, a respectful option is to:", options: ["Guess loudly", "Avoid talking to them", "Ask politely or use their name", "Make a joke"], answer: 2, why: "Asking politely or using their name is respectful." },
-      { q: "You hear a \"joke\" mocking a coworker's accent. What is the best first step?", options: ["Interrupt calmly: \"That's not okay here,\" then check on the coworker", "Laugh along", "Wait to see if it happens again", "Post about it online"], answer: 0, why: "Act in the moment and support the person affected." },
-      { q: "Retaliation means:", options: ["Giving a raise", "Punishing someone for complaining about discrimination or helping an investigation", "A team party", "A training session"], answer: 1, why: "Retaliation is itself prohibited and must be prevented." },
-      { q: "After someone reports harassment to you, you should:", options: ["Wait a few weeks", "Tell them to handle it", "Confront the accused in front of the team", "Write down what they said and report it to HR right away"], answer: 3, why: "Fast, documented reporting follows good practice and policy." },
-      { q: "Someone is in immediate danger at work. You should:", options: ["Send an email to HR tomorrow", "Call emergency services", "Hold a meeting", "Do nothing"], answer: 1, why: "Safety comes first; call emergency services." }
+      { objective: "O1", q: "Psychological safety means people:", options: ["Never disagree", "Can speak up or admit mistakes without being punished or mocked", "Work alone", "Have no deadlines"], answer: 1, why: "Safety to speak up is the core of it." },
+      { objective: "O1", q: "Which habit builds belonging?", options: ["Sharing news with some people first", "Giving the best tasks to friends", "Mispronouncing names", "Thanking people who raise problems"], answer: 3, why: "Thanking people for raising problems makes it safe to speak up." },
+      { objective: "O1", q: "To learn what would help someone speak up, you should:", options: ["Ask them privately", "Guess", "Ask their coworkers", "Wait"], answer: 0, why: "Asking beats assuming." },
+      { objective: "O2", q: "Unconscious bias is:", options: ["Always on purpose", "Only a problem for bad people", "A quick judgment we make without noticing", "Against the law to have"], answer: 2, why: "Everyone has it; the problem is acting on it." },
+      { objective: "O2", q: "The halo effect is when:", options: ["One trait colors how we judge everything else about someone", "We like bright offices", "We work late", "We hire from many places"], answer: 0, why: "One good or bad trait spreads to our whole view." },
+      { objective: "O2", q: "A good bias check question is:", options: ["\"Do I like them?\"", "\"Would I decide the same if this person were from a different group?\"", "\"Are they like me?\"", "\"What does my gut say?\""], answer: 1, why: "It tests whether group membership changed your decision." },
+      { objective: "O3", q: "The job ad asks for a degree, but the work doesn't need one. Fair hiring says:", options: ["Keep it to cut applicants", "Add two more degrees", "Remove requirements the job doesn't really need", "Hide the ad"], answer: 2, why: "Extra requirements shut out capable people." },
+      { objective: "O3", q: "Which interview question should you NOT ask?", options: ["\"Tell me about a time you solved a customer problem.\"", "\"How would you handle a late delivery?\"", "\"What safety steps do you follow?\"", "\"Are you planning to have children?\""], answer: 3, why: "Family plans are not job-related and can lead to discrimination." },
+      { objective: "O3", q: "Where can US employers check federal anti-discrimination duties?", options: ["eeoc.gov", "A social media post", "A competitor's website", "Nowhere"], answer: 0, why: "The EEOC's official site explains employer duties." },
+      { objective: "O3", q: "Under EEOC rules, age discrimination protection covers people who are:", options: ["Under 25", "40 or older", "Over 70 only", "Any age under 18"], answer: 1, why: "The EEOC lists age 40 or older." },
+      { objective: "O4", q: "A minute of silent writing before discussion helps because:", options: ["It ends the meeting faster", "Quieter people get time to form their ideas", "Nobody has to speak", "It replaces the agenda"], answer: 1, why: "It gives everyone time to think before louder voices take over." },
+      { objective: "O4", q: "Why rotate the note-taker role?", options: ["So the same people don't always get background tasks", "To confuse people", "Because notes are not needed", "To punish latecomers"], answer: 0, why: "Rotating background tasks is fairer." },
+      { objective: "O4", q: "A colleague keeps interrupting Amina. You say:", options: ["Nothing", "\"Amina, be quicker.\"", "\"Let's let Amina finish.\"", "\"Let's take a break.\""], answer: 2, why: "Stepping in kindly protects her turn." },
+      { objective: "O5", q: "Which free US service gives confidential guidance on workplace accommodations?", options: ["A search engine ad", "The Job Accommodation Network (askjan.org)", "A video game site", "A shopping app"], answer: 1, why: "JAN gives free, confidential accommodation guidance." },
+      { objective: "O5", q: "An employee asks for a change to do their job because of a disability. You should:", options: ["Discuss it with the whole team", "Say no right away", "Ask them to prove it publicly", "Handle it privately and follow your accommodation process"], answer: 3, why: "Requests should be private and taken seriously." },
+      { objective: "O5", q: "When you are unsure of someone's pronouns, a respectful option is to:", options: ["Guess loudly", "Avoid talking to them", "Ask politely or use their name", "Make a joke"], answer: 2, why: "Asking politely or using their name is respectful." },
+      { objective: "O6", q: "You hear a \"joke\" mocking a coworker's accent. What is the best first step?", options: ["Interrupt calmly: \"That's not okay here,\" then check on the coworker", "Laugh along", "Wait to see if it happens again", "Post about it online"], answer: 0, why: "Act in the moment and support the person affected." },
+      { objective: "O6", q: "Retaliation means:", options: ["Giving a raise", "Punishing someone for complaining about discrimination or helping an investigation", "A team party", "A training session"], answer: 1, why: "Retaliation is itself prohibited and must be prevented." },
+      { objective: "O6", q: "After someone reports harassment to you, you should:", options: ["Wait a few weeks", "Tell them to handle it", "Confront the accused in front of the team", "Write down what they said and report it to HR right away"], answer: 3, why: "Fast, documented reporting follows good practice and policy." },
+      { objective: "O6", q: "Someone is in immediate danger at work. You should:", options: ["Send an email to HR tomorrow", "Call emergency services", "Hold a meeting", "Do nothing"], answer: 1, why: "Safety comes first; call emergency services." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      3,
+      5,
+      6,
+      10,
+      12,
+      13,
+      15,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Belonging habit",
+        objective: "O1",
+        notYet: "No habit, or a one-time event.",
+        meets: "One belonging habit the leader can repeat.",
+        exceeds: "Says how they will ask the team whether it helps."
+      },
+      {
+        name: "Bias check",
+        objective: "O2",
+        notYet: "No check, or the check comes after the decision.",
+        meets: "A bias check used on a real decision: criteria first, reasons written down.",
+        exceeds: "Also gets a second opinion on the decision."
+      },
+      {
+        name: "Fair hiring or promotion",
+        objective: "O3",
+        notYet: "Fewer than three habits, or habits not tied to the job.",
+        meets: "Three habits that judge everyone by the same job-related standards.",
+        exceeds: "Includes structured interview questions scored by more than one person."
+      },
+      {
+        name: "Meetings and accessibility",
+        objective: "O4",
+        notYet: "No meeting routine or no accessibility improvement.",
+        meets: "A meeting routine that gives every voice a turn, and one accessibility improvement.",
+        exceeds: "Says how they will step in on interruptions or ideas taken without credit."
+      },
+      {
+        name: "Response steps",
+        objective: "O6",
+        notYet: "Steps are missing, or the plan promises to keep a report secret against policy.",
+        meets: "Steps for a report of exclusion or harassment, who they will tell and where the official rules are.",
+        exceeds: "Includes protecting the person from retaliation and calling emergency services if someone is in danger."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who use a structured interview or bias check within 90 days (follow-up survey)",
+      "Team members who report they can speak up in meetings",
+      "Learners who take another Koach Learn leadership course"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or computer to watch the lessons",
+      "Paper or a document for the one-page inclusion habits plan",
+      "Your organization's policy on harassment and accommodations, if it has one",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Set ground rules first: no real names or identifying stories from learners' workplaces in group discussion.",
+      "Practice stepping in out loud with phrases like \"Let's let Amina finish.\"",
+      "Ask learners to find their own organization's reporting policy before writing the response steps.",
+      "Remind learners outside the US that laws differ, and to check their own national rules and HR.",
+      "Score the final task with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

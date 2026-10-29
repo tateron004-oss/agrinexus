@@ -16,11 +16,35 @@ module.exports = {
     "Nunca pongas nombres, puntajes ni otros datos que identifiquen a estudiantes en una herramienta que tu distrito no haya aprobado; usa datos inventados para practicar. Cada capítulo termina con una comprobación de conocimientos y el curso termina con un examen de 20 preguntas."
   ],
   finalTask: "Diferencia una clase real: escribe una evaluación diagnóstica de cinco preguntas con clave, tres tareas por niveles que lleguen al mismo objetivo (más apoyo, en nivel, extensión), un tablero de opciones de nueve casillas para practicar y un plan de agrupamiento hecho con los resultados diagnósticos de un grupo inventado (sin nombres reales). Revisa la exactitud y la equidad de cada tarea, y escribe cómo y cuándo pasarán los estudiantes de un grupo a otro.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Docentes de aula, coordinadores pedagógicos y líderes escolares que quieren que cada estudiante alcance las metas del grado por caminos distintos, y que empiezan a usar la IA para ahorrar tiempo de planificación.",
+    startingPoint: "Saben planear y dar una clase a todo el grupo y aplicar un examen. Algunos han probado un asistente de IA para hacer hojas de trabajo. Pocos tienen una rutina para crear rápido tareas por niveles, tableros de opciones o grupos flexibles.",
+    gap: "Hacer varias versiones de cada tarea toma más tiempo del que tienen la mayoría de los docentes, así que la diferenciación muchas veces se omite o se convierte en grupos fijos de nivel bajo y alto. Los docentes necesitan usar la IA para hacer las versiones mientras ellos toman las decisiones, protegen la privacidad de los estudiantes y mantienen altas las expectativas para todos.",
+    constraints: [
+      "Tiempo: lecciones cortas que caben en un periodo de planificación",
+      "Dispositivos: una computadora de la escuela o una laptop con un asistente de IA que el distrito permita",
+      "Privacidad: ni nombres, ni puntajes ni datos que identifiquen a estudiantes en herramientas que el distrito no haya aprobado; la práctica usa datos inventados",
+      "Las adaptaciones obligatorias del IEP y del plan 504 deben darse en cada versión",
+      "El docente debe revisar la exactitud y la equidad de cada tarea hecha con IA antes de usarla"
+    ],
+    prerequisites: "Ninguno. Los docentes que no conocen las herramientas de IA pueden tomar primero un curso introductorio de IA."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con una tarea que enseñas", action: "explicar la diferenciación según la preparación, el interés y la forma preferida de aprender, y describir qué hace la IA y qué decide el docente", standard: "manteniendo la misma meta de aprendizaje en cada versión" },
+    { id: "O2", condition: "Con un objetivo de aprendizaje y un asistente de IA", action: "crear una evaluación diagnóstica de cinco preguntas con clave y tres tareas por niveles", standard: "con los tres niveles practicando el mismo objetivo" },
+    { id: "O3", condition: "Con una habilidad para practicar", action: "crear un tablero de opciones de nueve casillas con una casilla obligatoria", standard: "con cada casilla practicando la habilidad y tomando más o menos el mismo tiempo" },
+    { id: "O4", condition: "Con los resultados diagnósticos de un grupo inventado", action: "agrupar a los estudiantes a partir de pruebas y escribir cuándo y cómo pasan de un grupo a otro", standard: "usando códigos en lugar de nombres y sin grupos fijos" },
+    { id: "O5", condition: "Al planear una clase diferenciada", action: "planear las rutinas, las tarjetas de tareas y los tiempos de la clase", standard: "cubriendo cómo encuentran los estudiantes su tarea, qué hacer si se atascan y qué hacer al terminar" },
+    { id: "O6", condition: "Con una clase diferenciada terminada", action: "revisar que tenga la misma meta, movimiento entre grupos, patrones justos y acceso, y corregir lo que falle", standard: "pasando las cuatro revisiones de equidad" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Crear materiales diferenciados",
       lessons: [
         {
+          objectives: ["O1"],
           title: "La diferenciación en un minuto, y dónde ayuda la IA",
           minutes: 5,
           goal: "Explicar la diferenciación según la preparación, el interés y la forma preferida de aprender, y nombrar el papel de la IA.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "El docente decide", bullets: ["La meta y las pruebas", "Quién recibe cada camino", "Revisiones de exactitud y equidad"] }
           ],
           tryIt: "Toma una tarea que enseñas. Pide a la IA que la reescriba de tres formas para distintos intereses (por ejemplo deportes, música, cocina) con la misma habilidad. Revisa que cada una conserve la habilidad.",
-          youCanNow: "explicar la diferenciación y usar la IA para producir versiones de una tarea mientras tú tomas las decisiones."
+          youCanNow: "explicar la diferenciación y usar la IA para producir versiones de una tarea mientras tú tomas las decisiones.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué cambia cuando diferencias una clase?", options: ["El camino que siguen los estudiantes hacia la meta", "La meta de aprendizaje misma", "El estándar del grado", "Qué estudiantes hacen el examen final"], answer: 0, why: "En la diferenciación la meta se mantiene igual; solo cambia el camino." },
+            { objective: "O1", q: "La IA convierte tu tarea de lectura en una versión sobre deportes, otra sobre música y otra sobre cocina. ¿Qué harías después?", options: ["Repartirlas sin leerlas", "Revisar que cada versión siga practicando la misma habilidad", "Dar la versión de deportes a todos los estudiantes", "Pedirle a la IA que elija qué estudiante recibe cada versión"], answer: 1, why: "La IA hace las versiones, pero el docente las revisa y decide quién recibe cuál." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Evaluaciones diagnósticas y tareas por niveles",
           minutes: 6,
           goal: "Escribir una evaluación diagnóstica rápida y tres tareas por niveles hacia un objetivo.",
@@ -55,9 +84,14 @@ module.exports = {
             { title: "Revisa los niveles", bullets: ["Nivel 1 con apoyo, no más fácil", "Nivel 3 más profundo, no más largo", "Todos practican el objetivo"] }
           ],
           tryIt: "Escribe con IA una evaluación diagnóstica de cinco preguntas y tres tareas por niveles para un objetivo. Revisa que los tres niveles practiquen el mismo objetivo.",
-          youCanNow: "crear una evaluación diagnóstica y tareas por niveles que llegan a la misma meta."
+          youCanNow: "crear una evaluación diagnóstica y tareas por niveles que llegan a la misma meta.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué debe incluir una evaluación diagnóstica de cinco preguntas según esta lección?", options: ["Cinco preguntas de reto", "Cinco preguntas sobre la unidad del año pasado", "Dos preguntas de habilidades previas, dos sobre el objetivo y una pregunta de reto", "Solo preguntas que los estudiantes seguro responderán bien"], answer: 2, why: "Esa mezcla muestra quién necesita ayuda con lo previo, quién está listo y quién está listo para más." },
+            { objective: "O2", q: "Tu tarea de nivel 3 es la tarea de nivel 2 con el doble de problemas. ¿Qué harías?", options: ["Dejarla así, porque más trabajo es más difícil", "Quitar el nivel 3", "Dársela al grupo de apoyo", "Reemplazarla por una tarea más profunda, como usar la habilidad en una situación nueva"], answer: 3, why: "El nivel 3 debe ser más profundo, no solo más trabajo." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Tableros de opciones",
           minutes: 5,
           goal: "Crear con IA un tablero de opciones de nueve casillas para practicar.",
@@ -74,17 +108,21 @@ module.exports = {
             { title: "Revísalo", bullets: ["Misma habilidad, tiempo parecido", "Materiales disponibles", "Elegir, no evitar"] }
           ],
           tryIt: "Crea con IA un tablero de opciones de 3 por 3 para una habilidad. Revisa cada casilla y reemplaza las que no practiquen la habilidad.",
-          youCanNow: "crear tableros de opciones que ofrecen una elección real mientras practican la misma habilidad."
+          youCanNow: "crear tableros de opciones que ofrecen una elección real mientras practican la misma habilidad.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué es un tablero de opciones?", options: ["Una cuadrícula de actividades que practican la misma habilidad de formas distintas", "Una lista de temas distintos que los estudiantes pueden saltarse", "Un mapa de asientos", "Un tablero donde los estudiantes votan por la tarea"], answer: 0, why: "Cada casilla practica la misma habilidad; solo cambia la forma de practicarla." },
+            { objective: "O3", q: "Una casilla de tu tablero de opciones hecho con IA pide a los estudiantes dibujar su animal favorito, y eso no practica la habilidad. ¿Qué harías?", options: ["Dejarla para que tengan una opción divertida", "Convertirla en la casilla obligatoria", "Reemplazarla por una casilla que practique la habilidad", "Quitar todo el tablero"], answer: 2, why: "Elegir nunca debe convertirse en una forma de evitar la habilidad." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Crear materiales diferenciados",
         questions: [
-          { q: "En la diferenciación, ¿qué se mantiene igual?", options: ["El camino", "Los materiales", "La meta de aprendizaje", "El grupo"], answer: 2, why: "La meta se mantiene; cambia el camino." },
-          { q: "¿Qué NO sabe la IA al diferenciar?", options: ["Cómo son tus estudiantes", "Cómo reescribir una tarea", "Cómo hacer tres niveles", "Intereses comunes"], answer: 0, why: "Los docentes conocen a los estudiantes y deciden los caminos." },
-          { q: "Una buena tarea de nivel 1 es:", options: ["Una habilidad distinta y más fácil", "Saltarse el objetivo", "Solo colorear", "Con apoyo hacia el mismo objetivo"], answer: 3, why: "Apoyo, no una meta más baja." },
-          { q: "Una buena tarea de nivel 3 es:", options: ["Más de los mismos problemas", "Más profunda, como una tarea de transferencia", "Opcional", "Más corta"], answer: 1, why: "Extensión significa profundidad, no cantidad." },
-          { q: "Cada casilla de un tablero de opciones debe:", options: ["Necesitar materiales especiales", "Ser un juego", "Tomar tiempos muy distintos", "Practicar la misma habilidad"], answer: 3, why: "Se elige el camino, no la habilidad." }
+          { objective: "O1", q: "En la diferenciación, ¿qué se mantiene igual?", options: ["El camino", "Los materiales", "La meta de aprendizaje", "El grupo"], answer: 2, why: "La meta se mantiene; cambia el camino." },
+          { objective: "O1", q: "¿Qué NO sabe la IA al diferenciar?", options: ["Cómo son tus estudiantes", "Cómo reescribir una tarea", "Cómo hacer tres niveles", "Intereses comunes"], answer: 0, why: "Los docentes conocen a los estudiantes y deciden los caminos." },
+          { objective: "O2", q: "Una buena tarea de nivel 1 es:", options: ["Una habilidad distinta y más fácil", "Saltarse el objetivo", "Solo colorear", "Con apoyo hacia el mismo objetivo"], answer: 3, why: "Apoyo, no una meta más baja." },
+          { objective: "O2", q: "Una buena tarea de nivel 3 es:", options: ["Más de los mismos problemas", "Más profunda, como una tarea de transferencia", "Opcional", "Más corta"], answer: 1, why: "Extensión significa profundidad, no cantidad." },
+          { objective: "O3", q: "Cada casilla de un tablero de opciones debe:", options: ["Necesitar materiales especiales", "Ser un juego", "Tomar tiempos muy distintos", "Practicar la misma habilidad"], answer: 3, why: "Se elige el camino, no la habilidad." }
         ]
       }
     },
@@ -92,6 +130,7 @@ module.exports = {
       name: "Capítulo 2: Usar bien la diferenciación",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Agrupamiento flexible a partir de pruebas",
           minutes: 6,
           goal: "Agrupar a los estudiantes a partir de la evaluación diagnóstica y planear cómo pasan de un grupo a otro.",
@@ -109,9 +148,14 @@ module.exports = {
           ],
           sources: [{ name: "FERPA: protección de la privacidad estudiantil", url: "https://studentprivacy.ed.gov/ferpa" }],
           tryIt: "Inventa resultados diagnósticos para 24 estudiantes usando códigos (E1 a E24). Forma tres grupos para el objetivo y escribe cuándo y cómo pasarán los estudiantes de un grupo a otro.",
-          youCanNow: "agrupar a los estudiantes de forma flexible a partir de pruebas y mantener los grupos en movimiento."
+          youCanNow: "agrupar a los estudiantes de forma flexible a partir de pruebas y mantener los grupos en movimiento.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué hace que un grupo sea \"flexible\"?", options: ["Los estudiantes eligen el grupo que quieran", "Cambia seguido, según las pruebas actuales en una habilidad", "Se mantiene igual todo el año", "Se basa en la etiqueta de un estudiante"], answer: 1, why: "Los grupos flexibles siguen las pruebas actuales y cambian a medida que los estudiantes aprenden." },
+            { objective: "O4", q: "Quieres que la IA te ayude a ver patrones en los puntajes diagnósticos de tu grupo. ¿Qué harías primero?", options: ["Pegar el registro de calificaciones con los nombres", "Enviar los puntajes por correo a un colega", "Poner los puntajes en la pared", "Reemplazar los nombres por códigos como E1, o usar una herramienta aprobada por el distrito"], answer: 3, why: "Los puntajes con nombres son registros educativos, así que protégelos antes de usar la IA." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Llevar una clase diferenciada",
           minutes: 5,
           goal: "Planear las rutinas que hacen funcionar una clase diferenciada en el aula.",
@@ -128,9 +172,14 @@ module.exports = {
             { title: "Que se sienta normal", bullets: ["Nombres de grupo neutros", "Los grupos cambian seguido", "Trabajo interesante para todos los grupos"] }
           ],
           tryIt: "Usa la IA para redactar tarjetas de tareas para tus tres niveles, una tarjeta de ayuda para cuando los estudiantes se atasquen y un plan de tiempos para una clase de 50 minutos.",
-          youCanNow: "llevar una clase diferenciada con rutinas claras y prácticas de grupo justas."
+          youCanNow: "llevar una clase diferenciada con rutinas claras y prácticas de grupo justas.",
+          quickCheck: [
+            { objective: "O5", q: "¿Por qué fallan con más frecuencia las clases diferenciadas?", options: ["Por la logística y las rutinas", "Por tener muy pocas hojas de trabajo", "Porque a los estudiantes no les gusta elegir", "Porque la IA hace demasiadas versiones"], answer: 0, why: "La lección dice que fallan más por la logística que por los materiales." },
+            { objective: "O5", q: "Unos estudiantes terminan su tarea de nivel diez minutos antes. ¿Qué debe decirles tu plan que hagan?", options: ["Esperar en silencio", "Empezar la tarea del siguiente nivel", "Ir al tablero de opciones", "Unirse al grupo del docente"], answer: 2, why: "El plan debe decir qué hacer al terminar, como ir al tablero de opciones." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Revisar la equidad de la diferenciación",
           minutes: 6,
           goal: "Revisar que la diferenciación abra puertas en lugar de bajar las expectativas.",
@@ -147,17 +196,21 @@ module.exports = {
             { title: "Acceso y contenido", bullets: ["Los apoyos y adaptaciones llegan a todos", "Ejemplos de IA variados, sin estereotipos"] }
           ],
           tryIt: "Tarea final: arma tu clase diferenciada (evaluación diagnóstica con clave, tres niveles, tablero de opciones, plan de agrupamiento con datos inventados y reglas de cambio), luego aplícale las cuatro revisiones de equidad y corrige lo que falle.",
-          youCanNow: "diferenciar clases con IA manteniendo altas las expectativas para cada estudiante."
+          youCanNow: "diferenciar clases con IA manteniendo altas las expectativas para cada estudiante.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué pregunta la revisión de equidad de la \"misma meta\"?", options: ["¿Todos los grupos reciben la misma hoja de trabajo?", "¿Cada estudiante practica el objetivo del grado?", "¿Todos los grupos terminan al mismo tiempo?", "¿Todos los estudiantes sacan el mismo puntaje?"], answer: 1, why: "La diferenciación no debe dejar a algunos estudiantes lejos de la meta del grado." },
+            { objective: "O6", q: "Durante la unidad, los mismos estudiantes de un mismo origen están siempre en el grupo de apoyo. ¿Qué harías?", options: ["Dejarlos ahí, porque está funcionando", "Pasarlos al grupo de extensión sin pruebas", "Dejar de usar grupos", "Preguntarte por qué y revisar si el agrupamiento refleja la habilidad o algo más"], answer: 3, why: "Un patrón así es una señal de alerta de que la diferenciación se está convirtiendo en expectativas bajas." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Usar bien la diferenciación",
         questions: [
-          { q: "Los grupos flexibles se basan en:", options: ["Una etiqueta del año pasado", "La popularidad del estudiante", "Las pruebas actuales en una habilidad concreta", "El mapa de asientos"], answer: 2, why: "Deciden las pruebas sobre la habilidad actual." },
-          { q: "Quieres que la IA te ayude a ordenar los resultados diagnósticos. ¿Qué es seguro?", options: ["Usar códigos en lugar de nombres, o una herramienta aprobada", "Pegar nombres y puntajes en una herramienta gratuita", "Publicar los resultados en línea", "Enviarlos por correo a un proveedor"], answer: 0, why: "Los puntajes con nombres son registros educativos." },
-          { q: "¿Qué nombres de grupo son mejores?", options: ["Bajo, medio, alto", "Colores o figuras", "Listos y lentos", "Los puntajes de los estudiantes"], answer: 1, why: "Los nombres neutros evitan etiquetar a los estudiantes." },
-          { q: "Los estudiantes que aprenden inglés están en el grupo de apoyo toda la unidad. ¿Qué debes hacer?", options: ["Preguntarte por qué y revisar si el agrupamiento refleja el idioma y no la comprensión", "Nada", "Hacerlo permanente", "Sacarlos de la clase"], answer: 0, why: "Los patrones pueden mostrar un agrupamiento injusto." },
-          { q: "¿Cuál es el riesgo de los grupos que nunca cambian?", options: ["Ninguno", "Ahorran tiempo", "Mejoran el aprendizaje", "Se convierten en agrupamiento fijo por niveles"], answer: 3, why: "Los grupos fijos limitan las oportunidades." }
+          { objective: "O4", q: "Los grupos flexibles se basan en:", options: ["Una etiqueta del año pasado", "La popularidad del estudiante", "Las pruebas actuales en una habilidad concreta", "El mapa de asientos"], answer: 2, why: "Deciden las pruebas sobre la habilidad actual." },
+          { objective: "O4", q: "Quieres que la IA te ayude a ordenar los resultados diagnósticos. ¿Qué es seguro?", options: ["Usar códigos en lugar de nombres, o una herramienta aprobada", "Pegar nombres y puntajes en una herramienta gratuita", "Publicar los resultados en línea", "Enviarlos por correo a un proveedor"], answer: 0, why: "Los puntajes con nombres son registros educativos." },
+          { objective: "O5", q: "¿Qué nombres de grupo son mejores?", options: ["Bajo, medio, alto", "Colores o figuras", "Listos y lentos", "Los puntajes de los estudiantes"], answer: 1, why: "Los nombres neutros evitan etiquetar a los estudiantes." },
+          { objective: "O6", q: "Los estudiantes que aprenden inglés están en el grupo de apoyo toda la unidad. ¿Qué debes hacer?", options: ["Preguntarte por qué y revisar si el agrupamiento refleja el idioma y no la comprensión", "Nada", "Hacerlo permanente", "Sacarlos de la clase"], answer: 0, why: "Los patrones pueden mostrar un agrupamiento injusto." },
+          { objective: "O4", q: "¿Cuál es el riesgo de los grupos que nunca cambian?", options: ["Ninguno", "Ahorran tiempo", "Mejoran el aprendizaje", "Se convierten en agrupamiento fijo por niveles"], answer: 3, why: "Los grupos fijos limitan las oportunidades." }
         ]
       }
     }
@@ -165,26 +218,105 @@ module.exports = {
   quiz: {
     title: "Examen final: Diferenciación con IA",
     questions: [
-      { q: "Diferenciar significa:", options: ["Dar metas distintas", "Ajustar cómo llegan los estudiantes a la misma meta", "Clases separadas", "Menos trabajo para algunos"], answer: 1, why: "La misma meta, caminos distintos." },
-      { q: "La preparación se refiere a:", options: ["La edad", "La puntualidad", "Lo que un estudiante ya sabe y puede hacer", "Solo la velocidad de lectura"], answer: 2, why: "Depende de cada habilidad." },
-      { q: "Las versiones según intereses conservan:", options: ["Ninguna habilidad", "Habilidades distintas", "La misma habilidad", "Solo el tema"], answer: 2, why: "Cambia el contexto, no la habilidad." },
-      { q: "¿Quién decide qué camino recibe cada estudiante?", options: ["El docente", "La IA", "El proveedor", "Solo los padres del estudiante"], answer: 0, why: "Los docentes leen las pruebas y deciden." },
-      { q: "Una evaluación diagnóstica se aplica:", options: ["Solo a algunos estudiantes", "Al final del año", "Nunca", "Antes de enseñar"], answer: 3, why: "Muestra desde dónde empiezan los estudiantes." },
-      { q: "Una buena evaluación diagnóstica incluye:", options: ["Solo las preguntas más difíciles", "Habilidades previas, el objetivo y una pregunta de reto", "Solo preguntas de opinión", "Nada sobre el objetivo"], answer: 1, why: "Muestra la variedad de preparación." },
-      { q: "Las tareas por niveles apuntan a:", options: ["Solo los mejores estudiantes", "Objetivos distintos", "Ningún objetivo", "El mismo objetivo"], answer: 3, why: "Los niveles varían el apoyo y la complejidad, no la meta." },
-      { q: "Una tarea de transferencia:", options: ["Copia una respuesta", "Cambia a un estudiante de escuela", "Usa una habilidad en una situación nueva", "Es repetir un examen"], answer: 2, why: "Profundiza el aprendizaje." },
-      { q: "Un tablero de opciones suele tener:", options: ["Nueve casillas de actividades para la misma habilidad", "Una actividad", "Solo juegos", "Calificaciones"], answer: 0, why: "Una cuadrícula de formas de practicar." },
-      { q: "La casilla obligatoria de un tablero de opciones:", options: ["Es opcional", "La completan todos los estudiantes", "Es para el docente", "Es solo para estudiantes avanzados"], answer: 1, why: "Asegura la práctica central." },
-      { q: "Las casillas de un tablero de opciones deben tomar:", options: ["Más o menos el mismo tiempo", "Tiempos muy distintos", "Nada de tiempo", "Solo tiempo de tarea en casa"], answer: 0, why: "Una elección justa necesita un esfuerzo parecido." },
-      { q: "Los puntajes de los estudiantes con nombres son:", options: ["Propiedad de las empresas de IA", "Públicos", "Seguros en cualquier aplicación", "Registros educativos protegidos por FERPA"], answer: 3, why: "Protégelos." },
-      { q: "Reemplazar los nombres por códigos como E1 ayuda a:", options: ["Calificar más rápido", "Proteger la privacidad de los estudiantes al practicar con IA", "Ocultar calificaciones a los docentes", "Nada"], answer: 1, why: "Los códigos quitan los nombres identificadores." },
-      { q: "Los estudiantes deben cambiar de grupo:", options: ["Solo al final del año", "Nunca", "Cuando nuevas pruebas muestran un cambio", "Al azar"], answer: 2, why: "Flexible significa cambiar según las pruebas." },
-      { q: "Las clases diferenciadas suelen fallar por:", options: ["Aulas iluminadas", "Demasiadas ideas", "La logística y las rutinas", "Nombres cortos"], answer: 2, why: "Las rutinas las hacen funcionar." },
-      { q: "“Pregunta a tres antes que a mí” es una rutina para:", options: ["Cuando los estudiantes se atascan", "Cuando los estudiantes terminan", "Hacer fila", "El almuerzo"], answer: 0, why: "Desarrolla la autonomía." },
-      { q: "Durante el trabajo en grupos, el docente debe reunirse primero con:", options: ["El director", "Nadie", "Solo el grupo de extensión", "El grupo que más lo necesita"], answer: 3, why: "El tiempo del docente va donde más importa." },
-      { q: "La diferenciación se convierte en expectativas bajas cuando:", options: ["Todos los niveles llegan a la meta", "Algunos estudiantes nunca practican la meta del grado", "Los grupos cambian seguido", "Se ofrecen apoyos"], answer: 1, why: "Todos los estudiantes necesitan la meta del grado." },
-      { q: "Las adaptaciones obligatorias del IEP y del plan 504 en una clase diferenciada:", options: ["Solo aplican en los exámenes", "Se reemplazan con los niveles", "Son opcionales", "Deben darse de todos modos"], answer: 3, why: "Son obligatorias." },
-      { q: "Los ejemplos hechos con IA deben revisarse en:", options: ["Solo la extensión", "Solo el tamaño de letra", "Variedad y estereotipos", "Nada"], answer: 2, why: "Los materiales deben ser justos y respetuosos." }
+      { objective: "O1", q: "Diferenciar significa:", options: ["Dar metas distintas", "Ajustar cómo llegan los estudiantes a la misma meta", "Clases separadas", "Menos trabajo para algunos"], answer: 1, why: "La misma meta, caminos distintos." },
+      { objective: "O1", q: "La preparación se refiere a:", options: ["La edad", "La puntualidad", "Lo que un estudiante ya sabe y puede hacer", "Solo la velocidad de lectura"], answer: 2, why: "Depende de cada habilidad." },
+      { objective: "O1", q: "Las versiones según intereses conservan:", options: ["Ninguna habilidad", "Habilidades distintas", "La misma habilidad", "Solo el tema"], answer: 2, why: "Cambia el contexto, no la habilidad." },
+      { objective: "O1", q: "¿Quién decide qué camino recibe cada estudiante?", options: ["El docente", "La IA", "El proveedor", "Solo los padres del estudiante"], answer: 0, why: "Los docentes leen las pruebas y deciden." },
+      { objective: "O2", q: "Una evaluación diagnóstica se aplica:", options: ["Solo a algunos estudiantes", "Al final del año", "Nunca", "Antes de enseñar"], answer: 3, why: "Muestra desde dónde empiezan los estudiantes." },
+      { objective: "O2", q: "Una buena evaluación diagnóstica incluye:", options: ["Solo las preguntas más difíciles", "Habilidades previas, el objetivo y una pregunta de reto", "Solo preguntas de opinión", "Nada sobre el objetivo"], answer: 1, why: "Muestra la variedad de preparación." },
+      { objective: "O2", q: "Las tareas por niveles apuntan a:", options: ["Solo los mejores estudiantes", "Objetivos distintos", "Ningún objetivo", "El mismo objetivo"], answer: 3, why: "Los niveles varían el apoyo y la complejidad, no la meta." },
+      { objective: "O2", q: "Una tarea de transferencia:", options: ["Copia una respuesta", "Cambia a un estudiante de escuela", "Usa una habilidad en una situación nueva", "Es repetir un examen"], answer: 2, why: "Profundiza el aprendizaje." },
+      { objective: "O3", q: "Un tablero de opciones suele tener:", options: ["Nueve casillas de actividades para la misma habilidad", "Una actividad", "Solo juegos", "Calificaciones"], answer: 0, why: "Una cuadrícula de formas de practicar." },
+      { objective: "O3", q: "La casilla obligatoria de un tablero de opciones:", options: ["Es opcional", "La completan todos los estudiantes", "Es para el docente", "Es solo para estudiantes avanzados"], answer: 1, why: "Asegura la práctica central." },
+      { objective: "O3", q: "Las casillas de un tablero de opciones deben tomar:", options: ["Más o menos el mismo tiempo", "Tiempos muy distintos", "Nada de tiempo", "Solo tiempo de tarea en casa"], answer: 0, why: "Una elección justa necesita un esfuerzo parecido." },
+      { objective: "O4", q: "Los puntajes de los estudiantes con nombres son:", options: ["Propiedad de las empresas de IA", "Públicos", "Seguros en cualquier aplicación", "Registros educativos protegidos por FERPA"], answer: 3, why: "Protégelos." },
+      { objective: "O4", q: "Reemplazar los nombres por códigos como E1 ayuda a:", options: ["Calificar más rápido", "Proteger la privacidad de los estudiantes al practicar con IA", "Ocultar calificaciones a los docentes", "Nada"], answer: 1, why: "Los códigos quitan los nombres identificadores." },
+      { objective: "O4", q: "Los estudiantes deben cambiar de grupo:", options: ["Solo al final del año", "Nunca", "Cuando nuevas pruebas muestran un cambio", "Al azar"], answer: 2, why: "Flexible significa cambiar según las pruebas." },
+      { objective: "O5", q: "Las clases diferenciadas suelen fallar por:", options: ["Aulas iluminadas", "Demasiadas ideas", "La logística y las rutinas", "Nombres cortos"], answer: 2, why: "Las rutinas las hacen funcionar." },
+      { objective: "O5", q: "“Pregunta a tres antes que a mí” es una rutina para:", options: ["Cuando los estudiantes se atascan", "Cuando los estudiantes terminan", "Hacer fila", "El almuerzo"], answer: 0, why: "Desarrolla la autonomía." },
+      { objective: "O5", q: "Durante el trabajo en grupos, el docente debe reunirse primero con:", options: ["El director", "Nadie", "Solo el grupo de extensión", "El grupo que más lo necesita"], answer: 3, why: "El tiempo del docente va donde más importa." },
+      { objective: "O6", q: "La diferenciación se convierte en expectativas bajas cuando:", options: ["Todos los niveles llegan a la meta", "Algunos estudiantes nunca practican la meta del grado", "Los grupos cambian seguido", "Se ofrecen apoyos"], answer: 1, why: "Todos los estudiantes necesitan la meta del grado." },
+      { objective: "O6", q: "Las adaptaciones obligatorias del IEP y del plan 504 en una clase diferenciada:", options: ["Solo aplican en los exámenes", "Se reemplazan con los niveles", "Son opcionales", "Deben darse de todos modos"], answer: 3, why: "Son obligatorias." },
+      { objective: "O6", q: "Los ejemplos hechos con IA deben revisarse en:", options: ["Solo la extensión", "Solo el tamaño de letra", "Variedad y estereotipos", "Nada"], answer: 2, why: "Los materiales deben ser justos y respetuosos." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      4,
+      6,
+      8,
+      11,
+      13,
+      14,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Evaluación diagnóstica",
+        objective: "O2",
+        notYet: "Menos de cinco preguntas, sin clave o sin relación con el objetivo.",
+        meets: "Cinco preguntas (habilidades previas, objetivo y reto) con clave.",
+        exceeds: "La clave también dice qué sugiere cada respuesta incorrecta."
+      },
+      {
+        name: "Tareas por niveles",
+        objective: "O2",
+        notYet: "Los niveles practican metas distintas, o el nivel 3 es solo más trabajo.",
+        meets: "Tres niveles (más apoyo, en nivel, extensión) que practican el mismo objetivo, con claves.",
+        exceeds: "El nivel 1 tiene apoyos claros y el nivel 3 es una verdadera tarea de transferencia."
+      },
+      {
+        name: "Tablero de opciones",
+        objective: "O3",
+        notYet: "Algunas casillas no practican la habilidad.",
+        meets: "Nueve casillas que practican la habilidad, con una casilla obligatoria en el centro.",
+        exceeds: "Las casillas toman más o menos el mismo tiempo y usan formas de trabajo distintas."
+      },
+      {
+        name: "Plan de agrupamiento",
+        objective: "O4",
+        notYet: "Usa nombres reales, o los grupos no cambian.",
+        meets: "Los grupos salen de los resultados inventados con códigos, y el plan dice cuándo y cómo pasan los estudiantes de un grupo a otro.",
+        exceeds: "Nombra la nueva revisión, como un boleto de salida, que hace cambiar a los estudiantes de grupo."
+      },
+      {
+        name: "Revisión de equidad",
+        objective: "O6",
+        notYet: "No se hicieron las revisiones de equidad.",
+        meets: "Se hicieron las cuatro revisiones (misma meta, movimiento, patrones, acceso) y se corrigió lo que falló.",
+        exceeds: "Puede decir qué cambió gracias a la revisión."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Docentes que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Docentes que dan al menos una clase diferenciada en los 30 días siguientes (encuesta de seguimiento)",
+      "Tiempo de planificación que los docentes dicen ahorrar al hacer versiones de las tareas",
+      "Escuelas donde los líderes hacen la revisión de equidad con un equipo"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Una computadora con un asistente de IA que tu distrito permita",
+      "Un objetivo real de una clase que enseñas",
+      "Una lista de grupo inventada con códigos (E1 a E24)",
+      "Unos 60 minutos en total: lecciones, práctica, comprobaciones y tarea final"
+    ],
+    facilitatorNotes: [
+      "Hazlo como una sesión de formación docente: respondan juntos la prueba inicial y luego pide a cada docente que traiga una clase que dará pronto.",
+      "Nunca permitas que los participantes peguen nombres ni puntajes reales de estudiantes en la IA; dales un grupo inventado con códigos.",
+      "Forma parejas de docentes del mismo grado o materia para que revisen los niveles del otro.",
+      "Califica la tarea final con la rúbrica y da comentarios sobre una fila en Todavía no a la vez.",
+      "Los líderes pueden cerrar haciendo juntos las cuatro revisiones de equidad sobre una clase compartida."
     ]
   }
 };

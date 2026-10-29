@@ -22,11 +22,35 @@ module.exports = {
     "Este curso no da dosis de medicamentos ni de vacunas. Las enfermedades, las vacunas y los medicamentos aprobados cambian según el país y la zona, así que sigue siempre a tu veterinario local o a tu técnico de sanidad animal y la etiqueta del producto. Cada lección dura unos cinco minutos y termina con una tarea con tus propios animales. Una comprobación de conocimientos cierra cada capítulo y un examen de 20 preguntas cierra el curso."
   ],
   finalTask: "Escribe un plan de salud de una página para tus animales (los tuyos, o un ejemplo como 3 vacas lecheras en Kiambu, 15 cabras en Kano o 200 gallinas ponedoras cerca de Kumasi): tu revisión diaria de salud, tu plan de alimento y agua incluida la temporada seca, dos reglas de corrales e higiene, el calendario de vacunas acordado con tu veterinario, tus reglas de bioseguridad (para aves: enfermedad de Newcastle), cómo vas a controlar las lombrices y las garrapatas, los registros que vas a llevar y las señales que significan que llamas de inmediato al veterinario, con su nombre y su número.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Pequeños ganaderos y ganaderos que están creciendo, pastores, avicultores, trabajadores agrícolas y jóvenes agricultores en Kenia, Nigeria, Ghana y en toda África que crían vacas, cabras, ovejas o gallinas.",
+    startingPoint: "La mayoría mira a sus animales todos los días y trata las enfermedades cuando las ve, muchas veces con medicinas compradas sin consejo de un veterinario. Pocos siguen un calendario de vacunas por escrito, tienen reglas de bioseguridad, registran los tratamientos y los periodos de retiro, o planean el alimento y el agua para la temporada seca.",
+    gap: "Un solo brote de enfermedad puede acabar con años de ahorros, y el mal alimento, los corrales sucios, los parásitos y el mal uso de medicinas bajan la leche, los huevos y el crecimiento, y pueden dañar a las personas. Un plan de salud sencillo y por escrito, hecho con un veterinario, mantiene sanos a los animales, evita pérdidas y hace que los alimentos de la finca sean seguros.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y frases cortas; cada término de sanidad animal se explica",
+      "Dispositivos: un teléfono básico y un cuaderno para los registros y el número del veterinario",
+      "No se dan dosis de medicinas ni de vacunas: las enfermedades, las vacunas y las medicinas aprobadas cambian según la zona; se sigue al veterinario y la etiqueta",
+      "Seguridad: algunas enfermedades de los animales contagian a las personas; nunca abras el cuerpo de un animal que murió de repente con sangrado",
+      "Tiempo: lecciones de unos 5 minutos que caben entre el cuidado de los animales"
+    ],
+    prerequisites: "Ninguno."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Durante la revisión diaria de tus animales", action: "identificar las señales de un animal sano y de uno enfermo, y apartar a uno que puede estar enfermo", standard: "nombrando al menos cinco señales de alerta y llamando al veterinario o al técnico de sanidad animal" },
+    { id: "O2", condition: "Para tus animales durante todo el año", action: "planear el alimento y el agua limpia, incluida la temporada seca", standard: "sin alimento con moho y con los cambios de alimento hechos poco a poco" },
+    { id: "O3", condition: "Para los corrales de tus animales", action: "revisar los corrales y fijar reglas de higiene para la finca", standard: "con corrales secos, con sombra y sin amontonar, los animales nuevos apartados y los enfermos separados" },
+    { id: "O4", condition: "Con un veterinario registrado o un técnico de sanidad animal", action: "acordar un calendario de vacunas por escrito y mantener las vacunas frías y sin caducar", standard: "con cada vacuna, los animales, la edad y cuándo repetirla" },
+    { id: "O5", condition: "Para una parvada de aves", action: "fijar reglas de bioseguridad y un plan ante un brote de la enfermedad de Newcastle", standard: "con la vacunación según el calendario del veterinario y los pasos a seguir si las aves mueren de repente" },
+    { id: "O6", condition: "Para tu rebaño o tu parvada", action: "planear el control de parásitos con tu veterinario, llevar un registro de tratamientos y hacer la lista de las señales que necesitan un veterinario de inmediato", standard: "anotando cada tratamiento con su periodo de retiro" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: El cuidado de todos los días",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Señales de un animal sano y de uno enfermo",
           minutes: 5,
           goal: "Hacer una revisión rápida de salud cada día y detectar un animal que puede estar enfermo.",
@@ -43,9 +67,14 @@ module.exports = {
             { title: "Actúa temprano", bullets: ["Revisa a todos los animales cada día", "Separa a cualquier animal enfermo", "Llama a tu veterinario o técnico de sanidad animal"] }
           ],
           tryIt: "Mañana, a la hora de dar de comer, revisa a cada animal con la lista: atento, come, rumia, ojos, nariz, pelo, respiración, estiércol. Escribe una línea por animal (o por corral, si son aves). Marca los que vigilarías o por los que llamarías al veterinario.",
-          youCanNow: "hacer una revisión de salud diaria y detectar las señales de un animal enfermo."
+          youCanNow: "hacer una revisión de salud diaria y detectar las señales de un animal enfermo.",
+          quickCheck: [
+            { objective: "O1", q: "¿Cuál de estas es una señal de alerta en una gallina?", options: ["La cresta roja y brillante", "Pone huevos como siempre", "Está activa y come bien", "Las plumas erizadas"], answer: 3, why: "Las plumas erizadas son una señal de alerta; una gallina sana está activa y tiene la cresta roja y brillante." },
+            { objective: "O1", q: "Tienes mucho trabajo y planeas revisar a tus animales solo una vez por semana. ¿Cuál es el riesgo?", options: ["Que los animales coman más", "Que la enfermedad se detecte tarde, cuando cuesta más tratarla y puede haberse contagiado", "Que mejore la leche", "No hay ningún riesgo"], answer: 1, why: "Una revisión diaria detecta la enfermedad a tiempo, cuando es más barato tratarla y antes de que se contagie." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Alimento y agua",
           minutes: 5,
           goal: "Planear el alimento y el agua limpia de tus animales durante todo el año, incluida la temporada seca.",
@@ -62,9 +91,14 @@ module.exports = {
             { title: "Planea y protege", bullets: ["Guarda heno, ensilaje o rastrojo para la temporada seca", "Nunca des alimento con moho", "Cambia de alimento poco a poco"] }
           ],
           tryIt: "Haz la lista de los alimentos que reciben ahora tus animales y de dónde sale cada uno. Marca cuáles se acaban en la temporada seca y escribe una forma de guardar o sembrar más antes de esa fecha. Revisa hoy cada bebedero y limpia los que estén sucios.",
-          youCanNow: "planear el alimento y el agua limpia de tus animales durante todo el año."
+          youCanNow: "planear el alimento y el agua limpia de tus animales durante todo el año.",
+          quickCheck: [
+            { objective: "O2", q: "¿Cuál de estos es forraje para las vacas?", options: ["El rastrojo de maíz y la paja de frijol", "Solo sal", "Solo un bloque de minerales", "Agua limpia"], answer: 0, why: "El forraje incluye pasto, forraje sembrado y rastrojos como el rastrojo de maíz y la paja de frijol." },
+            { objective: "O2", q: "En un día caluroso, el bebedero de tu vaca lechera está vacío y sucio. ¿Qué haces?", options: ["Esperar a la tarde", "Darle más alimento seco en su lugar", "Limpiarlo y llenarlo de agua limpia, a la sombra", "Dejar que tome de un charco"], answer: 2, why: "Los animales necesitan agua limpia todos los días, más con el calor, y sin ella la leche baja rápido." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Corrales e higiene",
           minutes: 5,
           goal: "Revisar los corrales de tus animales y fijar tres reglas de higiene para tu finca.",
@@ -83,17 +117,21 @@ module.exports = {
           ],
           sources: [FAO_BIOSEC],
           tryIt: "Recorre tu corral o gallinero con la lista: seco, con sombra, ventilado, que drene, sin amontonar, bebederos limpios. Escribe una cosa que vas a arreglar esta semana y tres reglas de higiene para todos los que trabajan con tus animales.",
-          youCanNow: "revisar los corrales y mantenerlos limpios, mantener apartados a los animales enfermos y nuevos, y actuar con seguridad ante una muerte repentina."
+          youCanNow: "revisar los corrales y mantenerlos limpios, mantener apartados a los animales enfermos y nuevos, y actuar con seguridad ante una muerte repentina.",
+          quickCheck: [
+            { objective: "O3", q: "¿Por qué sacar seguido el estiércol y la cama mojada?", options: ["Para que los animales coman menos", "Para ahorrar alimento", "Porque un corral sucio y húmedo contagia enfermedades, lombrices y problemas de patas", "Para que el corral se vea vacío"], answer: 2, why: "Los corrales amontonados, húmedos y sucios contagian enfermedades, lombrices y problemas de patas." },
+            { objective: "O3", q: "Se metió la lluvia en tu gallinero y la cama está mojada. ¿Qué haces?", options: ["Cambiar la cama mojada por cama seca y arreglar la gotera", "Dejar que se seque sola", "Echar alimento encima", "Sacar a las aves a la lluvia"], answer: 0, why: "Las aves necesitan una cama seca; la cama mojada se cambia y se arregla la causa." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: El cuidado de todos los días",
         questions: [
-          { q: "¿Cuál es una señal de una vaca o una cabra sana?", options: ["Está sola con la cabeza baja", "Rumia mientras descansa", "Le escurren los ojos y la nariz", "No bebe"], answer: 1, why: "Rumiar muestra que el estómago funciona normal." },
-          { q: "Una cabra no come y se aparta del rebaño. ¿Qué haces primero?", options: ["Esperas una semana", "La vendes de inmediato", "La separas y llamas a tu veterinario o a tu técnico de sanidad animal", "Le das cualquier medicina de la tienda"], answer: 2, why: "Aislarla protege al rebaño, y el veterinario puede encontrar la causa." },
-          { q: "Tu salvado de maíz se enmoheció. ¿Qué debes hacer?", options: ["Tirarlo; no dárselo a los animales", "Dárselo a las gallinas", "Mezclarlo con alimento bueno", "Dárselo solo a las vacas en ordeña"], answer: 0, why: "El moho puede traer aflatoxina, que daña a los animales y pasa a la leche y los huevos." },
-          { q: "¿Cómo debes prepararte para la temporada seca?", options: ["Vender todos los bebederos", "Dar heno con moho", "Dejar de dar agua", "Sembrar forraje y guardar heno, ensilaje o rastrojo"], answer: 3, why: "El alimento guardado ayuda a los animales a pasar la temporada seca." },
-          { q: "Una vaca muere de repente con sangre que le sale de la nariz. ¿Qué haces?", options: ["La abres para ver la causa", "No la abres; mantienes lejos a la gente y llamas de inmediato al veterinario", "Vendes la carne rápido", "Se la dejas a los perros"], answer: 1, why: "La muerte repentina con sangrado puede ser ántrax, que puede contagiar a las personas; el cadáver no se debe abrir." }
+          { objective: "O1", q: "¿Cuál es una señal de una vaca o una cabra sana?", options: ["Está sola con la cabeza baja", "Rumia mientras descansa", "Le escurren los ojos y la nariz", "No bebe"], answer: 1, why: "Rumiar muestra que el estómago funciona normal." },
+          { objective: "O1", q: "Una cabra no come y se aparta del rebaño. ¿Qué haces primero?", options: ["Esperas una semana", "La vendes de inmediato", "La separas y llamas a tu veterinario o a tu técnico de sanidad animal", "Le das cualquier medicina de la tienda"], answer: 2, why: "Aislarla protege al rebaño, y el veterinario puede encontrar la causa." },
+          { objective: "O2", q: "Tu salvado de maíz se enmoheció. ¿Qué debes hacer?", options: ["Tirarlo; no dárselo a los animales", "Dárselo a las gallinas", "Mezclarlo con alimento bueno", "Dárselo solo a las vacas en ordeña"], answer: 0, why: "El moho puede traer aflatoxina, que daña a los animales y pasa a la leche y los huevos." },
+          { objective: "O2", q: "¿Cómo debes prepararte para la temporada seca?", options: ["Vender todos los bebederos", "Dar heno con moho", "Dejar de dar agua", "Sembrar forraje y guardar heno, ensilaje o rastrojo"], answer: 3, why: "El alimento guardado ayuda a los animales a pasar la temporada seca." },
+          { objective: "O3", q: "Una vaca muere de repente con sangre que le sale de la nariz. ¿Qué haces?", options: ["La abres para ver la causa", "No la abres; mantienes lejos a la gente y llamas de inmediato al veterinario", "Vendes la carne rápido", "Se la dejas a los perros"], answer: 1, why: "La muerte repentina con sangrado puede ser ántrax, que puede contagiar a las personas; el cadáver no se debe abrir." }
         ]
       }
     },
@@ -101,6 +139,7 @@ module.exports = {
       name: "Capítulo 2: Prevenir y tratar las enfermedades",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Calendarios de vacunas con tu veterinario local",
           minutes: 5,
           goal: "Acordar por escrito un calendario de vacunas con un veterinario registrado y mantener las vacunas en buen estado.",
@@ -119,9 +158,14 @@ module.exports = {
           ],
           sources: [VCN],
           tryIt: "Llama o visita a tu veterinario local o a tu técnico de sanidad animal y pregúntale: ¿contra qué enfermedades debo vacunar aquí a mis animales, y cuándo? Escribe su respuesta como un calendario de 12 meses y guarda en tu teléfono el número del veterinario.",
-          youCanNow: "conseguir un calendario de vacunas con un veterinario registrado y mantener las vacunas frías y eficaces."
+          youCanNow: "conseguir un calendario de vacunas con un veterinario registrado y mantener las vacunas frías y eficaces.",
+          quickCheck: [
+            { objective: "O4", q: "¿Cuál es una enfermedad de las aves que se previene con vacuna?", options: ["La fiebre de la Costa Este", "La enfermedad de Newcastle", "La brucelosis en las cabras", "La pudrición de las patas"], answer: 1, why: "La enfermedad de Newcastle, la enfermedad de Gumboro y la viruela aviar son enfermedades comunes de las aves que se previenen con vacunas." },
+            { objective: "O4", q: "Tu veterinario puso las primeras vacunas, pero no te dio nada por escrito. ¿Qué le pides?", options: ["Una vacuna más barata", "Nada; te vas a acordar", "Una vacuna para cada enfermedad del mundo", "Un calendario del año por escrito: cada vacuna, qué animales, a qué edad y cuándo repetirla"], answer: 3, why: "Un calendario por escrito del veterinario mantiene a tiempo cada vacuna." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Bioseguridad de las aves y enfermedad de Newcastle",
           minutes: 5,
           goal: "Fijar reglas de bioseguridad que mantengan fuera de tu parvada la enfermedad de Newcastle y otras infecciones.",
@@ -140,9 +184,14 @@ module.exports = {
           ],
           sources: [WOAH_ND, FAO_ND_VILLAGE, FAO_BIOSEC],
           tryIt: "Escribe cinco reglas de bioseguridad para tus aves y pégalas en la puerta del gallinero. Luego pregunta a tu veterinario o a tu técnico de sanidad animal cuándo toca vacunar otra vez a tu parvada contra la enfermedad de Newcastle y agrégalo a tu calendario.",
-          youCanNow: "proteger una parvada de la enfermedad de Newcastle con bioseguridad y vacunación, y actuar rápido si mueren aves."
+          youCanNow: "proteger una parvada de la enfermedad de Newcastle con bioseguridad y vacunación, y actuar rápido si mueren aves.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué es la bioseguridad?", options: ["Un tipo de vacuna", "Una raza de gallina", "Un suplemento para el alimento", "Los pasos sencillos de todos los días que mantienen los gérmenes fuera de una finca"], answer: 3, why: "La bioseguridad son los pasos de todos los días que mantienen fuera los gérmenes, y muchos cuestan poco o nada." },
+            { objective: "O5", q: "Un vecino cuyas aves han estado enfermas quiere que le prestes tus charolas de huevo y tus comederos. ¿Qué haces?", options: ["Prestárselos y volver a usarlos cuando te los regrese", "No compartir el equipo, porque los gérmenes se pasan en él", "Prestárselos solo por un día", "Cambiarle tus aves por las suyas"], answer: 1, why: "La enfermedad de Newcastle se contagia por el alimento, el agua, el equipo y la ropa contaminados." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Parásitos, registros y cuándo llamar al veterinario",
           minutes: 6,
           goal: "Planear el control de parásitos con tu veterinario, llevar un registro de tratamientos y conocer las señales que necesitan un veterinario de inmediato.",
@@ -161,17 +210,21 @@ module.exports = {
           ],
           sources: [FAO_PRUDENT, WOAH_ND],
           tryIt: "Tarea final: escribe tu plan de salud de una página. Incluye tu revisión diaria, tu plan de alimento y agua, las reglas del corral, el calendario de vacunas de tu veterinario, las reglas de bioseguridad, el plan contra parásitos, los registros que vas a llevar y las señales que significan que llamas al veterinario, con su nombre y su número arriba.",
-          youCanNow: "controlar los parásitos con tu veterinario, llevar registros de tratamientos con sus periodos de retiro y saber cuándo llamar al veterinario."
+          youCanNow: "controlar los parásitos con tu veterinario, llevar registros de tratamientos con sus periodos de retiro y saber cuándo llamar al veterinario.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué enfermedad transmiten las garrapatas a las vacas en África Oriental?", options: ["La fiebre de la Costa Este", "La enfermedad de Newcastle", "La viruela aviar", "La PPR"], answer: 0, why: "Las garrapatas transmiten la fiebre de la Costa Este a las vacas en África Oriental." },
+            { objective: "O6", q: "Hoy trataste a una cabra. ¿Qué escribes en el registro?", options: ["Nada, si la cabra se ve mejor", "Solo el precio de la medicina", "La fecha, el producto, quién lo puso y cuándo termina el periodo de retiro", "El nombre del vecino"], answer: 2, why: "Registrar cada tratamiento con su periodo de retiro mantiene la leche y la carne seguras para vender y comer." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Prevenir y tratar las enfermedades",
         questions: [
-          { q: "¿Quién debe fijar el calendario de vacunas de tus animales?", options: ["Un vecino de otro país", "El cartel de la tienda de alimento", "Un veterinario registrado o un técnico de sanidad animal que conozca tu zona", "Cualquiera en internet"], answer: 2, why: "Qué vacunas se necesitan, y cuándo, depende de las enfermedades que hay en tu zona." },
-          { q: "Compras una vacuna y viajas tres horas al sol hasta tu casa. ¿Cuál es el riesgo?", options: ["El calor puede dañar la vacuna y que no proteja a tus animales", "Se vuelve más fuerte", "No hay ningún riesgo", "Se convierte en desparasitante"], answer: 0, why: "Las vacunas se deben mantener frías desde la tienda hasta el animal." },
-          { q: "¿Cuál es una señal de la enfermedad de Newcastle en las gallinas?", options: ["Crestas más brillantes", "Más huevos", "Crecimiento más rápido", "Cuello torcido, boquear y muertes repentinas"], answer: 3, why: "La WOAH menciona señales respiratorias y nerviosas, baja en la postura y muchas muertes." },
-          { q: "Muchas de tus aves mueren de repente. ¿Qué debes hacer?", options: ["Vender rápido las demás en el mercado", "Encerrar la parvada, llamar al veterinario y no mover ni vender aves", "Regalar las aves muertas a los vecinos", "Comprar aves nuevas ese mismo día"], answer: 1, why: "Mover o vender aves contagia la enfermedad; el veterinario tiene que encontrar la causa." },
-          { q: "¿Qué es un periodo de retiro?", options: ["El tiempo antes de que se pueda vender o consumir la leche, los huevos o la carne de un animal tratado", "Unas vacaciones para los productores", "El tiempo que dura una vacuna", "El tiempo para secar el grano"], answer: 0, why: "Mantiene los residuos de medicamentos fuera de los alimentos." }
+          { objective: "O4", q: "¿Quién debe fijar el calendario de vacunas de tus animales?", options: ["Un vecino de otro país", "El cartel de la tienda de alimento", "Un veterinario registrado o un técnico de sanidad animal que conozca tu zona", "Cualquiera en internet"], answer: 2, why: "Qué vacunas se necesitan, y cuándo, depende de las enfermedades que hay en tu zona." },
+          { objective: "O4", q: "Compras una vacuna y viajas tres horas al sol hasta tu casa. ¿Cuál es el riesgo?", options: ["El calor puede dañar la vacuna y que no proteja a tus animales", "Se vuelve más fuerte", "No hay ningún riesgo", "Se convierte en desparasitante"], answer: 0, why: "Las vacunas se deben mantener frías desde la tienda hasta el animal." },
+          { objective: "O5", q: "¿Cuál es una señal de la enfermedad de Newcastle en las gallinas?", options: ["Crestas más brillantes", "Más huevos", "Crecimiento más rápido", "Cuello torcido, boquear y muertes repentinas"], answer: 3, why: "La WOAH menciona señales respiratorias y nerviosas, baja en la postura y muchas muertes." },
+          { objective: "O5", q: "Muchas de tus aves mueren de repente. ¿Qué debes hacer?", options: ["Vender rápido las demás en el mercado", "Encerrar la parvada, llamar al veterinario y no mover ni vender aves", "Regalar las aves muertas a los vecinos", "Comprar aves nuevas ese mismo día"], answer: 1, why: "Mover o vender aves contagia la enfermedad; el veterinario tiene que encontrar la causa." },
+          { objective: "O6", q: "¿Qué es un periodo de retiro?", options: ["El tiempo antes de que se pueda vender o consumir la leche, los huevos o la carne de un animal tratado", "Unas vacaciones para los productores", "El tiempo que dura una vacuna", "El tiempo para secar el grano"], answer: 0, why: "Mantiene los residuos de medicamentos fuera de los alimentos." }
         ]
       }
     }
@@ -179,26 +232,106 @@ module.exports = {
   quiz: {
     title: "Examen final: Salud y manejo del ganado",
     questions: [
-      { q: "¿Cuándo es un buen momento para la revisión diaria de salud?", options: ["Una vez al mes", "Solo cuando muere un animal", "A la hora de dar de comer o de ordeñar", "Nunca; los animales se cuidan solos"], answer: 2, why: "A la hora de dar de comer o de ordeñar, los animales están juntos y activos." },
-      { q: "Una gallina sana normalmente tiene:", options: ["La cresta pálida y encogida", "Las plumas erizadas", "El cuello torcido", "La cresta roja y brillante, y está activa"], answer: 3, why: "La cresta brillante y la actividad son señales de buena salud." },
-      { q: "¿Cuál es una señal de alerta en una vaca lechera?", options: ["Una baja repentina de la leche", "Que rumie", "Ojos brillantes", "Que coma bien"], answer: 0, why: "Una baja repentina de la leche muchas veces quiere decir enfermedad." },
-      { q: "¿Qué va primero al alimentar a los animales?", options: ["Suplementos caros", "Agua limpia todos los días", "Solo bloques de minerales", "Heno con moho"], answer: 1, why: "Sin suficiente agua limpia, la salud y la producción bajan rápido." },
-      { q: "El pasto Napier y la alfalfa son ejemplos de:", options: ["Vacunas", "Desparasitantes", "Forraje", "Cama"], answer: 2, why: "Son cultivos de forraje que se siembran para alimentar a los animales." },
-      { q: "¿Por qué cambiar el alimento de los animales poco a poco durante varios días?", options: ["Para evitar problemas de estómago", "Porque el alimento nuevo siempre es malo", "Para ahorrar agua", "No importa"], answer: 0, why: "Los cambios bruscos de alimento alteran la digestión." },
-      { q: "Un buen corral es:", options: ["Amontonado y caliente", "Húmedo y oscuro", "Seco, con sombra, ventilado y sin amontonar", "Abierto a los ladrones"], answer: 2, why: "Un corral seco, ventilado y sin amontonar reduce las enfermedades." },
-      { q: "Compras tres cabras nuevas. ¿Qué debes hacer antes de juntarlas con tu rebaño?", options: ["Juntarlas de inmediato", "Mantenerlas apartadas durante el tiempo que indique tu veterinario", "Vender tus cabras viejas", "Darles antibióticos por si acaso"], answer: 1, why: "Mantener apartados a los animales nuevos evita que traigan enfermedades." },
-      { q: "Una zoonosis es:", options: ["Un tipo de forraje", "Una vacuna", "Una enfermedad que puede pasar de los animales a las personas y al revés", "Un gallinero"], answer: 2, why: "La brucelosis y el ántrax son ejemplos." },
-      { q: "La PPR es una enfermedad grave de:", options: ["Las cabras y las ovejas", "Las gallinas", "El maíz", "Los peces"], answer: 0, why: "La peste de los pequeños rumiantes afecta a las cabras y las ovejas." },
-      { q: "En Nigeria, ¿qué organismo lleva el registro de médicos veterinarios?", options: ["La Agencia Meteorológica de Nigeria", "El Veterinary Council of Nigeria", "El Banco Central", "Una empresa de alimento"], answer: 1, why: "El VCN registra a los médicos veterinarios." },
-      { q: "¿Dónde debes comprar las vacunas?", options: ["Con cualquiera a la orilla del camino", "En internet, con vendedores desconocidos", "Del refrigerador viejo de un vecino", "En una agroveterinaria con licencia, revisando la fecha de caducidad"], answer: 3, why: "Es más probable que funcionen las vacunas de vendedores con licencia y que no estén caducadas." },
-      { q: "Según la WOAH, la enfermedad de Newcastle se contagia por:", options: ["Solo la luz del sol", "El agua limpia", "Solo las aves vacunadas", "Las aves enfermas, el excremento, y el alimento, el agua, el equipo y la ropa contaminados"], answer: 3, why: "El contacto directo y los objetos contaminados contagian el virus." },
-      { q: "¿Cuál es un paso de bioseguridad de bajo costo?", options: ["Dejar que las visitas caminen por el gallinero", "Compartir cajas con otras fincas sin limpiarlas", "Lavarse las manos y usar un tapete sanitario antes de entrar", "Dejar que los pájaros silvestres coman del comedero"], answer: 2, why: "La higiene sencilla mantiene fuera los gérmenes." },
-      { q: "Para las gallinas de traspatio, la FAO describe vacunas contra Newcastle que:", options: ["Se mezclan en el concreto", "Son solo para vacas", "Nunca hacen falta", "Se ponen con gotas en el ojo y aguantan mejor el calor"], answer: 3, why: "Las vacunas termoestables como la I-2 sirven para las parvadas de traspatio." },
-      { q: "Después de un brote de Newcastle, la WOAH aconseja dejar el gallinero limpio sin aves durante:", options: ["1 día", "21 días", "2 horas", "Se puede volver a poblar de inmediato"], answer: 1, why: "La WOAH indica 21 días vacío antes de volver a poblarlo." },
-      { q: "¿Cuál es una señal de lombrices en las cabras?", options: ["Crecimiento rápido y pelo brillante", "Párpados rojos y brillantes", "Comer más de lo normal y subir de peso", "Poco crecimiento, panza abultada y párpados pálidos"], answer: 3, why: "Las lombrices les quitan sangre y nutrientes, y causan estas señales." },
-      { q: "¿Cómo decides la dosis de un desparasitante?", options: ["A ojo", "Usas la mitad para ahorrar", "Sigues la etiqueta o a tu veterinario", "Usas el doble para estar seguro"], answer: 2, why: "Las dosis equivocadas dañan a los animales o crean resistencia." },
-      { q: "Una vaca recibió un tratamiento ayer y el periodo de retiro no ha terminado. ¿Qué pasa con su leche?", options: ["La vendes como siempre", "No la vendas ni la tomes hasta que termine el periodo de retiro", "La mezclas con otra leche", "La hierves y la vendes"], answer: 1, why: "La leche durante el periodo de retiro puede traer residuos de medicamentos." },
-      { q: "¿Qué situación quiere decir que debes llamar de inmediato al veterinario?", options: ["Varios animales enfermos al mismo tiempo", "Un animal que rumia", "Gallinas que ponen como siempre", "Un becerro que bebe bien"], answer: 0, why: "Varios animales enfermos pueden indicar una enfermedad que se está contagiando." }
+      { objective: "O1", q: "¿Cuándo es un buen momento para la revisión diaria de salud?", options: ["Una vez al mes", "Solo cuando muere un animal", "A la hora de dar de comer o de ordeñar", "Nunca; los animales se cuidan solos"], answer: 2, why: "A la hora de dar de comer o de ordeñar, los animales están juntos y activos." },
+      { objective: "O1", q: "Una gallina sana normalmente tiene:", options: ["La cresta pálida y encogida", "Las plumas erizadas", "El cuello torcido", "La cresta roja y brillante, y está activa"], answer: 3, why: "La cresta brillante y la actividad son señales de buena salud." },
+      { objective: "O1", q: "¿Cuál es una señal de alerta en una vaca lechera?", options: ["Una baja repentina de la leche", "Que rumie", "Ojos brillantes", "Que coma bien"], answer: 0, why: "Una baja repentina de la leche muchas veces quiere decir enfermedad." },
+      { objective: "O2", q: "¿Qué va primero al alimentar a los animales?", options: ["Suplementos caros", "Agua limpia todos los días", "Solo bloques de minerales", "Heno con moho"], answer: 1, why: "Sin suficiente agua limpia, la salud y la producción bajan rápido." },
+      { objective: "O2", q: "El pasto Napier y la alfalfa son ejemplos de:", options: ["Vacunas", "Desparasitantes", "Forraje", "Cama"], answer: 2, why: "Son cultivos de forraje que se siembran para alimentar a los animales." },
+      { objective: "O2", q: "¿Por qué cambiar el alimento de los animales poco a poco durante varios días?", options: ["Para evitar problemas de estómago", "Porque el alimento nuevo siempre es malo", "Para ahorrar agua", "No importa"], answer: 0, why: "Los cambios bruscos de alimento alteran la digestión." },
+      { objective: "O3", q: "Un buen corral es:", options: ["Amontonado y caliente", "Húmedo y oscuro", "Seco, con sombra, ventilado y sin amontonar", "Abierto a los ladrones"], answer: 2, why: "Un corral seco, ventilado y sin amontonar reduce las enfermedades." },
+      { objective: "O3", q: "Compras tres cabras nuevas. ¿Qué debes hacer antes de juntarlas con tu rebaño?", options: ["Juntarlas de inmediato", "Mantenerlas apartadas durante el tiempo que indique tu veterinario", "Vender tus cabras viejas", "Darles antibióticos por si acaso"], answer: 1, why: "Mantener apartados a los animales nuevos evita que traigan enfermedades." },
+      { objective: "O3", q: "Una zoonosis es:", options: ["Un tipo de forraje", "Una vacuna", "Una enfermedad que puede pasar de los animales a las personas y al revés", "Un gallinero"], answer: 2, why: "La brucelosis y el ántrax son ejemplos." },
+      { objective: "O4", q: "La PPR es una enfermedad grave de:", options: ["Las cabras y las ovejas", "Las gallinas", "El maíz", "Los peces"], answer: 0, why: "La peste de los pequeños rumiantes afecta a las cabras y las ovejas." },
+      { objective: "O4", q: "En Nigeria, ¿qué organismo lleva el registro de médicos veterinarios?", options: ["La Agencia Meteorológica de Nigeria", "El Veterinary Council of Nigeria", "El Banco Central", "Una empresa de alimento"], answer: 1, why: "El VCN registra a los médicos veterinarios." },
+      { objective: "O4", q: "¿Dónde debes comprar las vacunas?", options: ["Con cualquiera a la orilla del camino", "En internet, con vendedores desconocidos", "Del refrigerador viejo de un vecino", "En una agroveterinaria con licencia, revisando la fecha de caducidad"], answer: 3, why: "Es más probable que funcionen las vacunas de vendedores con licencia y que no estén caducadas." },
+      { objective: "O5", q: "Según la WOAH, la enfermedad de Newcastle se contagia por:", options: ["Solo la luz del sol", "El agua limpia", "Solo las aves vacunadas", "Las aves enfermas, el excremento, y el alimento, el agua, el equipo y la ropa contaminados"], answer: 3, why: "El contacto directo y los objetos contaminados contagian el virus." },
+      { objective: "O5", q: "¿Cuál es un paso de bioseguridad de bajo costo?", options: ["Dejar que las visitas caminen por el gallinero", "Compartir cajas con otras fincas sin limpiarlas", "Lavarse las manos y usar un tapete sanitario antes de entrar", "Dejar que los pájaros silvestres coman del comedero"], answer: 2, why: "La higiene sencilla mantiene fuera los gérmenes." },
+      { objective: "O5", q: "Para las gallinas de traspatio, la FAO describe vacunas contra Newcastle que:", options: ["Se mezclan en el concreto", "Son solo para vacas", "Nunca hacen falta", "Se ponen con gotas en el ojo y aguantan mejor el calor"], answer: 3, why: "Las vacunas termoestables como la I-2 sirven para las parvadas de traspatio." },
+      { objective: "O5", q: "Después de un brote de Newcastle, la WOAH aconseja dejar el gallinero limpio sin aves durante:", options: ["1 día", "21 días", "2 horas", "Se puede volver a poblar de inmediato"], answer: 1, why: "La WOAH indica 21 días vacío antes de volver a poblarlo." },
+      { objective: "O6", q: "¿Cuál es una señal de lombrices en las cabras?", options: ["Crecimiento rápido y pelo brillante", "Párpados rojos y brillantes", "Comer más de lo normal y subir de peso", "Poco crecimiento, panza abultada y párpados pálidos"], answer: 3, why: "Las lombrices les quitan sangre y nutrientes, y causan estas señales." },
+      { objective: "O6", q: "¿Cómo decides la dosis de un desparasitante?", options: ["A ojo", "Usas la mitad para ahorrar", "Sigues la etiqueta o a tu veterinario", "Usas el doble para estar seguro"], answer: 2, why: "Las dosis equivocadas dañan a los animales o crean resistencia." },
+      { objective: "O6", q: "Una vaca recibió un tratamiento ayer y el periodo de retiro no ha terminado. ¿Qué pasa con su leche?", options: ["La vendes como siempre", "No la vendas ni la tomes hasta que termine el periodo de retiro", "La mezclas con otra leche", "La hierves y la vendes"], answer: 1, why: "La leche durante el periodo de retiro puede traer residuos de medicamentos." },
+      { objective: "O6", q: "¿Qué situación quiere decir que debes llamar de inmediato al veterinario?", options: ["Varios animales enfermos al mismo tiempo", "Un animal que rumia", "Gallinas que ponen como siempre", "Un becerro que bebe bien"], answer: 0, why: "Varios animales enfermos pueden indicar una enfermedad que se está contagiando." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      2,
+      3,
+      6,
+      7,
+      9,
+      11,
+      12,
+      16,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte del plan y revísala de nuevo.",
+    criteria: [
+      {
+        name: "Revisión diaria",
+        objective: "O1",
+        notYet: "No hay revisión diaria, o no enumera señales de alerta.",
+        meets: "Una revisión diaria a la hora de dar de comer o de ordeñar, con las principales señales de alerta y qué hacer.",
+        exceeds: "Ajusta la revisión a cada tipo de animal que cría."
+      },
+      {
+        name: "Alimento, agua y corrales",
+        objective: "O2",
+        notYet: "No hay plan para la temporada seca, o faltan reglas de corrales e higiene.",
+        meets: "Alimento y agua limpia durante todo el año con un plan para la temporada seca, y dos reglas de corrales e higiene.",
+        exceeds: "Incluye sembrar o guardar forraje y mantener apartados a los animales nuevos."
+      },
+      {
+        name: "Calendario de vacunas",
+        objective: "O4",
+        notYet: "No hay calendario, o no se acordó con un veterinario.",
+        meets: "Un calendario por escrito de un veterinario registrado, con cómo se mantienen las vacunas frías y sin caducar.",
+        exceeds: "Anota las campañas del gobierno y el nombre y el número del veterinario."
+      },
+      {
+        name: "Bioseguridad",
+        objective: "O5",
+        notYet: "No hay reglas de bioseguridad.",
+        meets: "Reglas de bioseguridad y, para las aves, la vacunación contra Newcastle y los pasos si las aves mueren de repente.",
+        exceeds: "Ya usa pasos de bajo costo, como lavarse las manos y un tapete sanitario."
+      },
+      {
+        name: "Parásitos, registros y el veterinario",
+        objective: "O6",
+        notYet: "No hay registros, o las dosis son adivinadas.",
+        meets: "Control de parásitos planeado con el veterinario, un registro de tratamientos con los periodos de retiro, y las señales que quieren decir llamar de inmediato al veterinario.",
+        exceeds: "Los registros también cubren los nacimientos, los pesos o la producción, y las muertes."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que terminan el curso y obtienen Cumple o Supera en cada fila de la rúbrica del plan de salud",
+      "Participantes que dicen tener un calendario de vacunas por escrito de un veterinario registrado en un plazo de 60 días (encuesta de seguimiento)",
+      "Cambio en las muertes de animales o aves y en la producción de leche o huevos que reportan los participantes después de seis meses",
+      "Participantes que dicen llevar registros de tratamientos y respetar los periodos de retiro"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un cuaderno o una hoja de cálculo en el teléfono para los registros",
+      "El número de teléfono de un veterinario registrado o un técnico de sanidad animal",
+      "Acceso a los propios animales para la revisión diaria",
+      "Unos 60 minutos en total, en sesiones cortas, más tiempo para escribir el plan de salud"
+    ],
+    facilitatorNotes: [
+      "En un grupo de agricultores: hagan juntos la prueba inicial y luego practiquen la revisión diaria de salud con animales reales.",
+      "Invita a un veterinario registrado o a un técnico de sanidad animal a explicar las enfermedades y las vacunas locales; no des dosis tú.",
+      "Lávense las manos después de tocar a los animales, y nunca toquen animales que murieron de repente con sangrado.",
+      "Ayuda a cada participante a anotar el nombre y el número de su veterinario antes de irse.",
+      "Califica el plan de salud con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

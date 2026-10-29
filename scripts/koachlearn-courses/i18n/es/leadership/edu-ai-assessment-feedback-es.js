@@ -16,11 +16,35 @@ module.exports = {
     "Practica solo con trabajos inventados o con trabajos a los que les quitaste todo dato identificador, y usa solo herramientas que tu distrito haya aprobado para trabajos de estudiantes. Cada capítulo termina con una comprobación de conocimientos y el curso termina con un examen de 20 preguntas. Este es el curso 4 de 8 de IA para líderes escolares y educativos."
   ],
   finalTask: "Crea un paquete de evaluación para un objetivo: cinco preguntas alineadas con una clave que revisaste, una rúbrica de cuatro niveles con tres o cuatro criterios y una versión para estudiantes, un boleto de salida de tres preguntas y un banco de al menos ocho comentarios ligados a la rúbrica. Prueba el proceso de retroalimentación con tres respuestas inventadas, cambia al menos un comentario redactado por la IA y escribe tú las calificaciones.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Docentes, coaches pedagógicos, responsables de evaluación y directores de escuelas de Estados Unidos que escriben evaluaciones, dan retroalimentación o apoyan a docentes que lo hacen.",
+    startingPoint: "Pueden planear una clase con IA y revisarla, y conocen lo básico de FERPA de los cursos anteriores. Escriben las evaluaciones y la retroalimentación a mano, y quizá no saben bien cómo responder cuando sospechan que un estudiante usó IA.",
+    gap: "La evaluación y la retroalimentación ocupan gran parte del tiempo de los docentes, y la IA puede ayudar, pero las calificaciones tienen mucho peso. Los educadores necesitan crear con IA evaluaciones alineadas, usar un proceso en el que la IA redacta y el docente decide, proteger el trabajo de los estudiantes y manejar con justicia la sospecha de uso de IA.",
+    constraints: [
+      "Practicar solo con trabajos de estudiantes inventados o con trabajos a los que se les quitó todo dato que identifique",
+      "Usar solo herramientas que el distrito aprobó para el trabajo de los estudiantes",
+      "Los docentes deciden cada calificación; la IA nunca califica a los estudiantes por su cuenta",
+      "El puntaje de un detector de escritura con IA nunca es la única evidencia de mal uso",
+      "Tiempo: lecciones cortas que caben en una jornada de clases"
+    ],
+    prerequisites: "\"IA para líderes escolares y educativos 3: IA para planear clases\"."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con un objetivo", action: "generar con IA preguntas alineadas en tres niveles y resolver cada respuesta de la clave", standard: "corrigiendo o quitando cualquier pregunta con un error o con dos respuestas posibles" },
+    { id: "O2", condition: "Para una tarea que asignas", action: "crear con IA una rúbrica de cuatro niveles y una versión para estudiantes", standard: "con cada celda tan concreta que dos docentes calificarían igual el mismo trabajo" },
+    { id: "O3", condition: "Para un objetivo", action: "diseñar una pregunta bisagra y un boleto de salida de tres preguntas", standard: "decidiendo antes de la verificación qué volverás a enseñar para cada respuesta incorrecta" },
+    { id: "O4", condition: "Con respuestas de estudiantes y tu rúbrica", action: "usar la IA para redactar comentarios de brilla y crece, y luego editarlos y poner tú mismo las calificaciones", standard: "con al menos un comentario de la IA cambiado y cada calificación decidida por ti" },
+    { id: "O5", condition: "Cuando las herramientas de IA tocan el trabajo o las calificaciones de los estudiantes", action: "aplicar lo básico de FERPA y explicar a las familias cómo se usa la IA para la retroalimentación", standard: "usando solo herramientas aprobadas y sin datos que identifiquen" },
+    { id: "O6", condition: "Cuando sospechas un mal uso de la IA en un trabajo", action: "responder con un proceso justo y una regla clara de uso de IA para cada tarea", standard: "sin usar nunca el puntaje de un detector como única evidencia" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Crear evaluaciones con IA",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Escribir preguntas alineadas y revisar la clave",
           minutes: 5,
           goal: "Generar preguntas de evaluación que coincidan con un objetivo y verificar las respuestas.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Revisa cada pregunta", bullets: ["Las claves tienen errores", "¿Dos respuestas correctas? ¿Redacción confusa?", "Quita las que se salen del objetivo"] }
           ],
           tryIt: "Pide a la IA seis preguntas sobre un objetivo en tres niveles, con clave. Resuelve tú cada respuesta y cuenta los errores o preguntas poco claras.",
-          youCanNow: "escribir preguntas de evaluación alineadas con IA y revisar la clave."
+          youCanNow: "escribir preguntas de evaluación alineadas con IA y revisar la clave.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué es un distractor en una pregunta de opción múltiple?", options: ["Una opción incorrecta de la lista", "Una pregunta demasiado difícil", "Un ruido en el salón", "La respuesta correcta"], answer: 0, why: "Los buenos distractores reflejan errores de comprensión reales, y eso muestra cómo piensan los estudiantes." },
+            { objective: "O1", q: "Resuelves la clave de respuestas de la IA y una respuesta está mal. ¿Qué harías?", options: ["Dejarla; los estudiantes no lo notarán", "Pedirle a la IA que vuelva a calificar a la clase", "Corregir la clave y revisar con cuidado el resto de las preguntas", "Quitar todas las preguntas"], answer: 2, why: "Resolver cada respuesta detecta los errores antes de calificar a los estudiantes." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Crear una rúbrica que los estudiantes entiendan",
           minutes: 6,
           goal: "Crear con IA una rúbrica de cuatro niveles y una versión para estudiantes.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Que sea justa y clara", bullets: ["Versión para estudiantes en primera persona", "¿Coincidirían dos docentes?"] }
           ],
           tryIt: "Crea con IA una rúbrica de cuatro niveles para una tarea que asignas. Reescribe las celdas vagas, haz la versión para estudiantes y pruébala con una respuesta inventada.",
-          youCanNow: "crear con IA una rúbrica clara de cuatro niveles y una versión para estudiantes."
+          youCanNow: "crear con IA una rúbrica clara de cuatro niveles y una versión para estudiantes.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué es una rúbrica analítica?", options: ["Una rúbrica con un solo puntaje general", "Una rúbrica que califica cada criterio por separado", "Una rúbrica escrita por la IA", "Una lista de materiales"], answer: 1, why: "Las rúbricas analíticas dan niveles separados para cada criterio." },
+            { objective: "O2", q: "Una celda de la rúbrica dice \"buen uso de la evidencia\". ¿Qué cambiarías?", options: ["Nada, está clara", "Quitar la celda", "Añadir la palabra \"muy\"", "Decir exactamente lo que hacen los estudiantes, como \"usa dos evidencias y explica cada una\""], answer: 3, why: "Las celdas concretas hacen justa la calificación y ayudan a los estudiantes a saber qué hacer." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Verificaciones formativas rápidas",
           minutes: 5,
           goal: "Diseñar boletos de salida y verificaciones durante la clase que muestren quién necesita qué después.",
@@ -75,17 +109,21 @@ module.exports = {
             { title: "Planea la respuesta", bullets: ["¿Quién recibe una nueva explicación?", "¿Quién avanza?", "Las verificaciones sin uso son solo papel"] }
           ],
           tryIt: "Pide a la IA una pregunta bisagra y un boleto de salida de tres preguntas para tu objetivo. Para cada respuesta incorrecta de la pregunta bisagra, escribe qué volverías a enseñar.",
-          youCanNow: "diseñar verificaciones formativas rápidas y planear qué hacer con los resultados."
+          youCanNow: "diseñar verificaciones formativas rápidas y planear qué hacer con los resultados.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué es la evaluación formativa?", options: ["El examen final", "Una prueba estatal", "Revisiones de poco peso durante el aprendizaje para ajustar la enseñanza", "Una calificación de conducta"], answer: 2, why: "Las revisiones formativas te dicen qué enseñar después." },
+            { objective: "O3", q: "La mitad de la clase elige la misma respuesta incorrecta en la pregunta bisagra. ¿Qué haces?", options: ["Vuelves a enseñar el error de comprensión que revela esa respuesta", "Pasas a la siguiente clase", "Les bajas la calificación a todos", "Le pides a la IA que califique la pregunta bisagra"], answer: 0, why: "Cada respuesta incorrecta de la pregunta bisagra señala un error de comprensión que puedes volver a enseñar." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Crear evaluaciones con IA",
         questions: [
-          { q: "¿Por qué pedir a la IA que explique por qué tienta cada opción incorrecta?", options: ["Alarga la prueba", "Para engañar a los estudiantes injustamente", "Los distractores que reflejan errores de comprensión muestran cómo piensan los estudiantes", "Es obligatorio"], answer: 2, why: "Los buenos distractores revelan errores de comprensión." },
-          { q: "Una pregunta de opción múltiple de la IA tiene dos respuestas que podrían ser correctas. Debes:", options: ["Corregirla o quitarla", "Dejarla", "Aceptar cualquiera de las dos", "Dar puntaje completo a todos"], answer: 0, why: "Cada pregunta necesita una sola respuesta claramente correcta." },
-          { q: "¿Qué celda de rúbrica está mejor escrita?", options: ["“Buena evidencia”", "“Más evidencia”", "“Buen trabajo”", "“Usa dos pruebas y explica cómo cada una apoya la afirmación”"], answer: 3, why: "Describe lo que está presente en el trabajo." },
-          { q: "¿Qué es una pregunta bisagra?", options: ["Una pregunta sobre puertas", "Una pregunta en la que cada respuesta incorrecta revela un error de comprensión", "Una pregunta del examen final", "Una pregunta de tarea"], answer: 1, why: "Muestra qué volver a enseñar a mitad de clase." },
-          { q: "¿Cuándo debes decidir qué hacer con los resultados del boleto de salida?", options: ["Solo si la mayoría reprueba", "Nunca", "Al final del año", "Antes de aplicar la verificación"], answer: 3, why: "Planear la respuesta hace útil la verificación." }
+          { objective: "O1", q: "¿Por qué pedir a la IA que explique por qué tienta cada opción incorrecta?", options: ["Alarga la prueba", "Para engañar a los estudiantes injustamente", "Los distractores que reflejan errores de comprensión muestran cómo piensan los estudiantes", "Es obligatorio"], answer: 2, why: "Los buenos distractores revelan errores de comprensión." },
+          { objective: "O1", q: "Una pregunta de opción múltiple de la IA tiene dos respuestas que podrían ser correctas. Debes:", options: ["Corregirla o quitarla", "Dejarla", "Aceptar cualquiera de las dos", "Dar puntaje completo a todos"], answer: 0, why: "Cada pregunta necesita una sola respuesta claramente correcta." },
+          { objective: "O2", q: "¿Qué celda de rúbrica está mejor escrita?", options: ["“Buena evidencia”", "“Más evidencia”", "“Buen trabajo”", "“Usa dos pruebas y explica cómo cada una apoya la afirmación”"], answer: 3, why: "Describe lo que está presente en el trabajo." },
+          { objective: "O3", q: "¿Qué es una pregunta bisagra?", options: ["Una pregunta sobre puertas", "Una pregunta en la que cada respuesta incorrecta revela un error de comprensión", "Una pregunta del examen final", "Una pregunta de tarea"], answer: 1, why: "Muestra qué volver a enseñar a mitad de clase." },
+          { objective: "O3", q: "¿Cuándo debes decidir qué hacer con los resultados del boleto de salida?", options: ["Solo si la mayoría reprueba", "Nunca", "Al final del año", "Antes de aplicar la verificación"], answer: 3, why: "Planear la respuesta hace útil la verificación." }
         ]
       }
     },
@@ -93,6 +131,7 @@ module.exports = {
       name: "Capítulo 2: Retroalimentación que el docente hace suya",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Un proceso de retroalimentación: la IA redacta, el docente decide",
           minutes: 6,
           goal: "Usar la IA para redactar retroalimentación ligada a una rúbrica, y luego editarla y hacerla tuya.",
@@ -109,9 +148,14 @@ module.exports = {
             { title: "Tú escribes la calificación", bullets: ["Las calificaciones de la IA pueden ser inconsistentes", "Pueden premiar la extensión sobre la calidad", "Edita para que suene a ti"] }
           ],
           tryIt: "Crea un banco de ocho comentarios de brilla y crece para tu rúbrica. Escribe tres respuestas de estudiantes inventadas, califícalas tú y elige y edita comentarios para cada una.",
-          youCanNow: "llevar un proceso de retroalimentación en el que la IA ayuda a redactar y tú decides."
+          youCanNow: "llevar un proceso de retroalimentación en el que la IA ayuda a redactar y tú decides.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué es un banco de comentarios?", options: ["Retroalimentación que la IA envía a los estudiantes por su cuenta", "Comentarios de retroalimentación guardados que reutilizas y ajustas", "Una lista de calificaciones", "Una cuenta bancaria para los fondos de la escuela"], answer: 1, why: "Un banco de comentarios ahorra tiempo, y el docente sigue eligiendo y editando cada comentario." },
+            { objective: "O4", q: "La IA redacta un comentario que no corresponde al trabajo de un estudiante. ¿Qué harías?", options: ["Enviarlo de todos modos", "Dejar que la IA cambie la calificación", "No darle retroalimentación a ese estudiante", "Editar el comentario para que corresponda al trabajo, y mantener tu propia calificación"], answer: 3, why: "La IA redacta y el docente decide, así que cada comentario y cada calificación son tuyos." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Proteger el trabajo y las calificaciones de los estudiantes",
           minutes: 5,
           goal: "Aplicar lo básico de FERPA al trabajo, las calificaciones y las herramientas de IA.",
@@ -129,9 +173,14 @@ module.exports = {
           ],
           sources: [{ name: "FERPA: protección de la privacidad estudiantil (Departamento de Educación de EE. UU.)", url: "https://studentprivacy.ed.gov/ferpa" }],
           tryIt: "Escribe una nota de tres oraciones para las familias que explique cómo tu clase o escuela usa la IA para ayudar con la retroalimentación, qué está protegido y que los docentes deciden todas las calificaciones.",
-          youCanNow: "proteger el trabajo y las calificaciones de los estudiantes cuando la IA forma parte de la retroalimentación."
+          youCanNow: "proteger el trabajo y las calificaciones de los estudiantes cuando la IA forma parte de la retroalimentación.",
+          quickCheck: [
+            { objective: "O5", q: "Según FERPA, ¿de qué forma parte por lo general el trabajo de un estudiante que guarda la escuela?", options: ["De los expedientes educativos", "De los registros públicos que cualquiera puede ver", "De las notas privadas del docente", "De la propiedad del proveedor"], answer: 0, why: "El trabajo de los estudiantes que guarda la escuela forma parte, por lo general, de los expedientes educativos protegidos." },
+            { objective: "O5", q: "Un docente quiere ayuda de la IA para la retroalimentación de ensayos reales. ¿Qué le aconsejarías?", options: ["Pegar los ensayos en cualquier chatbot gratuito", "Subir también el registro de calificaciones, para dar contexto", "Usar solo una herramienta aprobada por el distrito, sin datos que identifiquen", "Pedir a los estudiantes que peguen sus propios ensayos en la IA"], answer: 2, why: "Las herramientas aprobadas y quitar los datos que identifican protegen los expedientes de los estudiantes." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Sospecha de uso de IA en un trabajo: manejarla con justicia",
           minutes: 6,
           goal: "Responder a la sospecha de uso de IA con reglas claras y un proceso justo, no con el puntaje de un detector.",
@@ -148,17 +197,21 @@ module.exports = {
             { title: "Si sospechas un mal uso", bullets: ["Habla con el estudiante", "Pídele que explique o rehaga una parte", "Sigue tu política de integridad"] }
           ],
           tryIt: "Tarea final: termina tu paquete de evaluación (cinco preguntas revisadas, rúbrica y versión para estudiantes, boleto de salida, banco de ocho comentarios), aplica el proceso de retroalimentación a tres respuestas inventadas con tus propias calificaciones y agrega una regla de una línea sobre el uso de IA en la tarea.",
-          youCanNow: "usar la IA en la evaluación y la retroalimentación manteniendo las calificaciones justas, privadas y en manos del docente."
+          youCanNow: "usar la IA en la evaluación y la retroalimentación manteniendo las calificaciones justas, privadas y en manos del docente.",
+          quickCheck: [
+            { objective: "O6", q: "¿En qué se pueden equivocar los detectores de escritura con IA?", options: ["En nada; siempre aciertan", "En marcar un trabajo honesto como escrito por IA", "En calificar ensayos", "En escribir ensayos"], answer: 1, why: "Los detectores pueden marcar sin razón un trabajo honesto, así que nunca son la única evidencia." },
+            { objective: "O6", q: "Sospechas que un estudiante usó IA en contra de la regla de la tarea. ¿Cuál es un primer paso justo?", options: ["Ponerle un cero de inmediato", "Contárselo a toda la clase", "Pasar el trabajo por tres detectores más", "Pedirle al estudiante que explique su trabajo o muestre sus borradores"], answer: 3, why: "Una conversación y otras evidencias son más justas que el puntaje de un detector." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Retroalimentación que el docente hace suya",
         questions: [
-          { q: "En el proceso de retroalimentación, ¿qué hace primero el docente?", options: ["Pegar el trabajo en cualquier herramienta de IA", "Dejar que la IA lo califique", "Leer el trabajo y elegir el nivel de la rúbrica", "Enviarlo a los padres"], answer: 2, why: "El juicio del docente va primero." },
-          { q: "¿Quién escribe la calificación?", options: ["El docente", "La IA", "El estudiante", "El proveedor"], answer: 0, why: "Las calificaciones son decisiones del docente." },
-          { q: "Según FERPA, el trabajo de los estudiantes que guarda la escuela suele ser:", options: ["Información pública", "Parte de los registros educativos", "Propiedad de la empresa de IA", "Algo no protegido"], answer: 1, why: "Los registros relacionados directamente con un estudiante y guardados por la escuela son registros educativos." },
-          { q: "Un detector dice que un ensayo fue escrito en un 90% con IA. ¿Qué haces?", options: ["Hablar con el estudiante y mirar otras pruebas", "Poner un cero", "Denunciar a la familia", "Ignorar todas las políticas"], answer: 0, why: "El puntaje de un detector, por sí solo, no es prueba." },
-          { q: "¿Qué previene mejor el mal uso de la IA?", options: ["No decir nada", "Prohibir las computadoras para siempre", "Usar más detectores", "Indicar el uso de IA permitido en cada tarea y hacer visible el pensamiento"], answer: 3, why: "Las reglas claras y el pensamiento visible previenen problemas." }
+          { objective: "O4", q: "En el proceso de retroalimentación, ¿qué hace primero el docente?", options: ["Pegar el trabajo en cualquier herramienta de IA", "Dejar que la IA lo califique", "Leer el trabajo y elegir el nivel de la rúbrica", "Enviarlo a los padres"], answer: 2, why: "El juicio del docente va primero." },
+          { objective: "O4", q: "¿Quién escribe la calificación?", options: ["El docente", "La IA", "El estudiante", "El proveedor"], answer: 0, why: "Las calificaciones son decisiones del docente." },
+          { objective: "O5", q: "Según FERPA, el trabajo de los estudiantes que guarda la escuela suele ser:", options: ["Información pública", "Parte de los registros educativos", "Propiedad de la empresa de IA", "Algo no protegido"], answer: 1, why: "Los registros relacionados directamente con un estudiante y guardados por la escuela son registros educativos." },
+          { objective: "O6", q: "Un detector dice que un ensayo fue escrito en un 90% con IA. ¿Qué haces?", options: ["Hablar con el estudiante y mirar otras pruebas", "Poner un cero", "Denunciar a la familia", "Ignorar todas las políticas"], answer: 0, why: "El puntaje de un detector, por sí solo, no es prueba." },
+          { objective: "O6", q: "¿Qué previene mejor el mal uso de la IA?", options: ["No decir nada", "Prohibir las computadoras para siempre", "Usar más detectores", "Indicar el uso de IA permitido en cada tarea y hacer visible el pensamiento"], answer: 3, why: "Las reglas claras y el pensamiento visible previenen problemas." }
         ]
       }
     }
@@ -166,26 +219,106 @@ module.exports = {
   quiz: {
     title: "Examen final: IA para líderes escolares y educativos 4: IA para la evaluación y la retroalimentación",
     questions: [
-      { q: "Una pregunta alineada:", options: ["Es la más difícil", "Mide el objetivo que debe medir", "Es la más larga", "La elige solo la IA"], answer: 1, why: "La alineación es la primera prueba de una buena pregunta." },
-      { q: "Un distractor es:", options: ["Un teléfono", "Un estudiante ruidoso", "Una opción incorrecta en opción múltiple", "Una pregunta extra"], answer: 2, why: "Los buenos distractores revelan errores de comprensión." },
-      { q: "Después de que la IA escribe una clave, debes:", options: ["Imprimirla", "Confiar en ella", "Resolver tú cada respuesta", "Dársela a los estudiantes"], answer: 2, why: "Las claves tienen errores." },
-      { q: "Una mezcla de niveles de preguntas significa:", options: ["Recordar, aplicar y explicar", "Solo fáciles", "Solo difíciles", "Solo verdadero o falso"], answer: 0, why: "Los distintos niveles muestran distintas profundidades de aprendizaje." },
-      { q: "Una rúbrica analítica:", options: ["La escriben los estudiantes", "Da solo una calificación general", "No tiene niveles", "Califica cada criterio por separado"], answer: 3, why: "Cada criterio recibe su propio nivel." },
-      { q: "Una rúbrica para estudiantes usa:", options: ["Lenguaje legal", "Frases en primera persona (“Yo...”)", "Código", "Solo números"], answer: 1, why: "Los estudiantes deben entender la meta." },
-      { q: "Una rúbrica es justa cuando:", options: ["Todos sacan la nota máxima", "Es muy larga", "La escribió la IA", "Dos docentes calificarían igual el mismo trabajo"], answer: 3, why: "La consistencia es justicia." },
-      { q: "La evaluación formativa es:", options: ["Una boleta de calificaciones", "El examen final", "Revisar el aprendizaje con bajo riesgo para ajustar la enseñanza", "Un examen estatal"], answer: 2, why: "Orienta el siguiente paso." },
-      { q: "Un boleto de salida se aplica:", options: ["Al final de una clase", "Al inicio del año", "Solo los viernes", "Solo a los padres"], answer: 0, why: "Revisa el aprendizaje del día." },
-      { q: "Una verificación que nunca usas para actuar es:", options: ["La mejor", "Solo más papel", "Obligatoria", "Sumativa"], answer: 1, why: "Las verificaciones formativas importan cuando cambian la enseñanza." },
-      { q: "La retroalimentación de brilla y crece da:", options: ["Una fortaleza y un siguiente paso", "Solo elogios", "Solo críticas", "Solo una calificación"], answer: 0, why: "Los estudiantes necesitan las dos." },
-      { q: "Un banco de comentarios es:", options: ["Una aplicación de calificaciones", "Una cuenta de ahorros", "Una lista de estudiantes", "Comentarios guardados que reutilizas y ajustas"], answer: 3, why: "Ahorra tiempo sin perder especificidad." },
-      { q: "Las calificaciones de la IA pueden ser injustas porque pueden:", options: ["Ser siempre perfectas", "Premiar la extensión sobre la calidad", "No leer nunca el trabajo", "Usar la rúbrica con exactitud"], answer: 1, why: "El sesgo por extensión es un problema común." },
-      { q: "Para trabajos reales de estudiantes, usa:", options: ["Redes sociales", "Cualquier herramienta gratuita", "Solo herramientas aprobadas por el distrito, sin datos identificadores", "Correo personal"], answer: 2, why: "Las herramientas aprobadas y quitar los datos protegen la privacidad." },
-      { q: "¿Qué nunca debe ir a una herramienta de IA no aprobada?", options: ["Un boleto de salida en blanco", "Una rúbrica general", "Un libro de calificaciones", "Una respuesta inventada"], answer: 2, why: "Los libros de calificaciones contienen registros educativos identificables." },
-      { q: "Según FERPA, los padres pueden:", options: ["Revisar los registros educativos de su hijo", "Calificar el trabajo", "Aprobar proveedores", "Escribir la rúbrica"], answer: 0, why: "Revisar los registros es un derecho central de FERPA." },
-      { q: "Un proveedor puede actuar como funcionario escolar cuando:", options: ["Tiene muchos usuarios", "Es gratuito", "Lo pide con amabilidad", "Presta un servicio escolar bajo el control directo de la escuela, con límites para volver a compartir"], answer: 3, why: "Esas son las condiciones de FERPA." },
-      { q: "Los detectores de escritura con IA:", options: ["Siempre aciertan", "Pueden marcar por error trabajos honestos", "Son obligatorios por ley", "Prueban la trampa"], answer: 1, why: "Los falsos positivos ocurren." },
-      { q: "Si sospechas un mal uso de la IA, un primer paso justo es:", options: ["Ignorar tu política", "Poner un cero", "Publicarlo", "Pedir al estudiante que explique su trabajo o muestre borradores"], answer: 3, why: "Conversar permite reunir pruebas reales." },
-      { q: "Cada tarea debe indicar:", options: ["Que la IA siempre está prohibida", "Nada sobre la IA", "Qué uso de IA se permite", "La calificación del estudiante"], answer: 2, why: "Las reglas claras evitan malentendidos." }
+      { objective: "O1", q: "Una pregunta alineada:", options: ["Es la más difícil", "Mide el objetivo que debe medir", "Es la más larga", "La elige solo la IA"], answer: 1, why: "La alineación es la primera prueba de una buena pregunta." },
+      { objective: "O1", q: "Un distractor es:", options: ["Un teléfono", "Un estudiante ruidoso", "Una opción incorrecta en opción múltiple", "Una pregunta extra"], answer: 2, why: "Los buenos distractores revelan errores de comprensión." },
+      { objective: "O1", q: "Después de que la IA escribe una clave, debes:", options: ["Imprimirla", "Confiar en ella", "Resolver tú cada respuesta", "Dársela a los estudiantes"], answer: 2, why: "Las claves tienen errores." },
+      { objective: "O1", q: "Una mezcla de niveles de preguntas significa:", options: ["Recordar, aplicar y explicar", "Solo fáciles", "Solo difíciles", "Solo verdadero o falso"], answer: 0, why: "Los distintos niveles muestran distintas profundidades de aprendizaje." },
+      { objective: "O2", q: "Una rúbrica analítica:", options: ["La escriben los estudiantes", "Da solo una calificación general", "No tiene niveles", "Califica cada criterio por separado"], answer: 3, why: "Cada criterio recibe su propio nivel." },
+      { objective: "O2", q: "Una rúbrica para estudiantes usa:", options: ["Lenguaje legal", "Frases en primera persona (“Yo...”)", "Código", "Solo números"], answer: 1, why: "Los estudiantes deben entender la meta." },
+      { objective: "O2", q: "Una rúbrica es justa cuando:", options: ["Todos sacan la nota máxima", "Es muy larga", "La escribió la IA", "Dos docentes calificarían igual el mismo trabajo"], answer: 3, why: "La consistencia es justicia." },
+      { objective: "O3", q: "La evaluación formativa es:", options: ["Una boleta de calificaciones", "El examen final", "Revisar el aprendizaje con bajo riesgo para ajustar la enseñanza", "Un examen estatal"], answer: 2, why: "Orienta el siguiente paso." },
+      { objective: "O3", q: "Un boleto de salida se aplica:", options: ["Al final de una clase", "Al inicio del año", "Solo los viernes", "Solo a los padres"], answer: 0, why: "Revisa el aprendizaje del día." },
+      { objective: "O3", q: "Una verificación que nunca usas para actuar es:", options: ["La mejor", "Solo más papel", "Obligatoria", "Sumativa"], answer: 1, why: "Las verificaciones formativas importan cuando cambian la enseñanza." },
+      { objective: "O4", q: "La retroalimentación de brilla y crece da:", options: ["Una fortaleza y un siguiente paso", "Solo elogios", "Solo críticas", "Solo una calificación"], answer: 0, why: "Los estudiantes necesitan las dos." },
+      { objective: "O4", q: "Un banco de comentarios es:", options: ["Una aplicación de calificaciones", "Una cuenta de ahorros", "Una lista de estudiantes", "Comentarios guardados que reutilizas y ajustas"], answer: 3, why: "Ahorra tiempo sin perder especificidad." },
+      { objective: "O4", q: "Las calificaciones de la IA pueden ser injustas porque pueden:", options: ["Ser siempre perfectas", "Premiar la extensión sobre la calidad", "No leer nunca el trabajo", "Usar la rúbrica con exactitud"], answer: 1, why: "El sesgo por extensión es un problema común." },
+      { objective: "O5", q: "Para trabajos reales de estudiantes, usa:", options: ["Redes sociales", "Cualquier herramienta gratuita", "Solo herramientas aprobadas por el distrito, sin datos identificadores", "Correo personal"], answer: 2, why: "Las herramientas aprobadas y quitar los datos protegen la privacidad." },
+      { objective: "O5", q: "¿Qué nunca debe ir a una herramienta de IA no aprobada?", options: ["Un boleto de salida en blanco", "Una rúbrica general", "Un libro de calificaciones", "Una respuesta inventada"], answer: 2, why: "Los libros de calificaciones contienen registros educativos identificables." },
+      { objective: "O5", q: "Según FERPA, los padres pueden:", options: ["Revisar los registros educativos de su hijo", "Calificar el trabajo", "Aprobar proveedores", "Escribir la rúbrica"], answer: 0, why: "Revisar los registros es un derecho central de FERPA." },
+      { objective: "O5", q: "Un proveedor puede actuar como funcionario escolar cuando:", options: ["Tiene muchos usuarios", "Es gratuito", "Lo pide con amabilidad", "Presta un servicio escolar bajo el control directo de la escuela, con límites para volver a compartir"], answer: 3, why: "Esas son las condiciones de FERPA." },
+      { objective: "O6", q: "Los detectores de escritura con IA:", options: ["Siempre aciertan", "Pueden marcar por error trabajos honestos", "Son obligatorios por ley", "Prueban la trampa"], answer: 1, why: "Los falsos positivos ocurren." },
+      { objective: "O6", q: "Si sospechas un mal uso de la IA, un primer paso justo es:", options: ["Ignorar tu política", "Poner un cero", "Publicarlo", "Pedir al estudiante que explique su trabajo o muestre borradores"], answer: 3, why: "Conversar permite reunir pruebas reales." },
+      { objective: "O6", q: "Cada tarea debe indicar:", options: ["Que la IA siempre está prohibida", "Nada sobre la IA", "Qué uso de IA se permite", "La calificación del estudiante"], answer: 2, why: "Las reglas claras evitan malentendidos." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      2,
+      4,
+      6,
+      7,
+      10,
+      12,
+      13,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en todas las filas. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Preguntas alineadas",
+        objective: "O1",
+        notYet: "Menos de cinco preguntas, o no se revisó la clave.",
+        meets: "Cinco preguntas alineadas al objetivo con una clave que resolviste tú mismo.",
+        exceeds: "Las preguntas mezclan recordar, aplicar y explicar, y los distractores reflejan errores de comprensión reales."
+      },
+      {
+        name: "Rúbrica",
+        objective: "O2",
+        notYet: "Menos de cuatro niveles, celdas vagas o sin versión para estudiantes.",
+        meets: "Una rúbrica de cuatro niveles con tres o cuatro criterios y una versión para estudiantes.",
+        exceeds: "Cada celda describe lo que hacen los estudiantes, y se probó con una respuesta inventada."
+      },
+      {
+        name: "Boleto de salida",
+        objective: "O3",
+        notYet: "No hay boleto de salida, o no corresponde al objetivo.",
+        meets: "Un boleto de salida de tres preguntas para el objetivo.",
+        exceeds: "Dice qué harás con cada resultado antes de aplicarlo."
+      },
+      {
+        name: "Proceso de retroalimentación",
+        objective: "O4",
+        notYet: "Menos de ocho comentarios, comentarios de la IA usados sin cambios, o la IA puso las calificaciones.",
+        meets: "Al menos ocho comentarios ligados a la rúbrica, tres respuestas inventadas, un comentario de la IA cambiado y las calificaciones puestas por ti.",
+        exceeds: "Cada respuesta recibe un brilla y un crece ligados a un nivel de la rúbrica."
+      },
+      {
+        name: "Privacidad y uso justo de la IA",
+        objective: "O6",
+        notYet: "Se usaron datos reales de estudiantes, o la tarea no tiene regla de uso de IA.",
+        meets: "Solo se usaron trabajos inventados, y la tarea tiene una regla de uso de IA de una línea.",
+        exceeds: "Incluye una nota corta para las familias sobre cómo ayuda la IA con la retroalimentación y quién decide las calificaciones."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Educadores que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Docentes que dicen haber usado el paquete de evaluación o el banco de comentarios con una clase en un plazo de 30 días (encuesta de seguimiento)",
+      "Docentes que dicen ahorrar tiempo de retroalimentación mientras siguen poniendo ellos mismos cada calificación (encuesta de seguimiento)",
+      "Escuelas donde cada tarea importante indica qué uso de IA se permite (encuesta de seguimiento)"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Una computadora con internet y un asistente de IA aprobado por el distrito para este uso",
+      "Un objetivo y una tarea que asignas",
+      "Tres respuestas de estudiantes inventadas",
+      "Unos 60 minutos en total: lecciones, práctica, comprobaciones y la tarea final"
+    ],
+    facilitatorNotes: [
+      "Hagan juntos la prueba inicial y luego pide a los docentes que resuelvan en parejas las claves de respuestas de la IA y comparen los errores encontrados.",
+      "Usa solo trabajos de estudiantes inventados; nunca pegues trabajos ni calificaciones reales en herramientas no aprobadas.",
+      "Pide a dos docentes que califiquen la misma respuesta inventada con cada rúbrica para probar si es justa.",
+      "Conversen sobre un proceso justo ante la sospecha de uso de IA antes de que surja algún caso, y acuerden que el puntaje de un detector nunca es la única evidencia.",
+      "Califica la tarea final con la rúbrica y comprueba que cada calificación la haya puesto el docente."
     ]
   }
 };

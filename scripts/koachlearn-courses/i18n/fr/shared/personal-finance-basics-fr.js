@@ -16,11 +16,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes et se termine par une tâche \"Essayez maintenant\" que vous faites avec vos propres chiffres, sur papier ou dans un tableur. Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin. Ce cours enseigne à gérer l'argent ; il ne donne pas de conseils en investissement. Pour les grandes décisions, parlez à une personne de confiance et qualifiée, comme un conseiller en crédit d'un organisme à but non lucratif."
   ],
   finalTask: "Écrivez un plan financier d'une page : (1) un budget mensuel avec vos revenus, vos besoins, vos envies et votre épargne ; (2) la liste de vos dettes et celle que vous rembourserez en plus ; (3) un objectif d'épargne de précaution, le montant que vous mettrez de côté chaque semaine ou chaque mois, et où ; (4) la date à laquelle vous vérifierez vos rapports de crédit. Puis lisez une offre de prêt ou d'argent que vous avez vue et notez tous les signaux d'alerte.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Toute personne qui veut mieux maîtriser son argent : personnes âgées à revenu fixe, jeunes qui touchent leur premier salaire, agriculteurs payés à la récolte, sportifs avec un nouveau sponsor, anciens combattants qui commencent un emploi civil et personnes qui sortent de prison et repartent de zéro.",
+    startingPoint: "Ils gagnent ou reçoivent de l'argent et paient des factures, mais beaucoup n'écrivent pas de budget, n'ont jamais lu leur rapport de crédit, ont des dettes sans plan de remboursement, ont peu d'épargne de précaution ou ont du mal à repérer un prêt abusif ou une arnaque.",
+    gap: "Sans plan, de petites surprises se transforment en dettes, en retards de paiement et en arnaques qui coûtent de l'argent et du stress aux familles. Les apprenants ont besoin d'un plan financier simple d'une page et de l'habitude de vérifier les offres, pour garder le contrôle et constituer une épargne.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes, avec des calculs simples",
+      "Ce n'est pas un conseil en investissement ; les grandes décisions se prennent avec une personne de confiance et qualifiée, comme un conseiller en crédit d'un organisme à but non lucratif",
+      "Confidentialité : aucun numéro de compte bancaire, numéro de carte ni mot de passe dans les outils d'IA ou les échanges en groupe",
+      "Les règles et les frais changent selon le pays et le prestataire ; les apprenants vérifient les grilles tarifaires et les sources officielles",
+      "Appareils : du papier ou un tableur gratuit ; certains apprenants utilisent l'argent mobile"
+    ],
+    prerequisites: "Aucun."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir des revenus et des dépenses du mois dernier", action: "écrire un budget mensuel qui classe les dépenses en besoins, envies et épargne", standard: "avec une ligne d'épargne et un total vérifié au-dessus ou en dessous de zéro" },
+    { id: "O2", condition: "Avec un rapport de crédit gratuit (AnnualCreditReport.com aux États-Unis)", action: "vérifier chaque compte de votre rapport de crédit et contester les erreurs", standard: "en gardant une copie de tout ce que vous envoyez" },
+    { id: "O3", condition: "À partir d'une liste de dettes", action: "choisir la dette à rembourser en plus avec la méthode du taux le plus élevé ou celle du plus petit solde", standard: "tout en payant au moins le minimum de chaque dette à temps" },
+    { id: "O4", condition: "À partir de votre budget", action: "fixer un objectif d'épargne de précaution avec un montant, un jour et un moyen automatique d'épargner", standard: "ajouté comme une ligne de votre budget" },
+    { id: "O5", condition: "Face à une banque, une coopérative de crédit, un service d'argent mobile ou un groupe d'épargne", action: "vérifier les frais et les règles avant de choisir un endroit sûr pour épargner", standard: "en notant ce que coûte un dépôt et un retrait" },
+    { id: "O6", condition: "Face à une offre de prêt ou d'argent", action: "repérer les signaux d'alerte d'un prêt abusif ou d'une arnaque avant de dire oui", standard: "en trouvant tous les signaux d'alerte de l'offre" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Savoir où va votre argent",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Faire un budget mensuel simple",
           minutes: 5,
           goal: "Écrire un budget mensuel qui montre vos revenus, vos besoins, vos envies et votre épargne.",
@@ -40,9 +64,14 @@ module.exports = {
           ],
           sources: [{ name: "Consumer Financial Protection Bureau (CFPB) : outils et guides pour les consommateurs", url: "https://www.consumerfinance.gov/consumer-tools/" }],
           tryIt: "Sur papier ou dans un tableur gratuit (Google Sheets ou Excel), écrivez les revenus du mois dernier et toutes les dépenses dont vous vous souvenez. Marquez chaque dépense B pour besoin ou E pour envie, ajoutez une ligne d'épargne, puis faites la soustraction. Votre résultat est-il au-dessus ou en dessous de zéro ?",
-          youCanNow: "écrire un budget mensuel avec revenus, besoins, envies et épargne, et voir si le compte y est."
+          youCanNow: "écrire un budget mensuel avec revenus, besoins, envies et épargne, et voir si le compte y est.",
+          quickCheck: [
+            { objective: "O1", q: "Lequel est une envie et non un besoin ?", options: ["Le loyer", "Un médicament quotidien", "Un nouveau service de streaming", "Le ticket de bus pour aller au travail"], answer: 2, why: "Un service de streaming est agréable ; le loyer, les médicaments et le transport pour aller travailler sont des besoins." },
+            { objective: "O1", q: "Votre budget montre que vous dépensez plus que vous ne gagnez. Que faites-vous d'abord ?", options: ["Réduire certaines envies", "Arrêter de payer le loyer", "Prendre un prêt sur salaire", "Jeter le budget"], answer: 0, why: "Quand un budget est en dessous de zéro, les envies sont la première chose à réduire." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Lire votre rapport de crédit et votre score",
           minutes: 5,
           goal: "Obtenir vos rapports de crédit gratuits et y chercher les erreurs.",
@@ -66,9 +95,14 @@ module.exports = {
             { name: "AnnualCreditReport.com", url: "https://www.annualcreditreport.com/" }
           ],
           tryIt: "Si vous vivez aux États-Unis, demandez au moins un rapport de crédit gratuit sur AnnualCreditReport.com et vérifiez chaque compte. Si vous vivez ailleurs, renseignez-vous pour savoir si votre pays a un bureau de crédit et comment lui demander votre rapport. Notez une chose que vous avez vérifiée et ce que vous avez trouvé.",
-          youCanNow: "obtenir vos rapports de crédit gratuits, y chercher les erreurs et savoir comment contester une erreur."
+          youCanNow: "obtenir vos rapports de crédit gratuits, y chercher les erreurs et savoir comment contester une erreur.",
+          quickCheck: [
+            { objective: "O2", q: "Qu'est-ce qu'un rapport de crédit ?", options: ["La liste de vos mots de passe bancaires", "Votre budget mensuel", "Le relevé de vos prêts, de vos cartes et de votre historique de paiement", "Votre déclaration d'impôts"], answer: 2, why: "Un rapport de crédit liste vos comptes de crédit et la façon dont vous les avez payés." },
+            { objective: "O2", q: "Votre rapport de crédit indique une adresse où vous n'avez jamais vécu. Que faites-vous ?", options: ["L'ignorer", "La contester auprès de l'agence de crédit et garder des copies", "Fermer tous vos comptes", "Payer un inconnu pour la corriger"], answer: 1, why: "Les erreurs d'un rapport de crédit doivent être contestées, en gardant des copies." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Faire un plan pour rembourser vos dettes",
           minutes: 5,
           goal: "Faire la liste de vos dettes et choisir celle que vous rembourserez en plus en premier.",
@@ -88,17 +122,21 @@ module.exports = {
           ],
           sources: [{ name: "CFPB : Recouvrement et gestion des dettes", url: "https://www.consumerfinance.gov/consumer-tools/debt-collection/" }],
           tryIt: "Faites un tableau de vos dettes (ou un exemple inventé si vous n'en avez pas) avec à qui, solde, taux, minimum et date d'échéance. Entourez la dette que vous rembourseriez en plus avec la méthode du taux le plus élevé, et celle que vous choisiriez avec la méthode du plus petit solde.",
-          youCanNow: "faire la liste de vos dettes, payer les minimums à temps et choisir la dette à rembourser en plus en premier."
+          youCanNow: "faire la liste de vos dettes, payer les minimums à temps et choisir la dette à rembourser en plus en premier.",
+          quickCheck: [
+            { objective: "O3", q: "Que veut dire la méthode du plus petit solde d'abord pour rembourser ses dettes ?", options: ["Payer seulement la plus petite dette et laisser les autres", "Payer en plus sur la dette au plus petit solde tout en payant le minimum des autres", "Payer le même supplément sur chaque dette", "Ne rien payer tant que vous n'avez pas plus d'argent"], answer: 1, why: "Vous payez le minimum de toutes et mettez le supplément sur le plus petit solde pour une victoire rapide." },
+            { objective: "O3", q: "Vous savez que vous allez manquer un remboursement de prêt la semaine prochaine. Que faites-vous ?", options: ["Éviter le prêteur", "Attendre qu'il vous appelle", "Prendre un nouveau prêt pour le payer", "Appeler le prêteur avant la date d'échéance pour demander les solutions possibles"], answer: 3, why: "Appeler tôt vous donne le plus de solutions." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Savoir où va votre argent",
         questions: [
-          { q: "Vos revenus changent d'un mois à l'autre. Avec quel montant devez-vous prévoir votre budget ?", options: ["Votre meilleur mois", "Ce que vous espérez gagner en moyenne l'an prochain", "Un mois normal et bas", "Ce que gagnent vos amis"], answer: 2, why: "Prévoir avec un mois bas permet au budget de marcher quand l'argent rentre moins." },
-          { q: "Laquelle de ces dépenses est un besoin et non une envie ?", options: ["Un médicament que vous prenez chaque jour", "Un service de streaming", "Manger au restaurant le vendredi", "Une nouvelle coque de téléphone"], answer: 0, why: "Un médicament est une dépense obligatoire pour rester en bonne santé." },
-          { q: "Où les habitants des États-Unis peuvent-ils obtenir gratuitement leurs rapports de crédit ?", options: ["Sur n'importe quel site qui affiche une publicité pour des rapports gratuits", "Par un lien dans un SMS", "Sur le site d'un agent de recouvrement", "Sur AnnualCreditReport.com"], answer: 3, why: "AnnualCreditReport.com est la source officielle et gratuite des rapports des trois agences." },
-          { q: "Vous trouvez sur votre rapport une carte de crédit que vous n'avez jamais ouverte. Que faites-vous ?", options: ["Vous l'ignorez", "Vous la contestez auprès de l'agence de crédit et gardez des copies", "Vous la remboursez pour qu'elle disparaisse", "Vous fermez votre compte bancaire"], answer: 1, why: "Vous avez le droit de contester les erreurs ; un compte que vous n'avez pas ouvert peut aussi être un vol d'identité." },
-          { q: "Vous pouvez payer un peu plus sur une dette. Avec la méthode du taux le plus élevé, laquelle reçoit cet argent ?", options: ["Celle qui a le plus petit solde", "Celle dont l'échéance est la plus tardive", "Celle qui a le taux d'intérêt le plus élevé", "La plus récente"], answer: 2, why: "Rembourser d'abord le taux le plus élevé fait en général économiser le plus d'intérêts." }
+          { objective: "O1", q: "Vos revenus changent d'un mois à l'autre. Avec quel montant devez-vous prévoir votre budget ?", options: ["Votre meilleur mois", "Ce que vous espérez gagner en moyenne l'an prochain", "Un mois normal et bas", "Ce que gagnent vos amis"], answer: 2, why: "Prévoir avec un mois bas permet au budget de marcher quand l'argent rentre moins." },
+          { objective: "O1", q: "Laquelle de ces dépenses est un besoin et non une envie ?", options: ["Un médicament que vous prenez chaque jour", "Un service de streaming", "Manger au restaurant le vendredi", "Une nouvelle coque de téléphone"], answer: 0, why: "Un médicament est une dépense obligatoire pour rester en bonne santé." },
+          { objective: "O2", q: "Où les habitants des États-Unis peuvent-ils obtenir gratuitement leurs rapports de crédit ?", options: ["Sur n'importe quel site qui affiche une publicité pour des rapports gratuits", "Par un lien dans un SMS", "Sur le site d'un agent de recouvrement", "Sur AnnualCreditReport.com"], answer: 3, why: "AnnualCreditReport.com est la source officielle et gratuite des rapports des trois agences." },
+          { objective: "O2", q: "Vous trouvez sur votre rapport une carte de crédit que vous n'avez jamais ouverte. Que faites-vous ?", options: ["Vous l'ignorez", "Vous la contestez auprès de l'agence de crédit et gardez des copies", "Vous la remboursez pour qu'elle disparaisse", "Vous fermez votre compte bancaire"], answer: 1, why: "Vous avez le droit de contester les erreurs ; un compte que vous n'avez pas ouvert peut aussi être un vol d'identité." },
+          { objective: "O3", q: "Vous pouvez payer un peu plus sur une dette. Avec la méthode du taux le plus élevé, laquelle reçoit cet argent ?", options: ["Celle qui a le plus petit solde", "Celle dont l'échéance est la plus tardive", "Celle qui a le taux d'intérêt le plus élevé", "La plus récente"], answer: 2, why: "Rembourser d'abord le taux le plus élevé fait en général économiser le plus d'intérêts." }
         ]
       }
     },
@@ -106,6 +144,7 @@ module.exports = {
       name: "Chapitre 2 : Construire votre filet de sécurité",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Commencer une épargne de précaution",
           minutes: 4,
           goal: "Fixer un objectif d'épargne de précaution et un moyen automatique de l'atteindre.",
@@ -125,9 +164,14 @@ module.exports = {
           ],
           sources: [{ name: "CFPB : Guide essentiel pour constituer une épargne de précaution", url: "https://www.consumerfinance.gov/an-essential-guide-to-building-an-emergency-fund/" }],
           tryIt: "Écrivez votre premier objectif d'épargne de précaution, le montant que vous épargnerez chaque semaine ou chaque mois, le jour où vous le ferez et où vous garderez l'argent. Ajoutez-le comme une ligne dans votre budget de la leçon 1.",
-          youCanNow: "fixer un objectif d'épargne de précaution, épargner automatiquement pour l'atteindre, et garder cet argent en sécurité et à part."
+          youCanNow: "fixer un objectif d'épargne de précaution, épargner automatiquement pour l'atteindre, et garder cet argent en sécurité et à part.",
+          quickCheck: [
+            { objective: "O4", q: "Pour quelle urgence une épargne de précaution est-elle prévue ?", options: ["Une réparation de voiture imprévue", "Des soldes de fêtes", "Un nouveau téléphone dont vous avez envie", "Une sortie le soir"], answer: 0, why: "L'épargne de précaution couvre les dépenses imprévues, pas les envies prévues." },
+            { objective: "O4", q: "Vous oubliez sans cesse d'épargner. Que faites-vous ?", options: ["Épargner seulement ce qui reste à la fin du mois", "Renoncer à épargner", "Mettre en place un virement automatique le jour de la paie", "Garder votre épargne dans votre portefeuille"], answer: 2, why: "L'épargne automatique le jour de la paie se fait avant que l'argent soit dépensé." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Épargner avec une banque, l'argent mobile ou un groupe d'épargne",
           minutes: 5,
           goal: "Choisir un endroit sûr pour épargner et vérifier ses frais et ses règles avant de l'utiliser.",
@@ -149,9 +193,14 @@ module.exports = {
             { name: "CFPB : Guide essentiel pour constituer une épargne de précaution (où garder son épargne)", url: "https://www.consumerfinance.gov/an-essential-guide-to-building-an-emergency-fund/" }
           ],
           tryIt: "Choisissez l'endroit où vous garderez votre épargne de précaution. Trouvez sa grille tarifaire officielle ou les règles du compte et notez ce que coûte un dépôt et un retrait. Si vous utilisez l'argent mobile, trouvez l'option d'épargne dans le menu de l'application, sans déplacer d'argent pour l'instant.",
-          youCanNow: "choisir un endroit sûr pour épargner, vérifier d'abord ses frais et ses règles, et protéger votre compte."
+          youCanNow: "choisir un endroit sûr pour épargner, vérifier d'abord ses frais et ses règles, et protéger votre compte.",
+          quickCheck: [
+            { objective: "O5", q: "Pourquoi garder votre épargne de précaution dans une banque ou une coopérative de crédit plutôt qu'en espèces à la maison ?", options: ["Elle est mieux protégée du vol et de la perte", "Elle est plus facile à dépenser", "Les banques vous paient pour retirer de l'argent", "L'argent liquide à la maison rapporte plus"], answer: 0, why: "Un compte protège mieux l'épargne que de l'argent liquide à la maison." },
+            { objective: "O5", q: "Vous comptez utiliser une solution d'épargne par argent mobile. Que faites-vous d'abord ?", options: ["Y mettre tout votre argent tout de suite", "Demander à un inconnu sur Internet combien ça coûte", "Supposer que c'est gratuit", "Lire la grille tarifaire officielle et les règles"], answer: 3, why: "Les frais varient et changent, donc vérifiez d'abord la grille tarifaire officielle." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Repérer les prêts abusifs et les arnaques financières",
           minutes: 5,
           goal: "Lire une offre de prêt ou d'argent et trouver les signaux d'alerte avant de dire oui.",
@@ -174,17 +223,21 @@ module.exports = {
             { name: "CFPB : Fraudes et arnaques", url: "https://www.consumerfinance.gov/consumer-tools/fraud/" }
           ],
           tryIt: "Tâche finale : terminez votre plan financier d'une page : votre budget de la leçon 1, la liste de vos dettes avec celle que vous rembourserez en plus, votre objectif d'épargne de précaution et l'endroit où vous la gardez, et la date à laquelle vous vérifierez vos rapports de crédit. Puis lisez une offre de prêt ou d'argent que vous avez vue (un SMS, une publicité ou une lettre) et notez chaque signal d'alerte que vous trouvez.",
-          youCanNow: "lire une offre de prêt ou d'argent, trouver l'APR et les signaux d'alerte, et choisir une solution plus sûre."
+          youCanNow: "lire une offre de prêt ou d'argent, trouver l'APR et les signaux d'alerte, et choisir une solution plus sûre.",
+          quickCheck: [
+            { objective: "O6", q: "Lequel est un signal d'alerte dans une offre de prêt ?", options: ["Elle indique clairement l'APR", "Elle vous demande de payer des frais avec une carte cadeau pour obtenir le prêt", "Elle vous laisse le temps de lire les conditions", "Elle vient de votre coopérative de crédit"], answer: 1, why: "Des frais à l'avance payés par carte cadeau sont un signe d'arnaque fréquent." },
+            { objective: "O6", q: "Un SMS dit : « Vous êtes pré-approuvé ! Répondez maintenant ou perdez cette offre aujourd'hui. » Que faites-vous ?", options: ["Répondre tout de suite", "Envoyer vos coordonnées bancaires pour garder l'offre", "Le transférer à vos amis", "Prendre le temps de vérifier le prêteur auprès d'une source officielle avant de répondre"], answer: 3, why: "La pression pour agir tout de suite est un signal d'alerte ; vérifiez avant de répondre." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Construire votre filet de sécurité",
         questions: [
-          { q: "À quoi sert une épargne de précaution ?", options: ["Aux achats des fêtes", "Aux dépenses imprévues, comme une réparation ou une perte de revenus", "À acheter des billets de loterie", "À prêter de l'argent aux amis"], answer: 1, why: "L'épargne de précaution est gardée uniquement pour les imprévus et les pertes de revenus." },
-          { q: "Quelle est la meilleure façon de continuer à épargner chaque mois ?", options: ["Épargner ce qui reste à la fin du mois", "Garder l'argent dans votre portefeuille", "Attendre d'abord une grosse augmentation", "Programmer un virement automatique le jour de la paie"], answer: 3, why: "L'épargne automatique se fait avant que l'argent soit dépensé." },
-          { q: "Avant d'utiliser une option d'épargne par argent mobile, que devez-vous vérifier ?", options: ["La grille tarifaire officielle et les règles", "Ce que dit un inconnu sur les réseaux sociaux", "Rien ; c'est toujours gratuit", "Le code PIN de votre voisin"], answer: 0, why: "Les frais et les règles varient selon le service et changent, alors vérifiez d'abord la source officielle." },
-          { q: "Quelqu'un vous écrit qu'il vous a envoyé de l'argent par erreur et vous demande de le renvoyer tout de suite. Que faites-vous d'abord ?", options: ["Le renvoyer tout de suite", "Donner votre code PIN pour qu'il arrange ça", "Vérifier vous-même votre vrai solde avant de faire quoi que ce soit", "Envoyer le double pour être gentil"], answer: 2, why: "C'est une arnaque courante ; vérifiez votre propre solde et demandez à votre fournisseur." },
-          { q: "Un prêteur dit que vous aurez un prêt dès que vous paierez des frais avec une carte cadeau. C'est :", options: ["Un prêt bancaire normal", "Un signal d'alerte d'arnaque", "Une subvention de l'État", "Un rapport de crédit"], answer: 1, why: "Payer des frais d'abord, surtout avec une carte cadeau, est un signe d'arnaque." }
+          { objective: "O4", q: "À quoi sert une épargne de précaution ?", options: ["Aux achats des fêtes", "Aux dépenses imprévues, comme une réparation ou une perte de revenus", "À acheter des billets de loterie", "À prêter de l'argent aux amis"], answer: 1, why: "L'épargne de précaution est gardée uniquement pour les imprévus et les pertes de revenus." },
+          { objective: "O4", q: "Quelle est la meilleure façon de continuer à épargner chaque mois ?", options: ["Épargner ce qui reste à la fin du mois", "Garder l'argent dans votre portefeuille", "Attendre d'abord une grosse augmentation", "Programmer un virement automatique le jour de la paie"], answer: 3, why: "L'épargne automatique se fait avant que l'argent soit dépensé." },
+          { objective: "O5", q: "Avant d'utiliser une option d'épargne par argent mobile, que devez-vous vérifier ?", options: ["La grille tarifaire officielle et les règles", "Ce que dit un inconnu sur les réseaux sociaux", "Rien ; c'est toujours gratuit", "Le code PIN de votre voisin"], answer: 0, why: "Les frais et les règles varient selon le service et changent, alors vérifiez d'abord la source officielle." },
+          { objective: "O6", q: "Quelqu'un vous écrit qu'il vous a envoyé de l'argent par erreur et vous demande de le renvoyer tout de suite. Que faites-vous d'abord ?", options: ["Le renvoyer tout de suite", "Donner votre code PIN pour qu'il arrange ça", "Vérifier vous-même votre vrai solde avant de faire quoi que ce soit", "Envoyer le double pour être gentil"], answer: 2, why: "C'est une arnaque courante ; vérifiez votre propre solde et demandez à votre fournisseur." },
+          { objective: "O6", q: "Un prêteur dit que vous aurez un prêt dès que vous paierez des frais avec une carte cadeau. C'est :", options: ["Un prêt bancaire normal", "Un signal d'alerte d'arnaque", "Une subvention de l'État", "Un rapport de crédit"], answer: 1, why: "Payer des frais d'abord, surtout avec une carte cadeau, est un signe d'arnaque." }
         ]
       }
     }
@@ -192,26 +245,112 @@ module.exports = {
   quiz: {
     title: "Quiz final : Les bases des finances personnelles : budget, crédit et épargne",
     questions: [
-      { q: "Un budget est :", options: ["Un plan pour l'argent que vous recevez chaque mois", "Un type de prêt", "Un score de crédit", "Des frais bancaires"], answer: 0, why: "Un budget prévoit où va votre argent." },
-      { q: "Qu'est-ce qui fait partie du groupe épargne d'un budget ?", options: ["Le loyer", "Un repas à emporter chaque semaine", "L'argent mis de côté pour votre épargne de précaution", "La facture de téléphone"], answer: 2, why: "L'épargne est l'argent que vous mettez de côté exprès." },
-      { q: "Votre budget tombe en dessous de zéro. Que devez-vous couper en premier ?", options: ["Les médicaments", "Les envies", "Le loyer", "Les paiements minimums des dettes"], answer: 1, why: "Coupez dans les envies avant les besoins." },
-      { q: "Que ne devez-vous PAS taper dans un assistant d'IA quand vous faites un budget ?", options: ["Des dépenses mensuelles approximatives", "\"Fais-moi un tableau de budget\"", "\"Propose des façons de dépenser moins\"", "Votre numéro de compte bancaire"], answer: 3, why: "Ne partagez jamais de numéros de compte ni de mots de passe avec des outils d'IA." },
-      { q: "Qu'est-ce qu'un score de crédit ?", options: ["Le solde de votre compte bancaire", "Un nombre calculé à partir de votre rapport de crédit", "Vos revenus", "Des frais de prêt"], answer: 1, why: "Un score de crédit est basé sur les informations de votre rapport de crédit." },
-      { q: "Consulter votre propre rapport de crédit fait-il baisser votre score ?", options: ["Non", "Oui, beaucoup", "Oui, un peu à chaque fois", "Seulement le week-end"], answer: 0, why: "Le CFPB dit que demander vos propres rapports ne nuit pas à votre score." },
-      { q: "Quelles sont les trois agences qui fournissent des rapports de crédit nationaux aux États-Unis ?", options: ["Visa, Mastercard, Discover", "Social Security, IRS, Medicare", "Chase, Wells Fargo, Citi", "Equifax, Experian, TransUnion"], answer: 3, why: "Ce sont les trois agences nationales de rapports de crédit." },
-      { q: "Un site propose un \"rapport de crédit gratuit\" mais demande une carte pour commencer un essai. Quel est le choix le plus sûr ?", options: ["S'inscrire quand même", "Donner votre numéro de carte", "Utiliser plutôt AnnualCreditReport.com", "Partager le lien avec vos amis"], answer: 2, why: "Certains sites vous inscrivent à des produits payants ; AnnualCreditReport.com est la source officielle et gratuite." },
-      { q: "Votre rapport montre un retard de paiement alors que vous savez avoir payé à temps. Vous devez :", options: ["Attendre qu'il disparaisse", "Ouvrir une nouvelle carte", "Contester l'erreur et garder des copies", "Arrêter de payer toutes vos factures"], answer: 2, why: "Vous pouvez contester les erreurs auprès de l'agence de crédit et de l'entreprise." },
-      { q: "Sur votre liste de dettes, que devez-vous toujours payer pour chaque dette ?", options: ["Rien tant que vous ne pouvez pas tout payer", "Au moins le minimum, à temps", "Seulement la plus grosse", "Le double du solde"], answer: 1, why: "Ne pas payer les minimums ajoute des frais et nuit à votre crédit." },
-      { q: "Pourquoi quelqu'un choisirait-il de rembourser d'abord le plus petit solde ?", options: ["Une victoire rapide l'aide à rester motivé", "Cela fait toujours économiser le plus d'argent", "Les prêteurs l'exigent", "Cela supprime tous les intérêts"], answer: 0, why: "Rembourser vite une petite dette donne une victoire rapide ; la méthode du taux le plus élevé fait en général économiser plus." },
-      { q: "Vous allez manquer un paiement de voiture la semaine prochaine. Quelle est la meilleure chose à faire ?", options: ["Ne rien dire et espérer", "Prendre un prêt sur salaire", "Changer de numéro de téléphone", "Appeler le prêteur avant la date d'échéance pour demander les solutions possibles"], answer: 3, why: "Les prêteurs peuvent proposer des solutions si vous appelez tôt." },
-      { q: "Un bon premier objectif d'épargne de précaution est :", options: ["Une somme énorme que vous ne pouvez pas atteindre", "Une petite somme atteignable, puis une plus grande", "Zéro tant que vous n'êtes pas riche", "Ce que possède votre voisin"], answer: 1, why: "Commencez petit et augmentez ; même un peu, ça aide." },
-      { q: "Quel endroit est plus sûr que l'argent liquide à la maison pour garder votre épargne de précaution ?", options: ["Sous le matelas", "Chez un inconnu en ligne", "Un compte d'épargne dans une banque ou une coopérative de crédit", "Dans votre portefeuille de tous les jours"], answer: 2, why: "L'argent liquide peut être perdu ou volé ; les comptes assurés sont plus sûrs." },
-      { q: "Un agriculteur est payé à la récolte. Quelle est une bonne habitude d'épargne ?", options: ["Dépenser d'abord et épargner ce qui reste", "Tout prêter à un cousin", "Tout garder en liquide à la maison", "Mettre une partie de côté le jour même, avant de dépenser"], answer: 3, why: "Épargner d'abord, avant de dépenser, fait marcher le plan." },
-      { q: "Les frais de l'argent mobile :", options: ["Varient selon le service et changent, alors vérifiez la grille tarifaire officielle", "Sont toujours nuls", "Sont les mêmes dans tous les pays", "N'ont jamais d'importance"], answer: 0, why: "Vérifiez les frais actuels dans l'application, sur le site officiel ou avec un agent officiel." },
-      { q: "Dans un groupe d'épargne (chama), qu'est-ce qui vous protège le mieux ?", options: ["Payer sans rien noter", "Rejoindre n'importe quel groupe en ligne", "Une trace écrite de chaque versement et une copie des règles", "Partager votre code PIN avec le groupe"], answer: 2, why: "Les traces écrites et les règles écrites protègent chaque membre." },
-      { q: "Que vous indique l'APR ?", options: ["Votre score de crédit", "Le coût d'un prêt sur un an, frais compris, en pourcentage", "Ce que vous gagnez", "L'adresse de votre banque"], answer: 1, why: "L'APR permet de comparer le vrai coût des prêts." },
-      { q: "Aux États-Unis, peut-on vous arrêter parce que vous n'avez pas remboursé un prêt sur salaire ?", options: ["Oui, toujours", "Oui, après un jour", "Seulement le week-end", "Non"], answer: 3, why: "Le CFPB dit qu'on ne peut pas vous arrêter pour un défaut de paiement d'un prêt sur salaire." },
-      { q: "Quelle solution coûte moins cher qu'un prêt sur salaire ?", options: ["Un petit prêt d'une coopérative de crédit", "Reconduire un prêt sur salaire", "Payer un inconnu avec des cartes cadeaux", "Un prêt qui demande des frais d'abord"], answer: 0, why: "Les prêts des coopératives de crédit et une demande de délai coûtent en général beaucoup moins." }
+      { objective: "O1", q: "Un budget est :", options: ["Un plan pour l'argent que vous recevez chaque mois", "Un type de prêt", "Un score de crédit", "Des frais bancaires"], answer: 0, why: "Un budget prévoit où va votre argent." },
+      { objective: "O1", q: "Qu'est-ce qui fait partie du groupe épargne d'un budget ?", options: ["Le loyer", "Un repas à emporter chaque semaine", "L'argent mis de côté pour votre épargne de précaution", "La facture de téléphone"], answer: 2, why: "L'épargne est l'argent que vous mettez de côté exprès." },
+      { objective: "O1", q: "Votre budget tombe en dessous de zéro. Que devez-vous couper en premier ?", options: ["Les médicaments", "Les envies", "Le loyer", "Les paiements minimums des dettes"], answer: 1, why: "Coupez dans les envies avant les besoins." },
+      { objective: "O1", q: "Que ne devez-vous PAS taper dans un assistant d'IA quand vous faites un budget ?", options: ["Des dépenses mensuelles approximatives", "\"Fais-moi un tableau de budget\"", "\"Propose des façons de dépenser moins\"", "Votre numéro de compte bancaire"], answer: 3, why: "Ne partagez jamais de numéros de compte ni de mots de passe avec des outils d'IA." },
+      { objective: "O2", q: "Qu'est-ce qu'un score de crédit ?", options: ["Le solde de votre compte bancaire", "Un nombre calculé à partir de votre rapport de crédit", "Vos revenus", "Des frais de prêt"], answer: 1, why: "Un score de crédit est basé sur les informations de votre rapport de crédit." },
+      { objective: "O2", q: "Consulter votre propre rapport de crédit fait-il baisser votre score ?", options: ["Non", "Oui, beaucoup", "Oui, un peu à chaque fois", "Seulement le week-end"], answer: 0, why: "Le CFPB dit que demander vos propres rapports ne nuit pas à votre score." },
+      { objective: "O2", q: "Quelles sont les trois agences qui fournissent des rapports de crédit nationaux aux États-Unis ?", options: ["Visa, Mastercard, Discover", "Social Security, IRS, Medicare", "Chase, Wells Fargo, Citi", "Equifax, Experian, TransUnion"], answer: 3, why: "Ce sont les trois agences nationales de rapports de crédit." },
+      { objective: "O2", q: "Un site propose un \"rapport de crédit gratuit\" mais demande une carte pour commencer un essai. Quel est le choix le plus sûr ?", options: ["S'inscrire quand même", "Donner votre numéro de carte", "Utiliser plutôt AnnualCreditReport.com", "Partager le lien avec vos amis"], answer: 2, why: "Certains sites vous inscrivent à des produits payants ; AnnualCreditReport.com est la source officielle et gratuite." },
+      { objective: "O2", q: "Votre rapport montre un retard de paiement alors que vous savez avoir payé à temps. Vous devez :", options: ["Attendre qu'il disparaisse", "Ouvrir une nouvelle carte", "Contester l'erreur et garder des copies", "Arrêter de payer toutes vos factures"], answer: 2, why: "Vous pouvez contester les erreurs auprès de l'agence de crédit et de l'entreprise." },
+      { objective: "O3", q: "Sur votre liste de dettes, que devez-vous toujours payer pour chaque dette ?", options: ["Rien tant que vous ne pouvez pas tout payer", "Au moins le minimum, à temps", "Seulement la plus grosse", "Le double du solde"], answer: 1, why: "Ne pas payer les minimums ajoute des frais et nuit à votre crédit." },
+      { objective: "O3", q: "Pourquoi quelqu'un choisirait-il de rembourser d'abord le plus petit solde ?", options: ["Une victoire rapide l'aide à rester motivé", "Cela fait toujours économiser le plus d'argent", "Les prêteurs l'exigent", "Cela supprime tous les intérêts"], answer: 0, why: "Rembourser vite une petite dette donne une victoire rapide ; la méthode du taux le plus élevé fait en général économiser plus." },
+      { objective: "O3", q: "Vous allez manquer un paiement de voiture la semaine prochaine. Quelle est la meilleure chose à faire ?", options: ["Ne rien dire et espérer", "Prendre un prêt sur salaire", "Changer de numéro de téléphone", "Appeler le prêteur avant la date d'échéance pour demander les solutions possibles"], answer: 3, why: "Les prêteurs peuvent proposer des solutions si vous appelez tôt." },
+      { objective: "O4", q: "Un bon premier objectif d'épargne de précaution est :", options: ["Une somme énorme que vous ne pouvez pas atteindre", "Une petite somme atteignable, puis une plus grande", "Zéro tant que vous n'êtes pas riche", "Ce que possède votre voisin"], answer: 1, why: "Commencez petit et augmentez ; même un peu, ça aide." },
+      { objective: "O5", q: "Quel endroit est plus sûr que l'argent liquide à la maison pour garder votre épargne de précaution ?", options: ["Sous le matelas", "Chez un inconnu en ligne", "Un compte d'épargne dans une banque ou une coopérative de crédit", "Dans votre portefeuille de tous les jours"], answer: 2, why: "L'argent liquide peut être perdu ou volé ; les comptes assurés sont plus sûrs." },
+      { objective: "O4", q: "Un agriculteur est payé à la récolte. Quelle est une bonne habitude d'épargne ?", options: ["Dépenser d'abord et épargner ce qui reste", "Tout prêter à un cousin", "Tout garder en liquide à la maison", "Mettre une partie de côté le jour même, avant de dépenser"], answer: 3, why: "Épargner d'abord, avant de dépenser, fait marcher le plan." },
+      { objective: "O5", q: "Les frais de l'argent mobile :", options: ["Varient selon le service et changent, alors vérifiez la grille tarifaire officielle", "Sont toujours nuls", "Sont les mêmes dans tous les pays", "N'ont jamais d'importance"], answer: 0, why: "Vérifiez les frais actuels dans l'application, sur le site officiel ou avec un agent officiel." },
+      { objective: "O5", q: "Dans un groupe d'épargne (chama), qu'est-ce qui vous protège le mieux ?", options: ["Payer sans rien noter", "Rejoindre n'importe quel groupe en ligne", "Une trace écrite de chaque versement et une copie des règles", "Partager votre code PIN avec le groupe"], answer: 2, why: "Les traces écrites et les règles écrites protègent chaque membre." },
+      { objective: "O6", q: "Que vous indique l'APR ?", options: ["Votre score de crédit", "Le coût d'un prêt sur un an, frais compris, en pourcentage", "Ce que vous gagnez", "L'adresse de votre banque"], answer: 1, why: "L'APR permet de comparer le vrai coût des prêts." },
+      { objective: "O6", q: "Aux États-Unis, peut-on vous arrêter parce que vous n'avez pas remboursé un prêt sur salaire ?", options: ["Oui, toujours", "Oui, après un jour", "Seulement le week-end", "Non"], answer: 3, why: "Le CFPB dit qu'on ne peut pas vous arrêter pour un défaut de paiement d'un prêt sur salaire." },
+      { objective: "O6", q: "Quelle solution coûte moins cher qu'un prêt sur salaire ?", options: ["Un petit prêt d'une coopérative de crédit", "Reconduire un prêt sur salaire", "Payer un inconnu avec des cartes cadeaux", "Un prêt qui demande des frais d'abord"], answer: 0, why: "Les prêts des coopératives de crédit et une demande de délai coûtent en général beaucoup moins." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      2,
+      5,
+      7,
+      9,
+      12,
+      14,
+      15,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Budget mensuel",
+        objective: "O1",
+        notYet: "Les revenus ou les dépenses manquent, ou il n'y a pas de ligne d'épargne.",
+        meets: "Les revenus, les besoins, les envies et l'épargne sont listés et le total est vérifié.",
+        exceeds: "Se base sur un mois normal aux revenus plutôt bas et montre quelles envies ont été réduites."
+      },
+      {
+        name: "Plan de remboursement",
+        objective: "O3",
+        notYet: "Des dettes manquent, ou aucune dette n'est choisie pour un remboursement en plus.",
+        meets: "Toutes les dettes sont listées avec le solde, le taux, le minimum et la date d'échéance, et une est choisie pour un remboursement en plus.",
+        exceeds: "Explique pourquoi il a choisi la méthode du taux le plus élevé ou celle du plus petit solde."
+      },
+      {
+        name: "Épargne de précaution",
+        objective: "O4",
+        notYet: "Pas d'objectif, ou pas de montant ni de jour.",
+        meets: "Un objectif, un montant, un jour et un endroit pour épargner, ajoutés au budget.",
+        exceeds: "L'épargne est mise en place pour se faire automatiquement."
+      },
+      {
+        name: "Endroit sûr pour épargner",
+        objective: "O5",
+        notYet: "Endroit choisi sans vérifier les frais ni les règles.",
+        meets: "Les frais de dépôt et de retrait sont notés d'après la source officielle.",
+        exceeds: "A comparé deux options avant de choisir."
+      },
+      {
+        name: "Date du rapport de crédit",
+        objective: "O2",
+        notYet: "Pas de date pour vérifier les rapports de crédit.",
+        meets: "Une date pour vérifier les rapports de crédit auprès de la source officielle gratuite.",
+        exceeds: "A déjà vérifié un rapport et noté ce qu'il a trouvé."
+      },
+      {
+        name: "Signaux d'alerte d'une offre",
+        objective: "O6",
+        notYet: "A manqué des signaux d'alerte évidents dans l'offre.",
+        meets: "Liste les signaux d'alerte d'une vraie offre.",
+        exceeds: "Nomme aussi une option plus sûre, comme un prêt d'une coopérative de crédit."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui utilisent un budget écrit à 30 jours (questionnaire de suivi)",
+      "Apprenants qui ont commencé ou augmenté une épargne de précaution dans les 30 jours",
+      "Apprenants qui ont vérifié leur rapport de crédit dans les 60 jours",
+      "Apprenants qui disent avoir évité un prêt abusif ou une arnaque financière"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Du papier et un stylo, ou un tableur gratuit comme Google Sheets ou Excel",
+      "Les revenus et les factures du mois dernier (gardés privés)",
+      "Un accès Internet pour AnnualCreditReport.com (États-Unis) ou l'agence de crédit locale et les grilles tarifaires",
+      "Environ 60 minutes au total, plus le temps de rassembler vos propres chiffres"
+    ],
+    facilitatorNotes: [
+      "Laissez les apprenants utiliser des chiffres inventés en groupe ; ne demandez jamais à quelqu'un de montrer ses vrais soldes, numéros de compte ou rapports de crédit.",
+      "Rappelez que ce n'est pas un conseil en investissement et orientez les apprenants vers un conseiller en crédit à but non lucratif pour les grandes décisions.",
+      "Pour les apprenants hors des États-Unis, aidez-les à trouver l'agence de crédit de leur pays et les grilles tarifaires officielles de l'argent mobile.",
+      "Apportez de vrais exemples d'offres de prêt et d'arnaques pour l'exercice sur les signaux d'alerte.",
+      "Notez le plan financier avec la grille et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

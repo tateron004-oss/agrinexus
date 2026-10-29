@@ -31,11 +31,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos. Lee la lección, mira las diapositivas y luego haz la tarea de \"Pruébalo ahora\". Hay una comprobación de conocimientos corta después de cada capítulo y un examen de 20 preguntas al final. Las tareas se van sumando en tu propio plan de preparación."
   ],
   finalTask: "Haz un plan de preparación de una página para tu negocio con cinco columnas: Paso, Oficina (con el sitio web oficial), Costo (o \"buscar en ...\"), Fecha límite, Hecho. Incluye tu estructura, el registro del nombre, el EIN, el permiso de vendedor (o por qué no lo necesitas), la licencia de negocio de la ciudad, cualquier permiso especial que CalGold mencione para tu tipo de negocio, y el impuesto anual de $800 y la Declaración de Información si formas una LLC o una corporación.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Personas que están empezando un pequeño negocio en California, como un camión de comida, un salón de belleza, un servicio de limpieza, una tienda de barrio, una tienda en línea o una panadería en casa. Muchas son dueñas por primera vez y de grupos minoritarios, y lo hacen sin abogado.",
+    startingPoint: "Tienen una idea de negocio y saben usar un teléfono o una computadora para entrar a sitios web. La mayoría no conoce los pasos para abrir un negocio, qué oficina se encarga de cada uno, cuáles son las cuotas del estado ni qué trámites e impuestos anuales vienen con cada estructura.",
+    gap: "Saltarse un registro, un permiso o un trámite anual puede traer multas y recargos, y los sitios web pagados que se parecen a los oficiales cobran de más por servicios gratuitos. Estas personas necesitan un plan de preparación con cada paso en orden, la oficina oficial, el costo y la fecha límite, para empezar de forma legal y hacer bien su presupuesto.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y oraciones cortas",
+      "Dispositivos: un teléfono o una computadora con internet para abrir páginas oficiales .gov",
+      "Tiempo: lecciones de unos 5 minutos que caben mientras manejas o planeas un negocio",
+      "Las cuotas y las reglas cambian, y las cuotas de cada ciudad y condado son distintas; revisa cada página oficial antes de pagar",
+      "No es asesoría legal ni de impuestos; privacidad: el número de Seguro Social va solo en el formulario oficial del IRS"
+    ],
+    prerequisites: "Ninguno. \"Introducción a la IA para pequeños negocios\" ayuda si quieres usar la IA para organizar el plan."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con tu idea de negocio, los dueños y los riesgos", action: "elegir una estructura de negocio y anotar cuánto cuesta formarla", standard: "con una razón para la elección y la cuota revisada en la página de la Secretaría de Estado" },
+    { id: "O2", condition: "Con el nombre y la estructura de tu negocio", action: "averiguar cómo registrar el nombre de tu negocio", standard: "con la oficina correcta, su página de cuotas y la regla de publicación anotadas en tu plan" },
+    { id: "O3", condition: "Con tu tipo de negocio", action: "decidir si necesitas un permiso de vendedor y anotar cómo obtener un EIN gratis", standard: "nombrando al IRS y a la CDTFA como las oficinas y sin usar ningún servicio de EIN pagado" },
+    { id: "O4", condition: "Usando CalGold y el sitio web de tu ciudad", action: "hacer una lista de los permisos locales que necesita tu negocio", standard: "con el sitio web de cada agencia y la cuota o dónde buscarla" },
+    { id: "O5", condition: "Con tu estructura y tus planes de contratar", action: "hacer una lista de los costos y las fechas límite estatales de cada año", standard: "incluyendo el impuesto de $800, la Declaración de Información y el registro en el EDD cuando apliquen, cada uno revisado en la página oficial" },
+    { id: "O6", condition: "Con todos los pasos del curso", action: "crear un plan de preparación de una página con los pasos en orden, las oficinas, los costos y las fechas límite", standard: "con cada costo revisado en la página oficial o marcado \"buscar en\" con el lugar" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Elegir y registrar tu negocio",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Elegir una estructura de negocio",
           minutes: 6,
           goal: "Elegir la estructura de negocio que le queda hoy a tu negocio y saber cuánto cuesta formarla.",
@@ -55,9 +79,14 @@ module.exports = {
           ],
           sources: [SOS_LLC, SOS_CORP, FTB_FORMS],
           tryIt: "Empieza tu plan de preparación. Arriba escribe tu idea de negocio, quién es el dueño y sus mayores riesgos. Luego escribe la estructura que elegirías hoy y una razón.",
-          youCanNow: "nombrar las estructuras de negocio comunes, decir cuánto cuesta en el estado formar una LLC o una corporación y elegir una para tu negocio."
+          youCanNow: "nombrar las estructuras de negocio comunes, decir cuánto cuesta en el estado formar una LLC o una corporación y elegir una para tu negocio.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué estructura no necesita ningún trámite de formación ante la Secretaría de Estado de California?", options: ["LLC", "Corporación", "Negocio de un solo dueño", "Corporación sin fines de lucro"], answer: 2, why: "Un negocio de un solo dueño no presenta documentos de formación ante la Secretaría de Estado." },
+            { objective: "O1", q: "Quieres formar una LLC y ves una cuota en internet. ¿Qué harías antes de pagar?", options: ["Revisar la cuota actual en la página oficial de la Secretaría de Estado", "Pagarle al primer sitio web que aparezca", "Preguntarle a un amigo cuánto pagó hace años", "Usar lo que diga la IA"], answer: 0, why: "Las cuotas cambian, así que revisas la página oficial antes de pagar." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Nombrar y registrar tu negocio",
           minutes: 5,
           goal: "Registrar el nombre de tu negocio de la forma correcta según tu estructura.",
@@ -75,9 +104,14 @@ module.exports = {
           ],
           sources: [BIZFILE, LA_FBN, CALOSBA],
           tryIt: "Busca el nombre de tu negocio en bizfile Online. Luego encuentra la página del FBN del secretario de tu condado y anota en tu plan la cuota y la regla de publicación.",
-          youCanNow: "revisar si un nombre de negocio está libre y decir cuándo necesitas un Nombre Comercial Ficticio y dónde presentarlo."
+          youCanNow: "revisar si un nombre de negocio está libre y decir cuándo necesitas un Nombre Comercial Ficticio y dónde presentarlo.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué es un DBA?", options: ["Un formulario de impuestos", "Una licencia de negocio", "Un tipo de LLC", "El nombre que un negocio usa con el público, si no es el nombre legal del dueño"], answer: 3, why: "Un DBA es el nombre público de un negocio que es distinto del nombre legal del dueño." },
+            { objective: "O2", q: "Presentaste un Nombre Comercial Ficticio (FBN) en tu condado. ¿Qué harías después, lo más probable?", options: ["Nada más", "Publicarlo en un periódico local, como lo pide tu condado", "Presentarlo otra vez ante el IRS", "Esperar cinco años"], answer: 1, why: "La mayoría de los condados de California te piden publicar el FBN en un periódico local." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Obtener tu EIN gratis y un permiso de vendedor",
           minutes: 5,
           goal: "Solicitar un EIN al IRS y decidir si necesitas un permiso de vendedor de California.",
@@ -95,17 +129,21 @@ module.exports = {
           ],
           sources: [IRS_EIN, CDTFA, CDTFA_FAQ],
           tryIt: "Agrega dos filas a tu plan: EIN (IRS, gratis, se solicita en irs.gov) y permiso de vendedor (CDTFA, sin cuota, posible depósito) o una nota de por qué no lo necesitas. No escribas tu número de Seguro Social en ningún lado salvo en el formulario oficial del IRS.",
-          youCanNow: "solicitar un EIN gratis en el sitio oficial del IRS y decidir si tu negocio necesita un permiso de vendedor."
+          youCanNow: "solicitar un EIN gratis en el sitio oficial del IRS y decidir si tu negocio necesita un permiso de vendedor.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué agencia da los permisos de vendedor de California?", options: ["El IRS", "El secretario de tu condado", "La CDTFA", "La Secretaría de Estado"], answer: 2, why: "El Departamento de Administración de Impuestos y Cuotas de California (CDTFA) da los permisos de vendedor." },
+            { objective: "O3", q: "Piensas vender productos solo en un mercado de temporada durante unas semanas. ¿Qué harías?", options: ["Preguntarle a la CDTFA por un permiso de vendedor temporal", "No sacar permisos porque es poco tiempo", "Sacar un EIN en su lugar", "Pagarle a un sitio privado por un permiso"], answer: 0, why: "Quienes venden por poco tiempo pueden preguntarle a la CDTFA por un permiso de vendedor temporal." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Elegir y registrar tu negocio",
         questions: [
-          { q: "¿Qué cuota indica la Secretaría de Estado para los Artículos de Organización de una LLC (Formulario LLC-1)?", options: ["$800", "$70", "$20", "Gratis"], answer: 1, why: "La página de formularios de LLC de la Secretaría de Estado indica $70 para el Formulario LLC-1." },
-          { q: "Kevin tiene un negocio de cuidado de jardines como dueño único. ¿Qué es cierto?", options: ["Debe pagar $100 a la Secretaría de Estado para formarlo", "No puede usar un nombre de negocio", "Primero debe formar una corporación", "No presenta documentos de formación ante la Secretaría de Estado"], answer: 3, why: "Los dueños únicos no presentan documentos de formación ante la Secretaría de Estado." },
-          { q: "María López vende comida como \"Tamales Amanecer\". ¿Dónde presenta su Nombre Comercial Ficticio?", options: ["Ante el secretario de su condado", "Ante el CDTFA", "Ante el IRS", "Ante el Franchise Tax Board"], answer: 0, why: "Las declaraciones de FBN se presentan ante el secretario del condado donde está el negocio." },
-          { q: "Un sitio web te pide $150 para conseguirte un EIN. ¿Qué haces?", options: ["Pagarlo; es más rápido", "Usar el EIN de un amigo", "Solicitarlo gratis en irs.gov", "No sacar nunca el EIN"], answer: 2, why: "El IRS dice que nunca tienes que pagar por un EIN." },
-          { q: "¿Qué negocio probablemente necesita un permiso de vendedor de California?", options: ["Un servicio de limpieza de casas", "Un servicio de clases particulares", "Una boutique que vende ropa", "Un servicio de contabilidad"], answer: 2, why: "Vender productos que pagan impuesto, como ropa, requiere un permiso de vendedor." }
+          { objective: "O1", q: "¿Qué cuota indica la Secretaría de Estado para los Artículos de Organización de una LLC (Formulario LLC-1)?", options: ["$800", "$70", "$20", "Gratis"], answer: 1, why: "La página de formularios de LLC de la Secretaría de Estado indica $70 para el Formulario LLC-1." },
+          { objective: "O1", q: "Kevin tiene un negocio de cuidado de jardines como dueño único. ¿Qué es cierto?", options: ["Debe pagar $100 a la Secretaría de Estado para formarlo", "No puede usar un nombre de negocio", "Primero debe formar una corporación", "No presenta documentos de formación ante la Secretaría de Estado"], answer: 3, why: "Los dueños únicos no presentan documentos de formación ante la Secretaría de Estado." },
+          { objective: "O2", q: "María López vende comida como \"Tamales Amanecer\". ¿Dónde presenta su Nombre Comercial Ficticio?", options: ["Ante el secretario de su condado", "Ante el CDTFA", "Ante el IRS", "Ante el Franchise Tax Board"], answer: 0, why: "Las declaraciones de FBN se presentan ante el secretario del condado donde está el negocio." },
+          { objective: "O3", q: "Un sitio web te pide $150 para conseguirte un EIN. ¿Qué haces?", options: ["Pagarlo; es más rápido", "Usar el EIN de un amigo", "Solicitarlo gratis en irs.gov", "No sacar nunca el EIN"], answer: 2, why: "El IRS dice que nunca tienes que pagar por un EIN." },
+          { objective: "O3", q: "¿Qué negocio probablemente necesita un permiso de vendedor de California?", options: ["Un servicio de limpieza de casas", "Un servicio de clases particulares", "Una boutique que vende ropa", "Un servicio de contabilidad"], answer: 2, why: "Vender productos que pagan impuesto, como ropa, requiere un permiso de vendedor." }
         ]
       }
     },
@@ -113,6 +151,7 @@ module.exports = {
       name: "Capítulo 2: Permisos locales, costos anuales y tu plan",
       lessons: [
         {
+          objectives: ["O4","O6"],
           title: "Encontrar los permisos de tu ciudad y tu condado",
           minutes: 5,
           goal: "Usar CalGold y el sitio web de tu ciudad para hacer una lista de los permisos locales que necesita tu negocio.",
@@ -130,9 +169,14 @@ module.exports = {
           ],
           sources: [CALGOLD, CALOSBA],
           tryIt: "Usa CalGold para tu ciudad y tu tipo de negocio. Agrega a tu plan cada permiso que muestre, con el sitio web de la agencia. Para cada uno, escribe la cuota o \"buscar en\" y dónde.",
-          youCanNow: "encontrar los permisos de la ciudad y del condado que necesita tu negocio y la oficina que da cada uno."
+          youCanNow: "encontrar los permisos de la ciudad y del condado que necesita tu negocio y la oficina que da cada uno.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué hace CalGold?", options: ["Da todos los permisos que necesitas", "Cobra tus impuestos", "Forma tu LLC", "Muestra la información de permisos y las agencias según tu ciudad y tu tipo de negocio"], answer: 3, why: "CalGold muestra los permisos y las agencias, pero no los da." },
+            { objective: "O4", q: "CalGold muestra un permiso para tu camión de comida. ¿Qué harías después?", options: ["Dar por hecho que ya lo tienes", "Contactar a la agencia que aparece para confirmar la cuota y solicitarlo", "Pedirle a la IA que lo solicite por ti", "Esperar a que llegue un inspector"], answer: 1, why: "CalGold no da permisos, así que contactas a cada agencia." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Los costos anuales: el impuesto de $800, los trámites y la nómina",
           minutes: 6,
           goal: "Hacer una lista de los costos y las fechas límite estatales de cada año que vienen con tu estructura.",
@@ -151,9 +195,14 @@ module.exports = {
           ],
           sources: [FTB_LLC, FTB_CORP, SOS_LLC, SOS_CORP, EDD],
           tryIt: "Agrega a tu plan las filas anuales que corresponden a tu estructura: el impuesto de $800 y su fecha límite, la Declaración de Información y su cuota, y el registro con el EDD si vas a contratar. Abre cada página oficial y revisa la cantidad antes de escribirla.",
-          youCanNow: "hacer una lista de los costos y las fechas límite estatales de cada año para tu estructura y decir qué oficina cobra cada uno."
+          youCanNow: "hacer una lista de los costos y las fechas límite estatales de cada año para tu estructura y decir qué oficina cobra cada uno.",
+          quickCheck: [
+            { objective: "O5", q: "Después de la primera, ¿cada cuánto presenta una LLC la Declaración de Información?", options: ["Cada mes", "Cada cinco años", "Solo una vez", "Cada dos años"], answer: 3, why: "Después de la primera, una LLC presenta la Declaración de Información cada dos años." },
+            { objective: "O5", q: "Tu LLC no ganó dinero este año. ¿Para qué te prepararías?", options: ["Para nada, porque no hubo negocio", "Cancelar el plan para los impuestos", "Para el impuesto anual de $800, que se sigue debiendo hasta que se cancele la LLC", "Solo para un impuesto federal"], answer: 2, why: "Una LLC debe el impuesto anual de $800 hasta que se cancela, aunque no tenga actividad." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Juntarlo todo: tu plan de preparación y tu presupuesto",
           minutes: 5,
           goal: "Hacer un plan de preparación de una página con los pasos en orden, las oficinas, los costos y las fechas límite.",
@@ -171,17 +220,21 @@ module.exports = {
           ],
           sources: [SOS_LLC, FTB_LLC, CDTFA, IRS_EIN, CALGOLD],
           tryIt: "Tarea final: termina tu plan de una página con cinco columnas: Paso, Oficina (sitio web), Costo, Fecha límite, Hecho. Llena cada fila con lo de este curso, suma los costos conocidos y marca cada cuota local que todavía tienes que buscar.",
-          youCanNow: "hacer y usar un plan de preparación completo para empezar un negocio en California."
+          youCanNow: "hacer y usar un plan de preparación completo para empezar un negocio en California.",
+          quickCheck: [
+            { objective: "O6", q: "¿En qué orden se hacen por lo general estos pasos?", options: ["Elegir una estructura, formarla, sacar el EIN y luego los permisos locales", "Los permisos locales y luego elegir una estructura", "Sacar el EIN antes de elegir un nombre o una estructura, y formarla al final", "Cualquier orden da lo mismo"], answer: 0, why: "Cada paso depende del anterior, empezando por la estructura." },
+            { objective: "O6", q: "Todavía no sabes la cuota de la licencia de negocio de tu ciudad. ¿Qué escribirías en tu plan?", options: ["Una cifra adivinada", "Cero", "\"Buscar en\" más el sitio web oficial de la ciudad", "La cuota de otra ciudad"], answer: 2, why: "Las cuotas locales son distintas, así que anotas dónde buscarlas en lugar de adivinar." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Permisos locales, costos anuales y tu plan",
         questions: [
-          { q: "¿Qué hace CalGold?", options: ["Muestra información de permisos y agencias para tu ciudad y tu tipo de negocio", "Da tu licencia de negocio", "Cobra el impuesto de $800", "Te da un EIN"], answer: 0, why: "CalGold encuentra información de permisos; no da permisos." },
-          { q: "¿Quién fija la cuota de la licencia de negocio de una ciudad?", options: ["El IRS", "La Secretaría de Estado", "El CDTFA", "Cada ciudad o condado"], answer: 3, why: "Las cuotas de las licencias locales las fija cada ciudad o condado." },
-          { q: "Una LLC no hizo ningún negocio este año. ¿Debe el impuesto anual de $800?", options: ["No, solo si ganó dinero", "Sí, hasta que se cancele la LLC", "Solo el primer año", "Solo si tiene trabajadores"], answer: 1, why: "El FTB dice que el impuesto anual se debe aunque la LLC no haga negocios, hasta que se cancele." },
-          { q: "¿Cuándo vence la primera Declaración de Información de una LLC?", options: ["Dentro de los 90 días después de formarla", "Cada mes", "Solo cuando cierra", "Dentro de 10 años"], answer: 0, why: "La Secretaría de Estado dice que vence dentro de los 90 días después de registrarla y luego cada dos años." },
-          { q: "Vas a contratar a tu primer trabajador. ¿Con qué oficina te registras?", options: ["CalGold", "El secretario del condado", "El EDD", "El DMV"], answer: 2, why: "Los empleadores se registran con el EDD dentro de los 15 días después de pagar más de $100 en salarios en un trimestre." }
+          { objective: "O4", q: "¿Qué hace CalGold?", options: ["Muestra información de permisos y agencias para tu ciudad y tu tipo de negocio", "Da tu licencia de negocio", "Cobra el impuesto de $800", "Te da un EIN"], answer: 0, why: "CalGold encuentra información de permisos; no da permisos." },
+          { objective: "O4", q: "¿Quién fija la cuota de la licencia de negocio de una ciudad?", options: ["El IRS", "La Secretaría de Estado", "El CDTFA", "Cada ciudad o condado"], answer: 3, why: "Las cuotas de las licencias locales las fija cada ciudad o condado." },
+          { objective: "O5", q: "Una LLC no hizo ningún negocio este año. ¿Debe el impuesto anual de $800?", options: ["No, solo si ganó dinero", "Sí, hasta que se cancele la LLC", "Solo el primer año", "Solo si tiene trabajadores"], answer: 1, why: "El FTB dice que el impuesto anual se debe aunque la LLC no haga negocios, hasta que se cancele." },
+          { objective: "O5", q: "¿Cuándo vence la primera Declaración de Información de una LLC?", options: ["Dentro de los 90 días después de formarla", "Cada mes", "Solo cuando cierra", "Dentro de 10 años"], answer: 0, why: "La Secretaría de Estado dice que vence dentro de los 90 días después de registrarla y luego cada dos años." },
+          { objective: "O5", q: "Vas a contratar a tu primer trabajador. ¿Con qué oficina te registras?", options: ["CalGold", "El secretario del condado", "El EDD", "El DMV"], answer: 2, why: "Los empleadores se registran con el EDD dentro de los 15 días después de pagar más de $100 en salarios en un trimestre." }
         ]
       }
     }
@@ -189,26 +242,106 @@ module.exports = {
   quiz: {
     title: "Examen final: Cómo montar un pequeño negocio en California, con sus costos",
     questions: [
-      { q: "¿Qué estructura no necesita trámite de formación ante la Secretaría de Estado de California?", options: ["LLC", "Negocio de un solo dueño", "Corporación", "Corporación sin fines de lucro"], answer: 1, why: "Los dueños únicos no presentan documentos de formación ante la Secretaría de Estado." },
-      { q: "¿Cuál es una razón principal por la que los dueños forman una LLC?", options: ["Siempre es gratis", "Reemplaza todos los permisos", "Quita todos los impuestos", "Puede ayudar a separar los bienes personales de las deudas del negocio"], answer: 3, why: "Una LLC es una entidad legal aparte que puede ayudar a proteger al dueño." },
-      { q: "La cuota de la Secretaría de Estado por los Artículos de Incorporación de una corporación general por acciones (ARTS-GS) es de:", options: ["$20", "$70", "$100", "$800"], answer: 2, why: "La Secretaría de Estado indica $100 para el ARTS-GS." },
-      { q: "¿Dónde presentas en línea los documentos de formación de una LLC?", options: ["irs.gov", "bizfileonline.sos.ca.gov", "calgold.ca.gov", "edd.ca.gov"], answer: 1, why: "bizfile Online es el sitio de trámites de la Secretaría de Estado." },
-      { q: "¿Qué es un DBA?", options: ["Un formulario de impuestos", "Un tipo de permiso para comida", "El nombre que un negocio usa con el público, si no es el nombre legal del dueño", "Una cuenta de banco"], answer: 2, why: "DBA significa \"doing business as\"; se presenta como Nombre Comercial Ficticio." },
-      { q: "Después de presentar un FBN, la mayoría de los condados de California también te piden:", options: ["Publicarlo en un periódico local durante cuatro semanas", "Pagarle al IRS", "Sacar un permiso de vendedor", "Formar una LLC"], answer: 0, why: "Los condados exigen publicar el FBN una vez por semana durante cuatro semanas." },
-      { q: "¿Dónde deberías buscar la cuota del FBN de tu condado?", options: ["En un asistente de IA", "En el IRS", "En el sitio web del secretario de tu condado", "En una publicación de redes sociales"], answer: 2, why: "Cada condado fija su propia cuota de FBN." },
-      { q: "¿Cuánto cobra el IRS por un EIN?", options: ["Nada", "$70", "$50", "$800"], answer: 0, why: "El IRS dice que nunca tienes que pagar por un EIN." },
-      { q: "¿Qué agencia da los permisos de vendedor de California?", options: ["El FTB", "El CDTFA", "El EDD", "El secretario del condado"], answer: 1, why: "El Departamento de Administración de Impuestos y Cuotas de California da los permisos de vendedor." },
-      { q: "¿Qué te podría pedir el CDTFA al sacar un permiso de vendedor, aunque no tenga cuota?", options: ["Un trámite de corporación", "La contraseña de tu banco", "Un aviso en el periódico", "Un depósito de garantía"], answer: 3, why: "El CDTFA dice que puede pedir un depósito de garantía." },
-      { q: "Un puesto de calabazas de temporada vende en un lugar durante seis semanas. ¿Por qué debería preguntar el dueño al CDTFA?", options: ["Por un permiso de vendedor temporal", "Por un EIN", "Por un FBN", "Por una Declaración de Información"], answer: 0, why: "Las ventas en un lugar durante 90 días o menos pueden necesitar un permiso de vendedor temporal." },
-      { q: "Un food truck por lo general necesita un permiso de salud de:", options: ["El IRS", "El EDD", "La Secretaría de Estado", "El departamento de salud ambiental del condado"], answer: 3, why: "Los negocios de comida sacan los permisos de salud con la salud ambiental del condado." },
-      { q: "CalGold dice que no da permisos. Así que, después de usarlo, deberías:", options: ["Ignorar la lista", "Pagarle a CalGold", "Contactar a cada agencia de la lista para confirmar la cuota y solicitar", "Pedirle a una IA que lo solicite por ti"], answer: 2, why: "CalGold muestra las agencias; tú solicitas con cada una." },
-      { q: "Un negocio de clases particulares en casa probablemente igual necesita:", options: ["Un permiso de vendedor", "Una licencia de negocio o un certificado de impuesto de la ciudad", "Un permiso de salud", "Una licencia de bebidas alcohólicas"], answer: 1, why: "La mayoría de las ciudades exigen una licencia de negocio, incluso para negocios en casa." },
-      { q: "¿Cuánto es el impuesto anual de una LLC en California?", options: ["$20", "$70", "$250", "$800"], answer: 3, why: "El FTB dice que toda LLC debe pagar un impuesto anual de $800." },
-      { q: "¿Cuándo vence el primer impuesto anual de $800 de una LLC?", options: ["Solo cuando gana $250,000", "Nunca en el primer año", "El día 15 del cuarto mes después de presentar los documentos ante la Secretaría de Estado", "El 31 de diciembre"], answer: 2, why: "El FTB indica el día 15 del cuarto mes después de presentarlos." },
-      { q: "Una corporación nueva, en su primer año fiscal:", options: ["No tiene que pagar el impuesto mínimo de franquicia de $800", "Paga $1,600", "Nunca paga impuestos", "Debe pagar la cuota de LLC"], answer: 0, why: "El FTB dice que las corporaciones recién formadas no tienen que pagar el mínimo en su primer año fiscal." },
-      { q: "¿Cada cuánto presenta una LLC la Declaración de Información después de la primera?", options: ["Cada mes", "Cada dos años", "Cada diez años", "Nunca"], answer: 1, why: "La Secretaría de Estado dice que cada dos años después de la primera." },
-      { q: "¿En qué orden se suelen hacer estas cosas?", options: ["Licencia de la ciudad, luego formar la LLC, luego elegir la estructura", "Elegir la estructura, formarla, sacar el EIN y luego los permisos locales", "Permiso de vendedor, luego EIN, luego estructura", "Cualquier orden está bien"], answer: 1, why: "Muchos permisos piden tu EIN y tu número de entidad, así que primero forma el negocio y saca el EIN." },
-      { q: "Un asistente de IA te dice la cuota del FBN en tu condado. ¿Qué haces?", options: ["Revisarla primero en la página oficial del secretario de tu condado", "Ponerla en el plan sin revisarla", "Pagarle a la herramienta de IA", "Escribir tu SSN para obtener una mejor respuesta"], answer: 0, why: "La IA puede equivocarse; las cuotas salen de la página oficial." }
+      { objective: "O1", q: "¿Qué estructura no necesita trámite de formación ante la Secretaría de Estado de California?", options: ["LLC", "Negocio de un solo dueño", "Corporación", "Corporación sin fines de lucro"], answer: 1, why: "Los dueños únicos no presentan documentos de formación ante la Secretaría de Estado." },
+      { objective: "O1", q: "¿Cuál es una razón principal por la que los dueños forman una LLC?", options: ["Siempre es gratis", "Reemplaza todos los permisos", "Quita todos los impuestos", "Puede ayudar a separar los bienes personales de las deudas del negocio"], answer: 3, why: "Una LLC es una entidad legal aparte que puede ayudar a proteger al dueño." },
+      { objective: "O1", q: "La cuota de la Secretaría de Estado por los Artículos de Incorporación de una corporación general por acciones (ARTS-GS) es de:", options: ["$20", "$70", "$100", "$800"], answer: 2, why: "La Secretaría de Estado indica $100 para el ARTS-GS." },
+      { objective: "O1", q: "¿Dónde presentas en línea los documentos de formación de una LLC?", options: ["irs.gov", "bizfileonline.sos.ca.gov", "calgold.ca.gov", "edd.ca.gov"], answer: 1, why: "bizfile Online es el sitio de trámites de la Secretaría de Estado." },
+      { objective: "O2", q: "¿Qué es un DBA?", options: ["Un formulario de impuestos", "Un tipo de permiso para comida", "El nombre que un negocio usa con el público, si no es el nombre legal del dueño", "Una cuenta de banco"], answer: 2, why: "DBA significa \"doing business as\"; se presenta como Nombre Comercial Ficticio." },
+      { objective: "O2", q: "Después de presentar un FBN, la mayoría de los condados de California también te piden:", options: ["Publicarlo en un periódico local durante cuatro semanas", "Pagarle al IRS", "Sacar un permiso de vendedor", "Formar una LLC"], answer: 0, why: "Los condados exigen publicar el FBN una vez por semana durante cuatro semanas." },
+      { objective: "O2", q: "¿Dónde deberías buscar la cuota del FBN de tu condado?", options: ["En un asistente de IA", "En el IRS", "En el sitio web del secretario de tu condado", "En una publicación de redes sociales"], answer: 2, why: "Cada condado fija su propia cuota de FBN." },
+      { objective: "O3", q: "¿Cuánto cobra el IRS por un EIN?", options: ["Nada", "$70", "$50", "$800"], answer: 0, why: "El IRS dice que nunca tienes que pagar por un EIN." },
+      { objective: "O3", q: "¿Qué agencia da los permisos de vendedor de California?", options: ["El FTB", "El CDTFA", "El EDD", "El secretario del condado"], answer: 1, why: "El Departamento de Administración de Impuestos y Cuotas de California da los permisos de vendedor." },
+      { objective: "O3", q: "¿Qué te podría pedir el CDTFA al sacar un permiso de vendedor, aunque no tenga cuota?", options: ["Un trámite de corporación", "La contraseña de tu banco", "Un aviso en el periódico", "Un depósito de garantía"], answer: 3, why: "El CDTFA dice que puede pedir un depósito de garantía." },
+      { objective: "O3", q: "Un puesto de calabazas de temporada vende en un lugar durante seis semanas. ¿Por qué debería preguntar el dueño al CDTFA?", options: ["Por un permiso de vendedor temporal", "Por un EIN", "Por un FBN", "Por una Declaración de Información"], answer: 0, why: "Las ventas en un lugar durante 90 días o menos pueden necesitar un permiso de vendedor temporal." },
+      { objective: "O4", q: "Un food truck por lo general necesita un permiso de salud de:", options: ["El IRS", "El EDD", "La Secretaría de Estado", "El departamento de salud ambiental del condado"], answer: 3, why: "Los negocios de comida sacan los permisos de salud con la salud ambiental del condado." },
+      { objective: "O6", q: "CalGold dice que no da permisos. Así que, después de usarlo, deberías:", options: ["Ignorar la lista", "Pagarle a CalGold", "Contactar a cada agencia de la lista para confirmar la cuota y solicitar", "Pedirle a una IA que lo solicite por ti"], answer: 2, why: "CalGold muestra las agencias; tú solicitas con cada una." },
+      { objective: "O4", q: "Un negocio de clases particulares en casa probablemente igual necesita:", options: ["Un permiso de vendedor", "Una licencia de negocio o un certificado de impuesto de la ciudad", "Un permiso de salud", "Una licencia de bebidas alcohólicas"], answer: 1, why: "La mayoría de las ciudades exigen una licencia de negocio, incluso para negocios en casa." },
+      { objective: "O5", q: "¿Cuánto es el impuesto anual de una LLC en California?", options: ["$20", "$70", "$250", "$800"], answer: 3, why: "El FTB dice que toda LLC debe pagar un impuesto anual de $800." },
+      { objective: "O5", q: "¿Cuándo vence el primer impuesto anual de $800 de una LLC?", options: ["Solo cuando gana $250,000", "Nunca en el primer año", "El día 15 del cuarto mes después de presentar los documentos ante la Secretaría de Estado", "El 31 de diciembre"], answer: 2, why: "El FTB indica el día 15 del cuarto mes después de presentarlos." },
+      { objective: "O5", q: "Una corporación nueva, en su primer año fiscal:", options: ["No tiene que pagar el impuesto mínimo de franquicia de $800", "Paga $1,600", "Nunca paga impuestos", "Debe pagar la cuota de LLC"], answer: 0, why: "El FTB dice que las corporaciones recién formadas no tienen que pagar el mínimo en su primer año fiscal." },
+      { objective: "O5", q: "¿Cada cuánto presenta una LLC la Declaración de Información después de la primera?", options: ["Cada mes", "Cada dos años", "Cada diez años", "Nunca"], answer: 1, why: "La Secretaría de Estado dice que cada dos años después de la primera." },
+      { objective: "O6", q: "¿En qué orden se suelen hacer estas cosas?", options: ["Licencia de la ciudad, luego formar la LLC, luego elegir la estructura", "Elegir la estructura, formarla, sacar el EIN y luego los permisos locales", "Permiso de vendedor, luego EIN, luego estructura", "Cualquier orden está bien"], answer: 1, why: "Muchos permisos piden tu EIN y tu número de entidad, así que primero forma el negocio y saca el EIN." },
+      { objective: "O6", q: "Un asistente de IA te dice la cuota del FBN en tu condado. ¿Qué haces?", options: ["Revisarla primero en la página oficial del secretario de tu condado", "Ponerla en el plan sin revisarla", "Pagarle a la herramienta de IA", "Escribir tu SSN para obtener una mejor respuesta"], answer: 0, why: "La IA puede equivocarse; las cuotas salen de la página oficial." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      3,
+      4,
+      7,
+      8,
+      11,
+      12,
+      14,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte y vuelve a intentarlo.",
+    criteria: [
+      {
+        name: "Estructura y nombre",
+        objective: "O1",
+        notYet: "No eligió una estructura, o falta el registro del nombre.",
+        meets: "La estructura con una razón, más el registro del nombre correcto y su oficina.",
+        exceeds: "También anota la regla de publicación del FBN si aplica."
+      },
+      {
+        name: "EIN y permiso de vendedor",
+        objective: "O3",
+        notYet: "Faltan, o usa un servicio de EIN pagado.",
+        meets: "El EIN en irs.gov sin costo, y una fila del permiso de vendedor o la razón por la que no se necesita.",
+        exceeds: "Anota un posible depósito de garantía de la CDTFA."
+      },
+      {
+        name: "Permisos locales",
+        objective: "O4",
+        notYet: "No anota la licencia de la ciudad ni los permisos de CalGold.",
+        meets: "La licencia de negocio de la ciudad y cada permiso de CalGold, cada uno con el sitio web de la agencia.",
+        exceeds: "Cada cuota local está llenada con la página oficial."
+      },
+      {
+        name: "Costos y fechas límite anuales",
+        objective: "O5",
+        notYet: "Falta el impuesto de $800 o la Declaración de Información para una LLC o una corporación.",
+        meets: "Filas anuales que van con la estructura, con fechas límite.",
+        exceeds: "Incluye el registro en el EDD si va a contratar, y cada número revisado en la página oficial."
+      },
+      {
+        name: "Plan en orden con costos",
+        objective: "O6",
+        notYet: "Los pasos no están en orden, o los costos son adivinados.",
+        meets: "Las cinco columnas llenas en orden, con los costos conocidos sumados y las cuotas desconocidas marcadas \"buscar en\".",
+        exceeds: "Están todos los sitios web oficiales y la columna Hecho se está usando."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Personas que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Personas que terminan al menos un registro o permiso en 60 días (encuesta de seguimiento)",
+      "Personas que abren su negocio de forma legal en 6 meses",
+      "Personas que se reúnen con un mentor de SCORE o un asesor del SBDC en 60 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono o una computadora con internet",
+      "Papel, o una hoja de cálculo gratis, para el plan de preparación de cinco columnas",
+      "Las páginas oficiales de cada lección: bizfile Online, irs.gov, CDTFA, CalGold, FTB y EDD",
+      "Unos 60 minutos en total: lecciones, práctica, comprobaciones y tarea final"
+    ],
+    facilitatorNotes: [
+      "Antes de cada sesión, abre las páginas oficiales y revisa que las cuotas estatales del curso sigan vigentes.",
+      "Busca las páginas del secretario de tu condado y de licencias de negocio de tu ciudad para mostrar a los participantes los sitios locales reales.",
+      "Nunca pidas a los participantes que escriban un número de Seguro Social en una pantalla compartida; el EIN se solicita solo en irs.gov y en privado.",
+      "Este curso no es asesoría legal ni de impuestos; invita a un mentor de SCORE, a un asesor del SBDC o a un profesional de impuestos para las preguntas sobre la situación de cada persona.",
+      "Califica el plan de preparación con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

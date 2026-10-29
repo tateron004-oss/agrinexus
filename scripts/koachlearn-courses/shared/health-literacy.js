@@ -18,11 +18,35 @@ module.exports = {
     "Each lesson takes about five minutes. Read the lesson, watch the slides, then do the \"Try it now\" task. There is a short knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Make a one-page visit sheet for a real or practice appointment: a short note about your symptom or concern (when it started, what makes it better or worse), your top three questions, and a full medicine list (prescriptions, over-the-counter medicines, vitamins, supplements and allergies). After the visit (or a practice run with a friend), write the plan in your own words: what the problem is, what you need to do, and why.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Older adults managing several medicines, young people going to the doctor alone for the first time, veterans using VA care, workers choosing a health plan, people coming home from prison who need to restart care, and caregivers.",
+    startingPoint: "Go to the doctor and take medicines, but often leave visits unsure what was said, do not keep a full medicine list, have not used a patient portal and find insurance words confusing.",
+    gap: "Not understanding health information leads to medicine mistakes, missed care and surprise costs. Learners need to find trustworthy information, prepare for visits, ask until they understand and know who to ask about medicines, results and costs, so they can take part in decisions about their own and their family's health.",
+    constraints: [
+      "Reading level: plain words and short sentences",
+      "Not medical advice; every health decision is checked with a doctor, nurse or pharmacist",
+      "Privacy: no health details or portal passwords shared in class or typed into AI tools",
+      "Devices: a phone or computer; some learners have no patient portal yet",
+      "Language: some learners need an interpreter at visits"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given a health website or post", action: "check whether the source is trustworthy and look up a health word on a trusted site such as medlineplus.gov", standard: "writing the meaning in your own words" },
+    { id: "O2", condition: "Before a medical visit", action: "write a visit sheet with your concern, your top three questions and a full medicine list", standard: "with when the symptom started and what makes it better or worse" },
+    { id: "O3", condition: "During a visit or role-play", action: "ask questions until you understand and repeat the plan back in your own words", standard: "covering what the problem is, what to do and why" },
+    { id: "O4", condition: "Given a medicine, vitamin or supplement", action: "read the label and add it to your medicine list with name, dose, how often, what it is for and a warning", standard: "with one question written for a pharmacist" },
+    { id: "O5", condition: "Using a patient portal or your clinic", action: "find a test result or visit note and write questions about it", standard: "with at least two questions for your provider" },
+    { id: "O6", condition: "Given common health coverage words", action: "explain words such as deductible, copay and in-network and name who to ask about costs", standard: "in your own words without help" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Getting ready and talking with your provider",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Finding health information you can trust",
           minutes: 5,
           goal: "Tell a trustworthy health source from an untrustworthy one.",
@@ -44,9 +68,14 @@ module.exports = {
             { name: "CDC: What Is Health Literacy?", url: "https://www.cdc.gov/health-literacy/php/about/index.html" }
           ],
           tryIt: "Pick a health word you have heard but do not fully understand (for example blood pressure, cholesterol or asthma). Look it up on medlineplus.gov and write a one-sentence meaning in your own words.",
-          youCanNow: "find health information on trusted sites and check any source with four simple questions."
+          youCanNow: "find health information on trusted sites and check any source with four simple questions.",
+          quickCheck: [
+            { objective: "O1", q: "Which detail makes a health website more trustworthy?", options: ["It sells a product on every page", "It has lots of exclamation marks", "It shows who wrote it and when it was last updated", "It promises a cure"], answer: 2, why: "Knowing who wrote it and when helps you judge the information." },
+            { objective: "O1", q: "A friend shares a post saying a tea cures high blood pressure. What would you do?", options: ["Stop your blood pressure medicine", "Share it with family", "Buy the tea right away", "Check a trusted site and ask your doctor"], answer: 3, why: "Health claims are checked on trusted sites and with your provider." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Preparing for a medical visit",
           minutes: 5,
           goal: "Make a visit sheet with your concern, questions and medicine list.",
@@ -65,9 +94,14 @@ module.exports = {
           ],
           sources: [{ name: "MedlinePlus: Talking With Your Doctor", url: "https://medlineplus.gov/talkingwithyourdoctor.html" }],
           tryIt: "Start your visit sheet. Write one real or practice concern with when it started and what makes it better or worse, then your top three questions.",
-          youCanNow: "prepare a visit sheet with your concern, your top questions and what to bring."
+          youCanNow: "prepare a visit sheet with your concern, your top questions and what to bring.",
+          quickCheck: [
+            { objective: "O2", q: "Why bring a full medicine list to a visit?", options: ["So the doctor can check everything you take works safely together", "Because it is required to get in", "So you do not need to talk", "To show you take a lot"], answer: 0, why: "A full list helps your provider avoid harmful mixes and mistakes." },
+            { objective: "O2", q: "You have five worries but a short appointment. What would you do?", options: ["Bring none of them up", "Write your top three questions and ask the most important first", "Talk very fast about all five", "Save them all for next year"], answer: 1, why: "Putting your top questions first makes sure the most important ones are answered." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "During the visit: asking questions and checking you understood",
           minutes: 5,
           goal: "Ask questions until you understand and repeat the plan back in your own words.",
@@ -86,17 +120,21 @@ module.exports = {
           ],
           sources: [{ name: "MedlinePlus: Talking With Your Doctor", url: "https://medlineplus.gov/talkingwithyourdoctor.html" }],
           tryIt: "Role-play with a friend or say it out loud: your friend reads a short doctor's instruction (for example \"Take this twice a day for 10 days and finish it all\"). Ask one question about it, then teach it back in your own words.",
-          youCanNow: "ask clear questions during a visit and use teach-back to check you understood the plan."
+          youCanNow: "ask clear questions during a visit and use teach-back to check you understood the plan.",
+          quickCheck: [
+            { objective: "O3", q: "Which is one of the three key questions to ask at a visit?", options: ["How much does the doctor earn?", "Why is it important for me to do this?", "Can I skip my medicine?", "How long is the wait?"], answer: 1, why: "The three key questions are: what is my main problem, what do I need to do, and why is it important." },
+            { objective: "O3", q: "The doctor says to take a pill \"twice daily with food.\" What would you do before leaving?", options: ["Nod and leave", "Ask a stranger in the waiting room", "Say it back: \"So I take it at breakfast and dinner with food, right?\"", "Guess later at home"], answer: 2, why: "Teach-back checks that you understood the plan correctly." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Getting ready and talking with your provider",
         questions: [
-          { q: "Which website is a trustworthy place to start for health information?", options: ["A social media post from a stranger", "An ad for a miracle pill", "medlineplus.gov", "A random forum comment"], answer: 2, why: "MedlinePlus is a free US government health site from the National Library of Medicine." },
-          { q: "What should you write about a symptom before a visit?", options: ["When it started and what makes it better or worse", "Nothing; the doctor will guess", "Only your favorite color", "Your bank account number"], answer: 0, why: "Clear details about the symptom help the provider understand you." },
-          { q: "What belongs on your medicine list?", options: ["Only prescriptions", "Only pills you took today", "Nothing; the pharmacy knows", "Prescriptions, over-the-counter medicines, vitamins, supplements and allergies"], answer: 3, why: "Everything you take can matter, including vitamins and supplements." },
-          { q: "The doctor uses a word you don't understand. What do you do?", options: ["Nod and pretend", "Ask them to explain it in simpler words", "Leave the visit", "Look it up next year"], answer: 1, why: "You have the right to understand your care; asking is normal." },
-          { q: "What is teach-back?", options: ["Teaching the doctor medicine", "Asking for a refund", "Saying the plan back in your own words", "Reading the plan silently"], answer: 2, why: "Teach-back checks that you understood, so mistakes can be fixed right away." }
+          { objective: "O1", q: "Which website is a trustworthy place to start for health information?", options: ["A social media post from a stranger", "An ad for a miracle pill", "medlineplus.gov", "A random forum comment"], answer: 2, why: "MedlinePlus is a free US government health site from the National Library of Medicine." },
+          { objective: "O2", q: "What should you write about a symptom before a visit?", options: ["When it started and what makes it better or worse", "Nothing; the doctor will guess", "Only your favorite color", "Your bank account number"], answer: 0, why: "Clear details about the symptom help the provider understand you." },
+          { objective: "O2", q: "What belongs on your medicine list?", options: ["Only prescriptions", "Only pills you took today", "Nothing; the pharmacy knows", "Prescriptions, over-the-counter medicines, vitamins, supplements and allergies"], answer: 3, why: "Everything you take can matter, including vitamins and supplements." },
+          { objective: "O3", q: "The doctor uses a word you don't understand. What do you do?", options: ["Nod and pretend", "Ask them to explain it in simpler words", "Leave the visit", "Look it up next year"], answer: 1, why: "You have the right to understand your care; asking is normal." },
+          { objective: "O3", q: "What is teach-back?", options: ["Teaching the doctor medicine", "Asking for a refund", "Saying the plan back in your own words", "Reading the plan silently"], answer: 2, why: "Teach-back checks that you understood, so mistakes can be fixed right away." }
         ]
       }
     },
@@ -104,6 +142,7 @@ module.exports = {
       name: "Chapter 2: Using your health information",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Medicines: reading the label and keeping a list",
           minutes: 5,
           goal: "Read a medicine label and keep an up-to-date medicine list.",
@@ -122,9 +161,14 @@ module.exports = {
           ],
           sources: [{ name: "MedlinePlus: Medication Errors", url: "https://medlineplus.gov/medicationerrors.html" }],
           tryIt: "Take one medicine, vitamin or supplement you (or a family member) use. Read the label and add it to your medicine list: name, dose, how often, what it is for and one warning. Write one question to ask a pharmacist.",
-          youCanNow: "read a medicine label, keep a complete medicine list and ask a pharmacist the right questions."
+          youCanNow: "read a medicine label, keep a complete medicine list and ask a pharmacist the right questions.",
+          quickCheck: [
+            { objective: "O4", q: "What does \"dose\" mean on a medicine label?", options: ["How much medicine to take at one time", "The price of the medicine", "The date it was made", "The name of the pharmacy"], answer: 0, why: "The dose is the amount you take at one time." },
+            { objective: "O4", q: "You start a new vitamin. What would you do with your medicine list?", options: ["Leave it off because vitamins do not count", "Wait until your next birthday", "Only tell your friends", "Add it to the list and ask the pharmacist if it is safe with your other medicines"], answer: 3, why: "Vitamins and supplements belong on the list and can mix with medicines." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Test results, patient portals and your records",
           minutes: 5,
           goal: "Find a test result in a patient portal and write questions about it.",
@@ -142,9 +186,14 @@ module.exports = {
           ],
           sources: [{ name: "MedlinePlus: Talking With Your Doctor", url: "https://medlineplus.gov/talkingwithyourdoctor.html" }],
           tryIt: "If you have a patient portal, sign in and find one recent result or visit note. If you don't, call or ask your clinic how to sign up. Either way, write two questions you would ask about a test result.",
-          youCanNow: "use a patient portal safely, read a result next to its reference range and ask your provider what it means for you."
+          youCanNow: "use a patient portal safely, read a result next to its reference range and ask your provider what it means for you.",
+          quickCheck: [
+            { objective: "O5", q: "What can you usually do in a patient portal?", options: ["Change your own prescriptions", "See your records and message your care team", "Order medicine without a prescription", "Read other patients' results"], answer: 1, why: "A portal is a secure place to see your records and message your care team." },
+            { objective: "O5", q: "You used a library computer to check your portal. What would you do when you finish?", options: ["Leave it open for next time", "Write your password on a note by the computer", "Sign out and close the browser", "Turn off the screen only"], answer: 2, why: "Signing out on shared computers keeps your health records private." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Health coverage words and your visit kit",
           minutes: 6,
           goal: "Explain common health coverage words and know who to ask about costs.",
@@ -168,17 +217,21 @@ module.exports = {
             { name: "HRSA: Find a Health Center", url: "https://findahealthcenter.hrsa.gov/" }
           ],
           tryIt: "Final task: finish your one-page visit sheet with your concern, your top three questions and your full medicine list. After a real visit, or a practice run with a friend playing the doctor, write the plan in your own words: the main problem, what to do, and why.",
-          youCanNow: "explain common coverage words, ask about costs before care, and bring a complete visit kit to every appointment."
+          youCanNow: "explain common coverage words, ask about costs before care, and bring a complete visit kit to every appointment.",
+          quickCheck: [
+            { objective: "O6", q: "What does \"in-network\" mean?", options: ["The provider is on social media", "The provider is in your neighborhood", "The provider is free", "The provider has a contract with your plan and usually costs you less"], answer: 3, why: "In-network providers have a contract with your plan." },
+            { objective: "O6", q: "You are unsure what a visit will cost you. What would you do?", options: ["Ask your plan or the office about costs before the visit", "Skip the visit", "Guess and hope", "Ask a stranger online"], answer: 0, why: "Your plan or the office can tell you about costs ahead of time." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Using your health information",
         questions: [
-          { q: "Before taking a dose of medicine, you should:", options: ["Rely on memory", "Read the label every time", "Guess the dose", "Take a friend's pill"], answer: 1, why: "Reading the label each time prevents mistakes." },
-          { q: "You want to stop a prescribed medicine because of a side effect. What do you do first?", options: ["Stop it right away", "Double the dose", "Give it to a friend", "Ask your doctor or pharmacist"], answer: 3, why: "Never stop or change a prescribed medicine without checking first." },
-          { q: "What is a patient portal?", options: ["A secure website or app to see your records and message your care team", "A hospital door", "A social media group", "A pharmacy coupon"], answer: 0, why: "Portals show results and let you message your team." },
-          { q: "A test result is marked \"high\" in your portal. What is the best next step?", options: ["Panic", "Change your medicine yourself", "Write your questions and ask your provider what it means for you", "Ignore it forever"], answer: 2, why: "High or low is not always a problem; your provider explains what it means for you." },
-          { q: "What is a deductible?", options: ["A set amount for each visit", "The monthly cost of your plan", "A discount coupon", "What you pay for covered care before your plan starts to pay"], answer: 3, why: "HealthCare.gov defines the deductible as what you pay before your plan starts to pay." }
+          { objective: "O4", q: "Before taking a dose of medicine, you should:", options: ["Rely on memory", "Read the label every time", "Guess the dose", "Take a friend's pill"], answer: 1, why: "Reading the label each time prevents mistakes." },
+          { objective: "O4", q: "You want to stop a prescribed medicine because of a side effect. What do you do first?", options: ["Stop it right away", "Double the dose", "Give it to a friend", "Ask your doctor or pharmacist"], answer: 3, why: "Never stop or change a prescribed medicine without checking first." },
+          { objective: "O5", q: "What is a patient portal?", options: ["A secure website or app to see your records and message your care team", "A hospital door", "A social media group", "A pharmacy coupon"], answer: 0, why: "Portals show results and let you message your team." },
+          { objective: "O5", q: "A test result is marked \"high\" in your portal. What is the best next step?", options: ["Panic", "Change your medicine yourself", "Write your questions and ask your provider what it means for you", "Ignore it forever"], answer: 2, why: "High or low is not always a problem; your provider explains what it means for you." },
+          { objective: "O6", q: "What is a deductible?", options: ["A set amount for each visit", "The monthly cost of your plan", "A discount coupon", "What you pay for covered care before your plan starts to pay"], answer: 3, why: "HealthCare.gov defines the deductible as what you pay before your plan starts to pay." }
         ]
       }
     }
@@ -186,26 +239,97 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Health Literacy: Understanding Your Health Care",
     questions: [
-      { q: "Health literacy means:", options: ["Being a doctor", "Being able to find, understand and use health information", "Reading fast", "Knowing every medical word"], answer: 1, why: "It is the skill of finding, understanding and using health information." },
-      { q: "Official US government websites end in:", options: [".gov", ".shop", ".win", ".xyz"], answer: 0, why: ".gov sites like medlineplus.gov and cdc.gov are official." },
-      { q: "Which question helps you judge a health website?", options: ["Is it colorful?", "Does it have many ads?", "When was it last updated?", "Is it long?"], answer: 2, why: "Old information can be wrong; check the update date." },
-      { q: "An AI assistant explains a medical word. What should you do?", options: ["Type your insurance number to get a better answer", "Change your treatment based on it", "Share it as fact", "Check it on a trusted site and ask your provider"], answer: 3, why: "AI can be wrong; check it and let your provider have the final word." },
-      { q: "Which belongs on a visit sheet?", options: ["Your top three questions", "Your bank password", "A shopping list", "Nothing"], answer: 0, why: "Writing questions first makes sure the most important ones get answered." },
-      { q: "You need an interpreter for a visit. When should you ask?", options: ["Never", "After the visit", "Ahead of time, when you book", "Only if the doctor offers"], answer: 2, why: "Asking ahead lets the office arrange one." },
-      { q: "Which describes a symptom well?", options: ["\"I feel bad.\"", "\"Sharp knee pain for 2 weeks, worse on stairs, better with rest.\"", "\"Something is wrong.\"", "\"Same as always.\""], answer: 1, why: "It says what, how long, and what makes it better or worse." },
-      { q: "Who can you bring to a visit to help?", options: ["Nobody is ever allowed", "Only a lawyer", "Only a child under 5", "A trusted friend or family member to take notes"], answer: 3, why: "A helper can listen and take notes." },
-      { q: "Which is one of the three key questions to ask at a visit?", options: ["What do I need to do?", "What car do you drive?", "How old is this building?", "Can I skip my follow-up?"], answer: 0, why: "Main problem, what to do and why: these three cover most visits." },
-      { q: "The doctor is talking too fast. You can say:", options: ["Nothing", "\"I'll figure it out later.\"", "\"Can you slow down and write that down?\"", "\"Never mind.\""], answer: 2, why: "Asking them to slow down or write it down is your right." },
-      { q: "Saying the plan back in your own words is called:", options: ["A refill", "Teach-back", "A deductible", "A copay"], answer: 1, why: "Teach-back checks your understanding before you leave." },
-      { q: "Before leaving a visit you should also ask:", options: ["Nothing", "Where the cafeteria is", "For free samples only", "How to reach the office and what to do if things get worse"], answer: 3, why: "Knowing how to reach them and when to call keeps you safe." },
-      { q: "Which is a free expert on your medicines?", options: ["A social media influencer", "An online ad", "Your pharmacist", "A stranger at the bus stop"], answer: 2, why: "Pharmacists answer medicine questions at no charge." },
-      { q: "\"Dose\" means:", options: ["How much medicine to take at one time", "The price of a medicine", "The pharmacy's name", "The expiration date"], answer: 0, why: "The dose is the amount per time." },
-      { q: "Which question should you ask a pharmacist about a new medicine?", options: ["What color is the bottle?", "Can I share it with my family?", "Can I stop whenever I want?", "Is it safe with my other medicines and supplements?"], answer: 3, why: "Medicines and supplements can affect each other." },
-      { q: "A \"reference range\" on a test result is:", options: ["Your doctor's phone number", "The range of results usual for most healthy people", "The price of the test", "A type of insurance"], answer: 1, why: "Your number is shown next to the usual range." },
-      { q: "How do you keep your patient portal safe?", options: ["Use a strong password and sign out on shared computers", "Share your password with friends", "Write the password on the screen", "Stay signed in at the library"], answer: 0, why: "A strong private password and signing out protect your records." },
-      { q: "What is a copay?", options: ["The monthly cost of your plan", "A free visit", "A set dollar amount you pay for a covered service", "A medicine label"], answer: 2, why: "HealthCare.gov defines a copay as a set amount for a covered service." },
-      { q: "Where can someone with Medicare call with questions?", options: ["911", "411", "Any number from a text message", "1-800-MEDICARE (1-800-633-4227)"], answer: 3, why: "1-800-MEDICARE is Medicare's official number." },
-      { q: "\"In-network\" providers:", options: ["Never accept insurance", "Have a contract with your plan and usually cost you less", "Only work online", "Are always free"], answer: 1, why: "In-network providers are contracted with your plan, which usually lowers your cost." }
+      { objective: "O1", q: "Health literacy means:", options: ["Being a doctor", "Being able to find, understand and use health information", "Reading fast", "Knowing every medical word"], answer: 1, why: "It is the skill of finding, understanding and using health information." },
+      { objective: "O1", q: "Official US government websites end in:", options: [".gov", ".shop", ".win", ".xyz"], answer: 0, why: ".gov sites like medlineplus.gov and cdc.gov are official." },
+      { objective: "O1", q: "Which question helps you judge a health website?", options: ["Is it colorful?", "Does it have many ads?", "When was it last updated?", "Is it long?"], answer: 2, why: "Old information can be wrong; check the update date." },
+      { objective: "O1", q: "An AI assistant explains a medical word. What should you do?", options: ["Type your insurance number to get a better answer", "Change your treatment based on it", "Share it as fact", "Check it on a trusted site and ask your provider"], answer: 3, why: "AI can be wrong; check it and let your provider have the final word." },
+      { objective: "O2", q: "Which belongs on a visit sheet?", options: ["Your top three questions", "Your bank password", "A shopping list", "Nothing"], answer: 0, why: "Writing questions first makes sure the most important ones get answered." },
+      { objective: "O2", q: "You need an interpreter for a visit. When should you ask?", options: ["Never", "After the visit", "Ahead of time, when you book", "Only if the doctor offers"], answer: 2, why: "Asking ahead lets the office arrange one." },
+      { objective: "O2", q: "Which describes a symptom well?", options: ["\"I feel bad.\"", "\"Sharp knee pain for 2 weeks, worse on stairs, better with rest.\"", "\"Something is wrong.\"", "\"Same as always.\""], answer: 1, why: "It says what, how long, and what makes it better or worse." },
+      { objective: "O2", q: "Who can you bring to a visit to help?", options: ["Nobody is ever allowed", "Only a lawyer", "Only a child under 5", "A trusted friend or family member to take notes"], answer: 3, why: "A helper can listen and take notes." },
+      { objective: "O3", q: "Which is one of the three key questions to ask at a visit?", options: ["What do I need to do?", "What car do you drive?", "How old is this building?", "Can I skip my follow-up?"], answer: 0, why: "Main problem, what to do and why: these three cover most visits." },
+      { objective: "O3", q: "The doctor is talking too fast. You can say:", options: ["Nothing", "\"I'll figure it out later.\"", "\"Can you slow down and write that down?\"", "\"Never mind.\""], answer: 2, why: "Asking them to slow down or write it down is your right." },
+      { objective: "O3", q: "Saying the plan back in your own words is called:", options: ["A refill", "Teach-back", "A deductible", "A copay"], answer: 1, why: "Teach-back checks your understanding before you leave." },
+      { objective: "O3", q: "Before leaving a visit you should also ask:", options: ["Nothing", "Where the cafeteria is", "For free samples only", "How to reach the office and what to do if things get worse"], answer: 3, why: "Knowing how to reach them and when to call keeps you safe." },
+      { objective: "O4", q: "Which is a free expert on your medicines?", options: ["A social media influencer", "An online ad", "Your pharmacist", "A stranger at the bus stop"], answer: 2, why: "Pharmacists answer medicine questions at no charge." },
+      { objective: "O4", q: "\"Dose\" means:", options: ["How much medicine to take at one time", "The price of a medicine", "The pharmacy's name", "The expiration date"], answer: 0, why: "The dose is the amount per time." },
+      { objective: "O4", q: "Which question should you ask a pharmacist about a new medicine?", options: ["What color is the bottle?", "Can I share it with my family?", "Can I stop whenever I want?", "Is it safe with my other medicines and supplements?"], answer: 3, why: "Medicines and supplements can affect each other." },
+      { objective: "O5", q: "A \"reference range\" on a test result is:", options: ["Your doctor's phone number", "The range of results usual for most healthy people", "The price of the test", "A type of insurance"], answer: 1, why: "Your number is shown next to the usual range." },
+      { objective: "O5", q: "How do you keep your patient portal safe?", options: ["Use a strong password and sign out on shared computers", "Share your password with friends", "Write the password on the screen", "Stay signed in at the library"], answer: 0, why: "A strong private password and signing out protect your records." },
+      { objective: "O6", q: "What is a copay?", options: ["The monthly cost of your plan", "A free visit", "A set dollar amount you pay for a covered service", "A medicine label"], answer: 2, why: "HealthCare.gov defines a copay as a set amount for a covered service." },
+      { objective: "O6", q: "Where can someone with Medicare call with questions?", options: ["911", "411", "Any number from a text message", "1-800-MEDICARE (1-800-633-4227)"], answer: 3, why: "1-800-MEDICARE is Medicare's official number." },
+      { objective: "O6", q: "\"In-network\" providers:", options: ["Never accept insurance", "Have a contract with your plan and usually cost you less", "Only work online", "Are always free"], answer: 1, why: "In-network providers are contracted with your plan, which usually lowers your cost." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      2,
+      4,
+      6,
+      10,
+      12,
+      13,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Symptom note",
+        objective: "O2",
+        notYet: "The concern is vague, or it is missing when it started.",
+        meets: "Says what the concern is, when it started and what makes it better or worse.",
+        exceeds: "Also notes how it affects daily life."
+      },
+      {
+        name: "Top three questions",
+        objective: "O3",
+        notYet: "Fewer than three questions, or they are unclear.",
+        meets: "Three clear questions with the most important first.",
+        exceeds: "Includes the three key questions: the problem, what to do and why."
+      },
+      {
+        name: "Medicine list",
+        objective: "O4",
+        notYet: "Missing over-the-counter medicines, vitamins, supplements or allergies.",
+        meets: "Every prescription, over-the-counter medicine, vitamin, supplement and allergy, with dose and how often.",
+        exceeds: "Also lists what each one is for and a question for the pharmacist."
+      },
+      {
+        name: "Plan in your own words",
+        objective: "O3",
+        notYet: "The plan is missing, or copies the doctor's words without understanding.",
+        meets: "Says the main problem, what to do and why, in the learner's own words.",
+        exceeds: "Also notes how to reach the office and what to do if things get worse."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who bring a visit sheet or medicine list to a real appointment within 60 days (follow-up survey)",
+      "Learners who report using teach-back or asking a question they would not have asked before",
+      "Learners who sign up for or use a patient portal within 60 days",
+      "Learners who start another Koach Learn health or life-skills course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Paper and pen or a phone note for the visit sheet",
+      "Labels from one medicine, vitamin or supplement",
+      "A phone or computer with internet for medlineplus.gov and a patient portal, if the learner has one",
+      "About 60 minutes in total"
+    ],
+    facilitatorNotes: [
+      "Remind learners at the start that this course teaches skills and does not give medical advice.",
+      "Use practice concerns and sample medicine labels in class; learners never have to share their own health details.",
+      "Practice teach-back in pairs, with one learner reading a sample instruction as the doctor.",
+      "Help learners who need an interpreter learn how to ask for one when they book a visit.",
+      "Score the visit sheet and plan with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

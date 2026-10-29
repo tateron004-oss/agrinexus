@@ -16,11 +16,35 @@ module.exports = {
     "Each lesson takes about five minutes. Read the lesson, look over the slides, then do the \"Try it now\" task. There is a knowledge check after each chapter and a 20-question quiz at the end. This course is general safety education. Always follow your employer's training and rules for your specific job, and check osha.gov for current rules."
   ],
   finalTask: "Do a 10-minute hazard walk of a real place (your workplace, a store room, a garage or your home). Write a hazard report listing at least five hazards, the type of each (slip/trip/fall, lifting, chemical, machine, electrical, other), the PPE or fix needed, and who you would report each one to. Add the safety data sheet sections you would read for one chemical you found, and write the steps you would take if someone were injured.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Job seekers and new or current workers in warehouses, construction, kitchens, cleaning, retail, manufacturing and health care, including young workers, career changers and people returning to work.",
+    startingPoint: "Have some work or home experience and notice obvious dangers, but have not been taught a hazard walk, how to read a safety data sheet, how to report an injury, or their rights under OSHA.",
+    gap: "Employers expect basic safety habits on day one. Workers who cannot spot hazards, choose PPE, lift safely or report an injury the right way are more likely to get hurt and may lose workers' compensation rights. Knowing these basics also helps them get hired and speak up safely.",
+    constraints: [
+      "Reading level: plain words and short sentences (about grade 6)",
+      "Devices: a phone or shared computer; practice uses a room at home or work",
+      "Time: about five-minute lessons that fit around work shifts",
+      "General safety education only: learners follow their employer's training and check osha.gov for current rules",
+      "Practice must be safe: no climbing, lifting heavy loads alone or mixing chemicals"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "During a walk through a workplace, store room or home", action: "identify hazards, name the type of each, and decide whether to fix or report it", standard: "listing at least five hazards with the right type" },
+    { id: "O2", condition: "Given a work task and its hazards", action: "choose and check the right PPE for each hazard", standard: "matching the gear to every hazard and spotting damaged gear" },
+    { id: "O3", condition: "When working on floors, ladders or with loads", action: "demonstrate the steps that prevent slips, trips and falls and a safe lift", standard: "following every step without twisting your back" },
+    { id: "O4", condition: "Given a chemical product", action: "find the hazards, PPE and first aid on its label and safety data sheet", standard: "naming the right SDS sections (2, 4 and 8)" },
+    { id: "O5", condition: "When someone is hurt or you find a hazard", action: "list the steps to respond and write a short injury or hazard report", standard: "including what, when, where and who saw it, reported right away" },
+    { id: "O6", condition: "Given a safety problem that is not fixed or a job you want", action: "explain your safety rights, how to file an OSHA complaint, and whether OSHA 10 or OSHA 30 fits", standard: "naming the right steps and course without help" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Spotting and preventing hazards",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Spotting hazards with a hazard walk",
           minutes: 5,
           goal: "Walk an area and list the hazards you see by type.",
@@ -39,9 +63,14 @@ module.exports = {
             { title: "What to do", bullets: ["Fix small hazards if safe", "Keep people away from big ones", "Always tell your supervisor"] }
           ],
           tryIt: "Do a five-minute hazard walk in one room of your home, a store room or your workplace. Write down at least five hazards and the type of each.",
-          youCanNow: "walk an area, spot hazards by type, and decide whether to fix or report each one."
+          youCanNow: "walk an area, spot hazards by type, and decide whether to fix or report each one.",
+          quickCheck: [
+            { objective: "O1", q: "In a hazard walk, what does \"look down\" mean checking?", options: ["Floors, cords and spills", "High shelves and ladders", "Machines and vehicles", "Alarms and strange sounds"], answer: 0, why: "Looking down means checking the floor for cords, spills and things you could trip on." },
+            { objective: "O1", q: "You find a guard missing on a machine you were not trained to fix. What do you do?", options: ["Fix it yourself quickly", "Keep people away and report it", "Ignore it until break time", "Keep using the machine carefully"], answer: 1, why: "If a hazard is not safe for you to fix, keep people away and report it." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Using PPE the right way",
           minutes: 5,
           goal: "Choose, check and wear the right protective equipment for a task.",
@@ -63,9 +92,14 @@ module.exports = {
             { name: "OSHA: Personal protective equipment", url: "https://www.osha.gov/personal-protective-equipment" }
           ],
           tryIt: "Pick three tasks: cutting boxes with a box cutter, mopping with a cleaning chemical, and running a leaf blower. For each, write the PPE you would wear and why.",
-          youCanNow: "choose, check and wear the right PPE for a task, and know it is the last line of defense."
+          youCanNow: "choose, check and wear the right PPE for a task, and know it is the last line of defense.",
+          quickCheck: [
+            { objective: "O2", q: "What is the main reason to check PPE before each use?", options: ["To see if it is the newest model", "To make sure the color matches", "To find cracks, holes or worn straps", "To count how many you have"], answer: 2, why: "Damaged gear may not protect you, so you check it before every use." },
+            { objective: "O2", q: "You will cut boxes with a box cutter all day. Which gloves do you pick?", options: ["Chemical gloves", "Thin cloth gloves", "No gloves", "Cut-resistant gloves"], answer: 3, why: "Cut-resistant gloves match the hazard of a blade." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Slips, trips, falls and safe lifting",
           minutes: 5,
           goal: "Prevent slips, trips and falls and lift a load safely.",
@@ -88,17 +122,21 @@ module.exports = {
             { name: "OSHA: Walking-working surfaces", url: "https://www.osha.gov/walking-working-surfaces" }
           ],
           tryIt: "Practice a safe lift with a box of books or groceries: check the weight, stand close, bend your knees, keep your back straight, lift with your legs and turn with your feet. Then write three things you would fix to stop slips and trips where you work or live.",
-          youCanNow: "prevent slips, trips and falls, use a ladder safely, and lift a load the right way."
+          youCanNow: "prevent slips, trips and falls, use a ladder safely, and lift a load the right way.",
+          quickCheck: [
+            { objective: "O3", q: "What should you never stand on when using a ladder?", options: ["The top step", "The bottom step", "A middle step", "Firm, level ground"], answer: 0, why: "Standing on the top step makes it easy to lose balance and fall." },
+            { objective: "O3", q: "You need to turn while carrying a box. How do you do it?", options: ["Twist at the waist", "Turn with your feet", "Hold the box far from your body", "Lock your knees and spin"], answer: 1, why: "Turning with your feet keeps your back straight and avoids strains." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Spotting and preventing hazards",
         questions: [
-          { q: "You see a power cord stretched across a walkway. What type of hazard is it?", options: ["Chemical", "Noise", "Slip, trip or fall", "Heat"], answer: 2, why: "Cords across walkways cause trips." },
-          { q: "What should you do with a small spill you can clean safely?", options: ["Walk around it", "Clean it, mark the floor if wet, and tell your supervisor", "Cover it with a box", "Wait for the next shift"], answer: 1, why: "Fixing small hazards right away and reporting them prevents injuries." },
-          { q: "Which PPE fits a job using a loud leaf blower?", options: ["Hearing protection", "A hard hat only", "A fall harness", "Nothing"], answer: 0, why: "Hearing protection guards against loud noise." },
-          { q: "Why is PPE called the last line of defense?", options: ["It is the most expensive", "It is optional", "It always stops every injury", "It is better to remove the hazard first"], answer: 3, why: "Removing or guarding a hazard protects everyone; PPE protects only the wearer." },
-          { q: "Which is a safe lifting habit?", options: ["Twist your back to turn", "Hold the load far from your body", "Bend your knees, keep the load close, and turn with your feet", "Lift heavy loads alone to save time"], answer: 2, why: "This keeps the strain on your legs, not your back." }
+          { objective: "O1", q: "You see a power cord stretched across a walkway. What type of hazard is it?", options: ["Chemical", "Noise", "Slip, trip or fall", "Heat"], answer: 2, why: "Cords across walkways cause trips." },
+          { objective: "O1", q: "What should you do with a small spill you can clean safely?", options: ["Walk around it", "Clean it, mark the floor if wet, and tell your supervisor", "Cover it with a box", "Wait for the next shift"], answer: 1, why: "Fixing small hazards right away and reporting them prevents injuries." },
+          { objective: "O2", q: "Which PPE fits a job using a loud leaf blower?", options: ["Hearing protection", "A hard hat only", "A fall harness", "Nothing"], answer: 0, why: "Hearing protection guards against loud noise." },
+          { objective: "O2", q: "Why is PPE called the last line of defense?", options: ["It is the most expensive", "It is optional", "It always stops every injury", "It is better to remove the hazard first"], answer: 3, why: "Removing or guarding a hazard protects everyone; PPE protects only the wearer." },
+          { objective: "O3", q: "Which is a safe lifting habit?", options: ["Twist your back to turn", "Hold the load far from your body", "Bend your knees, keep the load close, and turn with your feet", "Lift heavy loads alone to save time"], answer: 2, why: "This keeps the strain on your legs, not your back." }
         ]
       }
     },
@@ -106,6 +144,7 @@ module.exports = {
       name: "Chapter 2: Chemicals, injuries and your rights",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Chemicals and safety data sheets",
           minutes: 5,
           goal: "Find the hazards, PPE and first aid for a chemical on its safety data sheet.",
@@ -127,9 +166,14 @@ module.exports = {
             { name: "OSHA: Hazard Communication", url: "https://www.osha.gov/hazcom" }
           ],
           tryIt: "Find a cleaning product at home or work. Read its label (pictograms and signal word). Then search the product name plus \"safety data sheet\" on the maker's website, and write down what Sections 2, 4 and 8 say.",
-          youCanNow: "read a chemical label and find the hazards, PPE and first aid on its safety data sheet."
+          youCanNow: "read a chemical label and find the hazards, PPE and first aid on its safety data sheet.",
+          quickCheck: [
+            { objective: "O4", q: "What is a pictogram on a chemical label?", options: ["The price of the product", "The maker's phone number", "A red-bordered symbol that shows a hazard", "The date it was made"], answer: 2, why: "Pictograms are red-bordered symbols that show the type of hazard." },
+            { objective: "O4", q: "A product splashes in a coworker's eye. Which SDS section do you look at?", options: ["Section 2", "Section 7", "Section 8", "Section 4"], answer: 3, why: "Section 4 of the safety data sheet gives the first aid steps." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Reporting injuries and hazards",
           minutes: 5,
           goal: "Take the right steps when someone is hurt and report it correctly.",
@@ -152,9 +196,14 @@ module.exports = {
             { name: "OSHA: 29 CFR 1904.39 reporting rule", url: "https://www.osha.gov/laws-regs/regulations/standardnumber/1904/1904.39" }
           ],
           tryIt: "Write the steps you would take if a coworker cut their hand badly on a box cutter. Then write a short injury report: what happened, when, where, who saw it, and what should change.",
-          youCanNow: "respond to an injury, report it correctly and on time, and know what your employer must report."
+          youCanNow: "respond to an injury, report it correctly and on time, and know what your employer must report.",
+          quickCheck: [
+            { objective: "O5", q: "Which details belong in an injury report?", options: ["What happened, when, where and who saw it", "Only the name of the injured worker", "Who you think is to blame", "Your opinion of the supervisor"], answer: 0, why: "A clear report says what happened, when, where and who saw it." },
+            { objective: "O5", q: "You strain your back lifting but it only hurts a little. What do you do?", options: ["Keep working and say nothing", "Tell your supervisor right away", "Wait a month to see if it gets worse", "Only tell a coworker"], answer: 1, why: "Reporting early gets you care and protects your workers' compensation rights." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Your safety rights, OSHA 10 and OSHA 30",
           minutes: 5,
           goal: "Explain your right to a safe job, how to file an OSHA complaint, and what OSHA 10 and 30 are.",
@@ -179,17 +228,21 @@ module.exports = {
             { name: "OSHA: The facts about obtaining an OSHA card", url: "https://www.osha.gov/training/oshacardfacts" }
           ],
           tryIt: "Final task: do a 10-minute hazard walk and write your hazard report: five hazards, their type, the PPE or fix, who you would report each to, the SDS sections for one chemical, and your injury steps. At the bottom, write whether OSHA 10 or OSHA 30 fits your job and why.",
-          youCanNow: "explain your right to a safe job, file an OSHA complaint, and choose between OSHA 10 and OSHA 30."
+          youCanNow: "explain your right to a safe job, file an OSHA complaint, and choose between OSHA 10 and OSHA 30.",
+          quickCheck: [
+            { objective: "O6", q: "What is an OSHA 10 or OSHA 30 card?", options: ["A state license to work", "A professional certification", "A course completion card from an authorized trainer", "A card that replaces employer training"], answer: 2, why: "The cards show you finished a voluntary outreach course; they are not a license." },
+            { objective: "O6", q: "You told your supervisor about a blocked fire exit and nothing changed. What can you do next?", options: ["Nothing; only managers can act", "Quit right away", "Post about it online first", "File a complaint with OSHA and ask to keep your name private"], answer: 3, why: "If a hazard is not fixed, you can file an OSHA complaint and ask that your name not be shared." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Chemicals, injuries and your rights",
         questions: [
-          { q: "Which section of a safety data sheet tells you the PPE to wear?", options: ["Section 1", "Section 4", "Section 16", "Section 8"], answer: 3, why: "Section 8 covers exposure controls and personal protection." },
-          { q: "On a chemical label, which signal word means the more serious hazard?", options: ["Danger", "Warning", "Caution", "Notice"], answer: 0, why: "\"Danger\" is used for more serious hazards; \"Warning\" for less serious ones." },
-          { q: "You get a small cut at work. What should you do?", options: ["Hide it", "Wait until it gets worse", "Tell your supervisor right away and write down what happened", "Quit"], answer: 2, why: "Report every injury early, even small ones." },
-          { q: "Within how long must an employer report a work-related death to OSHA?", options: ["30 days", "8 hours", "One week", "It does not have to"], answer: 1, why: "OSHA's rule is 8 hours for a fatality." },
-          { q: "What is OSHA 10?", options: ["A required electrician license", "A fine", "A 10-hour voluntary safety course for entry-level workers", "A chemical label"], answer: 2, why: "It is an Outreach Training course with a completion card, not a license." }
+          { objective: "O4", q: "Which section of a safety data sheet tells you the PPE to wear?", options: ["Section 1", "Section 4", "Section 16", "Section 8"], answer: 3, why: "Section 8 covers exposure controls and personal protection." },
+          { objective: "O4", q: "On a chemical label, which signal word means the more serious hazard?", options: ["Danger", "Warning", "Caution", "Notice"], answer: 0, why: "\"Danger\" is used for more serious hazards; \"Warning\" for less serious ones." },
+          { objective: "O5", q: "You get a small cut at work. What should you do?", options: ["Hide it", "Wait until it gets worse", "Tell your supervisor right away and write down what happened", "Quit"], answer: 2, why: "Report every injury early, even small ones." },
+          { objective: "O5", q: "Within how long must an employer report a work-related death to OSHA?", options: ["30 days", "8 hours", "One week", "It does not have to"], answer: 1, why: "OSHA's rule is 8 hours for a fatality." },
+          { objective: "O6", q: "What is OSHA 10?", options: ["A required electrician license", "A fine", "A 10-hour voluntary safety course for entry-level workers", "A chemical label"], answer: 2, why: "It is an Outreach Training course with a completion card, not a license." }
         ]
       }
     }
@@ -197,26 +250,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Workplace Safety Basics (OSHA)",
     questions: [
-      { q: "What is a hazard?", options: ["Anything at work that could cause injury or illness", "A safety poster", "A type of PPE", "A break room"], answer: 0, why: "A hazard is a source of possible harm." },
-      { q: "During a hazard walk, \"look up\" means checking:", options: ["The floor for spills", "Your phone", "High shelves, overhead loads and ladders", "The time"], answer: 2, why: "Things overhead can fall or cause falls." },
-      { q: "A machine's guard has been removed. You should:", options: ["Use it carefully", "Do not use it, keep people away and report it", "Put your hand in to check it", "Ignore it"], answer: 1, why: "Missing guards cause serious injuries; report and stay clear." },
-      { q: "Which gloves should you wear with a cleaning chemical?", options: ["Any gloves", "No gloves", "Cut-resistant gloves", "The type the safety data sheet names"], answer: 3, why: "The SDS lists the right protection for that chemical." },
-      { q: "Before you use a respirator, you need:", options: ["Nothing", "A fit test and training", "Only a quick look", "A coworker's mask"], answer: 1, why: "A respirator must seal properly and be used correctly." },
-      { q: "Who generally must provide required PPE?", options: ["The employer", "The worker", "A coworker", "Nobody"], answer: 0, why: "Under OSHA rules employers generally must provide required PPE." },
-      { q: "Which is a good way to prevent slips?", options: ["Leave spills for later", "Wear smooth-soled shoes", "Turn off the lights", "Clean spills right away and use a wet floor sign"], answer: 3, why: "Fast clean-up and warnings prevent falls." },
-      { q: "On a ladder, \"three points of contact\" means:", options: ["Three people hold the ladder", "Three ladders together", "Two hands and a foot, or two feet and a hand, on the ladder", "Standing on the top three steps"], answer: 2, why: "It keeps you stable as you climb." },
-      { q: "In construction, OSHA's general height for fall protection is:", options: ["6 feet", "1 foot", "20 feet", "There is no rule"], answer: 0, why: "Construction's general trigger is 6 feet; general industry's is 4 feet." },
-      { q: "A box is heavy and awkward. What do you do?", options: ["Lift it fast", "Twist as you lift", "Get help or use a cart or dolly", "Carry it far from your body"], answer: 2, why: "Help or equipment prevents back injuries." },
-      { q: "What does SDS stand for?", options: ["Standard delivery slip", "Staff duty schedule", "Shift duty sign", "Safety data sheet"], answer: 3, why: "A safety data sheet describes a chemical's hazards and safe use." },
-      { q: "Which SDS section gives first aid?", options: ["Section 2", "Section 4", "Section 16", "Section 8"], answer: 1, why: "Section 4 lists first-aid measures." },
-      { q: "Why should you never mix bleach and ammonia?", options: ["They cost more", "They lose their smell", "They stain floors", "They make a toxic gas"], answer: 3, why: "Mixing them releases a dangerous gas." },
-      { q: "A coworker is badly hurt. What is the first step?", options: ["Call 911 or the site emergency number", "Finish your task", "Post a photo", "Move them right away"], answer: 0, why: "Emergency help comes first; do not move them unless they are in danger." },
-      { q: "Why report even a small injury?", options: ["To get a day off", "It is not needed", "To get care, protect your workers' compensation rights, and fix the hazard", "To blame someone"], answer: 2, why: "Early reports protect you and others." },
-      { q: "A worker loses an eye in a work accident. The employer must report to OSHA within:", options: ["8 hours", "24 hours", "One year", "30 days"], answer: 1, why: "Hospital admission, amputation and loss of an eye must be reported within 24 hours." },
-      { q: "Which phone number reaches OSHA?", options: ["1-800-321-6742", "1-800-669-4000", "911", "411"], answer: 0, why: "1-800-321-OSHA (6742) is OSHA's number; 1-800-669-4000 is the EEOC." },
-      { q: "You were cut from the schedule for reporting a hazard. Under federal law, file a whistleblower complaint within:", options: ["One year", "There is no deadline", "Five years", "30 days"], answer: 3, why: "The federal deadline for safety retaliation complaints is 30 days." },
-      { q: "Who is OSHA 30 mainly for?", options: ["Only truck drivers", "Supervisors and workers with safety responsibilities", "Children", "People who want an electrician license"], answer: 1, why: "OSHA 30 gives deeper training for supervisors and safety roles." },
-      { q: "Which is true about OSHA 10 and 30 cards?", options: ["They are a license", "Anyone can print one", "They are voluntary training cards that only authorized trainers can issue", "They never expire anywhere"], answer: 2, why: "They are not certifications, and only authorized trainers issue real cards." }
+      { objective: "O1", q: "What is a hazard?", options: ["Anything at work that could cause injury or illness", "A safety poster", "A type of PPE", "A break room"], answer: 0, why: "A hazard is a source of possible harm." },
+      { objective: "O1", q: "During a hazard walk, \"look up\" means checking:", options: ["The floor for spills", "Your phone", "High shelves, overhead loads and ladders", "The time"], answer: 2, why: "Things overhead can fall or cause falls." },
+      { objective: "O1", q: "A machine's guard has been removed. You should:", options: ["Use it carefully", "Do not use it, keep people away and report it", "Put your hand in to check it", "Ignore it"], answer: 1, why: "Missing guards cause serious injuries; report and stay clear." },
+      { objective: "O2", q: "Which gloves should you wear with a cleaning chemical?", options: ["Any gloves", "No gloves", "Cut-resistant gloves", "The type the safety data sheet names"], answer: 3, why: "The SDS lists the right protection for that chemical." },
+      { objective: "O2", q: "Before you use a respirator, you need:", options: ["Nothing", "A fit test and training", "Only a quick look", "A coworker's mask"], answer: 1, why: "A respirator must seal properly and be used correctly." },
+      { objective: "O2", q: "Who generally must provide required PPE?", options: ["The employer", "The worker", "A coworker", "Nobody"], answer: 0, why: "Under OSHA rules employers generally must provide required PPE." },
+      { objective: "O3", q: "Which is a good way to prevent slips?", options: ["Leave spills for later", "Wear smooth-soled shoes", "Turn off the lights", "Clean spills right away and use a wet floor sign"], answer: 3, why: "Fast clean-up and warnings prevent falls." },
+      { objective: "O3", q: "On a ladder, \"three points of contact\" means:", options: ["Three people hold the ladder", "Three ladders together", "Two hands and a foot, or two feet and a hand, on the ladder", "Standing on the top three steps"], answer: 2, why: "It keeps you stable as you climb." },
+      { objective: "O3", q: "In construction, OSHA's general height for fall protection is:", options: ["6 feet", "1 foot", "20 feet", "There is no rule"], answer: 0, why: "Construction's general trigger is 6 feet; general industry's is 4 feet." },
+      { objective: "O3", q: "A box is heavy and awkward. What do you do?", options: ["Lift it fast", "Twist as you lift", "Get help or use a cart or dolly", "Carry it far from your body"], answer: 2, why: "Help or equipment prevents back injuries." },
+      { objective: "O4", q: "What does SDS stand for?", options: ["Standard delivery slip", "Staff duty schedule", "Shift duty sign", "Safety data sheet"], answer: 3, why: "A safety data sheet describes a chemical's hazards and safe use." },
+      { objective: "O4", q: "Which SDS section gives first aid?", options: ["Section 2", "Section 4", "Section 16", "Section 8"], answer: 1, why: "Section 4 lists first-aid measures." },
+      { objective: "O4", q: "Why should you never mix bleach and ammonia?", options: ["They cost more", "They lose their smell", "They stain floors", "They make a toxic gas"], answer: 3, why: "Mixing them releases a dangerous gas." },
+      { objective: "O5", q: "A coworker is badly hurt. What is the first step?", options: ["Call 911 or the site emergency number", "Finish your task", "Post a photo", "Move them right away"], answer: 0, why: "Emergency help comes first; do not move them unless they are in danger." },
+      { objective: "O5", q: "Why report even a small injury?", options: ["To get a day off", "It is not needed", "To get care, protect your workers' compensation rights, and fix the hazard", "To blame someone"], answer: 2, why: "Early reports protect you and others." },
+      { objective: "O5", q: "A worker loses an eye in a work accident. The employer must report to OSHA within:", options: ["8 hours", "24 hours", "One year", "30 days"], answer: 1, why: "Hospital admission, amputation and loss of an eye must be reported within 24 hours." },
+      { objective: "O6", q: "Which phone number reaches OSHA?", options: ["1-800-321-6742", "1-800-669-4000", "911", "411"], answer: 0, why: "1-800-321-OSHA (6742) is OSHA's number; 1-800-669-4000 is the EEOC." },
+      { objective: "O6", q: "You were cut from the schedule for reporting a hazard. Under federal law, file a whistleblower complaint within:", options: ["One year", "There is no deadline", "Five years", "30 days"], answer: 3, why: "The federal deadline for safety retaliation complaints is 30 days." },
+      { objective: "O6", q: "Who is OSHA 30 mainly for?", options: ["Only truck drivers", "Supervisors and workers with safety responsibilities", "Children", "People who want an electrician license"], answer: 1, why: "OSHA 30 gives deeper training for supervisors and safety roles." },
+      { objective: "O6", q: "Which is true about OSHA 10 and 30 cards?", options: ["They are a license", "Anyone can print one", "They are voluntary training cards that only authorized trainers can issue", "They never expire anywhere"], answer: 2, why: "They are not certifications, and only authorized trainers issue real cards." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      2,
+      3,
+      7,
+      9,
+      11,
+      13,
+      14,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Hazards found",
+        objective: "O1",
+        notYet: "Fewer than five hazards, or types are missing or wrong.",
+        meets: "At least five hazards, each with the right type.",
+        exceeds: "Also says which hazards to fix now and which to report."
+      },
+      {
+        name: "PPE and fixes",
+        objective: "O2",
+        notYet: "No PPE or fix, or gear that does not match the hazard.",
+        meets: "Each hazard has a PPE item or fix that matches it.",
+        exceeds: "Names a way to remove the hazard before relying on PPE."
+      },
+      {
+        name: "Safety data sheet",
+        objective: "O4",
+        notYet: "No chemical, or the wrong SDS sections.",
+        meets: "Names Sections 2, 4 and 8 for one chemical and what each covers.",
+        exceeds: "Also notes the label's signal word and pictograms."
+      },
+      {
+        name: "Reporting",
+        objective: "O5",
+        notYet: "No one named to report to, or injury steps missing.",
+        meets: "Names who to report each hazard to and lists the injury steps in order.",
+        exceeds: "The injury steps include writing what, when, where and who saw it."
+      },
+      {
+        name: "Rights and training",
+        objective: "O6",
+        notYet: "Does not say whether OSHA 10 or 30 fits.",
+        meets: "Chooses OSHA 10 or OSHA 30 and gives a reason that fits their job.",
+        exceeds: "Also explains how to file an OSHA complaint if a hazard is not fixed."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who enroll in an OSHA 10 or OSHA 30 course from an authorized trainer within 90 days",
+      "Learners who get or keep a job in a hands-on field within 90 days (follow-up survey)",
+      "Workforce partners report fewer injuries or more hazards reported among program participants"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or computer to read the lessons",
+      "A room to walk for the hazard walk: home, a store room or a workplace (with permission)",
+      "A household cleaning product with a label, and internet to find its safety data sheet",
+      "Paper and pen for the hazard report",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Do a group hazard walk of the training room first, then let learners do their own.",
+      "Practice safe lifting with a light box only; nobody climbs ladders or lifts heavy loads during training.",
+      "Never let learners open or mix chemicals during practice; they read the label and SDS only.",
+      "Remind learners that this course does not replace an OSHA 10 or OSHA 30 card or their employer's training.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

@@ -17,11 +17,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos y termina con una tarea que haces enseguida. Hay una comprobación de conocimientos después de cada capítulo y un examen de 20 preguntas al final."
   ],
   finalTask: "Haz un plan de acción de una página para limpiar tus antecedentes: dónde vas a conseguir tus antecedentes, cada caso que conoces (condado, año, cargo) y el tipo de alivio que podría servirle, la ayuda legal gratis a la que vas a contactar primero, los papeles que vas a reunir y una declaración de rehabilitación corta y honesta que podrías darle a un empleador después de una oferta de trabajo.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Personas adultas con antecedentes penales, muchas de ellas de regreso a casa después de estar en prisión, a quienes sus antecedentes les cierran puertas para conseguir empleo, vivienda o estudios. Los ejemplos usan California, con indicaciones para revisar las reglas de otros estados.",
+    startingPoint: "Recuerdan algunos de sus casos de memoria. La mayoría nunca ha visto sus propios antecedentes oficiales, no conoce las palabras del alivio de antecedentes y no sabe dónde hay ayuda legal gratis.",
+    gap: "Muchas personas que califican para el alivio de antecedentes nunca lo piden porque nadie les enseñó cómo. Necesitan conseguir sus antecedentes, nombrar el alivio que podría aplicarles, encontrar ayuda legal gratis y preparar sus papeles, para que un abogado o una clínica presente la solicitud por ellas y puedan defender sus derechos al buscar empleo.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y oraciones cortas (más o menos de 5.º a 6.º grado)",
+      "Dispositivos: un teléfono inteligente o una computadora de la biblioteca con internet",
+      "Tiempo: lecciones de unos 5 minutos que caben entre el trabajo y las citas",
+      "No es asesoría legal: las leyes cambian según el estado y con el tiempo; antes de presentar cualquier cosa, se busca ayuda de un abogado, de asistencia legal o de un centro de autoayuda del tribunal",
+      "Privacidad: los detalles de los casos no se ponen en herramientas de IA ni en computadoras compartidas"
+    ],
+    prerequisites: "Ninguno. \"Introducción a la IA y a la confianza digital\" ayuda a quienes no tienen experiencia buscando sitios web oficiales."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Usando el sitio web oficial de tu estado", action: "pedir una copia de tus propios antecedentes penales y encontrar dónde conseguir tus antecedentes federales y los del tribunal", standard: "anotando el nombre del formulario, el costo, la exención de pago y el lugar más cercano para tomar las huellas" },
+    { id: "O2", condition: "Con las palabras del alivio de antecedentes", action: "explicar la diferencia entre borrado, sellado, anulación de la condena o desestimación, certificado de rehabilitación e indulto", standard: "con una oración sencilla y correcta para cada una" },
+    { id: "O3", condition: "Con tu lista de casos", action: "identificar si cada caso es federal o estatal y revisar si podría aplicarse el alivio automático", standard: "con cada caso marcado y un plan para revisar tus antecedentes más recientes" },
+    { id: "O4", condition: "Usando fuentes oficiales y organizaciones sin fines de lucro", action: "encontrar dos lugares gratis que ayuden con el alivio de antecedentes y preparar preguntas para la primera llamada", standard: "con nombre, teléfono, horario y tres preguntas para cada uno, y ningún servicio pagado que garantice resultados" },
+    { id: "O5", condition: "Con tus casos y pruebas de tu vida actual", action: "armar una carpeta de alivio de antecedentes que un abogado o una clínica pueda usar", standard: "con el condado, el año y el cargo de cada caso y una lista de las pruebas que todavía faltan" },
+    { id: "O6", condition: "Usando la Fair Chance Act de California", action: "explicar cuándo un empleador puede revisar tus antecedentes y escribir una declaración de rehabilitación corta", standard: "con una declaración honesta y corta que diga lo que has hecho desde entonces" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Conoce tus antecedentes y tus opciones",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Conseguir una copia de tus propios antecedentes",
           minutes: 5,
           goal: "Pedir una copia de tus antecedentes penales estatales y saber dónde encontrar tus antecedentes federales y los del tribunal.",
@@ -45,9 +69,14 @@ module.exports = {
             { name: "FBI: Identity History Summary (resumen de historial de identidad)", url: "https://www.fbi.gov/how-we-can-help-you/more-fbi-services-and-information/identity-history-summary-checks" }
           ],
           tryIt: "Busca la página oficial donde tu estado te deja pedir tus propios antecedentes (en California, Record Review en oag.ca.gov). Anota el nombre del formulario, la tarifa, si hay exención de pago y el lugar más cercano para tomarte las huellas.",
-          youCanNow: "pedir una copia de tus antecedentes estatales, decir dónde se guardan tus antecedentes del FBI y del tribunal, y encontrar errores para reclamarlos."
+          youCanNow: "pedir una copia de tus antecedentes estatales, decir dónde se guardan tus antecedentes del FBI y del tribunal, y encontrar errores para reclamarlos.",
+          quickCheck: [
+            { objective: "O1", q: "En California, ¿qué necesitas hacer para ver tus propios antecedentes estatales?", options: ["Llamar a la estación de policía", "Llenar el formulario Record Review del DOJ y tomarte las huellas en un sitio de Live Scan", "Pedirle a un asistente de IA que los busque", "Pagarle a un sitio web de verificación de antecedentes"], answer: 1, why: "El Record Review del DOJ de California usa un formulario y huellas tomadas con Live Scan." },
+            { objective: "O1", q: "Recibes tus antecedentes y ves un caso que no es tuyo. ¿Qué harías?", options: ["Ignorarlo", "Pedirle a la IA que lo borre", "Esperar a que un empleador pregunte", "Reclamarlo con el formulario oficial para errores"], answer: 3, why: "Conseguir tus antecedentes te permite encontrar errores y reclamarlos de forma oficial." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Qué significan las palabras del alivio de antecedentes",
           minutes: 5,
           goal: "Explicar la diferencia entre borrado, anulación, sellado, anulación de la condena (set-aside), certificado de rehabilitación e indulto.",
@@ -68,9 +97,14 @@ module.exports = {
             { name: "Guía de autoayuda de los tribunales de California: Limpia tus antecedentes", url: "https://selfhelp.courts.ca.gov/clean-your-record" }
           ],
           tryIt: "Haz una tabla pequeña con cinco filas: borrado, sellado, anulación (set-aside o dismissal), certificado de rehabilitación e indulto. Al lado de cada una, escribe una oración sencilla sobre lo que hace. Luego escribe una pregunta sobre tu propio caso para hacerle a un abogado.",
-          youCanNow: "explicar con palabras sencillas los principales tipos de alivio de antecedentes y decir por qué igual le preguntas a un abogado qué hace cada uno en tu caso."
+          youCanNow: "explicar con palabras sencillas los principales tipos de alivio de antecedentes y decir por qué igual le preguntas a un abogado qué hace cada uno en tu caso.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué hace por lo general el sellado de antecedentes?", options: ["Guarda los antecedentes pero los oculta a la mayoría de la gente", "Destruye todas las copias para siempre", "Convierte un delito grave en una multa", "Te da un indulto"], answer: 0, why: "Unos antecedentes sellados siguen existiendo, pero la mayoría de la gente no los puede ver." },
+            { objective: "O2", q: "No sabes qué alivio le sirve a tu caso. ¿Qué harías?", options: ["Elegir el que tenga el nombre más bonito", "Pedirlos todos a la vez", "Anotar tu pregunta y consultarla con un abogado o con asistencia legal", "Preguntarle a un amigo que tuvo un caso distinto"], answer: 2, why: "Un abogado o la asistencia legal pueden decirte qué alivio le sirve a tu propio caso." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Casos federales, estatales y Clean Slate de California",
           minutes: 5,
           goal: "Saber si cada uno de tus casos es federal o estatal y revisar si el alivio automático de California ya podría aplicarse.",
@@ -93,17 +127,21 @@ module.exports = {
             { name: "Office of the Pardon Attorney del DOJ de EE. UU.: Solicita clemencia", url: "https://www.justice.gov/pardon/apply-clemency" }
           ],
           tryIt: "Con tus antecedentes o con lo que recuerdes, haz una lista de cada caso y escribe al lado estatal o federal. Si vives en California, anota si tus antecedentes más recientes del DOJ muestran alivio automático en algún caso, o planea pedirlos para averiguarlo.",
-          youCanNow: "separar tus casos en federales y estatales, explicar qué hace y qué no hace el alivio automático de California y hacer una lista de los casos que todavía necesitan una petición."
+          youCanNow: "separar tus casos en federales y estatales, explicar qué hace y qué no hace el alivio automático de California y hacer una lista de los casos que todavía necesitan una petición.",
+          quickCheck: [
+            { objective: "O3", q: "Tu caso se vio en un tribunal superior de un condado. ¿Qué tipo de caso es?", options: ["Un caso federal", "Un caso estatal", "Un caso militar", "Solo un caso civil"], answer: 1, why: "Los tribunales superiores de los condados ven casos estatales." },
+            { objective: "O3", q: "Vives en California y crees que el alivio automático podría aplicarse a un caso viejo. ¿Qué harías?", options: ["Dar por hecho que ya se borró", "Presentar una petición federal", "Pedirle a un empleador que lo revise", "Pedir tus antecedentes más recientes al DOJ y buscar la nota del alivio"], answer: 3, why: "Tus antecedentes más recientes del DOJ muestran si se aplicó el alivio automático." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Conoce tus antecedentes y tus opciones",
         questions: [
-          { q: "¿Cuál es el mejor primer paso antes de pedir alivio de antecedentes?", options: ["Decirle a cada empleador que no tienes antecedentes", "Conseguir una copia de tus propios antecedentes", "Pagarle a un sitio web para que borre tus antecedentes", "Esperar a que el tribunal te llame"], answer: 1, why: "Tus antecedentes muestran cada caso y su resultado, así sabes qué arreglar y puedes encontrar errores." },
-          { q: "En California, ¿cómo ves tus propios antecedentes estatales?", options: ["Le preguntas a un amigo en el tribunal", "Buscas tu nombre en redes sociales", "Llamas al 911", "Llenas el formulario de Record Review del DOJ y te tomas las huellas en un sitio de Live Scan"], answer: 3, why: "El Record Review del DOJ de California usa el formulario BCIA 8016RR y huellas de Live Scan." },
-          { q: "¿Qué opción conserva los antecedentes pero los oculta para la mayoría de la gente?", options: ["El sellado", "Una multa de tránsito", "La libertad a prueba", "Una orden de arresto"], answer: 0, why: "Sellado significa que los antecedentes siguen existiendo, pero la mayoría del público no puede verlos." },
-          { q: "Tu única condena es de un US District Court. ¿Qué camino es el más probable?", options: ["Una anulación de California", "Un programa Clean Slate del condado", "Un indulto presidencial", "Un cambio en tu certificado de estudios"], answer: 2, why: "Un caso de un US District Court es federal y el alivio estatal no puede limpiarlo; el camino principal es un indulto presidencial." },
-          { q: "¿Qué es cierto sobre el alivio automático de antecedentes de California?", options: ["Borra el caso por completo", "Tienes que presentar una petición para recibirlo", "El DOJ te llama cuando está listo", "Limita quién puede ver un caso, pero no lo anula"], answer: 3, why: "El alivio automático agrega una nota que limita quién puede verlo; el caso no se anula ni se borra." }
+          { objective: "O1", q: "¿Cuál es el mejor primer paso antes de pedir alivio de antecedentes?", options: ["Decirle a cada empleador que no tienes antecedentes", "Conseguir una copia de tus propios antecedentes", "Pagarle a un sitio web para que borre tus antecedentes", "Esperar a que el tribunal te llame"], answer: 1, why: "Tus antecedentes muestran cada caso y su resultado, así sabes qué arreglar y puedes encontrar errores." },
+          { objective: "O1", q: "En California, ¿cómo ves tus propios antecedentes estatales?", options: ["Le preguntas a un amigo en el tribunal", "Buscas tu nombre en redes sociales", "Llamas al 911", "Llenas el formulario de Record Review del DOJ y te tomas las huellas en un sitio de Live Scan"], answer: 3, why: "El Record Review del DOJ de California usa el formulario BCIA 8016RR y huellas de Live Scan." },
+          { objective: "O2", q: "¿Qué opción conserva los antecedentes pero los oculta para la mayoría de la gente?", options: ["El sellado", "Una multa de tránsito", "La libertad a prueba", "Una orden de arresto"], answer: 0, why: "Sellado significa que los antecedentes siguen existiendo, pero la mayoría del público no puede verlos." },
+          { objective: "O3", q: "Tu única condena es de un US District Court. ¿Qué camino es el más probable?", options: ["Una anulación de California", "Un programa Clean Slate del condado", "Un indulto presidencial", "Un cambio en tu certificado de estudios"], answer: 2, why: "Un caso de un US District Court es federal y el alivio estatal no puede limpiarlo; el camino principal es un indulto presidencial." },
+          { objective: "O3", q: "¿Qué es cierto sobre el alivio automático de antecedentes de California?", options: ["Borra el caso por completo", "Tienes que presentar una petición para recibirlo", "El DOJ te llama cuando está listo", "Limita quién puede ver un caso, pero no lo anula"], answer: 3, why: "El alivio automático agrega una nota que limita quién puede verlo; el caso no se anula ni se borra." }
         ]
       }
     },
@@ -111,6 +149,7 @@ module.exports = {
       name: "Capítulo 2: Busca ayuda, prepárate y usa tus derechos",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Encontrar ayuda legal gratis",
           minutes: 5,
           goal: "Encontrar dos lugares gratis que puedan ayudarte con el alivio de antecedentes y prepararte para la primera llamada.",
@@ -133,9 +172,14 @@ module.exports = {
             { name: "Guía de autoayuda de los tribunales de California: Ayuda legal para limpiar tus antecedentes", url: "https://selfhelp.courts.ca.gov/clean-your-record/legal-help" }
           ],
           tryIt: "Encuentra cerca de ti dos lugares de ayuda legal gratis para el alivio de antecedentes. Para cada uno, escribe el nombre, el teléfono, el horario y qué llevar. Luego escribe tres preguntas que vas a hacer, como: ¿Cuáles de mis casos se pueden limpiar? ¿Qué tipo de alivio me sirve? ¿Cuánto tiempo va a tomar?",
-          youCanNow: "encontrar ayuda legal gratis para el alivio de antecedentes, prepararte para la primera llamada y reconocer ofertas pagadas que son señales de alerta."
+          youCanNow: "encontrar ayuda legal gratis para el alivio de antecedentes, prepararte para la primera llamada y reconocer ofertas pagadas que son señales de alerta.",
+          quickCheck: [
+            { objective: "O4", q: "¿Cuál es un lugar gratis para buscar ayuda con el alivio de antecedentes?", options: ["Un sitio web que garantiza resultados a cambio de un pago alto", "Un centro de autoayuda del tribunal", "Un desconocido en las redes sociales", "Una oficina de fianzas"], answer: 1, why: "Los centros de autoayuda de los tribunales dan ayuda gratis con los formularios del tribunal." },
+            { objective: "O4", q: "Alguien te promete limpiar tus antecedentes seguro si le pagas $1,000 hoy. ¿Qué harías?", options: ["Irte y buscar ayuda legal gratis", "Pagar la mitad ahora", "Pagar con una tarjeta de regalo", "Darle los detalles de tu caso para que los revise"], answer: 0, why: "Las garantías y los pagos altos por adelantado son señales de alerta." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Prepararte y presentar con ayuda",
           minutes: 6,
           goal: "Armar una carpeta de alivio de antecedentes que un abogado o una clínica pueda usar para presentar por ti.",
@@ -154,9 +198,14 @@ module.exports = {
             { title: "Después de presentar", bullets: ["Guarda copias y anota cada fecha", "Consigue una copia de la orden del juez", "Revisa tus antecedentes otra vez unos meses después"] }
           ],
           tryIt: "Empieza hoy tu carpeta de alivio de antecedentes. Escribe la lista de los casos que conoces (condado, año, cargo) y una lista de las pruebas que todavía tienes que reunir. Pon una estrella al lado de los dos primeros papeles que vas a conseguir esta semana.",
-          youCanNow: "armar una carpeta de alivio de antecedentes, trabajar con alguien que te ayude a presentarla y revisar después que tus antecedentes se actualizaron."
+          youCanNow: "armar una carpeta de alivio de antecedentes, trabajar con alguien que te ayude a presentarla y revisar después que tus antecedentes se actualizaron.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué es un número de caso?", options: ["Tu número de Seguro Social", "Tu número de identificación de la prisión", "El número que un tribunal le da a cada caso", "Tu número de teléfono"], answer: 2, why: "Cada caso en un tribunal tiene su propio número de caso." },
+            { objective: "O5", q: "El tribunal te concedió el alivio. ¿Qué harías después?", options: ["No volver a pensar en eso", "Pedir otra vez tus antecedentes para confirmar que se actualizaron", "Decirles a los empleadores que no tienes antecedentes sin revisar", "Tirar tu carpeta"], answer: 1, why: "Revisar otra vez tus antecedentes confirma que el alivio aparece." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Contratación justa y tus derechos",
           minutes: 6,
           goal: "Explicar la Fair Chance Act de California y preparar una declaración de rehabilitación corta para un empleador.",
@@ -179,17 +228,21 @@ module.exports = {
             { name: "California Civil Rights Department: Hoja informativa sobre antecedentes penales y empleo (junio de 2025)", url: "https://calcivilrights.ca.gov/wp-content/uploads/sites/32/2025/07/Fair-Chance-Act-Factsheet_English.pdf" }
           ],
           tryIt: "Tarea final: haz tu plan de acción de una página para limpiar tus antecedentes. Incluye dónde vas a conseguir tus antecedentes, cada caso y el alivio que podría servirle, la ayuda legal gratis a la que vas a contactar primero, los papeles que vas a reunir y tu declaración de rehabilitación corta para empleadores.",
-          youCanNow: "explicar tus derechos de contratación justa en California, averiguar las reglas de tu estado y responderle a un empleador sobre tus antecedentes con una declaración corta y honesta y con pruebas."
+          youCanNow: "explicar tus derechos de contratación justa en California, averiguar las reglas de tu estado y responderle a un empleador sobre tus antecedentes con una declaración corta y honesta y con pruebas.",
+          quickCheck: [
+            { objective: "O6", q: "Según la Fair Chance Act de California, ¿cuándo puede la mayoría de los empleadores cubiertos revisar tus antecedentes?", options: ["Antes de la entrevista", "En la solicitud de empleo", "Nunca", "Después de una oferta de trabajo condicional"], answer: 3, why: "Los empleadores cubiertos esperan a después de una oferta condicional para revisar tus antecedentes." },
+            { objective: "O6", q: "Un empleador te pregunta por tu pasado después de hacerte una oferta. ¿Qué harías?", options: ["Dar una declaración corta y honesta sobre lo que has hecho desde entonces", "Contar una historia larga sobre el caso", "Negarte a decir nada e irte", "Decir que no tienes antecedentes"], answer: 0, why: "Una declaración de rehabilitación corta y honesta muestra que estás listo para el trabajo." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Busca ayuda, prepárate y usa tus derechos",
         questions: [
-          { q: "¿Cuál es una señal de alerta cuando alguien ofrece limpiar tus antecedentes?", options: ["Te explica tus opciones primero", "Trabaja en un centro de autoayuda del tribunal", "Garantiza resultados y quiere un pago grande por adelantado", "Te pide que lleves tus antecedentes"], answer: 2, why: "Las garantías y los pagos grandes por adelantado son señales de estafa; la ayuda real primero explica las opciones." },
-          { q: "No eres ciudadano de Estados Unidos y quieres alivio de antecedentes. ¿Qué debes hacer primero?", options: ["Hablar con un abogado de inmigración", "Presentar los formularios solo enseguida", "No buscar ayuda legal", "Pedirle a un amigo que presente por ti"], answer: 0, why: "Los trámites en el tribunal pueden afectar tu situación migratoria, así que primero debe aconsejarte un abogado de inmigración." },
-          { q: "¿Qué va en tu carpeta de alivio de antecedentes?", options: ["La contraseña de tu banco", "Pruebas de que terminaste la libertad a prueba", "El acceso a tus redes sociales", "Una hoja en blanco"], answer: 1, why: "Las pruebas de que terminaste la libertad a prueba ayudan a mostrar que calificas y que hiciste lo que pidió el tribunal." },
-          { q: "Según la Fair Chance Act de California, ¿cuándo pueden revisar tus antecedentes la mayoría de los empleadores cubiertos?", options: ["Antes de que presentes la solicitud", "Durante la primera llamada", "En el anuncio de trabajo", "Después de una oferta de trabajo condicional"], answer: 3, why: "La mayoría de los empleadores cubiertos tienen que esperar hasta después de una oferta de trabajo condicional." },
-          { q: "Un empleador piensa retirar tu oferta por tus antecedentes. ¿Cuánto tiempo tienes para responder en California?", options: ["Nada de tiempo", "Una hora", "Al menos cinco días hábiles", "Un año"], answer: 2, why: "El empleador tiene que darte al menos cinco días hábiles para responder con pruebas o mostrar un error." }
+          { objective: "O4", q: "¿Cuál es una señal de alerta cuando alguien ofrece limpiar tus antecedentes?", options: ["Te explica tus opciones primero", "Trabaja en un centro de autoayuda del tribunal", "Garantiza resultados y quiere un pago grande por adelantado", "Te pide que lleves tus antecedentes"], answer: 2, why: "Las garantías y los pagos grandes por adelantado son señales de estafa; la ayuda real primero explica las opciones." },
+          { objective: "O4", q: "No eres ciudadano de Estados Unidos y quieres alivio de antecedentes. ¿Qué debes hacer primero?", options: ["Hablar con un abogado de inmigración", "Presentar los formularios solo enseguida", "No buscar ayuda legal", "Pedirle a un amigo que presente por ti"], answer: 0, why: "Los trámites en el tribunal pueden afectar tu situación migratoria, así que primero debe aconsejarte un abogado de inmigración." },
+          { objective: "O5", q: "¿Qué va en tu carpeta de alivio de antecedentes?", options: ["La contraseña de tu banco", "Pruebas de que terminaste la libertad a prueba", "El acceso a tus redes sociales", "Una hoja en blanco"], answer: 1, why: "Las pruebas de que terminaste la libertad a prueba ayudan a mostrar que calificas y que hiciste lo que pidió el tribunal." },
+          { objective: "O6", q: "Según la Fair Chance Act de California, ¿cuándo pueden revisar tus antecedentes la mayoría de los empleadores cubiertos?", options: ["Antes de que presentes la solicitud", "Durante la primera llamada", "En el anuncio de trabajo", "Después de una oferta de trabajo condicional"], answer: 3, why: "La mayoría de los empleadores cubiertos tienen que esperar hasta después de una oferta de trabajo condicional." },
+          { objective: "O6", q: "Un empleador piensa retirar tu oferta por tus antecedentes. ¿Cuánto tiempo tienes para responder en California?", options: ["Nada de tiempo", "Una hora", "Al menos cinco días hábiles", "Un año"], answer: 2, why: "El empleador tiene que darte al menos cinco días hábiles para responder con pruebas o mostrar un error." }
         ]
       }
     }
@@ -197,26 +250,106 @@ module.exports = {
   quiz: {
     title: "Examen final: Limpiar tus antecedentes: borrado y alivio de antecedentes penales",
     questions: [
-      { q: "¿Por qué conseguir primero una copia de tus propios antecedentes?", options: ["Para publicarla en internet", "Para ver cada caso y encontrar errores", "Porque los empleadores te exigen mostrarla", "No sirve de nada"], answer: 1, why: "Tus antecedentes muestran qué necesita alivio y pueden tener errores que arreglar." },
-      { q: "En California, el lugar donde te toman las huellas para el Record Review es:", options: ["Un sitio de Live Scan", "Un banco", "Un apartado postal", "Una agencia de carros"], answer: 0, why: "El Record Review usa huellas de Live Scan tomadas en sitios de Live Scan." },
-      { q: "Encuentras un error en tus antecedentes del DOJ de California. ¿Qué formulario sirve para reclamarlo?", options: ["Una solicitud de empleo", "Una FAFSA (solicitud de ayuda federal para estudiar)", "El BCIA 8706, Claim of Alleged Inaccuracy or Incompleteness", "Un formulario de licencia de manejo"], answer: 2, why: "El DOJ manda el BCIA 8706 con tus antecedentes para que puedas reclamar los errores." },
-      { q: "¿Dónde puedes pedir tus antecedentes nacionales del FBI?", options: ["En la biblioteca de tu condado", "En una red social", "A tu arrendador", "Al FBI, por medio de fbi.gov"], answer: 3, why: "El FBI guarda el Identity History Summary nacional; fbi.gov explica cómo pedirlo." },
-      { q: "¿Qué significa normalmente sellar los antecedentes?", options: ["Los antecedentes siguen existiendo, pero la mayoría de la gente no puede verlos", "Vuelves al tribunal para un juicio nuevo", "Pagas una multa otra vez", "El caso se hace más largo"], answer: 0, why: "Los antecedentes sellados existen, pero están ocultos para la mayoría del público." },
-      { q: "Una anulación (set-aside o dismissal) significa:", options: ["Te vuelven a arrestar", "El tribunal vuelve a abrir una condena y la anula", "Se borran tus huellas", "Tienes que mudarte a otro estado"], answer: 1, why: "Una anulación es cuando un tribunal anula una condena del pasado." },
-      { q: "¿Qué es un certificado de rehabilitación?", options: ["Un diploma de la preparatoria", "Un permiso de estacionamiento", "Una orden del tribunal que dice que has vivido respetando la ley desde tu sentencia", "Un contrato de trabajo"], answer: 2, why: "Es la declaración oficial de un tribunal de que te has rehabilitado." },
-      { q: "¿Qué es cierto sobre la palabra expungement (borrado) en California?", options: ["Siempre borra todos los antecedentes", "Solo la usa el FBI", "Es un programa federal", "Los tribunales dicen que el borrado real no existe allí"], answer: 3, why: "Los tribunales de California dicen que el borrado real no existe; el alivio común es una anulación." },
-      { q: "Tu caso se vio en un tribunal superior de condado. Es un:", options: ["Caso estatal", "Caso federal", "Caso militar", "Caso tribal"], answer: 0, why: "Los tribunales de condado ven casos estatales." },
-      { q: "¿Una anulación estatal puede limpiar una condena federal?", options: ["Sí, siempre", "Sí, si pagas más", "No, cada sistema limpia solo sus propios casos", "Solo los fines de semana"], answer: 2, why: "El alivio estatal no puede limpiar una condena federal." },
-      { q: "¿Cómo recibes el alivio automático Clean Slate de California?", options: ["Tienes que presentar una petición", "El DOJ lo aplica a los casos que califican sin petición", "Llamas al 911", "Se lo pides a tu empleador"], answer: 1, why: "El DOJ revisa los registros cada mes y da el alivio que corresponde de forma automática." },
-      { q: "¿Cómo puedes saber si recibiste alivio automático en California?", options: ["Esperas una carta del DOJ", "Le preguntas a un vecino", "Buscas en las noticias", "Pides tus propios antecedentes del DOJ y buscas la nota de alivio"], answer: 3, why: "El DOJ no avisa a la gente, así que tú revisas tus propios antecedentes." },
-      { q: "¿Cuál es un lugar gratis para buscar ayuda con el alivio de antecedentes?", options: ["Un centro de autoayuda del tribunal", "Un sitio web que garantiza resultados por mucho dinero", "Un desconocido en redes sociales", "Una casa de empeño"], answer: 0, why: "Los centros de autoayuda de los tribunales, la asistencia legal y los programas del defensor público muchas veces ayudan gratis." },
-      { q: "Antes de llamar a alguien para ayuda legal, un paso inteligente es:", options: ["Tirar tus papeles", "Escribir tres preguntas y reunir tus antecedentes", "Adivinar tus números de caso", "Firmar formularios en blanco"], answer: 1, why: "Estar preparado ayuda a que quien te ayuda trabaje más rápido y responda tus preguntas reales." },
-      { q: "¿Qué es un número de caso?", options: ["Tu número de teléfono", "Una cuenta de banco", "El número que un tribunal le da a cada caso", "Tu talla de zapato"], answer: 2, why: "Los números de caso ayudan a quien te ayuda o al secretario a encontrar el expediente correcto." },
-      { q: "Después de que el tribunal te da el alivio, ¿qué debes hacer más adelante?", options: ["Nada nunca más", "Tirar la orden", "No decirle a nadie", "Volver a pedir tus antecedentes para asegurarte de que se actualizaron"], answer: 3, why: "Los antecedentes no siempre se actualizan, así que los revisas y arreglas cualquier problema." },
-      { q: "¿Cuál es una buena prueba de tu vida de ahora?", options: ["Certificados de clases y cartas de apoyo", "Una identificación vieja de la cárcel", "Un cheque en blanco", "Tu lista de contraseñas"], answer: 0, why: "Los certificados y las cartas de apoyo son pruebas de rehabilitación." },
-      { q: "¿A qué empleadores cubre la Fair Chance Act de California?", options: ["Solo al gobierno del estado", "A los empleadores públicos y a los privados con cinco o más empleados", "Solo a empleadores con 500 trabajadores o más", "Solo a restaurantes"], answer: 1, why: "La ley cubre a los empleadores públicos y a los privados con cinco o más empleados, con algunas excepciones." },
-      { q: "Después de una oferta condicional, ¿qué NUNCA puede usar un empleador de California?", options: ["Tu prueba de habilidades", "Tus referencias de trabajo", "Una condena que se anuló", "Tu fecha de inicio"], answer: 2, why: "Las condenas selladas, anuladas o borradas no se pueden usar." },
-      { q: "Una buena declaración de rehabilitación para un empleador:", options: ["Les echa la culpa a todos los demás", "Tiene tres páginas", "Dice en una oración qué pasó, qué has hecho desde entonces y por qué estás listo", "Miente sobre los antecedentes"], answer: 2, why: "Lo que mejor funciona es algo corto, honesto y centrado en el cambio y en que estás listo." }
+      { objective: "O1", q: "¿Por qué conseguir primero una copia de tus propios antecedentes?", options: ["Para publicarla en internet", "Para ver cada caso y encontrar errores", "Porque los empleadores te exigen mostrarla", "No sirve de nada"], answer: 1, why: "Tus antecedentes muestran qué necesita alivio y pueden tener errores que arreglar." },
+      { objective: "O1", q: "En California, el lugar donde te toman las huellas para el Record Review es:", options: ["Un sitio de Live Scan", "Un banco", "Un apartado postal", "Una agencia de carros"], answer: 0, why: "El Record Review usa huellas de Live Scan tomadas en sitios de Live Scan." },
+      { objective: "O1", q: "Encuentras un error en tus antecedentes del DOJ de California. ¿Qué formulario sirve para reclamarlo?", options: ["Una solicitud de empleo", "Una FAFSA (solicitud de ayuda federal para estudiar)", "El BCIA 8706, Claim of Alleged Inaccuracy or Incompleteness", "Un formulario de licencia de manejo"], answer: 2, why: "El DOJ manda el BCIA 8706 con tus antecedentes para que puedas reclamar los errores." },
+      { objective: "O1", q: "¿Dónde puedes pedir tus antecedentes nacionales del FBI?", options: ["En la biblioteca de tu condado", "En una red social", "A tu arrendador", "Al FBI, por medio de fbi.gov"], answer: 3, why: "El FBI guarda el Identity History Summary nacional; fbi.gov explica cómo pedirlo." },
+      { objective: "O2", q: "¿Qué significa normalmente sellar los antecedentes?", options: ["Los antecedentes siguen existiendo, pero la mayoría de la gente no puede verlos", "Vuelves al tribunal para un juicio nuevo", "Pagas una multa otra vez", "El caso se hace más largo"], answer: 0, why: "Los antecedentes sellados existen, pero están ocultos para la mayoría del público." },
+      { objective: "O2", q: "Una anulación (set-aside o dismissal) significa:", options: ["Te vuelven a arrestar", "El tribunal vuelve a abrir una condena y la anula", "Se borran tus huellas", "Tienes que mudarte a otro estado"], answer: 1, why: "Una anulación es cuando un tribunal anula una condena del pasado." },
+      { objective: "O2", q: "¿Qué es un certificado de rehabilitación?", options: ["Un diploma de la preparatoria", "Un permiso de estacionamiento", "Una orden del tribunal que dice que has vivido respetando la ley desde tu sentencia", "Un contrato de trabajo"], answer: 2, why: "Es la declaración oficial de un tribunal de que te has rehabilitado." },
+      { objective: "O2", q: "¿Qué es cierto sobre la palabra expungement (borrado) en California?", options: ["Siempre borra todos los antecedentes", "Solo la usa el FBI", "Es un programa federal", "Los tribunales dicen que el borrado real no existe allí"], answer: 3, why: "Los tribunales de California dicen que el borrado real no existe; el alivio común es una anulación." },
+      { objective: "O3", q: "Tu caso se vio en un tribunal superior de condado. Es un:", options: ["Caso estatal", "Caso federal", "Caso militar", "Caso tribal"], answer: 0, why: "Los tribunales de condado ven casos estatales." },
+      { objective: "O3", q: "¿Una anulación estatal puede limpiar una condena federal?", options: ["Sí, siempre", "Sí, si pagas más", "No, cada sistema limpia solo sus propios casos", "Solo los fines de semana"], answer: 2, why: "El alivio estatal no puede limpiar una condena federal." },
+      { objective: "O3", q: "¿Cómo recibes el alivio automático Clean Slate de California?", options: ["Tienes que presentar una petición", "El DOJ lo aplica a los casos que califican sin petición", "Llamas al 911", "Se lo pides a tu empleador"], answer: 1, why: "El DOJ revisa los registros cada mes y da el alivio que corresponde de forma automática." },
+      { objective: "O3", q: "¿Cómo puedes saber si recibiste alivio automático en California?", options: ["Esperas una carta del DOJ", "Le preguntas a un vecino", "Buscas en las noticias", "Pides tus propios antecedentes del DOJ y buscas la nota de alivio"], answer: 3, why: "El DOJ no avisa a la gente, así que tú revisas tus propios antecedentes." },
+      { objective: "O4", q: "¿Cuál es un lugar gratis para buscar ayuda con el alivio de antecedentes?", options: ["Un centro de autoayuda del tribunal", "Un sitio web que garantiza resultados por mucho dinero", "Un desconocido en redes sociales", "Una casa de empeño"], answer: 0, why: "Los centros de autoayuda de los tribunales, la asistencia legal y los programas del defensor público muchas veces ayudan gratis." },
+      { objective: "O4", q: "Antes de llamar a alguien para ayuda legal, un paso inteligente es:", options: ["Tirar tus papeles", "Escribir tres preguntas y reunir tus antecedentes", "Adivinar tus números de caso", "Firmar formularios en blanco"], answer: 1, why: "Estar preparado ayuda a que quien te ayuda trabaje más rápido y responda tus preguntas reales." },
+      { objective: "O5", q: "¿Qué es un número de caso?", options: ["Tu número de teléfono", "Una cuenta de banco", "El número que un tribunal le da a cada caso", "Tu talla de zapato"], answer: 2, why: "Los números de caso ayudan a quien te ayuda o al secretario a encontrar el expediente correcto." },
+      { objective: "O5", q: "Después de que el tribunal te da el alivio, ¿qué debes hacer más adelante?", options: ["Nada nunca más", "Tirar la orden", "No decirle a nadie", "Volver a pedir tus antecedentes para asegurarte de que se actualizaron"], answer: 3, why: "Los antecedentes no siempre se actualizan, así que los revisas y arreglas cualquier problema." },
+      { objective: "O5", q: "¿Cuál es una buena prueba de tu vida de ahora?", options: ["Certificados de clases y cartas de apoyo", "Una identificación vieja de la cárcel", "Un cheque en blanco", "Tu lista de contraseñas"], answer: 0, why: "Los certificados y las cartas de apoyo son pruebas de rehabilitación." },
+      { objective: "O6", q: "¿A qué empleadores cubre la Fair Chance Act de California?", options: ["Solo al gobierno del estado", "A los empleadores públicos y a los privados con cinco o más empleados", "Solo a empleadores con 500 trabajadores o más", "Solo a restaurantes"], answer: 1, why: "La ley cubre a los empleadores públicos y a los privados con cinco o más empleados, con algunas excepciones." },
+      { objective: "O6", q: "Después de una oferta condicional, ¿qué NUNCA puede usar un empleador de California?", options: ["Tu prueba de habilidades", "Tus referencias de trabajo", "Una condena que se anuló", "Tu fecha de inicio"], answer: 2, why: "Las condenas selladas, anuladas o borradas no se pueden usar." },
+      { objective: "O6", q: "Una buena declaración de rehabilitación para un empleador:", options: ["Les echa la culpa a todos los demás", "Tiene tres páginas", "Dice en una oración qué pasó, qué has hecho desde entonces y por qué estás listo", "Miente sobre los antecedentes"], answer: 2, why: "Lo que mejor funciona es algo corto, honesto y centrado en el cambio y en que estás listo." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      1,
+      4,
+      7,
+      8,
+      10,
+      12,
+      14,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte y vuelve a intentarlo.",
+    criteria: [
+      {
+        name: "Conseguir los antecedentes",
+        objective: "O1",
+        notYet: "No hay plan, o planea usar un sitio privado de verificación de antecedentes.",
+        meets: "Nombra el lugar oficial para pedir los antecedentes y el sitio para tomar las huellas.",
+        exceeds: "También anota el costo, la exención de pago y dónde conseguir los antecedentes federales si hace falta."
+      },
+      {
+        name: "Casos y posible alivio",
+        objective: "O3",
+        notYet: "Faltan casos, o ninguno está marcado como estatal o federal.",
+        meets: "Cada caso conocido tiene condado, año, cargo, si es estatal o federal y un posible tipo de alivio.",
+        exceeds: "Anota qué casos revisar para el alivio automático y una pregunta para un abogado."
+      },
+      {
+        name: "Ayuda legal gratis",
+        objective: "O4",
+        notYet: "No nombra a nadie que ayude, o nombra un servicio pagado que garantiza resultados.",
+        meets: "Un lugar de ayuda legal gratis para contactar primero, con teléfono y horario.",
+        exceeds: "También anota un segundo lugar de ayuda y tres preguntas para hacer."
+      },
+      {
+        name: "Papeles por reunir",
+        objective: "O5",
+        notYet: "No hay lista de papeles.",
+        meets: "Una lista de los registros y las pruebas de la vida actual que hay que reunir.",
+        exceeds: "Los dos primeros papeles que conseguirá esta semana están marcados con una estrella."
+      },
+      {
+        name: "Declaración de rehabilitación",
+        objective: "O6",
+        notYet: "Falta, es muy larga o no es honesta.",
+        meets: "Una declaración corta y honesta: qué pasó en una oración, lo que has hecho desde entonces y por qué estás listo.",
+        exceeds: "La practicó en voz alta y menciona pruebas como certificados o cartas de apoyo."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Personas que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Personas que piden una copia de sus propios antecedentes en 30 días (encuesta de seguimiento)",
+      "Personas que contactan ayuda legal gratis o piden el alivio de antecedentes en 90 días",
+      "Personas que reportan una oferta de empleo o de vivienda después de usar su declaración de rehabilitación"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono inteligente o una computadora con internet",
+      "Papel y lápiz, o una carpeta, para el plan de acción y los papeles del alivio de antecedentes",
+      "Los datos de contacto de una oficina local de asistencia legal o de un centro de autoayuda del tribunal",
+      "Unos 60 minutos en total, en sesiones cortas: lecciones, práctica, comprobaciones y tarea final"
+    ],
+    facilitatorNotes: [
+      "Este curso no es asesoría legal; trabaja junto con una oficina de asistencia legal o una clínica e invítala a una sesión si es posible.",
+      "Quienes viven fuera de California deben buscar las páginas oficiales de su propio estado; ten esos enlaces listos.",
+      "Los participantes no deben compartir en voz alta en el grupo los detalles de sus casos ni escribirlos en la IA; déjalos trabajar sus listas de casos en privado.",
+      "Dile a quienes no son ciudadanos de Estados Unidos que hablen con un abogado de inmigración antes de pedir cualquier alivio de antecedentes.",
+      "Califica el plan de acción con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

@@ -15,11 +15,35 @@ module.exports = {
     "You will build a real 90-day AI plan for one organization as you go. Each lesson takes about five minutes and ends with a \"Try it now\" task. A knowledge check closes each chapter and a 20-question quiz closes the course."
   ],
   finalTask: "Write a 90-day AI integration plan for a real or practice organization (for example an athlete's brand business, a sports academy, a small business or a nonprofit). Include a readiness score, three goals tied to the mission, a one-page AI use policy, a risk table, a training and communication plan, and a roadmap with an owner and date for each step.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Athletes who run a brand business, and the coaches, academy directors, agents and staff around them, plus leaders of small businesses and nonprofits who must decide how their organization uses AI.",
+    startingPoint: "Know their team, brand or organization well and may use AI tools personally. Few have written a policy, a risk table or a change plan, or rolled out a new tool to a whole group.",
+    gap: "Staff and players are already using AI, often with no rules, and private health, contract or minors' data can leak. Learners need a practical 90-day plan that ties AI to the mission, sets clear rules, controls risk and brings people along, so AI helps instead of creating legal, privacy or trust problems.",
+    constraints: [
+      "Reading level: plain words; planning terms explained the first time",
+      "Devices: a phone or computer; a document or spreadsheet for the plan",
+      "Time: 5 minute lessons, about 60 minutes in total plus time to write the plan",
+      "Privacy: athlete health and performance data, minors' information, contracts and donor records are protected",
+      "No legal advice: contracts, endorsements and data laws go to a qualified lawyer"
+    ],
+    prerequisites: "None. \"AI in Business: Strategies and Applications\" is a helpful first course."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "For a real or practice organization", action: "score its AI readiness from 1 to 5 in leadership, people, data, processes and rules", standard: "with one sentence of evidence for each score and a fix for the two lowest" },
+    { id: "O2", condition: "Given the organization's mission", action: "write three SMART goals for AI that serve the mission", standard: "each with a number and a date" },
+    { id: "O3", condition: "For the people who will use AI", action: "write a one-page AI use policy", standard: "covering approved tools, what never goes in, human review, disclosure and a contact person" },
+    { id: "O4", condition: "For each planned AI use", action: "build a risk table using Govern, Map, Measure and Manage", standard: "with likelihood, impact, a control and who checks it for every risk" },
+    { id: "O5", condition: "For the team that will adopt AI", action: "write a training and communication plan", standard: "that says why, what, and what is in it for them, and names at least one AI champion" },
+    { id: "O6", condition: "Given your goals, policy, risks and training", action: "create a 90-day roadmap in three phases", standard: "with an owner and a due date for every step" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Getting ready for AI",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Checking your organization's AI readiness",
           minutes: 5,
           goal: "Score an organization's readiness for AI in five areas.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Low scores show where to start", bullets: ["Fix the basics first", "Example: organize files before using AI on them"] }
           ],
           tryIt: "Pick a real or practice organization. Score its readiness in the five areas with one sentence of evidence each, and name the first fix for the two lowest.",
-          youCanNow: "score an organization's AI readiness and find where to start."
+          youCanNow: "score an organization's AI readiness and find where to start.",
+          quickCheck: [
+            { objective: "O1", q: "Which question checks the \"processes\" readiness area?", options: ["Do leaders support AI?", "Are your main tasks written down?", "Is data stored safely?", "Do you have privacy rules?"], answer: 1, why: "Processes asks whether the main tasks are written down." },
+            { objective: "O1", q: "Your sports academy scores 2 on data and 5 on people. What do you do?", options: ["Stop the AI effort completely", "Buy the most advanced AI tool right away", "Ignore the data score", "Start by fixing the data area, such as organizing records"], answer: 3, why: "Low scores show where to start, not a reason to stop." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Setting AI goals tied to the mission",
           minutes: 5,
           goal: "Write three measurable AI goals that serve the organization's mission.",
@@ -55,9 +84,14 @@ module.exports = {
             { title: "SMART goals", bullets: ["Specific, measurable, achievable", "Relevant to the mission, time-bound", "Three goals for 90 days"] }
           ],
           tryIt: "Write the organization's mission in one sentence and three SMART AI goals that support it.",
-          youCanNow: "set measurable AI goals that serve an organization's mission."
+          youCanNow: "set measurable AI goals that serve an organization's mission.",
+          quickCheck: [
+            { objective: "O2", q: "In SMART, what does the \"R\" mean?", options: ["Relevant to the mission", "Rapid", "Repeated", "Required by law"], answer: 0, why: "A SMART goal is relevant to the organization's mission." },
+            { objective: "O2", q: "An athlete's brand wants to \"use AI more\". How do you make it a SMART goal?", options: ["\"Use lots of AI tools.\"", "\"Be the best brand online.\"", "\"Reply to fan and sponsor emails within 24 hours, down from 3 days, by June.\"", "\"Try AI someday.\""], answer: 2, why: "It is specific, measurable, tied to the mission and has a date." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Writing a one-page AI use policy",
           minutes: 6,
           goal: "Write a short AI use policy that tells people what is allowed, what is not and who to ask.",
@@ -74,17 +108,21 @@ module.exports = {
             { title: "Field-specific rules", bullets: ["Sports: athlete health data, minors", "Nonprofits: donor and client records", "Legal advice for contracts and data laws"] }
           ],
           tryIt: "Write a one-page AI use policy for your organization with all six parts. Ask an AI assistant to check it for anything unclear, then edit it yourself.",
-          youCanNow: "write a short AI use policy that protects people and data."
+          youCanNow: "write a short AI use policy that protects people and data.",
+          quickCheck: [
+            { objective: "O3", q: "Why does an organization need an AI use policy?", options: ["To ban all technology", "To make AI tools free", "To replace the staff handbook", "So people do not guess and paste private information into AI tools"], answer: 3, why: "Without a policy, people guess, and private player, client or donor data can leak." },
+            { objective: "O3", q: "A coach wants AI to draft a sponsorship contract. What should your policy say?", options: ["Send the AI draft to the sponsor right away", "Get legal advice on contracts; a person reviews anything AI-made", "Contracts are not covered by any rule", "Paste the full private contract into a free AI tool"], answer: 1, why: "Contracts need legal advice, and AI output is reviewed by a person." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Getting ready for AI",
         questions: [
-          { q: "Why check readiness before buying AI tools?", options: ["Tools are always bad", "It is required by law", "Unready people, data or rules cause most failures", "To spend more money"], answer: 2, why: "Readiness gaps, not tools, usually cause trouble." },
-          { q: "An academy has messy, scattered records. What is a smart first step?", options: ["Organize the files before using AI on them", "Feed everything into AI as is", "Give up on AI", "Buy the most expensive tool"], answer: 0, why: "Organized data makes AI useful and safer." },
-          { q: "Which is a SMART goal?", options: ["\"Use more AI\"", "\"Be modern\"", "\"Try stuff\"", "\"Cut coaches' weekly admin time from 6 hours to 3 by March\""], answer: 3, why: "It is specific, measurable and time-bound." },
-          { q: "What should an AI use policy say about athlete health records?", options: ["Paste them anywhere", "They must never go into AI tools that are not approved for them", "Post them online", "Share them with sponsors"], answer: 1, why: "Health data is private and must be protected." },
-          { q: "Who should check AI-made content before it is published?", options: ["Nobody", "A person", "The AI itself only", "A random follower"], answer: 1, why: "Human review is a core policy rule." }
+          { objective: "O1", q: "Why check readiness before buying AI tools?", options: ["Tools are always bad", "It is required by law", "Unready people, data or rules cause most failures", "To spend more money"], answer: 2, why: "Readiness gaps, not tools, usually cause trouble." },
+          { objective: "O1", q: "An academy has messy, scattered records. What is a smart first step?", options: ["Organize the files before using AI on them", "Feed everything into AI as is", "Give up on AI", "Buy the most expensive tool"], answer: 0, why: "Organized data makes AI useful and safer." },
+          { objective: "O2", q: "Which is a SMART goal?", options: ["\"Use more AI\"", "\"Be modern\"", "\"Try stuff\"", "\"Cut coaches' weekly admin time from 6 hours to 3 by March\""], answer: 3, why: "It is specific, measurable and time-bound." },
+          { objective: "O3", q: "What should an AI use policy say about athlete health records?", options: ["Paste them anywhere", "They must never go into AI tools that are not approved for them", "Post them online", "Share them with sponsors"], answer: 1, why: "Health data is private and must be protected." },
+          { objective: "O3", q: "Who should check AI-made content before it is published?", options: ["Nobody", "A person", "The AI itself only", "A random follower"], answer: 1, why: "Human review is a core policy rule." }
         ]
       }
     },
@@ -92,6 +130,7 @@ module.exports = {
       name: "Chapter 2: Rolling out AI safely",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Managing AI risk with a simple framework",
           minutes: 5,
           goal: "Build a risk table for an AI use and assign a control to each risk.",
@@ -109,9 +148,14 @@ module.exports = {
           ],
           sources: [{ name: "NIST AI Risk Management Framework", url: "https://www.nist.gov/itl/ai-risk-management-framework" }],
           tryIt: "Make a risk table for two AI uses in your plan, with at least three risks each, a likelihood and impact rating, a control and a person who checks it.",
-          youCanNow: "map AI risks and assign controls using the four NIST functions."
+          youCanNow: "map AI risks and assign controls using the four NIST functions.",
+          quickCheck: [
+            { objective: "O4", q: "In the NIST framework, which function is about what you do about each risk?", options: ["Govern", "Map", "Manage", "Measure"], answer: 2, why: "Manage is the action you take on each risk, such as human review." },
+            { objective: "O4", q: "AI will draft injury updates for parents. What control fits the risk of wrong facts?", options: ["A trainer or coach reviews every update before it is sent", "Send them faster", "Add more AI tools", "Stop telling parents anything"], answer: 0, why: "Human review before sending controls the risk of wrong facts." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Leading people through the change",
           minutes: 5,
           goal: "Write a training and communication plan that helps people adopt AI.",
@@ -128,9 +172,14 @@ module.exports = {
             { title: "Train in small doses", bullets: ["30-minute hands-on sessions", "Prompt cheat sheet and AI champions", "Celebrate early wins"] }
           ],
           tryIt: "Write a five-sentence announcement to your team, players, staff or volunteers about the AI plan, and a training schedule for the first month.",
-          youCanNow: "plan training and communication that helps people adopt AI."
+          youCanNow: "plan training and communication that helps people adopt AI.",
+          quickCheck: [
+            { objective: "O5", q: "What is a prompt cheat sheet?", options: ["A list of banned staff", "A one-page list of good prompts people can copy", "A test to grade staff", "A secret way around the policy"], answer: 1, why: "A one-page sheet of good prompts helps people get started fast." },
+            { objective: "O5", q: "Staff are nervous and avoiding the new AI tool. What do you do?", options: ["Force them to use it with no training", "Wait for them to figure it out alone", "Remove the tool without telling anyone", "Address worries openly, run a short hands-on session and share early wins"], answer: 3, why: "Open talk, small hands-on training and early wins help people adopt AI." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Building the 90-day roadmap",
           minutes: 5,
           goal: "Turn goals, policy, risks and training into a 90-day roadmap with owners and dates.",
@@ -147,17 +196,21 @@ module.exports = {
             { title: "Keep it alive", bullets: ["Check-ins every two weeks", "Day-90 review against goals", "Review the policy every six months"] }
           ],
           tryIt: "Final task: build your 90-day roadmap in a table with phase, step, owner and date, and attach your readiness score, goals, policy, risk table and training plan to complete your AI integration plan.",
-          youCanNow: "write a complete 90-day plan to bring AI into an organization safely."
+          youCanNow: "write a complete 90-day plan to bring AI into an organization safely.",
+          quickCheck: [
+            { objective: "O6", q: "What happens in days 61-90 of the roadmap?", options: ["Review the pilots and decide what to keep, scale or stop", "Write the mission statement", "Buy every tool", "Train the first champions"], answer: 0, why: "The last phase reviews pilots and expands or stops them." },
+            { objective: "O6", q: "Your roadmap says \"train staff\" with no name or date. What do you add?", options: ["Nothing; it will happen", "A longer description", "An owner and a due date", "A second roadmap"], answer: 2, why: "A step with no owner and date usually does not get done." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Rolling out AI safely",
         questions: [
-          { q: "What are the four core functions of the NIST AI Risk Management Framework?", options: ["Buy, Build, Sell, Repeat", "Plan, Do, Check, Act", "Read, Write, Test, Ship", "Govern, Map, Measure, Manage"], answer: 3, why: "NIST names Govern, Map, Measure and Manage." },
-          { q: "Is the NIST AI Risk Management Framework required by law for small organizations?", options: ["No, NIST says it is voluntary", "Yes, with heavy fines", "Only for athletes", "Only in Kenya"], answer: 0, why: "NIST describes it as intended for voluntary use." },
-          { q: "A coach worries AI will replace them. What is the best response?", options: ["Ignore it", "Tell them to stop asking", "Explain openly how AI frees time for coaching and what will not change", "Hide the plan"], answer: 2, why: "Addressing worries openly speeds adoption." },
-          { q: "What is an AI champion?", options: ["An AI that wins games", "A paid influencer", "The most expensive tool", "A team member who learns first and helps others"], answer: 3, why: "Champions spread skills and confidence." },
-          { q: "A roadmap step has no owner. What usually happens?", options: ["It finishes early", "The AI does it", "It does not get done", "Nothing changes"], answer: 2, why: "Steps need an owner to happen." }
+          { objective: "O4", q: "What are the four core functions of the NIST AI Risk Management Framework?", options: ["Buy, Build, Sell, Repeat", "Plan, Do, Check, Act", "Read, Write, Test, Ship", "Govern, Map, Measure, Manage"], answer: 3, why: "NIST names Govern, Map, Measure and Manage." },
+          { objective: "O4", q: "Is the NIST AI Risk Management Framework required by law for small organizations?", options: ["No, NIST says it is voluntary", "Yes, with heavy fines", "Only for athletes", "Only in Kenya"], answer: 0, why: "NIST describes it as intended for voluntary use." },
+          { objective: "O5", q: "A coach worries AI will replace them. What is the best response?", options: ["Ignore it", "Tell them to stop asking", "Explain openly how AI frees time for coaching and what will not change", "Hide the plan"], answer: 2, why: "Addressing worries openly speeds adoption." },
+          { objective: "O5", q: "What is an AI champion?", options: ["An AI that wins games", "A paid influencer", "The most expensive tool", "A team member who learns first and helps others"], answer: 3, why: "Champions spread skills and confidence." },
+          { objective: "O6", q: "A roadmap step has no owner. What usually happens?", options: ["It finishes early", "The AI does it", "It does not get done", "Nothing changes"], answer: 2, why: "Steps need an owner to happen." }
         ]
       }
     }
@@ -165,26 +218,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Strategies for Integrating AI into Your Organization",
     questions: [
-      { q: "Most AI efforts fail because:", options: ["The tools never work", "People, data or rules were not ready", "AI is illegal", "Computers are too slow"], answer: 1, why: "Readiness gaps cause most failures." },
-      { q: "Which is one of the five readiness areas?", options: ["Data", "Team colors", "Office size", "Stock price"], answer: 0, why: "Leadership, people, data, processes and rules." },
-      { q: "A low readiness score means:", options: ["Stop forever", "Ignore it", "Start by fixing that area", "Buy more tools"], answer: 2, why: "Low scores show where to start." },
-      { q: "AI goals should be tied to:", options: ["The organization's mission", "What competitors post", "The newest trend", "Nothing in particular"], answer: 0, why: "AI serves the mission." },
-      { q: "SMART stands for:", options: ["Simple, modern, automatic, rapid, technical", "Smart, mobile, AI, robot, tech", "Sales, marketing, admin, retail, tax", "Specific, measurable, achievable, relevant, time-bound"], answer: 3, why: "Those are the five SMART checks." },
-      { q: "How many goals does the course suggest for 90 days?", options: ["Thirty", "Three", "One hundred", "Zero"], answer: 1, why: "Three goals keep the plan focused." },
-      { q: "An AI use policy is:", options: ["A software license key", "A short set of rules for how people use AI", "An insurance plan", "A marketing post"], answer: 1, why: "It tells people what is allowed and not." },
-      { q: "Which should never go into an unapproved AI tool?", options: ["A generic practice schedule", "A public event date", "A sample social post", "A minor athlete's health information"], answer: 3, why: "Health data and minors' information are highly private." },
-      { q: "Where should an organization get advice on endorsement contracts and data laws?", options: ["A qualified lawyer", "A random AI chat", "A social media comment", "A competitor"], answer: 0, why: "Legal questions need a professional." },
-      { q: "In NIST terms, deciding who is responsible and what the rules are is:", options: ["Map", "Measure", "Govern", "Manage"], answer: 2, why: "Govern covers roles and rules." },
-      { q: "Listing what could go wrong with each AI use is:", options: ["Govern", "Manage", "Measure", "Map"], answer: 3, why: "Map identifies risks and who could be hurt." },
-      { q: "Spot-checking AI answers weekly is an example of:", options: ["Govern", "Map", "Measure", "Mission"], answer: 2, why: "Measure is how you notice problems." },
-      { q: "A risk table includes:", options: ["Only the tool's price", "Risk, likelihood, impact, control and who checks", "Player statistics", "Social media handles"], answer: 1, why: "Those columns make risks manageable." },
-      { q: "Which is a common AI risk?", options: ["Unfair treatment of people", "Too much free time", "Better replies", "Lower costs"], answer: 0, why: "AI can treat people unfairly if not checked." },
-      { q: "\"What's in it for me\" in change communication means:", options: ["Bonus pay only", "The vendor's profit", "How AI helps the people being asked to use it", "A legal clause"], answer: 2, why: "People adopt change when they see the benefit." },
-      { q: "A good way to train staff on AI is:", options: ["Short hands-on sessions and a prompt cheat sheet", "One three-day lecture with no practice", "No training", "A memo with no examples"], answer: 0, why: "Small, hands-on doses work best." },
-      { q: "Days 1-30 of the roadmap focus on:", options: ["Expanding everywhere", "The final review", "Firing staff", "Foundations: policy, files, champions"], answer: 3, why: "Foundations come first." },
-      { q: "Days 31-60 of the roadmap focus on:", options: ["Writing the mission", "Small pilots with measures", "Nothing", "Buying every tool"], answer: 1, why: "The middle phase tests AI uses." },
-      { q: "How often should check-ins happen during the 90 days?", options: ["Once a year", "Every two weeks", "Never", "Every hour"], answer: 1, why: "Regular check-ins keep the plan on track." },
-      { q: "How often should the AI policy be reviewed?", options: ["Never", "Every ten years", "Only after a scandal", "At least every six months"], answer: 3, why: "AI tools and rules change fast." }
+      { objective: "O1", q: "Most AI efforts fail because:", options: ["The tools never work", "People, data or rules were not ready", "AI is illegal", "Computers are too slow"], answer: 1, why: "Readiness gaps cause most failures." },
+      { objective: "O1", q: "Which is one of the five readiness areas?", options: ["Data", "Team colors", "Office size", "Stock price"], answer: 0, why: "Leadership, people, data, processes and rules." },
+      { objective: "O1", q: "A low readiness score means:", options: ["Stop forever", "Ignore it", "Start by fixing that area", "Buy more tools"], answer: 2, why: "Low scores show where to start." },
+      { objective: "O2", q: "AI goals should be tied to:", options: ["The organization's mission", "What competitors post", "The newest trend", "Nothing in particular"], answer: 0, why: "AI serves the mission." },
+      { objective: "O2", q: "SMART stands for:", options: ["Simple, modern, automatic, rapid, technical", "Smart, mobile, AI, robot, tech", "Sales, marketing, admin, retail, tax", "Specific, measurable, achievable, relevant, time-bound"], answer: 3, why: "Those are the five SMART checks." },
+      { objective: "O2", q: "How many goals does the course suggest for 90 days?", options: ["Thirty", "Three", "One hundred", "Zero"], answer: 1, why: "Three goals keep the plan focused." },
+      { objective: "O3", q: "An AI use policy is:", options: ["A software license key", "A short set of rules for how people use AI", "An insurance plan", "A marketing post"], answer: 1, why: "It tells people what is allowed and not." },
+      { objective: "O3", q: "Which should never go into an unapproved AI tool?", options: ["A generic practice schedule", "A public event date", "A sample social post", "A minor athlete's health information"], answer: 3, why: "Health data and minors' information are highly private." },
+      { objective: "O3", q: "Where should an organization get advice on endorsement contracts and data laws?", options: ["A qualified lawyer", "A random AI chat", "A social media comment", "A competitor"], answer: 0, why: "Legal questions need a professional." },
+      { objective: "O4", q: "In NIST terms, deciding who is responsible and what the rules are is:", options: ["Map", "Measure", "Govern", "Manage"], answer: 2, why: "Govern covers roles and rules." },
+      { objective: "O4", q: "Listing what could go wrong with each AI use is:", options: ["Govern", "Manage", "Measure", "Map"], answer: 3, why: "Map identifies risks and who could be hurt." },
+      { objective: "O4", q: "Spot-checking AI answers weekly is an example of:", options: ["Govern", "Map", "Measure", "Mission"], answer: 2, why: "Measure is how you notice problems." },
+      { objective: "O4", q: "A risk table includes:", options: ["Only the tool's price", "Risk, likelihood, impact, control and who checks", "Player statistics", "Social media handles"], answer: 1, why: "Those columns make risks manageable." },
+      { objective: "O4", q: "Which is a common AI risk?", options: ["Unfair treatment of people", "Too much free time", "Better replies", "Lower costs"], answer: 0, why: "AI can treat people unfairly if not checked." },
+      { objective: "O5", q: "\"What's in it for me\" in change communication means:", options: ["Bonus pay only", "The vendor's profit", "How AI helps the people being asked to use it", "A legal clause"], answer: 2, why: "People adopt change when they see the benefit." },
+      { objective: "O5", q: "A good way to train staff on AI is:", options: ["Short hands-on sessions and a prompt cheat sheet", "One three-day lecture with no practice", "No training", "A memo with no examples"], answer: 0, why: "Small, hands-on doses work best." },
+      { objective: "O6", q: "Days 1-30 of the roadmap focus on:", options: ["Expanding everywhere", "The final review", "Firing staff", "Foundations: policy, files, champions"], answer: 3, why: "Foundations come first." },
+      { objective: "O6", q: "Days 31-60 of the roadmap focus on:", options: ["Writing the mission", "Small pilots with measures", "Nothing", "Buying every tool"], answer: 1, why: "The middle phase tests AI uses." },
+      { objective: "O6", q: "How often should check-ins happen during the 90 days?", options: ["Once a year", "Every two weeks", "Never", "Every hour"], answer: 1, why: "Regular check-ins keep the plan on track." },
+      { objective: "O6", q: "How often should the AI policy be reviewed?", options: ["Never", "Every ten years", "Only after a scandal", "At least every six months"], answer: 3, why: "AI tools and rules change fast." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      2,
+      3,
+      4,
+      7,
+      9,
+      12,
+      14,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Readiness and goals",
+        objective: "O2",
+        notYet: "No readiness score, or goals with no number or date.",
+        meets: "A readiness score in five areas and three SMART goals tied to the mission.",
+        exceeds: "Each goal links to a low readiness area it will fix or work around."
+      },
+      {
+        name: "AI use policy",
+        objective: "O3",
+        notYet: "Missing what never goes into AI, or no human review.",
+        meets: "One page with approved tools, what never goes in, human review, disclosure and a contact person.",
+        exceeds: "Adds rules for the field, such as athlete health data and minors, and a review date."
+      },
+      {
+        name: "Risk table",
+        objective: "O4",
+        notYet: "Risks listed with no controls.",
+        meets: "Each AI use has risks with likelihood, impact, a control and who checks.",
+        exceeds: "Covers wrong facts, data leaks and unfair treatment, and maps to Govern, Map, Measure and Manage."
+      },
+      {
+        name: "Training and communication",
+        objective: "O5",
+        notYet: "No plan for telling or training people.",
+        meets: "A message with why, what and what is in it for them, champions and short training sessions.",
+        exceeds: "Includes a prompt cheat sheet and a way to share early wins."
+      },
+      {
+        name: "90-day roadmap",
+        objective: "O6",
+        notYet: "Steps have no owners or dates.",
+        meets: "Three 30-day phases, each step with an owner and date, and check-ins every two weeks.",
+        exceeds: "Includes a day-90 review against the SMART goals and a policy review date."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Organizations that approve an AI use policy within 30 days (follow-up survey)",
+      "Organizations that reach at least one SMART goal by day 90",
+      "Organizations that report no private data incidents from AI use during the 90 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or computer with internet",
+      "A document and spreadsheet tool (Google Docs and Sheets or Word and Excel) for the plan",
+      "The free NIST AI Risk Management Framework pages, optional for further reading",
+      "About 60 minutes for lessons and checks, plus time to write the 90-day plan"
+    ],
+    facilitatorNotes: [
+      "Take the pre-test together, then do one chapter per session; fill in a sample readiness score on a shared screen.",
+      "Use examples from the group's world: an athlete's brand, a sports academy, a small business or a nonprofit.",
+      "Remind learners that athlete health data, minors' information and contracts need extra care, and legal questions go to a lawyer.",
+      "Have learners swap policies and risk tables with a partner for a quick review.",
+      "Score the final plan with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

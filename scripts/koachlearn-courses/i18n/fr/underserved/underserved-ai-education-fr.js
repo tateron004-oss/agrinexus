@@ -16,11 +16,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes, avec une tâche « Essayez maintenant ». Un contrôle des connaissances termine chaque chapitre, et un quiz de 20 questions termine le cours."
   ],
   finalTask: "Choisissez une chose que vous voulez apprendre. Faites avec un assistant d'IA un plan d'étude de deux semaines qui utilise un site d'apprentissage gratuit (comme Khan Academy ou LearnFree) 20 minutes par jour. Puis demandez à l'IA cinq questions d'entraînement sur le premier sujet, répondez-y vous-même et vérifiez vos réponses.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des adultes de communautés mal desservies qui veulent apprendre quelque chose de nouveau : finir un diplôme, améliorer leur anglais, apprendre une compétence professionnelle ou aider leurs enfants à faire leurs devoirs. Beaucoup travaillent, élèvent des enfants ou s'occupent de leur famille.",
+    startingPoint: "Ils utilisent un peu le téléphone et internet. Certains ont eu une scolarité difficile ou ont quitté l'école tôt, et peu ont déjà utilisé un assistant d'IA ou un site d'apprentissage gratuit pour étudier.",
+    gap: "Les outils d'IA et les sites d'apprentissage gratuits peuvent servir de tuteur patient, mais les apprenants ne savent pas demander des explications à leur niveau, s'entraîner au lieu de seulement relire, ni faire un plan d'étude adapté à une vie chargée. Sans cela, beaucoup abandonnent des objectifs d'apprentissage qui aideraient leur travail et leur famille.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes (niveau fin d'école primaire)",
+      "Appareils : un smartphone ou un ordinateur de bibliothèque",
+      "Temps : de courtes séances d'étude par jour, souvent 20 minutes ou moins",
+      "L'IA peut se tromper en maths et sur les faits ; les apprenants vérifient les étapes et des sources fiables",
+      "Les écoles ont leurs propres règles sur l'IA, et beaucoup d'outils d'IA ont une limite d'âge pour les enfants"
+    ],
+    prerequisites: "Aucun. Les apprenants qui découvrent les assistants d'IA peuvent d'abord suivre « Introduction à l'IA et autonomie numérique »."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Face à une idée que vous trouvez difficile", action: "demander à un assistant d'IA de l'expliquer à votre niveau avec un exemple de tous les jours, et dire quelle partie reste confuse", standard: "jusqu'à pouvoir la réexpliquer avec vos propres mots" },
+    { id: "O2", condition: "Après avoir appris une idée", action: "demander à un assistant d'IA des questions d'entraînement une par une, y répondre vous-même et vérifier les réponses", standard: "en répondant avant de regarder et en vérifiant toute réponse qui semble fausse" },
+    { id: "O3", condition: "Face à une compétence que vous voulez apprendre", action: "trouver un cours gratuit sur un site d'apprentissage ou à votre bibliothèque", standard: "en ouvrant sa première leçon" },
+    { id: "O4", condition: "À partir du temps réel dont vous disposez chaque semaine", action: "créer avec un assistant d'IA un plan d'étude de deux semaines qui utilise un site d'apprentissage gratuit", standard: "avec un petit sujet par jour, des jours de repos, et le plan placé là où vous le verrez" },
+    { id: "O5", condition: "Face au sujet des devoirs d'un enfant", action: "utiliser un assistant d'IA pour qu'il vous explique l'idée afin de pouvoir l'enseigner, sans donner les réponses à l'enfant", standard: "en suivant les règles de l'école sur l'IA" },
+    { id: "O6", condition: "À la fin d'une semaine d'étude", action: "vérifier vos progrès avec un court quiz et ajuster votre plan", standard: "en révisant chaque sujet raté" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : L'IA comme professeur particulier",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Se faire expliquer une idée difficile à son niveau",
           minutes: 5,
           goal: "Demander à un assistant d'IA d'expliquer une idée difficile d'une façon que vous comprenez.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Encore perdu ?", bullets: ["Dites quelle partie vous ne comprenez pas", "Demandez un autre exemple"] }
           ],
           tryIt: "Choisissez une idée que vous avez toujours trouvée difficile (les pourcentages, une règle de grammaire, le fonctionnement des intérêts). Demandez à un assistant d'IA de l'expliquer à un niveau débutant avec un exemple de votre vie quotidienne.",
-          youCanNow: "vous faire expliquer une idée difficile à votre niveau et poser des questions de suivi jusqu'à ce qu'elle soit claire."
+          youCanNow: "vous faire expliquer une idée difficile à votre niveau et poser des questions de suivi jusqu'à ce qu'elle soit claire.",
+          quickCheck: [
+            { objective: "O1", q: "Qu'est-ce qu'un tuteur ?", options: ["Une personne qui explique en tête-à-tête", "Un examen passé à l'école", "Un type de calculatrice", "Un bâtiment scolaire"], answer: 0, why: "Un tuteur aide une seule personne à apprendre, et un assistant d'IA peut jouer le rôle d'un tuteur patient." },
+            { objective: "O1", q: "Vous comprenez la première partie d'une explication mais pas la deuxième. Que demandez-vous ?", options: ["« Réexplique tout. »", "« Je comprends la première partie, mais pas pourquoi on inverse la deuxième fraction. »", "« Laisse tomber. »", "« Donne-moi la réponse. »"], answer: 1, why: "Dire exactement quelle partie est confuse aide l'IA à expliquer cette partie." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "S'entraîner avec des questions créées par l'IA",
           minutes: 5,
           goal: "Demander à un assistant d'IA de vous interroger et de vérifier vos réponses.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "L'IA peut aussi se tromper", bullets: ["Demandez-lui de montrer les étapes", "Vérifiez avec un site d'apprentissage ou un enseignant"] }
           ],
           tryIt: "Demandez à un assistant d'IA trois questions d'entraînement sur l'idée de la leçon 1, une à la fois. Répondez à chacune avant qu'il vous donne la réponse.",
-          youCanNow: "utiliser un assistant d'IA pour vous interroger et vérifier ce que vous avez appris."
+          youCanNow: "utiliser un assistant d'IA pour vous interroger et vérifier ce que vous avez appris.",
+          quickCheck: [
+            { objective: "O2", q: "Pourquoi demander les questions d'entraînement une par une ?", options: ["L'IA ne peut en écrire qu'une", "Ça coûte moins cher", "Vous répondez à chacune avant de voir la suivante", "Ça rend les questions plus difficiles"], answer: 2, why: "Une par une, vous répondez vous-même à chaque question avant de passer à la suivante." },
+            { objective: "O2", q: "L'IA dit que 25 % de 80 font 25. Que faites-vous ?", options: ["L'accepter", "Arrêter de vous entraîner", "Supprimer la conversation", "Lui demander de montrer les étapes ou vérifier avec une autre source"], answer: 3, why: "L'IA peut faire des erreurs de calcul, donc vous demandez les étapes ou vérifiez avec une source fiable." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Trouver des sites d'apprentissage gratuits",
           minutes: 4,
           goal: "Trouver un site d'apprentissage gratuit avec des leçons sur la compétence que vous voulez.",
@@ -80,17 +114,21 @@ module.exports = {
             { title: "Encore de l'aide gratuite", bullets: ["Cours et soutien à la bibliothèque", "Financer l'université : aide financière de l'école ou studentaid.gov (É.-U.)"] }
           ],
           tryIt: "Allez sur Khan Academy ou LearnFree et trouvez un cours sur une compétence que vous voulez. Ouvrez la première leçon et notez son nom.",
-          youCanNow: "trouver un site d'apprentissage gratuit avec un cours sur la compétence que vous voulez."
+          youCanNow: "trouver un site d'apprentissage gratuit avec un cours sur la compétence que vous voulez.",
+          quickCheck: [
+            { objective: "O3", q: "Que propose LearnFree ?", options: ["Des leçons gratuites sur l'ordinateur, la recherche d'emploi, l'argent, la lecture et les maths", "Des diplômes universitaires payants", "Des téléphones gratuits", "Seulement du placement en emploi"], answer: 0, why: "LearnFree propose des leçons gratuites, à votre rythme, sur des compétences de tous les jours." },
+            { objective: "O3", q: "Vous voulez de l'aide gratuite en personne pour mieux lire. Où demandez-vous ?", options: ["Chez un vendeur de voitures", "À votre bibliothèque publique", "Dans une publicité sur les réseaux sociaux", "À une banque"], answer: 1, why: "Les bibliothèques publiques proposent souvent des cours gratuits, du tutorat ou des comptes d'apprentissage en ligne." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : L'IA comme professeur particulier",
         questions: [
-          { q: "L'explication de l'IA est trop difficile. Que devez-vous demander ?", options: ["Rien ; abandonner", "« Explique comme à un débutant, avec un exemple de cuisine. »", "« Utilise des mots plus compliqués. »", "« Fais plus long. »"], answer: 1, why: "Donner votre niveau et demander un exemple courant rend l'explication plus claire." },
-          { q: "Pourquoi s'entraîner avec des questions aide plus que relire ?", options: ["C'est plus rapide de sauter", "C'est plus joli", "Répondre oblige le cerveau à aller rechercher l'idée, donc on retient mieux", "Ça coûte moins cher"], answer: 2, why: "L'entraînement renforce la mémoire." },
-          { q: "L'IA dit que votre réponse de maths est fausse, mais vous pensez qu'elle est juste. Que faites-vous ?", options: ["Lui demander de montrer les étapes, ou vérifier une autre source", "Toujours faire confiance à l'IA", "Arrêter les maths", "Supprimer l'application"], answer: 0, why: "L'IA peut faire des erreurs de calcul ; les étapes montrent qui a raison." },
-          { q: "Lequel est un site d'apprentissage gratuit à but non lucratif ?", options: ["Un site de shopping", "Une application de réseau social", "Une boutique de jeux", "Khan Academy"], answer: 3, why: "Khan Academy est un site d'apprentissage gratuit à but non lucratif." },
-          { q: "Que veut dire « à votre rythme » ?", options: ["Vous devez finir en un jour", "Vous avancez à votre vitesse", "Un enseignant fixe chaque horaire", "Vous payez à la minute"], answer: 1, why: "Les leçons à votre rythme s'adaptent à votre emploi du temps." }
+          { objective: "O1", q: "L'explication de l'IA est trop difficile. Que devez-vous demander ?", options: ["Rien ; abandonner", "« Explique comme à un débutant, avec un exemple de cuisine. »", "« Utilise des mots plus compliqués. »", "« Fais plus long. »"], answer: 1, why: "Donner votre niveau et demander un exemple courant rend l'explication plus claire." },
+          { objective: "O2", q: "Pourquoi s'entraîner avec des questions aide plus que relire ?", options: ["C'est plus rapide de sauter", "C'est plus joli", "Répondre oblige le cerveau à aller rechercher l'idée, donc on retient mieux", "Ça coûte moins cher"], answer: 2, why: "L'entraînement renforce la mémoire." },
+          { objective: "O2", q: "L'IA dit que votre réponse de maths est fausse, mais vous pensez qu'elle est juste. Que faites-vous ?", options: ["Lui demander de montrer les étapes, ou vérifier une autre source", "Toujours faire confiance à l'IA", "Arrêter les maths", "Supprimer l'application"], answer: 0, why: "L'IA peut faire des erreurs de calcul ; les étapes montrent qui a raison." },
+          { objective: "O3", q: "Lequel est un site d'apprentissage gratuit à but non lucratif ?", options: ["Un site de shopping", "Une application de réseau social", "Une boutique de jeux", "Khan Academy"], answer: 3, why: "Khan Academy est un site d'apprentissage gratuit à but non lucratif." },
+          { objective: "O3", q: "Que veut dire « à votre rythme » ?", options: ["Vous devez finir en un jour", "Vous avancez à votre vitesse", "Un enseignant fixe chaque horaire", "Vous payez à la minute"], answer: 1, why: "Les leçons à votre rythme s'adaptent à votre emploi du temps." }
         ]
       }
     },
@@ -98,6 +136,7 @@ module.exports = {
       name: "Chapitre 2 : Un apprentissage adapté à votre vie",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Construire un plan d'étude adapté à une vie chargée",
           minutes: 5,
           goal: "Faire un plan d'étude simple de deux semaines avec un assistant d'IA.",
@@ -114,9 +153,14 @@ module.exports = {
             { title: "Gardez-le sous les yeux", bullets: ["Agenda du téléphone, frigo ou cahier", "Cochez chaque jour"] }
           ],
           tryIt: "Demandez à un assistant d'IA de faire un plan d'étude de deux semaines pour le cours trouvé à la leçon 3, selon le temps réel dont vous disposez chaque jour.",
-          youCanNow: "faire un plan d'étude adapté à votre vraie semaine."
+          youCanNow: "faire un plan d'étude adapté à votre vraie semaine.",
+          quickCheck: [
+            { objective: "O4", q: "Pourquoi des séances d'étude courtes et régulières marchent-elles pour les adultes occupés ?", options: ["Elles sont toujours plus faciles", "Elles ne demandent pas de plan", "Vous pouvez les tenir chaque jour", "Elles remplacent l'entraînement"], answer: 2, why: "Des séances courtes s'intègrent dans une vraie semaine, donc vous continuez au lieu d'abandonner." },
+            { objective: "O4", q: "Vous n'avez que 15 minutes à midi. Que dites-vous à l'IA en demandant un plan ?", options: ["Rien sur votre temps", "Que vous pouvez étudier 3 heures par jour", "Seulement la matière", "Que vous avez 15 minutes à midi chaque jour"], answer: 3, why: "Dire à l'IA votre temps réel lui permet de faire un plan que vous pouvez suivre." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Aider un enfant à apprendre sans faire le travail",
           minutes: 5,
           goal: "Utiliser l'IA pour aider un enfant à comprendre ses devoirs au lieu de lui donner les réponses.",
@@ -133,9 +177,14 @@ module.exports = {
             { title: "Consignes pour les parents", bullets: ["« Explique pour que je l'apprenne à mon enfant de 10 ans »", "« Ne donne pas la réponse »", "« Donne-moi trois questions faciles de vérification »"] }
           ],
           tryIt: "Prenez un sujet de devoirs (ou un sujet du niveau de votre enfant). Demandez à une IA de l'expliquer pour que vous puissiez l'enseigner, sans résoudre l'exercice. Notez comment vous l'expliqueriez avec vos mots.",
-          youCanNow: "utiliser l'IA pour aider un enfant à apprendre en suivant les règles de l'école et en lui laissant son travail."
+          youCanNow: "utiliser l'IA pour aider un enfant à apprendre en suivant les règles de l'école et en lui laissant son travail.",
+          quickCheck: [
+            { objective: "O5", q: "Quelle est la règle clé pour utiliser l'IA avec les devoirs d'un enfant ?", options: ["S'en servir pour expliquer, pas pour faire le travail", "La laisser écrire toute la réponse", "S'en servir seulement pendant les contrôles", "Ne jamais regarder les devoirs"], answer: 0, why: "L'IA doit vous aider à expliquer l'idée ; votre enfant fait quand même le travail." },
+            { objective: "O5", q: "Votre enfant de 11 ans veut utiliser seul un outil d'IA. Que vérifiez-vous d'abord ?", options: ["Ses couleurs", "Sa limite d'âge et ses conditions, et les règles de l'école sur l'IA", "La vitesse à laquelle il écrit", "S'il a des jeux"], answer: 1, why: "Beaucoup d'outils d'IA sont pour les 13 ans et plus, et les écoles ont leurs propres règles." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Garder le cap et vérifier vos progrès",
           minutes: 5,
           goal: "Vérifier vos propres progrès et ajuster votre plan.",
@@ -152,17 +201,21 @@ module.exports = {
             { title: "Ajustez votre plan", bullets: ["Trop chargé ? Allégez-le", "Trop facile ? Ajoutez un peu"] }
           ],
           tryIt: "Tâche finale : faites votre plan d'étude de deux semaines avec un assistant d'IA et un site d'apprentissage gratuit, puis demandez cinq questions d'entraînement sur le premier sujet, répondez-y vous-même et vérifiez vos réponses.",
-          youCanNow: "apprendre une nouvelle compétence avec un plan d'étude, des leçons gratuites et l'entraînement par l'IA, en ajustant au fur et à mesure."
+          youCanNow: "apprendre une nouvelle compétence avec un plan d'étude, des leçons gratuites et l'entraînement par l'IA, en ajustant au fur et à mesure.",
+          quickCheck: [
+            { objective: "O6", q: "Que vous montrent les questions ratées à un quiz de la semaine ?", options: ["Que vous devriez abandonner", "Que l'IA se trompe", "Ce qu'il faut réviser ensuite", "Que le plan était parfait"], answer: 2, why: "Les questions ratées montrent les sujets à réviser." },
+            { objective: "O6", q: "Votre plan vous a semblé trop facile cette semaine. Que faites-vous ?", options: ["Arrêter d'étudier", "Commencer une nouvelle matière", "Ne rien faire", "Ajouter un peu plus au plan"], answer: 3, why: "Un plan doit s'adapter à vous ; s'il est facile, ajoutez-en un peu." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Un apprentissage adapté à votre vie",
         questions: [
-          { q: "Quel plan d'étude a le plus de chances de marcher pour un parent occupé ?", options: ["Trois heures chaque soir", "20 minutes par jour avec des jours de repos", "Seulement pendant les vacances", "Aucun plan"], answer: 1, why: "Étudier peu mais régulièrement convient à une vie chargée." },
-          { q: "Que dire à l'IA quand vous demandez un plan d'étude ?", options: ["Votre mot de passe", "Vos coordonnées bancaires", "La compétence, le site et le temps dont vous disposez", "Rien"], answer: 2, why: "Ces détails adaptent le plan à votre vraie semaine." },
-          { q: "Votre enfant a des devoirs de maths. Quelle est la meilleure façon d'utiliser l'IA ?", options: ["Lui faire expliquer l'idée pour que vous puissiez l'enseigner", "Lui faire écrire les réponses pour votre enfant", "Copier les réponses dans les devoirs", "Ignorer les devoirs"], answer: 0, why: "Utiliser l'IA pour expliquer laisse l'apprentissage et le travail à votre enfant." },
-          { q: "Où connaître les règles d'une école sur l'IA ?", options: ["Une publication sur les réseaux sociaux", "L'IA elle-même", "Un inconnu en ligne", "Demander à l'enseignant ou à l'école"], answer: 3, why: "Chaque école fixe ses propres règles." },
-          { q: "Votre quiz de la semaine montre que vous avez raté deux sujets. Et ensuite ?", options: ["Abandonner", "Revoir ces deux sujets", "Les sauter pour toujours", "Commencer une nouvelle compétence"], answer: 1, why: "Les questions ratées montrent quoi revoir." }
+          { objective: "O4", q: "Quel plan d'étude a le plus de chances de marcher pour un parent occupé ?", options: ["Trois heures chaque soir", "20 minutes par jour avec des jours de repos", "Seulement pendant les vacances", "Aucun plan"], answer: 1, why: "Étudier peu mais régulièrement convient à une vie chargée." },
+          { objective: "O4", q: "Que dire à l'IA quand vous demandez un plan d'étude ?", options: ["Votre mot de passe", "Vos coordonnées bancaires", "La compétence, le site et le temps dont vous disposez", "Rien"], answer: 2, why: "Ces détails adaptent le plan à votre vraie semaine." },
+          { objective: "O5", q: "Votre enfant a des devoirs de maths. Quelle est la meilleure façon d'utiliser l'IA ?", options: ["Lui faire expliquer l'idée pour que vous puissiez l'enseigner", "Lui faire écrire les réponses pour votre enfant", "Copier les réponses dans les devoirs", "Ignorer les devoirs"], answer: 0, why: "Utiliser l'IA pour expliquer laisse l'apprentissage et le travail à votre enfant." },
+          { objective: "O5", q: "Où connaître les règles d'une école sur l'IA ?", options: ["Une publication sur les réseaux sociaux", "L'IA elle-même", "Un inconnu en ligne", "Demander à l'enseignant ou à l'école"], answer: 3, why: "Chaque école fixe ses propres règles." },
+          { objective: "O6", q: "Votre quiz de la semaine montre que vous avez raté deux sujets. Et ensuite ?", options: ["Abandonner", "Revoir ces deux sujets", "Les sauter pour toujours", "Commencer une nouvelle compétence"], answer: 1, why: "Les questions ratées montrent quoi revoir." }
         ]
       }
     }
@@ -170,26 +223,98 @@ module.exports = {
   quiz: {
     title: "Quiz final : L'IA pour l'éducation et l'apprentissage",
     questions: [
-      { q: "Un professeur particulier est :", options: ["Quelqu'un qui aide une personne à apprendre", "Un type d'ordinateur", "Un examen", "Un bâtiment scolaire"], answer: 0, why: "Un professeur particulier enseigne en tête-à-tête." },
-      { q: "Pour avoir une explication plus claire, dites à l'IA :", options: ["Votre adresse", "Votre niveau, et demandez un exemple de la vie courante", "D'utiliser des mots plus difficiles", "Rien"], answer: 1, why: "Votre niveau et un exemple rendent l'explication plus claire." },
-      { q: "Vous comprenez une partie de la réponse mais pas tout. Dites :", options: ["« Laisse tomber. »", "« Fais plus long. »", "Quelle partie exacte est floue", "« Mets plus de chiffres. »"], answer: 2, why: "Nommer la partie floue donne une meilleure suite." },
-      { q: "Pourquoi un professeur IA patient est-il utile ?", options: ["Il note vos devoirs d'école", "Il vous donne un diplôme", "Chaque question coûte de l'argent", "Vous pouvez poser la même question plusieurs fois"], answer: 3, why: "Il ne se fatigue pas et ne vous juge pas." },
-      { q: "Quelle consigne fait que l'IA vous interroge bien ?", options: ["« Donne-moi cinq questions, une à la fois, et vérifie mes réponses. »", "« Donne-moi toutes les réponses. »", "« Quiz. »", "« Fais mon examen. »"], answer: 0, why: "Une à la fois, avec vérification, c'est un vrai entraînement." },
-      { q: "Avant que l'IA vous donne la réponse, vous devez :", options: ["La chercher", "Répondre vous-même", "Passer la question", "Fermer la conversation"], answer: 1, why: "Répondre d'abord, c'est ce qui rend l'entraînement efficace." },
-      { q: "Si une réponse de maths de l'IA semble fausse :", options: ["Lui faire confiance quand même", "Arrêter d'apprendre", "Lui demander les étapes ou vérifier une autre source", "Dénoncer votre ami"], answer: 2, why: "L'IA peut faire des erreurs de calcul." },
-      { q: "Khan Academy est :", options: ["Une université payante", "Un jeu", "Un magasin", "Un site d'apprentissage gratuit à but non lucratif"], answer: 3, why: "Elle offre des cours gratuits en tant qu'organisation à but non lucratif." },
-      { q: "LearnFree propose des leçons gratuites sur :", options: ["L'informatique, la recherche d'emploi, les bases de l'argent, la lecture et les maths", "Seulement la cuisine", "Seulement le sport", "Rien pour les adultes"], answer: 0, why: "LearnFree couvre beaucoup de compétences du quotidien et du travail." },
-      { q: "Où trouver aussi des cours gratuits ou du soutien ?", options: ["Une station de lavage", "Votre bibliothèque publique", "Le hall d'une banque", "Une publicité surgissante"], answer: 1, why: "Les bibliothèques proposent souvent des cours gratuits et du soutien." },
-      { q: "Pour des questions sur le financement de l'université aux États-Unis, où chercher ?", options: ["Un site au hasard qui demande des frais", "Le SMS d'un inconnu", "Le bureau d'aide financière de l'école ou studentaid.gov", "Un jeu vidéo"], answer: 2, why: "Ce sont les sources officielles." },
-      { q: "Un bon plan d'étude pour la plupart des adultes, c'est :", options: ["Cinq heures chaque dimanche", "Quand vous en avez envie", "Tout en une nuit", "Un peu d'étude chaque jour avec des jours de repos"], answer: 3, why: "Étudier peu mais régulièrement est plus facile à tenir." },
-      { q: "Où garder votre plan d'étude ?", options: ["Là où vous le verrez, comme l'agenda ou le frigo", "Caché dans un tiroir", "Seulement dans votre tête", "À la poubelle"], answer: 0, why: "Le voir vous rappelle d'étudier." },
-      { q: "En demandant un plan d'étude à l'IA, indiquez :", options: ["Votre numéro de sécurité sociale", "Le temps dont vous disposez vraiment et quand", "Le code de votre carte bancaire", "Votre adresse complète"], answer: 1, why: "Votre vrai temps donne un plan que vous pouvez suivre." },
-      { q: "Beaucoup d'outils d'IA ont une limite d'âge de :", options: ["5 ans et plus", "10 ans et plus", "13 ans et plus, parfois avec l'autorisation d'un parent", "Jamais de limite"], answer: 2, why: "Beaucoup d'outils d'IA sont pour les 13 ans et plus ; vérifiez les conditions de chaque outil." },
-      { q: "Pour les devoirs de votre enfant, l'IA doit :", options: ["Écrire les devoirs", "Passer l'examen", "Écrire à l'enseignant à votre place", "Expliquer l'idée, pas faire le travail"], answer: 3, why: "Expliquer laisse l'apprentissage à votre enfant." },
-      { q: "Laquelle est une bonne consigne de parent ?", options: ["« Explique pour que je l'apprenne à mon enfant de 10 ans. Ne donne pas la réponse. »", "« Fais les devoirs de mon enfant. »", "« Écris la rédaction. »", "« Donne toutes les réponses. »"], answer: 0, why: "Elle demande une explication, pas des réponses." },
-      { q: "À la fin d'une semaine d'étude, vous devez :", options: ["Supprimer vos notes", "Faire le bilan de ce que vous avez fait et vous interroger", "Tout recommencer à zéro", "Arrêter d'étudier"], answer: 1, why: "Le bilan montre les progrès et ce qu'il faut revoir." },
-      { q: "Votre plan était trop chargé pour votre semaine. Que faites-vous ?", options: ["Abandonner", "Culpabiliser", "L'alléger", "Le doubler"], answer: 2, why: "Un plan doit s'adapter à votre vie ; l'ajuster est normal." },
-      { q: "Dans la tâche finale, après que l'IA a donné cinq questions d'entraînement, vous :", options: ["Copiez ses réponses", "Les sautez", "Les publiez en ligne", "Y répondez vous-même, puis vérifiez vos réponses"], answer: 3, why: "Répondre vous-même et vérifier prouve l'apprentissage." }
+      { objective: "O1", q: "Un professeur particulier est :", options: ["Quelqu'un qui aide une personne à apprendre", "Un type d'ordinateur", "Un examen", "Un bâtiment scolaire"], answer: 0, why: "Un professeur particulier enseigne en tête-à-tête." },
+      { objective: "O1", q: "Pour avoir une explication plus claire, dites à l'IA :", options: ["Votre adresse", "Votre niveau, et demandez un exemple de la vie courante", "D'utiliser des mots plus difficiles", "Rien"], answer: 1, why: "Votre niveau et un exemple rendent l'explication plus claire." },
+      { objective: "O1", q: "Vous comprenez une partie de la réponse mais pas tout. Dites :", options: ["« Laisse tomber. »", "« Fais plus long. »", "Quelle partie exacte est floue", "« Mets plus de chiffres. »"], answer: 2, why: "Nommer la partie floue donne une meilleure suite." },
+      { objective: "O1", q: "Pourquoi un professeur IA patient est-il utile ?", options: ["Il note vos devoirs d'école", "Il vous donne un diplôme", "Chaque question coûte de l'argent", "Vous pouvez poser la même question plusieurs fois"], answer: 3, why: "Il ne se fatigue pas et ne vous juge pas." },
+      { objective: "O2", q: "Quelle consigne fait que l'IA vous interroge bien ?", options: ["« Donne-moi cinq questions, une à la fois, et vérifie mes réponses. »", "« Donne-moi toutes les réponses. »", "« Quiz. »", "« Fais mon examen. »"], answer: 0, why: "Une à la fois, avec vérification, c'est un vrai entraînement." },
+      { objective: "O2", q: "Avant que l'IA vous donne la réponse, vous devez :", options: ["La chercher", "Répondre vous-même", "Passer la question", "Fermer la conversation"], answer: 1, why: "Répondre d'abord, c'est ce qui rend l'entraînement efficace." },
+      { objective: "O2", q: "Si une réponse de maths de l'IA semble fausse :", options: ["Lui faire confiance quand même", "Arrêter d'apprendre", "Lui demander les étapes ou vérifier une autre source", "Dénoncer votre ami"], answer: 2, why: "L'IA peut faire des erreurs de calcul." },
+      { objective: "O3", q: "Khan Academy est :", options: ["Une université payante", "Un jeu", "Un magasin", "Un site d'apprentissage gratuit à but non lucratif"], answer: 3, why: "Elle offre des cours gratuits en tant qu'organisation à but non lucratif." },
+      { objective: "O3", q: "LearnFree propose des leçons gratuites sur :", options: ["L'informatique, la recherche d'emploi, les bases de l'argent, la lecture et les maths", "Seulement la cuisine", "Seulement le sport", "Rien pour les adultes"], answer: 0, why: "LearnFree couvre beaucoup de compétences du quotidien et du travail." },
+      { objective: "O3", q: "Où trouver aussi des cours gratuits ou du soutien ?", options: ["Une station de lavage", "Votre bibliothèque publique", "Le hall d'une banque", "Une publicité surgissante"], answer: 1, why: "Les bibliothèques proposent souvent des cours gratuits et du soutien." },
+      { objective: "O3", q: "Pour des questions sur le financement de l'université aux États-Unis, où chercher ?", options: ["Un site au hasard qui demande des frais", "Le SMS d'un inconnu", "Le bureau d'aide financière de l'école ou studentaid.gov", "Un jeu vidéo"], answer: 2, why: "Ce sont les sources officielles." },
+      { objective: "O4", q: "Un bon plan d'étude pour la plupart des adultes, c'est :", options: ["Cinq heures chaque dimanche", "Quand vous en avez envie", "Tout en une nuit", "Un peu d'étude chaque jour avec des jours de repos"], answer: 3, why: "Étudier peu mais régulièrement est plus facile à tenir." },
+      { objective: "O4", q: "Où garder votre plan d'étude ?", options: ["Là où vous le verrez, comme l'agenda ou le frigo", "Caché dans un tiroir", "Seulement dans votre tête", "À la poubelle"], answer: 0, why: "Le voir vous rappelle d'étudier." },
+      { objective: "O4", q: "En demandant un plan d'étude à l'IA, indiquez :", options: ["Votre numéro de sécurité sociale", "Le temps dont vous disposez vraiment et quand", "Le code de votre carte bancaire", "Votre adresse complète"], answer: 1, why: "Votre vrai temps donne un plan que vous pouvez suivre." },
+      { objective: "O5", q: "Beaucoup d'outils d'IA ont une limite d'âge de :", options: ["5 ans et plus", "10 ans et plus", "13 ans et plus, parfois avec l'autorisation d'un parent", "Jamais de limite"], answer: 2, why: "Beaucoup d'outils d'IA sont pour les 13 ans et plus ; vérifiez les conditions de chaque outil." },
+      { objective: "O5", q: "Pour les devoirs de votre enfant, l'IA doit :", options: ["Écrire les devoirs", "Passer l'examen", "Écrire à l'enseignant à votre place", "Expliquer l'idée, pas faire le travail"], answer: 3, why: "Expliquer laisse l'apprentissage à votre enfant." },
+      { objective: "O5", q: "Laquelle est une bonne consigne de parent ?", options: ["« Explique pour que je l'apprenne à mon enfant de 10 ans. Ne donne pas la réponse. »", "« Fais les devoirs de mon enfant. »", "« Écris la rédaction. »", "« Donne toutes les réponses. »"], answer: 0, why: "Elle demande une explication, pas des réponses." },
+      { objective: "O6", q: "À la fin d'une semaine d'étude, vous devez :", options: ["Supprimer vos notes", "Faire le bilan de ce que vous avez fait et vous interroger", "Tout recommencer à zéro", "Arrêter d'étudier"], answer: 1, why: "Le bilan montre les progrès et ce qu'il faut revoir." },
+      { objective: "O6", q: "Votre plan était trop chargé pour votre semaine. Que faites-vous ?", options: ["Abandonner", "Culpabiliser", "L'alléger", "Le doubler"], answer: 2, why: "Un plan doit s'adapter à votre vie ; l'ajuster est normal." },
+      { objective: "O2", q: "Dans la tâche finale, après que l'IA a donné cinq questions d'entraînement, vous :", options: ["Copiez ses réponses", "Les sautez", "Les publiez en ligne", "Y répondez vous-même, puis vérifiez vos réponses"], answer: 3, why: "Répondre vous-même et vérifier prouve l'apprentissage." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      1,
+      4,
+      7,
+      11,
+      13,
+      15,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Site d'apprentissage gratuit",
+        objective: "O3",
+        notYet: "Pas de site d'apprentissage, ou un site payant.",
+        meets: "Nomme un site d'apprentissage gratuit et le cours ou les leçons utilisés.",
+        exceeds: "Nomme aussi un cours gratuit ou du tutorat proposé par la bibliothèque."
+      },
+      {
+        name: "Plan de deux semaines",
+        objective: "O4",
+        notYet: "Pas de plan, ou un plan qui ne correspond pas au temps réel de l'apprenant.",
+        meets: "Deux semaines, environ 20 minutes par jour, un petit sujet par jour, avec des jours de repos.",
+        exceeds: "Placé sur un calendrier ou sur le réfrigérateur, avec les jours cochés."
+      },
+      {
+        name: "Questions d'entraînement",
+        objective: "O2",
+        notYet: "A regardé les réponses d'abord, ou n'a pas répondu aux questions.",
+        meets: "Cinq questions répondues avant de vérifier, et chacune vérifiée.",
+        exceeds: "A demandé à l'IA de montrer les étapes pour toute réponse qui semblait fausse."
+      },
+      {
+        name: "Vérification des progrès",
+        objective: "O6",
+        notYet: "Aucun retour sur ce qui a été raté.",
+        meets: "Liste les questions ratées et ce qu'il faut réviser.",
+        exceeds: "Dit comment le plan va changer d'après les résultats."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Apprenants qui suivent leur plan d'étude au moins 10 jours sur 14 (questionnaire de suivi)",
+      "Apprenants qui s'inscrivent à un cours gratuit, au GED, à un cours d'anglais ou à un programme universitaire dans les 90 jours",
+      "Parents qui disent aider un enfant pour ses devoirs en utilisant l'IA pour expliquer, pas pour répondre"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un smartphone avec internet, ou un ordinateur de bibliothèque ou de centre communautaire",
+      "Un assistant d'IA gratuit : Microsoft Copilot, ChatGPT ou Google Gemini",
+      "Un site d'apprentissage gratuit comme Khan Academy ou LearnFree",
+      "Un cahier ou un calendrier pour le plan d'étude",
+      "Environ 60 minutes au total : leçons, pratique, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Commencez par demander à chaque apprenant ce qu'il veut apprendre, et utilisez cette compétence dans chaque exercice.",
+      "Montrez comment demander une explication plus simple ; beaucoup d'apprenants sont gênés de redemander.",
+      "Avec les parents, insistez : l'IA explique et l'enfant fait le travail, et les règles de l'école passent en premier.",
+      "Faites un point après une semaine pour voir qui a tenu son plan, et aidez chacun à le réduire ou à l'augmenter.",
+      "Notez la tâche finale avec la grille d'évaluation, et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

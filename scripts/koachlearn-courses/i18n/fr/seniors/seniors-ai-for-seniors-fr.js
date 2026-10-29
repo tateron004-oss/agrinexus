@@ -16,11 +16,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes. Lisez la leçon, regardez les diapositives, puis faites l'exercice « Essayez maintenant » à votre rythme. Un court contrôle des connaissances termine chaque chapitre, et un quiz de 20 questions termine le cours. Vous pouvez refaire chaque leçon autant de fois que vous voulez."
   ],
   finalTask: "Utilisez un assistant IA pour préparer un repas de famille simple : demandez une recette facile pour quatre personnes, demandez-lui de mettre les étapes en courtes lignes numérotées, posez une question de suivi et vérifiez un fait (par exemple une température de cuisson) sur un site de confiance ou auprès d'une personne de confiance.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des personnes âgées, souvent à la retraite, qui veulent utiliser les nouveaux assistants IA pour s'aider au quotidien : cartes et lettres à la famille, loisirs, explications et listes. Certaines vivent seules ; beaucoup ont des petits-enfants qui utilisent ces outils.",
+    startingPoint: "Elles savent appeler et envoyer des SMS, et beaucoup utilisent l'e-mail ou une tablette. La plupart n'ont jamais utilisé d'assistant IA, et certaines ne se sentent pas à l'aise avec les applications, les petits caractères ou la saisie au clavier.",
+    gap: "Les assistants IA peuvent faire gagner du temps et aider les seniors à rester en contact et autonomes, mais les seniors sont aussi visés par des arnaques et peuvent être trompés par de mauvaises réponses sur la santé ou l'argent. Ils doivent savoir ouvrir un assistant, demander clairement, rendre les réponses plus faciles à lire, vérifier les faits et protéger leurs informations privées.",
+    constraints: [
+      "Niveau de lecture : mots simples, phrases courtes et étapes grandes et simples",
+      "Appareils : un téléphone, une tablette ou un ordinateur ; les petits écrans et les petits caractères peuvent être difficiles à lire",
+      "Temps : environ 5 minutes par leçon, à un rythme tranquille, avec du temps pour s'exercer",
+      "Les réponses sur la santé, les médicaments et l'argent doivent être vérifiées avec un médecin, un pharmacien ou une source officielle",
+      "Risque d'arnaque élevé : aucun numéro de Social Security, de Medicare ou de banque, ni aucun mot de passe dans une consigne"
+    ],
+    prerequisites: "Aucun. Les débutants avec les écrans tactiles peuvent demander à un membre de la famille ou à une personne de la bibliothèque de rester avec eux la première fois."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir d'une liste de tâches du quotidien", action: "identifier les tâches pour lesquelles un assistant IA peut aider et celles qui demandent un médecin, une banque ou une autre personne", standard: "en trouvant au moins 4 bonnes réponses sur 5" },
+    { id: "O2", condition: "Avec votre téléphone, votre tablette ou votre ordinateur", action: "ouvrir un assistant IA gratuit depuis son magasin d'applications ou son site officiel et trouver la zone de message ou le micro", standard: "sans aide" },
+    { id: "O3", condition: "À partir d'un vrai besoin de votre vie", action: "écrire ou dire une consigne qui donne ce dont vous avez besoin, votre situation et la forme de réponse voulue", standard: "pour que la première réponse soit utile" },
+    { id: "O4", condition: "Face à une réponse trop longue ou difficile à lire", action: "faire des demandes de suivi, une à la fois, pour la rendre plus simple ou plus courte", standard: "jusqu'à ce qu'elle soit facile à lire et à utiliser pour vous" },
+    { id: "O5", condition: "Face à une réponse de l'IA sur la santé, l'argent, un numéro de téléphone ou une date", action: "vérifier l'information sur un site officiel, avec votre médecin ou votre pharmacien, ou avec une personne de confiance", standard: "avant d'agir" },
+    { id: "O6", condition: "Quand vous écrivez une consigne ou recevez un appel ou un message urgent", action: "garder vos informations privées pour vous et repérer les signes d'une arnaque", standard: "sans partager aucun numéro privé, mot de passe ou code" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Découvrir votre assistant IA",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Ce qu'est un assistant IA",
           minutes: 4,
           goal: "Dire avec vos propres mots ce qu'un assistant IA peut faire et ne peut pas faire pour vous.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Ce n'est PAS", bullets: ["Votre médecin, votre avocat ou votre banque", "Toujours juste, même s'il a l'air sûr", "Le chef : c'est vous"] }
           ],
           tryIt: "Sur une feuille, écrivez trois choses pour lesquelles un assistant IA pourrait vous aider ce mois-ci, par exemple une carte pour un petit-enfant, une question sur une plante du jardin ou une recette.",
-          youCanNow: "dire ce qu'est un assistant IA, citer trois façons dont il peut vous aider et expliquer pourquoi vous vérifiez quand même ce qu'il dit."
+          youCanNow: "dire ce qu'est un assistant IA, citer trois façons dont il peut vous aider et expliquer pourquoi vous vérifiez quand même ce qu'il dit.",
+          quickCheck: [
+            { objective: "O1", q: "Pour quelle tâche un assistant IA est-il utile ?", options: ["Écrire un premier brouillon de carte d'anniversaire", "Vous donner les résultats de votre prise de sang", "Transférer de l'argent depuis votre banque", "Aller chez le médecin à votre place"], answer: 0, why: "Les assistants sont bons pour les brouillons, les idées et les listes ; ils ne remplacent ni votre médecin ni votre banque." },
+            { objective: "O1", q: "Un assistant IA semble très sûr de lui à propos d'une règle sur vos prestations. Que faites-vous ?", options: ["Le croire parce qu'il semble sûr", "Vous rappeler qu'il peut se tromper, et vérifier auprès du service concerné", "Le dire tout de suite à vos amis", "Lui demander de promettre qu'il a raison"], answer: 1, why: "Les assistants peuvent se tromper même quand ils semblent sûrs, et c'est vous qui décidez quoi croire." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Ouvrir un assistant sur votre téléphone, tablette ou ordinateur",
           minutes: 6,
           goal: "Ouvrir un assistant IA gratuit et trouver la zone où taper ou parler.",
@@ -57,9 +86,14 @@ module.exports = {
             { title: "Trouver où parler", bullets: ["Zone de message en bas de l'écran", "Elle peut afficher « Posez une question »", "Le bouton micro vous permet de parler"] }
           ],
           tryIt: "Ouvrez un assistant gratuit. Trouvez la zone de message et tapez, ou dites : Bonjour, je débute. Merci de répondre avec des phrases courtes et simples. Lisez sa réponse.",
-          youCanNow: "ouvrir un assistant IA gratuit et trouver où taper ou dire votre question."
+          youCanNow: "ouvrir un assistant IA gratuit et trouver où taper ou dire votre question.",
+          quickCheck: [
+            { objective: "O2", q: "Qui fabrique la vraie application Microsoft Copilot ?", options: ["N'importe quelle entreprise avec un nom proche", "Google", "Microsoft", "OpenAI"], answer: 2, why: "Installez l'application de la vraie entreprise : Microsoft pour Copilot." },
+            { objective: "O2", q: "Vous avez du mal à taper sur votre téléphone. Que cherchez-vous dans l'application de l'assistant ?", options: ["L'icône de la batterie", "Le bouton de l'appareil photo", "La roue des réglages", "Le petit micro sur lequel vous appuyez pour parler"], answer: 3, why: "Beaucoup d'applications ont un micro pour parler au lieu de taper." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Poser une question claire",
           minutes: 5,
           goal: "Écrire ou dire une question qui donne une réponse utile du premier coup.",
@@ -76,17 +110,21 @@ module.exports = {
             { title: "Un exemple", bullets: ["« Ma petite-fille a 8 ans et adore les chevaux.", "Écris un court message d'anniversaire de la part de Mamie.", "Utilise des mots simples. »"] }
           ],
           tryIt: "Choisissez une idée de votre liste de la leçon 1. Écrivez une consigne avec les trois parties, envoyez-la et lisez la réponse lentement.",
-          youCanNow: "poser une question claire à un assistant IA en disant ce dont vous avez besoin, votre situation et la forme de réponse voulue."
+          youCanNow: "poser une question claire à un assistant IA en disant ce dont vous avez besoin, votre situation et la forme de réponse voulue.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce qu'une consigne ?", options: ["Un rappel dans votre agenda", "Ce que vous tapez ou dites à l'assistant", "La réponse que donne l'assistant", "Un mot de passe"], answer: 1, why: "Une consigne est votre demande à l'assistant, tapée ou dite à voix haute." },
+            { objective: "O3", q: "Vous voulez un mot de remerciement pour votre voisin qui a réparé votre clôture. Quelle consigne est la meilleure ?", options: ["\"mot\"", "\"merci\"", "\"Écris n'importe quoi.\"", "\"Mon voisin a réparé ma clôture. Écris un mot de remerciement court et chaleureux, avec des mots simples.\""], answer: 3, why: "Elle dit ce dont vous avez besoin, votre situation et la forme de réponse voulue." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Découvrir votre assistant IA",
         questions: [
-          { q: "Qu'est-ce qu'un assistant IA ?", options: ["Une personne dans un centre d'appels", "Un type de télévision", "Un programme informatique avec qui on discute avec des mots simples", "Un bureau de l'administration"], answer: 2, why: "Un assistant IA est un programme à qui vous écrivez ou parlez, et qui vous répond par écrit." },
-          { q: "L'assistant a l'air très sûr de lui sur une question de médicament. Que faites-vous ?", options: ["Je vérifie avec mon médecin ou mon pharmacien", "Je suis son conseil tout de suite", "J'arrête tous mes médicaments", "Je dis à mon voisin de suivre son conseil"], answer: 0, why: "L'IA peut se tromper même quand elle a l'air sûre ; les questions de santé vont au médecin ou au pharmacien." },
-          { q: "Où obtenir une application d'IA en sécurité sur un téléphone ou une tablette ?", options: ["Par un lien dans un SMS d'un inconnu", "Par une publicité qui s'ouvre toute seule", "Sur n'importe quel site", "Dans la boutique d'applications officielle, auprès de la vraie entreprise"], answer: 3, why: "La boutique officielle et l'application de la vraie entreprise sont le choix sûr." },
-          { q: "Vous préférez parler plutôt que taper. Que cherchez-vous ?", options: ["L'icône de la batterie", "Le bouton micro", "L'appareil photo", "Le bouton du volume"], answer: 1, why: "Le bouton micro vous permet de dire votre question." },
-          { q: "Quelle consigne est la plus claire ?", options: ["« anniversaire »", "« Ma petite-fille a 8 ans et adore les chevaux. Écris un court message d'anniversaire de la part de Mamie, avec des mots simples. »", "« aide »", "« carte »"], answer: 1, why: "Elle dit ce dont vous avez besoin, votre situation et la forme de réponse voulue." }
+          { objective: "O1", q: "Qu'est-ce qu'un assistant IA ?", options: ["Une personne dans un centre d'appels", "Un type de télévision", "Un programme informatique avec qui on discute avec des mots simples", "Un bureau de l'administration"], answer: 2, why: "Un assistant IA est un programme à qui vous écrivez ou parlez, et qui vous répond par écrit." },
+          { objective: "O1", q: "L'assistant a l'air très sûr de lui sur une question de médicament. Que faites-vous ?", options: ["Je vérifie avec mon médecin ou mon pharmacien", "Je suis son conseil tout de suite", "J'arrête tous mes médicaments", "Je dis à mon voisin de suivre son conseil"], answer: 0, why: "L'IA peut se tromper même quand elle a l'air sûre ; les questions de santé vont au médecin ou au pharmacien." },
+          { objective: "O2", q: "Où obtenir une application d'IA en sécurité sur un téléphone ou une tablette ?", options: ["Par un lien dans un SMS d'un inconnu", "Par une publicité qui s'ouvre toute seule", "Sur n'importe quel site", "Dans la boutique d'applications officielle, auprès de la vraie entreprise"], answer: 3, why: "La boutique officielle et l'application de la vraie entreprise sont le choix sûr." },
+          { objective: "O2", q: "Vous préférez parler plutôt que taper. Que cherchez-vous ?", options: ["L'icône de la batterie", "Le bouton micro", "L'appareil photo", "Le bouton du volume"], answer: 1, why: "Le bouton micro vous permet de dire votre question." },
+          { objective: "O3", q: "Quelle consigne est la plus claire ?", options: ["« anniversaire »", "« Ma petite-fille a 8 ans et adore les chevaux. Écris un court message d'anniversaire de la part de Mamie, avec des mots simples. »", "« aide »", "« carte »"], answer: 1, why: "Elle dit ce dont vous avez besoin, votre situation et la forme de réponse voulue." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Chapitre 2 : Obtenir de bonnes réponses en sécurité",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Demander une réponse plus simple ou plus courte",
           minutes: 4,
           goal: "Utiliser des questions de suivi pour rendre une réponse plus facile à lire et à utiliser.",
@@ -110,9 +149,14 @@ module.exports = {
             { title: "Difficile à lire ?", bullets: ["Agrandissez le texte sur votre appareil", "Demandez à l'assistant comment faire", "Demandez à un proche de vous montrer"] }
           ],
           tryIt: "Reprenez la réponse de la leçon 3. Demandez deux changements, l'un après l'autre, par exemple « fais plus court » puis « rends-le plus chaleureux ». Comparez la première et la dernière réponse.",
-          youCanNow: "améliorer une réponse de l'IA en posant des questions de suivi claires."
+          youCanNow: "améliorer une réponse de l'IA en posant des questions de suivi claires.",
+          quickCheck: [
+            { objective: "O4", q: "Pourquoi pouvez-vous demander à l'assistant de changer sa réponse ?", options: ["Il se souvient de ce que vous avez dit plus tôt dans la même conversation", "Il doit tout recommencer à chaque fois", "Il lit dans vos pensées", "Il ne répond qu'une seule fois"], answer: 0, why: "Dans la même conversation, l'assistant se souvient des messages précédents, donc vous pouvez demander des changements." },
+            { objective: "O4", q: "Une recette arrive en un seul long paragraphe. Qu'envoyez-vous ensuite ?", options: ["\"Faux.\"", "Rien ; vous fermez l'application", "\"Mets-la en étapes numérotées.\"", "\"Fais-la plus longue.\""], answer: 2, why: "Une demande de suivi claire qui nomme le changement rend la réponse plus facile à utiliser." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Vérifier une réponse avant d'agir",
           minutes: 5,
           goal: "Vérifier une réponse de l'IA auprès d'une source de confiance avant de vous y fier.",
@@ -129,9 +173,14 @@ module.exports = {
             { title: "Comment vérifier", bullets: ["Site officiel, souvent en .gov aux États-Unis", "Appelez le bureau", "Demandez à votre médecin, pharmacien ou à une personne de confiance"] }
           ],
           tryIt: "Demandez à un assistant les horaires d'ouverture de votre bibliothèque. Puis vérifiez sur le site de la bibliothèque ou appelez-la. La réponse était-elle juste ?",
-          youCanNow: "repérer les faits à vérifier et les vérifier auprès d'une source de confiance."
+          youCanNow: "repérer les faits à vérifier et les vérifier auprès d'une source de confiance.",
+          quickCheck: [
+            { objective: "O5", q: "Qu'est-ce qu'une « hallucination » en IA ?", options: ["Quand l'écran devient noir", "Quand l'application est lente", "Quand l'assistant parle à voix haute", "Quand l'assistant invente quelque chose qui semble vrai"], answer: 3, why: "L'IA peut inventer un faux numéro de téléphone, de faux horaires de magasin ou une fausse règle qui semblent réels." },
+            { objective: "O5", q: "L'assistant vous dit quelle dose d'un médicament prendre. Que faites-vous ?", options: ["Prendre cette dose tout de suite", "Vérifier d'abord avec votre médecin ou votre pharmacien", "Demander à une autre IA", "Le partager avec vos amis"], answer: 1, why: "Les réponses sur la santé et les médicaments doivent être vérifiées avec votre médecin ou votre pharmacien." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Protéger vos informations privées",
           minutes: 5,
           goal: "Utiliser un assistant IA sans partager d'informations privées.",
@@ -149,17 +198,21 @@ module.exports = {
             { title: "En cas de doute", bullets: ["Arrêtez", "Raccrochez", "Rappelez à un numéro que vous savez être le bon"] }
           ],
           tryIt: "Tâche finale : demandez à un assistant une recette facile pour quatre personnes, demandez-lui de mettre les étapes en courtes lignes numérotées, posez une question de suivi et vérifiez un fait, comme une température de cuisson, sur un site de confiance ou auprès d'une personne de confiance.",
-          youCanNow: "utiliser un assistant IA pour une vraie tâche, vérifier sa réponse et protéger vos informations privées."
+          youCanNow: "utiliser un assistant IA pour une vraie tâche, vérifier sa réponse et protéger vos informations privées.",
+          quickCheck: [
+            { objective: "O6", q: "Laquelle de ces informations ne faut-il jamais taper dans un assistant IA ?", options: ["Votre numéro de Medicare", "Votre recette préférée", "Le nom d'un oiseau que vous avez vu", "Une question sur votre jardin"], answer: 0, why: "Les numéros de Medicare, de Social Security et de banque sont privés ; écrivez plutôt un texte de remplacement, comme [mon numéro]." },
+            { objective: "O6", q: "Un SMS dit que votre compte sera fermé aujourd'hui si vous n'envoyez pas le code que vous venez de recevoir. Que faites-vous ?", options: ["Envoyer le code vite", "Répondre avec votre numéro de compte bancaire", "Ne pas partager le code ; appeler l'entreprise à un numéro que vous connaissez", "Le transférer à vos petits-enfants"], answer: 2, why: "Vous presser et demander un code sont des signes d'arnaque." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Obtenir de bonnes réponses en sécurité",
         questions: [
-          { q: "La réponse contient des mots que vous ne comprenez pas. Que tapez-vous ?", options: ["« Fais plus long. »", "Votre numéro Medicare", "Rien ; je ferme l'application", "« Utilise des mots plus simples. »"], answer: 3, why: "Une question de suivi demande à l'assistant de modifier sa réponse." },
-          { q: "Que faut-il TOUJOURS vérifier auprès d'une source de confiance ?", options: ["La dose de médicament à prendre", "Une blague", "Un poème d'anniversaire", "Une liste de noms de fleurs"], answer: 0, why: "Les renseignements sur la santé et les médicaments doivent être vérifiés avec votre médecin ou pharmacien." },
-          { q: "Qu'est-ce qu'une « hallucination » en IA ?", options: ["L'écran est trop lumineux", "Un type d'application", "L'IA a écrit quelque chose qui a l'air vrai mais qui est inventé", "Une connexion internet lente"], answer: 2, why: "L'IA peut inventer des faits qui ont l'air réels." },
-          { q: "Qu'écrire à la place de votre numéro Medicare dans une consigne ?", options: ["Le vrai numéro", "La moitié du numéro", "Votre numéro de compte bancaire", "Un mot de remplacement comme « [mon numéro] »"], answer: 3, why: "Un mot de remplacement vous permet d'obtenir de l'aide sans partager d'informations privées." },
-          { q: "Un appelant a la voix de votre petit-fils et demande tout de suite des cartes cadeaux. Que faites-vous ?", options: ["Je les achète vite", "Je lui donne le code reçu sur mon téléphone", "Je raccroche et j'appelle mon petit-fils à un numéro que je connais", "J'envoie mes coordonnées bancaires"], answer: 2, why: "Les escrocs peuvent imiter les voix ; l'urgence et les cartes cadeaux sont des signaux d'alerte." }
+          { objective: "O4", q: "La réponse contient des mots que vous ne comprenez pas. Que tapez-vous ?", options: ["« Fais plus long. »", "Votre numéro Medicare", "Rien ; je ferme l'application", "« Utilise des mots plus simples. »"], answer: 3, why: "Une question de suivi demande à l'assistant de modifier sa réponse." },
+          { objective: "O5", q: "Que faut-il TOUJOURS vérifier auprès d'une source de confiance ?", options: ["La dose de médicament à prendre", "Une blague", "Un poème d'anniversaire", "Une liste de noms de fleurs"], answer: 0, why: "Les renseignements sur la santé et les médicaments doivent être vérifiés avec votre médecin ou pharmacien." },
+          { objective: "O5", q: "Qu'est-ce qu'une « hallucination » en IA ?", options: ["L'écran est trop lumineux", "Un type d'application", "L'IA a écrit quelque chose qui a l'air vrai mais qui est inventé", "Une connexion internet lente"], answer: 2, why: "L'IA peut inventer des faits qui ont l'air réels." },
+          { objective: "O6", q: "Qu'écrire à la place de votre numéro Medicare dans une consigne ?", options: ["Le vrai numéro", "La moitié du numéro", "Votre numéro de compte bancaire", "Un mot de remplacement comme « [mon numéro] »"], answer: 3, why: "Un mot de remplacement vous permet d'obtenir de l'aide sans partager d'informations privées." },
+          { objective: "O6", q: "Un appelant a la voix de votre petit-fils et demande tout de suite des cartes cadeaux. Que faites-vous ?", options: ["Je les achète vite", "Je lui donne le code reçu sur mon téléphone", "Je raccroche et j'appelle mon petit-fils à un numéro que je connais", "J'envoie mes coordonnées bancaires"], answer: 2, why: "Les escrocs peuvent imiter les voix ; l'urgence et les cartes cadeaux sont des signaux d'alerte." }
         ]
       }
     }
@@ -167,26 +220,104 @@ module.exports = {
   quiz: {
     title: "Quiz final : L'IA pour les seniors : utiliser un assistant IA",
     questions: [
-      { q: "Un assistant IA, c'est avant tout :", options: ["Une personne dans un centre d'appels", "Un programme informatique avec qui on discute", "Une compagnie de téléphone", "Un magasin"], answer: 1, why: "C'est un programme à qui vous écrivez ou parlez." },
-      { q: "Lequel est un bon usage d'un assistant IA ?", options: ["Préparer un mot de remerciement pour un ami", "Décider de votre dose de médicament", "Signer des papiers à votre place", "Connaître le solde de votre compte"], answer: 0, why: "Préparer des mots et des cartes fait partie de ses points forts." },
-      { q: "Qui décide quand vous utilisez un assistant IA ?", options: ["Vous", "La compagnie de téléphone", "L'IA", "Personne"], answer: 0, why: "C'est vous qui décidez quoi demander et quoi croire." },
-      { q: "Lequel est un assistant IA gratuit connu ?", options: ["Une calculatrice", "Google Gemini", "Une imprimante", "Une télécommande"], answer: 1, why: "Gemini, ChatGPT et Copilot sont des assistants gratuits connus." },
-      { q: "L'endroit sûr pour obtenir une application d'IA sur une tablette est :", options: ["Un lien dans un e-mail d'un inconnu", "Une publicité qui s'ouvre toute seule", "La boutique d'applications officielle", "N'importe quel site"], answer: 2, why: "N'installez que depuis la boutique d'applications officielle." },
-      { q: "Quelle adresse ouvre ChatGPT sur un ordinateur ?", options: ["chatgpt.gift", "chatgpt-prize.net", "free-chatgpt.win", "chatgpt.com"], answer: 3, why: "chatgpt.com est l'adresse officielle." },
-      { q: "Où tape-t-on en général sa question ?", options: ["Sur l'icône de la batterie", "Sur l'horloge", "Dans la zone de message en bas de l'écran", "Dans l'appareil photo"], answer: 2, why: "La zone de message affiche souvent « Posez une question » ou « Message »." },
-      { q: "Vous voulez dire votre question à voix haute. Vous touchez :", options: ["Le bouton micro", "L'appareil photo", "Le bouton marche/arrêt", "Le bouton du volume"], answer: 0, why: "Le bouton micro vous permet de parler au lieu de taper." },
-      { q: "Qu'est-ce qu'une consigne (prompt) ?", options: ["Une alarme de rappel", "La fin d'une adresse web", "Un chargeur de téléphone", "Ce que vous tapez ou dites à l'assistant"], answer: 3, why: "La consigne est votre demande à l'assistant." },
-      { q: "Une bonne consigne contient :", options: ["Un seul mot", "Ce dont vous avez besoin, votre situation et la forme de réponse voulue", "Votre mot de passe", "Votre numéro de sécurité sociale"], answer: 1, why: "Ces trois parties donnent une réponse utile." },
-      { q: "Quelle consigne donnera sans doute la réponse la plus utile ?", options: ["« jardin »", "« Les feuilles de mes tomates ont des taches jaunes. Quelle peut être la cause ? Réponds en étapes courtes et simples. »", "« plantes »", "« aide »"], answer: 1, why: "Elle donne le besoin, la situation et la forme." },
-      { q: "La première réponse est trop longue. Vous pouvez :", options: ["Éteindre l'appareil", "Seulement l'accepter", "Payer pour la corriger", "Demander : « Fais plus court. »"], answer: 3, why: "Les questions de suivi modifient la réponse." },
-      { q: "Laquelle est une question de suivi utile ?", options: ["« Mets-le en étapes numérotées. »", "« Voici mon numéro de carte. »", "« Supprime mon téléphone. »", "« Envoie de l'argent. »"], answer: 0, why: "Elle demande un changement clair de la réponse." },
-      { q: "Le texte à l'écran est trop petit. Que pouvez-vous faire ?", options: ["Abandonner", "Acheter un nouveau téléphone aujourd'hui", "Agrandir le texte dans les réglages de l'appareil ou demander à quelqu'un de vous montrer", "Taper votre mot de passe"], answer: 2, why: "Les appareils ont un réglage de taille du texte ; un proche ou l'assistant peut vous montrer comment faire." },
-      { q: "L'assistant vous donne le numéro de téléphone d'une clinique. Vous devez :", options: ["Lui donner votre numéro Medicare", "L'appeler sans vérifier", "Le publier en ligne", "Le vérifier sur le site de la clinique ou sur un courrier de la clinique"], answer: 3, why: "L'IA peut donner de faux numéros ; vérifiez la source officielle." },
-      { q: "Les sites officiels du gouvernement des États-Unis se terminent par :", options: [".win", ".gift", ".gov", ".xyz"], answer: 2, why: ".gov est utilisé par les sites du gouvernement américain." },
-      { q: "Pour une question de médicament, la meilleure personne pour confirmer la réponse est :", options: ["Un inconnu sur internet", "Votre médecin ou votre pharmacien", "L'IA elle-même", "Une publicité"], answer: 1, why: "Les renseignements de santé doivent être vérifiés par un professionnel." },
-      { q: "Que ne faut-il JAMAIS taper dans un assistant IA ?", options: ["Votre numéro de carte bancaire", "« Donne-moi un exemple. »", "« Utilise des mots plus simples. »", "« Rends-le plus chaleureux. »"], answer: 0, why: "Les numéros de compte et de carte sont des informations privées." },
-      { q: "Quelqu'un vous demande le code qui vient d'arriver par SMS sur votre téléphone. Vous devez :", options: ["Ne jamais le donner", "Le publier", "Le lui envoyer par SMS", "Le lui lire"], answer: 0, why: "Ce code protège votre compte ; les vrais services ne le demandent pas." },
-      { q: "Si un appel vous semble anormal, le plus sûr est de :", options: ["Continuer à parler", "Raccrocher et rappeler à un numéro que vous savez être le bon", "Donner votre adresse", "Envoyer un petit paiement"], answer: 1, why: "Rappeler à un numéro connu arrête la plupart des arnaques." }
+      { objective: "O1", q: "Un assistant IA, c'est avant tout :", options: ["Une personne dans un centre d'appels", "Un programme informatique avec qui on discute", "Une compagnie de téléphone", "Un magasin"], answer: 1, why: "C'est un programme à qui vous écrivez ou parlez." },
+      { objective: "O1", q: "Lequel est un bon usage d'un assistant IA ?", options: ["Préparer un mot de remerciement pour un ami", "Décider de votre dose de médicament", "Signer des papiers à votre place", "Connaître le solde de votre compte"], answer: 0, why: "Préparer des mots et des cartes fait partie de ses points forts." },
+      { objective: "O1", q: "Qui décide quand vous utilisez un assistant IA ?", options: ["Vous", "La compagnie de téléphone", "L'IA", "Personne"], answer: 0, why: "C'est vous qui décidez quoi demander et quoi croire." },
+      { objective: "O2", q: "Lequel est un assistant IA gratuit connu ?", options: ["Une calculatrice", "Google Gemini", "Une imprimante", "Une télécommande"], answer: 1, why: "Gemini, ChatGPT et Copilot sont des assistants gratuits connus." },
+      { objective: "O2", q: "L'endroit sûr pour obtenir une application d'IA sur une tablette est :", options: ["Un lien dans un e-mail d'un inconnu", "Une publicité qui s'ouvre toute seule", "La boutique d'applications officielle", "N'importe quel site"], answer: 2, why: "N'installez que depuis la boutique d'applications officielle." },
+      { objective: "O2", q: "Quelle adresse ouvre ChatGPT sur un ordinateur ?", options: ["chatgpt.gift", "chatgpt-prize.net", "free-chatgpt.win", "chatgpt.com"], answer: 3, why: "chatgpt.com est l'adresse officielle." },
+      { objective: "O2", q: "Où tape-t-on en général sa question ?", options: ["Sur l'icône de la batterie", "Sur l'horloge", "Dans la zone de message en bas de l'écran", "Dans l'appareil photo"], answer: 2, why: "La zone de message affiche souvent « Posez une question » ou « Message »." },
+      { objective: "O2", q: "Vous voulez dire votre question à voix haute. Vous touchez :", options: ["Le bouton micro", "L'appareil photo", "Le bouton marche/arrêt", "Le bouton du volume"], answer: 0, why: "Le bouton micro vous permet de parler au lieu de taper." },
+      { objective: "O3", q: "Qu'est-ce qu'une consigne (prompt) ?", options: ["Une alarme de rappel", "La fin d'une adresse web", "Un chargeur de téléphone", "Ce que vous tapez ou dites à l'assistant"], answer: 3, why: "La consigne est votre demande à l'assistant." },
+      { objective: "O3", q: "Une bonne consigne contient :", options: ["Un seul mot", "Ce dont vous avez besoin, votre situation et la forme de réponse voulue", "Votre mot de passe", "Votre numéro de sécurité sociale"], answer: 1, why: "Ces trois parties donnent une réponse utile." },
+      { objective: "O3", q: "Quelle consigne donnera sans doute la réponse la plus utile ?", options: ["« jardin »", "« Les feuilles de mes tomates ont des taches jaunes. Quelle peut être la cause ? Réponds en étapes courtes et simples. »", "« plantes »", "« aide »"], answer: 1, why: "Elle donne le besoin, la situation et la forme." },
+      { objective: "O4", q: "La première réponse est trop longue. Vous pouvez :", options: ["Éteindre l'appareil", "Seulement l'accepter", "Payer pour la corriger", "Demander : « Fais plus court. »"], answer: 3, why: "Les questions de suivi modifient la réponse." },
+      { objective: "O4", q: "Laquelle est une question de suivi utile ?", options: ["« Mets-le en étapes numérotées. »", "« Voici mon numéro de carte. »", "« Supprime mon téléphone. »", "« Envoie de l'argent. »"], answer: 0, why: "Elle demande un changement clair de la réponse." },
+      { objective: "O4", q: "Le texte à l'écran est trop petit. Que pouvez-vous faire ?", options: ["Abandonner", "Acheter un nouveau téléphone aujourd'hui", "Agrandir le texte dans les réglages de l'appareil ou demander à quelqu'un de vous montrer", "Taper votre mot de passe"], answer: 2, why: "Les appareils ont un réglage de taille du texte ; un proche ou l'assistant peut vous montrer comment faire." },
+      { objective: "O5", q: "L'assistant vous donne le numéro de téléphone d'une clinique. Vous devez :", options: ["Lui donner votre numéro Medicare", "L'appeler sans vérifier", "Le publier en ligne", "Le vérifier sur le site de la clinique ou sur un courrier de la clinique"], answer: 3, why: "L'IA peut donner de faux numéros ; vérifiez la source officielle." },
+      { objective: "O5", q: "Les sites officiels du gouvernement des États-Unis se terminent par :", options: [".win", ".gift", ".gov", ".xyz"], answer: 2, why: ".gov est utilisé par les sites du gouvernement américain." },
+      { objective: "O5", q: "Pour une question de médicament, la meilleure personne pour confirmer la réponse est :", options: ["Un inconnu sur internet", "Votre médecin ou votre pharmacien", "L'IA elle-même", "Une publicité"], answer: 1, why: "Les renseignements de santé doivent être vérifiés par un professionnel." },
+      { objective: "O6", q: "Que ne faut-il JAMAIS taper dans un assistant IA ?", options: ["Votre numéro de carte bancaire", "« Donne-moi un exemple. »", "« Utilise des mots plus simples. »", "« Rends-le plus chaleureux. »"], answer: 0, why: "Les numéros de compte et de carte sont des informations privées." },
+      { objective: "O6", q: "Quelqu'un vous demande le code qui vient d'arriver par SMS sur votre téléphone. Vous devez :", options: ["Ne jamais le donner", "Le publier", "Le lui envoyer par SMS", "Le lui lire"], answer: 0, why: "Ce code protège votre compte ; les vrais services ne le demandent pas." },
+      { objective: "O6", q: "Si un appel vous semble anormal, le plus sûr est de :", options: ["Continuer à parler", "Raccrocher et rappeler à un numéro que vous savez être le bon", "Donner votre adresse", "Envoyer un petit paiement"], answer: 1, why: "Rappeler à un numéro connu arrête la plupart des arnaques." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      4,
+      9,
+      11,
+      14,
+      16,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est à « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Assistant ouvert",
+        objective: "O2",
+        notYet: "A eu besoin de quelqu'un pour ouvrir l'assistant, ou a utilisé une application ou un site non officiel.",
+        meets: "A ouvert un assistant officiel et trouvé la zone de message ou le micro.",
+        exceeds: "Peut montrer à un ami ou à un membre de la famille comment l'ouvrir."
+      },
+      {
+        name: "Demande claire",
+        objective: "O3",
+        notYet: "La consigne est vague, par exemple \"recette\".",
+        meets: "A demandé une recette facile pour quatre personnes, avec la situation et la forme de réponse voulue.",
+        exceeds: "A ajouté un détail, comme un aliment qu'une personne ne peut pas manger, et la première réponse était presque prête."
+      },
+      {
+        name: "Réponse rendue plus facile",
+        objective: "O4",
+        notYet: "A utilisé la première réponse telle quelle, même si elle était difficile à lire.",
+        meets: "A demandé des étapes courtes et numérotées, et a posé une autre question de suivi.",
+        exceeds: "A demandé les changements un par un et peut dire ce que chacun a corrigé."
+      },
+      {
+        name: "Information vérifiée",
+        objective: "O5",
+        notYet: "A fait confiance à une information, comme une température de cuisson, sans la vérifier.",
+        meets: "A vérifié une information sur un site de confiance ou avec une personne de confiance.",
+        exceeds: "Peut dire où il l'a vérifiée et si elle correspondait."
+      },
+      {
+        name: "Informations privées protégées",
+        objective: "O6",
+        notYet: "La consigne contient un numéro privé, une adresse ou un mot de passe.",
+        meets: "Aucune information privée dans aucune consigne.",
+        exceeds: "Peut nommer deux signes d'arnaque."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Apprenants qui disent avoir utilisé un assistant IA pour une carte, une lettre, une recette ou une question dans les 30 jours (questionnaire de suivi)",
+      "Apprenants qui disent avoir repéré et évité un appel ou un message d'arnaque",
+      "Apprenants qui commencent un autre cours Seniors et technologie dans les 30 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un smartphone, une tablette ou un ordinateur avec Internet",
+      "Un assistant IA gratuit : ChatGPT, Microsoft Copilot ou Google Gemini",
+      "Des lunettes de lecture si besoin, et du papier et un stylo pour les notes",
+      "Environ 60 minutes au total, en courtes séances tranquilles : leçons, exercices, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Allez lentement, et mettez chaque apprenant avec un aidant ou un petit-enfant la première fois qu'il ouvre l'application.",
+      "Montrez comment agrandir le texte sur l'appareil de chaque apprenant avant de commencer.",
+      "Ne demandez jamais aux apprenants de taper de vraies informations privées ; utilisez des textes de remplacement, comme [mon numéro].",
+      "Rappelez aux apprenants que les réponses sur la santé, les médicaments et l'argent doivent être vérifiées avec un médecin, un pharmacien ou un service officiel.",
+      "Notez la tâche finale avec la grille d'évaluation, et faites un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

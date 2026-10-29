@@ -14,11 +14,35 @@ module.exports = {
     "You will build your own job kit step by step. Each lesson is about five minutes with a \"Try it now\" task, a knowledge check after each chapter and a 20-question quiz at the end. Keep private details out of AI: no Social Security, ID, case or inmate numbers."
   ],
   finalTask: "Find one real job post you could apply for. Using an AI assistant, build a one-page résumé tailored to it, a cover letter of under 200 words, and answers to five likely interview questions, including one about a gap or background if it applies to you. Practice the answers out loud, check the job post against the scam warning signs, and apply or save it ready to send.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Adults coming home from prison (re-entry) who are looking for work, often with gaps in their work history and a record to explain. Many have strong work experience from prison jobs, the military, caregiving or informal work.",
+    startingPoint: "Can make calls and send texts on a basic phone; some have an email account and have tried an AI assistant. Many have no current résumé, have not done a recent interview, and are not sure how to talk about their background.",
+    gap: "A steady job is one of the strongest supports for a successful return home, but applications now happen online and employers expect a tailored résumé and confident interview answers. Learners need to turn their real experience into job materials with AI help, answer questions about gaps honestly, and avoid job scams that target people who need work fast.",
+    constraints: [
+      "Reading level: plain words and short sentences (about grade 5 to 6)",
+      "Devices: may only have a basic phone or a time-limited library or job center computer",
+      "Time: 5 minute lessons that fit around appointments and work",
+      "Privacy: no Social Security, case or inmate numbers, or bank details in AI tools or on a résumé",
+      "Rules on records vary by state and city; learners check their state labor department or a reentry legal aid group, and follow their own parole or probation conditions"
+    ],
+    prerequisites: "None. \"Introduction to AI and Digital Confidence\" is a helpful first course for learners new to AI."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given your work, training, volunteer and life experience, inside or outside", action: "list your job skills in employer words, with one true example each", standard: "keeping only skills that are true for you" },
+    { id: "O2", condition: "Given a real job post and a free template", action: "create a one-page résumé tailored to the job, with action-word bullets and numbers", standard: "with every word true and no Social Security number, date of birth or photo" },
+    { id: "O3", condition: "For the same job post", action: "write a cover letter in three short paragraphs", standard: "under 200 words and sounding like you when read out loud" },
+    { id: "O4", condition: "Using an AI assistant as a practice interviewer", action: "answer five common interview questions out loud, using STAR for \"tell me about a time\" questions", standard: "without reading from notes" },
+    { id: "O5", condition: "If you have a gap or a record", action: "prepare a short, honest answer that turns to why you are ready now", standard: "using only facts you are comfortable sharing, said calmly out loud" },
+    { id: "O6", condition: "When you search and apply for jobs", action: "find openings on trusted sites, track each application and check every post for scam warning signs", standard: "giving no bank or Social Security number before a real offer" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Building your job materials",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Finding the skills you already have",
           minutes: 5,
           goal: "Turn your life and work experience into a list of job skills.",
@@ -35,9 +59,14 @@ module.exports = {
             { title: "Keep it true", bullets: ["Remove skills you do not have", "One real example for each", "You may be asked about any of it"] }
           ],
           tryIt: "Describe three things you have done to an AI assistant and ask what job skills they show. Write a master list of at least eight true skills, each with one example.",
-          youCanNow: "turn your experience into a true list of job skills in employer language."
+          youCanNow: "turn your experience into a true list of job skills in employer language.",
+          quickCheck: [
+            { objective: "O1", q: "What is a transferable skill?", options: ["A skill you can only use in one job", "A skill from one setting that is useful in another", "A skill you pay to learn", "A skill only managers have"], answer: 1, why: "Transferable skills, like training others, move from one setting to another." },
+            { objective: "O1", q: "You fixed cars for neighbors for years with no paycheck. What do you do with that experience?", options: ["Leave it out; it was not a real job", "Say you were a licensed mechanic", "Wait until an interviewer asks about it", "Ask AI what skills it shows and list the true ones with an example"], answer: 3, why: "Informal work builds real skills; list only the ones that are true, with an example." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Writing a one-page résumé with AI",
           minutes: 6,
           goal: "Build a clean, one-page résumé tailored to a real job post.",
@@ -54,9 +83,14 @@ module.exports = {
             { title: "Keep it safe and true", bullets: ["No SSN, birth date or photo", "Ask your counselor how to list work inside", "Check every word"] }
           ],
           tryIt: "Find one real job post. Use AI to find its keywords and write five bullet points from your true examples. Put them into a one-page résumé template.",
-          youCanNow: "build a one-page résumé tailored to a real job post with AI help."
+          youCanNow: "build a one-page résumé tailored to a real job post with AI help.",
+          quickCheck: [
+            { objective: "O2", q: "What should you paste into AI to tailor your résumé?", options: ["The job post", "Your Social Security number", "Your case number", "Your bank details"], answer: 0, why: "Paste the job post, not your private details, so AI can find the keywords." },
+            { objective: "O2", q: "Your résumé is a page and a half for an entry-level job. What do you do?", options: ["Make the font tiny", "Add more pages", "Cut it to the strongest bullets that match the job, on one page", "Add a photo"], answer: 2, why: "Most entry-level résumés should fit on one page, focused on what the job wants." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Writing a short cover letter",
           minutes: 5,
           goal: "Write a cover letter under 200 words that sounds like you.",
@@ -73,17 +107,21 @@ module.exports = {
             { title: "Make it yours", bullets: ["Change phrases you would never say", "Add one true detail", "Read it out loud"] }
           ],
           tryIt: "Write a cover letter for your job post with AI, keep it under 200 words, and edit it until it sounds like you when you read it out loud.",
-          youCanNow: "write a short, personal cover letter with AI help."
+          youCanNow: "write a short, personal cover letter with AI help.",
+          quickCheck: [
+            { objective: "O3", q: "What goes in the second paragraph of the cover letter?", options: ["Your date of birth", "Your salary history", "A thank-you only", "Two skills that match the job, with a quick example"], answer: 3, why: "Paragraph 2 gives two matching skills with examples." },
+            { objective: "O3", q: "AI's cover letter says \"I am exceedingly enthusiastic to leverage my synergies.\" What do you do?", options: ["Keep it; it sounds smart", "Change it to words you would really say", "Make it longer", "Send it without reading"], answer: 1, why: "Change any phrase you would never say so the letter sounds like you." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Building your job materials",
         questions: [
-          { q: "You trained new workers in a prison kitchen. Which skill does that show?", options: ["Forklift driving", "Accounting", "Training others", "None"], answer: 2, why: "Training new workers is a transferable skill." },
-          { q: "AI adds \"fluent in Spanish\" to your skills, but you are not. What do you do?", options: ["Remove it", "Keep it", "Learn Spanish by the interview", "Add more languages"], answer: 0, why: "Everything on a résumé must be true." },
-          { q: "Which should NOT go on a U.S. résumé?", options: ["Your skills", "Your work experience", "Your phone number", "Your Social Security number"], answer: 3, why: "Private numbers stay off résumés." },
-          { q: "What does tailoring a résumé mean?", options: ["Sewing clothes", "Changing it to fit a specific job post", "Making it three pages", "Using the same résumé for every job"], answer: 1, why: "Tailored résumés match the job's keywords." },
-          { q: "How long should the cover letter in this course be?", options: ["Five pages", "Under 200 words", "One word", "Over 1,000 words"], answer: 1, why: "Short letters get read." }
+          { objective: "O1", q: "You trained new workers in a prison kitchen. Which skill does that show?", options: ["Forklift driving", "Accounting", "Training others", "None"], answer: 2, why: "Training new workers is a transferable skill." },
+          { objective: "O1", q: "AI adds \"fluent in Spanish\" to your skills, but you are not. What do you do?", options: ["Remove it", "Keep it", "Learn Spanish by the interview", "Add more languages"], answer: 0, why: "Everything on a résumé must be true." },
+          { objective: "O2", q: "Which should NOT go on a U.S. résumé?", options: ["Your skills", "Your work experience", "Your phone number", "Your Social Security number"], answer: 3, why: "Private numbers stay off résumés." },
+          { objective: "O2", q: "What does tailoring a résumé mean?", options: ["Sewing clothes", "Changing it to fit a specific job post", "Making it three pages", "Using the same résumé for every job"], answer: 1, why: "Tailored résumés match the job's keywords." },
+          { objective: "O3", q: "How long should the cover letter in this course be?", options: ["Five pages", "Under 200 words", "One word", "Over 1,000 words"], answer: 1, why: "Short letters get read." }
         ]
       }
     },
@@ -91,6 +129,7 @@ module.exports = {
       name: "Chapter 2: Interviews and the job search",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Practicing interviews with AI",
           minutes: 6,
           goal: "Use AI as a practice interviewer and improve your answers.",
@@ -107,9 +146,14 @@ module.exports = {
             { title: "Five questions to prepare", bullets: ["Tell me about yourself; why this job", "A strength; a problem you solved", "Your questions for them"] }
           ],
           tryIt: "Run a mock interview with AI for your job post. Answer five questions out loud using STAR where it fits, and write down the feedback.",
-          youCanNow: "practice interviews with AI and answer with the STAR method."
+          youCanNow: "practice interviews with AI and answer with the STAR method.",
+          quickCheck: [
+            { objective: "O4", q: "In the STAR method, what does \"Result\" mean?", options: ["Your job title", "The problem you faced", "What happened because of what you did", "The question you were asked"], answer: 2, why: "Result is the outcome of your action, like finishing on time every day." },
+            { objective: "O4", q: "You can only answer \"Tell me about yourself\" by reading your notes. What do you do?", options: ["Practice it out loud with AI until you can answer without notes", "Skip that question in the interview", "Memorize a long speech AI wrote", "Bring the notes and read them"], answer: 0, why: "Practice out loud until you can answer without reading." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Talking about gaps or a record with confidence",
           minutes: 5,
           goal: "Prepare a short, honest, forward-looking answer about a gap or background.",
@@ -127,9 +171,14 @@ module.exports = {
           ],
           sources: [{ name: "The Federal Bonding Program", url: "https://bonds4jobs.com/" }, { name: "U.S. Department of Labor: Work Opportunity Tax Credit", url: "https://www.dol.gov/agencies/eta/wotc" }, { name: "IRS: Work Opportunity Tax Credit", url: "https://www.irs.gov/businesses/small-businesses-self-employed/work-opportunity-tax-credit" }],
           tryIt: "Write a three-sentence answer about a gap or background (yours, or a practice one). Use AI to tighten it, then say it out loud three times.",
-          youCanNow: "answer questions about a gap or record honestly and confidently, and name supports that can help."
+          youCanNow: "answer questions about a gap or record honestly and confidently, and name supports that can help.",
+          quickCheck: [
+            { objective: "O5", q: "What do employers mostly want to know when they ask about a gap?", options: ["Every detail of your case", "Your case number", "That you are ready to work now", "Who your lawyer was"], answer: 2, why: "Employers mostly want to know you are ready now, so keep it brief and forward-looking." },
+            { objective: "O5", q: "An interviewer asks about your record. Which answer is best?", options: ["\"That is none of your business.\"", "A long story with every detail", "\"I have never been in trouble.\"", "\"I made a mistake and served time. I earned my food handler certificate there, and I'm ready to work.\""], answer: 3, why: "Honest, brief and focused on what you learned and why you are ready." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Searching and applying safely",
           minutes: 5,
           goal: "Find real job openings, track applications and avoid job scams.",
@@ -147,17 +196,21 @@ module.exports = {
           ],
           sources: [{ name: "FTC: Job scams", url: "https://consumer.ftc.gov/articles/job-scams" }, { name: "CareerOneStop (U.S. Department of Labor): find an American Job Center", url: "https://www.careeronestop.org/LocalHelp/AmericanJobCenters/find-american-job-centers.aspx" }],
           tryIt: "Final task: finalize your tailored résumé, cover letter and five practiced interview answers for your real job post. Check the post against the scam signs, add it to a tracking sheet, and apply or have it ready to send.",
-          youCanNow: "build a job kit with AI, interview with confidence and apply safely."
+          youCanNow: "build a job kit with AI, interview with confidence and apply safely.",
+          quickCheck: [
+            { objective: "O6", q: "Where can you get free help with a job search and training?", options: ["An American Job Center", "A website that charges a fee to apply", "A text from an unknown number", "A job that asks you to reship packages"], answer: 0, why: "American Job Centers offer free help with job search and training." },
+            { objective: "O6", q: "A \"job\" offers high pay for little work and asks for your bank account before any interview. What do you do?", options: ["Send it to start faster", "Send only half the account number", "Do not share it; check for scam signs and report it", "Pay a small fee first"], answer: 2, why: "Never give a bank account before a real offer; this has scam warning signs." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Interviews and the job search",
         questions: [
-          { q: "What does STAR stand for?", options: ["Start, Talk, Ask, Rest", "Skills, Training, Awards, References", "Smile, Thank, Answer, Return", "Situation, Task, Action, Result"], answer: 3, why: "STAR structures \"tell me about a time\" answers." },
-          { q: "A good answer about a gap or record is:", options: ["Honest, brief and focused on why you are ready now", "A long story with every detail", "A lie", "Refusing to answer rudely"], answer: 0, why: "Short, honest and forward-looking answers work best." },
-          { q: "What does the Federal Bonding Program offer?", options: ["Free cars", "Cash to job seekers", "Free fidelity bonds to employers who hire at-risk job seekers", "Prison release"], answer: 2, why: "It gives employers free bonds covering the first six months." },
-          { q: "A job offer asks you to pay $150 for training before you start. According to the FTC, this is:", options: ["Normal for every job", "A tax", "A bonus", "A warning sign of a scam"], answer: 3, why: "Honest employers do not charge you to get a job." },
-          { q: "When should you follow up after applying?", options: ["Every hour", "Never", "About a week later with a short, polite email", "After a year"], answer: 2, why: "A polite follow-up shows interest." }
+          { objective: "O4", q: "What does STAR stand for?", options: ["Start, Talk, Ask, Rest", "Skills, Training, Awards, References", "Smile, Thank, Answer, Return", "Situation, Task, Action, Result"], answer: 3, why: "STAR structures \"tell me about a time\" answers." },
+          { objective: "O5", q: "A good answer about a gap or record is:", options: ["Honest, brief and focused on why you are ready now", "A long story with every detail", "A lie", "Refusing to answer rudely"], answer: 0, why: "Short, honest and forward-looking answers work best." },
+          { objective: "O5", q: "What does the Federal Bonding Program offer?", options: ["Free cars", "Cash to job seekers", "Free fidelity bonds to employers who hire at-risk job seekers", "Prison release"], answer: 2, why: "It gives employers free bonds covering the first six months." },
+          { objective: "O6", q: "A job offer asks you to pay $150 for training before you start. According to the FTC, this is:", options: ["Normal for every job", "A tax", "A bonus", "A warning sign of a scam"], answer: 3, why: "Honest employers do not charge you to get a job." },
+          { objective: "O6", q: "When should you follow up after applying?", options: ["Every hour", "Never", "About a week later with a short, polite email", "After a year"], answer: 2, why: "A polite follow-up shows interest." }
         ]
       }
     }
@@ -165,26 +218,114 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI for Job Readiness and Career Development",
     questions: [
-      { q: "A transferable skill is:", options: ["A skill you can sell", "A skill from one setting useful in another", "A skill only for computers", "A fake skill"], answer: 1, why: "Skills carry over between settings." },
-      { q: "Which is a soft skill?", options: ["Reliability", "Forklift driving", "Welding", "Typing speed"], answer: 0, why: "Soft skills are people skills." },
-      { q: "Which experience counts toward job skills?", options: ["Only paid office jobs", "Only college", "Caring for a family member", "Nothing outside a job"], answer: 2, why: "All real experience builds skills." },
-      { q: "Why must everything on your résumé be true?", options: ["You may be asked about it in the interview", "AI checks it", "It does not need to be", "So it is longer"], answer: 0, why: "Interviewers ask about what you list." },
-      { q: "A keyword is:", options: ["A password", "A key to the office", "Your name", "An important word from the job post"], answer: 3, why: "Matching keywords helps your résumé get noticed." },
-      { q: "Which bullet point is strongest?", options: ["\"Did kitchen stuff\"", "\"Prepared meals for 500 people daily while meeting food safety standards\"", "\"Worked\"", "\"Food\""], answer: 1, why: "Action word, numbers and a result." },
-      { q: "When asking AI to tailor your résumé, paste:", options: ["Your Social Security number", "The job post, not your private details", "Your case number", "Your bank details"], answer: 1, why: "The job post is what AI needs." },
-      { q: "How long should a résumé usually be for most entry-level jobs?", options: ["Ten pages", "Half a line", "As long as possible", "One page"], answer: 3, why: "One page is easy to read." },
-      { q: "A cover letter explains:", options: ["Why you want the job and why you fit", "Your full life story", "Your salary history only", "Your passwords"], answer: 0, why: "It connects you to the job." },
-      { q: "After AI drafts your cover letter, you should:", options: ["Send it unread", "Add skills you do not have", "Edit it and read it out loud until it sounds like you", "Make it 1,000 words"], answer: 2, why: "Your letter should sound like you." },
-      { q: "A mock interview is:", options: ["A fake job", "A rude interview", "An interview you skip", "A practice interview"], answer: 3, why: "Practice builds confidence." },
-      { q: "In STAR, \"Action\" means:", options: ["The weather", "The company's name", "What you did", "Your pay"], answer: 2, why: "Action is your part of the story." },
-      { q: "\"Do you have any questions for us?\" Best response:", options: ["\"No.\"", "Ask a thoughtful question about the job or team", "\"How soon can I take vacation?\" only", "Leave"], answer: 1, why: "Good questions show interest." },
-      { q: "When talking about a record, you should:", options: ["Share only facts you are comfortable with, briefly", "Give your case number", "Lie about it", "Talk about it for 20 minutes"], answer: 0, why: "Brief, honest and forward-looking is best." },
-      { q: "Fair chance or \"ban the box\" rules:", options: ["Are the same everywhere", "Do not exist", "Vary by state and city; check your state labor department", "Ban all background checks"], answer: 2, why: "These rules differ by place." },
-      { q: "Where can you check the current status of the Work Opportunity Tax Credit?", options: ["The IRS WOTC page", "A social media post", "An AI guess", "A job ad"], answer: 0, why: "Tax credit rules and dates change; the IRS is the source." },
-      { q: "American Job Centers offer:", options: ["Paid résumé writing only", "Loans", "Housing", "Free help with job search and training"], answer: 3, why: "They are free workforce help centers." },
-      { q: "A job tracking sheet includes:", options: ["Your passwords", "Company, job, date applied, contact and follow-up date", "Your bank account", "Nothing"], answer: 1, why: "Tracking keeps you organized." },
-      { q: "A \"job\" asks you to deposit a check and send part of it back. This is:", options: ["Normal payroll", "A fake check scam", "A bonus", "A tax refund"], answer: 1, why: "The FTC names this as a common scam." },
-      { q: "When is it okay to give your bank account number for payroll?", options: ["In your first message to any recruiter", "On a job board comment", "To anyone who asks", "After a real offer from a real, verified employer"], answer: 3, why: "Only share for payroll after a real, verified offer." }
+      { objective: "O1", q: "A transferable skill is:", options: ["A skill you can sell", "A skill from one setting useful in another", "A skill only for computers", "A fake skill"], answer: 1, why: "Skills carry over between settings." },
+      { objective: "O1", q: "Which is a soft skill?", options: ["Reliability", "Forklift driving", "Welding", "Typing speed"], answer: 0, why: "Soft skills are people skills." },
+      { objective: "O1", q: "Which experience counts toward job skills?", options: ["Only paid office jobs", "Only college", "Caring for a family member", "Nothing outside a job"], answer: 2, why: "All real experience builds skills." },
+      { objective: "O1", q: "Why must everything on your résumé be true?", options: ["You may be asked about it in the interview", "AI checks it", "It does not need to be", "So it is longer"], answer: 0, why: "Interviewers ask about what you list." },
+      { objective: "O2", q: "A keyword is:", options: ["A password", "A key to the office", "Your name", "An important word from the job post"], answer: 3, why: "Matching keywords helps your résumé get noticed." },
+      { objective: "O2", q: "Which bullet point is strongest?", options: ["\"Did kitchen stuff\"", "\"Prepared meals for 500 people daily while meeting food safety standards\"", "\"Worked\"", "\"Food\""], answer: 1, why: "Action word, numbers and a result." },
+      { objective: "O2", q: "When asking AI to tailor your résumé, paste:", options: ["Your Social Security number", "The job post, not your private details", "Your case number", "Your bank details"], answer: 1, why: "The job post is what AI needs." },
+      { objective: "O2", q: "How long should a résumé usually be for most entry-level jobs?", options: ["Ten pages", "Half a line", "As long as possible", "One page"], answer: 3, why: "One page is easy to read." },
+      { objective: "O3", q: "A cover letter explains:", options: ["Why you want the job and why you fit", "Your full life story", "Your salary history only", "Your passwords"], answer: 0, why: "It connects you to the job." },
+      { objective: "O3", q: "After AI drafts your cover letter, you should:", options: ["Send it unread", "Add skills you do not have", "Edit it and read it out loud until it sounds like you", "Make it 1,000 words"], answer: 2, why: "Your letter should sound like you." },
+      { objective: "O4", q: "A mock interview is:", options: ["A fake job", "A rude interview", "An interview you skip", "A practice interview"], answer: 3, why: "Practice builds confidence." },
+      { objective: "O4", q: "In STAR, \"Action\" means:", options: ["The weather", "The company's name", "What you did", "Your pay"], answer: 2, why: "Action is your part of the story." },
+      { objective: "O4", q: "\"Do you have any questions for us?\" Best response:", options: ["\"No.\"", "Ask a thoughtful question about the job or team", "\"How soon can I take vacation?\" only", "Leave"], answer: 1, why: "Good questions show interest." },
+      { objective: "O5", q: "When talking about a record, you should:", options: ["Share only facts you are comfortable with, briefly", "Give your case number", "Lie about it", "Talk about it for 20 minutes"], answer: 0, why: "Brief, honest and forward-looking is best." },
+      { objective: "O5", q: "Fair chance or \"ban the box\" rules:", options: ["Are the same everywhere", "Do not exist", "Vary by state and city; check your state labor department", "Ban all background checks"], answer: 2, why: "These rules differ by place." },
+      { objective: "O5", q: "Where can you check the current status of the Work Opportunity Tax Credit?", options: ["The IRS WOTC page", "A social media post", "An AI guess", "A job ad"], answer: 0, why: "Tax credit rules and dates change; the IRS is the source." },
+      { objective: "O6", q: "American Job Centers offer:", options: ["Paid résumé writing only", "Loans", "Housing", "Free help with job search and training"], answer: 3, why: "They are free workforce help centers." },
+      { objective: "O6", q: "A job tracking sheet includes:", options: ["Your passwords", "Company, job, date applied, contact and follow-up date", "Your bank account", "Nothing"], answer: 1, why: "Tracking keeps you organized." },
+      { objective: "O6", q: "A \"job\" asks you to deposit a check and send part of it back. This is:", options: ["Normal payroll", "A fake check scam", "A bonus", "A tax refund"], answer: 1, why: "The FTC names this as a common scam." },
+      { objective: "O6", q: "When is it okay to give your bank account number for payroll?", options: ["In your first message to any recruiter", "On a job board comment", "To anyone who asks", "After a real offer from a real, verified employer"], answer: 3, why: "Only share for payroll after a real, verified offer." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      3,
+      5,
+      7,
+      8,
+      11,
+      13,
+      16,
+      18,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Tailored résumé",
+        objective: "O2",
+        notYet: "Longer than one page, not matched to the job, or includes private numbers.",
+        meets: "One page with the job's keywords, action-word bullets with numbers, and no private numbers.",
+        exceeds: "Every bullet links to a skill the job post asks for."
+      },
+      {
+        name: "True skills",
+        objective: "O1",
+        notYet: "A skill or claim on the résumé is not true.",
+        meets: "Every skill is true and backed by a real example.",
+        exceeds: "Skills from prison jobs, caregiving or informal work are described in employer words."
+      },
+      {
+        name: "Cover letter",
+        objective: "O3",
+        notYet: "Over 200 words, or reads like a generic AI letter.",
+        meets: "Three short paragraphs under 200 words that sound like the learner.",
+        exceeds: "Includes one true detail about why they want to work there."
+      },
+      {
+        name: "Interview answers",
+        objective: "O4",
+        notYet: "Fewer than five answers, or answers are read from notes.",
+        meets: "Five answers practiced out loud, with STAR for \"tell me about a time\".",
+        exceeds: "Uses AI feedback to improve at least two answers."
+      },
+      {
+        name: "Gap or background answer",
+        objective: "O5",
+        notYet: "The answer is long, defensive or untrue (if it applies).",
+        meets: "Short, honest and ends with why the learner is ready now.",
+        exceeds: "Said calmly out loud without notes."
+      },
+      {
+        name: "Safe application",
+        objective: "O6",
+        notYet: "The job post was not checked for scam signs.",
+        meets: "The post was checked against the scam signs and the application is tracked.",
+        exceeds: "A follow-up date is set for about a week later."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who apply for at least three jobs within 30 days (follow-up survey)",
+      "Learners who get an interview or a job offer within 90 days",
+      "Learners who report spotting and avoiding a job scam"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A smartphone with internet, or a library, job center or program computer",
+      "A free AI assistant (ChatGPT, Microsoft Copilot or Google Gemini) and a free résumé template in Google Docs or Word",
+      "One real job post the learner could apply for",
+      "Paper and pen for the skills list and interview notes",
+      "About 60 minutes in total, in short sessions, plus practice time"
+    ],
+    facilitatorNotes: [
+      "Take the pre-test together, then do one chapter per session with the \"Try it now\" tasks done live.",
+      "Partner with a reentry counselor or American Job Center so learners can get help listing work done while incarcerated.",
+      "Run mock interviews in pairs; let learners choose whether to practice a background question in front of others.",
+      "Never ask learners to type Social Security, case or inmate numbers into AI tools; use placeholders.",
+      "Remind learners on parole or probation to follow any conditions about internet use, and score the final task with the rubric, one Not yet row at a time."
     ]
   }
 };

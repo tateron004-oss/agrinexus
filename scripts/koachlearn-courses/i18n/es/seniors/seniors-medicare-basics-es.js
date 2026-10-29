@@ -16,11 +16,34 @@ module.exports = {
     "Cada lección dura unos cinco minutos y termina con una tarea de \"Pruébalo ahora\". Hay una comprobación de conocimientos después de cada capítulo y un examen de 20 preguntas al final. Las reglas, fechas y costos de Medicare cambian. Confírmalos siempre en medicare.gov, llamando al 1-800-MEDICARE o con tu consejero local de SHIP, y pregunta a tu médico o farmacéutico sobre tu propia atención."
   ],
   finalTask: "Haz un plan de Medicare de una página: tu período de inscripción (los meses de tu Initial Enrollment Period, o las fechas de Open Enrollment de este año si ya tienes Medicare), qué partes tienes o necesitas, una lista de tus médicos, medicinas y farmacia, tres preguntas que quieres que te respondan y la ayuda gratis que vas a usar (tu SHIP local, medicare.gov y 1-800-MEDICARE). Luego comunícate con tu SHIP o usa la herramienta para comparar planes de medicare.gov.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Personas en Estados Unidos que están por cumplir 65 años o que ya tienen Medicare, y los familiares que las ayudan. Muchas se confunden con las partes, las fechas límite y la avalancha de llamadas de ventas y anuncios de cada otoño.",
+    startingPoint: "Saben que Medicare existe y quizás ya tienen una tarjeta. La mayoría no puede explicar las Partes A a D, no conoce su propio período de inscripción y no ha usado la herramienta de medicare.gov para comparar planes ni ha oído hablar de SHIP.",
+    gap: "No inscribirse a tiempo puede significar una multa por inscripción tardía para toda la vida, y el plan equivocado puede dejar fuera a los médicos o las medicinas de una persona. Conocer las partes, sus propias fechas, cómo comparar planes y dónde conseguir ayuda gratis e imparcial protege su salud y su dinero, y la mantiene lejos de las estafas de Medicare.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas, oraciones cortas y pasos simples y grandes",
+      "Dispositivos: un teléfono para llamar, y una computadora o tableta para medicare.gov si hay",
+      "Tiempo: unos 5 minutos por lección, sin prisa",
+      "Los costos y algunas reglas cambian cada año; cada persona revisa los montos actuales en medicare.gov, ssa.gov o con SHIP",
+      "El curso no recomienda ningún plan; los números de Medicare nunca se escriben en la IA ni se comparten con quien llama"
+    ],
+    prerequisites: "Ninguno."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con las cuatro partes de Medicare", action: "explicar qué cubren las Partes A, B, C y D y los dos caminos principales para tener cobertura", standard: "acertando al menos 4 de 5 preguntas" },
+    { id: "O2", condition: "Cuando alguien te pide tu número de Medicare o un estado de cuenta muestra atención que nunca recibiste", action: "reconocer una estafa de Medicare y denunciarla al 1-800-MEDICARE", standard: "compartiendo tu número solo con tus médicos, tu farmacia y tu plan" },
+    { id: "O3", condition: "Con el mes en que cumples 65 años y tu cobertura del trabajo", action: "calcular tu Initial Enrollment Period y si podría aplicarte un Special Enrollment Period", standard: "con el mes de inicio y de fin correctos, confirmados en ssa.gov, medicare.gov o con SHIP" },
+    { id: "O4", condition: "Con tus médicos, tus medicinas y tu farmacia", action: "comparar planes en medicare.gov o con SHIP durante Open Enrollment", standard: "mirando el costo total del año y revisando que tus médicos estén en la red" },
+    { id: "O5", condition: "Cuando tienes preguntas sobre Medicare", action: "comunicarte con tu SHIP local o con el 1-800-MEDICARE con tus preguntas y tus listas preparadas", standard: "anotando la fecha, el nombre de la persona y la respuesta" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Las partes de Medicare",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Para quién es Medicare, y las Partes A y B",
           minutes: 5,
           goal: "Decir quién puede tener Medicare y qué cubren las Partes A y B.",
@@ -39,9 +62,14 @@ module.exports = {
           ],
           sources: [{ name: "CMS: Medicare (Partes A, B y D, quién puede tenerlo)", url: "https://www.cms.gov/about-cms/what-we-do/medicare" }],
           tryIt: "Anota dos tipos de atención que tú o un familiar usaron el último año, como una estancia en el hospital, un chequeo o un análisis de sangre. Al lado de cada uno, escribe si corresponde a la Parte A o a la Parte B.",
-          youCanNow: "decir para quién es Medicare y clasificar la atención de todos los días en Parte A o Parte B."
+          youCanNow: "decir para quién es Medicare y clasificar la atención de todos los días en Parte A o Parte B.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué es Original Medicare?", options: ["La Parte A y la Parte B juntas", "Solo la Parte D", "Un plan Medicare Advantage", "Una póliza Medigap"], answer: 0, why: "La Parte A (hospital) y la Parte B (médica) juntas se llaman Original Medicare." },
+            { objective: "O1", q: "A tu vecino lo internan en el hospital por tres días. ¿Qué parte ayuda sobre todo a cubrir la estadía en el hospital?", options: ["La Parte D", "La Parte B", "La Parte A", "Ninguna"], answer: 2, why: "La Parte A es el seguro de hospital para la atención cuando te internan." }
+          ]
         },
         {
+          objectives: ["O1","O4"],
           title: "Partes C y D: Medicare Advantage y planes de medicamentos",
           minutes: 5,
           goal: "Explicar la diferencia entre Original Medicare y un plan Medicare Advantage, y qué cubre la Parte D.",
@@ -60,9 +88,14 @@ module.exports = {
           ],
           sources: [{ name: "CMS: Planes Medicare Advantage y de la Parte D", url: "https://www.cms.gov/medicare/enrollment-renewal/health-plans" }],
           tryIt: "Haz una lista de todos los médicos que ves y todas las medicinas que tomas, con la dosis, y la farmacia que usas. Si quieres, pide ayuda a un familiar. Guarda esta lista: es lo que necesitas para comparar planes.",
-          youCanNow: "explicar las Partes C y D, describir los dos caminos principales de Medicare y hacer la lista que necesitas para comparar planes."
+          youCanNow: "explicar las Partes C y D, describir los dos caminos principales de Medicare y hacer la lista que necesitas para comparar planes.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué es un plan de la Parte D?", options: ["Un seguro de hospital", "Cobertura de medicamentos con receta de un plan privado aprobado por Medicare", "Un plan dental", "Una pensión del gobierno"], answer: 1, why: "La Parte D es la cobertura de medicamentos con receta por medio de planes privados aprobados por Medicare." },
+            { objective: "O1", q: "Una amiga dice que un camino, Original Medicare o Medicare Advantage, es el mejor para todos. ¿Qué le dices?", options: ["Le das la razón y eliges ese", "Que siempre hay que elegir la prima más barata", "Que hay que elegir lo que sugiera quien llama para vender", "Que depende de tus médicos, tus medicinas, dónde vives y tu presupuesto"], answer: 3, why: "Ningún camino es el mejor para todos; un consejero de SHIP gratis te ayuda a comparar." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Proteger tu tarjeta y tu número de Medicare",
           minutes: 4,
           goal: "Reconocer una estafa de Medicare y saber a quién avisar.",
@@ -81,17 +114,21 @@ module.exports = {
           ],
           sources: [{ name: "Medicare.gov: Reportar fraude (confirma aquí los pasos actuales)", url: "https://www.medicare.gov/fraud" }],
           tryIt: "Busca tu Medicare Summary Notice o Explanation of Benefits más reciente (o pide a un familiar que te ayude a encontrarlo). Revisa tres líneas: ¿cada una es atención que de verdad recibiste?",
-          youCanNow: "mantener seguro tu número de Medicare, revisar tus estados de cuenta para encontrar problemas y saber dónde reportar una estafa."
+          youCanNow: "mantener seguro tu número de Medicare, revisar tus estados de cuenta para encontrar problemas y saber dónde reportar una estafa.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué es un Medicare Summary Notice?", options: ["Una factura que debes pagar de inmediato", "Un anuncio de un plan nuevo", "Un estado de cuenta de Original Medicare con la atención que se le cobró a Medicare", "Una tarjeta de Medicare nueva"], answer: 2, why: "Revisa tu Medicare Summary Notice o tu Explanation of Benefits para ver si hay atención que nunca recibiste." },
+            { objective: "O2", q: "Un mensaje de texto dice que tus beneficios de Medicare se van a cortar si no respondes con tu número de Medicare. ¿Qué haces?", options: ["No responder, y denunciarlo al 1-800-MEDICARE", "Responder rápido para no perder tus beneficios", "Enviar la mitad del número", "Reenviárselo a tus amigos"], answer: 0, why: "Medicare no te va a contactar de la nada para pedirte tu número; denúncialo." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Las partes de Medicare",
         questions: [
-          { q: "¿Qué parte de Medicare es el seguro de hospital?", options: ["Parte D", "Parte A", "Parte B", "Medigap"], answer: 1, why: "La Parte A ayuda a cubrir estancias en el hospital, cuidados paliativos y algunos cuidados de salud en el hogar." },
-          { q: "Tu abuela tiene un chequeo con el médico. ¿Qué parte normalmente ayuda a pagarlo?", options: ["Parte A", "Parte D", "Parte B", "Ninguna"], answer: 2, why: "La Parte B cubre visitas al médico y atención ambulatoria." },
-          { q: "¿Qué es Medicare Advantage?", options: ["Un plan privado aprobado por Medicare que incluye las Partes A y B", "Un teléfono gratis", "Un pago del Seguro Social", "Un tipo de hospital"], answer: 0, why: "Los planes de la Parte C son planes privados que juntan A, B y normalmente cobertura de medicamentos." },
-          { q: "¿Dónde debes buscar la prima de la Parte B de este año?", options: ["En un mensaje de texto de un desconocido", "En el periódico del año pasado", "En lo que adivine un vecino", "En medicare.gov o con tu consejero de SHIP"], answer: 3, why: "Las primas cambian cada año; consulta la fuente oficial." },
-          { q: "Alguien llama diciendo que es de Medicare y que necesita tu número de Medicare para mandarte un aparato ortopédico gratis. ¿Qué haces?", options: ["Le das el número", "Cuelgas y lo reportas al 1-800-MEDICARE", "Le das tu número de banco en su lugar", "Le devuelves la llamada al número que te dio"], answer: 1, why: "Medicare no llama de repente para pedir tu número; es una estafa común." }
+          { objective: "O1", q: "¿Qué parte de Medicare es el seguro de hospital?", options: ["Parte D", "Parte A", "Parte B", "Medigap"], answer: 1, why: "La Parte A ayuda a cubrir estancias en el hospital, cuidados paliativos y algunos cuidados de salud en el hogar." },
+          { objective: "O1", q: "Tu abuela tiene un chequeo con el médico. ¿Qué parte normalmente ayuda a pagarlo?", options: ["Parte A", "Parte D", "Parte B", "Ninguna"], answer: 2, why: "La Parte B cubre visitas al médico y atención ambulatoria." },
+          { objective: "O1", q: "¿Qué es Medicare Advantage?", options: ["Un plan privado aprobado por Medicare que incluye las Partes A y B", "Un teléfono gratis", "Un pago del Seguro Social", "Un tipo de hospital"], answer: 0, why: "Los planes de la Parte C son planes privados que juntan A, B y normalmente cobertura de medicamentos." },
+          { objective: "O1", q: "¿Dónde debes buscar la prima de la Parte B de este año?", options: ["En un mensaje de texto de un desconocido", "En el periódico del año pasado", "En lo que adivine un vecino", "En medicare.gov o con tu consejero de SHIP"], answer: 3, why: "Las primas cambian cada año; consulta la fuente oficial." },
+          { objective: "O2", q: "Alguien llama diciendo que es de Medicare y que necesita tu número de Medicare para mandarte un aparato ortopédico gratis. ¿Qué haces?", options: ["Le das el número", "Cuelgas y lo reportas al 1-800-MEDICARE", "Le das tu número de banco en su lugar", "Le devuelves la llamada al número que te dio"], answer: 1, why: "Medicare no llama de repente para pedir tu número; es una estafa común." }
         ]
       }
     },
@@ -99,6 +136,7 @@ module.exports = {
       name: "Capítulo 2: Inscribirte a tiempo y recibir ayuda",
       lessons: [
         {
+          objectives: ["O3"],
           title: "Encontrar tu período de inscripción",
           minutes: 6,
           goal: "Calcular tu propio Initial Enrollment Period y saber qué pasa si no te inscribes a tiempo.",
@@ -121,9 +159,14 @@ module.exports = {
             { name: "Seguro Social: Inscribirse en Medicare", url: "https://www.ssa.gov/medicare/sign-up" }
           ],
           tryIt: "Calcula el Initial Enrollment Period para ti o para un familiar: escribe el mes del cumpleaños y luego el primer y el último mes del período de 7 meses. Si esa persona ya tiene Medicare, escribe en su lugar las fechas del General Enrollment Period.",
-          youCanNow: "calcular un Initial Enrollment Period, saber cuándo puedes esperar y conocer el costo de inscribirte tarde."
+          youCanNow: "calcular un Initial Enrollment Period, saber cuándo puedes esperar y conocer el costo de inscribirte tarde.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué es el Initial Enrollment Period?", options: ["Tu plazo de 7 meses: los 3 meses antes del mes en que cumples 65, ese mes y los 3 meses después", "El Open Enrollment de otoño", "Cuando tú quieras", "Una semana después de tu cumpleaños"], answer: 0, why: "Dura 7 meses y tiene en el centro el mes en que cumples 65 años." },
+            { objective: "O3", q: "Cumples 65 en octubre y no tienes seguro del trabajo. ¿Qué meses son tu plazo?", options: ["Solo octubre", "De enero a marzo", "Del 15 de octubre al 7 de diciembre", "De julio a enero"], answer: 3, why: "Cuenta 3 meses hacia atrás (julio) y 3 meses hacia adelante (enero)." }
+          ]
         },
         {
+          objectives: ["O4"],
           title: "Revisar tu cobertura cada otoño",
           minutes: 5,
           goal: "Usar el período de Open Enrollment de otoño para ver si tu plan todavía te conviene.",
@@ -146,9 +189,14 @@ module.exports = {
             { name: "Medicare.gov: Buscar y comparar planes", url: "https://www.medicare.gov/plan-compare/" }
           ],
           tryIt: "Anota en tu calendario las fechas de Open Enrollment de este año. Luego busca el Annual Notice of Change de tu plan (o pide a un familiar que te ayude) y escribe una cosa que va a cambiar el año que viene. Si todavía no tienes Medicare, escribe las preguntas que harías sobre un plan.",
-          youCanNow: "usar el período de Open Enrollment de otoño para revisar tu plan y comparar opciones con tus propias medicinas y médicos."
+          youCanNow: "usar el período de Open Enrollment de otoño para revisar tu plan y comparar opciones con tus propias medicinas y médicos.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué es el Annual Notice of Change?", options: ["Una carta de tu plan con los cambios del año que viene", "Una multa de Medicare", "Una tarjeta nueva", "Un formulario de impuestos"], answer: 0, why: "Los planes lo envían antes de Open Enrollment para que revises los cambios en costos, medicamentos y médicos." },
+            { objective: "O4", q: "Dos planes de medicamentos se ven bien. Uno tiene una prima mensual más baja. ¿Qué comparas?", options: ["Solo la prima mensual", "El costo total del año con tus propias medicinas y tu farmacia", "Qué plan te llama más", "El logotipo"], answer: 1, why: "Mira el costo total del año, no solo la prima mensual." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Recibir ayuda gratis de SHIP y de Medicare",
           minutes: 5,
           goal: "Comunicarte con ayuda gratis e imparcial sobre Medicare y llegar preparado con tus preguntas.",
@@ -171,17 +219,21 @@ module.exports = {
             { name: "Medicare.gov: Hablar con alguien (confirma aquí el horario de atención)", url: "https://www.medicare.gov/talk-to-someone" }
           ],
           tryIt: "Tarea final: haz tu plan de Medicare de una página con tu período de inscripción, las partes que tienes o necesitas, tus médicos, medicinas y farmacia, tres preguntas y el número de teléfono de tu SHIP que encuentres en shiphelp.org. Luego llama a tu SHIP para pedir una cita de asesoría, o usa la herramienta para comparar planes de medicare.gov con tu lista de medicinas.",
-          youCanNow: "encontrar ayuda gratis sobre Medicare, comunicarte con ella y llegar preparado con tu propio plan y tus preguntas."
+          youCanNow: "encontrar ayuda gratis sobre Medicare, comunicarte con ella y llegar preparado con tu propio plan y tus preguntas.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué es SHIP?", options: ["Una compañía de seguros", "Un plan Medicare Advantage", "Un programa gratis e imparcial de asesoría sobre Medicare en cada estado", "Un centro de llamadas de ventas"], answer: 2, why: "SHIP da asesoría gratis y personal sobre Medicare y no vende seguros." },
+            { objective: "O5", q: "Estás por llamar a SHIP. ¿Qué tienes listo?", options: ["Nada; ya saben todo sobre ti", "Tu tarjeta del banco", "Tus preguntas, tu lista de médicos y medicinas, y las cartas de tu plan", "Tu número del Seguro Social para leerlo primero en voz alta"], answer: 2, why: "Prepara tus preguntas, tus listas y tus cartas, y toma notas durante la llamada." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Inscribirte a tiempo y recibir ayuda",
         questions: [
-          { q: "Cumples 65 años en junio. ¿Cuándo es tu Initial Enrollment Period?", options: ["Solo en junio", "De enero a marzo", "Del 15 de octubre al 7 de diciembre", "De marzo a septiembre"], answer: 3, why: "Empieza 3 meses antes del mes de tu cumpleaños y termina 3 meses después." },
-          { q: "¿Qué puede pasar si te inscribes tarde en la Parte B sin un Special Enrollment Period?", options: ["Puedes pagar una prima más alta mientras tengas la Parte B", "No pasa nada", "Te devuelven dinero", "Nunca podrás tener Medicare"], answer: 0, why: "CMS dice que la prima de la Parte B puede subir un 10% por cada 12 meses completos de retraso." },
-          { q: "¿Cuándo es el Open Enrollment de otoño de Medicare?", options: ["Del 1 de enero al 31 de marzo", "El mes de tu cumpleaños", "Del 15 de octubre al 7 de diciembre", "Cualquier día que quieras"], answer: 2, why: "Cada otoño, las personas con Medicare pueden cambiar de plan del 15 de octubre al 7 de diciembre." },
-          { q: "¿Cuál es la mejor forma de comparar planes de medicamentos?", options: ["Elegir solo la prima mensual más baja", "Escribir tus propias medicinas y tu farmacia y mirar el costo total del año", "Elegir el plan que recomienda alguien que te llama", "Elegir el plan con el anuncio más bonito"], answer: 1, why: "El costo total del año con tus propias medicinas muestra el precio real." },
-          { q: "¿Qué es cierto sobre SHIP?", options: ["Vende planes de seguro", "Cobra por cada llamada", "Da asesoría sobre Medicare gratis e imparcial", "Solo ayuda a personas menores de 65"], answer: 2, why: "La asesoría de SHIP es gratis, local e imparcial." }
+          { objective: "O3", q: "Cumples 65 años en junio. ¿Cuándo es tu Initial Enrollment Period?", options: ["Solo en junio", "De enero a marzo", "Del 15 de octubre al 7 de diciembre", "De marzo a septiembre"], answer: 3, why: "Empieza 3 meses antes del mes de tu cumpleaños y termina 3 meses después." },
+          { objective: "O3", q: "¿Qué puede pasar si te inscribes tarde en la Parte B sin un Special Enrollment Period?", options: ["Puedes pagar una prima más alta mientras tengas la Parte B", "No pasa nada", "Te devuelven dinero", "Nunca podrás tener Medicare"], answer: 0, why: "CMS dice que la prima de la Parte B puede subir un 10% por cada 12 meses completos de retraso." },
+          { objective: "O4", q: "¿Cuándo es el Open Enrollment de otoño de Medicare?", options: ["Del 1 de enero al 31 de marzo", "El mes de tu cumpleaños", "Del 15 de octubre al 7 de diciembre", "Cualquier día que quieras"], answer: 2, why: "Cada otoño, las personas con Medicare pueden cambiar de plan del 15 de octubre al 7 de diciembre." },
+          { objective: "O4", q: "¿Cuál es la mejor forma de comparar planes de medicamentos?", options: ["Elegir solo la prima mensual más baja", "Escribir tus propias medicinas y tu farmacia y mirar el costo total del año", "Elegir el plan que recomienda alguien que te llama", "Elegir el plan con el anuncio más bonito"], answer: 1, why: "El costo total del año con tus propias medicinas muestra el precio real." },
+          { objective: "O5", q: "¿Qué es cierto sobre SHIP?", options: ["Vende planes de seguro", "Cobra por cada llamada", "Da asesoría sobre Medicare gratis e imparcial", "Solo ayuda a personas menores de 65"], answer: 2, why: "La asesoría de SHIP es gratis, local e imparcial." }
         ]
       }
     }
@@ -189,26 +241,97 @@ module.exports = {
   quiz: {
     title: "Examen final: Conceptos básicos de Medicare",
     questions: [
-      { q: "¿Quién puede tener Medicare?", options: ["Solo personas menores de 30", "Personas de 65 años o más, y algunas personas más jóvenes con discapacidades o falla de los riñones", "Solo veteranos", "Solo personas que viven en el extranjero"], answer: 1, why: "Medicare cubre a personas de 65 o más, a algunas personas con discapacidades y a personas con End-Stage Renal Disease." },
-      { q: "La Parte B cubre principalmente:", options: ["Estancias en el hospital", "Solo medicamentos recetados", "Solo limpiezas dentales", "Visitas al médico y atención ambulatoria"], answer: 3, why: "La Parte B es el seguro médico para médicos y atención ambulatoria." },
-      { q: "Original Medicare es:", options: ["La Parte A y la Parte B", "Solo la Parte C", "Solo la Parte D", "Un plan privado"], answer: 0, why: "Original Medicare significa las Partes A y B juntas." },
-      { q: "La mayoría de las personas paga una prima mensual por:", options: ["Nada", "Solo la Parte A", "La Parte B", "Su tarjeta de Medicare"], answer: 2, why: "La mayoría no paga prima por la Parte A, pero sí paga una por la Parte B." },
-      { q: "La Parte D cubre:", options: ["Medicamentos recetados", "Estancias en el hospital", "Solo anteojos", "Vivienda"], answer: 0, why: "La Parte D es la cobertura de medicamentos recetados de Medicare." },
-      { q: "Un plan Medicare Advantage normalmente:", options: ["Cubre solo medicamentos", "Incluye las Partes A y B y muchas veces cobertura de medicamentos", "Lo administra tu banco", "Reemplaza al Seguro Social"], answer: 1, why: "Los planes de la Parte C juntan A, B y normalmente D." },
-      { q: "¿Qué es la red de un plan?", options: ["Su sitio web", "Su número de teléfono", "Los médicos, hospitales y farmacias con los que trabaja", "Su factura mensual"], answer: 2, why: "Muchos planes esperan que uses su red." },
-      { q: "¿Qué debes tener listo para comparar planes?", options: ["El PIN de tu banco", "Un anuncio del periódico", "Nada", "Una lista de tus médicos, medicinas y farmacia"], answer: 3, why: "Tus propios médicos y medicinas deciden qué plan te conviene." },
-      { q: "Alguien que llama te ofrece un kit de pruebas gratis si le das tu número de Medicare. Esto es:", options: ["Un servicio normal de Medicare", "Probablemente una estafa", "Un resurtido de la farmacia", "Un consejero de SHIP"], answer: 1, why: "Medicare no llama de repente para pedir tu número; las ofertas gratis son un engaño común." },
-      { q: "Tu Medicare Summary Notice muestra una silla de ruedas que nunca recibiste. Debes:", options: ["Reportarlo al 1-800-MEDICARE", "No hacerle caso", "Pagarla", "Tirar el aviso"], answer: 0, why: "La atención que nunca recibiste puede ser fraude; repórtala." },
-      { q: "¿Cuánto dura el Initial Enrollment Period?", options: ["1 semana", "1 mes", "1 año", "7 meses"], answer: 3, why: "3 meses antes, el mes del cumpleaños y 3 meses después." },
-      { q: "Recibes beneficios del Seguro Social antes de los 65. Normalmente:", options: ["Nunca puedes tener Medicare", "Te cobran una multa", "Te inscriben en las Partes A y B automáticamente", "Te pasan solo a la Parte D"], answer: 2, why: "A quienes ya reciben Seguro Social normalmente los inscriben automáticamente; confírmalo en ssa.gov." },
-      { q: "Tienes 66 años y todavía tienes seguro médico de tu trabajo actual. ¿Qué debes hacer antes de decidir esperar para la Parte B?", options: ["Nada; esperar siempre está bien", "Cancelar el seguro de tu trabajo", "Preguntar a la oficina de beneficios de tu empleador y a SHIP", "Preguntar a un vendedor que te llama"], answer: 2, why: "Puede aplicar un Special Enrollment Period, pero revisa primero tu situación." },
-      { q: "El General Enrollment Period va:", options: ["Del 1 de enero al 31 de marzo", "Del 15 de octubre al 7 de diciembre", "Solo el día de tu cumpleaños", "De junio a agosto"], answer: 0, why: "CMS fija el General Enrollment Period del 1 de enero al 31 de marzo de cada año." },
-      { q: "La multa por inscripción tardía de la Parte B puede subir la prima:", options: ["1% una sola vez", "50% durante un mes", "Nada", "10% por cada 12 meses completos en que pudiste tener la Parte B y no la tuviste"], answer: 3, why: "CMS dice que la multa es de hasta 10% por cada período completo de 12 meses, mientras tengas la Parte B." },
-      { q: "Durante el Open Enrollment de otoño puedes:", options: ["Cambiar tu número de Seguro Social", "Cambiar tu plan Medicare Advantage o de medicamentos para el año siguiente", "Recibir dinero en efectivo de Medicare", "Solo cancelar Medicare"], answer: 1, why: "Del 15 de octubre al 7 de diciembre puedes cambiar de plan para el 1 de enero." },
-      { q: "Cada otoño tu plan te manda una carta con los cambios del año siguiente. Es el:", options: ["Annual Notice of Change", "Tarjeta de cumpleaños", "Declaración de impuestos", "Reporte de crédito"], answer: 0, why: "Lee el Annual Notice of Change antes de Open Enrollment." },
-      { q: "¿Dónde encuentras tu SHIP local?", options: ["En un anuncio emergente", "En un enlace de un mensaje de texto", "En shiphelp.org", "Con cualquier agente de seguros"], answer: 2, why: "shiphelp.org tiene el SHIP de cada estado." },
-      { q: "Quieres pedirle a un asistente de IA que te explique una carta de Medicare. Primero debes:", options: ["Pegar tu número de Medicare", "Agregar tus datos bancarios", "Mandar una foto de tu tarjeta", "Quitar tu nombre, tu número de Medicare y otros datos privados"], answer: 3, why: "Nunca compartas números privados con herramientas de IA; después confirma con SHIP o en medicare.gov." },
-      { q: "Cuando llamas a SHIP o al 1-800-MEDICARE, un buen hábito es:", options: ["Colgar rápido", "Tomar notas: fecha, nombre y respuesta", "Leerle tu número a cualquiera que te haya llamado", "Olvidar tus preguntas"], answer: 1, why: "Las notas te ayudan a recordar y a dar seguimiento." }
+      { objective: "O1", q: "¿Quién puede tener Medicare?", options: ["Solo personas menores de 30", "Personas de 65 años o más, y algunas personas más jóvenes con discapacidades o falla de los riñones", "Solo veteranos", "Solo personas que viven en el extranjero"], answer: 1, why: "Medicare cubre a personas de 65 o más, a algunas personas con discapacidades y a personas con End-Stage Renal Disease." },
+      { objective: "O1", q: "La Parte B cubre principalmente:", options: ["Estancias en el hospital", "Solo medicamentos recetados", "Solo limpiezas dentales", "Visitas al médico y atención ambulatoria"], answer: 3, why: "La Parte B es el seguro médico para médicos y atención ambulatoria." },
+      { objective: "O1", q: "Original Medicare es:", options: ["La Parte A y la Parte B", "Solo la Parte C", "Solo la Parte D", "Un plan privado"], answer: 0, why: "Original Medicare significa las Partes A y B juntas." },
+      { objective: "O1", q: "La mayoría de las personas paga una prima mensual por:", options: ["Nada", "Solo la Parte A", "La Parte B", "Su tarjeta de Medicare"], answer: 2, why: "La mayoría no paga prima por la Parte A, pero sí paga una por la Parte B." },
+      { objective: "O1", q: "La Parte D cubre:", options: ["Medicamentos recetados", "Estancias en el hospital", "Solo anteojos", "Vivienda"], answer: 0, why: "La Parte D es la cobertura de medicamentos recetados de Medicare." },
+      { objective: "O1", q: "Un plan Medicare Advantage normalmente:", options: ["Cubre solo medicamentos", "Incluye las Partes A y B y muchas veces cobertura de medicamentos", "Lo administra tu banco", "Reemplaza al Seguro Social"], answer: 1, why: "Los planes de la Parte C juntan A, B y normalmente D." },
+      { objective: "O4", q: "¿Qué es la red de un plan?", options: ["Su sitio web", "Su número de teléfono", "Los médicos, hospitales y farmacias con los que trabaja", "Su factura mensual"], answer: 2, why: "Muchos planes esperan que uses su red." },
+      { objective: "O4", q: "¿Qué debes tener listo para comparar planes?", options: ["El PIN de tu banco", "Un anuncio del periódico", "Nada", "Una lista de tus médicos, medicinas y farmacia"], answer: 3, why: "Tus propios médicos y medicinas deciden qué plan te conviene." },
+      { objective: "O2", q: "Alguien que llama te ofrece un kit de pruebas gratis si le das tu número de Medicare. Esto es:", options: ["Un servicio normal de Medicare", "Probablemente una estafa", "Un resurtido de la farmacia", "Un consejero de SHIP"], answer: 1, why: "Medicare no llama de repente para pedir tu número; las ofertas gratis son un engaño común." },
+      { objective: "O2", q: "Tu Medicare Summary Notice muestra una silla de ruedas que nunca recibiste. Debes:", options: ["Reportarlo al 1-800-MEDICARE", "No hacerle caso", "Pagarla", "Tirar el aviso"], answer: 0, why: "La atención que nunca recibiste puede ser fraude; repórtala." },
+      { objective: "O3", q: "¿Cuánto dura el Initial Enrollment Period?", options: ["1 semana", "1 mes", "1 año", "7 meses"], answer: 3, why: "3 meses antes, el mes del cumpleaños y 3 meses después." },
+      { objective: "O3", q: "Recibes beneficios del Seguro Social antes de los 65. Normalmente:", options: ["Nunca puedes tener Medicare", "Te cobran una multa", "Te inscriben en las Partes A y B automáticamente", "Te pasan solo a la Parte D"], answer: 2, why: "A quienes ya reciben Seguro Social normalmente los inscriben automáticamente; confírmalo en ssa.gov." },
+      { objective: "O3", q: "Tienes 66 años y todavía tienes seguro médico de tu trabajo actual. ¿Qué debes hacer antes de decidir esperar para la Parte B?", options: ["Nada; esperar siempre está bien", "Cancelar el seguro de tu trabajo", "Preguntar a la oficina de beneficios de tu empleador y a SHIP", "Preguntar a un vendedor que te llama"], answer: 2, why: "Puede aplicar un Special Enrollment Period, pero revisa primero tu situación." },
+      { objective: "O3", q: "El General Enrollment Period va:", options: ["Del 1 de enero al 31 de marzo", "Del 15 de octubre al 7 de diciembre", "Solo el día de tu cumpleaños", "De junio a agosto"], answer: 0, why: "CMS fija el General Enrollment Period del 1 de enero al 31 de marzo de cada año." },
+      { objective: "O3", q: "La multa por inscripción tardía de la Parte B puede subir la prima:", options: ["1% una sola vez", "50% durante un mes", "Nada", "10% por cada 12 meses completos en que pudiste tener la Parte B y no la tuviste"], answer: 3, why: "CMS dice que la multa es de hasta 10% por cada período completo de 12 meses, mientras tengas la Parte B." },
+      { objective: "O4", q: "Durante el Open Enrollment de otoño puedes:", options: ["Cambiar tu número de Seguro Social", "Cambiar tu plan Medicare Advantage o de medicamentos para el año siguiente", "Recibir dinero en efectivo de Medicare", "Solo cancelar Medicare"], answer: 1, why: "Del 15 de octubre al 7 de diciembre puedes cambiar de plan para el 1 de enero." },
+      { objective: "O4", q: "Cada otoño tu plan te manda una carta con los cambios del año siguiente. Es el:", options: ["Annual Notice of Change", "Tarjeta de cumpleaños", "Declaración de impuestos", "Reporte de crédito"], answer: 0, why: "Lee el Annual Notice of Change antes de Open Enrollment." },
+      { objective: "O5", q: "¿Dónde encuentras tu SHIP local?", options: ["En un anuncio emergente", "En un enlace de un mensaje de texto", "En shiphelp.org", "Con cualquier agente de seguros"], answer: 2, why: "shiphelp.org tiene el SHIP de cada estado." },
+      { objective: "O5", q: "Quieres pedirle a un asistente de IA que te explique una carta de Medicare. Primero debes:", options: ["Pegar tu número de Medicare", "Agregar tus datos bancarios", "Mandar una foto de tu tarjeta", "Quitar tu nombre, tu número de Medicare y otros datos privados"], answer: 3, why: "Nunca compartas números privados con herramientas de IA; después confirma con SHIP o en medicare.gov." },
+      { objective: "O5", q: "Cuando llamas a SHIP o al 1-800-MEDICARE, un buen hábito es:", options: ["Colgar rápido", "Tomar notas: fecha, nombre y respuesta", "Leerle tu número a cualquiera que te haya llamado", "Olvidar tus preguntas"], answer: 1, why: "Las notas te ayudan a recordar y a dar seguimiento." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      1,
+      4,
+      7,
+      8,
+      10,
+      14,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte y vuelve a intentarlo.",
+    criteria: [
+      {
+        name: "Período de inscripción",
+        objective: "O3",
+        notYet: "No anotó el plazo, o los meses o las fechas están mal.",
+        meets: "Los meses correctos del Initial Enrollment Period, o las fechas del Open Enrollment de este año si ya tiene Medicare.",
+        exceeds: "Anota si podría aplicarle un Special Enrollment Period y dónde lo confirmó."
+      },
+      {
+        name: "Partes que tienes o necesitas",
+        objective: "O1",
+        notYet: "Faltan partes o están confundidas.",
+        meets: "Enumera qué partes tiene o necesita y qué cubre cada una.",
+        exceeds: "Nombra qué camino (Original Medicare o Medicare Advantage) está mirando, y por qué."
+      },
+      {
+        name: "Listo para comparar",
+        objective: "O4",
+        notYet: "No hay lista de médicos, medicinas ni farmacia.",
+        meets: "Una lista de médicos, medicinas y farmacia, lista para la herramienta de comparación de planes.",
+        exceeds: "Usó la herramienta o a SHIP para comparar el costo total del año y las redes."
+      },
+      {
+        name: "Ayuda gratis y preguntas",
+        objective: "O5",
+        notYet: "No hay preguntas, o no anotó ninguna ayuda gratis.",
+        meets: "Tres preguntas claras y la ayuda gratis que va a usar: su SHIP local, medicare.gov y el 1-800-MEDICARE.",
+        exceeds: "Se comunicó con SHIP o usó medicare.gov, y anotó la fecha, el nombre y la respuesta."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Personas que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Personas que se comunican con su SHIP o usan la herramienta de medicare.gov para comparar planes dentro de 30 días (encuesta de seguimiento)",
+      "Personas que se inscriben dentro de su plazo y evitan una multa por inscripción tardía",
+      "Personas que denuncian una posible estafa de Medicare o un cobro equivocado al 1-800-MEDICARE"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Papel y lápiz para el plan de Medicare de una página",
+      "Una lista de los médicos, las medicinas y la farmacia de cada persona",
+      "Un teléfono, y una computadora o tableta con internet para medicare.gov y shiphelp.org si hay",
+      "Unos 60 minutos en total, en sesiones cortas y sin prisa: lecciones, práctica, comprobaciones y la tarea final"
+    ],
+    facilitatorNotes: [
+      "No recomiendes ningún plan ni des consejos de seguros; manda a las personas a su SHIP local, que es gratis e imparcial.",
+      "Antes de cada sesión, revisa en medicare.gov las primas y los detalles del Open Enrollment de este año.",
+      "Nunca pidas que compartan su número de Medicare; usen una tarjeta de ejemplo para practicar.",
+      "Si se puede, invita a un consejero de SHIP local a una sesión, sobre todo antes del 15 de octubre.",
+      "Califica la tarea final con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

@@ -17,11 +17,35 @@ module.exports = {
     "Usa solo herramientas de IA adecuadas para tu edad y para las reglas de tu escuela, y habla con tu madre, padre o tutor antes de registrarte en algo nuevo. Cada lección dura unos cinco minutos y termina con una tarea \"Pruébalo ahora\"."
   ],
   finalTask: "Planea un proyecto pequeño para un grupo real al que perteneces (un club, un equipo, una clase o un grupo juvenil): escribe el problema en una oración, haz una lista de tres soluciones y elige una, dale un rol a cada persona, escribe un orden del día para una reunión de 15 minutos y practica en voz alta una presentación del plan de un minuto (con un juego de rol con IA o con un amigo).",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Jóvenes de unos 13 a 18 años que quieren sentirse más seguros y tomar la iniciativa como líderes en un club, un equipo, una banda, un proyecto de clase, un grupo de videojuegos, un grupo juvenil o un trabajo de medio tiempo.",
+    startingPoint: "Son parte de al menos un grupo y tienen ideas, pero a muchos les da nervios alzar la voz, se ponen metas vagas y nunca han dirigido una reunión ni seguido un proceso ordenado para resolver problemas.",
+    gap: "Sin herramientas sencillas de liderazgo, los grupos se estancan, las reuniones se desvían y los desacuerdos se vuelven personales. Los jóvenes que pueden nombrar sus fortalezas, fijar metas alcanzables, hablar con claridad y dirigir una reunión corta y justa ganan una confianza que les sirve en la escuela, el trabajo y su comunidad.",
+    constraints: [
+      "Límites de edad y reglas de la escuela para las herramientas de IA; la madre, el padre o el tutor aprueba las cuentas nuevas",
+      "Privacidad: nada de datos privados en los juegos de rol con IA ni en las historias",
+      "Lecciones cortas para horarios ocupados; palabras sencillas",
+      "La práctica necesita un grupo real o uno imaginario",
+      "Seguridad: el acoso, las amenazas o el daño se le cuentan de inmediato a un adulto de confianza"
+    ],
+    prerequisites: "Ninguno."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Pensando en momentos en que te sentiste orgulloso", action: "nombrar tres de tus fortalezas con un ejemplo real de cada una", standard: "con cada fortaleza respaldada por algo que de verdad hiciste" },
+    { id: "O2", condition: "Con un deseo sobre la confianza o el liderazgo", action: "escribir una meta SMART con un primer paso para esta semana", standard: "con las cinco partes de SMART" },
+    { id: "O3", condition: "Antes de una conversación real o una charla corta", action: "practicarla con un juego de rol con IA usando Punto, Razón, Ejemplo, Punto, y luego decirla en voz alta a una persona", standard: "hablando con claridad durante más o menos un minuto" },
+    { id: "O4", condition: "Con un problema real de un grupo al que perteneces", action: "resolver el problema en cinco pasos: nombrarlo, encontrar la causa, hacer una lista de soluciones, escoger una y comprobarla", standard: "con el problema en una frase y al menos tres soluciones" },
+    { id: "O5", condition: "Para una reunión de grupo", action: "planear y dirigir una reunión de 15 minutos con un orden del día, roles y tareas asignadas", standard: "terminando con quién hace qué y para cuándo" },
+    { id: "O6", condition: "Cuando tu grupo no está de acuerdo", action: "usar escuchar, repetir y responder, y una forma justa de decidir", standard: "hablando del problema y no de la persona, y buscando a un adulto si deja de ser seguro" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Construir confianza",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Conocer tus fortalezas",
           minutes: 4,
           goal: "Nombrar tres de tus fortalezas con un ejemplo real de cada una.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "La IA puede ayudarte a nombrarlas", bullets: ["Cuenta una historia corta, sin datos privados", "Pregunta: \"¿Qué fortalezas muestra esto?\"", "Tú decides cuáles te quedan"] }
           ],
           tryIt: "Escribe en tres oraciones sobre un momento en que te sentiste orgulloso. Pregúntale a un asistente de IA o a una persona de confianza qué fortalezas muestra. Anota tus tres fortalezas principales con un ejemplo de cada una.",
-          youCanNow: "nombrar tres de tus fortalezas y respaldar cada una con un ejemplo."
+          youCanNow: "nombrar tres de tus fortalezas y respaldar cada una con un ejemplo.",
+          quickCheck: [
+            { objective: "O1", q: "¿Cuál de estas cuenta como una fortaleza?", options: ["Solo sacar las mejores calificaciones", "Solo ganar trofeos deportivos", "Mantener la calma cuando algo sale mal", "Ser el que habla más fuerte"], answer: 2, why: "Las fortalezas incluyen cualidades como mantener la calma, escuchar y ser organizado, no solo las calificaciones o los deportes." },
+            { objective: "O1", q: "No estás seguro de cuáles son tus fortalezas. ¿Cuál es un buen siguiente paso?", options: ["Preguntarle a un entrenador, un maestro o un amigo qué ven en ti", "Decidir que no tienes ninguna", "Copiar la lista de un amigo", "Esperar a ser mayor"], answer: 0, why: "Las personas que te conocen te pueden ayudar a ver fortalezas que tú no ves." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Fijar una meta que puedas alcanzar",
           minutes: 5,
           goal: "Convertir un deseo en una meta SMART con un primer paso.",
@@ -57,9 +86,14 @@ module.exports = {
             { title: "Empieza en pequeño", bullets: ["Un primer paso esta semana", "Los pequeños logros construyen la confianza"] }
           ],
           tryIt: "Escribe un deseo sobre la confianza o el liderazgo. Conviértelo en una meta SMART (con ayuda de la IA si quieres) y luego escribe el primer paso que darás esta semana.",
-          youCanNow: "fijar una meta SMART con un primer paso."
+          youCanNow: "fijar una meta SMART con un primer paso.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué significa la M de SMART?", options: ["Significativa", "Moderna", "Obligatoria", "Medible"], answer: 3, why: "SMART, por sus siglas en inglés, significa específica, medible, alcanzable, relevante y con fecha límite." },
+            { objective: "O2", q: "Tu meta es \"Dirigir una reunión cada semana durante un año\", pero tienes poco tiempo libre. ¿Qué cambias?", options: ["Nada; más grande es mejor", "La haces alcanzable, como dirigir una reunión este mes", "Le quitas la fecha límite", "La haces más vaga"], answer: 1, why: "Una meta tiene que ser realista para tu vida; los logros pequeños dan confianza." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Practicar cómo alzar la voz con juegos de rol con IA",
           minutes: 5,
           goal: "Practicar una conversación difícil o un discurso corto con IA antes de hacerlo de verdad.",
@@ -76,17 +110,21 @@ module.exports = {
             { title: "Luego hazlo de verdad", bullets: ["Practica con un amigo o alguien de tu familia", "Primero respira despacio"] }
           ],
           tryIt: "Elige una conversación real que necesitas tener. Pídele a la IA que haga el papel de la otra persona. Responde usando PREP. Luego dilo una vez en voz alta a alguien de confianza.",
-          youCanNow: "practicar cómo alzar la voz con juegos de rol y el patrón PREP."
+          youCanNow: "practicar cómo alzar la voz con juegos de rol y el patrón PREP.",
+          quickCheck: [
+            { objective: "O3", q: "En PREP, ¿qué dices primero?", options: ["Tu punto principal", "Un chiste", "Tu ejemplo", "Una disculpa"], answer: 0, why: "PREP empieza con tu Punto, luego la Razón, un Ejemplo y otra vez el Punto." },
+            { objective: "O3", q: "Practicaste con IA cómo pedirle a tu asesor un proyecto nuevo. ¿Cuál es el siguiente paso?", options: ["Enviarle por mensaje las palabras de la IA", "Saltarte la conversación real", "Practicar en voz alta con un amigo o un familiar", "Pedirle a la IA que hable con tu asesor"], answer: 2, why: "Las personas reales reaccionan de formas que la IA no puede, así que practica también con una persona." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Construir confianza",
         questions: [
-          { q: "¿Cuál es una fortaleza?", options: ["Perder tus llaves", "Saber escuchar", "Llegar tarde", "Ignorar a tus amigos"], answer: 1, why: "Las fortalezas incluyen habilidades con personas, como escuchar." },
-          { q: "Una buena forma de encontrar tus fortalezas es:", options: ["Adivinar al azar", "Copiar la lista de un amigo", "Mirar solo las calificaciones", "Recordar momentos en que te sentiste orgulloso y lo que hiciste"], answer: 3, why: "Los momentos de orgullo señalan fortalezas reales." },
-          { q: "¿Cuál es una meta SMART?", options: ["\"Hablar una vez en cada discusión de clase durante las próximas dos semanas\"", "\"Tener más confianza\"", "\"Ser el mejor\"", "\"Esforzarme más algún día\""], answer: 0, why: "Es específica, medible y tiene fecha límite." },
-          { q: "¿Qué significa PREP?", options: ["Planear, Correr, Comer, Jugar", "Practicar, Descansar, Salir, Pausar", "Punto, Razón, Ejemplo, Punto", "Teléfono, Radio, Correo, Publicación"], answer: 2, why: "PREP es un patrón sencillo para charlas cortas." },
-          { q: "Después de practicar con un juego de rol con IA, deberías:", options: ["No volver a practicar nunca", "Dejar que la IA dé la charla", "Practicar también en voz alta con una persona real", "Saltarte la conversación real"], answer: 2, why: "Las personas reales reaccionan de formas que la IA no puede." }
+          { objective: "O1", q: "¿Cuál es una fortaleza?", options: ["Perder tus llaves", "Saber escuchar", "Llegar tarde", "Ignorar a tus amigos"], answer: 1, why: "Las fortalezas incluyen habilidades con personas, como escuchar." },
+          { objective: "O1", q: "Una buena forma de encontrar tus fortalezas es:", options: ["Adivinar al azar", "Copiar la lista de un amigo", "Mirar solo las calificaciones", "Recordar momentos en que te sentiste orgulloso y lo que hiciste"], answer: 3, why: "Los momentos de orgullo señalan fortalezas reales." },
+          { objective: "O2", q: "¿Cuál es una meta SMART?", options: ["\"Hablar una vez en cada discusión de clase durante las próximas dos semanas\"", "\"Tener más confianza\"", "\"Ser el mejor\"", "\"Esforzarme más algún día\""], answer: 0, why: "Es específica, medible y tiene fecha límite." },
+          { objective: "O3", q: "¿Qué significa PREP?", options: ["Planear, Correr, Comer, Jugar", "Practicar, Descansar, Salir, Pausar", "Punto, Razón, Ejemplo, Punto", "Teléfono, Radio, Correo, Publicación"], answer: 2, why: "PREP es un patrón sencillo para charlas cortas." },
+          { objective: "O3", q: "Después de practicar con un juego de rol con IA, deberías:", options: ["No volver a practicar nunca", "Dejar que la IA dé la charla", "Practicar también en voz alta con una persona real", "Saltarte la conversación real"], answer: 2, why: "Las personas reales reaccionan de formas que la IA no puede." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Capítulo 2: Liderar y resolver problemas",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Resolver un problema en cinco pasos",
           minutes: 5,
           goal: "Usar cinco pasos para resolver un problema real en un grupo.",
@@ -110,9 +149,14 @@ module.exports = {
             { title: "Dónde ayuda la IA", bullets: ["Generar muchas soluciones", "Tú y el grupo siguen decidiendo"] }
           ],
           tryIt: "Elige un problema real de un grupo al que perteneces. Escríbelo en una oración, nombra la causa, pídele a la IA 8 soluciones y encierra en un círculo la que probarías primero.",
-          youCanNow: "resolver un problema de grupo con cinco pasos claros."
+          youCanNow: "resolver un problema de grupo con cinco pasos claros.",
+          quickCheck: [
+            { objective: "O4", q: "¿Cuál es el último de los cinco pasos para resolver problemas?", options: ["Nombrar el problema", "Hacer una lista de soluciones", "Encontrar la causa", "Comprobar si funcionó"], answer: 3, why: "Después de probar una solución, compruebas si funcionó." },
+            { objective: "O4", q: "Tu banda sigue faltando a los ensayos. Antes de hacer una lista de soluciones, ¿qué haces?", options: ["Sacar a alguien de la banda", "Encontrar la causa, como un choque con los horarios de trabajo", "Pedirle a la IA que escoja por ti", "Terminar la banda"], answer: 1, why: "Encontrar la causa va antes de hacer la lista de soluciones." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Dirigir una reunión corta de equipo",
           minutes: 5,
           goal: "Planear y dirigir una reunión de 15 minutos con un orden del día y roles.",
@@ -129,9 +173,14 @@ module.exports = {
             { title: "Termina con los siguientes pasos", bullets: ["Quién hace qué y para cuándo", "Envía un resumen corto"] }
           ],
           tryIt: "Pídele a la IA un borrador de orden del día de 15 minutos para una reunión de grupo real o inventada. Cámbialo para que se ajuste a tu grupo, agrega roles y escribe tres tareas asignadas con nombres y fechas.",
-          youCanNow: "planear y dirigir una reunión corta y útil."
+          youCanNow: "planear y dirigir una reunión corta y útil.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué hace la persona que toma notas en una reunión?", options: ["Controla el tiempo", "Dirige todos los temas", "Anota las decisiones y los siguientes pasos", "Escoge los bocadillos"], answer: 2, why: "Quien toma notas anota lo que se decidió para poder compartirlo después." },
+            { objective: "O5", q: "Dos personas hablan todo el tiempo en tu reunión. ¿Qué haces como líder?", options: ["Invitar a las personas más calladas a compartir sus ideas", "Dejar que sigan", "Terminar la reunión antes", "Cancelar las próximas reuniones"], answer: 0, why: "Un líder se asegura de que todos tengan la oportunidad de hablar, sobre todo las personas más calladas." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Manejar los desacuerdos con calma",
           minutes: 5,
           goal: "Usar escuchar, repetir y responder para calmar un desacuerdo y llegar a una decisión.",
@@ -148,17 +197,21 @@ module.exports = {
             { title: "Si se atoran", bullets: ["Voten o hagan una prueba", "Pregunten a un asesor o entrenador", "¿Hay peligro o acoso? Avisa a un adulto de confianza"] }
           ],
           tryIt: "Tarea final: planea un proyecto pequeño para un grupo real: el problema en una oración, tres soluciones y la que eliges, un rol para cada persona, un orden del día de 15 minutos y una presentación de un minuto practicada en voz alta con un juego de rol con IA o con un amigo.",
-          youCanNow: "guiar a un grupo con confianza a través de un problema, una reunión y un desacuerdo."
+          youCanNow: "guiar a un grupo con confianza a través de un problema, una reunión y un desacuerdo.",
+          quickCheck: [
+            { objective: "O6", q: "En escuchar, repetir y responder, ¿por qué repites lo que oíste?", options: ["Para ganar la discusión", "Para mostrarle a la otra persona que la escuchaste y comprobar que entendiste", "Para que la reunión dure más", "Para copiar su idea"], answer: 1, why: "Repetir muestra que escuchaste y asegura que entendiste antes de responder." },
+            { objective: "O6", q: "Un desacuerdo sobre una actividad para recaudar fondos se convierte en amenazas. ¿Qué haces?", options: ["Hacer una votación", "Ignorarlo", "Hacer un chiste", "Dar un paso atrás y contárselo de inmediato a un adulto de confianza"], answer: 3, why: "El acoso, las amenazas o que alguien salga lastimado necesitan a un adulto de confianza de inmediato." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Liderar y resolver problemas",
         questions: [
-          { q: "¿Cuál es el primero de los cinco pasos para resolver problemas?", options: ["Nombrar el problema en una oración", "Probar una solución", "Revisar si funcionó", "Culpar a alguien"], answer: 0, why: "Empiezas por nombrar el problema con claridad." },
-          { q: "¿Dónde ayuda más la IA al resolver problemas?", options: ["Tomando la decisión final por el grupo", "Haciendo el trabajo del grupo", "Culpando a las personas", "Generando muchas soluciones"], answer: 3, why: "La IA es buena para hacer listas de ideas; el grupo decide." },
-          { q: "¿Qué es un orden del día?", options: ["Un bocadillo", "Una lista de temas de la reunión con tiempos", "Un tipo de votación", "Una contraseña"], answer: 1, why: "Un orden del día mantiene la reunión en camino." },
-          { q: "¿Cómo debe terminar cada reunión?", options: ["Con quién hace qué y para cuándo", "Sin ningún plan", "Con una pelea", "Con todos yéndose temprano"], answer: 0, why: "Las tareas asignadas claras convierten la conversación en acción." },
-          { q: "Un desacuerdo se convierte en amenazas. El líder debe:", options: ["Ignorarlo", "Unirse", "Dar un paso atrás y avisar a un adulto de confianza", "Publicarlo en internet"], answer: 2, why: "La seguridad va primero; involucra a un adulto." }
+          { objective: "O4", q: "¿Cuál es el primero de los cinco pasos para resolver problemas?", options: ["Nombrar el problema en una oración", "Probar una solución", "Revisar si funcionó", "Culpar a alguien"], answer: 0, why: "Empiezas por nombrar el problema con claridad." },
+          { objective: "O4", q: "¿Dónde ayuda más la IA al resolver problemas?", options: ["Tomando la decisión final por el grupo", "Haciendo el trabajo del grupo", "Culpando a las personas", "Generando muchas soluciones"], answer: 3, why: "La IA es buena para hacer listas de ideas; el grupo decide." },
+          { objective: "O5", q: "¿Qué es un orden del día?", options: ["Un bocadillo", "Una lista de temas de la reunión con tiempos", "Un tipo de votación", "Una contraseña"], answer: 1, why: "Un orden del día mantiene la reunión en camino." },
+          { objective: "O5", q: "¿Cómo debe terminar cada reunión?", options: ["Con quién hace qué y para cuándo", "Sin ningún plan", "Con una pelea", "Con todos yéndose temprano"], answer: 0, why: "Las tareas asignadas claras convierten la conversación en acción." },
+          { objective: "O6", q: "Un desacuerdo se convierte en amenazas. El líder debe:", options: ["Ignorarlo", "Unirse", "Dar un paso atrás y avisar a un adulto de confianza", "Publicarlo en internet"], answer: 2, why: "La seguridad va primero; involucra a un adulto." }
         ]
       }
     }
@@ -166,26 +219,106 @@ module.exports = {
   quiz: {
     title: "Examen final: Liderazgo, confianza y resolución de problemas",
     questions: [
-      { q: "Confianza significa:", options: ["Nunca ponerte nervioso", "Creer que puedes con algo", "Ser siempre el que habla más fuerte", "Ser perfecto"], answer: 1, why: "La confianza es creer en ti, aunque tengas nervios." },
-      { q: "¿Cuál NO es una fortaleza?", options: ["Mantener la calma", "Ser organizado", "Nunca rendirte", "Ignorar a tus compañeros de equipo"], answer: 3, why: "Ignorar a tus compañeros perjudica al grupo." },
-      { q: "Cuando le pides a la IA que nombre tus fortalezas, deberías:", options: ["Compartir tu dirección", "Dejar que la IA decida quién eres", "Compartir tu contraseña", "Compartir una historia corta sin datos privados"], answer: 3, why: "Las historias sin datos privados le dan a la IA lo suficiente para ayudar." },
-      { q: "Las metas SMART son específicas, medibles, alcanzables, relevantes y:", options: ["Secretas", "Con fecha límite", "Enormes", "Opcionales"], answer: 1, why: "Una fecha límite le pone tiempo a la meta." },
-      { q: "¿Por qué agregar un primer paso a una meta?", options: ["Hace la meta más larga", "Los maestros lo exigen", "Los pequeños logros construyen confianza y empiezan el avance", "No hace falta"], answer: 2, why: "Empezar en pequeño te pone en marcha." },
-      { q: "¿Cuál es un deseo y no una meta?", options: ["\"Quiero liderar mejor\"", "\"Voy a dirigir una reunión del club antes del 1 de marzo\"", "\"Voy a hablar en clase dos veces por semana durante un mes\"", "\"Voy a correr 2 millas tres veces por semana durante 4 semanas\""], answer: 0, why: "No tiene medida ni fecha límite." },
-      { q: "Una buena instrucción para un juego de rol es:", options: ["\"Habla con mi asesor por mí\"", "\"Haz de cuenta que eres el asesor de mi club y hazme preguntas difíciles\"", "\"Dame un discurso para leer\"", "\"Haz mi tarea\""], answer: 1, why: "El juego de rol te deja practicar la conversación real." },
-      { q: "En PREP, la E significa:", options: ["Salida", "Energía", "Correo electrónico", "Ejemplo"], answer: 3, why: "Punto, Razón, Ejemplo, Punto." },
-      { q: "Antes de una charla difícil, una forma rápida de calmar los nervios es:", options: ["Respirar despacio", "Saltártela", "Gritar", "Mirar tu teléfono"], answer: 0, why: "Respirar despacio te ayuda a mantenerte firme." },
-      { q: "En la resolución de problemas en cinco pasos, después de hacer la lista de soluciones:", options: ["Te detienes", "Culpas a alguien", "Eliges una y la pruebas", "Empiezas otro problema"], answer: 2, why: "Luego revisas si funcionó." },
-      { q: "Una causa raíz es:", options: ["La raíz de una planta", "Un tipo de reunión", "La razón real por la que pasa un problema", "Una contraseña"], answer: 2, why: "Resolver la causa raíz resuelve el problema." },
-      { q: "Poca gente va al club porque las reuniones chocan con el entrenamiento. Una buena primera solución para probar es:", options: ["Cambiar el día de la reunión", "Cancelar el club", "Culpar a los miembros", "No hacer nada"], answer: 0, why: "Ataca la causa." },
-      { q: "¿Quién toma la decisión final cuando la IA hace una lista de soluciones?", options: ["La IA", "Un desconocido en internet", "Nadie", "Tú y tu grupo"], answer: 3, why: "La IA sugiere; las personas deciden." },
-      { q: "Una reunión de 15 minutos necesita:", options: ["Ningún plan", "Un orden del día con tiempos", "Dos horas", "Solo bocadillos"], answer: 1, why: "El orden del día mantiene cortas las reuniones." },
-      { q: "¿Qué hace quien controla el tiempo?", options: ["Mantiene la reunión dentro del horario", "Toma notas", "Lleva bocadillos", "Vota dos veces"], answer: 0, why: "Quien controla el tiempo vigila el reloj." },
-      { q: "Un buen líder en una reunión:", options: ["Habla todo el tiempo", "Ignora las ideas nuevas", "Invita a hablar a las personas más calladas", "Deja que una persona decida todo"], answer: 2, why: "Las ideas de todos ayudan al grupo." },
-      { q: "Una tarea asignada es:", options: ["Una película", "Una tarea que alguien acepta hacer para una fecha", "Un bocadillo de la reunión", "Una pelea"], answer: 1, why: "Las tareas asignadas convierten los planes en trabajo." },
-      { q: "En escuchar, repetir y responder, el paso de \"repetir\" suena así:", options: ["\"Estás equivocado\"", "\"Como sea\"", "\"Me voy\"", "\"O sea que piensas que la venta debería ser el viernes porque hay más gente\""], answer: 3, why: "Repetir muestra que entendiste." },
-      { q: "Tu grupo no logra ponerse de acuerdo en una fecha. Una forma justa de decidir es:", options: ["Gana el que grita más fuerte", "Rendirse", "Pelear por eso", "Una votación o una prueba"], answer: 3, why: "Las votaciones y las pruebas son formas justas de decidir." },
-      { q: "Un acuerdo mutuo es:", options: ["Un lado gana todo", "Un acuerdo en el que cada lado cede un poco", "Terminar la amistad", "Ignorar el problema"], answer: 1, why: "Los dos lados ceden un poco para ponerse de acuerdo." }
+      { objective: "O1", q: "Confianza significa:", options: ["Nunca ponerte nervioso", "Creer que puedes con algo", "Ser siempre el que habla más fuerte", "Ser perfecto"], answer: 1, why: "La confianza es creer en ti, aunque tengas nervios." },
+      { objective: "O1", q: "¿Cuál NO es una fortaleza?", options: ["Mantener la calma", "Ser organizado", "Nunca rendirte", "Ignorar a tus compañeros de equipo"], answer: 3, why: "Ignorar a tus compañeros perjudica al grupo." },
+      { objective: "O1", q: "Cuando le pides a la IA que nombre tus fortalezas, deberías:", options: ["Compartir tu dirección", "Dejar que la IA decida quién eres", "Compartir tu contraseña", "Compartir una historia corta sin datos privados"], answer: 3, why: "Las historias sin datos privados le dan a la IA lo suficiente para ayudar." },
+      { objective: "O2", q: "Las metas SMART son específicas, medibles, alcanzables, relevantes y:", options: ["Secretas", "Con fecha límite", "Enormes", "Opcionales"], answer: 1, why: "Una fecha límite le pone tiempo a la meta." },
+      { objective: "O2", q: "¿Por qué agregar un primer paso a una meta?", options: ["Hace la meta más larga", "Los maestros lo exigen", "Los pequeños logros construyen confianza y empiezan el avance", "No hace falta"], answer: 2, why: "Empezar en pequeño te pone en marcha." },
+      { objective: "O2", q: "¿Cuál es un deseo y no una meta?", options: ["\"Quiero liderar mejor\"", "\"Voy a dirigir una reunión del club antes del 1 de marzo\"", "\"Voy a hablar en clase dos veces por semana durante un mes\"", "\"Voy a correr 2 millas tres veces por semana durante 4 semanas\""], answer: 0, why: "No tiene medida ni fecha límite." },
+      { objective: "O3", q: "Una buena instrucción para un juego de rol es:", options: ["\"Habla con mi asesor por mí\"", "\"Haz de cuenta que eres el asesor de mi club y hazme preguntas difíciles\"", "\"Dame un discurso para leer\"", "\"Haz mi tarea\""], answer: 1, why: "El juego de rol te deja practicar la conversación real." },
+      { objective: "O3", q: "En PREP, la E significa:", options: ["Salida", "Energía", "Correo electrónico", "Ejemplo"], answer: 3, why: "Punto, Razón, Ejemplo, Punto." },
+      { objective: "O3", q: "Antes de una charla difícil, una forma rápida de calmar los nervios es:", options: ["Respirar despacio", "Saltártela", "Gritar", "Mirar tu teléfono"], answer: 0, why: "Respirar despacio te ayuda a mantenerte firme." },
+      { objective: "O4", q: "En la resolución de problemas en cinco pasos, después de hacer la lista de soluciones:", options: ["Te detienes", "Culpas a alguien", "Eliges una y la pruebas", "Empiezas otro problema"], answer: 2, why: "Luego revisas si funcionó." },
+      { objective: "O4", q: "Una causa raíz es:", options: ["La raíz de una planta", "Un tipo de reunión", "La razón real por la que pasa un problema", "Una contraseña"], answer: 2, why: "Resolver la causa raíz resuelve el problema." },
+      { objective: "O4", q: "Poca gente va al club porque las reuniones chocan con el entrenamiento. Una buena primera solución para probar es:", options: ["Cambiar el día de la reunión", "Cancelar el club", "Culpar a los miembros", "No hacer nada"], answer: 0, why: "Ataca la causa." },
+      { objective: "O4", q: "¿Quién toma la decisión final cuando la IA hace una lista de soluciones?", options: ["La IA", "Un desconocido en internet", "Nadie", "Tú y tu grupo"], answer: 3, why: "La IA sugiere; las personas deciden." },
+      { objective: "O5", q: "Una reunión de 15 minutos necesita:", options: ["Ningún plan", "Un orden del día con tiempos", "Dos horas", "Solo bocadillos"], answer: 1, why: "El orden del día mantiene cortas las reuniones." },
+      { objective: "O5", q: "¿Qué hace quien controla el tiempo?", options: ["Mantiene la reunión dentro del horario", "Toma notas", "Lleva bocadillos", "Vota dos veces"], answer: 0, why: "Quien controla el tiempo vigila el reloj." },
+      { objective: "O5", q: "Un buen líder en una reunión:", options: ["Habla todo el tiempo", "Ignora las ideas nuevas", "Invita a hablar a las personas más calladas", "Deja que una persona decida todo"], answer: 2, why: "Las ideas de todos ayudan al grupo." },
+      { objective: "O5", q: "Una tarea asignada es:", options: ["Una película", "Una tarea que alguien acepta hacer para una fecha", "Un bocadillo de la reunión", "Una pelea"], answer: 1, why: "Las tareas asignadas convierten los planes en trabajo." },
+      { objective: "O6", q: "En escuchar, repetir y responder, el paso de \"repetir\" suena así:", options: ["\"Estás equivocado\"", "\"Como sea\"", "\"Me voy\"", "\"O sea que piensas que la venta debería ser el viernes porque hay más gente\""], answer: 3, why: "Repetir muestra que entendiste." },
+      { objective: "O6", q: "Tu grupo no logra ponerse de acuerdo en una fecha. Una forma justa de decidir es:", options: ["Gana el que grita más fuerte", "Rendirse", "Pelear por eso", "Una votación o una prueba"], answer: 3, why: "Las votaciones y las pruebas son formas justas de decidir." },
+      { objective: "O6", q: "Un acuerdo mutuo es:", options: ["Un lado gana todo", "Un acuerdo en el que cada lado cede un poco", "Terminar la amistad", "Ignorar el problema"], answer: 1, why: "Los dos lados ceden un poco para ponerse de acuerdo." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      3,
+      5,
+      7,
+      9,
+      10,
+      13,
+      15,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en todas las filas. Si una fila está en Todavía no, corrige esa parte y vuelve a intentarlo.",
+    criteria: [
+      {
+        name: "Problema nombrado",
+        objective: "O4",
+        notYet: "El problema es vago o tiene más de una frase.",
+        meets: "El problema está en una frase clara, con su causa.",
+        exceeds: "Además dice cómo sabrá el grupo que está resuelto."
+      },
+      {
+        name: "Soluciones y decisión",
+        objective: "O4",
+        notYet: "Solo una solución, o no se tomó una decisión.",
+        meets: "Tres soluciones en la lista y una escogida con una razón.",
+        exceeds: "Incluye un plan para comprobar si la decisión funcionó."
+      },
+      {
+        name: "Roles",
+        objective: "O5",
+        notYet: "Algunas personas no tienen rol, o una persona lo hace todo.",
+        meets: "Cada persona tiene un rol, incluidos quien toma notas y quien controla el tiempo.",
+        exceeds: "Los roles van con las fortalezas de cada persona."
+      },
+      {
+        name: "Orden del día de la reunión",
+        objective: "O5",
+        notYet: "No hay orden del día, o no tiene tiempos.",
+        meets: "Un orden del día de 15 minutos con tiempos, que termina con quién hace qué y para cuándo.",
+        exceeds: "Incluye una forma de invitar a hablar a las personas más calladas."
+      },
+      {
+        name: "Presentación de un minuto",
+        objective: "O3",
+        notYet: "La presentación no se practicó en voz alta.",
+        meets: "Una presentación clara con Punto, Razón, Ejemplo, Punto, practicada en voz alta.",
+        exceeds: "Practicada con un juego de rol con IA y con una persona real, y mejorada después."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Jóvenes que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Jóvenes que dirigen una reunión real o un proyecto de grupo dentro de 30 días (encuesta de seguimiento)",
+      "Jóvenes que logran el primer paso de su meta SMART",
+      "Jóvenes que asumen un nuevo rol de liderazgo en un club, un equipo o un grupo juvenil dentro de 90 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono, una computadora de la escuela o de la biblioteca con internet",
+      "Un asistente de IA gratuito que la persona tenga permiso de usar para juegos de rol e ideas",
+      "Papel o un documento para el plan del proyecto y el orden del día",
+      "Unos 60 minutos en total: lecciones, práctica, comprobaciones y la tarea final"
+    ],
+    facilitatorNotes: [
+      "Hazlo con un club o equipo real para que los jóvenes planeen juntos un proyecto de verdad.",
+      "Forma parejas para practicar la presentación PREP y escuchar, repetir y responder, para que todos hablen en voz alta.",
+      "Rota los roles de la reunión (líder, quien toma notas, quien controla el tiempo) para que cada persona pruebe a dirigir.",
+      "Deja claro que el acoso, las amenazas o el daño se le cuentan de inmediato a un adulto de confianza, y di quién es ese adulto en tu programa.",
+      "Califica el plan del proyecto con la rúbrica y da retroalimentación sobre una fila en Todavía no a la vez."
     ]
   }
 };

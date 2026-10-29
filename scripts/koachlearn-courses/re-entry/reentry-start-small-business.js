@@ -18,11 +18,35 @@ module.exports = {
     "Rules differ by state, county and city, and they change. This course gives you the steps and the official places to check, such as sba.gov and irs.gov; it is not legal or tax advice. Never type your Social Security number, case details or bank details into AI. Each lesson takes about five minutes. A knowledge check closes each chapter and a 20-question quiz closes the course."
   ],
   finalTask: "Write a one-page business plan for a simple service business with AI help (service, customers, price, how customers will find you, startup costs). Then make your setup checklist: your business structure, your business name and whether it needs a DBA, getting a free EIN at irs.gov, the licenses to check with your city, county and state, opening a separate bank account, and how you will keep records and set money aside for taxes. Include the official website for each step.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Adults coming home from prison (re-entry) who want to work for themselves with a simple service business, such as cleaning, lawn care, moving help, car detailing, barbering, cooking, painting or handyman work.",
+    startingPoint: "Have practical skills and can use a phone. Little or no experience with business plans, pricing, business registration, EINs, licenses, business banking or tax records.",
+    gap: "Some employers are slow to hire people with records, and self-employment can give income and independence. Learners need to turn a skill into a planned business and follow the official US setup steps, so they avoid scams, fines and tax trouble.",
+    constraints: [
+      "Reading level: plain words and short sentences (about grade 5 to 6)",
+      "Devices: a smartphone or library computer with internet",
+      "Time: about 5-minute lessons that fit around work and appointments",
+      "Rules differ by state, county and city and change; the course points to official sites and is not legal or tax advice",
+      "Privacy: never type a Social Security number, case details or bank details into AI"
+    ],
+    prerequisites: "\"Financial and Life Management with AI\" is helpful but not required."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given your skills and the money you could start with", action: "choose a business idea that fits your skills, money and situation", standard: "with low startup costs and any required state license checked" },
+    { id: "O2", condition: "Given your business idea", action: "describe your customers and set a starting price", standard: "with a specific customer sentence and a price that covers costs, time and taxes" },
+    { id: "O3", condition: "Using an AI assistant that asks you questions", action: "write a one-page business plan", standard: "covering service, customers, price, how customers find you and startup costs, with facts supplied by you" },
+    { id: "O4", condition: "Given your business idea and name", action: "choose a business structure and find whether your name needs a DBA", standard: "with the reason for your choice and the official government page found" },
+    { id: "O5", condition: "Using irs.gov and your local government sites", action: "find the free EIN application and the licenses your business needs", standard: "with the official web address for each, and no paid EIN service" },
+    { id: "O6", condition: "Given a new business", action: "plan a separate bank account, simple records, money for taxes and free help", standard: "with a record log that has date, who, what and how much, and your nearest SCORE or SBDC named" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Planning your business",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Choosing a business you can start now",
           minutes: 5,
           goal: "Choose a business idea that fits your skills, money and situation.",
@@ -39,9 +63,14 @@ module.exports = {
             { title: "Licensed work?", bullets: ["Barbering, electrical, contracting and more", "Check your state licensing board", "Rules have changed in many states"] }
           ],
           tryIt: "Write your top three skills and how much money you could start with. Ask an AI assistant for five matching small business ideas, then pick one.",
-          youCanNow: "choose a small business idea that fits your skills and money."
+          youCanNow: "choose a small business idea that fits your skills and money.",
+          quickCheck: [
+            { objective: "O1", q: "What are startup costs?", options: ["The money needed to begin, such as tools and supplies", "Your weekly profit", "Taxes you owe each year", "The price you charge customers"], answer: 0, why: "Startup costs are what you spend to get the business going." },
+            { objective: "O1", q: "You want to start a business doing electrical repairs. What would you do first?", options: ["Start taking jobs right away", "Ask AI if you need a license and trust the answer", "Check your state licensing board's official website", "Print business cards"], answer: 2, why: "Many trades need a state license, and the official board has the real rules." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Customers and pricing",
           minutes: 5,
           goal: "Describe your customers and set a starting price that covers your costs.",
@@ -58,9 +87,14 @@ module.exports = {
             { title: "Don't price too low", bullets: ["Cover costs and time", "Leave room for taxes and savings"] }
           ],
           tryIt: "For your idea, write one sentence describing your customers. Ask AI to help you work out a starting price from your costs and time, then check two real local prices.",
-          youCanNow: "describe your customers and set a starting price that covers your costs."
+          youCanNow: "describe your customers and set a starting price that covers your costs.",
+          quickCheck: [
+            { objective: "O2", q: "What is profit?", options: ["All the money customers pay you", "Money left after costs", "The cost of your tools", "Money you borrow"], answer: 1, why: "Profit is what remains after you pay your costs." },
+            { objective: "O2", q: "AI suggests a lawn-care price that seems very low. What would you do?", options: ["Use it to get more customers", "Double it without thinking", "Ask friends to guess a price", "Check your costs and time, then compare two real local prices"], answer: 3, why: "A price must cover your costs and time, and local prices show what customers pay." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "A one-page business plan with AI",
           minutes: 6,
           goal: "Write a one-page business plan with an AI assistant.",
@@ -78,17 +112,21 @@ module.exports = {
           ],
           sources: [{ name: "SBA: Write your business plan", url: "https://www.sba.gov/business-guide/plan-your-business/write-your-business-plan" }],
           tryIt: "Ask an AI assistant to interview you one question at a time and write a one-page plan for your business idea. Save the plan.",
-          youCanNow: "write a one-page business plan with AI help."
+          youCanNow: "write a one-page business plan with AI help.",
+          quickCheck: [
+            { objective: "O3", q: "What is a lean startup business plan?", options: ["A 50-page report for a bank", "A short, one-page plan", "A list of business names", "A tax form"], answer: 1, why: "A lean plan fits the key parts of a business on one page." },
+            { objective: "O3", q: "AI wrote your plan and added a customer number you never gave it. What would you do?", options: ["Remove or replace it with your real facts", "Keep it because it looks good", "Add more numbers like it", "Send the plan to a lender as it is"], answer: 0, why: "You supply the facts in your plan, not the AI." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Planning your business",
         questions: [
-          { q: "Which is usually the best first business?", options: ["One you know nothing about", "A business that needs $100,000 to start", "A simple service you already know, with low startup costs", "One with no customers nearby"], answer: 2, why: "Low cost and known skills reduce risk." },
-          { q: "You want to be a barber. What should you check first?", options: ["Your state licensing board's rules", "Nothing", "A social media rumor", "Only AI"], answer: 0, why: "Barbering needs a state license, and boards set the rules." },
-          { q: "Which customer description is most useful?", options: ["\"Anybody with money\"", "\"Everyone\"", "\"People\"", "\"Older homeowners in my neighborhood who cannot mow\""], answer: 3, why: "Specific customers tell you where to find them." },
-          { q: "A good price covers:", options: ["Only supplies", "Your costs, your time and something for taxes", "Nothing; work for free", "Whatever the cheapest competitor charges, even at a loss"], answer: 1, why: "Prices must cover costs and pay you." },
-          { q: "How can AI best help write a business plan?", options: ["Make up facts about your business", "Interview you one question at a time", "Sign legal papers", "Get your EIN for you"], answer: 1, why: "You supply the facts; AI organizes them." }
+          { objective: "O1", q: "Which is usually the best first business?", options: ["One you know nothing about", "A business that needs $100,000 to start", "A simple service you already know, with low startup costs", "One with no customers nearby"], answer: 2, why: "Low cost and known skills reduce risk." },
+          { objective: "O1", q: "You want to be a barber. What should you check first?", options: ["Your state licensing board's rules", "Nothing", "A social media rumor", "Only AI"], answer: 0, why: "Barbering needs a state license, and boards set the rules." },
+          { objective: "O2", q: "Which customer description is most useful?", options: ["\"Anybody with money\"", "\"Everyone\"", "\"People\"", "\"Older homeowners in my neighborhood who cannot mow\""], answer: 3, why: "Specific customers tell you where to find them." },
+          { objective: "O2", q: "A good price covers:", options: ["Only supplies", "Your costs, your time and something for taxes", "Nothing; work for free", "Whatever the cheapest competitor charges, even at a loss"], answer: 1, why: "Prices must cover costs and pay you." },
+          { objective: "O3", q: "How can AI best help write a business plan?", options: ["Make up facts about your business", "Interview you one question at a time", "Sign legal papers", "Get your EIN for you"], answer: 1, why: "You supply the facts; AI organizes them." }
         ]
       }
     },
@@ -96,6 +134,7 @@ module.exports = {
       name: "Chapter 2: Setting it up the official way",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Business structure and business name",
           minutes: 6,
           goal: "Choose a business structure and find out whether your business name needs to be registered.",
@@ -113,12 +152,17 @@ module.exports = {
           ],
           sources: [{ name: "SBA: Choose a business structure", url: "https://www.sba.gov/business-guide/launch-your-business/choose-business-structure" }, { name: "SBA: Register your business", url: "https://www.sba.gov/business-guide/launch-your-business/register-your-business" }],
           tryIt: "Decide whether you would start as a sole proprietorship or an LLC, and write why. Choose a business name, then search \"register DBA\" plus your county or state and find the official government page (often ending in .gov).",
-          youCanNow: "choose a business structure and find out how to register your business name."
+          youCanNow: "choose a business structure and find out how to register your business name.",
+          quickCheck: [
+            { objective: "O4", q: "What does DBA stand for?", options: ["Daily business account", "Department of business affairs", "Doing business as", "Direct bank authorization"], answer: 2, why: "DBA means doing business as, a name different from your legal name." },
+            { objective: "O4", q: "You want to call your business \"Shine Car Care\". What would you do?", options: ["Use it without checking anything", "Search for your county or state's official DBA page", "Pay a random website to register it", "Ask AI to register it for you"], answer: 1, why: "Most states require registering a business name that is not your legal name, on an official site." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Your free EIN and the right licenses",
           minutes: 6,
-          goal: "Know how to get a free EIN from the IRS and find the licenses and permits your business needs.",
+          goal: "Find the free IRS EIN application and the licenses and permits your business needs.",
           text: [
             "An EIN (Employer Identification Number) is a tax ID number for your business. The IRS says \"You never have to pay a fee for an EIN\", and warns about websites that charge for one. Apply directly on irs.gov. If approved, the number is issued right away online. You must finish in one session, so set aside time; the online tool is only open at certain hours, listed on irs.gov. Sole proprietors without employees can often use their Social Security number instead, but many open an EIN to keep business and personal separate.",
             "Licenses and permits come from different levels of government. The SBA explains that federal licenses are only for certain activities (such as alcohol or aviation); states license many trades; and cities and counties often require a general business license and permits for things like food, construction or vending.",
@@ -133,9 +177,14 @@ module.exports = {
           ],
           sources: [{ name: "IRS: Get an employer identification number", url: "https://www.irs.gov/businesses/small-businesses-self-employed/get-an-employer-identification-number" }, { name: "SBA: Apply for licenses and permits", url: "https://www.sba.gov/business-guide/launch-your-business/apply-licenses-permits" }],
           tryIt: "Open the IRS EIN page on irs.gov and write down the online hours and what you need to apply (do not apply yet unless you are ready). Then find your city or county's business license page and write down its web address.",
-          youCanNow: "get a free EIN from the IRS and find the licenses and permits your business needs."
+          youCanNow: "get a free EIN from the IRS and find the licenses and permits your business needs.",
+          quickCheck: [
+            { objective: "O5", q: "Where does a general business license usually come from?", options: ["The IRS", "Your bank", "A private website", "Your city or county"], answer: 3, why: "General business licenses are usually issued by your city or county." },
+            { objective: "O5", q: "A website offers to get you an EIN for $150. What would you do?", options: ["Pay it because it is faster", "Apply free on irs.gov instead", "Ask a friend to pay it", "Skip getting an EIN forever"], answer: 1, why: "The IRS gives EINs for free on its own website." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Bank account, records, taxes and free help",
           minutes: 6,
           goal: "Set up simple money records, plan for taxes, and find free business help.",
@@ -154,17 +203,21 @@ module.exports = {
           ],
           sources: [{ name: "SBA: Open a business bank account", url: "https://www.sba.gov/business-guide/launch-your-business/open-business-bank-account" }, { name: "IRS: Self-employed individuals tax center", url: "https://www.irs.gov/businesses/small-businesses-self-employed/self-employed-individuals-tax-center" }, { name: "SBA: Resource partners", url: "https://www.sba.gov/local-assistance/resource-partners" }],
           tryIt: "Final task: finish your one-page plan and make your setup checklist with an official website for each step: structure, name and DBA, free EIN on irs.gov, city, county and state licenses, a separate bank account, a record log made with AI, money set aside for taxes, and your nearest SCORE or SBDC.",
-          youCanNow: "plan a small business and set it up the official way, with records, a tax plan and free help."
+          youCanNow: "plan a small business and set it up the official way, with records, a tax plan and free help.",
+          quickCheck: [
+            { objective: "O6", q: "What should a good business record include?", options: ["Date, who, what and how much, with receipts", "Only the total for the year", "Your Social Security number", "Only money you received"], answer: 0, why: "Clear records with receipts help at tax time and show how the business is doing." },
+            { objective: "O6", q: "You get paid for a cleaning job in cash. What would you do?", options: ["Spend it all right away", "Keep no record because it is cash", "Record it, put it in your business account and set some aside for taxes", "Put it in a friend's account"], answer: 2, why: "Recording income, keeping business money separate and saving for taxes keeps you out of trouble." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Setting it up the official way",
         questions: [
-          { q: "You start cleaning houses without registering any business type. You are:", options: ["A nonprofit", "An LLC", "A corporation", "A sole proprietorship"], answer: 3, why: "The SBA says sole proprietorships form automatically." },
-          { q: "Your business name is \"Fresh Start Cleaning\", not your legal name. Most states require:", options: ["Registering it as a DBA", "Nothing ever", "A federal license", "A trademark first"], answer: 0, why: "A trade name usually must be registered as a DBA." },
-          { q: "How much does the IRS charge for an EIN?", options: ["$250", "$50", "Nothing; it is free", "It depends on the website"], answer: 2, why: "The IRS says you never have to pay a fee for an EIN." },
-          { q: "Where does a general business license usually come from?", options: ["A private website", "The IRS", "The FAA", "Your city or county"], answer: 3, why: "Cities and counties issue general business licenses." },
-          { q: "Self-employed people must file a tax return if net earnings are:", options: ["Never", "$40,000 or more", "$400 or more", "Only over $1 million"], answer: 2, why: "The IRS sets the filing point at $400 of net self-employment earnings." }
+          { objective: "O4", q: "You start cleaning houses without registering any business type. You are:", options: ["A nonprofit", "An LLC", "A corporation", "A sole proprietorship"], answer: 3, why: "The SBA says sole proprietorships form automatically." },
+          { objective: "O4", q: "Your business name is \"Fresh Start Cleaning\", not your legal name. Most states require:", options: ["Registering it as a DBA", "Nothing ever", "A federal license", "A trademark first"], answer: 0, why: "A trade name usually must be registered as a DBA." },
+          { objective: "O5", q: "How much does the IRS charge for an EIN?", options: ["$250", "$50", "Nothing; it is free", "It depends on the website"], answer: 2, why: "The IRS says you never have to pay a fee for an EIN." },
+          { objective: "O5", q: "Where does a general business license usually come from?", options: ["A private website", "The IRS", "The FAA", "Your city or county"], answer: 3, why: "Cities and counties issue general business licenses." },
+          { objective: "O6", q: "Self-employed people must file a tax return if net earnings are:", options: ["Never", "$40,000 or more", "$400 or more", "Only over $1 million"], answer: 2, why: "The IRS sets the filing point at $400 of net self-employment earnings." }
         ]
       }
     }
@@ -172,26 +225,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: How to Set Up and Start a Small Business",
     questions: [
-      { q: "A service business:", options: ["Only sells products", "Does work for people, like cleaning or repairs", "Is always online", "Needs a factory"], answer: 1, why: "Services are work done for customers." },
-      { q: "Startup costs are:", options: ["The money needed to begin, such as tools and supplies", "Your profit", "Your taxes", "Your customers"], answer: 0, why: "They are what you spend to start." },
-      { q: "If a job needs a state license, you should check:", options: ["Your state licensing board's official website", "Only AI", "A rumor", "Nothing"], answer: 0, why: "Licensing boards set the rules, which have changed in many states." },
-      { q: "Why describe customers specifically?", options: ["It raises prices", "It tells you where to find them", "It is required by the IRS", "It replaces a license"], answer: 1, why: "Specific customers are easier to reach." },
-      { q: "To set a price, start with:", options: ["The lowest price in town, even at a loss", "A random number", "Your costs for one job and your time", "Whatever a friend says"], answer: 2, why: "Prices must cover costs and time." },
-      { q: "Profit is:", options: ["A loan", "All money coming in", "Your tax bill", "Money left after costs"], answer: 3, why: "Profit = income minus costs." },
-      { q: "A lean startup business plan is:", options: ["A tax form", "A 100-page report", "A short, one-page plan", "A license"], answer: 2, why: "The SBA describes it as a one-page plan." },
-      { q: "When AI helps write your plan, who supplies the facts?", options: ["You", "The AI", "A stranger", "The IRS"], answer: 0, why: "AI organizes; you know your business." },
-      { q: "In a sole proprietorship, who is responsible for business debts?", options: ["Your customers", "Nobody", "The government", "You personally"], answer: 3, why: "There is no separation between owner and business." },
-      { q: "An LLC is usually registered with:", options: ["The IRS only", "Your state, often the Secretary of State", "Your bank", "A social media site"], answer: 1, why: "States form LLCs." },
-      { q: "Where do you check the current cost of forming an LLC?", options: ["AI only", "Your state's Secretary of State website", "A pop-up ad", "A friend"], answer: 1, why: "Costs differ by state and change." },
-      { q: "DBA stands for:", options: ["Debt before assets", "Department of Business Affairs", "Daily bank account", "Doing business as"], answer: 3, why: "A DBA is a registered trade name." },
-      { q: "A website charges $200 to get you an EIN. You should:", options: ["Apply free on irs.gov instead", "Pay it", "Give it your SSN", "Ask AI to pay it"], answer: 0, why: "The IRS warns about sites that charge for EINs." },
-      { q: "The IRS online EIN application:", options: ["Is open 24 hours every day", "Can be saved and finished next week", "Must be finished in one session during its open hours", "Costs a fee"], answer: 2, why: "The IRS says you cannot save it and lists set hours." },
-      { q: "Which level of government licenses many trades, like electrical work?", options: ["The post office", "Only the federal government", "Your bank", "The state"], answer: 3, why: "States license many trades." },
-      { q: "Where should you type your real Social Security number when applying for an EIN?", options: ["In a text to a stranger", "Into an AI assistant", "Only on the official irs.gov site", "On any website"], answer: 2, why: "Private numbers go only on official sites." },
-      { q: "Why open a separate business bank account?", options: ["To avoid all taxes", "To keep business and personal money apart", "It replaces a license", "To hide money"], answer: 1, why: "The SBA says separation protects you and helps records." },
-      { q: "Good business records include:", options: ["Date, who, what and how much, with receipts", "Only big sales", "Nothing", "Your passwords"], answer: 0, why: "Complete records make taxes easier." },
-      { q: "Which form reports income or loss from a sole proprietorship?", options: ["Schedule C", "Form W-2", "Form I-9", "Form DS-11"], answer: 0, why: "The IRS uses Schedule C for sole proprietors." },
-      { q: "Which SBA partner offers volunteer business mentors at no cost?", options: ["The IRS", "SCORE", "A payday lender", "A credit bureau"], answer: 1, why: "SCORE mentors give advice at no cost." }
+      { objective: "O1", q: "A service business:", options: ["Only sells products", "Does work for people, like cleaning or repairs", "Is always online", "Needs a factory"], answer: 1, why: "Services are work done for customers." },
+      { objective: "O1", q: "Startup costs are:", options: ["The money needed to begin, such as tools and supplies", "Your profit", "Your taxes", "Your customers"], answer: 0, why: "They are what you spend to start." },
+      { objective: "O1", q: "If a job needs a state license, you should check:", options: ["Your state licensing board's official website", "Only AI", "A rumor", "Nothing"], answer: 0, why: "Licensing boards set the rules, which have changed in many states." },
+      { objective: "O2", q: "Why describe customers specifically?", options: ["It raises prices", "It tells you where to find them", "It is required by the IRS", "It replaces a license"], answer: 1, why: "Specific customers are easier to reach." },
+      { objective: "O2", q: "To set a price, start with:", options: ["The lowest price in town, even at a loss", "A random number", "Your costs for one job and your time", "Whatever a friend says"], answer: 2, why: "Prices must cover costs and time." },
+      { objective: "O2", q: "Profit is:", options: ["A loan", "All money coming in", "Your tax bill", "Money left after costs"], answer: 3, why: "Profit = income minus costs." },
+      { objective: "O3", q: "A lean startup business plan is:", options: ["A tax form", "A 100-page report", "A short, one-page plan", "A license"], answer: 2, why: "The SBA describes it as a one-page plan." },
+      { objective: "O3", q: "When AI helps write your plan, who supplies the facts?", options: ["You", "The AI", "A stranger", "The IRS"], answer: 0, why: "AI organizes; you know your business." },
+      { objective: "O4", q: "In a sole proprietorship, who is responsible for business debts?", options: ["Your customers", "Nobody", "The government", "You personally"], answer: 3, why: "There is no separation between owner and business." },
+      { objective: "O4", q: "An LLC is usually registered with:", options: ["The IRS only", "Your state, often the Secretary of State", "Your bank", "A social media site"], answer: 1, why: "States form LLCs." },
+      { objective: "O4", q: "Where do you check the current cost of forming an LLC?", options: ["AI only", "Your state's Secretary of State website", "A pop-up ad", "A friend"], answer: 1, why: "Costs differ by state and change." },
+      { objective: "O4", q: "DBA stands for:", options: ["Debt before assets", "Department of Business Affairs", "Daily bank account", "Doing business as"], answer: 3, why: "A DBA is a registered trade name." },
+      { objective: "O5", q: "A website charges $200 to get you an EIN. You should:", options: ["Apply free on irs.gov instead", "Pay it", "Give it your SSN", "Ask AI to pay it"], answer: 0, why: "The IRS warns about sites that charge for EINs." },
+      { objective: "O5", q: "The IRS online EIN application:", options: ["Is open 24 hours every day", "Can be saved and finished next week", "Must be finished in one session during its open hours", "Costs a fee"], answer: 2, why: "The IRS says you cannot save it and lists set hours." },
+      { objective: "O5", q: "Which level of government licenses many trades, like electrical work?", options: ["The post office", "Only the federal government", "Your bank", "The state"], answer: 3, why: "States license many trades." },
+      { objective: "O5", q: "Where should you type your real Social Security number when applying for an EIN?", options: ["In a text to a stranger", "Into an AI assistant", "Only on the official irs.gov site", "On any website"], answer: 2, why: "Private numbers go only on official sites." },
+      { objective: "O6", q: "Why open a separate business bank account?", options: ["To avoid all taxes", "To keep business and personal money apart", "It replaces a license", "To hide money"], answer: 1, why: "The SBA says separation protects you and helps records." },
+      { objective: "O6", q: "Good business records include:", options: ["Date, who, what and how much, with receipts", "Only big sales", "Nothing", "Your passwords"], answer: 0, why: "Complete records make taxes easier." },
+      { objective: "O6", q: "Which form reports income or loss from a sole proprietorship?", options: ["Schedule C", "Form W-2", "Form I-9", "Form DS-11"], answer: 0, why: "The IRS uses Schedule C for sole proprietors." },
+      { objective: "O6", q: "Which SBA partner offers volunteer business mentors at no cost?", options: ["The IRS", "SCORE", "A payday lender", "A credit bureau"], answer: 1, why: "SCORE mentors give advice at no cost." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      2,
+      4,
+      6,
+      7,
+      8,
+      11,
+      12,
+      14,
+      16
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "One-page plan",
+        objective: "O3",
+        notYet: "The plan is missing a part, or has facts the learner did not give.",
+        meets: "One page covering service, customers, price, how customers find you and startup costs.",
+        exceeds: "The learner can explain each part of the plan in their own words."
+      },
+      {
+        name: "Customers and price",
+        objective: "O2",
+        notYet: "Customers are \"everyone\", or the price does not cover costs.",
+        meets: "A specific customer description and a price that covers costs, time and taxes.",
+        exceeds: "The price was compared with two real local prices."
+      },
+      {
+        name: "Structure and name",
+        objective: "O4",
+        notYet: "No structure chosen, or the name was not checked.",
+        meets: "Structure chosen with a reason, and the official DBA page found if needed.",
+        exceeds: "Also notes where to check the current cost of forming an LLC."
+      },
+      {
+        name: "EIN and licenses",
+        objective: "O5",
+        notYet: "Uses a paid EIN service, or no license check.",
+        meets: "irs.gov EIN page and city, county and state license pages listed.",
+        exceeds: "Notes the EIN online hours and what to have ready to apply."
+      },
+      {
+        name: "Money, records and help",
+        objective: "O6",
+        notYet: "No separate account or record plan.",
+        meets: "A separate bank account, a record log, money set aside for taxes, and a SCORE or SBDC office named.",
+        exceeds: "The record log has a first real or practice entry with a receipt."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who get an EIN or register a business within 90 days (follow-up survey)",
+      "Learners who earn income from their business within 90 days",
+      "Learners who meet with a SCORE mentor or SBDC adviser within 60 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A smartphone or computer with internet",
+      "A free AI assistant: Microsoft Copilot, ChatGPT or Google Gemini",
+      "Paper and pen, or a free notes app, for the plan and checklist",
+      "About 60 minutes in total, in short sessions: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Look up your own state, county and city business pages before the session so you can show learners the real local sites.",
+      "Never ask learners to type a Social Security number, case details or bank details into AI or on a shared screen; EIN applications are done only on irs.gov, privately.",
+      "Send questions about licenses and past convictions to the state licensing board, not to AI.",
+      "This course is not legal or tax advice; invite a local SCORE mentor or SBDC adviser to a session if you can.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

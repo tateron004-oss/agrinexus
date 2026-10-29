@@ -23,11 +23,35 @@ module.exports = {
     "Each lesson takes about five minutes with a \"Try it now\" task. There is a knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Build a restaurant kit: menu descriptions for five dishes, an allergen chart for those five dishes built from your real recipes and ingredient labels (checked by you against the FDA's nine major allergens), a prep list and an order list for one week based on your sales, a draft staff schedule, and replies to one good and one bad review.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Owners, managers and cooks at small restaurants, cafés, food trucks, caterers and home-style kitchens, many of them family and minority-owned, where the owner also cooks, orders and answers the phone.",
+    startingPoint: "Can cook, run a shift and take orders. Many use a phone and a point-of-sale system, but have little or no experience with AI assistants or spreadsheet formulas.",
+    gap: "Writing, planning and paperwork eat hours the owner does not have. Learners need to use AI to save that time while keeping allergen information, labor rules and reviews accurate and honest, because a mistake can hurt a guest or break a rule.",
+    constraints: [
+      "Time: owners work long shifts, so lessons are about 5 minutes each",
+      "Devices: often a phone or one shared office computer",
+      "Food safety and allergen rules come from the FDA and the local health department, not from AI",
+      "Labor rules on breaks, overtime and minors depend on the state and city",
+      "Privacy: no Social Security numbers, pay with names or private notes about workers in AI tools"
+    ],
+    prerequisites: "None. Learners new to AI assistants can take an introduction to AI course first."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given the real ingredients and method for a dish", action: "write a short menu description with AI help and remove anything that is not true", standard: "with every ingredient word matching your recipe" },
+    { id: "O2", condition: "Using your own recipes and the labels of what you buy", action: "build an allergen chart that marks the FDA's nine major allergens for each dish", standard: "with every dish checked by a second person" },
+    { id: "O3", condition: "Given your average sales per day and portions per batch", action: "create a weekly prep list and order list in a spreadsheet", standard: "with batches rounded up and adjusted for events, weekends and weather" },
+    { id: "O4", condition: "Given your hours, shifts and workers' first names and availability", action: "draft a weekly staff schedule with AI and check it for coverage, fairness and labor rules", standard: "with no private worker details in the prompt" },
+    { id: "O5", condition: "Given a guest question or a good or bad review", action: "write a calm, honest reply with AI help", standard: "with every statement true and no fake or paid-for reviews" },
+    { id: "O6", condition: "Given extra or seasonal ingredients", action: "plan a weekly special, calculate its plate cost and set a price with a profit", standard: "with allergens checked and the special added to the prep list" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Menu, allergens and kitchen lists",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Writing menu descriptions",
           minutes: 5,
           goal: "Write short, mouth-watering and accurate menu descriptions with AI help.",
@@ -44,9 +68,14 @@ module.exports = {
             { title: "Check every word", bullets: ["No ingredients you do not use", "No \"organic\" or \"house-made\" unless true", "Wrong ingredients can hurt allergic guests"] }
           ],
           tryIt: "Write menu descriptions for five of your dishes with AI help. Check every ingredient word against your recipe.",
-          youCanNow: "write accurate, appealing menu descriptions with AI help."
+          youCanNow: "write accurate, appealing menu descriptions with AI help.",
+          quickCheck: [
+            { objective: "O1", q: "What three things does a good menu description say?", options: ["What is in the dish, how it is cooked, and why it is special", "The price, the cook's name and the plate size", "The calories, the supplier and the date", "Only the name of the dish in capital letters"], answer: 0, why: "The lesson says a good description covers what is in it, how it is cooked and why it is special." },
+            { objective: "O1", q: "AI writes \"house-made organic tortillas\" but you buy regular tortillas. What do you do?", options: ["Keep it because it sounds better", "Remove \"house-made\" and \"organic\" because they are not true", "Add more words like \"artisan\"", "Ask AI to write it in capital letters"], answer: 1, why: "Menu words must be true, so you remove anything AI added that you do not do." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Building an allergen chart, safely",
           minutes: 6,
           goal: "Build an allergen chart from your own recipes and labels, checked by you.",
@@ -65,9 +94,14 @@ module.exports = {
           ],
           sources: [FDA_ALLERGENS, FDA_CODE],
           tryIt: "Ask AI to set up an empty allergen chart for five dishes with the nine allergens as columns. Fill it in yourself from your recipes and ingredient labels, then have someone check it.",
-          youCanNow: "build and maintain an allergen chart from your own recipes and labels."
+          youCanNow: "build and maintain an allergen chart from your own recipes and labels.",
+          quickCheck: [
+            { objective: "O2", q: "What goes across the top of the allergen chart in this lesson?", options: ["Your prices", "Your suppliers' names", "The nine major allergens", "Your staff's names"], answer: 2, why: "Dishes go down the side and the nine allergens go across the top." },
+            { objective: "O2", q: "Your supplier changes the brand of spice mix you use. What do you do?", options: ["Nothing, spice mixes never have allergens", "Ask AI if the new brand has allergens and trust it", "Wait until a guest asks", "Read the new label and update the chart"], answer: 3, why: "AI does not know your suppliers' products; you update the chart from the new label." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Prep lists and order lists from your sales",
           minutes: 5,
           goal: "Make a weekly prep list and order list from your sales numbers.",
@@ -84,17 +118,21 @@ module.exports = {
             { title: "Use what you know", bullets: ["Weekends, events, weather", "AI helps with layout; you set the amounts"] }
           ],
           tryIt: "Make a prep sheet for five dishes with sold-per-day, portions per batch and a ROUNDUP formula for batches. Turn it into an order list for one week.",
-          youCanNow: "build prep and order lists from your own sales numbers."
+          youCanNow: "build prep and order lists from your own sales numbers.",
+          quickCheck: [
+            { objective: "O3", q: "What problem does over-prepping cause?", options: ["Wasted food", "Running out of a dish", "Longer opening hours", "Higher rent"], answer: 0, why: "The lesson says over-prepping wastes food and under-prepping means running out." },
+            { objective: "O3", q: "A big festival is in town this weekend. What do you do with your prep list?", options: ["Use the usual numbers exactly", "Adjust the amounts up based on what you know", "Let AI set the amounts with no changes", "Stop making a prep list"], answer: 1, why: "You adjust for events, weekends and weather, because your experience sets the amounts." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Menu, allergens and kitchen lists",
         questions: [
-          { q: "AI's menu description adds \"with cashews\" but your dish has none. What do you do?", options: ["Keep it; it sounds nice", "Remove it", "Add cashews", "Ignore it"], answer: 1, why: "Wrong ingredients can hurt allergic guests and mislead everyone." },
-          { q: "How many major food allergens does the FDA list?", options: ["Twenty", "Three", "Fourteen", "Nine"], answer: 3, why: "The FDA lists nine, including sesame." },
-          { q: "Where does the allergen information in your chart come from?", options: ["Your recipes and the labels of what you buy", "AI's guess", "A competitor's menu", "Customers"], answer: 0, why: "Only your recipes and labels show what is really in your food." },
-          { q: "A guest asks if a dish has sesame and you are not sure. You:", options: ["Ask AI", "Guess no", "Say \"Let me check\" and ask the kitchen and chart", "Say it is fine"], answer: 2, why: "Never guess about allergens." },
-          { q: "You sell 22 a day and a batch makes 8. With ROUNDUP, how many batches?", options: ["2", "3", "4", "22"], answer: 1, why: "22 / 8 = 2.75, rounded up to 3." }
+          { objective: "O1", q: "AI's menu description adds \"with cashews\" but your dish has none. What do you do?", options: ["Keep it; it sounds nice", "Remove it", "Add cashews", "Ignore it"], answer: 1, why: "Wrong ingredients can hurt allergic guests and mislead everyone." },
+          { objective: "O2", q: "How many major food allergens does the FDA list?", options: ["Twenty", "Three", "Fourteen", "Nine"], answer: 3, why: "The FDA lists nine, including sesame." },
+          { objective: "O2", q: "Where does the allergen information in your chart come from?", options: ["Your recipes and the labels of what you buy", "AI's guess", "A competitor's menu", "Customers"], answer: 0, why: "Only your recipes and labels show what is really in your food." },
+          { objective: "O2", q: "A guest asks if a dish has sesame and you are not sure. You:", options: ["Ask AI", "Guess no", "Say \"Let me check\" and ask the kitchen and chart", "Say it is fine"], answer: 2, why: "Never guess about allergens." },
+          { objective: "O3", q: "You sell 22 a day and a batch makes 8. With ROUNDUP, how many batches?", options: ["2", "3", "4", "22"], answer: 1, why: "22 / 8 = 2.75, rounded up to 3." }
         ]
       }
     },
@@ -102,6 +140,7 @@ module.exports = {
       name: "Chapter 2: Staff, guests and growth",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Drafting a staff schedule",
           minutes: 5,
           goal: "Draft a weekly schedule with AI help, then check it against your rules.",
@@ -118,9 +157,14 @@ module.exports = {
             { title: "Keep worker data private", bullets: ["No SSNs or pay rates with names", "First names and availability are enough"] }
           ],
           tryIt: "Draft next week's schedule with AI using first names and availability. Check coverage and fairness, and write where you will check your state's break and overtime rules.",
-          youCanNow: "draft a staff schedule with AI and check it against your own needs and labor rules."
+          youCanNow: "draft a staff schedule with AI and check it against your own needs and labor rules.",
+          quickCheck: [
+            { objective: "O4", q: "What facts does AI need to draft a schedule?", options: ["Workers' Social Security numbers and pay", "Only the restaurant's name", "Your hours, people needed per shift, and workers' availability and roles", "Private notes about each worker"], answer: 2, why: "Hours, shift needs, availability and roles are enough; private details stay out." },
+            { objective: "O4", q: "AI's draft schedules a 16-year-old on a late shift. What do you do?", options: ["Post it as it is", "Ask AI if it is legal and trust the answer", "Remove the worker from the schedule forever", "Check your state's rules for minors and fix the draft"], answer: 3, why: "Rules on minors depend on your state, so you check them and fix the schedule yourself." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Answering reviews and guest messages",
           minutes: 5,
           goal: "Reply to reviews and common guest questions quickly and honestly.",
@@ -138,9 +182,14 @@ module.exports = {
           ],
           sources: [FTC_REVIEWS],
           tryIt: "Ask AI to draft replies to one good and one bad review (real or sample, such as cold food on a busy Friday). Make every statement true and in your voice.",
-          youCanNow: "answer guest questions and reviews quickly, calmly and honestly."
+          youCanNow: "answer guest questions and reviews quickly, calmly and honestly.",
+          quickCheck: [
+            { objective: "O5", q: "How should you answer a good review?", options: ["Thank them briefly and mention the dish", "Ignore it", "Offer them money for another review", "Write a long story about your restaurant"], answer: 0, why: "The lesson says to thank good reviews briefly and mention the dish." },
+            { objective: "O5", q: "You are angry about an unfair bad review. What do you do?", options: ["Argue with the guest in public", "Let AI draft a calm reply, then check every statement is true", "Post fake good reviews to hide it", "Delete your business page"], answer: 1, why: "AI can help you stay calm, and you check the reply is true; you never argue publicly or fake reviews." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Planning specials that use what you have",
           minutes: 5,
           goal: "Plan a weekly special that cuts waste and keeps a profit.",
@@ -157,17 +206,21 @@ module.exports = {
             { title: "Before you post", bullets: ["Cost the plate and set a price", "Check allergens; add to prep list", "Use a real photo"] }
           ],
           tryIt: "Final task: build your restaurant kit: five menu descriptions, an allergen chart from your recipes and labels, a week's prep and order lists, a draft schedule, two review replies, and one special with its plate cost.",
-          youCanNow: "use AI across your restaurant's planning, paperwork and guest communication, safely."
+          youCanNow: "use AI across your restaurant's planning, paperwork and guest communication, safely.",
+          quickCheck: [
+            { objective: "O6", q: "What is one reason to run a special?", options: ["To raise prices on everything", "To use up staff hours", "To sell extra stock before it spoils", "To avoid checking allergens"], answer: 2, why: "Specials can sell extra stock, test new dishes and bring regulars back." },
+            { objective: "O6", q: "AI suggests three specials from your extra plantains. What do you do next?", options: ["Post all three right away with stock photos", "Ask AI to set the price", "Skip costing because it is only for one week", "Pick one, cost the plate and set a price with a profit"], answer: 3, why: "You cost the plate and price it for a profit, then check allergens and add it to the prep list." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Staff, guests and growth",
         questions: [
-          { q: "Where do you check break and overtime rules?", options: ["Your state labor department or a professional", "The AI's draft", "A customer", "A social media post"], answer: 0, why: "Labor rules depend on your state and city." },
-          { q: "Which worker information should go into the AI schedule prompt?", options: ["Home addresses", "Social Security numbers", "Pay rates with names", "First names and availability"], answer: 3, why: "Only what is needed, nothing private." },
-          { q: "A guest messages asking if a dish is peanut-free. Your reply should be based on:", options: ["AI's guess", "Your checked allergen chart and staff", "The menu photo", "Your memory only"], answer: 1, why: "Allergen answers come from your checked chart." },
-          { q: "Under the FTC rule, which is banned?", options: ["Writing fake reviews with AI", "Thanking a reviewer", "Replying to a bad review", "Asking guests for honest reviews"], answer: 0, why: "Fake reviews, including AI-written ones, are banned." },
-          { q: "A special uses $3.50 of ingredients and sells for $14. What is the food cost percentage?", options: ["14%", "25%", "35%", "50%"], answer: 1, why: "3.50 / 14 = 0.25, or 25%." }
+          { objective: "O4", q: "Where do you check break and overtime rules?", options: ["Your state labor department or a professional", "The AI's draft", "A customer", "A social media post"], answer: 0, why: "Labor rules depend on your state and city." },
+          { objective: "O4", q: "Which worker information should go into the AI schedule prompt?", options: ["Home addresses", "Social Security numbers", "Pay rates with names", "First names and availability"], answer: 3, why: "Only what is needed, nothing private." },
+          { objective: "O5", q: "A guest messages asking if a dish is peanut-free. Your reply should be based on:", options: ["AI's guess", "Your checked allergen chart and staff", "The menu photo", "Your memory only"], answer: 1, why: "Allergen answers come from your checked chart." },
+          { objective: "O5", q: "Under the FTC rule, which is banned?", options: ["Writing fake reviews with AI", "Thanking a reviewer", "Replying to a bad review", "Asking guests for honest reviews"], answer: 0, why: "Fake reviews, including AI-written ones, are banned." },
+          { objective: "O6", q: "A special uses $3.50 of ingredients and sells for $14. What is the food cost percentage?", options: ["14%", "25%", "35%", "50%"], answer: 1, why: "3.50 / 14 = 0.25, or 25%." }
         ]
       }
     }
@@ -175,26 +228,110 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI for Restaurants",
     questions: [
-      { q: "A good menu description is about:", options: ["200 words", "10 to 25 words", "One letter", "A full page"], answer: 1, why: "Short descriptions are read quickly." },
-      { q: "What do you give AI to write a menu description?", options: ["Nothing", "Your bank details", "Guests' names", "The real ingredients and method"], answer: 3, why: "Real facts make accurate descriptions." },
-      { q: "Why check every ingredient word AI writes?", options: ["It is not needed", "To make it longer", "For spelling only", "A wrong ingredient can hurt a guest with an allergy"], answer: 3, why: "Accuracy is a safety issue." },
-      { q: "Which is one of the FDA's nine major allergens?", options: ["Rice", "Sesame", "Corn", "Chicken"], answer: 1, why: "Sesame was added as the ninth." },
-      { q: "Why read the label of every bought ingredient?", options: ["For fun", "To find the price", "Sauces and mixes can hide allergens", "It is not needed"], answer: 2, why: "Hidden allergens are common in prepared ingredients." },
-      { q: "When should you update your allergen chart?", options: ["When a recipe or supplier changes", "Once every ten years", "Never", "Only after a complaint"], answer: 0, why: "Changes can add allergens." },
-      { q: "What is cross-contact?", options: ["A phone call", "Two staff talking", "An allergen getting into another food via shared tools or oil", "A menu change"], answer: 2, why: "Shared surfaces can spread allergens." },
-      { q: "Who sets food safety rules for your restaurant?", options: ["Your local health department, often based on the FDA Food Code", "The AI", "Your customers", "A review site"], answer: 0, why: "Official agencies set the rules." },
-      { q: "A prep list is:", options: ["A staff schedule", "What the kitchen must prepare before service", "A review", "A tax form"], answer: 1, why: "It guides kitchen prep." },
-      { q: "=ROUNDUP(B2/C2,0) gives:", options: ["Allergens", "Profit", "Staff hours", "Whole batches needed, rounded up"], answer: 3, why: "It rounds the batch count up." },
-      { q: "Who sets the final prep amounts?", options: ["You, from your numbers and experience", "The AI alone", "A supplier", "Guests"], answer: 0, why: "AI helps with layout; you decide amounts." },
-      { q: "Which is a good reason to adjust prep?", options: ["Nothing", "A new font", "AI says so", "A local event this weekend"], answer: 3, why: "Events change demand." },
-      { q: "AI's schedule draft gives one worker 7 shifts. You:", options: ["Ignore it", "Post it", "Check fairness and labor rules, then fix it", "Ask the worker to quit"], answer: 2, why: "You check every draft." },
-      { q: "Is AI a reliable source for your state's overtime law?", options: ["Yes, always", "No, check the state labor department", "Only on weekends", "Only for minors"], answer: 1, why: "Labor law needs an official source." },
-      { q: "A bad review complains of cold food. A good reply:", options: ["Offers cash for a better review", "Argues publicly", "Shares the guest's details", "Apologizes, says what you are fixing, invites contact"], answer: 3, why: "Calm, honest replies build trust." },
-      { q: "Paying guests only if they leave 5 stars is:", options: ["Required", "Smart marketing", "Banned under the FTC review rule", "Fine"], answer: 2, why: "Rewards tied to positive sentiment are banned." },
-      { q: "A good use of a special is to:", options: ["Use extra stock before it spoils", "Hide old food", "Raise all prices", "Skip allergen checks"], answer: 0, why: "Specials cut waste." },
-      { q: "What is plate cost?", options: ["The price of dishes", "The cost of ingredients in one serving", "Rent", "A tip"], answer: 1, why: "It is ingredient cost per plate." },
-      { q: "Before posting a special you should:", options: ["Skip pricing", "Check allergens and add it to the prep list", "Use a stock photo of another dish", "Promise it is organic"], answer: 1, why: "Safety and planning come first." },
-      { q: "Food cost percentage is:", options: ["Plate cost divided by menu price, times 100", "Rent divided by sales", "Tips times staff", "Price plus tax"], answer: 0, why: "It shows how much of the price is ingredients." }
+      { objective: "O1", q: "A good menu description is about:", options: ["200 words", "10 to 25 words", "One letter", "A full page"], answer: 1, why: "Short descriptions are read quickly." },
+      { objective: "O1", q: "What do you give AI to write a menu description?", options: ["Nothing", "Your bank details", "Guests' names", "The real ingredients and method"], answer: 3, why: "Real facts make accurate descriptions." },
+      { objective: "O1", q: "Why check every ingredient word AI writes?", options: ["It is not needed", "To make it longer", "For spelling only", "A wrong ingredient can hurt a guest with an allergy"], answer: 3, why: "Accuracy is a safety issue." },
+      { objective: "O2", q: "Which is one of the FDA's nine major allergens?", options: ["Rice", "Sesame", "Corn", "Chicken"], answer: 1, why: "Sesame was added as the ninth." },
+      { objective: "O2", q: "Why read the label of every bought ingredient?", options: ["For fun", "To find the price", "Sauces and mixes can hide allergens", "It is not needed"], answer: 2, why: "Hidden allergens are common in prepared ingredients." },
+      { objective: "O2", q: "When should you update your allergen chart?", options: ["When a recipe or supplier changes", "Once every ten years", "Never", "Only after a complaint"], answer: 0, why: "Changes can add allergens." },
+      { objective: "O2", q: "What is cross-contact?", options: ["A phone call", "Two staff talking", "An allergen getting into another food via shared tools or oil", "A menu change"], answer: 2, why: "Shared surfaces can spread allergens." },
+      { objective: "O2", q: "Who sets food safety rules for your restaurant?", options: ["Your local health department, often based on the FDA Food Code", "The AI", "Your customers", "A review site"], answer: 0, why: "Official agencies set the rules." },
+      { objective: "O3", q: "A prep list is:", options: ["A staff schedule", "What the kitchen must prepare before service", "A review", "A tax form"], answer: 1, why: "It guides kitchen prep." },
+      { objective: "O3", q: "=ROUNDUP(B2/C2,0) gives:", options: ["Allergens", "Profit", "Staff hours", "Whole batches needed, rounded up"], answer: 3, why: "It rounds the batch count up." },
+      { objective: "O3", q: "Who sets the final prep amounts?", options: ["You, from your numbers and experience", "The AI alone", "A supplier", "Guests"], answer: 0, why: "AI helps with layout; you decide amounts." },
+      { objective: "O3", q: "Which is a good reason to adjust prep?", options: ["Nothing", "A new font", "AI says so", "A local event this weekend"], answer: 3, why: "Events change demand." },
+      { objective: "O4", q: "AI's schedule draft gives one worker 7 shifts. You:", options: ["Ignore it", "Post it", "Check fairness and labor rules, then fix it", "Ask the worker to quit"], answer: 2, why: "You check every draft." },
+      { objective: "O4", q: "Is AI a reliable source for your state's overtime law?", options: ["Yes, always", "No, check the state labor department", "Only on weekends", "Only for minors"], answer: 1, why: "Labor law needs an official source." },
+      { objective: "O5", q: "A bad review complains of cold food. A good reply:", options: ["Offers cash for a better review", "Argues publicly", "Shares the guest's details", "Apologizes, says what you are fixing, invites contact"], answer: 3, why: "Calm, honest replies build trust." },
+      { objective: "O5", q: "Paying guests only if they leave 5 stars is:", options: ["Required", "Smart marketing", "Banned under the FTC review rule", "Fine"], answer: 2, why: "Rewards tied to positive sentiment are banned." },
+      { objective: "O6", q: "A good use of a special is to:", options: ["Use extra stock before it spoils", "Hide old food", "Raise all prices", "Skip allergen checks"], answer: 0, why: "Specials cut waste." },
+      { objective: "O6", q: "What is plate cost?", options: ["The price of dishes", "The cost of ingredients in one serving", "Rent", "A tip"], answer: 1, why: "It is ingredient cost per plate." },
+      { objective: "O6", q: "Before posting a special you should:", options: ["Skip pricing", "Check allergens and add it to the prep list", "Use a stock photo of another dish", "Promise it is organic"], answer: 1, why: "Safety and planning come first." },
+      { objective: "O6", q: "Food cost percentage is:", options: ["Plate cost divided by menu price, times 100", "Rent divided by sales", "Tips times staff", "Price plus tax"], answer: 0, why: "It shows how much of the price is ingredients." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      1,
+      3,
+      6,
+      9,
+      12,
+      14,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Accurate menu descriptions",
+        objective: "O1",
+        notYet: "A description lists an ingredient or claim that is not in the dish.",
+        meets: "Five short descriptions, every ingredient word matching the recipe.",
+        exceeds: "Each one also says how the dish is cooked and why it is special."
+      },
+      {
+        name: "Checked allergen chart",
+        objective: "O2",
+        notYet: "The chart is copied from AI or missing a dish or allergen.",
+        meets: "All five dishes marked for the nine allergens from recipes and labels, checked by a second person.",
+        exceeds: "Notes which bought items hide allergens and when the chart was last updated."
+      },
+      {
+        name: "Prep and order lists",
+        objective: "O3",
+        notYet: "Amounts are guessed or batches are not rounded up.",
+        meets: "A week's prep and order lists built from sales with batches rounded up.",
+        exceeds: "Amounts are adjusted for a named event, weekend or weather."
+      },
+      {
+        name: "Fair, checked schedule",
+        objective: "O4",
+        notYet: "The schedule leaves a busy shift short or used private worker details.",
+        meets: "Covers every shift fairly, uses first names only, and notes where labor rules were checked.",
+        exceeds: "Also notes breaks and any rules for minors from the state source."
+      },
+      {
+        name: "Honest review replies",
+        objective: "O5",
+        notYet: "A reply argues, makes a false promise or offers a reward for reviews.",
+        meets: "One good and one bad review answered calmly with only true statements.",
+        exceeds: "The bad-review reply names a real fix and invites the guest to make contact."
+      },
+      {
+        name: "Costed special",
+        objective: "O6",
+        notYet: "The special has no plate cost or price.",
+        meets: "One special with plate cost, a price with profit, and allergens checked.",
+        exceeds: "Also added to the prep list and uses extra or seasonal stock."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Owners who report using their allergen chart and prep lists in the kitchen within 30 days (follow-up survey)",
+      "Owners who report less food waste or fewer items running out within 30 days",
+      "Learners who start another Koach Learn small business course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or computer with internet",
+      "A free AI assistant and a free spreadsheet such as Google Sheets",
+      "Your own recipes, ingredient labels and a week of sales numbers",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Ask owners to bring real recipes and labels, or use sample ones, so the allergen chart is built from real information.",
+      "Stress that allergen, food safety and labor rules come from the FDA, the local health department and the state labor department, not from AI.",
+      "Remind learners to use first names only for staff and never type Social Security numbers or pay with names.",
+      "Schedule sessions outside meal rushes, for example mid-afternoon.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

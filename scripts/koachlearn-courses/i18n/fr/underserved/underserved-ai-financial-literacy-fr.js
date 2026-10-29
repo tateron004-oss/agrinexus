@@ -16,11 +16,35 @@ module.exports = {
     "Ce cours enseigne des compétences, pas des conseils en placement. Pour les grandes décisions d'argent, parlez à un conseiller gratuit d'une association ou consultez des sources officielles comme consumerfinance.gov, fdic.gov et irs.gov (des sites américains ; ailleurs, consultez la banque centrale ou l'administration fiscale de votre pays). Chaque leçon dure environ cinq minutes et se termine par une tâche « Essayez maintenant ». Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Construisez le budget d'un mois pour votre foyer : listez les revenus, les besoins et les envies avec des montants arrondis, utilisez un assistant d'IA pour les trier et proposer un endroit où économiser (sans numéro de compte ni détail privé), fixez un objectif d'épargne avec un montant et une date, et notez où vous obtiendrez gratuitement votre rapport de crédit et de l'aide pour vos impôts.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des adultes de communautés mal desservies qui gèrent un foyer avec un budget serré : parents qui travaillent, aidants, personnes qui reçoivent des aides, personnes âgées et jeunes adultes qui vivent seuls pour la première fois.",
+    startingPoint: "Ils paient les factures et suivent leur argent de tête ou sur papier. Peu ont un budget écrit, un objectif d'épargne ou ont déjà consulté leur rapport de crédit, et beaucoup n'ont jamais utilisé l'IA pour leurs finances. Certains ont été visés par des arnaques financières.",
+    gap: "Sans plan, les petites dépenses s'accumulent, l'épargne ne commence jamais, les erreurs de crédit ne sont pas corrigées, et des familles paient pour de l'aide fiscale ou tombent dans des arnaques. Les apprenants ont besoin d'un budget simple, d'un objectif d'épargne et d'une aide gratuite fiable, et doivent utiliser l'IA sans partager de numéros privés.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes (niveau fin d'école primaire)",
+      "Appareils : un smartphone ou un ordinateur de bibliothèque ; le papier suffit pour le budget",
+      "Vie privée : seulement des montants arrondis, jamais de numéro de compte, de carte ou de sécurité sociale ni de mot de passe dans l'IA",
+      "Éducation financière générale seulement : aucun conseil en investissement, et les grandes décisions passent par les sources officielles ou un conseiller gratuit d'une association",
+      "Les montants et les règles (FDIC, VITA, Lifeline) changent : les apprenants vérifient les sites officiels"
+    ],
+    prerequisites: "Aucun. Les apprenants qui découvrent les assistants d'IA peuvent d'abord suivre « Introduction à l'IA et autonomie numérique »."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir d'un mois de fiches de paie, de relevés ou de reçus", action: "lister vos revenus et classer vos dépenses en besoins et en envies", standard: "avec au moins dix dépenses, des montants arrondis et des totaux" },
+    { id: "O2", condition: "Avec un assistant d'IA gratuit", action: "organiser votre budget en tableau et choisir lesquelles de ses suggestions conviennent à votre famille", standard: "en partageant seulement des catégories arrondies et en vérifiant les totaux avec une calculatrice" },
+    { id: "O3", condition: "À partir d'une chose pour laquelle vous voulez épargner", action: "fixer un objectif d'épargne avec un montant et une date, calculer la somme par semaine et choisir un endroit sûr où la garder", standard: "avec le calcul vérifié et une banque assurée par la FDIC ou une coopérative de crédit assurée au niveau fédéral" },
+    { id: "O4", condition: "Avec AnnualCreditReport.com", action: "expliquer comment obtenir vos rapports de crédit gratuits et y chercher les erreurs", standard: "en nommant les trois bureaux de crédit et ce qu'il faut contester" },
+    { id: "O5", condition: "Quand vous avez besoin d'aide pour les impôts ou l'argent", action: "trouver un lieu d'aide fiscale gratuite VITA ou TCE et une source fiable pour vos questions d'argent", standard: "en notant l'adresse du lieu et ce qu'il faut apporter" },
+    { id: "O6", condition: "Face à une offre d'argent ou à un message urgent", action: "repérer les signes d'une arnaque financière et choisir l'étape suivante sans risque", standard: "sans donner d'identifiants ni de codes, et en signalant les arnaques à la FTC" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Votre plan d'argent",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Les bases du budget : revenus, besoins et envies",
           minutes: 5,
           goal: "Lister vos revenus du mois et classer vos dépenses en besoins et en envies.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Commencez simple", bullets: ["Un mois", "Fiches de paie, relevés, reçus", "Arrondissez les montants"] }
           ],
           tryIt: "Sur papier ou dans un tableur gratuit, notez vos revenus du mois et au moins dix dépenses. Marquez chacune B pour besoin ou E pour envie.",
-          youCanNow: "lister vos revenus et classer vos dépenses en besoins et en envies."
+          youCanNow: "lister vos revenus et classer vos dépenses en besoins et en envies.",
+          quickCheck: [
+            { objective: "O1", q: "Que sont les revenus ?", options: ["L'argent qui entre, comme les salaires et les aides", "L'argent dépensé pour le loyer", "L'argent que vous devez", "Une facture que vous payez"], answer: 0, why: "Les revenus, c'est l'argent qui entre : salaires, aides ou petits boulots." },
+            { objective: "O1", q: "Vous listez vos dépenses et vous payez environ 87,60 $ de téléphone. Qu'écrivez-vous pour commencer ?", options: ["Ne pas la mettre", "Environ 90 $", "870 $", "Rien tant que vous n'avez pas les centimes exacts"], answer: 1, why: "Arrondir au dollar ou aux cinq dollars près suffit pour commencer un budget." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Utiliser l'IA pour organiser votre budget en sécurité",
           minutes: 5,
           goal: "Demander à un assistant d'IA gratuit de trier et d'expliquer votre budget sans partager d'informations privées.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Vérifiez et choisissez", bullets: ["Refaites le calcul vous-même", "Les conseils sont des idées, pas des règles", "Choisissez ce qui convient à votre famille"] }
           ],
           tryIt: "Donnez à un assistant d'IA vos catégories et montants arrondis (sans détails privés). Demandez un tableau, un total et deux idées pour réduire. Vérifiez le total avec une calculatrice.",
-          youCanNow: "utiliser l'IA pour organiser un budget sans partager d'informations privées, et vérifier ses calculs."
+          youCanNow: "utiliser l'IA pour organiser un budget sans partager d'informations privées, et vérifier ses calculs.",
+          quickCheck: [
+            { objective: "O2", q: "Qui fait les choix finaux sur votre budget quand vous utilisez l'IA ?", options: ["L'IA", "Votre banque", "Vous", "La boutique d'applications"], answer: 2, why: "L'IA donne des idées, mais c'est vous qui décidez de tout." },
+            { objective: "O2", q: "Vous voulez que l'IA trie votre budget. Que tapez-vous ?", options: ["Vos identifiants bancaires", "Votre numéro de carte et son code", "Votre numéro de sécurité sociale", "Des catégories arrondies comme « nourriture environ 650 $ »"], answer: 3, why: "Seuls des montants arrondis et des catégories vont dans l'IA, jamais des numéros privés." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Fixer un objectif d'épargne et protéger son argent",
           minutes: 5,
           goal: "Fixer un objectif d'épargne avec un montant et une date, et savoir comment les dépôts bancaires sont protégés.",
@@ -76,17 +110,21 @@ module.exports = {
             { title: "Protégez votre épargne", bullets: ["Banque assurée FDIC : jusqu'à 250 000 $ par déposant, banque, catégorie", "Pas les actions ni les cryptomonnaies", "Vérifiez une banque sur fdic.gov"] }
           ],
           tryIt: "Écrivez un objectif d'épargne avec un montant et une date. Calculez combien épargner chaque semaine, puis demandez à l'IA de vérifier votre calcul.",
-          youCanNow: "fixer un objectif d'épargne clair et choisir un endroit sûr et garanti pour le garder."
+          youCanNow: "fixer un objectif d'épargne clair et choisir un endroit sûr et garanti pour le garder.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce qui rend un objectif d'épargne clair ?", options: ["Un montant et une date", "Un joli nom", "Un gros chiffre", "N'en parler à personne"], answer: 0, why: "Un objectif clair dit combien et pour quand, comme 300 $ d'ici le 1er juin." },
+            { objective: "O3", q: "Vous voulez épargner 200 $ en 20 semaines. Combien mettez-vous de côté chaque semaine ?", options: ["20 $", "10 $", "4 $", "100 $"], answer: 1, why: "200 $ divisés par 20 semaines font 10 $ par semaine." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Votre plan d'argent",
         questions: [
-          { q: "Lequel est un besoin ?", options: ["Un abonnement de streaming", "Le loyer", "Manger au restaurant", "Un nouveau jeu"], answer: 1, why: "Le loyer est une dépense obligatoire pour vivre." },
-          { q: "Qu'est-ce qu'on peut taper sans risque dans un assistant d'IA pour de l'aide sur le budget ?", options: ["Votre numéro de compte bancaire", "Votre numéro de carte", "Des montants arrondis comme « loyer environ 1 400 $ »", "Votre mot de passe de banque en ligne"], answer: 2, why: "Des montants arrondis et des catégories donnent l'aide voulue sans détails privés." },
-          { q: "L'IA additionne votre budget et obtient un total qui semble faux. Que faites-vous ?", options: ["Lui faire confiance", "Supprimer votre budget", "Demander à un inconnu en ligne", "Vérifier le total avec une calculatrice"], answer: 3, why: "L'IA peut faire des erreurs de calcul ; vérifiez vous-même." },
-          { q: "Lequel est un objectif d'épargne clair ?", options: ["« Épargner 300 $ pour les urgences d'ici le 1er juin »", "« Épargner un peu »", "« Devenir riche »", "« De l'argent plus tard »"], answer: 0, why: "Il a un but, un montant et une date." },
-          { q: "Que couvre l'assurance de la FDIC ?", options: ["Les actions", "Les dépôts dans une banque assurée, jusqu'à la limite", "Les cryptomonnaies", "L'argent sous le matelas"], answer: 1, why: "La FDIC protège les dépôts dans les banques assurées ; pas les actions ni les cryptomonnaies." }
+          { objective: "O1", q: "Lequel est un besoin ?", options: ["Un abonnement de streaming", "Le loyer", "Manger au restaurant", "Un nouveau jeu"], answer: 1, why: "Le loyer est une dépense obligatoire pour vivre." },
+          { objective: "O2", q: "Qu'est-ce qu'on peut taper sans risque dans un assistant d'IA pour de l'aide sur le budget ?", options: ["Votre numéro de compte bancaire", "Votre numéro de carte", "Des montants arrondis comme « loyer environ 1 400 $ »", "Votre mot de passe de banque en ligne"], answer: 2, why: "Des montants arrondis et des catégories donnent l'aide voulue sans détails privés." },
+          { objective: "O2", q: "L'IA additionne votre budget et obtient un total qui semble faux. Que faites-vous ?", options: ["Lui faire confiance", "Supprimer votre budget", "Demander à un inconnu en ligne", "Vérifier le total avec une calculatrice"], answer: 3, why: "L'IA peut faire des erreurs de calcul ; vérifiez vous-même." },
+          { objective: "O3", q: "Lequel est un objectif d'épargne clair ?", options: ["« Épargner 300 $ pour les urgences d'ici le 1er juin »", "« Épargner un peu »", "« Devenir riche »", "« De l'argent plus tard »"], answer: 0, why: "Il a un but, un montant et une date." },
+          { objective: "O3", q: "Que couvre l'assurance de la FDIC ?", options: ["Les actions", "Les dépôts dans une banque assurée, jusqu'à la limite", "Les cryptomonnaies", "L'argent sous le matelas"], answer: 1, why: "La FDIC protège les dépôts dans les banques assurées ; pas les actions ni les cryptomonnaies." }
         ]
       }
     },
@@ -94,9 +132,10 @@ module.exports = {
       name: "Chapitre 2 : Crédit, aide et sécurité",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Consulter gratuitement votre rapport de crédit",
           minutes: 5,
-          goal: "Savoir comment obtenir gratuitement votre rapport de crédit et quoi y regarder.",
+          goal: "Trouver le site officiel des rapports de crédit gratuits et vérifier qu'un rapport ne contient pas d'erreurs.",
           text: [
             "Un rapport de crédit est un historique de vos prêts, cartes et factures. Les propriétaires, les prêteurs et certains employeurs peuvent le consulter. Des erreurs arrivent, et une erreur peut vous coûter un logement ou un prêt.",
             "Aux États-Unis, vous pouvez obtenir gratuitement chaque semaine les rapports des trois grands bureaux de crédit, Equifax, Experian et TransUnion, sur AnnualCreditReport.com. C'est le site officiel. D'autres sites qui promettent des rapports « gratuits » peuvent essayer de vous vendre quelque chose. Ailleurs, renseignez-vous auprès de la banque centrale ou du bureau d'information sur le crédit de votre pays.",
@@ -111,9 +150,14 @@ module.exports = {
             { title: "Quoi regarder", bullets: ["Les comptes que vous ne connaissez pas", "Adresses ou retards de paiement faux", "Contestez les erreurs : voir consumerfinance.gov"] }
           ],
           tryIt: "Notez le site officiel des rapports de crédit gratuits et le nom des trois bureaux. Si vous êtes prêt et sur un appareil privé, demandez un rapport et cherchez ce que vous ne reconnaissez pas.",
-          youCanNow: "obtenir vos rapports de crédit gratuits sur le site officiel et repérer les erreurs à contester."
+          youCanNow: "obtenir vos rapports de crédit gratuits sur le site officiel et repérer les erreurs à contester.",
+          quickCheck: [
+            { objective: "O4", q: "Qui peut consulter votre rapport de crédit ?", options: ["Seulement vous", "Seulement votre famille", "Les propriétaires, les prêteurs et certains employeurs", "Personne"], answer: 2, why: "Les propriétaires, les prêteurs et certains employeurs peuvent consulter votre rapport de crédit." },
+            { objective: "O4", q: "Une publicité propose un rapport de crédit « gratuit » sur un site que vous ne connaissez pas. Que faites-vous ?", options: ["Vous inscrire et entrer votre carte", "Cliquer sur la publicité", "Ignorer les rapports de crédit", "Taper vous-même AnnualCreditReport.com"], answer: 3, why: "AnnualCreditReport.com est le site officiel ; les autres peuvent essayer de vous vendre quelque chose." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "De l'aide gratuite pour les impôts et l'argent",
           minutes: 5,
           goal: "Trouver un lieu d'aide fiscale gratuite et une source fiable pour vos questions d'argent.",
@@ -131,9 +175,14 @@ module.exports = {
             { title: "Aide fiable sur l'argent", bullets: ["Guides et plaintes sur consumerfinance.gov", "Les prêts sur salaire peuvent coûter cher", "Demandez le coût total avant de signer"] }
           ],
           tryIt: "Utilisez l'outil de recherche VITA/TCE de l'IRS pour trouver le lieu d'aide fiscale gratuite le plus proche (ou cherchez l'aide gratuite de votre pays). Notez son adresse et ce qu'il faut apporter.",
-          youCanNow: "trouver de l'aide fiscale gratuite et des informations fiables sur l'argent."
+          youCanNow: "trouver de l'aide fiscale gratuite et des informations fiables sur l'argent.",
+          quickCheck: [
+            { objective: "O5", q: "Que propose surtout le programme TCE ?", options: ["Une aide fiscale gratuite, surtout pour les personnes de 60 ans et plus", "Des prêts payants", "Des cartes de crédit", "Des formations professionnelles"], answer: 0, why: "TCE offre une aide fiscale gratuite comme VITA, surtout aux personnes de 60 ans et plus." },
+            { objective: "O5", q: "Une application de prêt rapide vous propose 200 $ aujourd'hui. Que demandez-vous d'abord ?", options: ["Comment en obtenir plus vite", "Le coût total en dollars", "Si vos amis l'utilisent", "Rien ; signer tout de suite"], answer: 1, why: "Les prêts sur salaire et les applications de prêt rapide peuvent coûter bien plus qu'ils n'en ont l'air." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Repérer les arnaques financières, et votre plan final",
           minutes: 5,
           goal: "Repérer les arnaques financières courantes et terminer votre plan de budget.",
@@ -151,17 +200,21 @@ module.exports = {
             { title: "Que faire", bullets: ["Arrêtez et raccrochez", "Rappelez avec un numéro que vous connaissez", "Signalez sur ReportFraud.ftc.gov (É.-U.)"] }
           ],
           tryIt: "Tâche finale : terminez votre budget d'un mois avec l'aide de l'IA (sans numéros privés), vérifiez les totaux, écrivez un objectif d'épargne avec un montant et une date, et notez où vous obtiendrez gratuitement votre rapport de crédit et de l'aide pour vos impôts.",
-          youCanNow: "faire un budget familial, planifier votre épargne, trouver de l'aide gratuite et éviter les arnaques financières."
+          youCanNow: "faire un budget familial, planifier votre épargne, trouver de l'aide gratuite et éviter les arnaques financières.",
+          quickCheck: [
+            { objective: "O6", q: "Quelle demande de paiement est un signe d'arnaque ?", options: ["Une facture de votre fournisseur habituel d'eau ou d'électricité à son adresse habituelle", "Payer le loyer à votre propriétaire par chèque", "Qu'on vous demande de payer en cartes cadeaux", "Payer à la caisse du magasin"], answer: 2, why: "Les arnaqueurs demandent des cartes cadeaux, des virements, des applications de paiement ou des cryptomonnaies." },
+            { objective: "O6", q: "Vous recevez un appel avec la voix de votre cousin qui demande de l'argent tout de suite. Que faites-vous ?", options: ["L'envoyer tout de suite", "Lui donner vos identifiants bancaires", "Payer en cartes cadeaux", "Raccrocher et rappeler votre cousin à un numéro que vous connaissez"], answer: 3, why: "Les arnaqueurs peuvent imiter des voix avec l'IA, donc vous rappelez à un numéro connu." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Crédit, aide et sécurité",
         questions: [
-          { q: "Quel est le site officiel des rapports de crédit gratuits aux États-Unis ?", options: ["N'importe quel site qui dit « gratuit »", "Un lien dans un SMS", "Une publicité sur les réseaux sociaux", "AnnualCreditReport.com"], answer: 3, why: "AnnualCreditReport.com est le site officiel des rapports gratuits." },
-          { q: "Vous trouvez sur votre rapport de crédit un compte qui n'est pas à vous. Vous devez :", options: ["Le contester auprès du bureau de crédit", "L'ignorer", "Le payer tout de suite", "Le publier en ligne"], answer: 0, why: "La contestation corrige les erreurs de votre rapport." },
-          { q: "Qu'est-ce que VITA ?", options: ["Un prêt sur salaire", "Une aide fiscale gratuite soutenue par l'IRS", "Un bureau de crédit", "Un compte d'épargne"], answer: 1, why: "VITA offre une préparation gratuite de la déclaration par des bénévoles formés." },
-          { q: "Un appelant dit venir du gouvernement et exige que vous payiez une amende aujourd'hui en cartes cadeaux. C'est :", options: ["Normal", "Un remboursement d'impôts", "Une arnaque", "Un service VITA"], answer: 2, why: "Les administrations n'exigent pas de paiement en cartes cadeaux." },
-          { q: "Où signaler une arnaque aux États-Unis ?", options: ["À l'arnaqueur", "Nulle part", "Seulement dans une discussion de groupe", "Sur ReportFraud.ftc.gov"], answer: 3, why: "La Federal Trade Commission reçoit les signalements d'arnaques." }
+          { objective: "O4", q: "Quel est le site officiel des rapports de crédit gratuits aux États-Unis ?", options: ["N'importe quel site qui dit « gratuit »", "Un lien dans un SMS", "Une publicité sur les réseaux sociaux", "AnnualCreditReport.com"], answer: 3, why: "AnnualCreditReport.com est le site officiel des rapports gratuits." },
+          { objective: "O4", q: "Vous trouvez sur votre rapport de crédit un compte qui n'est pas à vous. Vous devez :", options: ["Le contester auprès du bureau de crédit", "L'ignorer", "Le payer tout de suite", "Le publier en ligne"], answer: 0, why: "La contestation corrige les erreurs de votre rapport." },
+          { objective: "O5", q: "Qu'est-ce que VITA ?", options: ["Un prêt sur salaire", "Une aide fiscale gratuite soutenue par l'IRS", "Un bureau de crédit", "Un compte d'épargne"], answer: 1, why: "VITA offre une préparation gratuite de la déclaration par des bénévoles formés." },
+          { objective: "O6", q: "Un appelant dit venir du gouvernement et exige que vous payiez une amende aujourd'hui en cartes cadeaux. C'est :", options: ["Normal", "Un remboursement d'impôts", "Une arnaque", "Un service VITA"], answer: 2, why: "Les administrations n'exigent pas de paiement en cartes cadeaux." },
+          { objective: "O6", q: "Où signaler une arnaque aux États-Unis ?", options: ["À l'arnaqueur", "Nulle part", "Seulement dans une discussion de groupe", "Sur ReportFraud.ftc.gov"], answer: 3, why: "La Federal Trade Commission reçoit les signalements d'arnaques." }
         ]
       }
     }
@@ -169,26 +222,99 @@ module.exports = {
   quiz: {
     title: "Quiz final : L'IA pour bien gérer son argent",
     questions: [
-      { q: "Un budget est :", options: ["Un plan pour votre argent", "Un type de prêt", "Une carte de crédit", "Des frais bancaires"], answer: 0, why: "Un budget planifie les revenus et les dépenses." },
-      { q: "Lequel est un revenu ?", options: ["Le loyer", "Un salaire", "Les courses", "Une facture de téléphone"], answer: 1, why: "Les revenus, c'est l'argent qui entre." },
-      { q: "Laquelle est une envie ?", options: ["La garde d'enfants pour travailler", "L'électricité", "Manger au restaurant", "Les médicaments"], answer: 2, why: "Manger au restaurant est agréable, pas obligatoire." },
-      { q: "Pour commencer un budget, on peut :", options: ["Oublier les revenus", "Utiliser son mot de passe", "Deviner n'importe comment", "Arrondir les montants au dollar ou aux cinq dollars près"], answer: 3, why: "Des montants proches et arrondis suffisent pour commencer." },
-      { q: "Qu'est-ce qu'il ne faut JAMAIS taper dans un assistant d'IA ?", options: ["Votre numéro de carte", "« Nourriture environ 600 $ »", "« Famille de 4 »", "« Propose deux réductions »"], answer: 0, why: "Les numéros de carte sont des informations privées." },
-      { q: "L'IA propose de supprimer le titre de transport de votre enfant. Vous :", options: ["Devez le faire", "Décidez ce qui convient à votre famille ; ce conseil n'y convient peut-être pas", "Demandez à un inconnu", "Donnez vos identifiants bancaires à l'IA"], answer: 1, why: "Les conseils de l'IA sont des idées ; c'est vous qui choisissez." },
-      { q: "Pourquoi vérifier les totaux du budget faits par l'IA ?", options: ["L'IA ne se trompe jamais", "C'est la loi", "L'IA peut faire des erreurs de calcul", "Cela change le solde de votre compte"], answer: 2, why: "Vérifiez toujours vous-même les calculs." },
-      { q: "Une épargne de secours, c'est :", options: ["De l'argent pour les envies", "Un prêt", "Un rapport de crédit", "De l'argent mis de côté uniquement pour les imprévus"], answer: 3, why: "Elle couvre les imprévus comme une réparation de voiture." },
-      { q: "Vous voulez 260 $ en 26 semaines. Combien par semaine ?", options: ["5 $", "10 $", "26 $", "100 $"], answer: 1, why: "260 $ divisés par 26 semaines font 10 $." },
-      { q: "L'assurance de la FDIC protège les dépôts jusqu'à :", options: ["1 000 $", "250 000 $ par déposant, par banque assurée, par catégorie de propriété", "N'importe quel montant", "Seulement les cryptomonnaies"], answer: 1, why: "C'est le montant standard de la FDIC." },
-      { q: "Qu'est-ce qui n'est PAS couvert par l'assurance de la FDIC ?", options: ["Un compte d'épargne dans une banque assurée", "Un compte courant dans une banque assurée", "Les cryptomonnaies", "Un dépôt à terme dans une banque assurée"], answer: 2, why: "La FDIC ne couvre ni les cryptomonnaies ni les actions." },
-      { q: "Un rapport de crédit est :", options: ["Votre fiche de paie", "Votre déclaration d'impôts", "Votre budget", "Un historique de vos prêts, cartes et paiements de factures"], answer: 3, why: "Les prêteurs et les propriétaires peuvent le consulter." },
-      { q: "Les trois grands bureaux de crédit américains sont :", options: ["Equifax, Experian et TransUnion", "Google, Bing et Yahoo", "FDIC, IRS et FTC", "Visa, Mastercard et Discover"], answer: 0, why: "Ces trois-là tiennent les rapports de crédit." },
-      { q: "À quelle fréquence peut-on obtenir des rapports gratuits sur AnnualCreditReport.com ?", options: ["Une fois tous les dix ans", "Chaque semaine", "Jamais", "Seulement en payant"], answer: 1, why: "Les bureaux y offrent des rapports gratuits chaque semaine." },
-      { q: "Où trouver des guides gratuits sur le recouvrement de dettes et les prêts sur salaire ?", options: ["Dans une publicité surgissante", "Dans le SMS d'un arnaqueur", "Sur consumerfinance.gov", "Dans un magasin de cartes cadeaux"], answer: 2, why: "Le Consumer Financial Protection Bureau publie des guides gratuits." },
-      { q: "Comment trouver un site d'aide fiscale gratuite VITA ?", options: ["Demander à un inconnu", "Payer d'abord des frais", "Attendre un appel", "Utiliser l'outil VITA/TCE de l'IRS ou appeler le 800-906-9887"], answer: 3, why: "Ce sont les moyens officiels de l'IRS pour trouver un site." },
-      { q: "Avant de prendre un prêt sur salaire ou une application de prêt rapide, vous devez :", options: ["Demander le coût total en dollars", "Signer vite", "Donner vos identifiants bancaires", "Ne pas lire"], answer: 0, why: "Ces prêts peuvent coûter bien plus qu'ils n'en ont l'air." },
-      { q: "Quelqu'un promet des profits « garantis » en cryptomonnaie. C'est :", options: ["Une affaire sûre", "Un signal d'arnaque courant", "Assuré par la FDIC", "Une aide fiscale gratuite"], answer: 1, why: "L'argent garanti est une phrase d'arnaque classique." },
-      { q: "Un message demande le code envoyé sur votre téléphone pour « vérifier votre banque ». Vous :", options: ["L'envoyez", "Le publiez", "Ne le partagez jamais et appelez votre banque avec un numéro que vous connaissez", "Le lisez à voix haute"], answer: 2, why: "Ce code protège votre compte." },
-      { q: "Pour une grande décision d'argent, la meilleure étape est :", options: ["Croire n'importe quelle réponse de l'IA", "Suivre une publication sur les réseaux sociaux", "Demander à la personne qui vend", "Consulter des sources officielles ou parler à un conseiller gratuit d'une association"], answer: 3, why: "Les sources officielles et de vrais conseillers vous protègent." }
+      { objective: "O1", q: "Un budget est :", options: ["Un plan pour votre argent", "Un type de prêt", "Une carte de crédit", "Des frais bancaires"], answer: 0, why: "Un budget planifie les revenus et les dépenses." },
+      { objective: "O1", q: "Lequel est un revenu ?", options: ["Le loyer", "Un salaire", "Les courses", "Une facture de téléphone"], answer: 1, why: "Les revenus, c'est l'argent qui entre." },
+      { objective: "O1", q: "Laquelle est une envie ?", options: ["La garde d'enfants pour travailler", "L'électricité", "Manger au restaurant", "Les médicaments"], answer: 2, why: "Manger au restaurant est agréable, pas obligatoire." },
+      { objective: "O1", q: "Pour commencer un budget, on peut :", options: ["Oublier les revenus", "Utiliser son mot de passe", "Deviner n'importe comment", "Arrondir les montants au dollar ou aux cinq dollars près"], answer: 3, why: "Des montants proches et arrondis suffisent pour commencer." },
+      { objective: "O2", q: "Qu'est-ce qu'il ne faut JAMAIS taper dans un assistant d'IA ?", options: ["Votre numéro de carte", "« Nourriture environ 600 $ »", "« Famille de 4 »", "« Propose deux réductions »"], answer: 0, why: "Les numéros de carte sont des informations privées." },
+      { objective: "O2", q: "L'IA propose de supprimer le titre de transport de votre enfant. Vous :", options: ["Devez le faire", "Décidez ce qui convient à votre famille ; ce conseil n'y convient peut-être pas", "Demandez à un inconnu", "Donnez vos identifiants bancaires à l'IA"], answer: 1, why: "Les conseils de l'IA sont des idées ; c'est vous qui choisissez." },
+      { objective: "O2", q: "Pourquoi vérifier les totaux du budget faits par l'IA ?", options: ["L'IA ne se trompe jamais", "C'est la loi", "L'IA peut faire des erreurs de calcul", "Cela change le solde de votre compte"], answer: 2, why: "Vérifiez toujours vous-même les calculs." },
+      { objective: "O3", q: "Une épargne de secours, c'est :", options: ["De l'argent pour les envies", "Un prêt", "Un rapport de crédit", "De l'argent mis de côté uniquement pour les imprévus"], answer: 3, why: "Elle couvre les imprévus comme une réparation de voiture." },
+      { objective: "O3", q: "Vous voulez 260 $ en 26 semaines. Combien par semaine ?", options: ["5 $", "10 $", "26 $", "100 $"], answer: 1, why: "260 $ divisés par 26 semaines font 10 $." },
+      { objective: "O3", q: "L'assurance de la FDIC protège les dépôts jusqu'à :", options: ["1 000 $", "250 000 $ par déposant, par banque assurée, par catégorie de propriété", "N'importe quel montant", "Seulement les cryptomonnaies"], answer: 1, why: "C'est le montant standard de la FDIC." },
+      { objective: "O3", q: "Qu'est-ce qui n'est PAS couvert par l'assurance de la FDIC ?", options: ["Un compte d'épargne dans une banque assurée", "Un compte courant dans une banque assurée", "Les cryptomonnaies", "Un dépôt à terme dans une banque assurée"], answer: 2, why: "La FDIC ne couvre ni les cryptomonnaies ni les actions." },
+      { objective: "O4", q: "Un rapport de crédit est :", options: ["Votre fiche de paie", "Votre déclaration d'impôts", "Votre budget", "Un historique de vos prêts, cartes et paiements de factures"], answer: 3, why: "Les prêteurs et les propriétaires peuvent le consulter." },
+      { objective: "O4", q: "Les trois grands bureaux de crédit américains sont :", options: ["Equifax, Experian et TransUnion", "Google, Bing et Yahoo", "FDIC, IRS et FTC", "Visa, Mastercard et Discover"], answer: 0, why: "Ces trois-là tiennent les rapports de crédit." },
+      { objective: "O4", q: "À quelle fréquence peut-on obtenir des rapports gratuits sur AnnualCreditReport.com ?", options: ["Une fois tous les dix ans", "Chaque semaine", "Jamais", "Seulement en payant"], answer: 1, why: "Les bureaux y offrent des rapports gratuits chaque semaine." },
+      { objective: "O5", q: "Où trouver des guides gratuits sur le recouvrement de dettes et les prêts sur salaire ?", options: ["Dans une publicité surgissante", "Dans le SMS d'un arnaqueur", "Sur consumerfinance.gov", "Dans un magasin de cartes cadeaux"], answer: 2, why: "Le Consumer Financial Protection Bureau publie des guides gratuits." },
+      { objective: "O5", q: "Comment trouver un site d'aide fiscale gratuite VITA ?", options: ["Demander à un inconnu", "Payer d'abord des frais", "Attendre un appel", "Utiliser l'outil VITA/TCE de l'IRS ou appeler le 800-906-9887"], answer: 3, why: "Ce sont les moyens officiels de l'IRS pour trouver un site." },
+      { objective: "O5", q: "Avant de prendre un prêt sur salaire ou une application de prêt rapide, vous devez :", options: ["Demander le coût total en dollars", "Signer vite", "Donner vos identifiants bancaires", "Ne pas lire"], answer: 0, why: "Ces prêts peuvent coûter bien plus qu'ils n'en ont l'air." },
+      { objective: "O6", q: "Quelqu'un promet des profits « garantis » en cryptomonnaie. C'est :", options: ["Une affaire sûre", "Un signal d'arnaque courant", "Assuré par la FDIC", "Une aide fiscale gratuite"], answer: 1, why: "L'argent garanti est une phrase d'arnaque classique." },
+      { objective: "O6", q: "Un message demande le code envoyé sur votre téléphone pour « vérifier votre banque ». Vous :", options: ["L'envoyez", "Le publiez", "Ne le partagez jamais et appelez votre banque avec un numéro que vous connaissez", "Le lisez à voix haute"], answer: 2, why: "Ce code protège votre compte." },
+      { objective: "O6", q: "Pour une grande décision d'argent, la meilleure étape est :", options: ["Croire n'importe quelle réponse de l'IA", "Suivre une publication sur les réseaux sociaux", "Demander à la personne qui vend", "Consulter des sources officielles ou parler à un conseiller gratuit d'une association"], answer: 3, why: "Les sources officielles et de vrais conseillers vous protègent." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      2,
+      4,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Budget",
+        objective: "O1",
+        notYet: "Revenus ou dépenses manquants, ou besoins et envies non indiqués.",
+        meets: "Un mois de revenus et de dépenses avec des montants arrondis, chacun marqué besoin ou envie, et des totaux.",
+        exceeds: "Utilise des fiches de paie, des relevés ou des reçus pour que les montants soient proches de la réalité."
+      },
+      {
+        name: "IA utilisée en sécurité",
+        objective: "O2",
+        notYet: "La demande contient un numéro de compte, de carte ou de sécurité sociale, ou les totaux n'ont pas été vérifiés.",
+        meets: "Seulement des catégories arrondies partagées, totaux vérifiés, et un endroit où épargner choisi.",
+        exceeds: "Explique pourquoi chaque suggestion de l'IA a été gardée ou rejetée."
+      },
+      {
+        name: "Objectif d'épargne",
+        objective: "O3",
+        notYet: "Pas de montant ni de date.",
+        meets: "Un objectif avec un montant, une date et une somme par semaine vérifiée.",
+        exceeds: "Indique où l'argent sera gardé et qu'il est assuré au niveau fédéral."
+      },
+      {
+        name: "Rapport de crédit et aide fiscale",
+        objective: "O5",
+        notYet: "Ne dit pas où obtenir le rapport ou l'aide fiscale.",
+        meets: "Nomme AnnualCreditReport.com et un lieu VITA ou TCE à utiliser.",
+        exceeds: "A l'adresse du lieu d'aide fiscale et la liste de ce qu'il faut apporter."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Apprenants qui suivent leur budget et commencent à épargner dans les 30 jours (questionnaire de suivi)",
+      "Apprenants qui consultent leur rapport de crédit ou utilisent l'aide fiscale gratuite VITA dans les 6 mois",
+      "Apprenants qui disent avoir évité une arnaque financière ou un prêt coûteux"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un smartphone ou un ordinateur de bibliothèque, et une calculatrice (le téléphone en a une)",
+      "Un assistant d'IA gratuit : Microsoft Copilot, ChatGPT ou Google Gemini",
+      "Les fiches de paie, relevés ou reçus d'un mois (gardés privés)",
+      "Du papier ou un tableur gratuit pour le budget",
+      "Environ 60 minutes au total : leçons, pratique, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Les apprenants gardent leurs vrais chiffres pour eux ; proposez un budget d'entraînement à ceux qui préfèrent ne pas utiliser le leur.",
+      "Vérifiez dans les demandes qu'il n'y a pas de numéro de compte, de carte ou de sécurité sociale avant l'envoi.",
+      "Ne donnez aucun conseil en investissement, fiscal ou juridique ; orientez les apprenants vers les sites officiels, VITA ou un conseiller gratuit d'une association.",
+      "Montrez AnnualCreditReport.com et l'outil de recherche VITA/TCE en direct, et faites demander les rapports seulement sur un appareil personnel.",
+      "Notez la tâche finale avec la grille d'évaluation, et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

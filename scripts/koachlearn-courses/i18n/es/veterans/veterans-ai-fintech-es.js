@@ -17,11 +17,35 @@ module.exports = {
     "Cada lección toma unos cinco minutos. Una comprobación de conocimientos cierra cada capítulo y un examen de 20 preguntas cierra el curso. Este curso explica cómo funcionan las cosas y sus riesgos; no te dice qué comprar ni en qué invertir. Para decisiones personales de dinero, habla con un profesional calificado e independiente o con un orientador financiero gratuito militar o del VA (el Departamento de Asuntos de Veteranos)."
   ],
   finalTask: "Haz una Tarjeta de Seguridad Fintech de una página para una app de dinero que uses o que estés pensando usar: qué hace y cómo usa la IA, si tu dinero en ella está asegurado por la FDIC (y cómo lo revisaste), las opciones de seguridad que activaste, tres señales de alerta de estafa y dónde denunciarías un problema.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Veteranos, militares y sus familias que usan apps de dinero, o piensan usarlas, para manejar su banco, pagar, pedir prestado, hacer presupuestos o invertir. Los veteranos suelen ser blanco de estafas por su sueldo y sus beneficios estables.",
+    startingPoint: "Usan un teléfono inteligente y al menos una app de dinero o de pagos. La mayoría no sabe dónde guarda su dinero una app, si está asegurado ni cómo usa la app la IA, y pocos han activado todas las opciones de seguridad.",
+    gap: "Las apps de dinero pueden parecer bancos sin serlo, y los estafadores se hacen pasar por bancos, agencias y ofertas de inversión. Necesitan revisar en fuentes oficiales si una app es legítima y si está asegurada, proteger sus cuentas, y detectar y denunciar las estafas de tecnología financiera antes de perder dinero.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y frases cortas; no se supone experiencia en finanzas",
+      "Dispositivos: un teléfono inteligente con la app de dinero de la propia persona",
+      "Privacidad: ninguna contraseña, código ni número de cuenta completo en ninguna instrucción a la IA ni en la práctica",
+      "Sin consejos de inversión: las criptomonedas y los asesores automatizados se explican con sus riesgos, y las decisiones van a un profesional calificado e independiente",
+      "Las reglas y los límites del seguro cambian, así que se revisan directamente fdic.gov, la CFPB y la FTC"
+    ],
+    prerequisites: "Ninguno. \"IA para el éxito financiero y personal\" es un buen primer curso sobre presupuestos y estafas."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con las apps de dinero de tu teléfono", action: "identificar cuatro tipos de tecnología financiera y una forma en que cada uno usa la IA", standard: "y decir qué puedes hacer cuando una decisión de la IA sobre tu dinero está mal" },
+    { id: "O2", condition: "Para una app de dinero que uses", action: "revisar si el dinero en la app está protegido por el seguro de depósitos de la FDIC", standard: "encontrando su banco asociado y confirmándolo en BankFind de la FDIC" },
+    { id: "O3", condition: "Cuando oigas hablar de un asesor automatizado o de las criptomonedas", action: "explicar cómo funciona cada uno y hacer una lista de sus riesgos principales", standard: "revisando la lista de riesgos con una fuente oficial como la FTC" },
+    { id: "O4", condition: "Antes de poner dinero en una app", action: "hacerle a la app una revisión de cinco puntos", standard: "escribiendo sí o no en cada punto" },
+    { id: "O5", condition: "En una app de dinero", action: "activar la verificación en dos pasos y las alertas de pagos y quitar los dispositivos desconocidos", standard: "sin compartir ninguna contraseña ni ningún código" },
+    { id: "O6", condition: "Con un mensaje, una llamada o una oferta sobre dinero", action: "identificar las señales de alerta de una estafa de tecnología financiera y denunciarla en el lugar correcto", standard: "sin compartir códigos y sin pagar nada" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Cómo funciona la tecnología financiera",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Qué es la tecnología financiera y dónde entra la IA",
           minutes: 4,
           goal: "Nombrar cuatro tipos de tecnología financiera y una forma en que cada uno usa la IA.",
@@ -38,9 +62,14 @@ module.exports = {
           ],
           sources: [{ name: "CFPB: el dinero a lo largo de la vida militar (militares y veteranos)", url: "https://www.consumerfinance.gov/consumer-tools/military-financial-lifecycle/" }],
           tryIt: "Haz una lista de todas las apps de dinero de tu teléfono. Junto a cada una, escribe qué tipo de tecnología financiera es y una forma en que podría usar la IA.",
-          youCanNow: "describir los tipos principales de tecnología financiera y cómo usan la IA."
+          youCanNow: "describir los tipos principales de tecnología financiera y cómo usan la IA.",
+          quickCheck: [
+            { objective: "O1", q: "¿Cuál es un tipo de tecnología financiera?", options: ["Una chequera de papel", "Un frasco con efectivo en casa", "Una app de pagos en tu teléfono", "Un estado de cuenta bancario impreso"], answer: 2, why: "La tecnología financiera son apps y sitios web para el dinero, como apps de pagos, de banco, de presupuesto y de inversión." },
+            { objective: "O1", q: "La IA de tu app de dinero marca como fraude el pago normal de tu renta y lo bloquea. ¿Qué haces?", options: ["Comunicarte con la empresa, preguntar por qué y disputar el error", "Borrar la app y no volver a pagar la renta en línea", "Compartir tu contraseña para que lo arreglen", "Esperar y confiar en que se resuelva"], answer: 0, why: "Cuando una decisión de la IA sobre tu dinero está mal, puedes preguntar por qué y disputarla." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Dónde está de verdad tu dinero: bancos, apps y seguros",
           minutes: 5,
           goal: "Revisar si el dinero en una app está protegido por el seguro de depósitos de la FDIC.",
@@ -58,9 +87,14 @@ module.exports = {
           ],
           sources: [{ name: "FDIC: seguro de depósitos", url: "https://www.fdic.gov/resources/deposit-insurance/" }],
           tryIt: "Elige una app de dinero que uses. Encuentra su banco asociado en las páginas de ayuda de la app y revisa ese banco en BankFind de la FDIC. Anota si tu saldo está asegurado.",
-          youCanNow: "revisar si el dinero en una app está protegido por el seguro de depósitos de la FDIC."
+          youCanNow: "revisar si el dinero en una app está protegido por el seguro de depósitos de la FDIC.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué es BankFind de la FDIC?", options: ["Una app de préstamos", "Una plataforma de criptomonedas", "Una herramienta de puntaje de crédito", "La herramienta de la FDIC para revisar si un banco está asegurado"], answer: 3, why: "BankFind te deja confirmar que un banco está asegurado por la FDIC." },
+            { objective: "O2", q: "Una app de pagos dice que tu dinero está \"seguro\". ¿Cómo revisas si está asegurado?", options: ["Confiar en el anuncio de la app", "Buscar su banco asociado en las páginas de ayuda y revisarlo en BankFind", "Preguntarle al asistente de IA", "Suponer que todas las apps son bancos"], answer: 1, why: "El seguro depende de si la app guarda tu dinero en un banco asegurado, y eso lo confirmas en BankFind." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Cómo funcionan los asesores automatizados y las criptomonedas, y sus riesgos",
           minutes: 5,
           goal: "Explicar cómo funcionan un asesor automatizado y las criptomonedas y nombrar sus riesgos principales.",
@@ -77,17 +111,21 @@ module.exports = {
           ],
           sources: [{ name: "FTC: lo que debes saber sobre las criptomonedas y las estafas", url: "https://consumer.ftc.gov/articles/what-know-about-cryptocurrency-and-scams" }, { name: "FDIC: seguro de depósitos", url: "https://www.fdic.gov/resources/deposit-insurance/" }],
           tryIt: "Pregúntale a un asistente de IA: \"Explica con palabras sencillas cómo funciona un asesor automatizado y cómo funcionan las criptomonedas, con los riesgos principales de cada uno.\" Compara su lista de riesgos con la página de criptomonedas de la FTC y anota lo que le faltó.",
-          youCanNow: "explicar cómo funcionan los asesores automatizados y las criptomonedas y nombrar sus riesgos principales."
+          youCanNow: "explicar cómo funcionan los asesores automatizados y las criptomonedas y nombrar sus riesgos principales.",
+          quickCheck: [
+            { objective: "O3", q: "¿Cómo funciona un asesor automatizado?", options: ["Invierte con reglas de computadora según tus respuestas", "Una persona del banco elige acciones gratis", "Garantiza que tu dinero crezca", "Es lo mismo que una cuenta de ahorros"], answer: 0, why: "Un asesor automatizado invierte con reglas de computadora y tus respuestas; tiene riesgo de mercado." },
+            { objective: "O3", q: "Un amigo dice que las criptomonedas están \"aseguradas como una cuenta de banco\". ¿Qué le dices?", options: ["Que tiene razón", "Que solo los fines de semana", "Que las criptomonedas no están aseguradas como los depósitos bancarios y sus precios pueden cambiar mucho", "Que los pagos en cripto siempre se pueden revertir"], answer: 2, why: "Las criptomonedas no están aseguradas como los depósitos bancarios, sus precios pueden cambiar mucho y los pagos casi nunca se pueden revertir." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Cómo funciona la tecnología financiera",
         questions: [
-          { q: "¿Cuál es un ejemplo de IA en la tecnología financiera?", options: ["La puerta de un banco", "Imprimir cheques en papel", "Detectar una tarjeta usada en dos países en una hora", "Un recibo en papel"], answer: 2, why: "La detección de fraudes es un uso común de la IA." },
-          { q: "Una IA bloquea por error tu compra real. ¿Qué puedes hacer?", options: ["Preguntar por qué y disputar el error", "Nada, la IA tiene la última palabra", "Cerrar todas tus cuentas", "Publicar tu número de tarjeta en internet"], answer: 0, why: "Tienes derecho a cuestionar y disputar los errores." },
-          { q: "Según fdic.gov en octubre de 2026, ¿qué está asegurado por la FDIC en un banco asegurado?", options: ["Un fondo de inversión", "Las criptomonedas", "Las acciones", "Una cuenta de ahorro"], answer: 3, why: "Las cuentas de depósito como el ahorro están cubiertas." },
-          { q: "¿Cómo revisas si el banco asociado de una app está asegurado por la FDIC?", options: ["Confiando en los anuncios de la app", "Buscando el banco con BankFind de la FDIC", "Preguntándole a un desconocido", "Revisando las redes sociales"], answer: 1, why: "BankFind es la herramienta oficial de la FDIC." },
-          { q: "¿Qué dice la FTC sobre los pagos con criptomonedas?", options: ["Siempre están asegurados", "Normalmente no se pueden revertir", "Los bancos los garantizan", "No tienen riesgo"], answer: 1, why: "La FTC advierte que los pagos con cripto normalmente son irreversibles." }
+          { objective: "O1", q: "¿Cuál es un ejemplo de IA en la tecnología financiera?", options: ["La puerta de un banco", "Imprimir cheques en papel", "Detectar una tarjeta usada en dos países en una hora", "Un recibo en papel"], answer: 2, why: "La detección de fraudes es un uso común de la IA." },
+          { objective: "O1", q: "Una IA bloquea por error tu compra real. ¿Qué puedes hacer?", options: ["Preguntar por qué y disputar el error", "Nada, la IA tiene la última palabra", "Cerrar todas tus cuentas", "Publicar tu número de tarjeta en internet"], answer: 0, why: "Tienes derecho a cuestionar y disputar los errores." },
+          { objective: "O2", q: "Según fdic.gov en octubre de 2026, ¿qué está asegurado por la FDIC en un banco asegurado?", options: ["Un fondo de inversión", "Las criptomonedas", "Las acciones", "Una cuenta de ahorro"], answer: 3, why: "Las cuentas de depósito como el ahorro están cubiertas." },
+          { objective: "O2", q: "¿Cómo revisas si el banco asociado de una app está asegurado por la FDIC?", options: ["Confiando en los anuncios de la app", "Buscando el banco con BankFind de la FDIC", "Preguntándole a un desconocido", "Revisando las redes sociales"], answer: 1, why: "BankFind es la herramienta oficial de la FDIC." },
+          { objective: "O3", q: "¿Qué dice la FTC sobre los pagos con criptomonedas?", options: ["Siempre están asegurados", "Normalmente no se pueden revertir", "Los bancos los garantizan", "No tienen riesgo"], answer: 1, why: "La FTC advierte que los pagos con cripto normalmente son irreversibles." }
         ]
       }
     },
@@ -95,6 +133,7 @@ module.exports = {
       name: "Capítulo 2: Usar la tecnología financiera con seguridad",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Revisar una app antes de confiar en ella",
           minutes: 5,
           goal: "Hacer una revisión de cinco puntos a una app de dinero antes de poner dinero en ella.",
@@ -112,9 +151,14 @@ module.exports = {
           ],
           sources: [{ name: "CFPB: el dinero a lo largo de la vida militar (quejas y derechos)", url: "https://www.consumerfinance.gov/consumer-tools/military-financial-lifecycle/" }, { name: "FDIC: seguro de depósitos (BankFind)", url: "https://www.fdic.gov/resources/deposit-insurance/" }],
           tryIt: "Haz la revisión de cinco puntos a una app de dinero que uses o que estés pensando usar. Escribe sí o no junto a cada punto.",
-          youCanNow: "revisar si una app de dinero es real antes de confiarle tu dinero."
+          youCanNow: "revisar si una app de dinero es real antes de confiarle tu dinero.",
+          quickCheck: [
+            { objective: "O4", q: "¿Cuál es el primer punto de la revisión de cinco puntos de una app?", options: ["Leer solo las reseñas en internet", "Descargar solo de la tienda de apps oficial, del desarrollador correcto", "Ver qué tan bonita se ve la app", "Preguntarle al chat de la app si es segura"], answer: 1, why: "Las apps falsas copian a las reales, así que empiezas por bajar la app real de la tienda oficial." },
+            { objective: "O4", q: "Un asistente de IA dice que una nueva app de dinero es \"totalmente segura\". ¿Qué haces?", options: ["Poner en ella todos tus ahorros", "Compartir la app con tus amigos", "Saltarte las demás revisiones", "Hacer tú la revisión de cinco puntos en fuentes oficiales"], answer: 3, why: "La IA no puede confirmar con certeza que una app es segura; tú revisas las fuentes oficiales." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Proteger tus cuentas de dinero",
           minutes: 5,
           goal: "Activar las opciones de seguridad principales en una app de dinero.",
@@ -131,9 +175,14 @@ module.exports = {
             { title: "Nunca compartas", bullets: ["Códigos de inicio de sesión, con nadie", "Contraseñas ni números de cuenta con herramientas de IA"] }
           ],
           tryIt: "Abre las opciones de seguridad de una app de dinero. Activa la verificación en dos pasos y las alertas de pagos, y quita cualquier dispositivo que no reconozcas.",
-          youCanNow: "configurar las opciones de seguridad principales que protegen una cuenta de dinero."
+          youCanNow: "configurar las opciones de seguridad principales que protegen una cuenta de dinero.",
+          quickCheck: [
+            { objective: "O5", q: "¿Por qué activar las alertas de pagos?", options: ["Para recibir publicidad", "Para compartir tu saldo con amigos", "Para detectar y detener fraudes a tiempo", "Para que la app sea más rápida"], answer: 2, why: "Las alertas te avisan de cada pago para que detectes un fraude rápido." },
+            { objective: "O5", q: "En las opciones de seguridad de tu app ves un dispositivo que no reconoces. ¿Qué haces?", options: ["Quitarlo y cambiar tu contraseña", "Dejarlo; seguro no pasa nada", "Desactivar la verificación en dos pasos", "Publicar una captura de pantalla en internet"], answer: 0, why: "Un dispositivo desconocido podría ser otra persona dentro de tu cuenta, así que lo quitas y proteges la cuenta." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Detectar y denunciar estafas de tecnología financiera",
           minutes: 5,
           goal: "Detectar las señales de alerta de una estafa de tecnología financiera y saber dónde denunciarla.",
@@ -151,17 +200,21 @@ module.exports = {
           ],
           sources: [{ name: "FTC: lo que debes saber sobre las criptomonedas y las estafas", url: "https://consumer.ftc.gov/articles/what-know-about-cryptocurrency-and-scams" }, { name: "CFPB: el dinero a lo largo de la vida militar (presentar una queja)", url: "https://www.consumerfinance.gov/consumer-tools/military-financial-lifecycle/" }],
           tryIt: "Tarea final: haz tu Tarjeta de Seguridad Fintech de una página para una app: qué hace y cómo usa la IA, si tu dinero está asegurado y cómo lo revisaste, las opciones de seguridad que activaste, tres señales de alerta de estafa y dónde denunciarías un problema.",
-          youCanNow: "entender cómo funciona una app de dinero, revisarla y protegerla, y detectar y denunciar estafas de tecnología financiera."
+          youCanNow: "entender cómo funciona una app de dinero, revisarla y protegerla, y detectar y denunciar estafas de tecnología financiera.",
+          quickCheck: [
+            { objective: "O6", q: "¿Cuál es una señal de alerta de una estafa de tecnología financiera?", options: ["Un estado de cuenta mensual que esperabas", "El horario publicado de una sucursal bancaria", "Un recibo de algo que compraste", "Presión para pasar tu dinero rápido a una cuenta \"segura\""], answer: 3, why: "Apurarte a pasar tu dinero a una cuenta \"segura\" es una estafa de suplantación clásica." },
+            { objective: "O6", q: "Recibes un mensaje de texto de \"tu banco\" con un enlace para arreglar un problema. ¿Qué haces?", options: ["Tocar el enlace e iniciar sesión", "No tocarlo; llamar al banco al número de su sitio web oficial o de tu tarjeta", "Responder con tu número de cuenta", "Reenviarlo a tus amigos"], answer: 1, why: "Te comunicas tú con la empresa a un número de confianza, no al que viene en el mensaje." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Usar la tecnología financiera con seguridad",
         questions: [
-          { q: "¿De dónde debes descargar una app de dinero?", options: ["De cualquier sitio web", "De un enlace en un mensaje de un desconocido", "De un anuncio emergente", "De la tienda de apps oficial, de la empresa real"], answer: 3, why: "Las tiendas oficiales y el desarrollador correcto reducen las apps falsas." },
-          { q: "¿Puede un asistente de IA decirte con seguridad que una app es segura?", options: ["No; revisa tú las fuentes oficiales", "Sí, siempre", "Solo los fines de semana", "Solo para apps de cripto"], answer: 0, why: "La IA puede explicar los términos, pero no puede verificar la seguridad." },
-          { q: "¿Qué hace la verificación en dos pasos?", options: ["Quita tu contraseña", "Duplica tu dinero", "Pide una segunda revisión, como un código, para iniciar sesión", "Comparte tu cuenta"], answer: 2, why: "Una segunda revisión bloquea a quien roba tu contraseña." },
-          { q: "Alguien dice ser de tu banco y te pide el código de inicio de sesión que te llegó al teléfono. Tú:", options: ["Lo publicas en internet", "Se lo lees", "Se lo mandas por mensaje", "Nunca lo compartes; llamas al banco al número oficial"], answer: 3, why: "Las empresas reales nunca piden tu código de inicio de sesión." },
-          { q: "Según la FTC, ¿cuál es una señal de estafa?", options: ["Un recibo de una tienda", "Un estado de cuenta mensual del banco", "Una promesa de rendimientos grandes garantizados", "Una alerta que configuraste"], answer: 2, why: "Solo los estafadores garantizan ganancias." }
+          { objective: "O4", q: "¿De dónde debes descargar una app de dinero?", options: ["De cualquier sitio web", "De un enlace en un mensaje de un desconocido", "De un anuncio emergente", "De la tienda de apps oficial, de la empresa real"], answer: 3, why: "Las tiendas oficiales y el desarrollador correcto reducen las apps falsas." },
+          { objective: "O4", q: "¿Puede un asistente de IA decirte con seguridad que una app es segura?", options: ["No; revisa tú las fuentes oficiales", "Sí, siempre", "Solo los fines de semana", "Solo para apps de cripto"], answer: 0, why: "La IA puede explicar los términos, pero no puede verificar la seguridad." },
+          { objective: "O5", q: "¿Qué hace la verificación en dos pasos?", options: ["Quita tu contraseña", "Duplica tu dinero", "Pide una segunda revisión, como un código, para iniciar sesión", "Comparte tu cuenta"], answer: 2, why: "Una segunda revisión bloquea a quien roba tu contraseña." },
+          { objective: "O6", q: "Alguien dice ser de tu banco y te pide el código de inicio de sesión que te llegó al teléfono. Tú:", options: ["Lo publicas en internet", "Se lo lees", "Se lo mandas por mensaje", "Nunca lo compartes; llamas al banco al número oficial"], answer: 3, why: "Las empresas reales nunca piden tu código de inicio de sesión." },
+          { objective: "O6", q: "Según la FTC, ¿cuál es una señal de estafa?", options: ["Un recibo de una tienda", "Un estado de cuenta mensual del banco", "Una promesa de rendimientos grandes garantizados", "Una alerta que configuraste"], answer: 2, why: "Solo los estafadores garantizan ganancias." }
         ]
       }
     }
@@ -169,26 +222,106 @@ module.exports = {
   quiz: {
     title: "Examen final: Tecnología financiera con IA",
     questions: [
-      { q: "Fintech significa:", options: ["Tecnología fina", "Tecnología financiera: apps y sitios web para el dinero", "Tecnología para el ejercicio", "Un tipo de bóveda de banco"], answer: 1, why: "Abarca la tecnología para operaciones de banco, pagos, préstamos, presupuestos e inversiones." },
-      { q: "¿Cuál es un uso común de la IA en las apps de dinero?", options: ["Ordenar tus gastos por categorías", "Imprimir efectivo", "Abrir las puertas del banco", "Enviar estados de cuenta por correo"], answer: 0, why: "La IA ordena los gastos por categorías en las apps de presupuesto." },
-      { q: "Te rechazan un préstamo por datos incorrectos. Puedes:", options: ["Pagarle a un desconocido para que lo arregle", "No hacer nada", "Preguntar por qué y disputar el error", "Darle tu contraseña a un chatbot"], answer: 2, why: "Tienes derecho a disputar los errores." },
-      { q: "¿Qué agencia explica tus derechos con los productos financieros y recibe quejas?", options: ["La Consumer Financial Protection Bureau (CFPB)", "El Servicio Postal", "La NASA", "El Servicio de Parques Nacionales"], answer: 0, why: "La CFPB atiende las quejas sobre finanzas del consumidor." },
-      { q: "El seguro de la FDIC protege:", options: ["Cualquier saldo de una app", "Todas las criptomonedas", "Todas las acciones", "Los depósitos en bancos asegurados por la FDIC"], answer: 3, why: "Cubre las cuentas de depósito en bancos asegurados." },
-      { q: "Según fdic.gov en octubre de 2026, el monto asegurado estándar es de al menos:", options: ["$2,500", "$250,000 por depositante, en cada banco asegurado", "$25,000", "Ilimitado"], answer: 1, why: "La página de la FDIC dice al menos $250,000 en cada banco asegurado." },
-      { q: "¿El saldo en una app de pagos siempre está asegurado por la FDIC?", options: ["Sí, siempre", "No; depende de si la app lo guarda en un banco asegurado", "Solo los viernes", "Solo si es cripto"], answer: 1, why: "Muchas apps de pago no son bancos." },
-      { q: "BankFind es:", options: ["Una bolsa de trabajo", "Una billetera de cripto", "Una app de préstamos", "La herramienta de la FDIC para revisar si un banco está asegurado"], answer: 3, why: "BankFind está en fdic.gov." },
-      { q: "Un asesor automatizado es:", options: ["Una app que invierte con reglas de computadora según tus respuestas", "Un robot del banco que entrega efectivo", "Un préstamo gratuito del gobierno", "Una póliza de seguro"], answer: 0, why: "Automatiza la inversión a cambio de una comisión." },
-      { q: "¿Qué es cierto sobre las criptomonedas?", options: ["La FDIC las asegura", "Siempre suben", "Los precios pueden cambiar mucho y no están aseguradas como los depósitos bancarios", "Los pagos son fáciles de revertir"], answer: 2, why: "Las cripto son volátiles y no tienen seguro de depósitos." },
-      { q: "Antes de cualquier decisión de inversión, este curso dice que debes:", options: ["Invertir todo de una vez", "Hacer lo que diga una IA", "Seguir un consejo de redes sociales", "Conocer las comisiones y los riesgos y hablar con un profesional calificado e independiente"], answer: 3, why: "El curso explica, no aconseja." },
-      { q: "El primer punto de la revisión de una app es:", options: ["Compartirla con tus amigos", "Depositar dinero primero", "Descargar solo de la tienda de apps oficial, del desarrollador correcto", "Desactivar las alertas"], answer: 2, why: "Las apps falsas son comunes fuera de las tiendas oficiales." },
-      { q: "¿Dónde encuentras el banco asociado de una app?", options: ["En un anuncio cualquiera", "En el sitio web o las páginas de ayuda de la propia empresa", "En un mensaje de texto", "En una suposición de la IA"], answer: 1, why: "Las páginas oficiales de la empresa nombran al banco." },
-      { q: "¿Cuál es un buen paso de seguridad?", options: ["Activar la verificación en dos pasos", "Usar la misma contraseña en todos lados", "Compartir códigos con soporte", "Desactivar las alertas"], answer: 0, why: "Un segundo paso bloquea los inicios de sesión con contraseñas robadas." },
-      { q: "¿Por qué activar las alertas de pagos?", options: ["Para hacer más lento tu teléfono", "Para recibir más anuncios", "Para detectar y detener fraudes a tiempo", "Para compartir tu saldo"], answer: 2, why: "Las alertas rápidas te permiten actuar pronto." },
-      { q: "¿Qué NUNCA debes escribir en un asistente de IA?", options: ["Tu contraseña o tu número de cuenta completo", "\"Explica el seguro de la FDIC\"", "\"¿Qué es un asesor automatizado?\"", "\"Haz una lista de señales de estafa\""], answer: 0, why: "Los datos financieros privados deben quedar fuera de las herramientas de IA." },
-      { q: "Alguien llama, dice que tu dinero está en riesgo y que debes pasarlo a una cuenta de cripto \"segura\". Esto es:", options: ["Una actualización de seguridad", "Una práctica normal del banco", "Un beneficio del VA", "Una estafa de suplantación"], answer: 3, why: "La FTC advierte que estas son estafas." },
-      { q: "Un empleo te pide pagar por adelantado una comisión en cripto. Esto es:", options: ["Un paso normal de contratación", "Una estafa, según la FTC", "Un costo de formación que paga el VA", "Un impuesto"], answer: 1, why: "La FTC dice que las comisiones en cripto por adelantado para un empleo son estafas." },
-      { q: "¿Cómo debes volver a llamar a una empresa por un mensaje sospechoso?", options: ["Usar el número del mensaje", "Usar el número de su sitio web oficial o de tu tarjeta", "Responder el mensaje", "Pedirle un número a quien llamó"], answer: 1, why: "Los estafadores dan números falsos." },
-      { q: "¿Dónde puedes denunciar un fraude ante la FTC?", options: ["En un chatbot de IA", "En un comentario de redes sociales", "En el sitio web del estafador", "En ReportFraud.ftc.gov"], answer: 3, why: "ReportFraud.ftc.gov es el sitio de denuncias de la FTC." }
+      { objective: "O1", q: "Fintech significa:", options: ["Tecnología fina", "Tecnología financiera: apps y sitios web para el dinero", "Tecnología para el ejercicio", "Un tipo de bóveda de banco"], answer: 1, why: "Abarca la tecnología para operaciones de banco, pagos, préstamos, presupuestos e inversiones." },
+      { objective: "O1", q: "¿Cuál es un uso común de la IA en las apps de dinero?", options: ["Ordenar tus gastos por categorías", "Imprimir efectivo", "Abrir las puertas del banco", "Enviar estados de cuenta por correo"], answer: 0, why: "La IA ordena los gastos por categorías en las apps de presupuesto." },
+      { objective: "O1", q: "Te rechazan un préstamo por datos incorrectos. Puedes:", options: ["Pagarle a un desconocido para que lo arregle", "No hacer nada", "Preguntar por qué y disputar el error", "Darle tu contraseña a un chatbot"], answer: 2, why: "Tienes derecho a disputar los errores." },
+      { objective: "O1", q: "¿Qué agencia explica tus derechos con los productos financieros y recibe quejas?", options: ["La Consumer Financial Protection Bureau (CFPB)", "El Servicio Postal", "La NASA", "El Servicio de Parques Nacionales"], answer: 0, why: "La CFPB atiende las quejas sobre finanzas del consumidor." },
+      { objective: "O2", q: "El seguro de la FDIC protege:", options: ["Cualquier saldo de una app", "Todas las criptomonedas", "Todas las acciones", "Los depósitos en bancos asegurados por la FDIC"], answer: 3, why: "Cubre las cuentas de depósito en bancos asegurados." },
+      { objective: "O2", q: "Según fdic.gov en octubre de 2026, el monto asegurado estándar es de al menos:", options: ["$2,500", "$250,000 por depositante, en cada banco asegurado", "$25,000", "Ilimitado"], answer: 1, why: "La página de la FDIC dice al menos $250,000 en cada banco asegurado." },
+      { objective: "O2", q: "¿El saldo en una app de pagos siempre está asegurado por la FDIC?", options: ["Sí, siempre", "No; depende de si la app lo guarda en un banco asegurado", "Solo los viernes", "Solo si es cripto"], answer: 1, why: "Muchas apps de pago no son bancos." },
+      { objective: "O2", q: "BankFind es:", options: ["Una bolsa de trabajo", "Una billetera de cripto", "Una app de préstamos", "La herramienta de la FDIC para revisar si un banco está asegurado"], answer: 3, why: "BankFind está en fdic.gov." },
+      { objective: "O3", q: "Un asesor automatizado es:", options: ["Una app que invierte con reglas de computadora según tus respuestas", "Un robot del banco que entrega efectivo", "Un préstamo gratuito del gobierno", "Una póliza de seguro"], answer: 0, why: "Automatiza la inversión a cambio de una comisión." },
+      { objective: "O3", q: "¿Qué es cierto sobre las criptomonedas?", options: ["La FDIC las asegura", "Siempre suben", "Los precios pueden cambiar mucho y no están aseguradas como los depósitos bancarios", "Los pagos son fáciles de revertir"], answer: 2, why: "Las cripto son volátiles y no tienen seguro de depósitos." },
+      { objective: "O3", q: "Antes de cualquier decisión de inversión, este curso dice que debes:", options: ["Invertir todo de una vez", "Hacer lo que diga una IA", "Seguir un consejo de redes sociales", "Conocer las comisiones y los riesgos y hablar con un profesional calificado e independiente"], answer: 3, why: "El curso explica, no aconseja." },
+      { objective: "O4", q: "El primer punto de la revisión de una app es:", options: ["Compartirla con tus amigos", "Depositar dinero primero", "Descargar solo de la tienda de apps oficial, del desarrollador correcto", "Desactivar las alertas"], answer: 2, why: "Las apps falsas son comunes fuera de las tiendas oficiales." },
+      { objective: "O4", q: "¿Dónde encuentras el banco asociado de una app?", options: ["En un anuncio cualquiera", "En el sitio web o las páginas de ayuda de la propia empresa", "En un mensaje de texto", "En una suposición de la IA"], answer: 1, why: "Las páginas oficiales de la empresa nombran al banco." },
+      { objective: "O5", q: "¿Cuál es un buen paso de seguridad?", options: ["Activar la verificación en dos pasos", "Usar la misma contraseña en todos lados", "Compartir códigos con soporte", "Desactivar las alertas"], answer: 0, why: "Un segundo paso bloquea los inicios de sesión con contraseñas robadas." },
+      { objective: "O5", q: "¿Por qué activar las alertas de pagos?", options: ["Para hacer más lento tu teléfono", "Para recibir más anuncios", "Para detectar y detener fraudes a tiempo", "Para compartir tu saldo"], answer: 2, why: "Las alertas rápidas te permiten actuar pronto." },
+      { objective: "O5", q: "¿Qué NUNCA debes escribir en un asistente de IA?", options: ["Tu contraseña o tu número de cuenta completo", "\"Explica el seguro de la FDIC\"", "\"¿Qué es un asesor automatizado?\"", "\"Haz una lista de señales de estafa\""], answer: 0, why: "Los datos financieros privados deben quedar fuera de las herramientas de IA." },
+      { objective: "O6", q: "Alguien llama, dice que tu dinero está en riesgo y que debes pasarlo a una cuenta de cripto \"segura\". Esto es:", options: ["Una actualización de seguridad", "Una práctica normal del banco", "Un beneficio del VA", "Una estafa de suplantación"], answer: 3, why: "La FTC advierte que estas son estafas." },
+      { objective: "O6", q: "Un empleo te pide pagar por adelantado una comisión en cripto. Esto es:", options: ["Un paso normal de contratación", "Una estafa, según la FTC", "Un costo de formación que paga el VA", "Un impuesto"], answer: 1, why: "La FTC dice que las comisiones en cripto por adelantado para un empleo son estafas." },
+      { objective: "O6", q: "¿Cómo debes volver a llamar a una empresa por un mensaje sospechoso?", options: ["Usar el número del mensaje", "Usar el número de su sitio web oficial o de tu tarjeta", "Responder el mensaje", "Pedirle un número a quien llamó"], answer: 1, why: "Los estafadores dan números falsos." },
+      { objective: "O6", q: "¿Dónde puedes denunciar un fraude ante la FTC?", options: ["En un chatbot de IA", "En un comentario de redes sociales", "En el sitio web del estafador", "En ReportFraud.ftc.gov"], answer: 3, why: "ReportFraud.ftc.gov es el sitio de denuncias de la FTC." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      1,
+      6,
+      7,
+      9,
+      11,
+      13,
+      16,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Qué hace y cómo usa la IA",
+        objective: "O1",
+        notYet: "La tarjeta no dice qué hace la app ni cómo usa la IA.",
+        meets: "La tarjeta nombra el tipo de tecnología financiera y una forma en que la app usa la IA.",
+        exceeds: "También dice qué hacer si la IA de la app toma una decisión equivocada."
+      },
+      {
+        name: "Seguro revisado",
+        objective: "O2",
+        notYet: "Dice que el dinero está asegurado sin revisarlo, o lo adivina.",
+        meets: "Nombra el banco asociado y si está asegurado por la FDIC, revisado en BankFind.",
+        exceeds: "Anota qué partes del saldo están cubiertas y cuáles no, y dónde se confirmó."
+      },
+      {
+        name: "Opciones de seguridad",
+        objective: "O5",
+        notYet: "No se activó ninguna opción de seguridad.",
+        meets: "La verificación en dos pasos y las alertas de pagos están activadas, y se quitaron los dispositivos desconocidos.",
+        exceeds: "También anota otra opción activada, como el bloqueo de la tarjeta o un límite de gasto."
+      },
+      {
+        name: "Señales de estafa y denuncia",
+        objective: "O6",
+        notYet: "Menos de tres señales de alerta, o ningún lugar para denunciar.",
+        meets: "Tres señales de alerta de estafa y dónde denunciar un problema.",
+        exceeds: "Incluye cómo volver a llamar a la empresa a un número de confianza."
+      },
+      {
+        name: "App revisada",
+        objective: "O4",
+        notYet: "La app no se revisó antes de usarla.",
+        meets: "Se hizo la revisión de cinco puntos, con sí o no en cada punto.",
+        exceeds: "Explica qué haría si algún punto fuera un no."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Personas que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Personas que dicen haber activado la verificación en dos pasos y las alertas en sus apps de dinero dentro de 30 días (encuesta de seguimiento)",
+      "Personas que dicen haber detectado y evitado una estafa de tecnología financiera",
+      "Personas que empiezan otro curso de Koach Learn de dinero o de seguridad dentro de 30 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono inteligente con la app de dinero de la propia persona",
+      "Un asistente de IA gratuito: ChatGPT, Microsoft Copilot o Google Gemini",
+      "Los sitios web gratuitos de BankFind de la FDIC, la CFPB y la FTC",
+      "Papel o un documento para la Tarjeta de Seguridad Fintech de una página",
+      "Unos 60 minutos en total: lecciones, práctica, comprobaciones y la tarea final"
+    ],
+    facilitatorNotes: [
+      "Cada persona cambia las opciones en su propio teléfono; nunca pidas ver saldos, contraseñas ni códigos.",
+      "No recomiendes apps, inversiones ni criptomonedas; envía las preguntas de inversión a un profesional calificado e independiente.",
+      "Muestra en clase un mensaje de estafa inventado y luego practiquen volver a llamar a un número oficial.",
+      "Califica la Tarjeta de Seguridad Fintech con la rúbrica y da comentarios sobre una fila en Todavía no a la vez.",
+      "Los familiares pueden unirse, porque las estafas también suelen apuntar a las parejas y a los padres."
     ]
   }
 };

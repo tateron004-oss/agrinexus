@@ -16,11 +16,35 @@ module.exports = {
     "L'IA vous aide à réfléchir et à écrire. Elle ne remplace pas de vrais conseils sur les impôts, les licences ou la loi. Chaque leçon vous indique une aide officielle gratuite. Les leçons durent environ cinq minutes, avec un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Faites un plan d'une page pour une petite entreprise que vous avez ou que vous voulez créer : votre offre et à qui elle s'adresse, un prix qui couvre vos coûts (avec vos calculs vérifiés), une présentation de l'entreprise en trois phrases, une publication pour les réseaux sociaux, et le nom et le contact d'un conseiller gratuit pour les entreprises près de chez vous (aux États-Unis : SCORE, un Small Business Development Center ou un Women's Business Center ; ailleurs : l'agence publique d'appui aux petites entreprises ou la chambre de commerce de votre pays).",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des personnes de communautés mal desservies qui ont ou veulent créer une petite entreprise : tresseuses, traiteurs, agents d'entretien à domicile, jardiniers, professeurs particuliers, réparateurs de téléphones et vendeurs d'artisanat, dont beaucoup travaillent payés en liquide ou à temps partiel.",
+    startingPoint: "Ils ont un savoir-faire pour lequel on les paie, et certains ont déjà des clients. Peu ont une offre écrite, un prix calculé sur leurs coûts, des comptes ou un conseiller, et la plupart n'ont jamais utilisé l'IA pour leur entreprise.",
+    gap: "Beaucoup de petites entreprises font payer trop peu, ne tiennent pas de comptes et ne demandent jamais de conseils gratuits, donc elles perdent de l'argent ou restent bloquées. Les apprenants ont besoin d'un plan simple d'une page, de calculs vérifiés et d'un conseiller gratuit pour grandir en sécurité.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes (niveau fin d'école primaire)",
+      "Appareils : un smartphone ou un ordinateur de bibliothèque",
+      "Coût : seulement des outils gratuits et des conseillers gratuits ou peu chers",
+      "L'IA ne connaît pas les prix locaux, les impôts ni les règles de licence : les apprenants vérifient les calculs et demandent aux sources officielles ou à un conseiller",
+      "Vie privée : aucun numéro de compte bancaire dans l'IA, et pas d'adresse personnelle dans les publications publiques"
+    ],
+    prerequisites: "Aucun. Les apprenants qui découvrent les assistants d'IA peuvent d'abord suivre « Introduction à l'IA et autonomie numérique »."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir d'un savoir-faire pour lequel on vous sollicite déjà", action: "écrire une offre d'une phrase qui dit ce que vous faites, pour qui, et ce qui vous rend différent", standard: "avec des mots qui vous ressemblent" },
+    { id: "O2", condition: "À partir des coûts et des heures d'un travail", action: "calculer un prix qui couvre vos coûts et paie votre temps", standard: "en vérifiant vous-même les calculs de l'IA avec une calculatrice et en comparant les prix locaux" },
+    { id: "O3", condition: "Avec la page des partenaires de la SBA", action: "trouver un conseiller gratuit pour les entreprises près de chez vous et préparer vos questions", standard: "en notant son nom, son contact et trois questions" },
+    { id: "O4", condition: "À partir de votre offre", action: "écrire avec un assistant d'IA une présentation de l'entreprise en trois phrases et une publication pour les réseaux sociaux", standard: "avec chaque promesse vraie et seulement des coordonnées sans risque" },
+    { id: "O5", condition: "Avec Google Sheets ou Excel sur le web", action: "créer une feuille de comptes simple et y noter les ventes et les dépenses", standard: "avec les cinq colonnes, les totaux, et chaque entrée notée le jour même" },
+    { id: "O6", condition: "Face à un message ou une plainte d'un client", action: "écrire une réponse polie et rassembler votre travail dans un plan d'entreprise d'une page", standard: "en proposant seulement ce que vous pouvez vous permettre et avec toutes les parties du plan" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Du savoir-faire à l'entreprise",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Transformer un savoir-faire en offre claire",
           minutes: 5,
           goal: "Écrire une offre d'une phrase qui dit ce que vous vendez, à qui, et pourquoi on devrait vous choisir.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Demandez des options à l'IA", bullets: ["Trois offres pour trois types de clients", "Choisissez celle qui vous ressemble"] }
           ],
           tryIt: "Demandez à un assistant d'IA d'écrire trois offres d'une phrase pour un de vos savoir-faire. Choisissez-en une et modifiez-la pour qu'elle vous ressemble.",
-          youCanNow: "transformer un savoir-faire en offre commerciale claire d'une phrase."
+          youCanNow: "transformer un savoir-faire en offre commerciale claire d'une phrase.",
+          quickCheck: [
+            { objective: "O1", q: "Quelle offre est claire ?", options: ["Des repas de la semaine préparés le week-end pour les familles occupées du quartier est, faits maison à un prix juste", "Je cuisine des trucs", "Nourriture à vendre", "La meilleure entreprise du monde"], answer: 0, why: "Elle dit ce que vous faites, pour qui, et ce qui vous rend différent." },
+            { objective: "O1", q: "L'IA vous propose trois offres, mais aucune ne vous ressemble. Que faites-vous ?", options: ["Utiliser quand même la première", "En choisir une et changer les mots pour qu'elle vous ressemble", "Abandonner l'entreprise", "Copier l'offre d'un concurrent"], answer: 1, why: "L'offre doit être la vôtre, donc vous retouchez la meilleure pour qu'elle vous corresponde." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Fixer un prix pour ne pas perdre d'argent",
           minutes: 6,
           goal: "Calculer un prix qui couvre vos coûts et paie votre temps.",
@@ -57,9 +86,14 @@ module.exports = {
           ],
           sources: [{ name: "IRS : petites entreprises et travailleurs indépendants", url: "https://www.irs.gov/businesses/small-businesses-self-employed" }],
           tryIt: "Choisissez un travail que ferait votre entreprise. Listez les coûts et les heures, demandez à un assistant d'IA de calculer un prix qui les couvre, puis vérifiez vous-même le calcul.",
-          youCanNow: "fixer un prix qui couvre vos coûts et votre temps, et vérifier vous-même le calcul."
+          youCanNow: "fixer un prix qui couvre vos coûts et votre temps, et vérifier vous-même le calcul.",
+          quickCheck: [
+            { objective: "O2", q: "Quel coût beaucoup de petits entrepreneurs oublient-ils de compter ?", options: ["Les fournitures", "Les frais", "Leur propre temps", "L'essence"], answer: 2, why: "Votre temps est aussi un coût, donc le prix doit payer vos heures." },
+            { objective: "O2", q: "L'IA dit que votre prix devrait être de 150 $, mais vos coûts font 160 $. Que faites-vous ?", options: ["Faire payer 150 $", "Faire payer moins pour gagner des clients", "Ignorer vos coûts", "Refaire le calcul avec une calculatrice et corriger le prix"], answer: 3, why: "L'IA peut faire des erreurs de calcul, et un prix inférieur à vos coûts fait perdre de l'argent." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Trouver de l'aide gratuite pour les entreprises",
           minutes: 4,
           goal: "Trouver un conseiller gratuit pour les entreprises près de chez vous.",
@@ -77,17 +111,21 @@ module.exports = {
             { title: "Venez préparé", bullets: ["Apportez votre plan d'une page", "Demandez licences, impôts et prêts pour votre région"] }
           ],
           tryIt: "Trouvez un conseiller gratuit pour les entreprises près de chez vous par la page des partenaires de la SBA (ou l'organisme d'appui de votre pays). Notez son nom, son contact et trois questions à poser.",
-          youCanNow: "trouver de l'aide officielle et gratuite pour les entreprises près de chez vous."
+          youCanNow: "trouver de l'aide officielle et gratuite pour les entreprises près de chez vous.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce que SCORE ?", options: ["Un réseau de mentors bénévoles qui conseillent les entreprises gratuitement", "Une société de score de crédit", "Un service de prêts payant", "Un bureau des impôts de l'État"], answer: 0, why: "SCORE est un partenaire de la SBA avec des mentors bénévoles gratuits." },
+            { objective: "O3", q: "Vous ne savez pas quelles licences il faut pour votre activité de traiteur. Que faites-vous ?", options: ["Ne pas prendre de licence", "Demander à un conseiller gratuit et vérifier auprès de votre ville, de votre comté et de votre État", "Croire la première réponse de l'IA", "Demander à un client"], answer: 1, why: "Les conseillers et vos bureaux locaux et de l'État connaissent les règles de votre région." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Du savoir-faire à l'entreprise",
         questions: [
-          { q: "Que dit une offre claire ?", options: ["L'histoire de votre vie", "Ce que vous faites, pour qui, et ce qui vous rend différent", "Seulement votre prix", "Votre adresse personnelle"], answer: 1, why: "Ces trois parties disent aux clients pourquoi vous choisir." },
-          { q: "Que faut-il compter pour fixer un prix ?", options: ["Seulement les fournitures", "Seulement votre temps", "Les fournitures, les déplacements, les frais et votre temps", "Rien ; deviner"], answer: 2, why: "Tous les coûts, y compris votre temps, doivent être couverts." },
-          { q: "L'IA calcule un prix pour vous. Et ensuite ?", options: ["Vérifier vous-même le calcul et comparer avec les prix locaux", "L'utiliser sans vérifier", "Le doubler", "Ne jamais faire payer"], answer: 0, why: "L'IA peut faire des erreurs de calcul et ne connaît pas les prix locaux." },
-          { q: "SCORE propose :", options: ["Seulement des prêts payants", "La déclaration d'impôts", "Des licences", "Des mentors d'entreprise bénévoles gratuits"], answer: 3, why: "La SBA décrit SCORE comme des mentors bénévoles qui conseillent gratuitement." },
-          { q: "Où vérifier quelles licences il vous faut ?", options: ["Seulement auprès de l'IA", "Auprès de votre ville ou comté, de votre État, ou d'un conseiller gratuit", "Dans une publication sur les réseaux sociaux", "Auprès d'un ami dans un autre État"], answer: 1, why: "Les licences dépendent du lieu ; les sources officielles et les conseillers savent." }
+          { objective: "O1", q: "Que dit une offre claire ?", options: ["L'histoire de votre vie", "Ce que vous faites, pour qui, et ce qui vous rend différent", "Seulement votre prix", "Votre adresse personnelle"], answer: 1, why: "Ces trois parties disent aux clients pourquoi vous choisir." },
+          { objective: "O2", q: "Que faut-il compter pour fixer un prix ?", options: ["Seulement les fournitures", "Seulement votre temps", "Les fournitures, les déplacements, les frais et votre temps", "Rien ; deviner"], answer: 2, why: "Tous les coûts, y compris votre temps, doivent être couverts." },
+          { objective: "O2", q: "L'IA calcule un prix pour vous. Et ensuite ?", options: ["Vérifier vous-même le calcul et comparer avec les prix locaux", "L'utiliser sans vérifier", "Le doubler", "Ne jamais faire payer"], answer: 0, why: "L'IA peut faire des erreurs de calcul et ne connaît pas les prix locaux." },
+          { objective: "O3", q: "SCORE propose :", options: ["Seulement des prêts payants", "La déclaration d'impôts", "Des licences", "Des mentors d'entreprise bénévoles gratuits"], answer: 3, why: "La SBA décrit SCORE comme des mentors bénévoles qui conseillent gratuitement." },
+          { objective: "O3", q: "Où vérifier quelles licences il vous faut ?", options: ["Seulement auprès de l'IA", "Auprès de votre ville ou comté, de votre État, ou d'un conseiller gratuit", "Dans une publication sur les réseaux sociaux", "Auprès d'un ami dans un autre État"], answer: 1, why: "Les licences dépendent du lieu ; les sources officielles et les conseillers savent." }
         ]
       }
     },
@@ -95,6 +133,7 @@ module.exports = {
       name: "Chapitre 2 : Faire tourner et grandir l'entreprise",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Écrire la présentation de votre entreprise et une publication",
           minutes: 5,
           goal: "Écrire une présentation de l'entreprise en trois phrases et une publication pour les réseaux sociaux.",
@@ -111,9 +150,14 @@ module.exports = {
             { title: "Avant de partager", bullets: ["Faites en sorte que cela vous ressemble", "Ne promettez que ce que vous pouvez tenir", "Pas d'adresse personnelle"] }
           ],
           tryIt: "Demandez à un assistant d'IA d'écrire une présentation de votre entreprise en trois phrases et une courte publication pour les réseaux sociaux. Retouchez les deux pour qu'elles vous ressemblent.",
-          youCanNow: "écrire une courte présentation d'entreprise et une publication qui vous ressemblent."
+          youCanNow: "écrire une courte présentation d'entreprise et une publication qui vous ressemblent.",
+          quickCheck: [
+            { objective: "O4", q: "Quelles trois choses une courte présentation d'entreprise dit-elle aux gens ?", options: ["Vos prix, votre banque et votre âge", "Vos concurrents, vos peurs et vos objectifs", "Qui vous êtes, ce que vous faites et comment vous joindre", "Votre adresse, vos horaires et votre famille"], answer: 2, why: "Une présentation dit qui vous êtes, ce que vous faites et comment vous joindre." },
+            { objective: "O4", q: "La publication écrite par l'IA promet une « livraison le jour même », mais vous ne pouvez pas le faire. Que faites-vous ?", options: ["La publier ; ça sonne bien", "L'ajouter à chaque publication", "La publier et espérer", "Retirer la promesse avant de publier"], answer: 3, why: "Promettez seulement ce que vous pouvez tenir." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Tenir des comptes simples",
           minutes: 5,
           goal: "Créer une feuille gratuite et simple pour suivre l'argent qui entre et qui sort.",
@@ -130,9 +174,14 @@ module.exports = {
             { title: "Bonnes habitudes", bullets: ["Notez le jour même", "Une photo de chaque reçu", "Pas de numéros bancaires dans l'IA"] }
           ],
           tryIt: "Créez une feuille simple dans Google Sheets ou Excel sur le web avec les cinq colonnes. Ajoutez trois ventes fictives et deux dépenses, et additionnez l'argent entré et l'argent sorti.",
-          youCanNow: "tenir des comptes simples pour une petite entreprise dans un tableur gratuit."
+          youCanNow: "tenir des comptes simples pour une petite entreprise dans un tableur gratuit.",
+          quickCheck: [
+            { objective: "O5", q: "Pourquoi tenir des comptes simples ?", options: ["Pour voir si vous gagnez de l'argent et être prêt pour les impôts", "Parce que l'IA en a besoin", "Pour les montrer aux clients", "Pour les publier en ligne"], answer: 0, why: "Les comptes montrent si vous gagnez de l'argent, et vous en avez besoin pour les impôts." },
+            { objective: "O5", q: "Vous avez acheté 30 $ de fournitures mais perdu le reçu papier. Qu'auriez-vous pu faire ?", options: ["Rien ; les reçus ne comptent pas", "Prendre le reçu en photo le jour même", "Taper votre numéro de compte bancaire dans l'IA", "Deviner le montant au moment des impôts"], answer: 1, why: "Une photo de chaque reçu garde une trace même si le papier est perdu." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Répondre aux clients et tout rassembler",
           minutes: 5,
           goal: "Écrire des réponses polies aux clients et terminer votre plan d'entreprise d'une page.",
@@ -149,17 +198,21 @@ module.exports = {
             { title: "Votre plan d'une page", bullets: ["Offre et prix", "Présentation et publication", "Comptes et conseiller gratuit"] }
           ],
           tryIt: "Tâche finale : faites un plan d'une page avec votre offre, un prix vérifié qui couvre vos coûts, une présentation en trois phrases, une publication pour les réseaux sociaux, et le contact d'un conseiller gratuit pour les entreprises près de chez vous.",
-          youCanNow: "planifier, fixer le prix et faire connaître une petite entreprise, et savoir où trouver de l'aide experte gratuite."
+          youCanNow: "planifier, fixer le prix et faire connaître une petite entreprise, et savoir où trouver de l'aide experte gratuite.",
+          quickCheck: [
+            { objective: "O6", q: "Que met-on dans votre plan d'entreprise d'une page ?", options: ["Seulement votre prix", "Seulement votre publication", "L'offre, le prix et les coûts, la présentation et la publication, une note sur les comptes et un conseiller gratuit", "Les numéros de téléphone de vos clients"], answer: 2, why: "Le plan d'une page rassemble tout votre travail au même endroit." },
+            { objective: "O6", q: "Vous êtes complet ce week-end et un client demande une commande. Que lui envoyez-vous ?", options: ["Aucune réponse", "Un oui, puis une annulation plus tard", "Une réponse impolie", "Une réponse polie qui dit que vous êtes complet et propose une autre date"], answer: 3, why: "Une réponse polie et honnête donne envie au client de revenir." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Faire tourner et grandir l'entreprise",
         questions: [
-          { q: "Que doit contenir une courte présentation d'entreprise ?", options: ["Votre numéro de sécurité sociale", "Qui vous êtes, ce que vous faites et comment vous joindre", "Votre adresse personnelle", "Le solde de votre compte"], answer: 1, why: "Cela dit aux clients ce qu'ils ont besoin de savoir." },
-          { q: "Quelles coordonnées peut-on partager publiquement avec le moins de risque ?", options: ["Votre adresse personnelle", "Votre compte bancaire", "Un téléphone ou un e-mail professionnel que vous êtes à l'aise de partager", "Votre numéro d'identité"], answer: 2, why: "Gardez les détails privés pour vous." },
-          { q: "Quelles colonnes vont dans une feuille de comptes simple ?", options: ["Date, ce que c'était, argent entré, argent sorti, notes", "Seulement votre nom", "Votre mot de passe", "Les numéros de sécurité sociale des clients"], answer: 0, why: "Ces colonnes suivent l'argent qui entre et qui sort." },
-          { q: "Quand faut-il noter une vente ?", options: ["À la fin de l'année", "Jamais", "Seulement les grosses ventes", "Le jour même"], answer: 3, why: "Noter le jour même rend les comptes exacts." },
-          { q: "Un client se plaint que le repas était en retard. Une bonne réponse :", options: ["Accuse le client", "S'excuse, dit comment vous allez corriger, et n'offre que ce qui est dans vos moyens", "L'ignore", "Promet des repas gratuits pour toujours"], answer: 1, why: "Des réponses calmes et honnêtes gardent les clients." }
+          { objective: "O4", q: "Que doit contenir une courte présentation d'entreprise ?", options: ["Votre numéro de sécurité sociale", "Qui vous êtes, ce que vous faites et comment vous joindre", "Votre adresse personnelle", "Le solde de votre compte"], answer: 1, why: "Cela dit aux clients ce qu'ils ont besoin de savoir." },
+          { objective: "O4", q: "Quelles coordonnées peut-on partager publiquement avec le moins de risque ?", options: ["Votre adresse personnelle", "Votre compte bancaire", "Un téléphone ou un e-mail professionnel que vous êtes à l'aise de partager", "Votre numéro d'identité"], answer: 2, why: "Gardez les détails privés pour vous." },
+          { objective: "O5", q: "Quelles colonnes vont dans une feuille de comptes simple ?", options: ["Date, ce que c'était, argent entré, argent sorti, notes", "Seulement votre nom", "Votre mot de passe", "Les numéros de sécurité sociale des clients"], answer: 0, why: "Ces colonnes suivent l'argent qui entre et qui sort." },
+          { objective: "O5", q: "Quand faut-il noter une vente ?", options: ["À la fin de l'année", "Jamais", "Seulement les grosses ventes", "Le jour même"], answer: 3, why: "Noter le jour même rend les comptes exacts." },
+          { objective: "O6", q: "Un client se plaint que le repas était en retard. Une bonne réponse :", options: ["Accuse le client", "S'excuse, dit comment vous allez corriger, et n'offre que ce qui est dans vos moyens", "L'ignore", "Promet des repas gratuits pour toujours"], answer: 1, why: "Des réponses calmes et honnêtes gardent les clients." }
         ]
       }
     }
@@ -167,26 +220,107 @@ module.exports = {
   quiz: {
     title: "Quiz final : L'IA pour l'entrepreneuriat et la petite entreprise",
     questions: [
-      { q: "Un bon point de départ pour une idée d'entreprise est :", options: ["Ce qu'on vous demande déjà de faire", "Ce qui est à la mode en ligne", "Une idée au hasard de l'IA", "Copier une grande entreprise"], answer: 0, why: "Ce qu'on vous demande déjà montre une vraie demande." },
-      { q: "Un client est :", options: ["Votre fournisseur", "Une personne qui paie pour ce que vous vendez", "Votre mentor", "Une banque"], answer: 1, why: "Les clients vous achètent quelque chose." },
-      { q: "Pourquoi demander trois offres à l'IA au lieu d'une ?", options: ["Ça coûte moins cher", "C'est obligatoire", "Pour choisir celle qui vous convient le mieux", "Pour embrouiller les clients"], answer: 2, why: "Avoir le choix aide à trouver la meilleure option." },
-      { q: "Quelle erreur de prix font beaucoup de petites entreprises ?", options: ["Demander trop cher", "Ne jamais faire payer", "Faire payer dans d'autres monnaies", "Demander trop peu"], answer: 3, why: "Oublier les coûts et le temps mène à des prix trop bas." },
-      { q: "Le bénéfice est :", options: ["L'argent qui reste après avoir payé tous vos coûts", "Tout l'argent que vous encaissez", "Vos fournitures", "Un prêt"], answer: 0, why: "Le bénéfice, c'est ce qui reste." },
-      { q: "Quand l'IA calcule votre prix, vous devez :", options: ["Lui faire entièrement confiance", "Vérifier vous-même le calcul", "Ignorer vos coûts", "Demander à un inconnu"], answer: 1, why: "L'IA peut faire des erreurs de calcul." },
-      { q: "Où se renseigner sur les impôts d'une entreprise aux États-Unis ?", options: ["Une publicité surgissante", "Un jeu vidéo", "irs.gov, un conseiller gratuit ou un professionnel des impôts", "Seulement l'IA"], answer: 2, why: "Les sources officielles et les professionnels connaissent les règles fiscales." },
-      { q: "La SBA est :", options: ["Une banque", "Une application de réseau social", "Un club privé", "La Small Business Administration des États-Unis"], answer: 3, why: "C'est l'agence fédérale qui aide les petites entreprises." },
-      { q: "Les Small Business Development Centers proposent :", options: ["De l'accompagnement et des formations", "Du stock gratuit", "Des locaux gratuits", "Des publicités payantes"], answer: 0, why: "Les SBDC aident à créer et développer des entreprises." },
-      { q: "Les services des Women's Business Centers sont :", options: ["Toujours chers", "Gratuits ou peu chers", "Seulement pour les grandes entreprises", "Seulement en ligne"], answer: 1, why: "La SBA les décrit comme gratuits ou peu chers." },
-      { q: "Qu'apporter à un rendez-vous avec un conseiller gratuit ?", options: ["Rien", "Le code de votre carte", "Votre plan d'une page et vos questions", "Vos mots de passe"], answer: 2, why: "Un plan et des questions rendent le rendez-vous utile." },
-      { q: "Une présentation d'entreprise doit :", options: ["Promettre ce que vous ne pouvez pas faire", "Contenir votre adresse personnelle", "Faire dix pages", "Vous ressembler et être vraie"], answer: 3, why: "Honnête et personnelle, elle crée la confiance." },
-      { q: "Vos clients parlent surtout une autre langue. Vous pouvez :", options: ["Demander à l'IA une version de votre publication dans cette langue", "Publier seulement en français", "Ne rien publier", "N'utiliser que des images"], answer: 0, why: "Une deuxième langue touche vos clients." },
-      { q: "Avant de partager une publication, vérifiez que :", options: ["Elle est la plus longue possible", "Chaque promesse est vraie et les coordonnées sont sûres", "Elle contient votre numéro de sécurité sociale", "Elle cite tous vos concurrents"], answer: 1, why: "Les promesses doivent être réelles et les coordonnées sûres." },
-      { q: "Un tableur est :", options: ["Un meuble", "Un formulaire d'impôts", "Une grille de lignes et de colonnes", "Une licence commerciale"], answer: 2, why: "Les tableurs organisent les chiffres et les listes." },
-      { q: "Quels outils gratuits peuvent contenir vos comptes ?", options: ["Seulement un cabinet comptable payant", "Un SMS", "Un album photo", "Google Sheets ou Excel sur le web"], answer: 3, why: "Ce sont deux tableurs gratuits." },
-      { q: "Que garder pour chaque dépense ?", options: ["Un reçu, une photo suffit", "Rien", "Un souvenir", "L'estimation de l'IA"], answer: 0, why: "Les reçus prouvent ce que vous avez dépensé." },
-      { q: "Qu'est-ce qu'il ne faut jamais taper dans l'IA ?", options: ["« Aide-moi à créer des colonnes »", "Votre numéro de compte bancaire", "« Écris une publication aimable »", "Le nom de votre entreprise"], answer: 1, why: "Les numéros bancaires sont privés." },
-      { q: "En offrant une réduction après une réclamation, assurez-vous :", options: ["Qu'elle est la plus grande possible", "De promettre un service gratuit pour toujours", "Qu'elle est dans vos moyens", "De ne jamais vous excuser"], answer: 2, why: "N'offrez que ce que votre entreprise peut se permettre." },
-      { q: "Votre plan d'une page contient :", options: ["Seulement votre logo", "Votre adresse personnelle", "Vos mots de passe", "Offre, prix, présentation, publication, comptes et conseiller gratuit"], answer: 3, why: "Ces parties forment la tâche finale." }
+      { objective: "O1", q: "Un bon point de départ pour une idée d'entreprise est :", options: ["Ce qu'on vous demande déjà de faire", "Ce qui est à la mode en ligne", "Une idée au hasard de l'IA", "Copier une grande entreprise"], answer: 0, why: "Ce qu'on vous demande déjà montre une vraie demande." },
+      { objective: "O1", q: "Un client est :", options: ["Votre fournisseur", "Une personne qui paie pour ce que vous vendez", "Votre mentor", "Une banque"], answer: 1, why: "Les clients vous achètent quelque chose." },
+      { objective: "O1", q: "Pourquoi demander trois offres à l'IA au lieu d'une ?", options: ["Ça coûte moins cher", "C'est obligatoire", "Pour choisir celle qui vous convient le mieux", "Pour embrouiller les clients"], answer: 2, why: "Avoir le choix aide à trouver la meilleure option." },
+      { objective: "O2", q: "Quelle erreur de prix font beaucoup de petites entreprises ?", options: ["Demander trop cher", "Ne jamais faire payer", "Faire payer dans d'autres monnaies", "Demander trop peu"], answer: 3, why: "Oublier les coûts et le temps mène à des prix trop bas." },
+      { objective: "O2", q: "Le bénéfice est :", options: ["L'argent qui reste après avoir payé tous vos coûts", "Tout l'argent que vous encaissez", "Vos fournitures", "Un prêt"], answer: 0, why: "Le bénéfice, c'est ce qui reste." },
+      { objective: "O2", q: "Quand l'IA calcule votre prix, vous devez :", options: ["Lui faire entièrement confiance", "Vérifier vous-même le calcul", "Ignorer vos coûts", "Demander à un inconnu"], answer: 1, why: "L'IA peut faire des erreurs de calcul." },
+      { objective: "O2", q: "Où se renseigner sur les impôts d'une entreprise aux États-Unis ?", options: ["Une publicité surgissante", "Un jeu vidéo", "irs.gov, un conseiller gratuit ou un professionnel des impôts", "Seulement l'IA"], answer: 2, why: "Les sources officielles et les professionnels connaissent les règles fiscales." },
+      { objective: "O3", q: "La SBA est :", options: ["Une banque", "Une application de réseau social", "Un club privé", "La Small Business Administration des États-Unis"], answer: 3, why: "C'est l'agence fédérale qui aide les petites entreprises." },
+      { objective: "O3", q: "Les Small Business Development Centers proposent :", options: ["De l'accompagnement et des formations", "Du stock gratuit", "Des locaux gratuits", "Des publicités payantes"], answer: 0, why: "Les SBDC aident à créer et développer des entreprises." },
+      { objective: "O3", q: "Les services des Women's Business Centers sont :", options: ["Toujours chers", "Gratuits ou peu chers", "Seulement pour les grandes entreprises", "Seulement en ligne"], answer: 1, why: "La SBA les décrit comme gratuits ou peu chers." },
+      { objective: "O3", q: "Qu'apporter à un rendez-vous avec un conseiller gratuit ?", options: ["Rien", "Le code de votre carte", "Votre plan d'une page et vos questions", "Vos mots de passe"], answer: 2, why: "Un plan et des questions rendent le rendez-vous utile." },
+      { objective: "O4", q: "Une présentation d'entreprise doit :", options: ["Promettre ce que vous ne pouvez pas faire", "Contenir votre adresse personnelle", "Faire dix pages", "Vous ressembler et être vraie"], answer: 3, why: "Honnête et personnelle, elle crée la confiance." },
+      { objective: "O4", q: "Vos clients parlent surtout une autre langue. Vous pouvez :", options: ["Demander à l'IA une version de votre publication dans cette langue", "Publier seulement en français", "Ne rien publier", "N'utiliser que des images"], answer: 0, why: "Une deuxième langue touche vos clients." },
+      { objective: "O4", q: "Avant de partager une publication, vérifiez que :", options: ["Elle est la plus longue possible", "Chaque promesse est vraie et les coordonnées sont sûres", "Elle contient votre numéro de sécurité sociale", "Elle cite tous vos concurrents"], answer: 1, why: "Les promesses doivent être réelles et les coordonnées sûres." },
+      { objective: "O5", q: "Un tableur est :", options: ["Un meuble", "Un formulaire d'impôts", "Une grille de lignes et de colonnes", "Une licence commerciale"], answer: 2, why: "Les tableurs organisent les chiffres et les listes." },
+      { objective: "O5", q: "Quels outils gratuits peuvent contenir vos comptes ?", options: ["Seulement un cabinet comptable payant", "Un SMS", "Un album photo", "Google Sheets ou Excel sur le web"], answer: 3, why: "Ce sont deux tableurs gratuits." },
+      { objective: "O5", q: "Que garder pour chaque dépense ?", options: ["Un reçu, une photo suffit", "Rien", "Un souvenir", "L'estimation de l'IA"], answer: 0, why: "Les reçus prouvent ce que vous avez dépensé." },
+      { objective: "O5", q: "Qu'est-ce qu'il ne faut jamais taper dans l'IA ?", options: ["« Aide-moi à créer des colonnes »", "Votre numéro de compte bancaire", "« Écris une publication aimable »", "Le nom de votre entreprise"], answer: 1, why: "Les numéros bancaires sont privés." },
+      { objective: "O6", q: "En offrant une réduction après une réclamation, assurez-vous :", options: ["Qu'elle est la plus grande possible", "De promettre un service gratuit pour toujours", "Qu'elle est dans vos moyens", "De ne jamais vous excuser"], answer: 2, why: "N'offrez que ce que votre entreprise peut se permettre." },
+      { objective: "O6", q: "Votre plan d'une page contient :", options: ["Seulement votre logo", "Votre adresse personnelle", "Vos mots de passe", "Offre, prix, présentation, publication, comptes et conseiller gratuit"], answer: 3, why: "Ces parties forment la tâche finale." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      3,
+      5,
+      7,
+      10,
+      11,
+      13,
+      14,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Offre",
+        objective: "O1",
+        notYet: "Pas d'offre, ou elle ne dit pas quoi, pour qui ou pourquoi vous.",
+        meets: "Une phrase avec ce que vous faites, pour qui, et ce qui vous rend différent.",
+        exceeds: "Retouchée pour qu'elle ressemble clairement à l'apprenant."
+      },
+      {
+        name: "Le prix couvre les coûts",
+        objective: "O2",
+        notYet: "Prix inférieur aux coûts, ou calculs non vérifiés.",
+        meets: "Liste les coûts et les heures, et le prix les couvre, avec les calculs vérifiés à la main.",
+        exceeds: "Comparé aux prix locaux, avec une note sur les impôts et les licences à demander."
+      },
+      {
+        name: "Présentation et publication",
+        objective: "O4",
+        notYet: "Absentes, ou elles font des promesses que l'entreprise ne peut pas tenir.",
+        meets: "Une présentation en trois phrases et une publication, vraies et avec des coordonnées sans risque.",
+        exceeds: "Inclut une version dans une deuxième langue pour les clients qui en ont besoin."
+      },
+      {
+        name: "Conseiller gratuit",
+        objective: "O3",
+        notYet: "Aucun conseiller nommé.",
+        meets: "Nomme un conseiller de SCORE, d'un SBDC ou d'un Women's Business Center, avec ses coordonnées.",
+        exceeds: "Liste trois questions à poser au rendez-vous."
+      },
+      {
+        name: "Plan d'une page",
+        objective: "O6",
+        notYet: "Des parties manquent ou sont réparties sur plusieurs pages.",
+        meets: "Toutes les parties sont sur une page, avec une note sur les comptes.",
+        exceeds: "Prêt à apporter à un rendez-vous avec un conseiller, avec un exemple de réponse à un client."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Apprenants qui rencontrent un conseiller gratuit pour les entreprises dans les 60 jours (questionnaire de suivi)",
+      "Apprenants qui augmentent leurs prix pour couvrir leurs coûts ou commencent à tenir des comptes",
+      "Apprenants qui créent ou déclarent une petite entreprise dans les 6 mois"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un smartphone avec internet, ou un ordinateur de bibliothèque",
+      "Un assistant d'IA gratuit : Microsoft Copilot, ChatGPT ou Google Gemini",
+      "Google Sheets ou Excel sur le web (gratuits) et une calculatrice",
+      "Du papier pour le plan d'une page",
+      "Environ 60 minutes au total : leçons, pratique, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Demandez à chaque apprenant d'utiliser sa propre entreprise, réelle ou en projet, dans chaque exercice.",
+      "Faites les calculs de prix ensemble avec des calculatrices ; beaucoup d'apprenants découvrent qu'ils faisaient payer trop peu.",
+      "Invitez un mentor de SCORE ou un conseiller d'un SBDC à la dernière séance si possible.",
+      "Rappelez aux apprenants que les impôts et les licences changent selon le lieu et qu'il faut vérifier auprès des sources officielles ou d'un conseiller ; ne donnez aucun conseil fiscal.",
+      "Notez la tâche finale avec la grille d'évaluation, et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

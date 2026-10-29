@@ -17,11 +17,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos y tiene una tarea “Pruébalo ahora”. Cada capítulo cierra con una comprobación de conocimientos y el curso cierra con un examen de 20 preguntas. Aquí la defensa trata de causas, no de candidatos; las organizaciones sin fines de lucro tienen reglas especiales, que se ven en la lección 6."
   ],
   finalTask: "Arma un kit de defensa para un problema local real: un problema de una oración y un pedido concreto, tres datos con fuentes oficiales, dos historias cortas de la comunidad compartidas con permiso, el nombre de quien decide y cómo contactarlo, una carta o un comentario público de menos de 300 palabras, una hoja informativa de una página y un testimonio de dos minutos que hayas practicado en voz alta.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Personal y voluntarios de organizaciones sin fines de lucro, grupos de fe y de vecinos, y miembros de la comunidad que quieren cambiar un problema local, como un cruce peatonal peligroso, una ruta de autobús recortada o una regla que impide a las personas conseguir empleo o vivienda.",
+    startingPoint: "Les importa un problema local y saben hablar de él con sus vecinos. Muchos no han escrito un comentario público, no han encontrado a quien decide, no han comprobado datos con fuentes oficiales ni han hablado en una reunión pública.",
+    gap: "A las comunidades que alzan la voz con un pedido claro, datos comprobados e historias reales se las escucha más. Necesitan planificar una campaña pequeña con ayuda de la IA, manteniendo la voz de su comunidad en el centro y siguiendo las reglas para organizaciones sin fines de lucro, para que su esfuerzo lleve a un cambio real.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y frases cortas",
+      "Dispositivos: un teléfono o una computadora con un asistente de IA gratuito y una herramienta gratuita de diseño o de documentos",
+      "Las historias se comparten solo con permiso, y los datos privados no se ponen en las instrucciones para la IA",
+      "Reglas para organizaciones sin fines de lucro: solo defensa de causas, sin apoyar a candidatos; se revisa la guía del IRS",
+      "Tiempo: lecciones de unos cinco minutos, más tiempo para investigar y practicar"
+    ],
+    prerequisites: "Ninguno. Quienes no conocen las herramientas de IA pueden tomar primero \"Introducción a la IA y a la confianza digital\"."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con una preocupación de la comunidad", action: "escribir el problema en una oración y un pedido concreto que diga qué, de quién y para cuándo", standard: "definido con al menos dos personas afectadas" },
+    { id: "O2", condition: "Para tu causa", action: "encontrar datos de fuentes oficiales o de confianza y reunir historias de la comunidad", standard: "con tres datos, cada uno con su fuente, enlace y fecha, e historias compartidas solo con permiso" },
+    { id: "O3", condition: "Usando sitios web oficiales", action: "identificar a quien decide, la próxima reunión o fecha límite para comentarios, tus aliados y la posible oposición", standard: "con quien decide confirmado en una fuente oficial" },
+    { id: "O4", condition: "Usando tus datos comprobados y una historia", action: "escribir una carta o un comentario público respetuoso que haga tu pedido", standard: "en menos de 300 palabras, con quién eres, datos, una historia y el pedido" },
+    { id: "O5", condition: "Usando la IA para el texto y una herramienta de diseño gratuita", action: "crear una hoja informativa de una página con el pedido en un recuadro claro", standard: "de modo que quien la lea pueda decirte el pedido después de un minuto" },
+    { id: "O6", condition: "En una reunión pública", action: "dar un testimonio de dos minutos y planificar la acción de quienes te apoyan dentro de las reglas de defensa para organizaciones sin fines de lucro", standard: "en dos minutos o menos y sin apoyar a ningún candidato" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Armar tu caso",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Definir el problema y tu pedido",
           minutes: 5,
           goal: "Convertir una preocupación de la comunidad en un problema claro y un pedido concreto.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "La comunidad primero", bullets: ["La IA afina la redacción", "Las personas afectadas dan forma al pedido"] }
           ],
           tryIt: "Elige una preocupación local real. Escribe un problema de una oración y un pedido concreto, usa la IA para afinarlos y compártelos con dos personas afectadas.",
-          youCanNow: "convertir una preocupación en un planteamiento claro del problema y un pedido concreto."
+          youCanNow: "convertir una preocupación en un planteamiento claro del problema y un pedido concreto.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué tres cosas incluye un pedido fuerte?", options: ["Tu nombre, tu edad y tu dirección", "Qué, de quién y para cuándo", "Un lema, un logo y un color", "Una queja, una amenaza y una fecha límite"], answer: 1, why: "Un pedido fuerte nombra la acción, a quien decide y la fecha límite." },
+            { objective: "O1", q: "La preocupación de tu grupo es \"nuestro barrio no es seguro\". ¿Qué harías primero?", options: ["Reducirla a un problema concreto que las autoridades puedan atender", "Enviarla a todas las autoridades del estado", "Publicarla en internet sin cambios", "Esperar a que las cosas empeoren"], answer: 0, why: "Los problemas concretos llevan a acciones concretas que las autoridades pueden tomar." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Investigar datos y revisar las fuentes",
           minutes: 6,
           goal: "Encontrar datos que apoyen tu caso y comprobar cada uno con una fuente oficial o de confianza.",
@@ -58,9 +87,14 @@ module.exports = {
           ],
           sources: [{ name: "Oficina del Censo de EE. UU.: data.census.gov", url: "https://data.census.gov/" }],
           tryIt: "Encuentra tres datos sobre tu problema en fuentes oficiales o de confianza, con enlace y fecha de cada uno. Pregunta a dos personas si puedes compartir su historia.",
-          youCanNow: "investigar datos comprobados y juntar historias de la comunidad con permiso."
+          youCanNow: "investigar datos comprobados y juntar historias de la comunidad con permiso.",
+          quickCheck: [
+            { objective: "O2", q: "¿Cuál es una fuente de confianza para un dato sobre tu ciudad?", options: ["Una publicación cualquiera en redes sociales", "Una respuesta de la IA sin enlace", "El sitio web o un informe oficial de la propia ciudad", "Un rumor de un vecino"], answer: 2, why: "Las fuentes oficiales son donde los datos se pueden comprobar y citar." },
+            { objective: "O2", q: "Un vecino te cuenta una historia muy fuerte de cuando lo atropellaron en el cruce. ¿Qué harías antes de usarla?", options: ["Usarla con su nombre completo y su dirección", "Cambiar los detalles y usarla de todos modos", "Publicarla primero en internet", "Pedirle permiso y preguntarle cómo quiere que lo nombren"], answer: 3, why: "Las historias se comparten solo con el permiso de la persona." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Encontrar a quien decide y el momento correcto",
           minutes: 5,
           goal: "Identificar quién puede decir que sí a tu pedido y cuándo lo va a decidir.",
@@ -77,17 +111,21 @@ module.exports = {
             { title: "Haz el mapa del terreno", bullets: ["Aliados: vecinos, escuelas, iglesias, negocios", "La oposición y sus razones"] }
           ],
           tryIt: "Encuentra en un sitio web oficial a quien decide sobre tu problema y su próxima reunión o fecha límite para comentarios. Haz una lista de tres aliados y una posible preocupación de los opositores.",
-          youCanNow: "encontrar a quien decide, el momento y los aliados correctos para un pedido de defensa."
+          youCanNow: "encontrar a quien decide, el momento y los aliados correctos para un pedido de defensa.",
+          quickCheck: [
+            { objective: "O3", q: "En la defensa de una causa, ¿quién es la persona que decide?", options: ["La persona o el organismo que puede decir que sí a tu pedido", "Cualquiera que esté de acuerdo contigo", "El periódico", "La persona que se queja más fuerte"], answer: 0, why: "Quien decide tiene el poder de concederte el pedido." },
+            { objective: "O3", q: "Quieres una nueva luz en el parque, pero no sabes quién decide. ¿Qué harías?", options: ["Escribirle al presidente del país", "Revisar el sitio web de la ciudad o llamar a la ciudad para averiguarlo", "Adivinar y enviarlo a la junta escolar", "Esperar a que alguien te lo diga"], answer: 1, why: "Confirma quién decide en una fuente oficial antes de contactarlo." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Armar tu caso",
         questions: [
-          { q: "¿Cuál es el pedido de defensa más claro?", options: ["“Que las cosas mejoren”", "“Arreglen la seguridad”", "“Pedimos al Departamento de Transporte que instale un semáforo peatonal en Main y la Quinta antes del próximo año escolar”", "“Hagan algo ya”"], answer: 2, why: "Dice qué, quién y para cuándo." },
-          { q: "La IA da una estadística sobre choques en tu cruce. ¿Qué haces?", options: ["Encontrarla en la fuente original antes de usarla", "Usarla de inmediato", "Redondearla hacia arriba", "Ponerla en negritas"], answer: 0, why: "La IA puede inventar estadísticas." },
-          { q: "Antes de compartir la historia de un vecino en tu campaña, debes:", options: ["Publicar su dirección", "Cambiarla para que suene peor", "Nada", "Pedirle permiso"], answer: 3, why: "Las historias son de las personas que las vivieron." },
-          { q: "¿Por qué encontrar a quien decide?", options: ["Para publicar su dirección", "La defensa fracasa cuando va a la persona equivocada", "No importa", "Para evitarlo"], answer: 1, why: "Solo la persona correcta puede decir que sí." },
-          { q: "¿Qué es un periodo de comentarios públicos?", options: ["Un programa de televisión", "Una oportunidad para que el público hable o escriba antes de una decisión", "Una fecha límite de impuestos", "Una reunión privada"], answer: 1, why: "Es un momento formal para que el público opine." }
+          { objective: "O1", q: "¿Cuál es el pedido de defensa más claro?", options: ["“Que las cosas mejoren”", "“Arreglen la seguridad”", "“Pedimos al Departamento de Transporte que instale un semáforo peatonal en Main y la Quinta antes del próximo año escolar”", "“Hagan algo ya”"], answer: 2, why: "Dice qué, quién y para cuándo." },
+          { objective: "O2", q: "La IA da una estadística sobre choques en tu cruce. ¿Qué haces?", options: ["Encontrarla en la fuente original antes de usarla", "Usarla de inmediato", "Redondearla hacia arriba", "Ponerla en negritas"], answer: 0, why: "La IA puede inventar estadísticas." },
+          { objective: "O2", q: "Antes de compartir la historia de un vecino en tu campaña, debes:", options: ["Publicar su dirección", "Cambiarla para que suene peor", "Nada", "Pedirle permiso"], answer: 3, why: "Las historias son de las personas que las vivieron." },
+          { objective: "O3", q: "¿Por qué encontrar a quien decide?", options: ["Para publicar su dirección", "La defensa fracasa cuando va a la persona equivocada", "No importa", "Para evitarlo"], answer: 1, why: "Solo la persona correcta puede decir que sí." },
+          { objective: "O3", q: "¿Qué es un periodo de comentarios públicos?", options: ["Un programa de televisión", "Una oportunidad para que el público hable o escriba antes de una decisión", "Una fecha límite de impuestos", "Una reunión privada"], answer: 1, why: "Es un momento formal para que el público opine." }
         ]
       }
     },
@@ -95,6 +133,7 @@ module.exports = {
       name: "Capítulo 2: Alzar la voz con eficacia",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Escribir una carta o un comentario público con IA",
           minutes: 5,
           goal: "Escribir una carta o un comentario público corto y respetuoso que haga tu pedido.",
@@ -111,9 +150,14 @@ module.exports = {
             { title: "Que te escuchen", bullets: ["Lo personal vale más que las cartas idénticas", "Quienes te apoyan agregan su propia oración", "Sé respetuoso"] }
           ],
           tryIt: "Escribe con ayuda de la IA una carta o un comentario público de menos de 300 palabras sobre tu problema, con tus datos comprobados y una historia compartida con permiso. Léelo en voz alta y edítalo.",
-          youCanNow: "escribir una carta o un comentario público corto y respetuoso que haga un pedido claro."
+          youCanNow: "escribir una carta o un comentario público corto y respetuoso que haga un pedido claro.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué es un elector?", options: ["Un empleado de una organización sin fines de lucro", "Un cabildero pagado", "Un periodista", "Una persona que vive en el distrito de una autoridad"], answer: 3, why: "Las autoridades prestan atención a las personas a las que representan." },
+            { objective: "O4", q: "La IA escribe una carta que suena enojada y culpa al concejo. ¿Qué harías?", options: ["Enviarla para mostrar lo molesto que estás", "Reescribirla para que sea respetuosa, con datos, una historia y el pedido", "Agregar más palabras de enojo", "Enviar la misma carta con 100 nombres falsos"], answer: 1, why: "Las cartas respetuosas y personales con un pedido claro tienen más probabilidad de ser escuchadas." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Hacer una hoja informativa de una página",
           minutes: 5,
           goal: "Crear una hoja informativa de una página que las autoridades ocupadas y los vecinos puedan leer en un minuto.",
@@ -130,9 +174,14 @@ module.exports = {
             { title: "Púlela", bullets: ["Canva o Google Docs", "Vuelve a revisar cada número", "Traducciones revisadas por hablantes nativos"] }
           ],
           tryIt: "Haz una hoja informativa de una página para tu problema con la IA redactando el texto y Canva o Google Docs para el diseño. Pide a alguien que la lea en un minuto y te diga cuál es el pedido.",
-          youCanNow: "crear una hoja informativa clara de una página para una causa."
+          youCanNow: "crear una hoja informativa clara de una página para una causa.",
+          quickCheck: [
+            { objective: "O5", q: "¿Para quién es sobre todo una hoja informativa?", options: ["Para autoridades y vecinos ocupados que necesitan los puntos clave rápido", "Solo para quienes la escribieron", "Para abogados en un juicio", "Para estudiantes que escriben ensayos"], answer: 0, why: "Una hoja informativa da a los lectores ocupados el problema, los datos y el pedido en un minuto." },
+            { objective: "O5", q: "El borrador de tu hoja informativa ocupa dos páginas completas de letra pequeña. ¿Qué harías?", options: ["Hacer la letra más pequeña", "Agregar una tercera página con más datos", "Recortarla a una página con el pedido en un recuadro claro", "Quitar el pedido para ahorrar espacio"], answer: 2, why: "Una página con un pedido claro es más fácil de leer y de atender." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Testimonio público, quienes te apoyan y las reglas",
           minutes: 6,
           goal: "Dar un testimonio de dos minutos, movilizar a quienes te apoyan y seguir las reglas de defensa para organizaciones sin fines de lucro.",
@@ -150,17 +199,21 @@ module.exports = {
           ],
           sources: [{ name: "IRS: Cabildeo", url: "https://www.irs.gov/charities-non-profits/lobbying" }, { name: "IRS: Prohibición de intervenir en campañas políticas para organizaciones 501(c)(3)", url: "https://www.irs.gov/charities-non-profits/charitable-organizations/the-restriction-of-political-campaign-intervention-by-section-501c3-tax-exempt-organizations" }],
           tryIt: "Tarea final: recorta tu carta a un testimonio de dos minutos y practícalo en voz alta con un cronómetro. Júntalo con tu problema y tu pedido, tus datos, tus historias, quien decide, tu carta y tu hoja informativa para completar tu kit de defensa.",
-          youCanNow: "planificar y llevar a cabo con ayuda de la IA una pequeña campaña de defensa basada en datos, dentro de las reglas."
+          youCanNow: "planificar y llevar a cabo con ayuda de la IA una pequeña campaña de defensa basada en datos, dentro de las reglas.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué significa no partidista?", options: ["Apoyar a un partido", "Pagado por el gobierno", "No apoyar a ningún candidato ni partido", "Estar en contra de todas las autoridades"], answer: 2, why: "No partidista significa no tomar partido por candidatos ni partidos." },
+            { objective: "O6", q: "Tu testimonio dura tres minutos y medio, pero tienes dos. ¿Qué harías?", options: ["Hablar más rápido", "Seguir hablando cuando se acabe el tiempo", "Saltarte el pedido", "Recortarlo a tu nombre, tu relación con el problema, un dato, una historia y el pedido, y practicar con un cronómetro"], answer: 3, why: "Recortar a las partes clave y practicar te mantiene dentro del tiempo." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Alzar la voz con eficacia",
         questions: [
-          { q: "¿Por qué las cartas personales son mejores que cientos de cartas idénticas?", options: ["Las cartas idénticas son ilegales", "Las cartas personales son más largas", "No son mejores", "Las autoridades notan y valoran las voces individuales"], answer: 3, why: "Las historias y palabras personales pesan más." },
-          { q: "Una hoja informativa debe ser:", options: ["Una página que se pueda leer en más o menos un minuto", "De veinte páginas", "Solo fotos", "Escrita con términos técnicos"], answer: 0, why: "Los lectores ocupados necesitan algo corto y claro." },
-          { q: "La IA traduce tu hoja informativa al inglés. ¿Qué debes hacer después?", options: ["Imprimirla sin revisar", "Borrar la versión en español", "Pedir a alguien que hable bien el idioma que la revise", "No traducirla"], answer: 2, why: "Las traducciones de la IA pueden tener errores." },
-          { q: "¿Cuántas palabras habladas caben más o menos en dos minutos?", options: ["Unas 2,500", "Unas 20", "Unas 1,000", "Unas 250"], answer: 3, why: "La mayoría de la gente habla entre 120 y 130 palabras por minuto." },
-          { q: "Según el IRS, ¿puede una organización 501(c)(3) apoyar en público a un candidato a un cargo?", options: ["Sí, en cualquier momento", "Solo en redes sociales", "No, está absolutamente prohibido", "Solo con donaciones pequeñas"], answer: 2, why: "El IRS dice que intervenir en campañas está absolutamente prohibido." }
+          { objective: "O4", q: "¿Por qué las cartas personales son mejores que cientos de cartas idénticas?", options: ["Las cartas idénticas son ilegales", "Las cartas personales son más largas", "No son mejores", "Las autoridades notan y valoran las voces individuales"], answer: 3, why: "Las historias y palabras personales pesan más." },
+          { objective: "O5", q: "Una hoja informativa debe ser:", options: ["Una página que se pueda leer en más o menos un minuto", "De veinte páginas", "Solo fotos", "Escrita con términos técnicos"], answer: 0, why: "Los lectores ocupados necesitan algo corto y claro." },
+          { objective: "O5", q: "La IA traduce tu hoja informativa al inglés. ¿Qué debes hacer después?", options: ["Imprimirla sin revisar", "Borrar la versión en español", "Pedir a alguien que hable bien el idioma que la revise", "No traducirla"], answer: 2, why: "Las traducciones de la IA pueden tener errores." },
+          { objective: "O6", q: "¿Cuántas palabras habladas caben más o menos en dos minutos?", options: ["Unas 2,500", "Unas 20", "Unas 1,000", "Unas 250"], answer: 3, why: "La mayoría de la gente habla entre 120 y 130 palabras por minuto." },
+          { objective: "O6", q: "Según el IRS, ¿puede una organización 501(c)(3) apoyar en público a un candidato a un cargo?", options: ["Sí, en cualquier momento", "Solo en redes sociales", "No, está absolutamente prohibido", "Solo con donaciones pequeñas"], answer: 2, why: "El IRS dice que intervenir en campañas está absolutamente prohibido." }
         ]
       }
     }
@@ -168,26 +221,105 @@ module.exports = {
   quiz: {
     title: "Examen final: IA para la defensa de causas comunitarias",
     questions: [
-      { q: "Defender una causa significa:", options: ["Solo votar", "Alzar la voz para cambiar una política, una práctica o una decisión", "Postularse a un cargo", "Demandar a alguien"], answer: 1, why: "La defensa busca el cambio alzando la voz." },
-      { q: "¿Por qué reducir una preocupación grande a un problema concreto?", options: ["Las autoridades pueden atender problemas concretos", "Suena más pequeño", "La IA lo exige", "Para evitar actuar"], answer: 0, why: "Los problemas concretos llevan a soluciones concretas." },
-      { q: "Un pedido fuerte incluye:", options: ["Solo sentimientos", "Una amenaza", "Qué, de quién y para cuándo", "Ningún detalle"], answer: 2, why: "Es más fácil decir que sí a los pedidos claros." },
-      { q: "¿Quién debe dar forma al pedido?", options: ["Las personas más afectadas", "Solo la IA", "Solo gente de fuera", "Nadie"], answer: 0, why: "La defensa dirigida por la comunidad es más fuerte." },
-      { q: "¿Dónde puedes encontrar datos de población e ingresos de EE. UU.?", options: ["En un meme cualquiera", "En lo que adivine la IA", "En un comentario de redes sociales", "En data.census.gov"], answer: 3, why: "La Oficina del Censo publica datos oficiales." },
-      { q: "Una fuente primaria es:", options: ["Cualquier blog", "El lugar original donde se publicó la información", "Un resumen de la IA", "Un rumor"], answer: 1, why: "Las fuentes primarias son las más confiables." },
-      { q: "Para cada dato que juntes, anota:", options: ["Solo el número", "La fuente, el enlace y la fecha", "Nada", "Lo que adivinas"], answer: 1, why: "Las fuentes dejan que otros comprueben tus datos." },
-      { q: "Las actas de una reunión son:", options: ["Cuánto duró una reunión", "Un tipo de reloj", "Un diario privado", "El registro oficial por escrito de una reunión pública"], answer: 3, why: "Las actas registran lo que se decidió." },
-      { q: "La IA dice que la junta escolar decide sobre los cruces peatonales. Debes:", options: ["Confirmarlo en el sitio web de tu ciudad o llamando", "Creerle", "Escribir a todas las oficinas a la vez sin revisar", "Rendirte"], answer: 0, why: "Los procesos locales cambian; confírmalo oficialmente." },
-      { q: "¿Por qué aprender el calendario del presupuesto?", options: ["Los presupuestos son secretos", "No sirve", "Muchas decisiones se toman cuando se fijan los presupuestos", "Para faltar a las reuniones"], answer: 2, why: "Importa hacer tu pedido en el momento de las decisiones del presupuesto." },
-      { q: "Un aliado es:", options: ["Un opositor", "Solo quien decide", "Un sitio web", "Una persona o un grupo que apoya tu causa"], answer: 3, why: "Los aliados suman fuerza y voces." },
-      { q: "¿Por qué entender a la posible oposición?", options: ["Para insultarla", "Para ignorarla", "Para poder responder sus preocupaciones", "Para copiarla"], answer: 2, why: "Atender las preocupaciones suma apoyo." },
-      { q: "Un elector es:", options: ["Un tipo de ley", "Una persona que vive en el distrito de una autoridad", "Un abogado", "Un edificio de la ciudad"], answer: 1, why: "Las autoridades prestan atención a sus electores." },
-      { q: "Un comentario público fuerte es:", options: ["De menos de 300 palabras, con quién eres, datos, una historia y un pedido", "Lo más largo posible", "Enojado e insultante", "Solo estadísticas"], answer: 0, why: "Lo corto, personal y concreto funciona mejor." },
-      { q: "Estás enojado con las autoridades. En tu carta debes:", options: ["Usar insultos", "Hacer amenazas", "Ser respetuoso", "Escribir todo en mayúsculas"], answer: 2, why: "Los mensajes respetuosos se leen y se toman en cuenta." },
-      { q: "¿Dónde debe aparecer el pedido en una hoja informativa?", options: ["En un recuadro claro", "Escondido abajo en letra pequeña", "En ningún lado", "Solo en el reverso"], answer: 0, why: "El pedido debe destacar." },
-      { q: "En un testimonio público, debes empezar con:", options: ["Una historia larga", "Solo tu pedido", "Un chiste", "Tu nombre y tu relación con el problema"], answer: 3, why: "Les dice a las autoridades por qué te importa el problema." },
-      { q: "Según el IRS, educar al público sobre políticas:", options: ["Siempre es ilegal", "No se considera cabildeo", "Cuenta como hacer campaña", "Está prohibido para las organizaciones sin fines de lucro"], answer: 1, why: "El IRS dice que las actividades educativas no son cabildeo." },
-      { q: "Una organización 501(c)(3) puede hacer algo de cabildeo, pero:", options: ["En cantidades ilimitadas", "No como una parte sustancial de sus actividades", "Solo a favor de candidatos", "Nunca"], answer: 1, why: "Demasiado cabildeo pone en riesgo su exención de impuestos." },
-      { q: "Según el IRS, las campañas no partidistas de registro de votantes de una organización 501(c)(3) están:", options: ["Siempre prohibidas", "Permitidas solo para un partido", "Obligatorias", "En general permitidas si de verdad son no partidistas"], answer: 3, why: "El registro de votantes no partidista no está prohibido." }
+      { objective: "O1", q: "Defender una causa significa:", options: ["Solo votar", "Alzar la voz para cambiar una política, una práctica o una decisión", "Postularse a un cargo", "Demandar a alguien"], answer: 1, why: "La defensa busca el cambio alzando la voz." },
+      { objective: "O1", q: "¿Por qué reducir una preocupación grande a un problema concreto?", options: ["Las autoridades pueden atender problemas concretos", "Suena más pequeño", "La IA lo exige", "Para evitar actuar"], answer: 0, why: "Los problemas concretos llevan a soluciones concretas." },
+      { objective: "O1", q: "Un pedido fuerte incluye:", options: ["Solo sentimientos", "Una amenaza", "Qué, de quién y para cuándo", "Ningún detalle"], answer: 2, why: "Es más fácil decir que sí a los pedidos claros." },
+      { objective: "O1", q: "¿Quién debe dar forma al pedido?", options: ["Las personas más afectadas", "Solo la IA", "Solo gente de fuera", "Nadie"], answer: 0, why: "La defensa dirigida por la comunidad es más fuerte." },
+      { objective: "O2", q: "¿Dónde puedes encontrar datos de población e ingresos de EE. UU.?", options: ["En un meme cualquiera", "En lo que adivine la IA", "En un comentario de redes sociales", "En data.census.gov"], answer: 3, why: "La Oficina del Censo publica datos oficiales." },
+      { objective: "O2", q: "Una fuente primaria es:", options: ["Cualquier blog", "El lugar original donde se publicó la información", "Un resumen de la IA", "Un rumor"], answer: 1, why: "Las fuentes primarias son las más confiables." },
+      { objective: "O2", q: "Para cada dato que juntes, anota:", options: ["Solo el número", "La fuente, el enlace y la fecha", "Nada", "Lo que adivinas"], answer: 1, why: "Las fuentes dejan que otros comprueben tus datos." },
+      { objective: "O3", q: "Las actas de una reunión son:", options: ["Cuánto duró una reunión", "Un tipo de reloj", "Un diario privado", "El registro oficial por escrito de una reunión pública"], answer: 3, why: "Las actas registran lo que se decidió." },
+      { objective: "O3", q: "La IA dice que la junta escolar decide sobre los cruces peatonales. Debes:", options: ["Confirmarlo en el sitio web de tu ciudad o llamando", "Creerle", "Escribir a todas las oficinas a la vez sin revisar", "Rendirte"], answer: 0, why: "Los procesos locales cambian; confírmalo oficialmente." },
+      { objective: "O3", q: "¿Por qué aprender el calendario del presupuesto?", options: ["Los presupuestos son secretos", "No sirve", "Muchas decisiones se toman cuando se fijan los presupuestos", "Para faltar a las reuniones"], answer: 2, why: "Importa hacer tu pedido en el momento de las decisiones del presupuesto." },
+      { objective: "O3", q: "Un aliado es:", options: ["Un opositor", "Solo quien decide", "Un sitio web", "Una persona o un grupo que apoya tu causa"], answer: 3, why: "Los aliados suman fuerza y voces." },
+      { objective: "O3", q: "¿Por qué entender a la posible oposición?", options: ["Para insultarla", "Para ignorarla", "Para poder responder sus preocupaciones", "Para copiarla"], answer: 2, why: "Atender las preocupaciones suma apoyo." },
+      { objective: "O4", q: "Un elector es:", options: ["Un tipo de ley", "Una persona que vive en el distrito de una autoridad", "Un abogado", "Un edificio de la ciudad"], answer: 1, why: "Las autoridades prestan atención a sus electores." },
+      { objective: "O4", q: "Un comentario público fuerte es:", options: ["De menos de 300 palabras, con quién eres, datos, una historia y un pedido", "Lo más largo posible", "Enojado e insultante", "Solo estadísticas"], answer: 0, why: "Lo corto, personal y concreto funciona mejor." },
+      { objective: "O4", q: "Estás enojado con las autoridades. En tu carta debes:", options: ["Usar insultos", "Hacer amenazas", "Ser respetuoso", "Escribir todo en mayúsculas"], answer: 2, why: "Los mensajes respetuosos se leen y se toman en cuenta." },
+      { objective: "O5", q: "¿Dónde debe aparecer el pedido en una hoja informativa?", options: ["En un recuadro claro", "Escondido abajo en letra pequeña", "En ningún lado", "Solo en el reverso"], answer: 0, why: "El pedido debe destacar." },
+      { objective: "O6", q: "En un testimonio público, debes empezar con:", options: ["Una historia larga", "Solo tu pedido", "Un chiste", "Tu nombre y tu relación con el problema"], answer: 3, why: "Les dice a las autoridades por qué te importa el problema." },
+      { objective: "O6", q: "Según el IRS, educar al público sobre políticas:", options: ["Siempre es ilegal", "No se considera cabildeo", "Cuenta como hacer campaña", "Está prohibido para las organizaciones sin fines de lucro"], answer: 1, why: "El IRS dice que las actividades educativas no son cabildeo." },
+      { objective: "O6", q: "Una organización 501(c)(3) puede hacer algo de cabildeo, pero:", options: ["En cantidades ilimitadas", "No como una parte sustancial de sus actividades", "Solo a favor de candidatos", "Nunca"], answer: 1, why: "Demasiado cabildeo pone en riesgo su exención de impuestos." },
+      { objective: "O6", q: "Según el IRS, las campañas no partidistas de registro de votantes de una organización 501(c)(3) están:", options: ["Siempre prohibidas", "Permitidas solo para un partido", "Obligatorias", "En general permitidas si de verdad son no partidistas"], answer: 3, why: "El registro de votantes no partidista no está prohibido." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      2,
+      5,
+      6,
+      8,
+      13,
+      15,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Problema y pedido",
+        objective: "O1",
+        notYet: "El problema es demasiado amplio, o al pedido le falta qué, de quién o para cuándo.",
+        meets: "El problema en una oración y un pedido concreto con qué, de quién y para cuándo.",
+        exceeds: "Muestra cómo las personas afectadas ayudaron a definir el pedido."
+      },
+      {
+        name: "Datos e historias",
+        objective: "O2",
+        notYet: "Un dato no tiene fuente, o se usa una historia sin permiso.",
+        meets: "Tres datos con fuente, enlace y fecha, y dos historias compartidas con permiso.",
+        exceeds: "Los datos vienen de fuentes primarias y las historias usan los nombres que eligieron las personas."
+      },
+      {
+        name: "Quien decide",
+        objective: "O3",
+        notYet: "Quien decide es la persona equivocada o no está confirmado.",
+        meets: "Quien decide y la próxima fecha límite confirmados en un sitio web oficial.",
+        exceeds: "Además anota los aliados y una respuesta a la principal preocupación de la oposición."
+      },
+      {
+        name: "Carta o comentario y hoja informativa",
+        objective: "O4",
+        notYet: "Más de 300 palabras, falta de respeto o ningún pedido claro.",
+        meets: "Menos de 300 palabras, respetuosa, con quién eres, datos, una historia y el pedido; la hoja informativa cabe en una página.",
+        exceeds: "Con la hoja informativa, un lector puede decir el pedido después de un minuto."
+      },
+      {
+        name: "Testimonio y reglas",
+        objective: "O6",
+        notYet: "Más de dos minutos, sin práctica, o menciona apoyo a un candidato.",
+        meets: "Practicado en voz alta en dos minutos o menos, empieza con el nombre y la relación con el problema, y trata solo la causa.",
+        exceeds: "Incluye un plan para que quienes te apoyan asistan o comenten."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que envían una carta o un comentario público, o hablan en una reunión pública, en 60 días (encuesta de seguimiento)",
+      "Campañas en las que quien decide responde, pone el tema en la agenda o concede el pedido",
+      "Número de miembros de la comunidad que se suman a una campaña después del curso",
+      "Participantes que empiezan otro curso de Koach Learn para organizaciones sin fines de lucro en 30 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono o una computadora con internet",
+      "Un asistente de IA gratuito como ChatGPT, Microsoft Copilot o Google Gemini",
+      "Canva o Google Docs para la hoja informativa",
+      "Un cronómetro para practicar el testimonio",
+      "Unos 60 minutos para las lecciones y las comprobaciones, más tiempo para investigar y practicar"
+    ],
+    facilitatorNotes: [
+      "Deja que los grupos trabajen en un mismo problema local para que se repartan la investigación y practiquen juntos el testimonio.",
+      "Recuerda al personal de organizaciones sin fines de lucro que los grupos 501(c)(3) no pueden apoyar a candidatos; indícales la guía del IRS para su propia situación.",
+      "Las historias se comparten solo con permiso; deja los datos privados fuera de las instrucciones para la IA.",
+      "Pide que practiquen el testimonio en voz alta con un cronómetro frente al grupo.",
+      "Califica el kit de defensa con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

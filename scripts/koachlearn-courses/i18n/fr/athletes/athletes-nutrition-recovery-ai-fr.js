@@ -17,11 +17,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes, avec un exercice « Essayez maintenant ». Un contrôle des connaissances termine chaque chapitre et un quiz de 20 questions termine le cours."
   ],
   finalTask: "Utilisez un assistant IA pour préparer un plan de repas et de récupération d'une semaine autour de votre vrai calendrier d'entraînements et de matchs : assiettes équilibrées, routine repas et hydratation pour le jour de match, liste de courses adaptée à votre budget et routine de sommeil. Retirez tout détail de santé privé, puis montrez le plan à un diététicien diplômé, un soigneur ou un médecin et modifiez-le selon ses conseils.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des sportifs de lycée, d'université et de club, et les entraîneurs qui les accompagnent, qui veulent bien manger, bien boire et bien récupérer, et utiliser l'IA pour planifier plus facilement.",
+    startingPoint: "Ils mangent et dorment autour d'un emploi du temps chargé entre entraînements, cours et matchs, et utilisent un téléphone tous les jours. Beaucoup sautent des repas, improvisent la nourriture et l'eau du jour de match, dorment trop peu et ne savent pas quand des courbatures demandent un professionnel.",
+    gap: "Une mauvaise alimentation, trop peu d'eau et de sommeil freinent la performance et augmentent le risque de blessure et de coup de chaleur, et les conseils de l'IA ou d'internet sur les calories et les compléments peuvent être dangereux. Un plan hebdomadaire simple, vérifié par un professionnel, aide les sportifs à récupérer et à rester en bonne santé.",
+    constraints: [
+      "Niveau de lecture : des mots simples et des phrases courtes",
+      "Formation générale seulement, pas de conseil médical ni nutritionnel ; les quantités exactes viennent d'un diététicien diplômé, d'un soigneur ou d'un médecin",
+      "Un téléphone ou un ordinateur avec un assistant IA gratuit ; les plans doivent correspondre à un vrai budget alimentaire et à une vraie cuisine",
+      "Environ 60 minutes au total",
+      "Aucun dossier médical, médicament ni détail de santé privé collé dans l'IA ; l'image du corps et le poids sont des sujets sensibles"
+    ],
+    prerequisites: "Aucun"
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Avec des aliments que vous mangez déjà", action: "composer une assiette équilibrée avec des glucides, des protéines, et des fruits et légumes", standard: "avec les trois parties dans l'assiette et plus d'énergie prévue les jours d'entraînement dur" },
+    { id: "O2", condition: "À partir de l'heure de début d'un match ou d'un entraînement intense", action: "planifier une routine repas et hydratation du jour de match, du repas d'avant à la récupération d'après", standard: "avec un repas et une collation habituels, de l'eau toute la journée, et une collation de récupération avec des glucides et des protéines" },
+    { id: "O3", condition: "Avec un assistant IA gratuit", action: "créer une semaine d'idées de repas et une liste de courses adaptées à votre emploi du temps, à votre budget et à votre cuisine", standard: "avec les allergies décrites en termes généraux et sans demander d'objectif de calories, de plan pour perdre du poids ni de dose de compléments" },
+    { id: "O4", condition: "À partir de votre calendrier d'entraînements et de matchs", action: "planifier une routine de sommeil avec une heure de lever régulière, une heure de coucher et une heure où les écrans s'éteignent", standard: "avec la routine notée pendant une semaine" },
+    { id: "O5", condition: "À partir de la description d'une courbature, d'une douleur ou d'un coup à la tête", action: "expliquer s'il s'agit de courbatures normales ou d'un signe pour arrêter et prévenir votre soigneur", standard: "en réussissant chaque cas de douleur vive, de gonflement ou de symptômes après un coup à la tête" },
+    { id: "O6", condition: "Avec votre emploi du temps et un assistant IA", action: "créer un plan de repas et de récupération d'une semaine et le faire vérifier par un diététicien, un soigneur ou un médecin", standard: "avec les détails de santé privés retirés et le plan mis à jour selon ses conseils" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : S'alimenter autour de l'entraînement",
       lessons: [
         {
+          objectives: ["O1"],
           title: "L'assiette équilibrée du sportif",
           minutes: 5,
           goal: "Composer une assiette équilibrée avec des aliments que vous mangez déjà.",
@@ -38,9 +62,14 @@ module.exports = {
           ],
           sources: [{ name: "Academy of Nutrition and Dietetics : trouver un expert en nutrition (États-Unis, en anglais)", url: "https://www.eatright.org/find-a-nutrition-expert" }],
           tryIt: "Notez ce que vous avez mangé hier à un repas. Repérez le glucide, la protéine et le fruit ou légume. Que pourriez-vous ajouter pour en faire une assiette équilibrée ?",
-          youCanNow: "composer une assiette équilibrée avec des glucides, des protéines, des fruits et des légumes."
+          youCanNow: "composer une assiette équilibrée avec des glucides, des protéines, des fruits et des légumes.",
+          quickCheck: [
+            { objective: "O1", q: "Quel est le rôle principal des protéines dans l'assiette d'un sportif ?", options: ["Donner de l'énergie rapide", "Aider les muscles à se réparer", "Apporter seulement des vitamines", "Vous garder au frais"], answer: 1, why: "Les protéines apportent les éléments dont les muscles ont besoin pour se réparer." },
+            { objective: "O1", q: "Demain, c'est un jour d'entraînement dur. Quel changement dans votre assiette est logique ?", options: ["Sauter le petit-déjeuner", "Supprimer les glucides", "Ajouter plus de glucides pour l'énergie", "Ne manger que des légumes"], answer: 2, why: "Les jours plus durs demandent en général plus de glucides pour l'énergie." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Routine repas et hydratation du jour de match",
           minutes: 5,
           goal: "Prévoir quoi et quand manger et boire un jour de match ou d'entraînement intense.",
@@ -57,9 +86,14 @@ module.exports = {
             { title: "Après", bullets: ["Glucides et protéines", "Demandez à votre soigneur ce qui vous convient"] }
           ],
           tryIt: "Écrivez un déroulé pour votre prochain match ou entraînement intense : repas, collation, eau et nourriture de récupération, avec les heures.",
-          youCanNow: "prévoir une routine simple de repas et d'hydratation pour le jour de match."
+          youCanNow: "prévoir une routine simple de repas et d'hydratation pour le jour de match.",
+          quickCheck: [
+            { objective: "O2", q: "Quand beaucoup de sportifs prennent-ils leur repas équilibré habituel le jour du match ?", options: ["Quelques heures avant le match", "Juste au début du match", "Seulement après le match", "Seulement la veille au soir"], answer: 0, why: "Un repas normal quelques heures avant et une petite collation plus près du début, c'est une routine courante." },
+            { objective: "O2", q: "Il fait chaud et vous avez un long entraînement. Que prévoyez-vous ?", options: ["Boire seulement quand l'entraîneur le dit", "Ne pas boire pour éviter les crampes", "Attendre la fin de l'entraînement pour boire", "Prendre une bouteille d'eau et boire régulièrement toute la journée, plus quand il fait chaud"], answer: 3, why: "L'eau compte toute la journée, et il en faut plus quand il fait chaud." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Utiliser l'IA pour les idées de repas et les listes de courses",
           minutes: 5,
           goal: "Utiliser un assistant IA pour obtenir une semaine d'idées de repas et une liste de courses adaptée à votre budget.",
@@ -76,17 +110,21 @@ module.exports = {
             { title: "Ne demandez PAS à l'IA", bullets: ["Des objectifs caloriques ou un plan pour maigrir", "Des doses de compléments", "Des conseils médicaux"] }
           ],
           tryIt: "Demandez à un assistant IA sept jours de repas simples et équilibrés et une liste de courses pour votre vrai budget et votre vraie cuisine. Vérifiez trois prix dans votre magasin.",
-          youCanNow: "utiliser l'IA pour obtenir des idées de repas et une liste de courses adaptées à votre budget et à votre emploi du temps."
+          youCanNow: "utiliser l'IA pour obtenir des idées de repas et une liste de courses adaptées à votre budget et à votre emploi du temps.",
+          quickCheck: [
+            { objective: "O3", q: "Quels détails aident un assistant IA à donner des idées de repas utiles ?", options: ["Votre dossier médical", "Votre emploi du temps, votre budget et votre cuisine", "Vos médicaments", "Votre objectif de poids"], answer: 1, why: "L'emploi du temps, le budget et la cuisine adaptent les idées à votre vie sans partager de détails de santé privés." },
+            { objective: "O3", q: "Vous voulez savoir exactement combien de calories manger pour perdre du poids. À qui le demandez-vous ?", options: ["À un assistant IA", "À un coéquipier", "À un diététicien diplômé ou à un médecin", "À un influenceur sur les réseaux sociaux"], answer: 2, why: "Les objectifs de calories dépendent de votre santé et relèvent d'un diététicien ou d'un médecin." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : S'alimenter autour de l'entraînement",
         questions: [
-          { q: "Quel est le rôle principal des glucides pour les sportifs ?", options: ["Seulement réparer les muscles", "Seulement les vitamines", "L'énergie", "Aucun"], answer: 2, why: "Les glucides sont la principale source d'énergie rapide du corps." },
-          { q: "Qui est la bonne personne pour vos quantités exactes de nourriture ?", options: ["Un diététicien diplômé", "Un assistant IA", "Un influenceur des réseaux sociaux", "Un coéquipier"], answer: 0, why: "Les diététiciens diplômés donnent des conseils de nutrition personnels." },
-          { q: "Le jour du match, quelle collation est la meilleure ?", options: ["Une nouvelle boisson énergisante jamais essayée", "Rien de toute la journée", "Un énorme repas gras juste avant", "Une petite collation habituelle comme un fruit"], answer: 3, why: "Les aliments habituels et faciles sont les plus sûrs le jour du match." },
-          { q: "Un coéquipier a des vertiges et semble confus à l'entraînement sous la chaleur. Que faites-vous ?", options: ["Je lui dis de serrer les dents", "Je préviens tout de suite l'entraîneur ou le soigneur", "J'attends la fin de l'entraînement", "Je lui donne une boisson énergisante et je pars"], answer: 1, why: "Ces signes peuvent être une urgence ; le staff doit agir tout de suite." },
-          { q: "Quelle demande ne faut-il PAS faire à un assistant IA ?", options: ["Une liste de courses pour un budget de 50 $", "Une dose de complément pour vous", "Des idées de repas au micro-ondes", "Des recettes avec des haricots"], answer: 1, why: "Les doses dépendent de votre santé ; demandez à un diététicien ou un médecin." }
+          { objective: "O1", q: "Quel est le rôle principal des glucides pour les sportifs ?", options: ["Seulement réparer les muscles", "Seulement les vitamines", "L'énergie", "Aucun"], answer: 2, why: "Les glucides sont la principale source d'énergie rapide du corps." },
+          { objective: "O1", q: "Qui est la bonne personne pour vos quantités exactes de nourriture ?", options: ["Un diététicien diplômé", "Un assistant IA", "Un influenceur des réseaux sociaux", "Un coéquipier"], answer: 0, why: "Les diététiciens diplômés donnent des conseils de nutrition personnels." },
+          { objective: "O2", q: "Le jour du match, quelle collation est la meilleure ?", options: ["Une nouvelle boisson énergisante jamais essayée", "Rien de toute la journée", "Un énorme repas gras juste avant", "Une petite collation habituelle comme un fruit"], answer: 3, why: "Les aliments habituels et faciles sont les plus sûrs le jour du match." },
+          { objective: "O2", q: "Un coéquipier a des vertiges et semble confus à l'entraînement sous la chaleur. Que faites-vous ?", options: ["Je lui dis de serrer les dents", "Je préviens tout de suite l'entraîneur ou le soigneur", "J'attends la fin de l'entraînement", "Je lui donne une boisson énergisante et je pars"], answer: 1, why: "Ces signes peuvent être une urgence ; le staff doit agir tout de suite." },
+          { objective: "O3", q: "Quelle demande ne faut-il PAS faire à un assistant IA ?", options: ["Une liste de courses pour un budget de 50 $", "Une dose de complément pour vous", "Des idées de repas au micro-ondes", "Des recettes avec des haricots"], answer: 1, why: "Les doses dépendent de votre santé ; demandez à un diététicien ou un médecin." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Chapitre 2 : Les habitudes de récupération",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Le sommeil : votre meilleur outil de récupération",
           minutes: 5,
           goal: "Mettre en place une routine de sommeil simple adaptée à votre emploi du temps.",
@@ -110,9 +149,14 @@ module.exports = {
             { title: "Voyez votre médecin si", bullets: ["Vous n'arrivez souvent pas à dormir", "Vous ronflez fort", "Vous êtes toujours épuisé"] }
           ],
           tryIt: "Demandez à un assistant IA : « J'ai entraînement à 6 h en semaine et les matchs finissent à 21 h le vendredi. Aide-moi à faire une routine de sommeil simple. » Choisissez votre heure de coucher et notez votre sommeil pendant les trois prochaines nuits.",
-          youCanNow: "mettre en place et suivre une routine de sommeil simple."
+          youCanNow: "mettre en place et suivre une routine de sommeil simple.",
+          quickCheck: [
+            { objective: "O4", q: "Lequel fait partie d'une bonne routine de sommeil ?", options: ["De la caféine tard le soir", "Une heure de coucher différente chaque soir", "Une chambre lumineuse et chaude", "Des heures de coucher et de lever régulières"], answer: 3, why: "Des horaires réguliers, les écrans éteints, une chambre fraîche et sombre et la caféine tôt dans la journée aident à dormir." },
+            { objective: "O4", q: "L'entraînement commence à 6 h. Comment fixez-vous votre heure de coucher ?", options: ["Choisir l'heure de lever, puis compter à rebours jusqu'à une heure de coucher qui donne assez de sommeil", "Se coucher quand vous lâchez votre téléphone", "Faire la grasse matinée les jours d'entraînement", "Ne pas dormir avant un entraînement tôt"], answer: 0, why: "Compter à rebours à partir d'une heure de lever régulière donne une heure de coucher avec assez de sommeil." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Jours de repos, courbatures et douleur",
           minutes: 5,
           goal: "Distinguer les courbatures normales de l'entraînement d'une douleur qui demande un professionnel.",
@@ -130,9 +174,14 @@ module.exports = {
           ],
           sources: [{ name: "CDC : formation HEADS UP sur les commotions (en anglais)", url: "https://www.cdc.gov/heads-up/index.html" }],
           tryIt: "Écrivez deux listes : les signes de courbatures normales et les signes de douleur à signaler. Puis notez qui vous préviendriez dans votre équipe et comment le joindre.",
-          youCanNow: "distinguer les courbatures normales d'une douleur qui demande votre soigneur, et savoir quoi faire après un choc à la tête."
+          youCanNow: "distinguer les courbatures normales d'une douleur qui demande votre soigneur, et savoir quoi faire après un choc à la tête.",
+          quickCheck: [
+            { objective: "O5", q: "Lequel est un signe de douleur qui demande votre soigneur ?", options: ["Une fatigue sourde dans les jambes le lendemain d'un entraînement dur", "Une douleur vive dans une articulation qui empire", "De légères courbatures qui passent en deux jours", "Avoir faim après l'entraînement"], answer: 1, why: "Une douleur vive, une douleur d'articulation ou d'os, un gonflement, une boiterie ou une douleur qui empire demandent un professionnel." },
+            { objective: "O5", q: "Un coéquipier reçoit un coup à la tête et dit qu'il a des vertiges. Que se passe-t-il ?", options: ["Il continue à jouer s'il le veut", "Il se repose pendant une action", "Il arrête de jouer et vous prévenez l'entraîneur ou le soigneur", "Il boit de l'eau et retourne jouer"], answer: 2, why: "Un coup à la tête avec des symptômes veut dire : arrêter de jouer et prévenir le staff." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Construire votre plan de récupération",
           minutes: 5,
           goal: "Réunir repas, eau et sommeil dans un plan de récupération hebdomadaire et le faire vérifier par un professionnel.",
@@ -150,17 +199,21 @@ module.exports = {
           ],
           sources: [{ name: "Academy of Nutrition and Dietetics : trouver un expert en nutrition (États-Unis, en anglais)", url: "https://www.eatright.org/find-a-nutrition-expert" }],
           tryIt: "Tâche finale : utilisez un assistant IA pour préparer votre plan de repas et de récupération d'une semaine, retirez les détails de santé privés et montrez-le à un diététicien, un soigneur ou un médecin.",
-          youCanNow: "construire avec l'IA un plan hebdomadaire de repas, d'hydratation et de sommeil et le faire vérifier par un professionnel."
+          youCanNow: "construire avec l'IA un plan hebdomadaire de repas, d'hydratation et de sommeil et le faire vérifier par un professionnel.",
+          quickCheck: [
+            { objective: "O6", q: "Que contient votre plan de récupération d'une semaine ?", options: ["Les repas et collations, des rappels pour boire et les heures de coucher", "Seulement vos séances", "Seulement votre calendrier de matchs", "Une liste de compléments"], answer: 0, why: "Le plan réunit nourriture, eau et sommeil autour de votre emploi du temps." },
+            { objective: "O6", q: "Votre soigneur propose des changements au plan rédigé par l'IA. Que faites-vous ?", options: ["Garder la version de l'IA", "Demander à l'IA de le contredire", "Prendre la moitié de chaque", "Mettre le plan à jour avec ses conseils et suivre cette version"], answer: 3, why: "Le plan que le professionnel vous aide à corriger est celui à suivre." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Les habitudes de récupération",
         questions: [
-          { q: "Pourquoi le sommeil compte-t-il pour les sportifs ?", options: ["Il ne compte pas", "Il remplace l'entraînement", "Seulement pour le poids", "Le corps se répare et le cerveau garde les gestes appris"], answer: 3, why: "C'est pendant le sommeil que se font la réparation et l'apprentissage." },
-          { q: "Lequel fait partie d'une bonne routine de sommeil ?", options: ["Éteindre les écrans avant le coucher", "Des boissons énergisantes le soir", "Une heure de coucher différente chaque soir", "Le téléphone au lit jusqu'à s'endormir"], answer: 0, why: "Éteindre les écrans avant le coucher aide à s'endormir." },
-          { q: "Votre genou a une douleur vive et gonfle après l'entraînement. Que faites-vous ?", options: ["Je l'ignore", "Je demande un traitement à l'IA", "Je préviens mon soigneur", "Je cours plus pour le détendre"], answer: 2, why: "Une douleur vive avec gonflement demande un professionnel." },
-          { q: "Un coéquipier a des vertiges et se sent « pas bien » après un choc à la tête. Que doit-il se passer ?", options: ["Il continue de jouer", "Il fait une courte pause et revient", "Il demande à une application", "Il arrête de jouer et prévient le staff"], answer: 3, why: "Commotion possible : arrêter et prévenir un entraîneur ou un soigneur." },
-          { q: "Qui doit vérifier votre plan de récupération préparé avec l'IA ?", options: ["Une section de commentaires au hasard", "Un diététicien, un soigneur ou un médecin", "L'IA, encore une fois", "Personne"], answer: 1, why: "Un professionnel peut adapter le plan à votre corps et à votre sport." }
+          { objective: "O4", q: "Pourquoi le sommeil compte-t-il pour les sportifs ?", options: ["Il ne compte pas", "Il remplace l'entraînement", "Seulement pour le poids", "Le corps se répare et le cerveau garde les gestes appris"], answer: 3, why: "C'est pendant le sommeil que se font la réparation et l'apprentissage." },
+          { objective: "O4", q: "Lequel fait partie d'une bonne routine de sommeil ?", options: ["Éteindre les écrans avant le coucher", "Des boissons énergisantes le soir", "Une heure de coucher différente chaque soir", "Le téléphone au lit jusqu'à s'endormir"], answer: 0, why: "Éteindre les écrans avant le coucher aide à s'endormir." },
+          { objective: "O5", q: "Votre genou a une douleur vive et gonfle après l'entraînement. Que faites-vous ?", options: ["Je l'ignore", "Je demande un traitement à l'IA", "Je préviens mon soigneur", "Je cours plus pour le détendre"], answer: 2, why: "Une douleur vive avec gonflement demande un professionnel." },
+          { objective: "O5", q: "Un coéquipier a des vertiges et se sent « pas bien » après un choc à la tête. Que doit-il se passer ?", options: ["Il continue de jouer", "Il fait une courte pause et revient", "Il demande à une application", "Il arrête de jouer et prévient le staff"], answer: 3, why: "Commotion possible : arrêter et prévenir un entraîneur ou un soigneur." },
+          { objective: "O6", q: "Qui doit vérifier votre plan de récupération préparé avec l'IA ?", options: ["Une section de commentaires au hasard", "Un diététicien, un soigneur ou un médecin", "L'IA, encore une fois", "Personne"], answer: 1, why: "Un professionnel peut adapter le plan à votre corps et à votre sport." }
         ]
       }
     }
@@ -168,26 +221,105 @@ module.exports = {
   quiz: {
     title: "Quiz final : Nutrition et récupération avec l'IA",
     questions: [
-      { q: "Quel aliment est surtout une protéine ?", options: ["Le riz", "Les pommes", "Les œufs", "Le pain"], answer: 2, why: "Les œufs sont un aliment protéiné." },
-      { q: "Les trois parties principales d'une assiette équilibrée sont :", options: ["Glucides, protéines, fruits et légumes", "Bonbons, sodas, chips", "Seulement des protéines", "Seulement des légumes"], answer: 0, why: "Ces trois parties couvrent l'énergie, la réparation et les vitamines." },
-      { q: "Les jours d'entraînement dur demandent en général :", options: ["Plus de carburant", "De sauter des repas", "Pas d'eau", "Seulement des collations"], answer: 0, why: "Plus d'entraînement veut en général dire plus d'énergie nécessaire." },
-      { q: "La nourriture ou l'image de votre corps vous stresse. Vous devez :", options: ["Arrêter de manger", "Le cacher", "En parler à une personne de confiance et à votre soigneur ou médecin", "Demander un régime à l'IA"], answer: 2, why: "Ces inquiétudes méritent un vrai soutien." },
-      { q: "Le jour du match, choisissez :", options: ["Un aliment tout nouveau", "Des aliments habituels", "Rien de la journée", "Un nouveau complément"], answer: 1, why: "Les aliments habituels sont les plus sûrs." },
-      { q: "Quand faut-il boire de l'eau ?", options: ["Seulement pendant le match", "Jamais avant les matchs", "Seulement quand on vous le dit", "Toute la journée, davantage quand il fait chaud"], answer: 3, why: "L'hydratation est une habitude de toute la journée." },
-      { q: "Lequel peut montrer qu'il vous faut plus de liquide ?", options: ["Se sentir reposé", "Avoir les idées claires", "Des urines foncées et un mal de tête", "Bien dormir"], answer: 2, why: "Urines foncées, maux de tête et crampes peuvent signaler un manque de liquide." },
-      { q: "Après un entraînement dur, une collation de récupération contient :", options: ["Seulement de l'eau", "Seulement des bonbons", "Rien", "Des glucides et des protéines"], answer: 3, why: "Les glucides refont le plein d'énergie ; les protéines aident à réparer." },
-      { q: "Que donner à l'IA pour obtenir des idées de repas utiles ?", options: ["Votre emploi du temps, votre budget et votre cuisine", "Votre dossier médical", "Votre mot de passe", "Votre carte bancaire"], answer: 0, why: "Ces détails adaptent les idées à votre vie." },
-      { q: "Que ne faut-il PAS demander à l'IA ?", options: ["Des recettes au micro-ondes", "Un objectif calorique pour perdre du poids", "Une liste de courses", "Des idées de repas avec des haricots"], answer: 1, why: "Les objectifs caloriques dépendent de votre santé ; demandez à un diététicien." },
-      { q: "Comment parler d'une allergie alimentaire à l'IA ?", options: ["En collant votre dossier médical", "En tapant les notes de votre médecin", "Avec des mots généraux, comme « pas d'arachides »", "Ne pas en parler"], answer: 2, why: "Des mots généraux donnent des idées sûres sans partager de dossier." },
-      { q: "Après que l'IA a fait une liste de courses, vous devez :", options: ["Vérifier les prix dans votre magasin", "Faire confiance aux prix", "Tout acheter en double", "La publier"], answer: 0, why: "L'IA ne peut pas connaître les vrais prix de votre magasin." },
-      { q: "Les compléments alimentaires sont risqués parce que :", options: ["Ils sont toujours illégaux", "Ils sont gratuits", "Les entraîneurs les vendent", "Ils ne sont pas contrôlés par la FDA avant la vente et certains contiennent des substances interdites"], answer: 3, why: "L'USADA (agence antidopage américaine) met en garde contre les compléments contaminés ou mal étiquetés." },
-      { q: "Qu'est-ce qui aide à s'endormir ?", options: ["La caféine tard le soir", "Une chambre fraîche et sombre", "Faire défiler son téléphone au lit", "Une heure de coucher différente chaque soir"], answer: 1, why: "Une chambre fraîche et sombre favorise le sommeil." },
-      { q: "Vous êtes toujours épuisé, même après avoir dormi. Vous devez :", options: ["Boire plus de boissons énergisantes", "En parler à votre médecin", "L'ignorer", "Vous entraîner plus dur"], answer: 1, why: "Un épuisement qui dure est une raison de voir un médecin." },
-      { q: "Les jours de repos sont :", options: ["De la paresse", "Interdits", "Seulement pour les blessés", "Une partie de l'entraînement"], answer: 3, why: "Votre corps s'adapte et se renforce les jours de repos." },
-      { q: "Lequel ressemble à des courbatures normales ?", options: ["Une fatigue musculaire sourde qui passe en un ou deux jours", "Une douleur vive dans une articulation", "Un gonflement et une boiterie", "Une douleur qui ne cesse d'empirer"], answer: 0, why: "Les courbatures normales sont sourdes et passent." },
-      { q: "Où apprendre gratuitement les signes d'une commotion ?", options: ["Dans un mème au hasard", "Dans une publicité pour une boisson sportive", "Avec CDC HEADS UP", "Nulle part"], answer: 2, why: "Les CDC proposent la formation gratuite HEADS UP." },
-      { q: "Avant de coller votre plan dans une IA, retirez :", options: ["Les horaires d'entraînement", "Votre budget", "Vos plats préférés", "Les détails de santé privés"], answer: 3, why: "Les détails de santé restent privés." },
-      { q: "Le plan à suivre est :", options: ["Le premier brouillon de l'IA", "Celui corrigé avec un diététicien, un soigneur ou un médecin", "Le plan d'un influenceur", "Le plan de votre rival"], answer: 1, why: "Un professionnel adapte le plan à vous." }
+      { objective: "O1", q: "Quel aliment est surtout une protéine ?", options: ["Le riz", "Les pommes", "Les œufs", "Le pain"], answer: 2, why: "Les œufs sont un aliment protéiné." },
+      { objective: "O1", q: "Les trois parties principales d'une assiette équilibrée sont :", options: ["Glucides, protéines, fruits et légumes", "Bonbons, sodas, chips", "Seulement des protéines", "Seulement des légumes"], answer: 0, why: "Ces trois parties couvrent l'énergie, la réparation et les vitamines." },
+      { objective: "O1", q: "Les jours d'entraînement dur demandent en général :", options: ["Plus de carburant", "De sauter des repas", "Pas d'eau", "Seulement des collations"], answer: 0, why: "Plus d'entraînement veut en général dire plus d'énergie nécessaire." },
+      { objective: "O1", q: "La nourriture ou l'image de votre corps vous stresse. Vous devez :", options: ["Arrêter de manger", "Le cacher", "En parler à une personne de confiance et à votre soigneur ou médecin", "Demander un régime à l'IA"], answer: 2, why: "Ces inquiétudes méritent un vrai soutien." },
+      { objective: "O2", q: "Le jour du match, choisissez :", options: ["Un aliment tout nouveau", "Des aliments habituels", "Rien de la journée", "Un nouveau complément"], answer: 1, why: "Les aliments habituels sont les plus sûrs." },
+      { objective: "O2", q: "Quand faut-il boire de l'eau ?", options: ["Seulement pendant le match", "Jamais avant les matchs", "Seulement quand on vous le dit", "Toute la journée, davantage quand il fait chaud"], answer: 3, why: "L'hydratation est une habitude de toute la journée." },
+      { objective: "O2", q: "Lequel peut montrer qu'il vous faut plus de liquide ?", options: ["Se sentir reposé", "Avoir les idées claires", "Des urines foncées et un mal de tête", "Bien dormir"], answer: 2, why: "Urines foncées, maux de tête et crampes peuvent signaler un manque de liquide." },
+      { objective: "O2", q: "Après un entraînement dur, une collation de récupération contient :", options: ["Seulement de l'eau", "Seulement des bonbons", "Rien", "Des glucides et des protéines"], answer: 3, why: "Les glucides refont le plein d'énergie ; les protéines aident à réparer." },
+      { objective: "O3", q: "Que donner à l'IA pour obtenir des idées de repas utiles ?", options: ["Votre emploi du temps, votre budget et votre cuisine", "Votre dossier médical", "Votre mot de passe", "Votre carte bancaire"], answer: 0, why: "Ces détails adaptent les idées à votre vie." },
+      { objective: "O3", q: "Que ne faut-il PAS demander à l'IA ?", options: ["Des recettes au micro-ondes", "Un objectif calorique pour perdre du poids", "Une liste de courses", "Des idées de repas avec des haricots"], answer: 1, why: "Les objectifs caloriques dépendent de votre santé ; demandez à un diététicien." },
+      { objective: "O3", q: "Comment parler d'une allergie alimentaire à l'IA ?", options: ["En collant votre dossier médical", "En tapant les notes de votre médecin", "Avec des mots généraux, comme « pas d'arachides »", "Ne pas en parler"], answer: 2, why: "Des mots généraux donnent des idées sûres sans partager de dossier." },
+      { objective: "O3", q: "Après que l'IA a fait une liste de courses, vous devez :", options: ["Vérifier les prix dans votre magasin", "Faire confiance aux prix", "Tout acheter en double", "La publier"], answer: 0, why: "L'IA ne peut pas connaître les vrais prix de votre magasin." },
+      { objective: "O3", q: "Les compléments alimentaires sont risqués parce que :", options: ["Ils sont toujours illégaux", "Ils sont gratuits", "Les entraîneurs les vendent", "Ils ne sont pas contrôlés par la FDA avant la vente et certains contiennent des substances interdites"], answer: 3, why: "L'USADA (agence antidopage américaine) met en garde contre les compléments contaminés ou mal étiquetés." },
+      { objective: "O4", q: "Qu'est-ce qui aide à s'endormir ?", options: ["La caféine tard le soir", "Une chambre fraîche et sombre", "Faire défiler son téléphone au lit", "Une heure de coucher différente chaque soir"], answer: 1, why: "Une chambre fraîche et sombre favorise le sommeil." },
+      { objective: "O4", q: "Vous êtes toujours épuisé, même après avoir dormi. Vous devez :", options: ["Boire plus de boissons énergisantes", "En parler à votre médecin", "L'ignorer", "Vous entraîner plus dur"], answer: 1, why: "Un épuisement qui dure est une raison de voir un médecin." },
+      { objective: "O5", q: "Les jours de repos sont :", options: ["De la paresse", "Interdits", "Seulement pour les blessés", "Une partie de l'entraînement"], answer: 3, why: "Votre corps s'adapte et se renforce les jours de repos." },
+      { objective: "O5", q: "Lequel ressemble à des courbatures normales ?", options: ["Une fatigue musculaire sourde qui passe en un ou deux jours", "Une douleur vive dans une articulation", "Un gonflement et une boiterie", "Une douleur qui ne cesse d'empirer"], answer: 0, why: "Les courbatures normales sont sourdes et passent." },
+      { objective: "O5", q: "Où apprendre gratuitement les signes d'une commotion ?", options: ["Dans un mème au hasard", "Dans une publicité pour une boisson sportive", "Avec CDC HEADS UP", "Nulle part"], answer: 2, why: "Les CDC proposent la formation gratuite HEADS UP." },
+      { objective: "O6", q: "Avant de coller votre plan dans une IA, retirez :", options: ["Les horaires d'entraînement", "Votre budget", "Vos plats préférés", "Les détails de santé privés"], answer: 3, why: "Les détails de santé restent privés." },
+      { objective: "O6", q: "Le plan à suivre est :", options: ["Le premier brouillon de l'IA", "Celui corrigé avec un diététicien, un soigneur ou un médecin", "Le plan d'un influenceur", "Le plan de votre rival"], answer: 1, why: "Un professionnel adapte le plan à vous." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      1,
+      4,
+      8,
+      9,
+      13,
+      16,
+      18,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Repas équilibrés",
+        objective: "O1",
+        notYet: "Des repas oublient tout un groupe d'aliments, ou il manque des repas autour de l'entraînement.",
+        meets: "Chaque repas principal contient des glucides, des protéines, et des fruits ou des légumes.",
+        exceeds: "Plus d'énergie est prévue les jours durs et les repas utilisent des aliments que le sportif aime déjà."
+      },
+      {
+        name: "Routine du jour de match",
+        objective: "O2",
+        notYet: "Pas d'horaires, pas de plan pour l'eau, ou un nouvel aliment le jour du match.",
+        meets: "Un repas habituel quelques heures avant, une petite collation plus près du début, de l'eau toute la journée et une collation de récupération après.",
+        exceeds: "Comprend un plan pour la chaleur et les signes d'alerte qui veulent dire : arrêter et prévenir le staff."
+      },
+      {
+        name: "Liste de courses dans le budget",
+        objective: "O3",
+        notYet: "Pas de liste de courses, ou le plan demande à l'IA des objectifs de calories ou des doses de compléments.",
+        meets: "Une liste de courses adaptée au budget et à la cuisine indiqués, avec les allergies décrites en termes généraux.",
+        exceeds: "Les prix sont vérifiés dans le magasin du sportif et la liste est ajustée."
+      },
+      {
+        name: "Routine de sommeil",
+        objective: "O4",
+        notYet: "Pas d'heure de lever ni d'heure de coucher régulière.",
+        meets: "Une heure de lever, une heure de coucher et une heure d'arrêt des écrans régulières, adaptées à l'emploi du temps.",
+        exceeds: "Les heures de sommeil sont notées pendant une semaine et la routine est ajustée autour des entraînements tôt ou des matchs tard."
+      },
+      {
+        name: "Vérification par un professionnel",
+        objective: "O6",
+        notYet: "Le plan n'a pas été montré à un professionnel, ou il contient des détails de santé privés.",
+        meets: "Détails privés retirés, plan montré à un diététicien, un soigneur ou un médecin, et mis à jour selon ses conseils.",
+        exceeds: "Le sportif note ce qui a été changé et pourquoi."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent la tâche finale avec « Atteint » ou « Dépasse » sur chaque ligne de la grille",
+      "Les apprenants qui disent suivre leur plan de repas et de sommeil vérifié 30 jours plus tard (questionnaire de suivi)",
+      "Les apprenants qui disent avoir parlé de leur plan avec un diététicien, un soigneur ou un médecin",
+      "Les apprenants qui disent avoir prévenu le staff d'une douleur vive, de signes de coup de chaleur ou d'un coup à la tête au lieu de continuer à jouer"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur avec Internet",
+      "Un assistant IA gratuit (ChatGPT, Microsoft Copilot ou Google Gemini)",
+      "Votre calendrier d'entraînements et de matchs, votre budget alimentaire de la semaine et ce que contient votre cuisine",
+      "Le contact d'un diététicien diplômé, d'un soigneur, du service de santé des étudiants ou d'un médecin",
+      "Environ 60 minutes, plus le temps de rencontrer le professionnel"
+    ],
+    facilitatorNotes: [
+      "Dites clairement qu'il s'agit d'une formation générale ; ne donnez pas de conseil individuel sur les calories, le poids ou les compléments en groupe.",
+      "Faites attention au poids et à l'image du corps : ne pesez et ne comparez jamais les sportifs, et sachez vers qui orienter quelqu'un qui va mal.",
+      "Organisez l'accès à un diététicien diplômé, à un soigneur ou au service de santé des étudiants avant la tâche finale, pour que chaque sportif puisse faire vérifier son plan.",
+      "Revoyez avec tout le groupe les signes de coup de chaleur et de coup à la tête, et assurez-vous que les sportifs savent qui prévenir.",
+      "Respectez les budgets alimentaires, les allergies et les règles alimentaires culturelles ou religieuses quand vous donnez des exemples de repas."
     ]
   }
 };

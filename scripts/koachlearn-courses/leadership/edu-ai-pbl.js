@@ -15,11 +15,35 @@ module.exports = {
     "Use approved tools for anything students do, and keep student information out of unapproved tools. A knowledge check closes each chapter and a 20-question quiz closes the course."
   ],
   finalTask: "Design a two- to four-week PBL unit: a driving question, an entry event, four to six milestones each with an AI use level, a rubric for the final product and for process, an individual checkpoint at each milestone, a student AI log template, and a plan for a public showcase with a real audience. Check it with a colleague and revise one part based on their feedback.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Classroom teachers, instructional coaches and school leaders who run or want to run project-based learning (PBL) units and need to plan for students who have AI tools.",
+    startingPoint: "Can plan units and group projects and grade a final product. Some have run a project before. Few have set AI rules for each stage of a project or built checkpoints that show each student's own learning.",
+    gap: "A student can ask AI for the answer to a driving question in seconds, and team products can hide who learned what. Teachers need to design projects where inquiry stays real, AI use is clear and honest at each stage, and every student's learning shows.",
+    constraints: [
+      "Time: short lessons that fit into a planning period; the unit itself runs two to four weeks",
+      "Devices: a school computer with an AI assistant the district allows",
+      "Privacy: student names and grades stay out of tools the district has not approved",
+      "School rules for photos, names, recordings and online sharing apply to the showcase",
+      "Standards come from the official source, not from AI"
+    ],
+    prerequisites: "None. Teachers new to AI tools may want an introductory AI course first."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given a project idea", action: "list the essentials of a strong project and write a driving question that AI cannot simply answer", standard: "with a question that is local or personal and open" },
+    { id: "O2", condition: "Given your grade, subject, standards and project length", action: "use AI to draft an entry event, four to six milestones and a two-part rubric", standard: "checked against your standards and for a realistic timeline" },
+    { id: "O3", condition: "When students research a project topic", action: "teach the explore, find, verify and cite routine with a research log", standard: "so every fact used is checked against a real source" },
+    { id: "O4", condition: "Given your project's milestones", action: "set an AI use level for each milestone and give students an AI log template", standard: "with a reason students can understand for each level" },
+    { id: "O5", condition: "Given a team project", action: "plan an individual checkpoint at each milestone", standard: "so every student can explain the team's work and their own part" },
+    { id: "O6", condition: "When the project ends", action: "plan a public showcase with a real audience, an AI disclosure and a student reflection", standard: "following your school's rules for photos, names and online sharing" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Designing the project with AI",
       lessons: [
         {
+          objectives: ["O1"],
           title: "PBL essentials and AI's place in them",
           minutes: 5,
           goal: "Name the essentials of a strong project and where AI helps or harms.",
@@ -35,9 +59,14 @@ module.exports = {
             { title: "Design for it", bullets: ["Local or personal driving questions", "Learning shows in the process"] }
           ],
           tryIt: "Ask an AI tool to answer a driving question you have used or seen. Then rewrite the question so it is local or personal enough that AI cannot simply answer it.",
-          youCanNow: "name the essentials of strong PBL and design driving questions AI cannot short-circuit."
+          youCanNow: "name the essentials of strong PBL and design driving questions AI cannot short-circuit.",
+          quickCheck: [
+            { objective: "O1", q: "Which is one of the PBL essentials?", options: ["A worksheet graded only by the teacher", "A single test at the end", "Critique and revision", "A topic the teacher picks with no student choice"], answer: 2, why: "Strong projects include critique and revision, along with voice, choice and a public product." },
+            { objective: "O1", q: "Your driving question is \"What causes air pollution?\" How would you change it?", options: ["Make it local, such as \"How can we cut idling cars outside our school?\"", "Make it shorter", "Add more facts to it", "Ask AI to answer it first"], answer: 0, why: "A local or personal question keeps AI from simply answering it." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Driving questions, launches, milestones and rubrics",
           minutes: 6,
           goal: "Use AI to draft the project's driving question, entry event, milestones and rubric.",
@@ -54,9 +83,14 @@ module.exports = {
             { title: "Two-part rubric", bullets: ["Product: content and quality", "Process: collaboration, revision, evidence", "Check standards and timeline"] }
           ],
           tryIt: "Use AI to draft the driving question, entry event, milestones and a two-part rubric for a project you could teach. Adjust the timeline to fit your calendar.",
-          youCanNow: "design a project's structure quickly with AI and check it against standards and time."
+          youCanNow: "design a project's structure quickly with AI and check it against standards and time.",
+          quickCheck: [
+            { objective: "O2", q: "What two parts should a PBL rubric score?", options: ["Spelling and neatness", "The final product and the process", "Attendance and homework", "Speed and length"], answer: 1, why: "Scoring process (collaboration, revision, evidence) as well as product rewards the learning." },
+            { objective: "O2", q: "AI's project timeline fits eight milestones into two weeks. What would you do?", options: ["Keep it, since AI planned it", "Add more milestones", "Remove the rubric to save time", "Cut it to a realistic plan, such as four to six milestones"], answer: 3, why: "AI often packs in too much, so check that the timeline is realistic." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Research with AI: search, verify, cite",
           minutes: 5,
           goal: "Teach students a research routine that uses AI without trusting it blindly.",
@@ -73,17 +107,21 @@ module.exports = {
             { title: "Research log", bullets: ["Question, source, learning, how verified"] }
           ],
           tryIt: "Write the research routine and a research log template for your project. Test it yourself on one research question from the project.",
-          youCanNow: "teach students to research with AI while relying on real, verified sources."
+          youCanNow: "teach students to research with AI while relying on real, verified sources.",
+          quickCheck: [
+            { objective: "O3", q: "What should students cite in their project?", options: ["The real source they checked", "The AI tool", "Nothing, if AI helped", "The search engine's name"], answer: 0, why: "The routine is to verify every fact against a real source and cite that source." },
+            { objective: "O3", q: "A team wants to know how much food their cafeteria throws away. What is the strongest step?", options: ["Ask AI for a number", "Copy a number from any website", "Measure the waste themselves or interview cafeteria staff", "Guess and move on"], answer: 2, why: "Primary sources keep the inquiry real and AI cannot collect them for students." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Designing the project with AI",
         questions: [
-          { q: "Which driving question is hardest for AI to simply answer?", options: ["What causes food waste?", "What is food waste?", "How can we reduce food waste in our cafeteria?", "Who invented composting?"], answer: 2, why: "Local questions need students' own inquiry." },
-          { q: "What is an entry event?", options: ["An activity that launches a project and sparks questions", "The final presentation", "A test", "A field trip permission form"], answer: 0, why: "It creates curiosity at the start." },
-          { q: "A two-part PBL rubric scores:", options: ["Only the final product", "Only the presentation", "Only attendance", "The product and the process"], answer: 3, why: "Process shows learning along the way." },
-          { q: "Students should cite:", options: ["The AI tool as their source", "The real source they verified", "Nothing", "Wikipedia only"], answer: 1, why: "AI is not a reliable source; real sources are." },
-          { q: "Which is a primary source?", options: ["An AI summary", "A chatbot answer", "A textbook summary", "An interview with cafeteria staff"], answer: 3, why: "First-hand evidence keeps inquiry real." }
+          { objective: "O1", q: "Which driving question is hardest for AI to simply answer?", options: ["What causes food waste?", "What is food waste?", "How can we reduce food waste in our cafeteria?", "Who invented composting?"], answer: 2, why: "Local questions need students' own inquiry." },
+          { objective: "O2", q: "What is an entry event?", options: ["An activity that launches a project and sparks questions", "The final presentation", "A test", "A field trip permission form"], answer: 0, why: "It creates curiosity at the start." },
+          { objective: "O2", q: "A two-part PBL rubric scores:", options: ["Only the final product", "Only the presentation", "Only attendance", "The product and the process"], answer: 3, why: "Process shows learning along the way." },
+          { objective: "O3", q: "Students should cite:", options: ["The AI tool as their source", "The real source they verified", "Nothing", "Wikipedia only"], answer: 1, why: "AI is not a reliable source; real sources are." },
+          { objective: "O3", q: "Which is a primary source?", options: ["An AI summary", "A chatbot answer", "A textbook summary", "An interview with cafeteria staff"], answer: 3, why: "First-hand evidence keeps inquiry real." }
         ]
       }
     },
@@ -91,6 +129,7 @@ module.exports = {
       name: "Chapter 2: Managing and assessing the project",
       lessons: [
         {
+          objectives: ["O4"],
           title: "AI rules for each stage and a student AI log",
           minutes: 5,
           goal: "Set an AI use level for each milestone and a log students keep.",
@@ -107,9 +146,14 @@ module.exports = {
             { title: "Explain why", bullets: ["\"We need to see your thinking first\""] }
           ],
           tryIt: "Write an AI use level and a one-line reason for each milestone of your project, and make a one-page AI log template for students.",
-          youCanNow: "set clear, stage-by-stage AI rules for a project and make AI use visible."
+          youCanNow: "set clear, stage-by-stage AI rules for a project and make AI use visible.",
+          quickCheck: [
+            { objective: "O4", q: "What does a student AI log record?", options: ["Only the final grade", "Date, tool, what was asked, what was used and what was changed", "The student's password", "How long each class lasted"], answer: 1, why: "The log makes AI use visible and honest, one short entry at a time." },
+            { objective: "O4", q: "A student asks why the first draft is no-AI. What would you say?", options: ["Because AI is never allowed", "Because the rules say so", "Because AI is too slow", "Because we need to see your thinking before anyone helps"], answer: 3, why: "Students follow rules they understand, so give the reason." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Checkpoints that show individual learning",
           minutes: 6,
           goal: "Plan checkpoints that show what each student learned in a team project.",
@@ -126,9 +170,14 @@ module.exports = {
             { title: "Team tools, individual proof", bullets: ["AI for planning and draft feedback", "Every student explains the work and their part"] }
           ],
           tryIt: "Use AI to draft an individual checkpoint for each milestone (one exit-ticket question, one conference prompt or one reflection question).",
-          youCanNow: "assess each student's learning inside a team project."
+          youCanNow: "assess each student's learning inside a team project.",
+          quickCheck: [
+            { objective: "O5", q: "Which is an individual checkpoint?", options: ["A two-minute conference with one student", "The team's final poster", "A group grade for the whole project", "A class vote"], answer: 0, why: "Individual checkpoints show what each student learned, not just the team." },
+            { objective: "O5", q: "You record checkpoint results with AI's help. What would you do?", options: ["Paste student names and grades into any AI tool", "Post results on the class website", "Keep names and grades out of tools the district has not approved", "Skip recording results"], answer: 2, why: "Student names and grades stay out of unapproved tools." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "The public product, showcase and reflection",
           minutes: 6,
           goal: "Plan an authentic showcase with honest AI disclosure and student reflection.",
@@ -145,17 +194,21 @@ module.exports = {
             { title: "Protect and reflect", bullets: ["School rules on photos and names", "Reflect: topic, teamwork, AI"] }
           ],
           tryIt: "Final task: assemble your PBL unit (driving question, entry event, milestones with AI levels, product and process rubric, individual checkpoints, student AI log, showcase plan). Share it with a colleague and revise one part based on their feedback.",
-          youCanNow: "lead project-based learning where AI supports real inquiry and every student's learning shows."
+          youCanNow: "lead project-based learning where AI supports real inquiry and every student's learning shows.",
+          quickCheck: [
+            { objective: "O6", q: "Which is an authentic audience for a project?", options: ["Only the teacher", "Local experts or families who care about the problem", "An AI chatbot", "Students in the same team"], answer: 1, why: "Real people who care about the work raise its quality." },
+            { objective: "O6", q: "A family member at the showcase wants to post photos of students online. What would you check?", options: ["Nothing; it is a public event", "Whether the photos are clear", "Whether AI can edit them", "Your school's rules for photos, names and online sharing"], answer: 3, why: "Protect students by following school rules on photos and sharing." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Managing and assessing the project",
         questions: [
-          { q: "Why set an AI use level for each milestone rather than one for the whole project?", options: ["AI requires it", "It is shorter", "Different stages build different skills", "To confuse students"], answer: 2, why: "A first draft may need no AI while polishing can use it." },
-          { q: "What does a student AI log record?", options: ["Date, tool, what was asked, used and changed", "Grades", "Passwords", "Teacher notes"], answer: 0, why: "It makes AI use visible and honest." },
-          { q: "How can you see what each student learned in a team project?", options: ["Only grade the team product", "Add individual checkpoints at each milestone", "Ask the AI", "Skip assessment"], answer: 1, why: "Individual checks show individual learning." },
-          { q: "What should a team's AI disclosure say?", options: ["What AI did and what students did", "Nothing", "Only the tool's price", "That no AI exists"], answer: 0, why: "Honest disclosure is part of integrity." },
-          { q: "Before posting student work online after the showcase, check:", options: ["The AI's opinion", "Nothing", "Only the font", "Your school's rules for photos, names and online sharing"], answer: 3, why: "Student privacy rules apply." }
+          { objective: "O4", q: "Why set an AI use level for each milestone rather than one for the whole project?", options: ["AI requires it", "It is shorter", "Different stages build different skills", "To confuse students"], answer: 2, why: "A first draft may need no AI while polishing can use it." },
+          { objective: "O4", q: "What does a student AI log record?", options: ["Date, tool, what was asked, used and changed", "Grades", "Passwords", "Teacher notes"], answer: 0, why: "It makes AI use visible and honest." },
+          { objective: "O5", q: "How can you see what each student learned in a team project?", options: ["Only grade the team product", "Add individual checkpoints at each milestone", "Ask the AI", "Skip assessment"], answer: 1, why: "Individual checks show individual learning." },
+          { objective: "O6", q: "What should a team's AI disclosure say?", options: ["What AI did and what students did", "Nothing", "Only the tool's price", "That no AI exists"], answer: 0, why: "Honest disclosure is part of integrity." },
+          { objective: "O6", q: "Before posting student work online after the showcase, check:", options: ["The AI's opinion", "Nothing", "Only the font", "Your school's rules for photos, names and online sharing"], answer: 3, why: "Student privacy rules apply." }
         ]
       }
     }
@@ -163,26 +216,113 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI and Project-Based Learning",
     questions: [
-      { q: "PBL means students learn by:", options: ["Only reading textbooks", "Working over time on a real question and sharing a product", "Taking daily quizzes only", "Watching videos"], answer: 1, why: "That is the core of PBL." },
-      { q: "A driving question should be:", options: ["Secret", "Answerable in one word", "Open and meaningful to students", "From a test bank"], answer: 2, why: "It guides sustained inquiry." },
-      { q: "Making a driving question local helps because:", options: ["It needs no research", "It is shorter", "AI cannot simply answer it", "It avoids standards"], answer: 2, why: "Local questions need real inquiry." },
-      { q: "Which is a PBL essential?", options: ["A public product for a real audience", "No revision", "Teacher-only audience", "No student choice"], answer: 0, why: "Public products raise quality." },
-      { q: "Milestones are:", options: ["Rubric levels", "Grades", "Field trips", "Checkpoints where parts of the project are due"], answer: 3, why: "They structure the project." },
-      { q: "For each milestone, AI can list:", options: ["Students' names", "The knowledge it requires, for mini-lesson planning", "Grades", "Passwords"], answer: 1, why: "This helps plan teaching." },
-      { q: "AI project timelines often:", options: ["Skip milestones", "Leave too much time", "Are always perfect", "Pack in too much"], answer: 3, why: "Check against your calendar." },
-      { q: "Step 1 of the research routine is:", options: ["Cite the AI", "Copy the AI's answer", "Explore with AI: questions and search terms", "Skip research"], answer: 2, why: "AI helps start, not finish, research." },
-      { q: "Every fact students use should be:", options: ["Verified against a real source", "Taken from AI", "Unverified", "Made up"], answer: 0, why: "AI can invent facts." },
-      { q: "An anonymous classmate survey is:", options: ["An AI summary", "A primary source", "A secondary review", "Not allowed"], answer: 1, why: "Students collect first-hand evidence." },
-      { q: "A research log records:", options: ["Question, source, learning and how it was verified", "Passwords", "Grades", "Lunch orders"], answer: 0, why: "It documents real research." },
-      { q: "Why might the first draft be a no-AI stage?", options: ["Because drafts do not matter", "AI is illegal", "To save money", "To see students' own thinking before help"], answer: 3, why: "Thinking first, help after." },
-      { q: "Rules students understand are:", options: ["Secret rules", "Rules with reasons explained", "Rules that change daily", "Rules from the AI"], answer: 1, why: "Reasons build buy-in." },
-      { q: "An individual checkpoint could be:", options: ["A group grade", "The team's final product only", "A two-minute conference", "Nothing"], answer: 2, why: "It shows one student's learning." },
-      { q: "Reflection questions ask students:", options: ["Their grade", "Their password", "What they changed and why", "Nothing"], answer: 2, why: "Reflection deepens learning." },
-      { q: "Every student on a team should be able to:", options: ["Explain the team's work and their part", "Only present their slide", "Stay silent", "Let AI explain"], answer: 0, why: "Shared understanding is part of learning." },
-      { q: "An authentic audience is:", options: ["No one", "Only the teacher", "An AI tool", "Real people who care about the work"], answer: 3, why: "Real audiences raise quality." },
-      { q: "An AI disclosure on a product shows:", options: ["The AI's price", "What AI did and what students did", "Student grades", "Nothing"], answer: 1, why: "Transparency builds trust." },
-      { q: "Photos of students at the showcase should follow:", options: ["Vendor rules", "No rules", "Social media trends", "School rules on photos and names"], answer: 3, why: "Student privacy matters." },
-      { q: "The final reflection should cover:", options: ["Only the AI tool", "Only the grade", "The topic, teamwork and when AI helped or got in the way", "Nothing"], answer: 2, why: "Students learn from reflecting on all three." }
+      { objective: "O1", q: "PBL means students learn by:", options: ["Only reading textbooks", "Working over time on a real question and sharing a product", "Taking daily quizzes only", "Watching videos"], answer: 1, why: "That is the core of PBL." },
+      { objective: "O1", q: "A driving question should be:", options: ["Secret", "Answerable in one word", "Open and meaningful to students", "From a test bank"], answer: 2, why: "It guides sustained inquiry." },
+      { objective: "O1", q: "Making a driving question local helps because:", options: ["It needs no research", "It is shorter", "AI cannot simply answer it", "It avoids standards"], answer: 2, why: "Local questions need real inquiry." },
+      { objective: "O1", q: "Which is a PBL essential?", options: ["A public product for a real audience", "No revision", "Teacher-only audience", "No student choice"], answer: 0, why: "Public products raise quality." },
+      { objective: "O2", q: "Milestones are:", options: ["Rubric levels", "Grades", "Field trips", "Checkpoints where parts of the project are due"], answer: 3, why: "They structure the project." },
+      { objective: "O2", q: "For each milestone, AI can list:", options: ["Students' names", "The knowledge it requires, for mini-lesson planning", "Grades", "Passwords"], answer: 1, why: "This helps plan teaching." },
+      { objective: "O2", q: "AI project timelines often:", options: ["Skip milestones", "Leave too much time", "Are always perfect", "Pack in too much"], answer: 3, why: "Check against your calendar." },
+      { objective: "O3", q: "Step 1 of the research routine is:", options: ["Cite the AI", "Copy the AI's answer", "Explore with AI: questions and search terms", "Skip research"], answer: 2, why: "AI helps start, not finish, research." },
+      { objective: "O3", q: "Every fact students use should be:", options: ["Verified against a real source", "Taken from AI", "Unverified", "Made up"], answer: 0, why: "AI can invent facts." },
+      { objective: "O3", q: "An anonymous classmate survey is:", options: ["An AI summary", "A primary source", "A secondary review", "Not allowed"], answer: 1, why: "Students collect first-hand evidence." },
+      { objective: "O3", q: "A research log records:", options: ["Question, source, learning and how it was verified", "Passwords", "Grades", "Lunch orders"], answer: 0, why: "It documents real research." },
+      { objective: "O4", q: "Why might the first draft be a no-AI stage?", options: ["Because drafts do not matter", "AI is illegal", "To save money", "To see students' own thinking before help"], answer: 3, why: "Thinking first, help after." },
+      { objective: "O4", q: "Rules students understand are:", options: ["Secret rules", "Rules with reasons explained", "Rules that change daily", "Rules from the AI"], answer: 1, why: "Reasons build buy-in." },
+      { objective: "O5", q: "An individual checkpoint could be:", options: ["A group grade", "The team's final product only", "A two-minute conference", "Nothing"], answer: 2, why: "It shows one student's learning." },
+      { objective: "O5", q: "Reflection questions ask students:", options: ["Their grade", "Their password", "What they changed and why", "Nothing"], answer: 2, why: "Reflection deepens learning." },
+      { objective: "O5", q: "Every student on a team should be able to:", options: ["Explain the team's work and their part", "Only present their slide", "Stay silent", "Let AI explain"], answer: 0, why: "Shared understanding is part of learning." },
+      { objective: "O6", q: "An authentic audience is:", options: ["No one", "Only the teacher", "An AI tool", "Real people who care about the work"], answer: 3, why: "Real audiences raise quality." },
+      { objective: "O6", q: "An AI disclosure on a product shows:", options: ["The AI's price", "What AI did and what students did", "Student grades", "Nothing"], answer: 1, why: "Transparency builds trust." },
+      { objective: "O6", q: "Photos of students at the showcase should follow:", options: ["Vendor rules", "No rules", "Social media trends", "School rules on photos and names"], answer: 3, why: "Student privacy matters." },
+      { objective: "O6", q: "The final reflection should cover:", options: ["Only the AI tool", "Only the grade", "The topic, teamwork and when AI helped or got in the way", "Nothing"], answer: 2, why: "Students learn from reflecting on all three." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      2,
+      4,
+      7,
+      8,
+      11,
+      13,
+      15,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Driving question and launch",
+        objective: "O1",
+        notYet: "The question is closed or AI could answer it, or there is no entry event.",
+        meets: "An open, local or personal driving question and an entry event that sparks questions.",
+        exceeds: "Students helped choose or refine the question."
+      },
+      {
+        name: "Milestones and rubric",
+        objective: "O2",
+        notYet: "Fewer than four milestones, or the rubric scores only the product.",
+        meets: "Four to six milestones on a realistic timeline and a rubric for product and process, matched to standards.",
+        exceeds: "Each milestone lists the knowledge it needs and a mini-lesson to teach it."
+      },
+      {
+        name: "AI levels and log",
+        objective: "O4",
+        notYet: "One AI rule for the whole project, or no student AI log.",
+        meets: "Every milestone has an AI use level, and there is a student AI log template.",
+        exceeds: "Each level comes with a reason written for students."
+      },
+      {
+        name: "Individual checkpoints",
+        objective: "O5",
+        notYet: "Only the team product is assessed.",
+        meets: "An individual checkpoint at each milestone.",
+        exceeds: "Checkpoints vary (exit ticket, conference, reflection) and fit each stage."
+      },
+      {
+        name: "Showcase plan",
+        objective: "O6",
+        notYet: "No real audience, or no AI disclosure.",
+        meets: "A public showcase with a real audience, an AI disclosure and a reflection, following school rules.",
+        exceeds: "Names the specific audience and how they will be invited."
+      },
+      {
+        name: "Colleague feedback",
+        objective: "O2",
+        notYet: "The plan was not shared with a colleague.",
+        meets: "A colleague checked the plan and one part was revised.",
+        exceeds: "Can say what changed and why it is better."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Teachers who finish the course and pass the final task (rubric)",
+      "Teachers who run a PBL unit with AI use levels within the next term (follow-up survey)",
+      "Showcases held with a real community audience",
+      "Teachers who take another Koach Learn AI-for-educators course"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer with an AI assistant your district allows",
+      "Your standards from the official source and your school's AI use scale, if it has one",
+      "A colleague to review the plan",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Run it with grade-level or subject teams: take the pre-test together, then have each team design one unit.",
+      "Build in time for the colleague review at the end; pair teachers across teams if possible.",
+      "Remind participants that student names and grades stay out of unapproved AI tools.",
+      "Have school leaders confirm the rules for showcase photos and online sharing before teams plan their events.",
+      "Score the final task with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

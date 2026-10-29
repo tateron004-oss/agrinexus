@@ -21,11 +21,35 @@ module.exports = {
     "Tout se passe dans Google Colab, dans votre navigateur, gratuitement. Chaque leçon dure environ cinq minutes et se termine par du code que vous tapez vous-même. Le modèle utilisé lit l'anglais, donc les commentaires de test seront écrits en anglais. Un contrôle des connaissances termine chaque chapitre et un quiz de 20 questions termine le cours."
   ],
   finalTask: "Construisez un trieur d'avis dans Google Colab : écrivez une liste d'au moins six commentaires courts en anglais (par exemple sur un entraînement d'équipe, un cours ou une petite boutique), appliquez à chacun un modèle d'analyse de sentiment pré-entraîné, affichez chaque commentaire avec son étiquette et son score, marquez tout résultat avec un score inférieur à 0.80 comme « à vérifier à la main », et affichez combien de commentaires étaient positifs et combien négatifs.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des jeunes et des adultes qui ont écrit un peu de Python et veulent construire quelque chose avec l'IA : lycéens et étudiants, membres de clubs de code, personnes en reconversion et stagiaires en formation professionnelle.",
+    startingPoint: "Ils savent écrire et exécuter de courts programmes Python dans Google Colab avec des variables, des if, des listes, des boucles et des fonctions. La plupart n'ont jamais importé une bibliothèque d'IA, utilisé un modèle pré-entraîné, ni réfléchi à la confiance qu'un modèle a dans sa réponse ou au moment où une personne doit vérifier ses réponses.",
+    gap: "Les outils d'IA sont maintenant présents dans beaucoup de métiers et de produits, et les employeurs apprécient les personnes qui savent les utiliser dans du code et les vérifier de façon responsable. Sans pratique concrète, les apprenants pensent que l'IA est magique ou hors de portée, et n'apprennent pas à tester les limites d'un modèle ni à garder les données privées à l'écart.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes ; les termes comme bibliothèque, modèle, score et seuil sont expliqués",
+      "Appareils : un ordinateur fixe ou portable avec un navigateur web ; une tablette rend la saisie du code difficile",
+      "Comptes et coût : un compte Google gratuit pour Google Colab et des modèles Hugging Face gratuits ; les ressources gratuites de Colab sont limitées et peuvent changer",
+      "Temps : environ 5 à 6 minutes par leçon plus les exercices, environ 60 à 75 minutes au total",
+      "Vie privée : les apprenants utilisent des commentaires inventés ou autorisés et ne collent jamais de mots de passe ou de clés API dans un notebook partagé"
+    ],
+    prerequisites: "« Introduction à la programmation avec Python » (variables, if, listes, boucles et fonctions)."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Dans Google Colab", action: "expliquer en quoi un modèle d'IA diffère d'un code à règles et importer ou installer une bibliothèque Python", standard: "avec une explication juste en une phrase et la bibliothèque qui se charge sans erreur" },
+    { id: "O2", condition: "À partir de mots-clés et de réponses pour un chatbot simple", action: "utiliser des outils de chaînes et un dictionnaire pour associer un message à la bonne réponse", standard: "en trouvant la correspondance quelles que soient les majuscules et en donnant une réponse par défaut quand rien ne correspond" },
+    { id: "O3", condition: "À partir de votre fonction de réponse", action: "écrire une boucle de discussion qui s'arrête quand l'utilisateur dit bye et décrire les limites des réponses à règles", standard: "avec la boucle qui se termine sur bye et au moins un exemple que les règles ne savent pas gérer" },
+    { id: "O4", condition: "Avec le pipeline de Hugging Face", action: "charger un modèle d'analyse de sentiment pré-entraîné, l'exécuter sur une phrase et lire son étiquette et son score", standard: "après avoir lu la fiche du modèle, avec l'étiquette et le score lus correctement" },
+    { id: "O5", condition: "À partir d'une liste de commentaires", action: "exécuter le modèle sur chaque commentaire dans une boucle, compter les étiquettes et afficher un résumé propre", standard: "avec des comptes qui correspondent aux étiquettes et des scores arrondis à deux décimales" },
+    { id: "O6", condition: "À partir des résultats du modèle", action: "signaler les résultats sous un seuil de confiance pour qu'une personne les vérifie, et suivre les bonnes pratiques d'une IA responsable", standard: "avec chaque score sous le seuil marqué « à vérifier à la main » et aucune donnée privée ni clé dans le notebook" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Les briques de Python pour l'IA",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Ce qu'est la programmation d'IA, et préparer Colab",
           minutes: 5,
           goal: "Expliquer ce qu'est un modèle d'IA et importer une bibliothèque Python dans Colab.",
@@ -43,9 +67,14 @@ module.exports = {
           ],
           sources: [COLAB],
           tryIt: "Dans un nouveau notebook Colab, importez la bibliothèque random et écrivez un programme qui choisit au hasard un exercice de sport, un en-cas ou un sujet d'étude dans une liste de cinq, et l'affiche. Exécutez-le trois fois.",
-          youCanNow: "expliquer la différence entre un code à règles et un modèle d'IA, et importer une bibliothèque dans Colab."
+          youCanNow: "expliquer la différence entre un code à règles et un modèle d'IA, et importer une bibliothèque dans Colab.",
+          quickCheck: [
+            { objective: "O1", q: "Qu'est-ce qu'une bibliothèque en Python ?", options: ["Une liste de vos notebooks enregistrés", "Un dossier Google Drive", "Du code tout prêt que quelqu'un d'autre a écrit et partagé", "Un message d'erreur"], answer: 2, why: "Une bibliothèque est du code tout prêt et partagé, que vous chargez avec import." },
+            { objective: "O1", q: "Vous voulez utiliser scikit-learn mais vous ne savez pas si Colab l'a. Qu'essayez-vous d'abord ?", options: ["Exécuter import sklearn, et s'il affiche « No module named », exécuter !pip install scikit-learn", "Réécrire la bibliothèque vous-même", "Supprimer le notebook", "Taper le nom de la bibliothèque dans print()"], answer: 0, why: "Colab a déjà beaucoup de bibliothèques ; installez avec !pip seulement si l'import échoue." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Chaînes et dictionnaires : le cerveau d'un chatbot simple",
           minutes: 6,
           goal: "Utiliser un dictionnaire pour associer des mots-clés d'un message à des réponses.",
@@ -62,9 +91,14 @@ module.exports = {
             { title: "Le cerveau du chatbot", bullets: ["Mettre le message en minuscules", "Parcourir replies.items()", "Renvoyer la première correspondance, ou une réponse par défaut"] }
           ],
           tryIt: "Écrivez reply(message) pour une salle de sport, une bibliothèque ou un food truck imaginaires, avec au moins quatre mots-clés (par exemple horaires, prix, adresse, contact). Testez-la avec trois messages, dont un écrit en majuscules et un qu'elle ne devrait pas comprendre.",
-          youCanNow: "utiliser les outils de chaînes et un dictionnaire pour associer un message à la bonne réponse."
+          youCanNow: "utiliser les outils de chaînes et un dictionnaire pour associer un message à la bonne réponse.",
+          quickCheck: [
+            { objective: "O2", q: "Que donne \"I need help now\".split() ?", options: ["\"i need help now\"", "[\"I\", \"need\", \"help\", \"now\"]", "True", "4"], answer: 1, why: "split() coupe une phrase en une liste de mots." },
+            { objective: "O2", q: "Votre chatbot ne trouve aucun mot-clé dans le message. Que doit-il faire ?", options: ["Planter avec une erreur", "Afficher toutes les réponses du dictionnaire", "Arrêter le programme", "Renvoyer une réponse par défaut comme « Désolé, je ne sais pas encore répondre à cela. »"], answer: 3, why: "Une réponse par défaut gère les messages qui ne correspondent à aucun mot-clé." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Faire parler le chatbot, et voir ses limites",
           minutes: 5,
           goal: "Mettre votre fonction de réponse dans une boucle qui discute jusqu'à ce que l'utilisateur dise au revoir, et repérer ce que les règles ne savent pas faire.",
@@ -81,17 +115,21 @@ module.exports = {
             { title: "Pourquoi les règles atteignent leurs limites", bullets: ["Chaque nouvelle formulation demande une nouvelle règle", "Les modèles d'IA ont appris de millions de phrases", "C'est ce qu'utilise le chapitre 2"] }
           ],
           tryIt: "Mettez votre fonction de réponse de la leçon 2 dans une boucle de discussion qui se termine sur « bye ». Demandez les horaires de cinq façons différentes. Notez combien votre robot en a compris, puis ajoutez une règle pour corriger un échec.",
-          youCanNow: "construire une boucle de chatbot à règles qui marche et expliquer pourquoi les règles seules sont limitées."
+          youCanNow: "construire une boucle de chatbot à règles qui marche et expliquer pourquoi les règles seules sont limitées.",
+          quickCheck: [
+            { objective: "O3", q: "Que fait while True: tout seul ?", options: ["Il répète sans fin jusqu'à ce que quelque chose comme break l'arrête", "Il s'exécute une seule fois", "Il s'exécute seulement si l'utilisateur dit bye", "Il charge une bibliothèque"], answer: 0, why: "while True répète sans fin, il faut donc une sortie comme break." },
+            { objective: "O3", q: "Les utilisateurs tapent sans cesse « à quelle heure vous fermez ? » et votre bot à règles échoue. Qu'est-ce que cela vous apprend ?", options: ["Le bot a une faute de frappe", "Colab est en panne", "Chaque nouvelle façon de dire quelque chose demande une nouvelle règle : c'est la limite des bots à règles", "Les utilisateurs devraient taper en majuscules"], answer: 2, why: "Les bots à règles ne reconnaissent que les règles que vous avez écrites ; les modèles de langage gèrent plus de façons de dire les choses." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Les briques de Python pour l'IA",
         questions: [
-          { q: "Quelle est la grande différence entre un code à règles et un modèle d'IA ?", options: ["Le code à règles est toujours plus rapide", "Les modèles n'utilisent aucun code", "Un modèle a appris des régularités à partir d'exemples au lieu d'avoir chaque règle écrite à la main", "Il n'y a aucune différence"], answer: 2, why: "Les modèles apprennent à partir de données ; le code à règles demande d'écrire chaque règle." },
-          { q: "Votre cellule Colab dit « No module named » pour une bibliothèque. Que faites-vous ?", options: ["Exécuter !pip install avec le nom de la bibliothèque, puis refaire l'import", "Redémarrer votre ordinateur", "Supprimer le notebook", "Renommer la variable"], answer: 0, why: "pip installe une bibliothèque manquante." },
-          { q: "replies = {\"hours\": \"Open 9 to 5.\"}. Que vaut replies[\"hours\"] ?", options: ["\"hours\"", "Une erreur", "True", "\"Open 9 to 5.\""], answer: 3, why: "Chercher une clé donne sa valeur." },
-          { q: "Pourquoi utiliser message.lower() dans un chatbot ?", options: ["Pour raccourcir le texte", "Pour que « HOURS » et « hours » correspondent tous les deux", "Pour supprimer le message", "Pour le traduire"], answer: 1, why: "Mettre en minuscules fait ignorer les majuscules lors de la comparaison." },
-          { q: "Quel mot fait sortir d'une boucle while True ?", options: ["exit", "break", "stop", "return to"], answer: 1, why: "break sort de la boucle tout de suite." }
+          { objective: "O1", q: "Quelle est la grande différence entre un code à règles et un modèle d'IA ?", options: ["Le code à règles est toujours plus rapide", "Les modèles n'utilisent aucun code", "Un modèle a appris des régularités à partir d'exemples au lieu d'avoir chaque règle écrite à la main", "Il n'y a aucune différence"], answer: 2, why: "Les modèles apprennent à partir de données ; le code à règles demande d'écrire chaque règle." },
+          { objective: "O1", q: "Votre cellule Colab dit « No module named » pour une bibliothèque. Que faites-vous ?", options: ["Exécuter !pip install avec le nom de la bibliothèque, puis refaire l'import", "Redémarrer votre ordinateur", "Supprimer le notebook", "Renommer la variable"], answer: 0, why: "pip installe une bibliothèque manquante." },
+          { objective: "O2", q: "replies = {\"hours\": \"Open 9 to 5.\"}. Que vaut replies[\"hours\"] ?", options: ["\"hours\"", "Une erreur", "True", "\"Open 9 to 5.\""], answer: 3, why: "Chercher une clé donne sa valeur." },
+          { objective: "O2", q: "Pourquoi utiliser message.lower() dans un chatbot ?", options: ["Pour raccourcir le texte", "Pour que « HOURS » et « hours » correspondent tous les deux", "Pour supprimer le message", "Pour le traduire"], answer: 1, why: "Mettre en minuscules fait ignorer les majuscules lors de la comparaison." },
+          { objective: "O3", q: "Quel mot fait sortir d'une boucle while True ?", options: ["exit", "break", "stop", "return to"], answer: 1, why: "break sort de la boucle tout de suite." }
         ]
       }
     },
@@ -99,6 +137,7 @@ module.exports = {
       name: "Chapitre 2 : Utiliser un modèle d'IA pré-entraîné",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Charger un modèle pré-entraîné avec Hugging Face",
           minutes: 6,
           goal: "Charger un modèle gratuit d'analyse de sentiment dans Colab et l'utiliser sur une phrase.",
@@ -117,9 +156,14 @@ module.exports = {
           ],
           sources: [HF_PIPELINES, HF_MODEL],
           tryIt: "Chargez le classifieur de sentiment et appliquez-le à trois phrases en anglais que vous écrivez : une clairement joyeuse, une clairement fâchée, et une mitigée comme « The food was good but the wait was long. » Affichez l'étiquette et le score de chacune et notez celle dont il était le moins sûr.",
-          youCanNow: "charger un modèle pré-entraîné avec pipeline et lire son étiquette et son score."
+          youCanNow: "charger un modèle pré-entraîné avec pipeline et lire son étiquette et son score.",
+          quickCheck: [
+            { objective: "O4", q: "Que vous apprend la fiche d'un modèle ?", options: ["Votre mot de passe Colab", "Combien de commentaires vous avez", "Le prix d'un ordinateur", "Sur quoi le modèle a été entraîné, à quoi il sert et sa licence"], answer: 3, why: "Lisez la fiche du modèle avant d'utiliser un modèle." },
+            { objective: "O4", q: "Vous lancez le classifieur pour la première fois et il met du temps. Que faites-vous ?", options: ["L'arrêter et abandonner", "Attendre ; la première exécution télécharge le modèle", "Réinstaller Python", "Changer l'étiquette en POSITIVE à la main"], answer: 1, why: "La première exécution télécharge le modèle, donc elle prend plus de temps." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Appliquer le modèle à beaucoup de textes",
           minutes: 5,
           goal: "Utiliser une boucle pour classer une liste de commentaires et compter les résultats.",
@@ -136,9 +180,14 @@ module.exports = {
             { title: "Rendez-le lisible", bullets: ["round(score, 2) pour deux chiffres après la virgule", "Une ligne propre par commentaire"] }
           ],
           tryIt: "Écrivez six commentaires en anglais sur un cours, un entraînement d'équipe ou une boutique du quartier. Classez-les dans une boucle, affichez une ligne propre pour chacun, et affichez combien étaient positifs et combien négatifs.",
-          youCanNow: "appliquer un modèle d'IA à une liste de textes et résumer les résultats avec des compteurs."
+          youCanNow: "appliquer un modèle d'IA à une liste de textes et résumer les résultats avec des compteurs.",
+          quickCheck: [
+            { objective: "O5", q: "Que renvoie classifier(comments) quand comments est une liste ?", options: ["Un seul résultat pour toute la liste", "Une erreur à chaque fois", "Un résultat par commentaire", "Seulement le résultat du premier commentaire"], answer: 2, why: "Donner une liste renvoie un résultat pour chaque commentaire." },
+            { objective: "O5", q: "Dans votre boucle, result[\"label\"] vaut \"POSITIVE\". Que faites-vous de vos compteurs ?", options: ["Ajouter 1 à positive", "Ajouter 1 à negative", "Remettre positive à 0", "Supprimer le commentaire"], answer: 0, why: "Ajoutez 1 au compteur qui correspond à l'étiquette." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Vérifier l'IA et terminer le trieur d'avis",
           minutes: 6,
           goal: "Signaler les résultats peu sûrs pour qu'une personne les vérifie, et terminer le trieur d'avis.",
@@ -157,17 +206,21 @@ module.exports = {
           ],
           sources: [HF_MODEL],
           tryIt: "Tâche finale : construisez le trieur d'avis. Utilisez au moins six commentaires en anglais, dont un mitigé et un ironique. Affichez chacun avec son étiquette et son score, marquez tout ce qui est sous 0.80 comme « à vérifier à la main », et affichez les totaux positifs, négatifs et à vérifier. Puis lisez vous-même ceux qui sont signalés et décidez.",
-          youCanNow: "construire en Python un programme d'IA qui trie du texte, présente ses résultats et confie les cas incertains à une personne."
+          youCanNow: "construire en Python un programme d'IA qui trie du texte, présente ses résultats et confie les cas incertains à une personne.",
+          quickCheck: [
+            { objective: "O6", q: "Pourquoi ce modèle de sentiment peut-il se tromper sur un commentaire neutre ?", options: ["Il ne lit que des nombres", "Il ne connaît que positif et négatif, donc les commentaires neutres sont forcés dans l'un des deux", "Il a besoin d'un mot de passe", "Il ne marche que le vendredi"], answer: 1, why: "Le modèle n'a que deux étiquettes, donc les commentaires mitigés ou neutres sont forcés dans l'une d'elles." },
+            { objective: "O6", q: "Un ami veut que vous passiez ses messages privés dans votre trieur. Que faites-vous ?", options: ["Les passer sans demander aux personnes qui les ont écrits", "Publier les résultats en ligne", "Coller votre clé API dans le notebook pour aller plus vite", "N'utiliser que des messages que vous avez la permission d'utiliser, et dire que les résultats viennent de l'IA"], answer: 3, why: "Utiliser l'IA de façon responsable, c'est avoir la permission pour les données privées et dire quand l'IA a été utilisée." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Utiliser un modèle d'IA pré-entraîné",
         questions: [
-          { q: "Qu'est-ce qu'un modèle pré-entraîné ?", options: ["Un modèle que vous devez d'abord entraîner pendant des semaines", "Une liste de règles que vous écrivez", "Un site payant", "Un modèle que quelqu'un a déjà entraîné et que vous pouvez utiliser tout de suite"], answer: 3, why: "Les modèles pré-entraînés sont prêts à l'emploi." },
-          { q: "Le classifieur renvoie [{'label': 'NEGATIVE', 'score': 0.97}]. Que veut dire 0.97 ?", options: ["Le modèle est très sûr que le commentaire est négatif", "97 mots ont été lus", "Le commentaire est long à 97 %", "Cela a coûté 97 centimes"], answer: 0, why: "Le score est la confiance du modèle, de 0 à 1." },
-          { q: "Quelle ligne obtient l'étiquette à partir de result = classifier(text) ?", options: ["result.label", "result[\"label\"][0]", "result[0][\"label\"]", "label(result)"], answer: 2, why: "Le résultat est une liste qui contient un dictionnaire, donc d'abord [0], puis [\"label\"]." },
-          { q: "Un commentaire obtient un score de 0.55. Avec un seuil de 0.80, que fait votre programme ?", options: ["Il le supprime", "Il le compte deux fois", "Il arrête le programme", "Il le marque « à vérifier à la main »"], answer: 3, why: "Les scores sous le seuil vont à une personne." },
-          { q: "Lequel de ces usages de l'IA est responsable ?", options: ["Coller votre clé d'API dans un notebook que vous partagez", "Analyser les messages privés de camarades sans demander", "Dire aux gens qu'un résultat vient de l'IA et vérifier ceux qui sont incertains", "Faire confiance à chaque étiquette"], answer: 2, why: "Être transparent et garder une personne dans la boucle, c'est un usage responsable." }
+          { objective: "O4", q: "Qu'est-ce qu'un modèle pré-entraîné ?", options: ["Un modèle que vous devez d'abord entraîner pendant des semaines", "Une liste de règles que vous écrivez", "Un site payant", "Un modèle que quelqu'un a déjà entraîné et que vous pouvez utiliser tout de suite"], answer: 3, why: "Les modèles pré-entraînés sont prêts à l'emploi." },
+          { objective: "O4", q: "Le classifieur renvoie [{'label': 'NEGATIVE', 'score': 0.97}]. Que veut dire 0.97 ?", options: ["Le modèle est très sûr que le commentaire est négatif", "97 mots ont été lus", "Le commentaire est long à 97 %", "Cela a coûté 97 centimes"], answer: 0, why: "Le score est la confiance du modèle, de 0 à 1." },
+          { objective: "O5", q: "Quelle ligne obtient l'étiquette à partir de result = classifier(text) ?", options: ["result.label", "result[\"label\"][0]", "result[0][\"label\"]", "label(result)"], answer: 2, why: "Le résultat est une liste qui contient un dictionnaire, donc d'abord [0], puis [\"label\"]." },
+          { objective: "O6", q: "Un commentaire obtient un score de 0.55. Avec un seuil de 0.80, que fait votre programme ?", options: ["Il le supprime", "Il le compte deux fois", "Il arrête le programme", "Il le marque « à vérifier à la main »"], answer: 3, why: "Les scores sous le seuil vont à une personne." },
+          { objective: "O6", q: "Lequel de ces usages de l'IA est responsable ?", options: ["Coller votre clé d'API dans un notebook que vous partagez", "Analyser les messages privés de camarades sans demander", "Dire aux gens qu'un résultat vient de l'IA et vérifier ceux qui sont incertains", "Faire confiance à chaque étiquette"], answer: 2, why: "Être transparent et garder une personne dans la boucle, c'est un usage responsable." }
         ]
       }
     }
@@ -175,26 +228,106 @@ module.exports = {
   quiz: {
     title: "Quiz final : Programmer l'IA avec Python pour débutants",
     questions: [
-      { q: "La meilleure description d'un modèle d'IA est :", options: ["Une liste d'instructions if", "Un programme qui a appris des régularités à partir de nombreux exemples", "Un type de clavier", "Une adresse de site web"], answer: 1, why: "Les modèles apprennent des régularités à partir de données." },
-      { q: "Que fait import en Python ?", options: ["Il charge une bibliothèque pour utiliser son code", "Il télécharge un film", "Il affiche du texte", "Il supprime un fichier"], answer: 0, why: "import fait entrer une bibliothèque dans votre programme." },
-      { q: "Que veut dire le ! dans !pip install transformers dans Colab ?", options: ["C'est une erreur", "Parler plus fort", "Exécuter ceci comme une commande système, pas comme du Python", "L'installer deux fois"], answer: 2, why: "Le ! dit à Colab d'exécuter une commande système." },
-      { q: "Quelle phrase est vraie sur la version gratuite de Colab ?", options: ["Elle est gratuite, mais les ressources sont limitées et peuvent changer", "Les ressources sont illimitées", "Il faut d'abord l'installer", "Elle ne marche que sur téléphone"], answer: 0, why: "Colab dit que les ressources gratuites ne sont ni garanties ni illimitées." },
-      { q: "\"HELP\".lower() donne :", options: ["\"HELP\"", "\"Help\"", "Une erreur", "\"help\""], answer: 3, why: "lower() met chaque lettre en minuscule." },
-      { q: "\"price\" in \"what is the price?\" donne :", options: ["False", "True", "\"price\"", "0"], answer: 1, why: "in vérifie si le mot apparaît dans le texte." },
-      { q: "Dans {\"hours\": \"Open 9 to 5.\"}, qu'est-ce que \"hours\" ?", options: ["La valeur", "La clé", "Une liste", "Une boucle"], answer: 1, why: "Le côté gauche de la paire est la clé." },
-      { q: "Votre chatbot ne comprend pas « vous ouvrez quand ? » mais connaît « horaires ». Pourquoi ?", options: ["Colab est en panne", "Python ne sait pas lire les questions", "Le dictionnaire est trop court pour marcher", "Les robots à règles ne reconnaissent que les règles que vous avez écrites"], answer: 3, why: "Dans un robot à règles, chaque formulation demande sa propre règle." },
-      { q: "Dans une boucle de discussion, que doit-il se passer quand l'utilisateur tape bye ?", options: ["Afficher un au revoir et faire break", "Commencer une nouvelle boucle", "Demander un mot de passe", "Rien"], answer: 0, why: "break termine proprement la boucle." },
-      { q: "Pourquoi les modèles de langage sont-ils utiles pour les chatbots ?", options: ["Ils ne se trompent jamais", "Ils n'ont pas besoin d'ordinateur", "Ils comprennent beaucoup de façons de dire la même chose", "Ils marchent sans données"], answer: 2, why: "Ils ont appris à partir de millions de phrases." },
-      { q: "Qu'est-ce que Hugging Face ?", options: ["Un réseau social", "Une erreur Python", "Un jeu vidéo", "Un site et des bibliothèques pour partager des modèles d'IA gratuits"], answer: 3, why: "Hugging Face héberge des modèles et la bibliothèque Transformers." },
-      { q: "Quelle ligne charge le modèle de sentiment ?", options: ["import sentiment", "model = load()", "pipeline(\"text-classification\", model=\"distilbert/distilbert-base-uncased-finetuned-sst-2-english\")", "print(\"model\")"], answer: 2, why: "pipeline prend la tâche et le nom du modèle." },
-      { q: "Pourquoi la première exécution du modèle est-elle plus longue ?", options: ["Colab est lent exprès", "Elle télécharge le modèle", "Elle entraîne le modèle à partir de zéro", "Elle vérifie vos e-mails"], answer: 1, why: "Les fichiers du modèle se téléchargent la première fois." },
-      { q: "Que devez-vous lire avant d'utiliser un modèle ?", options: ["Sa fiche de modèle", "L'historique de votre navigateur", "Le logo de Colab", "Rien"], answer: 0, why: "La fiche explique son usage, ses données et sa licence." },
-      { q: "Le score du modèle de sentiment, c'est :", options: ["La longueur du texte", "Le nombre de mots positifs", "À quel point le modèle est sûr, de 0 à 1", "Une note sur 100"], answer: 2, why: "Le score est la confiance." },
-      { q: "Pour compter les commentaires positifs dans une boucle, vous commencez par :", options: ["Mettre positive = 0 avant la boucle", "Afficher positive", "Supprimer la liste", "Importer counter"], answer: 0, why: "Un compteur commence à 0 avant la boucle." },
-      { q: "round(0.98765, 2) donne :", options: ["0.98", "0.99", "1", "98"], answer: 1, why: "Arrondi à deux chiffres après la virgule, 0.98765 donne 0.99." },
-      { q: "Quel commentaire ce modèle risque-t-il le plus de mal classer ?", options: ["« I loved it! »", "« Great, another rainy game day. »", "« This was terrible. »", "« Best class ever. »"], answer: 1, why: "L'ironie dit le contraire de ce qu'elle veut dire, et les modèles la ratent souvent." },
-      { q: "Pourquoi utiliser un seuil de confiance ?", options: ["Pour rendre le programme plus rapide", "Pour envoyer les résultats incertains à une personne qui vérifie", "Pour cacher les commentaires négatifs", "Pour supprimer les scores faibles"], answer: 1, why: "Les résultats peu sûrs demandent une vérification humaine." },
-      { q: "Qu'est-ce qu'il n'est PAS sûr de mettre dans un notebook que vous partagez ?", options: ["Une liste de commentaires inventés", "Une ligne de commentaire qui commence par #", "Une instruction print", "Votre mot de passe ou votre clé d'API"], answer: 3, why: "Les secrets dans un notebook partagé peuvent être copiés et mal utilisés." }
+      { objective: "O1", q: "La meilleure description d'un modèle d'IA est :", options: ["Une liste d'instructions if", "Un programme qui a appris des régularités à partir de nombreux exemples", "Un type de clavier", "Une adresse de site web"], answer: 1, why: "Les modèles apprennent des régularités à partir de données." },
+      { objective: "O1", q: "Que fait import en Python ?", options: ["Il charge une bibliothèque pour utiliser son code", "Il télécharge un film", "Il affiche du texte", "Il supprime un fichier"], answer: 0, why: "import fait entrer une bibliothèque dans votre programme." },
+      { objective: "O1", q: "Que veut dire le ! dans !pip install transformers dans Colab ?", options: ["C'est une erreur", "Parler plus fort", "Exécuter ceci comme une commande système, pas comme du Python", "L'installer deux fois"], answer: 2, why: "Le ! dit à Colab d'exécuter une commande système." },
+      { objective: "O1", q: "Quelle phrase est vraie sur la version gratuite de Colab ?", options: ["Elle est gratuite, mais les ressources sont limitées et peuvent changer", "Les ressources sont illimitées", "Il faut d'abord l'installer", "Elle ne marche que sur téléphone"], answer: 0, why: "Colab dit que les ressources gratuites ne sont ni garanties ni illimitées." },
+      { objective: "O2", q: "\"HELP\".lower() donne :", options: ["\"HELP\"", "\"Help\"", "Une erreur", "\"help\""], answer: 3, why: "lower() met chaque lettre en minuscule." },
+      { objective: "O2", q: "\"price\" in \"what is the price?\" donne :", options: ["False", "True", "\"price\"", "0"], answer: 1, why: "in vérifie si le mot apparaît dans le texte." },
+      { objective: "O2", q: "Dans {\"hours\": \"Open 9 to 5.\"}, qu'est-ce que \"hours\" ?", options: ["La valeur", "La clé", "Une liste", "Une boucle"], answer: 1, why: "Le côté gauche de la paire est la clé." },
+      { objective: "O3", q: "Votre chatbot ne comprend pas « vous ouvrez quand ? » mais connaît « horaires ». Pourquoi ?", options: ["Colab est en panne", "Python ne sait pas lire les questions", "Le dictionnaire est trop court pour marcher", "Les robots à règles ne reconnaissent que les règles que vous avez écrites"], answer: 3, why: "Dans un robot à règles, chaque formulation demande sa propre règle." },
+      { objective: "O3", q: "Dans une boucle de discussion, que doit-il se passer quand l'utilisateur tape bye ?", options: ["Afficher un au revoir et faire break", "Commencer une nouvelle boucle", "Demander un mot de passe", "Rien"], answer: 0, why: "break termine proprement la boucle." },
+      { objective: "O3", q: "Pourquoi les modèles de langage sont-ils utiles pour les chatbots ?", options: ["Ils ne se trompent jamais", "Ils n'ont pas besoin d'ordinateur", "Ils comprennent beaucoup de façons de dire la même chose", "Ils marchent sans données"], answer: 2, why: "Ils ont appris à partir de millions de phrases." },
+      { objective: "O4", q: "Qu'est-ce que Hugging Face ?", options: ["Un réseau social", "Une erreur Python", "Un jeu vidéo", "Un site et des bibliothèques pour partager des modèles d'IA gratuits"], answer: 3, why: "Hugging Face héberge des modèles et la bibliothèque Transformers." },
+      { objective: "O4", q: "Quelle ligne charge le modèle de sentiment ?", options: ["import sentiment", "model = load()", "pipeline(\"text-classification\", model=\"distilbert/distilbert-base-uncased-finetuned-sst-2-english\")", "print(\"model\")"], answer: 2, why: "pipeline prend la tâche et le nom du modèle." },
+      { objective: "O4", q: "Pourquoi la première exécution du modèle est-elle plus longue ?", options: ["Colab est lent exprès", "Elle télécharge le modèle", "Elle entraîne le modèle à partir de zéro", "Elle vérifie vos e-mails"], answer: 1, why: "Les fichiers du modèle se téléchargent la première fois." },
+      { objective: "O4", q: "Que devez-vous lire avant d'utiliser un modèle ?", options: ["Sa fiche de modèle", "L'historique de votre navigateur", "Le logo de Colab", "Rien"], answer: 0, why: "La fiche explique son usage, ses données et sa licence." },
+      { objective: "O4", q: "Le score du modèle de sentiment, c'est :", options: ["La longueur du texte", "Le nombre de mots positifs", "À quel point le modèle est sûr, de 0 à 1", "Une note sur 100"], answer: 2, why: "Le score est la confiance." },
+      { objective: "O5", q: "Pour compter les commentaires positifs dans une boucle, vous commencez par :", options: ["Mettre positive = 0 avant la boucle", "Afficher positive", "Supprimer la liste", "Importer counter"], answer: 0, why: "Un compteur commence à 0 avant la boucle." },
+      { objective: "O5", q: "round(0.98765, 2) donne :", options: ["0.98", "0.99", "1", "98"], answer: 1, why: "Arrondi à deux chiffres après la virgule, 0.98765 donne 0.99." },
+      { objective: "O6", q: "Quel commentaire ce modèle risque-t-il le plus de mal classer ?", options: ["« I loved it! »", "« Great, another rainy game day. »", "« This was terrible. »", "« Best class ever. »"], answer: 1, why: "L'ironie dit le contraire de ce qu'elle veut dire, et les modèles la ratent souvent." },
+      { objective: "O6", q: "Pourquoi utiliser un seuil de confiance ?", options: ["Pour rendre le programme plus rapide", "Pour envoyer les résultats incertains à une personne qui vérifie", "Pour cacher les commentaires négatifs", "Pour supprimer les scores faibles"], answer: 1, why: "Les résultats peu sûrs demandent une vérification humaine." },
+      { objective: "O6", q: "Qu'est-ce qu'il n'est PAS sûr de mettre dans un notebook que vous partagez ?", options: ["Une liste de commentaires inventés", "Une ligne de commentaire qui commence par #", "Une instruction print", "Votre mot de passe ou votre clé d'API"], answer: 3, why: "Les secrets dans un notebook partagé peuvent être copiés et mal utilisés." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      2,
+      5,
+      7,
+      8,
+      10,
+      14,
+      15,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Modèle chargé et utilisé",
+        objective: "O4",
+        notYet: "Le modèle ne se charge pas, ou aucune étiquette ni aucun score n'est produit.",
+        meets: "Le modèle de sentiment pré-entraîné s'exécute et donne une étiquette et un score pour chaque commentaire.",
+        exceeds: "Le notebook note sur quoi le modèle a été entraîné, d'après sa fiche."
+      },
+      {
+        name: "Boucle et affichage",
+        objective: "O5",
+        notYet: "Moins de six commentaires, ou les commentaires ne sont pas chacun affichés avec étiquette et score.",
+        meets: "Au moins six commentaires, chacun affiché avec son étiquette et un score arrondi.",
+        exceeds: "L'affichage est bien aligné grâce à une f-string."
+      },
+      {
+        name: "Comptes",
+        objective: "O5",
+        notYet: "Les comptes de positifs et de négatifs manquent ou sont faux.",
+        meets: "Les bons comptes de commentaires positifs et négatifs sont affichés.",
+        exceeds: "Affiche aussi combien ont été marqués « à vérifier à la main »."
+      },
+      {
+        name: "Seuil de confiance",
+        objective: "O6",
+        notYet: "Pas de seuil, ou les scores bas ne sont pas signalés.",
+        meets: "Chaque score sous 0.80 est marqué « à vérifier à la main ».",
+        exceeds: "Inclut un commentaire ironique ou mitigé et explique pourquoi le modèle peut se tromper."
+      },
+      {
+        name: "Usage responsable",
+        objective: "O6",
+        notYet: "Le notebook contient des messages privés sans permission, ou un mot de passe ou une clé API.",
+        meets: "Seulement des commentaires inventés ou autorisés, et aucun mot de passe ni aucune clé dans le notebook.",
+        exceeds: "Ajoute une note disant que les étiquettes viennent de l'IA et qu'une personne vérifie les cas incertains."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et obtiennent « Atteint » ou « Dépasse » sur chaque ligne de la grille du trieur d'avis",
+      "Apprenants qui disent avoir construit ou modifié un autre programme d'IA dans les 30 jours après le cours (enquête de suivi)",
+      "Apprenants qui suivent ensuite un autre cours, comme « Introduction à l'apprentissage automatique » ou « Introduction à la science des données et à l'analyse de données »",
+      "Apprenants qui montrent le trieur d'avis dans un portfolio, un cours, un club ou une candidature"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur fixe ou portable avec un navigateur web",
+      "Un compte Google gratuit pour utiliser Google Colab",
+      "Six courts commentaires inventés ou plus, par exemple sur un entraînement, un cours ou une petite boutique",
+      "Environ 60 à 75 minutes au total, plus le temps d'exercice"
+    ],
+    facilitatorNotes: [
+      "Lancez une fois le téléchargement du modèle avant le cours, sur le même réseau, pour vérifier qu'il marche ; les réseaux scolaires bloquent parfois le téléchargement des modèles.",
+      "Faites utiliser aux apprenants des commentaires inventés ou qu'ils ont la permission d'utiliser ; jamais de vrais messages privés.",
+      "Rappelez aux apprenants de ne jamais coller de mots de passe ou de clés API dans un notebook, surtout s'ils le partagent.",
+      "Demandez à chaque apprenant de trouver un commentaire sur lequel le modèle se trompe, et discutez-en en groupe.",
+      "Les ressources gratuites de Colab peuvent s'épuiser ; si une session s'arrête, montrez comment se reconnecter et relancer les cellules depuis le début."
     ]
   }
 };

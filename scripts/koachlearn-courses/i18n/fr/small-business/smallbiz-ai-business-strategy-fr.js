@@ -16,11 +16,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes, avec une tâche \"Essayez maintenant\". Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin. Les tâches forment ensemble votre plan d'IA d'une page."
   ],
   finalTask: "Rédigez votre plan d'IA d'une page en cinq parties : (1) la carte de votre temps et les deux tâches choisies, avec une note de valeur et de risque pour chacune ; (2) un projet pilote de 30 jours pour la première tâche, avec une mesure avant et après ; (3) un schéma ou une liste simple de la façon dont vos outils se connectent et des étapes qui demandent votre approbation ; (4) une vérification des coûts ; (5) une charte d'utilisation de l'IA en cinq règles pour vous et votre équipe.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des propriétaires de petites entreprises qui ont un peu essayé l'IA et veulent maintenant un plan au lieu d'essais au hasard : commerces, restaurants, salons, services de nettoyage et de réparation, et petits bureaux, certains avec quelques employés.",
+    startingPoint: "Ils ont utilisé un assistant de discussion pour quelques tâches et utilisent plusieurs applications pour l'entreprise, comme un outil de réservation, un outil de paiement et un tableur. Ils n'ont aucun plan écrit sur les projets d'IA à mener, la façon de les mesurer, la façon dont les outils se connectent ou les règles à suivre.",
+    gap: "Les essais d'IA au hasard font perdre du temps et de l'argent, et les automatisations sans approbation peuvent répéter des erreurs coûteuses ou laisser fuir des données. Les propriétaires doivent choisir les projets qui en valent la peine, en tester un et le mesurer, connecter leurs outils sans risque et fixer des règles claires sur l'IA pour eux-mêmes et leur équipe.",
+    constraints: [
+      "Niveau de lecture : des mots simples et des phrases courtes",
+      "Appareils : un ordinateur ou un smartphone avec les applications actuelles de l'entreprise",
+      "Temps : des leçons d'environ 5 minutes, à caser dans une journée de travail chargée",
+      "Les prix et les fonctions des outils changent ; les propriétaires consultent la page de tarifs de chaque outil",
+      "Vie privée et sécurité : les décisions sur l'argent, le juridique, l'embauche et la sécurité restent aux personnes ; les données des clients sont protégées"
+    ],
+    prerequisites: "« Introduction à l'IA pour les petites entreprises » ou « Les outils d'IA essentiels pour les petites entreprises » d'abord."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "De mémoire, à partir d'une semaine normale", action: "faire une carte du temps des tâches qui vous prennent du temps", standard: "avec au moins dix tâches, les minutes pour chacune, classées par groupes, et les trois plus grosses entourées" },
+    { id: "O2", condition: "À partir d'au moins cinq idées d'IA", action: "noter chacune selon sa valeur et son risque et choisir deux projets par lesquels commencer", standard: "avec un gain rapide et un projet plus important, chacun avec une raison en une phrase" },
+    { id: "O3", condition: "À partir de votre projet de gain rapide", action: "préparer un projet pilote de 30 jours avec une mesure avant et après", standard: "avec un point de départ, un objectif clair et un relevé chaque semaine" },
+    { id: "O4", condition: "À partir des outils que votre entreprise utilise", action: "dessiner comment vos outils se transmettent des informations", standard: "avec des cases et des flèches, et au moins une étape faite à la main qui pourrait être automatisée" },
+    { id: "O5", condition: "À partir de votre carte des outils et de vos coûts", action: "marquer les étapes qui demandent votre approbation et calculer le vrai coût de l'automatisation", standard: "en mettant une étoile à chaque étape qui envoie de l'argent ou des messages à beaucoup de personnes, et en comparant le coût aux heures gagnées" },
+    { id: "O6", condition: "À partir de la façon dont votre entreprise utilise l'IA", action: "écrire une charte d'utilisation de l'IA en cinq règles et un plan d'IA d'une page", standard: "avec les cinq parties du plan et des règles qu'un membre de l'équipe trouve claires" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Choisir quoi améliorer",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Repérer où passe votre temps",
           minutes: 5,
           goal: "Faire une carte simple des tâches qui prennent votre temps chaque semaine.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Trouvez ce qui mange votre temps", bullets: ["Faites le total de chaque catégorie", "Entourez les trois plus grosses tâches"] }
           ],
           tryIt: "Commencez la carte de votre temps. De mémoire, listez au moins dix tâches de la semaine avec les minutes de chacune, classez-les dans les cinq catégories, et entourez les trois plus grosses.",
-          youCanNow: "faire la carte de l'usage de votre temps et trouver les tâches qui en prennent le plus."
+          youCanNow: "faire la carte de l'usage de votre temps et trouver les tâches qui en prennent le plus.",
+          quickCheck: [
+            { objective: "O1", q: "Que liste une carte du temps ?", options: ["Vos tâches et le temps que prend chacune", "L'adresse personnelle de vos employés", "Vos ventes du mois", "Seulement vos heures d'ouverture"], answer: 0, why: "Une carte du temps montre où passe votre temps chaque semaine." },
+            { objective: "O1", q: "Votre carte du temps montre que trois tâches prennent la plus grande partie de votre semaine. Que faites-vous avec elles ?", options: ["Les ignorer", "Les entourer comme les endroits où l'IA pourrait le plus aider", "Les retirer de la liste", "Les faire plus vite sans rien changer"], answer: 1, why: "Les tâches qui prennent le plus de temps sont celles où l'IA pourrait le plus aider." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Choisir des projets d'IA selon la valeur et le risque",
           minutes: 5,
           goal: "Noter les projets d'IA possibles et choisir les deux par lesquels commencer.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Choisissez-en deux", bullets: ["Un gain rapide", "Un projet plus important, bien planifié"] }
           ],
           tryIt: "Notez au moins cinq idées d'IA selon la valeur et le risque dans un petit tableau. Choisissez votre gain rapide et votre projet plus important, et écrivez une phrase pour expliquer chaque choix.",
-          youCanNow: "choisir des projets d'IA pour votre entreprise en comparant la valeur et le risque."
+          youCanNow: "choisir des projets d'IA pour votre entreprise en comparant la valeur et le risque.",
+          quickCheck: [
+            { objective: "O2", q: "Dans la notation valeur et risque, que veut dire le risque ?", options: ["Le prix de l'outil", "Le temps de mise en place", "Le tort causé si l'IA se trompe", "Le nombre d'employés qui l'utilisent"], answer: 2, why: "Le risque est le tort qui pourrait arriver si l'IA fait une erreur." },
+            { objective: "O2", q: "Une idée a une forte valeur et un faible risque, une autre a une forte valeur et un fort risque. Par laquelle commencez-vous ?", options: ["Celle qui a un fort risque", "Aucune des deux", "Les deux en même temps", "Celle qui a une forte valeur et un faible risque"], answer: 3, why: "Une forte valeur et un faible risque font le meilleur premier projet." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Mener un projet pilote de 30 jours et le mesurer",
           minutes: 5,
           goal: "Préparer un petit test de 30 jours avec une mesure claire avant et après.",
@@ -75,17 +109,21 @@ module.exports = {
             { title: "Au jour 30", bullets: ["Relisez votre journal", "Garder, modifier ou arrêter", "Arrêter, c'est une leçon pas chère"] }
           ],
           tryIt: "Écrivez un plan de pilote pour votre gain rapide : la tâche, les chiffres d'avant (estimez si besoin), l'objectif d'après, et ce que vous noterez dans votre journal chaque semaine.",
-          youCanNow: "préparer et mesurer un projet pilote d'IA de 30 jours pour une tâche de l'entreprise."
+          youCanNow: "préparer et mesurer un projet pilote d'IA de 30 jours pour une tâche de l'entreprise.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce que le point de départ dans un projet pilote ?", options: ["Les chiffres « avant » auxquels vous comparez", "Le résultat final", "Le prix de l'outil", "Le planning de l'équipe"], answer: 0, why: "Le point de départ est l'endroit d'où vous partez, pour pouvoir mesurer le changement." },
+            { objective: "O3", q: "Au jour 30, votre projet pilote ne vous a fait gagner aucun temps. Que faites-vous ?", options: ["Le garder pour toujours", "L'arrêter ou le changer : vous avez appris à petit prix", "Acheter une version plus chère", "Cacher les résultats"], answer: 1, why: "Un projet pilote est un petit test, donc un échec coûte peu et apprend beaucoup." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Choisir quoi améliorer",
         questions: [
-          { q: "Quelle est la première étape d'une stratégie d'IA dans ce cours ?", options: ["Acheter beaucoup d'outils", "Repérer où passe votre temps", "Licencier du personnel", "Copier un concurrent"], answer: 1, why: "Une stratégie commence par des faits sur votre entreprise." },
-          { q: "Quel projet est le meilleur premier choix ?", options: ["Le plus récent", "Faible valeur, risque élevé", "Risque élevé, n'importe quelle valeur", "Grande valeur, faible risque"], answer: 3, why: "Commencez là où l'IA aide le plus et peut faire peu de dégâts." },
-          { q: "Quelle tâche doit rester sous la responsabilité d'une personne et d'un professionnel ?", options: ["Les décisions d'embauche", "Rédiger des publications", "Répondre à \"Quels sont vos horaires ?\"", "Trouver des noms de plats"], answer: 0, why: "L'embauche est à haut risque." },
-          { q: "Qu'est-ce qu'un projet pilote ?", options: ["Un métier de l'aviation", "Un changement définitif", "Un petit test limité dans le temps", "Une licence de logiciel"], answer: 2, why: "Un pilote teste une tâche pendant un temps fixé." },
-          { q: "Au jour 30, le pilote n'a pas aidé. Quelle est la bonne décision ?", options: ["Cacher les résultats", "L'étendre à tout", "L'arrêter ou le modifier ; vous avez appris pour pas cher", "Ne plus jamais mesurer"], answer: 2, why: "Arrêter un test qui n'a pas marché est une bonne décision." }
+          { objective: "O1", q: "Quelle est la première étape d'une stratégie d'IA dans ce cours ?", options: ["Acheter beaucoup d'outils", "Repérer où passe votre temps", "Licencier du personnel", "Copier un concurrent"], answer: 1, why: "Une stratégie commence par des faits sur votre entreprise." },
+          { objective: "O2", q: "Quel projet est le meilleur premier choix ?", options: ["Le plus récent", "Faible valeur, risque élevé", "Risque élevé, n'importe quelle valeur", "Grande valeur, faible risque"], answer: 3, why: "Commencez là où l'IA aide le plus et peut faire peu de dégâts." },
+          { objective: "O2", q: "Quelle tâche doit rester sous la responsabilité d'une personne et d'un professionnel ?", options: ["Les décisions d'embauche", "Rédiger des publications", "Répondre à \"Quels sont vos horaires ?\"", "Trouver des noms de plats"], answer: 0, why: "L'embauche est à haut risque." },
+          { objective: "O3", q: "Qu'est-ce qu'un projet pilote ?", options: ["Un métier de l'aviation", "Un changement définitif", "Un petit test limité dans le temps", "Une licence de logiciel"], answer: 2, why: "Un pilote teste une tâche pendant un temps fixé." },
+          { objective: "O3", q: "Au jour 30, le pilote n'a pas aidé. Quelle est la bonne décision ?", options: ["Cacher les résultats", "L'étendre à tout", "L'arrêter ou le modifier ; vous avez appris pour pas cher", "Ne plus jamais mesurer"], answer: 2, why: "Arrêter un test qui n'a pas marché est une bonne décision." }
         ]
       }
     },
@@ -93,6 +131,7 @@ module.exports = {
       name: "Chapitre 2 : Connecter les outils et fixer des règles",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Comment les outils se connectent : les intégrations en mots simples",
           minutes: 5,
           goal: "Dessiner comment les outils de votre entreprise se transmettent des informations.",
@@ -109,9 +148,14 @@ module.exports = {
             { title: "Dessinez votre carte", bullets: ["Les outils sont des boîtes ; les informations, des flèches", "Marquez : automatique, à la main, à automatiser"] }
           ],
           tryIt: "Dessinez sur papier la carte de vos outils avec des boîtes et des flèches. Marquez au moins une flèche que vous faites à la main aujourd'hui et qui pourrait être automatisée.",
-          youCanNow: "faire la carte des connexions entre les outils de votre entreprise et repérer les tâches à automatiser."
+          youCanNow: "faire la carte des connexions entre les outils de votre entreprise et repérer les tâches à automatiser.",
+          quickCheck: [
+            { objective: "O4", q: "Que montrent les flèches sur votre carte des outils ?", options: ["Qui commande", "Quel outil coûte le plus", "Les informations qui passent d'un outil à l'autre", "L'ordre dans lequel vous avez acheté les outils"], answer: 2, why: "Les flèches montrent comment les informations passent d'un outil à un autre." },
+            { objective: "O4", q: "Vous recopiez à la main chaque commande payée dans votre tableau des ventes. Que faites-vous ?", options: ["Arrêter de noter les ventes", "Embaucher quelqu'un qui tape plus vite", "Supprimer le tableau des ventes", "La marquer sur votre carte comme une étape qui pourrait être automatisée"], answer: 3, why: "Les étapes faites à la main pour déplacer des informations sont de bonnes candidates pour une intégration." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Garder le contrôle : approbations, coûts et données",
           minutes: 5,
           goal: "Décider quelles étapes automatiques demandent votre approbation et vérifier le vrai coût.",
@@ -128,9 +172,14 @@ module.exports = {
             { title: "Protégez vos données", bullets: ["Le minimum de données pour chaque outil", "Mots de passe solides et connexion en deux étapes", "Retirez les accès des employés qui partent"] }
           ],
           tryIt: "Sur la carte de vos outils, mettez une étoile sur chaque étape qui demande votre approbation. Puis écrivez une vérification des coûts : coûts mensuels des outils comparés aux heures gagnées multipliées par la valeur de votre heure.",
-          youCanNow: "garder le contrôle des automatisations avec des étapes d'approbation, des vérifications de coûts et des limites sur les données."
+          youCanNow: "garder le contrôle des automatisations avec des étapes d'approbation, des vérifications de coûts et des limites sur les données.",
+          quickCheck: [
+            { objective: "O5", q: "Pourquoi garder une approbation sur les automatisations qui envoient de l'argent ou des messages en masse ?", options: ["Une automatisation peut répéter une erreur de nombreuses fois", "Les approbations rendent les outils moins chers", "La loi l'exige toujours", "Cela rend l'automatisation plus rapide"], answer: 0, why: "Une seule erreur dans une automatisation peut se répéter de nombreuses fois avant que vous la remarquiez." },
+            { objective: "O5", q: "Un employé quitte votre entreprise. Que faites-vous ?", options: ["Laisser ses accès au cas où il reviendrait", "Donner son mot de passe à la nouvelle recrue", "Retirer ses accès aux outils de l'entreprise", "Ne rien changer"], answer: 2, why: "Retirer les accès protège les données de votre entreprise." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Rédiger votre charte d'utilisation de l'IA et votre plan d'une page",
           minutes: 5,
           goal: "Écrire cinq règles simples sur l'IA pour votre entreprise et terminer votre plan d'IA d'une page.",
@@ -147,17 +196,21 @@ module.exports = {
             { title: "Votre plan d'une page", bullets: ["Carte du temps et deux projets", "Pilote, carte des outils et vérification des coûts", "Cinq règles ; révision tous les trois mois"] }
           ],
           tryIt: "Tâche finale : écrivez vos cinq règles sur l'IA et votre plan d'IA d'une page avec les cinq parties. Partagez les règles avec un employé ou une personne de confiance et demandez si quelque chose n'est pas clair.",
-          youCanNow: "diriger l'usage de l'IA dans votre entreprise avec un plan écrit et des règles claires."
+          youCanNow: "diriger l'usage de l'IA dans votre entreprise avec un plan écrit et des règles claires.",
+          quickCheck: [
+            { objective: "O6", q: "Qu'est-ce qu'une charte d'utilisation de l'IA ?", options: ["Un abonnement payant à l'IA", "Des règles écrites sur la façon dont votre entreprise utilise l'IA", "L'avis d'un client", "Les conditions d'utilisation d'un outil"], answer: 1, why: "Une charte d'utilisation de l'IA fixe des règles claires pour vous et votre équipe." },
+            { objective: "O6", q: "Vous avez écrit vos cinq règles sur l'IA. Que faites-vous ensuite ?", options: ["Les garder secrètes", "Les publier en ligne sans les relire", "Demander à l'IA de les approuver", "Les montrer à un membre de l'équipe et lui demander si quelque chose n'est pas clair"], answer: 3, why: "Des règles ne marchent que si les personnes qui les suivent les comprennent." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Connecter les outils et fixer des règles",
         questions: [
-          { q: "Qu'est-ce qu'une intégration ?", options: ["Une connexion qui permet à un outil d'envoyer des informations à un autre", "Un nouvel employé", "Un formulaire fiscal", "Un type de prêt"], answer: 0, why: "Les intégrations font passer les informations entre les outils." },
-          { q: "Lequel est un service de connexion ?", options: ["Une agrafeuse", "Un tiroir-caisse", "Un fax", "Zapier"], answer: 3, why: "Zapier relie des outils qui ne se connectent pas tout seuls." },
-          { q: "Quelle étape automatique a le plus besoin de votre approbation ?", options: ["Enregistrer un nom de fichier", "Envoyer un e-mail de réduction à vos 800 clients", "Ajouter une couleur au calendrier", "Trier une liste"], answer: 1, why: "Les messages à beaucoup de clients demandent le oui d'une personne." },
-          { q: "Une automatisation coûte chaque mois plus que le temps qu'elle fait gagner. Que faites-vous ?", options: ["Rester manuel pour l'instant", "Continuer à payer", "Ajouter plus d'outils", "Ignorer le coût"], answer: 0, why: "Les chiffres doivent tenir." },
-          { q: "Laquelle est une bonne règle d'utilisation de l'IA ?", options: ["Coller les numéros de carte des clients pour gagner du temps", "Utiliser n'importe quel outil trouvé", "Une personne vérifie chaque fait avant que les clients le voient", "L'IA prend les décisions d'embauche"], answer: 2, why: "Vérifier les faits protège les clients." }
+          { objective: "O4", q: "Qu'est-ce qu'une intégration ?", options: ["Une connexion qui permet à un outil d'envoyer des informations à un autre", "Un nouvel employé", "Un formulaire fiscal", "Un type de prêt"], answer: 0, why: "Les intégrations font passer les informations entre les outils." },
+          { objective: "O4", q: "Lequel est un service de connexion ?", options: ["Une agrafeuse", "Un tiroir-caisse", "Un fax", "Zapier"], answer: 3, why: "Zapier relie des outils qui ne se connectent pas tout seuls." },
+          { objective: "O5", q: "Quelle étape automatique a le plus besoin de votre approbation ?", options: ["Enregistrer un nom de fichier", "Envoyer un e-mail de réduction à vos 800 clients", "Ajouter une couleur au calendrier", "Trier une liste"], answer: 1, why: "Les messages à beaucoup de clients demandent le oui d'une personne." },
+          { objective: "O5", q: "Une automatisation coûte chaque mois plus que le temps qu'elle fait gagner. Que faites-vous ?", options: ["Rester manuel pour l'instant", "Continuer à payer", "Ajouter plus d'outils", "Ignorer le coût"], answer: 0, why: "Les chiffres doivent tenir." },
+          { objective: "O6", q: "Laquelle est une bonne règle d'utilisation de l'IA ?", options: ["Coller les numéros de carte des clients pour gagner du temps", "Utiliser n'importe quel outil trouvé", "Une personne vérifie chaque fait avant que les clients le voient", "L'IA prend les décisions d'embauche"], answer: 2, why: "Vérifier les faits protège les clients." }
         ]
       }
     }
@@ -165,26 +218,106 @@ module.exports = {
   quiz: {
     title: "Quiz final : Construire une stratégie d'IA et connecter ses outils",
     questions: [
-      { q: "Une carte du temps liste :", options: ["Vos mots de passe", "Vos tâches et le temps que prend chacune", "Les adresses de vos clients", "Vos concurrents"], answer: 1, why: "Elle montre où passe votre temps." },
-      { q: "Laquelle fait partie des cinq catégories ?", options: ["Les films", "La météo", "Le sport", "Les opérations"], answer: 3, why: "Clients, ventes et marketing, opérations, argent, personnel." },
-      { q: "Pourquoi entourer les trois tâches qui prennent le plus de temps ?", options: ["Pour décorer", "Pour les supprimer", "Pour les partager en ligne", "C'est là que l'IA pourrait aider le plus"], answer: 3, why: "Les grosses tâches offrent le plus de temps à gagner." },
-      { q: "Dans la notation valeur-risque, le risque veut dire :", options: ["À quel point c'est amusant", "Les dégâts si l'IA se trompe", "À quel point l'outil est récent", "Combien d'applications vous avez"], answer: 1, why: "Le risque mesure le mal possible." },
-      { q: "Un gain rapide est :", options: ["Un ticket de loto", "Le projet le plus gros et le plus risqué", "Un petit projet qui marche vite", "Un procès"], answer: 2, why: "Les gains rapides donnent confiance." },
-      { q: "Quel projet est à haut risque ?", options: ["Rédiger un contrat juridique", "Rédiger une légende Instagram", "Trouver le nom d'un plat du jour", "Mettre en forme une liste de contrôle"], answer: 0, why: "Les documents juridiques demandent un professionnel." },
-      { q: "Les chiffres \"avant\" d'un pilote s'appellent :", options: ["Le budget", "L'objectif", "Le point de départ", "Le mot de passe"], answer: 2, why: "Le point de départ est ce à quoi on compare." },
-      { q: "Un bon objectif de pilote est :", options: ["\"Les messages passent de 60 à 25 minutes par jour sans hausse des plaintes\"", "\"Faire mieux\"", "\"Utiliser plus l'IA\"", "\"Essayer des trucs\""], answer: 0, why: "Il est précis et mesurable." },
-      { q: "Pendant le pilote, vous tenez :", options: ["Aucune note", "Un court journal de ce qui a marché et de ce qui a mal tourné", "Les numéros de carte des clients", "Seulement les bonnes nouvelles"], answer: 1, why: "Le journal guide votre décision au jour 30." },
-      { q: "\"Commande payée -> tableau de ventes\" est un exemple de :", options: ["Impôt", "Charte", "Avis", "Intégration"], answer: 3, why: "Les informations passent automatiquement d'un outil à l'autre." },
-      { q: "Où trouve-t-on en général les connexions intégrées ?", options: ["Dans les réglages d'un outil", "Sur un ticket de caisse", "Dans le courrier", "Nulle part"], answer: 0, why: "Les réglages listent souvent les applications ou intégrations." },
-      { q: "Sur la carte de vos outils, les flèches montrent :", options: ["Les noms des employés", "L'humeur des clients", "Les prix", "Les informations qui passent entre les outils"], answer: 3, why: "Les boîtes sont des outils ; les flèches, des informations." },
-      { q: "Pourquoi garder une approbation sur les automatisations qui envoient de l'argent ?", options: ["Pour embêter l'équipe", "C'est plus lent", "L'automatisation peut répéter une erreur de nombreuses fois", "Ce n'est pas nécessaire"], answer: 2, why: "Une personne arrête les erreurs coûteuses répétées." },
-      { q: "Le coût complet d'un outil comprend :", options: ["Seulement le prix affiché dans la publicité", "L'abonnement, les frais à l'utilisation, la mise en place et le temps de vérification", "Rien", "Seulement l'électricité"], answer: 1, why: "Tous les coûts comptent face au temps gagné." },
-      { q: "Quand un employé part, vous devez :", options: ["Ne rien faire", "Laisser son accès ouvert", "Partager son mot de passe", "Retirer son accès aux outils de l'entreprise"], answer: 3, why: "Retirer l'accès protège vos données." },
-      { q: "Qu'apporte la connexion en deux étapes ?", options: ["Une mise à niveau gratuite", "Un deuxième mot de passe sur papier", "Une deuxième vérification, comme un code sur le téléphone", "Rien"], answer: 2, why: "Elle rend les comptes plus difficiles à pirater." },
-      { q: "Une charte d'utilisation de l'IA est :", options: ["Les règles écrites sur la façon dont votre entreprise utilise l'IA", "Un contrat d'assurance", "Un bail", "Un outil"], answer: 0, why: "Elle protège tout le monde et assure la cohérence." },
-      { q: "Qu'est-ce qui a sa place dans votre charte d'IA ?", options: ["L'IA décide qui embaucher", "Les personnes prennent les décisions sur l'argent, le juridique, l'embauche et la sécurité", "N'importe quel outil convient", "Les faux avis sont acceptables"], answer: 1, why: "Les grandes décisions restent aux personnes." },
-      { q: "À quelle fréquence revoir votre plan d'IA ?", options: ["Jamais", "Environ tous les trois mois", "Toutes les heures", "Seulement après une catastrophe"], answer: 1, why: "Des révisions régulières le gardent à jour." },
-      { q: "Votre plan d'IA d'une page contient :", options: ["Carte du temps, projets, pilote, carte des outils, vérification des coûts et règles", "Seulement une liste d'applications", "Les mots de passe des clients", "Les prix d'un concurrent"], answer: 0, why: "Ces parties font un plan complet." }
+      { objective: "O1", q: "Une carte du temps liste :", options: ["Vos mots de passe", "Vos tâches et le temps que prend chacune", "Les adresses de vos clients", "Vos concurrents"], answer: 1, why: "Elle montre où passe votre temps." },
+      { objective: "O1", q: "Laquelle fait partie des cinq catégories ?", options: ["Les films", "La météo", "Le sport", "Les opérations"], answer: 3, why: "Clients, ventes et marketing, opérations, argent, personnel." },
+      { objective: "O1", q: "Pourquoi entourer les trois tâches qui prennent le plus de temps ?", options: ["Pour décorer", "Pour les supprimer", "Pour les partager en ligne", "C'est là que l'IA pourrait aider le plus"], answer: 3, why: "Les grosses tâches offrent le plus de temps à gagner." },
+      { objective: "O2", q: "Dans la notation valeur-risque, le risque veut dire :", options: ["À quel point c'est amusant", "Les dégâts si l'IA se trompe", "À quel point l'outil est récent", "Combien d'applications vous avez"], answer: 1, why: "Le risque mesure le mal possible." },
+      { objective: "O2", q: "Un gain rapide est :", options: ["Un ticket de loto", "Le projet le plus gros et le plus risqué", "Un petit projet qui marche vite", "Un procès"], answer: 2, why: "Les gains rapides donnent confiance." },
+      { objective: "O2", q: "Quel projet est à haut risque ?", options: ["Rédiger un contrat juridique", "Rédiger une légende Instagram", "Trouver le nom d'un plat du jour", "Mettre en forme une liste de contrôle"], answer: 0, why: "Les documents juridiques demandent un professionnel." },
+      { objective: "O3", q: "Les chiffres \"avant\" d'un pilote s'appellent :", options: ["Le budget", "L'objectif", "Le point de départ", "Le mot de passe"], answer: 2, why: "Le point de départ est ce à quoi on compare." },
+      { objective: "O3", q: "Un bon objectif de pilote est :", options: ["\"Les messages passent de 60 à 25 minutes par jour sans hausse des plaintes\"", "\"Faire mieux\"", "\"Utiliser plus l'IA\"", "\"Essayer des trucs\""], answer: 0, why: "Il est précis et mesurable." },
+      { objective: "O3", q: "Pendant le pilote, vous tenez :", options: ["Aucune note", "Un court journal de ce qui a marché et de ce qui a mal tourné", "Les numéros de carte des clients", "Seulement les bonnes nouvelles"], answer: 1, why: "Le journal guide votre décision au jour 30." },
+      { objective: "O4", q: "\"Commande payée -> tableau de ventes\" est un exemple de :", options: ["Impôt", "Charte", "Avis", "Intégration"], answer: 3, why: "Les informations passent automatiquement d'un outil à l'autre." },
+      { objective: "O4", q: "Où trouve-t-on en général les connexions intégrées ?", options: ["Dans les réglages d'un outil", "Sur un ticket de caisse", "Dans le courrier", "Nulle part"], answer: 0, why: "Les réglages listent souvent les applications ou intégrations." },
+      { objective: "O4", q: "Sur la carte de vos outils, les flèches montrent :", options: ["Les noms des employés", "L'humeur des clients", "Les prix", "Les informations qui passent entre les outils"], answer: 3, why: "Les boîtes sont des outils ; les flèches, des informations." },
+      { objective: "O5", q: "Pourquoi garder une approbation sur les automatisations qui envoient de l'argent ?", options: ["Pour embêter l'équipe", "C'est plus lent", "L'automatisation peut répéter une erreur de nombreuses fois", "Ce n'est pas nécessaire"], answer: 2, why: "Une personne arrête les erreurs coûteuses répétées." },
+      { objective: "O5", q: "Le coût complet d'un outil comprend :", options: ["Seulement le prix affiché dans la publicité", "L'abonnement, les frais à l'utilisation, la mise en place et le temps de vérification", "Rien", "Seulement l'électricité"], answer: 1, why: "Tous les coûts comptent face au temps gagné." },
+      { objective: "O5", q: "Quand un employé part, vous devez :", options: ["Ne rien faire", "Laisser son accès ouvert", "Partager son mot de passe", "Retirer son accès aux outils de l'entreprise"], answer: 3, why: "Retirer l'accès protège vos données." },
+      { objective: "O5", q: "Qu'apporte la connexion en deux étapes ?", options: ["Une mise à niveau gratuite", "Un deuxième mot de passe sur papier", "Une deuxième vérification, comme un code sur le téléphone", "Rien"], answer: 2, why: "Elle rend les comptes plus difficiles à pirater." },
+      { objective: "O6", q: "Une charte d'utilisation de l'IA est :", options: ["Les règles écrites sur la façon dont votre entreprise utilise l'IA", "Un contrat d'assurance", "Un bail", "Un outil"], answer: 0, why: "Elle protège tout le monde et assure la cohérence." },
+      { objective: "O6", q: "Qu'est-ce qui a sa place dans votre charte d'IA ?", options: ["L'IA décide qui embaucher", "Les personnes prennent les décisions sur l'argent, le juridique, l'embauche et la sécurité", "N'importe quel outil convient", "Les faux avis sont acceptables"], answer: 1, why: "Les grandes décisions restent aux personnes." },
+      { objective: "O6", q: "À quelle fréquence revoir votre plan d'IA ?", options: ["Jamais", "Environ tous les trois mois", "Toutes les heures", "Seulement après une catastrophe"], answer: 1, why: "Des révisions régulières le gardent à jour." },
+      { objective: "O6", q: "Votre plan d'IA d'une page contient :", options: ["Carte du temps, projets, pilote, carte des outils, vérification des coûts et règles", "Seulement une liste d'applications", "Les mots de passe des clients", "Les prix d'un concurrent"], answer: 0, why: "Ces parties font un plan complet." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      3,
+      4,
+      6,
+      7,
+      9,
+      11,
+      12,
+      13,
+      16
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Carte du temps et deux projets",
+        objective: "O2",
+        notYet: "Pas de carte du temps, ou des projets choisis sans note de valeur et de risque.",
+        meets: "Une carte du temps et deux tâches choisies, chacune avec une note de valeur et de risque.",
+        exceeds: "Chaque choix a une raison claire en une phrase, liée à la carte du temps."
+      },
+      {
+        name: "Projet pilote de 30 jours",
+        objective: "O3",
+        notYet: "Pas de mesure, ou pas de chiffres « avant ».",
+        meets: "Un projet pilote pour la première tâche, avec un point de départ et un objectif « après ».",
+        exceeds: "Il prévoit aussi un relevé chaque semaine et une règle pour arrêter ou changer au jour 30."
+      },
+      {
+        name: "Connexions des outils et approbations",
+        objective: "O4",
+        notYet: "Pas de carte des outils, ou aucune approbation marquée.",
+        meets: "Un schéma ou une liste qui montre comment les outils se connectent, avec les étapes d'approbation marquées.",
+        exceeds: "Chaque étape qui envoie de l'argent ou des messages en masse a une étoile."
+      },
+      {
+        name: "Vérification du coût",
+        objective: "O5",
+        notYet: "Pas de vérification du coût.",
+        meets: "Le coût mensuel des outils comparé aux heures gagnées multipliées par la valeur de votre heure.",
+        exceeds: "Elle compte aussi les frais à l'usage, la mise en place et le temps de vérification."
+      },
+      {
+        name: "Charte d'utilisation de l'IA",
+        objective: "O6",
+        notYet: "Moins de cinq règles, ou des règles qui confient à l'IA des décisions sur l'argent, le juridique, l'embauche ou la sécurité.",
+        meets: "Cinq règles claires pour vous et votre équipe.",
+        exceeds: "Montrée à un membre de l'équipe ou à une personne de confiance, et rendue plus claire grâce à ses remarques."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Les propriétaires qui mènent leur projet pilote de 30 jours et donnent le résultat avant et après (enquête de suivi)",
+      "Les propriétaires qui disent gagner des heures chaque semaine après le projet pilote",
+      "Les propriétaires qui partagent une charte d'utilisation de l'IA écrite avec leur équipe dans les 30 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur ou un smartphone avec internet et les applications actuelles de l'entreprise",
+      "Un assistant d'IA gratuit et un tableur gratuit pour noter et suivre",
+      "Du papier et un stylo pour la carte du temps et la carte des outils",
+      "Environ 60 minutes en tout : leçons, pratique, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Demandez aux propriétaires d'estimer les tâches d'une semaine normale avant la séance, pour que la carte du temps aille vite.",
+      "Dessinez au tableau un exemple de carte des outils avec des cases et des flèches avant que les propriétaires dessinent la leur.",
+      "Rappelez aux propriétaires de consulter la page de tarifs de chaque outil ; les prix et les fonctions changent.",
+      "Insistez sur le fait que les décisions sur l'argent, le juridique, l'embauche et la sécurité restent aux personnes, et que les données des clients restent protégées.",
+      "Notez le plan d'une page avec la grille et donnez votre retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

@@ -16,11 +16,35 @@ module.exports = {
     "Harás un plan de negociación de una página, practicarás cómo pedir, aprenderás a intercambiar en lugar de ceder, a manejar la presión, a poner el acuerdo por escrito y a usar todo esto con el sueldo y el precio. Cada lección dura unos cinco minutos. Hay una comprobación de conocimientos después de cada capítulo y un examen de 20 preguntas al final. Para contratos grandes, como acuerdos NIL, alquileres o préstamos, haz que un abogado, un agente de confianza o la oficina de cumplimiento de tu escuela revise los papeles finales."
   ],
   finalTask: "Escribe un plan de una página para una negociación real de sueldo o precio (tu meta, tu punto de retirada, tu plan B, las necesidades de la otra parte, tu primera petición con una razón y dos cosas que podrías intercambiar). Practícalo con un amigo que te ponga objeciones y luego escribe el correo corto de seguimiento que confirma lo acordado.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Atletas y otros adultos que necesitan acordar un sueldo o un precio: personas que buscan trabajo y trabajadores, atletas estudiantiles con ofertas de NIL o de patrocinadores, y dueños de pequeños negocios que compran a proveedores o venden a clientes.",
+    startingPoint: "Han aceptado ofertas de trabajo, precios o tratos tal como se los dieron, o han regateado sin un plan. Muchos se ponen nerviosos al pedir más y ceden cuando los presionan.",
+    gap: "Quienes nunca piden, o bajan su número bajo presión, dejan ir sueldo y ganancias y firman tratos de los que se arrepienten. Un plan por escrito, una petición clara con una razón, intercambiar en lugar de ceder, respuestas tranquilas ante la presión y un acuerdo por escrito protegen sus ingresos y su reputación.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y oraciones cortas",
+      "Dispositivos: un teléfono o una computadora para investigar y enviar correos; el plan se puede hacer en papel",
+      "Tiempo: unos 5 minutos por lección más una práctica de roles con un amigo",
+      "Las leyes de sueldos cambian según el estado y el país; cada persona revisa su propio departamento de trabajo",
+      "Los contratos grandes, como los tratos de NIL o de patrocinio, necesitan un abogado, un agente o una oficina de cumplimiento; nada de identificaciones privadas ni números de banco en herramientas de IA"
+    ],
+    prerequisites: "Ninguno."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Ante una negociación real de sueldo o de precio", action: "escribir un plan de una página con tu meta, tu punto de retirada, tu plan B y las necesidades de la otra parte", standard: "con cada parte completa antes de hablar" },
+    { id: "O2", condition: "Al abrir una negociación", action: "hacer una petición clara un poco por encima de tu meta, con una razón, y luego dejar de hablar", standard: "en una o dos oraciones" },
+    { id: "O3", condition: "Cuando la otra parte rechaza tu número", action: "ofrecer un intercambio de \"Si tú puedes..., entonces yo puedo...\" en lugar de ceder", standard: "nombrando al menos dos cosas aparte del dinero que podrías intercambiar" },
+    { id: "O4", condition: "Cuando alguien usa una táctica de presión", action: "responder con calma pidiendo tiempo, o decir que no con amabilidad a una oferta por debajo de tu punto de retirada", standard: "sin aceptar en ese mismo momento" },
+    { id: "O5", condition: "Al final de cualquier trato", action: "confirmar por escrito cada punto acordado y leerlo antes de firmar", standard: "con el precio, las fechas y las condiciones anotados el mismo día" },
+    { id: "O6", condition: "Antes de hablar de sueldo o de precio", action: "investigar un número justo usando datos de sueldos, anuncios de empleo o tres cotizaciones, y tus propios costos", standard: "usando al menos una fuente confiable" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Prepararse y pedir",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Prepararse: tu meta, tu punto de retirada y sus necesidades",
           minutes: 5,
           goal: "Escribir un plan de negociación de una página antes de hablar.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "3. Sus necesidades", bullets: ["Empleador: alguien responsable que empiece pronto", "Patrocinador: llegar a sus clientes", "Proveedor: un pedido mensual estable"] }
           ],
           tryIt: "Elige una negociación real que tengas pronto: una conversación sobre sueldo, un precio con un proveedor o cliente, el alquiler o un patrocinio. Escribe tu meta, tu punto de retirada, tu plan B y las dos necesidades principales de la otra parte.",
-          youCanNow: "prepararte para una negociación escribiendo tu meta, tu punto de retirada, tu plan B y las necesidades de la otra parte."
+          youCanNow: "prepararte para una negociación escribiendo tu meta, tu punto de retirada, tu plan B y las necesidades de la otra parte.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué es tu plan B?", options: ["Tu primera petición", "Lo mejor que puedes hacer si no hay acuerdo", "El punto de retirada de la otra parte", "Una segunda copia de tu plan"], answer: 1, why: "Tu plan B es tu mejor opción si no hay acuerdo, como otra oferta o quedarte en tu trabajo actual." },
+            { objective: "O1", q: "Te preparas para pedirle un mejor precio a un proveedor. ¿Qué anotas sobre él?", options: ["Nada; solo importa tu propia meta", "La dirección de su casa", "Una lista de sus errores", "Lo que quiere y lo que le preocupa, como un pedido mensual constante"], answer: 3, why: "Conocer las necesidades de la otra parte te ayuda a ofrecer cosas que te cuestan poco pero le importan a ella." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Pedir con confianza",
           minutes: 5,
           goal: "Hacer una primera petición clara con una razón y luego dejar de hablar.",
@@ -58,9 +87,14 @@ module.exports = {
             { title: "Pregunta y escucha", bullets: ["\"¿Qué es lo más importante para ti en este acuerdo?\"", "\"¿Qué flexibilidad tienes con la fecha de inicio?\""] }
           ],
           tryIt: "Escribe tu primera petición y una razón para tu negociación real. Dila en voz alta tres veces con voz tranquila y quédate callado cinco segundos completos después de cada vez.",
-          youCanNow: "hacer una primera petición clara con una razón, quedarte en silencio y hacer preguntas que muestran las necesidades de la otra parte."
+          youCanNow: "hacer una primera petición clara con una razón, quedarte en silencio y hacer preguntas que muestran las necesidades de la otra parte.",
+          quickCheck: [
+            { objective: "O2", q: "¿Por qué ayuda decir tú primero un número razonable?", options: ["El primer número que se dice en voz alta muchas veces marca toda la conversación", "Termina la negociación más rápido", "La otra parte tiene que aceptarlo", "Muestra que no te importa"], answer: 0, why: "La lección dice que el primer número muchas veces marca la conversación, así que una petición clara con una razón te ayuda." },
+            { objective: "O2", q: "Acabas de hacer tu petición con una razón y todos se quedan callados. ¿Qué haces?", options: ["Bajar tu número de inmediato", "Volver a explicar por qué tal vez no lo mereces", "Quedarte callado y dejar que piensen", "Salir de la sala"], answer: 2, why: "El silencio les da tiempo para pensar; si hablas, puedes terminar discutiendo contra ti mismo." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Intercambiar en lugar de ceder",
           minutes: 5,
           goal: "Usar intercambios de \"si... entonces...\" para nunca dar algo a cambio de nada.",
@@ -78,17 +112,21 @@ module.exports = {
             { title: "Protégete", bullets: ["Compara cada intercambio con tu punto de retirada"] }
           ],
           tryIt: "Para tu negociación real, haz una lista de tres cosas que podrías ofrecer y tres cosas que podrías pedir aparte del dinero. Escribe dos frases de \"Si tú puedes..., entonces yo puedo...\".",
-          youCanNow: "intercambiar concesiones con \"si... entonces...\" en lugar de regalar cosas."
+          youCanNow: "intercambiar concesiones con \"si... entonces...\" en lugar de regalar cosas.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué significa intercambiar en una negociación?", options: ["Ceder para terminar la conversación", "Pedir algo a cambio cada vez que das algo", "Cambiar de trabajo con alguien", "Repetir tu primer número"], answer: 1, why: "Intercambiar significa que cada vez que das algo, pides algo a cambio." },
+            { objective: "O3", q: "Un empleador no puede subir la tarifa por hora. ¿Qué intercambio es bueno pedir?", options: ["Nada; aceptar como está", "Pedirle que prometa un aumento algún día", "Amenazar con renunciar", "Una revisión del sueldo a los 90 días o un día libre pagado más"], answer: 3, why: "Las cosas aparte del dinero, como una revisión a los 90 días o un día libre, pueden hacer que el trato funcione para los dos." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Prepararse y pedir",
         questions: [
-          { q: "Tu punto de retirada es:", options: ["El mejor acuerdo que puedes imaginar", "El peor acuerdo que todavía aceptarías", "La primera oferta de la otra parte", "Tu número favorito"], answer: 1, why: "Por debajo de tu punto de retirada, dices que no." },
-          { q: "¿Por qué ayuda un plan B fuerte?", options: ["Te permite insultar a la otra parte", "Significa que nunca necesitas prepararte", "Te da confianza para decir que no a un mal acuerdo", "Te garantiza ganar"], answer: 2, why: "Tener una buena opción sin acuerdo hace menos probable que aceptes uno malo." },
-          { q: "¿Qué primera petición es la más fuerte?", options: ["\"Lo que a usted le parezca justo.\"", "\"Perdón, ¿tal vez podría recibir un poco más?\"", "\"Acepto cualquier cosa.\"", "\"Según el sueldo local y mi experiencia, pido $21 la hora.\""], answer: 3, why: "Un número claro con una razón es fácil de tomar en serio." },
-          { q: "Después de hacer tu petición, debes:", options: ["Dejar de hablar y dejarlos pensar", "Bajarla de inmediato", "Seguir explicando por qué quizá no lo mereces", "Salir de la sala"], answer: 0, why: "El silencio les da tiempo para responder; no discutas contra ti mismo." },
-          { q: "El proveedor dice que no a tu precio. ¿Qué respuesta es un intercambio?", options: ["\"Está bien, pago el precio completo.\"", "\"Si hago un pedido por 12 meses, ¿podría dejarlo en $4.20 por caja?\"", "\"Me está estafando.\"", "\"Bueno, olvídelo.\""], answer: 1, why: "Ofrece algo que ellos valoran a cambio de lo que tú quieres." }
+          { objective: "O1", q: "Tu punto de retirada es:", options: ["El mejor acuerdo que puedes imaginar", "El peor acuerdo que todavía aceptarías", "La primera oferta de la otra parte", "Tu número favorito"], answer: 1, why: "Por debajo de tu punto de retirada, dices que no." },
+          { objective: "O1", q: "¿Por qué ayuda un plan B fuerte?", options: ["Te permite insultar a la otra parte", "Significa que nunca necesitas prepararte", "Te da confianza para decir que no a un mal acuerdo", "Te garantiza ganar"], answer: 2, why: "Tener una buena opción sin acuerdo hace menos probable que aceptes uno malo." },
+          { objective: "O2", q: "¿Qué primera petición es la más fuerte?", options: ["\"Lo que a usted le parezca justo.\"", "\"Perdón, ¿tal vez podría recibir un poco más?\"", "\"Acepto cualquier cosa.\"", "\"Según el sueldo local y mi experiencia, pido $21 la hora.\""], answer: 3, why: "Un número claro con una razón es fácil de tomar en serio." },
+          { objective: "O2", q: "Después de hacer tu petición, debes:", options: ["Dejar de hablar y dejarlos pensar", "Bajarla de inmediato", "Seguir explicando por qué quizá no lo mereces", "Salir de la sala"], answer: 0, why: "El silencio les da tiempo para responder; no discutas contra ti mismo." },
+          { objective: "O3", q: "El proveedor dice que no a tu precio. ¿Qué respuesta es un intercambio?", options: ["\"Está bien, pago el precio completo.\"", "\"Si hago un pedido por 12 meses, ¿podría dejarlo en $4.20 por caja?\"", "\"Me está estafando.\"", "\"Bueno, olvídelo.\""], answer: 1, why: "Ofrece algo que ellos valoran a cambio de lo que tú quieres." }
         ]
       }
     },
@@ -96,6 +134,7 @@ module.exports = {
       name: "Capítulo 2: Cerrar el acuerdo",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Mantener la calma bajo presión",
           minutes: 5,
           goal: "Reconocer las tácticas de presión y responder con calma.",
@@ -113,9 +152,14 @@ module.exports = {
             { title: "Mantén el respeto", bullets: ["El problema, no la persona", "Amenazas o deshonestidad: retírate"] }
           ],
           tryIt: "Escribe tu respuesta tranquila a tres frases de presión: \"Esta oferta vence hoy\", \"Lo tomas o lo dejas\" y una oferta muy baja. Di cada respuesta en voz alta con voz tranquila.",
-          youCanNow: "reconocer las tácticas de presión y responder con calma pidiendo tiempo o diciendo que no con amabilidad."
+          youCanNow: "reconocer las tácticas de presión y responder con calma pidiendo tiempo o diciendo que no con amabilidad.",
+          quickCheck: [
+            { objective: "O4", q: "¿Cuál es una táctica de presión?", options: ["\"Esta oferta termina hoy.\"", "\"¿Qué es lo que más te importa?\"", "\"Te mando los detalles por correo.\"", "\"Gracias por reunirte conmigo.\""], answer: 0, why: "Las fechas límite como \"termina hoy\" buscan apurarte para que decidas ya." },
+            { objective: "O4", q: "La otra parte se pone grosera durante la conversación. ¿Qué debes hacer?", options: ["Responder con groserías", "Aceptar cualquier cosa para terminar", "Mantener el respeto y hablar del problema, no de la persona", "Publicar algo sobre ella en internet"], answer: 2, why: "Mantener la calma y la cortesía deja la puerta abierta para una mejor oferta después." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Ponerlo por escrito",
           minutes: 5,
           goal: "Confirmar un acuerdo por escrito y leerlo antes de firmar.",
@@ -133,9 +177,14 @@ module.exports = {
             { title: "Contratos grandes", bullets: ["NIL, patrocinios, alquileres, préstamos, sociedades", "Haz que lo revise un abogado, un agente o la oficina de cumplimiento"] }
           ],
           tryIt: "Escribe un correo de resumen corto para un acuerdo (real o de práctica) que incluya el precio o el sueldo, las fechas, las condiciones y quién hace qué, y que termine con: \"Por favor, responde para confirmar que esto coincide con lo que entendiste.\"",
-          youCanNow: "resumir un acuerdo, confirmarlo por escrito y saber cuándo hacer revisar un contrato."
+          youCanNow: "resumir un acuerdo, confirmarlo por escrito y saber cuándo hacer revisar un contrato.",
+          quickCheck: [
+            { objective: "O5", q: "¿Cuál es la mejor prueba por escrito de un nuevo trato de trabajo?", options: ["Un mensaje de texto de un amigo", "Una carta de oferta", "Tus propias notas de memoria", "Un apretón de manos"], answer: 1, why: "Para un trabajo, la lección dice que pidas una carta de oferta por escrito." },
+            { objective: "O5", q: "Te entregan un contrato con una sección en blanco para \"llenar después\". ¿Qué haces?", options: ["Firmar rápido para no perder el trato", "Firmar y esperar que todo salga bien", "Pedirle a una IA que lo firme por ti", "No firmar hasta que esté completo y lo entiendas"], answer: 3, why: "Nunca firmes nada en blanco ni nada que no entiendas." }
+          ]
         },
         {
+          objectives: ["O6","O3"],
           title: "Negociar sueldo y precio",
           minutes: 6,
           goal: "Investigar un número justo y negociar una oferta de trabajo o un precio.",
@@ -157,17 +206,21 @@ module.exports = {
             { title: "Precio", bullets: ["Al comprar: consigue tres cotizaciones", "Al vender: conoce tus costos", "Ofrece opciones, no solo descuentos"] }
           ],
           tryIt: "Tarea final: escribe tu plan de una página para una negociación real de sueldo o precio usando investigación real. Practícalo con un amigo que use una táctica de presión y luego escribe el correo de seguimiento que confirma el acuerdo.",
-          youCanNow: "investigar un número justo, hacer una contraoferta a una oferta de trabajo o a un precio con una razón y cerrar el acuerdo por escrito."
+          youCanNow: "investigar un número justo, hacer una contraoferta a una oferta de trabajo o a un precio con una razón y cerrar el acuerdo por escrito.",
+          quickCheck: [
+            { objective: "O6", q: "¿Dónde pueden los trabajadores de Estados Unidos consultar el sueldo típico de muchos trabajos?", options: ["En una encuesta de redes sociales", "En el Occupational Outlook Handbook del BLS, en bls.gov/ooh", "En cualquier foro de internet", "Con los competidores del empleador"], answer: 1, why: "El Occupational Outlook Handbook del BLS muestra el sueldo típico de cientos de trabajos." },
+            { objective: "O6", q: "Un cliente te pide un descuento. ¿Qué opción es buena para ofrecerle?", options: ["Un precio más bajo por un pedido más grande o un pago más rápido", "La mitad del precio sin nada a cambio", "Un precio por debajo de tus costos", "Negarte a hablar del precio"], answer: 0, why: "Ofrecer opciones en lugar de descuentos sin más protege tus costos y a la vez ayuda al cliente." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Cerrar el acuerdo",
         questions: [
-          { q: "Alguien dice \"Esta oferta vence hoy\". ¿Cuál es una respuesta tranquila?", options: ["Firmar de inmediato", "Gritar que es injusto", "\"Gracias. Me gustaría tomarme hasta mañana para pensarlo.\"", "Bajar tu petición a la mitad"], answer: 2, why: "Pedir tiempo quita la presión." },
-          { q: "La oferta está por debajo de tu punto de retirada. Debes:", options: ["Decir que no con amabilidad", "Aceptarla de todos modos", "Insultarlos", "Ignorarlos"], answer: 0, why: "Por debajo de tu punto de retirada significa no, dicho con respeto." },
-          { q: "¿Qué debes hacer justo después de cerrar un acuerdo por teléfono con un proveedor?", options: ["Nada; lo recordarás", "Publicarlo en redes sociales", "Esperar un mes", "Enviar el mismo día un correo con cada punto acordado"], answer: 3, why: "Un resumen por escrito evita recuerdos diferentes más adelante." },
-          { q: "Te ofrecen un acuerdo NIL con un contrato largo. ¿Qué es lo más sensato?", options: ["Firmarlo hoy antes de que desaparezca", "Hacer que primero lo revise un abogado, un agente de confianza o la oficina de cumplimiento", "Dejar que un asistente de IA firme por ti", "Firmar sin leer porque es largo"], answer: 1, why: "Los contratos grandes se deben revisar antes de firmar." },
-          { q: "En California, ¿qué deben poner en los anuncios de empleo los empleadores con 15 o más empleados?", options: ["La escala salarial", "El teléfono del jefe", "Tu sueldo anterior", "Nada sobre el sueldo"], answer: 0, why: "California exige la escala salarial en los anuncios a los empleadores con 15 o más empleados." }
+          { objective: "O4", q: "Alguien dice \"Esta oferta vence hoy\". ¿Cuál es una respuesta tranquila?", options: ["Firmar de inmediato", "Gritar que es injusto", "\"Gracias. Me gustaría tomarme hasta mañana para pensarlo.\"", "Bajar tu petición a la mitad"], answer: 2, why: "Pedir tiempo quita la presión." },
+          { objective: "O4", q: "La oferta está por debajo de tu punto de retirada. Debes:", options: ["Decir que no con amabilidad", "Aceptarla de todos modos", "Insultarlos", "Ignorarlos"], answer: 0, why: "Por debajo de tu punto de retirada significa no, dicho con respeto." },
+          { objective: "O5", q: "¿Qué debes hacer justo después de cerrar un acuerdo por teléfono con un proveedor?", options: ["Nada; lo recordarás", "Publicarlo en redes sociales", "Esperar un mes", "Enviar el mismo día un correo con cada punto acordado"], answer: 3, why: "Un resumen por escrito evita recuerdos diferentes más adelante." },
+          { objective: "O5", q: "Te ofrecen un acuerdo NIL con un contrato largo. ¿Qué es lo más sensato?", options: ["Firmarlo hoy antes de que desaparezca", "Hacer que primero lo revise un abogado, un agente de confianza o la oficina de cumplimiento", "Dejar que un asistente de IA firme por ti", "Firmar sin leer porque es largo"], answer: 1, why: "Los contratos grandes se deben revisar antes de firmar." },
+          { objective: "O6", q: "En California, ¿qué deben poner en los anuncios de empleo los empleadores con 15 o más empleados?", options: ["La escala salarial", "El teléfono del jefe", "Tu sueldo anterior", "Nada sobre el sueldo"], answer: 0, why: "California exige la escala salarial en los anuncios a los empleadores con 15 o más empleados." }
         ]
       }
     }
@@ -175,26 +228,111 @@ module.exports = {
   quiz: {
     title: "Examen final: Habilidades de negociación",
     questions: [
-      { q: "La mayor parte de una negociación se gana:", options: ["Hablando más fuerte", "Antes de empezar, al prepararse", "En el último segundo", "Por suerte"], answer: 1, why: "La preparación fija tu meta, tus límites y tus opciones." },
-      { q: "¿Qué meta es mejor para un plan de negociación?", options: ["\"Más dinero\"", "\"Un buen acuerdo\"", "\"Lo que me ofrezcan\"", "\"$19 la hora y los sábados libres\""], answer: 3, why: "Las metas específicas con números guían la conversación." },
-      { q: "Tu plan B es:", options: ["Lo que harás si no hay acuerdo", "Tu primera oferta", "El punto de retirada de la otra parte", "Un segundo contrato"], answer: 0, why: "El plan B es tu mejor opción sin acuerdo." },
-      { q: "¿Por qué pensar en las necesidades de la otra parte?", options: ["Para engañarlos", "Para ceder más rápido", "Para encontrar cosas que puedes ofrecer y que les importan", "No importa"], answer: 2, why: "Conocer sus necesidades muestra qué intercambiar." },
-      { q: "Lo más probable es que un patrocinador necesite:", options: ["La contraseña de tu banco", "Que tus publicaciones lleguen a sus clientes", "Que trabajes gratis", "Tu dirección de casa"], answer: 1, why: "Los patrocinadores pagan para llegar a personas que podrían comprar." },
-      { q: "¿Por qué hacer tú la primera petición razonable?", options: ["El primer número suele marcar toda la conversación", "Es de mala educación esperar", "Termina la conversación más rápido", "La ley lo exige"], answer: 0, why: "El primer número que se dice funciona como un ancla." },
-      { q: "Tu primera petición debe ser:", options: ["Muy por debajo de tu meta", "Un secreto", "Exactamente tu punto de retirada", "Un poco por encima de tu meta, con una razón"], answer: 3, why: "Deja espacio para moverse y es fácil de explicar." },
-      { q: "¿Qué pregunta te ayuda a saber qué intercambiar?", options: ["\"¿Por qué es tan tacaño?\"", "\"¿Me lo puede dar y ya?\"", "\"¿Qué es lo más importante para ti en este acuerdo?\"", "\"¿Es su respuesta final?\""], answer: 2, why: "Las preguntas abiertas muestran las necesidades de la otra parte." },
-      { q: "La herramienta \"Si tú puedes..., entonces yo puedo...\" te ayuda a:", options: ["Regalar cosas", "Intercambiar en lugar de ceder", "Terminar la conversación", "Evitar escuchar"], answer: 1, why: "Une cada concesión a algo que recibes a cambio." },
-      { q: "Aparte del dinero, ¿qué podrías negociar en un trabajo?", options: ["El sueldo de tus compañeros", "La declaración de impuestos de la empresa", "La fecha de inicio o una revisión del sueldo a los 90 días", "No se permite nada más"], answer: 2, why: "El horario, la fecha de inicio, la capacitación y las revisiones se pueden negociar." },
-      { q: "Un cliente quiere un precio más bajo. Una buena respuesta con opciones es:", options: ["\"Si pagas por adelantado, puedo descontar un 5 por ciento.\"", "\"Claro, a mitad de precio.\"", "\"Nunca hago descuentos, adiós.\"", "\"Voy a perder dinero, pero está bien.\""], answer: 0, why: "Cambia el descuento por algo que tú valoras." },
-      { q: "\"Lo tomas o lo dejas\" es un ejemplo de:", options: ["Un plan B", "Una táctica de presión", "Una oferta por escrito", "Una contraoferta"], answer: 1, why: "Intenta apurarte a decidir." },
-      { q: "Tu mejor herramienta contra la presión es:", options: ["Gritar", "Firmar rápido", "Mentir", "El tiempo: pedir pensarlo"], answer: 3, why: "El tiempo te deja revisar tu plan y calmarte." },
-      { q: "En una conversación tensa, lo mejor es:", options: ["Atacar a la persona", "Hablar del problema, no de la persona", "Irte sin decir nada", "Levantar la voz"], answer: 1, why: "El respeto deja la puerta abierta a un mejor acuerdo." },
-      { q: "Alguien te pide firmar un formulario en blanco y \"llenarlo después\". Debes:", options: ["Firmarlo", "Firmar solo la primera página", "Negarte; nunca firmes papeles en blanco o poco claros", "Pedirle a una IA que firme"], answer: 2, why: "Los papeles en blanco se pueden llenar con cualquier cosa." },
-      { q: "Para un trabajo nuevo, la mejor prueba escrita del acuerdo es:", options: ["Una carta de oferta", "Un mensaje de texto de un amigo", "Tu memoria", "Una publicación en redes sociales"], answer: 0, why: "Una carta de oferta indica el sueldo, la fecha de inicio y las condiciones." },
-      { q: "¿Dónde pueden los trabajadores de EE. UU. consultar el sueldo típico de muchos trabajos?", options: ["Un foro cualquiera", "Un anuncio emergente", "Solo con el empleador", "El Occupational Outlook Handbook de la BLS en bls.gov/ooh"], answer: 3, why: "El manual de la BLS muestra el sueldo típico de cientos de trabajos." },
-      { q: "En California, ¿puede un empleador preguntar en general por tu sueldo anterior?", options: ["Sí, siempre", "En general no, pero puede preguntar qué sueldo esperas", "Solo por correo electrónico", "Solo si tienes menos de 25 años"], answer: 1, why: "California en general prohíbe pedir el historial de sueldo; sí se puede preguntar qué sueldo esperas." },
-      { q: "Antes de comprar suministros para tu negocio, un paso inteligente es:", options: ["Aceptar el primer precio", "Pedirle al proveedor que elija por ti", "Conseguir al menos tres cotizaciones", "Nunca comparar"], answer: 2, why: "Varias cotizaciones muestran el precio del mercado." },
-      { q: "Cuando vendes, ¿por qué debes conocer tus costos?", options: ["Para nunca aceptar un precio con el que pierdes dinero", "Para mostrar tus facturas a los clientes", "No es importante", "Para subir los precios a tus amigos"], answer: 0, why: "Conocer tus costos fija tu precio de retirada." }
+      { objective: "O1", q: "La mayor parte de una negociación se gana:", options: ["Hablando más fuerte", "Antes de empezar, al prepararse", "En el último segundo", "Por suerte"], answer: 1, why: "La preparación fija tu meta, tus límites y tus opciones." },
+      { objective: "O1", q: "¿Qué meta es mejor para un plan de negociación?", options: ["\"Más dinero\"", "\"Un buen acuerdo\"", "\"Lo que me ofrezcan\"", "\"$19 la hora y los sábados libres\""], answer: 3, why: "Las metas específicas con números guían la conversación." },
+      { objective: "O1", q: "Tu plan B es:", options: ["Lo que harás si no hay acuerdo", "Tu primera oferta", "El punto de retirada de la otra parte", "Un segundo contrato"], answer: 0, why: "El plan B es tu mejor opción sin acuerdo." },
+      { objective: "O1", q: "¿Por qué pensar en las necesidades de la otra parte?", options: ["Para engañarlos", "Para ceder más rápido", "Para encontrar cosas que puedes ofrecer y que les importan", "No importa"], answer: 2, why: "Conocer sus necesidades muestra qué intercambiar." },
+      { objective: "O1", q: "Lo más probable es que un patrocinador necesite:", options: ["La contraseña de tu banco", "Que tus publicaciones lleguen a sus clientes", "Que trabajes gratis", "Tu dirección de casa"], answer: 1, why: "Los patrocinadores pagan para llegar a personas que podrían comprar." },
+      { objective: "O2", q: "¿Por qué hacer tú la primera petición razonable?", options: ["El primer número suele marcar toda la conversación", "Es de mala educación esperar", "Termina la conversación más rápido", "La ley lo exige"], answer: 0, why: "El primer número que se dice funciona como un ancla." },
+      { objective: "O2", q: "Tu primera petición debe ser:", options: ["Muy por debajo de tu meta", "Un secreto", "Exactamente tu punto de retirada", "Un poco por encima de tu meta, con una razón"], answer: 3, why: "Deja espacio para moverse y es fácil de explicar." },
+      { objective: "O3", q: "¿Qué pregunta te ayuda a saber qué intercambiar?", options: ["\"¿Por qué es tan tacaño?\"", "\"¿Me lo puede dar y ya?\"", "\"¿Qué es lo más importante para ti en este acuerdo?\"", "\"¿Es su respuesta final?\""], answer: 2, why: "Las preguntas abiertas muestran las necesidades de la otra parte." },
+      { objective: "O3", q: "La herramienta \"Si tú puedes..., entonces yo puedo...\" te ayuda a:", options: ["Regalar cosas", "Intercambiar en lugar de ceder", "Terminar la conversación", "Evitar escuchar"], answer: 1, why: "Une cada concesión a algo que recibes a cambio." },
+      { objective: "O3", q: "Aparte del dinero, ¿qué podrías negociar en un trabajo?", options: ["El sueldo de tus compañeros", "La declaración de impuestos de la empresa", "La fecha de inicio o una revisión del sueldo a los 90 días", "No se permite nada más"], answer: 2, why: "El horario, la fecha de inicio, la capacitación y las revisiones se pueden negociar." },
+      { objective: "O3", q: "Un cliente quiere un precio más bajo. Una buena respuesta con opciones es:", options: ["\"Si pagas por adelantado, puedo descontar un 5 por ciento.\"", "\"Claro, a mitad de precio.\"", "\"Nunca hago descuentos, adiós.\"", "\"Voy a perder dinero, pero está bien.\""], answer: 0, why: "Cambia el descuento por algo que tú valoras." },
+      { objective: "O4", q: "\"Lo tomas o lo dejas\" es un ejemplo de:", options: ["Un plan B", "Una táctica de presión", "Una oferta por escrito", "Una contraoferta"], answer: 1, why: "Intenta apurarte a decidir." },
+      { objective: "O4", q: "Tu mejor herramienta contra la presión es:", options: ["Gritar", "Firmar rápido", "Mentir", "El tiempo: pedir pensarlo"], answer: 3, why: "El tiempo te deja revisar tu plan y calmarte." },
+      { objective: "O4", q: "En una conversación tensa, lo mejor es:", options: ["Atacar a la persona", "Hablar del problema, no de la persona", "Irte sin decir nada", "Levantar la voz"], answer: 1, why: "El respeto deja la puerta abierta a un mejor acuerdo." },
+      { objective: "O5", q: "Alguien te pide firmar un formulario en blanco y \"llenarlo después\". Debes:", options: ["Firmarlo", "Firmar solo la primera página", "Negarte; nunca firmes papeles en blanco o poco claros", "Pedirle a una IA que firme"], answer: 2, why: "Los papeles en blanco se pueden llenar con cualquier cosa." },
+      { objective: "O5", q: "Para un trabajo nuevo, la mejor prueba escrita del acuerdo es:", options: ["Una carta de oferta", "Un mensaje de texto de un amigo", "Tu memoria", "Una publicación en redes sociales"], answer: 0, why: "Una carta de oferta indica el sueldo, la fecha de inicio y las condiciones." },
+      { objective: "O6", q: "¿Dónde pueden los trabajadores de EE. UU. consultar el sueldo típico de muchos trabajos?", options: ["Un foro cualquiera", "Un anuncio emergente", "Solo con el empleador", "El Occupational Outlook Handbook de la BLS en bls.gov/ooh"], answer: 3, why: "El manual de la BLS muestra el sueldo típico de cientos de trabajos." },
+      { objective: "O6", q: "En California, ¿puede un empleador preguntar en general por tu sueldo anterior?", options: ["Sí, siempre", "En general no, pero puede preguntar qué sueldo esperas", "Solo por correo electrónico", "Solo si tienes menos de 25 años"], answer: 1, why: "California en general prohíbe pedir el historial de sueldo; sí se puede preguntar qué sueldo esperas." },
+      { objective: "O6", q: "Antes de comprar suministros para tu negocio, un paso inteligente es:", options: ["Aceptar el primer precio", "Pedirle al proveedor que elija por ti", "Conseguir al menos tres cotizaciones", "Nunca comparar"], answer: 2, why: "Varias cotizaciones muestran el precio del mercado." },
+      { objective: "O6", q: "Cuando vendes, ¿por qué debes conocer tus costos?", options: ["Para nunca aceptar un precio con el que pierdes dinero", "Para mostrar tus facturas a los clientes", "No es importante", "Para subir los precios a tus amigos"], answer: 0, why: "Conocer tus costos fija tu precio de retirada." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      2,
+      5,
+      8,
+      11,
+      14,
+      16,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte y vuelve a intentarlo.",
+    criteria: [
+      {
+        name: "Plan en papel",
+        objective: "O1",
+        notYet: "Al plan le falta la meta, el punto de retirada, el plan B o las necesidades de la otra parte.",
+        meets: "Las cuatro partes están escritas, son específicas y realistas.",
+        exceeds: "Las necesidades de la otra parte están unidas a cosas que podrías ofrecerle."
+      },
+      {
+        name: "Número justo investigado",
+        objective: "O6",
+        notYet: "La meta es una suposición sin fuente.",
+        meets: "La meta se basa en al menos una fuente confiable, como datos de sueldos, anuncios de empleo o tres cotizaciones.",
+        exceeds: "Nombra la fuente y, si vende, muestra que el precio cubre sus costos."
+      },
+      {
+        name: "Petición clara",
+        objective: "O2",
+        notYet: "No hay número, o hay un número sin razón.",
+        meets: "Una primera petición clara un poco por encima de la meta, con una razón, y luego silencio.",
+        exceeds: "La petición también incluye una pregunta para saber qué le importa a la otra parte."
+      },
+      {
+        name: "Intercambios, no cesiones",
+        objective: "O3",
+        notYet: "Bajó su número al sentir presión, sin recibir nada a cambio.",
+        meets: "Usó al menos un intercambio de \"Si tú puedes..., entonces yo puedo...\" en la práctica de roles.",
+        exceeds: "Ofreció dos o más intercambios aparte del dinero que cuestan poco pero le importan a la otra parte."
+      },
+      {
+        name: "Calma bajo presión",
+        objective: "O4",
+        notYet: "Aceptó en ese momento o se enojó cuando lo presionaron.",
+        meets: "Pidió tiempo o dijo que no con amabilidad, y mantuvo el respeto.",
+        exceeds: "Después nombró la táctica de presión y cómo la manejó."
+      },
+      {
+        name: "Trato por escrito",
+        objective: "O5",
+        notYet: "No hay correo de seguimiento, o le faltan puntos acordados.",
+        meets: "El correo enumera cada punto acordado (precio o sueldo, fechas, condiciones) y pide que lo confirmen.",
+        exceeds: "El correo es corto, amable y está listo para enviarse el mismo día."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Personas que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Personas que dicen haber pedido un mejor sueldo, un mejor precio o mejores condiciones dentro de 30 días (encuesta de seguimiento)",
+      "Personas que dicen haber conseguido un aumento, una mejor oferta o un mejor precio de un proveedor después de negociar",
+      "Personas que confirman un trato por escrito o hacen revisar un contrato grande antes de firmarlo"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Papel y lápiz, o un teléfono o una computadora, para el plan de una página",
+      "Acceso a internet para investigar sueldos o precios, como bls.gov/ooh o anuncios de empleo",
+      "Un amigo o compañero para la práctica de roles",
+      "Unos 60 minutos en total, en sesiones cortas: lecciones, práctica, comprobaciones y la tarea final"
+    ],
+    facilitatorNotes: [
+      "Forma parejas para la práctica de roles y dale a quien pone resistencia una tarjeta con una táctica de presión para usar.",
+      "Usa ejemplos que le sirvan al grupo: sueldo por hora para quienes buscan trabajo, tratos de NIL y de patrocinio para atletas, precios de proveedores para dueños de negocios.",
+      "Recuerda a los atletas estudiantiles que revisen sus tratos de NIL con la oficina de cumplimiento de su escuela, y a cualquiera con un contrato grande que lo haga revisar.",
+      "Las leyes de sueldos cambian según el estado y el país; manda a las personas a su propio departamento de trabajo en lugar de dar consejos legales.",
+      "Califica la tarea final con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

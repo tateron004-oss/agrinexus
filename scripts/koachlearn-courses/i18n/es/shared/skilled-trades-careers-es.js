@@ -16,11 +16,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos. Lee la lección, mira las diapositivas y luego haz la tarea de \"Pruébalo ahora\". Hay una comprobación de conocimientos después de cada capítulo y un examen de 20 preguntas al final. Las reglas, los sueldos y las licencias cambian según el estado y con el tiempo, así que cada lección te muestra el lugar oficial para revisarlos."
   ],
   finalTask: "Haz un \"Plan para empezar en un oficio\" de una página para un oficio: cómo es el trabajo, su sueldo mediano y sus perspectivas de empleo según bls.gov/ooh, la licencia o certificación que pide en tu estado, dos programas de aprendiz o de preaprendiz cerca de ti sacados de apprenticeship.gov o de un centro de empleo local, el equipo de seguridad y las herramientas básicas que vas a necesitar, cualquier recurso de segunda oportunidad que te aplique y tus primeros tres pasos con fechas.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Jóvenes que eligen un camino, veteranos que pasan al trabajo civil, personas que vuelven a casa después de la prisión y cualquiera que esté listo para trabajar con las manos en un oficio como electricista, plomero, técnico de HVAC, soldador, instalador de paneles solares, carpintero o chofer de camión.",
+    startingPoint: "Les interesa el trabajo práctico y quizá tienen experiencia relacionada de empleos, del servicio militar, del deporte o de programas hechos en prisión. La mayoría no conoce el sueldo real de los oficios, cómo funcionan los programas de aprendiz y las licencias, ni cómo encontrar un programa cerca.",
+    gap: "Los oficios calificados ofrecen capacitación pagada y buenas carreras sin un título universitario de cuatro años, pero la gente los pasa por alto o gasta dinero en la capacitación equivocada. Necesitan elegir un oficio, revisar su sueldo y su camino en sitios oficiales, y planear cómo entrar a un programa, incluidas las opciones de segunda oportunidad si tienen antecedentes.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y frases cortas",
+      "Los sueldos, las licencias y las reglas cambian según el estado y con el tiempo; se revisan en sitios oficiales (bls.gov/ooh, apprenticeship.gov, juntas estatales de licencias)",
+      "Dispositivos: un teléfono o una computadora de la biblioteca con internet",
+      "Quienes tienen antecedentes consultan con la junta estatal de licencias antes de pagar una capacitación",
+      "Tiempo: lecciones de unos cinco minutos, más tiempo para investigar"
+    ],
+    prerequisites: "Ninguno."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con siete oficios comunes y tus propios intereses y límites", action: "describir lo que hace cada oficio y elegir dos que vayan contigo", standard: "con una razón para cada elección" },
+    { id: "O2", condition: "Usando el Occupational Outlook Handbook en bls.gov/ooh", action: "buscar el sueldo mediano de un oficio, la capacitación habitual, la licencia que pide y sus perspectivas de empleo", standard: "anotando el año de la cifra del sueldo" },
+    { id: "O3", condition: "Para tu oficio principal", action: "explicar cómo funcionan su programa de aprendiz, su programa de preaprendiz y su licencia o certificación", standard: "con la página oficial de la junta estatal encontrada" },
+    { id: "O4", condition: "Para tu oficio principal", action: "enumerar el equipo de seguridad, los hábitos de seguridad y las herramientas básicas que pide el trabajo", standard: "comparados con la lista oficial de herramientas de un programa" },
+    { id: "O5", condition: "Si tú o alguien a quien ayudas tiene antecedentes", action: "encontrar programas de segunda oportunidad y preparar preguntas para la junta de licencias", standard: "nombrando el Programa Federal de Fianzas y el Crédito Tributario por Oportunidad de Trabajo" },
+    { id: "O6", condition: "Usando apprenticeship.gov o un centro de empleo local", action: "encontrar dos programas cerca de ti y escribir tus primeros tres pasos para presentar tu solicitud", standard: "con una fecha para cada paso y las fechas de solicitud de cada programa" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Elegir un oficio",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Qué son los oficios calificados",
           minutes: 5,
           goal: "Describir siete oficios comunes y elegir dos que vayan contigo.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "Tus habilidades te sirven", bullets: ["Mecánica y logística militar", "Disciplina y trabajo en equipo del deporte", "Programas de trabajo y capacitación en prisión"] }
           ],
           tryIt: "Responde por escrito las preguntas de \"¿Qué va contigo?\". Luego elige los dos oficios que mejor coinciden con tus respuestas y escribe una oración para cada uno diciendo por qué.",
-          youCanNow: "describir oficios calificados comunes y elegir dos que vayan con tu forma de trabajar."
+          youCanNow: "describir oficios calificados comunes y elegir dos que vayan con tu forma de trabajar.",
+          quickCheck: [
+            { objective: "O1", q: "¿En qué trabaja principalmente un electricista?", options: ["En el cableado y los sistemas de electricidad e iluminación", "En las tuberías de agua y los desagües", "En los equipos de calefacción y aire acondicionado", "En unir metal con calor"], answer: 0, why: "Los electricistas instalan y reparan el cableado, la electricidad y la iluminación." },
+            { objective: "O1", q: "Te gusta resolver problemas, no te molestan los espacios estrechos y quieres trabajar cerca de casa. ¿Cómo elegirías?", options: ["Elegir el oficio que eligió un amigo", "Elegir el que tenga el nombre más llamativo", "Comparar los oficios con tus respuestas y elegir dos que vayan contigo", "Elegir manejar camiones de larga distancia porque paga bien"], answer: 2, why: "Comparar los oficios con tus propios intereses y límites te da la mejor opción." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Revisar sueldos y capacitación en sitios oficiales",
           minutes: 5,
           goal: "Buscar el sueldo, la capacitación y las perspectivas de empleo de un oficio en el Occupational Outlook Handbook.",
@@ -63,9 +92,14 @@ module.exports = {
             { name: "Occupational Outlook Handbook: Electricistas (en inglés)", url: "https://www.bls.gov/ooh/construction-and-extraction/electricians.htm" }
           ],
           tryIt: "Busca en bls.gov/ooh tus dos oficios de la Lección 1. Para cada uno, anota el sueldo mediano y el año al que corresponde, la capacitación habitual, si se necesita licencia y las perspectivas de empleo.",
-          youCanNow: "encontrar en el manual oficial el sueldo mediano real, el camino de capacitación y las perspectivas de empleo de un oficio."
+          youCanNow: "encontrar en el manual oficial el sueldo mediano real, el camino de capacitación y las perspectivas de empleo de un oficio.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué te dicen las perspectivas de empleo?", options: ["El color del uniforme", "Qué tan rápido se espera que crezcan los empleos del oficio", "El sueldo de un trabajador", "Dónde está la escuela de capacitación"], answer: 1, why: "Las perspectivas de empleo muestran si se espera que la cantidad de empleos crezca o baje." },
+            { objective: "O2", q: "Un video dice que todos los plomeros ganan muchísimo. ¿Qué harías?", options: ["Creerlo porque es popular", "Preguntar en los comentarios del video", "Elegir la plomería enseguida", "Revisar el sueldo mediano y su año en bls.gov/ooh"], answer: 3, why: "Los datos oficiales de sueldos en bls.gov/ooh son el lugar para comprobarlo." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Programas de aprendiz, de preaprendiz y licencias",
           minutes: 6,
           goal: "Explicar cómo funcionan para tu oficio los programas de aprendiz, los de preaprendiz y las licencias.",
@@ -90,17 +124,21 @@ module.exports = {
             { name: "VA: Capacitación en el trabajo y programas de aprendiz (en inglés)", url: "https://www.va.gov/education/about-gi-bill-benefits/how-to-use-benefits/on-the-job-training-apprenticeships/" }
           ],
           tryIt: "Para tu oficio principal, anota: ¿normalmente se aprende en un programa de aprendiz? ¿Qué licencia o certificación pide? Luego busca \"[tu estado] [oficio] license\" y encuentra la página oficial de la junta estatal (busca una dirección que termine en .gov).",
-          youCanNow: "explicar cómo funcionan los programas de aprendiz, los de preaprendiz y las licencias, y encontrar la página de licencias de tu estado."
+          youCanNow: "explicar cómo funcionan los programas de aprendiz, los de preaprendiz y las licencias, y encontrar la página de licencias de tu estado.",
+          quickCheck: [
+            { objective: "O3", q: "¿En qué se diferencia un programa de aprendiz de una clase normal?", options: ["Pagas más", "No aprendes ninguna habilidad", "Trabajas y ganas un sueldo mientras aprendes", "Nunca lleva a una credencial"], answer: 2, why: "A los aprendices les pagan por trabajar mientras aprenden el oficio." },
+            { objective: "O3", q: "Quieres saber qué licencia pide tu oficio en tu estado. ¿Qué harías?", options: ["Buscar la página oficial de la junta estatal que termina en .gov", "Preguntar en un grupo cualquiera de redes sociales", "Suponer que no hace falta licencia", "Comprar el primer curso en línea que veas"], answer: 0, why: "La página oficial de la junta estatal tiene las reglas reales de la licencia." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Elegir un oficio",
         questions: [
-          { q: "¿Qué oficio trabaja en calefacción, aire acondicionado y refrigeración?", options: ["Carpintero", "Soldador", "Técnico de HVAC", "Instalador solar"], answer: 2, why: "HVAC son las siglas en inglés de calefacción, ventilación y aire acondicionado." },
-          { q: "¿Cuál es el mejor lugar para buscar el sueldo real de un oficio?", options: ["Un anuncio en redes sociales", "bls.gov/ooh", "Lo que crea un amigo", "Cualquier respuesta de un chat de IA"], answer: 1, why: "El Occupational Outlook Handbook es la fuente oficial y gratis." },
-          { q: "¿Qué significa \"sueldo mediano\"?", options: ["El sueldo más alto del oficio", "El sueldo inicial del primer día", "El sueldo después de impuestos", "El del medio: la mitad gana más y la otra mitad gana menos"], answer: 3, why: "La mediana es el valor del medio." },
-          { q: "¿Qué es un programa de aprendiz registrado?", options: ["Un trabajo pagado con capacitación que termina con una credencial reconocida", "Una pasantía sin pago", "Un título universitario de cuatro años", "Una sola clase de seguridad"], answer: 0, why: "Los aprendices ganan mientras aprenden y obtienen una credencial." },
-          { q: "Un técnico de HVAC va a manejar refrigerantes. ¿Qué necesita?", options: ["Una CDL", "La certificación EPA Section 608", "Un certificado de soldadura", "Nada"], answer: 1, why: "La EPA exige que estén certificados los técnicos que podrían liberar refrigerantes." }
+          { objective: "O1", q: "¿Qué oficio trabaja en calefacción, aire acondicionado y refrigeración?", options: ["Carpintero", "Soldador", "Técnico de HVAC", "Instalador solar"], answer: 2, why: "HVAC son las siglas en inglés de calefacción, ventilación y aire acondicionado." },
+          { objective: "O2", q: "¿Cuál es el mejor lugar para buscar el sueldo real de un oficio?", options: ["Un anuncio en redes sociales", "bls.gov/ooh", "Lo que crea un amigo", "Cualquier respuesta de un chat de IA"], answer: 1, why: "El Occupational Outlook Handbook es la fuente oficial y gratis." },
+          { objective: "O2", q: "¿Qué significa \"sueldo mediano\"?", options: ["El sueldo más alto del oficio", "El sueldo inicial del primer día", "El sueldo después de impuestos", "El del medio: la mitad gana más y la otra mitad gana menos"], answer: 3, why: "La mediana es el valor del medio." },
+          { objective: "O3", q: "¿Qué es un programa de aprendiz registrado?", options: ["Un trabajo pagado con capacitación que termina con una credencial reconocida", "Una pasantía sin pago", "Un título universitario de cuatro años", "Una sola clase de seguridad"], answer: 0, why: "Los aprendices ganan mientras aprenden y obtienen una credencial." },
+          { objective: "O3", q: "Un técnico de HVAC va a manejar refrigerantes. ¿Qué necesita?", options: ["Una CDL", "La certificación EPA Section 608", "Un certificado de soldadura", "Nada"], answer: 1, why: "La EPA exige que estén certificados los técnicos que podrían liberar refrigerantes." }
         ]
       }
     },
@@ -108,6 +146,7 @@ module.exports = {
       name: "Capítulo 2: Entrar y trabajar seguro",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Herramientas y seguridad en el trabajo",
           minutes: 5,
           goal: "Nombrar el equipo de seguridad y los hábitos básicos que espera cada oficio.",
@@ -126,9 +165,14 @@ module.exports = {
             { title: "Tu juego inicial", bullets: ["El empleador da el equipo de seguridad requerido", "Pregunta qué herramientas de mano debes llevar"] }
           ],
           tryIt: "Para tu oficio principal, haz una lista del EPP que usarías y de cinco herramientas de mano que probablemente necesitarías. Luego pregunta en un programa cerca de ti, o revisa su sitio web, cuál es su lista oficial de herramientas.",
-          youCanNow: "nombrar el equipo de seguridad y los hábitos que espera tu oficio y preparar una lista de herramientas iniciales."
+          youCanNow: "nombrar el equipo de seguridad y los hábitos que espera tu oficio y preparar una lista de herramientas iniciales.",
+          quickCheck: [
+            { objective: "O4", q: "¿Cuál es un hábito básico de seguridad en los oficios?", options: ["Quitar las protecciones para trabajar más rápido", "Usar el EPP correcto para la tarea", "Saltarte la capacitación de seguridad", "Trabajar con la electricidad conectada para ahorrar tiempo"], answer: 1, why: "Usar el EPP correcto te protege de los peligros comunes." },
+            { objective: "O4", q: "Tu programa te manda una lista de herramientas básicas, pero en una tienda te sugieren un kit caro. ¿Qué harías?", options: ["Comprar el kit caro", "No comprar ninguna herramienta", "Tomar herramientas prestadas sin pedir permiso", "Seguir la lista oficial de herramientas del programa"], answer: 3, why: "La lista del programa te dice lo que de verdad necesitas." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Opciones de segunda oportunidad si tienes antecedentes",
           minutes: 5,
           goal: "Encontrar programas e incentivos de segunda oportunidad y planear cómo manejar tus antecedentes en los oficios.",
@@ -152,9 +196,14 @@ module.exports = {
             { name: "Departamento de Trabajo de EE. UU.: Crédito Tributario por Oportunidad de Trabajo (en inglés)", url: "https://www.dol.gov/agencies/eta/wotc" }
           ],
           tryIt: "Escribe tres preguntas para la junta estatal de licencias de tu oficio sobre cómo revisa los antecedentes. Luego escribe dos oraciones que podrías decirle a un empleador sobre el Programa Federal de Fianzas y el Crédito Tributario por Oportunidad de Trabajo. (Si no tienes antecedentes, hazlo para un amigo o como práctica.)",
-          youCanNow: "nombrar herramientas de segunda oportunidad para los oficios y revisar cómo una junta de licencias revisa los antecedentes antes de pagar una capacitación."
+          youCanNow: "nombrar herramientas de segunda oportunidad para los oficios y revisar cómo una junta de licencias revisa los antecedentes antes de pagar una capacitación.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué es el Crédito Tributario por Oportunidad de Trabajo?", options: ["Un préstamo para trabajadores", "Un crédito de impuestos que pueden recibir los empleadores por contratar a personas de ciertos grupos", "Un kit de herramientas gratis", "Una licencia de oficio"], answer: 1, why: "El WOTC da a los empleadores un crédito de impuestos por contratar a personas de ciertos grupos, incluidas algunas con antecedentes." },
+            { objective: "O5", q: "Tienes antecedentes y quieres una licencia de oficio. ¿Qué harías antes de pagar la capacitación?", options: ["Preguntar a la junta estatal de licencias cómo revisa los antecedentes", "Ocultar los antecedentes en la solicitud", "Pagar la capacitación y esperar lo mejor", "Renunciar a los oficios"], answer: 0, why: "Muchas juntas revisan los antecedentes caso por caso, así que pregunta primero." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Encontrar un programa y presentar tu solicitud",
           minutes: 5,
           goal: "Encontrar dos programas cerca de ti y hacer un plan para presentar tu solicitud.",
@@ -177,17 +226,21 @@ module.exports = {
             { name: "CareerOneStop: Encontrar un American Job Center (en inglés)", url: "https://www.careeronestop.org/LocalHelp/AmericanJobCenters/find-american-job-centers.aspx" }
           ],
           tryIt: "Tarea final: haz tu Plan para empezar en un oficio de una página. Incluye el oficio, su sueldo mediano y sus perspectivas según bls.gov/ooh, la licencia o certificación, dos programas cerca de ti, tu equipo de seguridad y tus herramientas iniciales, cualquier recurso de segunda oportunidad y tus primeros tres pasos con fechas.",
-          youCanNow: "encontrar programas de aprendiz y de preaprendiz cerca de ti y hacer un plan con fechas para presentar tu solicitud."
+          youCanNow: "encontrar programas de aprendiz y de preaprendiz cerca de ti y hacer un plan con fechas para presentar tu solicitud.",
+          quickCheck: [
+            { objective: "O6", q: "¿Por qué anotar las fechas de solicitud de cada programa?", options: ["Algunos programas solo reciben solicitudes en ciertas épocas", "Los programas nunca cierran", "Las fechas no importan", "Para enseñárselas a tus amigos"], answer: 0, why: "Perder el periodo de solicitud puede significar esperar meses." },
+            { objective: "O6", q: "Un programa cerca de ti tiene un examen de entrada con medidas y fracciones. ¿Qué harías?", options: ["No presentar el examen", "Esperar que sea fácil", "Practicar fracciones, medidas y álgebra sencilla antes del examen", "Presentar tu solicitud a otro oficio"], answer: 2, why: "Practicar las matemáticas con tiempo te ayuda a aprobar los exámenes de entrada." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Entrar y trabajar seguro",
         questions: [
-          { q: "¿Qué significa PPE (en español, EPP)?", options: ["Programa Pagado para Electricistas", "Equipo de protección personal", "Prueba Pública de Plomería", "Plan de Planta Eléctrica"], answer: 1, why: "El EPP es equipo como lentes, guantes y cascos que te protege." },
-          { q: "¿Qué es el bloqueo y etiquetado (lockout/tagout)?", options: ["Cerrar la caja de herramientas en la noche", "Una votación del sindicato", "Mantener una máquina o la electricidad apagada y con candado mientras alguien trabaja en ella", "Una forma de marcar la salida"], answer: 2, why: "Impide que una máquina arranque mientras alguien trabaja en ella." },
-          { q: "¿Qué le puede dar el Programa Federal de Fianzas a un empleador que contrata a alguien con antecedentes?", options: ["Una fianza gratis durante los primeros seis meses", "Un camión gratis", "Una licencia para el trabajador", "Nada"], answer: 0, why: "La fianza es gratis para el trabajador y para el empleador y cubre los primeros seis meses." },
-          { q: "Tienes antecedentes y quieres una licencia de electricista. ¿Qué debes hacer antes de pagar la capacitación?", options: ["Ocultar los antecedentes", "Rendirte", "Pagar primero y preguntar después", "Preguntar a la junta estatal de licencias cómo revisa los antecedentes"], answer: 3, why: "Las juntas muchas veces revisan caso por caso; preguntar primero protege tu tiempo y tu dinero." },
-          { q: "¿Dónde puedes buscar programas de aprendiz por carrera y lugar?", options: ["Solo en un grupo de redes sociales", "En el Apprenticeship Job Finder de apprenticeship.gov", "En el sitio web del IRS", "En un anuncio de televisión"], answer: 1, why: "Es la herramienta oficial de búsqueda del Departamento de Trabajo." }
+          { objective: "O4", q: "¿Qué significa PPE (en español, EPP)?", options: ["Programa Pagado para Electricistas", "Equipo de protección personal", "Prueba Pública de Plomería", "Plan de Planta Eléctrica"], answer: 1, why: "El EPP es equipo como lentes, guantes y cascos que te protege." },
+          { objective: "O4", q: "¿Qué es el bloqueo y etiquetado (lockout/tagout)?", options: ["Cerrar la caja de herramientas en la noche", "Una votación del sindicato", "Mantener una máquina o la electricidad apagada y con candado mientras alguien trabaja en ella", "Una forma de marcar la salida"], answer: 2, why: "Impide que una máquina arranque mientras alguien trabaja en ella." },
+          { objective: "O5", q: "¿Qué le puede dar el Programa Federal de Fianzas a un empleador que contrata a alguien con antecedentes?", options: ["Una fianza gratis durante los primeros seis meses", "Un camión gratis", "Una licencia para el trabajador", "Nada"], answer: 0, why: "La fianza es gratis para el trabajador y para el empleador y cubre los primeros seis meses." },
+          { objective: "O5", q: "Tienes antecedentes y quieres una licencia de electricista. ¿Qué debes hacer antes de pagar la capacitación?", options: ["Ocultar los antecedentes", "Rendirte", "Pagar primero y preguntar después", "Preguntar a la junta estatal de licencias cómo revisa los antecedentes"], answer: 3, why: "Las juntas muchas veces revisan caso por caso; preguntar primero protege tu tiempo y tu dinero." },
+          { objective: "O6", q: "¿Dónde puedes buscar programas de aprendiz por carrera y lugar?", options: ["Solo en un grupo de redes sociales", "En el Apprenticeship Job Finder de apprenticeship.gov", "En el sitio web del IRS", "En un anuncio de televisión"], answer: 1, why: "Es la herramienta oficial de búsqueda del Departamento de Trabajo." }
         ]
       }
     }
@@ -195,26 +248,112 @@ module.exports = {
   quiz: {
     title: "Examen final: Empezar una carrera en los oficios calificados",
     questions: [
-      { q: "¿Qué oficio une metal usando calor?", options: ["Plomero", "Soldador", "Carpintero", "Técnico de HVAC"], answer: 1, why: "Los soldadores unen metal con calor." },
-      { q: "¿Qué te permite hacer una CDL?", options: ["Instalar cableado", "Arreglar tuberías", "Manejar camiones grandes y autobuses", "Soldar acero"], answer: 2, why: "Se necesita una licencia de conducir comercial para camiones grandes y autobuses." },
-      { q: "Odias las alturas y quieres estar en casa cada noche. ¿Qué probablemente NO va contigo?", options: ["Manejar camiones de larga distancia e instalar paneles solares en techos", "Reparar plomería en interiores", "Soldar en un taller", "Carpintería de gabinetes"], answer: 0, why: "Manejar largas distancias te tiene fuera varios días, y el trabajo en techos es en lo alto." },
-      { q: "¿Qué experiencia puede contar para una carrera en los oficios?", options: ["Solo trabajos civiles pagados", "Nada antes de los 25 años", "Solo clases universitarias", "La mecánica militar, el trabajo en equipo en el deporte y los programas de capacitación hechos en prisión"], answer: 3, why: "Las habilidades prácticas y la disciplina te sirven vengan de donde vengan." },
-      { q: "¿Qué sitio es la fuente oficial y gratis de sueldos y perspectivas de los oficios?", options: ["bls.gov/ooh", "Un anuncio de trabajo", "Un comentario en un video", "Una plática con un amigo"], answer: 0, why: "La Oficina de Estadísticas Laborales publica el Occupational Outlook Handbook." },
-      { q: "En un perfil del manual, ¿qué pestaña muestra la capacitación que necesitas?", options: ["Pay", "Job Outlook", "How to Become One", "Similar Occupations"], answer: 2, why: "How to Become One (cómo llegar a serlo) describe los estudios, la capacitación y las licencias." },
-      { q: "Un asistente de IA te da una cifra de sueldo para soldadores. ¿Qué debes hacer?", options: ["Creerle", "Publicarla en internet", "Usarla tal cual en tu plan", "Revisar la cifra en bls.gov/ooh"], answer: 3, why: "Toma las cifras de la página oficial; la IA puede equivocarse o estar desactualizada." },
-      { q: "Según el manual, la mayoría de los electricistas aprende el oficio con:", options: ["Una clase de fin de semana", "Un programa de aprendiz de 4 o 5 años", "Solo videos en línea", "Un título universitario de cuatro años"], answer: 1, why: "El perfil de la BLS dice que la mayoría aprende en un programa de aprendiz de 4 o 5 años." },
-      { q: "¿Cómo suelen recibir pago los aprendices?", options: ["Ellos pagan por trabajar", "Nunca", "Con un sueldo que sube a medida que crecen sus habilidades", "Solo cuando terminan"], answer: 2, why: "Los aprendices ganan mientras aprenden, con aumentos de sueldo." },
-      { q: "¿Qué es un programa de preaprendiz?", options: ["Un programa corto que te ayuda a entrar a un programa de aprendiz", "Una licencia", "Un formulario de impuestos", "Una cuota del sindicato"], answer: 0, why: "Te prepara con lo básico, como matemáticas, herramientas y seguridad." },
-      { q: "Un chofer de camión nuevo quiere una CDL Clase A. Antes de los exámenes debe:", options: ["Comprar un camión", "Terminar la capacitación inicial para conductores con un proveedor registrado", "Sacar una tarjeta EPA 608", "Presentar un examen de soldadura"], answer: 1, why: "Las reglas federales exigen capacitarse con un proveedor del Training Provider Registry." },
-      { q: "¿Quiénes pueden muchas veces usar los beneficios del GI Bill para programas de aprendiz?", options: ["Solo las tropas en servicio activo", "Nadie", "Solo las personas mayores de 65 años", "Muchos veteranos"], answer: 3, why: "El VA dice que los beneficios del GI Bill pueden pagar muchos programas de aprendiz y de capacitación en el trabajo." },
-      { q: "¿Qué es EPP?", options: ["Una cinta métrica", "Los lentes de seguridad", "Un recibo de pago", "Un currículum"], answer: 1, why: "Los lentes de seguridad protegen tus ojos; son equipo de protección personal." },
-      { q: "La protección de una esmeriladora te estorba. Debes:", options: ["Dejar la protección puesta y pedir ayuda si el trabajo necesita otra herramienta", "Quitar la protección", "Usar la mano para sostener el disco", "Trabajar más rápido"], answer: 0, why: "Quitar las protecciones causa lesiones graves." },
-      { q: "¿Qué es OSHA 10?", options: ["Una licencia para trabajar como electricista", "Un permiso especial de la CDL", "Un curso básico de seguridad de 10 horas con una tarjeta al terminarlo", "Un crédito de impuestos"], answer: 2, why: "Es una capacitación de seguridad, no una licencia." },
-      { q: "¿Quién llena el Formulario 8850 del IRS (Form 8850) para el Crédito Tributario por Oportunidad de Trabajo, y cuándo?", options: ["Solo el trabajador, después de un año", "El estado, al final del año", "Nadie; es automático", "El empleador y quien solicita, a más tardar el día de la oferta de trabajo"], answer: 3, why: "El IRS dice que el formulario se llena a más tardar el día de la oferta de trabajo." },
-      { q: "Muchas juntas estatales de licencias revisan los antecedentes:", options: ["Nunca", "Caso por caso", "Solo para plomeros", "Solo en línea"], answer: 1, why: "Pregunta a la junta cómo revisa los antecedentes antes de pagar una capacitación." },
-      { q: "¿Qué lugares pueden ayudarte a encontrar un programa de oficios?", options: ["Solo anuncios privados", "Solo una lotería", "Los American Job Centers, los colegios comunitarios, los centros de capacitación sindical y los programas de reinserción", "Ninguno; debes esperar a que te llamen"], answer: 2, why: "Son lugares comunes, gratis o de bajo costo, para empezar." },
-      { q: "Algunos programas de aprendiz solo reciben solicitudes en ciertas épocas. Entonces debes:", options: ["Anotar las fechas de solicitud de cada programa", "Solicitar cuando te acuerdes", "Descartar los programas con fechas", "Solicitar solo en verano"], answer: 0, why: "Conocer las fechas evita que se te pase el plazo." },
-      { q: "¿Qué matemáticas vale más la pena practicar antes de un examen de entrada a un oficio?", options: ["Cálculo", "Fracciones, medidas y álgebra sencilla", "Teoría estadística", "Nunca se usan matemáticas"], answer: 1, why: "Los oficios usan fracciones, medidas y álgebra básica todos los días." }
+      { objective: "O1", q: "¿Qué oficio une metal usando calor?", options: ["Plomero", "Soldador", "Carpintero", "Técnico de HVAC"], answer: 1, why: "Los soldadores unen metal con calor." },
+      { objective: "O1", q: "¿Qué te permite hacer una CDL?", options: ["Instalar cableado", "Arreglar tuberías", "Manejar camiones grandes y autobuses", "Soldar acero"], answer: 2, why: "Se necesita una licencia de conducir comercial para camiones grandes y autobuses." },
+      { objective: "O1", q: "Odias las alturas y quieres estar en casa cada noche. ¿Qué probablemente NO va contigo?", options: ["Manejar camiones de larga distancia e instalar paneles solares en techos", "Reparar plomería en interiores", "Soldar en un taller", "Carpintería de gabinetes"], answer: 0, why: "Manejar largas distancias te tiene fuera varios días, y el trabajo en techos es en lo alto." },
+      { objective: "O1", q: "¿Qué experiencia puede contar para una carrera en los oficios?", options: ["Solo trabajos civiles pagados", "Nada antes de los 25 años", "Solo clases universitarias", "La mecánica militar, el trabajo en equipo en el deporte y los programas de capacitación hechos en prisión"], answer: 3, why: "Las habilidades prácticas y la disciplina te sirven vengan de donde vengan." },
+      { objective: "O2", q: "¿Qué sitio es la fuente oficial y gratis de sueldos y perspectivas de los oficios?", options: ["bls.gov/ooh", "Un anuncio de trabajo", "Un comentario en un video", "Una plática con un amigo"], answer: 0, why: "La Oficina de Estadísticas Laborales publica el Occupational Outlook Handbook." },
+      { objective: "O2", q: "En un perfil del manual, ¿qué pestaña muestra la capacitación que necesitas?", options: ["Pay", "Job Outlook", "How to Become One", "Similar Occupations"], answer: 2, why: "How to Become One (cómo llegar a serlo) describe los estudios, la capacitación y las licencias." },
+      { objective: "O2", q: "Un asistente de IA te da una cifra de sueldo para soldadores. ¿Qué debes hacer?", options: ["Creerle", "Publicarla en internet", "Usarla tal cual en tu plan", "Revisar la cifra en bls.gov/ooh"], answer: 3, why: "Toma las cifras de la página oficial; la IA puede equivocarse o estar desactualizada." },
+      { objective: "O3", q: "Según el manual, la mayoría de los electricistas aprende el oficio con:", options: ["Una clase de fin de semana", "Un programa de aprendiz de 4 o 5 años", "Solo videos en línea", "Un título universitario de cuatro años"], answer: 1, why: "El perfil de la BLS dice que la mayoría aprende en un programa de aprendiz de 4 o 5 años." },
+      { objective: "O3", q: "¿Cómo suelen recibir pago los aprendices?", options: ["Ellos pagan por trabajar", "Nunca", "Con un sueldo que sube a medida que crecen sus habilidades", "Solo cuando terminan"], answer: 2, why: "Los aprendices ganan mientras aprenden, con aumentos de sueldo." },
+      { objective: "O3", q: "¿Qué es un programa de preaprendiz?", options: ["Un programa corto que te ayuda a entrar a un programa de aprendiz", "Una licencia", "Un formulario de impuestos", "Una cuota del sindicato"], answer: 0, why: "Te prepara con lo básico, como matemáticas, herramientas y seguridad." },
+      { objective: "O3", q: "Un chofer de camión nuevo quiere una CDL Clase A. Antes de los exámenes debe:", options: ["Comprar un camión", "Terminar la capacitación inicial para conductores con un proveedor registrado", "Sacar una tarjeta EPA 608", "Presentar un examen de soldadura"], answer: 1, why: "Las reglas federales exigen capacitarse con un proveedor del Training Provider Registry." },
+      { objective: "O3", q: "¿Quiénes pueden muchas veces usar los beneficios del GI Bill para programas de aprendiz?", options: ["Solo las tropas en servicio activo", "Nadie", "Solo las personas mayores de 65 años", "Muchos veteranos"], answer: 3, why: "El VA dice que los beneficios del GI Bill pueden pagar muchos programas de aprendiz y de capacitación en el trabajo." },
+      { objective: "O4", q: "¿Qué es EPP?", options: ["Una cinta métrica", "Los lentes de seguridad", "Un recibo de pago", "Un currículum"], answer: 1, why: "Los lentes de seguridad protegen tus ojos; son equipo de protección personal." },
+      { objective: "O4", q: "La protección de una esmeriladora te estorba. Debes:", options: ["Dejar la protección puesta y pedir ayuda si el trabajo necesita otra herramienta", "Quitar la protección", "Usar la mano para sostener el disco", "Trabajar más rápido"], answer: 0, why: "Quitar las protecciones causa lesiones graves." },
+      { objective: "O4", q: "¿Qué es OSHA 10?", options: ["Una licencia para trabajar como electricista", "Un permiso especial de la CDL", "Un curso básico de seguridad de 10 horas con una tarjeta al terminarlo", "Un crédito de impuestos"], answer: 2, why: "Es una capacitación de seguridad, no una licencia." },
+      { objective: "O5", q: "¿Quién llena el Formulario 8850 del IRS (Form 8850) para el Crédito Tributario por Oportunidad de Trabajo, y cuándo?", options: ["Solo el trabajador, después de un año", "El estado, al final del año", "Nadie; es automático", "El empleador y quien solicita, a más tardar el día de la oferta de trabajo"], answer: 3, why: "El IRS dice que el formulario se llena a más tardar el día de la oferta de trabajo." },
+      { objective: "O5", q: "Muchas juntas estatales de licencias revisan los antecedentes:", options: ["Nunca", "Caso por caso", "Solo para plomeros", "Solo en línea"], answer: 1, why: "Pregunta a la junta cómo revisa los antecedentes antes de pagar una capacitación." },
+      { objective: "O6", q: "¿Qué lugares pueden ayudarte a encontrar un programa de oficios?", options: ["Solo anuncios privados", "Solo una lotería", "Los American Job Centers, los colegios comunitarios, los centros de capacitación sindical y los programas de reinserción", "Ninguno; debes esperar a que te llamen"], answer: 2, why: "Son lugares comunes, gratis o de bajo costo, para empezar." },
+      { objective: "O6", q: "Algunos programas de aprendiz solo reciben solicitudes en ciertas épocas. Entonces debes:", options: ["Anotar las fechas de solicitud de cada programa", "Solicitar cuando te acuerdes", "Descartar los programas con fechas", "Solicitar solo en verano"], answer: 0, why: "Conocer las fechas evita que se te pase el plazo." },
+      { objective: "O6", q: "¿Qué matemáticas vale más la pena practicar antes de un examen de entrada a un oficio?", options: ["Cálculo", "Fracciones, medidas y álgebra sencilla", "Teoría estadística", "Nunca se usan matemáticas"], answer: 1, why: "Los oficios usan fracciones, medidas y álgebra básica todos los días." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      2,
+      4,
+      6,
+      8,
+      9,
+      12,
+      13,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Oficio y encaje",
+        objective: "O1",
+        notYet: "No hay un oficio claro, o no sabe cómo es el trabajo.",
+        meets: "Un oficio con una descripción corta del trabajo y por qué va con la persona.",
+        exceeds: "Lo compara con un segundo oficio y explica la elección."
+      },
+      {
+        name: "Sueldo y perspectivas",
+        objective: "O2",
+        notYet: "Falta el sueldo, viene de una fuente no oficial o no tiene año.",
+        meets: "El sueldo mediano con su año y las perspectivas de empleo de bls.gov/ooh.",
+        exceeds: "Además anota la capacitación habitual según el manual."
+      },
+      {
+        name: "Licencia y programas",
+        objective: "O3",
+        notYet: "No revisó la licencia, o tiene menos de dos programas.",
+        meets: "La licencia o certificación de la página oficial del estado y dos programas cerca.",
+        exceeds: "Incluye las fechas de solicitud y los requisitos de cada programa."
+      },
+      {
+        name: "Equipo de seguridad y herramientas",
+        objective: "O4",
+        notYet: "Falta el EPP o las herramientas.",
+        meets: "Anota el EPP y las herramientas básicas del oficio.",
+        exceeds: "Los comparó con la lista oficial de herramientas de un programa."
+      },
+      {
+        name: "Recursos de segunda oportunidad",
+        objective: "O5",
+        notYet: "Faltan recursos donde sí aplican.",
+        meets: "Anota los recursos de segunda oportunidad que aplican, o indica que no aplica ninguno.",
+        exceeds: "Incluye preguntas para la junta de licencias y qué decirle a un empleador."
+      },
+      {
+        name: "Primeros tres pasos",
+        objective: "O6",
+        notYet: "Los pasos son vagos o no tienen fechas.",
+        meets: "Tres pasos claros con fechas.",
+        exceeds: "El primer paso ya está hecho."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que presentan su solicitud a un programa de preaprendiz, de aprendiz o de oficios en 60 días (encuesta de seguimiento)",
+      "Participantes que empiezan un programa de oficios o un empleo en un oficio en 6 meses",
+      "Participantes que contactan a una junta estatal de licencias, un American Job Center o un centro de capacitación sindical en 30 días",
+      "Participantes que empiezan otro curso de oficios de Koach Learn en 30 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono o una computadora con internet",
+      "Sitios oficiales: bls.gov/ooh, apprenticeship.gov y la junta de licencias de tu estado",
+      "Papel y lápiz o un documento para el Plan para empezar en un oficio",
+      "Unos 60 minutos para las lecciones y las comprobaciones, más tiempo para investigar"
+    ],
+    facilitatorNotes: [
+      "Invita a un centro local de capacitación sindical, a un colegio comunitario o a un programa de preaprendiz a hablar con el grupo.",
+      "Ayuda a usar bls.gov/ooh y apprenticeship.gov en vivo en clase; los sueldos y los programas cambian.",
+      "Con quienes tienen antecedentes, insiste en consultar con la junta estatal de licencias antes de pagar cualquier capacitación.",
+      "Ayuda a los veteranos a revisar los beneficios del GI Bill para programas de aprendiz en fuentes oficiales del VA.",
+      "Califica el Plan para empezar en un oficio con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

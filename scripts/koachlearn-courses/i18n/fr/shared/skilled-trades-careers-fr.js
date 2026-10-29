@@ -16,11 +16,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes. Lisez la leçon, regardez les diapositives, puis faites la tâche \"Essayez maintenant\". Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin. Les règles, les salaires et les licences changent selon l'État américain et avec le temps, donc chaque leçon vous montre l'endroit officiel où vérifier."
   ],
   finalTask: "Faites un \"Plan de départ dans un métier\" d'une page pour un métier : en quoi consiste le travail, son salaire médian et ses perspectives d'emploi selon bls.gov/ooh, la licence ou la certification exigée dans votre État, deux programmes d'apprentissage ou de pré-apprentissage près de chez vous trouvés sur apprenticeship.gov ou dans un centre pour l'emploi local, l'équipement de sécurité et les outils de base dont vous aurez besoin, les ressources de seconde chance qui vous concernent, et vos trois premières étapes avec des dates.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des jeunes qui choisissent une voie, des anciens combattants qui passent au travail civil, des personnes qui sortent de prison et toute personne prête à travailler de ses mains dans un métier comme électricien, plombier, technicien en chauffage et climatisation, soudeur, installateur solaire, charpentier ou chauffeur routier.",
+    startingPoint: "Ils s'intéressent au travail manuel et ont parfois une expérience proche grâce à des emplois, l'armée, le sport ou des programmes suivis en détention. La plupart ne connaissent pas le vrai salaire des métiers, le fonctionnement de l'apprentissage et des licences, ni comment trouver un programme près de chez eux.",
+    gap: "Les métiers techniques offrent une formation payée et de bonnes carrières sans diplôme universitaire de quatre ans, mais beaucoup passent à côté ou dépensent de l'argent dans la mauvaise formation. Les apprenants doivent choisir un métier, vérifier son salaire et son parcours sur les sites officiels et prévoir comment entrer dans un programme, y compris avec les options de seconde chance s'ils ont un casier.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes",
+      "Les salaires, les licences et les règles changent selon l'État et dans le temps ; les apprenants vérifient les sites officiels (bls.gov/ooh, apprenticeship.gov, conseils des licences des États)",
+      "Appareils : un téléphone ou un ordinateur de bibliothèque avec Internet",
+      "Les apprenants qui ont un casier se renseignent auprès du conseil des licences de leur État avant de payer une formation",
+      "Temps : des leçons d'environ cinq minutes plus le temps de recherche"
+    ],
+    prerequisites: "Aucun."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir de sept métiers courants et de vos propres goûts et limites", action: "décrire ce que fait chaque métier et en choisir deux qui vous conviennent", standard: "avec une raison pour chaque choix" },
+    { id: "O2", condition: "Avec l'Occupational Outlook Handbook sur bls.gov/ooh", action: "chercher le salaire médian d'un métier, sa formation habituelle, ses exigences de licence et ses perspectives d'emploi", standard: "en notant l'année du chiffre de salaire" },
+    { id: "O3", condition: "Pour le métier que vous préférez", action: "expliquer comment fonctionnent son apprentissage, son pré-apprentissage et sa licence ou certification", standard: "en trouvant la page officielle du conseil des licences de l'État" },
+    { id: "O4", condition: "Pour le métier que vous préférez", action: "lister l'équipement de sécurité, les habitudes de sécurité et les outils de base dont le travail a besoin", standard: "en vérifiant avec la liste d'outils officielle d'un programme" },
+    { id: "O5", condition: "Si vous ou une personne que vous aidez avez un casier", action: "trouver des programmes de seconde chance et préparer des questions pour le conseil des licences", standard: "en nommant le Federal Bonding Program et le Work Opportunity Tax Credit" },
+    { id: "O6", condition: "Avec apprenticeship.gov ou un centre d'emploi local", action: "trouver deux programmes près de chez vous et écrire vos trois premières étapes pour postuler", standard: "avec une date pour chaque étape et les dates de candidature de chaque programme" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Choisir un métier",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Ce que sont les métiers techniques",
           minutes: 5,
           goal: "Décrire sept métiers courants et en choisir deux qui vous conviennent.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "Vos compétences se transfèrent", bullets: ["Mécanique et logistique militaires", "Discipline et esprit d'équipe du sport", "Programmes de travail et de formation en détention"] }
           ],
           tryIt: "Répondez par écrit aux questions \"Qu'est-ce qui vous convient ?\". Puis choisissez les deux métiers qui correspondent le mieux à vos réponses et écrivez une phrase pour chacun pour dire pourquoi.",
-          youCanNow: "décrire des métiers techniques courants et en choisir deux qui correspondent à votre façon de travailler."
+          youCanNow: "décrire des métiers techniques courants et en choisir deux qui correspondent à votre façon de travailler.",
+          quickCheck: [
+            { objective: "O1", q: "Sur quoi travaille surtout un électricien ?", options: ["Le câblage, l'alimentation électrique et l'éclairage", "Les conduites d'eau et les évacuations", "Les appareils de chauffage et de climatisation", "L'assemblage du métal par la chaleur"], answer: 0, why: "Les électriciens installent et réparent le câblage, l'alimentation et l'éclairage." },
+            { objective: "O1", q: "Vous aimez résoudre des problèmes, les espaces étroits ne vous gênent pas et vous voulez travailler près de chez vous. Comment choisissez-vous ?", options: ["Prendre le métier qu'un ami a choisi", "Prendre celui qui a le nom le plus sympa", "Comparer les métiers à vos réponses et en choisir deux qui vous conviennent", "Prendre le transport routier longue distance parce qu'il paie"], answer: 2, why: "Comparer les métiers à vos goûts et à vos limites donne le meilleur choix." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Vérifier le salaire et la formation sur les sites officiels",
           minutes: 5,
           goal: "Chercher le salaire, la formation et les perspectives d'un métier dans l'Occupational Outlook Handbook.",
@@ -63,9 +92,14 @@ module.exports = {
             { name: "Occupational Outlook Handbook : Électriciens", url: "https://www.bls.gov/ooh/construction-and-extraction/electricians.htm" }
           ],
           tryIt: "Cherchez vos deux métiers de la leçon 1 sur bls.gov/ooh. Pour chacun, notez le salaire médian et son année, la formation habituelle, si une licence est nécessaire, et les perspectives d'emploi.",
-          youCanNow: "trouver le vrai salaire médian, le parcours de formation et les perspectives d'un métier dans le guide officiel."
+          youCanNow: "trouver le vrai salaire médian, le parcours de formation et les perspectives d'un métier dans le guide officiel.",
+          quickCheck: [
+            { objective: "O2", q: "Que vous disent les perspectives d'emploi ?", options: ["La couleur de l'uniforme", "La vitesse à laquelle les emplois du métier devraient augmenter", "Le salaire d'un seul travailleur", "L'adresse du centre de formation"], answer: 1, why: "Les perspectives montrent si le nombre d'emplois devrait augmenter ou baisser." },
+            { objective: "O2", q: "Une vidéo dit que tous les plombiers gagnent énormément. Que faites-vous ?", options: ["La croire parce qu'elle est populaire", "Demander dans les commentaires de la vidéo", "Choisir la plomberie tout de suite", "Vérifier le salaire médian et son année sur bls.gov/ooh"], answer: 3, why: "Les données officielles de salaire sur bls.gov/ooh sont l'endroit où vérifier." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Apprentissage, pré-apprentissage et licences",
           minutes: 6,
           goal: "Expliquer comment fonctionnent l'apprentissage, le pré-apprentissage et les licences pour votre métier.",
@@ -90,17 +124,21 @@ module.exports = {
             { name: "VA : Formation en emploi et apprentissages", url: "https://www.va.gov/education/about-gi-bill-benefits/how-to-use-benefits/on-the-job-training-apprenticeships/" }
           ],
           tryIt: "Pour votre métier préféré, notez : s'apprend-il en général par un apprentissage ? Quelle licence ou certification exige-t-il ? Puis cherchez \"[votre État] [métier] license\" et trouvez la page officielle du conseil de l'État (cherchez une adresse qui finit par .gov).",
-          youCanNow: "expliquer comment fonctionnent l'apprentissage, le pré-apprentissage et les licences, et trouver la page des licences de votre État."
+          youCanNow: "expliquer comment fonctionnent l'apprentissage, le pré-apprentissage et les licences, et trouver la page des licences de votre État.",
+          quickCheck: [
+            { objective: "O3", q: "En quoi un apprentissage est-il différent d'un cours ordinaire ?", options: ["Vous payez plus cher", "Vous n'apprenez aucune compétence", "Vous travaillez et touchez un salaire pendant que vous apprenez", "Il ne mène jamais à un diplôme ou une certification"], answer: 2, why: "Les apprentis sont payés pour travailler pendant qu'ils apprennent le métier." },
+            { objective: "O3", q: "Vous voulez savoir quelle licence votre métier exige dans votre État. Que faites-vous ?", options: ["Trouver la page officielle du conseil de l'État, qui finit par .gov", "Demander dans un groupe quelconque sur les réseaux sociaux", "Supposer qu'aucune licence n'est nécessaire", "Acheter le premier cours en ligne que vous voyez"], answer: 0, why: "La page officielle du conseil de l'État donne les vraies règles de licence." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Choisir un métier",
         questions: [
-          { q: "Quel métier travaille sur le chauffage, la climatisation et la réfrigération ?", options: ["Charpentier-menuisier", "Soudeur", "Technicien CVC (HVAC)", "Installateur solaire"], answer: 2, why: "CVC veut dire chauffage, ventilation et climatisation (en anglais : HVAC)." },
-          { q: "Quel est le meilleur endroit pour chercher le vrai salaire d'un métier ?", options: ["Une publicité sur les réseaux sociaux", "bls.gov/ooh", "La supposition d'un ami", "N'importe quelle réponse d'IA"], answer: 1, why: "L'Occupational Outlook Handbook est la source officielle et gratuite." },
-          { q: "Que veut dire \"salaire médian\" ?", options: ["Le salaire le plus élevé du métier", "Le salaire de départ le premier jour", "Le salaire après impôts", "Le milieu : la moitié gagne plus et l'autre moitié gagne moins"], answer: 3, why: "La médiane est la valeur du milieu." },
-          { q: "Qu'est-ce qu'un apprentissage enregistré ?", options: ["Un emploi payé avec une formation qui se termine par un diplôme reconnu", "Un stage non payé", "Un diplôme universitaire de quatre ans", "Un seul cours de sécurité"], answer: 0, why: "Les apprentis gagnent un salaire pendant qu'ils apprennent et obtiennent un diplôme." },
-          { q: "Un technicien CVC va manipuler des fluides frigorigènes. De quoi a-t-il besoin ?", options: ["D'un CDL", "De la certification EPA Section 608", "D'un certificat de soudure", "De rien"], answer: 1, why: "L'EPA exige que les techniciens qui pourraient rejeter des fluides frigorigènes soient certifiés." }
+          { objective: "O1", q: "Quel métier travaille sur le chauffage, la climatisation et la réfrigération ?", options: ["Charpentier-menuisier", "Soudeur", "Technicien CVC (HVAC)", "Installateur solaire"], answer: 2, why: "CVC veut dire chauffage, ventilation et climatisation (en anglais : HVAC)." },
+          { objective: "O2", q: "Quel est le meilleur endroit pour chercher le vrai salaire d'un métier ?", options: ["Une publicité sur les réseaux sociaux", "bls.gov/ooh", "La supposition d'un ami", "N'importe quelle réponse d'IA"], answer: 1, why: "L'Occupational Outlook Handbook est la source officielle et gratuite." },
+          { objective: "O2", q: "Que veut dire \"salaire médian\" ?", options: ["Le salaire le plus élevé du métier", "Le salaire de départ le premier jour", "Le salaire après impôts", "Le milieu : la moitié gagne plus et l'autre moitié gagne moins"], answer: 3, why: "La médiane est la valeur du milieu." },
+          { objective: "O3", q: "Qu'est-ce qu'un apprentissage enregistré ?", options: ["Un emploi payé avec une formation qui se termine par un diplôme reconnu", "Un stage non payé", "Un diplôme universitaire de quatre ans", "Un seul cours de sécurité"], answer: 0, why: "Les apprentis gagnent un salaire pendant qu'ils apprennent et obtiennent un diplôme." },
+          { objective: "O3", q: "Un technicien CVC va manipuler des fluides frigorigènes. De quoi a-t-il besoin ?", options: ["D'un CDL", "De la certification EPA Section 608", "D'un certificat de soudure", "De rien"], answer: 1, why: "L'EPA exige que les techniciens qui pourraient rejeter des fluides frigorigènes soient certifiés." }
         ]
       }
     },
@@ -108,6 +146,7 @@ module.exports = {
       name: "Chapitre 2 : Entrer dans le métier et rester en sécurité",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Outils et sécurité au travail",
           minutes: 5,
           goal: "Citer l'équipement de sécurité de base et les habitudes que chaque métier attend.",
@@ -126,9 +165,14 @@ module.exports = {
             { title: "Votre kit de départ", bullets: ["L'employeur fournit l'équipement de sécurité obligatoire", "Demandez quels outils à main vous devez apporter"] }
           ],
           tryIt: "Pour votre métier préféré, listez les EPI que vous porteriez et cinq outils à main dont vous auriez sans doute besoin. Puis demandez à un programme près de chez vous, ou regardez son site web, sa liste officielle d'outils.",
-          youCanNow: "citer l'équipement de sécurité et les habitudes attendus dans votre métier et préparer une liste d'outils de départ."
+          youCanNow: "citer l'équipement de sécurité et les habitudes attendus dans votre métier et préparer une liste d'outils de départ.",
+          quickCheck: [
+            { objective: "O4", q: "Laquelle est une habitude de sécurité de base dans les métiers techniques ?", options: ["Retirer les protecteurs pour aller plus vite", "Porter les bons EPI pour la tâche", "Sauter la formation à la sécurité", "Travailler sous tension pour gagner du temps"], answer: 1, why: "Porter les bons EPI vous protège des dangers courants." },
+            { objective: "O4", q: "Votre programme envoie une liste d'outils de départ, mais un magasin vous propose une mallette chère. Que faites-vous ?", options: ["Acheter la mallette chère", "N'acheter aucun outil", "Emprunter des outils sans demander", "Suivre la liste d'outils officielle du programme"], answer: 3, why: "La liste du programme vous dit ce dont vous avez vraiment besoin." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Options de seconde chance si vous avez un casier",
           minutes: 5,
           goal: "Trouver des programmes et des aides de seconde chance et prévoir comment gérer un casier dans les métiers techniques.",
@@ -152,9 +196,14 @@ module.exports = {
             { name: "Ministère du Travail des États-Unis : Work Opportunity Tax Credit", url: "https://www.dol.gov/agencies/eta/wotc" }
           ],
           tryIt: "Écrivez trois questions à poser au conseil des licences de votre État pour votre métier sur la façon dont il examine les casiers. Puis écrivez deux phrases que vous pourriez dire à un employeur sur le Federal Bonding Program et le WOTC. (Si vous n'avez pas de casier, faites-le pour un ami ou pour vous entraîner.)",
-          youCanNow: "citer des outils de seconde chance pour les métiers techniques et vérifier comment un conseil des licences examine les casiers avant de payer une formation."
+          youCanNow: "citer des outils de seconde chance pour les métiers techniques et vérifier comment un conseil des licences examine les casiers avant de payer une formation.",
+          quickCheck: [
+            { objective: "O5", q: "Qu'est-ce que le Work Opportunity Tax Credit ?", options: ["Un prêt pour les travailleurs", "Un crédit d'impôt que les employeurs peuvent obtenir en embauchant des personnes de certains groupes", "Une mallette d'outils gratuite", "Une licence de métier"], answer: 1, why: "Le WOTC donne un crédit d'impôt aux employeurs qui embauchent dans certains groupes, dont certaines personnes ayant un casier." },
+            { objective: "O5", q: "Vous avez un casier et voulez une licence de métier. Que faites-vous avant de payer une formation ?", options: ["Demander au conseil des licences de l'État comment il examine les casiers", "Cacher le casier sur la demande", "Payer la formation en espérant", "Abandonner les métiers techniques"], answer: 0, why: "Beaucoup de conseils examinent les casiers au cas par cas, donc renseignez-vous d'abord." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Trouver un programme et y postuler",
           minutes: 5,
           goal: "Trouver deux programmes près de chez vous et faire un plan pour postuler.",
@@ -177,17 +226,21 @@ module.exports = {
             { name: "CareerOneStop : Trouver un American Job Center", url: "https://www.careeronestop.org/LocalHelp/AmericanJobCenters/find-american-job-centers.aspx" }
           ],
           tryIt: "Tâche finale : faites votre Plan de départ dans un métier d'une page. Indiquez le métier, son salaire médian et ses perspectives selon bls.gov/ooh, la licence ou la certification, deux programmes près de chez vous, votre équipement de sécurité et vos outils de départ, les ressources de seconde chance, et vos trois premières étapes avec des dates.",
-          youCanNow: "trouver des programmes d'apprentissage et de pré-apprentissage près de chez vous et faire un plan daté pour postuler."
+          youCanNow: "trouver des programmes d'apprentissage et de pré-apprentissage près de chez vous et faire un plan daté pour postuler.",
+          quickCheck: [
+            { objective: "O6", q: "Pourquoi noter les dates de candidature de chaque programme ?", options: ["Certains programmes ne prennent les candidatures qu'à certaines périodes", "Les programmes ne ferment jamais", "Les dates n'ont pas d'importance", "Pour les montrer à vos amis"], answer: 0, why: "Rater une période de candidature peut obliger à attendre des mois." },
+            { objective: "O6", q: "Un programme près de chez vous a un test d'entrée avec des mesures et des fractions. Que faites-vous ?", options: ["Ne pas passer le test", "Espérer qu'il soit facile", "Vous entraîner aux fractions, aux mesures et à l'algèbre simple avant le test", "Postuler dans un autre métier"], answer: 2, why: "S'entraîner aux calculs à l'avance aide à réussir les tests d'entrée." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Entrer dans le métier et rester en sécurité",
         questions: [
-          { q: "Que veut dire le sigle EPI (en anglais PPE) ?", options: ["Programme payé pour électriciens", "Équipement de protection individuelle", "Examen public de plomberie", "Ingénierie de centrale électrique"], answer: 1, why: "Les EPI sont du matériel comme les lunettes, les gants et les casques qui vous protège." },
-          { q: "Qu'est-ce que la consignation (lockout/tagout) ?", options: ["Fermer la boîte à outils le soir", "Un vote syndical", "Garder une machine ou le courant coupés et verrouillés pendant que quelqu'un travaille dessus", "Une façon de pointer à la sortie"], answer: 2, why: "Elle empêche une machine de démarrer pendant que quelqu'un travaille dessus." },
-          { q: "Que peut donner le Federal Bonding Program à un employeur qui embauche une personne avec un casier ?", options: ["Une garantie gratuite pour les six premiers mois", "Un camion gratuit", "Une licence pour le travailleur", "Rien"], answer: 0, why: "La garantie est gratuite pour le travailleur et l'employeur et couvre les six premiers mois." },
-          { q: "Vous avez un casier et voulez une licence d'électricien. Que faire avant de payer une formation ?", options: ["Cacher le casier", "Abandonner", "Payer d'abord et demander ensuite", "Demander au conseil des licences de l'État comment il examine les casiers"], answer: 3, why: "Les conseils examinent souvent au cas par cas ; demander d'abord protège votre temps et votre argent." },
-          { q: "Où pouvez-vous chercher des apprentissages par métier et par lieu ?", options: ["Seulement dans un groupe sur les réseaux sociaux", "L'Apprenticeship Job Finder sur apprenticeship.gov", "Le site de l'IRS", "Une publicité à la télé"], answer: 1, why: "C'est l'outil de recherche officiel du ministère du Travail." }
+          { objective: "O4", q: "Que veut dire le sigle EPI (en anglais PPE) ?", options: ["Programme payé pour électriciens", "Équipement de protection individuelle", "Examen public de plomberie", "Ingénierie de centrale électrique"], answer: 1, why: "Les EPI sont du matériel comme les lunettes, les gants et les casques qui vous protège." },
+          { objective: "O4", q: "Qu'est-ce que la consignation (lockout/tagout) ?", options: ["Fermer la boîte à outils le soir", "Un vote syndical", "Garder une machine ou le courant coupés et verrouillés pendant que quelqu'un travaille dessus", "Une façon de pointer à la sortie"], answer: 2, why: "Elle empêche une machine de démarrer pendant que quelqu'un travaille dessus." },
+          { objective: "O5", q: "Que peut donner le Federal Bonding Program à un employeur qui embauche une personne avec un casier ?", options: ["Une garantie gratuite pour les six premiers mois", "Un camion gratuit", "Une licence pour le travailleur", "Rien"], answer: 0, why: "La garantie est gratuite pour le travailleur et l'employeur et couvre les six premiers mois." },
+          { objective: "O5", q: "Vous avez un casier et voulez une licence d'électricien. Que faire avant de payer une formation ?", options: ["Cacher le casier", "Abandonner", "Payer d'abord et demander ensuite", "Demander au conseil des licences de l'État comment il examine les casiers"], answer: 3, why: "Les conseils examinent souvent au cas par cas ; demander d'abord protège votre temps et votre argent." },
+          { objective: "O6", q: "Où pouvez-vous chercher des apprentissages par métier et par lieu ?", options: ["Seulement dans un groupe sur les réseaux sociaux", "L'Apprenticeship Job Finder sur apprenticeship.gov", "Le site de l'IRS", "Une publicité à la télé"], answer: 1, why: "C'est l'outil de recherche officiel du ministère du Travail." }
         ]
       }
     }
@@ -195,26 +248,112 @@ module.exports = {
   quiz: {
     title: "Quiz final : Commencer une carrière dans les métiers techniques",
     questions: [
-      { q: "Quel métier assemble le métal avec la chaleur ?", options: ["Plombier", "Soudeur", "Charpentier-menuisier", "Technicien CVC"], answer: 1, why: "Les soudeurs assemblent le métal avec la chaleur." },
-      { q: "Que vous permet un CDL ?", options: ["Installer du câblage", "Réparer des tuyaux", "Conduire de gros camions et des bus", "Souder de l'acier"], answer: 2, why: "Le permis de conduire commercial est exigé pour les gros camions et les bus." },
-      { q: "Vous détestez la hauteur et voulez rentrer chez vous chaque soir. Qu'est-ce qui vous convient sans doute mal ?", options: ["Le transport routier de longue distance et la pose solaire sur les toits", "La réparation de plomberie à l'intérieur", "La soudure en atelier", "La menuiserie de placards"], answer: 0, why: "La longue distance vous éloigne pendant des jours, et le travail sur les toits se fait en hauteur." },
-      { q: "Quelle expérience peut compter pour une carrière dans un métier technique ?", options: ["Seulement les emplois civils payés", "Rien avant 25 ans", "Seulement les cours universitaires", "La mécanique militaire, l'esprit d'équipe du sport et les formations suivies en détention"], answer: 3, why: "Les compétences pratiques et la discipline se transfèrent depuis beaucoup d'endroits." },
-      { q: "Quel site est la source officielle et gratuite sur le salaire et les perspectives des métiers ?", options: ["bls.gov/ooh", "Une offre d'emploi", "Un commentaire sous une vidéo", "Une discussion avec un ami"], answer: 0, why: "Le Bureau of Labor Statistics publie l'Occupational Outlook Handbook." },
-      { q: "Sur une fiche du guide, quel onglet montre la formation nécessaire ?", options: ["Pay", "Job Outlook", "How to Become One", "Similar Occupations"], answer: 2, why: "How to Become One décrit les études, la formation et les licences." },
-      { q: "Un assistant d'IA vous donne un salaire pour les soudeurs. Que devez-vous faire ?", options: ["Le croire", "Le publier en ligne", "L'utiliser tel quel dans votre plan", "Vérifier le chiffre sur bls.gov/ooh"], answer: 3, why: "Prenez les chiffres sur la page officielle ; l'IA peut se tromper ou être dépassée." },
-      { q: "Selon le guide, la plupart des électriciens apprennent le métier par :", options: ["Un cours de week-end", "Un apprentissage de 4 ou 5 ans", "Seulement des vidéos en ligne", "Un diplôme universitaire de quatre ans"], answer: 1, why: "La fiche du BLS indique que la plupart apprennent en 4 ou 5 ans d'apprentissage." },
-      { q: "Comment les apprentis sont-ils payés en général ?", options: ["Ils paient pour travailler", "Jamais", "Avec un salaire qui augmente avec leurs compétences", "Seulement à la fin"], answer: 2, why: "Les apprentis gagnent un salaire pendant qu'ils apprennent, avec des augmentations." },
-      { q: "Qu'est-ce qu'un pré-apprentissage ?", options: ["Un programme court qui vous aide à entrer en apprentissage", "Une licence", "Un formulaire fiscal", "Une cotisation syndicale"], answer: 0, why: "Il vous prépare avec des bases comme les maths, les outils et la sécurité." },
-      { q: "Un nouveau chauffeur veut un CDL de classe A. Avant les examens, il doit :", options: ["Acheter un camion", "Terminer une formation de conducteur débutant chez un organisme enregistré", "Obtenir une carte EPA 608", "Passer un test de soudure"], answer: 1, why: "Les règles fédérales exigent une formation chez un organisme inscrit au Training Provider Registry." },
-      { q: "Qui peut souvent utiliser les avantages du GI Bill pour un apprentissage ?", options: ["Seulement les militaires en service actif", "Personne", "Seulement les plus de 65 ans", "Beaucoup d'anciens militaires"], answer: 3, why: "Le VA indique que le GI Bill peut payer beaucoup d'apprentissages et de formations en emploi." },
-      { q: "Lequel est un EPI ?", options: ["Un mètre ruban", "Des lunettes de sécurité", "Une fiche de paie", "Un CV"], answer: 1, why: "Les lunettes de sécurité protègent vos yeux ; ce sont des équipements de protection individuelle." },
-      { q: "Le protecteur d'une meuleuse vous gêne. Vous devez :", options: ["Garder le protecteur et demander de l'aide si le travail demande un autre outil", "Enlever le protecteur", "Tenir le disque avec la main", "Travailler plus vite"], answer: 0, why: "Enlever les protecteurs cause des blessures graves." },
-      { q: "Qu'est-ce que l'OSHA 10 ?", options: ["Une licence pour travailler comme électricien", "Une mention du CDL", "Un cours de base de 10 heures sur la sécurité, avec une carte de réussite", "Un crédit d'impôt"], answer: 2, why: "C'est une formation de sécurité, pas une licence." },
-      { q: "Qui remplit le Form 8850 de l'IRS pour le WOTC, et quand ?", options: ["Seulement le travailleur, après un an", "L'État, à la fin de l'année", "Personne ; c'est automatique", "L'employeur et le candidat, au plus tard le jour de l'offre d'emploi"], answer: 3, why: "L'IRS indique que le formulaire se remplit au plus tard le jour de l'offre d'emploi." },
-      { q: "Beaucoup de conseils des licences des États examinent les casiers :", options: ["Jamais", "Au cas par cas", "Seulement pour les plombiers", "Seulement en ligne"], answer: 1, why: "Demandez au conseil comment il examine les casiers avant de payer une formation." },
-      { q: "Quels endroits peuvent vous aider à trouver un programme de métier technique ?", options: ["Seulement les annonces privées", "Seulement une loterie", "Les American Job Centers, les community colleges, les centres de formation syndicaux et les programmes de réinsertion", "Aucun ; il faut attendre qu'on vous appelle"], answer: 2, why: "Ce sont des points de départ courants, gratuits ou peu chers." },
-      { q: "Certains apprentissages ne prennent des candidatures qu'à certains moments. Donc vous devez :", options: ["Noter les dates de candidature de chaque programme", "Postuler quand vous y pensez", "Éviter les programmes qui ont des dates", "Postuler seulement en été"], answer: 0, why: "Connaître les dates vous évite de rater la période." },
-      { q: "Quelles maths faut-il surtout réviser avant un test d'entrée dans un métier technique ?", options: ["Le calcul différentiel", "Les fractions, les mesures et l'algèbre simple", "La théorie des statistiques", "On n'utilise jamais de maths"], answer: 1, why: "Les métiers techniques utilisent chaque jour les fractions, les mesures et l'algèbre de base." }
+      { objective: "O1", q: "Quel métier assemble le métal avec la chaleur ?", options: ["Plombier", "Soudeur", "Charpentier-menuisier", "Technicien CVC"], answer: 1, why: "Les soudeurs assemblent le métal avec la chaleur." },
+      { objective: "O1", q: "Que vous permet un CDL ?", options: ["Installer du câblage", "Réparer des tuyaux", "Conduire de gros camions et des bus", "Souder de l'acier"], answer: 2, why: "Le permis de conduire commercial est exigé pour les gros camions et les bus." },
+      { objective: "O1", q: "Vous détestez la hauteur et voulez rentrer chez vous chaque soir. Qu'est-ce qui vous convient sans doute mal ?", options: ["Le transport routier de longue distance et la pose solaire sur les toits", "La réparation de plomberie à l'intérieur", "La soudure en atelier", "La menuiserie de placards"], answer: 0, why: "La longue distance vous éloigne pendant des jours, et le travail sur les toits se fait en hauteur." },
+      { objective: "O1", q: "Quelle expérience peut compter pour une carrière dans un métier technique ?", options: ["Seulement les emplois civils payés", "Rien avant 25 ans", "Seulement les cours universitaires", "La mécanique militaire, l'esprit d'équipe du sport et les formations suivies en détention"], answer: 3, why: "Les compétences pratiques et la discipline se transfèrent depuis beaucoup d'endroits." },
+      { objective: "O2", q: "Quel site est la source officielle et gratuite sur le salaire et les perspectives des métiers ?", options: ["bls.gov/ooh", "Une offre d'emploi", "Un commentaire sous une vidéo", "Une discussion avec un ami"], answer: 0, why: "Le Bureau of Labor Statistics publie l'Occupational Outlook Handbook." },
+      { objective: "O2", q: "Sur une fiche du guide, quel onglet montre la formation nécessaire ?", options: ["Pay", "Job Outlook", "How to Become One", "Similar Occupations"], answer: 2, why: "How to Become One décrit les études, la formation et les licences." },
+      { objective: "O2", q: "Un assistant d'IA vous donne un salaire pour les soudeurs. Que devez-vous faire ?", options: ["Le croire", "Le publier en ligne", "L'utiliser tel quel dans votre plan", "Vérifier le chiffre sur bls.gov/ooh"], answer: 3, why: "Prenez les chiffres sur la page officielle ; l'IA peut se tromper ou être dépassée." },
+      { objective: "O3", q: "Selon le guide, la plupart des électriciens apprennent le métier par :", options: ["Un cours de week-end", "Un apprentissage de 4 ou 5 ans", "Seulement des vidéos en ligne", "Un diplôme universitaire de quatre ans"], answer: 1, why: "La fiche du BLS indique que la plupart apprennent en 4 ou 5 ans d'apprentissage." },
+      { objective: "O3", q: "Comment les apprentis sont-ils payés en général ?", options: ["Ils paient pour travailler", "Jamais", "Avec un salaire qui augmente avec leurs compétences", "Seulement à la fin"], answer: 2, why: "Les apprentis gagnent un salaire pendant qu'ils apprennent, avec des augmentations." },
+      { objective: "O3", q: "Qu'est-ce qu'un pré-apprentissage ?", options: ["Un programme court qui vous aide à entrer en apprentissage", "Une licence", "Un formulaire fiscal", "Une cotisation syndicale"], answer: 0, why: "Il vous prépare avec des bases comme les maths, les outils et la sécurité." },
+      { objective: "O3", q: "Un nouveau chauffeur veut un CDL de classe A. Avant les examens, il doit :", options: ["Acheter un camion", "Terminer une formation de conducteur débutant chez un organisme enregistré", "Obtenir une carte EPA 608", "Passer un test de soudure"], answer: 1, why: "Les règles fédérales exigent une formation chez un organisme inscrit au Training Provider Registry." },
+      { objective: "O3", q: "Qui peut souvent utiliser les avantages du GI Bill pour un apprentissage ?", options: ["Seulement les militaires en service actif", "Personne", "Seulement les plus de 65 ans", "Beaucoup d'anciens militaires"], answer: 3, why: "Le VA indique que le GI Bill peut payer beaucoup d'apprentissages et de formations en emploi." },
+      { objective: "O4", q: "Lequel est un EPI ?", options: ["Un mètre ruban", "Des lunettes de sécurité", "Une fiche de paie", "Un CV"], answer: 1, why: "Les lunettes de sécurité protègent vos yeux ; ce sont des équipements de protection individuelle." },
+      { objective: "O4", q: "Le protecteur d'une meuleuse vous gêne. Vous devez :", options: ["Garder le protecteur et demander de l'aide si le travail demande un autre outil", "Enlever le protecteur", "Tenir le disque avec la main", "Travailler plus vite"], answer: 0, why: "Enlever les protecteurs cause des blessures graves." },
+      { objective: "O4", q: "Qu'est-ce que l'OSHA 10 ?", options: ["Une licence pour travailler comme électricien", "Une mention du CDL", "Un cours de base de 10 heures sur la sécurité, avec une carte de réussite", "Un crédit d'impôt"], answer: 2, why: "C'est une formation de sécurité, pas une licence." },
+      { objective: "O5", q: "Qui remplit le Form 8850 de l'IRS pour le WOTC, et quand ?", options: ["Seulement le travailleur, après un an", "L'État, à la fin de l'année", "Personne ; c'est automatique", "L'employeur et le candidat, au plus tard le jour de l'offre d'emploi"], answer: 3, why: "L'IRS indique que le formulaire se remplit au plus tard le jour de l'offre d'emploi." },
+      { objective: "O5", q: "Beaucoup de conseils des licences des États examinent les casiers :", options: ["Jamais", "Au cas par cas", "Seulement pour les plombiers", "Seulement en ligne"], answer: 1, why: "Demandez au conseil comment il examine les casiers avant de payer une formation." },
+      { objective: "O6", q: "Quels endroits peuvent vous aider à trouver un programme de métier technique ?", options: ["Seulement les annonces privées", "Seulement une loterie", "Les American Job Centers, les community colleges, les centres de formation syndicaux et les programmes de réinsertion", "Aucun ; il faut attendre qu'on vous appelle"], answer: 2, why: "Ce sont des points de départ courants, gratuits ou peu chers." },
+      { objective: "O6", q: "Certains apprentissages ne prennent des candidatures qu'à certains moments. Donc vous devez :", options: ["Noter les dates de candidature de chaque programme", "Postuler quand vous y pensez", "Éviter les programmes qui ont des dates", "Postuler seulement en été"], answer: 0, why: "Connaître les dates vous évite de rater la période." },
+      { objective: "O6", q: "Quelles maths faut-il surtout réviser avant un test d'entrée dans un métier technique ?", options: ["Le calcul différentiel", "Les fractions, les mesures et l'algèbre simple", "La théorie des statistiques", "On n'utilise jamais de maths"], answer: 1, why: "Les métiers techniques utilisent chaque jour les fractions, les mesures et l'algèbre de base." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      2,
+      4,
+      6,
+      8,
+      9,
+      12,
+      13,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Métier et adéquation",
+        objective: "O1",
+        notYet: "Pas de métier clair, ou aucune idée de ce qu'est le travail.",
+        meets: "Un métier avec une courte description du travail et pourquoi il convient.",
+        exceeds: "Le compare à un deuxième métier et explique le choix."
+      },
+      {
+        name: "Salaire et perspectives",
+        objective: "O2",
+        notYet: "Le salaire manque, vient d'une source non officielle ou n'a pas d'année.",
+        meets: "Le salaire médian avec son année et les perspectives d'emploi d'après bls.gov/ooh.",
+        exceeds: "Indique aussi la formation habituelle d'après le guide."
+      },
+      {
+        name: "Licence et programmes",
+        objective: "O3",
+        notYet: "Licence non vérifiée, ou moins de deux programmes.",
+        meets: "La licence ou la certification d'après la page officielle de l'État et deux programmes près de chez soi.",
+        exceeds: "Comprend les dates de candidature et les conditions de chaque programme."
+      },
+      {
+        name: "Équipement de sécurité et outils",
+        objective: "O4",
+        notYet: "Il manque des EPI ou des outils.",
+        meets: "Liste les EPI et les outils de départ du métier.",
+        exceeds: "Vérifiés avec la liste d'outils officielle d'un programme."
+      },
+      {
+        name: "Ressources de seconde chance",
+        objective: "O5",
+        notYet: "Des ressources manquent alors qu'elles s'appliquent.",
+        meets: "Liste les ressources de seconde chance qui s'appliquent, ou indique qu'aucune ne s'applique.",
+        exceeds: "Comprend des questions pour le conseil des licences et ce qu'il faut dire à un employeur."
+      },
+      {
+        name: "Trois premières étapes",
+        objective: "O6",
+        notYet: "Les étapes sont vagues ou sans date.",
+        meets: "Trois étapes claires avec des dates.",
+        exceeds: "La première étape est déjà faite."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui postulent à un pré-apprentissage, un apprentissage ou un programme de métier dans les 60 jours (questionnaire de suivi)",
+      "Apprenants qui commencent un programme ou un emploi de métier dans les 6 mois",
+      "Apprenants qui contactent un conseil des licences de l'État, un American Job Center ou un centre de formation syndical dans les 30 jours",
+      "Apprenants qui commencent un autre cours Koach Learn sur les métiers dans les 30 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur avec Internet",
+      "Les sites officiels : bls.gov/ooh, apprenticeship.gov et le conseil des licences de votre État",
+      "Du papier et un stylo ou un document pour le « Plan de départ dans un métier »",
+      "Environ 60 minutes pour les leçons et les contrôles, plus le temps de recherche"
+    ],
+    facilitatorNotes: [
+      "Invitez un centre de formation syndical, un community college ou un programme de pré-apprentissage local à venir parler au groupe.",
+      "Aidez les apprenants à utiliser bls.gov/ooh et apprenticeship.gov en direct pendant la séance ; les salaires et les programmes changent.",
+      "Pour les apprenants qui ont un casier, insistez sur la vérification auprès du conseil des licences de l'État avant de payer une formation.",
+      "Aidez les anciens combattants à vérifier les droits du GI Bill pour l'apprentissage auprès des sources officielles du VA.",
+      "Notez le « Plan de départ dans un métier » avec la grille et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

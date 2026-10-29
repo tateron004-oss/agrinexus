@@ -16,11 +16,35 @@ module.exports = {
     "Este curso es para personas que vuelven a casa, trabajadores en programas de capacitación laboral y cualquiera que empieza en un oficio o en un empleo de logística. Cada lección dura unos cinco minutos y tiene una tarea “Pruébalo ahora”. Cada capítulo cierra con una comprobación de conocimientos y el curso cierra con un examen de 20 preguntas. Las reglas de seguridad siempre vienen de tu empleador, del fabricante y de OSHA (la agencia de seguridad laboral de EE. UU.), no de la IA."
   ],
   finalTask: "Para un trabajo real o de práctica en un oficio o en logística, crea con ayuda de la IA un paquete de trabajo: un resumen en lenguaje sencillo de una sección de un manual o de una especificación, un presupuesto u orden de trabajo por escrito, una lista de seguridad del trabajo comparada con una fuente oficial, una entrada del registro de trabajo con notas de fotos de antes y después, y un plan de ruta o de carga. Luego busca un programa de aprendiz o un empleo en un oficio al que podrías postularte.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Personas que vuelven a casa después de la prisión, trabajadores de programas de capacitación laboral y cualquiera que empieza en un oficio calificado (electricidad, plomería, climatización HVAC, carpintería, soldadura, mecánica automotriz) o en un empleo de logística (almacén, montacargas, reparto, transporte en camión).",
+    startingPoint: "Saben usar un teléfono para llamar, enviar mensajes y tomar fotos, y muchos tienen experiencia de trabajo práctico. Pocos han usado un asistente de IA para leer manuales, escribir presupuestos o planificar rutas.",
+    gap: "A quienes trabajan en oficios y logística se les pide leer manuales técnicos, escribir presupuestos y notas de trabajo, seguir reglas de seguridad y planificar rutas. Usar la IA en el teléfono, y comprobarla con fuentes oficiales, ahorra tiempo, da una imagen profesional y ayuda a entrar a programas de aprendiz y a empleos en oficios.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y frases cortas",
+      "Dispositivos: muchas veces solo un teléfono, usado en la obra o en un camión",
+      "Las reglas de seguridad, el torque, el voltaje y los límites de peso vienen del manual, del empleador y de OSHA, nunca de la IA",
+      "Privacidad: nada de papeles ni datos privados de clientes en las fotos ni en las instrucciones para la IA",
+      "Tiempo: lecciones de unos cinco minutos que caben entre turnos"
+    ],
+    prerequisites: "Ninguno. Quienes no conocen las herramientas de IA pueden tomar primero \"Introducción a la IA y a la confianza digital\"."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con una sección de un manual o de una hoja de especificaciones", action: "usar la IA para explicarla con palabras sencillas y comprobar cada número con el manual", standard: "con cada número igual al de la fuente" },
+    { id: "O2", condition: "Para un trabajo real o de práctica", action: "escribir un presupuesto u orden de trabajo con la mano de obra, las piezas, el total, lo que incluye y la fecha de vencimiento", standard: "con las cuentas revisadas a mano y todas las partes necesarias" },
+    { id: "O3", condition: "Para una tarea de trabajo real", action: "hacer con la IA un borrador de lista de seguridad del trabajo y compararlo con el manual o con una fuente oficial de seguridad", standard: "agregando lo que la IA omitió antes de empezar el trabajo" },
+    { id: "O4", condition: "Después de un trabajo", action: "escribir una entrada del registro de trabajo con fecha, lugar, trabajo hecho, materiales, problemas, siguientes pasos y notas de fotos", standard: "con todas las partes y sin información privada del cliente" },
+    { id: "O5", condition: "Con varias paradas o artículos", action: "planificar una ruta y una lista sencilla de carga o de inventario, y luego comprobar la ruta en una app de mapas", standard: "con la carga en el orden inverso de las paradas y los tiempos de manejo comprobados" },
+    { id: "O6", condition: "Usando Apprenticeship.gov o un programa local", action: "encontrar un programa de aprendiz o un empleo en un oficio al que podrías postularte", standard: "y anotar sus requisitos y cómo postularte" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: La IA en el trabajo",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Entender manuales y especificaciones con IA",
           minutes: 5,
           goal: "Usar la IA para explicar con palabras sencillas un manual técnico o una especificación, y luego comprobarlo con la fuente.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Cuando no coinciden", bullets: ["Sigue el manual", "Pregúntale a tu supervisor"] }
           ],
           tryIt: "Busca el manual de algo que tengas (una herramienta, un aparato o un vehículo) en internet o en un cajón. Pide a la IA que explique una sección con palabras sencillas y luego comprueba cada número con el manual.",
-          youCanNow: "usar la IA para entender manuales y especificaciones confiando en los números oficiales."
+          youCanNow: "usar la IA para entender manuales y especificaciones confiando en los números oficiales.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué es una hoja de especificaciones?", options: ["Un folleto de ventas con precios", "Una lista de las medidas y requisitos exactos de un producto", "Un cartel de seguridad para la sala de descanso", "La reseña de un cliente sobre un producto"], answer: 1, why: "Una hoja de especificaciones da las medidas y los requisitos exactos que debes cumplir." },
+            { objective: "O1", q: "La IA explica una sección del manual pero da un voltaje distinto al del manual. ¿Qué harías?", options: ["Usar el voltaje del manual y preguntarle a tu supervisor", "Usar el número de la IA porque es más reciente", "Sacar el promedio de los dos números", "Saltarte ese paso"], answer: 0, why: "Números como el voltaje vienen del manual, no de la IA; si tienes dudas, pregúntale a tu supervisor." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Escribir un presupuesto u orden de trabajo claros",
           minutes: 5,
           goal: "Escribir un presupuesto u orden de trabajo profesional con ayuda de la IA.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Sé honesto", bullets: ["Qué incluye y qué no", "Cambios solo con aprobación del cliente", "Guarda todas las copias"] }
           ],
           tryIt: "Escribe con ayuda de la IA un presupuesto para un trabajo real o de práctica: mano de obra, piezas, total, qué incluye y una fecha de vencimiento. Revisa las cuentas a mano.",
-          youCanNow: "escribir con ayuda de la IA un presupuesto u orden de trabajo claros y honestos."
+          youCanNow: "escribir con ayuda de la IA un presupuesto u orden de trabajo claros y honestos.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué significa \"piezas\" en un presupuesto?", options: ["El tiempo del trabajador", "El impuesto del trabajo", "Los materiales que necesita el trabajo", "El tiempo de traslado"], answer: 2, why: "Las piezas son los materiales; la mano de obra es el tiempo del trabajador." },
+            { objective: "O2", q: "La IA suma tu presupuesto en $310, pero tus cuentas a mano dan $280. ¿Qué harías?", options: ["Enviar $310 porque la IA es mejor para las cuentas", "Enviar $280 sin revisar", "Enviarle los dos números al cliente", "Revisar cada línea y enviar el total correcto"], answer: 3, why: "Revisa siempre las cuentas línea por línea antes de enviar un presupuesto." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Hacer una lista de seguridad del trabajo",
           minutes: 6,
           goal: "Hacer con la IA un borrador de lista de seguridad del trabajo y compararlo con fuentes oficiales de seguridad.",
@@ -76,17 +110,21 @@ module.exports = {
           ],
           sources: [{ name: "Programa de capacitación Outreach de OSHA", url: "https://www.osha.gov/training/outreach" }, { name: "Preguntas frecuentes del programa Outreach de OSHA", url: "https://www.osha.gov/training/outreach/faq" }],
           tryIt: "Pide a la IA una lista de seguridad para una tarea real (como levantar cajas pesadas o cambiar una llanta). Luego busca una página oficial de seguridad o el manual de esa tarea y agrega lo que la IA haya olvidado.",
-          youCanNow: "hacer con la IA un borrador de lista de seguridad del trabajo y compararlo con fuentes oficiales."
+          youCanNow: "hacer con la IA un borrador de lista de seguridad del trabajo y compararlo con fuentes oficiales.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué tres cosas tiene un análisis de seguridad del trabajo?", options: ["Pasos, peligros y controles", "Herramientas, precios y tiempos", "Trabajadores, turnos y descansos", "Clientes, direcciones y números de teléfono"], answer: 0, why: "Un análisis de seguridad del trabajo enumera cada paso, sus peligros y los controles para ellos." },
+            { objective: "O3", q: "Tu lista de seguridad hecha con IA para levantar cajas no menciona guantes, pero la regla del empleador los exige. ¿Qué harías?", options: ["No usar guantes porque la IA no los puso", "Preguntarle otra vez a la IA hasta que esté de acuerdo", "Agregar los guantes a la lista y seguir la regla del empleador", "Usar guantes solo con las cajas pesadas"], answer: 2, why: "Las reglas oficiales y del empleador mandan; agrega lo que la IA omitió." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: La IA en el trabajo",
         questions: [
-          { q: "La IA dice que aprietes un tornillo a 40 ft-lbs, pero el manual dice 25. ¿Qué haces?", options: ["Seguir a la IA", "Elegir el promedio", "Seguir el manual y preguntarle a tu supervisor", "Apretar lo más fuerte que puedas"], answer: 2, why: "Los números oficiales vienen del manual." },
-          { q: "¿Qué es un presupuesto?", options: ["El precio por escrito de un trabajo antes de empezarlo", "Un recibo después de pagar", "Una regla de seguridad", "Un tipo de herramienta"], answer: 0, why: "Los presupuestos fijan lo que se espera antes de empezar el trabajo." },
-          { q: "Encuentras un problema oculto que sube el precio. ¿Qué debes hacer?", options: ["Cobrar más sin decirle", "Abandonar el trabajo", "Esconder el problema", "Conseguir la aprobación del cliente antes de hacer trabajo extra"], answer: 3, why: "Los cambios de precio necesitan la aprobación del cliente." },
-          { q: "EPP significa:", options: ["Empleado público pagado", "Equipo de protección personal", "Extensión para enchufes", "Entrada a propiedad privada"], answer: 1, why: "El EPP es equipo como guantes y lentes de seguridad." },
-          { q: "Según OSHA, la tarjeta de 10 horas de OSHA es:", options: ["Una licencia federal", "Voluntaria y no es una certificación ni una licencia", "Una licencia de conducir", "Obligatoria por OSHA para todo empleo"], answer: 1, why: "OSHA dice que la tarjeta Outreach no es una certificación ni una licencia." }
+          { objective: "O1", q: "La IA dice que aprietes un tornillo a 40 ft-lbs, pero el manual dice 25. ¿Qué haces?", options: ["Seguir a la IA", "Elegir el promedio", "Seguir el manual y preguntarle a tu supervisor", "Apretar lo más fuerte que puedas"], answer: 2, why: "Los números oficiales vienen del manual." },
+          { objective: "O2", q: "¿Qué es un presupuesto?", options: ["El precio por escrito de un trabajo antes de empezarlo", "Un recibo después de pagar", "Una regla de seguridad", "Un tipo de herramienta"], answer: 0, why: "Los presupuestos fijan lo que se espera antes de empezar el trabajo." },
+          { objective: "O2", q: "Encuentras un problema oculto que sube el precio. ¿Qué debes hacer?", options: ["Cobrar más sin decirle", "Abandonar el trabajo", "Esconder el problema", "Conseguir la aprobación del cliente antes de hacer trabajo extra"], answer: 3, why: "Los cambios de precio necesitan la aprobación del cliente." },
+          { objective: "O3", q: "EPP significa:", options: ["Empleado público pagado", "Equipo de protección personal", "Extensión para enchufes", "Entrada a propiedad privada"], answer: 1, why: "El EPP es equipo como guantes y lentes de seguridad." },
+          { objective: "O3", q: "Según OSHA, la tarjeta de 10 horas de OSHA es:", options: ["Una licencia federal", "Voluntaria y no es una certificación ni una licencia", "Una licencia de conducir", "Obligatoria por OSHA para todo empleo"], answer: 1, why: "OSHA dice que la tarjeta Outreach no es una certificación ni una licencia." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Capítulo 2: Logística, registros y carreras",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Llevar un registro de trabajo con fotos y notas",
           minutes: 5,
           goal: "Llevar un registro diario de trabajo con fotos y notas cortas, usando la IA para ordenarlas.",
@@ -110,9 +149,14 @@ module.exports = {
             { title: "Reglas para las fotos", bullets: ["Sigue las reglas del lugar", "Ni clientes, ni papeles privados, ni sistemas de seguridad", "Guárdalas donde diga tu empleador"] }
           ],
           tryIt: "Haz un trabajo pequeño en casa (arreglar, limpiar u ordenar algo). Toma fotos de antes y después, di tus notas en voz alta y pide a la IA que las convierta en una entrada del registro de trabajo.",
-          youCanNow: "llevar un registro de trabajo profesional con fotos y notas ordenadas con IA."
+          youCanNow: "llevar un registro de trabajo profesional con fotos y notas ordenadas con IA.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué muestra una foto de antes en un registro de trabajo?", options: ["Qué tan rápido trabajaste", "Cómo estaba todo antes de empezar el trabajo", "La cara del cliente", "Tus herramientas a la venta"], answer: 1, why: "Las fotos de antes y después muestran lo que cambiaste y que se hizo bien." },
+            { objective: "O4", q: "El estado de cuenta bancario de un cliente está sobre el mostrador donde trabajas. ¿Qué harías antes de tomar una foto?", options: ["Tomar la foto; es solo para el registro", "Preguntarle a la IA si está bien", "Acercar la cámara al estado de cuenta para que se vea claro", "Dejarlo fuera de la foto o pedirle al cliente que lo quite"], answer: 3, why: "No fotografíes papeles privados sin permiso." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Planificar rutas, cargas e inventario",
           minutes: 5,
           goal: "Usar apps de mapas y la IA para planificar una ruta y una lista sencilla de carga o de inventario.",
@@ -129,9 +173,14 @@ module.exports = {
             { title: "Las reglas van primero", bullets: ["Límites de peso y sujeción de la carga", "Horas de servicio de los conductores", "Las da tu empleador y las reglas oficiales"] }
           ],
           tryIt: "Elige cinco lugares reales de tu zona. Pide a la IA que sugiera el mejor orden para visitarlos y luego compruébalo en una app de mapas gratuita comparando los tiempos de manejo.",
-          youCanNow: "planificar una ruta y una carga con IA y apps de mapas siguiendo las reglas."
+          youCanNow: "planificar una ruta y una carga con IA y apps de mapas siguiendo las reglas.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué significa inventario?", options: ["Una lista de lo que tienes en existencia y cuántos hay", "La ruta más rápida", "Las horas de un conductor", "Una regla de seguridad para cargar"], answer: 0, why: "El inventario es un conteo de los artículos que tienes." },
+            { objective: "O5", q: "La IA sugiere el orden de una ruta con cinco paradas. ¿Qué harías después?", options: ["Seguirlo sin mirar", "Comprobarlo en una app de mapas con tráfico antes de manejar", "Pedirles a los clientes que elijan", "Manejar primero a la parada más lejana"], answer: 1, why: "Las ideas de ruta de la IA hay que comprobarlas en una app de mapas con el tráfico del momento." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Encontrar programas de aprendiz y empleos en oficios",
           minutes: 5,
           goal: "Encontrar un programa de aprendiz registrado o un empleo en un oficio y prepararte para postularte.",
@@ -149,17 +198,21 @@ module.exports = {
           ],
           sources: [{ name: "Apprenticeship.gov (Departamento de Trabajo de EE. UU.)", url: "https://www.apprenticeship.gov/" }],
           tryIt: "Tarea final: busca en Apprenticeship.gov o en un programa local un programa de aprendiz o un empleo en un oficio al que podrías postularte. Luego termina tu paquete de trabajo: resumen del manual, presupuesto u orden de trabajo, lista de seguridad revisada, entrada del registro de trabajo y plan de ruta o de carga.",
-          youCanNow: "usar la IA para trabajar mejor en un oficio o en logística y encontrar un camino para entrar."
+          youCanNow: "usar la IA para trabajar mejor en un oficio o en logística y encontrar un camino para entrar.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué es un programa de preparación para aprendices?", options: ["Una licencia para trabajar solo", "Un empleo pagado como supervisor", "Un programa que te prepara para entrar a un programa de aprendiz", "Un examen que haces después de un programa de aprendiz"], answer: 2, why: "Un programa de preparación te da lo básico para que puedas entrar a un programa de aprendiz." },
+            { objective: "O6", q: "Quieres saber si una licencia de oficio que necesitas toma en cuenta los antecedentes penales. ¿Qué harías?", options: ["Adivinar por lo que le pasó a un amigo", "Preguntarle a la IA y confiar en su respuesta", "Renunciar a ese oficio", "Consultar con la agencia de licencias de tu estado"], answer: 3, why: "La agencia de licencias del estado tiene las reglas oficiales de esa licencia." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Logística, registros y carreras",
         questions: [
-          { q: "¿Por qué guardar fotos de antes y después en un registro de trabajo?", options: ["Para tener me gusta en redes", "Las exigen todas las leyes", "Para fotografiar a los clientes", "Muestran lo que hiciste y que se hizo bien"], answer: 3, why: "Las fotos demuestran el trabajo." },
-          { q: "Al cargar un camión para varias paradas, ¿qué artículos entran primero?", options: ["Los de la última parada", "Los de la primera parada", "Siempre los más livianos", "En cualquier orden"], answer: 0, why: "Si lo de la última parada entra primero, lo de la primera queda a la mano." },
-          { q: "¿De dónde vienen los límites de peso y las reglas de horas de manejo?", options: ["De un chatbot de IA", "De tus amigos", "De tu empleador y de las reglas oficiales de transporte", "De una app de mapas"], answer: 2, why: "Las reglas oficiales fijan estos límites." },
-          { q: "¿Qué es un programa de aprendiz registrado?", options: ["Solo una pasantía sin paga", "Un título universitario", "Un examen de licencia", "Un empleo pagado con capacitación que lleva a una credencial reconocida"], answer: 3, why: "Los aprendices ganan mientras aprenden." },
-          { q: "¿Qué sitio tiene el buscador de empleos de aprendiz del Departamento de Trabajo de EE. UU.?", options: ["Una app de redes sociales", "Un blog cualquiera", "Apprenticeship.gov", "Un sitio de compras"], answer: 2, why: "Apprenticeship.gov lo maneja el Departamento de Trabajo." }
+          { objective: "O4", q: "¿Por qué guardar fotos de antes y después en un registro de trabajo?", options: ["Para tener me gusta en redes", "Las exigen todas las leyes", "Para fotografiar a los clientes", "Muestran lo que hiciste y que se hizo bien"], answer: 3, why: "Las fotos demuestran el trabajo." },
+          { objective: "O5", q: "Al cargar un camión para varias paradas, ¿qué artículos entran primero?", options: ["Los de la última parada", "Los de la primera parada", "Siempre los más livianos", "En cualquier orden"], answer: 0, why: "Si lo de la última parada entra primero, lo de la primera queda a la mano." },
+          { objective: "O5", q: "¿De dónde vienen los límites de peso y las reglas de horas de manejo?", options: ["De un chatbot de IA", "De tus amigos", "De tu empleador y de las reglas oficiales de transporte", "De una app de mapas"], answer: 2, why: "Las reglas oficiales fijan estos límites." },
+          { objective: "O6", q: "¿Qué es un programa de aprendiz registrado?", options: ["Solo una pasantía sin paga", "Un título universitario", "Un examen de licencia", "Un empleo pagado con capacitación que lleva a una credencial reconocida"], answer: 3, why: "Los aprendices ganan mientras aprenden." },
+          { objective: "O6", q: "¿Qué sitio tiene el buscador de empleos de aprendiz del Departamento de Trabajo de EE. UU.?", options: ["Una app de redes sociales", "Un blog cualquiera", "Apprenticeship.gov", "Un sitio de compras"], answer: 2, why: "Apprenticeship.gov lo maneja el Departamento de Trabajo." }
         ]
       }
     }
@@ -167,26 +220,113 @@ module.exports = {
   quiz: {
     title: "Examen final: IA para oficios calificados y logística",
     questions: [
-      { q: "¿Cuál es un oficio calificado?", options: ["Influencer de redes sociales", "Electricista", "Crítico de cine", "Jugador de lotería"], answer: 1, why: "El trabajo eléctrico es un oficio calificado." },
-      { q: "¿Cómo puede ayudar la IA con un manual difícil?", options: ["Explicándolo con palabras sencillas", "Cambiando los números del manual", "Haciendo el trabajo por ti", "Aprobando la seguridad"], answer: 0, why: "La IA es un buen tutor para términos y pasos." },
-      { q: "Una hoja de especificaciones tiene:", options: ["Tu horario de trabajo", "Tu sueldo", "Las medidas y requisitos exactos de un producto", "Reseñas de clientes"], answer: 2, why: "Las especificaciones dan los requisitos exactos." },
-      { q: "¿Qué números deben venir del manual o del código, no de la IA?", options: ["El voltaje, el torque y los límites de peso", "La fecha", "Tu nombre", "El color del camión"], answer: 0, why: "Los números clave para la seguridad necesitan fuentes oficiales." },
-      { q: "La mano de obra en un presupuesto es:", options: ["Las piezas", "El impuesto", "La dirección del cliente", "El costo del tiempo del trabajador"], answer: 3, why: "La mano de obra es el tiempo pagado." },
-      { q: "2 horas a $60 más $100 de piezas son:", options: ["$62", "$120", "$160", "$220"], answer: 3, why: "2 x 60 = 120, más 100 = 220." },
-      { q: "Un buen presupuesto también dice:", options: ["Nada sobre el trabajo", "Qué incluye, qué no y cuándo vence", "Tu número del Seguro Social", "Un precio fijo garantizado pase lo que pase"], answer: 1, why: "Las condiciones claras evitan conflictos." },
-      { q: "Un análisis de seguridad del trabajo tiene:", options: ["Solo el precio", "Los cumpleaños del equipo", "Las reseñas del cliente", "Pasos, peligros y controles"], answer: 3, why: "Planifica la seguridad de cada paso." },
-      { q: "¿Qué es EPP?", options: ["Lentes de seguridad", "Una funda de teléfono", "Una lonchera", "Una app de mapas"], answer: 0, why: "Los lentes de seguridad protegen tus ojos." },
-      { q: "¿Quién confirma una lista de seguridad que hizo la IA?", options: ["Nadie", "La misma IA", "Tu supervisor, el manual y fuentes oficiales como OSHA", "Un video cualquiera"], answer: 2, why: "La IA no es una autoridad en seguridad." },
-      { q: "La clase Outreach de 10 horas de OSHA:", options: ["Es una licencia de contratista", "Reemplaza toda la capacitación del empleo", "La da una IA", "Enseña lo básico de la seguridad; la tarjeta es voluntaria"], answer: 3, why: "OSHA la describe como una capacitación voluntaria." },
-      { q: "El dictado por voz te ayuda a:", options: ["Hacer llamadas más baratas", "Manejar más rápido", "Decir tus notas en lugar de escribirlas", "Solo leer manuales en voz alta"], answer: 2, why: "Convierte lo que dices en texto." },
-      { q: "¿Qué foto NO debes tomar sin permiso?", options: ["La reparación terminada", "Los papeles privados de un cliente", "La pieza rota", "Tu propia caja de herramientas"], answer: 1, why: "Respeta la privacidad del cliente." },
-      { q: "Una entrada del registro de trabajo incluye:", options: ["Fecha, lugar, trabajo hecho, materiales, problemas y siguientes pasos", "Solo tu opinión", "Contraseñas de clientes", "Nada"], answer: 0, why: "Las entradas completas son registros útiles." },
-      { q: "Después de que la IA sugiere el orden de una ruta, debes:", options: ["Seguirlo sin mirar", "Ignorar los horarios", "Comprobarlo en una app de mapas con tráfico", "Manejar más rápido"], answer: 2, why: "Las apps de mapas muestran los tiempos reales y el tráfico." },
-      { q: "La sujeción de la carga significa:", options: ["Amarrar la carga para que no se mueva ni se caiga", "Cerrar la oficina con llave", "Conseguir un préstamo", "Guardar un archivo"], answer: 0, why: "Las cargas bien sujetas evitan accidentes." },
-      { q: "Las reglas de horas de servicio limitan:", options: ["El horario de las tiendas", "Solo los almuerzos del personal de oficina", "El uso de internet", "Cuánto tiempo pueden manejar y trabajar los conductores comerciales"], answer: 3, why: "Evitan el cansancio de los conductores." },
-      { q: "Un programa de preparación para aprendices:", options: ["Es una licencia completa", "Te prepara para entrar a un programa de aprendiz", "Es un programa de préstamos", "Es un tipo de herramienta"], answer: 1, why: "Desarrolla habilidades para entrar a un programa de aprendiz." },
-      { q: "¿Dónde revisas si una licencia de un oficio toma en cuenta los antecedentes penales?", options: ["En lo que adivine la IA", "En la agencia de licencias de tu estado", "En un comentario de un anuncio de empleo", "En ningún lado"], answer: 1, why: "Las agencias estatales fijan las reglas de las licencias." },
-      { q: "En los oficios, ¿qué es lo que más les importa a muchos empleadores al principio?", options: ["Tener herramientas caras", "Tener un título", "Conocer a todo el mundo", "Llegar puntual, ser responsable y tener ganas de aprender"], answer: 3, why: "La responsabilidad y la actitud abren puertas." }
+      { objective: "O6", q: "¿Cuál es un oficio calificado?", options: ["Influencer de redes sociales", "Electricista", "Crítico de cine", "Jugador de lotería"], answer: 1, why: "El trabajo eléctrico es un oficio calificado." },
+      { objective: "O1", q: "¿Cómo puede ayudar la IA con un manual difícil?", options: ["Explicándolo con palabras sencillas", "Cambiando los números del manual", "Haciendo el trabajo por ti", "Aprobando la seguridad"], answer: 0, why: "La IA es un buen tutor para términos y pasos." },
+      { objective: "O1", q: "Una hoja de especificaciones tiene:", options: ["Tu horario de trabajo", "Tu sueldo", "Las medidas y requisitos exactos de un producto", "Reseñas de clientes"], answer: 2, why: "Las especificaciones dan los requisitos exactos." },
+      { objective: "O1", q: "¿Qué números deben venir del manual o del código, no de la IA?", options: ["El voltaje, el torque y los límites de peso", "La fecha", "Tu nombre", "El color del camión"], answer: 0, why: "Los números clave para la seguridad necesitan fuentes oficiales." },
+      { objective: "O2", q: "La mano de obra en un presupuesto es:", options: ["Las piezas", "El impuesto", "La dirección del cliente", "El costo del tiempo del trabajador"], answer: 3, why: "La mano de obra es el tiempo pagado." },
+      { objective: "O2", q: "2 horas a $60 más $100 de piezas son:", options: ["$62", "$120", "$160", "$220"], answer: 3, why: "2 x 60 = 120, más 100 = 220." },
+      { objective: "O2", q: "Un buen presupuesto también dice:", options: ["Nada sobre el trabajo", "Qué incluye, qué no y cuándo vence", "Tu número del Seguro Social", "Un precio fijo garantizado pase lo que pase"], answer: 1, why: "Las condiciones claras evitan conflictos." },
+      { objective: "O3", q: "Un análisis de seguridad del trabajo tiene:", options: ["Solo el precio", "Los cumpleaños del equipo", "Las reseñas del cliente", "Pasos, peligros y controles"], answer: 3, why: "Planifica la seguridad de cada paso." },
+      { objective: "O3", q: "¿Qué es EPP?", options: ["Lentes de seguridad", "Una funda de teléfono", "Una lonchera", "Una app de mapas"], answer: 0, why: "Los lentes de seguridad protegen tus ojos." },
+      { objective: "O3", q: "¿Quién confirma una lista de seguridad que hizo la IA?", options: ["Nadie", "La misma IA", "Tu supervisor, el manual y fuentes oficiales como OSHA", "Un video cualquiera"], answer: 2, why: "La IA no es una autoridad en seguridad." },
+      { objective: "O3", q: "La clase Outreach de 10 horas de OSHA:", options: ["Es una licencia de contratista", "Reemplaza toda la capacitación del empleo", "La da una IA", "Enseña lo básico de la seguridad; la tarjeta es voluntaria"], answer: 3, why: "OSHA la describe como una capacitación voluntaria." },
+      { objective: "O4", q: "El dictado por voz te ayuda a:", options: ["Hacer llamadas más baratas", "Manejar más rápido", "Decir tus notas en lugar de escribirlas", "Solo leer manuales en voz alta"], answer: 2, why: "Convierte lo que dices en texto." },
+      { objective: "O4", q: "¿Qué foto NO debes tomar sin permiso?", options: ["La reparación terminada", "Los papeles privados de un cliente", "La pieza rota", "Tu propia caja de herramientas"], answer: 1, why: "Respeta la privacidad del cliente." },
+      { objective: "O4", q: "Una entrada del registro de trabajo incluye:", options: ["Fecha, lugar, trabajo hecho, materiales, problemas y siguientes pasos", "Solo tu opinión", "Contraseñas de clientes", "Nada"], answer: 0, why: "Las entradas completas son registros útiles." },
+      { objective: "O5", q: "Después de que la IA sugiere el orden de una ruta, debes:", options: ["Seguirlo sin mirar", "Ignorar los horarios", "Comprobarlo en una app de mapas con tráfico", "Manejar más rápido"], answer: 2, why: "Las apps de mapas muestran los tiempos reales y el tráfico." },
+      { objective: "O5", q: "La sujeción de la carga significa:", options: ["Amarrar la carga para que no se mueva ni se caiga", "Cerrar la oficina con llave", "Conseguir un préstamo", "Guardar un archivo"], answer: 0, why: "Las cargas bien sujetas evitan accidentes." },
+      { objective: "O5", q: "Las reglas de horas de servicio limitan:", options: ["El horario de las tiendas", "Solo los almuerzos del personal de oficina", "El uso de internet", "Cuánto tiempo pueden manejar y trabajar los conductores comerciales"], answer: 3, why: "Evitan el cansancio de los conductores." },
+      { objective: "O6", q: "Un programa de preparación para aprendices:", options: ["Es una licencia completa", "Te prepara para entrar a un programa de aprendiz", "Es un programa de préstamos", "Es un tipo de herramienta"], answer: 1, why: "Desarrolla habilidades para entrar a un programa de aprendiz." },
+      { objective: "O6", q: "¿Dónde revisas si una licencia de un oficio toma en cuenta los antecedentes penales?", options: ["En lo que adivine la IA", "En la agencia de licencias de tu estado", "En un comentario de un anuncio de empleo", "En ningún lado"], answer: 1, why: "Las agencias estatales fijan las reglas de las licencias." },
+      { objective: "O6", q: "En los oficios, ¿qué es lo que más les importa a muchos empleadores al principio?", options: ["Tener herramientas caras", "Tener un título", "Conocer a todo el mundo", "Llegar puntual, ser responsable y tener ganas de aprender"], answer: 3, why: "La responsabilidad y la actitud abren puertas." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      1,
+      3,
+      5,
+      7,
+      9,
+      13,
+      14,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Resumen del manual",
+        objective: "O1",
+        notYet: "El resumen tiene un número que no coincide con el manual, o no tiene fuente.",
+        meets: "Resumen en lenguaje sencillo con cada número comprobado con el manual.",
+        exceeds: "Además indica qué paso necesita a un supervisor o a un trabajador con licencia."
+      },
+      {
+        name: "Presupuesto u orden de trabajo",
+        objective: "O2",
+        notYet: "Falta la mano de obra, las piezas, el total, lo que incluye o la fecha de vencimiento, o las cuentas están mal.",
+        meets: "Tiene todas las partes y las cuentas están revisadas a mano.",
+        exceeds: "Además dice qué no incluye y cómo se aprobarán los cambios."
+      },
+      {
+        name: "Lista de seguridad",
+        objective: "O3",
+        notYet: "Copiada de la IA sin comprobarla con una fuente oficial.",
+        meets: "Comparada con el manual o con una fuente oficial, y con lo que faltaba agregado.",
+        exceeds: "Nombra la fuente y el EPP para cada peligro."
+      },
+      {
+        name: "Registro de trabajo",
+        objective: "O4",
+        notYet: "Falta la fecha, el trabajo hecho, los materiales, los problemas o los siguientes pasos, o muestra información privada.",
+        meets: "Una entrada completa con notas de fotos de antes y después y sin información privada.",
+        exceeds: "Otro trabajador podría continuar el trabajo solo con esta entrada."
+      },
+      {
+        name: "Plan de ruta o de carga",
+        objective: "O5",
+        notYet: "La ruta no se comprobó, o la carga está en el orden equivocado.",
+        meets: "Ruta comprobada en una app de mapas y carga colocada en el orden inverso de las paradas.",
+        exceeds: "Además anota los conteos de inventario y las reglas del empleador."
+      },
+      {
+        name: "Siguiente empleo encontrado",
+        objective: "O6",
+        notYet: "No encontró ningún programa de aprendiz ni empleo.",
+        meets: "Un programa de aprendiz o empleo en un oficio real, con sus requisitos y cómo postularse.",
+        exceeds: "Además anota el primer paso que dará esta semana."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que se postulan a un programa de aprendiz, de preparación para aprendices o a un empleo en un oficio en 30 días (encuesta de seguimiento)",
+      "Participantes que empiezan un programa de aprendiz o un empleo en un oficio en 90 días",
+      "Participantes que cuentan que usaron la IA en el trabajo para escribir un presupuesto, un registro de trabajo o una lista de seguridad",
+      "Participantes que empiezan otro curso de oficios o de carrera de Koach Learn en 30 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono inteligente con cámara e internet",
+      "Un asistente de IA gratuito como ChatGPT, Microsoft Copilot o Google Gemini, y una app de mapas gratuita",
+      "El manual de una herramienta, un aparato o un vehículo (en papel o en línea)",
+      "Papel y lápiz o una app de notas para el paquete de trabajo",
+      "Unos 60 minutos en total: lecciones, práctica, comprobaciones y la tarea final"
+    ],
+    facilitatorNotes: [
+      "Recalca en cada sesión que los números y las reglas de seguridad vienen del manual, del empleador y de OSHA, no de la IA.",
+      "Lleva manuales reales y presupuestos de ejemplo de oficios locales para que se practique con documentos reales.",
+      "No permitas trabajos eléctricos, de gas ni otros trabajos con licencia como práctica; usa tareas domésticas seguras.",
+      "Pon a los participantes en contacto con programas locales de preparación para aprendices y con empleadores que contratan a personas con antecedentes.",
+      "Califica el paquete de trabajo con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

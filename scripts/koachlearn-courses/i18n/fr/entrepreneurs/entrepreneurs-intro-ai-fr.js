@@ -16,11 +16,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes. Lisez la leçon, regardez les diapositives, puis faites la tâche « Essayez maintenant » avec votre propre entreprise. Une vérification des connaissances suit chaque chapitre, et un quiz de 20 questions vous attend à la fin."
   ],
   finalTask: "Choisissez une vraie tâche de votre entreprise (par exemple une grille de prix, un e-mail de bienvenue pour les nouveaux clients ou une publication hebdomadaire sur les réseaux sociaux). Utilisez un assistant IA gratuit pour la rédiger avec un prompt professionnel en trois parties, demandez deux améliorations, vérifiez vous-même chaque fait et chaque chiffre, retirez toute information privée sur les clients ou l'argent, et enregistrez la version finale prête à l'emploi.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des personnes qui lancent ou développent une petite entreprise, comme un food truck, un service de nettoyage, un salon de coiffure, une boutique en ligne, une activité de conseil ou une activité complémentaire. La plupart font elles-mêmes tous les métiers de l'entreprise.",
+    startingPoint: "Ils gèrent les tâches de leur entreprise à la main et utilisent un téléphone ou un ordinateur tous les jours. Beaucoup ont entendu parler des assistants IA mais ne s'en sont jamais servis pour leur entreprise, ou en ont essayé un sans méthode claire.",
+    gap: "Les entrepreneurs perdent des heures chaque semaine sur des tâches d'écriture et de planification qu'un assistant IA pourrait rédiger en quelques minutes. Utilisée sans précaution, l'IA peut mettre des prix faux, des affirmations fausses ou des détails privés sur les clients au nom de l'entreprise. Les entrepreneurs ont besoin d'une méthode sûre et répétable pour rédiger, améliorer et vérifier leurs écrits professionnels avec l'IA.",
+    constraints: [
+      "Des mots simples ; aucune formation technique nécessaire",
+      "Appareils : un téléphone ou un ordinateur avec un assistant IA gratuit",
+      "Temps : environ cinq minutes par leçon, à caser entre les tâches de l'entreprise",
+      "Les affirmations publicitaires doivent être vraies et prouvées ; les questions d'impôts et de licences vont aux sources officielles ou à un professionnel",
+      "Aucun numéro de carte de client, aucune coordonnée bancaire ni aucune autre donnée privée dans une demande à l'IA"
+    ],
+    prerequisites: "Aucun."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Avec vos propres mots", action: "expliquer ce qu'un assistant IA peut et ne peut pas faire pour une entreprise", standard: "en disant pourquoi l'entrepreneur vérifie tout avant que ça parte" },
+    { id: "O2", condition: "À partir d'une liste de dix tâches de votre semaine", action: "classer vos tâches de la semaine entre celles que l'IA peut rédiger, celles où l'IA vous aide à réfléchir et celles à garder pour vous", standard: "en choisissant une première tâche sûre et utile pour l'IA" },
+    { id: "O3", condition: "À partir de la tâche choisie", action: "écrire un prompt professionnel avec une tâche, un contexte et un format", standard: "pour que le premier brouillon soit presque utilisable" },
+    { id: "O4", condition: "À partir d'un premier brouillon de l'IA", action: "faire des demandes de suivi, une à la fois, et ajouter vos vrais détails", standard: "jusqu'à ce qu'il ressemble à votre entreprise, en trois demandes de suivi au maximum" },
+    { id: "O5", condition: "À partir d'un brouillon amélioré", action: "vérifier chaque fait, chiffre et affirmation avec vos propres documents ou une source officielle", standard: "en retirant toute affirmation que vous ne pouvez pas prouver" },
+    { id: "O6", condition: "Chaque fois que vous utilisez l'IA pour l'entreprise", action: "garder les détails privés sur les clients et l'argent hors des prompts et repérer les arnaques au paiement", standard: "en utilisant des espaces réservés et sans partager aucun numéro de carte, de banque ou de compte" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Ce que l'IA peut faire pour votre entreprise",
       lessons: [
         {
+          objectives: ["O1"],
           title: "L'IA, en termes d'entreprise",
           minutes: 4,
           goal: "Expliquer avec vos mots ce qu'un assistant IA peut et ne peut pas faire pour une entreprise.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Ce qu'elle n'est pas", bullets: ["Votre comptable ou votre avocat", "Au courant de vos prix ou clients si vous ne le dites pas", "Toujours juste, même quand elle a l'air sûre"] }
           ],
           tryIt: "Notez trois choses que vous avez faites pour votre entreprise la semaine dernière et qui demandaient d'écrire, de planifier ou d'expliquer. Entourez celle qui vous a pris le plus de temps.",
-          youCanNow: "dire ce qu'un assistant IA peut faire pour une entreprise, et pourquoi vous vérifiez quand même tout avant que ce soit envoyé."
+          youCanNow: "dire ce qu'un assistant IA peut faire pour une entreprise, et pourquoi vous vérifiez quand même tout avant que ce soit envoyé.",
+          quickCheck: [
+            { objective: "O1", q: "De quoi un assistant IA a-t-il besoin de votre part pour écrire sur votre entreprise ?", options: ["Vos vrais prix, horaires et détails", "Rien ; il connaît déjà votre entreprise", "Le mot de passe de votre banque", "Un abonnement payant"], answer: 0, why: "L'IA ne connaît pas votre entreprise si vous ne la lui décrivez pas." },
+            { objective: "O1", q: "L'IA écrit un prospectus pour votre salon. Que faites-vous avant de l'imprimer ?", options: ["L'imprimer tout de suite", "Le lire et le vérifier, car il part sous votre nom", "Laisser l'IA l'imprimer", "L'envoyer d'abord aux clients"], answer: 1, why: "L'entrepreneur est responsable de tout ce qui porte le nom de l'entreprise." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Trouver les tâches que l'IA peut accélérer",
           minutes: 5,
           goal: "Lister les tâches de votre semaine qui conviennent à l'IA, et celles qui ne conviennent pas.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Triez vos tâches", bullets: ["L'IA rédige, je vérifie", "L'IA m'aide à réfléchir", "Je le fais moi-même"] }
           ],
           tryIt: "Faites votre liste de dix tâches et triez-les dans les trois groupes. Choisissez la tâche « l'IA rédige, je vérifie » que vous utiliserez pendant le reste de ce cours.",
-          youCanNow: "trier les tâches de votre entreprise et choisir une première tâche sûre et utile pour l'IA."
+          youCanNow: "trier les tâches de votre entreprise et choisir une première tâche sûre et utile pour l'IA.",
+          quickCheck: [
+            { objective: "O2", q: "Qu'est-ce qui fait d'une tâche une bonne première tâche pour l'IA ?", options: ["Elle déplace de l'argent", "Elle demande une signature", "Elle se répète, est surtout écrite et facile à vérifier", "Elle touche des données privées de clients"], answer: 2, why: "Les tâches d'écriture répétées et faciles à vérifier sont des gains sûrs." },
+            { objective: "O2", q: "Une tâche de votre liste est d'approuver le paiement d'un fournisseur. Comment la classez-vous ?", options: ["L'IA rédige, je vérifie", "L'IA la fait seule", "L'IA m'aide à réfléchir", "Je la garde pour moi"], answer: 3, why: "Les décisions d'argent restent à l'entrepreneur." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Écrire un prompt professionnel clair",
           minutes: 5,
           goal: "Écrire un prompt professionnel en trois parties qui donne un brouillon utile dès la première fois.",
@@ -75,17 +109,21 @@ module.exports = {
             { title: "À garder hors du prompt", bullets: ["Noms et numéros de téléphone des clients", "Numéros de carte et de compte", "Mots de passe"] }
           ],
           tryIt: "Écrivez un prompt en trois parties pour la tâche choisie à la leçon 2. Envoyez-le à un assistant IA gratuit et enregistrez le premier brouillon.",
-          youCanNow: "écrire un prompt professionnel avec une tâche, un contexte et un format, sans infos privées."
+          youCanNow: "écrire un prompt professionnel avec une tâche, un contexte et un format, sans infos privées.",
+          quickCheck: [
+            { objective: "O3", q: "Quelle partie d'un prompt professionnel est le format ?", options: ["« Moins de 100 mots, avec un objet »", "« Écris un e-mail de bienvenue »", "« Nous sommes un salon de toilettage pour animaux à Phoenix »", "« Merci pour ton aide »"], answer: 0, why: "Le format dit comment vous voulez la réponse : longueur, présentation ou style." },
+            { objective: "O3", q: "Votre prompt dit seulement « écris une publication ». Qu'ajoutez-vous ?", options: ["Rien de plus", "Votre entreprise, vos clients, la longueur et le style voulus", "Votre liste de clients", "Le solde de votre compte bancaire"], answer: 1, why: "Le contexte et le format transforment une demande floue en brouillon utile." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Ce que l'IA peut faire pour votre entreprise",
         questions: [
-          { q: "Quelle est la meilleure façon de voir un assistant IA dans votre entreprise ?", options: ["Votre comptable", "Un remplaçant de votre jugement", "Une aide rapide aux premiers brouillons que vous vérifiez", "Un client"], answer: 2, why: "L'IA rédige vite, mais c'est vous qui vérifiez et décidez de ce qui sort." },
-          { q: "Quelle tâche est une bonne première tâche à confier à un assistant IA ?", options: ["Rédiger une publication hebdomadaire que vous lirez d'abord", "Payer un fournisseur", "Signer un bail", "Choisir votre régime fiscal"], answer: 0, why: "Elle se répète, ce sont surtout des mots, et les erreurs se repèrent avant que quelqu'un les voie." },
-          { q: "Lequel est un prompt professionnel en trois parties ?", options: ["« écris un e-mail »", "« aide-moi »", "« trucs d'entreprise »", "« E-mail de bienvenue pour les nouveaux clients d'un service de ménage à Atlanta ; nous nettoyons toutes les deux semaines ; amical, moins de 120 mots, avec un objet. »"], answer: 3, why: "Il donne la tâche, le contexte de l'entreprise et le format." },
-          { q: "Que devez-vous laisser hors d'un prompt ?", options: ["Votre type d'entreprise", "Le numéro de carte d'un client", "Le ton souhaité", "La longueur souhaitée"], answer: 1, why: "Les numéros de carte et autres infos privées ne doivent jamais aller dans une conversation avec une IA." },
-          { q: "Un brouillon de l'IA porte le nom de votre entreprise. Qui en est responsable ?", options: ["L'entreprise d'IA", "Vous, le patron", "Personne", "Le client"], answer: 1, why: "Vous décidez de ce qui sort avec le nom de votre entreprise." }
+          { objective: "O1", q: "Quelle est la meilleure façon de voir un assistant IA dans votre entreprise ?", options: ["Votre comptable", "Un remplaçant de votre jugement", "Une aide rapide aux premiers brouillons que vous vérifiez", "Un client"], answer: 2, why: "L'IA rédige vite, mais c'est vous qui vérifiez et décidez de ce qui sort." },
+          { objective: "O2", q: "Quelle tâche est une bonne première tâche à confier à un assistant IA ?", options: ["Rédiger une publication hebdomadaire que vous lirez d'abord", "Payer un fournisseur", "Signer un bail", "Choisir votre régime fiscal"], answer: 0, why: "Elle se répète, ce sont surtout des mots, et les erreurs se repèrent avant que quelqu'un les voie." },
+          { objective: "O3", q: "Lequel est un prompt professionnel en trois parties ?", options: ["« écris un e-mail »", "« aide-moi »", "« trucs d'entreprise »", "« E-mail de bienvenue pour les nouveaux clients d'un service de ménage à Atlanta ; nous nettoyons toutes les deux semaines ; amical, moins de 120 mots, avec un objet. »"], answer: 3, why: "Il donne la tâche, le contexte de l'entreprise et le format." },
+          { objective: "O6", q: "Que devez-vous laisser hors d'un prompt ?", options: ["Votre type d'entreprise", "Le numéro de carte d'un client", "Le ton souhaité", "La longueur souhaitée"], answer: 1, why: "Les numéros de carte et autres infos privées ne doivent jamais aller dans une conversation avec une IA." },
+          { objective: "O1", q: "Un brouillon de l'IA porte le nom de votre entreprise. Qui en est responsable ?", options: ["L'entreprise d'IA", "Vous, le patron", "Personne", "Le client"], answer: 1, why: "Vous décidez de ce qui sort avec le nom de votre entreprise." }
         ]
       }
     },
@@ -93,6 +131,7 @@ module.exports = {
       name: "Chapitre 2 : Utiliser l'IA de façon sûre et efficace",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Améliorer le brouillon avec des demandes de suivi",
           minutes: 4,
           goal: "Transformer un premier brouillon en une version que vous utiliseriez vraiment, grâce à des demandes de suivi.",
@@ -109,9 +148,14 @@ module.exports = {
             { title: "Faites-le vôtre", bullets: ["Ajoutez vos vrais horaires, prix et règles", "Lisez-le à voix haute", "Retouchez jusqu'à ce que ça sonne comme vous"] }
           ],
           tryIt: "Reprenez votre brouillon de la leçon 3. Demandez deux changements, un à la fois, puis ajoutez vos propres vrais détails. Comparez la première et la dernière version.",
-          youCanNow: "améliorer un brouillon de l'IA avec des demandes de suivi et le faire sonner comme votre entreprise."
+          youCanNow: "améliorer un brouillon de l'IA avec des demandes de suivi et le faire sonner comme votre entreprise.",
+          quickCheck: [
+            { objective: "O4", q: "Qu'est-ce qu'une demande de suivi ?", options: ["Une nouvelle conversation sur autre chose", "Un rappel de paiement", "Une deuxième demande dans la même conversation qui modifie la réponse", "Un avis de client"], answer: 2, why: "Les demandes de suivi améliorent le brouillon que vous avez déjà." },
+            { objective: "O4", q: "Le brouillon est bon mais trop long. Que demandez-vous ensuite ?", options: ["Recommencer dans une nouvelle conversation", "Demander cinq autres versions d'un coup", "L'accepter tel quel", "« Raccourcis-le, moins de 80 mots »"], answer: 3, why: "Un changement clair à la fois améliore le brouillon." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Vérifier les faits, les chiffres et les affirmations",
           minutes: 5,
           goal: "Vérifier un brouillon de l'IA pour repérer les faits faux, les chiffres faux et les promesses impossibles à tenir.",
@@ -130,9 +174,14 @@ module.exports = {
           ],
           sources: [{ name: "FTC : les bases de la publicité et du marketing (en anglais)", url: "https://www.ftc.gov/business-guidance/advertising-marketing/advertising-marketing-basics" }],
           tryIt: "Surlignez chaque fait, chiffre et affirmation de votre brouillon amélioré. Vérifiez chacun, corrigez ce qui est faux et retirez toute affirmation que vous ne pouvez pas prouver.",
-          youCanNow: "vérifier un brouillon de l'IA pour repérer les faits faux, les chiffres faux et les affirmations impossibles à prouver."
+          youCanNow: "vérifier un brouillon de l'IA pour repérer les faits faux, les chiffres faux et les affirmations impossibles à prouver.",
+          quickCheck: [
+            { objective: "O5", q: "Qu'est-ce qu'une hallucination de l'IA ?", options: ["Quelque chose qui semble vrai mais qui est inventé", "Un type de publicité", "Une connexion Internet lente", "Une plainte de client"], answer: 0, why: "L'IA peut écrire des faits inventés sur un ton très sûr." },
+            { objective: "O5", q: "Le brouillon dit « classé numéro 1 de la ville ». Vous n'en avez aucune preuve. Que faites-vous ?", options: ["Le garder ; ça sonne bien", "Le retirer ou le remplacer par quelque chose de vrai", "Ajouter « peut-être »", "Demander à l'IA si c'est vrai"], answer: 1, why: "Les affirmations publicitaires doivent être vraies et appuyées par des preuves." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Protéger les informations des clients et de l'entreprise",
           minutes: 5,
           goal: "Utiliser l'IA pour des tâches d'entreprise sans partager d'informations privées sur les clients ou l'argent.",
@@ -150,17 +199,21 @@ module.exports = {
             { title: "Arnaques visant les entreprises", bullets: ["Fausses factures qui ont l'air vraies", "Appels urgents de paiement avec une voix familière", "Rappelez sur un numéro que vous connaissez"] }
           ],
           tryIt: "Tâche finale : terminez la tâche d'entreprise choisie. Assurez-vous que le prompt et la version finale ne contiennent aucune information privée sur les clients ou l'argent, vérifiez chaque fait, chiffre et affirmation, et enregistrez-la prête à l'emploi.",
-          youCanNow: "utiliser l'IA pour une vraie tâche d'entreprise tout en protégeant vos clients, votre argent et votre nom."
+          youCanNow: "utiliser l'IA pour une vraie tâche d'entreprise tout en protégeant vos clients, votre argent et votre nom.",
+          quickCheck: [
+            { objective: "O6", q: "Qu'est-ce qu'un espace réservé dans un prompt ?", options: ["Le vrai numéro de téléphone d'un client", "Un mot de passe", "Une étiquette comme [nom du client] à la place des vrais détails", "Une page blanche"], answer: 2, why: "Les espaces réservés permettent d'obtenir de l'aide sans partager de détails privés." },
+            { objective: "O6", q: "Un message de votre « banque » vous demande de confirmer votre numéro de compte en répondant. Que faites-vous ?", options: ["Répondre avec le numéro", "Demander à l'IA de répondre pour vous", "Le transférer aux clients", "Contacter la banque avec un numéro que vous connaissez déjà"], answer: 3, why: "Utilisez un contact que vous connaissez déjà, jamais celui donné dans un message urgent." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Utiliser l'IA de façon sûre et efficace",
         questions: [
-          { q: "Le brouillon de l'IA est trop formel pour votre petite boutique. Que faites-vous ?", options: ["Vous l'utilisez quand même", "Vous supprimez l'application d'IA", "Vous l'envoyez à un avocat", "Vous demandez : « Fais que ça sonne plus comme une petite entreprise locale. »"], answer: 3, why: "Une demande de suivi demande à l'assistant de changer le ton." },
-          { q: "Un brouillon de l'IA dit « ouvert jusqu'à 21 h » mais vous fermez à 19 h. Qu'est-ce que cela montre ?", options: ["L'IA peut inventer des faits, donc vous les vérifiez", "L'IA a toujours raison", "Vos horaires sont faux", "Le client ne le remarquera pas"], answer: 0, why: "L'IA peut inventer des faits ; vous les vérifiez avec vos propres documents." },
-          { q: "Le brouillon dit « le moins cher de l'État ». Vous n'avez pas comparé les prix. Que faire ?", options: ["Le garder, ça sonne bien", "Le mettre en plus grand", "Le retirer ou le remplacer par quelque chose que vous pouvez prouver", "Ajouter « garanti »"], answer: 2, why: "Les publicités doivent être vraies et appuyées par des preuves." },
-          { q: "Comment inclure le nom d'un client dans un prompt ?", options: ["Écrire le nom complet et le numéro de téléphone", "Écrire aussi son numéro de carte", "Demander son mot de passe au client", "Utiliser un espace réservé comme « [nom du client] »"], answer: 3, why: "Les espaces réservés gardent les infos privées hors de la conversation." },
-          { q: "Vous recevez un appel urgent avec la voix de votre fournisseur qui vous demande de payer un nouveau compte aujourd'hui. Que faites-vous ?", options: ["Vous payez tout de suite", "Vous envoyez vos identifiants bancaires", "Vous rappelez le fournisseur sur un numéro que vous connaissez déjà", "Vous répondez avec le code reçu sur votre téléphone"], answer: 2, why: "Les voix peuvent être imitées par l'IA ; vérifiez sur un numéro connu avant de payer." }
+          { objective: "O4", q: "Le brouillon de l'IA est trop formel pour votre petite boutique. Que faites-vous ?", options: ["Vous l'utilisez quand même", "Vous supprimez l'application d'IA", "Vous l'envoyez à un avocat", "Vous demandez : « Fais que ça sonne plus comme une petite entreprise locale. »"], answer: 3, why: "Une demande de suivi demande à l'assistant de changer le ton." },
+          { objective: "O5", q: "Un brouillon de l'IA dit « ouvert jusqu'à 21 h » mais vous fermez à 19 h. Qu'est-ce que cela montre ?", options: ["L'IA peut inventer des faits, donc vous les vérifiez", "L'IA a toujours raison", "Vos horaires sont faux", "Le client ne le remarquera pas"], answer: 0, why: "L'IA peut inventer des faits ; vous les vérifiez avec vos propres documents." },
+          { objective: "O5", q: "Le brouillon dit « le moins cher de l'État ». Vous n'avez pas comparé les prix. Que faire ?", options: ["Le garder, ça sonne bien", "Le mettre en plus grand", "Le retirer ou le remplacer par quelque chose que vous pouvez prouver", "Ajouter « garanti »"], answer: 2, why: "Les publicités doivent être vraies et appuyées par des preuves." },
+          { objective: "O6", q: "Comment inclure le nom d'un client dans un prompt ?", options: ["Écrire le nom complet et le numéro de téléphone", "Écrire aussi son numéro de carte", "Demander son mot de passe au client", "Utiliser un espace réservé comme « [nom du client] »"], answer: 3, why: "Les espaces réservés gardent les infos privées hors de la conversation." },
+          { objective: "O6", q: "Vous recevez un appel urgent avec la voix de votre fournisseur qui vous demande de payer un nouveau compte aujourd'hui. Que faites-vous ?", options: ["Vous payez tout de suite", "Vous envoyez vos identifiants bancaires", "Vous rappelez le fournisseur sur un numéro que vous connaissez déjà", "Vous répondez avec le code reçu sur votre téléphone"], answer: 2, why: "Les voix peuvent être imitées par l'IA ; vérifiez sur un numéro connu avant de payer." }
         ]
       }
     }
@@ -168,26 +221,105 @@ module.exports = {
   quiz: {
     title: "Quiz final : Introduction à l'IA pour les entrepreneurs",
     questions: [
-      { q: "Dans votre entreprise, un assistant IA s'utilise le mieux comme :", options: ["Votre avocat", "Une aide rapide aux premiers brouillons", "Votre banque", "Celui qui prend la décision finale"], answer: 1, why: "Il rédige ; vous vérifiez et décidez." },
-      { q: "Lequel est un assistant IA gratuit et connu ?", options: ["Google Gemini", "Une caisse enregistreuse", "Une imprimante", "Une cellule de tableur"], answer: 0, why: "Gemini, ChatGPT et Copilot sont des assistants IA connus." },
-      { q: "Qu'est-ce qu'un assistant IA ne sait PAS si vous ne le lui dites pas ?", options: ["Ce qu'est un plan d'affaires", "Comment écrire une liste", "Vos vrais prix", "Les mots courants des affaires"], answer: 2, why: "Il ne connaît pas vos prix, vos clients ou vos règles si vous ne les lui donnez pas." },
-      { q: "Les bonnes premières tâches pour l'IA sont celles qui :", options: ["Se répètent, sont surtout des mots et sont faciles à vérifier", "Envoient de l'argent", "Signent des contrats", "Fixent votre position fiscale"], answer: 0, why: "Elles sont peu risquées et font gagner du temps." },
-      { q: "Quelle tâche devez-vous garder pour vous ?", options: ["Chercher des noms de boutique", "Rédiger un prospectus", "Faire une liste de contrôle", "Approuver un paiement à un fournisseur"], answer: 3, why: "Les décisions d'argent vous reviennent." },
-      { q: "Quand vous triez les tâches, « l'IA m'aide à réfléchir » veut dire :", options: ["L'IA prend la décision", "Vous utilisez l'IA pour trouver des idées ou expliquer, puis vous décidez", "Vous n'utilisez jamais l'IA", "L'IA l'envoie à votre place"], answer: 1, why: "L'IA soutient votre réflexion ; vous décidez." },
-      { q: "Les trois parties d'un prompt professionnel sont :", options: ["Nom, mot de passe, adresse", "Tâche, contexte, format", "Bonjour, s'il te plaît, merci", "Prix, taxe, total"], answer: 1, why: "La tâche, le contexte et le format donnent à l'IA ce dont elle a besoin." },
-      { q: "Lequel est un contexte d'entreprise ?", options: ["« Moins de 100 mots »", "« Écris un e-mail »", "« Merci »", "« Nous sommes un service de lavage de voitures à domicile à Dallas pour les parents pressés »"], answer: 3, why: "Le contexte explique votre entreprise et votre client." },
-      { q: "Laquelle est une consigne de format ?", options: ["« Donne-moi une liste de 5 puces courtes »", "« Nous vendons des gâteaux »", "« Nos clients sont des étudiants »", "« Nous sommes à Lagos »"], answer: 0, why: "Le format dit à quoi doit ressembler la réponse." },
-      { q: "Une demande de suivi, c'est :", options: ["Une nouvelle application", "Un avis client", "Une deuxième demande dans la même conversation qui modifie la réponse", "Un type de facture"], answer: 2, why: "Les demandes de suivi améliorent le brouillon étape par étape." },
-      { q: "Quelle demande de suivi ajoute un appel à l'action ?", options: ["« Rallonge-le sans raison. »", "« Retire tous les détails. »", "« Ajoute mon mot de passe. »", "« Ajoute une prochaine étape claire, comme Envoyez-nous un texto pour réserver. »"], answer: 3, why: "Un appel à l'action dit au client quoi faire ensuite." },
-      { q: "Pourquoi lire un brouillon à voix haute ?", options: ["Pour rendre l'IA plus rapide", "Pour économiser la batterie", "Pour vérifier qu'il sonne comme vous", "C'est exigé par la loi"], answer: 2, why: "L'entendre vous aide à repérer le ton et les erreurs." },
-      { q: "Une « hallucination » de l'IA, c'est :", options: ["Une réponse lente", "Quelque chose qui a l'air vrai mais qui est inventé", "Un type de logo", "Une plainte de client"], answer: 1, why: "L'IA peut inventer des faits qui ont l'air réels." },
-      { q: "L'IA calcule mal le total de votre liste de prix. Quelle est la leçon ?", options: ["Refaire le calcul vous-même ou dans un tableur", "Faire confiance aux calculs de l'IA", "Augmenter vos prix", "Arrêter de vendre"], answer: 0, why: "Vérifiez toujours les chiffres avant de les utiliser." },
-      { q: "Selon la FTC, les affirmations publicitaires doivent être :", options: ["Drôles", "Écrites par l'IA", "Vraies, non trompeuses et appuyées par des preuves", "Courtes"], answer: 2, why: "Les règles de vérité dans la publicité de la FTC l'exigent." },
-      { q: "Pour une question d'impôts ou de licence, l'IA sert le mieux à :", options: ["Comprendre les mots avant de vérifier la source officielle ou un professionnel", "Prendre la décision finale", "Faire la déclaration à votre place", "Remplacer votre comptable"], answer: 0, why: "Confirmez les points fiscaux et juridiques avec des sources officielles ou des professionnels." },
-      { q: "Qu'est-ce qui ne doit JAMAIS aller dans une conversation avec une IA ?", options: ["« Rends-le plus amical »", "Votre type d'entreprise", "Le ton souhaité", "Le numéro de carte d'un client"], answer: 3, why: "Les numéros de carte sont des informations financières privées." },
-      { q: "Un espace réservé comme « [nom du client] » vous permet de :", options: ["Cacher les prix aux clients", "Obtenir de l'aide sans partager d'infos privées", "Sauter la vérification", "Payer plus vite"], answer: 1, why: "Vous remplissez vous-même la vraie information ensuite." },
-      { q: "Avec certaines offres d'IA gratuites, vos conversations peuvent :", options: ["Disparaître avant que vous les lisiez", "Être conservées et servir à améliorer l'IA", "Être envoyées à vos clients", "Être imprimées"], answer: 1, why: "C'est pourquoi vous vérifiez les paramètres de confidentialité et gardez les infos privées dehors." },
-      { q: "Un e-mail qui a l'air de venir de votre fournisseur vous demande de payer d'urgence sur un nouveau compte bancaire. Meilleure étape ?", options: ["Payer maintenant", "Répondre avec vos identifiants bancaires", "Le transférer à tous vos clients", "Appeler le fournisseur sur un numéro que vous connaissez déjà"], answer: 3, why: "Les fausses factures sont courantes ; vérifiez sur un numéro connu." }
+      { objective: "O1", q: "Dans votre entreprise, un assistant IA s'utilise le mieux comme :", options: ["Votre avocat", "Une aide rapide aux premiers brouillons", "Votre banque", "Celui qui prend la décision finale"], answer: 1, why: "Il rédige ; vous vérifiez et décidez." },
+      { objective: "O1", q: "Lequel est un assistant IA gratuit et connu ?", options: ["Google Gemini", "Une caisse enregistreuse", "Une imprimante", "Une cellule de tableur"], answer: 0, why: "Gemini, ChatGPT et Copilot sont des assistants IA connus." },
+      { objective: "O1", q: "Qu'est-ce qu'un assistant IA ne sait PAS si vous ne le lui dites pas ?", options: ["Ce qu'est un plan d'affaires", "Comment écrire une liste", "Vos vrais prix", "Les mots courants des affaires"], answer: 2, why: "Il ne connaît pas vos prix, vos clients ou vos règles si vous ne les lui donnez pas." },
+      { objective: "O2", q: "Les bonnes premières tâches pour l'IA sont celles qui :", options: ["Se répètent, sont surtout des mots et sont faciles à vérifier", "Envoient de l'argent", "Signent des contrats", "Fixent votre position fiscale"], answer: 0, why: "Elles sont peu risquées et font gagner du temps." },
+      { objective: "O2", q: "Quelle tâche devez-vous garder pour vous ?", options: ["Chercher des noms de boutique", "Rédiger un prospectus", "Faire une liste de contrôle", "Approuver un paiement à un fournisseur"], answer: 3, why: "Les décisions d'argent vous reviennent." },
+      { objective: "O2", q: "Quand vous triez les tâches, « l'IA m'aide à réfléchir » veut dire :", options: ["L'IA prend la décision", "Vous utilisez l'IA pour trouver des idées ou expliquer, puis vous décidez", "Vous n'utilisez jamais l'IA", "L'IA l'envoie à votre place"], answer: 1, why: "L'IA soutient votre réflexion ; vous décidez." },
+      { objective: "O3", q: "Les trois parties d'un prompt professionnel sont :", options: ["Nom, mot de passe, adresse", "Tâche, contexte, format", "Bonjour, s'il te plaît, merci", "Prix, taxe, total"], answer: 1, why: "La tâche, le contexte et le format donnent à l'IA ce dont elle a besoin." },
+      { objective: "O3", q: "Lequel est un contexte d'entreprise ?", options: ["« Moins de 100 mots »", "« Écris un e-mail »", "« Merci »", "« Nous sommes un service de lavage de voitures à domicile à Dallas pour les parents pressés »"], answer: 3, why: "Le contexte explique votre entreprise et votre client." },
+      { objective: "O3", q: "Laquelle est une consigne de format ?", options: ["« Donne-moi une liste de 5 puces courtes »", "« Nous vendons des gâteaux »", "« Nos clients sont des étudiants »", "« Nous sommes à Lagos »"], answer: 0, why: "Le format dit à quoi doit ressembler la réponse." },
+      { objective: "O4", q: "Une demande de suivi, c'est :", options: ["Une nouvelle application", "Un avis client", "Une deuxième demande dans la même conversation qui modifie la réponse", "Un type de facture"], answer: 2, why: "Les demandes de suivi améliorent le brouillon étape par étape." },
+      { objective: "O4", q: "Quelle demande de suivi ajoute un appel à l'action ?", options: ["« Rallonge-le sans raison. »", "« Retire tous les détails. »", "« Ajoute mon mot de passe. »", "« Ajoute une prochaine étape claire, comme Envoyez-nous un texto pour réserver. »"], answer: 3, why: "Un appel à l'action dit au client quoi faire ensuite." },
+      { objective: "O4", q: "Pourquoi lire un brouillon à voix haute ?", options: ["Pour rendre l'IA plus rapide", "Pour économiser la batterie", "Pour vérifier qu'il sonne comme vous", "C'est exigé par la loi"], answer: 2, why: "L'entendre vous aide à repérer le ton et les erreurs." },
+      { objective: "O5", q: "Une « hallucination » de l'IA, c'est :", options: ["Une réponse lente", "Quelque chose qui a l'air vrai mais qui est inventé", "Un type de logo", "Une plainte de client"], answer: 1, why: "L'IA peut inventer des faits qui ont l'air réels." },
+      { objective: "O5", q: "L'IA calcule mal le total de votre liste de prix. Quelle est la leçon ?", options: ["Refaire le calcul vous-même ou dans un tableur", "Faire confiance aux calculs de l'IA", "Augmenter vos prix", "Arrêter de vendre"], answer: 0, why: "Vérifiez toujours les chiffres avant de les utiliser." },
+      { objective: "O5", q: "Selon la FTC, les affirmations publicitaires doivent être :", options: ["Drôles", "Écrites par l'IA", "Vraies, non trompeuses et appuyées par des preuves", "Courtes"], answer: 2, why: "Les règles de vérité dans la publicité de la FTC l'exigent." },
+      { objective: "O5", q: "Pour une question d'impôts ou de licence, l'IA sert le mieux à :", options: ["Comprendre les mots avant de vérifier la source officielle ou un professionnel", "Prendre la décision finale", "Faire la déclaration à votre place", "Remplacer votre comptable"], answer: 0, why: "Confirmez les points fiscaux et juridiques avec des sources officielles ou des professionnels." },
+      { objective: "O6", q: "Qu'est-ce qui ne doit JAMAIS aller dans une conversation avec une IA ?", options: ["« Rends-le plus amical »", "Votre type d'entreprise", "Le ton souhaité", "Le numéro de carte d'un client"], answer: 3, why: "Les numéros de carte sont des informations financières privées." },
+      { objective: "O6", q: "Un espace réservé comme « [nom du client] » vous permet de :", options: ["Cacher les prix aux clients", "Obtenir de l'aide sans partager d'infos privées", "Sauter la vérification", "Payer plus vite"], answer: 1, why: "Vous remplissez vous-même la vraie information ensuite." },
+      { objective: "O6", q: "Avec certaines offres d'IA gratuites, vos conversations peuvent :", options: ["Disparaître avant que vous les lisiez", "Être conservées et servir à améliorer l'IA", "Être envoyées à vos clients", "Être imprimées"], answer: 1, why: "C'est pourquoi vous vérifiez les paramètres de confidentialité et gardez les infos privées dehors." },
+      { objective: "O6", q: "Un e-mail qui a l'air de venir de votre fournisseur vous demande de payer d'urgence sur un nouveau compte bancaire. Meilleure étape ?", options: ["Payer maintenant", "Répondre avec vos identifiants bancaires", "Le transférer à tous vos clients", "Appeler le fournisseur sur un numéro que vous connaissez déjà"], answer: 3, why: "Les fausses factures sont courantes ; vérifiez sur un numéro connu." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      3,
+      6,
+      8,
+      9,
+      12,
+      14,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Prompt professionnel",
+        objective: "O3",
+        notYet: "Le prompt est flou, par exemple « écris un e-mail ».",
+        meets: "Le prompt a une tâche, un contexte sur l'entreprise et un format.",
+        exceeds: "Il nomme aussi le client et le but, et le premier brouillon est presque prêt."
+      },
+      {
+        name: "Brouillon amélioré",
+        objective: "O4",
+        notYet: "Le premier brouillon a été utilisé tel quel.",
+        meets: "Deux changements demandés, un à la fois, plus les détails propres à l'entrepreneur.",
+        exceeds: "Sait dire ce que chaque changement a corrigé, et la version finale ressemble à l'entreprise."
+      },
+      {
+        name: "Faits et affirmations vérifiés",
+        objective: "O5",
+        notYet: "Un prix, un horaire, un total ou une affirmation a été copié sans vérification.",
+        meets: "Chaque fait et chaque chiffre vérifiés ; chaque affirmation est vraie et prouvable.",
+        exceeds: "Note où chaque fait a été vérifié, et les calculs ont été refaits dans un tableur."
+      },
+      {
+        name: "Détails privés protégés",
+        objective: "O6",
+        notYet: "Le prompt ou la version finale contient des données de carte, de banque ou des détails privés de clients.",
+        meets: "Aucun détail privé sur les clients ou l'argent ; des espaces réservés là où il faut.",
+        exceeds: "A aussi vérifié le réglage de confidentialité de l'outil d'IA sur l'enregistrement des conversations."
+      },
+      {
+        name: "Prêt à l'emploi",
+        objective: "O1",
+        notYet: "La version finale n'est pas terminée ou pas enregistrée.",
+        meets: "Enregistrée, vérifiée et prête à servir pour la tâche choisie.",
+        exceeds: "Enregistrée comme modèle que l'entrepreneur peut réutiliser la prochaine fois."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les entrepreneurs qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Les entrepreneurs qui utilisent un brouillon de l'IA pour une vraie tâche de l'entreprise dans les 30 jours (enquête de suivi)",
+      "Les entrepreneurs qui disent gagner des heures chaque semaine sur l'écriture et la planification",
+      "Les apprenants qui commencent un autre cours Koach Learn pour entrepreneurs dans les 30 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur avec Internet",
+      "Un assistant IA gratuit comme ChatGPT, Microsoft Copilot ou Google Gemini",
+      "Vos vrais prix, horaires et détails de l'entreprise pour vérifier",
+      "Environ 60 minutes au total pour les leçons, les exercices, les vérifications et la tâche finale"
+    ],
+    facilitatorNotes: [
+      "En atelier, demandez à chaque entrepreneur d'apporter une vraie tâche et de la travailler pendant les six leçons.",
+      "Rappelez aux entrepreneurs de ne jamais coller de numéros de carte, de coordonnées bancaires ou de listes de clients dans une conversation avec l'IA.",
+      "Formez des binômes qui lisent à voix haute le brouillon de l'autre et repèrent les affirmations à prouver.",
+      "Orientez les questions d'impôts et de licences vers les sources officielles ou un professionnel, pas vers l'IA.",
+      "Notez la tâche finale avec la grille, une ligne « Pas encore » à la fois."
     ]
   }
 };

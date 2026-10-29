@@ -15,11 +15,35 @@ module.exports = {
     "Check each tool's age rule and your school's AI rules, and involve a parent or guardian before you sign up for anything. A school counselor is a great partner for this course too. Each lesson is about five minutes and ends with a \"Try it now\" task."
   ],
   finalTask: "Make a one-page career plan for one career you are curious about: why it fits your interests, its typical training, pay and job outlook from an official site, one way AI is used in that work, and three steps you can take this school year (a class, a club or activity, and a person to talk to).",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Teens about 13 to 18 in the United States who are wondering what they could be, including those who have no idea yet and those thinking about trades, college or a first job.",
+    startingPoint: "Know some things they enjoy and may have a part-time job idea, but have rarely used an interest quiz, an official career site or a step-by-step plan. Many take career facts from friends, social media or AI without checking.",
+    gap: "Without real information, teens pick or rule out careers on guesses about pay and training, and miss classes and programs they could start now. Learning to explore with AI and check official sites helps them choose a direction and take real steps this school year.",
+    constraints: [
+      "Age limits and parent or guardian involvement for new accounts, jobs and volunteering",
+      "School AI rules; a school counselor is a key partner",
+      "Pay, training and youth work rules change and differ by state; learners check official sites",
+      "Privacy: no address, phone number or other private details in AI tools",
+      "Devices: a phone, school computer or library computer; short lessons"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Using a free interest quiz such as the one on mynextmove.org", action: "list your top interest areas and the three activities you enjoy most", standard: "answering the quiz honestly and writing down the results" },
+    { id: "O2", condition: "Given your interests and an AI assistant you are allowed to use", action: "generate a list of careers with different training paths and choose two to research", standard: "sharing no private details and treating the list as ideas to check" },
+    { id: "O3", condition: "For each of your two careers", action: "look up typical pay, training and job outlook on bls.gov/ooh or mynextmove.org", standard: "trusting the official site wherever it disagrees with AI" },
+    { id: "O4", condition: "For one career you like", action: "describe one way AI is used in that work and two human skills that still matter", standard: "checked with a real person or a trusted source" },
+    { id: "O5", condition: "Given your grade and a target career", action: "plan a step-by-step pathway from now to a first job, with three steps for this school year", standard: "with at least one step checked with your counselor or an official site" },
+    { id: "O6", condition: "Before a first job, volunteering or job shadowing", action: "check the federal and state youth work rules and write a three-sentence pitch about yourself", standard: "following the stricter rule and practicing the pitch out loud" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Finding careers that fit you",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Starting with what you like",
           minutes: 5,
           goal: "Take a free interest quiz and list your top interests.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Write down your clues", bullets: ["Your top interest areas", "Three activities you love"] }
           ],
           tryIt: "Take the interest profiler on mynextmove.org (or one your counselor gives you). Write down your top interest areas and three things you love doing.",
-          youCanNow: "describe your interests in a way that helps you search for careers."
+          youCanNow: "describe your interests in a way that helps you search for careers.",
+          quickCheck: [
+            { objective: "O1", q: "What is the first step in a good career search?", options: ["Picking the job that pays the most", "Looking at what you enjoy, are good at and care about", "Choosing what your friends choose", "Applying for jobs right away"], answer: 1, why: "A good search starts with you: your interests, strengths and values." },
+            { objective: "O1", q: "You finished the interest profiler on mynextmove.org. What do you do next?", options: ["Close it and forget the results", "Retake it until it says what you want", "Share your home address with the site", "Write down your top interest areas and three activities you love"], answer: 3, why: "Your results and favorite activities are your starting clues." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Brainstorming careers with AI",
           minutes: 5,
           goal: "Use AI to turn your interests into a list of careers to explore.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Ideas, not facts", bullets: ["AI can be wrong about pay and training", "Pick two careers to check"] }
           ],
           tryIt: "Give an AI assistant your interests and ask for 10 careers with different training paths. Ask what a day looks like in two of them, then pick your two favorites.",
-          youCanNow: "use AI to brainstorm careers that match your interests."
+          youCanNow: "use AI to brainstorm careers that match your interests.",
+          quickCheck: [
+            { objective: "O2", q: "How should you treat a list of careers from AI?", options: ["As ideas to check", "As facts about pay", "As a final decision", "As a job offer"], answer: 0, why: "AI is good for ideas but can be wrong about pay, training and job numbers." },
+            { objective: "O2", q: "You like music and fixing things. Which prompt helps most?", options: ["\"jobs\"", "\"Give me my address and a job.\"", "\"I like music and fixing things. Suggest 10 careers with different training paths.\"", "\"What job is best?\""], answer: 2, why: "Giving your interests and asking for different training paths gets useful ideas." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Checking the facts on official career sites",
           minutes: 5,
           goal: "Look up a career's pay, training and job outlook on an official site.",
@@ -76,17 +110,21 @@ module.exports = {
             { title: "Compare and decide", bullets: ["AI vs official site", "When they disagree, trust the official site"] }
           ],
           tryIt: "Look up your two careers on bls.gov/ooh or mynextmove.org. Write down the typical training, pay and job outlook for each, and note one thing AI got different.",
-          youCanNow: "research a career's real facts on an official site."
+          youCanNow: "research a career's real facts on an official site.",
+          quickCheck: [
+            { objective: "O3", q: "What does the Occupational Outlook Handbook at bls.gov/ooh show?", options: ["Video game reviews", "School grades", "Celebrity salaries", "Typical pay, training and job outlook for hundreds of jobs"], answer: 3, why: "It is a free, official guide to jobs from the U.S. Bureau of Labor Statistics." },
+            { objective: "O3", q: "A friend says a career pays a lot, and AI gives a different number. What do you do?", options: ["Look up the current pay on an official site", "Trust your friend", "Average the two numbers", "Trust the AI"], answer: 0, why: "Pay changes over time and place, so check the current number on an official site." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Finding careers that fit you",
         questions: [
-          { q: "What does an interest profiler do?", options: ["Finds your password", "Matches what you like with kinds of work", "Gives you a job", "Grades your homework"], answer: 1, why: "It suggests careers based on your interests." },
-          { q: "Who offers My Next Move?", options: ["A video game company", "A social media app", "Your school cafeteria", "The U.S. Department of Labor"], answer: 3, why: "It is sponsored by the U.S. Department of Labor." },
-          { q: "Which prompt is best for brainstorming careers?", options: ["\"I like games, drawing and helping kids. Suggest 10 careers with different training paths.\"", "\"jobs\"", "\"give me a job\"", "\"what is work\""], answer: 0, why: "It gives interests and asks for variety." },
-          { q: "AI says a job pays a certain amount. You should:", options: ["Believe it", "Tell everyone", "Check the current pay on an official site", "Pick that job right away"], answer: 2, why: "AI can be wrong; official sites have current numbers." },
-          { q: "What is median pay?", options: ["The highest pay", "The lowest pay", "The middle pay: half earn more, half earn less", "Pay for interns only"], answer: 2, why: "Median is the middle point." }
+          { objective: "O1", q: "What does an interest profiler do?", options: ["Finds your password", "Matches what you like with kinds of work", "Gives you a job", "Grades your homework"], answer: 1, why: "It suggests careers based on your interests." },
+          { objective: "O1", q: "Who offers My Next Move?", options: ["A video game company", "A social media app", "Your school cafeteria", "The U.S. Department of Labor"], answer: 3, why: "It is sponsored by the U.S. Department of Labor." },
+          { objective: "O2", q: "Which prompt is best for brainstorming careers?", options: ["\"I like games, drawing and helping kids. Suggest 10 careers with different training paths.\"", "\"jobs\"", "\"give me a job\"", "\"what is work\""], answer: 0, why: "It gives interests and asks for variety." },
+          { objective: "O3", q: "AI says a job pays a certain amount. You should:", options: ["Believe it", "Tell everyone", "Check the current pay on an official site", "Pick that job right away"], answer: 2, why: "AI can be wrong; official sites have current numbers." },
+          { objective: "O3", q: "What is median pay?", options: ["The highest pay", "The lowest pay", "The middle pay: half earn more, half earn less", "Pay for interns only"], answer: 2, why: "Median is the middle point." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Chapter 2: Planning your path",
       lessons: [
         {
+          objectives: ["O4"],
           title: "How AI is changing work",
           minutes: 5,
           goal: "Describe one way AI is used in a career you like and the human skills that still matter.",
@@ -109,9 +148,14 @@ module.exports = {
             { title: "Find out for your career", bullets: ["Ask AI how it is used", "Check with a real person or trusted site"] }
           ],
           tryIt: "Ask AI how AI is used in one of your two careers and which human skills matter most. Write down one AI use and two human skills, and one question you would ask a real person in that job.",
-          youCanNow: "explain how AI touches a career and which human skills still matter."
+          youCanNow: "explain how AI touches a career and which human skills still matter.",
+          quickCheck: [
+            { objective: "O4", q: "Which is a human skill that matters more as AI spreads?", options: ["Typing fast", "Talking with people and solving new problems", "Memorizing phone numbers", "Copying answers"], answer: 1, why: "Communication, creativity, reliability and knowing when AI is wrong matter even more." },
+            { objective: "O4", q: "AI tells you how it is used in nursing. How do you check it?", options: ["Ask the same AI again", "Assume it is right", "Post it online", "Ask a real nurse or read a trusted industry or news site"], answer: 3, why: "Check what AI says with a real person in the job or a trusted source." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Building a pathway from high school",
           minutes: 5,
           goal: "Make a step-by-step plan from now to a first job in a career.",
@@ -128,12 +172,17 @@ module.exports = {
             { title: "Check and ask", bullets: ["Licenses and programs differ by state", "Ask your counselor about CTE and dual enrollment"] }
           ],
           tryIt: "Ask AI for a step-by-step path to one of your careers. Pick three things you can do this school year and check one of them with your counselor or an official site.",
-          youCanNow: "build a realistic career pathway plan."
+          youCanNow: "build a realistic career pathway plan.",
+          quickCheck: [
+            { objective: "O5", q: "What is a career pathway?", options: ["The road from where you are now to the job you want", "A single class", "A job application form", "A list of company names"], answer: 0, why: "A pathway lists the steps, such as classes, programs and training, from now to a job." },
+            { objective: "O5", q: "AI's pathway says you need a certain license. What do you do?", options: ["Assume it is the same in every state", "Skip the license", "Check the license rules on an official site for your state", "Ask AI to issue the license"], answer: 2, why: "Licenses and programs differ by state, so check official sites." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Getting ready for a first job",
           minutes: 5,
-          goal: "Know the basic youth work rules and prepare a simple first-job pitch.",
+          goal: "Check the basic youth work rules and prepare a simple first-job pitch.",
           text: [
             "A first job, volunteering or job shadowing helps you test a career. Under federal law, most jobs need you to be at least 14. If you are 14 or 15, your hours are limited, for example no more than 3 hours on a school day and only between 7 a.m. and 7 p.m. for most of the year (until 9 p.m. from June 1 to Labor Day). At 16 and 17, federal law does not limit hours, but no one under 18 may do hazardous jobs.",
             "Many states have stricter rules and may need a work permit. When federal and state laws both apply, the stricter one counts. Check your state's labor office and talk with a parent or guardian.",
@@ -148,17 +197,21 @@ module.exports = {
             { title: "Your first-job pitch", bullets: ["3 sentences about you", "Draft with AI, no private details", "Practice it out loud"] }
           ],
           tryIt: "Final task: make your one-page career plan: why the career fits you, its training, pay and outlook from an official site, one way AI is used in it, and three steps for this school year. Add your 3-sentence first-job pitch at the bottom.",
-          youCanNow: "explore careers, check the facts, plan your path and pitch yourself for a first job."
+          youCanNow: "explore careers, check the facts, plan your path and pitch yourself for a first job.",
+          quickCheck: [
+            { objective: "O6", q: "Under federal law, what kind of work may no one under 18 do?", options: ["Hazardous jobs", "Volunteering", "Job shadowing", "Babysitting for family"], answer: 0, why: "Federal law bars anyone under 18 from hazardous jobs." },
+            { objective: "O6", q: "You want AI to help write your first-job pitch. What do you leave out of the prompt?", options: ["That you are reliable", "Your address and phone number", "That you coach a sports team", "What you want to learn"], answer: 1, why: "Keep private details like your address and phone number out of AI tools." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Planning your path",
         questions: [
-          { q: "Which skill matters MORE as AI spreads?", options: ["Communication and solving new problems", "Ignoring people", "Never learning new tools", "Copying answers"], answer: 0, why: "Human skills become more valuable as AI handles routine tasks." },
-          { q: "What is a career pathway?", options: ["A hiking trail", "A video game map", "A type of resume", "The steps from school to a job in a field"], answer: 3, why: "A pathway is the road from now to the job." },
-          { q: "Who can tell you which CTE or dual enrollment classes your school offers?", options: ["A pop-up ad", "Your school counselor", "A random app", "Nobody"], answer: 1, why: "Counselors know the school's programs." },
-          { q: "Under federal law, a 15-year-old on a school day may work at most:", options: ["3 hours", "8 hours", "12 hours", "No limit"], answer: 0, why: "The federal limit for 14-15 year olds is 3 hours on a school day." },
-          { q: "Your state's youth work rule is stricter than the federal rule. Which counts?", options: ["The federal rule", "Neither", "The stricter rule", "Whichever your friend likes"], answer: 2, why: "When both apply, the stricter standard must be followed." }
+          { objective: "O4", q: "Which skill matters MORE as AI spreads?", options: ["Communication and solving new problems", "Ignoring people", "Never learning new tools", "Copying answers"], answer: 0, why: "Human skills become more valuable as AI handles routine tasks." },
+          { objective: "O5", q: "What is a career pathway?", options: ["A hiking trail", "A video game map", "A type of resume", "The steps from school to a job in a field"], answer: 3, why: "A pathway is the road from now to the job." },
+          { objective: "O5", q: "Who can tell you which CTE or dual enrollment classes your school offers?", options: ["A pop-up ad", "Your school counselor", "A random app", "Nobody"], answer: 1, why: "Counselors know the school's programs." },
+          { objective: "O6", q: "Under federal law, a 15-year-old on a school day may work at most:", options: ["3 hours", "8 hours", "12 hours", "No limit"], answer: 0, why: "The federal limit for 14-15 year olds is 3 hours on a school day." },
+          { objective: "O6", q: "Your state's youth work rule is stricter than the federal rule. Which counts?", options: ["The federal rule", "Neither", "The stricter rule", "Whichever your friend likes"], answer: 2, why: "When both apply, the stricter standard must be followed." }
         ]
       }
     }
@@ -166,26 +219,107 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI and Career Exploration",
     questions: [
-      { q: "A good career search starts with:", options: ["The highest-paying job only", "What you enjoy and are good at", "A random pick", "What a stranger says"], answer: 1, why: "Your interests are the best starting clues." },
-      { q: "mynextmove.org is:", options: ["A game store", "A dating site", "A social media app", "A free career site from the U.S. Department of Labor"], answer: 3, why: "It is sponsored by the Department of Labor." },
-      { q: "After an interest quiz you should:", options: ["Forget the results", "Post your password", "Quit school", "Write down your top interest areas"], answer: 3, why: "Your results are clues for the next step." },
-      { q: "When brainstorming careers with AI, leave out:", options: ["Your interests", "Private details like your address", "Your age range", "Your favorite school subject"], answer: 1, why: "Never put private information into AI." },
-      { q: "An apprenticeship is:", options: ["A video game", "An unpaid test", "A paid job where you learn a trade while working", "A college dorm"], answer: 2, why: "Apprentices earn while they learn." },
-      { q: "AI's career list should be treated as:", options: ["Ideas to check", "Guaranteed facts", "A job offer", "A school grade"], answer: 0, why: "AI can be wrong about pay and training." },
-      { q: "bls.gov/ooh shows each job's:", options: ["Song lyrics", "Pay, training and job outlook", "Game scores", "Weather"], answer: 1, why: "The Occupational Outlook Handbook gives those facts." },
-      { q: "AI and bls.gov disagree about training for a job. Trust:", options: ["AI", "Neither", "A meme", "The official site"], answer: 3, why: "Official sites are checked and current." },
-      { q: "Job outlook means:", options: ["How many jobs are expected in the future", "The view from the office", "Your outfit for work", "Your boss's mood"], answer: 0, why: "Outlook is about future job numbers." },
-      { q: "Automation means:", options: ["Driving a car", "A school rule", "Machines or software doing tasks people used to do", "A music style"], answer: 2, why: "Automation shifts tasks to machines." },
-      { q: "Which is a soft skill?", options: ["Typing speed only", "Owning a laptop", "Teamwork", "Knowing a password"], answer: 2, why: "Soft skills are people skills like teamwork." },
-      { q: "To check what AI says about AI in a job, you can:", options: ["Ask a real person in that job", "Trust it fully", "Ask a pop-up ad", "Skip checking"], answer: 0, why: "People in the job know how it really works." },
-      { q: "Dual enrollment means:", options: ["Having two lockers", "Two phones", "Two lunches", "Taking college classes while in high school"], answer: 3, why: "Students earn college credit early." },
-      { q: "Why check licenses on official sites?", options: ["AI is always right", "Rules differ by state", "They never change", "It is not needed"], answer: 1, why: "Training and license rules vary by state." },
-      { q: "A good pathway prompt includes:", options: ["Your grade and target career", "Your password", "Your address", "Nothing"], answer: 0, why: "Grade and goal let AI make a fitting plan." },
-      { q: "Under federal law, 14- and 15-year-olds may usually work only between:", options: ["Midnight and 6 a.m.", "Any time", "7 a.m. and 7 p.m. (9 p.m. from June 1 to Labor Day)", "Only on school days"], answer: 2, why: "Those are the federal time-of-day limits." },
-      { q: "Under federal law, who may not do hazardous jobs?", options: ["Only people under 12", "Anyone under 18", "Adults", "Nobody"], answer: 1, why: "Hazardous jobs are off-limits to anyone under 18." },
-      { q: "Before taking a first job you should:", options: ["Lie about your age", "Skip school", "Give AI your phone number", "Check your state's rules and talk with a parent or guardian"], answer: 3, why: "State rules may require a permit, and a parent or guardian should know." },
-      { q: "Job shadowing is:", options: ["Hiding from your boss", "A video game mode", "A type of resume", "Following a worker for a day to see the job"], answer: 3, why: "Shadowing lets you see a job up close." },
-      { q: "A first-job pitch should be:", options: ["A 10-page essay", "About 3 sentences about you, practiced out loud", "Your address and phone number", "Written by AI and never read"], answer: 1, why: "Short and practiced is easy to say with confidence." }
+      { objective: "O1", q: "A good career search starts with:", options: ["The highest-paying job only", "What you enjoy and are good at", "A random pick", "What a stranger says"], answer: 1, why: "Your interests are the best starting clues." },
+      { objective: "O1", q: "mynextmove.org is:", options: ["A game store", "A dating site", "A social media app", "A free career site from the U.S. Department of Labor"], answer: 3, why: "It is sponsored by the Department of Labor." },
+      { objective: "O1", q: "After an interest quiz you should:", options: ["Forget the results", "Post your password", "Quit school", "Write down your top interest areas"], answer: 3, why: "Your results are clues for the next step." },
+      { objective: "O2", q: "When brainstorming careers with AI, leave out:", options: ["Your interests", "Private details like your address", "Your age range", "Your favorite school subject"], answer: 1, why: "Never put private information into AI." },
+      { objective: "O2", q: "An apprenticeship is:", options: ["A video game", "An unpaid test", "A paid job where you learn a trade while working", "A college dorm"], answer: 2, why: "Apprentices earn while they learn." },
+      { objective: "O2", q: "AI's career list should be treated as:", options: ["Ideas to check", "Guaranteed facts", "A job offer", "A school grade"], answer: 0, why: "AI can be wrong about pay and training." },
+      { objective: "O3", q: "bls.gov/ooh shows each job's:", options: ["Song lyrics", "Pay, training and job outlook", "Game scores", "Weather"], answer: 1, why: "The Occupational Outlook Handbook gives those facts." },
+      { objective: "O3", q: "AI and bls.gov disagree about training for a job. Trust:", options: ["AI", "Neither", "A meme", "The official site"], answer: 3, why: "Official sites are checked and current." },
+      { objective: "O3", q: "Job outlook means:", options: ["How many jobs are expected in the future", "The view from the office", "Your outfit for work", "Your boss's mood"], answer: 0, why: "Outlook is about future job numbers." },
+      { objective: "O4", q: "Automation means:", options: ["Driving a car", "A school rule", "Machines or software doing tasks people used to do", "A music style"], answer: 2, why: "Automation shifts tasks to machines." },
+      { objective: "O4", q: "Which is a soft skill?", options: ["Typing speed only", "Owning a laptop", "Teamwork", "Knowing a password"], answer: 2, why: "Soft skills are people skills like teamwork." },
+      { objective: "O4", q: "To check what AI says about AI in a job, you can:", options: ["Ask a real person in that job", "Trust it fully", "Ask a pop-up ad", "Skip checking"], answer: 0, why: "People in the job know how it really works." },
+      { objective: "O5", q: "Dual enrollment means:", options: ["Having two lockers", "Two phones", "Two lunches", "Taking college classes while in high school"], answer: 3, why: "Students earn college credit early." },
+      { objective: "O5", q: "Why check licenses on official sites?", options: ["AI is always right", "Rules differ by state", "They never change", "It is not needed"], answer: 1, why: "Training and license rules vary by state." },
+      { objective: "O5", q: "A good pathway prompt includes:", options: ["Your grade and target career", "Your password", "Your address", "Nothing"], answer: 0, why: "Grade and goal let AI make a fitting plan." },
+      { objective: "O6", q: "Under federal law, 14- and 15-year-olds may usually work only between:", options: ["Midnight and 6 a.m.", "Any time", "7 a.m. and 7 p.m. (9 p.m. from June 1 to Labor Day)", "Only on school days"], answer: 2, why: "Those are the federal time-of-day limits." },
+      { objective: "O6", q: "Under federal law, who may not do hazardous jobs?", options: ["Only people under 12", "Anyone under 18", "Adults", "Nobody"], answer: 1, why: "Hazardous jobs are off-limits to anyone under 18." },
+      { objective: "O6", q: "Before taking a first job you should:", options: ["Lie about your age", "Skip school", "Give AI your phone number", "Check your state's rules and talk with a parent or guardian"], answer: 3, why: "State rules may require a permit, and a parent or guardian should know." },
+      { objective: "O6", q: "Job shadowing is:", options: ["Hiding from your boss", "A video game mode", "A type of resume", "Following a worker for a day to see the job"], answer: 3, why: "Shadowing lets you see a job up close." },
+      { objective: "O6", q: "A first-job pitch should be:", options: ["A 10-page essay", "About 3 sentences about you, practiced out loud", "Your address and phone number", "Written by AI and never read"], answer: 1, why: "Short and practiced is easy to say with confidence." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      5,
+      6,
+      7,
+      9,
+      11,
+      13,
+      15,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Why it fits me",
+        objective: "O1",
+        notYet: "No link between the career and the learner's interests.",
+        meets: "Names interest quiz results or favorite activities that match the career.",
+        exceeds: "Also names a strength or value that fits the career."
+      },
+      {
+        name: "Official facts",
+        objective: "O3",
+        notYet: "Pay, training or outlook is missing or taken only from AI.",
+        meets: "Typical training, pay and job outlook from bls.gov/ooh or mynextmove.org.",
+        exceeds: "Also notes one thing AI got different from the official site."
+      },
+      {
+        name: "AI in the work",
+        objective: "O4",
+        notYet: "No AI use or human skill named.",
+        meets: "One way AI is used in the career and two human skills that still matter.",
+        exceeds: "Includes a question to ask a real person in that job, or their answer."
+      },
+      {
+        name: "This year's steps",
+        objective: "O5",
+        notYet: "Fewer than three steps, or steps are vague like \"work hard\".",
+        meets: "Three concrete steps: a class, a club or activity, and a person to talk to.",
+        exceeds: "At least one step is checked with a counselor or an official site."
+      },
+      {
+        name: "First-job pitch",
+        objective: "O6",
+        notYet: "No pitch, or it includes private details.",
+        meets: "A three-sentence pitch about the learner, practiced out loud.",
+        exceeds: "Also notes the youth work rules that apply to the learner's age and state."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who take one of their three planned steps (class, club or meeting) within 30 days",
+      "Learners who meet with a school counselor about their career plan",
+      "Learners who start a job, volunteer role, job shadow or career program within 90 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone, school computer or library computer with internet",
+      "Free sites: mynextmove.org and bls.gov/ooh",
+      "A free AI assistant the learner is allowed to use",
+      "Paper or a document for the one-page career plan",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Partner with the school counselor so learners can check classes, CTE and dual enrollment options during the course.",
+      "Remind learners that pay and youth work rules change and differ by state; have them check official sites in class.",
+      "Never ask learners to put private details into AI tools; use first names or no names in pitches.",
+      "Invite a guest from a local job or trade so learners can ask their \"real person\" question.",
+      "Score the career plan with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

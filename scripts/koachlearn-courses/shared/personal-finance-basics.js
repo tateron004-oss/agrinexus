@@ -17,11 +17,35 @@ module.exports = {
     "Each lesson takes about five minutes and ends with a \"Try it now\" task that you do with your own numbers on paper or in a spreadsheet. There is a knowledge check after each chapter and a 20-question quiz at the end. This course teaches money skills; it does not give investment advice. For big decisions, talk to a trusted, qualified person such as a nonprofit credit counselor."
   ],
   finalTask: "Write a one-page money plan: (1) a monthly budget with your income, needs, wants and savings; (2) a list of your debts and the one you will pay extra on; (3) an emergency savings goal and how much you will put away each week or month, and where; (4) the date you will check your credit reports. Then read one loan or money offer you have seen and write down any warning signs.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Anyone who wants more control over their money: seniors on a fixed income, young people with a first paycheck, farmers paid at harvest, athletes with a new sponsor, veterans starting civilian jobs and people coming home and starting over.",
+    startingPoint: "Earn or receive some money and pay bills, but many do not write a budget, have never read their credit report, carry debt without a payoff plan, have little emergency savings, or struggle to spot a predatory loan or scam.",
+    gap: "Without a plan, small surprises turn into debt, missed payments and scams that cost families money and stress. Learners need a simple one-page money plan and the habit of checking offers, so they can stay in control and build savings.",
+    constraints: [
+      "Reading level: plain words and short sentences, with simple math",
+      "Not investment advice; big decisions go to a trusted, qualified person such as a nonprofit credit counselor",
+      "Privacy: no bank account numbers, card numbers or passwords in AI tools or class sharing",
+      "Rules and fees differ by country and provider; learners check official fee tables and sources",
+      "Devices: paper or a free spreadsheet; some learners use mobile money"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Using last month's income and costs", action: "write a monthly budget that sorts costs into needs, wants and savings", standard: "with a savings line and the total checked above or below zero" },
+    { id: "O2", condition: "Using a free credit report (AnnualCreditReport.com in the US)", action: "check every account on your credit report and dispute any mistakes", standard: "keeping copies of anything you send" },
+    { id: "O3", condition: "Given a list of debts", action: "choose which debt to pay extra on using the highest-rate way or the smallest-balance way", standard: "while paying at least the minimum on every debt on time" },
+    { id: "O4", condition: "Using your budget", action: "set an emergency savings goal with an amount, a day and an automatic way to save", standard: "added as a line in your budget" },
+    { id: "O5", condition: "Given a bank, credit union, mobile money service or savings group", action: "check the fees and rules before choosing a safe place to save", standard: "writing down what it costs to put money in and take it out" },
+    { id: "O6", condition: "Given a loan or money offer", action: "identify the warning signs of a predatory loan or scam before saying yes", standard: "finding every warning sign in the offer" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Know where your money goes",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Making a simple monthly budget",
           minutes: 5,
           goal: "Write a monthly budget that shows your income, needs, wants and savings.",
@@ -41,9 +65,14 @@ module.exports = {
           ],
           sources: [{ name: "Consumer Financial Protection Bureau: Consumer tools and money guides", url: "https://www.consumerfinance.gov/consumer-tools/" }],
           tryIt: "On paper or in a free spreadsheet (Google Sheets or Excel), write last month's income and every cost you remember. Mark each cost N for need or W for want, add a savings line, and subtract. Is your answer above or below zero?",
-          youCanNow: "write a monthly budget with income, needs, wants and savings, and see whether it adds up."
+          youCanNow: "write a monthly budget with income, needs, wants and savings, and see whether it adds up.",
+          quickCheck: [
+            { objective: "O1", q: "Which of these is a want, not a need?", options: ["Rent", "Daily medicine", "A new streaming service", "Bus fare to work"], answer: 2, why: "A streaming service is nice to have; rent, medicine and transport to work are needs." },
+            { objective: "O1", q: "Your budget shows you spend more than you earn. What would you do first?", options: ["Cut some wants", "Stop paying rent", "Take a payday loan", "Throw the budget away"], answer: 0, why: "When a budget is below zero, wants are the first place to cut." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Reading your credit report and score",
           minutes: 5,
           goal: "Get your free credit reports and check them for mistakes.",
@@ -67,9 +96,14 @@ module.exports = {
             { name: "AnnualCreditReport.com", url: "https://www.annualcreditreport.com/" }
           ],
           tryIt: "If you live in the US, request at least one free credit report at AnnualCreditReport.com and check every account on it. If you are outside the US, find out whether your country has a credit bureau and how to request your report from it. Write down one thing you checked and what you found.",
-          youCanNow: "get your free credit reports, read them for mistakes, and know how to dispute an error."
+          youCanNow: "get your free credit reports, read them for mistakes, and know how to dispute an error.",
+          quickCheck: [
+            { objective: "O2", q: "What is a credit report?", options: ["A list of your bank passwords", "Your monthly budget", "A record of your loans, cards and payment history", "Your tax return"], answer: 2, why: "A credit report lists your credit accounts and how you have paid them." },
+            { objective: "O2", q: "Your credit report shows an address where you never lived. What would you do?", options: ["Ignore it", "Dispute it with the credit company and keep copies", "Close all your accounts", "Pay a stranger to fix it"], answer: 1, why: "Mistakes on a credit report should be disputed, with copies kept." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Making a plan to pay down debt",
           minutes: 5,
           goal: "List your debts and choose which one to pay extra on first.",
@@ -89,17 +123,21 @@ module.exports = {
           ],
           sources: [{ name: "CFPB: Debt collection and managing debt", url: "https://www.consumerfinance.gov/consumer-tools/debt-collection/" }],
           tryIt: "Make a table of your debts (or a made-up example if you have none) with who, balance, rate, minimum and due date. Circle the debt you would pay extra on using the highest-rate way, and the one using the smallest-balance way.",
-          youCanNow: "list your debts, pay the minimums on time, and choose which debt to pay extra on first."
+          youCanNow: "list your debts, pay the minimums on time, and choose which debt to pay extra on first.",
+          quickCheck: [
+            { objective: "O3", q: "What does the smallest-balance way of paying debt mean?", options: ["Pay only the smallest debt and skip the others", "Pay extra on the debt with the smallest balance while paying minimums on the rest", "Pay the same extra amount on every debt", "Pay nothing until you have more money"], answer: 1, why: "You pay minimums on all and put extra on the smallest balance for a quick win." },
+            { objective: "O3", q: "You know you will miss a loan payment next week. What would you do?", options: ["Hide from the lender", "Wait until they call you", "Take a new loan to pay it", "Call the lender before the due date and ask about options"], answer: 3, why: "Calling early gives you the most options." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Know where your money goes",
         questions: [
-          { q: "Your income changes from month to month. Which amount should you plan your budget with?", options: ["Your best month", "Your average hope for next year", "A low, normal month", "Whatever your friends earn"], answer: 2, why: "Planning with a low month means the budget still works when money is slow." },
-          { q: "Which of these is a need, not a want?", options: ["Medicine you take every day", "A streaming service", "Eating out on Fridays", "A new phone case"], answer: 0, why: "Medicine is something you must pay for to stay healthy." },
-          { q: "Where can people in the US get their credit reports free?", options: ["Any site that shows an ad for free reports", "A link in a text message", "A debt collector's website", "AnnualCreditReport.com"], answer: 3, why: "AnnualCreditReport.com is the official free source for reports from the three companies." },
-          { q: "You find a credit card on your report that you never opened. What do you do?", options: ["Ignore it", "Dispute it with the credit company and keep copies", "Pay it off to make it go away", "Close your bank account"], answer: 1, why: "You have the right to dispute mistakes; an account you did not open could also be identity theft." },
-          { q: "You can pay a little extra on one debt. Using the highest-rate way, which one gets the extra?", options: ["The one with the smallest balance", "The one with the latest due date", "The one with the highest interest rate", "The newest one"], answer: 2, why: "Paying the highest rate first usually saves the most interest." }
+          { objective: "O1", q: "Your income changes from month to month. Which amount should you plan your budget with?", options: ["Your best month", "Your average hope for next year", "A low, normal month", "Whatever your friends earn"], answer: 2, why: "Planning with a low month means the budget still works when money is slow." },
+          { objective: "O1", q: "Which of these is a need, not a want?", options: ["Medicine you take every day", "A streaming service", "Eating out on Fridays", "A new phone case"], answer: 0, why: "Medicine is something you must pay for to stay healthy." },
+          { objective: "O2", q: "Where can people in the US get their credit reports free?", options: ["Any site that shows an ad for free reports", "A link in a text message", "A debt collector's website", "AnnualCreditReport.com"], answer: 3, why: "AnnualCreditReport.com is the official free source for reports from the three companies." },
+          { objective: "O2", q: "You find a credit card on your report that you never opened. What do you do?", options: ["Ignore it", "Dispute it with the credit company and keep copies", "Pay it off to make it go away", "Close your bank account"], answer: 1, why: "You have the right to dispute mistakes; an account you did not open could also be identity theft." },
+          { objective: "O3", q: "You can pay a little extra on one debt. Using the highest-rate way, which one gets the extra?", options: ["The one with the smallest balance", "The one with the latest due date", "The one with the highest interest rate", "The newest one"], answer: 2, why: "Paying the highest rate first usually saves the most interest." }
         ]
       }
     },
@@ -107,6 +145,7 @@ module.exports = {
       name: "Chapter 2: Build your safety net",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Starting an emergency fund",
           minutes: 4,
           goal: "Set an emergency savings goal and an automatic way to reach it.",
@@ -126,9 +165,14 @@ module.exports = {
           ],
           sources: [{ name: "CFPB: An essential guide to building an emergency fund", url: "https://www.consumerfinance.gov/an-essential-guide-to-building-an-emergency-fund/" }],
           tryIt: "Write your first emergency savings goal, the amount you will save each week or month, the day you will save it, and where you will keep it. Add it as a line in your Lesson 1 budget.",
-          youCanNow: "set an emergency savings goal, save toward it automatically, and keep it safe and separate."
+          youCanNow: "set an emergency savings goal, save toward it automatically, and keep it safe and separate.",
+          quickCheck: [
+            { objective: "O4", q: "Which is an emergency an emergency fund is meant for?", options: ["A car repair you did not expect", "A holiday sale", "A new phone you want", "A night out"], answer: 0, why: "Emergency funds cover unexpected costs, not planned wants." },
+            { objective: "O4", q: "You keep forgetting to save. What would you do?", options: ["Save only what is left at the end of the month", "Give up on saving", "Set an automatic transfer on payday", "Keep savings in your wallet"], answer: 2, why: "Automatic saving on payday happens before the money is spent." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Saving with a bank, mobile money or a savings group",
           minutes: 5,
           goal: "Choose a safe place to save and check its fees and rules before you use it.",
@@ -150,9 +194,14 @@ module.exports = {
             { name: "CFPB: An essential guide to building an emergency fund (where to keep savings)", url: "https://www.consumerfinance.gov/an-essential-guide-to-building-an-emergency-fund/" }
           ],
           tryIt: "Pick the place you will keep your emergency savings. Find its official fee table or account rules and write down what it costs to put money in and take it out. If you use mobile money, find the savings option in the app menu without moving any money yet.",
-          youCanNow: "choose a safe place to save, check its fees and rules first, and protect your account."
+          youCanNow: "choose a safe place to save, check its fees and rules first, and protect your account.",
+          quickCheck: [
+            { objective: "O5", q: "Why keep emergency savings in a bank or credit union instead of cash at home?", options: ["It is safer from theft and loss", "It is easier to spend", "Banks pay you to take money out", "Cash at home earns more"], answer: 0, why: "An account keeps savings safer than cash at home." },
+            { objective: "O5", q: "You plan to use a mobile money savings option. What would you do first?", options: ["Move all your money right away", "Ask a stranger online what it costs", "Assume it is free", "Read the official fee table and rules"], answer: 3, why: "Fees differ and change, so check the official fee table first." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Spotting predatory loans and money scams",
           minutes: 5,
           goal: "Read a loan or money offer and find the warning signs before you say yes.",
@@ -175,17 +224,21 @@ module.exports = {
             { name: "CFPB: Fraud and scams", url: "https://www.consumerfinance.gov/consumer-tools/fraud/" }
           ],
           tryIt: "Final task: finish your one-page money plan: your Lesson 1 budget, your debt list with the debt you will pay extra on, your emergency savings goal and where you keep it, and the date you will check your credit reports. Then read one loan or money offer you have seen (a text, an ad or a letter) and write down every warning sign you find.",
-          youCanNow: "read a loan or money offer, find the APR and the warning signs, and choose a safer option."
+          youCanNow: "read a loan or money offer, find the APR and the warning signs, and choose a safer option.",
+          quickCheck: [
+            { objective: "O6", q: "What is a warning sign in a loan offer?", options: ["It shows the APR clearly", "It asks you to pay a fee with a gift card to get the loan", "It gives you time to read the terms", "It comes from your credit union"], answer: 1, why: "Up-front fees paid with gift cards are a common scam sign." },
+            { objective: "O6", q: "A text says \"You are pre-approved! Reply now or lose this offer today.\" What would you do?", options: ["Reply right away", "Send your bank details to hold the offer", "Forward it to friends", "Slow down and check the lender through an official source before replying"], answer: 3, why: "Pressure to act now is a warning sign; check before you respond." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Build your safety net",
         questions: [
-          { q: "What is an emergency fund for?", options: ["Holiday shopping", "Unexpected costs like a repair or lost income", "Buying lottery tickets", "Lending to friends"], answer: 1, why: "An emergency fund is kept only for surprises and lost income." },
-          { q: "Which is the best way to keep saving every month?", options: ["Save whatever is left at the end of the month", "Keep the money in your wallet", "Wait for a big raise first", "Set an automatic transfer on payday"], answer: 3, why: "Automatic saving happens before the money gets spent." },
-          { q: "Before you use a mobile money savings option, what should you check?", options: ["The official fee table and rules", "What a stranger on social media says", "Nothing; it is always free", "Your neighbor's PIN"], answer: 0, why: "Fees and rules differ by service and change, so check the official source first." },
-          { q: "Someone texts that they sent you money by mistake and asks you to send it back now. What do you do first?", options: ["Send it back right away", "Share your PIN so they can fix it", "Check your real balance yourself before doing anything", "Send double to be nice"], answer: 2, why: "This is a common scam; check your own balance and ask your provider." },
-          { q: "A lender says you will get a loan as soon as you pay a fee with a gift card. This is:", options: ["A normal bank loan", "A warning sign of a scam", "A government grant", "A credit report"], answer: 1, why: "Paying a fee first, especially with a gift card, is a scam sign." }
+          { objective: "O4", q: "What is an emergency fund for?", options: ["Holiday shopping", "Unexpected costs like a repair or lost income", "Buying lottery tickets", "Lending to friends"], answer: 1, why: "An emergency fund is kept only for surprises and lost income." },
+          { objective: "O4", q: "Which is the best way to keep saving every month?", options: ["Save whatever is left at the end of the month", "Keep the money in your wallet", "Wait for a big raise first", "Set an automatic transfer on payday"], answer: 3, why: "Automatic saving happens before the money gets spent." },
+          { objective: "O5", q: "Before you use a mobile money savings option, what should you check?", options: ["The official fee table and rules", "What a stranger on social media says", "Nothing; it is always free", "Your neighbor's PIN"], answer: 0, why: "Fees and rules differ by service and change, so check the official source first." },
+          { objective: "O6", q: "Someone texts that they sent you money by mistake and asks you to send it back now. What do you do first?", options: ["Send it back right away", "Share your PIN so they can fix it", "Check your real balance yourself before doing anything", "Send double to be nice"], answer: 2, why: "This is a common scam; check your own balance and ask your provider." },
+          { objective: "O6", q: "A lender says you will get a loan as soon as you pay a fee with a gift card. This is:", options: ["A normal bank loan", "A warning sign of a scam", "A government grant", "A credit report"], answer: 1, why: "Paying a fee first, especially with a gift card, is a scam sign." }
         ]
       }
     }
@@ -193,26 +246,112 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Personal Finance Basics: Budgeting, Credit and Saving",
     questions: [
-      { q: "A budget is:", options: ["A plan for the money you get each month", "A type of loan", "A credit score", "A bank fee"], answer: 0, why: "A budget plans where your money goes." },
-      { q: "Which belongs in the savings group of a budget?", options: ["Rent", "A weekly takeout dinner", "Money set aside for your emergency fund", "Your phone bill"], answer: 2, why: "Savings is money you set aside on purpose." },
-      { q: "Your budget comes out below zero. What should you cut first?", options: ["Medicine", "Wants", "Rent", "Minimum debt payments"], answer: 1, why: "Cut wants before needs." },
-      { q: "What should you NOT type into an AI assistant when making a budget?", options: ["Rough monthly costs", "\"Make me a budget table\"", "\"Suggest ways to cut costs\"", "Your bank account number"], answer: 3, why: "Never share account numbers or passwords with AI tools." },
-      { q: "What is a credit score?", options: ["Your bank balance", "A number made from your credit report", "Your income", "A loan fee"], answer: 1, why: "A credit score is based on the information in your credit report." },
-      { q: "Does checking your own credit report lower your score?", options: ["No", "Yes, a lot", "Yes, a little each time", "Only on weekends"], answer: 0, why: "The CFPB says requesting your own reports does not hurt your score." },
-      { q: "Which three companies give nationwide US credit reports?", options: ["Visa, Mastercard, Discover", "Social Security, IRS, Medicare", "Chase, Wells Fargo, Citi", "Equifax, Experian, TransUnion"], answer: 3, why: "These are the three nationwide credit reporting companies." },
-      { q: "A website offers a \"free credit report\" but asks for a card to start a trial. What is the safer choice?", options: ["Sign up anyway", "Give your card number", "Use AnnualCreditReport.com instead", "Share the link with friends"], answer: 2, why: "Some sites sign you up for paid products; AnnualCreditReport.com is the official free source." },
-      { q: "Your report shows a late payment you know you paid on time. You should:", options: ["Wait for it to go away", "Open a new card", "Dispute the error and keep copies", "Stop paying all bills"], answer: 2, why: "You can dispute mistakes with the credit company and the business." },
-      { q: "On your debt list, what should you always pay on every debt?", options: ["Nothing until you can pay all of it", "At least the minimum, on time", "Only the biggest one", "Double the balance"], answer: 1, why: "Missing minimums adds fees and hurts your credit." },
-      { q: "Why might someone choose to pay the smallest balance first?", options: ["A quick win keeps them motivated", "It always saves the most money", "Lenders require it", "It removes all interest"], answer: 0, why: "Paying off a small debt fast gives a quick win; the highest-rate way usually saves more." },
-      { q: "You will miss a car payment next week. What is the best move?", options: ["Say nothing and hope", "Take a payday loan", "Change your phone number", "Call the lender before the due date and ask about options"], answer: 3, why: "Lenders may offer options if you call early." },
-      { q: "A good first emergency savings goal is:", options: ["A huge amount you cannot reach", "A small amount you can reach, then a bigger one", "Zero until you are rich", "Whatever your neighbor has"], answer: 1, why: "Start small and grow it; even a little helps." },
-      { q: "Where is a safer place to keep emergency savings than cash at home?", options: ["Under the mattress", "With a stranger online", "A savings account at a bank or credit union", "In your everyday wallet"], answer: 2, why: "Cash can be lost or stolen; insured accounts are safer." },
-      { q: "A farmer is paid at harvest. What is a good saving habit?", options: ["Spend first and save what is left", "Lend it all to a cousin", "Keep it all in cash at home", "Move part into savings the same day, before spending"], answer: 3, why: "Saving first, before spending, makes the plan work." },
-      { q: "Mobile money fees:", options: ["Differ by service and change, so check the official fee table", "Are always zero", "Are the same in every country", "Never matter"], answer: 0, why: "Check current fees in the app, on the official site or with an official agent." },
-      { q: "In a savings group (chama), what protects you best?", options: ["Paying without records", "Joining any group online", "Written records of every payment and a copy of the rules", "Sharing your PIN with the group"], answer: 2, why: "Records and written rules protect every member." },
-      { q: "What does APR tell you?", options: ["Your credit score", "The yearly cost of a loan, including fees, as a percent", "How much you earn", "Your bank's address"], answer: 1, why: "APR lets you compare the true cost of loans." },
-      { q: "In the US, can you be arrested for not paying a payday loan?", options: ["Yes, always", "Yes, after one day", "Only on the weekend", "No"], answer: 3, why: "The CFPB says you cannot be arrested for defaulting on a payday loan." },
-      { q: "Which is a cheaper option than a payday loan?", options: ["A small loan from a credit union", "Rolling over a payday loan", "Paying a stranger with gift cards", "A loan that needs a fee first"], answer: 0, why: "Credit union loans and asking for more time usually cost far less." }
+      { objective: "O1", q: "A budget is:", options: ["A plan for the money you get each month", "A type of loan", "A credit score", "A bank fee"], answer: 0, why: "A budget plans where your money goes." },
+      { objective: "O1", q: "Which belongs in the savings group of a budget?", options: ["Rent", "A weekly takeout dinner", "Money set aside for your emergency fund", "Your phone bill"], answer: 2, why: "Savings is money you set aside on purpose." },
+      { objective: "O1", q: "Your budget comes out below zero. What should you cut first?", options: ["Medicine", "Wants", "Rent", "Minimum debt payments"], answer: 1, why: "Cut wants before needs." },
+      { objective: "O1", q: "What should you NOT type into an AI assistant when making a budget?", options: ["Rough monthly costs", "\"Make me a budget table\"", "\"Suggest ways to cut costs\"", "Your bank account number"], answer: 3, why: "Never share account numbers or passwords with AI tools." },
+      { objective: "O2", q: "What is a credit score?", options: ["Your bank balance", "A number made from your credit report", "Your income", "A loan fee"], answer: 1, why: "A credit score is based on the information in your credit report." },
+      { objective: "O2", q: "Does checking your own credit report lower your score?", options: ["No", "Yes, a lot", "Yes, a little each time", "Only on weekends"], answer: 0, why: "The CFPB says requesting your own reports does not hurt your score." },
+      { objective: "O2", q: "Which three companies give nationwide US credit reports?", options: ["Visa, Mastercard, Discover", "Social Security, IRS, Medicare", "Chase, Wells Fargo, Citi", "Equifax, Experian, TransUnion"], answer: 3, why: "These are the three nationwide credit reporting companies." },
+      { objective: "O2", q: "A website offers a \"free credit report\" but asks for a card to start a trial. What is the safer choice?", options: ["Sign up anyway", "Give your card number", "Use AnnualCreditReport.com instead", "Share the link with friends"], answer: 2, why: "Some sites sign you up for paid products; AnnualCreditReport.com is the official free source." },
+      { objective: "O2", q: "Your report shows a late payment you know you paid on time. You should:", options: ["Wait for it to go away", "Open a new card", "Dispute the error and keep copies", "Stop paying all bills"], answer: 2, why: "You can dispute mistakes with the credit company and the business." },
+      { objective: "O3", q: "On your debt list, what should you always pay on every debt?", options: ["Nothing until you can pay all of it", "At least the minimum, on time", "Only the biggest one", "Double the balance"], answer: 1, why: "Missing minimums adds fees and hurts your credit." },
+      { objective: "O3", q: "Why might someone choose to pay the smallest balance first?", options: ["A quick win keeps them motivated", "It always saves the most money", "Lenders require it", "It removes all interest"], answer: 0, why: "Paying off a small debt fast gives a quick win; the highest-rate way usually saves more." },
+      { objective: "O3", q: "You will miss a car payment next week. What is the best move?", options: ["Say nothing and hope", "Take a payday loan", "Change your phone number", "Call the lender before the due date and ask about options"], answer: 3, why: "Lenders may offer options if you call early." },
+      { objective: "O4", q: "A good first emergency savings goal is:", options: ["A huge amount you cannot reach", "A small amount you can reach, then a bigger one", "Zero until you are rich", "Whatever your neighbor has"], answer: 1, why: "Start small and grow it; even a little helps." },
+      { objective: "O5", q: "Where is a safer place to keep emergency savings than cash at home?", options: ["Under the mattress", "With a stranger online", "A savings account at a bank or credit union", "In your everyday wallet"], answer: 2, why: "Cash can be lost or stolen; insured accounts are safer." },
+      { objective: "O4", q: "A farmer is paid at harvest. What is a good saving habit?", options: ["Spend first and save what is left", "Lend it all to a cousin", "Keep it all in cash at home", "Move part into savings the same day, before spending"], answer: 3, why: "Saving first, before spending, makes the plan work." },
+      { objective: "O5", q: "Mobile money fees:", options: ["Differ by service and change, so check the official fee table", "Are always zero", "Are the same in every country", "Never matter"], answer: 0, why: "Check current fees in the app, on the official site or with an official agent." },
+      { objective: "O5", q: "In a savings group (chama), what protects you best?", options: ["Paying without records", "Joining any group online", "Written records of every payment and a copy of the rules", "Sharing your PIN with the group"], answer: 2, why: "Records and written rules protect every member." },
+      { objective: "O6", q: "What does APR tell you?", options: ["Your credit score", "The yearly cost of a loan, including fees, as a percent", "How much you earn", "Your bank's address"], answer: 1, why: "APR lets you compare the true cost of loans." },
+      { objective: "O6", q: "In the US, can you be arrested for not paying a payday loan?", options: ["Yes, always", "Yes, after one day", "Only on the weekend", "No"], answer: 3, why: "The CFPB says you cannot be arrested for defaulting on a payday loan." },
+      { objective: "O6", q: "Which is a cheaper option than a payday loan?", options: ["A small loan from a credit union", "Rolling over a payday loan", "Paying a stranger with gift cards", "A loan that needs a fee first"], answer: 0, why: "Credit union loans and asking for more time usually cost far less." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      2,
+      5,
+      7,
+      9,
+      12,
+      14,
+      15,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Monthly budget",
+        objective: "O1",
+        notYet: "Income or costs are missing, or there is no savings line.",
+        meets: "Income, needs, wants and savings are listed and the total is checked.",
+        exceeds: "Uses a low, normal month and shows which wants were cut."
+      },
+      {
+        name: "Debt plan",
+        objective: "O3",
+        notYet: "Debts are missing, or no debt is chosen for extra payments.",
+        meets: "All debts listed with balance, rate, minimum and due date, and one chosen for extra payments.",
+        exceeds: "Explains why they chose the highest-rate or smallest-balance way."
+      },
+      {
+        name: "Emergency savings",
+        objective: "O4",
+        notYet: "No goal, or no amount and day.",
+        meets: "A goal, an amount, a day and a place to save, added to the budget.",
+        exceeds: "The saving is set up to happen automatically."
+      },
+      {
+        name: "Safe place to save",
+        objective: "O5",
+        notYet: "Place chosen without checking fees or rules.",
+        meets: "Fees to put money in and take it out are written down from the official source.",
+        exceeds: "Compared two options before choosing."
+      },
+      {
+        name: "Credit report date",
+        objective: "O2",
+        notYet: "No date to check credit reports.",
+        meets: "A date to check credit reports from the official free source.",
+        exceeds: "Has already checked one report and noted what they found."
+      },
+      {
+        name: "Offer warning signs",
+        objective: "O6",
+        notYet: "Missed clear warning signs in the offer.",
+        meets: "Lists the warning signs in a real offer.",
+        exceeds: "Also names a safer option, such as a credit union loan."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who are using a written budget at 30 days (follow-up survey)",
+      "Learners who started or added to an emergency fund within 30 days",
+      "Learners who checked their credit report within 60 days",
+      "Learners who report avoiding a predatory loan or money scam"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Paper and pen, or a free spreadsheet such as Google Sheets or Excel",
+      "Last month's income and bills (kept private)",
+      "Internet access for AnnualCreditReport.com (US) or the local credit bureau and fee tables",
+      "About 60 minutes in total, plus time to gather your own numbers"
+    ],
+    facilitatorNotes: [
+      "Let learners use made-up numbers in class; never ask anyone to share real balances, account numbers or credit reports.",
+      "Remind learners this is not investment advice and point them to a nonprofit credit counselor for big decisions.",
+      "For learners outside the US, help them find their country's credit bureau and official mobile money fee tables.",
+      "Bring real examples of loan and scam offers for the warning-sign practice.",
+      "Score the money plan with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

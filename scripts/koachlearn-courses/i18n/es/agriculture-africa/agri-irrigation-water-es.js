@@ -23,11 +23,35 @@ module.exports = {
     "Las reglas y los permisos de agua cambian según el país, así que consulta a tu autoridad del agua y a tu extensionista antes de perforar un pozo, bombear de un río o hacer un estanque grande. Cada lección dura unos cinco minutos y termina con una tarea en tu propia finca. Una comprobación de conocimientos cierra cada capítulo y un examen de 20 preguntas cierra el curso."
   ],
   finalTask: "Escribe un plan de riego de una página para una parcela pequeña (la tuya, o un ejemplo como 200 metros cuadrados de tomate cerca de Nakuru o 500 metros cuadrados de cebolla y chile cerca de Kano): el cultivo y sus etapas de más sed, de dónde va a salir el agua y cuánta puedes guardar, el sistema de goteo u otro que vas a usar, un horario semanal de riego y cómo vas a revisar el suelo, cómo vas a evitar el encharcamiento y la acumulación de sal, y la bomba que elegirías y por qué.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Pequeños agricultores y agricultores que están creciendo, trabajadores agrícolas y jóvenes agricultores en Kenia, Nigeria, Ghana y en toda África que quieren producir durante las temporadas secas, sembrar un cultivo en la época seca o usar mejor su agua en parcelas pequeñas de hortalizas, maíz o plántulas.",
+    startingPoint: "La mayoría depende de la lluvia y riega a mano con regaderas o cubetas cuando puede. Pocos revisan la humedad del suelo a la altura de las raíces, conocen las etapas de más sed de su cultivo, cosechan el agua de los techos o del escurrimiento del campo, usan un kit de goteo o saben calcular el tamaño de una bomba.",
+    gap: "Las temporadas secas en la floración y el cuajado del fruto son las que más rendimiento quitan, y el agua desperdiciada, sucia o mal manejada trae enfermedades, encharcamiento y suelo salado. Planear el agua de una parcela pequeña permite cosechar más, producir en la época seca y gastar menos en agua y combustible.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y frases cortas; cada término sobre el agua se explica",
+      "Dispositivos: un teléfono básico y un cuaderno; una parcela pequeña para practicar",
+      "Dinero: primero los métodos de bajo costo; cada quien compara por su cuenta los precios de los proveedores",
+      "Las normas y los permisos de agua cambian según el país: consulta a la autoridad del agua antes de perforar, represar o bombear",
+      "Seguridad: los estanques y los tanques se tapan y se cercan; el agua para beber necesita consejo de tratamiento de la oficina de salud"
+    ],
+    prerequisites: "Ninguno. \"Salud y fertilidad del suelo\" ayuda con la cobertura y el drenaje."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Para tu cultivo principal", action: "nombrar sus etapas de más sed y revisar con la mano la humedad del suelo a la altura de las raíces", standard: "decidiendo bien si regar o esperar" },
+    { id: "O2", condition: "Para tu techo y tu terreno", action: "calcular cuánta lluvia puede juntar un techo y elegir un método de campo para que la lluvia se quede en tu tierra", standard: "usando más o menos 1 litro por metro cuadrado por cada milímetro de lluvia, y contando con menos" },
+    { id: "O3", condition: "Para el agua cosechada", action: "elegir dónde guardar el agua y mantenerla limpia, tapada y dentro de la ley", standard: "con el depósito tapado o cercado y cualquier permiso revisado" },
+    { id: "O4", condition: "Para una parcela de unos 100 a 500 metros cuadrados", action: "instalar y cuidar un kit de goteo por gravedad", standard: "con el tambo al menos a 1 metro de altura, un filtro limpio y sin goteros tapados" },
+    { id: "O5", condition: "Durante una temporada de cultivo", action: "hacer un horario semanal de riego y detectar a tiempo el encharcamiento y la acumulación de sal", standard: "revisando el suelo antes de cada riego" },
+    { id: "O6", condition: "Cuando hay que subir o mover el agua", action: "comparar las bombas de pedal, de combustible y solares, y hacer la lista de lo que hay que preguntar a un proveedor", standard: "dando el agua que se necesita al día, la altura y la distancia, y bombeando solo lo que necesita el cultivo" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Conseguir y guardar el agua",
       lessons: [
         {
+          objectives: ["O1"],
           title: "¿Cuánta agua necesita tu cultivo y cuándo?",
           minutes: 5,
           goal: "Nombrar las etapas de más sed de tu cultivo y revisar la humedad del suelo con la mano.",
@@ -45,9 +69,14 @@ module.exports = {
           ],
           sources: [FAO_WATERNEEDS],
           tryIt: "Para un cultivo que siembres, escribe en qué semanas después de la siembra llega a sus etapas de más sed. Luego revisa hoy tu suelo a la altura de las raíces con un dedo, un palito o un hoyito y escribe: húmedo o seco.",
-          youCanNow: "decir cuándo tu cultivo necesita más agua y revisar la humedad del suelo a la altura de las raíces."
+          youCanNow: "decir cuándo tu cultivo necesita más agua y revisar la humedad del suelo a la altura de las raíces.",
+          quickCheck: [
+            { objective: "O1", q: "¿Cuándo necesita más agua el frijol?", options: ["Justo después de la cosecha", "En la floración y el llenado de las vainas", "Solo cuando es semilla", "Cuando las vainas están secas"], answer: 1, why: "La sequía le hace más daño al frijol en la floración y el llenado de las vainas." },
+            { objective: "O1", q: "Cavas un hoyo pequeño cerca de las raíces. A esa profundidad, la tierra se desmorona y se siente seca. ¿Qué haces?", options: ["Esperar otra semana", "Regar solo las hojas", "Echar fertilizante en lugar de agua", "Regar el cultivo ahora"], answer: 3, why: "Si la tierra se desmorona y se siente seca a la altura de las raíces, ya es hora de regar." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Cosechar agua de lluvia de los techos y del campo",
           minutes: 5,
           goal: "Calcular cuánta lluvia puede juntar tu techo y elegir un método de campo para que la lluvia se quede en tu tierra.",
@@ -65,9 +94,14 @@ module.exports = {
           ],
           sources: [FAO_HARVEST],
           tryIt: "Mide el techo de tu casa o de tu bodega y averigua la lluvia de tu zona al año. Calcula cuántos litros podría juntar en un año. Usa la calculadora del teléfono o pide a un asistente de IA del teléfono que revise tu cuenta.",
-          youCanNow: "calcular cuánta agua de lluvia puedes cosechar y elegir un método de campo para que la lluvia se quede en tu tierra."
+          youCanNow: "calcular cuánta agua de lluvia puedes cosechar y elegir un método de campo para que la lluvia se quede en tu tierra.",
+          quickCheck: [
+            { objective: "O2", q: "¿Cuál es un método de campo que mantiene la lluvia en tu tierra?", options: ["Hoyos de siembra o camellones en curvas de nivel", "Quemar el pasto", "Arar hacia arriba y hacia abajo de la pendiente", "Dejar el suelo desnudo"], answer: 0, why: "Los hoyos de siembra, los bordos y los camellones en curvas de nivel atrapan la lluvia donde cae." },
+            { objective: "O2", q: "En la próxima tormenta, el agua corre con fuerza por el camino de tu finca. ¿Qué podrías hacer con ella?", options: ["Dejar que se vaya al río", "Bloquear el camino", "Llevarla a una olla de agua o un estanque con forro", "Cavar un hoyo en medio del camino"], answer: 2, why: "El escurrimiento de caminos y senderos se puede llevar a una olla de agua o un estanque con forro para usarlo después." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Guardar el agua con seguridad",
           minutes: 4,
           goal: "Elegir dónde guardar el agua y mantenerla limpia, tapada y dentro de la ley.",
@@ -85,17 +119,21 @@ module.exports = {
           ],
           sources: [WRA],
           tryIt: "Escribe qué forma de guardar agua le queda a tu finca y a tu presupuesto, cómo la vas a tapar y cercar, y el nombre de la oficina de tu país a la que preguntarías antes de perforar o bombear.",
-          youCanNow: "elegir dónde guardar el agua, mantenerla segura y saber cuándo necesitas un permiso."
+          youCanNow: "elegir dónde guardar el agua, mantenerla segura y saber cuándo necesitas un permiso.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué depósito pierde más agua si no tiene forro y no está tapado?", options: ["Un tanque de plástico tapado", "Un tanque de ferrocemento", "Un tanque subterráneo", "Un estanque abierto y sin forro"], answer: 3, why: "Los estanques pierden agua hacia el suelo si no tienen forro, y hacia el sol si no tienen sombra o tapa." },
+            { objective: "O3", q: "Quieres usar para beber un poco del agua de lluvia que guardaste. ¿Qué haces?", options: ["Tomarla directo del estanque", "Preguntar a tu oficina de salud cómo tratarla", "Echarle fertilizante para limpiarla", "Usar el agua del primer lavado"], answer: 1, why: "El agua para beber necesita más cuidado que el agua para los cultivos; pregunta a la oficina de salud cómo tratarla." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Conseguir y guardar el agua",
         questions: [
-          { q: "¿Cuándo sufre más el maíz por la sequía?", options: ["En la salida de la espiga y de los pelos", "Justo después de la cosecha", "Antes de sembrar", "Cuando las mazorcas están secas"], answer: 0, why: "Las etapas de floración son las más sensibles; un periodo seco en ese momento es el que más cosecha cuesta." },
-          { q: "¿Cómo debes revisar si un cultivo necesita agua?", options: ["Mirar solo la parte de arriba del suelo", "Esperar a que se mueran las hojas", "Revisar la humedad a la altura de las raíces con un dedo, un palito o un hoyito", "Regar cada hora"], answer: 2, why: "Las raíces sienten el suelo debajo de la superficie, así que revisa ahí." },
-          { q: "Un techo mide 40 metros cuadrados y recibe 500 mm de lluvia al año. ¿Cuánto podría juntar como máximo, más o menos?", options: ["200 litros", "2,000 litros", "540 litros", "20,000 litros"], answer: 3, why: "40 x 500 = 20,000 litros; lo que de verdad se junta será un poco menos." },
-          { q: "¿Qué hace un tubo de primer lavado?", options: ["Sube el agua cuesta arriba", "Tira la primera lluvia del techo, que es la más sucia", "Calienta el agua", "Mide la lluvia"], answer: 1, why: "Evita que el polvo y el excremento de los pájaros entren al tanque." },
-          { q: "¿Por qué tapar un tanque o un estanque?", options: ["Para que no entren tierra ni animales y no se críen mosquitos", "Para que el agua esté más caliente", "Para que pese más", "Las tapas no sirven"], answer: 0, why: "Taparlo mantiene el agua limpia y segura." }
+          { objective: "O1", q: "¿Cuándo sufre más el maíz por la sequía?", options: ["En la salida de la espiga y de los pelos", "Justo después de la cosecha", "Antes de sembrar", "Cuando las mazorcas están secas"], answer: 0, why: "Las etapas de floración son las más sensibles; un periodo seco en ese momento es el que más cosecha cuesta." },
+          { objective: "O1", q: "¿Cómo debes revisar si un cultivo necesita agua?", options: ["Mirar solo la parte de arriba del suelo", "Esperar a que se mueran las hojas", "Revisar la humedad a la altura de las raíces con un dedo, un palito o un hoyito", "Regar cada hora"], answer: 2, why: "Las raíces sienten el suelo debajo de la superficie, así que revisa ahí." },
+          { objective: "O2", q: "Un techo mide 40 metros cuadrados y recibe 500 mm de lluvia al año. ¿Cuánto podría juntar como máximo, más o menos?", options: ["200 litros", "2,000 litros", "540 litros", "20,000 litros"], answer: 3, why: "40 x 500 = 20,000 litros; lo que de verdad se junta será un poco menos." },
+          { objective: "O2", q: "¿Qué hace un tubo de primer lavado?", options: ["Sube el agua cuesta arriba", "Tira la primera lluvia del techo, que es la más sucia", "Calienta el agua", "Mide la lluvia"], answer: 1, why: "Evita que el polvo y el excremento de los pájaros entren al tanque." },
+          { objective: "O3", q: "¿Por qué tapar un tanque o un estanque?", options: ["Para que no entren tierra ni animales y no se críen mosquitos", "Para que el agua esté más caliente", "Para que pese más", "Las tapas no sirven"], answer: 0, why: "Taparlo mantiene el agua limpia y segura." }
         ]
       }
     },
@@ -103,6 +141,7 @@ module.exports = {
       name: "Capítulo 2: Llevar el agua al cultivo",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Riego por goteo de bajo costo",
           minutes: 6,
           goal: "Instalar y cuidar un kit de goteo con cubeta o tambo para una parcela pequeña.",
@@ -120,9 +159,14 @@ module.exports = {
           ],
           sources: [FAO_DRIP],
           tryIt: "Dibuja un plano de goteo para una parcela pequeña: dónde va el tambo (al menos a 1 m de altura), el filtro, el tubo principal y cada cinta. Luego pregunta a dos proveedores o distribuidores de insumos el precio de un kit de ese tamaño y anota los dos.",
-          youCanNow: "instalar, manejar y cuidar un kit de goteo por gravedad de bajo costo."
+          youCanNow: "instalar, manejar y cuidar un kit de goteo por gravedad de bajo costo.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué es un gotero en una cinta de goteo?", options: ["El tanque de agua", "La bomba", "Un agujero pequeño o goteador que deja salir el agua en cada planta", "El filtro"], answer: 2, why: "Los goteros son los agujeros pequeños que dejan caer el agua al pie de cada planta." },
+            { objective: "O4", q: "Tu agua viene de un estanque lodoso. ¿Cómo proteges tu kit de goteo?", options: ["Dejar el filtro puesto, limpiarlo seguido y lavar los extremos de las cintas", "Quitar el filtro para que el agua corra más rápido", "Nunca revisar los goteros", "Usar el kit solo al mediodía"], answer: 0, why: "El agua limpia, un filtro limpio y lavar las cintas con frecuencia evitan que se tapen, que es el problema principal del goteo." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Programar el riego sin encharcar ni acumular sal",
           minutes: 5,
           goal: "Hacer un horario semanal de riego y detectar a tiempo el encharcamiento y la acumulación de sal.",
@@ -140,9 +184,14 @@ module.exports = {
           ],
           sources: [FAO_WATERNEEDS, FAO_SALINITY],
           tryIt: "Escribe un horario de riego de una semana para un cultivo: días, hora del día y cuánto tiempo. Al lado, escribe las dos señales de alerta de encharcamiento y las dos de acumulación de sal que vas a buscar cada vez que riegues.",
-          youCanNow: "programar el riego y detectar el encharcamiento y la acumulación de sal antes de que arruinen un cultivo."
+          youCanNow: "programar el riego y detectar el encharcamiento y la acumulación de sal antes de que arruinen un cultivo.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué decide un horario de riego?", options: ["Qué semilla comprar", "Cuándo regar y cuánto", "Dónde vender", "Qué bomba comprar"], answer: 1, why: "Un horario responde cuándo regar y cuánto, y la revisión del suelo tiene la última palabra." },
+            { objective: "O5", q: "Riegas con agua de pozo en una zona seca, y cada temporada el cultivo crece peor. ¿Qué haces?", options: ["Regar el doble", "Dejar de regar por completo", "Echar más fertilizante", "Pedir a tu extensionista o a un laboratorio de suelos que analicen el agua y el suelo"], answer: 3, why: "El agua de pozo en zonas secas puede traer sal; un análisis del agua y del suelo muestra qué está mal." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Elegir una bomba, incluidas las bombas solares",
           minutes: 5,
           goal: "Comparar las bombas de pedal, de combustible y solares, y hacer la lista de lo que hay que preguntar a un proveedor.",
@@ -161,17 +210,21 @@ module.exports = {
           ],
           sources: [FAO_SOLAR, WRA],
           tryIt: "Tarea final: escribe tu plan de riego de una página. Incluye las etapas de más sed de tu cultivo, tu fuente de agua y cómo la guardas, tu sistema de goteo u otro, un horario semanal, cómo vas a evitar el encharcamiento y la sal, y la bomba que elegirías con tu altura, tu distancia y el agua que necesitas al día.",
-          youCanNow: "elegir el tipo de bomba correcto y armar un plan de riego completo para una parcela pequeña."
+          youCanNow: "elegir el tipo de bomba correcto y armar un plan de riego completo para una parcela pequeña.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué bomba usa tu propio esfuerzo y sirve para una parcela pequeña cerca de agua poco profunda?", options: ["Una bomba de pedal o de mano", "Una bomba grande de diésel", "Un sistema solar grande", "Ninguna bomba"], answer: 0, why: "Las bombas de pedal y de mano son baratas y sirven para parcelas pequeñas cerca de agua poco profunda." },
+            { objective: "O6", q: "Tu nueva bomba solar puede funcionar todo el día gratis, pero el río está bajando. ¿Qué haces?", options: ["Bombear todo el día porque es gratis", "Vender el agua que sobra", "Bombear solo lo que necesita el cultivo y compartir el agua de forma justa con los vecinos", "Mover la bomba más arriba en el río"], answer: 2, why: "Bombear gratis puede sacar demasiada agua; bombea solo lo que necesita el cultivo y sigue las normas de la autoridad del agua." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Llevar el agua al cultivo",
         questions: [
-          { q: "¿Cuál es el principal problema que hay que evitar con los kits de goteo?", options: ["Demasiada presión", "Goteros tapados", "Demasiadas plantas", "Hojas mojadas"], answer: 1, why: "La tierra tapa los goteros; un filtro limpio y lavar las cintas lo evitan." },
-          { q: "¿A qué altura se debe subir el tambo de un kit de goteo por gravedad?", options: ["En el suelo", "Enterrado debajo de las camas", "Al menos 1 metro por encima de las camas", "No importa"], answer: 2, why: "La FAO dice que los tambos deben estar al menos a 1 metro de altura para dar suficiente presión." },
-          { q: "Las plantas están amarillas y marchitas, el suelo huele agrio y hay agua estancada. ¿Qué pasa?", options: ["Muy poca agua", "Demasiado sol", "Sal en el aire", "Encharcamiento"], answer: 3, why: "El agua estancada y el olor agrio quieren decir que las raíces no tienen aire." },
-          { q: "Ves una costra blanca en el suelo y bordes de hoja quemados. ¿Qué debes hacer?", options: ["Pedir un análisis del agua y del suelo y mejorar el drenaje", "Regar mucho más cada día", "Agregar más sal", "Ignorarlo"], answer: 0, why: "Son señales de acumulación de sal; la FAO la relaciona con regar de más y drenar mal." },
-          { q: "¿Por qué advierte la FAO sobre las bombas solares?", options: ["Nunca funcionan", "Hacen mucho ruido", "Bombear gratis puede llevar a sacar demasiada agua", "Necesitan gasolina"], answer: 2, why: "Como casi no cuesta usarlas, los agricultores pueden bombear de más de los ríos y del agua subterránea." }
+          { objective: "O4", q: "¿Cuál es el principal problema que hay que evitar con los kits de goteo?", options: ["Demasiada presión", "Goteros tapados", "Demasiadas plantas", "Hojas mojadas"], answer: 1, why: "La tierra tapa los goteros; un filtro limpio y lavar las cintas lo evitan." },
+          { objective: "O4", q: "¿A qué altura se debe subir el tambo de un kit de goteo por gravedad?", options: ["En el suelo", "Enterrado debajo de las camas", "Al menos 1 metro por encima de las camas", "No importa"], answer: 2, why: "La FAO dice que los tambos deben estar al menos a 1 metro de altura para dar suficiente presión." },
+          { objective: "O5", q: "Las plantas están amarillas y marchitas, el suelo huele agrio y hay agua estancada. ¿Qué pasa?", options: ["Muy poca agua", "Demasiado sol", "Sal en el aire", "Encharcamiento"], answer: 3, why: "El agua estancada y el olor agrio quieren decir que las raíces no tienen aire." },
+          { objective: "O5", q: "Ves una costra blanca en el suelo y bordes de hoja quemados. ¿Qué debes hacer?", options: ["Pedir un análisis del agua y del suelo y mejorar el drenaje", "Regar mucho más cada día", "Agregar más sal", "Ignorarlo"], answer: 0, why: "Son señales de acumulación de sal; la FAO la relaciona con regar de más y drenar mal." },
+          { objective: "O6", q: "¿Por qué advierte la FAO sobre las bombas solares?", options: ["Nunca funcionan", "Hacen mucho ruido", "Bombear gratis puede llevar a sacar demasiada agua", "Necesitan gasolina"], answer: 2, why: "Como casi no cuesta usarlas, los agricultores pueden bombear de más de los ríos y del agua subterránea." }
         ]
       }
     }
@@ -179,26 +232,113 @@ module.exports = {
   quiz: {
     title: "Examen final: Riego y manejo del agua",
     questions: [
-      { q: "Según la FAO, el agua que necesita un cultivo depende de:", options: ["Solo del precio del agua", "El clima, el tipo de cultivo y la etapa de crecimiento", "El color del cultivo", "El día de la semana"], answer: 1, why: "La FAO menciona el clima, el tipo de cultivo y la etapa de crecimiento." },
-      { q: "¿Qué clima hace que los cultivos usen más agua?", options: ["Fresco y nublado", "Sin viento y con neblina", "Caluroso, soleado, seco y con viento", "Frío y húmedo"], answer: 2, why: "El calor, el sol, el aire seco y el viento aumentan el uso de agua." },
-      { q: "El tomate es más sensible a la falta de agua en:", options: ["La floración y el cuajado del fruto", "La compra de semilla", "Después de la última cosecha", "Cuando el terreno está desnudo"], answer: 0, why: "La floración y el cuajado del fruto son las etapas de más sed." },
-      { q: "La lluvia efectiva es:", options: ["Toda la lluvia que cae", "La lluvia que cae de noche", "La lluvia que mide la radio", "La parte de la lluvia que el cultivo de verdad puede usar"], answer: 3, why: "Parte de la lluvia se escurre o se va muy hondo; el resto es efectiva." },
-      { q: "¿Más o menos cuánta agua da 1 mm de lluvia en 1 metro cuadrado de techo?", options: ["1 litro", "10 litros", "100 litros", "1,000 litros"], answer: 0, why: "1 mm en 1 metro cuadrado es más o menos 1 litro." },
-      { q: "Un hoyo zai es:", options: ["Un pozo perforado", "Un hoyo de siembra pequeño con estiércol que atrapa la lluvia en las raíces", "Un tipo de bomba", "Un tanque de agua"], answer: 1, why: "Los hoyos zai juntan la lluvia y los nutrientes en la planta." },
-      { q: "¿Por qué ponerle forro a un estanque de la finca?", options: ["Para que el agua sea salada", "Para atraer animales", "Para que el agua no se filtre al suelo", "Nunca hace falta el forro"], answer: 2, why: "Los estanques sin forro pierden mucha agua hacia el suelo." },
-      { q: "¿Por qué hay que cercar los estanques de la finca?", options: ["Para proteger a los niños y a los animales", "Para que sean más hondos", "Para parar la lluvia", "Para calentar el agua"], answer: 0, why: "Los estanques abiertos son un riesgo de ahogarse." },
-      { q: "En Kenia, ¿qué organismo da permisos de uso de agua, por ejemplo para pozos?", options: ["Kenya Bureau of Standards", "Kenya Revenue Authority", "Kenya Power", "Water Resources Authority (WRA)"], answer: 3, why: "La WRA regula el uso del agua y da permisos." },
-      { q: "Una ventaja clave del riego por goteo es:", options: ["Moja las hojas", "El agua va a las raíces y se pierde menos", "No necesita agua", "Hace que la maleza crezca más rápido"], answer: 1, why: "El goteo lleva el agua a las raíces con poco desperdicio." },
-      { q: "La FAO describe los kits de goteo familiar como adecuados para parcelas de unos:", options: ["1 a 5 metros cuadrados", "100 hectáreas", "Cualquier tamaño, hasta un condado entero", "100 a 500 metros cuadrados"], answer: 3, why: "El manual de la FAO trata el goteo familiar sencillo para unos 100 a 500 metros cuadrados." },
-      { q: "Una planta de tu cinta de goteo está seca. La causa más probable es:", options: ["Un gotero tapado", "Demasiado sol sobre el tambo", "La planta está demasiado verde", "El filtro está demasiado limpio"], answer: 0, why: "Una planta seca casi siempre quiere decir que su gotero está tapado." },
-      { q: "¿Por qué cubrir las cintas de goteo con rastrojo?", options: ["Solo para esconderlas del sol", "Para que el agua esté más caliente", "Para tapar los goteros", "Para que se evapore menos agua del suelo"], answer: 3, why: "La cobertura evita que la humedad del suelo se evapore." },
-      { q: "La mejor hora del día para regar suele ser:", options: ["Al mediodía, a pleno sol", "Temprano en la mañana o al final de la tarde", "Solo a medianoche", "Cualquier hora; no hay diferencia"], answer: 1, why: "En las horas frescas del día se pierde menos agua por el sol." },
-      { q: "Anoche llovió bien. Tu horario dice que hoy toca regar. ¿Qué haces?", options: ["Riegas el doble", "Riegas de todos modos como estaba planeado", "Revisas el suelo; no riegas si está húmedo a la altura de las raíces", "Drenas el terreno"], answer: 2, why: "El suelo tiene la última palabra; no riegues después de una buena lluvia." },
-      { q: "En una arcilla pesada que se encharca fácil, una buena práctica es:", options: ["Inundar el terreno", "Agregar más agua", "Sembrar en un hueco", "Camas elevadas o camellones y zanjas de drenaje"], answer: 3, why: "Las camas elevadas y el drenaje dejan salir el agua de más." },
-      { q: "Según la FAO, una causa común de acumulación de sal en suelos regados es:", options: ["Cubrir el suelo con rastrojo", "Sembrar leguminosas", "Regar de más y drenar mal", "Usar un filtro"], answer: 2, why: "Entra más sal de la que sale cuando hay demasiada agua y mal drenaje." },
-      { q: "Para calcular el tamaño de una bomba, el proveedor necesita saber:", options: ["Tu color favorito", "El agua que necesitas al día, la altura y la distancia", "Solo tu presupuesto", "El PIN de tu banco"], answer: 1, why: "El agua que necesitas, la altura y la distancia deciden la bomba correcta." },
-      { q: "Comparada con una bomba de gasolina, una bomba solar normalmente:", options: ["Cuesta más al comprarla pero muy poco al usarla", "Cuesta menos al comprarla y más al usarla", "Necesita diésel", "Solo funciona de noche"], answer: 0, why: "Las bombas solares tienen un precio de compra más alto, pero usan la luz del sol, que es gratis." },
-      { q: "Un proveedor te ofrece una bomba solar con pago por uso. ¿Qué debes hacer primero?", options: ["Firmar de inmediato", "Darle tu PIN", "Leer por escrito el precio completo, las condiciones, la garantía y el servicio", "Comprar dos"], answer: 2, why: "Conoce el costo total y el apoyo que recibes antes de firmar." }
+      { objective: "O1", q: "Según la FAO, el agua que necesita un cultivo depende de:", options: ["Solo del precio del agua", "El clima, el tipo de cultivo y la etapa de crecimiento", "El color del cultivo", "El día de la semana"], answer: 1, why: "La FAO menciona el clima, el tipo de cultivo y la etapa de crecimiento." },
+      { objective: "O1", q: "¿Qué clima hace que los cultivos usen más agua?", options: ["Fresco y nublado", "Sin viento y con neblina", "Caluroso, soleado, seco y con viento", "Frío y húmedo"], answer: 2, why: "El calor, el sol, el aire seco y el viento aumentan el uso de agua." },
+      { objective: "O1", q: "El tomate es más sensible a la falta de agua en:", options: ["La floración y el cuajado del fruto", "La compra de semilla", "Después de la última cosecha", "Cuando el terreno está desnudo"], answer: 0, why: "La floración y el cuajado del fruto son las etapas de más sed." },
+      { objective: "O1", q: "La lluvia efectiva es:", options: ["Toda la lluvia que cae", "La lluvia que cae de noche", "La lluvia que mide la radio", "La parte de la lluvia que el cultivo de verdad puede usar"], answer: 3, why: "Parte de la lluvia se escurre o se va muy hondo; el resto es efectiva." },
+      { objective: "O2", q: "¿Más o menos cuánta agua da 1 mm de lluvia en 1 metro cuadrado de techo?", options: ["1 litro", "10 litros", "100 litros", "1,000 litros"], answer: 0, why: "1 mm en 1 metro cuadrado es más o menos 1 litro." },
+      { objective: "O2", q: "Un hoyo zai es:", options: ["Un pozo perforado", "Un hoyo de siembra pequeño con estiércol que atrapa la lluvia en las raíces", "Un tipo de bomba", "Un tanque de agua"], answer: 1, why: "Los hoyos zai juntan la lluvia y los nutrientes en la planta." },
+      { objective: "O3", q: "¿Por qué ponerle forro a un estanque de la finca?", options: ["Para que el agua sea salada", "Para atraer animales", "Para que el agua no se filtre al suelo", "Nunca hace falta el forro"], answer: 2, why: "Los estanques sin forro pierden mucha agua hacia el suelo." },
+      { objective: "O3", q: "¿Por qué hay que cercar los estanques de la finca?", options: ["Para proteger a los niños y a los animales", "Para que sean más hondos", "Para parar la lluvia", "Para calentar el agua"], answer: 0, why: "Los estanques abiertos son un riesgo de ahogarse." },
+      { objective: "O3", q: "En Kenia, ¿qué organismo da permisos de uso de agua, por ejemplo para pozos?", options: ["Kenya Bureau of Standards", "Kenya Revenue Authority", "Kenya Power", "Water Resources Authority (WRA)"], answer: 3, why: "La WRA regula el uso del agua y da permisos." },
+      { objective: "O4", q: "Una ventaja clave del riego por goteo es:", options: ["Moja las hojas", "El agua va a las raíces y se pierde menos", "No necesita agua", "Hace que la maleza crezca más rápido"], answer: 1, why: "El goteo lleva el agua a las raíces con poco desperdicio." },
+      { objective: "O4", q: "La FAO describe los kits de goteo familiar como adecuados para parcelas de unos:", options: ["1 a 5 metros cuadrados", "100 hectáreas", "Cualquier tamaño, hasta un condado entero", "100 a 500 metros cuadrados"], answer: 3, why: "El manual de la FAO trata el goteo familiar sencillo para unos 100 a 500 metros cuadrados." },
+      { objective: "O4", q: "Una planta de tu cinta de goteo está seca. La causa más probable es:", options: ["Un gotero tapado", "Demasiado sol sobre el tambo", "La planta está demasiado verde", "El filtro está demasiado limpio"], answer: 0, why: "Una planta seca casi siempre quiere decir que su gotero está tapado." },
+      { objective: "O4", q: "¿Por qué cubrir las cintas de goteo con rastrojo?", options: ["Solo para esconderlas del sol", "Para que el agua esté más caliente", "Para tapar los goteros", "Para que se evapore menos agua del suelo"], answer: 3, why: "La cobertura evita que la humedad del suelo se evapore." },
+      { objective: "O5", q: "La mejor hora del día para regar suele ser:", options: ["Al mediodía, a pleno sol", "Temprano en la mañana o al final de la tarde", "Solo a medianoche", "Cualquier hora; no hay diferencia"], answer: 1, why: "En las horas frescas del día se pierde menos agua por el sol." },
+      { objective: "O5", q: "Anoche llovió bien. Tu horario dice que hoy toca regar. ¿Qué haces?", options: ["Riegas el doble", "Riegas de todos modos como estaba planeado", "Revisas el suelo; no riegas si está húmedo a la altura de las raíces", "Drenas el terreno"], answer: 2, why: "El suelo tiene la última palabra; no riegues después de una buena lluvia." },
+      { objective: "O5", q: "En una arcilla pesada que se encharca fácil, una buena práctica es:", options: ["Inundar el terreno", "Agregar más agua", "Sembrar en un hueco", "Camas elevadas o camellones y zanjas de drenaje"], answer: 3, why: "Las camas elevadas y el drenaje dejan salir el agua de más." },
+      { objective: "O5", q: "Según la FAO, una causa común de acumulación de sal en suelos regados es:", options: ["Cubrir el suelo con rastrojo", "Sembrar leguminosas", "Regar de más y drenar mal", "Usar un filtro"], answer: 2, why: "Entra más sal de la que sale cuando hay demasiada agua y mal drenaje." },
+      { objective: "O6", q: "Para calcular el tamaño de una bomba, el proveedor necesita saber:", options: ["Tu color favorito", "El agua que necesitas al día, la altura y la distancia", "Solo tu presupuesto", "El PIN de tu banco"], answer: 1, why: "El agua que necesitas, la altura y la distancia deciden la bomba correcta." },
+      { objective: "O6", q: "Comparada con una bomba de gasolina, una bomba solar normalmente:", options: ["Cuesta más al comprarla pero muy poco al usarla", "Cuesta menos al comprarla y más al usarla", "Necesita diésel", "Solo funciona de noche"], answer: 0, why: "Las bombas solares tienen un precio de compra más alto, pero usan la luz del sol, que es gratis." },
+      { objective: "O6", q: "Un proveedor te ofrece una bomba solar con pago por uso. ¿Qué debes hacer primero?", options: ["Firmar de inmediato", "Darle tu PIN", "Leer por escrito el precio completo, las condiciones, la garantía y el servicio", "Comprar dos"], answer: 2, why: "Conoce el costo total y el apoyo que recibes antes de firmar." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      2,
+      4,
+      6,
+      8,
+      9,
+      11,
+      13,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte del plan y revísala de nuevo.",
+    criteria: [
+      {
+        name: "Cultivo y etapas de más sed",
+        objective: "O1",
+        notYet: "Faltan las etapas de más sed del cultivo o están mal.",
+        meets: "Nombra el cultivo y sus etapas de más sed, con cómo se revisará el suelo.",
+        exceeds: "Anota la fecha de siembra para que las etapas de más sed queden en el calendario."
+      },
+      {
+        name: "Fuente y almacenamiento del agua",
+        objective: "O2",
+        notYet: "No hay fuente de agua, o no calcula cuánta se puede guardar.",
+        meets: "La fuente de agua, un cálculo del techo o del escurrimiento, y un depósito tapado, con cualquier permiso revisado.",
+        exceeds: "Incluye un método de campo, como hoyos de siembra, para que la lluvia se quede en la tierra."
+      },
+      {
+        name: "Sistema de riego",
+        objective: "O4",
+        notYet: "No hay sistema, o no hay plan para evitar que se tape.",
+        meets: "Un sistema de goteo u otro que se ajusta a la parcela, con la altura del tambo, el filtro y el lavado de las cintas.",
+        exceeds: "Incluye cobertura sobre las cintas y una lista de piezas de repuesto."
+      },
+      {
+        name: "Horario y revisión del suelo",
+        objective: "O5",
+        notYet: "No hay horario, o riega al mediodía sin revisar el suelo.",
+        meets: "Un horario semanal con la hora del día, más agua en las etapas de más sed y una revisión del suelo antes de regar.",
+        exceeds: "Dice qué hacer después de una buena lluvia y en semanas calurosas y con viento."
+      },
+      {
+        name: "Encharcamiento y sal",
+        objective: "O5",
+        notYet: "No hay plan contra el encharcamiento ni la sal.",
+        meets: "Las señales que hay que vigilar y pasos como zanjas de drenaje, camas elevadas y no regar de más.",
+        exceeds: "Planea un análisis del agua y del suelo si usa agua de pozo en una zona seca."
+      },
+      {
+        name: "Elección de la bomba",
+        objective: "O6",
+        notYet: "No elige bomba, o no da razón.",
+        meets: "Un tipo de bomba con su razón, el agua que se necesita al día, la altura y la distancia.",
+        exceeds: "Hace la lista de la garantía, las piezas de repuesto y el servicio que hay que pedir por escrito."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que terminan el curso y obtienen Cumple o Supera en cada fila de la rúbrica del plan de riego",
+      "Participantes que dicen haber instalado un almacenamiento de agua de lluvia o un kit de goteo dentro de una temporada (encuesta de seguimiento)",
+      "Participantes que dicen haber sembrado un cultivo en la época seca o haber perdido menos cosecha en una temporada seca",
+      "Participantes que empiezan otro curso de agricultura de Koach Learn en un plazo de 30 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un cuaderno, una pluma y un teléfono básico con calculadora",
+      "Una parcela pequeña para practicar la revisión de la humedad del suelo",
+      "Un kit de goteo de bajo costo o una cubeta, si los hay, para una demostración",
+      "Unos 60 minutos en total, en sesiones cortas, más tiempo para escribir el plan de riego"
+    ],
+    facilitatorNotes: [
+      "En un grupo de agricultores o una escuela de campo: hagan juntos la prueba inicial y luego revisen la humedad del suelo en una parcela real.",
+      "Calculen juntos cuánta lluvia junta un techo real del lugar.",
+      "Instalen en grupo un kit de goteo con cubeta o tambo y practiquen cómo limpiar el filtro y lavar las cintas.",
+      "Recuerda que deben revisar los permisos de agua con su autoridad del agua, y cercar y tapar los estanques y los tanques.",
+      "Califica el plan de riego con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

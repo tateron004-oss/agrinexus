@@ -24,11 +24,35 @@ module.exports = {
     "This course does not give drug or vaccine doses. Diseases, vaccines and approved medicines differ by country and area, so always follow your local veterinarian or animal health officer and the product label. Each lesson takes about five minutes and ends with a task with your own animals. A knowledge check closes each chapter and a 20-question quiz closes the course."
   ],
   finalTask: "Write a one-page health plan for your animals (your own, or an example such as 3 dairy cows in Kiambu, 15 goats in Kano, or 200 layers near Kumasi): your daily health check, feeding and water plan including the dry season, two housing and hygiene rules, the vaccination schedule agreed with your vet, your biosecurity rules (for poultry: Newcastle disease), how you will control worms and ticks, the records you will keep, and the signs that mean you call the vet at once, with the vet's name and number.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Smallholder and growing livestock keepers, herders, poultry farmers, farm workers and young farmers in Kenya, Nigeria, Ghana and across Africa who keep cattle, goats, sheep or chickens.",
+    startingPoint: "Most look at their animals every day and treat sickness when they see it, often with medicines bought without a vet's advice. Few follow a written vaccination schedule, keep biosecurity rules, record treatments and withdrawal periods, or plan feed and water for the dry season.",
+    gap: "One disease outbreak can wipe out years of savings, and poor feed, dirty housing, parasites and wrong medicine use cut milk, eggs and growth and can harm people. A simple written health plan made with a vet keeps animals healthy, prevents losses and keeps food from the farm safe.",
+    constraints: [
+      "Reading level: plain words and short sentences; every animal health term is explained",
+      "Devices: a basic phone and a notebook for records and the vet's number",
+      "No drug or vaccine doses: diseases, vaccines and approved medicines differ by area; learners follow their vet and the label",
+      "Safety: some animal diseases infect people; never open a carcass after a sudden death with bleeding",
+      "Time: about 5 minute lessons that fit around animal care"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "During a daily check of your animals", action: "identify the signs of a healthy and a sick animal and separate one that may be sick", standard: "naming at least five warning signs and contacting the vet or animal health officer" },
+    { id: "O2", condition: "For your animals through the year", action: "plan feed and clean water, including the dry season", standard: "with no mouldy feed and feed changes made slowly" },
+    { id: "O3", condition: "For your animal housing", action: "check the housing and set hygiene rules for the farm", standard: "with dry, shaded, uncrowded housing, new animals kept apart and sick animals separated" },
+    { id: "O4", condition: "With a registered vet or animal health officer", action: "agree a written vaccination schedule and keep vaccines cool and in date", standard: "with each vaccine, the animals, the age and when to repeat" },
+    { id: "O5", condition: "For a poultry flock", action: "set biosecurity rules and an outbreak plan for Newcastle disease", standard: "with vaccination on the vet's schedule and the steps to take if birds die suddenly" },
+    { id: "O6", condition: "For your herd or flock", action: "plan parasite control with your vet, keep a treatment record and list the signs that need a vet at once", standard: "recording every treatment with its withdrawal period" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Everyday care",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Signs of a healthy and a sick animal",
           minutes: 5,
           goal: "Do a quick daily health check and spot an animal that may be sick.",
@@ -45,9 +69,14 @@ module.exports = {
             { title: "Act early", bullets: ["Check every animal daily", "Separate any sick animal", "Call your vet or animal health officer"] }
           ],
           tryIt: "Tomorrow at feeding time, check every animal with the list: alert, eating, chewing cud, eyes, nose, coat, breathing, dung. Write one line per animal (or per pen for poultry). Mark any you would watch or call the vet about.",
-          youCanNow: "do a daily health check and spot the signs of a sick animal."
+          youCanNow: "do a daily health check and spot the signs of a sick animal.",
+          quickCheck: [
+            { objective: "O1", q: "Which sign is a warning in a chicken?", options: ["A bright red comb", "Laying as usual", "Active and eating well", "Ruffled feathers"], answer: 3, why: "Ruffled feathers are a warning sign; a healthy hen is active with a bright red comb." },
+            { objective: "O1", q: "You are busy and plan to check your animals only once a week. What is the risk?", options: ["Animals will eat more", "Sickness is caught late, when it costs more to treat and may have spread", "Milk will improve", "There is no risk"], answer: 1, why: "A daily look catches sickness early, when it is cheapest to treat and before it spreads." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Feed and water",
           minutes: 5,
           goal: "Plan feed and clean water for your animals through the year, including the dry season.",
@@ -64,9 +93,14 @@ module.exports = {
             { title: "Plan and protect", bullets: ["Store hay, silage or residues for the dry season", "Never feed mouldy feed", "Change feeds slowly"] }
           ],
           tryIt: "List the feeds your animals get now and where each comes from. Mark which run out in the dry season and write one way to store or grow more before then. Check every drinker today and clean any that are dirty.",
-          youCanNow: "plan feed and clean water for your animals through the year."
+          youCanNow: "plan feed and clean water for your animals through the year.",
+          quickCheck: [
+            { objective: "O2", q: "Which of these is roughage for cattle?", options: ["Maize stover and bean haulms", "Salt only", "A mineral lick only", "Clean water"], answer: 0, why: "Roughage includes grass, fodder and crop residues such as maize stover and bean haulms." },
+            { objective: "O2", q: "On a hot day, your milking cow's trough is empty and dirty. What do you do?", options: ["Wait until evening", "Give her more dry feed instead", "Clean it and fill it with clean water, in the shade", "Let her drink from a standing puddle"], answer: 2, why: "Animals need clean water every day, more in hot weather, and milk falls quickly without it." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Housing and hygiene",
           minutes: 5,
           goal: "Check your animal housing and set three hygiene rules for your farm.",
@@ -85,17 +119,21 @@ module.exports = {
           ],
           sources: [FAO_BIOSEC],
           tryIt: "Walk through your animal house or pen with the checklist: dry, shaded, airy, drained, not crowded, clean drinkers. Write one thing to fix this week, and three hygiene rules for everyone who works with your animals.",
-          youCanNow: "check housing and keep it clean, keep sick and new animals apart, and act safely on a sudden death."
+          youCanNow: "check housing and keep it clean, keep sick and new animals apart, and act safely on a sudden death.",
+          quickCheck: [
+            { objective: "O3", q: "Why remove dung and wet bedding often?", options: ["To make animals eat less", "To save feed", "Dirty, damp housing spreads disease, worms and foot problems", "So the house looks empty"], answer: 2, why: "Crowded, damp, dirty housing spreads disease, worms and foot problems." },
+            { objective: "O3", q: "Rain leaked into your chicken house and the litter is wet. What do you do?", options: ["Replace the wet litter with dry litter and fix the leak", "Leave it to dry by itself", "Add feed on top of it", "Move the birds into the rain"], answer: 0, why: "Poultry need dry litter; wet litter is replaced and the cause fixed." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Everyday care",
         questions: [
-          { q: "Which is a sign of a healthy cow or goat?", options: ["Standing alone with head down", "Chewing the cud while resting", "Runny eyes and nose", "Not drinking"], answer: 1, why: "Cud-chewing shows the stomach is working normally." },
-          { q: "A goat is not eating and stands apart from the herd. What do you do first?", options: ["Wait a week", "Sell it at once", "Separate it and contact your vet or animal health officer", "Give it any medicine from the shop"], answer: 2, why: "Isolating it protects the herd, and the vet can find the cause." },
-          { q: "Your maize bran has gone mouldy. What should you do?", options: ["Throw it away; do not feed it", "Feed it to the chickens", "Mix it with good feed", "Feed it to milking cows only"], answer: 0, why: "Mould can carry aflatoxin, which harms animals and passes into milk and eggs." },
-          { q: "How should you prepare for the dry season?", options: ["Sell all water troughs", "Feed mouldy hay", "Stop giving water", "Grow fodder and store hay, silage or crop residues"], answer: 3, why: "Stored feed carries animals through the dry season." },
-          { q: "A cow dies suddenly with blood coming from its nose. What do you do?", options: ["Open it to see the cause", "Do not open it; keep people away and call the vet at once", "Sell the meat quickly", "Leave it for dogs"], answer: 1, why: "Sudden death with bleeding can be anthrax, which can infect people; the carcass must not be opened." }
+          { objective: "O1", q: "Which is a sign of a healthy cow or goat?", options: ["Standing alone with head down", "Chewing the cud while resting", "Runny eyes and nose", "Not drinking"], answer: 1, why: "Cud-chewing shows the stomach is working normally." },
+          { objective: "O1", q: "A goat is not eating and stands apart from the herd. What do you do first?", options: ["Wait a week", "Sell it at once", "Separate it and contact your vet or animal health officer", "Give it any medicine from the shop"], answer: 2, why: "Isolating it protects the herd, and the vet can find the cause." },
+          { objective: "O2", q: "Your maize bran has gone mouldy. What should you do?", options: ["Throw it away; do not feed it", "Feed it to the chickens", "Mix it with good feed", "Feed it to milking cows only"], answer: 0, why: "Mould can carry aflatoxin, which harms animals and passes into milk and eggs." },
+          { objective: "O2", q: "How should you prepare for the dry season?", options: ["Sell all water troughs", "Feed mouldy hay", "Stop giving water", "Grow fodder and store hay, silage or crop residues"], answer: 3, why: "Stored feed carries animals through the dry season." },
+          { objective: "O3", q: "A cow dies suddenly with blood coming from its nose. What do you do?", options: ["Open it to see the cause", "Do not open it; keep people away and call the vet at once", "Sell the meat quickly", "Leave it for dogs"], answer: 1, why: "Sudden death with bleeding can be anthrax, which can infect people; the carcass must not be opened." }
         ]
       }
     },
@@ -103,6 +141,7 @@ module.exports = {
       name: "Chapter 2: Preventing and treating disease",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Vaccination schedules with your local vet",
           minutes: 5,
           goal: "Agree a written vaccination schedule with a registered vet and keep vaccines working.",
@@ -121,9 +160,14 @@ module.exports = {
           ],
           sources: [VCN],
           tryIt: "Call or visit your local vet or animal health officer and ask: which diseases should I vaccinate my animals against here, and when? Write their answer as a 12-month calendar and save the vet's number in your phone.",
-          youCanNow: "get a vaccination schedule from a registered vet and keep vaccines cool and effective."
+          youCanNow: "get a vaccination schedule from a registered vet and keep vaccines cool and effective.",
+          quickCheck: [
+            { objective: "O4", q: "Which is a vaccine-preventable disease of poultry?", options: ["East Coast fever", "Newcastle disease", "Brucellosis in goats", "Foot rot"], answer: 1, why: "Newcastle disease, Gumboro and fowl pox are common poultry diseases prevented by vaccines." },
+            { objective: "O4", q: "Your vet gave the first vaccines but nothing in writing. What do you ask for?", options: ["A cheaper vaccine", "Nothing; you will remember", "A vaccine for every disease in the world", "A written year calendar: each vaccine, which animals, at what age and when to repeat"], answer: 3, why: "A written calendar from the vet keeps every vaccination on time." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Poultry biosecurity and Newcastle disease",
           minutes: 5,
           goal: "Set biosecurity rules that keep Newcastle disease and other infections out of your flock.",
@@ -142,9 +186,14 @@ module.exports = {
           ],
           sources: [WOAH_ND, FAO_ND_VILLAGE, FAO_BIOSEC],
           tryIt: "Write five biosecurity rules for your poultry and post them at the poultry house door. Then ask your vet or animal health officer when your flock should next be vaccinated against Newcastle disease and add it to your calendar.",
-          youCanNow: "protect a flock from Newcastle disease with biosecurity and vaccination, and act fast if birds die."
+          youCanNow: "protect a flock from Newcastle disease with biosecurity and vaccination, and act fast if birds die.",
+          quickCheck: [
+            { objective: "O5", q: "What is biosecurity?", options: ["A type of vaccine", "A chicken breed", "A feed supplement", "The simple everyday steps that keep germs out of a farm"], answer: 3, why: "Biosecurity is the everyday steps that keep germs out, and many cost little or nothing." },
+            { objective: "O5", q: "A neighbour whose birds have been sick wants to borrow your egg trays and feeders. What do you do?", options: ["Lend them and use them again when they come back", "Do not share equipment, because germs spread on it", "Lend them only for one day", "Swap your birds instead"], answer: 1, why: "Newcastle disease spreads on contaminated feed, water, equipment and clothing." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Parasites, records and when to call the vet",
           minutes: 6,
           goal: "Plan parasite control with your vet, keep a treatment record, and know the signs that need a vet at once.",
@@ -163,17 +212,21 @@ module.exports = {
           ],
           sources: [FAO_PRUDENT, WOAH_ND],
           tryIt: "Final task: write your one-page health plan. Include your daily check, feed and water plan, housing rules, the vaccination calendar from your vet, biosecurity rules, parasite plan, the records you will keep, and the signs that mean you call the vet, with the vet's name and number at the top.",
-          youCanNow: "control parasites with your vet, keep treatment records with withdrawal periods, and know when to call the vet."
+          youCanNow: "control parasites with your vet, keep treatment records with withdrawal periods, and know when to call the vet.",
+          quickCheck: [
+            { objective: "O6", q: "Which disease do ticks spread in cattle in East Africa?", options: ["East Coast fever", "Newcastle disease", "Fowl pox", "PPR"], answer: 0, why: "Ticks spread East Coast fever in cattle in East Africa." },
+            { objective: "O6", q: "You treated a goat today. What do you write in the record?", options: ["Nothing, if the goat looks better", "Only the price of the medicine", "The date, product, who gave it and when the withdrawal period ends", "The neighbour's name"], answer: 2, why: "Recording each treatment with its withdrawal period keeps milk and meat safe to sell and eat." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Preventing and treating disease",
         questions: [
-          { q: "Who should set your animals' vaccination schedule?", options: ["A neighbour in another country", "The feed shop's poster", "A registered vet or animal health officer who knows your area", "Anyone online"], answer: 2, why: "Which vaccines are needed, and when, depends on diseases present in your area." },
-          { q: "You buy a vaccine and travel home for three hours in the sun. What is the risk?", options: ["The vaccine may be damaged by heat and not protect your animals", "It becomes stronger", "No risk at all", "It becomes a dewormer"], answer: 0, why: "Vaccines must be kept cool from shop to animal." },
-          { q: "Which is a sign of Newcastle disease in chickens?", options: ["Brighter combs", "More eggs", "Faster growth", "Twisted necks, gasping and sudden deaths"], answer: 3, why: "WOAH lists breathing and nervous signs, egg drop and high deaths." },
-          { q: "Many of your birds die suddenly. What should you do?", options: ["Sell the rest quickly at market", "Shut the flock in, call the vet and do not move or sell birds", "Give the dead birds to neighbours", "Buy new birds the same day"], answer: 1, why: "Moving or selling birds spreads disease; the vet must find the cause." },
-          { q: "What is a withdrawal period?", options: ["The time before milk, eggs or meat from a treated animal can be sold or eaten", "A holiday for farmers", "The time a vaccine lasts", "The time to dry grain"], answer: 0, why: "It keeps medicine residues out of food." }
+          { objective: "O4", q: "Who should set your animals' vaccination schedule?", options: ["A neighbour in another country", "The feed shop's poster", "A registered vet or animal health officer who knows your area", "Anyone online"], answer: 2, why: "Which vaccines are needed, and when, depends on diseases present in your area." },
+          { objective: "O4", q: "You buy a vaccine and travel home for three hours in the sun. What is the risk?", options: ["The vaccine may be damaged by heat and not protect your animals", "It becomes stronger", "No risk at all", "It becomes a dewormer"], answer: 0, why: "Vaccines must be kept cool from shop to animal." },
+          { objective: "O5", q: "Which is a sign of Newcastle disease in chickens?", options: ["Brighter combs", "More eggs", "Faster growth", "Twisted necks, gasping and sudden deaths"], answer: 3, why: "WOAH lists breathing and nervous signs, egg drop and high deaths." },
+          { objective: "O5", q: "Many of your birds die suddenly. What should you do?", options: ["Sell the rest quickly at market", "Shut the flock in, call the vet and do not move or sell birds", "Give the dead birds to neighbours", "Buy new birds the same day"], answer: 1, why: "Moving or selling birds spreads disease; the vet must find the cause." },
+          { objective: "O6", q: "What is a withdrawal period?", options: ["The time before milk, eggs or meat from a treated animal can be sold or eaten", "A holiday for farmers", "The time a vaccine lasts", "The time to dry grain"], answer: 0, why: "It keeps medicine residues out of food." }
         ]
       }
     }
@@ -181,26 +234,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Livestock Health and Management",
     questions: [
-      { q: "When is a good time for the daily health check?", options: ["Once a month", "Only when an animal dies", "At feeding or milking time", "Never; animals look after themselves"], answer: 2, why: "Animals are gathered and active at feeding or milking time." },
-      { q: "A healthy hen usually has:", options: ["A pale, shrunken comb", "Ruffled feathers", "A twisted neck", "A bright red comb and is active"], answer: 3, why: "Bright combs and activity are signs of good health." },
-      { q: "Which is a warning sign in a dairy cow?", options: ["A sudden drop in milk", "Chewing the cud", "Bright eyes", "Eating well"], answer: 0, why: "A sudden milk drop often means sickness." },
-      { q: "What comes first in feeding animals?", options: ["Expensive supplements", "Clean water every day", "Mineral licks only", "Mouldy hay"], answer: 1, why: "Without enough clean water, health and production fall fast." },
-      { q: "Napier grass and lucerne are examples of:", options: ["Vaccines", "Dewormers", "Fodder", "Litter"], answer: 2, why: "They are fodder crops grown to feed animals." },
-      { q: "Why change animal feeds slowly over several days?", options: ["To avoid stomach upsets", "Because new feed is always bad", "To save water", "It does not matter"], answer: 0, why: "Sudden feed changes upset digestion." },
-      { q: "Good animal housing is:", options: ["Crowded and warm", "Damp and dark", "Dry, shaded, airy and not crowded", "Open to thieves"], answer: 2, why: "Dry, airy, uncrowded housing reduces disease." },
-      { q: "You buy three new goats. What should you do before mixing them with your herd?", options: ["Mix them at once", "Keep them apart for the period your vet advises", "Sell your old goats", "Give them antibiotics just in case"], answer: 1, why: "Keeping new animals apart stops them bringing in disease." },
-      { q: "A zoonosis is:", options: ["A type of fodder", "A vaccine", "A disease that can pass between animals and people", "A poultry house"], answer: 2, why: "Brucellosis and anthrax are examples." },
-      { q: "PPR is a serious disease of:", options: ["Goats and sheep", "Chickens", "Maize", "Fish"], answer: 0, why: "Peste des petits ruminants affects goats and sheep." },
-      { q: "In Nigeria, which body keeps the register of veterinary surgeons?", options: ["The Nigerian Meteorological Agency", "The Veterinary Council of Nigeria", "The Central Bank", "A feed company"], answer: 1, why: "The VCN registers veterinary surgeons." },
-      { q: "Where should you buy vaccines?", options: ["From anyone at the roadside", "Online from unknown sellers", "From a neighbour's old fridge", "From a licensed agrovet, checking the expiry date"], answer: 3, why: "Licensed sellers and in-date vaccines are more likely to work." },
-      { q: "According to WOAH, Newcastle disease spreads through:", options: ["Sunlight only", "Clean water", "Vaccinated birds only", "Sick birds, droppings, and contaminated feed, water, equipment and clothing"], answer: 3, why: "Direct contact and contaminated items spread the virus." },
-      { q: "Which is a low-cost biosecurity step?", options: ["Letting visitors walk through the poultry house", "Sharing crates with other farms without cleaning", "Washing hands and using a foot dip before entering", "Letting wild birds eat from the feeder"], answer: 2, why: "Simple hygiene keeps germs out." },
-      { q: "For village chickens, FAO describes Newcastle vaccines that are:", options: ["Mixed into concrete", "Only for cattle", "Never needed", "Given by eye drop and more heat-tolerant"], answer: 3, why: "Thermostable vaccines such as I-2 suit village flocks." },
-      { q: "After a Newcastle outbreak, WOAH advises leaving the cleaned house empty of poultry for:", options: ["1 day", "21 days", "2 hours", "It can be restocked at once"], answer: 1, why: "WOAH lists 21 days empty before restocking." },
-      { q: "Which is a sign of worms in goats?", options: ["Fast growth and shiny coat", "Bright red eyelids", "Eating more than usual and gaining weight", "Poor growth, pot belly and pale eyelids"], answer: 3, why: "Worms take blood and nutrients, causing these signs." },
-      { q: "How do you decide the dose of a dewormer?", options: ["Guess by eye", "Use half to save money", "Follow the label or your vet", "Use double to be sure"], answer: 2, why: "Wrong doses harm animals or build resistance." },
-      { q: "A cow was treated yesterday and the withdrawal period is not over. What about her milk?", options: ["Sell it as normal", "Do not sell or drink it until the withdrawal period ends", "Mix it with other milk", "Boil it and sell it"], answer: 1, why: "Milk during the withdrawal period can carry medicine residues." },
-      { q: "Which situation means you should call the vet at once?", options: ["Several animals sick at the same time", "An animal chewing the cud", "Hens laying as usual", "A calf drinking well"], answer: 0, why: "Several sick animals can mean a spreading disease." }
+      { objective: "O1", q: "When is a good time for the daily health check?", options: ["Once a month", "Only when an animal dies", "At feeding or milking time", "Never; animals look after themselves"], answer: 2, why: "Animals are gathered and active at feeding or milking time." },
+      { objective: "O1", q: "A healthy hen usually has:", options: ["A pale, shrunken comb", "Ruffled feathers", "A twisted neck", "A bright red comb and is active"], answer: 3, why: "Bright combs and activity are signs of good health." },
+      { objective: "O1", q: "Which is a warning sign in a dairy cow?", options: ["A sudden drop in milk", "Chewing the cud", "Bright eyes", "Eating well"], answer: 0, why: "A sudden milk drop often means sickness." },
+      { objective: "O2", q: "What comes first in feeding animals?", options: ["Expensive supplements", "Clean water every day", "Mineral licks only", "Mouldy hay"], answer: 1, why: "Without enough clean water, health and production fall fast." },
+      { objective: "O2", q: "Napier grass and lucerne are examples of:", options: ["Vaccines", "Dewormers", "Fodder", "Litter"], answer: 2, why: "They are fodder crops grown to feed animals." },
+      { objective: "O2", q: "Why change animal feeds slowly over several days?", options: ["To avoid stomach upsets", "Because new feed is always bad", "To save water", "It does not matter"], answer: 0, why: "Sudden feed changes upset digestion." },
+      { objective: "O3", q: "Good animal housing is:", options: ["Crowded and warm", "Damp and dark", "Dry, shaded, airy and not crowded", "Open to thieves"], answer: 2, why: "Dry, airy, uncrowded housing reduces disease." },
+      { objective: "O3", q: "You buy three new goats. What should you do before mixing them with your herd?", options: ["Mix them at once", "Keep them apart for the period your vet advises", "Sell your old goats", "Give them antibiotics just in case"], answer: 1, why: "Keeping new animals apart stops them bringing in disease." },
+      { objective: "O3", q: "A zoonosis is:", options: ["A type of fodder", "A vaccine", "A disease that can pass between animals and people", "A poultry house"], answer: 2, why: "Brucellosis and anthrax are examples." },
+      { objective: "O4", q: "PPR is a serious disease of:", options: ["Goats and sheep", "Chickens", "Maize", "Fish"], answer: 0, why: "Peste des petits ruminants affects goats and sheep." },
+      { objective: "O4", q: "In Nigeria, which body keeps the register of veterinary surgeons?", options: ["The Nigerian Meteorological Agency", "The Veterinary Council of Nigeria", "The Central Bank", "A feed company"], answer: 1, why: "The VCN registers veterinary surgeons." },
+      { objective: "O4", q: "Where should you buy vaccines?", options: ["From anyone at the roadside", "Online from unknown sellers", "From a neighbour's old fridge", "From a licensed agrovet, checking the expiry date"], answer: 3, why: "Licensed sellers and in-date vaccines are more likely to work." },
+      { objective: "O5", q: "According to WOAH, Newcastle disease spreads through:", options: ["Sunlight only", "Clean water", "Vaccinated birds only", "Sick birds, droppings, and contaminated feed, water, equipment and clothing"], answer: 3, why: "Direct contact and contaminated items spread the virus." },
+      { objective: "O5", q: "Which is a low-cost biosecurity step?", options: ["Letting visitors walk through the poultry house", "Sharing crates with other farms without cleaning", "Washing hands and using a foot dip before entering", "Letting wild birds eat from the feeder"], answer: 2, why: "Simple hygiene keeps germs out." },
+      { objective: "O5", q: "For village chickens, FAO describes Newcastle vaccines that are:", options: ["Mixed into concrete", "Only for cattle", "Never needed", "Given by eye drop and more heat-tolerant"], answer: 3, why: "Thermostable vaccines such as I-2 suit village flocks." },
+      { objective: "O5", q: "After a Newcastle outbreak, WOAH advises leaving the cleaned house empty of poultry for:", options: ["1 day", "21 days", "2 hours", "It can be restocked at once"], answer: 1, why: "WOAH lists 21 days empty before restocking." },
+      { objective: "O6", q: "Which is a sign of worms in goats?", options: ["Fast growth and shiny coat", "Bright red eyelids", "Eating more than usual and gaining weight", "Poor growth, pot belly and pale eyelids"], answer: 3, why: "Worms take blood and nutrients, causing these signs." },
+      { objective: "O6", q: "How do you decide the dose of a dewormer?", options: ["Guess by eye", "Use half to save money", "Follow the label or your vet", "Use double to be sure"], answer: 2, why: "Wrong doses harm animals or build resistance." },
+      { objective: "O6", q: "A cow was treated yesterday and the withdrawal period is not over. What about her milk?", options: ["Sell it as normal", "Do not sell or drink it until the withdrawal period ends", "Mix it with other milk", "Boil it and sell it"], answer: 1, why: "Milk during the withdrawal period can carry medicine residues." },
+      { objective: "O6", q: "Which situation means you should call the vet at once?", options: ["Several animals sick at the same time", "An animal chewing the cud", "Hens laying as usual", "A calf drinking well"], answer: 0, why: "Several sick animals can mean a spreading disease." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      2,
+      3,
+      6,
+      7,
+      9,
+      11,
+      12,
+      16,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part of the plan and check it again.",
+    criteria: [
+      {
+        name: "Daily check",
+        objective: "O1",
+        notYet: "No daily check, or no warning signs listed.",
+        meets: "A daily check at feeding or milking time with the main warning signs and what to do.",
+        exceeds: "Fits the check to each kind of animal kept."
+      },
+      {
+        name: "Feed, water and housing",
+        objective: "O2",
+        notYet: "No dry-season plan, or housing and hygiene rules missing.",
+        meets: "Feed and clean water through the year with a dry-season plan, and two housing and hygiene rules.",
+        exceeds: "Includes growing or storing fodder and keeping new animals apart."
+      },
+      {
+        name: "Vaccination schedule",
+        objective: "O4",
+        notYet: "No schedule, or one not agreed with a vet.",
+        meets: "A written schedule from a registered vet, with how vaccines are kept cool and in date.",
+        exceeds: "Notes government campaigns and the vet's name and number."
+      },
+      {
+        name: "Biosecurity",
+        objective: "O5",
+        notYet: "No biosecurity rules.",
+        meets: "Biosecurity rules, and for poultry, Newcastle vaccination and the steps if birds die suddenly.",
+        exceeds: "Low-cost steps such as hand washing and a foot dip are in place."
+      },
+      {
+        name: "Parasites, records and the vet",
+        objective: "O6",
+        notYet: "No records, or doses guessed.",
+        meets: "Parasite control planned with the vet, a treatment record with withdrawal periods, and the signs that mean call the vet at once.",
+        exceeds: "Records also cover births, weights or production and deaths."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and score Meets or Exceeds on every rubric row of the health plan",
+      "Learners who report a written vaccination schedule from a registered vet within 60 days (follow-up survey)",
+      "Change in animal or bird deaths and in milk or egg output reported by learners after six months",
+      "Learners who report keeping treatment records and observing withdrawal periods"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A notebook or phone spreadsheet for records",
+      "The phone number of a registered vet or animal health officer",
+      "Access to the learner's own animals for the daily check",
+      "About 60 minutes in total, in short sessions, plus time to write the health plan"
+    ],
+    facilitatorNotes: [
+      "In a farmer group: take the pre-test together, then practise the daily health check on real animals.",
+      "Invite a registered vet or animal health officer to explain local diseases and vaccines; do not give doses yourself.",
+      "Wash hands after handling animals, and never handle animals that died suddenly with bleeding.",
+      "Help each learner write down their vet's name and number before they leave.",
+      "Score the health plan with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

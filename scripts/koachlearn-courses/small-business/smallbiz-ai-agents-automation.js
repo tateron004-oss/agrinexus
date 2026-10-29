@@ -18,11 +18,35 @@ module.exports = {
     "Tools change their screens and prices often, so we describe what to do rather than exact menu names; check each tool's site for its current free plan. Each lesson takes about five minutes, with a knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Build one working automation for a real repeat task: write the step map, choose the trigger and actions, put a human approval step before anything is sent or paid, test it with three sample entries (no real customer data), fix what breaks, and set up a simple log and a weekly check. Write a one-page description of it so someone else could understand or turn it off.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Small business owners who repeat the same computer tasks every day, such as copying form answers into a sheet, sending the same follow-up email, creating invoices and sorting inquiries, in shops, restaurants, salons, cleaning and repair services and small offices.",
+    startingPoint: "Use email, a web form or booking tool and a spreadsheet, and may have tried an AI assistant. Most have never built an automation or used a no-code automation tool.",
+    gap: "Repeat tasks take hours every week and mistakes slip in when people are tired. Learners need to automate the routine steps safely, with a person approving anything that is sent or paid, so they save time without losing control of customers, money or records.",
+    constraints: [
+      "Free or low-cost no-code tools; free plans have limits that change, so learners check each tool's site",
+      "No real customer data in tests; sample entries only",
+      "A person approves anything that spends money, messages customers or changes records",
+      "Security: two-step sign-in, least access, no card numbers or passwords in AI steps",
+      "Time: about 60 minutes in total, in 5-minute lessons"
+    ],
+    prerequisites: "Comfort with email and a spreadsheet. Learners new to AI assistants can take an introduction to AI course first."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given a business task", action: "explain whether a fixed automation or an AI step fits it, and which parts stay with a person", standard: "keeping money, customer messages and record changes with a person" },
+    { id: "O2", condition: "Given one task you repeat often", action: "write a step map and mark each step as Rule, Words, Decision or Money or sending", standard: "with every step you do today included" },
+    { id: "O3", condition: "Given your step map", action: "design a workflow with a trigger, actions and a human approval step, drawn on paper", standard: "with approval placed before anything leaves the business" },
+    { id: "O4", condition: "Using a no-code automation tool", action: "build the workflow, connect your accounts and map the fields", standard: "with the AI step getting only the fields it needs and sending its draft to you" },
+    { id: "O5", condition: "Given three made-up sample entries", action: "test the automation and fix what breaks, one change at a time", standard: "until a normal entry, a missing-field entry and an odd-text entry all pass" },
+    { id: "O6", condition: "Once the automation is live", action: "set up a log, a weekly check and a one-page description that says how to turn it off", standard: "so someone else could understand or stop it" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Understanding and designing automation",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Automations and AI agents: what is the difference?",
           minutes: 5,
           goal: "Explain the difference between a fixed automation and an AI agent, and when each fits.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "Start simple", bullets: ["Fixed automation first", "Add AI to one wording step", "People approve money, messages and records"] }
           ],
           tryIt: "Write down two repeat tasks in your business. For each, write whether a fixed automation could do it, or whether it needs judgment (a possible AI step).",
-          youCanNow: "explain the difference between an automation and an AI agent and choose the safer fit."
+          youCanNow: "explain the difference between an automation and an AI agent and choose the safer fit.",
+          quickCheck: [
+            { objective: "O1", q: "What is a weakness of AI agents compared with fixed automations?", options: ["They are less predictable and can make mistakes confidently", "They can never use words", "They only work at night", "They cost nothing"], answer: 0, why: "Agents are more flexible but less predictable, and can be confidently wrong." },
+            { objective: "O1", q: "You want AI to reply to inquiries and pay supplier invoices on its own. What should you do?", options: ["Let the AI agent do both", "Let AI draft replies, and keep paying and sending with a person", "Turn off all automation", "Let AI pay but not reply"], answer: 1, why: "Keep people in charge of spending money and sending messages to customers." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Mapping a repeat task step by step",
           minutes: 5,
           goal: "Break one repeat task into a clear step map.",
@@ -57,9 +86,14 @@ module.exports = {
             { title: "What gets automated", bullets: ["Rule steps: automate", "Words steps: AI draft", "Decision and money steps: people"] }
           ],
           tryIt: "Write the step map for one repeat task in your business and mark every step Rule, Words, Decision or Money/sending.",
-          youCanNow: "break a repeat task into a step map that shows what can be automated."
+          youCanNow: "break a repeat task into a step map that shows what can be automated.",
+          quickCheck: [
+            { objective: "O2", q: "Which steps stay with a person?", options: ["Rule steps", "Words steps", "Decision and Money or sending steps", "Every step"], answer: 2, why: "Decision and Money or sending steps stay with a person; Rule steps can be automated." },
+            { objective: "O2", q: "You want to automate how you handle new inquiries. What do you do first?", options: ["Buy the most expensive tool", "Ask AI to guess your process", "Start building right away", "Write down every step as you do it today"], answer: 3, why: "You cannot automate what you have not written down." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Designing the workflow: trigger, actions, approval",
           minutes: 5,
           goal: "Design a workflow with a trigger, actions and a human approval step.",
@@ -76,17 +110,21 @@ module.exports = {
             { title: "Draw it first", bullets: ["Boxes and arrows on paper", "Name the tool for each box", "Check each tool connects"] }
           ],
           tryIt: "Draw the workflow for your task from Lesson 2: trigger, actions, and an approval step. Write the tool name in each box.",
-          youCanNow: "design a workflow with a trigger, actions and a human approval step."
+          youCanNow: "design a workflow with a trigger, actions and a human approval step.",
+          quickCheck: [
+            { objective: "O3", q: "In a workflow, what are \"actions\"?", options: ["What happens after the trigger", "The event that starts it", "Your password", "The price of the tool"], answer: 0, why: "The trigger starts the automation; the actions are what happens next." },
+            { objective: "O3", q: "Your design has the AI step email customers directly. What do you change?", options: ["Nothing; it saves time", "Send the draft to you for approval before it goes to the customer", "Remove the trigger", "Add a second AI step to check the first"], answer: 1, why: "Human approval goes before anything leaves the business." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Understanding and designing automation",
         questions: [
-          { q: "Which best describes a fixed automation?", options: ["It chooses its own goals", "It follows rules you set and does the same thing every time", "It is a person", "It never runs"], answer: 1, why: "Automations follow fixed rules." },
-          { q: "Which is more predictable?", options: ["Neither ever works", "An AI agent", "They are always the same", "A fixed automation"], answer: 3, why: "Agents choose steps and are less predictable." },
-          { q: "In a step map, \"send the quote\" is marked:", options: ["Money or sending: needs approval", "Rule: automate fully", "Ignore", "Delete"], answer: 0, why: "Anything sent to a customer needs a person's approval." },
-          { q: "What is a trigger?", options: ["A password", "The last step", "The event that starts an automation", "A price"], answer: 2, why: "Triggers start workflows." },
-          { q: "Where does the approval step go?", options: ["Nowhere", "After the customer gets it", "Before anything leaves the business", "Only at the end of the year"], answer: 2, why: "Approve before sending, paying or deleting." }
+          { objective: "O1", q: "Which best describes a fixed automation?", options: ["It chooses its own goals", "It follows rules you set and does the same thing every time", "It is a person", "It never runs"], answer: 1, why: "Automations follow fixed rules." },
+          { objective: "O1", q: "Which is more predictable?", options: ["Neither ever works", "An AI agent", "They are always the same", "A fixed automation"], answer: 3, why: "Agents choose steps and are less predictable." },
+          { objective: "O2", q: "In a step map, \"send the quote\" is marked:", options: ["Money or sending: needs approval", "Rule: automate fully", "Ignore", "Delete"], answer: 0, why: "Anything sent to a customer needs a person's approval." },
+          { objective: "O3", q: "What is a trigger?", options: ["A password", "The last step", "The event that starts an automation", "A price"], answer: 2, why: "Triggers start workflows." },
+          { objective: "O3", q: "Where does the approval step go?", options: ["Nowhere", "After the customer gets it", "Before anything leaves the business", "Only at the end of the year"], answer: 2, why: "Approve before sending, paying or deleting." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Chapter 2: Building, testing and running it safely",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Building it with a no-code tool",
           minutes: 6,
           goal: "Build your workflow in a no-code automation tool.",
@@ -110,9 +149,14 @@ module.exports = {
             { title: "The AI step", bullets: ["Clear instructions", "Only the fields it needs", "Draft goes to you, not the customer"] }
           ],
           tryIt: "Build your workflow in a no-code tool's free plan (or on paper if you cannot sign up yet): trigger, field mapping for each action, and an AI draft sent to you.",
-          youCanNow: "build a trigger-and-action workflow in a no-code automation tool."
+          youCanNow: "build a trigger-and-action workflow in a no-code automation tool.",
+          quickCheck: [
+            { objective: "O4", q: "What does a no-code tool let you do?", options: ["Write code faster", "Get free customer lists", "Build automations by choosing from menus", "Skip signing in to your apps"], answer: 2, why: "No-code tools let you build automations from menus instead of writing code." },
+            { objective: "O4", q: "The form has 12 fields but the AI only needs the name and job type to draft a reply. What do you send it?", options: ["All 12 fields to be safe", "The customer's card number too", "Nothing", "Only the name and job type"], answer: 3, why: "Give the AI step only the fields it needs." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Testing with sample data and fixing what breaks",
           minutes: 5,
           goal: "Test the automation with sample entries and fix errors before going live.",
@@ -129,9 +173,14 @@ module.exports = {
             { title: "Fix and retest", bullets: ["One fix at a time", "Tell the AI step not to invent prices", "Go live when all three pass"] }
           ],
           tryIt: "Run three sample entries through your automation (or walk them through your paper design). Write what happened at each step and one fix.",
-          youCanNow: "test an automation safely and fix problems before it touches real customers."
+          youCanNow: "test an automation safely and fix problems before it touches real customers.",
+          quickCheck: [
+            { objective: "O5", q: "Which is an example of an odd-text sample entry?", options: ["A very long message with emojis", "A normal inquiry", "A blank form", "A real customer's request"], answer: 0, why: "The odd-text entry has very long text, another language or emojis." },
+            { objective: "O5", q: "A test fails when the phone field is blank. What do you do?", options: ["Go live anyway", "Fix that one step and test again", "Change five things at once", "Test only with real customers"], answer: 1, why: "Fix one thing at a time and retest." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Running it safely: logs, monitoring and an off switch",
           minutes: 5,
           goal: "Set up a log, a weekly check and a way to turn the automation off.",
@@ -148,17 +197,21 @@ module.exports = {
             { title: "Protect access", bullets: ["Two-step sign-in", "Least access needed", "No card numbers or passwords in AI steps"] }
           ],
           tryIt: "Final task: finish your automation: step map, workflow with approval, three passing tests, a log and weekly check, and a one-page description with the off switch.",
-          youCanNow: "run a business automation safely with approval, testing, logs and an off switch."
+          youCanNow: "run a business automation safely with approval, testing, logs and an off switch.",
+          quickCheck: [
+            { objective: "O6", q: "What goes in a log row in this lesson?", options: ["Customer card numbers", "Your password", "Date, trigger, what it did and who approved", "Only the word \"done\""], answer: 2, why: "A log row records date, trigger, what it did and who approved it." },
+            { objective: "O6", q: "A staff member who helped approve drafts leaves the business. What do you do?", options: ["Nothing", "Share your password with the new person", "Turn off two-step sign-in", "Remove their access to the automation and connected accounts"], answer: 3, why: "Remove access when a staff member leaves." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Building, testing and running it safely",
         questions: [
-          { q: "Which is a no-code automation tool?", options: ["Zapier", "A stapler", "A cash drawer", "A fax"], answer: 0, why: "Zapier builds automations without code." },
-          { q: "What is field mapping?", options: ["Printing a map", "Drawing a farm", "Choosing a password", "Telling the tool which information goes where"], answer: 3, why: "It matches form fields to sheet columns." },
-          { q: "What data should you test with?", options: ["Real customers' details", "Made-up sample entries", "Card numbers", "Your bank login"], answer: 1, why: "Never test on real customers." },
-          { q: "The AI draft invents a price. What do you fix?", options: ["The AI step's instructions, then retest", "Nothing", "Send it anyway", "Delete the business"], answer: 0, why: "Clear instructions reduce invented facts." },
-          { q: "Why write a one-page description with an off switch?", options: ["For decoration", "To make it longer", "So someone else can understand or stop it", "It is not useful"], answer: 2, why: "Anyone should be able to turn it off fast." }
+          { objective: "O4", q: "Which is a no-code automation tool?", options: ["Zapier", "A stapler", "A cash drawer", "A fax"], answer: 0, why: "Zapier builds automations without code." },
+          { objective: "O4", q: "What is field mapping?", options: ["Printing a map", "Drawing a farm", "Choosing a password", "Telling the tool which information goes where"], answer: 3, why: "It matches form fields to sheet columns." },
+          { objective: "O5", q: "What data should you test with?", options: ["Real customers' details", "Made-up sample entries", "Card numbers", "Your bank login"], answer: 1, why: "Never test on real customers." },
+          { objective: "O5", q: "The AI draft invents a price. What do you fix?", options: ["The AI step's instructions, then retest", "Nothing", "Send it anyway", "Delete the business"], answer: 0, why: "Clear instructions reduce invented facts." },
+          { objective: "O6", q: "Why write a one-page description with an off switch?", options: ["For decoration", "To make it longer", "So someone else can understand or stop it", "It is not useful"], answer: 2, why: "Anyone should be able to turn it off fast." }
         ]
       }
     }
@@ -166,26 +219,103 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI Agents for Business Automation",
     questions: [
-      { q: "An AI agent is:", options: ["A person", "An AI system that can choose some of its own steps", "A fixed rule", "A printer"], answer: 1, why: "Agents choose steps toward a goal." },
-      { q: "Where should a small business start?", options: ["Automate everything at once", "A fully independent agent with bank access", "Nothing", "Fixed automations, then one AI step"], answer: 3, why: "Simple and predictable first." },
-      { q: "Which should always stay with a person?", options: ["Formatting a row", "Copying a form into a sheet", "Adding a calendar reminder", "Spending money"], answer: 3, why: "Money decisions need a person." },
-      { q: "The first step before automating is to:", options: ["Buy a tool", "Write a step map of the task", "Turn it on", "Hire someone"], answer: 1, why: "You cannot automate what you have not written down." },
-      { q: "A \"Rule\" step is one that is:", options: ["About money", "A big decision", "Always the same", "Unclear"], answer: 2, why: "Rule steps can be automated." },
-      { q: "A \"Words\" step can get:", options: ["An AI draft", "A payment", "A deletion", "Nothing"], answer: 0, why: "AI helps with writing." },
-      { q: "\"New form submission\" is an example of a:", options: ["Log", "Action", "Trigger", "Password"], answer: 2, why: "It starts the workflow." },
-      { q: "\"Add a row to the sheet\" is an example of an:", options: ["Action", "Trigger", "Approval", "Off switch"], answer: 0, why: "Actions follow the trigger." },
-      { q: "In a safe workflow, AI drafts customer replies and then:", options: ["Sends them straight to customers", "Sends them to you for approval", "Deletes them", "Posts them publicly"], answer: 1, why: "You press send." },
-      { q: "Why draw the workflow on paper first?", options: ["It is not useful", "It is required by law", "For fun only", "To see every step and tool before building"], answer: 3, why: "Planning prevents mistakes." },
-      { q: "When you connect an account to an automation tool, you are:", options: ["Letting the tool use that app after you sign in", "Deleting the app", "Sharing it publicly", "Paying a fine"], answer: 0, why: "Connections give the tool access." },
-      { q: "What should the AI step receive?", options: ["Passwords", "All customer data", "Card numbers", "Only the fields it needs"], answer: 3, why: "Least data needed." },
-      { q: "Where do you check a tool's free plan limits?", options: ["An old video", "A guess", "The tool's official site", "A competitor"], answer: 2, why: "Plans change." },
-      { q: "An edge case is:", options: ["A table corner", "An unusual input that might break the process", "A normal entry", "A password"], answer: 1, why: "Test odd inputs too." },
-      { q: "How many sample entries should pass before going live in this course?", options: ["A thousand", "Zero", "One real customer", "Three: normal, missing field, odd text"], answer: 3, why: "They cover common problems." },
-      { q: "Fix problems by:", options: ["Ignoring them", "Changing everything at once", "Changing one thing at a time and retesting", "Going live anyway"], answer: 2, why: "One fix at a time shows what worked." },
-      { q: "Run history shows:", options: ["Every time the automation ran", "Your browser history", "Customer passwords", "Tax returns"], answer: 0, why: "It helps you spot errors." },
-      { q: "How often should you check a live automation?", options: ["Never", "At least weekly", "Once every few years", "Only when customers complain"], answer: 1, why: "Regular checks catch problems early." },
-      { q: "Two-step sign-in on automation accounts:", options: ["Slows down nothing useful", "Makes them harder to break into", "Is not allowed", "Shares your password"], answer: 1, why: "It adds a second check." },
-      { q: "Each month you should ask whether the automation:", options: ["Still saves time", "Has a nice name", "Uses more apps", "Is popular"], answer: 0, why: "If it no longer helps, change or stop it." }
+      { objective: "O1", q: "An AI agent is:", options: ["A person", "An AI system that can choose some of its own steps", "A fixed rule", "A printer"], answer: 1, why: "Agents choose steps toward a goal." },
+      { objective: "O1", q: "Where should a small business start?", options: ["Automate everything at once", "A fully independent agent with bank access", "Nothing", "Fixed automations, then one AI step"], answer: 3, why: "Simple and predictable first." },
+      { objective: "O1", q: "Which should always stay with a person?", options: ["Formatting a row", "Copying a form into a sheet", "Adding a calendar reminder", "Spending money"], answer: 3, why: "Money decisions need a person." },
+      { objective: "O2", q: "The first step before automating is to:", options: ["Buy a tool", "Write a step map of the task", "Turn it on", "Hire someone"], answer: 1, why: "You cannot automate what you have not written down." },
+      { objective: "O2", q: "A \"Rule\" step is one that is:", options: ["About money", "A big decision", "Always the same", "Unclear"], answer: 2, why: "Rule steps can be automated." },
+      { objective: "O2", q: "A \"Words\" step can get:", options: ["An AI draft", "A payment", "A deletion", "Nothing"], answer: 0, why: "AI helps with writing." },
+      { objective: "O3", q: "\"New form submission\" is an example of a:", options: ["Log", "Action", "Trigger", "Password"], answer: 2, why: "It starts the workflow." },
+      { objective: "O3", q: "\"Add a row to the sheet\" is an example of an:", options: ["Action", "Trigger", "Approval", "Off switch"], answer: 0, why: "Actions follow the trigger." },
+      { objective: "O3", q: "In a safe workflow, AI drafts customer replies and then:", options: ["Sends them straight to customers", "Sends them to you for approval", "Deletes them", "Posts them publicly"], answer: 1, why: "You press send." },
+      { objective: "O3", q: "Why draw the workflow on paper first?", options: ["It is not useful", "It is required by law", "For fun only", "To see every step and tool before building"], answer: 3, why: "Planning prevents mistakes." },
+      { objective: "O4", q: "When you connect an account to an automation tool, you are:", options: ["Letting the tool use that app after you sign in", "Deleting the app", "Sharing it publicly", "Paying a fine"], answer: 0, why: "Connections give the tool access." },
+      { objective: "O4", q: "What should the AI step receive?", options: ["Passwords", "All customer data", "Card numbers", "Only the fields it needs"], answer: 3, why: "Least data needed." },
+      { objective: "O4", q: "Where do you check a tool's free plan limits?", options: ["An old video", "A guess", "The tool's official site", "A competitor"], answer: 2, why: "Plans change." },
+      { objective: "O5", q: "An edge case is:", options: ["A table corner", "An unusual input that might break the process", "A normal entry", "A password"], answer: 1, why: "Test odd inputs too." },
+      { objective: "O5", q: "How many sample entries should pass before going live in this course?", options: ["A thousand", "Zero", "One real customer", "Three: normal, missing field, odd text"], answer: 3, why: "They cover common problems." },
+      { objective: "O5", q: "Fix problems by:", options: ["Ignoring them", "Changing everything at once", "Changing one thing at a time and retesting", "Going live anyway"], answer: 2, why: "One fix at a time shows what worked." },
+      { objective: "O6", q: "Run history shows:", options: ["Every time the automation ran", "Your browser history", "Customer passwords", "Tax returns"], answer: 0, why: "It helps you spot errors." },
+      { objective: "O6", q: "How often should you check a live automation?", options: ["Never", "At least weekly", "Once every few years", "Only when customers complain"], answer: 1, why: "Regular checks catch problems early." },
+      { objective: "O6", q: "Two-step sign-in on automation accounts:", options: ["Slows down nothing useful", "Makes them harder to break into", "Is not allowed", "Shares your password"], answer: 1, why: "It adds a second check." },
+      { objective: "O6", q: "Each month you should ask whether the automation:", options: ["Still saves time", "Has a nice name", "Uses more apps", "Is popular"], answer: 0, why: "If it no longer helps, change or stop it." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      3,
+      6,
+      8,
+      11,
+      14,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Step map",
+        objective: "O2",
+        notYet: "Steps are missing or not marked.",
+        meets: "Every step of the task is listed and marked Rule, Words, Decision or Money or sending.",
+        exceeds: "Notes how long each step takes today."
+      },
+      {
+        name: "Workflow design",
+        objective: "O3",
+        notYet: "No approval step, or something is sent or paid without a person.",
+        meets: "Trigger, actions and a human approval before anything leaves the business.",
+        exceeds: "Each box names its tool and the connections are checked."
+      },
+      {
+        name: "Working build",
+        objective: "O4",
+        notYet: "The automation does not run or fields land in the wrong places.",
+        meets: "Runs from the trigger, maps fields correctly, and sends the AI draft to you.",
+        exceeds: "The AI step gets only the fields it needs and has clear instructions."
+      },
+      {
+        name: "Tested and fixed",
+        objective: "O5",
+        notYet: "Tested on real customer data or with fewer than three entries.",
+        meets: "Normal, missing-field and odd-text sample entries all pass after fixes.",
+        exceeds: "Lists each problem found and the one change that fixed it."
+      },
+      {
+        name: "Safe running",
+        objective: "O6",
+        notYet: "No log, weekly check or way to turn it off.",
+        meets: "Log, weekly check and a one-page description with the off switch.",
+        exceeds: "Two-step sign-in on and access limited to what it needs."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Owners with an automation still running safely 30 days later (follow-up survey)",
+      "Hours per week owners report saving on the automated task",
+      "Learners who start another Koach Learn small business course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer with internet",
+      "A free account on a no-code automation tool, a form tool and a spreadsheet such as Google Sheets or Excel",
+      "Paper and pen for the step map and workflow drawing",
+      "About 60 minutes in total, plus time to build and test"
+    ],
+    facilitatorNotes: [
+      "Have each learner pick one small, real repeat task before the session; smaller is better for a first automation.",
+      "Use only made-up sample entries and a test email the learner owns; never real customer data.",
+      "Check that every design has a human approval before anything is sent or paid before learners start building.",
+      "Help learners turn on two-step sign-in for the automation tool and connected accounts.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

@@ -19,11 +19,34 @@ module.exports = {
     "You will write one real goal, break it into steps, plan a week, choose what matters most, beat procrastination and track your progress. You can use paper, a free phone calendar or an app; an AI assistant can help you break a goal into steps, but you make the plan. Each lesson takes about five minutes. There is a knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Write one SMART goal for the next four weeks. Break it into weekly steps, plan next week with time blocks for your top three priorities, track what you actually do for seven days, and finish with a five-minute weekly review that says what worked and what you will change.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Athletes balancing training and school, workers and job seekers, business owners, veterans starting something new, young people and anyone rebuilding a routine after a big change such as coming home from prison.",
+    startingPoint: "Have things they want to do and some daily routine, but goals are often vague wishes, weeks are unplanned, urgent tasks crowd out important ones, and putting things off is common.",
+    gap: "Without clear goals and a weekly plan, people stay busy without moving forward on a job search, training, business or savings. Learners need a simple system to set a goal, plan the week, start hard tasks and review progress, so they reach the goals that matter to them.",
+    constraints: [
+      "Reading level: plain words and short sentences",
+      "Tools: paper, a free phone calendar or an app; AI can suggest steps but the learner makes the plan",
+      "Learners have fixed commitments such as work shifts, practice, school, appointments or supervision check-ins",
+      "Time: about five-minute lessons, plus seven days of tracking"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given a vague wish", action: "rewrite it as a SMART goal for the next four weeks", standard: "with every letter of SMART checked" },
+    { id: "O2", condition: "Starting from your SMART goal", action: "break it into one step per week and a small next action", standard: "with a next action you can do in about 15 minutes" },
+    { id: "O3", condition: "For the coming week", action: "plan your calendar with fixed things first, time blocks for your goal and a buffer block", standard: "with at least two goal blocks and one empty buffer" },
+    { id: "O4", condition: "Given a to-do list of ten tasks", action: "sort the tasks by urgent and important and choose your top three", standard: "circling the one you will do first" },
+    { id: "O5", condition: "Given a task you have been putting off", action: "start it using a tiny first step, no distractions and a 10-minute timer", standard: "starting within the same session" },
+    { id: "O6", condition: "After seven days of tracking", action: "complete a five-minute weekly review and change next week's plan", standard: "answering all three review questions and making at least one change" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Setting goals and planning",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Writing a SMART goal",
           minutes: 5,
           goal: "Turn a vague wish into a SMART goal.",
@@ -41,9 +64,14 @@ module.exports = {
             { title: "Aim at what you control", bullets: ["Applying, not being hired", "Practising, not winning", "Calling customers, not their answer"] }
           ],
           tryIt: "Write one wish you have right now. Then rewrite it as a SMART goal for the next four weeks. Check each letter: S, M, A, R, T.",
-          youCanNow: "turn a vague wish into a SMART goal with a number and a deadline."
+          youCanNow: "turn a vague wish into a SMART goal with a number and a deadline.",
+          quickCheck: [
+            { objective: "O1", q: "What does the M in SMART stand for?", options: ["Measurable", "Meaningful", "Monthly", "Maximum"], answer: 0, why: "Measurable means you can count or check whether you did it." },
+            { objective: "O1", q: "Your wish is \"get in shape.\" What would you write instead?", options: ["\"Get really fit someday\"", "\"Never miss a workout ever\"", "\"Jog 20 minutes, 3 days a week, for the next 4 weeks\"", "\"Be the strongest person in the gym\""], answer: 2, why: "This goal is specific, measurable, achievable, relevant and time-bound." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Breaking a goal into weekly steps",
           minutes: 5,
           goal: "Break a SMART goal into weekly steps and a first small action.",
@@ -61,9 +89,14 @@ module.exports = {
             { title: "AI can help", bullets: ["Ask it to suggest steps", "Cut the list to what fits your week"] }
           ],
           tryIt: "Take your SMART goal from Lesson 1. Write one step for each of the four weeks, then write the next small action and do it now if you can.",
-          youCanNow: "break a goal into weekly steps and choose a small next action."
+          youCanNow: "break a goal into weekly steps and choose a small next action.",
+          quickCheck: [
+            { objective: "O2", q: "What is a next action?", options: ["The final result of your goal", "A small, physical step you can do in about 15 minutes", "A goal for next year", "A reward after you finish"], answer: 1, why: "A next action is tiny and clear, so you can start right away." },
+            { objective: "O2", q: "An AI assistant gives you 25 steps for your goal. What would you do?", options: ["Try to do all 25 this week", "Ignore the list", "Ask AI to make the goal for you", "Trim it to steps that fit your real week"], answer: 3, why: "AI can suggest steps, but you trim them to fit your real time." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Planning your week",
           minutes: 5,
           goal: "Plan a week with time blocks for what matters most.",
@@ -81,17 +114,21 @@ module.exports = {
             { title: "Leave room", bullets: ["Keep some empty buffer time", "Use paper or a phone calendar", "Set reminders for key blocks"] }
           ],
           tryIt: "Plan next week on paper or a phone calendar. Put in the fixed things, then add at least two time blocks for your goal step and one empty buffer block.",
-          youCanNow: "plan a week with fixed commitments, goal time blocks and buffer time."
+          youCanNow: "plan a week with fixed commitments, goal time blocks and buffer time.",
+          quickCheck: [
+            { objective: "O3", q: "What is a buffer block?", options: ["Empty time left in your week for surprises", "Time for your most important task", "A block of time for sleep only", "A meeting with your boss"], answer: 0, why: "Buffer time gives your plan room when things go wrong." },
+            { objective: "O3", q: "You are planning next week. What would you put on the calendar first?", options: ["Goal blocks", "Social media time", "Fixed things like work, practice and appointments", "Nothing; plan each day in the morning"], answer: 2, why: "Fixed things go in first, then goal blocks fit around them." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Setting goals and planning",
         questions: [
-          { q: "Which is a SMART goal?", options: ["\"Get healthier\"", "\"Be better with money\"", "\"Walk 30 minutes, 5 days a week, for the next 4 weeks\"", "\"Try harder at work\""], answer: 2, why: "It is specific, measurable and has a time frame." },
-          { q: "What does the T in SMART stand for?", options: ["Time-bound", "Tough", "Team", "Trusted"], answer: 0, why: "A SMART goal has a deadline." },
-          { q: "Your goal is 10 job applications in 4 weeks. What is a good next action?", options: ["Get hired tomorrow", "Open your résumé and fix the phone number", "Think about it next month", "Apply to 100 jobs today"], answer: 1, why: "A next action is small, physical and doable now." },
-          { q: "When you plan a week, what goes on the calendar first?", options: ["Fun extras", "Nothing; just see what happens", "Only goal blocks", "Fixed things like work, school, practice and sleep"], answer: 3, why: "Fixed commitments come first; goal blocks fit around them." },
-          { q: "Why leave empty buffer time in your week?", options: ["Things go wrong and plans need room", "To waste time", "Because planning is optional", "So you never finish"], answer: 0, why: "A plan with no room breaks at the first surprise." }
+          { objective: "O1", q: "Which is a SMART goal?", options: ["\"Get healthier\"", "\"Be better with money\"", "\"Walk 30 minutes, 5 days a week, for the next 4 weeks\"", "\"Try harder at work\""], answer: 2, why: "It is specific, measurable and has a time frame." },
+          { objective: "O1", q: "What does the T in SMART stand for?", options: ["Time-bound", "Tough", "Team", "Trusted"], answer: 0, why: "A SMART goal has a deadline." },
+          { objective: "O2", q: "Your goal is 10 job applications in 4 weeks. What is a good next action?", options: ["Get hired tomorrow", "Open your résumé and fix the phone number", "Think about it next month", "Apply to 100 jobs today"], answer: 1, why: "A next action is small, physical and doable now." },
+          { objective: "O3", q: "When you plan a week, what goes on the calendar first?", options: ["Fun extras", "Nothing; just see what happens", "Only goal blocks", "Fixed things like work, school, practice and sleep"], answer: 3, why: "Fixed commitments come first; goal blocks fit around them." },
+          { objective: "O3", q: "Why leave empty buffer time in your week?", options: ["Things go wrong and plans need room", "To waste time", "Because planning is optional", "So you never finish"], answer: 0, why: "A plan with no room breaks at the first surprise." }
         ]
       }
     },
@@ -99,6 +136,7 @@ module.exports = {
       name: "Chapter 2: Getting it done",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Choosing priorities",
           minutes: 5,
           goal: "Sort tasks by urgent and important and choose your top three.",
@@ -116,9 +154,14 @@ module.exports = {
             { title: "Top three", bullets: ["Pick three tasks for tomorrow", "Do the most important first", "Before messages pull you away"] }
           ],
           tryIt: "Write down ten things on your to-do list. Put each in one of the four boxes. Then choose your top three for tomorrow and circle the one you will do first.",
-          youCanNow: "sort tasks by important and urgent and choose a top three for each day."
+          youCanNow: "sort tasks by important and urgent and choose a top three for each day.",
+          quickCheck: [
+            { objective: "O4", q: "Which box does a check-in appointment due today go in?", options: ["Not urgent and not important", "Urgent but not important", "Important but not urgent", "Urgent and important"], answer: 3, why: "It must be done today and it matters, so it is urgent and important." },
+            { objective: "O4", q: "Your phone keeps buzzing with group-chat messages while you work on a job application. What would you do?", options: ["Answer every message right away", "Finish the application first and check messages later", "Stop the application for the day", "Leave the chat forever"], answer: 1, why: "Most messages are urgent-feeling but less important than your top task." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Beating procrastination",
           minutes: 5,
           goal: "Use simple tricks to start a task you have been putting off.",
@@ -136,9 +179,14 @@ module.exports = {
             { title: "When you slip", bullets: ["Be kind to yourself", "Pick the tiny first step", "Start again"] }
           ],
           tryIt: "Pick one task you have been avoiding. Shrink it to a tiny first step, put your phone away, set a 10-minute timer and start right now.",
-          youCanNow: "start a task you have been avoiding by shrinking it, timing it and removing distractions."
+          youCanNow: "start a task you have been avoiding by shrinking it, timing it and removing distractions.",
+          quickCheck: [
+            { objective: "O5", q: "Why do people often put off a task?", options: ["It feels too big, unclear, boring or scary", "They have too much free time", "The task is too easy", "They already finished it"], answer: 0, why: "Tasks that feel big, unclear, boring or scary are the ones we avoid." },
+            { objective: "O5", q: "You have avoided cleaning out your garage for months. What would you do?", options: ["Wait until you feel motivated", "Plan to do it all next Saturday", "Pick up one box, set a 10-minute timer and start now", "Ask someone else to decide"], answer: 2, why: "A tiny first step and a timer make it easier to start." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Tracking progress and the weekly review",
           minutes: 5,
           goal: "Track your progress and adjust your plan in a five-minute weekly review.",
@@ -156,17 +204,21 @@ module.exports = {
             { title: "Keep going", bullets: ["Celebrate small wins", "Plan next week with what you learned"] }
           ],
           tryIt: "Final task: track your goal step every day for seven days. On day 7, answer the three review questions in writing and plan the next week with at least one change.",
-          youCanNow: "track progress on a goal and use a weekly review to adjust your plan."
+          youCanNow: "track progress on a goal and use a weekly review to adjust your plan.",
+          quickCheck: [
+            { objective: "O6", q: "How long should a weekly review take?", options: ["About five minutes", "A full day", "Two hours", "It is not needed"], answer: 0, why: "A short review is easy to keep doing every week." },
+            { objective: "O6", q: "Your tracking shows you never did your goal step on weekday mornings. What would you do?", options: ["Give up on the goal", "Keep the same plan and hope", "Blame your schedule", "Move the step to a time that worked better"], answer: 3, why: "The review is for changing the plan when it is not working." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Getting it done",
         questions: [
-          { q: "Studying for a test in three weeks is:", options: ["Urgent and not important", "Neither", "Important but not urgent", "Something to drop"], answer: 2, why: "It matters but is not due today, so you schedule it." },
-          { q: "What should you do with an important and urgent task, like a check-in appointment today?", options: ["Drop it", "Schedule it for next month", "Hand it to a friend", "Do it now"], answer: 3, why: "Important and urgent tasks get done first." },
-          { q: "You keep putting off a big report. What is a good first step?", options: ["Wait until you feel ready", "Write just the first sentence with a 10-minute timer", "Do everything at once at midnight", "Check social media first"], answer: 1, why: "Shrinking the task and using a timer makes starting easier." },
-          { q: "Which question belongs in a weekly review?", options: ["What will I change next week?", "Who can I blame?", "How can I avoid planning?", "Why am I so bad at this?"], answer: 0, why: "The review looks back to adjust the plan." },
-          { q: "You missed your step three weeks in a row. What is the best move?", options: ["Quit the goal", "Blame yourself", "Change the plan: smaller step, new time or new deadline", "Keep the same plan and hope"], answer: 2, why: "When steps keep slipping, adjust the plan." }
+          { objective: "O4", q: "Studying for a test in three weeks is:", options: ["Urgent and not important", "Neither", "Important but not urgent", "Something to drop"], answer: 2, why: "It matters but is not due today, so you schedule it." },
+          { objective: "O4", q: "What should you do with an important and urgent task, like a check-in appointment today?", options: ["Drop it", "Schedule it for next month", "Hand it to a friend", "Do it now"], answer: 3, why: "Important and urgent tasks get done first." },
+          { objective: "O5", q: "You keep putting off a big report. What is a good first step?", options: ["Wait until you feel ready", "Write just the first sentence with a 10-minute timer", "Do everything at once at midnight", "Check social media first"], answer: 1, why: "Shrinking the task and using a timer makes starting easier." },
+          { objective: "O6", q: "Which question belongs in a weekly review?", options: ["What will I change next week?", "Who can I blame?", "How can I avoid planning?", "Why am I so bad at this?"], answer: 0, why: "The review looks back to adjust the plan." },
+          { objective: "O6", q: "You missed your step three weeks in a row. What is the best move?", options: ["Quit the goal", "Blame yourself", "Change the plan: smaller step, new time or new deadline", "Keep the same plan and hope"], answer: 2, why: "When steps keep slipping, adjust the plan." }
         ]
       }
     }
@@ -174,26 +226,104 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Time Management and Goal Setting",
     questions: [
-      { q: "SMART stands for:", options: ["Simple, Modern, Active, Ready, Tough", "Specific, Measurable, Achievable, Relevant, Time-bound", "Strong, Mighty, Able, Rich, Tall", "Short, Monthly, Annual, Real, Total"], answer: 1, why: "Those five letters make a goal clear and doable." },
-      { q: "Which goal is measurable?", options: ["\"Be a better player\"", "\"Do more marketing\"", "\"Feel happier\"", "\"Save $50 a week for 8 weeks\""], answer: 3, why: "It has a number you can check." },
-      { q: "Why aim a goal at what you control?", options: ["It keeps you moving even when others are slow", "It is easier to cheat", "It sounds better", "Others will do it for you"], answer: 0, why: "You can always act on what you control." },
-      { q: "Which is a better job-search goal?", options: ["\"Get hired by Friday\"", "\"Hope someone calls\"", "\"Apply to 3 jobs this week\"", "\"Think about jobs\""], answer: 2, why: "Applying is in your control and measurable." },
-      { q: "Breaking a goal into weekly steps works best when you:", options: ["Start with the hardest week", "Work backwards from the deadline", "Skip the first week", "Keep it all in your head"], answer: 1, why: "Working backwards shows what each week needs." },
-      { q: "A \"next action\" should be:", options: ["Small, physical and doable in about 15 minutes", "As big as possible", "Something for next year", "Vague so you have options"], answer: 0, why: "Small actions are easy to start." },
-      { q: "How can an AI assistant help with goals?", options: ["It does the goal for you", "It decides your goals", "It replaces your calendar", "It can suggest steps you then trim to your real week"], answer: 3, why: "AI can help brainstorm; you make the plan." },
-      { q: "When is a good time to plan your week?", options: ["Never", "The same time each week, like Sunday evening", "Only when things go wrong", "Once a year"], answer: 1, why: "A regular planning time builds the habit." },
-      { q: "A time block is:", options: ["A set piece of time on your calendar for one task", "A break from work", "A type of alarm", "A sports drill"], answer: 0, why: "It reserves time for a specific task." },
-      { q: "Which belongs in your plan before goal blocks?", options: ["Social media time", "Optional extras", "Fixed things like work shifts, practice and appointments", "Nothing"], answer: 2, why: "Fixed commitments go in first." },
-      { q: "A plan with no empty time usually:", options: ["Works perfectly", "Breaks at the first surprise", "Saves the most time", "Makes you rich"], answer: 1, why: "Buffer time absorbs surprises." },
-      { q: "Endless scrolling is usually:", options: ["Important and urgent", "Important, not urgent", "Urgent, not important", "Neither important nor urgent"], answer: 3, why: "It neither moves goals nor needs doing now." },
-      { q: "Where does most long-term growth happen?", options: ["Important but not urgent tasks", "Urgent but not important tasks", "Tasks you drop", "Random tasks"], answer: 0, why: "Training, study and building happen here, so schedule them." },
-      { q: "Why do your most important task first each day?", options: ["It is always the easiest", "Messages and surprises can pull you away later", "It makes the day longer", "Nobody else will check"], answer: 1, why: "Doing it first protects it from distractions." },
-      { q: "We often procrastinate because a task feels:", options: ["Too small and clear", "Too fun", "Too big, unclear, boring or scary", "Already done"], answer: 2, why: "Those feelings make starting hard." },
-      { q: "The 10-minute timer trick means:", options: ["Work only 10 minutes a week", "Start for 10 minutes; then choose to stop or continue", "Finish everything in 10 minutes", "Wait 10 minutes before starting"], answer: 1, why: "A short timer lowers the barrier to start." },
-      { q: "Which helps you remove distractions?", options: ["Keeping every alert on", "Working in front of the TV", "Checking messages every minute", "Putting your phone in another room or on do-not-disturb"], answer: 3, why: "Fewer distractions make focus easier." },
-      { q: "What is a simple way to track progress?", options: ["Tick a list each day you do your step", "Try to remember it", "Ask a stranger", "Track nothing"], answer: 0, why: "A visible record shows you are moving." },
-      { q: "In the weekly review, you ask what got done, what got in the way, and:", options: ["Who is to blame", "What will I change next week", "How to skip next week", "What others did"], answer: 1, why: "The review leads to a better next week." },
-      { q: "Your coach changes your training when you stop improving. What does that teach about your own plans?", options: ["Never change a plan", "Give up when progress stalls", "Adjust the plan when it is not working", "Plans do not matter"], answer: 2, why: "Good plans change based on results." }
+      { objective: "O1", q: "SMART stands for:", options: ["Simple, Modern, Active, Ready, Tough", "Specific, Measurable, Achievable, Relevant, Time-bound", "Strong, Mighty, Able, Rich, Tall", "Short, Monthly, Annual, Real, Total"], answer: 1, why: "Those five letters make a goal clear and doable." },
+      { objective: "O1", q: "Which goal is measurable?", options: ["\"Be a better player\"", "\"Do more marketing\"", "\"Feel happier\"", "\"Save $50 a week for 8 weeks\""], answer: 3, why: "It has a number you can check." },
+      { objective: "O1", q: "Why aim a goal at what you control?", options: ["It keeps you moving even when others are slow", "It is easier to cheat", "It sounds better", "Others will do it for you"], answer: 0, why: "You can always act on what you control." },
+      { objective: "O1", q: "Which is a better job-search goal?", options: ["\"Get hired by Friday\"", "\"Hope someone calls\"", "\"Apply to 3 jobs this week\"", "\"Think about jobs\""], answer: 2, why: "Applying is in your control and measurable." },
+      { objective: "O2", q: "Breaking a goal into weekly steps works best when you:", options: ["Start with the hardest week", "Work backwards from the deadline", "Skip the first week", "Keep it all in your head"], answer: 1, why: "Working backwards shows what each week needs." },
+      { objective: "O2", q: "A \"next action\" should be:", options: ["Small, physical and doable in about 15 minutes", "As big as possible", "Something for next year", "Vague so you have options"], answer: 0, why: "Small actions are easy to start." },
+      { objective: "O2", q: "How can an AI assistant help with goals?", options: ["It does the goal for you", "It decides your goals", "It replaces your calendar", "It can suggest steps you then trim to your real week"], answer: 3, why: "AI can help brainstorm; you make the plan." },
+      { objective: "O3", q: "When is a good time to plan your week?", options: ["Never", "The same time each week, like Sunday evening", "Only when things go wrong", "Once a year"], answer: 1, why: "A regular planning time builds the habit." },
+      { objective: "O3", q: "A time block is:", options: ["A set piece of time on your calendar for one task", "A break from work", "A type of alarm", "A sports drill"], answer: 0, why: "It reserves time for a specific task." },
+      { objective: "O3", q: "Which belongs in your plan before goal blocks?", options: ["Social media time", "Optional extras", "Fixed things like work shifts, practice and appointments", "Nothing"], answer: 2, why: "Fixed commitments go in first." },
+      { objective: "O3", q: "A plan with no empty time usually:", options: ["Works perfectly", "Breaks at the first surprise", "Saves the most time", "Makes you rich"], answer: 1, why: "Buffer time absorbs surprises." },
+      { objective: "O4", q: "Endless scrolling is usually:", options: ["Important and urgent", "Important, not urgent", "Urgent, not important", "Neither important nor urgent"], answer: 3, why: "It neither moves goals nor needs doing now." },
+      { objective: "O4", q: "Where does most long-term growth happen?", options: ["Important but not urgent tasks", "Urgent but not important tasks", "Tasks you drop", "Random tasks"], answer: 0, why: "Training, study and building happen here, so schedule them." },
+      { objective: "O4", q: "Why do your most important task first each day?", options: ["It is always the easiest", "Messages and surprises can pull you away later", "It makes the day longer", "Nobody else will check"], answer: 1, why: "Doing it first protects it from distractions." },
+      { objective: "O5", q: "We often procrastinate because a task feels:", options: ["Too small and clear", "Too fun", "Too big, unclear, boring or scary", "Already done"], answer: 2, why: "Those feelings make starting hard." },
+      { objective: "O5", q: "The 10-minute timer trick means:", options: ["Work only 10 minutes a week", "Start for 10 minutes; then choose to stop or continue", "Finish everything in 10 minutes", "Wait 10 minutes before starting"], answer: 1, why: "A short timer lowers the barrier to start." },
+      { objective: "O5", q: "Which helps you remove distractions?", options: ["Keeping every alert on", "Working in front of the TV", "Checking messages every minute", "Putting your phone in another room or on do-not-disturb"], answer: 3, why: "Fewer distractions make focus easier." },
+      { objective: "O6", q: "What is a simple way to track progress?", options: ["Tick a list each day you do your step", "Try to remember it", "Ask a stranger", "Track nothing"], answer: 0, why: "A visible record shows you are moving." },
+      { objective: "O6", q: "In the weekly review, you ask what got done, what got in the way, and:", options: ["Who is to blame", "What will I change next week", "How to skip next week", "What others did"], answer: 1, why: "The review leads to a better next week." },
+      { objective: "O6", q: "Your coach changes your training when you stop improving. What does that teach about your own plans?", options: ["Never change a plan", "Give up when progress stalls", "Adjust the plan when it is not working", "Plans do not matter"], answer: 2, why: "Good plans change based on results." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      1,
+      5,
+      8,
+      10,
+      12,
+      15,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "SMART goal",
+        objective: "O1",
+        notYet: "The goal is vague or has no deadline or number.",
+        meets: "A four-week goal that is specific, measurable, achievable, relevant and time-bound.",
+        exceeds: "The goal focuses on actions the learner controls."
+      },
+      {
+        name: "Weekly steps",
+        objective: "O2",
+        notYet: "No weekly steps, or steps are too big to start.",
+        meets: "One step for each week and a small next action.",
+        exceeds: "Steps were planned backward from the deadline."
+      },
+      {
+        name: "Week plan",
+        objective: "O3",
+        notYet: "No time blocks, or fixed things missing.",
+        meets: "Fixed things first, time blocks for the top three priorities, and one buffer block.",
+        exceeds: "The most important task is planned early in the day."
+      },
+      {
+        name: "Getting started and tracking",
+        objective: "O5",
+        notYet: "Put off the steps, or fewer than seven days tracked.",
+        meets: "Seven days tracked, showing what was actually done.",
+        exceeds: "Notes which start tricks helped on hard days."
+      },
+      {
+        name: "Weekly review",
+        objective: "O6",
+        notYet: "Review missing, or no change planned.",
+        meets: "Answers what got done, what got in the way, and what will change, with at least one change.",
+        exceeds: "The change is already placed on next week's calendar."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who complete a weekly review for four weeks in a row (follow-up survey)",
+      "Learners who report reaching their four-week SMART goal",
+      "Learners who report applying the system to a job search, training, business or savings goal",
+      "Learners who start another Koach Learn course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Paper and pen, a free phone calendar or a planning app",
+      "A free AI assistant (optional) to suggest steps",
+      "A timer on a phone or clock",
+      "About 60 minutes for lessons and checks, plus seven days of tracking"
+    ],
+    facilitatorNotes: [
+      "Run the course over two sessions a week apart so learners can track seven days between them.",
+      "Have learners share one SMART goal with a partner and check it letter by letter.",
+      "Help learners with fixed commitments, such as shifts, practice or supervision check-ins, put those on the calendar first.",
+      "Use a group 10-minute timer to practice starting a put-off task together.",
+      "Score the final task with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

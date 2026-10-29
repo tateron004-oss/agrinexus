@@ -16,11 +16,34 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes. Faites la tâche « Essayez maintenant » après chacune. Un contrôle des connaissances termine chaque chapitre, et un quiz de 20 questions termine le cours."
   ],
   finalTask: "Faites une affiche d'une page pour un événement de quartier réel ou imaginaire, comme une collecte de nourriture, un nettoyage de rue ou une collecte de fonds pour l'école. Utilisez un assistant d'IA pour écrire un titre court et trois lignes de détails, créez l'affiche dans la version gratuite de Canva, et utilisez un outil de traduction pour mettre les mêmes mots dans une deuxième langue que parlent vos voisins.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des adultes de communautés mal desservies qui découvrent les outils d'IA : parents, personnes âgées, bénévoles de quartier, personnes sans ordinateur à la maison et personnes qui parlent une autre langue que l'anglais à la maison.",
+    startingPoint: "Ils utilisent un téléphone pour appeler, envoyer des SMS et parfois aller sur les réseaux sociaux. Ils ont entendu parler de l'IA mais ne savent pas quels outils gratuits existent ni à quoi sert chacun. Certains trouvent la frappe lente ou difficile.",
+    gap: "Des outils gratuits peuvent écrire des messages, traduire des panneaux et des lettres, et créer des affiches, mais les apprenants ne savent pas par où commencer. Choisir le bon outil gratuit pour une tâche fait gagner du temps et de l'argent, et les aide à partager des nouvelles avec leurs voisins dans plus d'une langue.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes (niveau fin d'école primaire)",
+      "Appareils : un smartphone ou un ordinateur de bibliothèque",
+      "Coût : seulement les versions gratuites des outils",
+      "La traduction automatique n'est pas parfaite : les papiers médicaux ou juridiques importants demandent un interprète",
+      "Vie privée : se déconnecter des ordinateurs partagés et garder les détails privés hors des demandes"
+    ],
+    prerequisites: "Aucun. Les apprenants qui découvrent les assistants d'IA peuvent d'abord suivre « Introduction à l'IA et autonomie numérique »."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Face à une tâche de tous les jours", action: "choisir l'outil gratuit qui lui convient : un assistant conversationnel, une application de traduction ou un outil de création", standard: "en associant au moins 4 tâches sur 5 au bon type d'outil" },
+    { id: "O2", condition: "Avec un téléphone ou une application d'assistant d'IA", action: "poser une question en parlant et corriger les mots que la saisie vocale a mal écrits", standard: "avant de l'envoyer" },
+    { id: "O3", condition: "Face à un panneau, une étiquette ou un avis imprimé dans une autre langue", action: "le traduire avec l'appareil photo du téléphone et décider quand demander un interprète ou une personne qui parle bien la langue", standard: "en faisant appel à un interprète pour les papiers médicaux ou juridiques" },
+    { id: "O4", condition: "Face à un message que vous devez envoyer", action: "demander à un assistant d'IA un message court en précisant le lecteur, le contenu, le ton et la longueur, puis le retoucher et vérifier chaque fait", standard: "pour qu'il vous ressemble et que chaque date et chaque lieu soient justes" },
+    { id: "O5", condition: "Avec la version gratuite de Canva", action: "créer une affiche d'une page à partir d'un modèle, avec un titre, quoi, quand et où, et une image", standard: "téléchargée ou partagée, et en vous déconnectant sur un ordinateur partagé" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Votre boîte à outils d'IA gratuite",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Choisir le bon outil gratuit pour la tâche",
           minutes: 4,
           goal: "Associer une tâche de tous les jours à l'outil d'IA gratuit qui lui convient.",
@@ -37,9 +60,14 @@ module.exports = {
             { title: "Demandez-vous", bullets: ["Ai-je besoin de mots écrits ?", "De mots traduits ?", "D'une création à imprimer ou à partager ?"] }
           ],
           tryIt: "Listez trois tâches que vous avez ce mois-ci. À côté de chacune, écrivez quel type d'outil convient : assistant conversationnel, application de traduction ou outil de création.",
-          youCanNow: "associer une tâche de tous les jours au bon outil d'IA gratuit."
+          youCanNow: "associer une tâche de tous les jours au bon outil d'IA gratuit.",
+          quickCheck: [
+            { objective: "O1", q: "Quel type d'outil est le meilleur pour mettre une lettre dans une autre langue ?", options: ["Une application de traduction", "Un outil de création", "Un logiciel de retouche photo", "Une application de calendrier"], answer: 0, why: "Une application de traduction est faite pour passer des mots dans une autre langue." },
+            { objective: "O1", q: "Il vous faut une carte de remerciement pour des bénévoles, jolie à imprimer. Qu'ouvrez-vous d'abord ?", options: ["Une application de traduction", "Un outil de création comme Canva", "Une calculatrice", "La saisie vocale"], answer: 1, why: "Un outil de création est fait pour des cartes et des affiches jolies à imprimer ou à partager." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Parler à l'IA avec votre voix",
           minutes: 5,
           goal: "Poser une question à un assistant d'IA en parlant au lieu de taper.",
@@ -56,9 +84,14 @@ module.exports = {
             { title: "Vérifiez avant d'envoyer", bullets: ["La saisie vocale peut mal entendre", "Relisez, corrigez, puis envoyez"] }
           ],
           tryIt: "Utilisez le bouton micro pour demander à un assistant d'IA d'écrire un mot de deux phrases à un enseignant, un patron ou un voisin. Relisez-le et corrigez les erreurs.",
-          youCanNow: "demander de l'aide à un assistant d'IA avec votre voix et vérifier ce qu'il a entendu."
+          youCanNow: "demander de l'aide à un assistant d'IA avec votre voix et vérifier ce qu'il a entendu.",
+          quickCheck: [
+            { objective: "O2", q: "Où trouve-t-on souvent la saisie vocale sur un téléphone ?", options: ["Dans les réglages de l'appareil photo", "Dans le menu de la batterie", "Un petit bouton micro sur le clavier", "Dans les contacts du téléphone"], answer: 2, why: "Les claviers de téléphone ont souvent un petit bouton micro pour la saisie vocale." },
+            { objective: "O2", q: "Vous avez dicté une note et l'application a écrit « acheter du pin » au lieu de « acheter du pain ». Que faites-vous ?", options: ["L'envoyer quand même", "Supprimer l'application", "Tout recommencer sur papier", "Corriger les mots avant d'envoyer"], answer: 3, why: "La saisie vocale peut mal entendre, donc vous relisez et corrigez les mots avant d'envoyer." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Traduire avec l'appareil photo de votre téléphone",
           minutes: 5,
           goal: "Traduire un panneau, une étiquette ou une lettre imprimée en pointant l'appareil photo de votre téléphone dessus.",
@@ -75,17 +108,21 @@ module.exports = {
             { title: "Papiers importants", bullets: ["La traduction automatique n'est pas parfaite", "Demandez un interprète au bureau", "Beaucoup de cliniques et bureaux en offrent un gratuitement"] }
           ],
           tryIt: "Pointez l'appareil photo d'une application de traduction vers une étiquette ou un panneau imprimé chez vous (une boîte d'aliments fait l'affaire). Traduisez-le dans une autre langue, puis dans l'autre sens.",
-          youCanNow: "traduire des mots imprimés avec l'appareil photo de votre téléphone, et savoir quand demander plutôt une personne."
+          youCanNow: "traduire des mots imprimés avec l'appareil photo de votre téléphone, et savoir quand demander plutôt une personne.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce qui est vrai pour la traduction automatique ?", options: ["Elle est utile mais pas parfaite", "Elle est toujours exacte", "Elle ne marche que pour l'anglais", "Elle demande un compte payant"], answer: 0, why: "La traduction gratuite aide beaucoup mais peut faire des erreurs." },
+            { objective: "O3", q: "L'étiquette de votre médicament est dans une langue que vous lisez mal. Quelle est l'étape la plus sûre ?", options: ["Deviner d'après les images", "Demander un interprète à la pharmacie ou à la clinique", "Utiliser seulement la traduction par l'appareil photo", "Demander à un inconnu en ligne"], answer: 1, why: "Pour les médicaments et les papiers juridiques, un interprète formé est l'aide la plus sûre." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Votre boîte à outils d'IA gratuite",
         questions: [
-          { q: "Vous avez besoin d'une affiche pour une vente de gâteaux à l'école. Quel type d'outil convient le mieux ?", options: ["Une application de traduction", "Un outil de création comme Canva", "Une calculatrice", "Une application de cartes"], answer: 1, why: "Les outils de création sont faits pour les affiches et les cartes." },
-          { q: "Taper est difficile pour vous. Comment poser quand même une question à un assistant d'IA ?", options: ["C'est impossible", "Payer d'abord un cours de clavier", "Utiliser le bouton micro et parler", "Demander à quelqu'un de taper votre mot de passe"], answer: 2, why: "La saisie vocale permet de parler au lieu de taper." },
-          { q: "Pourquoi relire ce que la saisie vocale a écrit avant d'envoyer ?", options: ["Elle peut mal entendre des mots", "Elle ajoute toujours votre adresse", "Elle coûte de l'argent", "Elle supprime votre message"], answer: 0, why: "La saisie vocale peut se tromper de mots." },
-          { q: "Vous voulez lire un panneau dans une autre langue. Qu'utilisez-vous ?", options: ["Un outil de création", "Une application de musique", "Une lampe de poche", "Une application de traduction avec l'option appareil photo"], answer: 3, why: "L'option appareil photo lit et traduit les mots imprimés." },
-          { q: "Vous devez comprendre les instructions de votre médecin dans une autre langue. Que faire de mieux ?", options: ["Demander un interprète à la clinique", "Deviner", "Utiliser seulement une traduction sur téléphone", "Ignorer les instructions"], answer: 0, why: "Pour les médicaments et les papiers importants, un interprète formé est le plus sûr." }
+          { objective: "O1", q: "Vous avez besoin d'une affiche pour une vente de gâteaux à l'école. Quel type d'outil convient le mieux ?", options: ["Une application de traduction", "Un outil de création comme Canva", "Une calculatrice", "Une application de cartes"], answer: 1, why: "Les outils de création sont faits pour les affiches et les cartes." },
+          { objective: "O2", q: "Taper est difficile pour vous. Comment poser quand même une question à un assistant d'IA ?", options: ["C'est impossible", "Payer d'abord un cours de clavier", "Utiliser le bouton micro et parler", "Demander à quelqu'un de taper votre mot de passe"], answer: 2, why: "La saisie vocale permet de parler au lieu de taper." },
+          { objective: "O2", q: "Pourquoi relire ce que la saisie vocale a écrit avant d'envoyer ?", options: ["Elle peut mal entendre des mots", "Elle ajoute toujours votre adresse", "Elle coûte de l'argent", "Elle supprime votre message"], answer: 0, why: "La saisie vocale peut se tromper de mots." },
+          { objective: "O3", q: "Vous voulez lire un panneau dans une autre langue. Qu'utilisez-vous ?", options: ["Un outil de création", "Une application de musique", "Une lampe de poche", "Une application de traduction avec l'option appareil photo"], answer: 3, why: "L'option appareil photo lit et traduit les mots imprimés." },
+          { objective: "O3", q: "Vous devez comprendre les instructions de votre médecin dans une autre langue. Que faire de mieux ?", options: ["Demander un interprète à la clinique", "Deviner", "Utiliser seulement une traduction sur téléphone", "Ignorer les instructions"], answer: 0, why: "Pour les médicaments et les papiers importants, un interprète formé est le plus sûr." }
         ]
       }
     },
@@ -93,6 +130,7 @@ module.exports = {
       name: "Chapitre 2 : Créer des choses avec l'IA",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Écrire de courts messages avec un assistant d'IA",
           minutes: 4,
           goal: "Faire écrire par un assistant d'IA un message court et clair avec le ton voulu.",
@@ -109,9 +147,14 @@ module.exports = {
             { title: "Faites-le vôtre", bullets: ["Changez les mots qui ne vous ressemblent pas", "Vérifiez noms, dates et lieux"] }
           ],
           tryIt: "Demandez à un assistant d'IA : « Écris un rappel aimable de trois phrases pour mes voisins sur le nettoyage de la rue samedi à 9 h. Apportez des gants. » Puis changez une ligne pour qu'elle vous ressemble.",
-          youCanNow: "faire écrire par un assistant d'IA un court message avec le bon ton et la bonne longueur, puis le faire vôtre."
+          youCanNow: "faire écrire par un assistant d'IA un court message avec le bon ton et la bonne longueur, puis le faire vôtre.",
+          quickCheck: [
+            { objective: "O4", q: "Que veut dire le « ton » d'un message ?", options: ["Sa longueur", "La personne à qui il s'adresse", "La façon dont il sonne, par exemple aimable ou ferme", "La date d'envoi"], answer: 2, why: "Le ton, c'est la façon dont le message sonne pour le lecteur." },
+            { objective: "O4", q: "Le rappel écrit par l'IA dit que le nettoyage a lieu dimanche, mais c'est samedi. Que faites-vous ?", options: ["L'envoyer ; l'IA sait mieux", "Demander à tout le monde de venir les deux jours", "Supprimer tout le message", "Mettre samedi avant d'envoyer"], answer: 3, why: "Vous vérifiez vous-même chaque fait et vous le corrigez avant d'envoyer." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Créer une affiche simple avec Canva",
           minutes: 6,
           goal: "Faire une affiche d'une page dans la version gratuite de Canva.",
@@ -128,9 +171,14 @@ module.exports = {
             { title: "Terminez et partagez", bullets: ["Téléchargez pour imprimer", "Partagez par SMS ou e-mail", "Déconnectez-vous sur un ordinateur partagé"] }
           ],
           tryIt: "Ouvrez Canva, choisissez un modèle d'affiche, et remplacez les mots par le rappel écrit à la leçon 4. Téléchargez-la ou enregistrez-la dans votre compte.",
-          youCanNow: "faire une affiche simple et claire avec un modèle gratuit de Canva."
+          youCanNow: "faire une affiche simple et claire avec un modèle gratuit de Canva.",
+          quickCheck: [
+            { objective: "O5", q: "Qu'est-ce qu'un modèle dans Canva ?", options: ["Une création toute prête que vous remplissez avec vos mots", "Une option payante", "Un type d'imprimante", "Un filtre photo"], answer: 0, why: "Un modèle est une création toute prête, donc vous changez seulement les mots et les images." },
+            { objective: "O5", q: "Votre affiche a huit lignes de petit texte. Comment la rendre plus facile à lire ?", options: ["Rendre le texte plus petit", "La réduire à un titre et trois lignes courtes", "Ajouter plus d'images", "Utiliser cinq couleurs"], answer: 1, why: "Un grand titre et trois lignes courtes (quoi, quand, où) sont le plus faciles à lire." }
+          ]
         },
         {
+          objectives: ["O5","O3"],
           title: "Utiliser les outils ensemble",
           minutes: 5,
           goal: "Utiliser ensemble un assistant conversationnel, un outil de création et un outil de traduction pour faire une affiche terminée en deux langues.",
@@ -147,17 +195,21 @@ module.exports = {
             { title: "Rendez-la juste", bullets: ["Vérifiez chaque date et chaque lieu", "Faites relire la traduction par une personne qui parle bien la langue"] }
           ],
           tryIt: "Tâche finale : faites une affiche d'une page pour un événement de quartier. Utilisez un assistant d'IA pour écrire un titre et trois lignes, créez-la dans Canva, et faites une deuxième copie traduite dans une autre langue que parlent vos voisins.",
-          youCanNow: "utiliser plusieurs outils d'IA gratuits ensemble pour terminer un vrai projet pour votre quartier."
+          youCanNow: "utiliser plusieurs outils d'IA gratuits ensemble pour terminer un vrai projet pour votre quartier.",
+          quickCheck: [
+            { objective: "O5", q: "Dans le projet final, que collez-vous dans le modèle Canva ?", options: ["Votre numéro de téléphone", "Toute la conversation avec l'IA", "Le titre et les trois lignes écrits par l'IA", "Un lien vers le site de l'IA"], answer: 2, why: "L'assistant conversationnel écrit les mots, et vous les mettez dans l'affiche Canva." },
+            { objective: "O3", q: "Vous avez traduit votre affiche en espagnol mais vous ne parlez pas espagnol. Que faites-vous avant de la partager ?", options: ["La partager tout de suite", "La traduire une deuxième fois", "Retirer la version espagnole", "Demander à une personne qui parle bien espagnol de la relire"], answer: 3, why: "Un vrai lecteur repère les erreurs que l'outil gratuit a laissées." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Créer des choses avec l'IA",
         questions: [
-          { q: "Quelles quatre choses dire à un assistant d'IA quand vous demandez un court message ?", options: ["Votre mot de passe, adresse, âge et banque", "À qui il s'adresse, ce qu'il doit dire, le ton et la longueur", "Seulement la date", "Rien ; il devinera"], answer: 1, why: "Ces quatre détails donnent un message adapté." },
-          { q: "Qu'est-ce qu'un modèle ?", options: ["Un virus", "Un mot de passe", "Une création toute prête que vous remplissez avec vos mots", "Un réglage du téléphone"], answer: 2, why: "Les modèles permettent aux débutants de faire de belles créations." },
-          { q: "Que doit contenir une affiche simple ?", options: ["Un grand titre et quoi, quand et où", "Dix paragraphes", "Votre numéro de sécurité sociale", "Seulement des images, sans mots"], answer: 0, why: "Les affiches simples se lisent facilement : titre, détails et une image." },
-          { q: "Vous avez utilisé Canva sur un ordinateur de bibliothèque. Que faites-vous à la fin ?", options: ["Laisser votre compte ouvert", "Enregistrer votre mot de passe dans le navigateur", "Écrire votre mot de passe sur l'écran", "Vous déconnecter"], answer: 3, why: "Se déconnecter protège votre compte sur un ordinateur partagé." },
-          { q: "Vous avez traduit votre affiche avec un outil gratuit. Comment vous assurer qu'elle est juste ?", options: ["La faire relire par une personne qui parle bien la langue", "La traduire dix fois de plus", "Agrandir la police", "Ajouter plus d'images"], answer: 0, why: "Un vrai lecteur repère les erreurs des machines." }
+          { objective: "O4", q: "Quelles quatre choses dire à un assistant d'IA quand vous demandez un court message ?", options: ["Votre mot de passe, adresse, âge et banque", "À qui il s'adresse, ce qu'il doit dire, le ton et la longueur", "Seulement la date", "Rien ; il devinera"], answer: 1, why: "Ces quatre détails donnent un message adapté." },
+          { objective: "O5", q: "Qu'est-ce qu'un modèle ?", options: ["Un virus", "Un mot de passe", "Une création toute prête que vous remplissez avec vos mots", "Un réglage du téléphone"], answer: 2, why: "Les modèles permettent aux débutants de faire de belles créations." },
+          { objective: "O5", q: "Que doit contenir une affiche simple ?", options: ["Un grand titre et quoi, quand et où", "Dix paragraphes", "Votre numéro de sécurité sociale", "Seulement des images, sans mots"], answer: 0, why: "Les affiches simples se lisent facilement : titre, détails et une image." },
+          { objective: "O5", q: "Vous avez utilisé Canva sur un ordinateur de bibliothèque. Que faites-vous à la fin ?", options: ["Laisser votre compte ouvert", "Enregistrer votre mot de passe dans le navigateur", "Écrire votre mot de passe sur l'écran", "Vous déconnecter"], answer: 3, why: "Se déconnecter protège votre compte sur un ordinateur partagé." },
+          { objective: "O3", q: "Vous avez traduit votre affiche avec un outil gratuit. Comment vous assurer qu'elle est juste ?", options: ["La faire relire par une personne qui parle bien la langue", "La traduire dix fois de plus", "Agrandir la police", "Ajouter plus d'images"], answer: 0, why: "Un vrai lecteur repère les erreurs des machines." }
         ]
       }
     }
@@ -165,26 +217,99 @@ module.exports = {
   quiz: {
     title: "Quiz final : Des outils d'IA faciles pour débuter",
     questions: [
-      { q: "Pour choisir un outil d'IA, vous devez partir de :", options: ["L'outil le plus cher", "La tâche que vous devez faire", "La plus récente application", "Ce que propose un inconnu"], answer: 1, why: "Partez de la tâche, puis choisissez l'outil qui convient." },
-      { q: "Quel outil est le meilleur pour écrire et expliquer ?", options: ["Une application d'appareil photo", "Une application de lampe de poche", "Un assistant conversationnel comme Copilot, ChatGPT ou Gemini", "Un lecteur de musique"], answer: 2, why: "Les assistants conversationnels sont doués pour écrire, expliquer et planifier." },
-      { q: "Canva sert surtout à :", options: ["Créer des affiches et des cartes", "Faire des opérations bancaires", "Passer des appels", "Voir la météo"], answer: 0, why: "Canva est un outil de création avec une version gratuite." },
-      { q: "Qu'essayer en premier quand vous choisissez un outil ?", options: ["L'abonnement le plus cher", "Un cours payant", "Une publicité surgissante", "La version gratuite"], answer: 3, why: "Les versions gratuites suffisent pour la plupart des tâches de débutant." },
-      { q: "Comment poser une question à voix haute à la plupart des applications d'IA ?", options: ["Secouer le téléphone", "Toucher le bouton micro", "Éteindre le téléphone", "Ouvrir l'appareil photo"], answer: 1, why: "Le bouton micro permet à l'application d'écouter." },
-      { q: "Avec la saisie vocale, il est utile de :", options: ["Parler clairement et un peu plus lentement", "Chuchoter", "Parler très vite", "Couvrir le micro"], answer: 0, why: "Une parole claire et plus lente est mieux comprise." },
-      { q: "La saisie vocale a écrit « vent dredi » au lieu de « vendredi ». Vous devez :", options: ["L'envoyer quand même", "Supprimer l'application", "Corriger avant d'envoyer", "Recommencer sur un nouveau téléphone"], answer: 2, why: "Relisez et corrigez toujours ce que la saisie vocale a entendu." },
-      { q: "Pour traduire un avis imprimé de l'école, vous pouvez :", options: ["Utiliser un outil de création", "Utiliser l'option appareil photo d'une application de traduction", "Utiliser la calculatrice", "Attendre qu'on vous appelle"], answer: 1, why: "L'option appareil photo lit et traduit les mots imprimés." },
-      { q: "Dans une application de traduction, vous choisissez d'abord :", options: ["Un mot de passe", "Une police", "Une couleur", "La langue du papier et la langue que vous voulez"], answer: 3, why: "L'application doit connaître les deux langues." },
-      { q: "Pour un papier juridique dans une langue que vous lisez mal, l'aide la plus sûre est :", options: ["Un interprète formé", "Deviner", "Un mème", "Ne pas le lire"], answer: 0, why: "Les papiers importants demandent une personne formée, pas seulement une machine." },
-      { q: "Laquelle est une bonne demande de court message ?", options: ["« message »", "« Écris un mot poli de deux phrases à mon propriétaire pour demander quand le chauffage sera réparé. »", "« écris »", "« trucs pour le proprio »"], answer: 1, why: "Elle dit à qui, quoi, le ton et la longueur." },
-      { q: "Après qu'une IA a écrit votre message, vous devez :", options: ["L'envoyer sans le lire", "Ajouter vos coordonnées bancaires", "Le retoucher pour qu'il vous ressemble et vérifier les faits", "Le publier"], answer: 2, why: "Vous le faites vôtre et vérifiez les noms, dates et lieux." },
-      { q: "Le ton, c'est :", options: ["La façon dont un message sonne, aimable ou ferme par exemple", "La longueur du message", "La taille de la police", "Le volume du téléphone"], answer: 0, why: "Le ton est ce que le message fait ressentir au lecteur." },
-      { q: "Que vous demande de créer Canva avant de pouvoir travailler ?", options: ["Un paiement", "Un appel téléphonique", "Un compte gratuit", "Un formulaire imprimé"], answer: 2, why: "Canva utilise un compte gratuit pour enregistrer vos créations." },
-      { q: "Quelle affiche est la plus facile à lire ?", options: ["Une page pleine de petits caractères", "Un titre, trois lignes courtes et une image", "Dix images sans mots", "Seulement un numéro de téléphone"], answer: 1, why: "Court et clair, c'est le mieux pour une affiche." },
-      { q: "Pour avoir une copie de votre affiche à imprimer, vous :", options: ["Prenez l'écran en photo", "Fermez le navigateur", "Écrivez à Canva", "La téléchargez"], answer: 3, why: "Télécharger enregistre une copie que vous pouvez imprimer." },
-      { q: "Dans le projet combiné, quel outil écrit les mots ?", options: ["L'assistant conversationnel", "L'application de traduction", "L'imprimante", "L'appareil photo"], answer: 0, why: "L'assistant conversationnel écrit le titre et les détails." },
-      { q: "Pourquoi faire une deuxième copie de l'affiche dans une autre langue ?", options: ["Elle est plus jolie", "Pour que plus de voisins puissent la lire", "Canva l'exige", "Pour utiliser plus de papier"], answer: 1, why: "Une deuxième langue touche une plus grande partie de votre quartier." },
-      { q: "Avant de partager l'affiche terminée, vous devez vérifier :", options: ["La météo", "La batterie de votre téléphone", "Que chaque date et chaque lieu sont justes", "La couleur de l'imprimante"], answer: 2, why: "Des détails faux envoient les gens au mauvais endroit." },
-      { q: "Dans la tâche finale, le dernier outil que vous utilisez est :", options: ["Une calculatrice", "Une application de musique", "Une carte", "Un outil de traduction pour une copie dans une deuxième langue"], answer: 3, why: "La dernière étape fait l'affiche dans une deuxième langue." }
+      { objective: "O1", q: "Pour choisir un outil d'IA, vous devez partir de :", options: ["L'outil le plus cher", "La tâche que vous devez faire", "La plus récente application", "Ce que propose un inconnu"], answer: 1, why: "Partez de la tâche, puis choisissez l'outil qui convient." },
+      { objective: "O1", q: "Quel outil est le meilleur pour écrire et expliquer ?", options: ["Une application d'appareil photo", "Une application de lampe de poche", "Un assistant conversationnel comme Copilot, ChatGPT ou Gemini", "Un lecteur de musique"], answer: 2, why: "Les assistants conversationnels sont doués pour écrire, expliquer et planifier." },
+      { objective: "O1", q: "Canva sert surtout à :", options: ["Créer des affiches et des cartes", "Faire des opérations bancaires", "Passer des appels", "Voir la météo"], answer: 0, why: "Canva est un outil de création avec une version gratuite." },
+      { objective: "O1", q: "Qu'essayer en premier quand vous choisissez un outil ?", options: ["L'abonnement le plus cher", "Un cours payant", "Une publicité surgissante", "La version gratuite"], answer: 3, why: "Les versions gratuites suffisent pour la plupart des tâches de débutant." },
+      { objective: "O2", q: "Comment poser une question à voix haute à la plupart des applications d'IA ?", options: ["Secouer le téléphone", "Toucher le bouton micro", "Éteindre le téléphone", "Ouvrir l'appareil photo"], answer: 1, why: "Le bouton micro permet à l'application d'écouter." },
+      { objective: "O2", q: "Avec la saisie vocale, il est utile de :", options: ["Parler clairement et un peu plus lentement", "Chuchoter", "Parler très vite", "Couvrir le micro"], answer: 0, why: "Une parole claire et plus lente est mieux comprise." },
+      { objective: "O2", q: "La saisie vocale a écrit « vent dredi » au lieu de « vendredi ». Vous devez :", options: ["L'envoyer quand même", "Supprimer l'application", "Corriger avant d'envoyer", "Recommencer sur un nouveau téléphone"], answer: 2, why: "Relisez et corrigez toujours ce que la saisie vocale a entendu." },
+      { objective: "O3", q: "Pour traduire un avis imprimé de l'école, vous pouvez :", options: ["Utiliser un outil de création", "Utiliser l'option appareil photo d'une application de traduction", "Utiliser la calculatrice", "Attendre qu'on vous appelle"], answer: 1, why: "L'option appareil photo lit et traduit les mots imprimés." },
+      { objective: "O3", q: "Dans une application de traduction, vous choisissez d'abord :", options: ["Un mot de passe", "Une police", "Une couleur", "La langue du papier et la langue que vous voulez"], answer: 3, why: "L'application doit connaître les deux langues." },
+      { objective: "O3", q: "Pour un papier juridique dans une langue que vous lisez mal, l'aide la plus sûre est :", options: ["Un interprète formé", "Deviner", "Un mème", "Ne pas le lire"], answer: 0, why: "Les papiers importants demandent une personne formée, pas seulement une machine." },
+      { objective: "O4", q: "Laquelle est une bonne demande de court message ?", options: ["« message »", "« Écris un mot poli de deux phrases à mon propriétaire pour demander quand le chauffage sera réparé. »", "« écris »", "« trucs pour le proprio »"], answer: 1, why: "Elle dit à qui, quoi, le ton et la longueur." },
+      { objective: "O4", q: "Après qu'une IA a écrit votre message, vous devez :", options: ["L'envoyer sans le lire", "Ajouter vos coordonnées bancaires", "Le retoucher pour qu'il vous ressemble et vérifier les faits", "Le publier"], answer: 2, why: "Vous le faites vôtre et vérifiez les noms, dates et lieux." },
+      { objective: "O4", q: "Le ton, c'est :", options: ["La façon dont un message sonne, aimable ou ferme par exemple", "La longueur du message", "La taille de la police", "Le volume du téléphone"], answer: 0, why: "Le ton est ce que le message fait ressentir au lecteur." },
+      { objective: "O5", q: "Que vous demande de créer Canva avant de pouvoir travailler ?", options: ["Un paiement", "Un appel téléphonique", "Un compte gratuit", "Un formulaire imprimé"], answer: 2, why: "Canva utilise un compte gratuit pour enregistrer vos créations." },
+      { objective: "O5", q: "Quelle affiche est la plus facile à lire ?", options: ["Une page pleine de petits caractères", "Un titre, trois lignes courtes et une image", "Dix images sans mots", "Seulement un numéro de téléphone"], answer: 1, why: "Court et clair, c'est le mieux pour une affiche." },
+      { objective: "O5", q: "Pour avoir une copie de votre affiche à imprimer, vous :", options: ["Prenez l'écran en photo", "Fermez le navigateur", "Écrivez à Canva", "La téléchargez"], answer: 3, why: "Télécharger enregistre une copie que vous pouvez imprimer." },
+      { objective: "O1", q: "Dans le projet combiné, quel outil écrit les mots ?", options: ["L'assistant conversationnel", "L'application de traduction", "L'imprimante", "L'appareil photo"], answer: 0, why: "L'assistant conversationnel écrit le titre et les détails." },
+      { objective: "O3", q: "Pourquoi faire une deuxième copie de l'affiche dans une autre langue ?", options: ["Elle est plus jolie", "Pour que plus de voisins puissent la lire", "Canva l'exige", "Pour utiliser plus de papier"], answer: 1, why: "Une deuxième langue touche une plus grande partie de votre quartier." },
+      { objective: "O4", q: "Avant de partager l'affiche terminée, vous devez vérifier :", options: ["La météo", "La batterie de votre téléphone", "Que chaque date et chaque lieu sont justes", "La couleur de l'imprimante"], answer: 2, why: "Des détails faux envoient les gens au mauvais endroit." },
+      { objective: "O3", q: "Dans la tâche finale, le dernier outil que vous utilisez est :", options: ["Une calculatrice", "Une application de musique", "Une carte", "Un outil de traduction pour une copie dans une deuxième langue"], answer: 3, why: "La dernière étape fait l'affiche dans une deuxième langue." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      4,
+      6,
+      7,
+      9,
+      10,
+      13,
+      14,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Mots de l'assistant",
+        objective: "O4",
+        notYet: "Pas de titre ni de détails, ou les mots n'ont pas été vérifiés.",
+        meets: "Un titre court et trois lignes de l'IA, retouchés pour bien sonner, avec les dates et les lieux vérifiés.",
+        exceeds: "A demandé une modification à l'IA, comme un ton plus aimable ou un titre plus court."
+      },
+      {
+        name: "Création de l'affiche",
+        objective: "O5",
+        notYet: "Pas d'affiche, ou elle est chargée et difficile à lire.",
+        meets: "Une affiche Canva d'une page avec un grand titre, quoi, quand et où, et une image.",
+        exceeds: "L'a téléchargée ou partagée, et elle se lit bien de l'autre bout d'une pièce."
+      },
+      {
+        name: "Deuxième langue",
+        objective: "O3",
+        notYet: "Pas de version traduite.",
+        meets: "Une deuxième version avec les mots traduits dans une langue que parlent les voisins.",
+        exceeds: "Une personne qui parle bien la langue a relu la traduction, corrigée si besoin."
+      },
+      {
+        name: "Le bon outil à chaque étape",
+        objective: "O1",
+        notYet: "Ne sait pas dire quel outil a fait quel travail.",
+        meets: "Nomme l'assistant conversationnel, Canva et l'outil de traduction pour chaque étape.",
+        exceeds: "Explique pourquoi chaque outil convient à son travail."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Apprenants qui font une vraie affiche ou un vrai message pour un groupe du quartier, une école ou une entreprise dans les 30 jours (questionnaire de suivi)",
+      "Les partenaires communautaires signalent plus d'événements annoncés dans deux langues ou plus",
+      "Apprenants qui commencent un autre cours Koach Learn dans les 30 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un smartphone avec internet, ou un ordinateur de bibliothèque ou de centre communautaire",
+      "Un assistant d'IA gratuit : Microsoft Copilot, ChatGPT ou Google Gemini",
+      "Une application de traduction gratuite comme Google Traduction, et un compte Canva gratuit",
+      "Une étiquette ou un panneau imprimé pour s'entraîner à traduire avec l'appareil photo",
+      "Environ 60 minutes au total : leçons, pratique, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Mettez ensemble des apprenants qui parlent des langues différentes pour qu'ils relisent les traductions les uns des autres.",
+      "Aidez d'abord à créer le compte Canva ; c'est ce qui prend le plus de temps aux débutants.",
+      "Rappelez aux apprenants que les médicaments et les papiers juridiques demandent un interprète, pas seulement une application.",
+      "Assurez-vous que les apprenants se déconnectent de Canva et des outils d'IA sur les ordinateurs partagés.",
+      "Notez la tâche finale avec la grille d'évaluation, et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

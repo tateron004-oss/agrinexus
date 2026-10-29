@@ -18,11 +18,35 @@ module.exports = {
     "Each lesson takes about five minutes and ends with a \"Try it now\" task. A knowledge check closes each chapter and a 20-question quiz closes the course."
   ],
   finalTask: "In Google Colab, load the MNIST handwritten digits, scale them, build and train a Keras neural network, report its accuracy on the test images, predict five test images and compare them with the true labels, then make one change (more neurons or more epochs), retrain, and write two sentences on whether it helped and one limit of the model.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Veterans and transitioning service members moving into technology, data or AI work, along with military spouses and other adult learners in veteran workforce programs who have some Python experience.",
+    startingPoint: "Can write and run short Python programs in Google Colab and know the basic idea of training and testing a model. Most have never seen inside a neural network, worked out what a neuron outputs, or built and trained one with Keras.",
+    gap: "Deep learning drives image, speech and text tools across defense, logistics, health and industry, and many tech roles expect people to know how neural networks learn and fail. Hands-on practice lets learners talk about it with confidence in interviews, judge a model's results and spot where a person must stay in the loop.",
+    constraints: [
+      "Reading level: plain words and short sentences; terms like weight, bias, loss and epoch are explained with small worked examples",
+      "Devices: a computer or laptop with a web browser",
+      "Accounts and cost: a free Google account for Google Colab; Keras and the MNIST data are free; Colab's free resources are limited and can change",
+      "Time: about 5 to 6 minutes a lesson plus practice and training time, about 60 to 75 minutes in total",
+      "Math: multiplying and adding small numbers by hand; no calculus needed"
+    ],
+    prerequisites: "Introduction to Programming with Python; Introduction to Machine Learning is helpful."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Without notes", action: "explain what deep learning is and name the kinds of data it works best on", standard: "mentioning layers that learn patterns from examples and at least two fitting kinds of data" },
+    { id: "O2", condition: "Given a neuron's inputs, weights, bias and ReLU", action: "calculate the neuron's output by hand", standard: "getting the right answer every time, including when ReLU gives 0" },
+    { id: "O3", condition: "Given a training log with loss and accuracy", action: "explain how training changes the weights and identify signs of overfitting", standard: "using the words loss, learning rate, epoch and validation correctly" },
+    { id: "O4", condition: "In Google Colab with Keras", action: "load the MNIST digits, scale the pixels and display one image with its label", standard: "with pixels between 0 and 1 and the label matching the picture" },
+    { id: "O5", condition: "Given the prepared MNIST data", action: "build, compile and train a Keras neural network", standard: "with the code running, a validation split used and the loss going down across epochs" },
+    { id: "O6", condition: "Given a trained network", action: "measure its test accuracy, predict new images, test one change and describe its limits", standard: "changing one thing at a time and naming at least one real limit" }
+  ],
   chapters: [
     {
       name: "Chapter 1: How neural networks work",
       lessons: [
         {
+          objectives: ["O1"],
           title: "What deep learning is",
           minutes: 4,
           goal: "Explain deep learning in your own words and name where it is used.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "Where it shines", bullets: ["Images, sound, speech and text", "Lots of data", "Needs more computing power (GPUs)"] }
           ],
           tryIt: "Write down four tools you have used that probably use deep learning (for example face unlock, voice typing, photo search, translation). For each, write what kind of data it learns from: images, sound or text.",
-          youCanNow: "explain what deep learning is, why it uses layers, and where it is used."
+          youCanNow: "explain what deep learning is, why it uses layers, and where it is used.",
+          quickCheck: [
+            { objective: "O1", q: "What are neurons in a neural network?", options: ["Brain cells copied into a computer", "Graphics chips", "Small math units joined in layers", "Labeled pictures"], answer: 2, why: "A neural network is made of many small math units, called neurons, in layers." },
+            { objective: "O1", q: "Your unit wants to sort thousands of recorded radio messages by speaker. Would you consider deep learning?", options: ["Yes; it works best with a lot of rich data like sound", "No; deep learning cannot use sound", "No; it only works on numbers in a table", "Only if there are fewer than ten recordings"], answer: 0, why: "Deep learning works best with lots of rich, messy data such as images, sound and text." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Inside a neuron: weights, bias and activation",
           minutes: 6,
           goal: "Work out by hand what a single neuron outputs.",
@@ -59,9 +88,14 @@ module.exports = {
             { title: "The last layer", bullets: ["Softmax gives chances for each answer", "The chances add up to 100%"] }
           ],
           tryIt: "Work out a neuron's output by hand: inputs 4 and 1, weights 0.5 and 2, bias -3, ReLU activation. Then change the bias to -6 and work it out again. (Answers: 1, then 0.)",
-          youCanNow: "calculate a neuron's output from its inputs, weights, bias and activation."
+          youCanNow: "calculate a neuron's output from its inputs, weights, bias and activation.",
+          quickCheck: [
+            { objective: "O2", q: "In a neuron, what is the bias?", options: ["The input with the biggest value", "The activation function", "A rule that says the model is unfair", "One more number added after the weighted inputs are summed"], answer: 3, why: "The neuron adds the bias to the weighted sum before the activation." },
+            { objective: "O2", q: "Inputs 4 and 1, weights 0.5 and 2, bias -1, ReLU. What output would you calculate?", options: ["0", "3", "5", "-1"], answer: 1, why: "4 x 0.5 + 1 x 2 - 1 = 3, and ReLU keeps positive totals." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "How a network learns: loss, epochs and small steps",
           minutes: 5,
           goal: "Explain how training changes the weights to make fewer mistakes.",
@@ -78,17 +112,21 @@ module.exports = {
             { title: "Epochs and validation", bullets: ["Epoch: one pass through the data", "Watch validation accuracy", "Training up, validation down = overfitting"] }
           ],
           tryIt: "Play \"guess the number\" with a friend or by yourself: pick a hidden number from 1 to 100, guess, get \"too high\" or \"too low\", and change your guess by a smaller step each time. Write down which part of the game is like the loss, which is like the learning rate, and how many rounds (epochs) it took.",
-          youCanNow: "explain loss, backpropagation, gradient descent, learning rate, epochs and overfitting in plain words."
+          youCanNow: "explain loss, backpropagation, gradient descent, learning rate, epochs and overfitting in plain words.",
+          quickCheck: [
+            { objective: "O3", q: "What is the learning rate?", options: ["How many images are in the dataset", "The size of each step the weights move", "The number of layers", "The final accuracy"], answer: 1, why: "Too big a step overshoots; too small a step is very slow." },
+            { objective: "O3", q: "After epoch 4, validation accuracy starts to fall while training accuracy keeps rising. What would you do?", options: ["Train for 50 more epochs", "Delete the validation set", "Stop training; the model is starting to overfit", "Raise the learning rate a lot"], answer: 2, why: "Falling validation accuracy with rising training accuracy is a sign of overfitting." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: How neural networks work",
         questions: [
-          { q: "What does \"deep\" mean in deep learning?", options: ["It uses a lot of electricity", "It only works underwater", "The network has many layers", "It is hard to explain"], answer: 2, why: "Deep means many layers of neurons." },
-          { q: "A neuron's total is -2. With ReLU, what does it output?", options: ["-2", "0", "1", "2"], answer: 1, why: "ReLU turns any negative total into 0." },
-          { q: "Inputs 1 and 2, weights 3 and 1, bias 0, ReLU. What is the output?", options: ["0", "3", "5", "6"], answer: 2, why: "1 x 3 + 2 x 1 + 0 = 5, and 5 is not negative." },
-          { q: "What does the loss function measure?", options: ["How many layers there are", "How wrong the network's guesses are", "How fast the computer is", "How much data you have"], answer: 1, why: "Loss is the size of the error." },
-          { q: "Training accuracy keeps rising but validation accuracy falls. What is happening?", options: ["The network is perfect", "Overfitting", "The learning rate is zero", "The data is missing"], answer: 1, why: "Doing better on training data but worse on held-back data is overfitting." }
+          { objective: "O1", q: "What does \"deep\" mean in deep learning?", options: ["It uses a lot of electricity", "It only works underwater", "The network has many layers", "It is hard to explain"], answer: 2, why: "Deep means many layers of neurons." },
+          { objective: "O2", q: "A neuron's total is -2. With ReLU, what does it output?", options: ["-2", "0", "1", "2"], answer: 1, why: "ReLU turns any negative total into 0." },
+          { objective: "O2", q: "Inputs 1 and 2, weights 3 and 1, bias 0, ReLU. What is the output?", options: ["0", "3", "5", "6"], answer: 2, why: "1 x 3 + 2 x 1 + 0 = 5, and 5 is not negative." },
+          { objective: "O3", q: "What does the loss function measure?", options: ["How many layers there are", "How wrong the network's guesses are", "How fast the computer is", "How much data you have"], answer: 1, why: "Loss is the size of the error." },
+          { objective: "O3", q: "Training accuracy keeps rising but validation accuracy falls. What is happening?", options: ["The network is perfect", "Overfitting", "The learning rate is zero", "The data is missing"], answer: 1, why: "Doing better on training data but worse on held-back data is overfitting." }
         ]
       }
     },
@@ -96,6 +134,7 @@ module.exports = {
       name: "Chapter 2: Building a neural network in Colab",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Loading and preparing image data",
           minutes: 5,
           goal: "Load the MNIST digits in Colab, scale them, and look at one image.",
@@ -113,9 +152,14 @@ module.exports = {
           ],
           sources: [KERAS_MNIST, COLAB],
           tryIt: "Load and scale MNIST in Colab. Print the shapes of the training and test sets. Draw the images at positions 0, 1 and 2 and print their labels to check they match.",
-          youCanNow: "load an image dataset, normalize it and check it by eye."
+          youCanNow: "load an image dataset, normalize it and check it by eye.",
+          quickCheck: [
+            { objective: "O4", q: "What does normalizing the MNIST pixels mean here?", options: ["Scaling them to between 0 and 1 by dividing by 255", "Turning the images upside down", "Deleting dark pixels", "Making every image the digit 0"], answer: 0, why: "Dividing by 255 turns 0 to 255 into 0 to 1, which helps learning." },
+            { objective: "O4", q: "You loaded MNIST and want to be sure the labels are right. What would you do?", options: ["Train first and check later", "Divide the labels by 255", "Delete the test set", "Draw one image with matplotlib and check it matches its label"], answer: 3, why: "Look at your data before training to check the label matches the picture." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Building and training the network",
           minutes: 6,
           goal: "Build a Keras network, compile it and train it for a few epochs.",
@@ -133,9 +177,14 @@ module.exports = {
           ],
           sources: [KERAS_MNIST],
           tryIt: "Build, compile and train the network for 5 epochs. Write down the accuracy and val_accuracy after epoch 1 and after epoch 5. Did both go up?",
-          youCanNow: "build a neural network in Keras, compile it and train it while watching for overfitting."
+          youCanNow: "build a neural network in Keras, compile it and train it while watching for overfitting.",
+          quickCheck: [
+            { objective: "O5", q: "What is a Sequential model in Keras?", options: ["A list of images", "A training log", "A stack of layers, one after another", "A type of loss function"], answer: 2, why: "Sequential stacks layers in order from input to output." },
+            { objective: "O5", q: "You want to see during training whether the model starts to overfit. What would you add to fit?", options: ["validation_split=0.1", "epochs=0", "activation=\"softmax\"", "Flatten()"], answer: 0, why: "validation_split holds back some training data to check the model each epoch." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Testing, predicting and improving",
           minutes: 6,
           goal: "Measure test accuracy, predict real images, try one improvement and name the model's limits.",
@@ -155,17 +204,21 @@ module.exports = {
           ],
           sources: [KERAS_MNIST],
           tryIt: "Final task: evaluate your network on the test set, predict the first five test images and compare with the true labels, then change Dense(128) to Dense(256) or epochs to 10, retrain and re-evaluate. Write two sentences: did the change help, and what is one limit of this model?",
-          youCanNow: "train, test, use and improve a neural network, and explain where it should and should not be trusted."
+          youCanNow: "train, test, use and improve a neural network, and explain where it should and should not be trusted.",
+          quickCheck: [
+            { objective: "O6", q: "What does model.predict(x_test[:5]) give you?", options: ["The test accuracy", "10 chances for each of the 5 images", "The 5 true labels", "A new trained model"], answer: 1, why: "predict returns a chance for each digit for each image; argmax picks the most likely." },
+            { objective: "O6", q: "You want to know if more epochs help. What would you do?", options: ["Change epochs, neurons and layers all at once", "Judge by training accuracy only", "Skip the test set this time", "Change only the number of epochs, retrain and compare test accuracy"], answer: 3, why: "Change one thing at a time so you know what caused the difference." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Building a neural network in Colab",
         questions: [
-          { q: "Why divide the MNIST pixels by 255.0?", options: ["To make the images bigger", "To delete dark pixels", "To change the labels", "To scale them between 0 and 1 so training works better"], answer: 3, why: "Normalizing to 0-1 helps the network learn." },
-          { q: "What does layers.Flatten() do?", options: ["Turns a 28 x 28 grid into one row of 784 numbers", "Makes the image brighter", "Adds 10 neurons", "Splits the data"], answer: 0, why: "Flatten reshapes the grid into a row for Dense layers." },
-          { q: "Why does the last layer have 10 neurons with softmax?", options: ["There are 10 epochs", "It is always 10", "There are 10 possible digits, and softmax gives a chance for each", "To save memory"], answer: 2, why: "One output per digit, as chances that add to 1." },
-          { q: "Which line gives the most likely digit for each image?", options: ["probs.sum()", "model.fit(probs)", "y_test.argmax()", "probs.argmax(axis=1)"], answer: 3, why: "argmax picks the highest chance." },
-          { q: "You want to know if Dense(256) is better than Dense(128). What do you do?", options: ["Change five things at once", "Look at the training loss only", "Change it, retrain, and compare test accuracy", "Guess"], answer: 2, why: "Change one thing and retest on the same test set." }
+          { objective: "O4", q: "Why divide the MNIST pixels by 255.0?", options: ["To make the images bigger", "To delete dark pixels", "To change the labels", "To scale them between 0 and 1 so training works better"], answer: 3, why: "Normalizing to 0-1 helps the network learn." },
+          { objective: "O5", q: "What does layers.Flatten() do?", options: ["Turns a 28 x 28 grid into one row of 784 numbers", "Makes the image brighter", "Adds 10 neurons", "Splits the data"], answer: 0, why: "Flatten reshapes the grid into a row for Dense layers." },
+          { objective: "O5", q: "Why does the last layer have 10 neurons with softmax?", options: ["There are 10 epochs", "It is always 10", "There are 10 possible digits, and softmax gives a chance for each", "To save memory"], answer: 2, why: "One output per digit, as chances that add to 1." },
+          { objective: "O6", q: "Which line gives the most likely digit for each image?", options: ["probs.sum()", "model.fit(probs)", "y_test.argmax()", "probs.argmax(axis=1)"], answer: 3, why: "argmax picks the highest chance." },
+          { objective: "O6", q: "You want to know if Dense(256) is better than Dense(128). What do you do?", options: ["Change five things at once", "Look at the training loss only", "Change it, retrain, and compare test accuracy", "Guess"], answer: 2, why: "Change one thing and retest on the same test set." }
         ]
       }
     }
@@ -173,26 +226,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Introduction to Deep Learning and Neural Networks",
     questions: [
-      { q: "Deep learning is:", options: ["A way to store files", "Machine learning with many-layered neural networks", "A kind of spreadsheet", "Learning while asleep"], answer: 1, why: "It uses deep (many-layer) networks." },
-      { q: "Which task is deep learning especially good at?", options: ["Recognizing faces in photos", "Adding two numbers", "Sorting a short list", "Printing a page"], answer: 0, why: "Images, sound and text are its strengths." },
-      { q: "In an image network, early layers usually notice:", options: ["Whole faces", "The file name", "Simple edges", "The label"], answer: 2, why: "Layers build from edges to shapes to objects." },
-      { q: "Why did deep learning take off in recent years?", options: ["Big datasets and fast GPUs", "Smaller screens", "Fewer computers", "New keyboards"], answer: 0, why: "It needs lots of data and computing power." },
-      { q: "What does a weight do in a neuron?", options: ["Counts the epochs", "Stores the label", "Draws the image", "Sets how much an input matters"], answer: 3, why: "Weights scale each input." },
-      { q: "Inputs 2 and 2, weights 1 and -2, bias 1, ReLU. Output?", options: ["-1", "0", "1", "3"], answer: 1, why: "2 - 4 + 1 = -1, and ReLU turns -1 into 0." },
-      { q: "Softmax in the last layer gives:", options: ["The number of layers", "Chances for each answer that add up to 100%", "The loss", "A random number"], answer: 1, why: "Softmax turns outputs into probabilities." },
-      { q: "The loss going down during training means:", options: ["The data is shrinking", "The computer is slowing", "Overfitting for sure", "The network's guesses are getting less wrong"], answer: 3, why: "Lower loss means smaller errors." },
-      { q: "The learning rate controls:", options: ["How big each weight update step is", "How many images there are", "The screen size", "The number of labels"], answer: 0, why: "It sets the size of each step." },
-      { q: "One epoch is:", options: ["One neuron", "One test image", "One pass through all the training data", "One minute of training"], answer: 2, why: "An epoch covers the whole training set once." },
-      { q: "A validation set is used to:", options: ["Train faster", "Store the model", "Label the images", "Catch overfitting during training"], answer: 3, why: "It is held back to check the model while it trains." },
-      { q: "How many images does MNIST put in its test set?", options: ["28", "784", "10,000", "60,000"], answer: 2, why: "MNIST has 60,000 training and 10,000 test images." },
-      { q: "Each MNIST image is:", options: ["A color photo of a street", "28 x 28 pixels of a handwritten digit", "A sound clip", "A sentence"], answer: 1, why: "Small grayscale digit images." },
-      { q: "Which Keras layer has every neuron connected to every input?", options: ["Dense", "Flatten", "Input", "Softmax"], answer: 0, why: "Dense means fully connected." },
-      { q: "What does model.compile set?", options: ["The dataset", "The image size", "The optimizer, loss and metrics", "The test accuracy"], answer: 2, why: "compile sets how the model learns and what it reports." },
-      { q: "Labels are plain numbers like 7. Which loss fits?", options: ["sparse_categorical_crossentropy", "accuracy", "relu", "adam"], answer: 0, why: "That loss expects integer labels." },
-      { q: "What does validation_split=0.1 in fit do?", options: ["Trains for 0.1 epochs", "Deletes 10% of the data", "Sets the learning rate", "Holds back 10% of training data to check the model"], answer: 3, why: "It reserves a validation share." },
-      { q: "Which line measures accuracy on unseen images?", options: ["model.fit(x_test, y_test)", "model.evaluate(x_test, y_test)", "model.summary()", "plt.imshow(x_test[0])"], answer: 1, why: "evaluate tests on the data you give it." },
-      { q: "What kind of network scans small patches of an image and does very well on pictures?", options: ["A spreadsheet", "A convolutional network (CNN)", "A rule-based chatbot", "A single neuron"], answer: 1, why: "CNNs are built for images." },
-      { q: "Your digit model is used to read handwritten forms at work. What is a responsible step?", options: ["Trust every answer", "Never test it", "Hide that a model is used", "Have a person check low-confidence results and test it on real forms first"], answer: 3, why: "Real-world testing and human checks catch the model's mistakes." }
+      { objective: "O1", q: "Deep learning is:", options: ["A way to store files", "Machine learning with many-layered neural networks", "A kind of spreadsheet", "Learning while asleep"], answer: 1, why: "It uses deep (many-layer) networks." },
+      { objective: "O1", q: "Which task is deep learning especially good at?", options: ["Recognizing faces in photos", "Adding two numbers", "Sorting a short list", "Printing a page"], answer: 0, why: "Images, sound and text are its strengths." },
+      { objective: "O1", q: "In an image network, early layers usually notice:", options: ["Whole faces", "The file name", "Simple edges", "The label"], answer: 2, why: "Layers build from edges to shapes to objects." },
+      { objective: "O1", q: "Why did deep learning take off in recent years?", options: ["Big datasets and fast GPUs", "Smaller screens", "Fewer computers", "New keyboards"], answer: 0, why: "It needs lots of data and computing power." },
+      { objective: "O2", q: "What does a weight do in a neuron?", options: ["Counts the epochs", "Stores the label", "Draws the image", "Sets how much an input matters"], answer: 3, why: "Weights scale each input." },
+      { objective: "O2", q: "Inputs 2 and 2, weights 1 and -2, bias 1, ReLU. Output?", options: ["-1", "0", "1", "3"], answer: 1, why: "2 - 4 + 1 = -1, and ReLU turns -1 into 0." },
+      { objective: "O2", q: "Softmax in the last layer gives:", options: ["The number of layers", "Chances for each answer that add up to 100%", "The loss", "A random number"], answer: 1, why: "Softmax turns outputs into probabilities." },
+      { objective: "O3", q: "The loss going down during training means:", options: ["The data is shrinking", "The computer is slowing", "Overfitting for sure", "The network's guesses are getting less wrong"], answer: 3, why: "Lower loss means smaller errors." },
+      { objective: "O3", q: "The learning rate controls:", options: ["How big each weight update step is", "How many images there are", "The screen size", "The number of labels"], answer: 0, why: "It sets the size of each step." },
+      { objective: "O3", q: "One epoch is:", options: ["One neuron", "One test image", "One pass through all the training data", "One minute of training"], answer: 2, why: "An epoch covers the whole training set once." },
+      { objective: "O3", q: "A validation set is used to:", options: ["Train faster", "Store the model", "Label the images", "Catch overfitting during training"], answer: 3, why: "It is held back to check the model while it trains." },
+      { objective: "O4", q: "How many images does MNIST put in its test set?", options: ["28", "784", "10,000", "60,000"], answer: 2, why: "MNIST has 60,000 training and 10,000 test images." },
+      { objective: "O4", q: "Each MNIST image is:", options: ["A color photo of a street", "28 x 28 pixels of a handwritten digit", "A sound clip", "A sentence"], answer: 1, why: "Small grayscale digit images." },
+      { objective: "O5", q: "Which Keras layer has every neuron connected to every input?", options: ["Dense", "Flatten", "Input", "Softmax"], answer: 0, why: "Dense means fully connected." },
+      { objective: "O5", q: "What does model.compile set?", options: ["The dataset", "The image size", "The optimizer, loss and metrics", "The test accuracy"], answer: 2, why: "compile sets how the model learns and what it reports." },
+      { objective: "O5", q: "Labels are plain numbers like 7. Which loss fits?", options: ["sparse_categorical_crossentropy", "accuracy", "relu", "adam"], answer: 0, why: "That loss expects integer labels." },
+      { objective: "O5", q: "What does validation_split=0.1 in fit do?", options: ["Trains for 0.1 epochs", "Deletes 10% of the data", "Sets the learning rate", "Holds back 10% of training data to check the model"], answer: 3, why: "It reserves a validation share." },
+      { objective: "O6", q: "Which line measures accuracy on unseen images?", options: ["model.fit(x_test, y_test)", "model.evaluate(x_test, y_test)", "model.summary()", "plt.imshow(x_test[0])"], answer: 1, why: "evaluate tests on the data you give it." },
+      { objective: "O6", q: "What kind of network scans small patches of an image and does very well on pictures?", options: ["A spreadsheet", "A convolutional network (CNN)", "A rule-based chatbot", "A single neuron"], answer: 1, why: "CNNs are built for images." },
+      { objective: "O6", q: "Your digit model is used to read handwritten forms at work. What is a responsible step?", options: ["Trust every answer", "Never test it", "Hide that a model is used", "Have a person check low-confidence results and test it on real forms first"], answer: 3, why: "Real-world testing and human checks catch the model's mistakes." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      5,
+      7,
+      9,
+      11,
+      12,
+      14,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Data prepared",
+        objective: "O4",
+        notYet: "MNIST is not loaded or the pixels are not scaled.",
+        meets: "MNIST is loaded and the pixels are scaled between 0 and 1.",
+        exceeds: "One image is drawn and checked against its label."
+      },
+      {
+        name: "Network built and trained",
+        objective: "O5",
+        notYet: "The model does not compile or train.",
+        meets: "A Keras network with Flatten, a Dense hidden layer and a 10-neuron softmax output trains with a validation split.",
+        exceeds: "Notes how loss and validation accuracy changed across epochs."
+      },
+      {
+        name: "Test accuracy and predictions",
+        objective: "O6",
+        notYet: "No test accuracy, or predictions are not compared with true labels.",
+        meets: "Reports test accuracy and compares five predictions with the true labels.",
+        exceeds: "Also looks at a wrong prediction and suggests why it happened."
+      },
+      {
+        name: "One change tested",
+        objective: "O6",
+        notYet: "No change made, or several things changed at once.",
+        meets: "One change (more neurons or more epochs), retrained, with a sentence on whether it helped.",
+        exceeds: "Also checks the change for signs of overfitting."
+      },
+      {
+        name: "Limits",
+        objective: "O6",
+        notYet: "No limit named, or the limit is wrong.",
+        meets: "One real limit, such as only knowing centered single digits.",
+        exceeds: "Also says how a person would check low-confidence results in real work."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and score Meets or Exceeds on every rubric row of the final task",
+      "Learners who report training another neural network or Keras example in the 30 days after the course (follow-up survey)",
+      "Learners who add the notebook to a portfolio or use it to talk about AI in a job interview",
+      "Learners who enter a tech, data or AI training program, certificate or job after the course"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer or laptop with a web browser",
+      "A free Google account to use Google Colab",
+      "Paper and pen for the hand calculation of a neuron",
+      "About 60 to 75 minutes in total, plus time for training to run"
+    ],
+    facilitatorNotes: [
+      "Do the neuron calculation on a whiteboard as a group before any code; it makes the later layers much easier to follow.",
+      "Run the MNIST download once before class to check the network allows it.",
+      "Training takes a few minutes; use the wait to discuss the loss and accuracy numbers as they print.",
+      "Connect examples to roles learners know, such as reading forms or inspecting parts, and stress that a person checks low-confidence results.",
+      "Encourage learners to save their notebook for a portfolio and practise explaining it in one minute, as they would in an interview."
     ]
   }
 };

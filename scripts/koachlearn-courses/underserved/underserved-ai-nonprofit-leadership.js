@@ -15,11 +15,35 @@ module.exports = {
     "Each lesson takes about five minutes and ends with a \"Try it now\" task that builds your real plan. There is a knowledge check after each chapter and a 20-question quiz at the end. For legal, tax or nonprofit-status questions, check official sources such as irs.gov and your state's attorney general or secretary of state."
   ],
   finalTask: "Write a one-page program plan for a real or practice community project with help from a free AI assistant: a one-sentence mission, one measurable goal, a simple timeline, three volunteer roles (with safety steps if minors are involved), a five-sentence grant summary, and five simple rules for how your group will use AI. Remove any private information before sharing.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "People who lead or want to lead community work in underserved areas: food pantry, tenant association, church ministry, youth program and block club leaders, and staff or board members of small nonprofits.",
+    startingPoint: "Run programs with little money and few staff, and write flyers, emails and reports by hand. Most have used an AI assistant little or not at all, and few have a written mission, measurable goal, volunteer roles or AI rules.",
+    gap: "Small groups lose hours to paperwork and miss grants because they lack time and clear plans. AI can draft much of this work, but leaders must keep the people they serve safe, check every fact and keep decisions in human hands.",
+    constraints: [
+      "Reading level: plain words and short sentences (about grade 6 to 7)",
+      "Devices: a smartphone or a library or office computer",
+      "Cost: free or donated tools only",
+      "Privacy: no names, addresses, phone numbers, health or immigration details of the people served in AI",
+      "Safety with minors and vulnerable adults follows the organization's policy and state rules"
+    ],
+    prerequisites: "None. Learners new to AI assistants can take \"Introduction to AI and Digital Empowerment\" first."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given the tasks your group does each month", action: "identify which ones AI can help draft and which need people", standard: "naming at least three tasks for AI and the human work it frees time for" },
+    { id: "O2", condition: "Given what your group does", action: "write a one-sentence mission and one measurable goal with AI's help", standard: "edited with your team so it says who, what and why, and the goal can be counted by a date" },
+    { id: "O3", condition: "Given a program or event goal", action: "create a timeline and task list with AI", standard: "adding what AI missed and putting a name and date by every task" },
+    { id: "O4", condition: "Given the volunteer jobs in your plan", action: "write short volunteer role descriptions and the safety steps they need", standard: "following your organization's policy when minors or vulnerable adults are involved and using no real names in AI" },
+    { id: "O5", condition: "Given a project that needs money", action: "find one grant opportunity and draft a five-sentence grant summary with AI", standard: "with every fact matching your records and the funder's rules followed" },
+    { id: "O6", condition: "When you share results and use AI as a group", action: "write a supporter update and five simple AI rules for your group", standard: "using stories only with written permission and keeping decisions about people in human hands" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Leading and planning with AI",
       lessons: [
         {
+          objectives: ["O1"],
           title: "What AI can do for a community group",
           minutes: 4,
           goal: "List three time-consuming tasks in your group that AI could help with.",
@@ -35,9 +59,14 @@ module.exports = {
             { title: "AI is not good at", bullets: ["Knowing your neighbors", "Judging real community needs", "Keeping private stories safe"] }
           ],
           tryIt: "Write down three tasks that take your group the most time each month. Next to each, write how AI could help with a first draft.",
-          youCanNow: "spot tasks in your group that AI can speed up, and the ones that need people."
+          youCanNow: "spot tasks in your group that AI can speed up, and the ones that need people.",
+          quickCheck: [
+            { objective: "O1", q: "Which is AI good at for a community group?", options: ["Writing a first draft of meeting notes", "Knowing your neighbors", "Judging what your community needs", "Keeping private stories safe"], answer: 0, why: "AI is good at drafts and summaries; people know the community." },
+            { objective: "O1", q: "AI saves you three hours a week on paperwork. What is the best use of that time?", options: ["More paperwork", "Listening to families and building trust", "Letting AI talk to families for you", "Nothing"], answer: 1, why: "Leaders use AI to free time for human work like listening and showing up." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "A clear mission and a measurable goal",
           minutes: 5,
           goal: "Write a one-sentence mission and one measurable goal with AI's help.",
@@ -54,9 +83,14 @@ module.exports = {
             { title: "Let AI draft, then decide together", bullets: ["Ask for three missions and two goals", "Choose and edit with your team"] }
           ],
           tryIt: "Ask an AI assistant for three mission statements and two measurable goals for your group. Pick one of each and edit them in your own words.",
-          youCanNow: "write a clear mission and a measurable goal for your group."
+          youCanNow: "write a clear mission and a measurable goal for your group.",
+          quickCheck: [
+            { objective: "O2", q: "What makes a goal measurable?", options: ["It sounds inspiring", "It is very long", "You can count it by a date", "It uses big words"], answer: 2, why: "A measurable goal says what you will achieve and by when, in a way you can count." },
+            { objective: "O2", q: "AI's mission statement uses words your members would never say. What do you do?", options: ["Use it anyway", "Ask AI for a longer one", "Drop the mission", "Edit it with your team so it sounds like your community"], answer: 3, why: "The mission should sound like your community, so you edit it together." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Planning a program or event with AI",
           minutes: 5,
           goal: "Use AI to make a simple timeline and task list for a program or event.",
@@ -73,17 +107,21 @@ module.exports = {
             { title: "Make it yours", bullets: ["Remove what does not fit", "Add what AI missed: permits, translation, rides", "Name and date for each task"] }
           ],
           tryIt: "Ask AI for a timeline and task list for one program or event your group could hold. Add one thing AI missed and put a name by each task.",
-          youCanNow: "turn a goal into a timeline and task list with AI and your team."
+          youCanNow: "turn a goal into a timeline and task list with AI and your team.",
+          quickCheck: [
+            { objective: "O3", q: "What is a task list?", options: ["A list of who does what", "A list of donors", "A budget", "A mission statement"], answer: 0, why: "A task list shows each job and who will do it." },
+            { objective: "O3", q: "AI's plan for a cookout does not mention a permit for the park. What do you do?", options: ["Skip it; AI knows best", "Add checking the permit to the task list with a name and date", "Cancel the cookout", "Ask AI to apply for it"], answer: 1, why: "You add what AI missed, like permits, and give the task an owner and date." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Leading and planning with AI",
         questions: [
-          { q: "Which task is AI good at for a community group?", options: ["Knowing what your neighbors need", "Drafting a flyer", "Building trust with families", "Keeping private stories safe"], answer: 1, why: "AI is good at first drafts; people do the relationship work." },
-          { q: "Which is a mission statement?", options: ["\"Serve 150 families by June\"", "\"Meeting Tuesday at 6\"", "\"We make sure no East Side family goes hungry by running a weekly free food pantry.\"", "\"Buy more chairs\""], answer: 2, why: "A mission says who you serve, what you do and why." },
-          { q: "Which goal is measurable?", options: ["\"Help more people\"", "\"Do good\"", "\"Be better\"", "\"Serve 150 families a month by June\""], answer: 3, why: "It can be counted and checked by a date." },
-          { q: "AI's event plan forgot rides for elders. What do you do?", options: ["Add it to the plan", "Follow the AI plan exactly", "Cancel the event", "Ask AI to remove elders"], answer: 0, why: "You know your community; add what AI missed." },
-          { q: "What should be next to every task on your list?", options: ["An emoji", "A name and a date", "A password", "Nothing"], answer: 1, why: "Names and dates make sure tasks get done." }
+          { objective: "O1", q: "Which task is AI good at for a community group?", options: ["Knowing what your neighbors need", "Drafting a flyer", "Building trust with families", "Keeping private stories safe"], answer: 1, why: "AI is good at first drafts; people do the relationship work." },
+          { objective: "O2", q: "Which is a mission statement?", options: ["\"Serve 150 families by June\"", "\"Meeting Tuesday at 6\"", "\"We make sure no East Side family goes hungry by running a weekly free food pantry.\"", "\"Buy more chairs\""], answer: 2, why: "A mission says who you serve, what you do and why." },
+          { objective: "O2", q: "Which goal is measurable?", options: ["\"Help more people\"", "\"Do good\"", "\"Be better\"", "\"Serve 150 families a month by June\""], answer: 3, why: "It can be counted and checked by a date." },
+          { objective: "O3", q: "AI's event plan forgot rides for elders. What do you do?", options: ["Add it to the plan", "Follow the AI plan exactly", "Cancel the event", "Ask AI to remove elders"], answer: 0, why: "You know your community; add what AI missed." },
+          { objective: "O3", q: "What should be next to every task on your list?", options: ["An emoji", "A name and a date", "A password", "Nothing"], answer: 1, why: "Names and dates make sure tasks get done." }
         ]
       }
     },
@@ -91,6 +129,7 @@ module.exports = {
       name: "Chapter 2: People, money and trust",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Organizing volunteers, and keeping everyone safe",
           minutes: 5,
           goal: "Write clear volunteer role descriptions and safety steps.",
@@ -108,9 +147,14 @@ module.exports = {
             { title: "Protect privacy", bullets: ["No real names or numbers in AI", "Use roles and placeholders"] }
           ],
           tryIt: "Ask AI to write three short volunteer role descriptions for your plan. If minors are involved, add the safety steps your organization requires.",
-          youCanNow: "write clear volunteer roles and include the safety steps your group needs."
+          youCanNow: "write clear volunteer roles and include the safety steps your group needs.",
+          quickCheck: [
+            { objective: "O4", q: "What should a volunteer role description include?", options: ["The volunteer's home address", "Only the job title", "What the job is, how long it takes and who to ask for help", "The volunteer's phone number"], answer: 2, why: "Clear roles say what to do, how long and who to ask." },
+            { objective: "O4", q: "You want AI to draft a reminder text for volunteers. What do you paste in?", options: ["Every volunteer's name and phone number", "Their background check results", "Their home addresses", "The role, date and time, using placeholders for names"], answer: 3, why: "Use roles and placeholders, never real names or numbers, in AI prompts." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Finding grants and writing a grant summary",
           minutes: 6,
           goal: "Find one grant opportunity and draft a five-sentence summary of your project.",
@@ -129,9 +173,14 @@ module.exports = {
             { title: "Stay honest", bullets: ["Every fact must be true", "Follow the funder's rules and deadline"] }
           ],
           tryIt: "Find one grant your group could apply for (local or on Grants.gov). Ask AI to draft a five-sentence summary of your project, then check every fact.",
-          youCanNow: "find a grant opportunity and draft an honest project summary."
+          youCanNow: "find a grant opportunity and draft an honest project summary.",
+          quickCheck: [
+            { objective: "O5", q: "What is a grant?", options: ["Money for a purpose that you do not pay back", "A loan with low interest", "A donation of food", "A tax form"], answer: 0, why: "A grant is money given for a purpose, not paid back." },
+            { objective: "O5", q: "A funder allows 100 words, and AI wrote 180. What do you do?", options: ["Send all 180 words", "Cut it to fit the funder's 100-word limit", "Make it 200 words", "Skip the summary"], answer: 1, why: "Follow the funder's rules, including word limits." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Updating supporters and setting AI rules for your group",
           minutes: 5,
           goal: "Write a supporter update and five simple AI rules for your group.",
@@ -148,17 +197,21 @@ module.exports = {
             { title: "Keep the rules alive", bullets: ["Be open about AI use if asked", "Use approved tools", "Share with volunteers; review yearly"] }
           ],
           tryIt: "Final task: put it together in a one-page program plan: mission, measurable goal, timeline, three volunteer roles with safety steps, a five-sentence grant summary and your group's five AI rules. Remove anything private before sharing.",
-          youCanNow: "lead a community project with a clear plan and safe, honest AI use."
+          youCanNow: "lead a community project with a clear plan and safe, honest AI use.",
+          quickCheck: [
+            { objective: "O6", q: "When can you share a family's story in an update?", options: ["Whenever it helps fundraising", "If you change one word", "Only with their written permission", "If the story is short"], answer: 2, why: "Stories are shared only with written permission." },
+            { objective: "O6", q: "A board member suggests letting AI choose which families get help first. What does your AI rule say?", options: ["Yes, AI is fair", "Yes, if it is faster", "Only on busy days", "No; people make decisions about who gets help"], answer: 3, why: "AI does not make decisions about who gets help; people do." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: People, money and trust",
         questions: [
-          { q: "Your program serves children. Which is a common safety practice?", options: ["One adult alone with each child", "Volunteers text kids privately", "Background checks and two adults present", "No rules needed"], answer: 2, why: "Background checks and the two-adult rule are common protections; follow your organization's policy." },
-          { q: "Can you paste a client's name and story into AI to write a report?", options: ["Yes, always", "Only if it is short", "Yes, if the AI is free", "No; use placeholders and keep private details out"], answer: 3, why: "Protect the people you serve by keeping their details out of AI tools." },
-          { q: "Most funding on Grants.gov is for:", options: ["Organizations", "Personal bills", "Individuals' rent", "Buying cars"], answer: 0, why: "Grants.gov says most opportunities are for organizations, not individuals." },
-          { q: "AI wrote that your group served 500 families, but your records say 312. You:", options: ["Keep 500, it sounds better", "Change it to 312", "Remove all numbers", "Ask AI for a bigger number"], answer: 1, why: "Every fact in a grant or update must match your records." },
-          { q: "Which is a good AI rule for a community group?", options: ["AI decides who gets help", "Nobody checks AI writing", "A person reads and checks everything before it goes out", "Paste all client files into AI"], answer: 2, why: "Human review keeps your group accurate and trustworthy." }
+          { objective: "O4", q: "Your program serves children. Which is a common safety practice?", options: ["One adult alone with each child", "Volunteers text kids privately", "Background checks and two adults present", "No rules needed"], answer: 2, why: "Background checks and the two-adult rule are common protections; follow your organization's policy." },
+          { objective: "O4", q: "Can you paste a client's name and story into AI to write a report?", options: ["Yes, always", "Only if it is short", "Yes, if the AI is free", "No; use placeholders and keep private details out"], answer: 3, why: "Protect the people you serve by keeping their details out of AI tools." },
+          { objective: "O5", q: "Most funding on Grants.gov is for:", options: ["Organizations", "Personal bills", "Individuals' rent", "Buying cars"], answer: 0, why: "Grants.gov says most opportunities are for organizations, not individuals." },
+          { objective: "O5", q: "AI wrote that your group served 500 families, but your records say 312. You:", options: ["Keep 500, it sounds better", "Change it to 312", "Remove all numbers", "Ask AI for a bigger number"], answer: 1, why: "Every fact in a grant or update must match your records." },
+          { objective: "O6", q: "Which is a good AI rule for a community group?", options: ["AI decides who gets help", "Nobody checks AI writing", "A person reads and checks everything before it goes out", "Paste all client files into AI"], answer: 2, why: "Human review keeps your group accurate and trustworthy." }
         ]
       }
     }
@@ -166,26 +219,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI for Nonprofit Leadership",
     questions: [
-      { q: "Which task is best kept for people, not AI?", options: ["Building trust with families", "Drafting a flyer", "Making a checklist", "Summarizing meeting notes"], answer: 0, why: "Relationships and trust are human work." },
-      { q: "Why should leaders use AI for drafts?", options: ["To replace the team", "To free up time for listening and showing up", "To avoid checking work", "To collect private data"], answer: 1, why: "AI saves writing time so leaders can focus on people." },
-      { q: "A mission statement says:", options: ["The meeting time", "Your bank balance", "Who you serve, what you do and why", "Your volunteers' phone numbers"], answer: 2, why: "That is the purpose of a mission." },
-      { q: "Which goal can you measure?", options: ["\"Make a difference\"", "\"Help a lot\"", "\"Be known\"", "\"Give 300 backpacks by August 10\""], answer: 3, why: "It has a number and a date." },
-      { q: "After AI suggests mission statements, you should:", options: ["Choose and edit with your team", "Use the first one unread", "Post all three", "Ignore your team"], answer: 0, why: "Your team makes sure it sounds like your community." },
-      { q: "A timeline shows:", options: ["Who donated", "What happens when, in order", "Your budget only", "Volunteers' addresses"], answer: 1, why: "A timeline orders the steps." },
-      { q: "Which detail should you give AI to plan an event?", options: ["Volunteers' phone numbers", "Families' addresses", "The event, date, place and number of people", "Your bank login"], answer: 2, why: "Those details help without sharing private information." },
-      { q: "AI's plan misses translation for Spanish-speaking families. You:", options: ["Follow AI exactly", "Cancel", "Remove those families", "Add translation to the plan"], answer: 3, why: "You add what your community needs." },
-      { q: "A good volunteer role description includes:", options: ["What the job is, how long and who to ask", "The volunteer's Social Security number", "Nothing", "Only the event name"], answer: 0, why: "Clear roles help volunteers succeed." },
-      { q: "The two-adult rule means:", options: ["Two volunteers share one phone", "At least two adults are present with children, never one alone", "Two adults sign every check", "Only two adults can volunteer"], answer: 1, why: "It is a common practice that protects children and volunteers." },
-      { q: "When you are unsure about safety rules for working with minors, you should:", options: ["Make up your own", "Skip them", "Follow your organization's policy and state rules, and ask your insurer or a lawyer", "Ask a volunteer's friend"], answer: 2, why: "Official policy and professionals give the right answer." },
-      { q: "A grant is:", options: ["A loan you pay back with interest", "A credit card", "A tax bill", "Money for a purpose that you do not pay back"], answer: 3, why: "Grants are not repaid." },
-      { q: "Which is a local place small groups often find grants?", options: ["A community foundation", "A pop-up ad", "A payday lender", "A text from a stranger"], answer: 0, why: "Community foundations give grants to local groups." },
-      { q: "About registering for federal grants on Grants.gov, it is wise to:", options: ["Wait until the day before the deadline", "Start early, because registration takes time", "Skip registration", "Pay a stranger to do it"], answer: 1, why: "Registration takes time, so start early." },
-      { q: "A five-sentence grant summary covers:", options: ["Only your name", "Your volunteers' phone numbers", "The need, the plan, who it helps, the goal and the amount", "A list of complaints"], answer: 2, why: "Those parts tell a funder what they need to know." },
-      { q: "Before sending a grant summary AI helped write, you:", options: ["Send it without reading", "Add bigger numbers", "Remove the deadline", "Check every fact and follow the funder's rules"], answer: 3, why: "Honesty and following rules protect your group." },
-      { q: "You want to share a family's story in a newsletter. You need:", options: ["Their written permission", "Nothing", "AI's permission", "A volunteer's opinion only"], answer: 0, why: "Stories are shared only with permission." },
-      { q: "Which is a good AI rule?", options: ["Put immigration details into AI", "Never put names, addresses or health details of people we serve into AI", "Let AI decide who gets food", "Never check AI writing"], answer: 1, why: "Private details stay out of AI tools." },
-      { q: "Should AI decide who receives help from your program?", options: ["Yes, always", "Yes, if it is free", "No; people make those decisions", "Only on weekends"], answer: 2, why: "Decisions about people's help need human judgment and fairness." },
-      { q: "How often should your group review its AI rules?", options: ["Never", "Every ten years", "Only after a problem", "About once a year"], answer: 3, why: "Tools change, so review your rules regularly." }
+      { objective: "O1", q: "Which task is best kept for people, not AI?", options: ["Building trust with families", "Drafting a flyer", "Making a checklist", "Summarizing meeting notes"], answer: 0, why: "Relationships and trust are human work." },
+      { objective: "O1", q: "Why should leaders use AI for drafts?", options: ["To replace the team", "To free up time for listening and showing up", "To avoid checking work", "To collect private data"], answer: 1, why: "AI saves writing time so leaders can focus on people." },
+      { objective: "O2", q: "A mission statement says:", options: ["The meeting time", "Your bank balance", "Who you serve, what you do and why", "Your volunteers' phone numbers"], answer: 2, why: "That is the purpose of a mission." },
+      { objective: "O2", q: "Which goal can you measure?", options: ["\"Make a difference\"", "\"Help a lot\"", "\"Be known\"", "\"Give 300 backpacks by August 10\""], answer: 3, why: "It has a number and a date." },
+      { objective: "O2", q: "After AI suggests mission statements, you should:", options: ["Choose and edit with your team", "Use the first one unread", "Post all three", "Ignore your team"], answer: 0, why: "Your team makes sure it sounds like your community." },
+      { objective: "O3", q: "A timeline shows:", options: ["Who donated", "What happens when, in order", "Your budget only", "Volunteers' addresses"], answer: 1, why: "A timeline orders the steps." },
+      { objective: "O3", q: "Which detail should you give AI to plan an event?", options: ["Volunteers' phone numbers", "Families' addresses", "The event, date, place and number of people", "Your bank login"], answer: 2, why: "Those details help without sharing private information." },
+      { objective: "O3", q: "AI's plan misses translation for Spanish-speaking families. You:", options: ["Follow AI exactly", "Cancel", "Remove those families", "Add translation to the plan"], answer: 3, why: "You add what your community needs." },
+      { objective: "O4", q: "A good volunteer role description includes:", options: ["What the job is, how long and who to ask", "The volunteer's Social Security number", "Nothing", "Only the event name"], answer: 0, why: "Clear roles help volunteers succeed." },
+      { objective: "O4", q: "The two-adult rule means:", options: ["Two volunteers share one phone", "At least two adults are present with children, never one alone", "Two adults sign every check", "Only two adults can volunteer"], answer: 1, why: "It is a common practice that protects children and volunteers." },
+      { objective: "O4", q: "When you are unsure about safety rules for working with minors, you should:", options: ["Make up your own", "Skip them", "Follow your organization's policy and state rules, and ask your insurer or a lawyer", "Ask a volunteer's friend"], answer: 2, why: "Official policy and professionals give the right answer." },
+      { objective: "O5", q: "A grant is:", options: ["A loan you pay back with interest", "A credit card", "A tax bill", "Money for a purpose that you do not pay back"], answer: 3, why: "Grants are not repaid." },
+      { objective: "O5", q: "Which is a local place small groups often find grants?", options: ["A community foundation", "A pop-up ad", "A payday lender", "A text from a stranger"], answer: 0, why: "Community foundations give grants to local groups." },
+      { objective: "O5", q: "About registering for federal grants on Grants.gov, it is wise to:", options: ["Wait until the day before the deadline", "Start early, because registration takes time", "Skip registration", "Pay a stranger to do it"], answer: 1, why: "Registration takes time, so start early." },
+      { objective: "O5", q: "A five-sentence grant summary covers:", options: ["Only your name", "Your volunteers' phone numbers", "The need, the plan, who it helps, the goal and the amount", "A list of complaints"], answer: 2, why: "Those parts tell a funder what they need to know." },
+      { objective: "O5", q: "Before sending a grant summary AI helped write, you:", options: ["Send it without reading", "Add bigger numbers", "Remove the deadline", "Check every fact and follow the funder's rules"], answer: 3, why: "Honesty and following rules protect your group." },
+      { objective: "O6", q: "You want to share a family's story in a newsletter. You need:", options: ["Their written permission", "Nothing", "AI's permission", "A volunteer's opinion only"], answer: 0, why: "Stories are shared only with permission." },
+      { objective: "O6", q: "Which is a good AI rule?", options: ["Put immigration details into AI", "Never put names, addresses or health details of people we serve into AI", "Let AI decide who gets food", "Never check AI writing"], answer: 1, why: "Private details stay out of AI tools." },
+      { objective: "O6", q: "Should AI decide who receives help from your program?", options: ["Yes, always", "Yes, if it is free", "No; people make those decisions", "Only on weekends"], answer: 2, why: "Decisions about people's help need human judgment and fairness." },
+      { objective: "O6", q: "How often should your group review its AI rules?", options: ["Never", "Every ten years", "Only after a problem", "About once a year"], answer: 3, why: "Tools change, so review your rules regularly." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      3,
+      5,
+      8,
+      9,
+      11,
+      14,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Mission and goal",
+        objective: "O2",
+        notYet: "No mission, or the goal cannot be counted.",
+        meets: "One-sentence mission with who, what and why, and one goal with a number and a date.",
+        exceeds: "Edited with the team so it sounds like the community."
+      },
+      {
+        name: "Timeline",
+        objective: "O3",
+        notYet: "No timeline, or tasks without names or dates.",
+        meets: "A simple timeline with a name and date by every task.",
+        exceeds: "Includes something AI missed, such as permits, translation or rides."
+      },
+      {
+        name: "Volunteer roles and safety",
+        objective: "O4",
+        notYet: "Fewer than three roles, or no safety steps when minors are involved.",
+        meets: "Three clear roles, with the organization's safety steps where needed.",
+        exceeds: "Roles say how long the job takes and who to ask for help."
+      },
+      {
+        name: "Grant summary",
+        objective: "O5",
+        notYet: "Missing parts, or facts that do not match records.",
+        meets: "Five sentences: need, plan, who it helps, goal and amount, all checked.",
+        exceeds: "Fits a real funder's word limit and questions."
+      },
+      {
+        name: "AI rules and privacy",
+        objective: "O6",
+        notYet: "Fewer than five rules, or private information left in the plan.",
+        meets: "Five clear AI rules, and no private information in the plan.",
+        exceeds: "Rules include a yearly review and are ready to share with volunteers."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Groups that adopt written AI rules within 30 days (follow-up survey)",
+      "Groups that apply for at least one grant within 90 days, and grants won",
+      "Groups that report more volunteers or people served after using their plan"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A smartphone, or a library or office computer",
+      "A free AI assistant: Microsoft Copilot, ChatGPT or Google Gemini",
+      "Facts about a real or practice program: who it serves, results and records",
+      "Paper or a free document tool for the one-page plan",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Have teams from the same group work together so the plan and AI rules are shared.",
+      "Check every prompt for names, phone numbers, health or immigration details of the people served.",
+      "For programs with minors, point to the organization's own safety policy; this course does not replace it.",
+      "Bring a list of local community foundations and grant help at the library.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

@@ -16,11 +16,35 @@ module.exports = {
     "Each lesson takes about five minutes. Read the lesson, look over the slides, then do the \"Try it now\" task. There is a short knowledge check after each chapter and a 20-question quiz at the end. AI tools such as ChatGPT or Microsoft Copilot can help you with wording, but the facts and the voice must be yours."
   ],
   finalTask: "Pick one real job posting. Write a one-page resume for it with at least four accomplishment bullets, update your LinkedIn headline and About section to match, then record yourself answering three interview questions out loud using the STAR method, including one honest answer about a gap or a record if that applies to you. Finish by writing a short thank-you note you could send after the interview.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Anyone getting ready for a job search: students looking for a first job, athletes moving into a career after sport, veterans moving into civilian work, people coming home from prison and people changing jobs after years in one place.",
+    startingPoint: "Have work, school, sport, service or life experience, and can use a phone or computer. Many have an old or no resume, no LinkedIn profile, and have not practiced interview answers out loud, especially about a gap or a record.",
+    gap: "Employers decide quickly from a resume, a profile and a short interview. Learners need a clear one-page resume, a simple LinkedIn profile and practiced, honest answers, so their real skills are seen and they get interviews and offers.",
+    constraints: [
+      "Reading level: plain words and short sentences",
+      "Devices: a phone or computer with a free document tool and a voice recorder",
+      "Honesty: everything on a resume, profile or AI rewrite must be true",
+      "Privacy: no home address or ID numbers on LinkedIn or in AI tools",
+      "Record and fair chance rules differ by place; learners check their own local rules"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given a real job posting", action: "lay out a one-page resume with contact details, a summary, matching skills and dated experience", standard: "on one page, matched to the posting" },
+    { id: "O2", condition: "Given plain job duties", action: "write accomplishment bullets using an action verb, what you did and a result or number", standard: "with at least four bullets that are all true" },
+    { id: "O3", condition: "Using your resume", action: "set up a LinkedIn profile with a photo, headline, About section and experience", standard: "with no home address or ID numbers and three connection requests sent" },
+    { id: "O4", condition: "Given a behavior interview question", action: "answer with a STAR story: Situation, Task, Action and Result", standard: "in one to two minutes with most of the time on Action" },
+    { id: "O5", condition: "When asked a hard question about a gap or a record", action: "give a short, honest answer out loud that says what you have done since", standard: "recorded, listened to and improved at least once" },
+    { id: "O6", condition: "At the end of an interview", action: "ask good questions and write a thank-you note", standard: "with the note sent within 24 hours" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Your resume and LinkedIn",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Building a one-page resume",
           minutes: 5,
           goal: "Lay out a clean, one-page resume with the right sections in the right order.",
@@ -39,9 +63,14 @@ module.exports = {
             { title: "Match each posting", bullets: ["Find the skills the posting asks for", "Use the same words for skills you really have"] }
           ],
           tryIt: "Find one real job posting you would apply for. Start a new document and build the resume outline for it: your contact details, a two-line summary, six skills that match the posting, and your experience with dates. Leave the bullets for the next lesson.",
-          youCanNow: "lay out a one-page resume with the right sections and match it to a job posting."
+          youCanNow: "lay out a one-page resume with the right sections and match it to a job posting.",
+          quickCheck: [
+            { objective: "O1", q: "What is a resume summary?", options: ["Two lines at the top saying who you are and what you offer", "A list of every job you ever had", "Your references' phone numbers", "Your salary history"], answer: 0, why: "A short summary tells the employer quickly what you bring." },
+            { objective: "O1", q: "A job posting asks for forklift and inventory skills, which you have. What would you do with your resume?", options: ["Leave it the same for every job", "Add your full life story", "Add those skills to your skills section and experience", "Make it three pages long"], answer: 2, why: "Matching your resume to the posting shows you fit the job." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Writing accomplishment bullets",
           minutes: 5,
           goal: "Turn plain duties into bullets that show what you achieved.",
@@ -60,9 +89,14 @@ module.exports = {
             { title: "Stay truthful", bullets: ["Never invent numbers or titles", "Use \"about\" for a fair estimate", "Describe the result in words if you have no number"] }
           ],
           tryIt: "Write four accomplishment bullets for your resume using the formula. You can ask an AI assistant: \"Make this resume bullet stronger without adding anything that is not true: [your bullet].\" Check every word it gives you is true before you keep it.",
-          youCanNow: "write accomplishment bullets that start with an action verb and show a result."
+          youCanNow: "write accomplishment bullets that start with an action verb and show a result.",
+          quickCheck: [
+            { objective: "O2", q: "Which is an action verb that starts a strong bullet?", options: ["Responsible for", "Trained", "Duties included", "Was in charge"], answer: 1, why: "Bullets start with an action verb that shows what you did." },
+            { objective: "O2", q: "Your bullet says \"Did customer service.\" What would you write instead?", options: ["\"Did a lot of customer service\"", "\"Customer service, cash, phones\"", "\"Was the best at customer service\"", "\"Helped about 50 customers a day and handled returns calmly\""], answer: 3, why: "Strong bullets show what you did with a result or number." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Building a LinkedIn profile",
           minutes: 5,
           goal: "Set up a LinkedIn profile with a photo, headline, About section and experience.",
@@ -81,17 +115,21 @@ module.exports = {
             { title: "Stay safe", bullets: ["No home address, birth date or ID numbers", "Show your skills; you choose what to share"] }
           ],
           tryIt: "Create or update your LinkedIn profile. Write your headline and About section, add one job with your new bullets, and send connection requests with a short note to three people you know.",
-          youCanNow: "set up a LinkedIn profile with a photo, headline, About section and experience, and start building your network."
+          youCanNow: "set up a LinkedIn profile with a photo, headline, About section and experience, and start building your network.",
+          quickCheck: [
+            { objective: "O3", q: "What does the About section on LinkedIn do?", options: ["Lists your home address", "Tells your work story and what you are looking for in a few short lines", "Shows your passwords", "Lists your social media friends"], answer: 1, why: "The About section is a short story of your skills and goals." },
+            { objective: "O3", q: "You want to connect with a former supervisor on LinkedIn. What would you do?", options: ["Send a request with a short, friendly note", "Send a request with no note and your phone number", "Message them asking for a job right away", "Wait for them to find you"], answer: 0, why: "A short note reminds them who you are and starts a good connection." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Your resume and LinkedIn",
         questions: [
-          { q: "How long should a resume for most entry-level and mid-level jobs be?", options: ["Three pages", "One page", "Half a page", "As long as possible"], answer: 1, why: "One page is easy to scan and is the standard for most jobs." },
-          { q: "Which bullet is the strongest?", options: ["\"Responsible for the stockroom\"", "\"Did various tasks\"", "\"Hard worker\"", "\"Organized the stockroom and cut search time for parts by about half\""], answer: 3, why: "It starts with an action verb and shows a result." },
-          { q: "You ran the kitchen line in a facility program while incarcerated. Should it go on your resume?", options: ["Yes, as experience, describing the skills you used", "No, it never counts", "Only if you were paid a lot", "Only on LinkedIn"], answer: 0, why: "Work and training programs are real experience; describe what you did." },
-          { q: "What is a good LinkedIn headline?", options: ["\"Looking\"", "Your home address", "\"Certified welder | Safety-first | Open to apprenticeships\"", "Your date of birth"], answer: 2, why: "A headline says what you do or want to do and shows your strengths." },
-          { q: "An AI tool rewrote your bullet and added a manager title you never had. What do you do?", options: ["Keep it, it sounds better", "Remove it, because everything on a resume must be true", "Add another title", "Put it only on LinkedIn"], answer: 1, why: "A resume must be truthful; you check every word an AI writes." }
+          { objective: "O1", q: "How long should a resume for most entry-level and mid-level jobs be?", options: ["Three pages", "One page", "Half a page", "As long as possible"], answer: 1, why: "One page is easy to scan and is the standard for most jobs." },
+          { objective: "O2", q: "Which bullet is the strongest?", options: ["\"Responsible for the stockroom\"", "\"Did various tasks\"", "\"Hard worker\"", "\"Organized the stockroom and cut search time for parts by about half\""], answer: 3, why: "It starts with an action verb and shows a result." },
+          { objective: "O1", q: "You ran the kitchen line in a facility program while incarcerated. Should it go on your resume?", options: ["Yes, as experience, describing the skills you used", "No, it never counts", "Only if you were paid a lot", "Only on LinkedIn"], answer: 0, why: "Work and training programs are real experience; describe what you did." },
+          { objective: "O3", q: "What is a good LinkedIn headline?", options: ["\"Looking\"", "Your home address", "\"Certified welder | Safety-first | Open to apprenticeships\"", "Your date of birth"], answer: 2, why: "A headline says what you do or want to do and shows your strengths." },
+          { objective: "O2", q: "An AI tool rewrote your bullet and added a manager title you never had. What do you do?", options: ["Keep it, it sounds better", "Remove it, because everything on a resume must be true", "Add another title", "Put it only on LinkedIn"], answer: 1, why: "A resume must be truthful; you check every word an AI writes." }
         ]
       }
     },
@@ -99,6 +137,7 @@ module.exports = {
       name: "Chapter 2: Interviews and follow-up",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Answering with the STAR method",
           minutes: 5,
           goal: "Answer a behavior interview question with a short STAR story.",
@@ -117,9 +156,14 @@ module.exports = {
             { title: "Keep it tight", bullets: ["About one to two minutes", "Use \"I\" for your actions", "End with a result"] }
           ],
           tryIt: "Write one STAR story for \"Tell me about a time you worked on a team.\" Use one sentence each for Situation and Task, two or three for Action, and one for Result.",
-          youCanNow: "answer a \"tell me about a time\" question with a clear STAR story."
+          youCanNow: "answer a \"tell me about a time\" question with a clear STAR story.",
+          quickCheck: [
+            { objective: "O4", q: "What does the S in STAR stand for?", options: ["Skill", "Strength", "Situation", "Summary"], answer: 2, why: "STAR is Situation, Task, Action and Result." },
+            { objective: "O4", q: "You are asked, \"Tell me about a time you solved a problem.\" What would you do?", options: ["Say \"I'm good at solving problems\" and stop", "Talk for ten minutes about many problems", "Say you have never had a problem", "Tell one short story: situation, task, what you did and the result"], answer: 3, why: "One short STAR story proves your skill with a real example." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Practicing out loud and answering honestly about a gap or a record",
           minutes: 6,
           goal: "Practice answers out loud, including a short, honest answer about a gap or a conviction record.",
@@ -141,9 +185,14 @@ module.exports = {
             { name: "EEOC: Arrest and conviction records, what job seekers and workers should know", url: "https://www.eeoc.gov/arrestandconviction" }
           ],
           tryIt: "Record yourself answering \"Tell me about yourself\" and one hard question (a gap, a record, or \"Why did you leave your last job?\"). Listen back. Cut anything that is not needed, then record it again.",
-          youCanNow: "practice answers out loud and give a short, honest, forward-looking answer about a gap or a record."
+          youCanNow: "practice answers out loud and give a short, honest, forward-looking answer about a gap or a record.",
+          quickCheck: [
+            { objective: "O5", q: "Why record yourself answering interview questions?", options: ["So you can hear what to cut and improve", "To post it online", "To send it to the employer", "Because interviews are always recorded"], answer: 0, why: "Listening back shows you what to shorten and fix." },
+            { objective: "O5", q: "An interviewer asks about a two-year gap when you were incarcerated. What would you say?", options: ["Make up a different job", "Refuse to answer and leave", "Give a long story about the case", "Give a short, honest answer and say what you have done since"], answer: 3, why: "Short and honest, then focus on what you have done since." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Asking questions and following up",
           minutes: 4,
           goal: "Ask good questions at the end of an interview and send a thank-you note.",
@@ -162,17 +211,21 @@ module.exports = {
             { title: "No answer yet?", bullets: ["Follow up once after their date passes", "Keep applying elsewhere"] }
           ],
           tryIt: "Final task: write a short thank-you note for the interview you practiced for. Then put it all together: your one-page resume, your updated LinkedIn headline and About section, and three recorded STAR answers.",
-          youCanNow: "ask good questions at the end of an interview and follow up with a short thank-you note."
+          youCanNow: "ask good questions at the end of an interview and follow up with a short thank-you note.",
+          quickCheck: [
+            { objective: "O6", q: "What does a good thank-you note include?", options: ["Thanks, one thing you discussed and why you want the job", "Only the word thanks", "A request for higher pay", "Your full resume again"], answer: 0, why: "Mentioning something you discussed shows real interest." },
+            { objective: "O6", q: "At the end of the interview they ask if you have questions. What would you ask?", options: ["\"How soon can I take vacation?\"", "\"No, I'm good.\"", "\"What are the next steps, and when should I expect to hear back?\"", "\"Did I get the job?\""], answer: 2, why: "Asking about next steps shows interest and tells you when to follow up." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Interviews and follow-up",
         questions: [
-          { q: "What does the A in STAR stand for?", options: ["Answer", "Attitude", "Action", "Award"], answer: 2, why: "STAR is Situation, Task, Action, Result." },
-          { q: "What is the best way to practice interview answers?", options: ["Read them silently once", "Memorise a script word for word and never say it aloud", "Skip practice so you sound natural", "Say them out loud and record yourself"], answer: 3, why: "Speaking and listening back shows you what to fix." },
-          { q: "You were out of work for a year caring for a parent. Which answer is best?", options: ["\"I cared for my mother for a year, kept my skills up with a course, and I'm ready to work full time.\"", "\"I'd rather not say.\"", "Make up a job to fill the gap", "A ten-minute story about family problems"], answer: 0, why: "It is short, honest and moves forward to why you are ready." },
-          { q: "An interviewer asks about your conviction record. What should you do?", options: ["Deny it", "Give a short, honest answer and say what you have done since", "Walk out", "Tell every detail for ten minutes"], answer: 1, why: "Honesty plus what you have done since builds trust; lying can cost you the job later." },
-          { q: "When should you send a thank-you note?", options: ["Within 24 hours", "After a month", "Only if you get the job", "Never"], answer: 0, why: "A quick note shows interest while you are still fresh in their mind." }
+          { objective: "O4", q: "What does the A in STAR stand for?", options: ["Answer", "Attitude", "Action", "Award"], answer: 2, why: "STAR is Situation, Task, Action, Result." },
+          { objective: "O5", q: "What is the best way to practice interview answers?", options: ["Read them silently once", "Memorise a script word for word and never say it aloud", "Skip practice so you sound natural", "Say them out loud and record yourself"], answer: 3, why: "Speaking and listening back shows you what to fix." },
+          { objective: "O5", q: "You were out of work for a year caring for a parent. Which answer is best?", options: ["\"I cared for my mother for a year, kept my skills up with a course, and I'm ready to work full time.\"", "\"I'd rather not say.\"", "Make up a job to fill the gap", "A ten-minute story about family problems"], answer: 0, why: "It is short, honest and moves forward to why you are ready." },
+          { objective: "O5", q: "An interviewer asks about your conviction record. What should you do?", options: ["Deny it", "Give a short, honest answer and say what you have done since", "Walk out", "Tell every detail for ten minutes"], answer: 1, why: "Honesty plus what you have done since builds trust; lying can cost you the job later." },
+          { objective: "O6", q: "When should you send a thank-you note?", options: ["Within 24 hours", "After a month", "Only if you get the job", "Never"], answer: 0, why: "A quick note shows interest while you are still fresh in their mind." }
         ]
       }
     }
@@ -180,26 +233,112 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Resumes, LinkedIn and Job Interviews",
     questions: [
-      { q: "Which belongs at the very top of a resume?", options: ["Your hobbies", "Your references", "Your name and contact details", "Your date of birth"], answer: 2, why: "Name and contact details come first so the employer can reach you." },
-      { q: "Why change your resume a little for each job?", options: ["To match the skills the posting asks for", "Because the law requires it", "To make it longer", "To add jobs you did not have"], answer: 0, why: "Matching real skills to the posting helps people and software find you." },
-      { q: "Which email address is best on a resume?", options: ["partyking99@example.com", "jordan.smith@example.com", "No email at all", "Your old school email you cannot open"], answer: 1, why: "A simple, professional address you check often is best." },
-      { q: "A veteran led a team of 9 on daily equipment checks. Which bullet is strongest?", options: ["\"Was in the army\"", "\"Did checks\"", "\"Various duties\"", "\"Led 9 soldiers through daily equipment checks with zero losses\""], answer: 3, why: "Action verb, what was done, and a result." },
-      { q: "What is the bullet formula?", options: ["Job title + salary", "Action verb + what you did + a result or number", "Adjective + adjective + adjective", "Date + place"], answer: 1, why: "That formula turns duties into accomplishments." },
-      { q: "You are not sure of an exact number for a bullet. What do you do?", options: ["Use a fair estimate with \"about\" or describe the result in words", "Make up a big number", "Leave the whole job off", "Copy a number from a friend's resume"], answer: 0, why: "Stay truthful; estimates must be fair and labeled." },
-      { q: "What is a LinkedIn headline?", options: ["Your home address", "A news story", "The short line under your name saying what you do", "Your password"], answer: 2, why: "The headline tells recruiters what you do or want to do." },
-      { q: "Which photo is best for LinkedIn?", options: ["A group photo from a party", "A photo of your car", "No face, just a logo", "A clear photo of your face with a plain background"], answer: 3, why: "A clear, friendly face photo looks professional." },
-      { q: "Which should you NOT put on your LinkedIn profile?", options: ["Your skills", "Your home address and ID numbers", "Your work experience", "Your certificates"], answer: 1, why: "Private details can be misused; keep them off." },
-      { q: "Who is a good person to connect with on LinkedIn first?", options: ["A former coach or supervisor who knows your work", "A random celebrity", "Nobody", "Only people you have never met"], answer: 0, why: "People who know your work can share leads and speak for you." },
-      { q: "\"Tell me about a time you made a mistake.\" What kind of question is this?", options: ["A trick question to skip", "A pay question", "A behavior question, good for a STAR answer", "A yes or no question"], answer: 2, why: "It asks for a real example, which STAR answers well." },
-      { q: "In a STAR answer, which part should take the most time?", options: ["Situation", "Task", "Result", "Action: what you did"], answer: 3, why: "The employer most wants to hear what you did." },
-      { q: "About how long should a STAR answer be?", options: ["One to two minutes", "Ten seconds", "Ten minutes", "Half an hour"], answer: 0, why: "Short and clear keeps the interviewer with you." },
-      { q: "How can an AI assistant help you practice?", options: ["By going to the interview for you", "By playing the interviewer and asking one question at a time", "By inventing your work history", "By storing your ID number"], answer: 1, why: "AI can run practice questions; the answers must still be yours." },
-      { q: "Which is a strong, honest answer about a record?", options: ["\"I don't have one\" when you do", "\"That's none of your business\"", "\"I made a mistake in 2019 and served my time. Since then I earned a certificate and kept a perfect attendance record.\"", "A long story blaming others"], answer: 2, why: "Own it, show what you have done since, and turn to the job." },
-      { q: "According to EEOC guidance, an arrest by itself:", options: ["Is proof of a crime", "Is not proof of a crime", "Must be listed on every resume", "Can never be asked about"], answer: 1, why: "An arrest alone does not prove someone committed a crime." },
-      { q: "What are \"ban the box\" or fair chance laws?", options: ["Rules about shipping boxes", "Laws that stop all background checks forever", "Laws that ban resumes", "Laws in many places that delay questions about records on the first application"], answer: 3, why: "They give applicants a chance to be judged on skills first; rules differ by place." },
-      { q: "At the end of the interview they ask, \"Any questions for us?\" You say:", options: ["\"What are the next steps, and when should I expect to hear back?\"", "\"No.\"", "\"How soon can I take a vacation?\"", "\"What does this company do?\""], answer: 0, why: "A prepared, useful question shows interest." },
-      { q: "A good thank-you note:", options: ["Is three pages long", "Asks again for a higher wage", "Thanks them, mentions one thing you discussed, and says why you want the job", "Is sent a month later"], answer: 2, why: "Short, specific and quick works best." },
-      { q: "The employer said they would call by Friday. It is now Wednesday of the next week. You:", options: ["Call ten times a day", "Send one polite follow-up and keep applying elsewhere", "Give up on all job searching", "Show up at their office uninvited every day"], answer: 1, why: "One polite follow-up is professional; keep your search going." }
+      { objective: "O1", q: "Which belongs at the very top of a resume?", options: ["Your hobbies", "Your references", "Your name and contact details", "Your date of birth"], answer: 2, why: "Name and contact details come first so the employer can reach you." },
+      { objective: "O1", q: "Why change your resume a little for each job?", options: ["To match the skills the posting asks for", "Because the law requires it", "To make it longer", "To add jobs you did not have"], answer: 0, why: "Matching real skills to the posting helps people and software find you." },
+      { objective: "O1", q: "Which email address is best on a resume?", options: ["partyking99@example.com", "jordan.smith@example.com", "No email at all", "Your old school email you cannot open"], answer: 1, why: "A simple, professional address you check often is best." },
+      { objective: "O2", q: "A veteran led a team of 9 on daily equipment checks. Which bullet is strongest?", options: ["\"Was in the army\"", "\"Did checks\"", "\"Various duties\"", "\"Led 9 soldiers through daily equipment checks with zero losses\""], answer: 3, why: "Action verb, what was done, and a result." },
+      { objective: "O2", q: "What is the bullet formula?", options: ["Job title + salary", "Action verb + what you did + a result or number", "Adjective + adjective + adjective", "Date + place"], answer: 1, why: "That formula turns duties into accomplishments." },
+      { objective: "O2", q: "You are not sure of an exact number for a bullet. What do you do?", options: ["Use a fair estimate with \"about\" or describe the result in words", "Make up a big number", "Leave the whole job off", "Copy a number from a friend's resume"], answer: 0, why: "Stay truthful; estimates must be fair and labeled." },
+      { objective: "O3", q: "What is a LinkedIn headline?", options: ["Your home address", "A news story", "The short line under your name saying what you do", "Your password"], answer: 2, why: "The headline tells recruiters what you do or want to do." },
+      { objective: "O3", q: "Which photo is best for LinkedIn?", options: ["A group photo from a party", "A photo of your car", "No face, just a logo", "A clear photo of your face with a plain background"], answer: 3, why: "A clear, friendly face photo looks professional." },
+      { objective: "O3", q: "Which should you NOT put on your LinkedIn profile?", options: ["Your skills", "Your home address and ID numbers", "Your work experience", "Your certificates"], answer: 1, why: "Private details can be misused; keep them off." },
+      { objective: "O3", q: "Who is a good person to connect with on LinkedIn first?", options: ["A former coach or supervisor who knows your work", "A random celebrity", "Nobody", "Only people you have never met"], answer: 0, why: "People who know your work can share leads and speak for you." },
+      { objective: "O4", q: "\"Tell me about a time you made a mistake.\" What kind of question is this?", options: ["A trick question to skip", "A pay question", "A behavior question, good for a STAR answer", "A yes or no question"], answer: 2, why: "It asks for a real example, which STAR answers well." },
+      { objective: "O4", q: "In a STAR answer, which part should take the most time?", options: ["Situation", "Task", "Result", "Action: what you did"], answer: 3, why: "The employer most wants to hear what you did." },
+      { objective: "O4", q: "About how long should a STAR answer be?", options: ["One to two minutes", "Ten seconds", "Ten minutes", "Half an hour"], answer: 0, why: "Short and clear keeps the interviewer with you." },
+      { objective: "O5", q: "How can an AI assistant help you practice?", options: ["By going to the interview for you", "By playing the interviewer and asking one question at a time", "By inventing your work history", "By storing your ID number"], answer: 1, why: "AI can run practice questions; the answers must still be yours." },
+      { objective: "O5", q: "Which is a strong, honest answer about a record?", options: ["\"I don't have one\" when you do", "\"That's none of your business\"", "\"I made a mistake in 2019 and served my time. Since then I earned a certificate and kept a perfect attendance record.\"", "A long story blaming others"], answer: 2, why: "Own it, show what you have done since, and turn to the job." },
+      { objective: "O5", q: "According to EEOC guidance, an arrest by itself:", options: ["Is proof of a crime", "Is not proof of a crime", "Must be listed on every resume", "Can never be asked about"], answer: 1, why: "An arrest alone does not prove someone committed a crime." },
+      { objective: "O5", q: "What are \"ban the box\" or fair chance laws?", options: ["Rules about shipping boxes", "Laws that stop all background checks forever", "Laws that ban resumes", "Laws in many places that delay questions about records on the first application"], answer: 3, why: "They give applicants a chance to be judged on skills first; rules differ by place." },
+      { objective: "O6", q: "At the end of the interview they ask, \"Any questions for us?\" You say:", options: ["\"What are the next steps, and when should I expect to hear back?\"", "\"No.\"", "\"How soon can I take a vacation?\"", "\"What does this company do?\""], answer: 0, why: "A prepared, useful question shows interest." },
+      { objective: "O6", q: "A good thank-you note:", options: ["Is three pages long", "Asks again for a higher wage", "Thanks them, mentions one thing you discussed, and says why you want the job", "Is sent a month later"], answer: 2, why: "Short, specific and quick works best." },
+      { objective: "O6", q: "The employer said they would call by Friday. It is now Wednesday of the next week. You:", options: ["Call ten times a day", "Send one polite follow-up and keep applying elsewhere", "Give up on all job searching", "Show up at their office uninvited every day"], answer: 1, why: "One polite follow-up is professional; keep your search going." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      1,
+      4,
+      6,
+      8,
+      11,
+      14,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "One-page resume",
+        objective: "O1",
+        notYet: "Over one page, missing sections, or not matched to the posting.",
+        meets: "One page with contact details, summary, matching skills and dated experience.",
+        exceeds: "Skills and summary use words from the job posting."
+      },
+      {
+        name: "Accomplishment bullets",
+        objective: "O2",
+        notYet: "Bullets list duties only, or anything is not true.",
+        meets: "At least four true bullets with an action verb and a result or number.",
+        exceeds: "Every bullet shows a clear result."
+      },
+      {
+        name: "LinkedIn profile",
+        objective: "O3",
+        notYet: "No headline or About section, or private details shown.",
+        meets: "Headline and About section match the resume, with no private details.",
+        exceeds: "Photo added and three connection requests sent with notes."
+      },
+      {
+        name: "STAR answers",
+        objective: "O4",
+        notYet: "Answers are vague or missing a STAR part.",
+        meets: "Three recorded STAR answers with all four parts, each one to two minutes.",
+        exceeds: "Answers end with a clear result, and most time is on Action."
+      },
+      {
+        name: "Honest hard answer",
+        objective: "O5",
+        notYet: "No answer prepared, or it is long, defensive or untrue.",
+        meets: "A short, honest answer about a gap or record that turns to what they have done since.",
+        exceeds: "Recorded, improved and delivered calmly."
+      },
+      {
+        name: "Thank-you note",
+        objective: "O6",
+        notYet: "No note, or a generic one-word note.",
+        meets: "A short note with thanks, one thing discussed and why they want the job.",
+        exceeds: "Ready to send within 24 hours and has a polite follow-up plan."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who apply for at least one job with the new resume within 30 days (follow-up survey)",
+      "Learners who get an interview within 60 days",
+      "Learners who get a job offer within 90 days",
+      "Learners who start another Koach Learn career course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or computer with a free document tool such as Google Docs or Microsoft Word",
+      "A free LinkedIn account",
+      "A voice or video recorder on a phone",
+      "One real job posting",
+      "About 60 minutes for lessons and checks, plus time to finish the resume and recordings"
+    ],
+    facilitatorNotes: [
+      "Run mock interviews in pairs so every learner answers out loud at least three times.",
+      "Help learners turn sport, military, caregiving and work done while incarcerated into honest resume experience.",
+      "Check that any AI rewrites stay true; remove anything the learner did not do.",
+      "Remind learners not to put home addresses or ID numbers on LinkedIn or into AI tools.",
+      "Score the final package with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

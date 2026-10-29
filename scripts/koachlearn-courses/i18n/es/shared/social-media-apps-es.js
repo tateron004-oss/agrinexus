@@ -16,11 +16,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos. Lee la lección, mira las diapositivas y luego haz la tarea \"Pruébalo ahora\". Hay una breve comprobación de conocimientos después de cada capítulo y un examen de 20 preguntas al final."
   ],
   finalTask: "En una red social: configura tu perfil para que solo los amigos o seguidores que apruebes puedan ver tus publicaciones, sigue a un familiar o amigo y a un grupo o página local, escribe un comentario amable en una publicación y encuentra el botón Denunciar (o Reportar) en una publicación o cuenta para saber dónde está.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Adultos que quieren usar las redes sociales para estar al día con su familia, sus amigos, su iglesia y los grupos del barrio, o para buscar trabajo: personas mayores, abuelos, personas que regresan a la comunidad, recién llegados y padres de adolescentes.",
+    startingPoint: "Pueden usar un teléfono inteligente o una computadora para abrir aplicaciones y escribir. Algunos tienen una cuenta que les creó un pariente; pocos han revisado su configuración de privacidad, activado la verificación en dos pasos o saben cómo detectar una cuenta falsa, denunciar una publicación o bloquear a alguien.",
+    gap: "Las redes sociales son donde muchas familias comparten noticias y donde se publican grupos, eventos y empleos, pero también donde los estafadores encuentran a las personas. Sin una configuración y unos hábitos seguros, las personas comparten de más, aceptan solicitudes de amistad falsas, caen en estafas románticas o de premios, o se sienten peor por pasar el dedo sin parar.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y oraciones cortas; se explican palabras como inicio (feed), perfil y configuración de privacidad",
+      "Dispositivos: un teléfono inteligente, una tableta o una computadora con internet",
+      "Tiempo: unos 5 minutos por lección, unos 60 minutos en total",
+      "Costo: solo aplicaciones gratuitas, de la tienda oficial de aplicaciones",
+      "Privacidad y edad: no se ponen la dirección, el año de nacimiento ni los planes de viaje, y se revisa la edad mínima de cada aplicación antes de que un niño o adolescente se registre"
+    ],
+    prerequisites: "Ninguno. Usar un teléfono inteligente y una tableta ayuda a quienes son nuevos con las aplicaciones."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Ante algo que quieres hacer, como ver fotos de la familia o buscar trabajo", action: "elegir la red social que se ajusta a eso", standard: "acertando con la aplicación correcta cada vez" },
+    { id: "O2", condition: "Con una red social de la tienda oficial", action: "crear una cuenta con un perfil seguro y activar la verificación en dos pasos", standard: "sin dirección de casa, año de nacimiento ni número de teléfono en el perfil y con la verificación en dos pasos activada" },
+    { id: "O3", condition: "En tu cuenta de una red social", action: "seguir a personas y grupos que revisaste, escribir una publicación y dejar un comentario amable", standard: "revisando quién puede ver cada publicación antes de compartirla" },
+    { id: "O4", condition: "En la configuración de privacidad de la aplicación", action: "elegir quién puede ver tus publicaciones, encontrarte y enviarte mensajes", standard: "con las publicaciones solo para amigos o seguidores aprobados y la ubicación en las publicaciones desactivada" },
+    { id: "O5", condition: "Ante una solicitud de amistad o un mensaje", action: "identificar las señales de una cuenta falsa o una estafa y rechazarla", standard: "nombrando al menos dos señales de alerta y sin enviar nunca dinero, tarjetas de regalo ni códigos" },
+    { id: "O6", condition: "Ante una publicación, una cuenta o un hábito que no quieres", action: "bloquear, denunciar o silenciar y poner un límite de tiempo a la aplicación", standard: "eligiendo la herramienta correcta para cada caso" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Empezar en las redes sociales",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Qué son las redes sociales y para qué sirve cada una",
           minutes: 4,
           goal: "Elegir la red social que se ajusta a lo que quieres hacer.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Empieza con una", bullets: ["Elige la aplicación que va con tu meta", "Revisa las reglas de edad de cada aplicación para los niños"] }
           ],
           tryIt: "Anota una cosa que quieres de las redes sociales (por ejemplo: ver las fotos de los nietos, unirte a un grupo de tu iglesia o comunidad, o encontrar trabajo). Al lado, escribe la aplicación de esta lección que mejor va con eso.",
-          youCanNow: "decir para qué sirven las principales redes sociales y elegir una que vaya con tu meta."
+          youCanNow: "decir para qué sirven las principales redes sociales y elegir una que vaya con tu meta.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué aplicación es sobre todo para noticias de tu barrio?", options: ["LinkedIn", "TikTok", "Nextdoor", "Instagram"], answer: 2, why: "Nextdoor es para noticias de tu barrio." },
+            { objective: "O1", q: "Quieres ver las fotos de tus nietos y unirte a un grupo de una iglesia local. ¿Con qué aplicación empezarías?", options: ["LinkedIn", "Facebook", "Un sitio web de empleos", "Con todas a la vez"], answer: 1, why: "Facebook es para la familia, los amigos, los grupos locales y los eventos; empieza con una aplicación que se ajuste." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Crear un perfil seguro",
           minutes: 5,
           goal: "Crear una cuenta y llenar un perfil sin compartir de más.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Activa la verificación en dos pasos", bullets: ["Búscala en la configuración de seguridad", "Un ladrón también necesitaría el código de tu teléfono"] }
           ],
           tryIt: "Crea una cuenta en la aplicación que elegiste (o abre la que tienes). Revisa tu perfil: quita todo lo de la lista \"qué no poner\" y activa la verificación en dos pasos.",
-          youCanNow: "crear un perfil en una red social que muestre quién eres sin regalar datos privados."
+          youCanNow: "crear un perfil en una red social que muestre quién eres sin regalar datos privados.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué es tu perfil?", options: ["La página que le dice a la gente quién eres", "Una lista de publicaciones de otras personas", "Tu contraseña", "Una opción que te esconde"], answer: 0, why: "Tu perfil es tu página, con tu nombre y tu foto." },
+            { objective: "O2", q: "Al registrarte, te piden mostrar en tu perfil tu fecha de nacimiento completa, tu dirección y tu teléfono. ¿Qué harías?", options: ["Mostrarlos todos para que la gente te encuentre", "Mostrar solo tu dirección", "Publicar también las fechas de tu viaje", "Dejarlos fuera de tu perfil, porque los estafadores juntan estos datos"], answer: 3, why: "No poner tu año de nacimiento, tu dirección ni tu teléfono te protege de los estafadores." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Seguir, publicar y comentar",
           minutes: 5,
           goal: "Seguir a personas y grupos, escribir una publicación y dejar un comentario amable.",
@@ -75,17 +109,21 @@ module.exports = {
             { title: "Reaccionar y comentar", bullets: ["Reaccionar: me gusta o corazón", "Comentar: tus palabras debajo de una publicación", "Sé amable; las publicaciones pueden durar mucho tiempo"] }
           ],
           tryIt: "Sigue a un familiar o amigo y únete a un grupo o página local, o síguelo. Luego deja un comentario amable en una de sus publicaciones.",
-          youCanNow: "seguir a personas y grupos, hacer una publicación y reaccionar y comentar con amabilidad."
+          youCanNow: "seguir a personas y grupos, hacer una publicación y reaccionar y comentar con amabilidad.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué muestra una reacción, como un pulgar arriba o un corazón?", options: ["Que quieres bloquear a la persona", "Que denunciaste la publicación", "Que compartiste la publicación con todos", "Que viste la publicación"], answer: 3, why: "Una reacción muestra que viste una publicación; un comentario agrega tus palabras." },
+            { objective: "O3", q: "No estás de acuerdo con una publicación de un primo. ¿Qué harías?", options: ["Escribir con amabilidad, como si la persona estuviera en la sala, o no decir nada", "Escribir un comentario enojado en mayúsculas", "Publicar su número de teléfono", "Compartir la publicación con un insulto"], answer: 0, why: "Sé amable; lo que publicas se puede copiar y se puede ver por mucho tiempo." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Empezar en las redes sociales",
         questions: [
-          { q: "Quieres llamadas y mensajes gratis con tu familia en otro país. ¿Qué aplicación va mejor?", options: ["LinkedIn", "WhatsApp", "Nextdoor", "TikTok"], answer: 1, why: "WhatsApp sirve para mensajes y llamadas, también entre países." },
-          { q: "¿Qué dato NO debes poner en tu perfil?", options: ["Tu nombre", "Una foto agradable", "La dirección de tu casa", "Un pasatiempo favorito"], answer: 2, why: "La dirección de tu casa permite que los desconocidos te encuentren." },
-          { q: "¿Qué hace la verificación en dos pasos?", options: ["Pide un código de tu teléfono además de tu contraseña", "Agranda las publicaciones", "Agrega amigos por ti", "Borra tu cuenta"], answer: 0, why: "Un ladrón también necesitaría el código de tu teléfono." },
-          { q: "Buscas a tu sobrina y encuentras dos cuentas con su nombre. ¿Qué haces?", options: ["Agregas las dos", "Envías dinero a las dos", "Les das tu contraseña a las dos", "Revisas primero la foto, los amigos en común y las publicaciones"], answer: 3, why: "Revisar te ayuda a evitar cuentas falsas que copian a otras." },
-          { q: "¿Qué es un comentario?", options: ["Tu contraseña", "Un mensaje privado del banco", "Palabras que escribes debajo de la publicación de alguien", "Una actualización de la aplicación"], answer: 2, why: "Un comentario es tu respuesta escrita debajo de una publicación." }
+          { objective: "O1", q: "Quieres llamadas y mensajes gratis con tu familia en otro país. ¿Qué aplicación va mejor?", options: ["LinkedIn", "WhatsApp", "Nextdoor", "TikTok"], answer: 1, why: "WhatsApp sirve para mensajes y llamadas, también entre países." },
+          { objective: "O2", q: "¿Qué dato NO debes poner en tu perfil?", options: ["Tu nombre", "Una foto agradable", "La dirección de tu casa", "Un pasatiempo favorito"], answer: 2, why: "La dirección de tu casa permite que los desconocidos te encuentren." },
+          { objective: "O2", q: "¿Qué hace la verificación en dos pasos?", options: ["Pide un código de tu teléfono además de tu contraseña", "Agranda las publicaciones", "Agrega amigos por ti", "Borra tu cuenta"], answer: 0, why: "Un ladrón también necesitaría el código de tu teléfono." },
+          { objective: "O3", q: "Buscas a tu sobrina y encuentras dos cuentas con su nombre. ¿Qué haces?", options: ["Agregas las dos", "Envías dinero a las dos", "Les das tu contraseña a las dos", "Revisas primero la foto, los amigos en común y las publicaciones"], answer: 3, why: "Revisar te ayuda a evitar cuentas falsas que copian a otras." },
+          { objective: "O3", q: "¿Qué es un comentario?", options: ["Tu contraseña", "Un mensaje privado del banco", "Palabras que escribes debajo de la publicación de alguien", "Una actualización de la aplicación"], answer: 2, why: "Un comentario es tu respuesta escrita debajo de una publicación." }
         ]
       }
     },
@@ -93,6 +131,7 @@ module.exports = {
       name: "Capítulo 2: Mantener tu privacidad y tu seguridad",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Configuración de privacidad: elegir quién ve qué",
           minutes: 5,
           goal: "Configurar tus publicaciones y tu perfil para que solo las personas que elijas puedan verlos.",
@@ -109,9 +148,14 @@ module.exports = {
             { title: "Un buen comienzo", bullets: ["Publicaciones: solo amigos", "Aprueba tú a los seguidores", "Limita quién puede enviarte mensajes", "Ubicación desactivada en las publicaciones"] }
           ],
           tryIt: "Abre la configuración de privacidad de tu aplicación. Pon tus publicaciones solo para amigos o seguidores aprobados y desactiva la ubicación en las publicaciones. Luego mira tu propio perfil como lo vería un desconocido, si la aplicación te lo permite.",
-          youCanNow: "configurar tu privacidad para que solo las personas que elijas vean tus publicaciones y tus datos."
+          youCanNow: "configurar tu privacidad para que solo las personas que elijas vean tus publicaciones y tus datos.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué es una revisión de privacidad?", options: ["Una visita al médico", "Una herramienta de muchas aplicaciones que te guía por cada opción de privacidad", "Una forma de publicar para todos", "Un mensaje de estafa"], answer: 1, why: "Muchas aplicaciones ofrecen una revisión de privacidad que te guía por cada opción." },
+            { objective: "O4", q: "No quieres que los desconocidos vean dónde estás cuando publicas. ¿Qué harías?", options: ["Hacer públicas todas tus publicaciones", "Publicar tu dirección en su lugar", "Desactivar la ubicación en las publicaciones", "Aceptar todas las solicitudes de amistad"], answer: 2, why: "Desactivar la ubicación en las publicaciones impide que la gente sepa dónde estás." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Detectar cuentas falsas y estafas",
           minutes: 5,
           goal: "Reconocer una cuenta falsa o un mensaje de estafa y rechazarlo.",
@@ -130,9 +174,14 @@ module.exports = {
           ],
           sources: [{ name: "FTC: Cómo evitar una estafa", url: "https://consumer.ftc.gov/articles/how-avoid-scam" }, { name: "FTC: Denunciar un fraude", url: "https://reportfraud.ftc.gov/" }],
           tryIt: "Mira tus solicitudes de amistad o tus seguidores. Para cualquiera del que no estés seguro, revisa el perfil buscando señales de alerta. Rechaza a quien no puedas confirmar que es real.",
-          youCanNow: "detectar una cuenta falsa o una estafa en las redes sociales y rechazarla."
+          youCanNow: "detectar una cuenta falsa o una estafa en las redes sociales y rechazarla.",
+          quickCheck: [
+            { objective: "O5", q: "¿Cuál de estas es una señal de alerta de una estafa en las redes sociales?", options: ["La presión para actuar ya mismo y pagar con una tarjeta de regalo", "Un amigo que conoces que comparte una foto de cumpleaños", "Un grupo local que publica la hora de una reunión", "Un video de cocina"], answer: 0, why: "La presión para actuar ya y el pago con tarjeta de regalo son señales que menciona la FTC." },
+            { objective: "O5", q: "Alguien que conociste en línea te ofrece un trabajo si primero le envías un código de tu teléfono. ¿Qué harías?", options: ["Enviar el código rápido", "Enviar dinero en lugar del código", "Darle tu contraseña", "Negarte y no enviar nunca códigos a alguien que solo conoces en línea"], answer: 3, why: "Nunca envíes dinero, tarjetas de regalo ni códigos a alguien que solo conoces en línea." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Denunciar, bloquear y tomar un descanso",
           minutes: 4,
           goal: "Bloquear o denunciar una cuenta y controlar cuánto tiempo pasas en las redes.",
@@ -149,17 +198,21 @@ module.exports = {
             { title: "Toma un descanso", bullets: ["Usa las opciones de tiempo en pantalla o de límite de tiempo", "Aléjate si las publicaciones te molestan"] }
           ],
           tryIt: "Práctica de la tarea final: en cualquier publicación, toca los tres puntos y encuentra Denunciar, Bloquear y Silenciar (no los presiones a menos que lo necesites). Luego comprueba que tu privacidad siga en solo amigos.",
-          youCanNow: "bloquear, denunciar o silenciar una cuenta y poner límites a tu tiempo."
+          youCanNow: "bloquear, denunciar o silenciar una cuenta y poner límites a tu tiempo.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué hace Denunciar?", options: ["Le envía tu dirección a la persona", "Borra tu cuenta", "Le avisa a la aplicación que una publicación o una cuenta rompe sus reglas", "Hace públicas tus publicaciones"], answer: 2, why: "Denunciar le avisa a la aplicación de una estafa, una cuenta falsa o un acoso." },
+            { objective: "O6", q: "Un pariente publica tanto que quieres ver menos, sin molestarlo. ¿Qué harías?", options: ["Denunciarlo como estafa", "Silenciarlo o dejar de seguirlo", "Bloquearlo y contárselo a todos", "Borrar tu propia cuenta"], answer: 1, why: "Silenciar o dejar de seguir esconde sus publicaciones sin avisarle." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Mantener tu privacidad y tu seguridad",
         questions: [
-          { q: "¿Qué significa \"público\" para una publicación?", options: ["Solo tú puedes verla", "Cualquiera, incluso desconocidos, puede verla", "Solo tu familia puede verla", "Está borrada"], answer: 1, why: "Las publicaciones públicas las puede ver cualquiera." },
-          { q: "Un amigo con el que ya estás conectado te envía una nueva solicitud de amistad. ¿Cuál es el paso más seguro?", options: ["Aceptarla enseguida", "Enviarle dinero", "Llamar al amigo real para comprobarlo antes de aceptar", "Darle el código de tu teléfono"], answer: 2, why: "Los estafadores copian las cuentas de amigos reales." },
-          { q: "Alguien que conociste en línea el mes pasado dice que te ama y necesita dinero para un boleto de avión. Lo más probable es que sea:", options: ["Una estafa romántica", "Un pedido normal", "Una oferta de empleo", "Una opción de privacidad"], answer: 0, why: "El amor en línea que termina en pedidos de dinero es una estafa común." },
-          { q: "¿Qué botón impide que una persona se comunique contigo?", options: ["Me gusta", "Compartir", "Comentar", "Bloquear"], answer: 3, why: "Bloquear impide que te vea o se comunique contigo." },
-          { q: "¿Dónde suelen estar Denunciar y Bloquear?", options: ["En la cámara", "En el menú de tres puntos de una publicación o perfil", "En tus contactos", "En la tienda de aplicaciones"], answer: 1, why: "El menú de tres puntos tiene estas opciones." }
+          { objective: "O4", q: "¿Qué significa \"público\" para una publicación?", options: ["Solo tú puedes verla", "Cualquiera, incluso desconocidos, puede verla", "Solo tu familia puede verla", "Está borrada"], answer: 1, why: "Las publicaciones públicas las puede ver cualquiera." },
+          { objective: "O5", q: "Un amigo con el que ya estás conectado te envía una nueva solicitud de amistad. ¿Cuál es el paso más seguro?", options: ["Aceptarla enseguida", "Enviarle dinero", "Llamar al amigo real para comprobarlo antes de aceptar", "Darle el código de tu teléfono"], answer: 2, why: "Los estafadores copian las cuentas de amigos reales." },
+          { objective: "O5", q: "Alguien que conociste en línea el mes pasado dice que te ama y necesita dinero para un boleto de avión. Lo más probable es que sea:", options: ["Una estafa romántica", "Un pedido normal", "Una oferta de empleo", "Una opción de privacidad"], answer: 0, why: "El amor en línea que termina en pedidos de dinero es una estafa común." },
+          { objective: "O6", q: "¿Qué botón impide que una persona se comunique contigo?", options: ["Me gusta", "Compartir", "Comentar", "Bloquear"], answer: 3, why: "Bloquear impide que te vea o se comunique contigo." },
+          { objective: "O6", q: "¿Dónde suelen estar Denunciar y Bloquear?", options: ["En la cámara", "En el menú de tres puntos de una publicación o perfil", "En tus contactos", "En la tienda de aplicaciones"], answer: 1, why: "El menú de tres puntos tiene estas opciones." }
         ]
       }
     }
@@ -167,26 +220,99 @@ module.exports = {
   quiz: {
     title: "Examen final: Las redes sociales y cómo usarlas",
     questions: [
-      { q: "¿Qué aplicación es sobre todo para empleos y contactos de trabajo?", options: ["TikTok", "LinkedIn", "Instagram", "YouTube"], answer: 1, why: "LinkedIn está hecha para el trabajo y los empleos." },
-      { q: "¿Qué aplicación es sobre todo para ver videos y aprender con ellos?", options: ["YouTube", "WhatsApp", "Nextdoor", "LinkedIn"], answer: 0, why: "YouTube es una aplicación de videos." },
-      { q: "El \"inicio\" (feed) es:", options: ["Tu contraseña", "Una opción de privacidad", "La lista de publicaciones que recorres", "Un tipo de comentario"], answer: 2, why: "Tu inicio muestra publicaciones de las personas y grupos que sigues." },
-      { q: "¿Desde dónde debes instalar una red social?", options: ["Desde un enlace que te envía un desconocido", "Desde una ventana emergente", "Desde cualquier sitio web", "Desde la tienda oficial de aplicaciones"], answer: 3, why: "Las tiendas oficiales tienen las aplicaciones reales." },
-      { q: "¿Qué va en un perfil seguro?", options: ["Tu nombre y una foto agradable", "Tu fecha de nacimiento completa y tu dirección", "Tus datos bancarios", "Tus fechas de viaje"], answer: 0, why: "El nombre y la foto están bien; los datos privados no." },
-      { q: "¿Por qué no publicar que estás de vacaciones fuera?", options: ["Hace lenta la aplicación", "Les dice a los desconocidos que tu casa puede estar vacía", "Va contra todas las leyes", "Gasta tus datos"], answer: 1, why: "Las publicaciones de viajes pueden decirles a los ladrones cuándo no hay nadie en casa." },
-      { q: "La verificación en dos pasos necesita:", options: ["Solo tu contraseña", "La contraseña de un amigo", "Tu número de banco", "Tu contraseña y un código de tu teléfono"], answer: 3, why: "Agrega una segunda comprobación desde tu teléfono." },
-      { q: "Antes de seguir a alguien, revisa:", options: ["Su foto, los amigos en común y sus publicaciones", "El saldo de su banco", "Su contraseña", "Nada"], answer: 0, why: "Esto ayuda a asegurarte de que es la persona real." },
-      { q: "Un grupo en una red social es:", options: ["Un virus", "Una contraseña", "Un espacio para personas con el mismo interés", "Un tipo de anuncio"], answer: 2, why: "Los grupos reúnen a personas alrededor de un interés." },
-      { q: "Antes de tocar Publicar, debes revisar:", options: ["Tu batería", "El clima", "Tu cuenta bancaria", "Quién puede verla"], answer: 3, why: "Revisar el público protege tu privacidad." },
-      { q: "¿Qué comentario es amable y adecuado?", options: ["Un enlace de un desconocido", "Un insulto", "Tu número de teléfono", "\"¡Qué linda foto, los niños se ven muy felices!\""], answer: 3, why: "Escribe como si la persona estuviera en la misma habitación." },
-      { q: "La configuración de privacidad controla:", options: ["La batería de tu teléfono", "Los colores de la aplicación", "Quién puede ver tus publicaciones y comunicarse contigo", "La velocidad de tu internet"], answer: 2, why: "Decide quién te ve y quién te puede contactar." },
-      { q: "Una buena primera opción de privacidad es:", options: ["Publicaciones en público", "Dejar que cualquiera te envíe mensajes", "Compartir tu ubicación en cada publicación", "Publicaciones para amigos o seguidores aprobados"], answer: 3, why: "Solo amigos deja fuera a los desconocidos." },
-      { q: "Desactivar la ubicación en las publicaciones:", options: ["Bloquea a tus amigos", "Borra tu cuenta", "Evita que la gente sepa dónde estás", "Hace borrosas las fotos"], answer: 2, why: "Tu ubicación ya no se muestra en las publicaciones." },
-      { q: "Un mensaje dice que ganaste un premio pero que primero debes pagar una pequeña cuota. Esto es:", options: ["Un premio normal", "Una opción de privacidad", "Una solicitud de amistad", "Una señal de estafa"], answer: 3, why: "La FTC menciona un premio con cuota como señal de estafa." },
-      { q: "¿Qué pedido de pago es una señal de alerta?", options: ["Tarjetas de regalo", "Pagar en el mostrador de una tienda", "Pagar tu cuenta del teléfono en el sitio de la compañía", "Pagar al médico en la recepción"], answer: 0, why: "Los estafadores piden tarjetas de regalo porque son difíciles de rastrear." },
-      { q: "En EE. UU., puedes denunciar una estafa en redes sociales en:", options: ["Una sección de comentarios", "El estafador", "reportfraud.ftc.gov", "Tu inicio"], answer: 2, why: "La FTC recibe allí las denuncias de fraude." },
-      { q: "¿Qué hace Silenciar?", options: ["Denuncia un delito", "Borra su cuenta", "Llama a la policía", "Esconde las publicaciones de alguien sin avisarle"], answer: 3, why: "Silenciar esconde publicaciones sin hacer ruido." },
-      { q: "Cuando denuncias una cuenta, la aplicación:", options: ["Le dice tu nombre", "Borra tu perfil", "No le dice que la denunciaste", "Te cobra una cuota"], answer: 2, why: "Las denuncias se mantienen en privado frente a la persona." },
-      { q: "Las publicaciones te siguen haciendo enojar. Un paso saludable es:", options: ["Desplazarte más", "Usar un límite de tiempo y alejarte", "Publicar tu dirección", "Aceptar todas las solicitudes"], answer: 1, why: "Los límites de tiempo y los descansos protegen tu bienestar." }
+      { objective: "O1", q: "¿Qué aplicación es sobre todo para empleos y contactos de trabajo?", options: ["TikTok", "LinkedIn", "Instagram", "YouTube"], answer: 1, why: "LinkedIn está hecha para el trabajo y los empleos." },
+      { objective: "O1", q: "¿Qué aplicación es sobre todo para ver videos y aprender con ellos?", options: ["YouTube", "WhatsApp", "Nextdoor", "LinkedIn"], answer: 0, why: "YouTube es una aplicación de videos." },
+      { objective: "O3", q: "El \"inicio\" (feed) es:", options: ["Tu contraseña", "Una opción de privacidad", "La lista de publicaciones que recorres", "Un tipo de comentario"], answer: 2, why: "Tu inicio muestra publicaciones de las personas y grupos que sigues." },
+      { objective: "O2", q: "¿Desde dónde debes instalar una red social?", options: ["Desde un enlace que te envía un desconocido", "Desde una ventana emergente", "Desde cualquier sitio web", "Desde la tienda oficial de aplicaciones"], answer: 3, why: "Las tiendas oficiales tienen las aplicaciones reales." },
+      { objective: "O2", q: "¿Qué va en un perfil seguro?", options: ["Tu nombre y una foto agradable", "Tu fecha de nacimiento completa y tu dirección", "Tus datos bancarios", "Tus fechas de viaje"], answer: 0, why: "El nombre y la foto están bien; los datos privados no." },
+      { objective: "O2", q: "¿Por qué no publicar que estás de vacaciones fuera?", options: ["Hace lenta la aplicación", "Les dice a los desconocidos que tu casa puede estar vacía", "Va contra todas las leyes", "Gasta tus datos"], answer: 1, why: "Las publicaciones de viajes pueden decirles a los ladrones cuándo no hay nadie en casa." },
+      { objective: "O2", q: "La verificación en dos pasos necesita:", options: ["Solo tu contraseña", "La contraseña de un amigo", "Tu número de banco", "Tu contraseña y un código de tu teléfono"], answer: 3, why: "Agrega una segunda comprobación desde tu teléfono." },
+      { objective: "O3", q: "Antes de seguir a alguien, revisa:", options: ["Su foto, los amigos en común y sus publicaciones", "El saldo de su banco", "Su contraseña", "Nada"], answer: 0, why: "Esto ayuda a asegurarte de que es la persona real." },
+      { objective: "O3", q: "Un grupo en una red social es:", options: ["Un virus", "Una contraseña", "Un espacio para personas con el mismo interés", "Un tipo de anuncio"], answer: 2, why: "Los grupos reúnen a personas alrededor de un interés." },
+      { objective: "O3", q: "Antes de tocar Publicar, debes revisar:", options: ["Tu batería", "El clima", "Tu cuenta bancaria", "Quién puede verla"], answer: 3, why: "Revisar el público protege tu privacidad." },
+      { objective: "O3", q: "¿Qué comentario es amable y adecuado?", options: ["Un enlace de un desconocido", "Un insulto", "Tu número de teléfono", "\"¡Qué linda foto, los niños se ven muy felices!\""], answer: 3, why: "Escribe como si la persona estuviera en la misma habitación." },
+      { objective: "O4", q: "La configuración de privacidad controla:", options: ["La batería de tu teléfono", "Los colores de la aplicación", "Quién puede ver tus publicaciones y comunicarse contigo", "La velocidad de tu internet"], answer: 2, why: "Decide quién te ve y quién te puede contactar." },
+      { objective: "O4", q: "Una buena primera opción de privacidad es:", options: ["Publicaciones en público", "Dejar que cualquiera te envíe mensajes", "Compartir tu ubicación en cada publicación", "Publicaciones para amigos o seguidores aprobados"], answer: 3, why: "Solo amigos deja fuera a los desconocidos." },
+      { objective: "O4", q: "Desactivar la ubicación en las publicaciones:", options: ["Bloquea a tus amigos", "Borra tu cuenta", "Evita que la gente sepa dónde estás", "Hace borrosas las fotos"], answer: 2, why: "Tu ubicación ya no se muestra en las publicaciones." },
+      { objective: "O5", q: "Un mensaje dice que ganaste un premio pero que primero debes pagar una pequeña cuota. Esto es:", options: ["Un premio normal", "Una opción de privacidad", "Una solicitud de amistad", "Una señal de estafa"], answer: 3, why: "La FTC menciona un premio con cuota como señal de estafa." },
+      { objective: "O5", q: "¿Qué pedido de pago es una señal de alerta?", options: ["Tarjetas de regalo", "Pagar en el mostrador de una tienda", "Pagar tu cuenta del teléfono en el sitio de la compañía", "Pagar al médico en la recepción"], answer: 0, why: "Los estafadores piden tarjetas de regalo porque son difíciles de rastrear." },
+      { objective: "O5", q: "En EE. UU., puedes denunciar una estafa en redes sociales en:", options: ["Una sección de comentarios", "El estafador", "reportfraud.ftc.gov", "Tu inicio"], answer: 2, why: "La FTC recibe allí las denuncias de fraude." },
+      { objective: "O6", q: "¿Qué hace Silenciar?", options: ["Denuncia un delito", "Borra su cuenta", "Llama a la policía", "Esconde las publicaciones de alguien sin avisarle"], answer: 3, why: "Silenciar esconde publicaciones sin hacer ruido." },
+      { objective: "O6", q: "Cuando denuncias una cuenta, la aplicación:", options: ["Le dice tu nombre", "Borra tu perfil", "No le dice que la denunciaste", "Te cobra una cuota"], answer: 2, why: "Las denuncias se mantienen en privado frente a la persona." },
+      { objective: "O6", q: "Las publicaciones te siguen haciendo enojar. Un paso saludable es:", options: ["Desplazarte más", "Usar un límite de tiempo y alejarte", "Publicar tu dirección", "Aceptar todas las solicitudes"], answer: 1, why: "Los límites de tiempo y los descansos protegen tu bienestar." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      4,
+      5,
+      7,
+      9,
+      11,
+      12,
+      14,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Configuración de privacidad",
+        objective: "O4",
+        notYet: "Las publicaciones siguen siendo públicas, o cualquiera puede seguir sin aprobación.",
+        meets: "Las publicaciones solo las ven amigos o seguidores aprobados.",
+        exceeds: "Además, limita quién puede enviarle mensajes y desactiva la ubicación en las publicaciones."
+      },
+      {
+        name: "Seguir con seguridad",
+        objective: "O3",
+        notYet: "No siguió a nadie, o siguió una cuenta sin revisar que fuera real.",
+        meets: "Sigue a un familiar o amigo revisado y a un grupo o página local.",
+        exceeds: "Explica cómo revisó la foto, los amigos en común y las publicaciones."
+      },
+      {
+        name: "Comentario amable",
+        objective: "O3",
+        notYet: "No hay comentario, o el comentario no es amable o comparte datos privados.",
+        meets: "Un comentario amable y adecuado en una publicación.",
+        exceeds: "El comentario es cálido y habla de esa publicación en particular."
+      },
+      {
+        name: "Botón Denunciar",
+        objective: "O6",
+        notYet: "No encuentra Denunciar en una publicación o una cuenta.",
+        meets: "Encuentra Denunciar en el menú de tres puntos de una publicación o una cuenta.",
+        exceeds: "Además, encuentra Bloquear y Silenciar y dice cuándo usar cada uno."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que terminan el curso y obtienen Cumple o Supera en cada fila de la rúbrica de la tarea final",
+      "Participantes que dicen mantener privadas sus publicaciones y activada la verificación en dos pasos 30 días después (encuesta de seguimiento)",
+      "Participantes que dicen haber rechazado o denunciado una solicitud de amistad falsa o un mensaje de estafa",
+      "Participantes que dicen haberse unido a un grupo local, de la iglesia, de empleo o de la familia que usan"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono inteligente, una tableta o una computadora con internet",
+      "Una red social de la tienda oficial, y un correo o un número de teléfono para registrarse",
+      "Capturas de pantalla de mensajes de estafa y solicitudes de amistad falsas de ejemplo para practicar",
+      "Unos 60 minutos en total, en sesiones cortas"
+    ],
+    facilitatorNotes: [
+      "Deje que cada persona elija una aplicación que se ajuste a su objetivo; no exija que todos se unan a la misma aplicación.",
+      "Hagan juntos la configuración de privacidad, paso a paso, en la pantalla de cada persona; nunca inicie sesión usted en la cuenta de alguien.",
+      "Use capturas de pantalla para practicar con estafas, así nadie tiene que comunicarse con un estafador real.",
+      "Hable de las edades mínimas si hay personas que crean cuentas para sus nietos o sus hijos.",
+      "Algunas personas pueden haber sufrido una estafa en línea antes; mantenga un tono sin culpas y muestre dónde denunciar."
     ]
   }
 };

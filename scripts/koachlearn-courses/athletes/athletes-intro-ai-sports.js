@@ -15,11 +15,35 @@ module.exports = {
     "Each lesson takes about five minutes. Read the lesson, watch the slides, then do the \"Try it now\" task. A knowledge check closes each chapter, and a 20-question quiz closes the course."
   ],
   finalTask: "Use a free AI assistant to build a one-week plan that fits your real practice, game and class schedule. Write a clear prompt, ask for at least two improvements, remove any private or health details, and show the plan to your coach or athletic trainer before you follow it.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "High school and college athletes, and some young adult athletes in club or amateur sport, who juggle practice, games, classes and sometimes work, recruiting or NIL.",
+    startingPoint: "Use smartphones, social media and sports apps every day. Many have tried an AI assistant casually but do not write clear prompts, check answers or think about what private and health details they share.",
+    gap: "AI can help athletes plan their week, study and stay organized, but wrong answers about training, injuries, nutrition or eligibility can hurt their health or their eligibility, and fake recruiters and brand deals target them. They need to use AI well and check it with their coach, athletic trainer or compliance office.",
+    constraints: [
+      "Reading level: plain words and short sentences",
+      "Devices: a phone or a school or library computer",
+      "Time: about 5 minutes per lesson, fitted around practice and classes",
+      "Age rules: learners under 18 check the app's age rules and ask a parent or guardian",
+      "Health and privacy: no injury reports, medications, passwords or ID numbers in prompts; training, health and eligibility advice is checked with the right professional"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given examples of technology in sports", action: "identify where AI is used in sports and what it cannot do for you", standard: "naming at least three uses and one limit" },
+    { id: "O2", condition: "Using your phone or a computer", action: "open a free AI assistant from its official app or website, send a first message and sign out on a shared computer", standard: "after checking the app's age rules" },
+    { id: "O3", condition: "Given your real practice, game and class schedule", action: "write a prompt with your need, your situation and the format you want", standard: "so the first answer is useful" },
+    { id: "O4", condition: "Given an AI answer that does not fit your week", action: "ask follow-up prompts, one change at a time, to fix it", standard: "making at least two improvements" },
+    { id: "O5", condition: "Given an AI answer with training, health, nutrition or eligibility advice", action: "check it with your coach, athletic trainer, dietitian, doctor, compliance office or an official page", standard: "before you follow it" },
+    { id: "O6", condition: "When you write a prompt or get an offer online", action: "keep private and health details out and spot scams aimed at athletes", standard: "sharing no passwords, codes, ID numbers or health records" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Where AI shows up in sports",
       lessons: [
         {
+          objectives: ["O1"],
           title: "What AI is, and where you already see it in sports",
           minutes: 4,
           goal: "Name three ways AI is used in sports today and say what AI cannot do.",
@@ -35,9 +59,14 @@ module.exports = {
             { title: "What AI is not", bullets: ["Not your coach, doctor or referee", "Can be wrong, even when it sounds sure", "You and your coach make the calls"] }
           ],
           tryIt: "Write down three places you have seen AI or smart stats in your sport this season, for example a broadcast graphic, a fitness app or a video tool your team uses.",
-          youCanNow: "explain what AI is, name three ways it shows up in sports, and say why people still make the decisions."
+          youCanNow: "explain what AI is, name three ways it shows up in sports, and say why people still make the decisions.",
+          quickCheck: [
+            { objective: "O1", q: "What does AI mean?", options: ["A kind of sports drink", "Computer programs that do tasks that usually need a person", "A training machine", "A referee's signal"], answer: 1, why: "AI means computer programs that spot patterns, write text or recognize what is in a video." },
+            { objective: "O1", q: "An AI app says you should change your position on the team. What do you do?", options: ["Talk with your coach; AI is a helper, not your coach", "Change position right away", "Quit the team", "Ignore your coach from now on"], answer: 0, why: "AI does not know your team or goals; coaches and athletes still make the calls." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Opening a free AI assistant",
           minutes: 5,
           goal: "Open a free AI assistant on your phone or a computer and send your first message.",
@@ -54,9 +83,14 @@ module.exports = {
             { title: "Before you start", bullets: ["Under 18? Check age rules and ask a parent", "Shared computer: sign out when done"] }
           ],
           tryIt: "Open one free AI assistant and type: \"I play [your sport]. Explain in three short sentences how AI is used in my sport.\" Read the answer.",
-          youCanNow: "open a free AI assistant, send a message and leave a shared computer safely."
+          youCanNow: "open a free AI assistant, send a message and leave a shared computer safely.",
+          quickCheck: [
+            { objective: "O2", q: "Which web address opens Google Gemini on a computer?", options: ["gemini-free-app.net", "freeai.win", "gemini.google.com", "googleai.gift"], answer: 2, why: "gemini.google.com is the official address; use the real company's site or app." },
+            { objective: "O2", q: "You used ChatGPT on a library computer to plan your week. What do you do when you finish?", options: ["Leave it open for a teammate", "Save your password", "Turn off the screen only", "Sign out and close the browser"], answer: 3, why: "Signing out on shared computers keeps others out of your chats and accounts." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Writing a clear sports prompt",
           minutes: 5,
           goal: "Write a prompt with your need, your situation and the format you want.",
@@ -73,17 +107,21 @@ module.exports = {
             { title: "Add details, not secrets", bullets: ["Yes: sport, position, practice times", "No: full name, school ID, health records"] }
           ],
           tryIt: "Write a three-part prompt asking for a study or recovery-day schedule around your real practice week. Send it and read the answer.",
-          youCanNow: "write a clear sports prompt that includes your need, your situation and the format."
+          youCanNow: "write a clear sports prompt that includes your need, your situation and the format.",
+          quickCheck: [
+            { objective: "O3", q: "What is the format part of a prompt?", options: ["How you want the answer, like a table or a short list", "Your sport", "Your coach's name", "Your password"], answer: 0, why: "The format tells the assistant how to shape the answer." },
+            { objective: "O3", q: "You want help planning homework around basketball. Which prompt is best?", options: ["\"homework\"", "\"help me get better\"", "\"basketball\"", "\"I'm a high school guard with practice 3 to 5 pm Monday to Thursday and a game Friday. Make a homework schedule for the week in a table.\""], answer: 3, why: "It gives the need, the situation and the format." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Where AI shows up in sports",
         questions: [
-          { q: "Which is an example of AI in sports?", options: ["A whistle", "A paper scorebook", "A broadcast graphic showing a shot's chance of going in", "A team bus"], answer: 2, why: "That graphic comes from a program that learned patterns from lots of past shots." },
-          { q: "An AI app suggests you play through sharp knee pain. What should you do?", options: ["Stop and talk to your athletic trainer or doctor", "Follow it, because AI knows best", "Ignore your coach", "Ask a teammate to decide"], answer: 0, why: "AI is not a doctor. Pain and injury questions go to a qualified person." },
-          { q: "Where should you get an AI app for your phone?", options: ["A link from a stranger in your DMs", "A pop-up ad", "Any website", "The official app store, from the real company"], answer: 3, why: "Official app stores and the real company's app are the safe choice." },
-          { q: "What are the three parts of a clear prompt?", options: ["Name, school, ID number", "Need, situation, format", "Sport, team color, mascot", "Hello, please, thanks"], answer: 1, why: "Need, situation and format give the assistant what it needs to help." },
-          { q: "Which prompt will likely get the most useful answer?", options: ["\"help me get better\"", "\"I'm a college point guard with practice 6-8 am. Make a class-and-recovery schedule for the week in a table.\"", "\"basketball\"", "\"tell me everything\""], answer: 1, why: "It includes the need, the situation and the format." }
+          { objective: "O1", q: "Which is an example of AI in sports?", options: ["A whistle", "A paper scorebook", "A broadcast graphic showing a shot's chance of going in", "A team bus"], answer: 2, why: "That graphic comes from a program that learned patterns from lots of past shots." },
+          { objective: "O1", q: "An AI app suggests you play through sharp knee pain. What should you do?", options: ["Stop and talk to your athletic trainer or doctor", "Follow it, because AI knows best", "Ignore your coach", "Ask a teammate to decide"], answer: 0, why: "AI is not a doctor. Pain and injury questions go to a qualified person." },
+          { objective: "O2", q: "Where should you get an AI app for your phone?", options: ["A link from a stranger in your DMs", "A pop-up ad", "Any website", "The official app store, from the real company"], answer: 3, why: "Official app stores and the real company's app are the safe choice." },
+          { objective: "O3", q: "What are the three parts of a clear prompt?", options: ["Name, school, ID number", "Need, situation, format", "Sport, team color, mascot", "Hello, please, thanks"], answer: 1, why: "Need, situation and format give the assistant what it needs to help." },
+          { objective: "O3", q: "Which prompt will likely get the most useful answer?", options: ["\"help me get better\"", "\"I'm a college point guard with practice 6-8 am. Make a class-and-recovery schedule for the week in a table.\"", "\"basketball\"", "\"tell me everything\""], answer: 1, why: "It includes the need, the situation and the format." }
         ]
       }
     },
@@ -91,6 +129,7 @@ module.exports = {
       name: "Chapter 2: Using AI with confidence",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Making the answer better",
           minutes: 4,
           goal: "Use follow-up prompts to fix an answer until it fits your week.",
@@ -107,9 +146,14 @@ module.exports = {
             { title: "Off track?", bullets: ["One change at a time", "Or start a new chat with a clearer prompt"] }
           ],
           tryIt: "Take your schedule from Lesson 3. Ask for two changes, one at a time, so it matches your real week. Compare the first and last versions.",
-          youCanNow: "improve an AI answer with clear follow-up prompts."
+          youCanNow: "improve an AI answer with clear follow-up prompts.",
+          quickCheck: [
+            { objective: "O4", q: "Why can you ask the assistant to change its answer?", options: ["It forgets each message", "It remembers what you said earlier in the same chat", "It is your coach", "It must agree with you"], answer: 1, why: "In the same chat the assistant remembers earlier messages, so you can ask for changes." },
+            { objective: "O4", q: "The plan puts heavy study time right before your Friday game. What do you send?", options: ["\"Wrong.\"", "\"Start over and add more.\"", "\"Move study time on game day to after dinner.\"", "Nothing; follow it anyway"], answer: 2, why: "A clear follow-up that names one change fixes the plan." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Checking AI answers with your coach",
           minutes: 5,
           goal: "Spot the parts of an AI answer that need checking and check them with the right person or source.",
@@ -127,9 +171,14 @@ module.exports = {
           ],
           sources: [{ name: "NCAA: Name, Image and Likeness (rules for college athletes)", url: "https://www.ncaa.org/student-athletes/name-image-likeness/" }],
           tryIt: "Ask an AI assistant one rule question about your sport, for example how many timeouts each team gets. Then find the answer in your league's official rulebook or ask your coach, and see if it matches.",
-          youCanNow: "spot what needs checking in an AI answer and take it to the right person or official source."
+          youCanNow: "spot what needs checking in an AI answer and take it to the right person or official source.",
+          quickCheck: [
+            { objective: "O5", q: "What is an AI hallucination?", options: ["A dream during a nap", "A video replay", "A fast answer", "Something the AI makes up that sounds true"], answer: 3, why: "AI can make up rules, stats or dates that sound real." },
+            { objective: "O5", q: "The AI suggests a supplement to recover faster. Who checks it?", options: ["A teammate", "A registered dietitian, your doctor or your athletic trainer", "The supplement's website", "Nobody; AI is always right"], answer: 1, why: "Supplements and nutrition advice must be checked with the right professional, and with compliance for eligibility." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Keeping your private and health information safe",
           minutes: 5,
           goal: "Use AI for a real task without sharing private, health or account information.",
@@ -146,17 +195,21 @@ module.exports = {
             { title: "Scams that target athletes", bullets: ["Fake recruiters and fake agents", "Fake brand deals asking for money up front", "Anyone asking for a login code"] }
           ],
           tryIt: "Final task: build your one-week practice-and-study plan with an AI assistant. Use a three-part prompt, ask for two improvements, remove private and health details, and show the plan to your coach or athletic trainer.",
-          youCanNow: "use AI to plan your week while keeping private and health information safe, and spot scams aimed at athletes."
+          youCanNow: "use AI to plan your week while keeping private and health information safe, and spot scams aimed at athletes.",
+          quickCheck: [
+            { objective: "O6", q: "Which detail should you keep out of a prompt?", options: ["Your practice times", "Your sport", "Your injury report and medication list", "That you want a table"], answer: 2, why: "Health records like injury reports and medications stay out of AI tools." },
+            { objective: "O6", q: "An \"agent\" messages you with a brand deal and asks for a login code to finish today. What do you do?", options: ["Never share the code, and check with your coach or compliance office", "Send the code quickly", "Pay the fee to hold the deal", "Give them your password instead"], answer: 0, why: "Rushing you and asking for a code are warning signs of a scam." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Using AI with confidence",
         questions: [
-          { q: "The AI plan has no rest day. What is the best next step?", options: ["Accept it anyway", "Delete the app", "Train every day forever", "Ask: \"Add a rest day.\""], answer: 3, why: "A follow-up asks the assistant to change its answer." },
-          { q: "Who should check AI advice about an injury?", options: ["Your athletic trainer or doctor", "A teammate", "The AI itself", "A social media comment"], answer: 0, why: "Health and injury questions go to a qualified professional." },
-          { q: "What is a hallucination in AI?", options: ["A dream before a game", "A slow internet connection", "Something the AI made up that sounds true", "A type of drill"], answer: 2, why: "AI can invent facts, rules or stats that sound real." },
-          { q: "Which detail is fine to put in a prompt?", options: ["Your password", "Your medication list", "Your home address", "Your practice times"], answer: 3, why: "Practice times help the answer and are not private." },
-          { q: "A \"recruiter\" DMs you asking for a fee to send your highlights to coaches today. What do you do?", options: ["Pay fast before the spot is gone", "Check with your coach or compliance office first", "Send your login code", "Send your ID number"], answer: 1, why: "Rushing and upfront fees are warning signs. Check before you act." }
+          { objective: "O4", q: "The AI plan has no rest day. What is the best next step?", options: ["Accept it anyway", "Delete the app", "Train every day forever", "Ask: \"Add a rest day.\""], answer: 3, why: "A follow-up asks the assistant to change its answer." },
+          { objective: "O5", q: "Who should check AI advice about an injury?", options: ["Your athletic trainer or doctor", "A teammate", "The AI itself", "A social media comment"], answer: 0, why: "Health and injury questions go to a qualified professional." },
+          { objective: "O5", q: "What is a hallucination in AI?", options: ["A dream before a game", "A slow internet connection", "Something the AI made up that sounds true", "A type of drill"], answer: 2, why: "AI can invent facts, rules or stats that sound real." },
+          { objective: "O6", q: "Which detail is fine to put in a prompt?", options: ["Your password", "Your medication list", "Your home address", "Your practice times"], answer: 3, why: "Practice times help the answer and are not private." },
+          { objective: "O6", q: "A \"recruiter\" DMs you asking for a fee to send your highlights to coaches today. What do you do?", options: ["Pay fast before the spot is gone", "Check with your coach or compliance office first", "Send your login code", "Send your ID number"], answer: 1, why: "Rushing and upfront fees are warning signs. Check before you act." }
         ]
       }
     }
@@ -164,26 +217,97 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Introduction to AI in Sports",
     questions: [
-      { q: "AI is best described as:", options: ["A new type of ball", "A referee", "Programs that learn patterns from data", "A sports league"], answer: 2, why: "AI learns patterns from data and uses them to answer or predict." },
-      { q: "Which is NOT an AI use in sports?", options: ["Lacing your shoes", "Tagging plays in game video", "Tracking runs with an app", "Predicting a shot's chance of going in"], answer: 0, why: "Lacing shoes is a person's job; the others use AI." },
-      { q: "Who makes the final call on your training?", options: ["You and your coach", "The AI", "A random app", "Nobody"], answer: 0, why: "AI helps; people decide." },
-      { q: "Which is a well-known free AI assistant?", options: ["A stopwatch", "A scoreboard", "Google Gemini", "A jersey"], answer: 2, why: "Gemini, ChatGPT and Copilot are free AI assistants." },
-      { q: "You are 15 and want to use an AI assistant. What should you do first?", options: ["Lie about your age", "Check the app's age rules and ask a parent or guardian", "Use a friend's account", "Share your password"], answer: 1, why: "Many assistants have age rules; a parent should know." },
-      { q: "Where do you usually type to an AI assistant?", options: ["The battery icon", "The camera", "The address of your school", "The message box near the bottom"], answer: 3, why: "The message box is where you type your prompt." },
-      { q: "After using a shared school computer you should:", options: ["Stay signed in", "Save your password", "Sign out and close the browser", "Leave a note with your password"], answer: 2, why: "Signing out keeps your account safe." },
-      { q: "What is a prompt?", options: ["A warm-up drill", "A team cheer", "A timeout", "What you type or say to an AI assistant"], answer: 3, why: "A prompt is your request to the AI." },
-      { q: "Which part tells the AI how to shape the answer?", options: ["The format, like a table or list", "Your jersey number", "Your password", "Your coach's phone number"], answer: 0, why: "Saying the format gets the answer in the shape you need." },
-      { q: "Which prompt is clearest?", options: ["\"workout\"", "\"I'm a college sprinter with practice 3-5 pm. Make a study plan for the week in a table.\"", "\"help\"", "\"sports\""], answer: 1, why: "It has the need, the situation and the format." },
-      { q: "The first answer does not fit your game day. You should:", options: ["Give up", "Accept it", "Ask a follow-up to change game day", "Pay for a new app"], answer: 2, why: "Follow-ups fix the parts that do not fit." },
-      { q: "How many changes should you ask for at once to keep it clear?", options: ["One at a time", "Ten", "None", "As many as you can type"], answer: 0, why: "One change at a time keeps the answer on track." },
-      { q: "A chat keeps going off track. A good move is:", options: ["Type your password", "Repeat the same words", "Stop training", "Start a new chat with a clearer prompt"], answer: 3, why: "A fresh chat with a clearer prompt usually works better." },
-      { q: "AI gives you a recruiting rule. You should:", options: ["Post it as fact", "Check it on ncaa.org or with your compliance office", "Ignore all rules", "Ask the AI again and trust it"], answer: 1, why: "Rules change; check the official source." },
-      { q: "Who is the right person to check a nutrition plan?", options: ["A random influencer", "A registered dietitian", "The AI", "A video game"], answer: 1, why: "Registered dietitians are trained to give nutrition advice." },
-      { q: "Who knows your school's NIL and recruiting rules?", options: ["The cafeteria", "The bus driver", "A rival team", "The compliance office"], answer: 3, why: "The compliance office handles athletic rules." },
-      { q: "Which should you NEVER type into an AI assistant?", options: ["Your medication list", "Your practice schedule", "Your sport", "Your position"], answer: 0, why: "Medication and health records are private." },
-      { q: "How can you ask about an injury without sharing records?", options: ["Paste your MRI report", "Type your doctor's notes", "Ask a general question and bring the specific one to your athletic trainer", "Share your insurance number"], answer: 2, why: "General questions are fine; specific care belongs with a professional." },
-      { q: "A brand deal asks you to pay a fee up front to join. This is:", options: ["Normal for all deals", "Required by the NCAA", "A good sign", "A warning sign of a scam"], answer: 3, why: "Real brands pay you; upfront fees are a common scam sign." },
-      { q: "Someone asks for the code just texted to your phone. You should:", options: ["Read it to them", "Never share it", "Post it", "Text it to your team"], answer: 1, why: "That code protects your account. Real recruiters and brands never ask for it." }
+      { objective: "O1", q: "AI is best described as:", options: ["A new type of ball", "A referee", "Programs that learn patterns from data", "A sports league"], answer: 2, why: "AI learns patterns from data and uses them to answer or predict." },
+      { objective: "O1", q: "Which is NOT an AI use in sports?", options: ["Lacing your shoes", "Tagging plays in game video", "Tracking runs with an app", "Predicting a shot's chance of going in"], answer: 0, why: "Lacing shoes is a person's job; the others use AI." },
+      { objective: "O1", q: "Who makes the final call on your training?", options: ["You and your coach", "The AI", "A random app", "Nobody"], answer: 0, why: "AI helps; people decide." },
+      { objective: "O2", q: "Which is a well-known free AI assistant?", options: ["A stopwatch", "A scoreboard", "Google Gemini", "A jersey"], answer: 2, why: "Gemini, ChatGPT and Copilot are free AI assistants." },
+      { objective: "O2", q: "You are 15 and want to use an AI assistant. What should you do first?", options: ["Lie about your age", "Check the app's age rules and ask a parent or guardian", "Use a friend's account", "Share your password"], answer: 1, why: "Many assistants have age rules; a parent should know." },
+      { objective: "O2", q: "Where do you usually type to an AI assistant?", options: ["The battery icon", "The camera", "The address of your school", "The message box near the bottom"], answer: 3, why: "The message box is where you type your prompt." },
+      { objective: "O2", q: "After using a shared school computer you should:", options: ["Stay signed in", "Save your password", "Sign out and close the browser", "Leave a note with your password"], answer: 2, why: "Signing out keeps your account safe." },
+      { objective: "O3", q: "What is a prompt?", options: ["A warm-up drill", "A team cheer", "A timeout", "What you type or say to an AI assistant"], answer: 3, why: "A prompt is your request to the AI." },
+      { objective: "O3", q: "Which part tells the AI how to shape the answer?", options: ["The format, like a table or list", "Your jersey number", "Your password", "Your coach's phone number"], answer: 0, why: "Saying the format gets the answer in the shape you need." },
+      { objective: "O3", q: "Which prompt is clearest?", options: ["\"workout\"", "\"I'm a college sprinter with practice 3-5 pm. Make a study plan for the week in a table.\"", "\"help\"", "\"sports\""], answer: 1, why: "It has the need, the situation and the format." },
+      { objective: "O4", q: "The first answer does not fit your game day. You should:", options: ["Give up", "Accept it", "Ask a follow-up to change game day", "Pay for a new app"], answer: 2, why: "Follow-ups fix the parts that do not fit." },
+      { objective: "O4", q: "How many changes should you ask for at once to keep it clear?", options: ["One at a time", "Ten", "None", "As many as you can type"], answer: 0, why: "One change at a time keeps the answer on track." },
+      { objective: "O4", q: "A chat keeps going off track. A good move is:", options: ["Type your password", "Repeat the same words", "Stop training", "Start a new chat with a clearer prompt"], answer: 3, why: "A fresh chat with a clearer prompt usually works better." },
+      { objective: "O5", q: "AI gives you a recruiting rule. You should:", options: ["Post it as fact", "Check it on ncaa.org or with your compliance office", "Ignore all rules", "Ask the AI again and trust it"], answer: 1, why: "Rules change; check the official source." },
+      { objective: "O5", q: "Who is the right person to check a nutrition plan?", options: ["A random influencer", "A registered dietitian", "The AI", "A video game"], answer: 1, why: "Registered dietitians are trained to give nutrition advice." },
+      { objective: "O5", q: "Who knows your school's NIL and recruiting rules?", options: ["The cafeteria", "The bus driver", "A rival team", "The compliance office"], answer: 3, why: "The compliance office handles athletic rules." },
+      { objective: "O6", q: "Which should you NEVER type into an AI assistant?", options: ["Your medication list", "Your practice schedule", "Your sport", "Your position"], answer: 0, why: "Medication and health records are private." },
+      { objective: "O6", q: "How can you ask about an injury without sharing records?", options: ["Paste your MRI report", "Type your doctor's notes", "Ask a general question and bring the specific one to your athletic trainer", "Share your insurance number"], answer: 2, why: "General questions are fine; specific care belongs with a professional." },
+      { objective: "O6", q: "A brand deal asks you to pay a fee up front to join. This is:", options: ["Normal for all deals", "Required by the NCAA", "A good sign", "A warning sign of a scam"], answer: 3, why: "Real brands pay you; upfront fees are a common scam sign." },
+      { objective: "O6", q: "Someone asks for the code just texted to your phone. You should:", options: ["Read it to them", "Never share it", "Post it", "Text it to your team"], answer: 1, why: "That code protects your account. Real recruiters and brands never ask for it." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      2,
+      4,
+      7,
+      10,
+      13,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Clear prompt",
+        objective: "O3",
+        notYet: "The prompt is vague, such as \"make me a plan\".",
+        meets: "The prompt gives the need, your real practice, game and class schedule, and the format.",
+        exceeds: "The first answer already fits most of your week."
+      },
+      {
+        name: "Made it better",
+        objective: "O4",
+        notYet: "Used the first answer as it was.",
+        meets: "Asked for at least two improvements, one at a time.",
+        exceeds: "Can say what each change fixed, such as a rest day or game-day timing."
+      },
+      {
+        name: "Private and health details out",
+        objective: "O6",
+        notYet: "The prompt has a name, ID number, password or health detail.",
+        meets: "No private or health details in the prompt or plan.",
+        exceeds: "Used placeholders like \"[my school]\" and kept health questions for the athletic trainer."
+      },
+      {
+        name: "Checked with coach",
+        objective: "O5",
+        notYet: "Followed the plan without showing anyone.",
+        meets: "Showed the plan to your coach or athletic trainer before following it.",
+        exceeds: "Changed the plan based on their feedback and can say what changed."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who report using an AI-made plan for practice and study within 30 days (follow-up survey)",
+      "Coaches or athletic trainers who report athletes checking AI advice with them",
+      "Learners who start another Athletes course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A smartphone or a school or library computer with internet",
+      "A free AI assistant: ChatGPT, Microsoft Copilot or Google Gemini",
+      "The learner's real practice, game and class schedule for one week",
+      "About 60 minutes in total, in short sessions: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Check each AI app's age rules for your group; learners under 18 need a parent or guardian's OK.",
+      "Ask a coach or athletic trainer to review the final plans with athletes.",
+      "Never ask athletes to type injury reports, medications or ID numbers into AI tools.",
+      "Talk through fake recruiter and brand deal scams, and point athletes to their compliance office for NIL questions.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

@@ -16,11 +16,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos y tiene una tarea “Pruébalo ahora”. Cada capítulo termina con una comprobación de conocimientos y el curso termina con un examen de 20 preguntas."
   ],
   finalTask: "Dale marca a un perfil de redes sociales: escribe tu frase de marca, actualiza tu biografía y tu foto de perfil, escribe tres temas principales con dos ideas de publicación cada uno, revisa tus últimas 30 publicaciones y arregla lo que no vaya con tu marca, y revisa tu configuración de privacidad y seguridad.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Deportistas de secundaria, universidad y clubes que saben que los entrenadores, los reclutadores, las marcas y los futuros empleadores miran sus redes sociales, y entrenadores que les enseñan sobre esto a sus equipos.",
+    startingPoint: "Tienen una o más cuentas en redes sociales y publican con regularidad. Pocos tienen una frase de marca escrita, una biografía pensada, temas principales, una revisión reciente de sus publicaciones viejas o una configuración de privacidad elegida a propósito.",
+    gap: "Las publicaciones viejas, los perfiles poco claros y las cuentas abiertas pueden costarles a los deportistas oportunidades de reclutamiento, de patrocinio y de trabajo, y exponerlos a desconocidos y estafas. Una marca clara y segura los ayuda a hacerse notar por las razones correctas y a mantenerse protegidos.",
+    constraints: [
+      "Lenguaje sencillo, a un nivel de lectura de alrededor de séptimo grado",
+      "Un teléfono con las aplicaciones de redes sociales del deportista y un asistente de IA gratuito",
+      "Unos 60 minutos en total",
+      "Las reglas de edad de las plataformas; los deportistas menores de 18 años incluyen a su madre, padre o tutor antes de mostrar su escuela o su ciudad",
+      "Las reglas del equipo, la escuela, la liga, de NIL y de aviso de la FTC; los menús de configuración cambian de una aplicación a otra"
+    ],
+    prerequisites: "Ninguno"
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Según tu deporte, tus valores y tus intereses", action: "escribir una frase de marca", standard: "nombrando tu deporte y tu posición, un valor y una cosa verdadera fuera del deporte" },
+    { id: "O2", condition: "En un perfil de redes sociales", action: "escribir una biografía corta y elegir una foto de perfil que vayan con tu marca", standard: "con deporte, posición, un valor y un enlace, una foto clara y bien iluminada, y sin datos privados" },
+    { id: "O3", condition: "Usando tu frase de marca y un asistente de IA", action: "elegir tres temas principales con dos ideas de publicación para cada uno", standard: "con cada tema y cada idea de acuerdo con tu frase de marca" },
+    { id: "O4", condition: "En tu propio perfil", action: "revisar tus últimas 30 publicaciones, comentarios, publicaciones compartidas y etiquetas con la prueba del entrenador, el patrocinador y la abuela", standard: "archivando, ocultando, borrando o quitando la etiqueta de todo lo que no pase la prueba" },
+    { id: "O5", condition: "En la configuración de cada aplicación", action: "configurar quién puede enviarte mensajes, comentar y etiquetarte, desactivar la ubicación en las publicaciones y activar la verificación en dos pasos", standard: "con cada opción revisada y un plan para guardar pruebas, bloquear, denunciar y avisar a un adulto si te amenazan" },
+    { id: "O6", condition: "Usando las reglas de tu equipo", action: "escribir tus reglas personales para publicar, incluido cómo avisas los acuerdos con marcas y cómo manejas los comentarios negativos", standard: "con tres reglas de \"siempre...\", tres reglas de \"nunca...\" y una regla para avisar y revisar las reglas de NIL" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Definir tu marca",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Qué es la marca de un deportista",
           minutes: 4,
           goal: "Escribir una frase de marca.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Frase de marca", bullets: ["“Soy [deporte/posición] que [valor]", "y [algo cierto sobre ti].”"] }
           ],
           tryIt: "Escribe tu frase de marca. Pídele a un asistente de IA otras tres formas de decirla y luego elige o mezcla la que más suene como tú.",
-          youCanNow: "describir tu marca de deportista en una frase honesta."
+          youCanNow: "describir tu marca de deportista en una frase honesta.",
+          quickCheck: [
+            { objective: "O1", q: "¿Tienes una marca aunque nunca la hayas planeado?", options: ["No, solo los profesionales tienen marca", "Solo si tienes 10,000 seguidores", "Sí, la gente la forma a partir de tus publicaciones, comentarios y acciones", "Solo si una empresa te patrocina"], answer: 2, why: "Ya tienes una marca, la hayas planeado o no." },
+            { objective: "O1", q: "La IA te sugiere una frase de marca que te llama \"el mejor tirador del estado\", y no es verdad. ¿Qué haces?", options: ["Usarla; suena fuerte", "Cambiarla por palabras honestas sobre ti", "Publicarla y ver quién se da cuenta", "Pedirle a la IA que la haga todavía más grande"], answer: 1, why: "Elige palabras que sean honestas." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Foto de perfil, nombre y biografía",
           minutes: 5,
           goal: "Escribir una biografía clara y elegir una foto de perfil que vayan con tu marca.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Fuera de tu biografía", bullets: ["Dirección o teléfono", "Horario de clases", "Menores: pregunta a tus padres por la escuela o la ciudad"] }
           ],
           tryIt: "Pídele a un asistente de IA cinco opciones de biografía usando tu frase de marca, dentro del límite de caracteres de la red. Elige una, edítala y actualiza tu perfil.",
-          youCanNow: "escribir una biografía clara y elegir una foto de perfil que vayan con tu marca."
+          youCanNow: "escribir una biografía clara y elegir una foto de perfil que vayan con tu marca.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué debe saber la gente en pocos segundos al ver tu perfil?", options: ["Quién eres, qué juegas y por qué seguirte", "Tu dirección", "Tu horario de clases", "Todos los equipos en los que has jugado"], answer: 0, why: "Tu perfil es tu puerta de entrada y debe dejar claras esas tres cosas." },
+            { objective: "O2", q: "Tienes 15 años y quieres poner tu ciudad y tu escuela en tu biografía. ¿Qué haces?", options: ["Ponerlas de inmediato", "Poner también tu dirección", "Poner tu número de teléfono en su lugar", "Preguntarle primero a tu madre, padre o tutor"], answer: 3, why: "Los menores de edad deben preguntarle a su madre, padre o tutor antes de mostrar su escuela o su ciudad." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Elegir tus temas principales",
           minutes: 5,
           goal: "Elegir tres temas principales y dos ideas de publicación para cada uno.",
@@ -75,17 +109,21 @@ module.exports = {
             { title: "Usa la IA para pensar ideas", bullets: ["Pide diez ideas por tema", "Quédate con las que de verdad publicarías"] }
           ],
           tryIt: "Escribe tus tres temas principales. Usa un asistente de IA para pensar ideas y quédate con dos ideas reales de publicación para cada tema.",
-          youCanNow: "elegir temas principales que vayan con tu marca y planear publicaciones para ellos."
+          youCanNow: "elegir temas principales que vayan con tu marca y planear publicaciones para ellos.",
+          quickCheck: [
+            { objective: "O3", q: "¿Para qué sirven los temas principales?", options: ["Para publicar lo más seguido posible", "Para mantener tu perfil enfocado y que la gente sepa qué esperar", "Para esconder tus publicaciones", "Para conseguir productos gratis"], answer: 1, why: "Los temas principales mantienen tu perfil enfocado en unos pocos temas." },
+            { objective: "O3", q: "Tu frase de marca habla de fe y de servicio a la comunidad. ¿Qué tema principal encaja mejor?", options: ["Burlas contra el rival", "Memes al azar", "Fuera de la cancha: fe y servicio a la comunidad", "Las mejores jugadas de otros equipos"], answer: 2, why: "Elige temas principales que vayan con tu frase de marca." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Definir tu marca",
         questions: [
-          { q: "¿Qué es tu marca de deportista?", options: ["Tu número de camiseta", "Tu patrocinador de zapatillas", "La imagen que la gente tiene en mente cuando oye tu nombre", "Tu cantidad de seguidores"], answer: 2, why: "Tu marca es cómo te ve la gente." },
-          { q: "¿Cuál es una frase de marca?", options: ["“Soy una base trabajadora a la que le encanta entrenar a niños y que quiere estudiar enfermería.”", "“Sígueme”", "“El mejor de la historia”", "“Sin comentarios”"], answer: 0, why: "Nombra tu deporte, tus valores y algo cierto sobre ti." },
-          { q: "¿Qué va en una buena biografía?", options: ["Tu dirección", "Tu horario de clases", "Tu número de teléfono", "Deporte, posición y un enlace a tus jugadas destacadas"], answer: 3, why: "Una biografía muestra quién eres sin datos privados." },
-          { q: "¿Qué son los temas principales?", options: ["Las columnas del estadio", "Los 3 o 4 asuntos principales sobre los que publicas", "Hashtags", "Seguidores"], answer: 1, why: "Los temas mantienen enfocado tu perfil." },
-          { q: "La IA te da diez ideas de publicación. ¿Qué haces?", options: ["Publicas las diez hoy", "Te quedas con las que de verdad publicarías", "No le haces caso a ninguna", "Copias las publicaciones de otro deportista"], answer: 1, why: "Publica solo lo que va contigo y con tu marca." }
+          { objective: "O1", q: "¿Qué es tu marca de deportista?", options: ["Tu número de camiseta", "Tu patrocinador de zapatillas", "La imagen que la gente tiene en mente cuando oye tu nombre", "Tu cantidad de seguidores"], answer: 2, why: "Tu marca es cómo te ve la gente." },
+          { objective: "O1", q: "¿Cuál es una frase de marca?", options: ["“Soy una base trabajadora a la que le encanta entrenar a niños y que quiere estudiar enfermería.”", "“Sígueme”", "“El mejor de la historia”", "“Sin comentarios”"], answer: 0, why: "Nombra tu deporte, tus valores y algo cierto sobre ti." },
+          { objective: "O2", q: "¿Qué va en una buena biografía?", options: ["Tu dirección", "Tu horario de clases", "Tu número de teléfono", "Deporte, posición y un enlace a tus jugadas destacadas"], answer: 3, why: "Una biografía muestra quién eres sin datos privados." },
+          { objective: "O3", q: "¿Qué son los temas principales?", options: ["Las columnas del estadio", "Los 3 o 4 asuntos principales sobre los que publicas", "Hashtags", "Seguidores"], answer: 1, why: "Los temas mantienen enfocado tu perfil." },
+          { objective: "O3", q: "La IA te da diez ideas de publicación. ¿Qué haces?", options: ["Publicas las diez hoy", "Te quedas con las que de verdad publicarías", "No le haces caso a ninguna", "Copias las publicaciones de otro deportista"], answer: 1, why: "Publica solo lo que va contigo y con tu marca." }
         ]
       }
     },
@@ -93,6 +131,7 @@ module.exports = {
       name: "Capítulo 2: Proteger tu marca",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Revisar tus publicaciones viejas",
           minutes: 5,
           goal: "Revisar tus publicaciones pasadas y arreglar lo que perjudique tu marca.",
@@ -109,9 +148,14 @@ module.exports = {
             { title: "De ahora en adelante", bullets: ["Las capturas de pantalla duran para siempre", "No publiques cuando estés enojado"] }
           ],
           tryIt: "Revisa tus últimas 30 publicaciones y las fotos en las que te etiquetaron. Anota cuántas dejaste, cuántas archivaste y cuántas borraste.",
-          youCanNow: "revisar tus redes sociales y quitar las publicaciones que perjudican tu marca."
+          youCanNow: "revisar tus redes sociales y quitar las publicaciones que perjudican tu marca.",
+          quickCheck: [
+            { objective: "O4", q: "Además de tus propias publicaciones, ¿qué debe incluir tu revisión?", options: ["Comentarios, publicaciones compartidas y fotos en las que te etiquetaron", "Solo tu foto de perfil", "Las cuentas de tus compañeros", "Tus mensajes privados a tu familia"], answer: 0, why: "La revisión cubre publicaciones, comentarios, publicaciones compartidas y etiquetas." },
+            { objective: "O4", q: "Un video cruel que compartiste hace tiempo no pasa la prueba de la abuela. ¿Qué haces?", options: ["Dejarlo; es viejo", "Volver a compartirlo", "Archivarlo, ocultarlo o borrarlo", "Comentarlo para dar una explicación"], answer: 2, why: "Archiva, oculta o borra lo que no pase la prueba." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Configuración de privacidad y seguridad",
           minutes: 5,
           goal: "Configurar tus cuentas para controlar quién te ve y quién te contacta.",
@@ -128,9 +172,14 @@ module.exports = {
             { title: "Cuídate", bullets: ["Nada de ubicación en vivo ni de rutina", "Cuidado con los mensajes de desconocidos", "Amenazas: guarda pruebas, bloquea, denuncia, avisa a un adulto"] }
           ],
           tryIt: "Abre la configuración de una cuenta. Limita quién puede enviarte mensajes y etiquetarte, desactiva la ubicación en las publicaciones y activa la verificación en dos pasos.",
-          youCanNow: "configurar tus cuentas para controlar quién te ve y quién te contacta."
+          youCanNow: "configurar tus cuentas para controlar quién te ve y quién te contacta.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué protege la verificación en dos pasos?", options: ["Tu número de seguidores", "El acceso a tu cuenta", "La calidad de tus fotos", "Tu ubicación"], answer: 1, why: "La verificación en dos pasos agrega una segunda comprobación para proteger el acceso a tu cuenta." },
+            { objective: "O5", q: "Un desconocido que dice ser reclutador te sigue escribiendo y te pide fotos privadas. ¿Qué haces?", options: ["Responder con amabilidad", "Mandarle una foto para que se quede tranquilo", "Pedirle pruebas primero", "No responder; guardar pruebas, bloquear, denunciar y avisar a un adulto de confianza"], answer: 3, why: "Nunca respondas a amenazas ni a pedidos de fotos privadas; guarda pruebas y busca ayuda." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Mantener tu marca: reglas, marcas y buen criterio",
           minutes: 5,
           goal: "Escribir tus reglas personales para publicar, incluido cómo manejar las publicaciones patrocinadas.",
@@ -151,17 +200,21 @@ module.exports = {
             { name: "NCAA: Nombre, imagen y semejanza (en inglés)", url: "https://www.ncaa.org/student-athletes/name-image-likeness/" }
           ],
           tryIt: "Tarea final: escribe tus reglas para publicar y luego termina de darle marca a un perfil: frase de marca, biografía y foto, tres temas con dos ideas cada uno, una revisión de 30 publicaciones y una configuración segura.",
-          youCanNow: "mantener tu marca encaminada con reglas claras para publicar y un manejo honesto de los acuerdos con marcas."
+          youCanNow: "mantener tu marca encaminada con reglas claras para publicar y un manejo honesto de los acuerdos con marcas.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué dice la FTC sobre un producto gratis del que publicas?", options: ["Avísalo con claridad en la misma publicación", "Solo avisa los acuerdos con dinero", "Ponlo una vez en tu biografía", "Los estudiantes no necesitan avisar"], answer: 0, why: "Cualquier acuerdo pagado o producto gratis se debe avisar con claridad en la publicación." },
+            { objective: "O6", q: "Alguien publica un comentario grosero después de que tu equipo pierde. ¿Qué dice tu regla?", options: ["Discutir hasta que pare", "Publicar una respuesta enojada", "Borrar tu cuenta", "No discutir; silenciar, ocultar o bloquear"], answer: 3, why: "Tus reglas para publicar dicen cómo manejar los comentarios negativos sin discutir." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Proteger tu marca",
         questions: [
-          { q: "¿Cuál es la prueba de revisión para una publicación vieja?", options: ["¿Tuvo 100 me gusta?", "¿Es graciosa?", "¿Es vieja?", "¿Le parecería bien verla a un entrenador, un patrocinador o tu abuela?"], answer: 3, why: "Si no pasa esa prueba, puede perjudicar tu marca." },
-          { q: "¿Qué ajuste protege tu inicio de sesión?", options: ["La verificación en dos pasos", "Un tipo de letra genial", "Más hashtags", "Una ubicación pública"], answer: 0, why: "La verificación en dos pasos bloquea a quien solo tiene tu contraseña." },
-          { q: "¿Qué no debes publicar nunca?", options: ["Un video de práctica", "Un agradecimiento a tu entrenador", "Tu ubicación en vivo", "Una foto de servicio comunitario"], answer: 2, why: "La ubicación en vivo puede ponerte en riesgo." },
-          { q: "Alguien te amenaza por mensaje directo. ¿Qué haces?", options: ["Le respondes discutiendo", "Le envías lo que pide", "No haces caso y no se lo cuentas a nadie", "Guardas las pruebas, bloqueas, denuncias y se lo cuentas a un adulto de confianza"], answer: 3, why: "Protégete y busca ayuda." },
-          { q: "Una marca te envía audífonos gratis para que publiques sobre ellos. ¿Qué debes hacer?", options: ["Nada", "Avisar con claridad del producto gratis en la publicación y revisar las reglas de NIL", "Esconder el nombre de la marca", "Borrar la publicación después"], answer: 1, why: "La FTC exige un aviso claro, y pueden aplicarse reglas de NIL." }
+          { objective: "O4", q: "¿Cuál es la prueba de revisión para una publicación vieja?", options: ["¿Tuvo 100 me gusta?", "¿Es graciosa?", "¿Es vieja?", "¿Le parecería bien verla a un entrenador, un patrocinador o tu abuela?"], answer: 3, why: "Si no pasa esa prueba, puede perjudicar tu marca." },
+          { objective: "O5", q: "¿Qué ajuste protege tu inicio de sesión?", options: ["La verificación en dos pasos", "Un tipo de letra genial", "Más hashtags", "Una ubicación pública"], answer: 0, why: "La verificación en dos pasos bloquea a quien solo tiene tu contraseña." },
+          { objective: "O5", q: "¿Qué no debes publicar nunca?", options: ["Un video de práctica", "Un agradecimiento a tu entrenador", "Tu ubicación en vivo", "Una foto de servicio comunitario"], answer: 2, why: "La ubicación en vivo puede ponerte en riesgo." },
+          { objective: "O5", q: "Alguien te amenaza por mensaje directo. ¿Qué haces?", options: ["Le respondes discutiendo", "Le envías lo que pide", "No haces caso y no se lo cuentas a nadie", "Guardas las pruebas, bloqueas, denuncias y se lo cuentas a un adulto de confianza"], answer: 3, why: "Protégete y busca ayuda." },
+          { objective: "O6", q: "Una marca te envía audífonos gratis para que publiques sobre ellos. ¿Qué debes hacer?", options: ["Nada", "Avisar con claridad del producto gratis en la publicación y revisar las reglas de NIL", "Esconder el nombre de la marca", "Borrar la publicación después"], answer: 1, why: "La FTC exige un aviso claro, y pueden aplicarse reglas de NIL." }
         ]
       }
     }
@@ -169,26 +222,104 @@ module.exports = {
   quiz: {
     title: "Examen final: Marca personal en redes sociales para deportistas",
     questions: [
-      { q: "¿Quién forma tu marca?", options: ["Solo tú", "Solo tu entrenador", "La gente que ve tus publicaciones, comentarios y acciones", "Nadie"], answer: 2, why: "Tu marca vive en la mente de otras personas." },
-      { q: "Una marca es tu deporte más:", options: ["Tus valores y lo que te hace ser tú", "Tu contraseña", "Tu rival", "Tu talla de zapatos"], answer: 0, why: "Los valores y la personalidad te hacen destacar." },
-      { q: "Una frase de marca debe ser:", options: ["Honesta", "Inventada", "Copiada", "Muy larga"], answer: 0, why: "Una marca solo funciona si es cierta." },
-      { q: "Tu perfil es como:", options: ["Tu casillero", "Un secreto", "Tu puerta de entrada", "Un marcador"], answer: 2, why: "Es lo primero que ve la gente." },
-      { q: "Una buena foto de perfil es:", options: ["Borrosa", "Clara y bien iluminada", "Un meme cualquiera", "De otra persona"], answer: 1, why: "La gente debe reconocerte." },
-      { q: "¿Qué NO conviene poner en una biografía?", options: ["Tu deporte", "Tu posición", "Un enlace a tus jugadas destacadas", "Tu número de teléfono"], answer: 3, why: "Los números de teléfono son privados." },
-      { q: "Si eres menor de edad, antes de poner tu escuela o tu ciudad debes:", options: ["Publicarlo igual", "Preguntarle a un desconocido", "Preguntarle a tu padre, madre o tutor", "Agregar también tu dirección"], answer: 2, why: "Tus padres te ayudan a decidir qué es seguro compartir." },
-      { q: "¿Cuántos temas principales debes tener?", options: ["20", "Ninguno", "1 publicación", "3 o 4"], answer: 3, why: "Unos pocos temas mantienen enfocado tu perfil." },
-      { q: "¿Cuál es una publicación del tema “fuera de la cancha”?", options: ["Ayudar como voluntario en una clínica para niños", "Una jugada destacada de un partido", "Un video de ejercicios", "Un gráfico de estadísticas"], answer: 0, why: "Muestra quién eres más allá del deporte." },
-      { q: "¿Cómo debes usar la IA para tener ideas de publicaciones?", options: ["Publicar todo lo que dice", "Pensar muchas ideas y quedarte con las que van contigo", "No usarla nunca", "Dejar que maneje tu cuenta"], answer: 1, why: "Tú eliges lo que va con tu marca." },
-      { q: "¿Cuántas publicaciones recientes debe cubrir tu revisión como mínimo?", options: ["1", "0", "30", "Solo las de hoy"], answer: 2, why: "Mira lo bastante atrás para ver lo que ven los demás." },
-      { q: "Archivar una publicación significa:", options: ["Ocultarla de tu perfil sin borrarla", "Publicarla otra vez", "Hacerla pública", "Venderla"], answer: 0, why: "Archivar oculta sin borrar." },
-      { q: "Después de una derrota dura, una buena regla es:", options: ["Publicar de inmediato", "Criticar al árbitro en internet", "Culpar a los compañeros", "No publicar cuando estás enojado"], answer: 3, why: "Las publicaciones con enojo suelen perjudicar tu marca." },
-      { q: "Muchos deportistas tienen:", options: ["Diez cuentas públicas", "Una cuenta pública de deportista y una personal privada", "Ninguna privacidad", "Su contraseña en la biografía"], answer: 1, why: "Separa el que te vean de tu vida personal." },
-      { q: "Desactivar la ubicación en las publicaciones te ayuda a:", options: ["Tener más me gusta", "Estar seguro", "Publicar más rápido", "Parecer mayor"], answer: 1, why: "Los desconocidos no pueden saber dónde estás." },
-      { q: "Un desconocido te escribe como reclutador y te pide dinero. Esto es:", options: ["Normal", "Obligatorio", "Una beca", "Una señal de alerta"], answer: 3, why: "Los falsos reclutadores piden dinero." },
-      { q: "¿Dónde encuentras las reglas de redes sociales de tu equipo?", options: ["Preguntándole a tu entrenador", "Adivinando", "Con un rival", "En un anuncio"], answer: 0, why: "Los equipos y las escuelas fijan sus propias reglas." },
-      { q: "¿Qué significa NIL?", options: ["National Interest League (Liga de Interés Nacional)", "No Internet Limits (Internet sin límites)", "Name, image and likeness (nombre, imagen y semejanza)", "New Influencer Level (Nuevo nivel de influencer)"], answer: 2, why: "NIL es ganar dinero con tu nombre, tu imagen y tu semejanza." },
-      { q: "A un deportista de secundaria le ofrecen un acuerdo de NIL. Primero debe:", options: ["Firmar de inmediato", "Ocultarlo", "Preguntarle a un aficionado", "Revisar las reglas de la asociación deportiva de su estado y de su escuela"], answer: 3, why: "Las reglas de NIL en la secundaria cambian según el estado." },
-      { q: "¿Cómo debes manejar los comentarios negativos?", options: ["Discutir en mayúsculas", "No discutir; silenciar, ocultar o bloquear", "Publicar su dirección", "Dejar las redes sociales para siempre"], answer: 1, why: "Discutir esparce la negatividad y perjudica tu marca." }
+      { objective: "O1", q: "¿Quién forma tu marca?", options: ["Solo tú", "Solo tu entrenador", "La gente que ve tus publicaciones, comentarios y acciones", "Nadie"], answer: 2, why: "Tu marca vive en la mente de otras personas." },
+      { objective: "O1", q: "Una marca es tu deporte más:", options: ["Tus valores y lo que te hace ser tú", "Tu contraseña", "Tu rival", "Tu talla de zapatos"], answer: 0, why: "Los valores y la personalidad te hacen destacar." },
+      { objective: "O1", q: "Una frase de marca debe ser:", options: ["Honesta", "Inventada", "Copiada", "Muy larga"], answer: 0, why: "Una marca solo funciona si es cierta." },
+      { objective: "O2", q: "Tu perfil es como:", options: ["Tu casillero", "Un secreto", "Tu puerta de entrada", "Un marcador"], answer: 2, why: "Es lo primero que ve la gente." },
+      { objective: "O2", q: "Una buena foto de perfil es:", options: ["Borrosa", "Clara y bien iluminada", "Un meme cualquiera", "De otra persona"], answer: 1, why: "La gente debe reconocerte." },
+      { objective: "O2", q: "¿Qué NO conviene poner en una biografía?", options: ["Tu deporte", "Tu posición", "Un enlace a tus jugadas destacadas", "Tu número de teléfono"], answer: 3, why: "Los números de teléfono son privados." },
+      { objective: "O2", q: "Si eres menor de edad, antes de poner tu escuela o tu ciudad debes:", options: ["Publicarlo igual", "Preguntarle a un desconocido", "Preguntarle a tu padre, madre o tutor", "Agregar también tu dirección"], answer: 2, why: "Tus padres te ayudan a decidir qué es seguro compartir." },
+      { objective: "O3", q: "¿Cuántos temas principales debes tener?", options: ["20", "Ninguno", "1 publicación", "3 o 4"], answer: 3, why: "Unos pocos temas mantienen enfocado tu perfil." },
+      { objective: "O3", q: "¿Cuál es una publicación del tema “fuera de la cancha”?", options: ["Ayudar como voluntario en una clínica para niños", "Una jugada destacada de un partido", "Un video de ejercicios", "Un gráfico de estadísticas"], answer: 0, why: "Muestra quién eres más allá del deporte." },
+      { objective: "O3", q: "¿Cómo debes usar la IA para tener ideas de publicaciones?", options: ["Publicar todo lo que dice", "Pensar muchas ideas y quedarte con las que van contigo", "No usarla nunca", "Dejar que maneje tu cuenta"], answer: 1, why: "Tú eliges lo que va con tu marca." },
+      { objective: "O4", q: "¿Cuántas publicaciones recientes debe cubrir tu revisión como mínimo?", options: ["1", "0", "30", "Solo las de hoy"], answer: 2, why: "Mira lo bastante atrás para ver lo que ven los demás." },
+      { objective: "O4", q: "Archivar una publicación significa:", options: ["Ocultarla de tu perfil sin borrarla", "Publicarla otra vez", "Hacerla pública", "Venderla"], answer: 0, why: "Archivar oculta sin borrar." },
+      { objective: "O4", q: "Después de una derrota dura, una buena regla es:", options: ["Publicar de inmediato", "Criticar al árbitro en internet", "Culpar a los compañeros", "No publicar cuando estás enojado"], answer: 3, why: "Las publicaciones con enojo suelen perjudicar tu marca." },
+      { objective: "O5", q: "Muchos deportistas tienen:", options: ["Diez cuentas públicas", "Una cuenta pública de deportista y una personal privada", "Ninguna privacidad", "Su contraseña en la biografía"], answer: 1, why: "Separa el que te vean de tu vida personal." },
+      { objective: "O5", q: "Desactivar la ubicación en las publicaciones te ayuda a:", options: ["Tener más me gusta", "Estar seguro", "Publicar más rápido", "Parecer mayor"], answer: 1, why: "Los desconocidos no pueden saber dónde estás." },
+      { objective: "O5", q: "Un desconocido te escribe como reclutador y te pide dinero. Esto es:", options: ["Normal", "Obligatorio", "Una beca", "Una señal de alerta"], answer: 3, why: "Los falsos reclutadores piden dinero." },
+      { objective: "O6", q: "¿Dónde encuentras las reglas de redes sociales de tu equipo?", options: ["Preguntándole a tu entrenador", "Adivinando", "Con un rival", "En un anuncio"], answer: 0, why: "Los equipos y las escuelas fijan sus propias reglas." },
+      { objective: "O6", q: "¿Qué significa NIL?", options: ["National Interest League (Liga de Interés Nacional)", "No Internet Limits (Internet sin límites)", "Name, image and likeness (nombre, imagen y semejanza)", "New Influencer Level (Nuevo nivel de influencer)"], answer: 2, why: "NIL es ganar dinero con tu nombre, tu imagen y tu semejanza." },
+      { objective: "O6", q: "A un deportista de secundaria le ofrecen un acuerdo de NIL. Primero debe:", options: ["Firmar de inmediato", "Ocultarlo", "Preguntarle a un aficionado", "Revisar las reglas de la asociación deportiva de su estado y de su escuela"], answer: 3, why: "Las reglas de NIL en la secundaria cambian según el estado." },
+      { objective: "O6", q: "¿Cómo debes manejar los comentarios negativos?", options: ["Discutir en mayúsculas", "No discutir; silenciar, ocultar o bloquear", "Publicar su dirección", "Dejar las redes sociales para siempre"], answer: 1, why: "Discutir esparce la negatividad y perjudica tu marca." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      1,
+      5,
+      7,
+      10,
+      13,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Frase de marca",
+        objective: "O1",
+        notYet: "Falta, es vaga o no es honesta.",
+        meets: "Una frase honesta con deporte y posición, un valor y un interés fuera del deporte.",
+        exceeds: "La biografía, la foto y los temas principales van claramente con la frase."
+      },
+      {
+        name: "Biografía y foto",
+        objective: "O2",
+        notYet: "No hay enlace ni llamada a la acción, la foto no es clara o se ven datos privados.",
+        meets: "Una biografía corta con deporte, posición, un valor y un enlace, una foto clara y sin datos privados.",
+        exceeds: "El enlace lleva a un video de mejores jugadas o a un perfil de reclutamiento al día."
+      },
+      {
+        name: "Temas principales",
+        objective: "O3",
+        notYet: "Hay menos de tres temas, o ideas que no van con la marca.",
+        meets: "Tres temas con dos ideas de publicación cada uno que van con la frase de marca.",
+        exceeds: "Las ideas están programadas para las próximas dos semanas."
+      },
+      {
+        name: "Revisión de publicaciones",
+        objective: "O4",
+        notYet: "Se revisaron menos de 30 publicaciones, o siguen visibles publicaciones que no pasan la prueba.",
+        meets: "Las últimas 30 publicaciones, comentarios, publicaciones compartidas y etiquetas revisadas, con lo que no pasa la prueba archivado, oculto, borrado o sin etiqueta.",
+        exceeds: "La revisión va más atrás y hay escrita una regla de \"no publicar cuando estoy enojado\"."
+      },
+      {
+        name: "Privacidad y seguridad",
+        objective: "O5",
+        notYet: "La ubicación sigue activada en las publicaciones, los mensajes están abiertos o no hay verificación en dos pasos.",
+        meets: "Mensajes, comentarios y etiquetas limitados, ubicación desactivada y verificación en dos pasos activada.",
+        exceeds: "Hay una cuenta personal privada aparte y el deportista puede mostrar cómo bloquear y denunciar."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que terminan la tarea final y obtienen Cumple o Supera en cada fila de la rúbrica",
+      "Participantes que dicen haber quitado u ocultado publicaciones que podrían haberles costado una oportunidad",
+      "Participantes que dicen haber recibido el contacto de un entrenador, un reclutador, una marca o un empleador a través de su perfil ya ordenado (encuesta de seguimiento)",
+      "Participantes que dicen haber bloqueado y denunciado a un reclutador falso, una estafa o una amenaza en lugar de responder"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono con la aplicación de redes sociales del deportista",
+      "Un asistente de IA gratuito (ChatGPT, Microsoft Copilot o Google Gemini), opcional",
+      "Las reglas de redes sociales de tu equipo, de parte de tu entrenador",
+      "Papel o una nota en el teléfono para tu frase de marca y tus reglas",
+      "Unos 60 minutos"
+    ],
+    facilitatorNotes: [
+      "Nunca pidas a los deportistas que muestren al grupo sus mensajes privados o sus cuentas privadas; deja que hagan la revisión por su cuenta.",
+      "Con deportistas menores de 18 años, incluye a sus padres o tutores en las decisiones sobre perfiles públicos y sobre mostrar la escuela o la ciudad.",
+      "Comparte las reglas de redes sociales del equipo y a quién avisar de amenazas, reclutadores falsos o pedidos de fotos privadas.",
+      "Revisen juntos la configuración de privacidad en las aplicaciones que usa el grupo, porque los menús cambian entre aplicaciones y actualizaciones.",
+      "Invita a la oficina de cumplimiento o al contacto de la asociación deportiva del estado para explicar las reglas de NIL antes de que alguien acepte un acuerdo."
     ]
   }
 };

@@ -18,11 +18,35 @@ module.exports = {
     "Le code apparaît sous forme de courtes lignes dans le texte des leçons. Vous pouvez les copier dans Colab. Si vous n'avez jamais codé, suivez quand même ; le cours « Introduction à la programmation avec Python » est un bon compagnon. Un contrôle des connaissances termine chaque chapitre et un quiz de 20 questions termine le cours."
   ],
   finalTask: "Rédigez une consigne système pour une tâche de votre agent du cours 1 (par exemple : « classer un message entrant en : question, réclamation, commande, autre »). Elle doit donner un rôle, la tâche, trois règles, le format de sortie JSON exact et un exemple. Exécutez-la depuis un notebook Colab sur cinq entrées de test, dont une piégeuse, notez si chaque sortie était un JSON valide et correct, et modifiez la consigne une fois pour corriger un échec.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des adultes qui construisent leur premier agent IA dans le programme Concevoir, construire et déployer des agents IA autonomes : propriétaires de petites entreprises, personnes en reconversion, étudiants et employés qui ont terminé le cours 1 et prévu une tâche pour leur agent.",
+    startingPoint: "Ils ont utilisé un chatbot gratuit et planifié un agent sur papier au cours 1. La plupart ont peu ou pas d'expérience en programmation et n'ont jamais appelé un modèle depuis du code.",
+    gap: "Un agent n'est fiable que si son modèle reçoit des instructions fiables. Les apprenants doivent rédiger des consignes système claires, obtenir des réponses qu'un programme peut lire et tester leurs consignes avec méthode, sinon leurs agents se comporteront de façon imprévisible et casseront sur des entrées inhabituelles.",
+    constraints: [
+      "Niveau de lecture : mots simples ; le code est montré en courtes lignes à copier",
+      "Appareils : un ordinateur avec un navigateur web ; Google Colab est gratuit mais ses ressources ne sont pas garanties",
+      "Les offres d'API gratuites ont des limites et peuvent utiliser les données : aucune donnée privée ou de client pendant les exercices",
+      "Les clés API doivent rester secrètes, hors des notebooks et des captures d'écran",
+      "Temps : des leçons courtes avec un exercice pratique chacune"
+    ],
+    prerequisites: "Le premier cours de Concevoir, construire et déployer des agents IA autonomes. « Introduction à la programmation avec Python » est un compagnon utile."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir d'une réponse fausse mais assurée d'un chatbot", action: "expliquer comment les tokens, la prédiction et la fenêtre de contexte peuvent faire paraître un LLM juste alors qu'il se trompe", standard: "avec vos propres mots, en citant au moins deux causes" },
+    { id: "O2", condition: "Pour une tâche de votre agent", action: "rédiger une consigne système avec un rôle, une tâche, un contexte, des règles et un format de sortie", standard: "avec toutes les parties présentes et des règles vérifiables" },
+    { id: "O3", condition: "À partir de votre consigne système", action: "ajouter un exemple complet et un format de sortie JSON exact", standard: "pour qu'au moins 4 réponses sur 5 soient uniquement du JSON valide avec les bonnes clés" },
+    { id: "O4", condition: "Dans un notebook Google Colab gratuit", action: "appeler un LLM depuis Python avec la clé API enregistrée comme secret", standard: "avec la réponse affichée et aucune clé visible dans le code" },
+    { id: "O5", condition: "À partir d'une réponse du modèle dans votre notebook", action: "transformer la réponse JSON en données Python et gérer une mauvaise réponse", standard: "sans que le code plante sur une réponse vide ou cassée" },
+    { id: "O6", condition: "À partir de cinq entrées de test, dont une piège", action: "tester la consigne, noter les résultats et changer une seule chose pour corriger un échec", standard: "en relançant tous les tests après chaque changement" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Comment fonctionnent les LLM et comment les instruire",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Comment écrit un LLM : tokens, prédiction et contexte",
           minutes: 5,
           goal: "Expliquer pourquoi un LLM peut paraître juste et pourtant se tromper.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "Pourquoi il peut se tromper", bullets: ["Il prédit un texte probable, pas des faits vérifiés", "Consigne, contexte et contrôles le rendent fiable"] }
           ],
           tryIt: "Dans un chatbot gratuit, demandez : « Combien de lettres r y a-t-il dans le mot anglais strawberry ? Puis explique comment les tokens peuvent rendre cela difficile pour toi. » Notez si la première réponse était juste, et pourquoi les tokens comptent.",
-          youCanNow: "expliquer les tokens et la fenêtre de contexte, et pourquoi un LLM doit être vérifié."
+          youCanNow: "expliquer les tokens et la fenêtre de contexte, et pourquoi un LLM doit être vérifié.",
+          quickCheck: [
+            { objective: "O1", q: "Que fait un LLM quand il écrit une réponse ?", options: ["Il cherche la réponse dans une base de données vérifiée", "Il prédit les tokens suivants probables, un à la fois", "Il copie une réponse enregistrée écrite par une personne", "Il lance une recherche et lit le premier résultat"], answer: 1, why: "Un LLM prédit le texte token par token : il peut paraître fluide sans vérifier les faits." },
+            { objective: "O1", q: "Un chatbot donne une réponse assurée sur une règle importante pour votre travail. Que faites-vous ?", options: ["Vous l'utilisez, puisqu'il avait l'air sûr", "Vous reposez la question jusqu'à ce qu'il soit d'accord", "Vous vérifiez la règle dans une source fiable avant de l'utiliser", "Vous collez la réponse dans une nouvelle conversation pour la confirmer"], answer: 2, why: "Une réponse fluide peut quand même être fausse : les faits importants doivent venir d'une source fiable." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Les parties d'une bonne consigne",
           minutes: 6,
           goal: "Rédiger une consigne avec un rôle, une tâche, un contexte, des règles et un format de sortie.",
@@ -57,9 +86,14 @@ module.exports = {
             { title: "Rédigez des règles claires", bullets: ["Dites quoi faire, pas seulement quoi éviter", "Donnez une règle pour le doute", "Exemple : si rien ne convient, utilise « other »"] }
           ],
           tryIt: "Rédigez une consigne système en cinq parties pour une tâche de votre agent du cours 1. Collez-la dans un chatbot gratuit, puis envoyez trois entrées différentes et regardez s'il suit chaque règle.",
-          youCanNow: "rédiger une consigne avec un rôle, une tâche, un contexte, des règles et un format de sortie."
+          youCanNow: "rédiger une consigne avec un rôle, une tâche, un contexte, des règles et un format de sortie.",
+          quickCheck: [
+            { objective: "O2", q: "Qu'est-ce que la partie « rôle » d'une consigne système ?", options: ["Les clés JSON exactes que vous voulez recevoir", "Le message que l'utilisateur envoie cette fois-ci", "La liste des entrées de test", "Ce que le modèle doit jouer, par exemple un trieur de demandes d'assistance"], answer: 3, why: "Le rôle dit au modèle qui il est pour cette tâche ; les autres parties couvrent la tâche, le contexte, les règles et le format." },
+            { objective: "O2", q: "Votre consigne dit « sois utile et bon » et les réponses varient. Que changeriez-vous ?", options: ["Remplacer cela par des règles claires que le modèle peut suivre et que vous pouvez vérifier", "Allonger la consigne avec plus de mots aimables", "Supprimer toutes les règles pour laisser le modèle décider", "Passer à un autre chatbot"], answer: 0, why: "Des mots vagues ne se vérifient pas ; des règles précises rendent le comportement régulier." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Exemples, étapes et sortie structurée",
           minutes: 5,
           goal: "Utiliser un exemple et un format JSON pour obtenir des réponses qu'un programme peut lire.",
@@ -75,17 +109,21 @@ module.exports = {
             { title: "Tâches plus difficiles", bullets: ["Faites lister les faits, puis décider", "Utilisez la sortie structurée si disponible"] }
           ],
           tryIt: "Ajoutez un exemple complet et un format JSON à votre consigne de la leçon 2. Envoyez cinq entrées. Comptez combien de réponses étaient uniquement du JSON avec les bonnes clés.",
-          youCanNow: "utiliser des exemples et un format JSON pour obtenir des réponses que votre code peut lire."
+          youCanNow: "utiliser des exemples et un format JSON pour obtenir des réponses que votre code peut lire.",
+          quickCheck: [
+            { objective: "O3", q: "Pourquoi ajouter un exemple complet à une consigne ?", options: ["Il rend le modèle plus rapide", "Il cache les règles à l'utilisateur", "Il montre au modèle le type exact de réponse que vous voulez", "Il remplace le besoin d'un rôle"], answer: 2, why: "Un exemple montre au modèle la forme de réponse et le format à reproduire." },
+            { objective: "O3", q: "Certaines réponses arrivent en JSON précédé d'une phrase aimable. Que feriez-vous ?", options: ["L'accepter, puisque le JSON est quelque part dedans", "Écrire dans la consigne de renvoyer uniquement du JSON avec les clés exactes, et montrer un exemple", "Demander une réponse plus longue", "Supprimer le format de sortie pour laisser le modèle libre"], answer: 1, why: "Le code n'a besoin que du JSON : la consigne doit le dire clairement et le montrer." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Comment fonctionnent les LLM et comment les instruire",
         questions: [
-          { q: "Qu'est-ce qu'un token ?", options: ["Un mot de passe pour l'IA", "Une pièce pour payer l'IA", "Un petit morceau de texte que le modèle lit et écrit", "Un type de chatbot"], answer: 2, why: "Les LLM travaillent sur des tokens : des mots ou des parties de mots." },
-          { q: "Vous avez collé un document dans une conversation. Dans une nouvelle conversation, le modèle ne le connaît pas. Pourquoi ?", options: ["Le document est maintenant hors de sa fenêtre de contexte", "Le modèle est cassé", "Les documents sont interdits", "Il lui faut un ordinateur plus rapide"], answer: 0, why: "Le modèle ne voit que ce qui est dans la fenêtre de contexte actuelle." },
-          { q: "Quelle partie a sa place dans la consigne système ?", options: ["Une blague au hasard", "Le message du client d'aujourd'hui", "Votre mot de passe", "Les règles qui s'appliquent à chaque exécution"], answer: 3, why: "La consigne système contient ce qui reste ; le message utilisateur contient ce qui change." },
-          { q: "Quelle règle est la mieux écrite ?", options: ["« Ne sois pas long. »", "« Réponds en deux phrases. En cas de doute, dis : pas sûr. »", "« Fais de ton mieux. »", "« Sois bon. »"], answer: 1, why: "Elle est précise, positive et dit quoi faire en cas de doute." },
-          { q: "Pourquoi demander du JSON au modèle d'un agent ?", options: ["C'est plus joli", "Les modèles ne savent pas écrire de paragraphes", "C'est plus court à taper", "Votre code peut lire la réponse de façon fiable"], answer: 3, why: "Les agents passent les réponses au code, et le code a besoin d'un format fixe." }
+          { objective: "O1", q: "Qu'est-ce qu'un token ?", options: ["Un mot de passe pour l'IA", "Une pièce pour payer l'IA", "Un petit morceau de texte que le modèle lit et écrit", "Un type de chatbot"], answer: 2, why: "Les LLM travaillent sur des tokens : des mots ou des parties de mots." },
+          { objective: "O1", q: "Vous avez collé un document dans une conversation. Dans une nouvelle conversation, le modèle ne le connaît pas. Pourquoi ?", options: ["Le document est maintenant hors de sa fenêtre de contexte", "Le modèle est cassé", "Les documents sont interdits", "Il lui faut un ordinateur plus rapide"], answer: 0, why: "Le modèle ne voit que ce qui est dans la fenêtre de contexte actuelle." },
+          { objective: "O2", q: "Quelle partie a sa place dans la consigne système ?", options: ["Une blague au hasard", "Le message du client d'aujourd'hui", "Votre mot de passe", "Les règles qui s'appliquent à chaque exécution"], answer: 3, why: "La consigne système contient ce qui reste ; le message utilisateur contient ce qui change." },
+          { objective: "O2", q: "Quelle règle est la mieux écrite ?", options: ["« Ne sois pas long. »", "« Réponds en deux phrases. En cas de doute, dis : pas sûr. »", "« Fais de ton mieux. »", "« Sois bon. »"], answer: 1, why: "Elle est précise, positive et dit quoi faire en cas de doute." },
+          { objective: "O3", q: "Pourquoi demander du JSON au modèle d'un agent ?", options: ["C'est plus joli", "Les modèles ne savent pas écrire de paragraphes", "C'est plus court à taper", "Votre code peut lire la réponse de façon fiable"], answer: 3, why: "Les agents passent les réponses au code, et le code a besoin d'un format fixe." }
         ]
       }
     },
@@ -93,6 +131,7 @@ module.exports = {
       name: "Chapitre 2 : Appeler et tester un LLM depuis Python",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Votre premier appel de modèle depuis Google Colab",
           minutes: 6,
           goal: "Appeler un LLM depuis un notebook Python et afficher la réponse.",
@@ -112,9 +151,14 @@ module.exports = {
           ],
           sources: [{ name: "Google Colab : questions fréquentes", url: "https://research.google.com/colaboratory/faq.html" }, { name: "API Gemini : démarrage rapide", url: "https://ai.google.dev/gemini-api/docs/quickstart" }, { name: "API Gemini : tarifs et offre gratuite", url: "https://ai.google.dev/gemini-api/docs/pricing" }],
           tryIt: "Créez un notebook Colab, configurez une clé de façon sûre et faites répondre le modèle à : « Explique ce qu'est un agent IA en une phrase. » Enregistrez le notebook sous le nom agent-prompts.",
-          youCanNow: "appeler un LLM depuis Python dans un notebook gratuit et garder votre clé API secrète."
+          youCanNow: "appeler un LLM depuis Python dans un notebook gratuit et garder votre clé API secrète.",
+          quickCheck: [
+            { objective: "O4", q: "Qu'est-ce que Google Colab ?", options: ["Un notebook Python gratuit qui fonctionne dans un navigateur web", "Un modèle d'IA payant", "Un endroit pour stocker des mots de passe", "Une application de téléphone pour discuter avec une IA"], answer: 0, why: "Colab permet d'exécuter Python gratuitement dans le navigateur, avec des limites." },
+            { objective: "O4", q: "Vous allez partager votre notebook. Votre clé API est tapée dans une cellule de code. Que faites-vous ?", options: ["Vous le partagez, seuls des amis le verront", "Vous floutez plutôt la clé sur une capture d'écran", "Vous changez le nom de la variable pour qu'elle soit plus difficile à trouver", "Vous déplacez la clé dans un réglage secret, et vous créez une nouvelle clé si elle a déjà été vue"], answer: 3, why: "Une clé est comme un mot de passe : gardez-la dans un réglage secret et remplacez-la si elle a fuité." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Envoyer votre consigne système et lire le JSON dans le code",
           minutes: 6,
           goal: "Envoyer votre consigne depuis le code et transformer la réponse JSON en données Python.",
@@ -131,9 +175,14 @@ module.exports = {
             { title: "Prévoir les mauvaises réponses", bullets: ["Entourez la lecture d'un try / except", "Vérifiez que les clés sont là", "Réessayez une fois, ou marquez l'échec"] }
           ],
           tryIt: "Dans votre notebook, envoyez votre consigne système avec une entrée, lisez le JSON et affichez seulement la catégorie. Puis donnez-lui une entrée étrange (un message vide) et vérifiez que votre code ne plante pas.",
-          youCanNow: "envoyer une consigne système depuis Python et transformer en sécurité le JSON du modèle en données."
+          youCanNow: "envoyer une consigne système depuis Python et transformer en sécurité le JSON du modèle en données.",
+          quickCheck: [
+            { objective: "O5", q: "Que fait json.loads avec la réponse du modèle ?", options: ["Il la renvoie au modèle", "Il transforme le texte JSON en données Python que votre code peut utiliser", "Il vérifie si la réponse est vraie", "Il l'enregistre dans un fichier"], answer: 1, why: "json.loads transforme du texte JSON en données Python, comme un dictionnaire." },
+            { objective: "O5", q: "Votre agent reçoit un message vide et l'étape de lecture échoue. Que doit faire le code ?", options: ["Planter pour que vous le remarquiez", "Renvoyer comme catégorie le texte reçu, quel qu'il soit", "Attraper l'erreur, puis réessayer une fois ou marquer l'élément comme échoué", "Supprimer le message"], answer: 2, why: "Entourer la lecture d'un try / except permet à l'agent de gérer une mauvaise réponse au lieu de planter." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Tester une consigne comme un ingénieur",
           minutes: 6,
           goal: "Exécuter une consigne sur un petit jeu de tests et l'améliorer d'après les résultats.",
@@ -150,17 +199,21 @@ module.exports = {
             { title: "Améliorez un changement à la fois", bullets: ["Règle plus claire ou meilleur exemple", "Relancez tous les tests après chaque changement", "Gardez versions et scores"] }
           ],
           tryIt: "Exercice final : rédigez votre consigne système avec un rôle, une tâche, trois règles, un format JSON et un exemple. Testez-la dans Colab sur cinq entrées dont une piège, notez pour chacune si le JSON est valide et correct, modifiez la consigne une fois pour corriger un échec, et relancez.",
-          youCanNow: "tester et améliorer une consigne avec un petit jeu de tests, comme le font les créateurs d'agents."
+          youCanNow: "tester et améliorer une consigne avec un petit jeu de tests, comme le font les créateurs d'agents.",
+          quickCheck: [
+            { objective: "O6", q: "Qu'est-ce qu'une régression quand on teste des consignes ?", options: ["Un test qui passe du premier coup", "Une correction qui fait échouer un test qui passait avant", "Une entrée de test écrite dans une autre langue", "Une réponse plus lente du modèle"], answer: 1, why: "Une régression, c'est quand un changement casse quelque chose qui marchait avant." },
+            { objective: "O6", q: "Un test sur cinq échoue. Quelle est la meilleure étape suivante ?", options: ["Changer une seule chose dans la consigne et relancer les cinq tests", "Réécrire toute la consigne depuis le début", "Supprimer le test qui échoue", "Relancer seulement le test qui échoue"], answer: 0, why: "Changer une seule chose et relancer tous les tests montre ce que le changement a corrigé et ce qu'il a cassé." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Appeler et tester un LLM depuis Python",
         questions: [
-          { q: "Où doit se trouver votre clé API ?", options: ["Dans une cellule de notebook partagé", "Dans une capture d'écran pour demander de l'aide", "Dans un réglage secret ou une variable d'environnement", "Dans le chatbot pour qu'il s'en souvienne"], answer: 2, why: "Les clés sont des mots de passe pour programmes et doivent rester secrètes." },
-          { q: "Pourquoi copier le nom du modèle depuis la page de démarrage rapide du fournisseur ?", options: ["Les noms de modèles et le code changent avec le temps", "La loi l'exige", "Cela raccourcit la réponse", "Sinon Colab ne fonctionne pas"], answer: 0, why: "Les fournisseurs renomment et retirent des modèles ; leur page est à jour." },
-          { q: "json.loads(text) échoue parce que le modèle a ajouté des mots. Un bon agent :", options: ["Plante", "Attrape l'erreur, réessaie une fois ou marque l'échec", "Supprime l'entrée", "Utilise le texte quand même"], answer: 1, why: "Prévoyez les mauvaises réponses pour qu'elles ne fassent ni planter ni passer en silence." },
-          { q: "Qu'est-ce qui a sa place dans un bon jeu de tests ?", options: ["Des cas faciles, des cas limites et une entrée piège", "Une seule entrée", "Seulement des entrées faciles", "Les réponses que le modèle a déjà données"], answer: 0, why: "Les cas limites et pièges montrent où une consigne casse." },
-          { q: "Vous avez changé la consigne et un test passe maintenant. Et ensuite ?", options: ["La mettre en service tout de suite", "Changer cinq autres choses à la fois", "Supprimer les anciens tests", "Relancer tout le jeu de tests"], answer: 3, why: "Tout relancer repère les régressions." }
+          { objective: "O4", q: "Où doit se trouver votre clé API ?", options: ["Dans une cellule de notebook partagé", "Dans une capture d'écran pour demander de l'aide", "Dans un réglage secret ou une variable d'environnement", "Dans le chatbot pour qu'il s'en souvienne"], answer: 2, why: "Les clés sont des mots de passe pour programmes et doivent rester secrètes." },
+          { objective: "O4", q: "Pourquoi copier le nom du modèle depuis la page de démarrage rapide du fournisseur ?", options: ["Les noms de modèles et le code changent avec le temps", "La loi l'exige", "Cela raccourcit la réponse", "Sinon Colab ne fonctionne pas"], answer: 0, why: "Les fournisseurs renomment et retirent des modèles ; leur page est à jour." },
+          { objective: "O5", q: "json.loads(text) échoue parce que le modèle a ajouté des mots. Un bon agent :", options: ["Plante", "Attrape l'erreur, réessaie une fois ou marque l'échec", "Supprime l'entrée", "Utilise le texte quand même"], answer: 1, why: "Prévoyez les mauvaises réponses pour qu'elles ne fassent ni planter ni passer en silence." },
+          { objective: "O6", q: "Qu'est-ce qui a sa place dans un bon jeu de tests ?", options: ["Des cas faciles, des cas limites et une entrée piège", "Une seule entrée", "Seulement des entrées faciles", "Les réponses que le modèle a déjà données"], answer: 0, why: "Les cas limites et pièges montrent où une consigne casse." },
+          { objective: "O6", q: "Vous avez changé la consigne et un test passe maintenant. Et ensuite ?", options: ["La mettre en service tout de suite", "Changer cinq autres choses à la fois", "Supprimer les anciens tests", "Relancer tout le jeu de tests"], answer: 3, why: "Tout relancer repère les régressions." }
         ]
       }
     }
@@ -168,26 +221,107 @@ module.exports = {
   quiz: {
     title: "Quiz final : Comprendre les LLM et l'ingénierie des consignes",
     questions: [
-      { q: "Un LLM écrit en :", options: ["Copiant une page web", "Prédisant un token à la fois", "Demandant à un humain", "Consultant une liste de réponses fixes"], answer: 1, why: "Il prédit un token suivant probable, encore et encore." },
-      { q: "La fenêtre de contexte, c'est :", options: ["Un onglet du navigateur", "Le prix du modèle", "Tout ce que le modèle voit en même temps", "Le thème de couleur de l'application"], answer: 2, why: "Seul le texte dans la fenêtre existe pour le modèle." },
-      { q: "Pourquoi un modèle peut-il affirmer une chose fausse avec aisance ?", options: ["Il n'a plus de tokens", "Il ment exprès", "Il prédit un texte probable au lieu de vérifier les faits", "Sa clé a expiré"], answer: 2, why: "Prédire n'est pas vérifier, sauf si on ajoute un outil." },
-      { q: "Laquelle n'est PAS l'une des cinq parties d'une bonne consigne ?", options: ["Votre mot de passe", "Le format de sortie", "Les règles", "Le rôle"], answer: 0, why: "Les mots de passe n'ont jamais leur place dans une consigne." },
-      { q: "Qu'est-ce qui doit changer à chaque exécution ?", options: ["La consigne système", "Le format de sortie", "Le rôle", "Le message utilisateur"], answer: 3, why: "La nouvelle entrée va dans le message utilisateur." },
-      { q: "Une bonne règle pour les cas incertains est :", options: ["« Devine. »", "« Si rien ne convient, utilise other. »", "« Ne doute jamais. »", "« Invente quelque chose. »"], answer: 1, why: "Lui dire quoi faire en cas de doute évite les mauvaises suppositions." },
-      { q: "La consigne à quelques exemples (few-shot) veut dire :", options: ["Seulement des consignes courtes", "Envoyer moins de demandes", "Utiliser un petit modèle", "Inclure quelques exemples complets"], answer: 3, why: "Des exemples d'entrée et de sortie guident le modèle." },
-      { q: "Lequel est un JSON valide ?", options: ["category = order", "<category>order", "{\"category\": \"order\"}", "category: order;"], answer: 2, why: "Le JSON utilise des accolades, des noms et des valeurs entre guillemets." },
-      { q: "La sortie structurée est :", options: ["Un réglage du modèle qui impose un format exact", "Une réponse plus longue", "Un type de chatbot", "Un menu de Colab"], answer: 0, why: "Beaucoup de fournisseurs peuvent imposer un JSON valide avec ; voyez la documentation." },
-      { q: "Google Colab est :", options: ["Un serveur payant à installer", "Un notebook Python gratuit dans le navigateur", "Seulement une application de téléphone", "Un modèle d'IA"], answer: 1, why: "Colab exécute gratuitement des notebooks Python dans votre navigateur." },
-      { q: "Les ressources gratuites de Colab sont :", options: ["Non garanties ; les notebooks inactifs se coupent", "Garanties et illimitées", "Réservées aux écoles", "Seulement le week-end"], answer: 0, why: "Colab indique que les ressources gratuites ne sont pas garanties." },
-      { q: "Une clé API doit être traitée comme :", options: ["Un nom d'utilisateur public", "Un commentaire", "Un nom de fichier", "Un mot de passe"], answer: 3, why: "Toute personne qui a la clé peut utiliser votre compte." },
-      { q: "Avec l'offre gratuite de l'API Gemini, vous ne devez pas envoyer :", options: ["Une question de test", "Des données privées ou de clients", "Un message de boulangerie inventé", "« Bonjour »"], answer: 1, why: "Le contenu de l'offre gratuite peut servir à améliorer les produits de Google." },
-      { q: "Votre clé a fuité dans une capture d'écran. Vous devez :", options: ["Espérer que personne ne l'a vue", "La republier", "Créer une nouvelle clé et ne plus utiliser l'ancienne", "L'envoyer par e-mail au support"], answer: 2, why: "Une clé qui a fuité doit être remplacée." },
-      { q: "json.loads transforme :", options: ["Des données en image", "Du Python en JavaScript", "Du texte JSON en données Python", "Une consigne en modèle"], answer: 2, why: "L'analyse rend la réponse utilisable dans le code." },
-      { q: "Entourer la lecture d'un try / except permet à votre agent de :", options: ["Gérer une mauvaise réponse au lieu de planter", "Aller plus vite", "Sauter l'appel au modèle", "Cacher la clé"], answer: 0, why: "Les erreurs sont attrapées et gérées." },
-      { q: "Un cas limite est :", options: ["Une entrée très courante", "Un nom de modèle", "Le premier test", "Une entrée inhabituelle comme un message vide"], answer: 3, why: "Les cas limites testent les limites d'une consigne." },
-      { q: "Pourquoi inclure une entrée « ignore tes instructions » dans les tests ?", options: ["Pour rendre le modèle plus rapide", "Pour vérifier que la consigne résiste à l'injection", "Pour économiser des tokens", "Parce que la loi l'exige"], answer: 1, why: "Les agents lisent du texte non fiable ; la consigne doit tenir ses règles." },
-      { q: "Il y a régression quand :", options: ["Le modèle devient moins cher", "La clé expire", "Tous les tests passent", "Une correction casse quelque chose qui marchait"], answer: 3, why: "Relancer tous les tests repère les régressions." },
-      { q: "La meilleure façon d'améliorer une consigne est de :", options: ["Changer beaucoup de choses à la fois", "Ne jamais la changer", "Changer une chose et relancer tous les tests", "Demander seulement au modèle de se noter"], answer: 2, why: "Un changement à la fois montre ce qui a vraiment aidé." }
+      { objective: "O1", q: "Un LLM écrit en :", options: ["Copiant une page web", "Prédisant un token à la fois", "Demandant à un humain", "Consultant une liste de réponses fixes"], answer: 1, why: "Il prédit un token suivant probable, encore et encore." },
+      { objective: "O1", q: "La fenêtre de contexte, c'est :", options: ["Un onglet du navigateur", "Le prix du modèle", "Tout ce que le modèle voit en même temps", "Le thème de couleur de l'application"], answer: 2, why: "Seul le texte dans la fenêtre existe pour le modèle." },
+      { objective: "O1", q: "Pourquoi un modèle peut-il affirmer une chose fausse avec aisance ?", options: ["Il n'a plus de tokens", "Il ment exprès", "Il prédit un texte probable au lieu de vérifier les faits", "Sa clé a expiré"], answer: 2, why: "Prédire n'est pas vérifier, sauf si on ajoute un outil." },
+      { objective: "O2", q: "Laquelle n'est PAS l'une des cinq parties d'une bonne consigne ?", options: ["Votre mot de passe", "Le format de sortie", "Les règles", "Le rôle"], answer: 0, why: "Les mots de passe n'ont jamais leur place dans une consigne." },
+      { objective: "O2", q: "Qu'est-ce qui doit changer à chaque exécution ?", options: ["La consigne système", "Le format de sortie", "Le rôle", "Le message utilisateur"], answer: 3, why: "La nouvelle entrée va dans le message utilisateur." },
+      { objective: "O2", q: "Une bonne règle pour les cas incertains est :", options: ["« Devine. »", "« Si rien ne convient, utilise other. »", "« Ne doute jamais. »", "« Invente quelque chose. »"], answer: 1, why: "Lui dire quoi faire en cas de doute évite les mauvaises suppositions." },
+      { objective: "O3", q: "La consigne à quelques exemples (few-shot) veut dire :", options: ["Seulement des consignes courtes", "Envoyer moins de demandes", "Utiliser un petit modèle", "Inclure quelques exemples complets"], answer: 3, why: "Des exemples d'entrée et de sortie guident le modèle." },
+      { objective: "O3", q: "Lequel est un JSON valide ?", options: ["category = order", "<category>order", "{\"category\": \"order\"}", "category: order;"], answer: 2, why: "Le JSON utilise des accolades, des noms et des valeurs entre guillemets." },
+      { objective: "O3", q: "La sortie structurée est :", options: ["Un réglage du modèle qui impose un format exact", "Une réponse plus longue", "Un type de chatbot", "Un menu de Colab"], answer: 0, why: "Beaucoup de fournisseurs peuvent imposer un JSON valide avec ; voyez la documentation." },
+      { objective: "O4", q: "Google Colab est :", options: ["Un serveur payant à installer", "Un notebook Python gratuit dans le navigateur", "Seulement une application de téléphone", "Un modèle d'IA"], answer: 1, why: "Colab exécute gratuitement des notebooks Python dans votre navigateur." },
+      { objective: "O4", q: "Les ressources gratuites de Colab sont :", options: ["Non garanties ; les notebooks inactifs se coupent", "Garanties et illimitées", "Réservées aux écoles", "Seulement le week-end"], answer: 0, why: "Colab indique que les ressources gratuites ne sont pas garanties." },
+      { objective: "O4", q: "Une clé API doit être traitée comme :", options: ["Un nom d'utilisateur public", "Un commentaire", "Un nom de fichier", "Un mot de passe"], answer: 3, why: "Toute personne qui a la clé peut utiliser votre compte." },
+      { objective: "O4", q: "Avec l'offre gratuite de l'API Gemini, vous ne devez pas envoyer :", options: ["Une question de test", "Des données privées ou de clients", "Un message de boulangerie inventé", "« Bonjour »"], answer: 1, why: "Le contenu de l'offre gratuite peut servir à améliorer les produits de Google." },
+      { objective: "O4", q: "Votre clé a fuité dans une capture d'écran. Vous devez :", options: ["Espérer que personne ne l'a vue", "La republier", "Créer une nouvelle clé et ne plus utiliser l'ancienne", "L'envoyer par e-mail au support"], answer: 2, why: "Une clé qui a fuité doit être remplacée." },
+      { objective: "O5", q: "json.loads transforme :", options: ["Des données en image", "Du Python en JavaScript", "Du texte JSON en données Python", "Une consigne en modèle"], answer: 2, why: "L'analyse rend la réponse utilisable dans le code." },
+      { objective: "O5", q: "Entourer la lecture d'un try / except permet à votre agent de :", options: ["Gérer une mauvaise réponse au lieu de planter", "Aller plus vite", "Sauter l'appel au modèle", "Cacher la clé"], answer: 0, why: "Les erreurs sont attrapées et gérées." },
+      { objective: "O6", q: "Un cas limite est :", options: ["Une entrée très courante", "Un nom de modèle", "Le premier test", "Une entrée inhabituelle comme un message vide"], answer: 3, why: "Les cas limites testent les limites d'une consigne." },
+      { objective: "O6", q: "Pourquoi inclure une entrée « ignore tes instructions » dans les tests ?", options: ["Pour rendre le modèle plus rapide", "Pour vérifier que la consigne résiste à l'injection", "Pour économiser des tokens", "Parce que la loi l'exige"], answer: 1, why: "Les agents lisent du texte non fiable ; la consigne doit tenir ses règles." },
+      { objective: "O6", q: "Il y a régression quand :", options: ["Le modèle devient moins cher", "La clé expire", "Tous les tests passent", "Une correction casse quelque chose qui marchait"], answer: 3, why: "Relancer tous les tests repère les régressions." },
+      { objective: "O6", q: "La meilleure façon d'améliorer une consigne est de :", options: ["Changer beaucoup de choses à la fois", "Ne jamais la changer", "Changer une chose et relancer tous les tests", "Demander seulement au modèle de se noter"], answer: 2, why: "Un changement à la fois montre ce qui a vraiment aidé." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      2,
+      3,
+      5,
+      7,
+      8,
+      11,
+      13,
+      15,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Atteint ou Dépasse sur chaque ligne. Si une ligne est à Pas encore, corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Consigne système complète",
+        objective: "O2",
+        notYet: "Le rôle, la tâche ou l'une des trois règles manque ou reste vague.",
+        meets: "Donne un rôle, la tâche et trois règles claires.",
+        exceeds: "Les règles disent aussi quoi faire en cas de doute ou quand rien ne convient."
+      },
+      {
+        name: "Format et exemple",
+        objective: "O3",
+        notYet: "Pas de format JSON exact ou pas d'exemple.",
+        meets: "Indique les clés JSON exactes et donne un exemple complet.",
+        exceeds: "L'exemple suit exactement le format et la plupart des sorties sont du JSON valide."
+      },
+      {
+        name: "Fonctionne depuis Colab en sécurité",
+        objective: "O4",
+        notYet: "Le notebook ne fonctionne pas, ou la clé API est visible.",
+        meets: "La consigne s'exécute depuis Colab avec la clé gardée dans un réglage secret.",
+        exceeds: "Le notebook est clair et quelqu'un d'autre pourrait le relancer avec sa propre clé."
+      },
+      {
+        name: "Lit les réponses en sécurité",
+        objective: "O5",
+        notYet: "Une réponse mauvaise ou vide fait planter le code.",
+        meets: "Le JSON est transformé en données et une mauvaise réponse est attrapée.",
+        exceeds: "Les éléments en échec sont clairement marqués pour être revus."
+      },
+      {
+        name: "Testée et améliorée",
+        objective: "O6",
+        notYet: "Moins de cinq entrées, pas d'entrée piège, ou résultats non notés.",
+        meets: "Cinq entrées dont une piège, JSON valide et correct noté pour chacune, un changement fait et tous les tests relancés.",
+        exceeds: "Sait expliquer pourquoi l'échec s'est produit et ce que le changement a corrigé."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent l'exercice final (grille d'évaluation)",
+      "Apprenants qui passent au cours 3 du programme sur les agents dans les 30 jours",
+      "Apprenants qui disent utiliser une consigne système testée dans un vrai agent ou une vraie tâche de travail dans les 30 jours (enquête de suivi)",
+      "Apprenants qui ne signalent aucune fuite de clé API (enquête de suivi)"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur avec un navigateur web et internet",
+      "Un compte Google gratuit pour Google Colab",
+      "Une clé API gratuite pour un modèle d'IA, prise sur le site officiel du fournisseur",
+      "Le plan d'agent du cours 1",
+      "Environ 60 minutes au total : leçons, exercices, contrôles et exercice final"
+    ],
+    facilitatorNotes: [
+      "Faites le test de départ ensemble, puis le chapitre 1 dans un chatbot gratuit avant que quiconque ouvre Colab.",
+      "Montrez au groupe comment enregistrer la clé API comme secret, et vérifiez qu'aucune clé n'apparaît à l'écran ni dans un notebook partagé.",
+      "Rappelez aux apprenants de ne pas envoyer de données privées ou de clients avec les offres d'API gratuites.",
+      "Mettez les personnes qui n'ont jamais codé avec quelqu'un qui a déjà codé, et demandez-leur de copier les lignes de code exactement.",
+      "Notez l'exercice final avec la grille, et demandez à chaque apprenant de montrer ses cinq résultats de test."
     ]
   }
 };

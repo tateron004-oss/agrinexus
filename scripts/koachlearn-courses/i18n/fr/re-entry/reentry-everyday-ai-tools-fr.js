@@ -16,11 +16,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes. Lisez-la, regardez les diapositives et faites la tâche \"Essayez maintenant\". Un contrôle des connaissances termine chaque chapitre et un quiz de 20 questions termine le cours. Vous n'avez jamais besoin de taper un numéro de dossier, un numéro de pièce d'identité ou un détail privé pour faire ces tâches."
   ],
   finalTask: "Préparez votre trajet pour un vrai rendez-vous (un entretien d'embauche, un bureau des pièces d'identité ou une visite de logement) : trouvez l'itinéraire en transports ou à pied, créez un rappel pour l'heure de départ, demandez à l'IA une liste de ce qu'il faut apporter, et faites-vous aider par l'IA pour écrire un court SMS poli à envoyer si vous êtes en retard.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des adultes qui sortent de prison (réinsertion), qui ont un smartphone et doivent gérer seuls leurs rendez-vous, leurs déplacements, leurs formulaires et leurs messages. Beaucoup étaient absents pendant que les téléphones et les outils d'IA changeaient.",
+    startingPoint: "Ils savent passer des appels et envoyer des SMS. Ils utilisent peu les assistants vocaux, les cartes, les outils de lecture par l'appareil photo ou les assistants d'IA. Certains ont peu confiance en eux pour la lecture ou la technologie.",
+    gap: "Manquer un entretien d'embauche, un rendez-vous pour une pièce d'identité ou une visite de logement peut retarder tout un projet de réinsertion. Les apprenants doivent utiliser les outils gratuits du téléphone pour arriver à l'heure, lire des papiers imprimés, trouver de l'aide près de chez eux et envoyer des messages polis, sans partager de données privées.",
+    constraints: [
+      "Niveau de lecture : des mots simples et des phrases courtes (fin d'école primaire environ)",
+      "Appareils : un smartphone, parfois avec peu de données mobiles ou un modèle ancien",
+      "Temps : des leçons d'environ 5 minutes, à caser autour des rendez-vous et du travail",
+      "Certaines conditions de libération conditionnelle ou de mise à l'épreuve limitent l'usage d'internet ; chaque apprenant suit ses propres conditions",
+      "Vie privée : aucun numéro de dossier, numéro d'identité ou autre donnée privée dans un outil d'IA ou un rappel"
+    ],
+    prerequisites: "Le cours « Introduction à l'IA et confiance numérique » est utile, mais pas obligatoire."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Avec l'assistant vocal de votre téléphone", action: "créer un rappel pour un rendez-vous et un deuxième rappel pour l'heure de départ", standard: "à la voix, avec un titre général et aucune donnée privée" },
+    { id: "O2", condition: "À partir de l'adresse d'un vrai lieu", action: "obtenir un itinéraire en bus, en train ou à pied dans une application de cartes et trouver l'heure de départ", standard: "avec une heure d'arrivée réglée 10 à 15 minutes en avance" },
+    { id: "O3", condition: "Face à un prospectus, un panneau ou une offre d'emploi imprimés", action: "utiliser l'appareil photo de votre téléphone pour lire, copier ou traduire le texte", standard: "en copiant un numéro de téléphone ou une adresse dans une note ou un contact sans le retaper" },
+    { id: "O4", condition: "Avec un assistant d'IA et le 211", action: "trouver un service local pour le logement, la nourriture, l'emploi ou les transports", standard: "avec un programme noté et ses informations confirmées par le 211 ou un site officiel" },
+    { id: "O5", condition: "Face à une vraie situation de la vie quotidienne", action: "écrire un message court et poli avec l'aide de l'IA", standard: "qui soit honnête, sans donnée privée et qui vous ressemble" },
+    { id: "O6", condition: "Pour un vrai rendez-vous", action: "faire avec l'aide de l'IA une liste de ce qu'il faut apporter et la confirmer auprès du bureau", standard: "en ne notant que le nom des documents, vérifiés sur le site officiel ou par téléphone" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Votre téléphone, un assistant",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Rappels et alarmes à la voix",
           minutes: 5,
           goal: "Créer un rappel pour un rendez-vous en parlant à votre téléphone.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Deux rappels pour les choses importantes", bullets: ["Un la veille", "Un au moment de partir", "Des titres généraux"] }
           ],
           tryIt: "Créez à la voix un rappel pour un vrai rendez-vous, ou un rendez-vous pour vous entraîner, et un deuxième rappel pour l'heure à laquelle vous devez partir.",
-          youCanNow: "créer à la voix des rappels de rendez-vous et des alarmes."
+          youCanNow: "créer à la voix des rappels de rendez-vous et des alarmes.",
+          quickCheck: [
+            { objective: "O1", q: "Quel est un bon titre pour le rappel d'un entretien d'embauche ?", options: ["Votre nom complet et votre date de naissance", "Entretien à 9 h", "Votre numéro de dossier", "Votre adresse personnelle"], answer: 1, why: "Le titre d'un rappel doit rester général, sans donnée privée." },
+            { objective: "O1", q: "Votre entretien est demain à 9 h et le bus met 40 minutes. Que faites-vous ?", options: ["Créer un seul rappel pour 9 h", "Espérer vous en souvenir le matin", "Créer un rappel pour ce soir et un autre pour l'heure de départ", "L'écrire sur votre main"], answer: 2, why: "Deux rappels, la veille et à l'heure de départ, vous aident à arriver à l'heure." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Se déplacer avec les cartes et les transports",
           minutes: 6,
           goal: "Trouver un itinéraire en bus, en train ou à pied, et savoir quand partir.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Soyez à l'heure", bullets: ["Indiquez votre heure d'arrivée", "Arrivez 10 à 15 minutes en avance", "Enregistrez les adresses fréquentes"] }
           ],
           tryIt: "Trouvez l'itinéraire en transports ou à pied vers un vrai lieu où vous devez aller, comme un American Job Center (centre public pour l'emploi aux États-Unis), le service des permis de conduire (DMV) ou une bibliothèque. Indiquez l'heure d'arrivée et notez quand vous devez partir.",
-          youCanNow: "trouver un itinéraire en transports ou à pied et calculer quand partir."
+          youCanNow: "trouver un itinéraire en transports ou à pied et calculer quand partir.",
+          quickCheck: [
+            { objective: "O2", q: "Que vous montre l'heure d'arrivée réglée dans une application de cartes ?", options: ["Quand vous devez partir", "Combien coûte le bus", "Qui d'autre y va", "La météo de demain"], answer: 0, why: "Avec une heure d'arrivée réglée, l'application calcule quand vous devez partir." },
+            { objective: "O2", q: "Vous devez aller au DMV (le service des permis de conduire) en bus pour un rendez-vous à 10 h. Que faites-vous ?", options: ["Partir à 10 h", "Chercher l'itinéraire en transports et régler l'arrivée vers 9 h 45", "Choisir seulement l'itinéraire à pied", "Demander à un inconnu à l'arrêt"], answer: 1, why: "Un itinéraire en transports avec une arrivée en avance vous aide à être là 10 à 15 minutes plus tôt." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Lire et traduire avec votre appareil photo",
           minutes: 5,
           goal: "Utiliser l'appareil photo de votre téléphone pour lire, copier ou traduire un texte imprimé.",
@@ -75,17 +109,21 @@ module.exports = {
             { title: "Restez sur du public", bullets: ["Pas de carte de sécurité sociale", "Pas de papiers du tribunal ni de formulaires privés"] }
           ],
           tryIt: "Visez avec votre appareil photo ou Google Lens un prospectus, un panneau ou une offre d'emploi. Copiez-en un numéro de téléphone ou une adresse dans une note ou dans vos contacts.",
-          youCanNow: "utiliser votre appareil photo pour copier, écouter ou traduire un texte imprimé."
+          youCanNow: "utiliser votre appareil photo pour copier, écouter ou traduire un texte imprimé.",
+          quickCheck: [
+            { objective: "O3", q: "Que peut faire l'outil de texte de l'appareil photo avec une offre d'emploi imprimée ?", options: ["Postuler à votre place", "En imprimer une nouvelle copie", "Appeler l'employeur tout seul", "Lire, copier ou traduire le texte"], answer: 3, why: "L'outil de texte de l'appareil photo peut lire, copier et traduire les mots imprimés." },
+            { objective: "O3", q: "Vous voulez scanner dans un outil d'IA un papier avec votre numéro de sécurité sociale. Que faites-vous ?", options: ["Le scanner pour que l'IA vous l'explique", "Ne pas le scanner : les numéros privés ne vont pas dans les outils d'IA", "En scanner seulement la moitié", "Le publier en ligne pour demander de l'aide"], answer: 1, why: "Les numéros privés, comme votre numéro de sécurité sociale, ne doivent jamais aller dans un outil d'IA." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Votre téléphone, un assistant",
         questions: [
-          { q: "Quelle est la meilleure façon de ne pas rater un entretien d'embauche ?", options: ["L'écrire sur votre main", "Espérer vous en souvenir", "Créer un rappel la veille et un pour l'heure de départ", "Demander à un inconnu de vous le rappeler"], answer: 2, why: "Deux rappels couvrent la préparation et le départ à l'heure." },
-          { q: "Dans une application de cartes, quel choix montre les trajets en bus et en train ?", options: ["Transports en commun", "Satellite", "Trafic", "Réglages"], answer: 0, why: "Transports en commun montre les transports publics." },
-          { q: "Combien de temps en avance prévoir d'arriver à un rendez-vous ?", options: ["Une heure en retard", "Pile à l'heure", "5 minutes en retard", "10 à 15 minutes en avance"], answer: 3, why: "Les bus peuvent être en retard ; arriver en avance est plus sûr." },
-          { q: "Que peut faire Google Lens avec un prospectus ?", options: ["Imprimer de l'argent", "Copier, lire à voix haute ou traduire son texte", "Appeler votre famille", "Signer des formulaires pour vous"], answer: 1, why: "Lens lit le texte que voit l'appareil photo." },
-          { q: "Que ne devez-vous PAS scanner dans un outil d'IA ?", options: ["Une offre d'emploi", "Votre carte de sécurité sociale", "Un panneau de rue", "Des horaires de bus"], answer: 1, why: "Les documents privés restent hors des outils d'IA." }
+          { objective: "O1", q: "Quelle est la meilleure façon de ne pas rater un entretien d'embauche ?", options: ["L'écrire sur votre main", "Espérer vous en souvenir", "Créer un rappel la veille et un pour l'heure de départ", "Demander à un inconnu de vous le rappeler"], answer: 2, why: "Deux rappels couvrent la préparation et le départ à l'heure." },
+          { objective: "O2", q: "Dans une application de cartes, quel choix montre les trajets en bus et en train ?", options: ["Transports en commun", "Satellite", "Trafic", "Réglages"], answer: 0, why: "Transports en commun montre les transports publics." },
+          { objective: "O2", q: "Combien de temps en avance prévoir d'arriver à un rendez-vous ?", options: ["Une heure en retard", "Pile à l'heure", "5 minutes en retard", "10 à 15 minutes en avance"], answer: 3, why: "Les bus peuvent être en retard ; arriver en avance est plus sûr." },
+          { objective: "O3", q: "Que peut faire Google Lens avec un prospectus ?", options: ["Imprimer de l'argent", "Copier, lire à voix haute ou traduire son texte", "Appeler votre famille", "Signer des formulaires pour vous"], answer: 1, why: "Lens lit le texte que voit l'appareil photo." },
+          { objective: "O3", q: "Que ne devez-vous PAS scanner dans un outil d'IA ?", options: ["Une offre d'emploi", "Votre carte de sécurité sociale", "Un panneau de rue", "Des horaires de bus"], answer: 1, why: "Les documents privés restent hors des outils d'IA." }
         ]
       }
     },
@@ -93,6 +131,7 @@ module.exports = {
       name: "Chapitre 2 : Faire avancer les choses",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Trouver de l'aide près de chez vous",
           minutes: 5,
           goal: "Trouver des services locaux pour le logement, la nourriture, l'emploi ou les transports.",
@@ -110,9 +149,14 @@ module.exports = {
           ],
           sources: [{ name: "211 : qui sommes-nous (en anglais)", url: "https://www.211.org/about-us" }],
           tryIt: "Demandez à un assistant d'IA quels types de services locaux pourraient vous aider maintenant et quoi demander quand vous appelez. Puis cherchez votre 211 local sur 211.org et notez un programme à contacter.",
-          youCanNow: "trouver de l'aide près de chez vous et la confirmer avant d'y aller."
+          youCanNow: "trouver de l'aide près de chez vous et la confirmer avant d'y aller.",
+          quickCheck: [
+            { objective: "O4", q: "Que peut vous aider à trouver le 211 ?", options: ["Seulement l'aide de la police en urgence", "Seulement des offres d'emploi dans les grandes entreprises", "De l'aide près de chez vous pour le logement, la nourriture et plus", "Votre casier judiciaire"], answer: 2, why: "Le 211 met les gens en contact avec des services locaux, comme l'aide au logement et l'aide alimentaire." },
+            { objective: "O4", q: "Un assistant d'IA vous donne le numéro de téléphone d'une banque alimentaire. Que faites-vous ?", options: ["Confirmer le numéro avec le 211 ou le site officiel", "Y aller tout de suite", "Le partager avec vos amis sans vérifier", "Demander à l'IA si elle est sûre"], answer: 0, why: "L'IA peut se tromper, donc vous confirmez les informations avec le 211 ou une source officielle." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Écrire des messages du quotidien avec l'IA",
           minutes: 5,
           goal: "Utiliser l'IA pour écrire un message court et poli pour une situation réelle.",
@@ -129,9 +173,14 @@ module.exports = {
             { title: "Faites-le vôtre", bullets: ["Lisez-le à voix haute", "Court et honnête", "Pas besoin d'expliquer votre passé"] }
           ],
           tryIt: "Demandez à un assistant d'IA d'écrire un SMS court et poli pour prévenir un recruteur que votre bus est en retard. Changez une chose pour qu'il vous ressemble.",
-          youCanNow: "écrire des messages du quotidien clairs et polis avec l'aide de l'IA."
+          youCanNow: "écrire des messages du quotidien clairs et polis avec l'aide de l'IA.",
+          quickCheck: [
+            { objective: "O5", q: "Qu'est-ce qui fait un bon message du quotidien ?", options: ["Long et plein de détails sur votre passé", "Court, poli et honnête", "Écrit tout en majuscules", "Envoyé sans être relu"], answer: 1, why: "Un message court, poli et honnête est facile à lire et respectueux." },
+            { objective: "O5", q: "L'IA a écrit un SMS de retard avec des mots que vous ne diriez jamais. Que faites-vous ?", options: ["L'envoyer quand même", "Demander à l'IA de le rallonger", "L'effacer et ne rien envoyer", "Changer les mots pour qu'il vous ressemble, puis l'envoyer"], answer: 3, why: "Vous relisez les textes de l'IA et les modifiez pour qu'ils vous ressemblent." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Listes pour les rendez-vous et les documents",
           minutes: 5,
           goal: "Demander à l'IA une liste de ce qu'il faut apporter, puis la confirmer auprès du bureau.",
@@ -148,17 +197,21 @@ module.exports = {
             { title: "Gardez vos numéros privés", bullets: ["La liste n'a besoin que du nom des documents", "Ne tapez jamais de numéro d'identité ou de dossier dans l'IA"] }
           ],
           tryIt: "Tâche finale : choisissez un vrai rendez-vous. Trouvez l'itinéraire en transports ou à pied, créez un rappel pour l'heure de départ, demandez à l'IA une liste de ce qu'il faut apporter (puis confirmez-la sur le site officiel), et faites-vous aider par l'IA pour écrire un court SMS à envoyer si vous êtes en retard.",
-          youCanNow: "utiliser les outils d'IA du quotidien pour préparer un rendez-vous et y arriver à l'heure."
+          youCanNow: "utiliser les outils d'IA du quotidien pour préparer un rendez-vous et y arriver à l'heure.",
+          quickCheck: [
+            { objective: "O6", q: "Que doit contenir une liste de documents ?", options: ["Le nom des documents dont vous avez besoin", "Vos numéros d'identité et de sécurité sociale", "Vos mots de passe", "L'adresse personnelle de votre agent de probation"], answer: 0, why: "Une liste a besoin du nom des documents, pas de vos numéros privés." },
+            { objective: "O6", q: "La liste de l'IA pour un rendez-vous de carte d'identité d'État semble complète. Que faites-vous ensuite ?", options: ["Lui faire confiance et y aller", "N'apporter rien de plus", "Confirmer la liste sur le site officiel du bureau ou par téléphone", "Demander à un ami ce qu'il avait apporté il y a des années"], answer: 2, why: "C'est le bureau qui décide de ce qu'il faut apporter." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Faire avancer les choses",
         questions: [
-          { q: "Quel numéro vous met en contact avec de l'aide locale pour le logement, la nourriture et plus encore ?", options: ["611", "411", "311 partout", "211"], answer: 3, why: "Le 211 met les gens en contact avec les services locaux." },
-          { q: "L'IA vous donne le numéro d'un programme. Que faites-vous ?", options: ["Le confirmer auprès du 211 ou du site officiel", "Le croire complètement", "Le publier en ligne", "Lui donner votre numéro de dossier"], answer: 0, why: "L'IA peut citer des programmes fermés ou de mauvais numéros." },
-          { q: "Quel prompt donnera un bon SMS de retard ?", options: ["\"retard\"", "\"SMS\"", "\"Écris un SMS court et poli à une responsable du recrutement. Mon bus a 10 minutes de retard pour mon entretien de 9 h.\"", "\"bus\""], answer: 2, why: "Il dit à qui, quoi et le ton voulu." },
-          { q: "Devez-vous expliquer votre passé dans un message de tous les jours ?", options: ["Seulement par e-mail", "Oui, toujours", "Seulement aux propriétaires", "Non ; restez court et honnête"], answer: 3, why: "Les messages du quotidien n'ont besoin que de l'essentiel." },
-          { q: "Qui a le dernier mot sur les documents à apporter ?", options: ["Un ami", "L'IA", "Le bureau lui-même", "Une publication sur les réseaux sociaux"], answer: 2, why: "Les règles varient selon les États ; c'est le bureau qui décide." }
+          { objective: "O4", q: "Quel numéro vous met en contact avec de l'aide locale pour le logement, la nourriture et plus encore ?", options: ["611", "411", "311 partout", "211"], answer: 3, why: "Le 211 met les gens en contact avec les services locaux." },
+          { objective: "O4", q: "L'IA vous donne le numéro d'un programme. Que faites-vous ?", options: ["Le confirmer auprès du 211 ou du site officiel", "Le croire complètement", "Le publier en ligne", "Lui donner votre numéro de dossier"], answer: 0, why: "L'IA peut citer des programmes fermés ou de mauvais numéros." },
+          { objective: "O5", q: "Quel prompt donnera un bon SMS de retard ?", options: ["\"retard\"", "\"SMS\"", "\"Écris un SMS court et poli à une responsable du recrutement. Mon bus a 10 minutes de retard pour mon entretien de 9 h.\"", "\"bus\""], answer: 2, why: "Il dit à qui, quoi et le ton voulu." },
+          { objective: "O5", q: "Devez-vous expliquer votre passé dans un message de tous les jours ?", options: ["Seulement par e-mail", "Oui, toujours", "Seulement aux propriétaires", "Non ; restez court et honnête"], answer: 3, why: "Les messages du quotidien n'ont besoin que de l'essentiel." },
+          { objective: "O6", q: "Qui a le dernier mot sur les documents à apporter ?", options: ["Un ami", "L'IA", "Le bureau lui-même", "Une publication sur les réseaux sociaux"], answer: 2, why: "Les règles varient selon les États ; c'est le bureau qui décide." }
         ]
       }
     }
@@ -166,26 +219,98 @@ module.exports = {
   quiz: {
     title: "Quiz final : Les outils d'IA du quotidien",
     questions: [
-      { q: "Siri et Google Assistant sont :", options: ["Des sites d'emploi", "Des assistants vocaux sur les téléphones", "Des compagnies de bus", "Des banques"], answer: 1, why: "Ils font des tâches simples quand vous parlez." },
-      { q: "Quelle demande vocale crée un rappel utile ?", options: ["\"Rappelle-moi mon entretien mardi à 9 h.\"", "\"Entretien.\"", "\"Mardi.\"", "\"Salut.\""], answer: 0, why: "Elle dit quoi, le jour et l'heure." },
-      { q: "Pour les rendez-vous importants, créez :", options: ["Deux rappels : la veille et au moment de partir", "Aucun", "Un un mois plus tard", "Dix alarmes au hasard"], answer: 0, why: "Deux rappels couvrent la préparation et le départ." },
-      { q: "Les titres de rappel doivent être :", options: ["Pleins de numéros d'identité", "Généraux, sans détails privés", "Votre numéro de dossier", "Votre mot de passe"], answer: 1, why: "Vous n'avez pas besoin de détails privés dans les rappels." },
-      { q: "Dans une application de cartes, après avoir tapé l'adresse, vous touchez :", options: ["Appareil photo", "Supprimer", "Itinéraire", "Partager le mot de passe"], answer: 2, why: "Itinéraire montre comment y aller." },
-      { q: "\"Transports en commun\" veut dire :", options: ["L'avion", "Seulement la marche", "Seulement les taxis", "Les bus et les trains"], answer: 3, why: "Ce sont les transports publics." },
-      { q: "Indiquer votre heure d'arrivée dans une application de cartes montre :", options: ["Votre numéro d'identité", "Le solde de votre compte", "Quand vous devez partir", "Seulement la météo"], answer: 2, why: "Elle calcule à rebours à partir de votre arrivée." },
-      { q: "Enregistrer les adresses où vous allez souvent les rend :", options: ["Accessibles en un geste", "Privées", "Invisibles", "Chères"], answer: 0, why: "Les lieux enregistrés sont rapides à retrouver." },
-      { q: "Google Lens peut :", options: ["Appeler votre agent de probation", "Remplacer votre pièce d'identité", "Payer votre loyer", "Lire, copier et traduire un texte imprimé"], answer: 3, why: "Lens lit ce que voit l'appareil photo." },
-      { q: "Un bon usage de l'outil texte de l'appareil photo est :", options: ["Scanner votre carte de sécurité sociale dans l'IA", "Copier un numéro de téléphone sur une offre d'emploi", "Scanner des papiers du tribunal dans l'IA", "Photographier votre carte bancaire pour l'IA"], answer: 1, why: "Seulement du texte public ; gardez les documents privés à l'écart." },
-      { q: "Les appels au 211 sont :", options: ["Enregistrés pour le public", "Confidentiels, et vous pouvez rester anonyme", "Seulement pour les urgences", "Seulement pour les entreprises"], answer: 1, why: "Les appels au 211 sont confidentiels." },
-      { q: "Avant d'appeler le 211, l'IA peut vous aider en :", options: ["Vous garantissant un lit", "Connaissant votre dossier", "Vous inscrivant automatiquement", "Vous suggérant les types d'aide à demander"], answer: 3, why: "Elle vous aide à préparer vos questions." },
-      { q: "Un conseiller (case manager) est :", options: ["Une personne qui vous aide à faire des plans et à trouver des services", "Une application de téléphone", "Un chauffeur de bus", "Un site web"], answer: 0, why: "Les conseillers aident à préparer la réinsertion." },
-      { q: "Quand l'IA écrit un message pour vous, vous devez :", options: ["Ajouter votre numéro de sécurité sociale", "L'envoyer sans le lire", "Le lire à voix haute et faire qu'il vous ressemble", "Le rendre très long"], answer: 2, why: "Votre message doit vous ressembler." },
-      { q: "Un bon message du quotidien est :", options: ["Plein de détails privés", "Long et plein d'excuses", "Impoli", "Court, poli et honnête"], answer: 3, why: "Court et honnête, c'est ce qui marche le mieux." },
-      { q: "Un \"brouillon\", c'est :", options: ["Un ticket de bus", "La version finale", "Une première version que vous pouvez changer", "Une pièce d'identité"], answer: 2, why: "On améliore les brouillons avant de les envoyer." },
-      { q: "Avant d'aller chercher une carte d'identité de l'État, vous devez :", options: ["Croire seulement l'IA", "Confirmer la liste des documents sur le site officiel ou par téléphone", "N'apporter rien", "Demander à un inconnu"], answer: 1, why: "Les règles varient selon les États." },
-      { q: "Les sites officiels du gouvernement américain finissent souvent par :", options: [".gov", ".win", ".gift", ".xyz"], answer: 0, why: ".gov est utilisé par les services publics." },
-      { q: "De quoi a besoin une liste de documents ?", options: ["Du nom des documents, pas de vos numéros", "De vos vrais numéros d'identité", "De votre numéro de dossier", "De votre numéro de sécurité sociale"], answer: 0, why: "Le nom des documents suffit." },
-      { q: "Une carte d'identité de l'État (state ID) est :", options: ["Un ticket de bus", "Une carte d'identité officielle avec photo délivrée par votre État", "Une carte de bibliothèque", "Une application de téléphone"], answer: 1, why: "C'est une pièce d'identité officielle avec photo, notamment pour ceux qui ne conduisent pas." }
+      { objective: "O1", q: "Siri et Google Assistant sont :", options: ["Des sites d'emploi", "Des assistants vocaux sur les téléphones", "Des compagnies de bus", "Des banques"], answer: 1, why: "Ils font des tâches simples quand vous parlez." },
+      { objective: "O1", q: "Quelle demande vocale crée un rappel utile ?", options: ["\"Rappelle-moi mon entretien mardi à 9 h.\"", "\"Entretien.\"", "\"Mardi.\"", "\"Salut.\""], answer: 0, why: "Elle dit quoi, le jour et l'heure." },
+      { objective: "O1", q: "Pour les rendez-vous importants, créez :", options: ["Deux rappels : la veille et au moment de partir", "Aucun", "Un un mois plus tard", "Dix alarmes au hasard"], answer: 0, why: "Deux rappels couvrent la préparation et le départ." },
+      { objective: "O1", q: "Les titres de rappel doivent être :", options: ["Pleins de numéros d'identité", "Généraux, sans détails privés", "Votre numéro de dossier", "Votre mot de passe"], answer: 1, why: "Vous n'avez pas besoin de détails privés dans les rappels." },
+      { objective: "O2", q: "Dans une application de cartes, après avoir tapé l'adresse, vous touchez :", options: ["Appareil photo", "Supprimer", "Itinéraire", "Partager le mot de passe"], answer: 2, why: "Itinéraire montre comment y aller." },
+      { objective: "O2", q: "\"Transports en commun\" veut dire :", options: ["L'avion", "Seulement la marche", "Seulement les taxis", "Les bus et les trains"], answer: 3, why: "Ce sont les transports publics." },
+      { objective: "O2", q: "Indiquer votre heure d'arrivée dans une application de cartes montre :", options: ["Votre numéro d'identité", "Le solde de votre compte", "Quand vous devez partir", "Seulement la météo"], answer: 2, why: "Elle calcule à rebours à partir de votre arrivée." },
+      { objective: "O2", q: "Enregistrer les adresses où vous allez souvent les rend :", options: ["Accessibles en un geste", "Privées", "Invisibles", "Chères"], answer: 0, why: "Les lieux enregistrés sont rapides à retrouver." },
+      { objective: "O3", q: "Google Lens peut :", options: ["Appeler votre agent de probation", "Remplacer votre pièce d'identité", "Payer votre loyer", "Lire, copier et traduire un texte imprimé"], answer: 3, why: "Lens lit ce que voit l'appareil photo." },
+      { objective: "O3", q: "Un bon usage de l'outil texte de l'appareil photo est :", options: ["Scanner votre carte de sécurité sociale dans l'IA", "Copier un numéro de téléphone sur une offre d'emploi", "Scanner des papiers du tribunal dans l'IA", "Photographier votre carte bancaire pour l'IA"], answer: 1, why: "Seulement du texte public ; gardez les documents privés à l'écart." },
+      { objective: "O4", q: "Les appels au 211 sont :", options: ["Enregistrés pour le public", "Confidentiels, et vous pouvez rester anonyme", "Seulement pour les urgences", "Seulement pour les entreprises"], answer: 1, why: "Les appels au 211 sont confidentiels." },
+      { objective: "O4", q: "Avant d'appeler le 211, l'IA peut vous aider en :", options: ["Vous garantissant un lit", "Connaissant votre dossier", "Vous inscrivant automatiquement", "Vous suggérant les types d'aide à demander"], answer: 3, why: "Elle vous aide à préparer vos questions." },
+      { objective: "O4", q: "Un conseiller (case manager) est :", options: ["Une personne qui vous aide à faire des plans et à trouver des services", "Une application de téléphone", "Un chauffeur de bus", "Un site web"], answer: 0, why: "Les conseillers aident à préparer la réinsertion." },
+      { objective: "O5", q: "Quand l'IA écrit un message pour vous, vous devez :", options: ["Ajouter votre numéro de sécurité sociale", "L'envoyer sans le lire", "Le lire à voix haute et faire qu'il vous ressemble", "Le rendre très long"], answer: 2, why: "Votre message doit vous ressembler." },
+      { objective: "O5", q: "Un bon message du quotidien est :", options: ["Plein de détails privés", "Long et plein d'excuses", "Impoli", "Court, poli et honnête"], answer: 3, why: "Court et honnête, c'est ce qui marche le mieux." },
+      { objective: "O5", q: "Un \"brouillon\", c'est :", options: ["Un ticket de bus", "La version finale", "Une première version que vous pouvez changer", "Une pièce d'identité"], answer: 2, why: "On améliore les brouillons avant de les envoyer." },
+      { objective: "O6", q: "Avant d'aller chercher une carte d'identité de l'État, vous devez :", options: ["Croire seulement l'IA", "Confirmer la liste des documents sur le site officiel ou par téléphone", "N'apporter rien", "Demander à un inconnu"], answer: 1, why: "Les règles varient selon les États." },
+      { objective: "O6", q: "Les sites officiels du gouvernement américain finissent souvent par :", options: [".gov", ".win", ".gift", ".xyz"], answer: 0, why: ".gov est utilisé par les services publics." },
+      { objective: "O6", q: "De quoi a besoin une liste de documents ?", options: ["Du nom des documents, pas de vos numéros", "De vos vrais numéros d'identité", "De votre numéro de dossier", "De votre numéro de sécurité sociale"], answer: 0, why: "Le nom des documents suffit." },
+      { objective: "O6", q: "Une carte d'identité de l'État (state ID) est :", options: ["Un ticket de bus", "Une carte d'identité officielle avec photo délivrée par votre État", "Une carte de bibliothèque", "Une application de téléphone"], answer: 1, why: "C'est une pièce d'identité officielle avec photo, notamment pour ceux qui ne conduisent pas." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      1,
+      3,
+      4,
+      6,
+      8,
+      10,
+      13,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Itinéraire",
+        objective: "O2",
+        notYet: "Pas d'itinéraire, ou aucune idée de l'heure de départ.",
+        meets: "Un itinéraire en transports ou à pied avec une heure d'arrivée en avance, et l'heure de départ notée.",
+        exceeds: "Il y a aussi un itinéraire de secours ou l'adresse enregistrée pour l'ouvrir en un geste."
+      },
+      {
+        name: "Rappel pour partir",
+        objective: "O1",
+        notYet: "Pas de rappel, ou un rappel avec des données privées dans le titre.",
+        meets: "Un rappel réglé pour l'heure de départ, avec un titre général.",
+        exceeds: "Un rappel a aussi été créé pour la veille."
+      },
+      {
+        name: "Liste confirmée",
+        objective: "O6",
+        notYet: "Pas de liste, ou une liste avec des numéros privés, ou une liste non confirmée.",
+        meets: "Une liste avec le nom des documents, confirmée sur le site officiel ou par téléphone.",
+        exceeds: "L'apprenant peut dire où il l'a confirmée et ce qui a changé par rapport à la liste de l'IA."
+      },
+      {
+        name: "SMS de retard",
+        objective: "O5",
+        notYet: "Pas de SMS, ou un SMS long, impoli ou avec des données privées.",
+        meets: "Un SMS court, poli et honnête, prêt à envoyer.",
+        exceeds: "L'apprenant a changé des mots pour qu'il lui ressemble."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Les apprenants qui disent être arrivés à l'heure à un rendez-vous grâce à ces outils dans les 30 jours (enquête de suivi)",
+      "Les apprenants qui contactent un service local trouvé par le 211 dans les 30 jours",
+      "Les partenaires de réinsertion signalent moins de rendez-vous manqués"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un smartphone avec internet et une application de cartes",
+      "Un assistant d'IA gratuit : Microsoft Copilot, ChatGPT ou Google Gemini",
+      "Un prospectus ou une offre d'emploi imprimés pour s'entraîner avec l'appareil photo",
+      "Environ 60 minutes en tout, en séances courtes : leçons, pratique, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Demandez aux apprenants de venir avec un vrai rendez-vous à venir, pour que la tâche finale serve tout de suite.",
+      "Ne demandez jamais aux apprenants de taper ou de scanner un vrai numéro d'identité, de dossier ou de sécurité sociale ; utilisez seulement le nom des documents.",
+      "Parcourez 211.org ensemble pour que chacun trouve son 211 local.",
+      "Rappelez aux personnes en libération conditionnelle ou en mise à l'épreuve de respecter leurs conditions sur l'usage d'internet ou du téléphone.",
+      "Notez la tâche finale avec la grille et donnez votre retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

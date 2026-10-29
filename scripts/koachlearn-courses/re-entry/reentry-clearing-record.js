@@ -18,11 +18,35 @@ module.exports = {
     "Each lesson takes about five minutes and ends with a task you do right away. There is a knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Make a one-page record-relief action plan: where you will get your record, each case you know about (county, year, charge) and the kind of relief that might fit it, the free legal help you will contact first, the papers you will gather, and a short, honest rehabilitation statement you could give an employer after a job offer.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Adults with a criminal record, many coming home from prison, whose record is getting in the way of jobs, housing or school. Examples use California, with pointers to check rules in other states.",
+    startingPoint: "Know some of their cases from memory. Most have never seen their own official record, do not know the record relief words, and do not know where free legal help is.",
+    gap: "Many people who qualify for record relief never apply because nobody showed them how. Learners need to get their record, name the relief that might fit, find free legal help and prepare their papers, so a lawyer or clinic can file for them and they can speak up for their rights in hiring.",
+    constraints: [
+      "Reading level: plain words and short sentences (about grade 5 to 6)",
+      "Devices: a smartphone or library computer with internet",
+      "Time: about 5-minute lessons that fit around work and appointments",
+      "Not legal advice: laws differ by state and change; learners get help from a lawyer, legal aid or court self-help center before filing",
+      "Privacy: case details stay out of AI tools and shared computers"
+    ],
+    prerequisites: "None. \"Introduction to AI and Digital Confidence\" helps learners who are new to finding official websites."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Using your state's official website", action: "request a copy of your own criminal record and find where to get federal and court records", standard: "writing down the form name, fee, fee waiver and nearest fingerprint site" },
+    { id: "O2", condition: "Given the record relief words", action: "explain the difference between expungement, sealing, set-aside or dismissal, a certificate of rehabilitation and a pardon", standard: "with one plain, correct sentence for each" },
+    { id: "O3", condition: "Given your list of cases", action: "identify whether each case is federal or state and check whether automatic relief may apply", standard: "with every case labeled and a plan to check your newest record" },
+    { id: "O4", condition: "Using official and nonprofit sources", action: "find two free places that help with record relief and prepare questions for the first call", standard: "with name, phone, hours and three questions for each, and no paid service that guarantees results" },
+    { id: "O5", condition: "Given your cases and proof of your life now", action: "build a record-relief folder a lawyer or clinic can use", standard: "with each case's county, year and charge and a checklist of proof still needed" },
+    { id: "O6", condition: "Using California's Fair Chance Act", action: "explain when an employer can check your record and write a short rehabilitation statement", standard: "with a statement that is honest, short and says what you have done since" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Know your record and your options",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Getting a copy of your own record",
           minutes: 5,
           goal: "Request a copy of your state criminal record and know where to find your federal and court records.",
@@ -46,9 +70,14 @@ module.exports = {
             { name: "FBI: Identity History Summary checks", url: "https://www.fbi.gov/how-we-can-help-you/more-fbi-services-and-information/identity-history-summary-checks" }
           ],
           tryIt: "Find the official page where your state lets you request your own record (in California, oag.ca.gov Record Review). Write down the form name, the fee, whether there is a fee waiver, and the nearest place to get fingerprinted.",
-          youCanNow: "request a copy of your state record, say where your FBI and court records are kept, and spot mistakes to challenge."
+          youCanNow: "request a copy of your state record, say where your FBI and court records are kept, and spot mistakes to challenge.",
+          quickCheck: [
+            { objective: "O1", q: "In California, what do you need to do to see your own state record?", options: ["Call the police station", "Fill out the DOJ Record Review form and get fingerprinted at a Live Scan site", "Ask an AI assistant to look it up", "Pay a background-check website"], answer: 1, why: "California's DOJ Record Review uses a form and Live Scan fingerprints." },
+            { objective: "O1", q: "You get your record and see a case that is not yours. What would you do?", options: ["Ignore it", "Ask AI to delete it", "Wait until an employer asks", "Challenge it with the official form for mistakes"], answer: 3, why: "Getting your record lets you catch mistakes and challenge them officially." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "What the record relief words mean",
           minutes: 5,
           goal: "Explain the difference between expungement, dismissal, sealing, set-aside, a certificate of rehabilitation and a pardon.",
@@ -69,9 +98,14 @@ module.exports = {
             { name: "California Courts Self-Help Guide: Clean your record", url: "https://selfhelp.courts.ca.gov/clean-your-record" }
           ],
           tryIt: "Make a small chart with five rows: expungement, sealing, set-aside or dismissal, certificate of rehabilitation, pardon. Next to each, write one plain sentence about what it does. Then write one question about your own case to ask a lawyer.",
-          youCanNow: "explain the main kinds of record relief in plain words and say why you still ask a lawyer what each one does for you."
+          youCanNow: "explain the main kinds of record relief in plain words and say why you still ask a lawyer what each one does for you.",
+          quickCheck: [
+            { objective: "O2", q: "What does sealing a record usually do?", options: ["Keeps the record but hides it from most people", "Destroys every copy forever", "Turns a felony into a ticket", "Gives you a pardon"], answer: 0, why: "A sealed record still exists, but most people cannot see it." },
+            { objective: "O2", q: "You are not sure which relief fits your case. What would you do?", options: ["Pick the one with the nicest name", "File for all of them at once", "Write down your question and ask a lawyer or legal aid", "Ask a friend who had a different case"], answer: 2, why: "A lawyer or legal aid can tell which relief fits your own case." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Federal, state and California Clean Slate",
           minutes: 5,
           goal: "Tell whether each of your cases is federal or state and check whether California's automatic relief may already apply.",
@@ -94,17 +128,21 @@ module.exports = {
             { name: "US DOJ Office of the Pardon Attorney: Apply for clemency", url: "https://www.justice.gov/pardon/apply-clemency" }
           ],
           tryIt: "Using your record or what you remember, list each case and write state or federal next to it. If you live in California, write down whether your newest DOJ record shows automatic relief for any case, or plan to request it to find out.",
-          youCanNow: "sort your cases into federal and state, explain what California's automatic relief does and does not do, and list which cases still need a petition."
+          youCanNow: "sort your cases into federal and state, explain what California's automatic relief does and does not do, and list which cases still need a petition.",
+          quickCheck: [
+            { objective: "O3", q: "Your case was heard in a county superior court. What kind of case is it?", options: ["A federal case", "A state case", "A military case", "A civil case only"], answer: 1, why: "County superior courts hear state cases." },
+            { objective: "O3", q: "You live in California and think automatic relief may apply to an old case. What would you do?", options: ["Assume it was cleared", "File a federal petition", "Ask an employer to check", "Request your newest DOJ record and look for the relief note"], answer: 3, why: "Your newest DOJ record shows whether automatic relief was applied." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Know your record and your options",
         questions: [
-          { q: "What is the best first step before applying for record relief?", options: ["Tell every employer you have no record", "Get a copy of your own record", "Pay a website to erase your record", "Wait for the court to call you"], answer: 1, why: "Your record shows each case and outcome, so you know what to fix and can spot mistakes." },
-          { q: "In California, how do you see your own state record?", options: ["Ask a friend at the courthouse", "Search your name on social media", "Call 911", "Fill out the DOJ Record Review form and get fingerprinted at a Live Scan site"], answer: 3, why: "California's DOJ Record Review uses form BCIA 8016RR and Live Scan fingerprints." },
-          { q: "Which option keeps the record but hides it from most people?", options: ["Sealing", "A traffic ticket", "Probation", "A warrant"], answer: 0, why: "Sealing means the record still exists but most of the public cannot see it." },
-          { q: "Your only conviction is from a US District Court. Which path is most likely?", options: ["A California dismissal", "A county Clean Slate program", "A presidential pardon", "A school transcript change"], answer: 2, why: "A US District Court case is federal, and state relief cannot clear it; the main path is a presidential pardon." },
-          { q: "What is true about California's automatic record relief?", options: ["It erases the case completely", "You must file a petition to get it", "DOJ calls you when it is done", "It limits who can see a case but does not dismiss it"], answer: 3, why: "Automatic relief adds a note that limits disclosure; the case is not dismissed or erased." }
+          { objective: "O1", q: "What is the best first step before applying for record relief?", options: ["Tell every employer you have no record", "Get a copy of your own record", "Pay a website to erase your record", "Wait for the court to call you"], answer: 1, why: "Your record shows each case and outcome, so you know what to fix and can spot mistakes." },
+          { objective: "O1", q: "In California, how do you see your own state record?", options: ["Ask a friend at the courthouse", "Search your name on social media", "Call 911", "Fill out the DOJ Record Review form and get fingerprinted at a Live Scan site"], answer: 3, why: "California's DOJ Record Review uses form BCIA 8016RR and Live Scan fingerprints." },
+          { objective: "O2", q: "Which option keeps the record but hides it from most people?", options: ["Sealing", "A traffic ticket", "Probation", "A warrant"], answer: 0, why: "Sealing means the record still exists but most of the public cannot see it." },
+          { objective: "O3", q: "Your only conviction is from a US District Court. Which path is most likely?", options: ["A California dismissal", "A county Clean Slate program", "A presidential pardon", "A school transcript change"], answer: 2, why: "A US District Court case is federal, and state relief cannot clear it; the main path is a presidential pardon." },
+          { objective: "O3", q: "What is true about California's automatic record relief?", options: ["It erases the case completely", "You must file a petition to get it", "DOJ calls you when it is done", "It limits who can see a case but does not dismiss it"], answer: 3, why: "Automatic relief adds a note that limits disclosure; the case is not dismissed or erased." }
         ]
       }
     },
@@ -112,6 +150,7 @@ module.exports = {
       name: "Chapter 2: Get help, prepare and use your rights",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Finding free legal help",
           minutes: 5,
           goal: "Find two free places that can help you with record relief and prepare for the first call.",
@@ -134,9 +173,14 @@ module.exports = {
             { name: "California Courts Self-Help Guide: Legal help to clean your record", url: "https://selfhelp.courts.ca.gov/clean-your-record/legal-help" }
           ],
           tryIt: "Find two free legal helpers near you for record relief. For each, write the name, phone number, hours and what to bring. Then write three questions you will ask, such as: Which of my cases can be cleared? Which kind of relief fits? How long will it take?",
-          youCanNow: "find free legal help for record relief, prepare for the first call and spot paid offers that are warning signs."
+          youCanNow: "find free legal help for record relief, prepare for the first call and spot paid offers that are warning signs.",
+          quickCheck: [
+            { objective: "O4", q: "Which is a free place to look for record relief help?", options: ["A website that guarantees results for a big fee", "A court self-help center", "A stranger on social media", "A bail bond office"], answer: 1, why: "Court self-help centers offer free help with court forms." },
+            { objective: "O4", q: "Someone promises to clear your record for sure if you pay $1,000 today. What would you do?", options: ["Walk away and contact free legal help instead", "Pay half now", "Pay with a gift card", "Give them your case details to check"], answer: 0, why: "Guarantees and big up-front fees are warning signs." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Preparing and filing with help",
           minutes: 6,
           goal: "Build a record-relief folder that a lawyer or clinic can use to file for you.",
@@ -155,9 +199,14 @@ module.exports = {
             { title: "After you file", bullets: ["Keep copies and write down every date", "Get a copy of the judge's order", "Check your record again a few months later"] }
           ],
           tryIt: "Start your record-relief folder today. Write the list of cases you know about (county, year, charge) and a checklist of the proof you still need to collect. Put a star next to the first two papers you will get this week.",
-          youCanNow: "build a record-relief folder, work with a helper to file, and check afterward that your record was updated."
+          youCanNow: "build a record-relief folder, work with a helper to file, and check afterward that your record was updated.",
+          quickCheck: [
+            { objective: "O5", q: "What is a case number?", options: ["Your Social Security number", "Your prison ID", "The number a court gives each case", "Your phone number"], answer: 2, why: "Each court case has its own case number." },
+            { objective: "O5", q: "The court granted your relief. What would you do later?", options: ["Never think about it again", "Request your record again to make sure it was updated", "Tell employers you have no record without checking", "Throw away your folder"], answer: 1, why: "Checking your record again makes sure the relief shows up." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Fair-chance hiring and your rights",
           minutes: 6,
           goal: "Explain California's Fair Chance Act and prepare a short rehabilitation statement for an employer.",
@@ -180,17 +229,21 @@ module.exports = {
             { name: "California Civil Rights Department: Criminal History and Employment fact sheet (June 2025)", url: "https://calcivilrights.ca.gov/wp-content/uploads/sites/32/2025/07/Fair-Chance-Act-Factsheet_English.pdf" }
           ],
           tryIt: "Final task: make your one-page record-relief action plan. Include where you will get your record, each case and the relief that might fit it, the free legal help you will contact first, the papers you will gather, and your short rehabilitation statement for employers.",
-          youCanNow: "explain your fair-chance hiring rights in California, find out the rules in your state, and answer an employer about your record with a short, honest statement and proof."
+          youCanNow: "explain your fair-chance hiring rights in California, find out the rules in your state, and answer an employer about your record with a short, honest statement and proof.",
+          quickCheck: [
+            { objective: "O6", q: "Under California's Fair Chance Act, when can most covered employers run a background check?", options: ["Before the interview", "On the job application", "Never", "After a conditional job offer"], answer: 3, why: "Covered employers wait until after a conditional offer to check your record." },
+            { objective: "O6", q: "An employer asks about your past after making you an offer. What would you do?", options: ["Give a short, honest statement about what you have done since", "Tell a long story about the case", "Refuse to say anything and leave", "Say you have no record"], answer: 0, why: "A short, honest rehabilitation statement shows you are ready for the job." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Get help, prepare and use your rights",
         questions: [
-          { q: "Which is a warning sign when someone offers to clear your record?", options: ["They explain your options first", "They work at a court self-help center", "They guarantee results and want a big fee up front", "They ask you to bring your record"], answer: 2, why: "Guarantees and large up-front fees are signs of a scam; real help explains options first." },
-          { q: "You are not a US citizen and want record relief. What should you do first?", options: ["Talk to an immigration lawyer", "File the forms alone right away", "Skip legal help", "Ask a friend to file for you"], answer: 0, why: "Court actions can affect immigration status, so an immigration lawyer should advise you first." },
-          { q: "Which belongs in your record-relief folder?", options: ["Your bank password", "Proof you finished probation", "Your social media login", "A blank page"], answer: 1, why: "Proof of finished probation helps show you qualify and have done what the court asked." },
-          { q: "Under California's Fair Chance Act, when can most covered employers run a background check?", options: ["Before you apply", "During the first phone call", "On the job ad", "After a conditional job offer"], answer: 3, why: "Most covered employers must wait until after a conditional job offer." },
-          { q: "An employer plans to take back your offer because of your record. How long do you have to respond in California?", options: ["No time at all", "One hour", "At least five business days", "One year"], answer: 2, why: "The employer must give at least five business days to respond with evidence or show a mistake." }
+          { objective: "O4", q: "Which is a warning sign when someone offers to clear your record?", options: ["They explain your options first", "They work at a court self-help center", "They guarantee results and want a big fee up front", "They ask you to bring your record"], answer: 2, why: "Guarantees and large up-front fees are signs of a scam; real help explains options first." },
+          { objective: "O4", q: "You are not a US citizen and want record relief. What should you do first?", options: ["Talk to an immigration lawyer", "File the forms alone right away", "Skip legal help", "Ask a friend to file for you"], answer: 0, why: "Court actions can affect immigration status, so an immigration lawyer should advise you first." },
+          { objective: "O5", q: "Which belongs in your record-relief folder?", options: ["Your bank password", "Proof you finished probation", "Your social media login", "A blank page"], answer: 1, why: "Proof of finished probation helps show you qualify and have done what the court asked." },
+          { objective: "O6", q: "Under California's Fair Chance Act, when can most covered employers run a background check?", options: ["Before you apply", "During the first phone call", "On the job ad", "After a conditional job offer"], answer: 3, why: "Most covered employers must wait until after a conditional job offer." },
+          { objective: "O6", q: "An employer plans to take back your offer because of your record. How long do you have to respond in California?", options: ["No time at all", "One hour", "At least five business days", "One year"], answer: 2, why: "The employer must give at least five business days to respond with evidence or show a mistake." }
         ]
       }
     }
@@ -198,26 +251,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Clearing Your Record: Expungement and Record Relief",
     questions: [
-      { q: "Why get a copy of your own record first?", options: ["To post it online", "To see each case and catch mistakes", "Because employers require you to show it", "It is not useful"], answer: 1, why: "Your record shows what needs relief and may have errors to fix." },
-      { q: "In California, the place you go to be fingerprinted for Record Review is:", options: ["A Live Scan site", "A bank", "A post office box", "A car dealership"], answer: 0, why: "Record Review uses Live Scan fingerprints taken at Live Scan sites." },
-      { q: "You find a mistake on your California DOJ record. Which form challenges it?", options: ["A job application", "A FAFSA", "BCIA 8706, the Claim of Alleged Inaccuracy or Incompleteness", "A driver's license form"], answer: 2, why: "DOJ sends BCIA 8706 with your record so you can challenge errors." },
-      { q: "Where can you request your national FBI record?", options: ["Your county library", "A social media site", "Your landlord", "The FBI, through fbi.gov"], answer: 3, why: "The FBI keeps the national Identity History Summary; fbi.gov explains how to request it." },
-      { q: "What does sealing a record usually mean?", options: ["The record still exists but most people cannot see it", "You go back to court for a new trial", "You pay a fine again", "The case gets longer"], answer: 0, why: "A sealed record exists but is hidden from most of the public." },
-      { q: "A set-aside or dismissal means:", options: ["You are arrested again", "The court reopens a conviction and dismisses it", "Your fingerprints are deleted", "You must move to a new state"], answer: 1, why: "A set-aside or dismissal is a court dismissing a past conviction." },
-      { q: "What is a certificate of rehabilitation?", options: ["A diploma from high school", "A parking permit", "A court order saying you have lived a law-abiding life since your sentence", "A job contract"], answer: 2, why: "It is a court's official statement that you have been rehabilitated." },
-      { q: "Which is true about the word expungement in California?", options: ["It always erases every record", "Only the FBI uses it", "It is a federal program", "The courts say true expungement does not exist there"], answer: 3, why: "California's courts say true expungement does not exist; the usual relief is a dismissal." },
-      { q: "Your case was heard in a county superior court. It is a:", options: ["State case", "Federal case", "Military case", "Tribal case"], answer: 0, why: "County courts hear state cases." },
-      { q: "Can a state dismissal clear a federal conviction?", options: ["Yes, always", "Yes, if you pay more", "No, each system clears only its own cases", "Only on weekends"], answer: 2, why: "State relief cannot clear a federal conviction." },
-      { q: "How do you get California's automatic Clean Slate relief?", options: ["You must file a petition", "DOJ applies it to eligible cases without a petition", "You call 911", "You ask your employer"], answer: 1, why: "DOJ reviews records monthly and grants eligible relief automatically." },
-      { q: "How can you find out whether you received automatic relief in California?", options: ["Wait for a letter from DOJ", "Ask a neighbor", "Search the news", "Request your own DOJ record and look for the relief note"], answer: 3, why: "DOJ does not notify people, so you check your own record." },
-      { q: "Which is a free place to look for record relief help?", options: ["A court self-help center", "A website that guarantees results for a big fee", "A stranger on social media", "A pawn shop"], answer: 0, why: "Court self-help centers, legal aid and public defender programs often help for free." },
-      { q: "Before calling a legal helper, a smart step is to:", options: ["Throw out your papers", "Write three questions and gather your record", "Guess your case numbers", "Sign blank forms"], answer: 1, why: "Being prepared helps the helper work faster and answer your real questions." },
-      { q: "What is a case number?", options: ["Your phone number", "A bank account", "The number a court gives each case", "Your shoe size"], answer: 2, why: "Case numbers help a helper or clerk find the right court file." },
-      { q: "After the court grants relief, what should you do later?", options: ["Nothing ever again", "Throw away the order", "Tell no one", "Request your record again to make sure it was updated"], answer: 3, why: "Records are not always updated, so you check and fix any problem." },
-      { q: "Which is good proof of your life now?", options: ["Certificates from classes and letters of support", "An old jail ID", "A blank check", "Your password list"], answer: 0, why: "Certificates and support letters are evidence of rehabilitation." },
-      { q: "Which employers does California's Fair Chance Act cover?", options: ["Only the state government", "Public employers and private employers with five or more employees", "Only employers with 500 or more workers", "Only restaurants"], answer: 1, why: "The law covers public employers and private employers with five or more employees, with some exceptions." },
-      { q: "After a conditional offer, which can a California employer NEVER use?", options: ["Your skills test", "Your work references", "A conviction that was dismissed", "Your start date"], answer: 2, why: "Sealed, dismissed or expunged convictions are off limits." },
-      { q: "A good rehabilitation statement for an employer:", options: ["Blames everyone else", "Is three pages long", "Says what happened in a sentence, what you have done since, and why you are ready", "Lies about the record"], answer: 2, why: "Short, honest and focused on change and readiness works best." }
+      { objective: "O1", q: "Why get a copy of your own record first?", options: ["To post it online", "To see each case and catch mistakes", "Because employers require you to show it", "It is not useful"], answer: 1, why: "Your record shows what needs relief and may have errors to fix." },
+      { objective: "O1", q: "In California, the place you go to be fingerprinted for Record Review is:", options: ["A Live Scan site", "A bank", "A post office box", "A car dealership"], answer: 0, why: "Record Review uses Live Scan fingerprints taken at Live Scan sites." },
+      { objective: "O1", q: "You find a mistake on your California DOJ record. Which form challenges it?", options: ["A job application", "A FAFSA", "BCIA 8706, the Claim of Alleged Inaccuracy or Incompleteness", "A driver's license form"], answer: 2, why: "DOJ sends BCIA 8706 with your record so you can challenge errors." },
+      { objective: "O1", q: "Where can you request your national FBI record?", options: ["Your county library", "A social media site", "Your landlord", "The FBI, through fbi.gov"], answer: 3, why: "The FBI keeps the national Identity History Summary; fbi.gov explains how to request it." },
+      { objective: "O2", q: "What does sealing a record usually mean?", options: ["The record still exists but most people cannot see it", "You go back to court for a new trial", "You pay a fine again", "The case gets longer"], answer: 0, why: "A sealed record exists but is hidden from most of the public." },
+      { objective: "O2", q: "A set-aside or dismissal means:", options: ["You are arrested again", "The court reopens a conviction and dismisses it", "Your fingerprints are deleted", "You must move to a new state"], answer: 1, why: "A set-aside or dismissal is a court dismissing a past conviction." },
+      { objective: "O2", q: "What is a certificate of rehabilitation?", options: ["A diploma from high school", "A parking permit", "A court order saying you have lived a law-abiding life since your sentence", "A job contract"], answer: 2, why: "It is a court's official statement that you have been rehabilitated." },
+      { objective: "O2", q: "Which is true about the word expungement in California?", options: ["It always erases every record", "Only the FBI uses it", "It is a federal program", "The courts say true expungement does not exist there"], answer: 3, why: "California's courts say true expungement does not exist; the usual relief is a dismissal." },
+      { objective: "O3", q: "Your case was heard in a county superior court. It is a:", options: ["State case", "Federal case", "Military case", "Tribal case"], answer: 0, why: "County courts hear state cases." },
+      { objective: "O3", q: "Can a state dismissal clear a federal conviction?", options: ["Yes, always", "Yes, if you pay more", "No, each system clears only its own cases", "Only on weekends"], answer: 2, why: "State relief cannot clear a federal conviction." },
+      { objective: "O3", q: "How do you get California's automatic Clean Slate relief?", options: ["You must file a petition", "DOJ applies it to eligible cases without a petition", "You call 911", "You ask your employer"], answer: 1, why: "DOJ reviews records monthly and grants eligible relief automatically." },
+      { objective: "O3", q: "How can you find out whether you received automatic relief in California?", options: ["Wait for a letter from DOJ", "Ask a neighbor", "Search the news", "Request your own DOJ record and look for the relief note"], answer: 3, why: "DOJ does not notify people, so you check your own record." },
+      { objective: "O4", q: "Which is a free place to look for record relief help?", options: ["A court self-help center", "A website that guarantees results for a big fee", "A stranger on social media", "A pawn shop"], answer: 0, why: "Court self-help centers, legal aid and public defender programs often help for free." },
+      { objective: "O4", q: "Before calling a legal helper, a smart step is to:", options: ["Throw out your papers", "Write three questions and gather your record", "Guess your case numbers", "Sign blank forms"], answer: 1, why: "Being prepared helps the helper work faster and answer your real questions." },
+      { objective: "O5", q: "What is a case number?", options: ["Your phone number", "A bank account", "The number a court gives each case", "Your shoe size"], answer: 2, why: "Case numbers help a helper or clerk find the right court file." },
+      { objective: "O5", q: "After the court grants relief, what should you do later?", options: ["Nothing ever again", "Throw away the order", "Tell no one", "Request your record again to make sure it was updated"], answer: 3, why: "Records are not always updated, so you check and fix any problem." },
+      { objective: "O5", q: "Which is good proof of your life now?", options: ["Certificates from classes and letters of support", "An old jail ID", "A blank check", "Your password list"], answer: 0, why: "Certificates and support letters are evidence of rehabilitation." },
+      { objective: "O6", q: "Which employers does California's Fair Chance Act cover?", options: ["Only the state government", "Public employers and private employers with five or more employees", "Only employers with 500 or more workers", "Only restaurants"], answer: 1, why: "The law covers public employers and private employers with five or more employees, with some exceptions." },
+      { objective: "O6", q: "After a conditional offer, which can a California employer NEVER use?", options: ["Your skills test", "Your work references", "A conviction that was dismissed", "Your start date"], answer: 2, why: "Sealed, dismissed or expunged convictions are off limits." },
+      { objective: "O6", q: "A good rehabilitation statement for an employer:", options: ["Blames everyone else", "Is three pages long", "Says what happened in a sentence, what you have done since, and why you are ready", "Lies about the record"], answer: 2, why: "Short, honest and focused on change and readiness works best." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      4,
+      7,
+      8,
+      10,
+      12,
+      14,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Getting the record",
+        objective: "O1",
+        notYet: "No plan, or plans to use a private background-check site.",
+        meets: "Names the official place to request the record and the fingerprint site.",
+        exceeds: "Also notes the fee, fee waiver and where to get a federal record if needed."
+      },
+      {
+        name: "Cases and possible relief",
+        objective: "O3",
+        notYet: "Cases are missing, or none is labeled state or federal.",
+        meets: "Each known case has county, year, charge, state or federal, and a possible kind of relief.",
+        exceeds: "Notes which cases to check for automatic relief and one question for a lawyer."
+      },
+      {
+        name: "Free legal help",
+        objective: "O4",
+        notYet: "No helper named, or a paid service that guarantees results.",
+        meets: "A free legal helper to contact first, with phone and hours.",
+        exceeds: "A second helper and three questions to ask are also written down."
+      },
+      {
+        name: "Papers to gather",
+        objective: "O5",
+        notYet: "No list of papers.",
+        meets: "A checklist of records and proof of life now to gather.",
+        exceeds: "The first two papers to get this week are starred."
+      },
+      {
+        name: "Rehabilitation statement",
+        objective: "O6",
+        notYet: "Missing, too long, or not honest.",
+        meets: "A short, honest statement: what happened in a sentence, what you have done since, and why you are ready.",
+        exceeds: "Practiced out loud and mentions proof like certificates or letters of support."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who request a copy of their own record within 30 days (follow-up survey)",
+      "Learners who contact free legal help or file for record relief within 90 days",
+      "Learners who report a job or housing offer after using their rehabilitation statement"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A smartphone or computer with internet",
+      "Paper and pen, or a folder, for the action plan and record-relief papers",
+      "Contact details for a local legal aid office or court self-help center",
+      "About 60 minutes in total, in short sessions: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "This course is not legal advice; partner with a legal aid office or clinic and invite them to a session if possible.",
+      "Learners outside California should look up their own state's official pages; have those links ready.",
+      "Learners should not share case details out loud in a group or type them into AI; let them work on case lists privately.",
+      "Tell learners who are not US citizens to talk with an immigration lawyer before seeking any record relief.",
+      "Score the action plan with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

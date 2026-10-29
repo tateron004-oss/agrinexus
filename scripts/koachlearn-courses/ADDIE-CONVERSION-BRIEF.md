@@ -64,7 +64,10 @@ Only the words go in the patch. The tool copies the ids, tags, answers, `pretest
 - **Objective `action`:** it follows "podrás", "vous saurez" or "ستتمكن من". Write an infinitive in Spanish and French, and a verbal noun (مصدر) in Arabic. It must make sense alone.
 - **goalChangedTo:** when a lesson shows it, translate that new goal into the lesson's `goal`.
 - **Pre-test title:** "Prueba inicial: ¿qué sabes ya?", "Test de départ : que savez-vous déjà ?" or "الاختبار القبلي: ماذا تعرف مسبقًا؟".
-- **Rubric levels:** the builder labels these itself.
+- **Rubric levels:** the builder labels these itself. When `mastery` names a level, use the builder's exact label:
+  - Spanish: "Todavía no", "Cumple", "Supera"
+  - French: « Pas encore », « Atteint », « Dépasse »
+  - Arabic: «ليس بعد»، «يحقق»، «يتجاوز»
 - **Language rules:**
   - Spanish: neutral Latin American Spanish, using "tú".
   - French: plain French for Africa and France, using "vous", with a space before `: ? !`, no France-only slang, and thousands written with a space.

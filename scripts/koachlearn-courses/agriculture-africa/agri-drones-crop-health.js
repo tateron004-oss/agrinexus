@@ -21,11 +21,35 @@ module.exports = {
     "A drone map never replaces the farmer's eyes or the extension officer's diagnosis. It shows where to look first, so scarce time and money go to the right spot. Each lesson takes about five minutes plus a practice task; a knowledge check closes each chapter and a 20-question quiz closes the course."
   ],
   finalTask: "Using a drone map of a real field or a free sample dataset: make an NDVI or colour map, mark at least three problem zones, write a ground-truthing plan (what to look for at each zone), and write a one-page action report for the farmer with a map picture, what was found or suspected, the recommended next step for each zone, and who to contact for confirmation.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Extension officers, agronomists, farm managers and young drone service providers in Kenya, Nigeria and across Africa taking Course 3 of the drone monitoring track, working with crops such as maize, cassava, beans, tea and coffee.",
+    startingPoint: "Learners can capture a set of overlapping drone images (Course 2) or have a sample dataset. Few have stitched photos into a map, made an NDVI map in QGIS, read map patterns for pests, disease and stress, checked zones on the ground or written a report a farmer acts on.",
+    gap: "Drone photos are only useful when they become a map, the weak zones are checked on foot, and the farmer gets a clear next step. Without this, problems are found late, treatments are guessed and money is wasted. Turning images into a checked action report sends scarce time and money to the right spot.",
+    constraints: [
+      "Reading level: plain words; every mapping and GIS term is explained",
+      "Devices: a computer that can run free QGIS and OpenDroneMap, and a phone with GPS for ground checks",
+      "Data: a real drone dataset or a free sample dataset; processing can take an hour or more",
+      "A drone map never replaces the farmer's eyes or an expert's diagnosis; no pesticide advice from a map",
+      "Farmers' data and maps are shared only with their permission"
+    ],
+    prerequisites: "\"Drones for Agricultural Monitoring 2: Flight Operations, Imaging and Sensors\", or a set of overlapping drone images to work with."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given an NDVI or colour crop health map", action: "read the legend and find the weak and strong zones", standard: "comparing differences within the field and with earlier maps" },
+    { id: "O2", condition: "Given map patterns in a field", action: "describe what each pattern may point to, such as pests, disease, water, machines or nutrients", standard: "treating each pattern as a clue to confirm, not a diagnosis" },
+    { id: "O3", condition: "For each problem zone on a map", action: "write a ground-truthing plan and record what you find at the spot", standard: "with zone number, coordinates, what you saw, likely cause, how sure you are and photos" },
+    { id: "O4", condition: "Given a set of overlapping drone photos", action: "stitch them into an orthomosaic with free software and check it for holes and blur", standard: "with the photos named, backed up and the result checked" },
+    { id: "O5", condition: "Using QGIS and a multispectral orthomosaic", action: "calculate and colour an NDVI map with the field boundary and ground points shown", standard: "using the formula (NIR - Red) / (NIR + Red)" },
+    { id: "O6", condition: "After ground-truthing", action: "write a one-page field action report for the farmer", standard: "with a map picture, findings, a next step for each zone and who to contact, and no pesticide advice from the map" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Reading crop health",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Reading an NDVI crop health map",
           minutes: 5,
           goal: "Read an NDVI map using its colour scale and find the weak and strong zones.",
@@ -43,9 +67,14 @@ module.exports = {
           ],
           sources: [FAO_EO],
           tryIt: "Find a sample NDVI map online (search for an NDVI map of a maize field) or use one of your own. Read the legend, mark two weak zones and one strong zone, and write what growth stage the crop might be at.",
-          youCanNow: "read an NDVI map's legend and find the weak and strong zones worth visiting."
+          youCanNow: "read an NDVI map's legend and find the weak and strong zones worth visiting.",
+          quickCheck: [
+            { objective: "O1", q: "What does a high positive NDVI value suggest?", options: ["Bare soil", "Water", "A broken drone", "Dense, healthy vegetation"], answer: 3, why: "High positive NDVI values suggest dense, healthy vegetation; low values suggest sparse cover, soil or water." },
+            { objective: "O1", q: "A maize field is even green except for one low patch. What do you do?", options: ["Mark the patch to visit and compare it with earlier maps", "Ignore it because most of the field is green", "Spray the whole field", "Delete the map"], answer: 0, why: "A low patch in an otherwise even field is worth a visit, and earlier maps show whether it is growing." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Spotting early pest, disease and stress patterns",
           minutes: 6,
           goal: "Recognise the map patterns that point to pests, disease, water or nutrient problems.",
@@ -62,9 +91,14 @@ module.exports = {
           ],
           sources: [FAO_FAMEWS],
           tryIt: "Draw four small sketches of a field: one with a spreading patch, one with a problem along an edge, one with stripes, one with a low wet corner. Under each, write two possible causes.",
-          youCanNow: "recognise common problem patterns on a crop map and list the likely causes to check."
+          youCanNow: "recognise common problem patterns on a crop map and list the likely causes to check.",
+          quickCheck: [
+            { objective: "O2", q: "What can a patch that starts small and spreads outward over weeks point to?", options: ["A planter fault", "Pests or disease", "A road", "A blocked drain only"], answer: 1, why: "Patches that spread outward over weeks can point to pests or disease such as fall armyworm or cassava viruses." },
+            { objective: "O2", q: "The map shows weak crop in the high, sandy part of the field on a hot afternoon. What do you suspect first?", options: ["Waterlogging", "Too much fertilizer", "Water stress", "A skipped planting row"], answer: 2, why: "High, sandy or sloping ground often shows water stress, especially on afternoon thermal images." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Ground-truthing: checking the zones on foot",
           minutes: 5,
           goal: "Visit each problem zone with a plan and record what you find.",
@@ -81,17 +115,21 @@ module.exports = {
             { title: "Record the same way every time", bullets: ["Zone, coordinates, crop and stage", "What you saw, likely cause, how sure", "Photo numbers"] }
           ],
           tryIt: "Make a ground-truthing form (on paper or in a phone spreadsheet) with these columns: zone, coordinates, crop and stage, what I saw, likely cause, how sure, photos. Fill one row for a real or example zone.",
-          youCanNow: "plan and carry out a ground-truthing visit and record findings in a clear form."
+          youCanNow: "plan and carry out a ground-truthing visit and record findings in a clear form.",
+          quickCheck: [
+            { objective: "O3", q: "How can you find the exact spot of a map zone when you are in the field?", options: ["Guess from the colour of the crop", "Ask a neighbour", "Load the map on a phone with GPS, or note the zone's coordinates", "Walk until the plants look bad"], answer: 2, why: "A phone showing your position on the drone map, or the zone's coordinates, takes you to the exact spot." },
+            { objective: "O3", q: "You reach zone 2 and find wilting maize. What do you record?", options: ["Only \"bad plants\"", "Nothing; you will remember", "A photo with no notes", "Zone number, coordinates, crop stage, what you saw, likely cause, how sure you are and photo numbers"], answer: 3, why: "Recording the same details every time makes records comparable and helps an expert confirm the cause." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Reading crop health",
         questions: [
-          { q: "An NDVI map of a field is mostly red early in the season. The most likely reason is:", options: ["The drone was broken", "Small plants and a lot of bare soil", "Everything is dead", "It rained"], answer: 1, why: "Young crops cover little ground, so soil pulls the values down." },
-          { q: "Which patch should you visit first?", options: ["A patch that is the same as last month", "The strongest green area", "A low patch that has grown since the last map", "The field border with grass"], answer: 2, why: "A growing patch suggests an active, spreading problem." },
-          { q: "Straight stripes of weak crop in a field usually point to:", options: ["Machines, fertilizer or irrigation lines", "A virus spreading from one plant", "Wind from one side", "Nothing"], answer: 0, why: "Straight lines follow how people and machines work the field." },
-          { q: "A drone map strongly suggests a disease. Before spraying, you should:", options: ["Spray the strongest chemical", "Post the map online", "Spray the whole farm", "Confirm the cause with an extension officer or plant clinic"], answer: 3, why: "Pests and diseases look alike from the air and need different treatments." },
-          { q: "Why compare a weak zone with healthy plants a few metres away?", options: ["To see what is different", "To save battery", "Because the law says so", "To find a better phone signal"], answer: 0, why: "Side-by-side comparison shows what is wrong with the weak plants." }
+          { objective: "O1", q: "An NDVI map of a field is mostly red early in the season. The most likely reason is:", options: ["The drone was broken", "Small plants and a lot of bare soil", "Everything is dead", "It rained"], answer: 1, why: "Young crops cover little ground, so soil pulls the values down." },
+          { objective: "O1", q: "Which patch should you visit first?", options: ["A patch that is the same as last month", "The strongest green area", "A low patch that has grown since the last map", "The field border with grass"], answer: 2, why: "A growing patch suggests an active, spreading problem." },
+          { objective: "O2", q: "Straight stripes of weak crop in a field usually point to:", options: ["Machines, fertilizer or irrigation lines", "A virus spreading from one plant", "Wind from one side", "Nothing"], answer: 0, why: "Straight lines follow how people and machines work the field." },
+          { objective: "O2", q: "A drone map strongly suggests a disease. Before spraying, you should:", options: ["Spray the strongest chemical", "Post the map online", "Spray the whole farm", "Confirm the cause with an extension officer or plant clinic"], answer: 3, why: "Pests and diseases look alike from the air and need different treatments." },
+          { objective: "O3", q: "Why compare a weak zone with healthy plants a few metres away?", options: ["To see what is different", "To save battery", "Because the law says so", "To find a better phone signal"], answer: 0, why: "Side-by-side comparison shows what is wrong with the weak plants." }
         ]
       }
     },
@@ -99,6 +137,7 @@ module.exports = {
       name: "Chapter 2: Processing drone data",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Stitching photos into a map",
           minutes: 6,
           goal: "Turn a set of overlapping drone photos into one orthomosaic map.",
@@ -116,9 +155,14 @@ module.exports = {
           ],
           sources: [ODM],
           tryIt: "Download a free sample drone dataset (OpenDroneMap links to sample datasets) or use your own photos. Name and back up the folder, and if your computer allows, process it into an orthomosaic. If not, write each step you would follow.",
-          youCanNow: "organise drone photos and stitch them into an orthomosaic map with free software."
+          youCanNow: "organise drone photos and stitch them into an orthomosaic map with free software.",
+          quickCheck: [
+            { objective: "O4", q: "Besides an orthomosaic, what else can stitching software make?", options: ["An elevation model of the height of the ground and crop", "A pesticide label", "A weather forecast", "A soil test"], answer: 0, why: "Stitching software can also make an elevation model showing the height of the ground and crop." },
+            { objective: "O4", q: "You have just landed with 400 photos. What do you do before processing?", options: ["Delete the blurry ones from the drone only", "Copy them into a folder named with farm, field and date, and back them up", "Process them straight from the drone's card", "Email them to the farmer"], answer: 1, why: "Naming the folder and backing up the photos before processing protects the data." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Making an NDVI map in QGIS",
           minutes: 6,
           goal: "Calculate and colour an NDVI map from a multispectral orthomosaic in QGIS.",
@@ -137,9 +181,14 @@ module.exports = {
           ],
           sources: [QGIS, FAO_EO],
           tryIt: "Install QGIS (free) and open your orthomosaic or a sample multispectral image. Calculate NDVI with the Raster Calculator, colour it, and mark three zones as points.",
-          youCanNow: "make a coloured NDVI map in QGIS and add zones and field boundaries to it."
+          youCanNow: "make a coloured NDVI map in QGIS and add zones and field boundaries to it.",
+          quickCheck: [
+            { objective: "O5", q: "What can the QGIS Raster Calculator do?", options: ["Stitch photos", "Fly the drone", "Send the report", "Do maths on an image's bands, such as calculating NDVI"], answer: 3, why: "The Raster Calculator does maths on bands, such as (NIR - Red) / (NIR + Red)." },
+            { objective: "O5", q: "Your NDVI map looks all one colour. What do you change?", options: ["Fly again at night", "Delete the near-infrared band", "Set the colour ramp's range so differences in the field stand out", "Use a different field"], answer: 2, why: "Styling with a colour ramp and setting the range makes differences within the field visible." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Writing a field action report",
           minutes: 5,
           goal: "Write a one-page report that tells the farmer what was found and what to do next.",
@@ -156,17 +205,21 @@ module.exports = {
             { title: "Stay safe and honest", bullets: ["No pesticide or dose from a map", "Send to extension, agrovet or plant clinic", "Agree when to fly again"] }
           ],
           tryIt: "Final task: using your map and ground-truthing form, write the one-page action report for the farmer: header, map picture with at least three numbered zones, finding and likely cause for each, next step, contacts and the next flight date.",
-          youCanNow: "turn drone data into a clear one-page action report a farmer can use."
+          youCanNow: "turn drone data into a clear one-page action report a farmer can use.",
+          quickCheck: [
+            { objective: "O6", q: "How long should a field action report be?", options: ["Ten pages", "One page", "Only the map with no words", "As long as possible"], answer: 1, why: "A one-page report in plain words, with a map and next steps, is what a busy farmer can use." },
+            { objective: "O6", q: "Your map and ground check suggest a disease in zone 3. What next step do you write?", options: ["Ask the plant clinic or extension officer to confirm the disease", "Spray a strong fungicide at double the dose", "Pull out the whole field", "Wait a year"], answer: 0, why: "Never recommend a pesticide or dose from a map; send the farmer to an expert to confirm first." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Processing drone data",
         questions: [
-          { q: "What is an orthomosaic?", options: ["A single photo", "A type of drone", "One map-accurate picture stitched from many photos", "A pest"], answer: 2, why: "Stitching software builds one map from overlapping photos." },
-          { q: "Your stitched map has holes and bent rows. The most likely cause is:", options: ["Too little overlap or poor photos", "Too much battery", "The farmer's phone", "Too much sun on the screen"], answer: 0, why: "Stitching needs plenty of sharp, overlapping photos." },
-          { q: "Which is the NDVI formula?", options: ["(Red + Blue) / 2", "NIR x Red", "Green - Blue", "(NIR - Red) / (NIR + Red)"], answer: 3, why: "NDVI compares near-infrared and red light." },
-          { q: "What is QGIS?", options: ["A paid drone", "Free, open-source GIS software for maps", "A pesticide", "A phone network"], answer: 1, why: "QGIS is free software used to make and analyse maps." },
-          { q: "In your report, a farmer asks which pesticide to spray on zone 2. You should:", options: ["Guess one from the map", "Send them to an extension officer, agrovet or plant clinic and the label", "Tell them to spray double", "Say nothing"], answer: 1, why: "Chemical advice needs a confirmed diagnosis and qualified advice." }
+          { objective: "O4", q: "What is an orthomosaic?", options: ["A single photo", "A type of drone", "One map-accurate picture stitched from many photos", "A pest"], answer: 2, why: "Stitching software builds one map from overlapping photos." },
+          { objective: "O4", q: "Your stitched map has holes and bent rows. The most likely cause is:", options: ["Too little overlap or poor photos", "Too much battery", "The farmer's phone", "Too much sun on the screen"], answer: 0, why: "Stitching needs plenty of sharp, overlapping photos." },
+          { objective: "O5", q: "Which is the NDVI formula?", options: ["(Red + Blue) / 2", "NIR x Red", "Green - Blue", "(NIR - Red) / (NIR + Red)"], answer: 3, why: "NDVI compares near-infrared and red light." },
+          { objective: "O5", q: "What is QGIS?", options: ["A paid drone", "Free, open-source GIS software for maps", "A pesticide", "A phone network"], answer: 1, why: "QGIS is free software used to make and analyse maps." },
+          { objective: "O6", q: "In your report, a farmer asks which pesticide to spray on zone 2. You should:", options: ["Guess one from the map", "Send them to an extension officer, agrovet or plant clinic and the label", "Tell them to spray double", "Say nothing"], answer: 1, why: "Chemical advice needs a confirmed diagnosis and qualified advice." }
         ]
       }
     }
@@ -174,26 +227,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Drones for Agricultural Monitoring 3: Crop Health, Pests and Data Processing",
     questions: [
-      { q: "NDVI values range from:", options: ["-100 to 0", "-1 to +1", "0 to 100", "1 to 10"], answer: 1, why: "NDVI is a ratio between -1 and +1." },
-      { q: "On an NDVI map, the first thing to read is:", options: ["The file size", "The legend", "The drone's name", "The weather"], answer: 1, why: "The legend says which colours mean low and high values." },
-      { q: "A patch has stayed the same for three maps. A new patch is spreading. Which matters more?", options: ["The old patch", "Neither", "The spreading patch", "Both are equally urgent"], answer: 2, why: "A spreading patch suggests an active problem." },
-      { q: "Weak crop along one edge next to a neighbour's field may come from:", options: ["Too much overlap", "The legend", "The drone battery", "Pests or spray drift from that side"], answer: 3, why: "Edge patterns often point to something coming from outside the field." },
-      { q: "Low, wet dips with weak crop most likely show:", options: ["Waterlogging", "Too much sun", "A good harvest", "A broken camera"], answer: 0, why: "Water collects in dips and harms roots." },
-      { q: "A drone map pattern is:", options: ["A final diagnosis", "A clue that needs checking on the ground", "Always a pest", "Always a disease"], answer: 1, why: "Patterns show where to look; ground checks find the cause." },
-      { q: "FAO's FAMEWS app was made to record:", options: ["Rainfall", "Market prices", "Fall armyworm sightings", "Drone flights"], answer: 2, why: "FAMEWS is FAO's Fall Armyworm Monitoring and Early Warning System." },
-      { q: "Ground-truthing means:", options: ["Flying lower", "Buying new software", "Cleaning the lens", "Checking on the ground what the map shows"], answer: 3, why: "You visit the spot to see what is really there." },
-      { q: "During a ground check you should look at:", options: ["Leaves top and underside, stems, roots, soil and insects", "Only the top of one leaf", "Only the sky", "Only the drone"], answer: 0, why: "A full check finds pests, disease and soil problems." },
-      { q: "Why record findings the same way every time?", options: ["It is required by the drone", "It makes records comparable and helps experts", "To fill time", "It makes photos sharper"], answer: 1, why: "Consistent records help compare and confirm causes." },
-      { q: "Coordinates are:", options: ["Colours on a map", "The drone's speed", "Latitude and longitude numbers for an exact place", "A type of crop"], answer: 2, why: "They let you find the exact zone again." },
-      { q: "OpenDroneMap is:", options: ["A drone brand", "A pesticide", "A satellite", "Free, open-source software to stitch drone photos"], answer: 3, why: "OpenDroneMap and WebODM turn photos into maps for free." },
-      { q: "Before processing photos you should:", options: ["Name the folder and back it up", "Delete half the photos", "Rename every photo by hand", "Turn off the computer"], answer: 0, why: "Good naming and a backup prevent lost data." },
-      { q: "A GeoTIFF is:", options: ["A video format", "An image that carries its location on earth", "A drone part", "A text message"], answer: 1, why: "Map software uses the built-in location to place it." },
-      { q: "In QGIS, NDVI is calculated with the:", options: ["Print tool", "Email button", "Raster Calculator", "Volume control"], answer: 2, why: "The Raster Calculator does maths on image bands." },
-      { q: "With only a colour camera, a greenness index is:", options: ["Exactly the same as NDVI", "Impossible", "Better than NDVI", "A rough guide, less reliable than NDVI"], answer: 3, why: "RGB indices lack near-infrared, so they are a rough guide." },
-      { q: "A layer in GIS is:", options: ["One set of map data shown on top of others", "A drone battery", "A crop disease", "A legal document"], answer: 0, why: "Boundaries, points and images are each a layer." },
-      { q: "A good field action report is:", options: ["Twenty pages of numbers", "One page, plain words, with a map and next steps", "Only the raw photos", "Only the NDVI formula"], answer: 1, why: "Busy farmers need a short, clear plan." },
-      { q: "Which should NOT be in your report?", options: ["The date and crop stage", "Numbered zones", "A pesticide and dose chosen from the map alone", "Who to contact"], answer: 2, why: "Chemical advice needs a confirmed diagnosis from a qualified source." },
-      { q: "Why agree a date for the next flight?", options: ["To use up batteries", "Because the law says weekly", "To sell more flights", "To see whether the action worked"], answer: 3, why: "A follow-up map shows whether the problem is fixed." }
+      { objective: "O1", q: "NDVI values range from:", options: ["-100 to 0", "-1 to +1", "0 to 100", "1 to 10"], answer: 1, why: "NDVI is a ratio between -1 and +1." },
+      { objective: "O1", q: "On an NDVI map, the first thing to read is:", options: ["The file size", "The legend", "The drone's name", "The weather"], answer: 1, why: "The legend says which colours mean low and high values." },
+      { objective: "O1", q: "A patch has stayed the same for three maps. A new patch is spreading. Which matters more?", options: ["The old patch", "Neither", "The spreading patch", "Both are equally urgent"], answer: 2, why: "A spreading patch suggests an active problem." },
+      { objective: "O2", q: "Weak crop along one edge next to a neighbour's field may come from:", options: ["Too much overlap", "The legend", "The drone battery", "Pests or spray drift from that side"], answer: 3, why: "Edge patterns often point to something coming from outside the field." },
+      { objective: "O2", q: "Low, wet dips with weak crop most likely show:", options: ["Waterlogging", "Too much sun", "A good harvest", "A broken camera"], answer: 0, why: "Water collects in dips and harms roots." },
+      { objective: "O2", q: "A drone map pattern is:", options: ["A final diagnosis", "A clue that needs checking on the ground", "Always a pest", "Always a disease"], answer: 1, why: "Patterns show where to look; ground checks find the cause." },
+      { objective: "O2", q: "FAO's FAMEWS app was made to record:", options: ["Rainfall", "Market prices", "Fall armyworm sightings", "Drone flights"], answer: 2, why: "FAMEWS is FAO's Fall Armyworm Monitoring and Early Warning System." },
+      { objective: "O3", q: "Ground-truthing means:", options: ["Flying lower", "Buying new software", "Cleaning the lens", "Checking on the ground what the map shows"], answer: 3, why: "You visit the spot to see what is really there." },
+      { objective: "O3", q: "During a ground check you should look at:", options: ["Leaves top and underside, stems, roots, soil and insects", "Only the top of one leaf", "Only the sky", "Only the drone"], answer: 0, why: "A full check finds pests, disease and soil problems." },
+      { objective: "O3", q: "Why record findings the same way every time?", options: ["It is required by the drone", "It makes records comparable and helps experts", "To fill time", "It makes photos sharper"], answer: 1, why: "Consistent records help compare and confirm causes." },
+      { objective: "O3", q: "Coordinates are:", options: ["Colours on a map", "The drone's speed", "Latitude and longitude numbers for an exact place", "A type of crop"], answer: 2, why: "They let you find the exact zone again." },
+      { objective: "O4", q: "OpenDroneMap is:", options: ["A drone brand", "A pesticide", "A satellite", "Free, open-source software to stitch drone photos"], answer: 3, why: "OpenDroneMap and WebODM turn photos into maps for free." },
+      { objective: "O4", q: "Before processing photos you should:", options: ["Name the folder and back it up", "Delete half the photos", "Rename every photo by hand", "Turn off the computer"], answer: 0, why: "Good naming and a backup prevent lost data." },
+      { objective: "O5", q: "A GeoTIFF is:", options: ["A video format", "An image that carries its location on earth", "A drone part", "A text message"], answer: 1, why: "Map software uses the built-in location to place it." },
+      { objective: "O5", q: "In QGIS, NDVI is calculated with the:", options: ["Print tool", "Email button", "Raster Calculator", "Volume control"], answer: 2, why: "The Raster Calculator does maths on image bands." },
+      { objective: "O5", q: "With only a colour camera, a greenness index is:", options: ["Exactly the same as NDVI", "Impossible", "Better than NDVI", "A rough guide, less reliable than NDVI"], answer: 3, why: "RGB indices lack near-infrared, so they are a rough guide." },
+      { objective: "O5", q: "A layer in GIS is:", options: ["One set of map data shown on top of others", "A drone battery", "A crop disease", "A legal document"], answer: 0, why: "Boundaries, points and images are each a layer." },
+      { objective: "O6", q: "A good field action report is:", options: ["Twenty pages of numbers", "One page, plain words, with a map and next steps", "Only the raw photos", "Only the NDVI formula"], answer: 1, why: "Busy farmers need a short, clear plan." },
+      { objective: "O6", q: "Which should NOT be in your report?", options: ["The date and crop stage", "Numbered zones", "A pesticide and dose chosen from the map alone", "Who to contact"], answer: 2, why: "Chemical advice needs a confirmed diagnosis from a qualified source." },
+      { objective: "O6", q: "Why agree a date for the next flight?", options: ["To use up batteries", "Because the law says weekly", "To sell more flights", "To see whether the action worked"], answer: 3, why: "A follow-up map shows whether the problem is fixed." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      3,
+      5,
+      7,
+      8,
+      11,
+      14,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part of the work and check it again.",
+    criteria: [
+      {
+        name: "Crop health map",
+        objective: "O5",
+        notYet: "No map, or no legend and boundary.",
+        meets: "An NDVI or colour map with a legend, a colour range that shows differences, and the field boundary.",
+        exceeds: "Notes the NDVI formula or index used and its limits."
+      },
+      {
+        name: "Problem zones",
+        objective: "O1",
+        notYet: "Fewer than three zones, or zones picked by colour alone.",
+        meets: "At least three numbered problem zones based on differences within the field.",
+        exceeds: "Compares the zones with an earlier map of the same field."
+      },
+      {
+        name: "Ground-truthing plan",
+        objective: "O3",
+        notYet: "No plan, or only \"go and look\".",
+        meets: "For each zone, what to look for, with coordinates and how findings will be recorded.",
+        exceeds: "Names the likely causes to check at each zone from its map pattern."
+      },
+      {
+        name: "Action report",
+        objective: "O6",
+        notYet: "Longer than one page, or no next steps.",
+        meets: "One page with the map, findings, likely cause, how sure, a next step per zone and who to contact.",
+        exceeds: "Written in the farmer's language and agrees when to fly again."
+      },
+      {
+        name: "Safe advice",
+        objective: "O2",
+        notYet: "Recommends a pesticide or dose from the map.",
+        meets: "Treats patterns as clues and sends chemical questions to an extension officer, agrovet or plant clinic.",
+        exceeds: "Explains to the farmer why the pattern needs confirming."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and score Meets or Exceeds on every rubric row",
+      "Learners who report delivering a field action report to a farmer within 60 days (follow-up survey)",
+      "Farmers who report acting on a report and checking with an expert before spraying",
+      "Learners who go on to Course 4 of the drone track"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer with free QGIS and OpenDroneMap (WebODM) installed",
+      "A drone dataset from a real field, or a free sample dataset",
+      "A phone with GPS and a map app for ground checks",
+      "About 60 minutes in total, in short sessions, plus processing time and time to write the report"
+    ],
+    facilitatorNotes: [
+      "Take the pre-test together, then process one shared sample dataset before class, because stitching can take an hour or more.",
+      "Do the NDVI step live in QGIS so learners see the Raster Calculator and colour ramp.",
+      "If possible, walk a real field to ground-truth two zones together.",
+      "Never let learners recommend a pesticide or dose from a map; bring in an extension officer or plant clinic for diagnosis.",
+      "Score the report with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

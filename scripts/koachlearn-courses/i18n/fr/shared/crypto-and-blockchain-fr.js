@@ -19,11 +19,35 @@ module.exports = {
     "Ce cours ne vous dit pas s'il faut acheter de la crypto. Ce n'est pas un conseil financier. Pour les décisions d'argent, parlez à un professionnel agréé que vous choisissez vous-même. Chaque leçon dure environ cinq minutes, avec un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin. Les exemples d'organismes viennent des États-Unis ; dans votre pays, cherchez l'autorité financière et le service de signalement des fraudes équivalents."
   ],
   finalTask: "Faites une « fiche de sécurité crypto » d'une page pour vous ou un proche : deux phrases sur ce que sont une blockchain et une cryptomonnaie, trois risques, quatre signes d'alerte d'une arnaque à la crypto et les sites officiels où signaler une fraude. Puis lisez une vraie publicité ou un vrai message sur la crypto (e-mail, SMS ou réseau social) et notez les signes d'alerte qu'il montre.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des adultes qui entendent parler du Bitcoin et de la crypto aux informations, au travail, en famille et dans les publicités : seniors, leurs enfants adultes et aidants, jeunes qui découvrent les applications d'argent, et membres de la communauté qui veulent se protéger et protéger les autres.",
+    startingPoint: "Ils savent utiliser un téléphone pour les messages, l'e-mail et les réseaux sociaux, et utilisent parfois une application bancaire ou une carte bancaire. La plupart ne savent pas dire ce qu'est une blockchain ou une phrase de récupération, en quoi la crypto diffère de l'argent à la banque, ni comment fonctionnent d'habitude les arnaques à la crypto.",
+    gap: "La crypto est l'un des moyens de paiement les plus demandés par les escrocs, et les paiements en crypto ne peuvent en général pas être annulés. Les personnes qui ne la comprennent pas peuvent perdre leurs économies dans de faux investissements, des arnaques sentimentales, de faux agents de l'État et des arnaques à la récupération, ou partager une phrase de récupération et tout perdre.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes ; chaque mot de la crypto est expliqué avec une image du quotidien",
+      "Appareils : un téléphone ou un ordinateur pour lire les pages officielles de mise en garde ; aucune application ni aucun compte crypto n'est nécessaire",
+      "Temps : environ 5 minutes par leçon, environ 60 minutes au total",
+      "Pas de conseil financier : le cours ne dit jamais aux apprenants d'acheter ou de vendre ; les décisions d'argent vont à un professionnel agréé choisi par l'apprenant",
+      "Vie privée et sécurité : les apprenants ne partagent jamais une phrase de récupération ou une clé privée, et n'envoient jamais d'argent pendant les exercices"
+    ],
+    prerequisites: "Aucun."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Avec l'image du cahier partagé", action: "expliquer ce qu'est une blockchain, avec les mots bloc, chaîne et décentralisé", standard: "en deux ou trois phrases simples sans erreur sur la façon dont les registres sont tenus" },
+    { id: "O2", condition: "Sans notes", action: "expliquer ce qu'est une cryptomonnaie et lister en quoi elle diffère de l'argent sur un compte bancaire assuré", standard: "en nommant au moins trois différences, dont le fait que les paiements en crypto ne peuvent en général pas être annulés" },
+    { id: "O3", condition: "À partir des mots portefeuille, adresse publique, phrase de récupération et plateforme d'échange", action: "décrire ce qu'est chacun et identifier ceux qu'il ne faut jamais partager", standard: "en décrivant chacun correctement et en gardant toujours secrètes la phrase de récupération et la clé privée" },
+    { id: "O4", condition: "Sans notes", action: "nommer les quatre principaux risques de la crypto et une façon de se protéger de chacun", standard: "en nommant correctement les quatre risques (prix, perte, entreprise et arnaque)" },
+    { id: "O5", condition: "À partir d'une vraie publicité, d'un vrai message ou d'une vraie publication sur la crypto", action: "le comparer aux signes d'alerte d'une arnaque à la crypto et choisir une réaction sûre", standard: "en marquant chaque signe d'alerte qu'il montre et en choisissant de s'arrêter, de ne pas payer et d'en parler à une personne de confiance" },
+    { id: "O6", condition: "À partir d'une arnaque à la crypto qui vous est arrivée ou est arrivée à un proche", action: "lister les endroits officiels où la signaler et les détails à noter", standard: "en nommant au moins deux sites officiels de signalement et au moins quatre détails à noter" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Comment fonctionnent la crypto et la blockchain",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Ce qu'est une blockchain",
           minutes: 5,
           goal: "Expliquer une blockchain avec des mots simples à l'aide d'une image simple.",
@@ -39,9 +63,14 @@ module.exports = {
             { title: "Ce que cela veut dire pour vous", bullets: ["Les paiements sont très difficiles à modifier ou annuler", "La plupart des blockchains sont des registres publics"] }
           ],
           tryIt: "Expliquez une blockchain à quelqu'un (ou à voix haute pour vous-même) avec l'image du cahier partagé. Utilisez les mots bloc, chaîne et décentralisé.",
-          youCanNow: "expliquer ce qu'est une blockchain et pourquoi ses registres sont difficiles à modifier."
+          youCanNow: "expliquer ce qu'est une blockchain et pourquoi ses registres sont difficiles à modifier.",
+          quickCheck: [
+            { objective: "O1", q: "Dans l'image du cahier partagé, qu'est-ce qu'un bloc ?", options: ["Le cahier entier", "La banque à qui appartient le cahier", "Une page de paiements ajoutée au cahier", "Un mot de passe pour le cahier"], answer: 2, why: "Chaque page de paiements est un bloc, et les pages sont enchaînées dans l'ordre." },
+            { objective: "O1", q: "Quelqu'un vous dit qu'il peut modifier discrètement un ancien paiement sur une blockchain publique. Qu'en pensez-vous ?", options: ["C'est très peu probable, parce que les autres copies ne correspondraient plus", "C'est facile, parce qu'une seule entreprise tient le cahier", "C'est normal, parce que les blockchains sont privées", "C'est vrai, parce que les blocs ne sont pas liés"], answer: 0, why: "Chaque bloc est verrouillé au précédent, donc une page modifiée ne correspondrait plus aux autres copies." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Ce qu'est une cryptomonnaie",
           minutes: 5,
           goal: "Expliquer ce qu'est une cryptomonnaie et en quoi elle diffère de l'argent à la banque.",
@@ -58,9 +87,14 @@ module.exports = {
             { title: "Pas comme un paiement par carte", bullets: ["Pas les protections légales des cartes (FTC)", "En général, impossible à annuler"] }
           ],
           tryIt: "Écrivez trois différences entre payer avec une carte de débit et payer en crypto. Vérifiez votre réponse avec la page de la FTC dans les sources de cette leçon.",
-          youCanNow: "expliquer ce qu'est une cryptomonnaie et en quoi elle diffère de l'argent à la banque et des paiements par carte."
+          youCanNow: "expliquer ce qu'est une cryptomonnaie et en quoi elle diffère de l'argent à la banque et des paiements par carte.",
+          quickCheck: [
+            { objective: "O2", q: "Qu'est-ce qu'une cryptomonnaie ?", options: ["Des billets émis par un État", "De l'argent numérique enregistré sur une blockchain", "Un compte d'épargne dans une banque", "Une carte cadeau d'un magasin"], answer: 1, why: "La crypto est de l'argent numérique enregistré sur une blockchain, pas émis par un État." },
+            { objective: "O2", q: "Un vendeur vous demande de payer en crypto plutôt qu'avec votre carte bancaire. Que devez-vous garder en tête ?", options: ["La crypto a plus de protection légale qu'une carte", "Les paiements en crypto sont toujours faciles à annuler", "La crypto est assurée comme un compte bancaire", "Les paiements en crypto ne peuvent en général pas être annulés si quelque chose tourne mal"], answer: 3, why: "La FTC dit que les paiements en crypto n'ont pas les protections des cartes et ne peuvent en général pas être annulés." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Portefeuilles, clés et plateformes d'échange",
           minutes: 5,
           goal: "Expliquer comment la crypto est conservée et envoyée, et ce qu'il ne faut jamais partager.",
@@ -77,17 +111,21 @@ module.exports = {
             { title: "Les plateformes d'échange", bullets: ["Des entreprises pour acheter, vendre et garder de la crypto", "Elles peuvent être piratées ou fermer", "Lisez d'abord les plaintes et les mises en garde des autorités"] }
           ],
           tryIt: "Écrivez une phrase pour chaque point : ce qu'est une adresse publique, ce qu'est une phrase de récupération, et ce que vous répondriez si un « agent du service client » vous demandait votre phrase de récupération.",
-          youCanNow: "expliquer comment la crypto est conservée et envoyée, et pourquoi une phrase de récupération ne doit jamais être partagée."
+          youCanNow: "expliquer comment la crypto est conservée et envoyée, et pourquoi une phrase de récupération ne doit jamais être partagée.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce qu'une phrase de récupération ?", options: ["Un mot gentil que vous envoyez avec un paiement", "Le nom d'une plateforme d'échange", "Votre adresse publique", "Une liste de 12 ou 24 mots qui contrôle votre crypto"], answer: 3, why: "Celui qui a la phrase de récupération contrôle la crypto, comme avec un passe-partout." },
+            { objective: "O3", q: "Un ami veut vous envoyer de la crypto et vous demande quoi utiliser. Que lui donnez-vous ?", options: ["Votre phrase de récupération", "Votre clé privée", "Votre adresse publique", "Le code PIN de votre carte bancaire"], answer: 2, why: "L'adresse publique est comme un numéro de compte : on peut la partager sans danger pour recevoir de la crypto." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Comment fonctionnent la crypto et la blockchain",
         questions: [
-          { q: "Quelle image décrit le mieux une blockchain ?", options: ["La liste de contacts d'un téléphone", "Le tableur privé d'une seule banque", "Un chèque en papier", "Un cahier de paiements partagé dont beaucoup d'ordinateurs gardent chacun une copie"], answer: 3, why: "Une blockchain est un registre partagé gardé par beaucoup d'ordinateurs." },
-          { q: "Pourquoi est-il difficile de modifier un ancien registre sur une blockchain ?", options: ["Il est imprimé sur papier", "Un juge le surveille", "Chaque bloc est relié au précédent, donc une modification ne correspond plus aux autres copies", "Il est effacé chaque jour"], answer: 2, why: "Les blocs reliés et les nombreuses copies font apparaître les modifications." },
-          { q: "Que dit la FTC des paiements en crypto par rapport aux cartes de crédit ?", options: ["Ils sont mieux protégés", "C'est pareil", "Ils n'ont pas les mêmes protections légales et ne peuvent généralement pas être annulés", "Ils sont toujours assurés"], answer: 2, why: "La FTC prévient que les paiements en crypto n'ont pas les protections des cartes." },
-          { q: "Qu'est-ce qu'un stablecoin ?", options: ["Une pièce en métal", "Un type de portefeuille", "Un bon d'épargne de l'État", "Une crypto conçue pour rester proche d'une monnaie comme le dollar"], answer: 3, why: "Les stablecoins visent la valeur d'une monnaie ordinaire, mais ils peuvent quand même s'effondrer." },
-          { q: "Quelqu'un du « support du portefeuille » demande votre phrase de récupération de 12 mots pour régler un problème. Que faites-vous ?", options: ["La donner pour qu'il puisse aider", "En donner la moitié", "La taper dans une IA pour la vérifier", "Refuser ; les vraies entreprises ne la demandent jamais"], answer: 3, why: "Celui qui a la phrase de récupération contrôle la crypto." }
+          { objective: "O1", q: "Quelle image décrit le mieux une blockchain ?", options: ["La liste de contacts d'un téléphone", "Le tableur privé d'une seule banque", "Un chèque en papier", "Un cahier de paiements partagé dont beaucoup d'ordinateurs gardent chacun une copie"], answer: 3, why: "Une blockchain est un registre partagé gardé par beaucoup d'ordinateurs." },
+          { objective: "O1", q: "Pourquoi est-il difficile de modifier un ancien registre sur une blockchain ?", options: ["Il est imprimé sur papier", "Un juge le surveille", "Chaque bloc est relié au précédent, donc une modification ne correspond plus aux autres copies", "Il est effacé chaque jour"], answer: 2, why: "Les blocs reliés et les nombreuses copies font apparaître les modifications." },
+          { objective: "O2", q: "Que dit la FTC des paiements en crypto par rapport aux cartes de crédit ?", options: ["Ils sont mieux protégés", "C'est pareil", "Ils n'ont pas les mêmes protections légales et ne peuvent généralement pas être annulés", "Ils sont toujours assurés"], answer: 2, why: "La FTC prévient que les paiements en crypto n'ont pas les protections des cartes." },
+          { objective: "O2", q: "Qu'est-ce qu'un stablecoin ?", options: ["Une pièce en métal", "Un type de portefeuille", "Un bon d'épargne de l'État", "Une crypto conçue pour rester proche d'une monnaie comme le dollar"], answer: 3, why: "Les stablecoins visent la valeur d'une monnaie ordinaire, mais ils peuvent quand même s'effondrer." },
+          { objective: "O3", q: "Quelqu'un du « support du portefeuille » demande votre phrase de récupération de 12 mots pour régler un problème. Que faites-vous ?", options: ["La donner pour qu'il puisse aider", "En donner la moitié", "La taper dans une IA pour la vérifier", "Refuser ; les vraies entreprises ne la demandent jamais"], answer: 3, why: "Celui qui a la phrase de récupération contrôle la crypto." }
         ]
       }
     },
@@ -95,6 +133,7 @@ module.exports = {
       name: "Chapitre 2 : Risques, arnaques et signalement",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Les vrais risques",
           minutes: 5,
           goal: "Nommer les principaux risques liés au fait de détenir ou de recevoir de la crypto.",
@@ -113,9 +152,14 @@ module.exports = {
             { title: "Ce n'est pas un conseil", bullets: ["Ce cours ne dit pas d'acheter ou de vendre", "Parlez à un professionnel agréé de votre choix"] }
           ],
           tryIt: "Écrivez les quatre risques avec vos mots : prix, perte, entreprise et arnaque. Pour chacun, écrivez une façon de se protéger.",
-          youCanNow: "nommer les principaux risques de la crypto et expliquer pourquoi l'argent dont on a besoin ne doit jamais être mis en danger."
+          youCanNow: "nommer les principaux risques de la crypto et expliquer pourquoi l'argent dont on a besoin ne doit jamais être mis en danger.",
+          quickCheck: [
+            { objective: "O4", q: "Qu'est-ce que le risque de prix avec la crypto ?", options: ["Le prix peut chuter fortement et personne ne peut promettre qu'il remontera", "Le prix est fixé par l'État", "Le prix ne fait que monter avec le temps", "Le prix est le même que celui du dollar chaque jour"], answer: 0, why: "Les prix de la crypto peuvent chuter fortement : n'y mettez jamais l'argent dont vous avez besoin pour vos factures." },
+            { objective: "O4", q: "Votre cousin veut mettre l'argent du loyer de ce mois dans la crypto. Que lui dites-vous ?", options: ["Vas-y ; les prix remontent toujours", "N'utilise pas l'argent dont tu as besoin pour le loyer, la nourriture, les factures ou les médicaments", "Mets-le sur une plateforme d'échange, car elles sont assurées", "Envoie-le vite avant que le prix change"], answer: 1, why: "Les prix peuvent beaucoup baisser, donc l'argent des besoins de base ne doit jamais aller dans la crypto." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Repérer les arnaques à la crypto",
           minutes: 5,
           goal: "Comparer une offre ou un message lié à la crypto avec les signes d'alerte d'une arnaque.",
@@ -133,12 +177,17 @@ module.exports = {
             { title: "Quand vous en repérez une", bullets: ["Arrêtez-vous", "Ne payez pas, ne cliquez pas", "Parlez-en à une personne de confiance"] }
           ],
           tryIt: "Trouvez une publicité, un message ou une publication sur la crypto. Passez les cinq questions de vérification et notez chaque signe d'alerte qu'il montre.",
-          youCanNow: "comparer une offre ou un message lié à la crypto avec les signes d'alerte et vous arrêter avant de payer."
+          youCanNow: "comparer une offre ou un message lié à la crypto avec les signes d'alerte et vous arrêter avant de payer.",
+          quickCheck: [
+            { objective: "O5", q: "Lequel de ces éléments est un signe d'alerte d'une arnaque à la crypto ?", options: ["Une lettre de la banque que vous avez demandée", "Un ami qui explique ce qu'est une blockchain", "Une demande de payer d'avance en crypto pour protéger votre argent", "Un article de presse sur le prix du Bitcoin"], answer: 2, why: "Seuls les escrocs exigent un paiement d'avance en crypto ou pour « protéger » votre argent." },
+            { objective: "O5", q: "Un SMS dit que votre compte bancaire est bloqué et que vous devez payer aujourd'hui à un distributeur de crypto. Que faites-vous ?", options: ["Aller tout de suite au distributeur de crypto", "Répondre avec votre numéro de compte", "Cliquer sur le lien du SMS pour vérifier", "Vous arrêter, ne pas payer ni cliquer, et en parler à une personne de confiance"], answer: 3, why: "Dire que vous devez de l'argent à payer en crypto est un signe d'arnaque : arrêtez-vous et ne payez pas." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Signaler une fraude et aider les autres",
           minutes: 5,
-          goal: "Savoir où signaler une arnaque à la crypto et quoi noter.",
+          goal: "Lister où signaler une arnaque à la crypto et ce qu'il faut noter.",
           text: [
             "Si vous ou un proche avez été visé, signalez-le. Aux États-Unis, la FTC indique ces endroits : la FTC sur ReportFraud.ftc.gov, la CFTC sur cftc.gov/complaint, la SEC sur sec.gov/tcr, le centre des plaintes pour la cybercriminalité du FBI (IC3) sur ic3.gov, et la plateforme ou l'application de crypto utilisée pour envoyer l'argent. Dans un autre pays, signalez-le à la police et à l'autorité financière nationale.",
             "Notez ce qui s'est passé : les dates, le montant, l'adresse du portefeuille ou l'identifiant de la transaction, les noms et numéros de téléphone utilisés par l'escroc, et des captures d'écran des messages. N'envoyez plus d'argent à quelqu'un qui promet de « récupérer » votre crypto perdue ; c'est souvent une deuxième arnaque.",
@@ -153,17 +202,21 @@ module.exports = {
             { title: "Attention aux arnaques à la récupération", bullets: ["Personne d'honnête ne fait payer pour « récupérer » de la crypto", "Ne payez pas une deuxième fois"] }
           ],
           tryIt: "Tâche finale : faites votre fiche de sécurité crypto d'une page (ce que sont la blockchain et la crypto, trois risques, quatre signes d'arnaque, où signaler). Puis notez les signes d'alerte d'une vraie publicité ou d'un vrai message sur la crypto.",
-          youCanNow: "signaler une arnaque à la crypto aux bons endroits et aider votre famille et vos amis à l'éviter."
+          youCanNow: "signaler une arnaque à la crypto aux bons endroits et aider votre famille et vos amis à l'éviter.",
+          quickCheck: [
+            { objective: "O6", q: "Lequel de ces endroits est un lieu officiel pour signaler une fraude à la crypto aux États-Unis ?", options: ["Un commentaire sous la publication de l'escroc sur un réseau social", "Le centre de plaintes du FBI pour la criminalité sur internet, sur ic3.gov", "Un inconnu qui dit pouvoir récupérer votre argent", "Un groupe de discussion sur la crypto"], answer: 1, why: "L'IC3, sur ic3.gov, est l'un des endroits officiels que la FTC indique pour signaler." },
+            { objective: "O6", q: "Votre voisine a été victime d'une arnaque et veut la signaler. Que l'aidez-vous à faire d'abord ?", options: ["Noter les dates, les montants, l'adresse du portefeuille ou l'identifiant de transaction, et garder des captures d'écran", "Supprimer tous les messages de l'escroc", "Payer un service de récupération pour retrouver l'argent", "Envoyer plus de crypto à l'escroc pour fermer le compte"], answer: 0, why: "Ces détails aident les agences et la plateforme d'échange à donner suite au signalement." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Risques, arnaques et signalement",
         questions: [
-          { q: "Quel argent ne faut-il jamais mettre dans la crypto ?", options: ["L'argent fictif d'un jeu", "L'argent que vous pouvez vous permettre de perdre, après conseil", "L'argent dont vous avez besoin pour le loyer, la nourriture ou les médicaments", "Il n'y a jamais aucun risque"], answer: 2, why: "Les variations de prix peuvent vous faire perdre l'argent dont vous avez besoin." },
-          { q: "Selon la FDIC, la crypto est :", options: ["Entièrement garantie par la FDIC", "Garantie seulement le week-end", "Non couverte par la garantie des dépôts de la FDIC", "Garantie si elle est achetée sur un téléphone"], answer: 2, why: "La garantie des dépôts de la FDIC ne couvre pas la crypto." },
-          { q: "Un homme au téléphone dit qu'il est de l'administration et que vous devez payer une amende à un distributeur de crypto aujourd'hui. C'est :", options: ["Un paiement normal à l'administration", "Un remboursement d'impôts", "Une règle bancaire", "Un signe d'alerte d'arnaque"], answer: 3, why: "Seuls les escrocs exigent un paiement en crypto." },
-          { q: "Un nouvel ami en ligne promet des profits garantis si vous investissez dans la crypto. Que faites-vous ?", options: ["Investir un peu pour essayer", "Envoyer votre phrase de récupération", "Demander une plus grande garantie", "Arrêter ; les profits garantis sont un signe d'arnaque"], answer: 3, why: "Seuls les escrocs garantissent des profits." },
-          { q: "Après avoir perdu de l'argent dans une arnaque à la crypto, quelqu'un propose de le récupérer contre des frais. C'est probablement :", options: ["Une arnaque à la récupération", "Le FBI", "Votre banque", "Un remboursement"], answer: 0, why: "Payer des frais pour récupérer de la crypto est une deuxième arnaque courante." }
+          { objective: "O4", q: "Quel argent ne faut-il jamais mettre dans la crypto ?", options: ["L'argent fictif d'un jeu", "L'argent que vous pouvez vous permettre de perdre, après conseil", "L'argent dont vous avez besoin pour le loyer, la nourriture ou les médicaments", "Il n'y a jamais aucun risque"], answer: 2, why: "Les variations de prix peuvent vous faire perdre l'argent dont vous avez besoin." },
+          { objective: "O4", q: "Selon la FDIC, la crypto est :", options: ["Entièrement garantie par la FDIC", "Garantie seulement le week-end", "Non couverte par la garantie des dépôts de la FDIC", "Garantie si elle est achetée sur un téléphone"], answer: 2, why: "La garantie des dépôts de la FDIC ne couvre pas la crypto." },
+          { objective: "O5", q: "Un homme au téléphone dit qu'il est de l'administration et que vous devez payer une amende à un distributeur de crypto aujourd'hui. C'est :", options: ["Un paiement normal à l'administration", "Un remboursement d'impôts", "Une règle bancaire", "Un signe d'alerte d'arnaque"], answer: 3, why: "Seuls les escrocs exigent un paiement en crypto." },
+          { objective: "O5", q: "Un nouvel ami en ligne promet des profits garantis si vous investissez dans la crypto. Que faites-vous ?", options: ["Investir un peu pour essayer", "Envoyer votre phrase de récupération", "Demander une plus grande garantie", "Arrêter ; les profits garantis sont un signe d'arnaque"], answer: 3, why: "Seuls les escrocs garantissent des profits." },
+          { objective: "O6", q: "Après avoir perdu de l'argent dans une arnaque à la crypto, quelqu'un propose de le récupérer contre des frais. C'est probablement :", options: ["Une arnaque à la récupération", "Le FBI", "Votre banque", "Un remboursement"], answer: 0, why: "Payer des frais pour récupérer de la crypto est une deuxième arnaque courante." }
         ]
       }
     }
@@ -171,26 +224,105 @@ module.exports = {
   quiz: {
     title: "Quiz final : Comprendre les cryptomonnaies et la blockchain",
     questions: [
-      { q: "Une blockchain est :", options: ["Un registre partagé des transactions gardé par beaucoup d'ordinateurs", "Un type d'antivol de vélo", "Le fichier secret d'une entreprise", "Un reçu en papier"], answer: 0, why: "Beaucoup d'ordinateurs gardent des copies du même registre relié." },
-      { q: "Dans une blockchain, un « bloc » est :", options: ["Un groupe de transactions ajoutées ensemble", "Un mot de passe", "Un distributeur de crypto", "Une agence bancaire"], answer: 0, why: "Chaque bloc contient un groupe de transactions." },
-      { q: "« Décentralisé » veut dire :", options: ["Géré par une seule banque", "Fermé le week-end", "Géré par un réseau de nombreux ordinateurs au lieu d'une seule entreprise", "Réservé aux États"], answer: 2, why: "Aucune entreprise ne garde seule le registre." },
-      { q: "La plupart des blockchains sont :", options: ["Secrètes et cachées", "Effacées chaque année", "Imprimées dans les journaux", "Des registres publics que tout le monde peut consulter"], answer: 3, why: "Tout le monde peut consulter les transactions, même si les noms ne sont pas affichés." },
-      { q: "Le Bitcoin est un exemple de :", options: ["Carte de crédit", "Compte bancaire", "Cryptomonnaie", "Stablecoin géré par l'État"], answer: 2, why: "Le Bitcoin a été la première cryptomonnaie." },
-      { q: "On dit que les prix de la crypto sont volatils parce qu'ils :", options: ["Ne changent jamais", "Ne font que monter", "Sont fixés par la loi", "Peuvent beaucoup monter ou baisser très vite"], answer: 3, why: "Volatil veut dire des changements de prix importants et rapides." },
-      { q: "Si vous payez un escroc en crypto, la FTC dit que vous :", options: ["Pouvez toujours annuler", "Ne pouvez généralement pas annuler le paiement", "Serez remboursé par la banque", "Êtes assuré"], answer: 1, why: "Les paiements en crypto ne peuvent généralement pas être annulés." },
-      { q: "Un portefeuille de crypto est :", options: ["Un portefeuille en cuir", "Une application ou un appareil qui contient les clés de votre crypto", "Un compte bancaire", "Le bureau d'une plateforme d'échange"], answer: 1, why: "Les portefeuilles contiennent les clés qui contrôlent la crypto." },
-      { q: "Que pouvez-vous donner sans danger à quelqu'un qui va vous envoyer de la crypto ?", options: ["Votre adresse publique", "Votre phrase de récupération", "Votre clé privée", "Le mot de passe de votre banque"], answer: 0, why: "L'adresse publique est comme un numéro de compte." },
-      { q: "Qui contrôle la crypto d'un portefeuille ?", options: ["L'opérateur téléphonique", "Celui qui a la clé privée ou la phrase de récupération", "L'État", "La personne qui a l'adresse publique"], answer: 1, why: "La clé privée est le passe-partout." },
-      { q: "Une plateforme d'échange est :", options: ["Une entreprise où l'on achète, vend et garde de la crypto", "Un bureau de l'administration", "Un type de bloc de blockchain", "Une phrase de récupération"], answer: 0, why: "Les plateformes d'échange sont des entreprises pour échanger et garder de la crypto." },
-      { q: "Quel est un risque lié à l'entreprise avec la crypto ?", options: ["La plateforme peut être piratée ou fermer", "Le prix est fixe", "Elle est garantie par la FDIC", "Elle ne peut pas être volée"], answer: 0, why: "Les plateformes et les applications peuvent être piratées ou faire faillite." },
-      { q: "Ce cours vous dit-il d'acheter de la crypto ?", options: ["Oui, toujours", "Oui, mais seulement du Bitcoin", "Non ; pour les décisions d'argent, parlez à un professionnel agréé de votre choix", "Oui, avec l'argent du loyer"], answer: 2, why: "Le cours explique comment fonctionne la crypto et ses risques ; ce n'est pas un conseil." },
-      { q: "Vous envoyez de la crypto à la mauvaise adresse. Que se passe-t-il généralement ?", options: ["Elle revient automatiquement", "Elle est généralement perdue", "La banque la rembourse", "La FTC la renvoie"], answer: 1, why: "Les paiements sur la blockchain ne peuvent généralement pas être annulés." },
-      { q: "Lequel est un signe d'alerte d'une arnaque à la crypto ?", options: ["Une promesse de profits garantis", "Une liste de prix claire", "Un magasin qui accepte les cartes", "Un reçu par e-mail"], answer: 0, why: "Seuls les escrocs garantissent des profits." },
-      { q: "Une personne d'une application de rencontre, que vous n'avez jamais vue, vous demande d'investir dans la crypto. C'est :", options: ["Le grand amour", "Un signe courant d'arnaque sentimentale", "Une exigence de la banque", "Une règle fiscale"], answer: 1, why: "Les nouveaux contacts en ligne qui poussent vers la crypto sont un signe d'arnaque." },
-      { q: "Une offre d'emploi dit que vous devez payer des frais de formation en crypto. Vous devez :", options: ["Payer vite", "Arrêter ; un emploi qui exige des frais en crypto est un signe d'arnaque", "Payer la moitié", "Envoyer plutôt votre phrase de récupération"], answer: 1, why: "La FTC cite les emplois avec frais en crypto comme un signe d'arnaque." },
-      { q: "Où pouvez-vous signaler une fraude à la crypto aux États-Unis ?", options: ["ReportFraud.ftc.gov et ic3.gov", "Un groupe quelconque sur les réseaux sociaux", "La ligne d'aide de l'escroc", "Nulle part"], answer: 0, why: "La FTC et l'IC3 du FBI reçoivent les signalements de fraude." },
-      { q: "Que devez-vous noter après une arnaque ?", options: ["Rien", "Les dates, les montants, l'adresse du portefeuille, l'identifiant de transaction et des captures d'écran", "Seulement votre mot de passe", "Votre phrase de récupération"], answer: 1, why: "Ces détails aident les enquêteurs." },
-      { q: "La meilleure façon de protéger un proche des arnaques à la crypto est de :", options: ["Ne jamais en parler", "Lui expliquer les signes d'alerte et où signaler", "Lui donner votre phrase de récupération", "Lui dire d'investir vite"], answer: 1, why: "Une courte conversation sur les signes d'alerte peut éviter une perte." }
+      { objective: "O1", q: "Une blockchain est :", options: ["Un registre partagé des transactions gardé par beaucoup d'ordinateurs", "Un type d'antivol de vélo", "Le fichier secret d'une entreprise", "Un reçu en papier"], answer: 0, why: "Beaucoup d'ordinateurs gardent des copies du même registre relié." },
+      { objective: "O1", q: "Dans une blockchain, un « bloc » est :", options: ["Un groupe de transactions ajoutées ensemble", "Un mot de passe", "Un distributeur de crypto", "Une agence bancaire"], answer: 0, why: "Chaque bloc contient un groupe de transactions." },
+      { objective: "O1", q: "« Décentralisé » veut dire :", options: ["Géré par une seule banque", "Fermé le week-end", "Géré par un réseau de nombreux ordinateurs au lieu d'une seule entreprise", "Réservé aux États"], answer: 2, why: "Aucune entreprise ne garde seule le registre." },
+      { objective: "O1", q: "La plupart des blockchains sont :", options: ["Secrètes et cachées", "Effacées chaque année", "Imprimées dans les journaux", "Des registres publics que tout le monde peut consulter"], answer: 3, why: "Tout le monde peut consulter les transactions, même si les noms ne sont pas affichés." },
+      { objective: "O2", q: "Le Bitcoin est un exemple de :", options: ["Carte de crédit", "Compte bancaire", "Cryptomonnaie", "Stablecoin géré par l'État"], answer: 2, why: "Le Bitcoin a été la première cryptomonnaie." },
+      { objective: "O2", q: "On dit que les prix de la crypto sont volatils parce qu'ils :", options: ["Ne changent jamais", "Ne font que monter", "Sont fixés par la loi", "Peuvent beaucoup monter ou baisser très vite"], answer: 3, why: "Volatil veut dire des changements de prix importants et rapides." },
+      { objective: "O2", q: "Si vous payez un escroc en crypto, la FTC dit que vous :", options: ["Pouvez toujours annuler", "Ne pouvez généralement pas annuler le paiement", "Serez remboursé par la banque", "Êtes assuré"], answer: 1, why: "Les paiements en crypto ne peuvent généralement pas être annulés." },
+      { objective: "O3", q: "Un portefeuille de crypto est :", options: ["Un portefeuille en cuir", "Une application ou un appareil qui contient les clés de votre crypto", "Un compte bancaire", "Le bureau d'une plateforme d'échange"], answer: 1, why: "Les portefeuilles contiennent les clés qui contrôlent la crypto." },
+      { objective: "O3", q: "Que pouvez-vous donner sans danger à quelqu'un qui va vous envoyer de la crypto ?", options: ["Votre adresse publique", "Votre phrase de récupération", "Votre clé privée", "Le mot de passe de votre banque"], answer: 0, why: "L'adresse publique est comme un numéro de compte." },
+      { objective: "O3", q: "Qui contrôle la crypto d'un portefeuille ?", options: ["L'opérateur téléphonique", "Celui qui a la clé privée ou la phrase de récupération", "L'État", "La personne qui a l'adresse publique"], answer: 1, why: "La clé privée est le passe-partout." },
+      { objective: "O3", q: "Une plateforme d'échange est :", options: ["Une entreprise où l'on achète, vend et garde de la crypto", "Un bureau de l'administration", "Un type de bloc de blockchain", "Une phrase de récupération"], answer: 0, why: "Les plateformes d'échange sont des entreprises pour échanger et garder de la crypto." },
+      { objective: "O4", q: "Quel est un risque lié à l'entreprise avec la crypto ?", options: ["La plateforme peut être piratée ou fermer", "Le prix est fixe", "Elle est garantie par la FDIC", "Elle ne peut pas être volée"], answer: 0, why: "Les plateformes et les applications peuvent être piratées ou faire faillite." },
+      { objective: "O4", q: "Ce cours vous dit-il d'acheter de la crypto ?", options: ["Oui, toujours", "Oui, mais seulement du Bitcoin", "Non ; pour les décisions d'argent, parlez à un professionnel agréé de votre choix", "Oui, avec l'argent du loyer"], answer: 2, why: "Le cours explique comment fonctionne la crypto et ses risques ; ce n'est pas un conseil." },
+      { objective: "O4", q: "Vous envoyez de la crypto à la mauvaise adresse. Que se passe-t-il généralement ?", options: ["Elle revient automatiquement", "Elle est généralement perdue", "La banque la rembourse", "La FTC la renvoie"], answer: 1, why: "Les paiements sur la blockchain ne peuvent généralement pas être annulés." },
+      { objective: "O5", q: "Lequel est un signe d'alerte d'une arnaque à la crypto ?", options: ["Une promesse de profits garantis", "Une liste de prix claire", "Un magasin qui accepte les cartes", "Un reçu par e-mail"], answer: 0, why: "Seuls les escrocs garantissent des profits." },
+      { objective: "O5", q: "Une personne d'une application de rencontre, que vous n'avez jamais vue, vous demande d'investir dans la crypto. C'est :", options: ["Le grand amour", "Un signe courant d'arnaque sentimentale", "Une exigence de la banque", "Une règle fiscale"], answer: 1, why: "Les nouveaux contacts en ligne qui poussent vers la crypto sont un signe d'arnaque." },
+      { objective: "O5", q: "Une offre d'emploi dit que vous devez payer des frais de formation en crypto. Vous devez :", options: ["Payer vite", "Arrêter ; un emploi qui exige des frais en crypto est un signe d'arnaque", "Payer la moitié", "Envoyer plutôt votre phrase de récupération"], answer: 1, why: "La FTC cite les emplois avec frais en crypto comme un signe d'arnaque." },
+      { objective: "O6", q: "Où pouvez-vous signaler une fraude à la crypto aux États-Unis ?", options: ["ReportFraud.ftc.gov et ic3.gov", "Un groupe quelconque sur les réseaux sociaux", "La ligne d'aide de l'escroc", "Nulle part"], answer: 0, why: "La FTC et l'IC3 du FBI reçoivent les signalements de fraude." },
+      { objective: "O6", q: "Que devez-vous noter après une arnaque ?", options: ["Rien", "Les dates, les montants, l'adresse du portefeuille, l'identifiant de transaction et des captures d'écran", "Seulement votre mot de passe", "Votre phrase de récupération"], answer: 1, why: "Ces détails aident les enquêteurs." },
+      { objective: "O6", q: "La meilleure façon de protéger un proche des arnaques à la crypto est de :", options: ["Ne jamais en parler", "Lui expliquer les signes d'alerte et où signaler", "Lui donner votre phrase de récupération", "Lui dire d'investir vite"], answer: 1, why: "Une courte conversation sur les signes d'alerte peut éviter une perte." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      2,
+      4,
+      6,
+      9,
+      11,
+      14,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie de la fiche et vérifiez-la de nouveau.",
+    criteria: [
+      {
+        name: "Ce que sont la blockchain et la crypto",
+        objective: "O1",
+        notYet: "Les deux phrases manquent, sont fausses ou sont copiées sans explication.",
+        meets: "Deux phrases simples disent correctement ce que sont une blockchain et une cryptomonnaie.",
+        exceeds: "Dit aussi pourquoi les paiements en crypto sont difficiles à annuler."
+      },
+      {
+        name: "Trois risques",
+        objective: "O4",
+        notYet: "Moins de trois risques, ou un risque est faux.",
+        meets: "Trois risques justes parmi le prix, la perte, l'entreprise et l'arnaque.",
+        exceeds: "Chaque risque a une façon de se protéger."
+      },
+      {
+        name: "Clés et phrase de récupération",
+        objective: "O3",
+        notYet: "La fiche ne dit pas de garder secrète la phrase de récupération, ou dit qu'on peut la partager.",
+        meets: "La fiche dit de ne jamais partager la phrase de récupération ou la clé privée avec personne.",
+        exceeds: "Dit aussi que l'adresse publique est la seule chose qu'on peut partager sans danger pour recevoir de la crypto."
+      },
+      {
+        name: "Quatre signes d'alerte d'arnaque",
+        objective: "O5",
+        notYet: "Moins de quatre signes, ou un signe est faux.",
+        meets: "Quatre signes d'alerte justes, et la vraie publicité ou le vrai message est marqué avec chaque signe qu'il montre.",
+        exceeds: "Écrit aussi la réaction sûre : s'arrêter, ne pas payer ni cliquer, et en parler à une personne de confiance."
+      },
+      {
+        name: "Où signaler",
+        objective: "O6",
+        notYet: "Aucun endroit officiel de signalement, ou un endroit non officiel.",
+        meets: "Au moins deux endroits officiels de signalement, comme ReportFraud.ftc.gov et ic3.gov.",
+        exceeds: "Liste aussi les détails à noter et met en garde contre les arnaques à la récupération."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et obtiennent « Atteint » ou « Dépasse » sur chaque ligne de la grille de la fiche de sécurité crypto",
+      "Apprenants qui disent avoir repéré et ignoré un message ou un appel d'arnaque à la crypto dans les 30 jours après le cours (enquête de suivi)",
+      "Apprenants qui partagent la fiche de sécurité ou les signes d'alerte avec un membre de leur famille ou un ami",
+      "Les programmes partenaires signalent moins de membres qui perdent de l'argent dans des arnaques à la crypto, ou plus d'arnaques signalées aux sites officiels"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur avec internet pour lire les pages officielles de mise en garde (FTC, FDIC, SEC, CFTC)",
+      "Du papier et un stylo, ou une application de documents, pour la fiche de sécurité crypto d'une page",
+      "Une vraie publicité, un vrai message ou une vraie publication sur la crypto à examiner (les captures d'écran conviennent)",
+      "Environ 60 minutes au total, en courtes séances"
+    ],
+    facilitatorNotes: [
+      "Dites dès le début que le cours n'est pas un conseil financier et ne dit à personne d'acheter ou de vendre de la crypto ; renvoyez les questions d'argent vers un professionnel agréé choisi par l'apprenant.",
+      "Ne demandez jamais aux apprenants d'ouvrir une application crypto, de connecter un portefeuille ou de taper une phrase de récupération en classe, même pour s'exercer.",
+      "Apportez quelques exemples imprimés ou en capture d'écran de vrais messages d'arnaque pour que les apprenants qui n'en ont pas puissent quand même faire la vérification des signes d'alerte.",
+      "Certains apprenants ont peut-être perdu de l'argent dans une arnaque ; gardez un ton sans reproche et montrez-leur comment la signaler.",
+      "Invitez les apprenants à venir avec un proche, surtout un parent âgé ou un jeune qui découvre les applications d'argent, et faites faire la fiche de sécurité en binôme."
     ]
   }
 };

@@ -23,11 +23,35 @@ module.exports = {
     "Every farm is different. Use this course with advice from your extension officer, agrovet or research institute, and test new practices on a small plot first. Each lesson takes about five minutes and ends with a task on your own farm. A knowledge check closes each chapter and a 20-question quiz closes the course."
   ],
   finalTask: "Write a one-page climate-smart plan for your farm (or an example farm such as 2 acres of maize and beans in Machakos, or 3 acres of sorghum and cowpea in Kano): a month-by-month climate-risk calendar, what this season's official forecast says and the date you read it, and at least five practices you will use (at least one each for soil and water, crops and varieties, and spreading risk), with when you will start each and how you will know if it worked.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Smallholder farmers, young farmers, extension officers and farmer-group leaders in Kenya, Nigeria and across Africa who face longer dry spells, heavier rains, more heat and new pests.",
+    startingPoint: "Know their land, crops and seasons well, and many already use some climate-smart practices without that name. Few read the official seasonal forecast, draw a climate-risk calendar or plan practices to spread risk across a season.",
+    gap: "Changing rains and new pests make harvests and incomes less steady. Farmers need to read official forecasts, see the danger points in their year, and choose soil, water, crop, tree, livestock and insurance practices that fit their farm, testing them before using them everywhere.",
+    constraints: [
+      "Reading level: plain words and short sentences; many learners use English as a second language",
+      "Devices: a basic phone, radio or extension bulletin; a smartphone helps but is optional",
+      "Cost and labour: start with low-cost practices tested on a small area",
+      "Forecasts, varieties, insurance and regulators differ by country: learners check KMD, NiMet or their national service, extension officers and licensed sellers",
+      "Time: learners fit lessons around farm work and seasons"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given practices used on your farm or in your village", action: "explain the three aims of climate-smart agriculture and judge whether each practice is climate-smart", standard: "naming which aim each practice helps" },
+    { id: "O2", condition: "Before a rainy season", action: "find your national weather service's seasonal forecast and write two changes it means for your plan", standard: "noting what it says, the date you read it, and that it gives chances, not promises" },
+    { id: "O3", condition: "For your own farm or an example farm", action: "draw a month-by-month climate-risk calendar and circle the danger points", standard: "with seasons, farm jobs, risks and at least two danger points marked" },
+    { id: "O4", condition: "Given the slope and water flow on your farm", action: "choose soil and water practices that fit and plan a small test", standard: "comparing the tested area with your usual way" },
+    { id: "O5", condition: "Given your main crop and local risks", action: "choose certified drought-tolerant or early varieties, a drought-hardy crop and a planting strategy that reduce risk", standard: "buying seed only from registered dealers" },
+    { id: "O6", condition: "Beyond your main crop", action: "plan at least one way to spread risk with trees, livestock feed and water, or insurance", standard: "checking any insurance trigger and that the insurer is licensed" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Understanding climate risk on your farm",
       lessons: [
         {
+          objectives: ["O1"],
           title: "What climate-smart agriculture means",
           minutes: 5,
           goal: "Explain the three aims of climate-smart agriculture and judge whether a practice is climate-smart.",
@@ -44,9 +68,14 @@ module.exports = {
           ],
           sources: [FAO_CSA],
           tryIt: "List three practices already used on your farm or in your village. For each, write which of the three CSA aims it helps (productivity, resilience, emissions).",
-          youCanNow: "explain the three aims of climate-smart agriculture and judge whether a practice is climate-smart."
+          youCanNow: "explain the three aims of climate-smart agriculture and judge whether a practice is climate-smart.",
+          quickCheck: [
+            { objective: "O1", q: "Which is a climate-smart practice farmers in Africa already use?", options: ["Mulching to keep soil moist", "Burning all crop residue", "Planting only one crop every year", "Ploughing the field many times"], answer: 0, why: "Mulching keeps soil moist and covered, helping productivity and resilience." },
+            { objective: "O1", q: "A practice raises your yields and helps you survive dry spells but does not cut emissions. Is it climate-smart?", options: ["No; it must do all three", "Yes, if it fits your farm and improves productivity and resilience", "Only if a government approves it", "Only if it is new"], answer: 1, why: "FAO says a practice does not have to meet all three aims; for smallholders, food and income come first." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Reading the official seasonal forecast",
           minutes: 5,
           goal: "Find and use your national weather service's seasonal forecast to plan the season.",
@@ -64,9 +93,14 @@ module.exports = {
           ],
           sources: [KMD, NIMET],
           tryIt: "Find the latest seasonal forecast for your area from KMD, NiMet or your country's weather service. Write what it says, the date you read it, and two changes you will make to your plan.",
-          youCanNow: "find the official seasonal forecast and use it to adjust your season plan."
+          youCanNow: "find the official seasonal forecast and use it to adjust your season plan.",
+          quickCheck: [
+            { objective: "O2", q: "What does a seasonal forecast tell you?", options: ["The exact rain on each day", "The price of maize", "Whether rains are likely above, near or below normal", "Which seed to buy"], answer: 2, why: "A seasonal forecast gives the chances of above, near or below normal rain and when rains may start and end." },
+            { objective: "O2", q: "The forecast says rains may end early. What is a sensible change?", options: ["Plant a long-maturing variety", "Plant much later than usual", "Do nothing", "Choose a shorter-maturing variety"], answer: 3, why: "A shorter-maturing variety can finish before the rains end." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Drawing your farm's climate-risk calendar",
           minutes: 5,
           goal: "Draw a month-by-month calendar of the climate risks your farm faces.",
@@ -84,17 +118,21 @@ module.exports = {
           ],
           sources: [FAO_EO],
           tryIt: "Draw the climate-risk calendar for your farm on paper or in a phone spreadsheet. Circle at least two danger points.",
-          youCanNow: "draw a climate-risk calendar for your farm and find its danger points."
+          youCanNow: "draw a climate-risk calendar for your farm and find its danger points.",
+          quickCheck: [
+            { objective: "O3", q: "What goes in the rows below the months on a climate-risk calendar?", options: ["Your farm jobs, animal needs and the risks", "Only market prices", "Your family's birthdays", "Only rainfall totals"], answer: 0, why: "The calendar puts farm jobs and animal needs next to each month's risks." },
+            { objective: "O3", q: "You store maize in a month that is often wet. What do you mark?", options: ["Nothing; storage is safe", "A post-harvest loss risk from damp grain", "A drought risk", "A planting job"], answer: 1, why: "Grain stored damp in wet months is a post-harvest loss risk." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Understanding climate risk on your farm",
         questions: [
-          { q: "Which is one of FAO's three aims of climate-smart agriculture?", options: ["Use as much chemical as possible", "Help farms adapt and build resilience", "Plant only one crop", "Clear all trees"], answer: 1, why: "CSA aims at productivity, adaptation and resilience, and lower emissions where possible." },
-          { q: "Must a climate-smart practice achieve all three aims at once?", options: ["Yes, always", "Only in Kenya", "No; it should fit the farm and improve productivity and resilience", "Only on large farms"], answer: 2, why: "FAO says practices need not deliver every aim; food and income come first." },
-          { q: "The seasonal forecast says \"below normal rainfall\". This means:", options: ["A higher chance of less rain than usual", "It will certainly not rain", "Floods are certain", "Nothing useful"], answer: 0, why: "Seasonal forecasts give chances, not certainties." },
-          { q: "Where should a Nigerian farmer look for the official seasonal forecast?", options: ["A rumour at the market", "Last year's calendar", "A social media stranger", "NiMet or its forecasts shared by extension and radio"], answer: 3, why: "NiMet is Nigeria's official weather service." },
-          { q: "A danger point on a climate-risk calendar is:", options: ["When an important farm job meets a high climate risk", "A place to sell crops", "A type of pest", "A month with no farm work"], answer: 0, why: "Danger points show where practices help most." }
+          { objective: "O1", q: "Which is one of FAO's three aims of climate-smart agriculture?", options: ["Use as much chemical as possible", "Help farms adapt and build resilience", "Plant only one crop", "Clear all trees"], answer: 1, why: "CSA aims at productivity, adaptation and resilience, and lower emissions where possible." },
+          { objective: "O1", q: "Must a climate-smart practice achieve all three aims at once?", options: ["Yes, always", "Only in Kenya", "No; it should fit the farm and improve productivity and resilience", "Only on large farms"], answer: 2, why: "FAO says practices need not deliver every aim; food and income come first." },
+          { objective: "O2", q: "The seasonal forecast says \"below normal rainfall\". This means:", options: ["A higher chance of less rain than usual", "It will certainly not rain", "Floods are certain", "Nothing useful"], answer: 0, why: "Seasonal forecasts give chances, not certainties." },
+          { objective: "O2", q: "Where should a Nigerian farmer look for the official seasonal forecast?", options: ["A rumour at the market", "Last year's calendar", "A social media stranger", "NiMet or its forecasts shared by extension and radio"], answer: 3, why: "NiMet is Nigeria's official weather service." },
+          { objective: "O3", q: "A danger point on a climate-risk calendar is:", options: ["When an important farm job meets a high climate risk", "A place to sell crops", "A type of pest", "A month with no farm work"], answer: 0, why: "Danger points show where practices help most." }
         ]
       }
     },
@@ -102,6 +140,7 @@ module.exports = {
       name: "Chapter 2: Climate-smart practices",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Keeping soil and water on the farm",
           minutes: 6,
           goal: "Choose soil and water practices that fit your farm and slope.",
@@ -120,9 +159,14 @@ module.exports = {
           ],
           sources: [FAO_CSA],
           tryIt: "Walk your farm after rain or look at it now. Mark where water runs off, where soil is washing away, and where water stands. Choose one soil or water practice for one spot and write how you will test it.",
-          youCanNow: "choose and test soil and water practices that keep moisture and soil on your farm."
+          youCanNow: "choose and test soil and water practices that keep moisture and soil on your farm.",
+          quickCheck: [
+            { objective: "O4", q: "What are tied ridges and contour bunds for?", options: ["Storing grain", "Feeding animals", "Stopping water running off the field", "Marking the farm boundary"], answer: 2, why: "They hold rain on the field so it soaks in instead of running off." },
+            { objective: "O4", q: "Water rushes down your sloping field after rain and carries soil. What do you choose?", options: ["Plough up and down the slope", "Burn the residue", "Leave the soil bare", "Grass strips or terraces along the contours"], answer: 3, why: "Terraces and grass strips on contours stop erosion on slopes." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Choosing crops and varieties that cope",
           minutes: 5,
           goal: "Pick crops, varieties and planting strategies that reduce climate risk.",
@@ -140,9 +184,14 @@ module.exports = {
           ],
           sources: [CGIAR_MAIZE, ICIPE_PUSHPULL],
           tryIt: "For your main crop, find one drought-tolerant or early-maturing certified variety sold near you (ask an agrovet or extension officer), and choose one drought-hardy crop to add. Write where you will plant each.",
-          youCanNow: "choose crops, varieties and planting strategies that lower your farm's climate risk."
+          youCanNow: "choose crops, varieties and planting strategies that lower your farm's climate risk.",
+          quickCheck: [
+            { objective: "O5", q: "Why do early-maturing varieties help in dry areas?", options: ["They can escape late-season drought", "They need more water", "They never get pests", "They do not need seed"], answer: 0, why: "Early-maturing crops finish before late-season drought hits." },
+            { objective: "O5", q: "Your maize often fails in dry years. What adds a safety net?", options: ["Plant more maize only", "Add a drought-hardy crop like sorghum or cowpea", "Plant later than everyone", "Buy uncertified seed in the market"], answer: 1, why: "Growing more than one crop, including a drought-hardy one, spreads risk." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Trees, livestock and insurance: spreading the risk",
           minutes: 6,
           goal: "Add at least one way to spread risk beyond your main crop, then write your plan.",
@@ -160,17 +209,21 @@ module.exports = {
           ],
           sources: [FAO_CSA],
           tryIt: "Final task: write your one-page climate-smart plan: risk calendar, this season's forecast and the date you read it, and at least five practices (soil and water, crops and varieties, spreading risk), with start dates and how you will judge success.",
-          youCanNow: "use trees, livestock, insurance and savings to spread climate risk, and write a complete climate-smart plan for your farm."
+          youCanNow: "use trees, livestock, insurance and savings to spread climate risk, and write a complete climate-smart plan for your farm.",
+          quickCheck: [
+            { objective: "O6", q: "What is agroforestry?", options: ["Cutting trees for charcoal", "Growing only trees", "Growing trees together with crops or livestock", "Buying timber"], answer: 2, why: "Agroforestry means trees on farms with crops or animals." },
+            { objective: "O6", q: "A dry season is coming and you keep goats and cows. What do you plan?", options: ["Buy more animals", "Sell all fodder", "Ignore water sources", "Fodder and water, with animal numbers matched to feed"], answer: 3, why: "Planning fodder and water and matching numbers to feed protects animals in drought." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Climate-smart practices",
         questions: [
-          { q: "Which is a conservation agriculture principle?", options: ["Burn residue after harvest", "Plough deeply every season", "Keep the soil covered with mulch or residue", "Grow the same crop forever"], answer: 2, why: "Soil cover keeps moisture in and protects against erosion." },
-          { q: "Planting pits (zai) help because they:", options: ["Collect rain and manure around each plant", "Keep birds away", "Make harvest faster", "Replace seed"], answer: 0, why: "They concentrate water and nutrients where roots are." },
-          { q: "Where should you buy seed of a drought-tolerant variety?", options: ["Any roadside seller", "A neighbour's grain store", "From grain bought at the market", "A registered dealer selling certified seed"], answer: 3, why: "Certified seed is checked for purity and quality." },
-          { q: "In push-pull, what does desmodium do?", options: ["Attracts pests into the maize", "Repels pests from the maize or sorghum", "Replaces fertilizer completely", "Feeds birds"], answer: 1, why: "Desmodium pushes pests away; border grass pulls them out." },
-          { q: "Before buying weather-index insurance you should:", options: ["Read the payout trigger and check the insurer is licensed", "Pay the first person who asks", "Give your mobile money PIN", "Buy it for neighbours"], answer: 0, why: "Know when it pays, and make sure the insurer is legitimate." }
+          { objective: "O4", q: "Which is a conservation agriculture principle?", options: ["Burn residue after harvest", "Plough deeply every season", "Keep the soil covered with mulch or residue", "Grow the same crop forever"], answer: 2, why: "Soil cover keeps moisture in and protects against erosion." },
+          { objective: "O4", q: "Planting pits (zai) help because they:", options: ["Collect rain and manure around each plant", "Keep birds away", "Make harvest faster", "Replace seed"], answer: 0, why: "They concentrate water and nutrients where roots are." },
+          { objective: "O5", q: "Where should you buy seed of a drought-tolerant variety?", options: ["Any roadside seller", "A neighbour's grain store", "From grain bought at the market", "A registered dealer selling certified seed"], answer: 3, why: "Certified seed is checked for purity and quality." },
+          { objective: "O5", q: "In push-pull, what does desmodium do?", options: ["Attracts pests into the maize", "Repels pests from the maize or sorghum", "Replaces fertilizer completely", "Feeds birds"], answer: 1, why: "Desmodium pushes pests away; border grass pulls them out." },
+          { objective: "O6", q: "Before buying weather-index insurance you should:", options: ["Read the payout trigger and check the insurer is licensed", "Pay the first person who asks", "Give your mobile money PIN", "Buy it for neighbours"], answer: 0, why: "Know when it pays, and make sure the insurer is legitimate." }
         ]
       }
     }
@@ -178,26 +231,113 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Climate-Smart Agriculture",
     questions: [
-      { q: "Climate-smart agriculture is:", options: ["Farming only with machines", "Choosing practices that raise productivity, build resilience and cut emissions where possible", "Farming only in cities", "A type of fertilizer"], answer: 1, why: "That is FAO's description of CSA." },
-      { q: "For most smallholders, which CSA aim usually comes first?", options: ["Reducing emissions", "Buying drones", "Food security and income", "Exporting"], answer: 2, why: "FAO notes food and income come first; emissions are often a co-benefit." },
-      { q: "Resilience means:", options: ["The ability to cope with a shock and recover", "Planting late", "Using more water", "A type of soil"], answer: 0, why: "Resilient farms bounce back after drought or floods." },
-      { q: "Kenya's official seasonal forecasts come from:", options: ["KCAA", "NiMet", "A seed company", "The Kenya Meteorological Department (KMD)"], answer: 3, why: "KMD publishes seasonal forecasts and agromet bulletins." },
-      { q: "A seasonal forecast should be used to:", options: ["Bet everything on one crop", "Adjust plans, such as choosing a shorter-maturing variety", "Ignore planting dates", "Stop farming"], answer: 1, why: "Forecasts give chances; adjust sensibly." },
-      { q: "Onset means:", options: ["The end of harvest", "A pest", "The start of the rainy season", "A fertilizer"], answer: 2, why: "Onset is when the rains begin." },
-      { q: "A dry spell is:", options: ["Days or weeks without useful rain during the rainy season", "A flood", "A cold night", "A market day"], answer: 0, why: "Dry spells mid-season can harm crops at key stages." },
-      { q: "Maize flowering in a month that often has a dry spell is a:", options: ["Market chance", "Good sign", "Planting method", "Danger point"], answer: 3, why: "A key stage meeting a high risk is a danger point." },
-      { q: "Burning crop residue:", options: ["Is a conservation agriculture principle", "Leaves the soil bare and loses organic matter", "Holds more water in the soil", "Is climate-smart"], answer: 1, why: "Residue kept as mulch protects and feeds the soil." },
-      { q: "Minimum tillage means:", options: ["Ploughing twice", "No weeding", "Disturbing the soil as little as possible", "Planting only trees"], answer: 2, why: "Less disturbance protects soil structure and moisture." },
-      { q: "Which practice stops erosion on a slope?", options: ["Terraces such as fanya juu, and grass strips on contours", "Ploughing straight downhill", "Removing all grass", "Burning the slope"], answer: 0, why: "Terraces and contour strips slow water and hold soil." },
-      { q: "A water pan is:", options: ["A cooking pot", "A pest trap", "A seed packet", "A dug pond that stores rainwater"], answer: 3, why: "Water pans store water for animals and small irrigation." },
-      { q: "CGIAR reports that drought-tolerant maize varieties:", options: ["Need more water", "Can yield clearly more than conventional varieties under drought", "Cannot be grown in Africa", "Are the same as ordinary maize"], answer: 1, why: "They were bred to perform better when water is short." },
-      { q: "Which crop often copes with dry conditions better than maize?", options: ["Rice in paddies", "Sugarcane", "Sorghum", "Tea"], answer: 2, why: "Sorghum is a drought-hardy cereal." },
-      { q: "Intercropping maize with beans or cowpea:", options: ["Spreads risk and adds a legume", "Always lowers income", "Is not allowed", "Requires a drone"], answer: 0, why: "Two crops spread risk; legumes add nitrogen." },
-      { q: "In push-pull, the border grass:", options: ["Repels pests", "Is harvested for export", "Is sprayed", "Attracts pests away from the crop"], answer: 3, why: "Napier or Brachiaria borders pull pests away." },
-      { q: "Agroforestry means:", options: ["Clearing forest for crops", "Growing trees together with crops or livestock", "Only planting flowers", "Buying timber"], answer: 1, why: "Trees on farms add income, shade and soil protection." },
-      { q: "In drought, livestock keepers should:", options: ["Keep adding animals", "Sell all fodder", "Plan fodder and water and match animal numbers to feed", "Stop watering animals"], answer: 2, why: "Feed and water planning keeps animals alive through dry seasons." },
-      { q: "A payout trigger in weather-index insurance is:", options: ["The condition that makes the insurer pay", "The price of seed", "A type of gun", "The insurer's address"], answer: 0, why: "It defines when the policy pays." },
-      { q: "Before using a new practice across your whole farm, you should:", options: ["Use it everywhere at once", "Ignore extension advice", "Wait ten years", "Test it on a small area and compare"], answer: 3, why: "Small trials show whether it works on your farm." }
+      { objective: "O1", q: "Climate-smart agriculture is:", options: ["Farming only with machines", "Choosing practices that raise productivity, build resilience and cut emissions where possible", "Farming only in cities", "A type of fertilizer"], answer: 1, why: "That is FAO's description of CSA." },
+      { objective: "O1", q: "For most smallholders, which CSA aim usually comes first?", options: ["Reducing emissions", "Buying drones", "Food security and income", "Exporting"], answer: 2, why: "FAO notes food and income come first; emissions are often a co-benefit." },
+      { objective: "O1", q: "Resilience means:", options: ["The ability to cope with a shock and recover", "Planting late", "Using more water", "A type of soil"], answer: 0, why: "Resilient farms bounce back after drought or floods." },
+      { objective: "O2", q: "Kenya's official seasonal forecasts come from:", options: ["KCAA", "NiMet", "A seed company", "The Kenya Meteorological Department (KMD)"], answer: 3, why: "KMD publishes seasonal forecasts and agromet bulletins." },
+      { objective: "O2", q: "A seasonal forecast should be used to:", options: ["Bet everything on one crop", "Adjust plans, such as choosing a shorter-maturing variety", "Ignore planting dates", "Stop farming"], answer: 1, why: "Forecasts give chances; adjust sensibly." },
+      { objective: "O3", q: "Onset means:", options: ["The end of harvest", "A pest", "The start of the rainy season", "A fertilizer"], answer: 2, why: "Onset is when the rains begin." },
+      { objective: "O3", q: "A dry spell is:", options: ["Days or weeks without useful rain during the rainy season", "A flood", "A cold night", "A market day"], answer: 0, why: "Dry spells mid-season can harm crops at key stages." },
+      { objective: "O3", q: "Maize flowering in a month that often has a dry spell is a:", options: ["Market chance", "Good sign", "Planting method", "Danger point"], answer: 3, why: "A key stage meeting a high risk is a danger point." },
+      { objective: "O4", q: "Burning crop residue:", options: ["Is a conservation agriculture principle", "Leaves the soil bare and loses organic matter", "Holds more water in the soil", "Is climate-smart"], answer: 1, why: "Residue kept as mulch protects and feeds the soil." },
+      { objective: "O4", q: "Minimum tillage means:", options: ["Ploughing twice", "No weeding", "Disturbing the soil as little as possible", "Planting only trees"], answer: 2, why: "Less disturbance protects soil structure and moisture." },
+      { objective: "O4", q: "Which practice stops erosion on a slope?", options: ["Terraces such as fanya juu, and grass strips on contours", "Ploughing straight downhill", "Removing all grass", "Burning the slope"], answer: 0, why: "Terraces and contour strips slow water and hold soil." },
+      { objective: "O4", q: "A water pan is:", options: ["A cooking pot", "A pest trap", "A seed packet", "A dug pond that stores rainwater"], answer: 3, why: "Water pans store water for animals and small irrigation." },
+      { objective: "O5", q: "CGIAR reports that drought-tolerant maize varieties:", options: ["Need more water", "Can yield clearly more than conventional varieties under drought", "Cannot be grown in Africa", "Are the same as ordinary maize"], answer: 1, why: "They were bred to perform better when water is short." },
+      { objective: "O5", q: "Which crop often copes with dry conditions better than maize?", options: ["Rice in paddies", "Sugarcane", "Sorghum", "Tea"], answer: 2, why: "Sorghum is a drought-hardy cereal." },
+      { objective: "O5", q: "Intercropping maize with beans or cowpea:", options: ["Spreads risk and adds a legume", "Always lowers income", "Is not allowed", "Requires a drone"], answer: 0, why: "Two crops spread risk; legumes add nitrogen." },
+      { objective: "O5", q: "In push-pull, the border grass:", options: ["Repels pests", "Is harvested for export", "Is sprayed", "Attracts pests away from the crop"], answer: 3, why: "Napier or Brachiaria borders pull pests away." },
+      { objective: "O6", q: "Agroforestry means:", options: ["Clearing forest for crops", "Growing trees together with crops or livestock", "Only planting flowers", "Buying timber"], answer: 1, why: "Trees on farms add income, shade and soil protection." },
+      { objective: "O6", q: "In drought, livestock keepers should:", options: ["Keep adding animals", "Sell all fodder", "Plan fodder and water and match animal numbers to feed", "Stop watering animals"], answer: 2, why: "Feed and water planning keeps animals alive through dry seasons." },
+      { objective: "O6", q: "A payout trigger in weather-index insurance is:", options: ["The condition that makes the insurer pay", "The price of seed", "A type of gun", "The insurer's address"], answer: 0, why: "It defines when the policy pays." },
+      { objective: "O4", q: "Before using a new practice across your whole farm, you should:", options: ["Use it everywhere at once", "Ignore extension advice", "Wait ten years", "Test it on a small area and compare"], answer: 3, why: "Small trials show whether it works on your farm." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      3,
+      6,
+      7,
+      10,
+      12,
+      14,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Climate-risk calendar",
+        objective: "O3",
+        notYet: "Months, jobs or risks missing, or no danger points.",
+        meets: "Twelve months with seasons, farm jobs, risks and at least two danger points circled.",
+        exceeds: "Includes what older farmers say has changed."
+      },
+      {
+        name: "Seasonal forecast",
+        objective: "O2",
+        notYet: "No forecast, or no date or source.",
+        meets: "What this season's official forecast says, its source and the date it was read.",
+        exceeds: "Shows two plan changes made because of the forecast."
+      },
+      {
+        name: "Soil and water practice",
+        objective: "O4",
+        notYet: "No soil or water practice.",
+        meets: "At least one soil or water practice that fits the farm, with a start date.",
+        exceeds: "Planned as a small test compared with the usual way."
+      },
+      {
+        name: "Crops and varieties",
+        objective: "O5",
+        notYet: "No crop or variety practice.",
+        meets: "At least one variety or crop practice that reduces risk, with certified seed from a registered dealer.",
+        exceeds: "Also includes intercropping or push-pull where it fits."
+      },
+      {
+        name: "Spreading risk",
+        objective: "O6",
+        notYet: "No way to spread risk beyond the main crop.",
+        meets: "At least one tree, livestock or insurance practice, with a start date.",
+        exceeds: "For insurance, names the payout trigger and checks the insurer is licensed."
+      },
+      {
+        name: "Five practices and success measures",
+        objective: "O1",
+        notYet: "Fewer than five practices, or no way to judge success.",
+        meets: "At least five practices, each with when to start and how you will know if it worked.",
+        exceeds: "Notes which climate-smart aim each practice helps."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Farmers who use at least two new climate-smart practices this season (follow-up survey)",
+      "Harvest and income compared with a recent dry or difficult season, as reported by farmers or partners",
+      "Farmers who check the official seasonal forecast before planting, or take up licensed crop or livestock insurance"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or radio to get the seasonal forecast, or an extension bulletin",
+      "Paper and pen (or a phone spreadsheet) for the climate-risk calendar and plan",
+      "Access to the learner's farm or an example farm to walk",
+      "Contact for an extension officer or agrovet for local varieties and designs",
+      "About 60 minutes of lessons, plus time on the farm for the walk and the plan"
+    ],
+    facilitatorNotes: [
+      "Run sessions with farmer groups before the season starts so plans are ready before planting.",
+      "Read the latest official forecast together and explain that it gives chances, not promises.",
+      "Draw one group climate-risk calendar first, then let farmers draw their own; invite older farmers to share changes.",
+      "Encourage small tests of new practices, and invite an extension officer for local designs and varieties.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

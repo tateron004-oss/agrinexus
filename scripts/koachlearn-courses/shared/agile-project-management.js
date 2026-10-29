@@ -14,11 +14,35 @@ module.exports = {
     "You will practice on one real, small project of your own from the first lesson to the last. Each lesson takes about five minutes, ends with a \"Try it now\" task, and there is a knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Pick a real project that takes two to six weeks (for example a résumé-and-job-search push, a community event or a small website). Build a backlog of at least eight user stories in priority order, plan a one-week sprint with a sprint goal, run it on a free task board, and finish with a written sprint review and a retrospective that lists one thing to keep, one to stop and one to try.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Veterans and transitioning service members moving into civilian roles such as project coordinator, operations, IT or program management. Many led teams, ran missions and held after-action reviews in the military.",
+    startingPoint: "Experienced with planning, briefing, chains of responsibility and after-action reviews. Most have not used Agile words, user stories or digital task boards.",
+    gap: "Many civilian employers run projects the Agile way and ask for Scrum or Kanban experience in job posts. Learners need to show they can run a small project in sprints with civilian terms, and connect that to leadership skills they already have, to compete for these roles.",
+    constraints: [
+      "Reading level: plain words; Agile terms are explained the first time",
+      "Devices: a phone or computer for a free board tool, or sticky notes on a wall",
+      "Time: 5 minute lessons, plus a one-week sprint for the final task",
+      "Certification fees and requirements change; learners check the certifying body's site",
+      "No private or classified details in practice projects or AI prompts"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given a project description", action: "explain how Agile runs the work in short rounds and when waterfall fits better", standard: "in your own words, with one example of each" },
+    { id: "O2", condition: "Given a small Scrum team", action: "name the three Scrum accountabilities, the five events and the three artifacts", standard: "getting at least 9 of 11 right" },
+    { id: "O3", condition: "For a real project of two to six weeks", action: "write a backlog of at least eight user stories with acceptance criteria, in priority order", standard: "with every story in the \"As a..., I want... so that...\" pattern" },
+    { id: "O4", condition: "Given your backlog and the hours you really have", action: "plan a one-week sprint with a one-sentence sprint goal and tasks of a day or less", standard: "so the planned work fits the time you have" },
+    { id: "O5", condition: "During your sprint", action: "track the work on a task board with a WIP limit and a daily 15-minute check-in", standard: "moving every card as the work happens" },
+    { id: "O6", condition: "At the end of your sprint", action: "hold a sprint review and a Keep, Stop, Try retrospective and add one improvement to the next sprint", standard: "with feedback written into the backlog" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Planning the Agile way",
       lessons: [
         {
+          objectives: ["O1"],
           title: "What Agile is, and how it differs from a big plan",
           minutes: 4,
           goal: "Explain in your own words how Agile runs a project in short rounds.",
@@ -35,9 +59,14 @@ module.exports = {
           ],
           sources: [{ name: "Manifesto for Agile Software Development", url: "https://agilemanifesto.org/" }, { name: "The Scrum Guide (2020)", url: "https://scrumguides.org/scrum-guide.html" }],
           tryIt: "Choose one real project you want to finish in the next two to six weeks. Write one sentence describing it and one sentence about who it is for.",
-          youCanNow: "explain how Agile differs from a big up-front plan and name Scrum and Kanban."
+          youCanNow: "explain how Agile differs from a big up-front plan and name Scrum and Kanban.",
+          quickCheck: [
+            { objective: "O1", q: "What is Kanban?", options: ["A fixed four-week plan", "A type of user story", "A certification exam", "A way of doing Agile with a board and a limit on work in progress"], answer: 3, why: "Kanban uses a board and a steady flow of work with a limit on how much is in progress." },
+            { objective: "O1", q: "Your veterans' group is building a new website, and members keep changing what they want. Which approach fits?", options: ["Waterfall: plan it all up front and deliver at the end", "Agile: deliver in short rounds and adjust after each one", "No plan at all", "Wait until everyone agrees on everything"], answer: 1, why: "Agile suits work where needs change, because each round is shown and the plan is adjusted." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Scrum roles, events and artifacts",
           minutes: 5,
           goal: "Name who does what in Scrum and the five events a sprint uses.",
@@ -54,9 +83,14 @@ module.exports = {
           ],
           sources: [{ name: "The Scrum Guide (2020)", url: "https://scrumguides.org/scrum-guide.html" }],
           tryIt: "For your project, write who will act as Product Owner, Scrum Master and Developers. If it is just you, write which hat you will wear at each event.",
-          youCanNow: "name the three Scrum accountabilities, the five events and the three artifacts, and assign them on your project."
+          youCanNow: "name the three Scrum accountabilities, the five events and the three artifacts, and assign them on your project.",
+          quickCheck: [
+            { objective: "O2", q: "What is the Increment in Scrum?", options: ["The usable result produced by the sprint", "The list of all the work", "A daily meeting", "The Scrum Master's report"], answer: 0, why: "The Increment is the usable result; the Product Backlog is the list of all work." },
+            { objective: "O2", q: "You are the only person on a small project. What do you do about the Scrum roles?", options: ["Stop, because Scrum needs at least three people", "Hire a Scrum Master first", "Hold more than one role and make sure each job gets done", "Skip the Product Owner's job"], answer: 2, why: "On a small project one person may hold more than one role, as long as each job gets done." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Writing user stories and building a backlog",
           minutes: 6,
           goal: "Turn a project into a prioritized backlog of user stories with clear finish lines.",
@@ -73,17 +107,21 @@ module.exports = {
             { title: "Ordering the backlog", bullets: ["Most valuable and urgent at the top", "Split stories too big for one sprint", "AI can draft; you decide the order"] }
           ],
           tryIt: "Write at least eight user stories for your project, each with acceptance criteria, and put them in priority order. You may ask an AI assistant: \"Turn this project into user stories with acceptance criteria\" and then edit the result.",
-          youCanNow: "write user stories with acceptance criteria and order them into a backlog."
+          youCanNow: "write user stories with acceptance criteria and order them into a backlog.",
+          quickCheck: [
+            { objective: "O3", q: "What does the \"so that\" part of a user story give?", options: ["The deadline", "The person doing the work", "The reason the work matters", "The cost"], answer: 2, why: "\"So that\" states the reason or benefit for the person the story helps." },
+            { objective: "O3", q: "An AI assistant drafts stories for your community event. One is \"Plan the whole event\". What do you do?", options: ["Split it into smaller stories that fit in one sprint", "Keep it as the top story", "Delete all the AI's stories", "Add it to every sprint"], answer: 0, why: "A story too big for one sprint should be split into smaller pieces." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Planning the Agile way",
         questions: [
-          { q: "What is the main difference between Agile and waterfall?", options: ["Agile has no plan at all", "Agile delivers in short rounds and adjusts as it learns", "Waterfall uses sprints", "Agile only works for software"], answer: 1, why: "Agile works in short rounds that each deliver something and then adjusts the plan." },
-          { q: "According to the Scrum Guide, how long can a sprint be?", options: ["One month or less", "Any length the boss likes", "One year", "Exactly six months"], answer: 0, why: "The Scrum Guide says sprints are one month or less." },
-          { q: "Who decides what work matters most and keeps the backlog in order?", options: ["Whoever finishes first", "The Scrum Master", "The customer's lawyer", "The Product Owner"], answer: 3, why: "The Product Owner orders the Product Backlog." },
-          { q: "Which is a well-written user story?", options: ["\"Résumé\"", "\"Fix stuff\"", "\"As a hiring manager, I want a one-page résumé so that I can see skills fast\"", "\"Do everything by Friday\""], answer: 2, why: "It names the person, what they want and why." },
-          { q: "A story is too big to finish in one sprint. What do you do?", options: ["Make the sprint a year long", "Delete it", "Split it into smaller stories", "Skip acceptance criteria"], answer: 2, why: "Big stories are split so each piece can be finished in a sprint." }
+          { objective: "O1", q: "What is the main difference between Agile and waterfall?", options: ["Agile has no plan at all", "Agile delivers in short rounds and adjusts as it learns", "Waterfall uses sprints", "Agile only works for software"], answer: 1, why: "Agile works in short rounds that each deliver something and then adjusts the plan." },
+          { objective: "O2", q: "According to the Scrum Guide, how long can a sprint be?", options: ["One month or less", "Any length the boss likes", "One year", "Exactly six months"], answer: 0, why: "The Scrum Guide says sprints are one month or less." },
+          { objective: "O2", q: "Who decides what work matters most and keeps the backlog in order?", options: ["Whoever finishes first", "The Scrum Master", "The customer's lawyer", "The Product Owner"], answer: 3, why: "The Product Owner orders the Product Backlog." },
+          { objective: "O3", q: "Which is a well-written user story?", options: ["\"Résumé\"", "\"Fix stuff\"", "\"As a hiring manager, I want a one-page résumé so that I can see skills fast\"", "\"Do everything by Friday\""], answer: 2, why: "It names the person, what they want and why." },
+          { objective: "O3", q: "A story is too big to finish in one sprint. What do you do?", options: ["Make the sprint a year long", "Delete it", "Split it into smaller stories", "Skip acceptance criteria"], answer: 2, why: "Big stories are split so each piece can be finished in a sprint." }
         ]
       }
     },
@@ -91,6 +129,7 @@ module.exports = {
       name: "Chapter 2: Running a sprint",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Planning a sprint with a clear goal",
           minutes: 5,
           goal: "Plan a one- or two-week sprint with a sprint goal and the right amount of work.",
@@ -107,9 +146,14 @@ module.exports = {
             { title: "Do not overload", bullets: ["Pull from the top of the backlog", "Tasks of a day or less", "Leave slack: new teams plan too much"] }
           ],
           tryIt: "Plan a one-week sprint for your project: write the sprint goal, pick the stories, break them into tasks, and check them against the hours you actually have this week.",
-          youCanNow: "plan a sprint with a goal, chosen stories and tasks that fit your real time."
+          youCanNow: "plan a sprint with a goal, chosen stories and tasks that fit your real time.",
+          quickCheck: [
+            { objective: "O4", q: "How long should a task in a sprint plan ideally take?", options: ["A full sprint", "A day or less", "At least a week", "A month"], answer: 1, why: "Breaking stories into tasks of a day or less makes progress easy to track." },
+            { objective: "O4", q: "Halfway through the sprint, plans change. What tells the team what still matters?", options: ["The oldest card on the board", "Whoever talks loudest", "The retrospective from last year", "The sprint goal"], answer: 3, why: "Like commander's intent, the sprint goal says what still matters when plans change." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Running the work on a task board",
           minutes: 5,
           goal: "Set up a task board and use a daily check-in to keep work moving.",
@@ -126,9 +170,14 @@ module.exports = {
             { title: "The 15-minute Daily Scrum", bullets: ["Progress toward the sprint goal", "What is next", "Blockers: solve them after the meeting"] }
           ],
           tryIt: "Build a task board for your sprint with three columns and one card per task. Set a WIP limit. For the next three days, move the cards and write a two-line daily check-in.",
-          youCanNow: "run a sprint on a task board with a WIP limit and a short daily check-in."
+          youCanNow: "run a sprint on a task board with a WIP limit and a short daily check-in.",
+          quickCheck: [
+            { objective: "O5", q: "What three things does each person share at the Daily Scrum?", options: ["Their salary, title and hours", "Every detail of every task", "Their opinion of the Product Owner", "Progress toward the goal, what is next and any blockers"], answer: 3, why: "The Daily Scrum is a short check on progress toward the sprint goal, next steps and blockers." },
+            { objective: "O5", q: "You finish a task. What do you do with its card?", options: ["Leave it in In Progress", "Move it to Done", "Throw it away before anyone sees it", "Move it back to To Do"], answer: 1, why: "Cards move right as work happens, so a finished task goes to Done." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Closing the sprint: review and retrospective",
           minutes: 5,
           goal: "Hold a sprint review and a retrospective and turn them into one change for the next sprint.",
@@ -146,17 +195,21 @@ module.exports = {
           ],
           sources: [{ name: "Scrum Alliance: Certified ScrumMaster", url: "https://www.scrumalliance.org/get-certified/scrum-master-track/certified-scrummaster" }, { name: "Scrum.org assessments", url: "https://www.scrum.org/assessments" }],
           tryIt: "Final task: finish your one-week sprint. Write a short sprint review (what is done, who saw it, what they said) and a Keep / Stop / Try retrospective, then add one improvement to the next sprint.",
-          youCanNow: "close a sprint with a review and a retrospective and carry one improvement into the next sprint."
+          youCanNow: "close a sprint with a review and a retrospective and carry one improvement into the next sprint.",
+          quickCheck: [
+            { objective: "O6", q: "A retrospective is most like which military practice?", options: ["An after-action review", "A change-of-command ceremony", "A supply request", "A uniform inspection"], answer: 0, why: "Like an after-action review, it asks what was planned, what happened, why, and what to change." },
+            { objective: "O6", q: "Your team listed five things to try next sprint. What makes the retrospective count?", options: ["Try all five at once", "Write them down and forget them", "Pick one and add it to the next sprint as a real task", "Hold another meeting to discuss them"], answer: 2, why: "One improvement turned into a real task is what changes how the team works." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Running a sprint",
         questions: [
-          { q: "What is a sprint goal?", options: ["A list of every task", "The team's salary", "One sentence saying what the sprint should achieve", "A deadline for the whole project"], answer: 2, why: "The sprint goal is a one-sentence aim that guides choices during the sprint." },
-          { q: "Your team planned 60 hours of work but has 40 hours available. What should you do?", options: ["Keep all 60 hours and work weekends", "Cut stories until the plan fits the real time", "Skip the Daily Scrum", "Make the sprint longer without telling anyone"], answer: 1, why: "Plan to real capacity; overloaded sprints fail." },
-          { q: "What does a WIP limit do?", options: ["Caps how many tasks can be in progress at once", "Limits how many people can join", "Sets the project budget", "Removes the Done column"], answer: 0, why: "A WIP limit pushes the team to finish work before starting more." },
-          { q: "A teammate raises a blocker at the Daily Scrum. When should it be solved?", options: ["During the meeting, for an hour", "Never", "At the end of the project", "After the meeting, by the people who can help"], answer: 3, why: "The Daily Scrum stays at 15 minutes; blockers are handled right after." },
-          { q: "What is the retrospective about?", options: ["Selling the product", "Choosing a new Product Owner", "Writing the budget", "How the team worked and what to change"], answer: 3, why: "The retrospective reviews how the team worked, like an after-action review." }
+          { objective: "O4", q: "What is a sprint goal?", options: ["A list of every task", "The team's salary", "One sentence saying what the sprint should achieve", "A deadline for the whole project"], answer: 2, why: "The sprint goal is a one-sentence aim that guides choices during the sprint." },
+          { objective: "O4", q: "Your team planned 60 hours of work but has 40 hours available. What should you do?", options: ["Keep all 60 hours and work weekends", "Cut stories until the plan fits the real time", "Skip the Daily Scrum", "Make the sprint longer without telling anyone"], answer: 1, why: "Plan to real capacity; overloaded sprints fail." },
+          { objective: "O5", q: "What does a WIP limit do?", options: ["Caps how many tasks can be in progress at once", "Limits how many people can join", "Sets the project budget", "Removes the Done column"], answer: 0, why: "A WIP limit pushes the team to finish work before starting more." },
+          { objective: "O5", q: "A teammate raises a blocker at the Daily Scrum. When should it be solved?", options: ["During the meeting, for an hour", "Never", "At the end of the project", "After the meeting, by the people who can help"], answer: 3, why: "The Daily Scrum stays at 15 minutes; blockers are handled right after." },
+          { objective: "O6", q: "What is the retrospective about?", options: ["Selling the product", "Choosing a new Product Owner", "Writing the budget", "How the team worked and what to change"], answer: 3, why: "The retrospective reviews how the team worked, like an after-action review." }
         ]
       }
     }
@@ -164,26 +217,99 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Agile Project Management",
     questions: [
-      { q: "Agile projects deliver:", options: ["Everything at the very end", "Only paperwork", "Something usable in short rounds", "Nothing until the budget is spent"], answer: 2, why: "Agile delivers usable work every few weeks." },
-      { q: "Which situation suits waterfall better than Agile?", options: ["A new app where users' needs are unclear", "A well-known job that will not change, like pouring a foundation", "A marketing test with unknown results", "A project where feedback changes the plan weekly"], answer: 1, why: "Waterfall works when the work is well known and stable." },
-      { q: "Scrum and Kanban are:", options: ["Two common ways to do Agile", "Two programming languages", "Two certification exams", "Two kinds of budget"], answer: 0, why: "Both are popular Agile methods." },
-      { q: "Who helps the team use Scrum well and clears blockers?", options: ["The Product Owner", "The accountant", "The customer", "The Scrum Master"], answer: 3, why: "That is the Scrum Master's job." },
-      { q: "In Scrum, \"Developers\" means:", options: ["Only software programmers", "The managers", "Real estate builders", "The people doing the work, of any kind"], answer: 3, why: "Developers are whoever does the work of the sprint." },
-      { q: "How long is the Daily Scrum?", options: ["A full day", "Two hours", "15 minutes", "There is no limit"], answer: 2, why: "The Scrum Guide sets the Daily Scrum at 15 minutes." },
-      { q: "Which is NOT one of the three Scrum artifacts?", options: ["Product Backlog", "Annual Report", "Increment", "Sprint Backlog"], answer: 1, why: "The artifacts are the Product Backlog, Sprint Backlog and Increment." },
-      { q: "Complete the user story pattern: \"As a ___, I want ___ ...\"", options: ["\"...so that [reason]\"", "\"...by Friday\"", "\"...for free\"", "\"...or else\""], answer: 0, why: "The pattern ends with the reason: so that..." },
-      { q: "Acceptance criteria are:", options: ["The checks that say a story is done", "The team's job applications", "The price of the project", "A list of team members"], answer: 0, why: "They define when a story counts as finished." },
-      { q: "An AI assistant drafts ten user stories for you. What is your job?", options: ["Use them without reading", "Ask the AI to run the sprint", "Delete the backlog", "Check them, edit them and decide the order"], answer: 3, why: "AI can draft; you check the work and set priorities." },
-      { q: "The backlog's top items should be:", options: ["The easiest ones", "Picked at random", "The most valuable and urgent", "The oldest"], answer: 2, why: "The backlog is ordered by value and urgency." },
-      { q: "Sprint Planning answers which three questions?", options: ["Who, where, when", "Why, what and how", "Cost, price, profit", "Start, stop, pause"], answer: 1, why: "Why (the goal), what (the stories), how (the tasks)." },
-      { q: "A sprint goal is most like which military idea?", options: ["Uniform inspection", "Commander's intent", "Pay grade", "Leave request"], answer: 1, why: "Both say what matters if plans change." },
-      { q: "Tasks in a sprint should ideally take:", options: ["A day or less", "A month each", "A year", "No time"], answer: 0, why: "Small tasks show progress and reveal problems early." },
-      { q: "A basic task board has which columns?", options: ["Red, white, blue", "Yes and No", "Monday to Friday", "To Do, In Progress, Done"], answer: 3, why: "Those three columns show where each task stands." },
-      { q: "You have five cards In Progress and a WIP limit of two. What should you do?", options: ["Start a sixth task", "Remove the limit", "Finish work before starting anything new", "Move them all to Done"], answer: 2, why: "A WIP limit means finishing beats starting." },
-      { q: "In the Sprint Review you should show:", options: ["Nothing; it is a planning meeting", "Half-finished work as if done", "Only work that meets its acceptance criteria", "The team's personal schedules"], answer: 2, why: "Only finished work is shown, so feedback is honest." },
-      { q: "Feedback from the Sprint Review goes:", options: ["Into the trash", "Into the backlog", "Into the retrospective only", "To a lawyer"], answer: 1, why: "New feedback becomes backlog items." },
-      { q: "Keep / Stop / Try is a format for:", options: ["The retrospective", "The budget", "Hiring", "User stories"], answer: 0, why: "It is a simple way to run a retrospective." },
-      { q: "Where should you confirm the current requirements and fee for an Agile certification?", options: ["A random forum post", "A social media ad", "An AI chat answer alone", "The certifying body's official site, such as Scrum Alliance or Scrum.org"], answer: 3, why: "Requirements and fees change; the official site is the source." }
+      { objective: "O1", q: "Agile projects deliver:", options: ["Everything at the very end", "Only paperwork", "Something usable in short rounds", "Nothing until the budget is spent"], answer: 2, why: "Agile delivers usable work every few weeks." },
+      { objective: "O1", q: "Which situation suits waterfall better than Agile?", options: ["A new app where users' needs are unclear", "A well-known job that will not change, like pouring a foundation", "A marketing test with unknown results", "A project where feedback changes the plan weekly"], answer: 1, why: "Waterfall works when the work is well known and stable." },
+      { objective: "O1", q: "Scrum and Kanban are:", options: ["Two common ways to do Agile", "Two programming languages", "Two certification exams", "Two kinds of budget"], answer: 0, why: "Both are popular Agile methods." },
+      { objective: "O2", q: "Who helps the team use Scrum well and clears blockers?", options: ["The Product Owner", "The accountant", "The customer", "The Scrum Master"], answer: 3, why: "That is the Scrum Master's job." },
+      { objective: "O2", q: "In Scrum, \"Developers\" means:", options: ["Only software programmers", "The managers", "Real estate builders", "The people doing the work, of any kind"], answer: 3, why: "Developers are whoever does the work of the sprint." },
+      { objective: "O2", q: "How long is the Daily Scrum?", options: ["A full day", "Two hours", "15 minutes", "There is no limit"], answer: 2, why: "The Scrum Guide sets the Daily Scrum at 15 minutes." },
+      { objective: "O2", q: "Which is NOT one of the three Scrum artifacts?", options: ["Product Backlog", "Annual Report", "Increment", "Sprint Backlog"], answer: 1, why: "The artifacts are the Product Backlog, Sprint Backlog and Increment." },
+      { objective: "O3", q: "Complete the user story pattern: \"As a ___, I want ___ ...\"", options: ["\"...so that [reason]\"", "\"...by Friday\"", "\"...for free\"", "\"...or else\""], answer: 0, why: "The pattern ends with the reason: so that..." },
+      { objective: "O3", q: "Acceptance criteria are:", options: ["The checks that say a story is done", "The team's job applications", "The price of the project", "A list of team members"], answer: 0, why: "They define when a story counts as finished." },
+      { objective: "O3", q: "An AI assistant drafts ten user stories for you. What is your job?", options: ["Use them without reading", "Ask the AI to run the sprint", "Delete the backlog", "Check them, edit them and decide the order"], answer: 3, why: "AI can draft; you check the work and set priorities." },
+      { objective: "O3", q: "The backlog's top items should be:", options: ["The easiest ones", "Picked at random", "The most valuable and urgent", "The oldest"], answer: 2, why: "The backlog is ordered by value and urgency." },
+      { objective: "O4", q: "Sprint Planning answers which three questions?", options: ["Who, where, when", "Why, what and how", "Cost, price, profit", "Start, stop, pause"], answer: 1, why: "Why (the goal), what (the stories), how (the tasks)." },
+      { objective: "O4", q: "A sprint goal is most like which military idea?", options: ["Uniform inspection", "Commander's intent", "Pay grade", "Leave request"], answer: 1, why: "Both say what matters if plans change." },
+      { objective: "O4", q: "Tasks in a sprint should ideally take:", options: ["A day or less", "A month each", "A year", "No time"], answer: 0, why: "Small tasks show progress and reveal problems early." },
+      { objective: "O5", q: "A basic task board has which columns?", options: ["Red, white, blue", "Yes and No", "Monday to Friday", "To Do, In Progress, Done"], answer: 3, why: "Those three columns show where each task stands." },
+      { objective: "O5", q: "You have five cards In Progress and a WIP limit of two. What should you do?", options: ["Start a sixth task", "Remove the limit", "Finish work before starting anything new", "Move them all to Done"], answer: 2, why: "A WIP limit means finishing beats starting." },
+      { objective: "O6", q: "In the Sprint Review you should show:", options: ["Nothing; it is a planning meeting", "Half-finished work as if done", "Only work that meets its acceptance criteria", "The team's personal schedules"], answer: 2, why: "Only finished work is shown, so feedback is honest." },
+      { objective: "O6", q: "Feedback from the Sprint Review goes:", options: ["Into the trash", "Into the backlog", "Into the retrospective only", "To a lawyer"], answer: 1, why: "New feedback becomes backlog items." },
+      { objective: "O6", q: "Keep / Stop / Try is a format for:", options: ["The retrospective", "The budget", "Hiring", "User stories"], answer: 0, why: "It is a simple way to run a retrospective." },
+      { objective: "O6", q: "Where should you confirm the current requirements and fee for an Agile certification?", options: ["A random forum post", "A social media ad", "An AI chat answer alone", "The certifying body's official site, such as Scrum Alliance or Scrum.org"], answer: 3, why: "Requirements and fees change; the official site is the source." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      3,
+      6,
+      7,
+      11,
+      12,
+      14,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Backlog of user stories",
+        objective: "O3",
+        notYet: "Fewer than eight stories, or items written as plain tasks with no \"so that\".",
+        meets: "At least eight stories in the pattern, each with two or three acceptance criteria, in priority order.",
+        exceeds: "Big stories are split and the learner can explain why the top story is first."
+      },
+      {
+        name: "Sprint plan",
+        objective: "O4",
+        notYet: "No sprint goal, or the work is more than the time available.",
+        meets: "A one-sentence sprint goal, stories from the top of the backlog and tasks of a day or less that fit the hours.",
+        exceeds: "Leaves some slack and says what would be cut first."
+      },
+      {
+        name: "Task board",
+        objective: "O5",
+        notYet: "The board was set up but cards were not moved during the week.",
+        meets: "To Do, In Progress and Done columns, a WIP limit and cards moved daily.",
+        exceeds: "Blockers were written down with who cleared them."
+      },
+      {
+        name: "Review and retrospective",
+        objective: "O6",
+        notYet: "The review or the retrospective is missing.",
+        meets: "A written review with feedback added to the backlog, and Keep, Stop and Try listed.",
+        exceeds: "One improvement is already a task in the next sprint."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who add Agile or Scrum experience to a résumé or LinkedIn profile within 30 days",
+      "Learners who apply for or start a project, program or operations role within 90 days",
+      "Learners who go on to an Agile certification such as Certified ScrumMaster or Professional Scrum Master"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A free task board tool (Trello, Microsoft Planner or GitHub Projects), a spreadsheet, or sticky notes on a wall",
+      "A phone or computer; an AI assistant is optional for drafting stories",
+      "Paper and pen, or a document, for the backlog, sprint plan, review and retrospective",
+      "About 60 minutes for lessons and checks, plus one week to run the sprint"
+    ],
+    facilitatorNotes: [
+      "Take the pre-test together, then do one chapter per session; run a sample board on a shared screen.",
+      "Connect each idea to military experience: sprint goal and commander's intent, retrospective and after-action review.",
+      "Have learners pick a real personal or community project so the sprint is genuine work.",
+      "Hold a short group check-in during the sprint week so learners practice the Daily Scrum out loud.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

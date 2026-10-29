@@ -17,11 +17,35 @@ module.exports = {
     "Each lesson takes about five minutes and ends with a \"Try it now\" task. There is a knowledge check after each chapter and a 20-question quiz at the end. VA rules, forms and processing times change, so confirm details on va.gov or with an accredited representative before you file."
   ],
   finalTask: "Make your VA benefits action plan: (1) a checklist of your documents, starting with your DD214; (2) each benefit you will apply for (disability compensation, health care, education) and how you will apply; (3) if you will use the GI Bill, which program, which school or training, and what you need for it; (4) the name and contact details of a VA-accredited representative or VSO you found with VA's search tool; (5) three warning signs of someone who should not be paid to file your claim. Then take the first step on one benefit.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Veterans, service members getting ready to separate, and family members who help them. Many have never applied for benefits they earned, or have waited years because the process looks confusing.",
+    startingPoint: "Can use a phone or computer and have, or can request, their DD214. Most do not know which forms to use, how to protect a claim's start date, how GI Bill programs differ, or that accredited help is free.",
+    gap: "Veterans lose money and care by not applying, by missing deadlines, or by paying people who should not charge to file. Learners need a clear action plan: documents ready, the right way to apply for each benefit, a GI Bill plan, and a free VA-accredited representative.",
+    constraints: [
+      "Reading level: plain words and short sentences; VA terms are explained",
+      "Devices: a phone or computer; paper applications are also covered",
+      "Privacy: no Social Security numbers, medical details or va.gov sign-ins in AI chatbots or with unaccredited helpers",
+      "Forms, rules and phone numbers change, so learners confirm them on va.gov before acting",
+      "Health and legal decisions go to VA or an accredited representative, not the course"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Before you apply for any VA benefit", action: "gather the documents VA asks for, starting with your DD214, and list the benefits you may apply for", standard: "with missing documents marked and copies kept in a safe place" },
+    { id: "O2", condition: "For conditions you think are connected to your service", action: "choose how you will file a disability claim and list evidence for each condition", standard: "using an official way to file and protecting your start date" },
+    { id: "O3", condition: "Using a practice checklist", action: "prepare the information for a VA health care application (10-10EZ) and choose how you will apply", standard: "with your service history, exposures, insurance and income marked as ready or still needed" },
+    { id: "O4", condition: "Given your career goal", action: "describe the main GI Bill programs and two kinds of training they could pay for", standard: "naming training that fits your goal" },
+    { id: "O5", condition: "Given two schools or training programs", action: "compare them in the GI Bill Comparison Tool and plan your education benefit application", standard: "with two facts about each and your application checked before you submit" },
+    { id: "O6", condition: "When you want help with a claim", action: "find a free VA-accredited representative and identify the warning signs of someone who should not be paid", standard: "with a representative's name and contact and three warning signs written down" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Applying for VA benefits",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Getting ready: your documents and your benefits list",
           minutes: 5,
           goal: "Gather the documents VA asks for and list the benefits you may apply for.",
@@ -41,9 +65,14 @@ module.exports = {
           ],
           sources: [{ name: "VA: How to file a VA disability claim", url: "https://www.va.gov/disability/how-to-file-claim/" }],
           tryIt: "Make a folder (paper or a secure folder on your own computer) and put in it, or list what is missing: your DD214, medical records, a list of your doctors and your dependents' details. Write down the benefits you want to look at.",
-          youCanNow: "gather the documents VA asks for and list the benefits you may apply for."
+          youCanNow: "gather the documents VA asks for and list the benefits you may apply for.",
+          quickCheck: [
+            { objective: "O1", q: "Why keep copies of your DD214 in a safe place?", options: ["So you can post it online", "So an AI can read it", "VA uses it to confirm your service, and you will need it again", "It expires after one year"], answer: 2, why: "Your DD214 confirms your service for many benefits, so keep copies safe." },
+            { objective: "O1", q: "You want an AI chatbot to help you understand your benefits. What do you leave out?", options: ["Your Social Security number and medical details", "The name of the benefit", "The word \"veteran\"", "Your question"], answer: 0, why: "Private numbers and medical details never go into an AI chatbot." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Filing a disability compensation claim",
           minutes: 6,
           goal: "Choose how you will file a disability claim and protect your start date.",
@@ -63,9 +92,14 @@ module.exports = {
           ],
           sources: [{ name: "VA: How to file a VA disability claim", url: "https://www.va.gov/disability/how-to-file-claim/" }],
           tryIt: "Write down every health condition you think may be connected to your service. Next to each, write one piece of evidence you have or could get. Then decide which way you will file and write it at the top.",
-          youCanNow: "choose how to file a disability claim, protect your effective date and gather evidence for each condition."
+          youCanNow: "choose how to file a disability claim, protect your effective date and gather evidence for each condition.",
+          quickCheck: [
+            { objective: "O2", q: "Which is an official way to file a disability claim?", options: ["Texting a stranger who offers help", "Posting in a social media group", "Emailing a company that charges a percentage", "Online at va.gov"], answer: 3, why: "Filing online at va.gov is one of VA's official ways to file." },
+            { objective: "O2", q: "You listed a knee condition from service. What do you write next to it?", options: ["Nothing; VA will find everything", "One piece of evidence, such as service treatment or doctor records", "A guess at your rating", "Your va.gov password"], answer: 1, why: "Each condition needs evidence, such as service treatment or doctor records." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Applying for VA health care",
           minutes: 4,
           goal: "Apply for VA health care with the right information ready.",
@@ -84,17 +118,21 @@ module.exports = {
           ],
           sources: [{ name: "VA: How to apply for VA health care", url: "https://www.va.gov/health-care/how-to-apply/" }],
           tryIt: "Fill in a practice checklist for the 10-10EZ: DD214 (have it or not), exposure history, insurance cards, last year's household income. Mark what you have and what you still need, and choose how you will apply.",
-          youCanNow: "apply for VA health care with the right information and know the ways to apply."
+          youCanNow: "apply for VA health care with the right information and know the ways to apply.",
+          quickCheck: [
+            { objective: "O3", q: "What is VA Form 10-10EZ for?", options: ["Filing a disability claim", "Applying for VA health care", "Applying for the GI Bill", "Choosing a VSO"], answer: 1, why: "The 10-10EZ is the application for VA health care." },
+            { objective: "O3", q: "You are filling in your health care checklist. What do you include about your service?", options: ["Nothing about your service", "Only your rank", "Only your favorite base", "Your service history, including any toxic or hazardous exposures"], answer: 3, why: "VA asks about your service history and exposures when you apply for health care." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Applying for VA benefits",
         questions: [
-          { q: "Which document does VA use to confirm your service?", options: ["Your driver's license", "A pay stub from a civilian job", "Your DD214 or other separation papers", "A gym membership card"], answer: 2, why: "VA reviews your DD214 or separation documents." },
-          { q: "You started an online disability claim but need time to get records. How long do you have to finish and keep your start date?", options: ["365 days", "7 days", "30 days", "There is no start date"], answer: 0, why: "VA says the date you started counts if you finish within 365 days." },
-          { q: "What is VA Form 21-526EZ for?", options: ["Applying for the GI Bill", "Applying for VA health care", "Changing your address", "Applying for disability compensation by mail"], answer: 3, why: "It is the Application for Disability Compensation." },
-          { q: "Which form is used to apply for VA health care?", options: ["DD214", "VA Form 10-10EZ", "VA Form 22-1990", "A W-2"], answer: 1, why: "The 10-10EZ is the Application for Health Benefits." },
-          { q: "You file a disability claim. What should you also do?", options: ["Go to any VA exam scheduled for you", "Ignore VA letters", "Pay someone to speed it up", "File the same claim many times"], answer: 0, why: "The exam is part of the decision; missing it can hurt your claim." }
+          { objective: "O1", q: "Which document does VA use to confirm your service?", options: ["Your driver's license", "A pay stub from a civilian job", "Your DD214 or other separation papers", "A gym membership card"], answer: 2, why: "VA reviews your DD214 or separation documents." },
+          { objective: "O2", q: "You started an online disability claim but need time to get records. How long do you have to finish and keep your start date?", options: ["365 days", "7 days", "30 days", "There is no start date"], answer: 0, why: "VA says the date you started counts if you finish within 365 days." },
+          { objective: "O2", q: "What is VA Form 21-526EZ for?", options: ["Applying for the GI Bill", "Applying for VA health care", "Changing your address", "Applying for disability compensation by mail"], answer: 3, why: "It is the Application for Disability Compensation." },
+          { objective: "O3", q: "Which form is used to apply for VA health care?", options: ["DD214", "VA Form 10-10EZ", "VA Form 22-1990", "A W-2"], answer: 1, why: "The 10-10EZ is the Application for Health Benefits." },
+          { objective: "O2", q: "You file a disability claim. What should you also do?", options: ["Go to any VA exam scheduled for you", "Ignore VA letters", "Pay someone to speed it up", "File the same claim many times"], answer: 0, why: "The exam is part of the decision; missing it can hurt your claim." }
         ]
       }
     },
@@ -102,9 +140,10 @@ module.exports = {
       name: "Chapter 2: The GI Bill and free help",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Understanding the GI Bill",
           minutes: 5,
-          goal: "Name the main GI Bill programs and what they can pay for.",
+          goal: "Name the main GI Bill programs and list what they can pay for.",
           text: [
             "The GI Bill helps pay for school and training. The main program today is the Post-9/11 GI Bill (Chapter 33), for people who served on active duty after September 10, 2001. It can help pay for school and cover costs while you train for a job.",
             "Other programs include the Montgomery GI Bill Active Duty (Chapter 30) and the Montgomery GI Bill Selected Reserve (Chapter 1606) for members of the Reserve and National Guard. Which one you can use depends on your service.",
@@ -120,9 +159,14 @@ module.exports = {
           ],
           sources: [{ name: "VA: About GI Bill benefits", url: "https://www.va.gov/education/about-gi-bill-benefits/" }],
           tryIt: "Write down the career you want. Then write two kinds of GI Bill-eligible training that could get you there, for example an electrician apprenticeship and a certificate program, or a degree and a licensing test.",
-          youCanNow: "name the main GI Bill programs and match GI Bill-eligible training to a career goal."
+          youCanNow: "name the main GI Bill programs and match GI Bill-eligible training to a career goal.",
+          quickCheck: [
+            { objective: "O4", q: "What is the Post-9/11 GI Bill also called?", options: ["Chapter 33", "Form 10-10EZ", "VetCert", "Chapter 1"], answer: 0, why: "The Post-9/11 GI Bill is Chapter 33." },
+            { objective: "O4", q: "You want to become an electrician without a four-year degree. What do you write in your plan?", options: ["The GI Bill only pays for degrees", "Give up on the GI Bill", "An apprenticeship or on-the-job training the GI Bill can help with", "Pay for everything yourself"], answer: 2, why: "The GI Bill can help with apprenticeships and on-the-job training, not only degrees." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Applying for the GI Bill and choosing a school",
           minutes: 5,
           goal: "Apply for education benefits and compare schools before you enroll.",
@@ -145,9 +189,14 @@ module.exports = {
             { name: "VA: GI Bill Comparison Tool", url: "https://www.va.gov/education/gi-bill-comparison-tool/" }
           ],
           tryIt: "Pick two schools or training programs for your career goal. Look each one up in the GI Bill Comparison Tool on va.gov, and write down two facts about each and one question you would ask its veterans office.",
-          youCanNow: "apply for GI Bill benefits, compare schools before enrolling and use your Certificate of Eligibility."
+          youCanNow: "apply for GI Bill benefits, compare schools before enrolling and use your Certificate of Eligibility.",
+          quickCheck: [
+            { objective: "O5", q: "What does the GI Bill Comparison Tool help you do?", options: ["File a disability claim", "Find a VSO", "Compare schools and training programs before you enroll", "Change your GI Bill after you submit"], answer: 2, why: "The Comparison Tool shows facts about schools and programs so you can compare them." },
+            { objective: "O5", q: "You finished your GI Bill application. What do you do before you submit?", options: ["Check it carefully, because you cannot change it after you submit", "Submit it fast and fix it later", "Ask a stranger to submit it", "Leave fields blank"], answer: 0, why: "You cannot change the application after you submit it, so check it first." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Getting free help, and avoiding people who charge to file",
           minutes: 5,
           goal: "Find a free, VA-accredited representative and spot people who should not be paid.",
@@ -170,17 +219,21 @@ module.exports = {
             { name: "VA: Find a VA-accredited representative or VSO", url: "https://www.va.gov/get-help-from-accredited-representative/find-rep/" }
           ],
           tryIt: "Final task: use VA's \"Find a VA-accredited representative or VSO\" tool to find one free representative near you and write down their name and how to reach them. Then finish your VA benefits action plan with your document checklist, the benefits you will apply for and how, your GI Bill plan if you have one, and three warning signs of claim sharks. Take the first step on one benefit.",
-          youCanNow: "find a free, accredited VSO, spot people who should not be paid to file, and start your VA benefits action plan."
+          youCanNow: "find a free, accredited VSO, spot people who should not be paid to file, and start your VA benefits action plan.",
+          quickCheck: [
+            { objective: "O6", q: "Who does VA accredit to help with claims?", options: ["Anyone with a website", "Any company that advertises to veterans", "Friends who filed before", "VSO representatives, attorneys and claims agents"], answer: 3, why: "VA accredits VSO representatives, attorneys and claims agents." },
+            { objective: "O6", q: "A helper says they will file your first claim fast if you share your va.gov sign-in. What do you do?", options: ["Share it to save time", "Refuse, and find a free accredited representative with VA's search tool", "Share only your password", "Pay them first"], answer: 1, why: "Never share your sign-in; free accredited help is available through VA's search tool." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: The GI Bill and free help",
         questions: [
-          { q: "Who is the Post-9/11 GI Bill for?", options: ["Anyone who lives in the US", "Only officers", "Only spouses", "People who served on active duty after September 10, 2001"], answer: 3, why: "VA says the Post-9/11 GI Bill is for active-duty service after September 10, 2001." },
-          { q: "Which of these can the GI Bill help pay for?", options: ["A car loan", "An apprenticeship or a licensing test", "Rent at your parents' house", "Your phone bill"], answer: 1, why: "VA lists apprenticeships, on-the-job training and licensing tests among GI Bill uses." },
-          { q: "After you are approved for the GI Bill, who gets a copy of your Certificate of Eligibility?", options: ["A recruiter", "Your landlord", "Your school's certifying official", "Nobody"], answer: 2, why: "The school's certifying official uses it to report your enrollment to VA." },
-          { q: "How much does an accredited VSO representative charge to help with your claim?", options: ["Nothing; it is always free", "A share of your back pay", "A fee before filing", "One month of payments"], answer: 0, why: "VA says accredited VSO representatives' services are always free." },
-          { q: "A company offers to file your first disability claim for 20% of your back pay. What is this?", options: ["A normal VA fee", "A VA program", "A warning sign; use a free accredited VSO instead", "Required by law"], answer: 2, why: "Fees are allowed only after VA decides the initial claim, with a signed agreement, and only by accredited attorneys or agents." }
+          { objective: "O4", q: "Who is the Post-9/11 GI Bill for?", options: ["Anyone who lives in the US", "Only officers", "Only spouses", "People who served on active duty after September 10, 2001"], answer: 3, why: "VA says the Post-9/11 GI Bill is for active-duty service after September 10, 2001." },
+          { objective: "O4", q: "Which of these can the GI Bill help pay for?", options: ["A car loan", "An apprenticeship or a licensing test", "Rent at your parents' house", "Your phone bill"], answer: 1, why: "VA lists apprenticeships, on-the-job training and licensing tests among GI Bill uses." },
+          { objective: "O5", q: "After you are approved for the GI Bill, who gets a copy of your Certificate of Eligibility?", options: ["A recruiter", "Your landlord", "Your school's certifying official", "Nobody"], answer: 2, why: "The school's certifying official uses it to report your enrollment to VA." },
+          { objective: "O6", q: "How much does an accredited VSO representative charge to help with your claim?", options: ["Nothing; it is always free", "A share of your back pay", "A fee before filing", "One month of payments"], answer: 0, why: "VA says accredited VSO representatives' services are always free." },
+          { objective: "O6", q: "A company offers to file your first disability claim for 20% of your back pay. What is this?", options: ["A normal VA fee", "A VA program", "A warning sign; use a free accredited VSO instead", "Required by law"], answer: 2, why: "Fees are allowed only after VA decides the initial claim, with a signed agreement, and only by accredited attorneys or agents." }
         ]
       }
     }
@@ -188,26 +241,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: VA Benefits and the GI Bill",
     questions: [
-      { q: "What is disability compensation?", options: ["A one-time gift card", "Monthly payments for conditions caused or made worse by service", "A school loan", "A job offer"], answer: 1, why: "It pays veterans for service-connected conditions." },
-      { q: "What should you do with your DD214?", options: ["Keep copies in a safe place", "Throw it away after you separate", "Post it online", "Give the original to anyone who asks"], answer: 0, why: "VA uses it to confirm your service, so keep it safe." },
-      { q: "Where should you apply for VA benefits online?", options: ["Any site with a flag on it", "A link in a text message", "The official site va.gov", "A social media page"], answer: 2, why: "Use only the official VA site." },
-      { q: "What should you NEVER type into an AI chatbot?", options: ["\"Explain what an effective date is\"", "\"Help me list questions for my VSO\"", "\"What is the GI Bill?\"", "Your Social Security number or medical details"], answer: 3, why: "Keep private information out of AI tools." },
-      { q: "Which is NOT one of the ways to file a disability claim?", options: ["Online at va.gov", "By mail with VA Form 21-526EZ", "In person at a VA regional office", "By texting a stranger who offers help"], answer: 3, why: "File online, by mail, in person or with an accredited representative." },
-      { q: "You plan to file on paper but need time to gather evidence. What can help protect your effective date?", options: ["An intent to file", "Waiting a few years", "Filing nothing", "Calling a claim shark"], answer: 0, why: "An intent to file can hold a possible effective date." },
-      { q: "Which is good evidence for a disability claim?", options: ["A guess about what VA wants", "Service treatment records and doctor records", "A social media post", "A friend's claim decision"], answer: 1, why: "Records and witness statements support your claim." },
-      { q: "VA schedules an exam for your claim. You should:", options: ["Skip it", "Send someone else", "Go to it", "Ask a claim shark to go"], answer: 2, why: "The exam is part of the decision." },
-      { q: "VA health care uses which application?", options: ["VA Form 10-10EZ", "VA Form 22-1990", "VA Form 21-526EZ", "A DD214"], answer: 0, why: "The 10-10EZ is the Application for Health Benefits." },
-      { q: "When applying for VA health care, what should you include about your service?", options: ["Only your rank", "Nothing at all", "Your favorite base", "Your service history, including any toxic or hazardous exposures"], answer: 3, why: "VA asks for service history and exposures." },
-      { q: "What phone number does VA list for help applying for health care?", options: ["911", "988", "877-222-8387", "411"], answer: 2, why: "VA lists 877-222-8387 for the health benefits hotline." },
-      { q: "The Post-9/11 GI Bill is also called:", options: ["Chapter 1606", "Chapter 33", "Form 10-10EZ", "The DD214"], answer: 1, why: "The Post-9/11 GI Bill is Chapter 33." },
-      { q: "A veteran wants to become an electrician without a four-year degree. Can the GI Bill help?", options: ["No, it only pays for four-year college", "Yes, it can help with apprenticeships and on-the-job training", "Only if she moves abroad", "Only for officers"], answer: 1, why: "VA lists apprenticeships and on-the-job training among GI Bill uses." },
-      { q: "The Yellow Ribbon Program can:", options: ["Pay your rent", "Replace your DD214", "Speed up disability claims", "Help cover tuition the Post-9/11 GI Bill does not, at schools that take part"], answer: 3, why: "Yellow Ribbon helps with tuition above the GI Bill's coverage." },
-      { q: "If you apply for the GI Bill by mail, which form do you use?", options: ["VA Form 22-1990", "VA Form 10-10EZ", "VA Form 21-526EZ", "A tax form"], answer: 0, why: "VA Form 22-1990 is the Application for VA Education Benefits." },
-      { q: "Before you enroll in a school with the GI Bill, you should:", options: ["Sign up the same day the recruiter calls", "Skip comparing", "Compare it with the GI Bill Comparison Tool and ask about costs and job results", "Pay a deposit before reading anything"], answer: 2, why: "Comparing first protects your benefits." },
-      { q: "Can you change your GI Bill application after you submit it?", options: ["Yes, any time", "Yes, by calling a school", "Only on weekends", "No, so check it before you submit"], answer: 3, why: "VA says you cannot make changes after submitting." },
-      { q: "Which of these is accredited by VA to help with claims?", options: ["VSO representatives, attorneys and claims agents", "Any website", "Any person who served", "Car dealers"], answer: 0, why: "VA's Office of General Counsel accredits these three types." },
-      { q: "When may an accredited attorney or claims agent charge a fee?", options: ["Before filing your first claim", "Only after VA has decided your initial claim and with a signed fee agreement", "Any time they want", "Never under any rule"], answer: 1, why: "VA says fees can come only after the initial decision, with a signed agreement." },
-      { q: "Someone helping with your claim asks for your va.gov sign-in. You should:", options: ["Share it so they can work faster", "Write it on a sticky note for them", "Refuse; never share your sign-in", "Change it to something simpler"], answer: 2, why: "Never give anyone your va.gov sign-in." }
+      { objective: "O2", q: "What is disability compensation?", options: ["A one-time gift card", "Monthly payments for conditions caused or made worse by service", "A school loan", "A job offer"], answer: 1, why: "It pays veterans for service-connected conditions." },
+      { objective: "O1", q: "What should you do with your DD214?", options: ["Keep copies in a safe place", "Throw it away after you separate", "Post it online", "Give the original to anyone who asks"], answer: 0, why: "VA uses it to confirm your service, so keep it safe." },
+      { objective: "O1", q: "Where should you apply for VA benefits online?", options: ["Any site with a flag on it", "A link in a text message", "The official site va.gov", "A social media page"], answer: 2, why: "Use only the official VA site." },
+      { objective: "O1", q: "What should you NEVER type into an AI chatbot?", options: ["\"Explain what an effective date is\"", "\"Help me list questions for my VSO\"", "\"What is the GI Bill?\"", "Your Social Security number or medical details"], answer: 3, why: "Keep private information out of AI tools." },
+      { objective: "O2", q: "Which is NOT one of the ways to file a disability claim?", options: ["Online at va.gov", "By mail with VA Form 21-526EZ", "In person at a VA regional office", "By texting a stranger who offers help"], answer: 3, why: "File online, by mail, in person or with an accredited representative." },
+      { objective: "O2", q: "You plan to file on paper but need time to gather evidence. What can help protect your effective date?", options: ["An intent to file", "Waiting a few years", "Filing nothing", "Calling a claim shark"], answer: 0, why: "An intent to file can hold a possible effective date." },
+      { objective: "O2", q: "Which is good evidence for a disability claim?", options: ["A guess about what VA wants", "Service treatment records and doctor records", "A social media post", "A friend's claim decision"], answer: 1, why: "Records and witness statements support your claim." },
+      { objective: "O2", q: "VA schedules an exam for your claim. You should:", options: ["Skip it", "Send someone else", "Go to it", "Ask a claim shark to go"], answer: 2, why: "The exam is part of the decision." },
+      { objective: "O3", q: "VA health care uses which application?", options: ["VA Form 10-10EZ", "VA Form 22-1990", "VA Form 21-526EZ", "A DD214"], answer: 0, why: "The 10-10EZ is the Application for Health Benefits." },
+      { objective: "O3", q: "When applying for VA health care, what should you include about your service?", options: ["Only your rank", "Nothing at all", "Your favorite base", "Your service history, including any toxic or hazardous exposures"], answer: 3, why: "VA asks for service history and exposures." },
+      { objective: "O3", q: "What phone number does VA list for help applying for health care?", options: ["911", "988", "877-222-8387", "411"], answer: 2, why: "VA lists 877-222-8387 for the health benefits hotline." },
+      { objective: "O4", q: "The Post-9/11 GI Bill is also called:", options: ["Chapter 1606", "Chapter 33", "Form 10-10EZ", "The DD214"], answer: 1, why: "The Post-9/11 GI Bill is Chapter 33." },
+      { objective: "O4", q: "A veteran wants to become an electrician without a four-year degree. Can the GI Bill help?", options: ["No, it only pays for four-year college", "Yes, it can help with apprenticeships and on-the-job training", "Only if she moves abroad", "Only for officers"], answer: 1, why: "VA lists apprenticeships and on-the-job training among GI Bill uses." },
+      { objective: "O4", q: "The Yellow Ribbon Program can:", options: ["Pay your rent", "Replace your DD214", "Speed up disability claims", "Help cover tuition the Post-9/11 GI Bill does not, at schools that take part"], answer: 3, why: "Yellow Ribbon helps with tuition above the GI Bill's coverage." },
+      { objective: "O5", q: "If you apply for the GI Bill by mail, which form do you use?", options: ["VA Form 22-1990", "VA Form 10-10EZ", "VA Form 21-526EZ", "A tax form"], answer: 0, why: "VA Form 22-1990 is the Application for VA Education Benefits." },
+      { objective: "O5", q: "Before you enroll in a school with the GI Bill, you should:", options: ["Sign up the same day the recruiter calls", "Skip comparing", "Compare it with the GI Bill Comparison Tool and ask about costs and job results", "Pay a deposit before reading anything"], answer: 2, why: "Comparing first protects your benefits." },
+      { objective: "O5", q: "Can you change your GI Bill application after you submit it?", options: ["Yes, any time", "Yes, by calling a school", "Only on weekends", "No, so check it before you submit"], answer: 3, why: "VA says you cannot make changes after submitting." },
+      { objective: "O6", q: "Which of these is accredited by VA to help with claims?", options: ["VSO representatives, attorneys and claims agents", "Any website", "Any person who served", "Car dealers"], answer: 0, why: "VA's Office of General Counsel accredits these three types." },
+      { objective: "O6", q: "When may an accredited attorney or claims agent charge a fee?", options: ["Before filing your first claim", "Only after VA has decided your initial claim and with a signed fee agreement", "Any time they want", "Never under any rule"], answer: 1, why: "VA says fees can come only after the initial decision, with a signed agreement." },
+      { objective: "O6", q: "Someone helping with your claim asks for your va.gov sign-in. You should:", options: ["Share it so they can work faster", "Write it on a sticky note for them", "Refuse; never share your sign-in", "Change it to something simpler"], answer: 2, why: "Never give anyone your va.gov sign-in." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      1,
+      3,
+      5,
+      8,
+      9,
+      12,
+      15,
+      18,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Document checklist",
+        objective: "O1",
+        notYet: "No checklist, or the DD214 is not on it.",
+        meets: "A checklist starting with the DD214, with missing documents marked.",
+        exceeds: "Notes where each document is kept and how to get any that are missing."
+      },
+      {
+        name: "Benefits and how to apply",
+        objective: "O2",
+        notYet: "Benefits are listed without how to apply.",
+        meets: "Each benefit (disability compensation, health care, education) with an official way to apply.",
+        exceeds: "Includes how the learner will protect the start date or which form they will use."
+      },
+      {
+        name: "GI Bill plan",
+        objective: "O5",
+        notYet: "No program or school named, if the learner will use the GI Bill.",
+        meets: "The program, the school or training, and what is needed for it.",
+        exceeds: "Two options compared in the GI Bill Comparison Tool."
+      },
+      {
+        name: "Free accredited help",
+        objective: "O6",
+        notYet: "No representative, or a paid company that is not accredited.",
+        meets: "The name and contact details of a VA-accredited representative or VSO from VA's search tool.",
+        exceeds: "The learner has contacted them or booked an appointment."
+      },
+      {
+        name: "Claim shark warning signs",
+        objective: "O6",
+        notYet: "Fewer than three warning signs.",
+        meets: "Three warning signs of someone who should not be paid to file.",
+        exceeds: "The learner explains when an accredited attorney or claims agent may charge."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who submit at least one VA application or intent to file within 30 days (follow-up survey)",
+      "Learners who contact a free accredited representative or VSO within 30 days",
+      "Learners who enroll in GI Bill-funded training within 6 months"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or computer with internet",
+      "A folder (paper, or a secure folder on the learner's own computer) for documents",
+      "The learner's DD214 or other separation papers, if they have them",
+      "The free va.gov website, including the GI Bill Comparison Tool and the accredited representative search",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Never collect or look at learners' DD214s, medical records or Social Security numbers; learners keep their own folders.",
+      "Invite a VA-accredited VSO to the last session so learners can meet free help in person.",
+      "Confirm forms, phone numbers and rules on va.gov during the session, since they can change.",
+      "Do not advise on medical or legal questions; send them to VA or an accredited representative.",
+      "Score the action plan with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

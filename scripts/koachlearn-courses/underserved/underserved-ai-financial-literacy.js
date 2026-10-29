@@ -16,11 +16,35 @@ module.exports = {
     "This course teaches skills, not investment advice. For big money decisions, talk with a free nonprofit counselor or check official sources like consumerfinance.gov, fdic.gov and irs.gov. Each lesson takes about five minutes and ends with a \"Try it now\" task. There is a knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Build a one-month household budget: list income, needs and wants with rounded amounts, use an AI assistant to sort it and suggest one place to save (with no account numbers or private details), set one savings goal with an amount and a date, and write down where you will get your free credit report and free tax help.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Adults in underserved communities managing a household on a tight budget: working parents, caregivers, people on benefits, older adults and young adults living on their own for the first time.",
+    startingPoint: "Pay bills and track money in their heads or on paper. Few have a written budget, a savings goal or have checked their credit report, and many have not used AI for money tasks. Some have been targeted by money scams.",
+    gap: "Without a plan, small costs add up, savings never start, credit mistakes go unfixed, and families pay for tax help or fall for scams. Learners need a simple budget, a savings goal and trusted free help, and must use AI without sharing private numbers.",
+    constraints: [
+      "Reading level: plain words and short sentences (about grade 6)",
+      "Devices: a smartphone or a library computer; paper works for the budget",
+      "Privacy: rounded amounts only, never account, card or Social Security numbers or passwords in AI",
+      "General money education only: no investment advice, and big decisions go to official sources or a free nonprofit counselor",
+      "Amounts and rules (FDIC, VITA, Lifeline) change: learners check the official sites"
+    ],
+    prerequisites: "None. Learners new to AI assistants can take \"Introduction to AI and Digital Empowerment\" first."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given one month of pay stubs, statements or receipts", action: "list your income and sort your expenses into needs and wants", standard: "with at least ten expenses, rounded amounts and totals" },
+    { id: "O2", condition: "Using a free AI assistant", action: "organize your budget into a table and choose which of its suggestions fit your family", standard: "sharing only rounded categories and checking the totals with a calculator" },
+    { id: "O3", condition: "Given something you want to save for", action: "set a savings goal with an amount and a date, calculate the weekly amount and choose a safe place to keep it", standard: "with the math checked and an FDIC-insured bank or federally insured credit union" },
+    { id: "O4", condition: "Using AnnualCreditReport.com", action: "explain how to get your free credit reports and check them for mistakes", standard: "naming the three bureaus and what to dispute" },
+    { id: "O5", condition: "When you need tax or money help", action: "find a free VITA or TCE tax site and a trusted source for money questions", standard: "writing down the site's address and what to bring" },
+    { id: "O6", condition: "Given a money offer or urgent message", action: "spot the warning signs of a money scam and choose the safe next step", standard: "sharing no logins or codes and reporting scams to the FTC" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Your money plan",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Budget basics: income, needs and wants",
           minutes: 5,
           goal: "List your monthly income and sort your spending into needs and wants.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Start simple", bullets: ["One month", "Use pay stubs, statements, receipts", "Round the amounts"] }
           ],
           tryIt: "On paper or in a free spreadsheet, write your monthly income and at least ten expenses. Mark each one N for need or W for want.",
-          youCanNow: "list your income and sort expenses into needs and wants."
+          youCanNow: "list your income and sort expenses into needs and wants.",
+          quickCheck: [
+            { objective: "O1", q: "What is income?", options: ["Money coming in, like paychecks and benefits", "Money you spend on rent", "Money you owe", "A bill you pay"], answer: 0, why: "Income is money coming in, such as paychecks, benefits or side jobs." },
+            { objective: "O1", q: "You are listing expenses and pay about $87.60 for phone. What do you write to start?", options: ["Leave it out", "About $90", "$870", "Nothing until you find the exact cents"], answer: 1, why: "Rounding to the nearest dollar or five is good enough to start a budget." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Using AI to organize your budget safely",
           minutes: 5,
           goal: "Ask a free AI assistant to sort and explain your budget without sharing private information.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Check and choose", bullets: ["Check the math yourself", "Tips are ideas, not rules", "Pick what fits your family"] }
           ],
           tryIt: "Give an AI assistant your rounded categories and amounts (no private details). Ask for a table, a total and two ideas to cut back. Check the total with a calculator.",
-          youCanNow: "use AI to organize a budget without sharing private information, and check its math."
+          youCanNow: "use AI to organize a budget without sharing private information, and check its math.",
+          quickCheck: [
+            { objective: "O2", q: "Who makes the final choices about your budget when you use AI?", options: ["The AI", "Your bank", "You", "The app store"], answer: 2, why: "AI gives ideas, but you stay in charge of every decision." },
+            { objective: "O2", q: "You want AI to sort your budget. What do you type?", options: ["Your bank login", "Your card number and its code", "Your Social Security number", "Rounded categories like \"food about $650\""], answer: 3, why: "Only rounded amounts and categories go into the AI, never private numbers." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Setting a savings goal and keeping money safe",
           minutes: 5,
           goal: "Set one savings goal with an amount and a date, and know how bank deposits are protected.",
@@ -76,17 +110,21 @@ module.exports = {
             { title: "Keep savings safe", bullets: ["FDIC-insured bank: up to $250,000 per depositor, per bank, per category", "Not stocks or crypto", "Check a bank on fdic.gov"] }
           ],
           tryIt: "Write one savings goal with an amount and a date. Work out how much to save each week, then ask AI to check your math.",
-          youCanNow: "set a clear savings goal and choose a safe, insured place to keep it."
+          youCanNow: "set a clear savings goal and choose a safe, insured place to keep it.",
+          quickCheck: [
+            { objective: "O3", q: "What makes a savings goal clear?", options: ["An amount and a date", "A nice name", "A big number", "Telling no one"], answer: 0, why: "A clear goal says how much and by when, like $300 by June 1." },
+            { objective: "O3", q: "You want to save $200 in 20 weeks. How much do you set aside each week?", options: ["$20", "$10", "$4", "$100"], answer: 1, why: "$200 divided by 20 weeks is $10 a week." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Your money plan",
         questions: [
-          { q: "Which is a need?", options: ["Streaming service", "Rent", "Eating out", "A new game"], answer: 1, why: "Rent is a must-pay cost to live." },
-          { q: "What is safe to type into an AI assistant for budget help?", options: ["Your bank account number", "Your card number", "Rounded amounts like \"rent about $1,400\"", "Your online banking password"], answer: 2, why: "Rounded amounts and categories give the help you need without private details." },
-          { q: "The AI adds your budget and gets a total that looks off. What do you do?", options: ["Trust it", "Delete your budget", "Ask a stranger online", "Check the total with a calculator"], answer: 3, why: "AI can make math mistakes; check it yourself." },
-          { q: "Which is a clear savings goal?", options: ["\"Save $300 for emergencies by June 1\"", "\"Save some\"", "\"Be rich\"", "\"Money later\""], answer: 0, why: "It has a purpose, an amount and a date." },
-          { q: "What does FDIC insurance cover?", options: ["Stocks", "Deposits in an insured bank, up to the limit", "Crypto", "Cash under your mattress"], answer: 1, why: "FDIC protects deposits at insured banks; not stocks or crypto." }
+          { objective: "O1", q: "Which is a need?", options: ["Streaming service", "Rent", "Eating out", "A new game"], answer: 1, why: "Rent is a must-pay cost to live." },
+          { objective: "O2", q: "What is safe to type into an AI assistant for budget help?", options: ["Your bank account number", "Your card number", "Rounded amounts like \"rent about $1,400\"", "Your online banking password"], answer: 2, why: "Rounded amounts and categories give the help you need without private details." },
+          { objective: "O2", q: "The AI adds your budget and gets a total that looks off. What do you do?", options: ["Trust it", "Delete your budget", "Ask a stranger online", "Check the total with a calculator"], answer: 3, why: "AI can make math mistakes; check it yourself." },
+          { objective: "O3", q: "Which is a clear savings goal?", options: ["\"Save $300 for emergencies by June 1\"", "\"Save some\"", "\"Be rich\"", "\"Money later\""], answer: 0, why: "It has a purpose, an amount and a date." },
+          { objective: "O3", q: "What does FDIC insurance cover?", options: ["Stocks", "Deposits in an insured bank, up to the limit", "Crypto", "Cash under your mattress"], answer: 1, why: "FDIC protects deposits at insured banks; not stocks or crypto." }
         ]
       }
     },
@@ -94,9 +132,10 @@ module.exports = {
       name: "Chapter 2: Credit, help and staying safe",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Checking your credit report for free",
           minutes: 5,
-          goal: "Know how to get your free credit report and what to look for.",
+          goal: "Find the official site for free credit reports and check a report for mistakes.",
           text: [
             "A credit report is a record of your loans, cards and bills. Landlords, lenders and some employers may look at it. Mistakes happen, and a mistake can cost you an apartment or a loan.",
             "You can get free credit reports from the three big credit bureaus, Equifax, Experian and TransUnion, every week at AnnualCreditReport.com. That is the official site. Other sites that promise \"free\" reports may try to sell you something.",
@@ -111,9 +150,14 @@ module.exports = {
             { title: "What to look for", bullets: ["Accounts you do not know", "Wrong addresses or late payments", "Dispute mistakes: see consumerfinance.gov"] }
           ],
           tryIt: "Write down the official site for free credit reports and the three bureau names. If you are ready and on a private device, request one report and look for anything you do not recognize.",
-          youCanNow: "get your free credit reports from the official site and spot mistakes to dispute."
+          youCanNow: "get your free credit reports from the official site and spot mistakes to dispute.",
+          quickCheck: [
+            { objective: "O4", q: "Who may look at your credit report?", options: ["Only you", "Only your family", "Landlords, lenders and some employers", "Nobody"], answer: 2, why: "Landlords, lenders and some employers may check your credit report." },
+            { objective: "O4", q: "An ad offers a \"free\" credit report on a site you do not know. What do you do?", options: ["Sign up and enter your card", "Click the ad", "Ignore credit reports", "Type AnnualCreditReport.com yourself"], answer: 3, why: "AnnualCreditReport.com is the official site; others may try to sell you something." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Free tax and money help",
           minutes: 5,
           goal: "Find a free tax help site and a trusted source for money questions.",
@@ -131,9 +175,14 @@ module.exports = {
             { title: "Trusted money help", bullets: ["consumerfinance.gov guides and complaints", "Payday loans can cost a lot", "Ask for the full cost before you sign"] }
           ],
           tryIt: "Use the IRS VITA/TCE Locator to find the free tax help site nearest you. Write down its address and what it says to bring.",
-          youCanNow: "find free tax help and trusted money information."
+          youCanNow: "find free tax help and trusted money information.",
+          quickCheck: [
+            { objective: "O5", q: "What does TCE mainly offer?", options: ["Free tax help, mainly for people 60 and older", "Paid loans", "Credit cards", "Job training"], answer: 0, why: "TCE gives free tax help like VITA, mainly to people 60 and older." },
+            { objective: "O5", q: "A quick-cash app offers you $200 today. What do you ask first?", options: ["How fast you can get more", "The full cost in dollars", "If your friends use it", "Nothing; just sign"], answer: 1, why: "Payday loans and quick-cash apps can cost far more than they seem." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Spotting money scams, and your final plan",
           minutes: 5,
           goal: "Spot common money scams and finish your budget plan.",
@@ -151,17 +200,21 @@ module.exports = {
             { title: "What to do", bullets: ["Stop and hang up", "Call back on a number you know", "Report at ReportFraud.ftc.gov"] }
           ],
           tryIt: "Final task: finish your one-month budget with AI help (no private numbers), check the totals, write one savings goal with an amount and date, and write where you will get your free credit report and free tax help.",
-          youCanNow: "make a household budget, plan savings, find free help and avoid money scams."
+          youCanNow: "make a household budget, plan savings, find free help and avoid money scams.",
+          quickCheck: [
+            { objective: "O6", q: "Which payment request is a scam warning sign?", options: ["A bill from your known utility at its usual address", "Paying rent to your landlord by check", "Being told to pay with gift cards", "Paying at the store counter"], answer: 2, why: "Scammers ask for gift cards, wire transfers, payment apps or crypto." },
+            { objective: "O6", q: "You get a call in your cousin's voice asking for money right now. What do you do?", options: ["Send it right away", "Give them your bank login", "Pay with gift cards", "Hang up and call your cousin on a number you know"], answer: 3, why: "Scammers can copy voices with AI, so you call back on a known number." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Credit, help and staying safe",
         questions: [
-          { q: "What is the official site for free credit reports?", options: ["Any site that says \"free\"", "A text message link", "A social media ad", "AnnualCreditReport.com"], answer: 3, why: "AnnualCreditReport.com is the official site for free reports." },
-          { q: "You find an account on your credit report that is not yours. You should:", options: ["Dispute it with the credit bureau", "Ignore it", "Pay it right away", "Post it online"], answer: 0, why: "Disputing fixes mistakes on your report." },
-          { q: "What is VITA?", options: ["A payday loan", "Free IRS-backed tax help", "A credit bureau", "A savings account"], answer: 1, why: "VITA offers free tax preparation through trained volunteers." },
-          { q: "A caller says they are from the government and you must pay a fine today with gift cards. This is:", options: ["Normal", "A tax refund", "A scam", "A VITA service"], answer: 2, why: "Government agencies do not demand gift-card payments." },
-          { q: "Where can you report a scam?", options: ["To the scammer", "Nowhere", "In a group chat only", "ReportFraud.ftc.gov"], answer: 3, why: "The Federal Trade Commission takes scam reports." }
+          { objective: "O4", q: "What is the official site for free credit reports?", options: ["Any site that says \"free\"", "A text message link", "A social media ad", "AnnualCreditReport.com"], answer: 3, why: "AnnualCreditReport.com is the official site for free reports." },
+          { objective: "O4", q: "You find an account on your credit report that is not yours. You should:", options: ["Dispute it with the credit bureau", "Ignore it", "Pay it right away", "Post it online"], answer: 0, why: "Disputing fixes mistakes on your report." },
+          { objective: "O5", q: "What is VITA?", options: ["A payday loan", "Free IRS-backed tax help", "A credit bureau", "A savings account"], answer: 1, why: "VITA offers free tax preparation through trained volunteers." },
+          { objective: "O6", q: "A caller says they are from the government and you must pay a fine today with gift cards. This is:", options: ["Normal", "A tax refund", "A scam", "A VITA service"], answer: 2, why: "Government agencies do not demand gift-card payments." },
+          { objective: "O6", q: "Where can you report a scam?", options: ["To the scammer", "Nowhere", "In a group chat only", "ReportFraud.ftc.gov"], answer: 3, why: "The Federal Trade Commission takes scam reports." }
         ]
       }
     }
@@ -169,26 +222,99 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI for Financial Literacy",
     questions: [
-      { q: "A budget is:", options: ["A plan for your money", "A type of loan", "A credit card", "A bank fee"], answer: 0, why: "A budget plans income and spending." },
-      { q: "Which is income?", options: ["Rent", "A paycheck", "Groceries", "A phone bill"], answer: 1, why: "Income is money coming in." },
-      { q: "Which is a want?", options: ["Child care for work", "Electricity", "Eating out", "Medicine"], answer: 2, why: "Eating out is nice to have, not a must." },
-      { q: "When starting a budget, it is okay to:", options: ["Skip income", "Use your password", "Guess wildly", "Round amounts to the nearest dollar or five"], answer: 3, why: "Close, rounded amounts are good enough to start." },
-      { q: "Which should you NEVER type into an AI assistant?", options: ["Your card number", "\"Food about $600\"", "\"Family of 4\"", "\"Suggest two cuts\""], answer: 0, why: "Card numbers are private information." },
-      { q: "AI suggests cutting your child's bus pass. You:", options: ["Must do it", "Decide what fits your family; that tip may not", "Ask a stranger", "Give AI your bank login"], answer: 1, why: "AI tips are ideas; you choose what fits." },
-      { q: "Why check AI's budget totals?", options: ["AI is never wrong", "It is the law", "AI can make math mistakes", "It changes your bank balance"], answer: 2, why: "Always check the math yourself." },
-      { q: "An emergency fund is:", options: ["Money for wants", "A loan", "A credit report", "Money saved only for surprise costs"], answer: 3, why: "It covers surprises like a car repair." },
-      { q: "You want $260 in 26 weeks. How much each week?", options: ["$5", "$10", "$26", "$100"], answer: 1, why: "$260 divided by 26 weeks is $10." },
-      { q: "FDIC insurance protects deposits up to:", options: ["$1,000", "$250,000 per depositor, per insured bank, per ownership category", "Any amount", "Only crypto"], answer: 1, why: "That is the FDIC standard amount." },
-      { q: "Which is NOT covered by FDIC insurance?", options: ["A savings account at an insured bank", "A checking account at an insured bank", "Crypto", "A certificate of deposit at an insured bank"], answer: 2, why: "FDIC does not cover crypto or stocks." },
-      { q: "A credit report is:", options: ["Your paycheck", "Your tax return", "Your budget", "A record of your loans, cards and bill payments"], answer: 3, why: "Lenders and landlords may look at it." },
-      { q: "The three big credit bureaus are:", options: ["Equifax, Experian and TransUnion", "Google, Bing and Yahoo", "FDIC, IRS and FTC", "Visa, Mastercard and Discover"], answer: 0, why: "These three keep credit reports." },
-      { q: "How often can you get free reports at AnnualCreditReport.com?", options: ["Once every ten years", "Every week", "Never", "Only if you pay"], answer: 1, why: "The bureaus offer free weekly reports there." },
-      { q: "Where can you find free guides on debt collection and payday loans?", options: ["A pop-up ad", "A scammer's text", "consumerfinance.gov", "A gift card store"], answer: 2, why: "The Consumer Financial Protection Bureau publishes free guides." },
-      { q: "How do you find a free VITA tax site?", options: ["Ask a stranger", "Pay a fee first", "Wait for a call", "Use the IRS VITA/TCE Locator or call 800-906-9887"], answer: 3, why: "Those are the IRS's official ways to find a site." },
-      { q: "Before taking a payday loan or quick-cash app, you should:", options: ["Ask for the full cost in dollars", "Sign fast", "Give your bank login", "Skip reading"], answer: 0, why: "These loans can cost far more than they seem." },
-      { q: "Someone promises \"guaranteed\" crypto profits. This is:", options: ["A safe deal", "A common scam warning sign", "FDIC insured", "Free tax help"], answer: 1, why: "Guaranteed money is a classic scam line." },
-      { q: "A message asks for the code sent to your phone to \"verify your bank\". You:", options: ["Send it", "Post it", "Never share it and call your bank on a number you know", "Read it out loud"], answer: 2, why: "That code protects your account." },
-      { q: "For a big money decision, the best step is:", options: ["Trust any AI answer", "Follow a social media post", "Ask the person selling it", "Check official sources or talk to a free nonprofit counselor"], answer: 3, why: "Official sources and real counselors protect you." }
+      { objective: "O1", q: "A budget is:", options: ["A plan for your money", "A type of loan", "A credit card", "A bank fee"], answer: 0, why: "A budget plans income and spending." },
+      { objective: "O1", q: "Which is income?", options: ["Rent", "A paycheck", "Groceries", "A phone bill"], answer: 1, why: "Income is money coming in." },
+      { objective: "O1", q: "Which is a want?", options: ["Child care for work", "Electricity", "Eating out", "Medicine"], answer: 2, why: "Eating out is nice to have, not a must." },
+      { objective: "O1", q: "When starting a budget, it is okay to:", options: ["Skip income", "Use your password", "Guess wildly", "Round amounts to the nearest dollar or five"], answer: 3, why: "Close, rounded amounts are good enough to start." },
+      { objective: "O2", q: "Which should you NEVER type into an AI assistant?", options: ["Your card number", "\"Food about $600\"", "\"Family of 4\"", "\"Suggest two cuts\""], answer: 0, why: "Card numbers are private information." },
+      { objective: "O2", q: "AI suggests cutting your child's bus pass. You:", options: ["Must do it", "Decide what fits your family; that tip may not", "Ask a stranger", "Give AI your bank login"], answer: 1, why: "AI tips are ideas; you choose what fits." },
+      { objective: "O2", q: "Why check AI's budget totals?", options: ["AI is never wrong", "It is the law", "AI can make math mistakes", "It changes your bank balance"], answer: 2, why: "Always check the math yourself." },
+      { objective: "O3", q: "An emergency fund is:", options: ["Money for wants", "A loan", "A credit report", "Money saved only for surprise costs"], answer: 3, why: "It covers surprises like a car repair." },
+      { objective: "O3", q: "You want $260 in 26 weeks. How much each week?", options: ["$5", "$10", "$26", "$100"], answer: 1, why: "$260 divided by 26 weeks is $10." },
+      { objective: "O3", q: "FDIC insurance protects deposits up to:", options: ["$1,000", "$250,000 per depositor, per insured bank, per ownership category", "Any amount", "Only crypto"], answer: 1, why: "That is the FDIC standard amount." },
+      { objective: "O3", q: "Which is NOT covered by FDIC insurance?", options: ["A savings account at an insured bank", "A checking account at an insured bank", "Crypto", "A certificate of deposit at an insured bank"], answer: 2, why: "FDIC does not cover crypto or stocks." },
+      { objective: "O4", q: "A credit report is:", options: ["Your paycheck", "Your tax return", "Your budget", "A record of your loans, cards and bill payments"], answer: 3, why: "Lenders and landlords may look at it." },
+      { objective: "O4", q: "The three big credit bureaus are:", options: ["Equifax, Experian and TransUnion", "Google, Bing and Yahoo", "FDIC, IRS and FTC", "Visa, Mastercard and Discover"], answer: 0, why: "These three keep credit reports." },
+      { objective: "O4", q: "How often can you get free reports at AnnualCreditReport.com?", options: ["Once every ten years", "Every week", "Never", "Only if you pay"], answer: 1, why: "The bureaus offer free weekly reports there." },
+      { objective: "O5", q: "Where can you find free guides on debt collection and payday loans?", options: ["A pop-up ad", "A scammer's text", "consumerfinance.gov", "A gift card store"], answer: 2, why: "The Consumer Financial Protection Bureau publishes free guides." },
+      { objective: "O5", q: "How do you find a free VITA tax site?", options: ["Ask a stranger", "Pay a fee first", "Wait for a call", "Use the IRS VITA/TCE Locator or call 800-906-9887"], answer: 3, why: "Those are the IRS's official ways to find a site." },
+      { objective: "O5", q: "Before taking a payday loan or quick-cash app, you should:", options: ["Ask for the full cost in dollars", "Sign fast", "Give your bank login", "Skip reading"], answer: 0, why: "These loans can cost far more than they seem." },
+      { objective: "O6", q: "Someone promises \"guaranteed\" crypto profits. This is:", options: ["A safe deal", "A common scam warning sign", "FDIC insured", "Free tax help"], answer: 1, why: "Guaranteed money is a classic scam line." },
+      { objective: "O6", q: "A message asks for the code sent to your phone to \"verify your bank\". You:", options: ["Send it", "Post it", "Never share it and call your bank on a number you know", "Read it out loud"], answer: 2, why: "That code protects your account." },
+      { objective: "O6", q: "For a big money decision, the best step is:", options: ["Trust any AI answer", "Follow a social media post", "Ask the person selling it", "Check official sources or talk to a free nonprofit counselor"], answer: 3, why: "Official sources and real counselors protect you." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      2,
+      4,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Budget",
+        objective: "O1",
+        notYet: "Income or expenses missing, or needs and wants not marked.",
+        meets: "One month of income and expenses with rounded amounts, each marked need or want, and totals.",
+        exceeds: "Uses pay stubs, statements or receipts to make the amounts close."
+      },
+      {
+        name: "AI used safely",
+        objective: "O2",
+        notYet: "The prompt has an account, card or Social Security number, or totals were not checked.",
+        meets: "Only rounded categories shared, totals checked, and one place to save chosen.",
+        exceeds: "Explains why they kept or rejected each AI suggestion."
+      },
+      {
+        name: "Savings goal",
+        objective: "O3",
+        notYet: "No amount or date.",
+        meets: "One goal with an amount, a date and a checked weekly amount.",
+        exceeds: "Names where the money will be kept and that it is federally insured."
+      },
+      {
+        name: "Credit report and tax help",
+        objective: "O5",
+        notYet: "Does not say where to get the report or tax help.",
+        meets: "Names AnnualCreditReport.com and a VITA or TCE site to use.",
+        exceeds: "Has the tax site's address and what to bring."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who follow their budget and start saving within 30 days (follow-up survey)",
+      "Learners who check their credit report or use free VITA tax help within 6 months",
+      "Learners who report avoiding a money scam or a costly loan"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A smartphone or a library computer, and a calculator (the phone has one)",
+      "A free AI assistant: Microsoft Copilot, ChatGPT or Google Gemini",
+      "Pay stubs, statements or receipts for one month (kept private)",
+      "Paper or a free spreadsheet for the budget",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Learners keep their real numbers private; offer a practice budget for anyone who prefers not to use their own.",
+      "Check prompts for account, card or Social Security numbers before they are sent.",
+      "Give no investment, tax or legal advice; point learners to official sites, VITA or a free nonprofit counselor.",
+      "Show AnnualCreditReport.com and the VITA/TCE Locator live, and have learners request reports only on a private device.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

@@ -17,11 +17,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos. Lee la lección, mira las diapositivas y luego haz la tarea de \"Pruébalo ahora\". Hay una comprobación de conocimientos después de cada capítulo y un examen de 20 preguntas al final. Las reglas de la tarjeta de manipulador de alimentos las ponen los estados y los condados, y los códigos de alimentos se actualizan con el tiempo, así que revisa con tu departamento de salud local las reglas del lugar donde trabajas. Las temperaturas se dan en grados Fahrenheit (°F), que es lo que se usa en Estados Unidos y en el examen, con los grados Celsius (°C) entre paréntesis."
   ],
   finalTask: "Escribe una \"Lista para un turno seguro\" de una página para una cocina real o de práctica: cuándo y cómo lavarte las manos, cómo guardar los alimentos crudos y los listos para comer para prevenir la contaminación cruzada, las temperaturas de mantenimiento en frío, de mantenimiento en caliente y de cocción que vas a revisar con un termómetro, los pasos para enfriar, qué harás cuando un cliente diga que tiene una alergia, los pasos para limpiar y desinfectar una mesa de preparación y los síntomas de enfermedad que debes reportar. Luego averigua la regla de la tarjeta de manipulador de alimentos de tu estado o condado y escríbela arriba.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Trabajadores de alimentos nuevos y actuales y personas que buscan trabajo: equipos de restaurantes y comida rápida, personal de cafeterías y cocinas escolares, servicios de banquetes, trabajadores de camiones de comida, panaderías y salchichonerías, y personas que se preparan para una tarjeta de manipulador de alimentos o un examen ServSafe.",
+    startingPoint: "Saben cocinar o preparar comida en casa y quizás han trabajado un turno en una cocina, pero no han aprendido las reglas del servicio de comida sobre el lavado de manos, el orden para guardar, las temperaturas para mantener y cocinar, los alérgenos y la desinfección.",
+    gap: "Muchos empleadores y departamentos de salud piden una tarjeta de manipulador de alimentos poco después de contratarte, y un solo error con las temperaturas, la contaminación cruzada o una alergia puede enfermar a los clientes. Necesitan estos hábitos y números para conseguir trabajo, pasar el examen y cuidar a los clientes.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y oraciones cortas (más o menos de sexto grado)",
+      "Dispositivos: un teléfono o una computadora compartida; un termómetro de alimentos ayuda, pero no es obligatorio",
+      "Tiempo: lecciones de unos cinco minutos que caben entre turnos",
+      "Las reglas cambian según el estado y el condado, y los números del servicio de comida no son iguales a los consejos para cocinar en casa; cada persona revisa con su departamento de salud local",
+      "Solo es educación general: no reemplaza un curso acreditado de manipulador de alimentos ni la certificación de gerente"
+    ],
+    prerequisites: "Ninguno."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Durante un turno en la cocina", action: "lavarte las manos de la forma correcta en los momentos correctos y no tocar con las manos descubiertas los alimentos listos para comer", standard: "tallándote al menos 20 segundos y nombrando al menos seis momentos para lavarte" },
+    { id: "O2", condition: "Con alimentos crudos y listos para comer que hay que guardar o preparar", action: "guardarlos y prepararlos para que los gérmenes no se pasen", standard: "poniendo cada alimento en el estante correcto del refrigerador y usando utensilios separados o desinfectados" },
+    { id: "O3", condition: "Cuando un cliente tiene una alergia alimentaria o hay que limpiar una superficie", action: "seguir los pasos para una alergia y limpiar y desinfectar una superficie en el orden correcto", standard: "con cada paso en orden y sin adivinar los ingredientes" },
+    { id: "O4", condition: "Con alimentos TCS fríos y calientes y un termómetro", action: "revisar las temperaturas para mantener la comida y descongelar de forma segura", standard: "con la comida fría a 41°F (5°C) o menos y la caliente a 135°F (57°C) o más, siempre" },
+    { id: "O5", condition: "Al cocinar, recalentar o enfriar alimentos", action: "elegir la temperatura y el tiempo seguros para cada alimento y planear un enfriamiento rápido", standard: "usando los números del Food Code de la FDA que enseña el curso" },
+    { id: "O6", condition: "Antes y durante un trabajo en el servicio de comida", action: "identificar los síntomas de enfermedad que debes reportar y encontrar la regla de la tarjeta de manipulador de alimentos donde trabajas", standard: "nombrando los síntomas, y el plazo, la duración de la tarjeta y los cursos aceptados según tu departamento de salud" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Manos limpias y alimentos limpios",
       lessons: [
         {
+          objectives: ["O1","O6"],
           title: "Lavado de manos e higiene personal",
           minutes: 5,
           goal: "Lavarte las manos de la forma correcta y en los momentos correctos, y seguir las reglas básicas de higiene.",
@@ -44,9 +68,14 @@ module.exports = {
             { name: "FDA: Food Code 2022 (Código de Alimentos, en inglés)", url: "https://www.fda.gov/food/fda-food-code/food-code-2022" }
           ],
           tryIt: "Lávate las manos de la forma completa y mide el tiempo: al menos 20 segundos tallando. Luego anota seis momentos de un turno en la cocina en los que debes lavarte las manos.",
-          youCanNow: "lavarte bien las manos, saber cuándo lavarlas, evitar tocar con las manos descubiertas los alimentos listos para comer y saber qué síntomas reportar."
+          youCanNow: "lavarte bien las manos, saber cuándo lavarlas, evitar tocar con las manos descubiertas los alimentos listos para comer y saber qué síntomas reportar.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué es un alimento listo para comer?", options: ["Un alimento que no se va a cocinar otra vez, como una ensalada o el pan", "Pollo crudo que espera para cocinarse", "Comida congelada en el congelador", "Cualquier alimento en un paquete cerrado"], answer: 0, why: "Un alimento listo para comer no se va a cocinar otra vez, así que no debe tocarlo una mano descubierta." },
+            { objective: "O1", q: "Acabas de sacar la basura y ahora tienes que hacer un sándwich. ¿Qué haces primero?", options: ["Te pones guantes de inmediato", "Te lavas las manos y luego te pones guantes nuevos", "Te limpias las manos en el delantal", "Usas solo gel antibacterial"], answer: 1, why: "Los guantes no reemplazan el lavado de manos; te lavas después de tocar la basura y antes de ponerte guantes." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Prevenir la contaminación cruzada",
           minutes: 5,
           goal: "Guardar y preparar los alimentos para que los gérmenes y los alérgenos no pasen de un alimento o una superficie a otra.",
@@ -68,9 +97,14 @@ module.exports = {
             { name: "FDA: Manejo seguro de los alimentos (separar los crudos de los listos para comer, en inglés)", url: "https://www.fda.gov/food/buy-store-serve-safe-food/safe-food-handling" }
           ],
           tryIt: "Dibuja un refrigerador con cuatro estantes. Pon estos productos en los estantes correctos: una charola de muslos de pollo crudos, un recipiente de lechuga picada, carne de res molida cruda y filetes de salmón crudos. Escribe una oración que diga por qué importa el orden.",
-          youCanNow: "guardar y preparar los alimentos para que los gérmenes no pasen entre los productos crudos y los listos para comer."
+          youCanNow: "guardar y preparar los alimentos para que los gérmenes no pasen entre los productos crudos y los listos para comer.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué es la contaminación cruzada?", options: ["Cocinar la comida demasiado tiempo", "Guardar la comida en un congelador", "Que los gérmenes pasen de un alimento o una superficie a otra", "Mezclar dos salsas"], answer: 2, why: "La contaminación cruzada es cuando los gérmenes pasan de una cosa, como el pollo crudo, a otra." },
+            { objective: "O2", q: "Necesitas hielo para las bebidas. ¿Con qué lo sacas?", options: ["Con un vaso de vidrio", "Con tu mano limpia", "Con una taza del escurridor de platos", "Con una pala para hielo limpia"], answer: 3, why: "Una pala limpia evita que las manos y los vidrios rotos lleguen al hielo." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Alérgenos, y limpiar frente a desinfectar",
           minutes: 5,
           goal: "Atender de forma segura a un cliente con una alergia alimentaria y limpiar y desinfectar bien una superficie.",
@@ -92,17 +126,21 @@ module.exports = {
             { name: "FDA: Alergias alimentarias (los nueve alérgenos alimentarios principales, en inglés)", url: "https://www.fda.gov/food/nutrition-food-labeling-and-critical-foods/food-allergies" }
           ],
           tryIt: "Elige un platillo que conozcas, como una hamburguesa con queso o un salteado. Haz una lista de los nueve alérgenos principales que podría tener. Luego escribe los seis pasos que seguirías para limpiar y desinfectar la mesa de preparación después de hacerlo.",
-          youCanNow: "manejar de forma segura un pedido con alergia y limpiar y desinfectar una superficie en el orden correcto."
+          youCanNow: "manejar de forma segura un pedido con alergia y limpiar y desinfectar una superficie en el orden correcto.",
+          quickCheck: [
+            { objective: "O3", q: "¿Por qué debes limpiar una superficie antes de desinfectarla?", options: ["El desinfectante no funciona bien en una superficie sucia", "Limpiar hace que el desinfectante huela mejor", "Desinfectar quita la grasa por sí solo", "Solo hay que limpiar una vez a la semana"], answer: 0, why: "El desinfectante necesita una superficie limpia para bajar los gérmenes a niveles seguros." },
+            { objective: "O3", q: "Un cliente pregunta si un platillo tiene ajonjolí y no estás seguro. ¿Qué le dices?", options: ["\"Debería estar bien.\"", "\"No estoy seguro; déjeme revisar con el chef y las etiquetas.\"", "\"Solo quítele el ajonjolí.\"", "\"Nadie es alérgico al ajonjolí.\""], answer: 1, why: "Nunca adivines sobre los alérgenos; revisa la receta y las etiquetas con el chef o el gerente." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Manos limpias y alimentos limpios",
         questions: [
-          { q: "¿Cuánto tiempo debes tallarte las manos al lavarlas?", options: ["3 segundos", "Al menos 20 segundos", "Solo hasta que se vean limpias", "2 minutos en el fregadero de platos"], answer: 1, why: "Tallar al menos 20 segundos quita los gérmenes; usa el lavamanos." },
-          { q: "Un cocinero de línea tiene que poner lechuga en una hamburguesa ya cocida. ¿Qué debe usar?", options: ["Las manos descubiertas, lavadas antes", "Los mismos guantes que usó para las carnes crudas", "Guantes limpios, pinzas o un utensilio", "Su delantal"], answer: 2, why: "Los alimentos listos para comer no se deben tocar con las manos descubiertas." },
-          { q: "¿Cuál es el estante correcto para el pollo crudo en el refrigerador?", options: ["El estante de abajo", "El estante de arriba", "Arriba de la ensalada", "Junto al pan"], answer: 0, why: "Las aves necesitan la temperatura de cocción más alta, así que van abajo, donde sus jugos no pueden gotear sobre otros alimentos." },
-          { q: "Un cliente dice que es alérgico al ajonjolí. ¿Qué haces primero?", options: ["Decirle que el ajonjolí no es un alérgeno", "Quitarle las semillas de ajonjolí al pan", "Suponer que el platillo está bien", "Avisarle al gerente o al chef y revisar cada ingrediente"], answer: 3, why: "Las alergias se toman en serio y se revisan; nunca se adivina." },
-          { q: "¿Cuál es el orden correcto para tratar una mesa de preparación?", options: ["Desinfectar y luego lavar", "Raspar, lavar, enjuagar, desinfectar, secar al aire", "Solo pasarle un trapo seco", "Enjuagar y luego secar con un trapo"], answer: 1, why: "El desinfectante solo funciona en una superficie que primero se limpió y se enjuagó." }
+          { objective: "O1", q: "¿Cuánto tiempo debes tallarte las manos al lavarlas?", options: ["3 segundos", "Al menos 20 segundos", "Solo hasta que se vean limpias", "2 minutos en el fregadero de platos"], answer: 1, why: "Tallar al menos 20 segundos quita los gérmenes; usa el lavamanos." },
+          { objective: "O1", q: "Un cocinero de línea tiene que poner lechuga en una hamburguesa ya cocida. ¿Qué debe usar?", options: ["Las manos descubiertas, lavadas antes", "Los mismos guantes que usó para las carnes crudas", "Guantes limpios, pinzas o un utensilio", "Su delantal"], answer: 2, why: "Los alimentos listos para comer no se deben tocar con las manos descubiertas." },
+          { objective: "O2", q: "¿Cuál es el estante correcto para el pollo crudo en el refrigerador?", options: ["El estante de abajo", "El estante de arriba", "Arriba de la ensalada", "Junto al pan"], answer: 0, why: "Las aves necesitan la temperatura de cocción más alta, así que van abajo, donde sus jugos no pueden gotear sobre otros alimentos." },
+          { objective: "O3", q: "Un cliente dice que es alérgico al ajonjolí. ¿Qué haces primero?", options: ["Decirle que el ajonjolí no es un alérgeno", "Quitarle las semillas de ajonjolí al pan", "Suponer que el platillo está bien", "Avisarle al gerente o al chef y revisar cada ingrediente"], answer: 3, why: "Las alergias se toman en serio y se revisan; nunca se adivina." },
+          { objective: "O3", q: "¿Cuál es el orden correcto para tratar una mesa de preparación?", options: ["Desinfectar y luego lavar", "Raspar, lavar, enjuagar, desinfectar, secar al aire", "Solo pasarle un trapo seco", "Enjuagar y luego secar con un trapo"], answer: 1, why: "El desinfectante solo funciona en una superficie que primero se limpió y se enjuagó." }
         ]
       }
     },
@@ -110,6 +148,7 @@ module.exports = {
       name: "Capítulo 2: Tiempo y temperatura",
       lessons: [
         {
+          objectives: ["O4"],
           title: "La zona de temperatura peligrosa",
           minutes: 5,
           goal: "Mantener fría la comida fría y caliente la comida caliente, y revisar las temperaturas con un termómetro.",
@@ -132,9 +171,14 @@ module.exports = {
             { name: "FDA: Food Code 2022 (Código de Alimentos, en inglés)", url: "https://www.fda.gov/food/fda-food-code/food-code-2022" }
           ],
           tryIt: "Usa un termómetro para alimentos en tu casa o en el trabajo para medir la temperatura dentro de tu refrigerador (mételo en un vaso de agua dentro del refrigerador unos minutos) y la de una comida caliente. Anota si cada una es segura para el mantenimiento en el servicio de comida.",
-          youCanNow: "nombrar la zona de temperatura peligrosa, mantener fuera de ella los alimentos TCS y revisar bien las temperaturas."
+          youCanNow: "nombrar la zona de temperatura peligrosa, mantener fuera de ella los alimentos TCS y revisar bien las temperaturas.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué significa alimento TCS?", options: ["Un alimento que siempre se sirve frío", "Un alimento que viene enlatado", "Un alimento que necesita control de tiempo y temperatura para ser seguro", "Un alimento que solo se vende en tiendas"], answer: 2, why: "Los alimentos TCS necesitan control de tiempo y temperatura porque en ellos pueden crecer gérmenes." },
+            { objective: "O4", q: "Una bandeja de frijoles que se mantiene caliente marca 120°F en la revisión de las 2 horas. ¿Qué haces?", options: ["Lo anotas y sigues sirviendo", "Pones más frijoles encima", "Apagas el calentador", "Le avisas a tu gerente, porque está en la zona de temperatura peligrosa"], answer: 3, why: "La comida caliente debe estar a 135°F (57°C) o más, así que 120°F está en la zona de temperatura peligrosa." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Temperaturas de cocción, recalentamiento y enfriamiento",
           minutes: 6,
           goal: "Cocinar, recalentar y enfriar los alimentos a las temperaturas seguras del Food Code de la FDA.",
@@ -157,9 +201,14 @@ module.exports = {
             { name: "FDA: Temperaturas clave para la seguridad del huevo en el servicio de comida (en inglés)", url: "https://www.fda.gov/food/retail-food-industryregulatory-assistance-training/key-temperatures-egg-safety-food-service-operations-and-retail-food-stores" }
           ],
           tryIt: "Haz una tarjeta de bolsillo con las temperaturas de cocción, recalentamiento, mantenimiento y enfriamiento de esta lección. Luego planea, paso a paso, cómo enfriarías rápido una olla llena de chili con carne.",
-          youCanNow: "cocinar, recalentar, mantener y enfriar la comida a las temperaturas seguras del Food Code y revisarlas con un termómetro."
+          youCanNow: "cocinar, recalentar, mantener y enfriar la comida a las temperaturas seguras del Food Code y revisarlas con un termómetro.",
+          quickCheck: [
+            { objective: "O5", q: "En el servicio de comida, ¿a qué temperatura se cocina un corte entero de res o de cerdo?", options: ["145°F (63°C) durante 15 segundos", "120°F durante 1 minuto", "155°F (68°C) durante 17 segundos", "165°F (74°C) durante 15 segundos"], answer: 0, why: "Según el Food Code de la FDA, los cortes enteros de res y de cerdo llegan a 145°F (63°C) durante 15 segundos." },
+            { objective: "O5", q: "Hay que enfriar una olla grande llena de arroz. ¿Cuál es el mejor primer paso?", options: ["Dejar la olla en la mesa toda la noche", "Meter la olla caliente con tapa directo al refrigerador", "Repartir el arroz en bandejas poco profundas", "Taparla con una toalla"], answer: 2, why: "Las bandejas poco profundas dejan que la comida pase por la zona de temperatura peligrosa lo bastante rápido." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Sacar tu tarjeta de manipulador de alimentos y pasar el examen",
           minutes: 5,
           goal: "Encontrar la regla local de la tarjeta de manipulador de alimentos y prepararte para el examen.",
@@ -182,17 +231,21 @@ module.exports = {
             { name: "Departamento de Salud Pública de California: Capacitación en inocuidad alimentaria para comercios (HSC 113948; en inglés)", url: "https://www.cdph.ca.gov/Programs/CEH/DFDCS/CDPH%20Document%20Library/FDB/FoodSafetyProgram/RetailFood/RetailFoodSafetyTraining.pdf" }
           ],
           tryIt: "Tarea final: escribe tu Lista para un turno seguro (lavado de manos, almacenamiento, temperaturas, enfriamiento, pasos ante una alergia, pasos para limpiar y desinfectar, síntomas de enfermedad que hay que reportar). Luego busca la regla de la tarjeta de manipulador de alimentos de tu estado o condado y escribe arriba el plazo, cuánto dura la tarjeta y qué cursos cuentan.",
-          youCanNow: "encontrar la regla de la tarjeta de manipulador de alimentos donde trabajas, elegir un curso aceptado y prepararte para el examen."
+          youCanNow: "encontrar la regla de la tarjeta de manipulador de alimentos donde trabajas, elegir un curso aceptado y prepararte para el examen.",
+          quickCheck: [
+            { objective: "O6", q: "¿Cuál es la diferencia entre una tarjeta de manipulador de alimentos y una certificación de gerente de alimentos?", options: ["Son lo mismo", "La tarjeta cubre lo básico; la certificación de gerente es más profunda y es para la persona a cargo", "La tarjeta es solo para gerentes", "La certificación de gerente es más corta"], answer: 1, why: "Los cursos de manipulador de alimentos cubren lo básico; la certificación de gerente es más larga y casi siempre la necesita la persona a cargo." },
+            { objective: "O6", q: "La próxima semana empiezas un trabajo nuevo en una cocina. ¿Cómo encuentras la regla de tu tarjeta de manipulador de alimentos?", options: ["Le preguntas a un amigo de otro estado", "Supones que no hay ninguna regla", "Compras el primer curso que ves en internet", "Revisas la página del departamento de salud de tu estado o condado"], answer: 3, why: "Las reglas cambian según el estado y el condado, así que la fuente es el departamento de salud local." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Tiempo y temperatura",
         questions: [
-          { q: "En el servicio de comida, ¿cuál es la zona de temperatura peligrosa según el Food Code de la FDA?", options: ["De 0°F a 32°F (de -18°C a 0°C)", "De 41°F a 135°F (de 5°C a 57°C)", "De 165°F a 212°F (de 74°C a 100°C)", "Solo de 70°F a 80°F (de 21°C a 27°C)"], answer: 1, why: "Los gérmenes crecen más rápido entre 41°F (5°C) y 135°F (57°C)." },
-          { q: "¿Cuál es la temperatura mínima de cocción del pollo en el servicio de comida?", options: ["145°F (63°C)", "135°F (57°C)", "155°F (68°C)", "165°F (74°C)"], answer: 3, why: "Las aves deben llegar a 165°F (74°C)." },
-          { q: "Hay que enfriar una olla grande de sopa. ¿Cuál es el método más seguro?", options: ["Dividirla en recipientes poco profundos y usar un baño de hielo", "Dejarla sobre la barra toda la noche", "Meter la olla caliente entera al fondo del refrigerador, tapada", "Agregarle agua caliente"], answer: 0, why: "Los recipientes poco profundos y el hielo enfrían la comida rápido a través de la zona peligrosa." },
-          { q: "La comida cocida debe enfriarse de 135°F (57°C) a 70°F (21°C) en:", options: ["6 horas", "12 horas", "2 horas", "24 horas"], answer: 2, why: "La primera etapa del enfriamiento es de 135°F (57°C) a 70°F (21°C) en 2 horas." },
-          { q: "En California, un nuevo manipulador de alimentos debe sacar su tarjeta dentro de:", options: ["30 días después de la contratación", "Un año", "Antes de cumplir 21 años", "Nunca se exige"], answer: 0, why: "La regla de California es de 30 días después de la contratación; la tarjeta dura tres años." }
+          { objective: "O4", q: "En el servicio de comida, ¿cuál es la zona de temperatura peligrosa según el Food Code de la FDA?", options: ["De 0°F a 32°F (de -18°C a 0°C)", "De 41°F a 135°F (de 5°C a 57°C)", "De 165°F a 212°F (de 74°C a 100°C)", "Solo de 70°F a 80°F (de 21°C a 27°C)"], answer: 1, why: "Los gérmenes crecen más rápido entre 41°F (5°C) y 135°F (57°C)." },
+          { objective: "O5", q: "¿Cuál es la temperatura mínima de cocción del pollo en el servicio de comida?", options: ["145°F (63°C)", "135°F (57°C)", "155°F (68°C)", "165°F (74°C)"], answer: 3, why: "Las aves deben llegar a 165°F (74°C)." },
+          { objective: "O5", q: "Hay que enfriar una olla grande de sopa. ¿Cuál es el método más seguro?", options: ["Dividirla en recipientes poco profundos y usar un baño de hielo", "Dejarla sobre la barra toda la noche", "Meter la olla caliente entera al fondo del refrigerador, tapada", "Agregarle agua caliente"], answer: 0, why: "Los recipientes poco profundos y el hielo enfrían la comida rápido a través de la zona peligrosa." },
+          { objective: "O5", q: "La comida cocida debe enfriarse de 135°F (57°C) a 70°F (21°C) en:", options: ["6 horas", "12 horas", "2 horas", "24 horas"], answer: 2, why: "La primera etapa del enfriamiento es de 135°F (57°C) a 70°F (21°C) en 2 horas." },
+          { objective: "O6", q: "En California, un nuevo manipulador de alimentos debe sacar su tarjeta dentro de:", options: ["30 días después de la contratación", "Un año", "Antes de cumplir 21 años", "Nunca se exige"], answer: 0, why: "La regla de California es de 30 días después de la contratación; la tarjeta dura tres años." }
         ]
       }
     }
@@ -200,26 +253,113 @@ module.exports = {
   quiz: {
     title: "Examen final: Manipulador de alimentos y preparación para el examen ServSafe",
     questions: [
-      { q: "¿Dónde deben lavarse las manos los manipuladores de alimentos?", options: ["En el fregadero de preparación", "En el fregadero de platos", "En el lavamanos", "En cualquier fregadero que esté vacío"], answer: 2, why: "Usa solo el lavamanos, para no contaminar los alimentos ni los platos." },
-      { q: "¿Cuándo debes lavarte las manos antes de ponerte guantes?", options: ["Nunca; los guantes bastan", "Siempre", "Solo una vez al día", "Solo después del almuerzo"], answer: 1, why: "Los guantes no reemplazan el lavado de manos." },
-      { q: "Un cocinero tiene diarrea y vomitó esta mañana. ¿Qué debe hacer?", options: ["Avisarle al gerente antes de trabajar con alimentos", "Trabajar pero con dos pares de guantes", "Tomar agua y seguir cocinando", "No decir nada"], answer: 0, why: "Estos síntomas se deben reportar; puede que el trabajador tenga que alejarse de los alimentos." },
-      { q: "¿Cuál es un alimento listo para comer?", options: ["Carne de res molida cruda", "Pollo crudo", "Camarón crudo", "Un tomate rebanado para un sándwich"], answer: 3, why: "Se come sin cocinarlo más, así que no se toca con las manos descubiertas." },
-      { q: "Tienes una cortada pequeña en un dedo. Debes:", options: ["Ignorarla", "Cubrirla con una venda y ponerte un guante", "Ponerte solo una venda", "Irte a casa una semana"], answer: 1, why: "La venda más el guante mantienen la herida lejos de la comida." },
-      { q: "¿Cuál es contaminación cruzada?", options: ["Cocinar el pollo a 165°F (74°C)", "Lavarte las manos durante 20 segundos", "Cortar pollo crudo y luego ensalada en la misma tabla sin desinfectar", "Etiquetar la comida con la fecha"], answer: 2, why: "Los gérmenes pasan del pollo crudo a la ensalada." },
-      { q: "En el refrigerador, ¿qué va en el estante de ARRIBA?", options: ["Los alimentos listos para comer, como la fruta picada", "Las aves crudas", "La carne de res molida cruda", "Los químicos"], answer: 0, why: "Los alimentos listos para comer van arriba de los crudos para que nada gotee sobre ellos." },
-      { q: "¿Dónde se deben guardar los químicos de limpieza?", options: ["En el estante arriba de la comida", "Junto a la barra de ensaladas", "En recipientes vacíos de comida", "Lejos de los alimentos y debajo de ellos"], answer: 3, why: "Guardar los químicos lejos y abajo evita que goteen o se derramen sobre la comida." },
-      { q: "¿Cuántos alérgenos alimentarios principales nombra la FDA?", options: ["Cinco", "Nueve", "Doce", "Tres"], answer: 1, why: "Leche, huevo, pescado, mariscos crustáceos, nueces de árbol, cacahuates, trigo, soya y ajonjolí." },
-      { q: "Un cliente con alergia al cacahuate pide un platillo. ¿Qué paso está MAL?", options: ["Avisarle al chef", "Revisar la etiqueta de cada ingrediente", "Usar utensilios limpios y desinfectados", "Quitarle los cacahuates a un platillo ya hecho y servirlo"], answer: 3, why: "Quitar el alérgeno no hace seguro el platillo; prepara uno nuevo con utensilios limpios." },
-      { q: "¿Cuál es la diferencia entre limpiar y desinfectar?", options: ["Limpiar quita la suciedad; desinfectar reduce los gérmenes a niveles seguros", "Son lo mismo", "Desinfectar quita la suciedad; limpiar mata los gérmenes", "Limpiar es solo para los pisos"], answer: 0, why: "Primero se limpia y luego se desinfecta." },
-      { q: "Después de desinfectar una tabla de cortar, debes:", options: ["Secarla con un trapo", "Enjuagarle el desinfectante de inmediato", "Dejar que se seque al aire", "Ponerla directo debajo de la carne cruda"], answer: 2, why: "Secar al aire deja que el desinfectante actúe su tiempo de contacto sin agregar gérmenes de un trapo." },
-      { q: "¿Cómo sabes si una solución desinfectante tiene la concentración correcta?", options: ["Por el olor", "La revisas con las tiras de prueba que usa tu cocina", "Por el color", "Le pones de más por si acaso"], answer: 1, why: "Las tiras de prueba muestran la concentración; si es muy débil no funciona y si es muy fuerte puede ser peligrosa." },
-      { q: "¿A qué temperatura o menos se deben mantener los alimentos TCS fríos en el servicio de comida?", options: ["50°F (10°C)", "60°F (16°C)", "45°F (7°C)", "41°F (5°C)"], answer: 3, why: "El Food Code dice que el mantenimiento en frío es a 41°F (5°C) o menos." },
-      { q: "Los alimentos TCS calientes en un bufé se deben mantener a:", options: ["135°F (57°C) o más", "100°F (38°C) o más", "120°F (49°C) o más", "Temperatura ambiente"], answer: 0, why: "Según el Food Code, el mantenimiento en caliente es a 135°F (57°C) o más." },
-      { q: "¿Cuál es una forma segura de descongelar pollo congelado?", options: ["Sobre la barra toda la noche", "En el refrigerador", "En agua tibia sobre la barra", "Al sol"], answer: 1, why: "Descongelar en el refrigerador lo mantiene fuera de la zona peligrosa." },
-      { q: "Las carnes de hamburguesa de res molida en un restaurante deben llegar a:", options: ["135°F (57°C)", "145°F (63°C) durante 15 segundos", "155°F (68°C) durante 17 segundos", "100°F (38°C)"], answer: 2, why: "El Food Code fija 155°F (68°C) durante 17 segundos para la carne molida." },
-      { q: "Una chuleta de cerdo o un filete de salmón deben llegar a:", options: ["165°F (74°C) durante 15 segundos", "120°F (49°C)", "100°F (38°C)", "145°F (63°C) durante 15 segundos"], answer: 3, why: "Los cortes enteros y el pescado van a 145°F (63°C) durante 15 segundos." },
-      { q: "El chili que sobró y se enfrió ayer va a ir a la bandeja de mantenimiento caliente. Recaliéntalo a:", options: ["165°F (74°C) durante 15 segundos en un máximo de 2 horas", "135°F (57°C) durante 6 horas", "100°F (38°C)", "Solo hasta que esté tibio"], answer: 0, why: "La comida cocinada y enfriada en el lugar se recalienta a 165°F (74°C) durante 15 segundos en un máximo de 2 horas para mantenerla caliente." },
-      { q: "¿Dónde encuentras la regla de la tarjeta de manipulador de alimentos de tu zona?", options: ["En una publicación de redes sociales", "En lo que crea un compañero", "En el departamento de salud de tu estado o condado", "En cualquier sitio web de exámenes"], answer: 2, why: "Las reglas cambian según el estado y el condado, así que el departamento de salud local es la fuente oficial." }
+      { objective: "O1", q: "¿Dónde deben lavarse las manos los manipuladores de alimentos?", options: ["En el fregadero de preparación", "En el fregadero de platos", "En el lavamanos", "En cualquier fregadero que esté vacío"], answer: 2, why: "Usa solo el lavamanos, para no contaminar los alimentos ni los platos." },
+      { objective: "O1", q: "¿Cuándo debes lavarte las manos antes de ponerte guantes?", options: ["Nunca; los guantes bastan", "Siempre", "Solo una vez al día", "Solo después del almuerzo"], answer: 1, why: "Los guantes no reemplazan el lavado de manos." },
+      { objective: "O6", q: "Un cocinero tiene diarrea y vomitó esta mañana. ¿Qué debe hacer?", options: ["Avisarle al gerente antes de trabajar con alimentos", "Trabajar pero con dos pares de guantes", "Tomar agua y seguir cocinando", "No decir nada"], answer: 0, why: "Estos síntomas se deben reportar; puede que el trabajador tenga que alejarse de los alimentos." },
+      { objective: "O2", q: "¿Cuál es un alimento listo para comer?", options: ["Carne de res molida cruda", "Pollo crudo", "Camarón crudo", "Un tomate rebanado para un sándwich"], answer: 3, why: "Se come sin cocinarlo más, así que no se toca con las manos descubiertas." },
+      { objective: "O1", q: "Tienes una cortada pequeña en un dedo. Debes:", options: ["Ignorarla", "Cubrirla con una venda y ponerte un guante", "Ponerte solo una venda", "Irte a casa una semana"], answer: 1, why: "La venda más el guante mantienen la herida lejos de la comida." },
+      { objective: "O2", q: "¿Cuál es contaminación cruzada?", options: ["Cocinar el pollo a 165°F (74°C)", "Lavarte las manos durante 20 segundos", "Cortar pollo crudo y luego ensalada en la misma tabla sin desinfectar", "Etiquetar la comida con la fecha"], answer: 2, why: "Los gérmenes pasan del pollo crudo a la ensalada." },
+      { objective: "O2", q: "En el refrigerador, ¿qué va en el estante de ARRIBA?", options: ["Los alimentos listos para comer, como la fruta picada", "Las aves crudas", "La carne de res molida cruda", "Los químicos"], answer: 0, why: "Los alimentos listos para comer van arriba de los crudos para que nada gotee sobre ellos." },
+      { objective: "O2", q: "¿Dónde se deben guardar los químicos de limpieza?", options: ["En el estante arriba de la comida", "Junto a la barra de ensaladas", "En recipientes vacíos de comida", "Lejos de los alimentos y debajo de ellos"], answer: 3, why: "Guardar los químicos lejos y abajo evita que goteen o se derramen sobre la comida." },
+      { objective: "O3", q: "¿Cuántos alérgenos alimentarios principales nombra la FDA?", options: ["Cinco", "Nueve", "Doce", "Tres"], answer: 1, why: "Leche, huevo, pescado, mariscos crustáceos, nueces de árbol, cacahuates, trigo, soya y ajonjolí." },
+      { objective: "O3", q: "Un cliente con alergia al cacahuate pide un platillo. ¿Qué paso está MAL?", options: ["Avisarle al chef", "Revisar la etiqueta de cada ingrediente", "Usar utensilios limpios y desinfectados", "Quitarle los cacahuates a un platillo ya hecho y servirlo"], answer: 3, why: "Quitar el alérgeno no hace seguro el platillo; prepara uno nuevo con utensilios limpios." },
+      { objective: "O3", q: "¿Cuál es la diferencia entre limpiar y desinfectar?", options: ["Limpiar quita la suciedad; desinfectar reduce los gérmenes a niveles seguros", "Son lo mismo", "Desinfectar quita la suciedad; limpiar mata los gérmenes", "Limpiar es solo para los pisos"], answer: 0, why: "Primero se limpia y luego se desinfecta." },
+      { objective: "O3", q: "Después de desinfectar una tabla de cortar, debes:", options: ["Secarla con un trapo", "Enjuagarle el desinfectante de inmediato", "Dejar que se seque al aire", "Ponerla directo debajo de la carne cruda"], answer: 2, why: "Secar al aire deja que el desinfectante actúe su tiempo de contacto sin agregar gérmenes de un trapo." },
+      { objective: "O3", q: "¿Cómo sabes si una solución desinfectante tiene la concentración correcta?", options: ["Por el olor", "La revisas con las tiras de prueba que usa tu cocina", "Por el color", "Le pones de más por si acaso"], answer: 1, why: "Las tiras de prueba muestran la concentración; si es muy débil no funciona y si es muy fuerte puede ser peligrosa." },
+      { objective: "O4", q: "¿A qué temperatura o menos se deben mantener los alimentos TCS fríos en el servicio de comida?", options: ["50°F (10°C)", "60°F (16°C)", "45°F (7°C)", "41°F (5°C)"], answer: 3, why: "El Food Code dice que el mantenimiento en frío es a 41°F (5°C) o menos." },
+      { objective: "O4", q: "Los alimentos TCS calientes en un bufé se deben mantener a:", options: ["135°F (57°C) o más", "100°F (38°C) o más", "120°F (49°C) o más", "Temperatura ambiente"], answer: 0, why: "Según el Food Code, el mantenimiento en caliente es a 135°F (57°C) o más." },
+      { objective: "O4", q: "¿Cuál es una forma segura de descongelar pollo congelado?", options: ["Sobre la barra toda la noche", "En el refrigerador", "En agua tibia sobre la barra", "Al sol"], answer: 1, why: "Descongelar en el refrigerador lo mantiene fuera de la zona peligrosa." },
+      { objective: "O5", q: "Las carnes de hamburguesa de res molida en un restaurante deben llegar a:", options: ["135°F (57°C)", "145°F (63°C) durante 15 segundos", "155°F (68°C) durante 17 segundos", "100°F (38°C)"], answer: 2, why: "El Food Code fija 155°F (68°C) durante 17 segundos para la carne molida." },
+      { objective: "O5", q: "Una chuleta de cerdo o un filete de salmón deben llegar a:", options: ["165°F (74°C) durante 15 segundos", "120°F (49°C)", "100°F (38°C)", "145°F (63°C) durante 15 segundos"], answer: 3, why: "Los cortes enteros y el pescado van a 145°F (63°C) durante 15 segundos." },
+      { objective: "O5", q: "El chili que sobró y se enfrió ayer va a ir a la bandeja de mantenimiento caliente. Recaliéntalo a:", options: ["165°F (74°C) durante 15 segundos en un máximo de 2 horas", "135°F (57°C) durante 6 horas", "100°F (38°C)", "Solo hasta que esté tibio"], answer: 0, why: "La comida cocinada y enfriada en el lugar se recalienta a 165°F (74°C) durante 15 segundos en un máximo de 2 horas para mantenerla caliente." },
+      { objective: "O6", q: "¿Dónde encuentras la regla de la tarjeta de manipulador de alimentos de tu zona?", options: ["En una publicación de redes sociales", "En lo que crea un compañero", "En el departamento de salud de tu estado o condado", "En cualquier sitio web de exámenes"], answer: 2, why: "Las reglas cambian según el estado y el condado, así que el departamento de salud local es la fuente oficial." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      2,
+      5,
+      8,
+      10,
+      13,
+      16,
+      18,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Lavado de manos",
+        objective: "O1",
+        notYet: "Faltan los pasos o los momentos del lavado de manos, o están mal.",
+        meets: "Enumera todos los pasos del lavado de manos y al menos seis momentos para lavarse.",
+        exceeds: "También dice cuándo cambiarse los guantes y cómo manejar los alimentos listos para comer."
+      },
+      {
+        name: "Almacenamiento y contaminación cruzada",
+        objective: "O2",
+        notYet: "Los alimentos crudos están arriba de los listos para comer, o no hay utensilios separados.",
+        meets: "Muestra el orden correcto de los estantes y tablas y cuchillos separados o desinfectados.",
+        exceeds: "También cubre las etiquetas con nombre y fecha y guardar los químicos debajo de la comida."
+      },
+      {
+        name: "Pasos para alergias y desinfección",
+        objective: "O3",
+        notYet: "Faltan los pasos para una alergia o el orden para limpiar y desinfectar.",
+        meets: "Enumera los pasos para una alergia y el orden: raspar, lavar, enjuagar, desinfectar, secar al aire.",
+        exceeds: "Menciona las tiras de prueba y el tiempo de contacto del desinfectante que dice la etiqueta."
+      },
+      {
+        name: "Temperaturas para mantener",
+        objective: "O4",
+        notYet: "Faltan las temperaturas para mantener la comida, o están mal.",
+        meets: "Fría a 41°F (5°C) o menos y caliente a 135°F (57°C) o más, revisadas con un termómetro.",
+        exceeds: "Agrega un horario de revisiones y un registro."
+      },
+      {
+        name: "Cocción y enfriamiento",
+        objective: "O5",
+        notYet: "Faltan los números de cocción o de enfriamiento, o están mal.",
+        meets: "Da las temperaturas de cocción correctas y los dos límites de tiempo para enfriar.",
+        exceeds: "Agrega la regla para recalentar y cómo enfriar la comida rápido."
+      },
+      {
+        name: "Enfermedad y regla local de la tarjeta",
+        objective: "O6",
+        notYet: "No enumera síntomas de enfermedad, o no hay regla de la tarjeta al principio.",
+        meets: "Enumera los síntomas que hay que reportar y el plazo, la duración y los cursos aceptados de la tarjeta local.",
+        exceeds: "Nombra la página del departamento de salud donde encontró la regla."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Personas que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Personas que sacan una tarjeta de manipulador de alimentos con un curso acreditado dentro de 60 días",
+      "Personas que consiguen o mantienen un trabajo en el servicio de comida dentro de 90 días (encuesta de seguimiento)",
+      "Los empleadores socios reportan menos errores de inocuidad alimentaria en las inspecciones de salud o en las revisiones de turno"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono o una computadora para leer las lecciones",
+      "Un lavabo con jabón para practicar el lavado de manos",
+      "Un termómetro de alimentos (no es obligatorio, pero ayuda)",
+      "Papel y lápiz para la tarjeta de bolsillo y la Lista para un turno seguro",
+      "Unos 60 minutos en total: lecciones, práctica, comprobaciones y la tarea final"
+    ],
+    facilitatorNotes: [
+      "Haz una demostración en vivo del lavado de manos y cuenten juntos los 20 segundos.",
+      "Usa fotos o recipientes vacíos para el ejercicio de los estantes del refrigerador; no hace falta comida cruda.",
+      "Recuerda a los participantes que los números para cocinar en casa no son iguales a los del servicio de comida, y que el código que cuenta es el de su departamento de salud.",
+      "Ayuda a cada persona a buscar la regla de la tarjeta de su propio estado o condado; cambia de un lugar a otro.",
+      "Califica la tarea final con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

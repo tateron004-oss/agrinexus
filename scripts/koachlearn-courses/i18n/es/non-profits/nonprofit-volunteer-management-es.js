@@ -16,11 +16,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos e incluye una tarea de \"Pruébalo ahora\" que puedes usar para un puesto de voluntariado real. Hay una comprobación de conocimientos después de cada capítulo y un examen de 20 preguntas al final. Para preguntas legales, de seguros o de impuestos, consulta con un profesional y con las fuentes oficiales que se nombran en las lecciones. (Si quieres usar la IA para encontrar voluntarios, mira el curso sobre IA para reclutar voluntarios.)"
   ],
   finalTask: "Arma un kit de voluntariado para un puesto real: una descripción del puesto, un mensaje para reclutar y los pasos de evaluación (con verificación de antecedentes si el puesto incluye niños o adultos vulnerables), un esquema de orientación de 30 minutos, un calendario mensual con un supervisor nombrado, dos ideas de reconocimiento y una hoja de registro o una hoja de cálculo sencilla para anotar las horas.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Coordinadores de voluntariado, personal de organizaciones sin fines de lucro, líderes de iglesias y ministerios, asociaciones de padres de escuelas, ligas deportivas juveniles, bancos de alimentos y cualquier persona cuyo trabajo depende de voluntarios.",
+    startingPoint: "Han reclutado voluntarios o trabajado con ellos de manera informal, muchas veces de boca en boca. Pocos usan descripciones de puestos escritas, una evaluación según el riesgo, una orientación fija o un sistema para registrar las horas.",
+    gap: "Los voluntarios dan su tiempo gratis, así que la mala organización, la falta de capacitación o la falta de agradecimiento hacen que se vayan, y una evaluación débil puede poner en riesgo a niños y adultos vulnerables. Un kit de voluntariado completo ayuda a las organizaciones a conservar a los buenos voluntarios, proteger a las personas que atienden y mostrar su impacto a quienes las financian.",
+    constraints: [
+      "Los coordinadores muchas veces trabajan medio tiempo o son voluntarios; lecciones de 5 minutos",
+      "Herramientas gratuitas o de bajo costo: papel, una hoja de cálculo, un formulario de inscripción gratuito",
+      "Las reglas de verificación de antecedentes cambian según el estado, el programa y la aseguradora; se consultan con la aseguradora y un abogado",
+      "Privacidad: los registros de voluntarios y de personas atendidas son privados; nada de nombres ni fotos de personas atendidas sin permiso",
+      "Sin asesoría fiscal; a los voluntarios se les indica la Publicación 526 del IRS y un profesional de impuestos"
+    ],
+    prerequisites: "Ninguno."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Para un puesto de voluntariado que necesita tu organización", action: "escribir una descripción del puesto que diga el impacto, las tareas, el tiempo, las habilidades y a quién le reporta el voluntario", standard: "con las cinco partes y una primera frase sobre el impacto" },
+    { id: "O2", condition: "Con un puesto de voluntariado y a quién atiende", action: "escribir un mensaje para reclutar y elegir los pasos de evaluación que vayan con el riesgo del puesto", standard: "incluyendo referencias y una verificación de antecedentes con permiso por escrito en todo puesto con niños o adultos vulnerables" },
+    { id: "O3", condition: "Para los nuevos voluntarios de tu puesto", action: "planear una orientación de 30 minutos y capacitar para el puesto en cuatro pasos: explicar, mostrar, intentar y dar retroalimentación", standard: "cubriendo seguridad, privacidad, registro de entrada y cómo cancelar" },
+    { id: "O4", condition: "Usando una hoja de cálculo, un calendario compartido o papel", action: "armar un calendario de un mes con un líder de turno con nombre, suplentes y un mensaje de recordatorio", standard: "con todos los turnos cubiertos y un líder con nombre en cada uno" },
+    { id: "O5", condition: "Para los voluntarios que coordinas", action: "planear un reconocimiento concreto e identificar las razones comunes por las que los voluntarios se van", standard: "con un agradecimiento pequeño y un momento más grande" },
+    { id: "O6", condition: "Para un puesto de voluntariado", action: "preparar una hoja de registro o una hoja de cálculo que registre las horas de voluntariado y usar los totales", standard: "anotando nombre, fecha, hora de inicio, hora de salida, horas y puesto, y manteniendo los registros privados" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Cómo sumar voluntarios",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Escribir la descripción de un puesto de voluntariado",
           minutes: 5,
           goal: "Escribir una descripción clara y atractiva para un puesto de voluntariado.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Un puesto, una descripción", bullets: ["Recepcionista, clasificador, chofer, captura de datos", "Tareas distintas, necesidades distintas"] }
           ],
           tryIt: "Elige un puesto de voluntariado que tu organización necesite. Escribe su descripción usando las cinco partes. Empieza con una oración sobre el impacto.",
-          youCanNow: "escribir una descripción clara del puesto que les dice a los voluntarios exactamente qué se espera y por qué importa."
+          youCanNow: "escribir una descripción clara del puesto que les dice a los voluntarios exactamente qué se espera y por qué importa.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué es la descripción de un puesto de voluntariado?", options: ["Una tarjeta de agradecimiento para los voluntarios", "Una descripción corta del puesto que dice qué es, por qué importa y qué se pide", "Una hoja de registro", "Un formulario de verificación de antecedentes"], answer: 1, why: "Una descripción del puesto les dice a los voluntarios exactamente qué se les pide, como una descripción de empleo corta." },
+            { objective: "O1", q: "Tu descripción dice \"Ayudar de vez en cuando\". ¿Qué agregas primero?", options: ["Nada; lo vago es más amigable", "Una lista de todas tus reglas", "El sueldo del voluntario", "Cuándo y por cuánto tiempo, y el impacto que tiene el puesto"], answer: 3, why: "Los voluntarios necesitan datos honestos sobre el tiempo y una razón por la que el puesto importa." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Reclutar y evaluar voluntarios",
           minutes: 6,
           goal: "Reclutar voluntarios para un puesto y elegir los pasos de evaluación adecuados.",
@@ -57,9 +86,14 @@ module.exports = {
             { title: "Reglas de seguridad", bullets: ["Ningún adulto a solas y fuera de la vista con un niño", "Reporta toda preocupación a una persona designada"] }
           ],
           tryIt: "Para el puesto que describiste en la Lección 1, escribe un mensaje corto para reclutar y anota tres lugares donde lo vas a compartir. Luego haz una lista de los pasos de evaluación que necesita el puesto y explica por qué, según su riesgo.",
-          youCanNow: "reclutar voluntarios en persona y elegir pasos de evaluación que vayan de acuerdo con el riesgo de cada puesto."
+          youCanNow: "reclutar voluntarios en persona y elegir pasos de evaluación que vayan de acuerdo con el riesgo de cada puesto.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué debe incluir la evaluación de todo puesto de voluntariado, incluso uno de bajo riesgo?", options: ["Una solicitud con datos de contacto y un contacto de emergencia, y una conversación corta", "Una verificación de antecedentes para todos", "Ninguna evaluación", "Una revisión del historial de crédito"], answer: 0, why: "Todo puesto lleva una solicitud, un contacto de emergencia y una conversación corta; los puestos de más riesgo agregan más." },
+            { objective: "O2", q: "Un puesto nuevo tiene voluntarios que leen con personas mayores en una casa de cuidado. ¿Qué agregas?", options: ["Nada más", "Una nota de agradecimiento más larga", "Referencias y una verificación de antecedentes con permiso por escrito", "Una publicación en redes sociales sobre los residentes"], answer: 2, why: "Los puestos con adultos vulnerables necesitan revisar referencias y una verificación de antecedentes hecha con permiso." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Integrar y capacitar a los voluntarios",
           minutes: 5,
           goal: "Planear una orientación corta y una capacitación para el puesto que preparen y den la bienvenida a los nuevos voluntarios.",
@@ -77,17 +111,21 @@ module.exports = {
             { title: "Después del primer turno", bullets: ["Júntalos con un compañero", "Pregunta: \"¿Cómo te fue? ¿Qué te confundió?\""] }
           ],
           tryIt: "Escribe un esquema de orientación de 30 minutos para tu puesto, con el tiempo de cada parte. Luego escribe la capacitación del puesto en cuatro pasos: explicar, mostrar, intentar, dar comentarios.",
-          youCanNow: "integrar y capacitar a los voluntarios nuevos para que estén seguros, se sientan capaces y quieran volver."
+          youCanNow: "integrar y capacitar a los voluntarios nuevos para que estén seguros, se sientan capaces y quieran volver.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué es la integración de un voluntario?", options: ["Solo el primer correo que envías", "Terminar el puesto de un voluntario", "Todo lo que pasa desde el \"sí\" hasta que se siente seguro en el puesto", "Contar las horas de voluntariado"], answer: 2, why: "La integración incluye la bienvenida, la orientación, la capacitación para el puesto y un primer turno amable." },
+            { objective: "O3", q: "Una voluntaria nueva empieza el sábado. ¿Qué ayuda más en su primer turno?", options: ["Ponerla con un compañero con experiencia y hablar con ella después", "Dejarla sola para que lo descubra", "Darle la tarea más difícil", "Saltarse la orientación para ahorrar tiempo"], answer: 0, why: "Un compañero le da a quién preguntar, y hablar después muestra qué fue confuso." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Cómo sumar voluntarios",
         questions: [
-          { q: "¿Cuál es la mejor forma de empezar la descripción de un puesto de voluntariado?", options: ["Con las reglas", "Con el impacto que tiene el puesto", "Con la fecha límite", "Con la verificación de antecedentes"], answer: 1, why: "Empezar con el impacto hace que el puesto sea atractivo." },
-          { q: "¿Cuál es la razón más común por la que la gente empieza a hacer voluntariado?", options: ["Alguien se lo pidió", "Un anuncio espectacular", "Un formulario de impuestos", "Un correo al azar"], answer: 0, why: "Pedir en persona es la herramienta más fuerte para reclutar." },
-          { q: "Un voluntario dará clases de apoyo a niños después de la escuela. ¿Qué evaluación se necesita?", options: ["Nada", "Solo un nombre", "Solo una sonrisa en la puerta", "Una solicitud, referencias y una verificación de antecedentes con permiso por escrito"], answer: 3, why: "Los puestos con niños necesitan la evaluación más estricta." },
-          { q: "¿A quién debes preguntar sobre las reglas de verificación de antecedentes para tus voluntarios?", options: ["A un amigo de un voluntario", "A nadie", "A tu aseguradora y a un abogado", "A una publicación en redes sociales"], answer: 2, why: "Las reglas cambian según el estado y las aseguradoras pueden tener requisitos." },
-          { q: "¿Qué debe incluir una orientación para voluntarios?", options: ["Reglas de privacidad sobre las personas a las que sirves", "Las direcciones de las casas de las personas atendidas", "Los sueldos del personal", "Chismes sobre los donantes"], answer: 0, why: "Los voluntarios deben saber cómo proteger la privacidad de las personas." }
+          { objective: "O1", q: "¿Cuál es la mejor forma de empezar la descripción de un puesto de voluntariado?", options: ["Con las reglas", "Con el impacto que tiene el puesto", "Con la fecha límite", "Con la verificación de antecedentes"], answer: 1, why: "Empezar con el impacto hace que el puesto sea atractivo." },
+          { objective: "O2", q: "¿Cuál es la razón más común por la que la gente empieza a hacer voluntariado?", options: ["Alguien se lo pidió", "Un anuncio espectacular", "Un formulario de impuestos", "Un correo al azar"], answer: 0, why: "Pedir en persona es la herramienta más fuerte para reclutar." },
+          { objective: "O2", q: "Un voluntario dará clases de apoyo a niños después de la escuela. ¿Qué evaluación se necesita?", options: ["Nada", "Solo un nombre", "Solo una sonrisa en la puerta", "Una solicitud, referencias y una verificación de antecedentes con permiso por escrito"], answer: 3, why: "Los puestos con niños necesitan la evaluación más estricta." },
+          { objective: "O2", q: "¿A quién debes preguntar sobre las reglas de verificación de antecedentes para tus voluntarios?", options: ["A un amigo de un voluntario", "A nadie", "A tu aseguradora y a un abogado", "A una publicación en redes sociales"], answer: 2, why: "Las reglas cambian según el estado y las aseguradoras pueden tener requisitos." },
+          { objective: "O3", q: "¿Qué debe incluir una orientación para voluntarios?", options: ["Reglas de privacidad sobre las personas a las que sirves", "Las direcciones de las casas de las personas atendidas", "Los sueldos del personal", "Chismes sobre los donantes"], answer: 0, why: "Los voluntarios deben saber cómo proteger la privacidad de las personas." }
         ]
       }
     },
@@ -95,6 +133,7 @@ module.exports = {
       name: "Capítulo 2: Cómo retener a los voluntarios",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Organizar turnos y supervisar voluntarios",
           minutes: 5,
           goal: "Armar un calendario de voluntarios con suplentes y supervisar a los voluntarios con apoyo.",
@@ -111,9 +150,14 @@ module.exports = {
             { title: "Supervisar voluntarios", bullets: ["Tareas claras y conversaciones frecuentes", "Comentarios rápidos y amables", "¿No funciona? Habla en privado; prueba otro puesto"] }
           ],
           tryIt: "Haz un calendario de un mes para tu puesto en una hoja de cálculo o en papel: fechas, horarios de los turnos, nombres de los voluntarios, un líder de turno designado y dos nombres de suplentes. Escribe el mensaje de recordatorio que vas a enviar.",
-          youCanNow: "armar un calendario de voluntarios con recordatorios y suplentes, y supervisar a los voluntarios de forma clara y con apoyo."
+          youCanNow: "armar un calendario de voluntarios con recordatorios y suplentes, y supervisar a los voluntarios de forma clara y con apoyo.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué es una lista de suplentes?", options: ["Una copia del presupuesto", "Una lista de voluntarios que se fueron", "Calendarios viejos", "Personas a las que puedes llamar cuando alguien cancela un turno importante"], answer: 3, why: "Una lista de suplentes mantiene cubiertos los turnos importantes cuando cambian los planes." },
+            { objective: "O4", q: "Un voluntario sigue cometiendo errores en su puesto. ¿Qué haces primero?", options: ["Contárselo a todo el equipo", "Hablar en privado, ser concreto y preguntarle qué le ayudaría", "Dejar de darle turnos sin decirle por qué", "Ignorarlo"], answer: 1, why: "Los problemas se tratan en privado y con amabilidad; quizás otro puesto le quede mejor." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Reconocimiento y retención",
           minutes: 5,
           goal: "Planear un reconocimiento que vaya con tus voluntarios y detectar por qué se van.",
@@ -130,9 +174,14 @@ module.exports = {
             { title: "Ayúdalos a crecer", bullets: ["Pregunta qué buscan", "Ofrece capacitación y puestos de liderazgo", "Pregunta a quienes se van por qué"] }
           ],
           tryIt: "Escribe dos ideas de reconocimiento para tus voluntarios: un agradecimiento pequeño que puedas dar esta semana y un momento más grande para este año. Luego escribe tres preguntas que le harás a un voluntario sobre lo que busca en el puesto.",
-          youCanNow: "reconocer a los voluntarios de maneras que les importan y actuar sobre las razones por las que se van."
+          youCanNow: "reconocer a los voluntarios de maneras que les importan y actuar sobre las razones por las que se van.",
+          quickCheck: [
+            { objective: "O5", q: "¿Cuál es una razón común por la que los voluntarios dejan de venir?", options: ["Sintieron que no los necesitaban o que no les daban las gracias", "Les dieron las gracias demasiadas veces", "Los turnos estaban bien organizados", "Tenían un compañero"], answer: 0, why: "Sentirse innecesario, la mala organización, la falta de capacitación o de agradecimiento suelen hacer que los voluntarios se vayan." },
+            { objective: "O5", q: "Una voluntaria fiel dice que quiere desarrollar habilidades de liderazgo. ¿Qué le ofreces?", options: ["Nada; los voluntarios no crecen", "Más de la misma tarea", "La oportunidad de dirigir un turno o capacitar a voluntarios nuevos", "Un puesto más pequeño"], answer: 2, why: "Los puestos para crecer, como dirigir un turno, ayudan a conservar a los voluntarios que quieren más." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Registrar las horas de voluntariado",
           minutes: 5,
           goal: "Crear un sistema sencillo para registrar las horas de voluntariado y usar los números.",
@@ -151,17 +200,21 @@ module.exports = {
           ],
           sources: [{ name: "IRS, Publicación 526, Contribuciones caritativas (en inglés)", url: "https://www.irs.gov/publications/p526" }],
           tryIt: "Tarea final: arma tu kit de voluntariado para un puesto: la descripción del puesto, el mensaje para reclutar y los pasos de evaluación, un esquema de orientación de 30 minutos, un calendario mensual con un líder de turno, dos ideas de reconocimiento y una hoja de registro u hoja de cálculo con columnas para nombre, fecha, entrada, salida, horas y puesto.",
-          youCanNow: "registrar las horas de voluntariado de forma sencilla y usar los números para informes, planeación, agradecimientos y comprobantes de horas."
+          youCanNow: "registrar las horas de voluntariado de forma sencilla y usar los números para informes, planeación, agradecimientos y comprobantes de horas.",
+          quickCheck: [
+            { objective: "O6", q: "¿Para qué se registran las horas de voluntariado?", options: ["Para cobrarles una cuota a los voluntarios", "Para mostrar el impacto en los informes de subvenciones y de la junta, y para planear el personal", "Para publicar los datos de los voluntarios", "Porque a los voluntarios se les paga por hora"], answer: 1, why: "Los totales de horas muestran el impacto, ayudan a planear y ayudan a agradecer a los voluntarios fieles." },
+            { objective: "O6", q: "Un voluntario pregunta si puede deducir el valor de su tiempo en sus impuestos. ¿Qué haces?", options: ["Decirle que sí, a cualquier tarifa por hora", "Hacerle la declaración de impuestos", "Ignorar la pregunta", "Indicarle la Publicación 526 del IRS y un profesional de impuestos"], answer: 3, why: "La lección dice que no se da asesoría fiscal; a los voluntarios se les indica la Publicación 526 del IRS y un profesional de impuestos." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Cómo retener a los voluntarios",
         questions: [
-          { q: "Los voluntarios siguen faltando a sus turnos sin avisarte. ¿Qué ayuda primero?", options: ["Prohibirles venir a todos", "Dejar de organizar turnos", "Enviar recordatorios y hacer que cancelar sea fácil", "Duplicar la duración de los turnos"], answer: 2, why: "Los recordatorios y la cancelación fácil reducen las ausencias sin aviso." },
-          { q: "¿A quién se debe designar para cada turno?", options: ["A un donante", "A un líder de turno o supervisor", "Al voluntario más nuevo", "A nadie"], answer: 1, why: "Un líder designado recibe, guía y resuelve problemas." },
-          { q: "¿Qué agradecimiento tiene más probabilidad de importarle a un voluntario?", options: ["\"Gracias a todos.\"", "Ninguno; es voluntariado", "Un correo genérico una vez al año", "\"Tus turnos de los sábados nos ayudaron a empacar 600 cajas este mes.\""], answer: 3, why: "El agradecimiento específico que nombra el impacto es el que más significa." },
-          { q: "Una adolescente necesita comprobar 40 horas de voluntariado para la escuela. Debes:", options: ["Usar tus registros de horas y firmar una carta que las confirme", "Negarte", "Adivinar las horas", "Decirle que le pregunte al IRS"], answer: 0, why: "Un buen registro te permite confirmar las horas con precisión." },
-          { q: "Según el IRS, ¿puede un voluntario deducir el valor de su tiempo?", options: ["Sí, al valor que elija", "Sí, al salario mínimo", "No, el valor del tiempo o de los servicios no es deducible", "Solo los fines de semana"], answer: 2, why: "La Publicación 526 del IRS dice que el valor de tu tiempo no es deducible." }
+          { objective: "O4", q: "Los voluntarios siguen faltando a sus turnos sin avisarte. ¿Qué ayuda primero?", options: ["Prohibirles venir a todos", "Dejar de organizar turnos", "Enviar recordatorios y hacer que cancelar sea fácil", "Duplicar la duración de los turnos"], answer: 2, why: "Los recordatorios y la cancelación fácil reducen las ausencias sin aviso." },
+          { objective: "O4", q: "¿A quién se debe designar para cada turno?", options: ["A un donante", "A un líder de turno o supervisor", "Al voluntario más nuevo", "A nadie"], answer: 1, why: "Un líder designado recibe, guía y resuelve problemas." },
+          { objective: "O5", q: "¿Qué agradecimiento tiene más probabilidad de importarle a un voluntario?", options: ["\"Gracias a todos.\"", "Ninguno; es voluntariado", "Un correo genérico una vez al año", "\"Tus turnos de los sábados nos ayudaron a empacar 600 cajas este mes.\""], answer: 3, why: "El agradecimiento específico que nombra el impacto es el que más significa." },
+          { objective: "O6", q: "Una adolescente necesita comprobar 40 horas de voluntariado para la escuela. Debes:", options: ["Usar tus registros de horas y firmar una carta que las confirme", "Negarte", "Adivinar las horas", "Decirle que le pregunte al IRS"], answer: 0, why: "Un buen registro te permite confirmar las horas con precisión." },
+          { objective: "O6", q: "Según el IRS, ¿puede un voluntario deducir el valor de su tiempo?", options: ["Sí, al valor que elija", "Sí, al salario mínimo", "No, el valor del tiempo o de los servicios no es deducible", "Solo los fines de semana"], answer: 2, why: "La Publicación 526 del IRS dice que el valor de tu tiempo no es deducible." }
         ]
       }
     }
@@ -169,26 +222,106 @@ module.exports = {
   quiz: {
     title: "Examen final: Gestión de voluntarios",
     questions: [
-      { q: "La descripción de un puesto de voluntariado debe incluir:", options: ["Solo el nombre del puesto", "Qué hará, cuándo, por qué importa y a quién le reporta", "El sueldo del voluntario", "Los nombres de los donantes"], answer: 1, why: "Los detalles claros ayudan a los voluntarios a tener éxito." },
-      { q: "¿Por qué ofrecer puestos cortos y flexibles?", options: ["Mucha gente puede dar un poco de tiempo, pero no todas las semanas", "Son más fáciles de olvidar", "No necesitan capacitación", "Reemplazan al personal"], answer: 0, why: "Los puestos flexibles abren la puerta a más voluntarios." },
-      { q: "Un banco de alimentos necesita recepcionistas, clasificadores y choferes. ¿Cuántas descripciones de puesto?", options: ["Una para todos", "Ninguna", "Una para cada puesto", "Solo para los choferes"], answer: 2, why: "Cada puesto tiene tareas y necesidades distintas." },
-      { q: "¿Qué forma de reclutar suele funcionar mejor?", options: ["Esperar a que la gente te encuentre", "Publicar una vez y esperar", "Pedir solo al personal", "Pedir a la gente en persona, también a través de los voluntarios actuales"], answer: 3, why: "Pedir en persona atrae a la mayor cantidad de voluntarios." },
-      { q: "La evaluación debe ajustarse a:", options: ["El riesgo del puesto", "La apariencia del voluntario", "El clima", "El humor del coordinador"], answer: 0, why: "Los puestos de mayor riesgo necesitan más evaluación." },
-      { q: "Una verificación de antecedentes se debe hacer:", options: ["En secreto", "Con el permiso por escrito de la persona", "Solo después de un incidente", "Preguntando a los vecinos"], answer: 1, why: "El permiso es obligatorio y es una muestra de respeto." },
-      { q: "¿Cuál es una buena regla de seguridad para programas juveniles?", options: ["Cualquier adulto puede estar a solas con un niño en cualquier lugar", "Las preocupaciones se guardan en silencio", "Ningún adulto está a solas y fuera de la vista con un niño", "La evaluación es opcional"], answer: 2, why: "Esta regla protege a los niños y a los voluntarios." },
-      { q: "Las reglas para la verificación de antecedentes de voluntarios:", options: ["Son iguales en todas partes", "No existen", "Las ponen los voluntarios", "Cambian según el estado y el programa; pregunta a tu aseguradora y a un abogado"], answer: 3, why: "Los requisitos varían, así que revisa qué se aplica en tu caso." },
-      { q: "La integración significa:", options: ["Todo lo que ayuda a un voluntario nuevo a empezar y a sentirse bienvenido", "Despedir a un voluntario", "Recaudar fondos", "Comprar equipo"], answer: 0, why: "Cubre la bienvenida, la orientación, la capacitación y el primer turno." },
-      { q: "Los cuatro pasos de la capacitación para el puesto son:", options: ["Leer, firmar, irse, olvidar", "Explicar, mostrar, dejarlos intentarlo, dar comentarios", "Decir, examinar, fallar, repetir", "Mirar, esperar, adivinar, irse"], answer: 1, why: "Mostrar y dejar intentar desarrolla habilidad y confianza." },
-      { q: "Juntar a un voluntario nuevo con un compañero ayuda porque:", options: ["Duplica el papeleo", "Reemplaza la orientación", "Tiene a alguien a quién preguntar en su primer turno", "El compañero hace todo el trabajo"], answer: 2, why: "Un compañero hace que el primer turno sea más fácil y amigable." },
-      { q: "Un voluntario publica en internet una foto de una persona atendida. ¿Qué tema de la orientación faltó?", options: ["El estacionamiento", "Las reglas de privacidad", "Los refrigerios", "La recaudación de fondos"], answer: 1, why: "Los voluntarios deben mantener en privado la identidad de las personas atendidas." },
-      { q: "Un buen calendario de voluntarios es:", options: ["Fácil de ver y fácil de cambiar", "Guardado en la cabeza de una sola persona", "Publicado la noche anterior", "Nunca compartido"], answer: 0, why: "Que se vea y sea flexible reduce los huecos." },
-      { q: "Una lista de suplentes sirve para:", options: ["Despedir voluntarios", "Informes de subvenciones", "Guardar calendarios viejos", "Llamar a alguien cuando una persona cancela un turno clave"], answer: 3, why: "Los suplentes mantienen cubiertos los turnos importantes." },
-      { q: "A un voluntario le cuesta la captura de datos, pero le encanta hablar con la gente. Podrías:", options: ["Ignorarlo", "Avergonzarlo en público", "Hablar en privado y ofrecerle el puesto de recepcionista", "Sacarlo sin decirle nada"], answer: 2, why: "Un puesto que le quede mejor muchas veces resuelve el problema." },
-      { q: "¿Cuál es una razón común por la que los voluntarios dejan de venir?", options: ["Les dieron las gracias demasiado", "Sintieron que no los necesitaban o nadie les dio las gracias", "Los turnos estaban bien organizados", "Tuvieron una capacitación clara"], answer: 1, why: "Sentirse innecesario o no agradecido aleja a la gente." },
-      { q: "Al compartir historias del impacto sobre las personas a las que sirves, debes:", options: ["Pedir su permiso", "Usar sus nombres completos sin preguntar", "Inventar detalles", "Compartir la dirección de su casa"], answer: 0, why: "El respeto y la privacidad van primero." },
-      { q: "Un voluntario con muchos años quiere crecer. Podrías:", options: ["Dejarlo para siempre en la misma tarea", "Pedirle que se vaya", "Darle solo más limpieza", "Invitarlo a capacitar a voluntarios nuevos o a dirigir un turno"], answer: 3, why: "Los puestos para crecer mantienen motivados a los voluntarios comprometidos." },
-      { q: "El registro de entrada de un voluntario debe incluir:", options: ["Sus datos bancarios", "Nombre, fecha, hora de entrada y de salida, y puesto", "Su contraseña", "Solo una firma"], answer: 1, why: "Estos datos básicos te permiten sumar las horas con precisión." },
-      { q: "Un voluntario pregunta si puede deducir la gasolina que usa para ir a su voluntariado. Debes:", options: ["Decir que sí, cualquier cantidad", "Decir que es ilegal", "Enviarlo a la Publicación 526 del IRS y a un profesional de impuestos", "Ignorar la pregunta"], answer: 2, why: "Algunos gastos de tu bolsillo podrían ser deducibles; debe revisar la fuente oficial." }
+      { objective: "O1", q: "La descripción de un puesto de voluntariado debe incluir:", options: ["Solo el nombre del puesto", "Qué hará, cuándo, por qué importa y a quién le reporta", "El sueldo del voluntario", "Los nombres de los donantes"], answer: 1, why: "Los detalles claros ayudan a los voluntarios a tener éxito." },
+      { objective: "O1", q: "¿Por qué ofrecer puestos cortos y flexibles?", options: ["Mucha gente puede dar un poco de tiempo, pero no todas las semanas", "Son más fáciles de olvidar", "No necesitan capacitación", "Reemplazan al personal"], answer: 0, why: "Los puestos flexibles abren la puerta a más voluntarios." },
+      { objective: "O1", q: "Un banco de alimentos necesita recepcionistas, clasificadores y choferes. ¿Cuántas descripciones de puesto?", options: ["Una para todos", "Ninguna", "Una para cada puesto", "Solo para los choferes"], answer: 2, why: "Cada puesto tiene tareas y necesidades distintas." },
+      { objective: "O2", q: "¿Qué forma de reclutar suele funcionar mejor?", options: ["Esperar a que la gente te encuentre", "Publicar una vez y esperar", "Pedir solo al personal", "Pedir a la gente en persona, también a través de los voluntarios actuales"], answer: 3, why: "Pedir en persona atrae a la mayor cantidad de voluntarios." },
+      { objective: "O2", q: "La evaluación debe ajustarse a:", options: ["El riesgo del puesto", "La apariencia del voluntario", "El clima", "El humor del coordinador"], answer: 0, why: "Los puestos de mayor riesgo necesitan más evaluación." },
+      { objective: "O2", q: "Una verificación de antecedentes se debe hacer:", options: ["En secreto", "Con el permiso por escrito de la persona", "Solo después de un incidente", "Preguntando a los vecinos"], answer: 1, why: "El permiso es obligatorio y es una muestra de respeto." },
+      { objective: "O2", q: "¿Cuál es una buena regla de seguridad para programas juveniles?", options: ["Cualquier adulto puede estar a solas con un niño en cualquier lugar", "Las preocupaciones se guardan en silencio", "Ningún adulto está a solas y fuera de la vista con un niño", "La evaluación es opcional"], answer: 2, why: "Esta regla protege a los niños y a los voluntarios." },
+      { objective: "O2", q: "Las reglas para la verificación de antecedentes de voluntarios:", options: ["Son iguales en todas partes", "No existen", "Las ponen los voluntarios", "Cambian según el estado y el programa; pregunta a tu aseguradora y a un abogado"], answer: 3, why: "Los requisitos varían, así que revisa qué se aplica en tu caso." },
+      { objective: "O3", q: "La integración significa:", options: ["Todo lo que ayuda a un voluntario nuevo a empezar y a sentirse bienvenido", "Despedir a un voluntario", "Recaudar fondos", "Comprar equipo"], answer: 0, why: "Cubre la bienvenida, la orientación, la capacitación y el primer turno." },
+      { objective: "O3", q: "Los cuatro pasos de la capacitación para el puesto son:", options: ["Leer, firmar, irse, olvidar", "Explicar, mostrar, dejarlos intentarlo, dar comentarios", "Decir, examinar, fallar, repetir", "Mirar, esperar, adivinar, irse"], answer: 1, why: "Mostrar y dejar intentar desarrolla habilidad y confianza." },
+      { objective: "O3", q: "Juntar a un voluntario nuevo con un compañero ayuda porque:", options: ["Duplica el papeleo", "Reemplaza la orientación", "Tiene a alguien a quién preguntar en su primer turno", "El compañero hace todo el trabajo"], answer: 2, why: "Un compañero hace que el primer turno sea más fácil y amigable." },
+      { objective: "O3", q: "Un voluntario publica en internet una foto de una persona atendida. ¿Qué tema de la orientación faltó?", options: ["El estacionamiento", "Las reglas de privacidad", "Los refrigerios", "La recaudación de fondos"], answer: 1, why: "Los voluntarios deben mantener en privado la identidad de las personas atendidas." },
+      { objective: "O4", q: "Un buen calendario de voluntarios es:", options: ["Fácil de ver y fácil de cambiar", "Guardado en la cabeza de una sola persona", "Publicado la noche anterior", "Nunca compartido"], answer: 0, why: "Que se vea y sea flexible reduce los huecos." },
+      { objective: "O4", q: "Una lista de suplentes sirve para:", options: ["Despedir voluntarios", "Informes de subvenciones", "Guardar calendarios viejos", "Llamar a alguien cuando una persona cancela un turno clave"], answer: 3, why: "Los suplentes mantienen cubiertos los turnos importantes." },
+      { objective: "O4", q: "A un voluntario le cuesta la captura de datos, pero le encanta hablar con la gente. Podrías:", options: ["Ignorarlo", "Avergonzarlo en público", "Hablar en privado y ofrecerle el puesto de recepcionista", "Sacarlo sin decirle nada"], answer: 2, why: "Un puesto que le quede mejor muchas veces resuelve el problema." },
+      { objective: "O5", q: "¿Cuál es una razón común por la que los voluntarios dejan de venir?", options: ["Les dieron las gracias demasiado", "Sintieron que no los necesitaban o nadie les dio las gracias", "Los turnos estaban bien organizados", "Tuvieron una capacitación clara"], answer: 1, why: "Sentirse innecesario o no agradecido aleja a la gente." },
+      { objective: "O5", q: "Al compartir historias del impacto sobre las personas a las que sirves, debes:", options: ["Pedir su permiso", "Usar sus nombres completos sin preguntar", "Inventar detalles", "Compartir la dirección de su casa"], answer: 0, why: "El respeto y la privacidad van primero." },
+      { objective: "O5", q: "Un voluntario con muchos años quiere crecer. Podrías:", options: ["Dejarlo para siempre en la misma tarea", "Pedirle que se vaya", "Darle solo más limpieza", "Invitarlo a capacitar a voluntarios nuevos o a dirigir un turno"], answer: 3, why: "Los puestos para crecer mantienen motivados a los voluntarios comprometidos." },
+      { objective: "O6", q: "El registro de entrada de un voluntario debe incluir:", options: ["Sus datos bancarios", "Nombre, fecha, hora de entrada y de salida, y puesto", "Su contraseña", "Solo una firma"], answer: 1, why: "Estos datos básicos te permiten sumar las horas con precisión." },
+      { objective: "O6", q: "Un voluntario pregunta si puede deducir la gasolina que usa para ir a su voluntariado. Debes:", options: ["Decir que sí, cualquier cantidad", "Decir que es ilegal", "Enviarlo a la Publicación 526 del IRS y a un profesional de impuestos", "Ignorar la pregunta"], answer: 2, why: "Algunos gastos de tu bolsillo podrían ser deducibles; debe revisar la fuente oficial." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      2,
+      4,
+      6,
+      8,
+      11,
+      12,
+      14,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en todas las filas. Si una fila está en Todavía no, corrige esa parte y vuelve a intentarlo.",
+    criteria: [
+      {
+        name: "Descripción del puesto",
+        objective: "O1",
+        notYet: "Faltan el tiempo, las tareas o a quién le reporta.",
+        meets: "Las cinco partes, empezando por el impacto.",
+        exceeds: "Además ofrece una opción corta y flexible para quienes tienen menos tiempo."
+      },
+      {
+        name: "Reclutamiento y evaluación",
+        objective: "O2",
+        notYet: "No hay evaluación, o un puesto con niños o adultos vulnerables no tiene verificación de antecedentes.",
+        meets: "Un mensaje para reclutar y una evaluación que va con el riesgo del puesto, con permiso por escrito para las verificaciones.",
+        exceeds: "Además agrega reglas de seguridad y notas para consultar con la aseguradora y un abogado."
+      },
+      {
+        name: "Orientación y capacitación",
+        objective: "O3",
+        notYet: "No hay plan de orientación, o faltan la seguridad y la privacidad.",
+        meets: "Un esquema de 30 minutos con tiempos, que cubre seguridad, privacidad, registro de entrada y cómo cancelar, más explicar, mostrar, intentar y dar retroalimentación.",
+        exceeds: "Además incluye un compañero y una conversación después del primer turno."
+      },
+      {
+        name: "Calendario y supervisión",
+        objective: "O4",
+        notYet: "Los turnos no tienen líder o no hay suplentes.",
+        meets: "Un calendario de un mes con un líder de turno con nombre, dos suplentes y un mensaje de recordatorio.",
+        exceeds: "Además dice cómo cancelan los voluntarios y quién se encarga de los problemas."
+      },
+      {
+        name: "Reconocimiento y horas",
+        objective: "O5",
+        notYet: "No hay plan de agradecimiento ni forma de registrar las horas.",
+        meets: "Una idea de reconocimiento pequeña y una más grande, y una hoja de registro con nombre, fecha, hora de inicio, hora de salida, horas y puesto.",
+        exceeds: "Además dice cómo se usarán los totales de horas en los informes y los agradecimientos."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Personas que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Voluntarios que siguen activos 90 días después de su primer turno, comparado con antes del curso",
+      "Puestos con niños o adultos vulnerables que tienen una evaluación y reglas de seguridad documentadas",
+      "Total de horas de voluntariado registradas e informadas a la junta o en los informes de subvenciones"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Una computadora o un teléfono con una hoja de cálculo o herramienta de inscripción gratuita, o papel",
+      "Un puesto de voluntariado real para planear",
+      "Papel o un documento para el kit de voluntariado",
+      "Unos 60 minutos en total: lecciones, práctica, comprobaciones y la tarea final"
+    ],
+    facilitatorNotes: [
+      "Pide que cada persona arme el kit para un puesto real de su propia organización, para que quede listo para usar.",
+      "En los puestos con niños o adultos vulnerables, insiste en la evaluación y las reglas de seguridad, y diles que confirmen los requisitos con su aseguradora y un abogado.",
+      "Recuerda no pedir más información de los voluntarios de la necesaria y mantener los registros privados.",
+      "Forma parejas para que intercambien y revisen sus descripciones de puestos y sus esquemas de orientación.",
+      "Califica el kit con la rúbrica y da retroalimentación sobre una fila en Todavía no a la vez."
     ]
   }
 };

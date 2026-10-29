@@ -16,11 +16,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos y termina con una tarea de \"Pruébalo ahora\" que va armando tu plan real. Hay una comprobación de conocimientos después de cada capítulo y un examen de 20 preguntas al final. Para preguntas legales, de impuestos o sobre el estatus de organización sin fines de lucro, revisa fuentes oficiales como irs.gov y la oficina del procurador general o de la secretaría de estado de tu estado."
   ],
   finalTask: "Escribe con ayuda de un asistente de IA gratuito un plan de programa de una página para un proyecto de la comunidad, real o de práctica: una misión de una frase, una meta medible, un calendario sencillo, tres papeles de voluntarios (con pasos de seguridad si hay menores), un resumen de cinco frases para una subvención y cinco reglas sencillas sobre cómo tu grupo va a usar la IA. Quita cualquier información privada antes de compartirlo.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Personas que dirigen o quieren dirigir trabajo comunitario en zonas desatendidas: líderes de bancos de alimentos, asociaciones de inquilinos, ministerios de la iglesia, programas juveniles y clubes de vecinos, y personal o miembros de la junta directiva de pequeñas organizaciones sin fines de lucro.",
+    startingPoint: "Manejan programas con poco dinero y poco personal, y escriben volantes, correos e informes a mano. La mayoría ha usado poco o nada un asistente de IA, y pocos tienen por escrito una misión, una meta medible, los papeles de los voluntarios o reglas de IA.",
+    gap: "Los grupos pequeños pierden horas en papeleo y se pierden subvenciones porque les falta tiempo y planes claros. La IA puede hacer el borrador de mucho de este trabajo, pero los líderes deben proteger a las personas que atienden, revisar cada dato y dejar las decisiones en manos de personas.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y oraciones cortas (más o menos de sexto o séptimo grado)",
+      "Dispositivos: un teléfono inteligente o una computadora de la biblioteca o de la oficina",
+      "Costo: solo herramientas gratuitas o donadas",
+      "Privacidad: nada de nombres, direcciones, teléfonos ni datos de salud o de inmigración de las personas atendidas en la IA",
+      "La seguridad con menores de edad y adultos vulnerables sigue la política de la organización y las reglas del estado"
+    ],
+    prerequisites: "Ninguno. Quien es nuevo con los asistentes de IA puede tomar primero \"Introducción a la IA y el empoderamiento digital\"."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con las tareas que hace tu grupo cada mes", action: "identificar en cuáles la IA puede ayudar con el borrador y cuáles necesitan a personas", standard: "nombrando al menos tres tareas para la IA y el trabajo humano para el que libera tiempo" },
+    { id: "O2", condition: "Con lo que hace tu grupo", action: "escribir una misión de una frase y una meta medible con ayuda de la IA", standard: "editadas con tu equipo para que digan quién, qué y por qué, y que la meta se pueda contar para una fecha" },
+    { id: "O3", condition: "Con la meta de un programa o un evento", action: "crear un calendario y una lista de tareas con la IA", standard: "agregando lo que la IA olvidó y poniendo un nombre y una fecha junto a cada tarea" },
+    { id: "O4", condition: "Con los trabajos de voluntarios de tu plan", action: "escribir descripciones cortas de los papeles de los voluntarios y los pasos de seguridad que necesitan", standard: "siguiendo la política de tu organización cuando hay menores de edad o adultos vulnerables, y sin nombres reales en la IA" },
+    { id: "O5", condition: "Con un proyecto que necesita dinero", action: "encontrar una oportunidad de subvención y hacer con la IA el borrador de un resumen de cinco frases", standard: "con cada dato igual a tus registros y siguiendo las reglas del financiador" },
+    { id: "O6", condition: "Cuando compartes resultados y usan la IA como grupo", action: "escribir un informe para quienes apoyan y cinco reglas sencillas de IA para tu grupo", standard: "usando historias solo con permiso por escrito y dejando las decisiones sobre las personas en manos de personas" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Dirigir y planear con IA",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Lo que la IA puede hacer por un grupo de la comunidad",
           minutes: 4,
           goal: "Hacer una lista de tres tareas de tu grupo que llevan mucho tiempo y con las que la IA podría ayudar.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "La IA no es buena para", bullets: ["Conocer a tus vecinos", "Juzgar lo que de verdad necesita la comunidad", "Guardar historias privadas"] }
           ],
           tryIt: "Anota tres tareas que le quitan más tiempo a tu grupo cada mes. Junto a cada una, escribe cómo podría ayudar la IA con un primer borrador.",
-          youCanNow: "ver qué tareas de tu grupo puede acelerar la IA y cuáles necesitan personas."
+          youCanNow: "ver qué tareas de tu grupo puede acelerar la IA y cuáles necesitan personas.",
+          quickCheck: [
+            { objective: "O1", q: "¿En qué es buena la IA para un grupo de la comunidad?", options: ["En escribir el primer borrador de las notas de una reunión", "En conocer a tus vecinos", "En juzgar lo que necesita tu comunidad", "En mantener seguras las historias privadas"], answer: 0, why: "La IA es buena para borradores y resúmenes; las personas conocen a la comunidad." },
+            { objective: "O1", q: "La IA te ahorra tres horas a la semana de papeleo. ¿Cuál es el mejor uso de ese tiempo?", options: ["Más papeleo", "Escuchar a las familias y crear confianza", "Dejar que la IA hable con las familias por ti", "Nada"], answer: 1, why: "Los líderes usan la IA para liberar tiempo para el trabajo humano, como escuchar y estar presentes." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Una misión clara y una meta medible",
           minutes: 5,
           goal: "Escribir una misión de una frase y una meta medible con ayuda de la IA.",
@@ -55,9 +84,14 @@ module.exports = {
             { title: "La IA hace el borrador; deciden juntos", bullets: ["Pide tres misiones y dos metas", "Elijan y editen en equipo"] }
           ],
           tryIt: "Pide a un asistente de IA tres misiones y dos metas medibles para tu grupo. Elige una de cada una y edítalas con tus propias palabras.",
-          youCanNow: "escribir una misión clara y una meta medible para tu grupo."
+          youCanNow: "escribir una misión clara y una meta medible para tu grupo.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué hace que una meta sea medible?", options: ["Que suene inspiradora", "Que sea muy larga", "Que la puedas contar para una fecha", "Que use palabras difíciles"], answer: 2, why: "Una meta medible dice qué vas a lograr y para cuándo, de una forma que puedes contar." },
+            { objective: "O2", q: "La misión que escribió la IA usa palabras que tus miembros nunca dirían. ¿Qué haces?", options: ["La usas de todos modos", "Le pides a la IA una más larga", "Dejas la misión", "La editas con tu equipo para que suene como tu comunidad"], answer: 3, why: "La misión debe sonar como tu comunidad, así que la editan juntos." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Planear un programa o un evento con IA",
           minutes: 5,
           goal: "Usar la IA para hacer un calendario y una lista de tareas sencillos para un programa o evento.",
@@ -74,17 +108,21 @@ module.exports = {
             { title: "Hazlo tuyo", bullets: ["Quita lo que no queda", "Agrega lo que olvidó la IA: permisos, traducción, transporte", "Nombre y fecha para cada tarea"] }
           ],
           tryIt: "Pide a la IA un calendario y una lista de tareas para un programa o evento que tu grupo podría hacer. Agrega algo que la IA olvidó y pon un nombre junto a cada tarea.",
-          youCanNow: "convertir una meta en un calendario y una lista de tareas con la IA y tu equipo."
+          youCanNow: "convertir una meta en un calendario y una lista de tareas con la IA y tu equipo.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué es una lista de tareas?", options: ["Una lista de quién hace qué", "Una lista de donantes", "Un presupuesto", "Una declaración de misión"], answer: 0, why: "Una lista de tareas muestra cada trabajo y quién lo va a hacer." },
+            { objective: "O3", q: "El plan de la IA para una comida al aire libre no menciona un permiso para usar el parque. ¿Qué haces?", options: ["Te lo saltas; la IA sabe más", "Agregas a la lista de tareas revisar el permiso, con un nombre y una fecha", "Cancelas la comida", "Le pides a la IA que lo solicite"], answer: 1, why: "Agregas lo que la IA olvidó, como los permisos, y le das a la tarea un responsable y una fecha." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Dirigir y planear con IA",
         questions: [
-          { q: "¿En qué tarea es buena la IA para un grupo de la comunidad?", options: ["Saber lo que necesitan tus vecinos", "Hacer el borrador de un volante", "Ganarse la confianza de las familias", "Guardar historias privadas"], answer: 1, why: "La IA es buena para primeros borradores; las personas hacen el trabajo de relaciones." },
-          { q: "¿Cuál es una misión?", options: ["\"Atender a 150 familias para junio\"", "\"Reunión el martes a las 6\"", "\"Nos aseguramos de que ninguna familia del lado este pase hambre con un banco de alimentos gratuito cada semana.\"", "\"Comprar más sillas\""], answer: 2, why: "Una misión dice a quién sirves, qué haces y por qué." },
-          { q: "¿Qué meta se puede medir?", options: ["\"Ayudar a más gente\"", "\"Hacer el bien\"", "\"Ser mejores\"", "\"Atender a 150 familias al mes para junio\""], answer: 3, why: "Se puede contar y revisar para una fecha." },
-          { q: "El plan de la IA olvidó el transporte para las personas mayores. ¿Qué haces?", options: ["Lo agregas al plan", "Sigues el plan de la IA al pie de la letra", "Cancelas el evento", "Le pides a la IA que quite a las personas mayores"], answer: 0, why: "Tú conoces a tu comunidad; agrega lo que la IA olvidó." },
-          { q: "¿Qué debe ir junto a cada tarea de tu lista?", options: ["Un emoji", "Un nombre y una fecha", "Una contraseña", "Nada"], answer: 1, why: "Los nombres y las fechas aseguran que las tareas se hagan." }
+          { objective: "O1", q: "¿En qué tarea es buena la IA para un grupo de la comunidad?", options: ["Saber lo que necesitan tus vecinos", "Hacer el borrador de un volante", "Ganarse la confianza de las familias", "Guardar historias privadas"], answer: 1, why: "La IA es buena para primeros borradores; las personas hacen el trabajo de relaciones." },
+          { objective: "O2", q: "¿Cuál es una misión?", options: ["\"Atender a 150 familias para junio\"", "\"Reunión el martes a las 6\"", "\"Nos aseguramos de que ninguna familia del lado este pase hambre con un banco de alimentos gratuito cada semana.\"", "\"Comprar más sillas\""], answer: 2, why: "Una misión dice a quién sirves, qué haces y por qué." },
+          { objective: "O2", q: "¿Qué meta se puede medir?", options: ["\"Ayudar a más gente\"", "\"Hacer el bien\"", "\"Ser mejores\"", "\"Atender a 150 familias al mes para junio\""], answer: 3, why: "Se puede contar y revisar para una fecha." },
+          { objective: "O3", q: "El plan de la IA olvidó el transporte para las personas mayores. ¿Qué haces?", options: ["Lo agregas al plan", "Sigues el plan de la IA al pie de la letra", "Cancelas el evento", "Le pides a la IA que quite a las personas mayores"], answer: 0, why: "Tú conoces a tu comunidad; agrega lo que la IA olvidó." },
+          { objective: "O3", q: "¿Qué debe ir junto a cada tarea de tu lista?", options: ["Un emoji", "Un nombre y una fecha", "Una contraseña", "Nada"], answer: 1, why: "Los nombres y las fechas aseguran que las tareas se hagan." }
         ]
       }
     },
@@ -92,6 +130,7 @@ module.exports = {
       name: "Capítulo 2: Personas, dinero y confianza",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Organizar voluntarios y mantener a todos seguros",
           minutes: 5,
           goal: "Escribir descripciones claras de los papeles de los voluntarios y los pasos de seguridad.",
@@ -109,9 +148,14 @@ module.exports = {
             { title: "Protege la privacidad", bullets: ["Nada de nombres o números reales en la IA", "Usa papeles y marcadores"] }
           ],
           tryIt: "Pide a la IA que escriba tres descripciones cortas de papeles de voluntarios para tu plan. Si hay menores, agrega los pasos de seguridad que pide tu organización.",
-          youCanNow: "escribir papeles claros para voluntarios e incluir los pasos de seguridad que necesita tu grupo."
+          youCanNow: "escribir papeles claros para voluntarios e incluir los pasos de seguridad que necesita tu grupo.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué debe incluir la descripción del papel de un voluntario?", options: ["La dirección de la casa del voluntario", "Solo el nombre del puesto", "En qué consiste el trabajo, cuánto tiempo toma y a quién pedir ayuda", "El teléfono del voluntario"], answer: 2, why: "Los papeles claros dicen qué hacer, cuánto tiempo y a quién preguntar." },
+            { objective: "O4", q: "Quieres que la IA haga el borrador de un mensaje de recordatorio para los voluntarios. ¿Qué pegas?", options: ["El nombre y el teléfono de cada voluntario", "Los resultados de sus revisiones de antecedentes", "Las direcciones de sus casas", "El papel, la fecha y la hora, usando marcadores en lugar de los nombres"], answer: 3, why: "En los prompts de IA usa papeles y marcadores, nunca nombres ni números reales." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Encontrar subvenciones y escribir un resumen para una subvención",
           minutes: 6,
           goal: "Encontrar una oportunidad de subvención y hacer el borrador de un resumen de cinco frases de tu proyecto.",
@@ -130,9 +174,14 @@ module.exports = {
             { title: "Sé honesto", bullets: ["Cada dato debe ser verdad", "Sigue las reglas y la fecha del financiador"] }
           ],
           tryIt: "Encuentra una subvención a la que tu grupo podría aplicar (local o en Grants.gov). Pide a la IA el borrador de un resumen de cinco frases de tu proyecto y luego revisa cada dato.",
-          youCanNow: "encontrar una oportunidad de subvención y hacer el borrador de un resumen honesto del proyecto."
+          youCanNow: "encontrar una oportunidad de subvención y hacer el borrador de un resumen honesto del proyecto.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué es una subvención?", options: ["Dinero para un fin que no tienes que devolver", "Un préstamo con intereses bajos", "Una donación de comida", "Un formulario de impuestos"], answer: 0, why: "Una subvención es dinero que se da para un fin y no se devuelve." },
+            { objective: "O5", q: "Un financiador permite 100 palabras, y la IA escribió 180. ¿Qué haces?", options: ["Mandas las 180 palabras", "Lo recortas para que quepa en el límite de 100 palabras del financiador", "Lo haces de 200 palabras", "No mandas el resumen"], answer: 1, why: "Sigue las reglas del financiador, incluidos los límites de palabras." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Informar a quienes apoyan y poner reglas de IA para tu grupo",
           minutes: 5,
           goal: "Escribir un informe para quienes apoyan y cinco reglas sencillas de IA para tu grupo.",
@@ -149,17 +198,21 @@ module.exports = {
             { title: "Mantén vivas las reglas", bullets: ["Sé abierto sobre el uso de IA si preguntan", "Usa herramientas aprobadas", "Compártelas con voluntarios; revísenlas cada año"] }
           ],
           tryIt: "Tarea final: júntalo en un plan de programa de una página: misión, meta medible, calendario, tres papeles de voluntarios con pasos de seguridad, un resumen de cinco frases para una subvención y las cinco reglas de IA de tu grupo. Quita todo lo privado antes de compartirlo.",
-          youCanNow: "dirigir un proyecto de la comunidad con un plan claro y un uso de la IA seguro y honesto."
+          youCanNow: "dirigir un proyecto de la comunidad con un plan claro y un uso de la IA seguro y honesto.",
+          quickCheck: [
+            { objective: "O6", q: "¿Cuándo puedes compartir la historia de una familia en un informe?", options: ["Siempre que ayude a recaudar fondos", "Si cambias una palabra", "Solo con su permiso por escrito", "Si la historia es corta"], answer: 2, why: "Las historias se comparten solo con permiso por escrito." },
+            { objective: "O6", q: "Un miembro de la junta sugiere dejar que la IA elija qué familias reciben ayuda primero. ¿Qué dice tu regla de IA?", options: ["Sí, la IA es justa", "Sí, si es más rápido", "Solo en los días de mucho trabajo", "No; las personas deciden quién recibe ayuda"], answer: 3, why: "La IA no toma decisiones sobre quién recibe ayuda; las toman las personas." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Personas, dinero y confianza",
         questions: [
-          { q: "Tu programa atiende a niños. ¿Cuál es una práctica de seguridad común?", options: ["Un adulto solo con cada niño", "Que los voluntarios les escriban a los niños en privado", "Revisión de antecedentes y dos adultos presentes", "No hacen falta reglas"], answer: 2, why: "La revisión de antecedentes y la regla de dos adultos son protecciones comunes; sigue la política de tu organización." },
-          { q: "¿Puedes pegar el nombre y la historia de una persona que atiendes en la IA para escribir un informe?", options: ["Sí, siempre", "Solo si es corta", "Sí, si la IA es gratuita", "No; usa marcadores y deja fuera los datos privados"], answer: 3, why: "Protege a las personas que atiendes dejando sus datos fuera de las herramientas de IA." },
-          { q: "La mayoría del dinero en Grants.gov es para:", options: ["Organizaciones", "Cuentas personales", "La renta de individuos", "Comprar autos"], answer: 0, why: "Grants.gov dice que la mayoría de las oportunidades son para organizaciones, no para individuos." },
-          { q: "La IA escribió que tu grupo atendió a 500 familias, pero tus registros dicen 312. Tú:", options: ["Dejas 500, suena mejor", "Lo cambias a 312", "Quitas todos los números", "Le pides a la IA un número más grande"], answer: 1, why: "Cada dato de una subvención o un informe debe coincidir con tus registros." },
-          { q: "¿Cuál es una buena regla de IA para un grupo de la comunidad?", options: ["La IA decide quién recibe ayuda", "Nadie revisa lo que escribe la IA", "Una persona lee y revisa todo antes de que salga", "Pegar todos los expedientes en la IA"], answer: 2, why: "La revisión humana mantiene a tu grupo preciso y confiable." }
+          { objective: "O4", q: "Tu programa atiende a niños. ¿Cuál es una práctica de seguridad común?", options: ["Un adulto solo con cada niño", "Que los voluntarios les escriban a los niños en privado", "Revisión de antecedentes y dos adultos presentes", "No hacen falta reglas"], answer: 2, why: "La revisión de antecedentes y la regla de dos adultos son protecciones comunes; sigue la política de tu organización." },
+          { objective: "O4", q: "¿Puedes pegar el nombre y la historia de una persona que atiendes en la IA para escribir un informe?", options: ["Sí, siempre", "Solo si es corta", "Sí, si la IA es gratuita", "No; usa marcadores y deja fuera los datos privados"], answer: 3, why: "Protege a las personas que atiendes dejando sus datos fuera de las herramientas de IA." },
+          { objective: "O5", q: "La mayoría del dinero en Grants.gov es para:", options: ["Organizaciones", "Cuentas personales", "La renta de individuos", "Comprar autos"], answer: 0, why: "Grants.gov dice que la mayoría de las oportunidades son para organizaciones, no para individuos." },
+          { objective: "O5", q: "La IA escribió que tu grupo atendió a 500 familias, pero tus registros dicen 312. Tú:", options: ["Dejas 500, suena mejor", "Lo cambias a 312", "Quitas todos los números", "Le pides a la IA un número más grande"], answer: 1, why: "Cada dato de una subvención o un informe debe coincidir con tus registros." },
+          { objective: "O6", q: "¿Cuál es una buena regla de IA para un grupo de la comunidad?", options: ["La IA decide quién recibe ayuda", "Nadie revisa lo que escribe la IA", "Una persona lee y revisa todo antes de que salga", "Pegar todos los expedientes en la IA"], answer: 2, why: "La revisión humana mantiene a tu grupo preciso y confiable." }
         ]
       }
     }
@@ -167,26 +220,106 @@ module.exports = {
   quiz: {
     title: "Examen final: IA para dirigir organizaciones sin fines de lucro",
     questions: [
-      { q: "¿Qué tarea es mejor dejarle a las personas y no a la IA?", options: ["Ganarse la confianza de las familias", "Hacer el borrador de un volante", "Hacer una lista de revisión", "Resumir las notas de una reunión"], answer: 0, why: "Las relaciones y la confianza son trabajo humano." },
-      { q: "¿Por qué los líderes deberían usar la IA para los borradores?", options: ["Para reemplazar al equipo", "Para tener más tiempo para escuchar y estar presentes", "Para no revisar el trabajo", "Para juntar datos privados"], answer: 1, why: "La IA ahorra tiempo de escritura para que los líderes se enfoquen en las personas." },
-      { q: "Una misión dice:", options: ["La hora de la reunión", "El saldo de tu banco", "A quién sirves, qué haces y por qué", "Los teléfonos de tus voluntarios"], answer: 2, why: "Para eso sirve una misión." },
-      { q: "¿Qué meta puedes medir?", options: ["\"Hacer una diferencia\"", "\"Ayudar mucho\"", "\"Ser conocidos\"", "\"Regalar 300 mochilas para el 10 de agosto\""], answer: 3, why: "Tiene un número y una fecha." },
-      { q: "Después de que la IA sugiere misiones, debes:", options: ["Elegir y editar con tu equipo", "Usar la primera sin leerla", "Publicar las tres", "Ignorar a tu equipo"], answer: 0, why: "Tu equipo se asegura de que suene a tu comunidad." },
-      { q: "Un calendario muestra:", options: ["Quién donó", "Qué pasa y cuándo, en orden", "Solo tu presupuesto", "Las direcciones de los voluntarios"], answer: 1, why: "Un calendario pone los pasos en orden." },
-      { q: "¿Qué dato debes darle a la IA para planear un evento?", options: ["Los teléfonos de los voluntarios", "Las direcciones de las familias", "El evento, la fecha, el lugar y cuántas personas", "El acceso a tu banco"], answer: 2, why: "Esos datos ayudan sin compartir información privada." },
-      { q: "El plan de la IA no incluye traducción para las familias que hablan español. Tú:", options: ["Sigues la IA al pie de la letra", "Cancelas", "Quitas a esas familias", "Agregas la traducción al plan"], answer: 3, why: "Tú agregas lo que necesita tu comunidad." },
-      { q: "Una buena descripción del papel de un voluntario incluye:", options: ["En qué consiste el trabajo, cuánto dura y a quién preguntar", "El número de Seguro Social del voluntario", "Nada", "Solo el nombre del evento"], answer: 0, why: "Los papeles claros ayudan a los voluntarios a hacerlo bien." },
-      { q: "La regla de dos adultos quiere decir:", options: ["Dos voluntarios comparten un teléfono", "Al menos dos adultos presentes con los niños, nunca uno solo", "Dos adultos firman cada cheque", "Solo dos adultos pueden ser voluntarios"], answer: 1, why: "Es una práctica común que protege a los niños y a los voluntarios." },
-      { q: "Si no estás seguro de las reglas de seguridad para trabajar con menores, debes:", options: ["Inventar las tuyas", "Saltártelas", "Seguir la política de tu organización y las reglas del estado, y preguntar a tu aseguradora o a un abogado", "Preguntarle al amigo de un voluntario"], answer: 2, why: "La política oficial y los profesionales dan la respuesta correcta." },
-      { q: "Una subvención es:", options: ["Un préstamo que pagas con intereses", "Una tarjeta de crédito", "Una cuenta de impuestos", "Dinero para un propósito que no se devuelve"], answer: 3, why: "Las subvenciones no se devuelven." },
-      { q: "¿Cuál es un lugar local donde los grupos pequeños suelen encontrar subvenciones?", options: ["Una fundación comunitaria", "Un anuncio emergente", "Un prestamista de día de pago", "Un mensaje de un desconocido"], answer: 0, why: "Las fundaciones comunitarias dan subvenciones a grupos locales." },
-      { q: "Sobre el registro para subvenciones federales en Grants.gov, es buena idea:", options: ["Esperar al día antes de la fecha límite", "Empezar con tiempo, porque el registro tarda", "Saltarse el registro", "Pagarle a un desconocido para que lo haga"], answer: 1, why: "El registro toma tiempo, así que empieza temprano." },
-      { q: "Un resumen de cinco frases para una subvención cubre:", options: ["Solo tu nombre", "Los teléfonos de tus voluntarios", "La necesidad, el plan, a quién ayuda, la meta y la cantidad", "Una lista de quejas"], answer: 2, why: "Esas partes le dicen al financiador lo que necesita saber." },
-      { q: "Antes de enviar un resumen para una subvención que escribiste con la IA, tú:", options: ["Lo envías sin leerlo", "Agregas números más grandes", "Quitas la fecha límite", "Revisas cada dato y sigues las reglas del financiador"], answer: 3, why: "La honestidad y seguir las reglas protegen a tu grupo." },
-      { q: "Quieres compartir la historia de una familia en un boletín. Necesitas:", options: ["Su permiso por escrito", "Nada", "El permiso de la IA", "Solo la opinión de un voluntario"], answer: 0, why: "Las historias se comparten solo con permiso." },
-      { q: "¿Cuál es una buena regla de IA?", options: ["Poner datos migratorios en la IA", "Nunca poner en la IA nombres, direcciones ni datos de salud de las personas que atendemos", "Dejar que la IA decida quién recibe comida", "Nunca revisar lo que escribe la IA"], answer: 1, why: "Los datos privados se quedan fuera de las herramientas de IA." },
-      { q: "¿Debe la IA decidir quién recibe ayuda de tu programa?", options: ["Sí, siempre", "Sí, si es gratuita", "No; esas decisiones las toman personas", "Solo los fines de semana"], answer: 2, why: "Las decisiones sobre la ayuda a las personas necesitan criterio humano y justicia." },
-      { q: "¿Cada cuánto debe tu grupo revisar sus reglas de IA?", options: ["Nunca", "Cada diez años", "Solo después de un problema", "Más o menos una vez al año"], answer: 3, why: "Las herramientas cambian, así que revisa tus reglas con regularidad." }
+      { objective: "O1", q: "¿Qué tarea es mejor dejarle a las personas y no a la IA?", options: ["Ganarse la confianza de las familias", "Hacer el borrador de un volante", "Hacer una lista de revisión", "Resumir las notas de una reunión"], answer: 0, why: "Las relaciones y la confianza son trabajo humano." },
+      { objective: "O1", q: "¿Por qué los líderes deberían usar la IA para los borradores?", options: ["Para reemplazar al equipo", "Para tener más tiempo para escuchar y estar presentes", "Para no revisar el trabajo", "Para juntar datos privados"], answer: 1, why: "La IA ahorra tiempo de escritura para que los líderes se enfoquen en las personas." },
+      { objective: "O2", q: "Una misión dice:", options: ["La hora de la reunión", "El saldo de tu banco", "A quién sirves, qué haces y por qué", "Los teléfonos de tus voluntarios"], answer: 2, why: "Para eso sirve una misión." },
+      { objective: "O2", q: "¿Qué meta puedes medir?", options: ["\"Hacer una diferencia\"", "\"Ayudar mucho\"", "\"Ser conocidos\"", "\"Regalar 300 mochilas para el 10 de agosto\""], answer: 3, why: "Tiene un número y una fecha." },
+      { objective: "O2", q: "Después de que la IA sugiere misiones, debes:", options: ["Elegir y editar con tu equipo", "Usar la primera sin leerla", "Publicar las tres", "Ignorar a tu equipo"], answer: 0, why: "Tu equipo se asegura de que suene a tu comunidad." },
+      { objective: "O3", q: "Un calendario muestra:", options: ["Quién donó", "Qué pasa y cuándo, en orden", "Solo tu presupuesto", "Las direcciones de los voluntarios"], answer: 1, why: "Un calendario pone los pasos en orden." },
+      { objective: "O3", q: "¿Qué dato debes darle a la IA para planear un evento?", options: ["Los teléfonos de los voluntarios", "Las direcciones de las familias", "El evento, la fecha, el lugar y cuántas personas", "El acceso a tu banco"], answer: 2, why: "Esos datos ayudan sin compartir información privada." },
+      { objective: "O3", q: "El plan de la IA no incluye traducción para las familias que hablan español. Tú:", options: ["Sigues la IA al pie de la letra", "Cancelas", "Quitas a esas familias", "Agregas la traducción al plan"], answer: 3, why: "Tú agregas lo que necesita tu comunidad." },
+      { objective: "O4", q: "Una buena descripción del papel de un voluntario incluye:", options: ["En qué consiste el trabajo, cuánto dura y a quién preguntar", "El número de Seguro Social del voluntario", "Nada", "Solo el nombre del evento"], answer: 0, why: "Los papeles claros ayudan a los voluntarios a hacerlo bien." },
+      { objective: "O4", q: "La regla de dos adultos quiere decir:", options: ["Dos voluntarios comparten un teléfono", "Al menos dos adultos presentes con los niños, nunca uno solo", "Dos adultos firman cada cheque", "Solo dos adultos pueden ser voluntarios"], answer: 1, why: "Es una práctica común que protege a los niños y a los voluntarios." },
+      { objective: "O4", q: "Si no estás seguro de las reglas de seguridad para trabajar con menores, debes:", options: ["Inventar las tuyas", "Saltártelas", "Seguir la política de tu organización y las reglas del estado, y preguntar a tu aseguradora o a un abogado", "Preguntarle al amigo de un voluntario"], answer: 2, why: "La política oficial y los profesionales dan la respuesta correcta." },
+      { objective: "O5", q: "Una subvención es:", options: ["Un préstamo que pagas con intereses", "Una tarjeta de crédito", "Una cuenta de impuestos", "Dinero para un propósito que no se devuelve"], answer: 3, why: "Las subvenciones no se devuelven." },
+      { objective: "O5", q: "¿Cuál es un lugar local donde los grupos pequeños suelen encontrar subvenciones?", options: ["Una fundación comunitaria", "Un anuncio emergente", "Un prestamista de día de pago", "Un mensaje de un desconocido"], answer: 0, why: "Las fundaciones comunitarias dan subvenciones a grupos locales." },
+      { objective: "O5", q: "Sobre el registro para subvenciones federales en Grants.gov, es buena idea:", options: ["Esperar al día antes de la fecha límite", "Empezar con tiempo, porque el registro tarda", "Saltarse el registro", "Pagarle a un desconocido para que lo haga"], answer: 1, why: "El registro toma tiempo, así que empieza temprano." },
+      { objective: "O5", q: "Un resumen de cinco frases para una subvención cubre:", options: ["Solo tu nombre", "Los teléfonos de tus voluntarios", "La necesidad, el plan, a quién ayuda, la meta y la cantidad", "Una lista de quejas"], answer: 2, why: "Esas partes le dicen al financiador lo que necesita saber." },
+      { objective: "O5", q: "Antes de enviar un resumen para una subvención que escribiste con la IA, tú:", options: ["Lo envías sin leerlo", "Agregas números más grandes", "Quitas la fecha límite", "Revisas cada dato y sigues las reglas del financiador"], answer: 3, why: "La honestidad y seguir las reglas protegen a tu grupo." },
+      { objective: "O6", q: "Quieres compartir la historia de una familia en un boletín. Necesitas:", options: ["Su permiso por escrito", "Nada", "El permiso de la IA", "Solo la opinión de un voluntario"], answer: 0, why: "Las historias se comparten solo con permiso." },
+      { objective: "O6", q: "¿Cuál es una buena regla de IA?", options: ["Poner datos migratorios en la IA", "Nunca poner en la IA nombres, direcciones ni datos de salud de las personas que atendemos", "Dejar que la IA decida quién recibe comida", "Nunca revisar lo que escribe la IA"], answer: 1, why: "Los datos privados se quedan fuera de las herramientas de IA." },
+      { objective: "O6", q: "¿Debe la IA decidir quién recibe ayuda de tu programa?", options: ["Sí, siempre", "Sí, si es gratuita", "No; esas decisiones las toman personas", "Solo los fines de semana"], answer: 2, why: "Las decisiones sobre la ayuda a las personas necesitan criterio humano y justicia." },
+      { objective: "O6", q: "¿Cada cuánto debe tu grupo revisar sus reglas de IA?", options: ["Nunca", "Cada diez años", "Solo después de un problema", "Más o menos una vez al año"], answer: 3, why: "Las herramientas cambian, así que revisa tus reglas con regularidad." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      3,
+      5,
+      8,
+      9,
+      11,
+      14,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Misión y meta",
+        objective: "O2",
+        notYet: "No hay misión, o la meta no se puede contar.",
+        meets: "Una misión de una frase con quién, qué y por qué, y una meta con un número y una fecha.",
+        exceeds: "Editadas con el equipo para que suenen como la comunidad."
+      },
+      {
+        name: "Calendario",
+        objective: "O3",
+        notYet: "No hay calendario, o hay tareas sin nombre ni fecha.",
+        meets: "Un calendario sencillo con un nombre y una fecha junto a cada tarea.",
+        exceeds: "Incluye algo que la IA olvidó, como permisos, traducción o transporte."
+      },
+      {
+        name: "Papeles de voluntarios y seguridad",
+        objective: "O4",
+        notYet: "Menos de tres papeles, o no hay pasos de seguridad cuando hay menores de edad.",
+        meets: "Tres papeles claros, con los pasos de seguridad de la organización donde hacen falta.",
+        exceeds: "Los papeles dicen cuánto tiempo toma el trabajo y a quién pedir ayuda."
+      },
+      {
+        name: "Resumen para la subvención",
+        objective: "O5",
+        notYet: "Faltan partes, o hay datos que no coinciden con los registros.",
+        meets: "Cinco frases: la necesidad, el plan, a quién ayuda, la meta y la cantidad, todo revisado.",
+        exceeds: "Cumple el límite de palabras y las preguntas de un financiador real."
+      },
+      {
+        name: "Reglas de IA y privacidad",
+        objective: "O6",
+        notYet: "Menos de cinco reglas, o quedó información privada en el plan.",
+        meets: "Cinco reglas de IA claras, y nada de información privada en el plan.",
+        exceeds: "Las reglas incluyen una revisión cada año y están listas para compartirlas con los voluntarios."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Personas que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Grupos que adoptan reglas de IA por escrito dentro de 30 días (encuesta de seguimiento)",
+      "Grupos que solicitan al menos una subvención dentro de 90 días, y las subvenciones que ganan",
+      "Grupos que reportan más voluntarios o más personas atendidas después de usar su plan"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono inteligente, o una computadora de la biblioteca o de la oficina",
+      "Un asistente de IA gratuito: Microsoft Copilot, ChatGPT o Google Gemini",
+      "Datos de un programa real o de práctica: a quién atiende, resultados y registros",
+      "Papel o una herramienta de documentos gratuita para el plan de una página",
+      "Unos 60 minutos en total: lecciones, práctica, comprobaciones y la tarea final"
+    ],
+    facilitatorNotes: [
+      "Pide que los equipos del mismo grupo trabajen juntos para que el plan y las reglas de IA sean compartidos.",
+      "Revisa que ningún prompt tenga nombres, teléfonos ni datos de salud o de inmigración de las personas atendidas.",
+      "En los programas con menores de edad, remite a la política de seguridad de la propia organización; este curso no la reemplaza.",
+      "Lleva una lista de las fundaciones comunitarias locales y de la ayuda con subvenciones que hay en la biblioteca.",
+      "Califica la tarea final con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

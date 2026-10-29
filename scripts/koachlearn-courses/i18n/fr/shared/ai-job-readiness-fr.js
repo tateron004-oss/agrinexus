@@ -16,11 +16,35 @@ module.exports = {
     "Vous construirez votre propre kit emploi étape par étape. Chaque leçon dure environ cinq minutes avec une tâche « Essayez maintenant », un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin. Gardez les détails privés hors de l'IA : pas de numéro de sécurité sociale, de pièce d'identité, de dossier ou d'écrou."
   ],
   finalTask: "Trouvez une vraie offre d'emploi à laquelle vous pourriez postuler. Avec un assistant d'IA, construisez un CV d'une page adapté à cette offre, une lettre de motivation de moins de 200 mots et des réponses à cinq questions d'entretien probables, dont une sur un trou dans votre parcours ou votre passé si cela vous concerne. Entraînez-vous à dire les réponses à voix haute, comparez l'offre aux signes d'arnaque, et postulez ou gardez la candidature prête à envoyer.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des adultes qui sortent de prison (réinsertion) et cherchent du travail, souvent avec des trous dans leur parcours professionnel et un casier judiciaire à expliquer. Beaucoup ont une vraie expérience de travail acquise en prison, dans l'armée, en s'occupant d'un proche ou dans du travail informel.",
+    startingPoint: "Ils savent appeler et envoyer des SMS avec un téléphone simple ; certains ont un compte e-mail et ont essayé un assistant d'IA. Beaucoup n'ont pas de CV à jour, n'ont pas passé d'entretien récemment et ne savent pas comment parler de leur passé.",
+    gap: "Un emploi stable est l'un des meilleurs appuis pour réussir son retour, mais les candidatures se font maintenant en ligne et les employeurs attendent un CV adapté et des réponses d'entretien assurées. Les apprenants doivent transformer leur vraie expérience en documents de candidature avec l'aide de l'IA, répondre honnêtement aux questions sur les trous dans leur parcours, et éviter les arnaques à l'emploi qui visent les personnes qui ont vite besoin de travailler.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes (niveau fin d'école primaire)",
+      "Appareils : parfois seulement un téléphone simple ou un ordinateur de bibliothèque ou de service de l'emploi à temps limité",
+      "Temps : des leçons de 5 minutes qui s'insèrent entre les rendez-vous et le travail",
+      "Vie privée : aucun numéro de sécurité sociale, de dossier ou d'écrou, ni coordonnées bancaires dans les outils d'IA ou sur un CV",
+      "Les règles sur le casier varient selon l'État et la ville ; les apprenants se renseignent auprès du service du travail de leur État ou d'une association d'aide juridique à la réinsertion, et respectent leurs propres conditions de libération conditionnelle ou de mise à l'épreuve"
+    ],
+    prerequisites: "Aucun. « Découvrir l'IA et prendre confiance avec le numérique » est un premier cours utile pour les apprenants qui découvrent l'IA."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir de votre expérience de travail, de formation, de bénévolat et de vie, en détention ou dehors", action: "lister vos compétences professionnelles avec les mots des employeurs, avec un exemple vrai pour chacune", standard: "en ne gardant que les compétences qui sont vraies pour vous" },
+    { id: "O2", condition: "À partir d'une vraie offre d'emploi et d'un modèle gratuit", action: "créer un CV d'une page adapté à l'offre, avec des points qui commencent par un verbe d'action et des chiffres", standard: "avec chaque mot vrai et sans numéro de sécurité sociale, date de naissance ni photo" },
+    { id: "O3", condition: "Pour la même offre d'emploi", action: "rédiger une lettre de motivation en trois courts paragraphes", standard: "de moins de 200 mots, qui vous ressemble quand on la lit à voix haute" },
+    { id: "O4", condition: "Avec un assistant d'IA comme recruteur d'entraînement", action: "répondre à voix haute à cinq questions d'entretien courantes, avec la méthode STAR pour les questions « Parlez-moi d'une fois où... »", standard: "sans lire vos notes" },
+    { id: "O5", condition: "Si vous avez un trou dans votre parcours ou un casier", action: "préparer une réponse courte et honnête qui se tourne vers les raisons pour lesquelles vous êtes prêt maintenant", standard: "en n'utilisant que des faits que vous êtes à l'aise de partager, dite calmement à voix haute" },
+    { id: "O6", condition: "Quand vous cherchez un emploi et postulez", action: "trouver des offres sur des sites fiables, suivre chaque candidature et vérifier chaque offre pour repérer les signes d'arnaque", standard: "sans donner de numéro de compte bancaire ou de sécurité sociale avant une vraie offre d'emploi" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Préparer vos documents de candidature",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Trouver les compétences que vous avez déjà",
           minutes: 5,
           goal: "Transformer votre expérience de vie et de travail en une liste de compétences professionnelles.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Rester vrai", bullets: ["Retirer les compétences que vous n'avez pas", "Un vrai exemple pour chacune", "On peut vous interroger sur tout"] }
           ],
           tryIt: "Décrivez à un assistant d'IA trois choses que vous avez faites et demandez-lui quelles compétences professionnelles elles montrent. Écrivez une liste principale d'au moins huit compétences vraies, chacune avec un exemple.",
-          youCanNow: "transformer votre expérience en une liste vraie de compétences professionnelles, dans le langage des employeurs."
+          youCanNow: "transformer votre expérience en une liste vraie de compétences professionnelles, dans le langage des employeurs.",
+          quickCheck: [
+            { objective: "O1", q: "Qu'est-ce qu'une compétence transférable ?", options: ["Une compétence qui ne sert que dans un seul emploi", "Une compétence acquise dans un contexte qui sert dans un autre", "Une compétence qu'on paie pour apprendre", "Une compétence que seuls les chefs ont"], answer: 1, why: "Les compétences transférables, comme former les autres, passent d'un contexte à un autre." },
+            { objective: "O1", q: "Pendant des années, vous avez réparé les voitures de vos voisins sans être payé. Que faites-vous de cette expérience ?", options: ["La laisser de côté : ce n'était pas un vrai emploi", "Dire que vous étiez mécanicien diplômé", "Attendre qu'un recruteur vous pose la question", "Demander à l'IA quelles compétences elle montre et lister les vraies avec un exemple"], answer: 3, why: "Le travail informel donne de vraies compétences ; listez seulement celles qui sont vraies, avec un exemple." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Rédiger un CV d'une page avec l'IA",
           minutes: 6,
           goal: "Construire un CV clair d'une page, adapté à une vraie offre d'emploi.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Rester prudent et vrai", bullets: ["Pas de sécurité sociale, date de naissance ni photo (États-Unis)", "Demander au conseiller comment présenter le travail en détention", "Vérifier chaque mot"] }
           ],
           tryIt: "Trouvez une vraie offre d'emploi. Utilisez l'IA pour trouver ses mots-clés et écrire cinq points à partir de vos vrais exemples. Mettez-les dans un modèle de CV d'une page.",
-          youCanNow: "construire avec l'aide de l'IA un CV d'une page adapté à une vraie offre d'emploi."
+          youCanNow: "construire avec l'aide de l'IA un CV d'une page adapté à une vraie offre d'emploi.",
+          quickCheck: [
+            { objective: "O2", q: "Que devez-vous coller dans l'IA pour adapter votre CV ?", options: ["L'offre d'emploi", "Votre numéro de sécurité sociale", "Votre numéro de dossier", "Vos coordonnées bancaires"], answer: 0, why: "Collez l'offre d'emploi, pas vos informations privées, pour que l'IA trouve les mots clés." },
+            { objective: "O2", q: "Votre CV fait une page et demie pour un premier emploi. Que faites-vous ?", options: ["Mettre une toute petite police", "Ajouter des pages", "Le réduire à une page avec les points les plus forts qui correspondent à l'offre", "Ajouter une photo"], answer: 2, why: "La plupart des CV pour un premier emploi doivent tenir sur une page, centrée sur ce que demande l'offre." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Rédiger une courte lettre de motivation",
           minutes: 5,
           goal: "Rédiger une lettre de motivation de moins de 200 mots qui vous ressemble.",
@@ -75,17 +109,21 @@ module.exports = {
             { title: "La faire vôtre", bullets: ["Changer ce que vous ne diriez jamais", "Ajouter un détail vrai", "La lire à voix haute"] }
           ],
           tryIt: "Rédigez avec l'IA une lettre de motivation pour votre offre, de moins de 200 mots, et corrigez-la jusqu'à ce qu'elle vous ressemble quand vous la lisez à voix haute.",
-          youCanNow: "rédiger une lettre de motivation courte et personnelle avec l'aide de l'IA."
+          youCanNow: "rédiger une lettre de motivation courte et personnelle avec l'aide de l'IA.",
+          quickCheck: [
+            { objective: "O3", q: "Que met-on dans le deuxième paragraphe de la lettre de motivation ?", options: ["Votre date de naissance", "Vos anciens salaires", "Seulement un remerciement", "Deux compétences qui correspondent au poste, avec un court exemple"], answer: 3, why: "Le paragraphe 2 donne deux compétences qui correspondent au poste, avec des exemples." },
+            { objective: "O3", q: "La lettre de l'IA dit : « Je suis extrêmement enthousiaste à l'idée de mobiliser mes synergies. » Que faites-vous ?", options: ["La garder : ça fait sérieux", "La remplacer par des mots que vous diriez vraiment", "La rallonger", "L'envoyer sans la lire"], answer: 1, why: "Changez toute phrase que vous ne diriez jamais pour que la lettre vous ressemble." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Préparer vos documents de candidature",
         questions: [
-          { q: "Vous avez formé les nouveaux en cuisine en détention. Quelle compétence cela montre-t-il ?", options: ["Conduite de chariot élévateur", "Comptabilité", "Former les autres", "Aucune"], answer: 2, why: "Former les nouveaux est une compétence transférable." },
-          { q: "L'IA ajoute « parle couramment espagnol » à vos compétences, mais ce n'est pas le cas. Que faites-vous ?", options: ["Le retirer", "Le garder", "Apprendre l'espagnol avant l'entretien", "Ajouter d'autres langues"], answer: 0, why: "Tout ce qui est sur un CV doit être vrai." },
-          { q: "Qu'est-ce qui ne doit PAS figurer sur un CV destiné aux États-Unis ?", options: ["Vos compétences", "Votre expérience professionnelle", "Votre numéro de téléphone", "Votre numéro de sécurité sociale"], answer: 3, why: "Les numéros privés n'ont pas leur place sur un CV." },
-          { q: "Que veut dire adapter un CV ?", options: ["Coudre des vêtements", "Le modifier pour qu'il corresponde à une offre précise", "Le faire tenir sur trois pages", "Utiliser le même CV pour toutes les offres"], answer: 1, why: "Un CV adapté reprend les mots-clés de l'offre." },
-          { q: "Quelle longueur doit avoir la lettre de motivation dans ce cours ?", options: ["Cinq pages", "Moins de 200 mots", "Un mot", "Plus de 1 000 mots"], answer: 1, why: "Les lettres courtes sont lues." }
+          { objective: "O1", q: "Vous avez formé les nouveaux en cuisine en détention. Quelle compétence cela montre-t-il ?", options: ["Conduite de chariot élévateur", "Comptabilité", "Former les autres", "Aucune"], answer: 2, why: "Former les nouveaux est une compétence transférable." },
+          { objective: "O1", q: "L'IA ajoute « parle couramment espagnol » à vos compétences, mais ce n'est pas le cas. Que faites-vous ?", options: ["Le retirer", "Le garder", "Apprendre l'espagnol avant l'entretien", "Ajouter d'autres langues"], answer: 0, why: "Tout ce qui est sur un CV doit être vrai." },
+          { objective: "O2", q: "Qu'est-ce qui ne doit PAS figurer sur un CV destiné aux États-Unis ?", options: ["Vos compétences", "Votre expérience professionnelle", "Votre numéro de téléphone", "Votre numéro de sécurité sociale"], answer: 3, why: "Les numéros privés n'ont pas leur place sur un CV." },
+          { objective: "O2", q: "Que veut dire adapter un CV ?", options: ["Coudre des vêtements", "Le modifier pour qu'il corresponde à une offre précise", "Le faire tenir sur trois pages", "Utiliser le même CV pour toutes les offres"], answer: 1, why: "Un CV adapté reprend les mots-clés de l'offre." },
+          { objective: "O3", q: "Quelle longueur doit avoir la lettre de motivation dans ce cours ?", options: ["Cinq pages", "Moins de 200 mots", "Un mot", "Plus de 1 000 mots"], answer: 1, why: "Les lettres courtes sont lues." }
         ]
       }
     },
@@ -93,6 +131,7 @@ module.exports = {
       name: "Chapitre 2 : Entretiens et recherche d'emploi",
       lessons: [
         {
+          objectives: ["O4"],
           title: "S'entraîner aux entretiens avec l'IA",
           minutes: 6,
           goal: "Utiliser l'IA comme recruteur d'entraînement et améliorer vos réponses.",
@@ -109,9 +148,14 @@ module.exports = {
             { title: "Cinq questions à préparer", bullets: ["Parlez-moi de vous ; pourquoi ce poste", "Une qualité ; un problème résolu", "Vos questions pour eux"] }
           ],
           tryIt: "Faites un entretien blanc avec l'IA pour votre offre. Répondez à cinq questions à voix haute en utilisant STAR quand c'est adapté, et notez les retours.",
-          youCanNow: "vous entraîner aux entretiens avec l'IA et répondre avec la méthode STAR."
+          youCanNow: "vous entraîner aux entretiens avec l'IA et répondre avec la méthode STAR.",
+          quickCheck: [
+            { objective: "O4", q: "Dans la méthode STAR, que veut dire « Résultat » ?", options: ["Votre intitulé de poste", "Le problème que vous aviez", "Ce qui s'est passé grâce à ce que vous avez fait", "La question qu'on vous a posée"], answer: 2, why: "Le résultat, c'est la conséquence de votre action, comme finir à l'heure tous les jours." },
+            { objective: "O4", q: "Vous ne pouvez répondre à « Parlez-moi de vous » qu'en lisant vos notes. Que faites-vous ?", options: ["Vous entraîner à voix haute avec l'IA jusqu'à pouvoir répondre sans notes", "Sauter cette question pendant l'entretien", "Apprendre par cœur un long discours écrit par l'IA", "Apporter vos notes et les lire"], answer: 0, why: "Entraînez-vous à voix haute jusqu'à pouvoir répondre sans lire." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Parler d'un trou dans le parcours ou d'un casier avec assurance",
           minutes: 5,
           goal: "Préparer une réponse courte, honnête et tournée vers l'avenir sur un trou dans votre parcours ou votre passé.",
@@ -129,9 +173,14 @@ module.exports = {
           ],
           sources: [{ name: "The Federal Bonding Program", url: "https://bonds4jobs.com/" }, { name: "Ministère du Travail des États-Unis : Work Opportunity Tax Credit", url: "https://www.dol.gov/agencies/eta/wotc" }, { name: "IRS : Work Opportunity Tax Credit", url: "https://www.irs.gov/businesses/small-businesses-self-employed/work-opportunity-tax-credit" }],
           tryIt: "Écrivez une réponse de trois phrases sur un trou dans votre parcours ou votre passé (le vôtre, ou un exemple). Utilisez l'IA pour la resserrer, puis dites-la trois fois à voix haute.",
-          youCanNow: "répondre honnêtement et avec assurance aux questions sur un trou dans votre parcours ou un casier, et citer des aides possibles."
+          youCanNow: "répondre honnêtement et avec assurance aux questions sur un trou dans votre parcours ou un casier, et citer des aides possibles.",
+          quickCheck: [
+            { objective: "O5", q: "Que veulent surtout savoir les employeurs quand ils posent une question sur un trou dans le parcours ?", options: ["Chaque détail de votre affaire", "Votre numéro de dossier", "Que vous êtes prêt à travailler maintenant", "Qui était votre avocat"], answer: 2, why: "Les employeurs veulent surtout savoir que vous êtes prêt maintenant : restez bref et tourné vers l'avenir." },
+            { objective: "O5", q: "Un recruteur vous pose une question sur votre casier. Quelle réponse est la meilleure ?", options: ["« Ça ne vous regarde pas. »", "Une longue histoire avec tous les détails", "« Je n'ai jamais eu de problème. »", "« J'ai fait une erreur et j'ai purgé ma peine. J'y ai obtenu mon certificat d'hygiène alimentaire, et je suis prêt à travailler. »"], answer: 3, why: "Honnête, brève et centrée sur ce que vous avez appris et pourquoi vous êtes prêt." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Chercher et postuler en sécurité",
           minutes: 5,
           goal: "Trouver de vraies offres, suivre vos candidatures et éviter les arnaques à l'emploi.",
@@ -149,17 +198,21 @@ module.exports = {
           ],
           sources: [{ name: "FTC : arnaques à l'emploi", url: "https://consumer.ftc.gov/articles/job-scams" }, { name: "CareerOneStop (ministère du Travail des États-Unis) : trouver un American Job Center", url: "https://www.careeronestop.org/LocalHelp/AmericanJobCenters/find-american-job-centers.aspx" }],
           tryIt: "Tâche finale : finalisez votre CV adapté, votre lettre de motivation et vos cinq réponses d'entretien travaillées pour votre vraie offre. Comparez l'offre aux signes d'arnaque, ajoutez-la à un tableau de suivi, et postulez ou gardez-la prête à envoyer.",
-          youCanNow: "construire un kit emploi avec l'IA, passer un entretien avec assurance et postuler en sécurité."
+          youCanNow: "construire un kit emploi avec l'IA, passer un entretien avec assurance et postuler en sécurité.",
+          quickCheck: [
+            { objective: "O6", q: "Où pouvez-vous obtenir une aide gratuite pour chercher un emploi et vous former ?", options: ["Dans un American Job Center", "Sur un site qui fait payer pour postuler", "Par un SMS d'un numéro inconnu", "Dans un emploi qui vous demande de réexpédier des colis"], answer: 0, why: "Les American Job Centers offrent une aide gratuite pour chercher un emploi et se former." },
+            { objective: "O6", q: "Un « emploi » propose un gros salaire pour peu de travail et demande votre compte bancaire avant tout entretien. Que faites-vous ?", options: ["Le donner pour commencer plus vite", "Envoyer seulement la moitié du numéro de compte", "Ne pas le donner ; vérifier les signes d'arnaque et la signaler", "Payer d'abord de petits frais"], answer: 2, why: "Ne donnez jamais votre compte bancaire avant une vraie offre : il y a ici des signes d'arnaque." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Entretiens et recherche d'emploi",
         questions: [
-          { q: "Que veut dire STAR ?", options: ["Start, Talk, Ask, Rest", "Skills, Training, Awards, References", "Sourire, Remercier, Répondre, Revenir", "Situation, Tâche, Action, Résultat"], answer: 3, why: "STAR structure les réponses aux questions « Parlez-moi d'une fois où... »." },
-          { q: "Une bonne réponse sur un trou dans le parcours ou un casier est :", options: ["Honnête, brève et centrée sur le fait que vous êtes prêt maintenant", "Une longue histoire avec tous les détails", "Un mensonge", "Un refus impoli de répondre"], answer: 0, why: "Des réponses courtes, honnêtes et tournées vers l'avenir marchent le mieux." },
-          { q: "Qu'offre le Federal Bonding Program ?", options: ["Des voitures gratuites", "De l'argent aux demandeurs d'emploi", "Des garanties de fidélité gratuites aux employeurs qui embauchent des personnes en difficulté", "Une libération de prison"], answer: 2, why: "Il donne aux employeurs des garanties gratuites pour les six premiers mois." },
-          { q: "Une offre d'emploi vous demande de payer 150 $ de formation avant de commencer. Selon la FTC, c'est :", options: ["Normal pour tout emploi", "Un impôt", "Une prime", "Un signe d'arnaque"], answer: 3, why: "Les employeurs honnêtes ne vous font pas payer pour obtenir un emploi." },
-          { q: "Quand relancer après avoir postulé ?", options: ["Toutes les heures", "Jamais", "Environ une semaine plus tard, par un court e-mail poli", "Au bout d'un an"], answer: 2, why: "Une relance polie montre votre intérêt." }
+          { objective: "O4", q: "Que veut dire STAR ?", options: ["Start, Talk, Ask, Rest", "Skills, Training, Awards, References", "Sourire, Remercier, Répondre, Revenir", "Situation, Tâche, Action, Résultat"], answer: 3, why: "STAR structure les réponses aux questions « Parlez-moi d'une fois où... »." },
+          { objective: "O5", q: "Une bonne réponse sur un trou dans le parcours ou un casier est :", options: ["Honnête, brève et centrée sur le fait que vous êtes prêt maintenant", "Une longue histoire avec tous les détails", "Un mensonge", "Un refus impoli de répondre"], answer: 0, why: "Des réponses courtes, honnêtes et tournées vers l'avenir marchent le mieux." },
+          { objective: "O5", q: "Qu'offre le Federal Bonding Program ?", options: ["Des voitures gratuites", "De l'argent aux demandeurs d'emploi", "Des garanties de fidélité gratuites aux employeurs qui embauchent des personnes en difficulté", "Une libération de prison"], answer: 2, why: "Il donne aux employeurs des garanties gratuites pour les six premiers mois." },
+          { objective: "O6", q: "Une offre d'emploi vous demande de payer 150 $ de formation avant de commencer. Selon la FTC, c'est :", options: ["Normal pour tout emploi", "Un impôt", "Une prime", "Un signe d'arnaque"], answer: 3, why: "Les employeurs honnêtes ne vous font pas payer pour obtenir un emploi." },
+          { objective: "O6", q: "Quand relancer après avoir postulé ?", options: ["Toutes les heures", "Jamais", "Environ une semaine plus tard, par un court e-mail poli", "Au bout d'un an"], answer: 2, why: "Une relance polie montre votre intérêt." }
         ]
       }
     }
@@ -167,26 +220,114 @@ module.exports = {
   quiz: {
     title: "Quiz final : L'IA pour se préparer à l'emploi et développer sa carrière",
     questions: [
-      { q: "Une compétence transférable est :", options: ["Une compétence qu'on peut vendre", "Une compétence acquise dans un contexte qui sert dans un autre", "Une compétence réservée aux ordinateurs", "Une fausse compétence"], answer: 1, why: "Les compétences passent d'un contexte à l'autre." },
-      { q: "Lequel est un savoir-être ?", options: ["La fiabilité", "La conduite de chariot élévateur", "La soudure", "La vitesse de frappe"], answer: 0, why: "Les savoir-être sont des compétences relationnelles." },
-      { q: "Quelle expérience compte comme compétence professionnelle ?", options: ["Seulement les emplois de bureau payés", "Seulement l'université", "S'occuper d'un proche", "Rien en dehors d'un emploi"], answer: 2, why: "Toute expérience réelle développe des compétences." },
-      { q: "Pourquoi tout ce qui est sur votre CV doit-il être vrai ?", options: ["On peut vous interroger dessus en entretien", "L'IA le vérifie", "Ce n'est pas nécessaire", "Pour qu'il soit plus long"], answer: 0, why: "Les recruteurs posent des questions sur ce que vous indiquez." },
-      { q: "Un mot-clé est :", options: ["Un mot de passe", "Une clé du bureau", "Votre nom", "Un mot important de l'offre d'emploi"], answer: 3, why: "Reprendre les mots-clés aide votre CV à être remarqué." },
-      { q: "Quel point de CV est le plus fort ?", options: ["« Fait des trucs en cuisine »", "« Préparé chaque jour des repas pour 500 personnes en respectant les normes d'hygiène alimentaire »", "« Travaillé »", "« Nourriture »"], answer: 1, why: "Un verbe d'action, des chiffres et un résultat." },
-      { q: "Pour que l'IA adapte votre CV, vous collez :", options: ["Votre numéro de sécurité sociale", "L'offre d'emploi, pas vos informations privées", "Votre numéro de dossier", "Vos coordonnées bancaires"], answer: 1, why: "C'est l'offre dont l'IA a besoin." },
-      { q: "Quelle longueur doit avoir un CV pour la plupart des emplois de début de carrière ?", options: ["Dix pages", "Une demi-ligne", "Le plus long possible", "Une page"], answer: 3, why: "Une page se lit facilement." },
-      { q: "Une lettre de motivation explique :", options: ["Pourquoi vous voulez le poste et pourquoi vous convenez", "Toute l'histoire de votre vie", "Seulement vos anciens salaires", "Vos mots de passe"], answer: 0, why: "Elle fait le lien entre vous et le poste." },
-      { q: "Une fois que l'IA a rédigé votre lettre de motivation, vous devez :", options: ["L'envoyer sans la lire", "Ajouter des compétences que vous n'avez pas", "La corriger et la lire à voix haute jusqu'à ce qu'elle vous ressemble", "La porter à 1 000 mots"], answer: 2, why: "Votre lettre doit vous ressembler." },
-      { q: "Un entretien blanc est :", options: ["Un faux emploi", "Un entretien impoli", "Un entretien qu'on saute", "Un entretien d'entraînement"], answer: 3, why: "L'entraînement donne confiance." },
-      { q: "Dans STAR, « Action » veut dire :", options: ["La météo", "Le nom de l'entreprise", "Ce que vous avez fait", "Votre salaire"], answer: 2, why: "L'action est votre part de l'histoire." },
-      { q: "« Avez-vous des questions pour nous ? » Meilleure réponse :", options: ["« Non. »", "Poser une question réfléchie sur le poste ou l'équipe", "Seulement « Quand pourrai-je prendre des vacances ? »", "Partir"], answer: 1, why: "De bonnes questions montrent votre intérêt." },
-      { q: "Quand vous parlez d'un casier, vous devez :", options: ["Ne partager que les faits avec lesquels vous êtes à l'aise, brièvement", "Donner votre numéro de dossier", "Mentir", "En parler pendant 20 minutes"], answer: 0, why: "Bref, honnête et tourné vers l'avenir, c'est le mieux." },
-      { q: "Les règles « fair chance » ou « ban the box » :", options: ["Sont les mêmes partout", "N'existent pas", "Varient selon l'État et la ville ; renseignez-vous auprès du service du travail de votre État", "Interdisent toute vérification des antécédents"], answer: 2, why: "Ces règles diffèrent selon les endroits." },
-      { q: "Où vérifier la situation actuelle du Work Opportunity Tax Credit ?", options: ["Sur la page WOTC de l'IRS", "Dans une publication sur les réseaux sociaux", "Dans une supposition de l'IA", "Dans une annonce d'emploi"], answer: 0, why: "Les règles et dates des crédits d'impôt changent ; l'IRS fait foi." },
-      { q: "Les American Job Centers offrent :", options: ["Seulement la rédaction payante de CV", "Des prêts", "Un logement", "Une aide gratuite pour chercher un emploi et se former"], answer: 3, why: "Ce sont des centres d'aide à l'emploi gratuits." },
-      { q: "Un tableau de suivi des candidatures contient :", options: ["Vos mots de passe", "Entreprise, poste, date de candidature, contact et date de relance", "Votre compte bancaire", "Rien"], answer: 1, why: "Le suivi vous garde organisé." },
-      { q: "Un « emploi » vous demande d'encaisser un chèque et d'en renvoyer une partie. C'est :", options: ["Une paie normale", "Une arnaque au faux chèque", "Une prime", "Un remboursement d'impôt"], answer: 1, why: "La FTC cite cette arnaque comme courante." },
-      { q: "Quand peut-on donner son numéro de compte bancaire pour la paie ?", options: ["Dans le premier message à n'importe quel recruteur", "Dans un commentaire sur un site d'emploi", "À quiconque le demande", "Après une vraie offre d'un vrai employeur vérifié"], answer: 3, why: "On ne le partage pour la paie qu'après une vraie offre vérifiée." }
+      { objective: "O1", q: "Une compétence transférable est :", options: ["Une compétence qu'on peut vendre", "Une compétence acquise dans un contexte qui sert dans un autre", "Une compétence réservée aux ordinateurs", "Une fausse compétence"], answer: 1, why: "Les compétences passent d'un contexte à l'autre." },
+      { objective: "O1", q: "Lequel est un savoir-être ?", options: ["La fiabilité", "La conduite de chariot élévateur", "La soudure", "La vitesse de frappe"], answer: 0, why: "Les savoir-être sont des compétences relationnelles." },
+      { objective: "O1", q: "Quelle expérience compte comme compétence professionnelle ?", options: ["Seulement les emplois de bureau payés", "Seulement l'université", "S'occuper d'un proche", "Rien en dehors d'un emploi"], answer: 2, why: "Toute expérience réelle développe des compétences." },
+      { objective: "O1", q: "Pourquoi tout ce qui est sur votre CV doit-il être vrai ?", options: ["On peut vous interroger dessus en entretien", "L'IA le vérifie", "Ce n'est pas nécessaire", "Pour qu'il soit plus long"], answer: 0, why: "Les recruteurs posent des questions sur ce que vous indiquez." },
+      { objective: "O2", q: "Un mot-clé est :", options: ["Un mot de passe", "Une clé du bureau", "Votre nom", "Un mot important de l'offre d'emploi"], answer: 3, why: "Reprendre les mots-clés aide votre CV à être remarqué." },
+      { objective: "O2", q: "Quel point de CV est le plus fort ?", options: ["« Fait des trucs en cuisine »", "« Préparé chaque jour des repas pour 500 personnes en respectant les normes d'hygiène alimentaire »", "« Travaillé »", "« Nourriture »"], answer: 1, why: "Un verbe d'action, des chiffres et un résultat." },
+      { objective: "O2", q: "Pour que l'IA adapte votre CV, vous collez :", options: ["Votre numéro de sécurité sociale", "L'offre d'emploi, pas vos informations privées", "Votre numéro de dossier", "Vos coordonnées bancaires"], answer: 1, why: "C'est l'offre dont l'IA a besoin." },
+      { objective: "O2", q: "Quelle longueur doit avoir un CV pour la plupart des emplois de début de carrière ?", options: ["Dix pages", "Une demi-ligne", "Le plus long possible", "Une page"], answer: 3, why: "Une page se lit facilement." },
+      { objective: "O3", q: "Une lettre de motivation explique :", options: ["Pourquoi vous voulez le poste et pourquoi vous convenez", "Toute l'histoire de votre vie", "Seulement vos anciens salaires", "Vos mots de passe"], answer: 0, why: "Elle fait le lien entre vous et le poste." },
+      { objective: "O3", q: "Une fois que l'IA a rédigé votre lettre de motivation, vous devez :", options: ["L'envoyer sans la lire", "Ajouter des compétences que vous n'avez pas", "La corriger et la lire à voix haute jusqu'à ce qu'elle vous ressemble", "La porter à 1 000 mots"], answer: 2, why: "Votre lettre doit vous ressembler." },
+      { objective: "O4", q: "Un entretien blanc est :", options: ["Un faux emploi", "Un entretien impoli", "Un entretien qu'on saute", "Un entretien d'entraînement"], answer: 3, why: "L'entraînement donne confiance." },
+      { objective: "O4", q: "Dans STAR, « Action » veut dire :", options: ["La météo", "Le nom de l'entreprise", "Ce que vous avez fait", "Votre salaire"], answer: 2, why: "L'action est votre part de l'histoire." },
+      { objective: "O4", q: "« Avez-vous des questions pour nous ? » Meilleure réponse :", options: ["« Non. »", "Poser une question réfléchie sur le poste ou l'équipe", "Seulement « Quand pourrai-je prendre des vacances ? »", "Partir"], answer: 1, why: "De bonnes questions montrent votre intérêt." },
+      { objective: "O5", q: "Quand vous parlez d'un casier, vous devez :", options: ["Ne partager que les faits avec lesquels vous êtes à l'aise, brièvement", "Donner votre numéro de dossier", "Mentir", "En parler pendant 20 minutes"], answer: 0, why: "Bref, honnête et tourné vers l'avenir, c'est le mieux." },
+      { objective: "O5", q: "Les règles « fair chance » ou « ban the box » :", options: ["Sont les mêmes partout", "N'existent pas", "Varient selon l'État et la ville ; renseignez-vous auprès du service du travail de votre État", "Interdisent toute vérification des antécédents"], answer: 2, why: "Ces règles diffèrent selon les endroits." },
+      { objective: "O5", q: "Où vérifier la situation actuelle du Work Opportunity Tax Credit ?", options: ["Sur la page WOTC de l'IRS", "Dans une publication sur les réseaux sociaux", "Dans une supposition de l'IA", "Dans une annonce d'emploi"], answer: 0, why: "Les règles et dates des crédits d'impôt changent ; l'IRS fait foi." },
+      { objective: "O6", q: "Les American Job Centers offrent :", options: ["Seulement la rédaction payante de CV", "Des prêts", "Un logement", "Une aide gratuite pour chercher un emploi et se former"], answer: 3, why: "Ce sont des centres d'aide à l'emploi gratuits." },
+      { objective: "O6", q: "Un tableau de suivi des candidatures contient :", options: ["Vos mots de passe", "Entreprise, poste, date de candidature, contact et date de relance", "Votre compte bancaire", "Rien"], answer: 1, why: "Le suivi vous garde organisé." },
+      { objective: "O6", q: "Un « emploi » vous demande d'encaisser un chèque et d'en renvoyer une partie. C'est :", options: ["Une paie normale", "Une arnaque au faux chèque", "Une prime", "Un remboursement d'impôt"], answer: 1, why: "La FTC cite cette arnaque comme courante." },
+      { objective: "O6", q: "Quand peut-on donner son numéro de compte bancaire pour la paie ?", options: ["Dans le premier message à n'importe quel recruteur", "Dans un commentaire sur un site d'emploi", "À quiconque le demande", "Après une vraie offre d'un vrai employeur vérifié"], answer: 3, why: "On ne le partage pour la paie qu'après une vraie offre vérifiée." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      3,
+      5,
+      7,
+      8,
+      11,
+      13,
+      16,
+      18,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "CV adapté",
+        objective: "O2",
+        notYet: "Plus d'une page, pas adapté à l'offre, ou contient des numéros privés.",
+        meets: "Une page avec les mots clés de l'offre, des points avec verbes d'action et chiffres, et aucun numéro privé.",
+        exceeds: "Chaque point est relié à une compétence demandée dans l'offre."
+      },
+      {
+        name: "Compétences vraies",
+        objective: "O1",
+        notYet: "Une compétence ou une affirmation du CV n'est pas vraie.",
+        meets: "Chaque compétence est vraie et appuyée par un exemple réel.",
+        exceeds: "Les compétences acquises en prison, en s'occupant d'un proche ou dans du travail informel sont décrites avec les mots des employeurs."
+      },
+      {
+        name: "Lettre de motivation",
+        objective: "O3",
+        notYet: "Plus de 200 mots, ou ressemble à une lettre d'IA générique.",
+        meets: "Trois courts paragraphes de moins de 200 mots qui ressemblent à l'apprenant.",
+        exceeds: "Inclut un détail vrai sur la raison pour laquelle il veut travailler là."
+      },
+      {
+        name: "Réponses d'entretien",
+        objective: "O4",
+        notYet: "Moins de cinq réponses, ou les réponses sont lues dans les notes.",
+        meets: "Cinq réponses travaillées à voix haute, avec STAR pour « Parlez-moi d'une fois où ».",
+        exceeds: "Utilise les retours de l'IA pour améliorer au moins deux réponses."
+      },
+      {
+        name: "Réponse sur le parcours ou le passé",
+        objective: "O5",
+        notYet: "La réponse est longue, sur la défensive ou fausse (si c'est le cas de l'apprenant).",
+        meets: "Courte, honnête, et se termine par la raison pour laquelle l'apprenant est prêt maintenant.",
+        exceeds: "Dite calmement à voix haute, sans notes."
+      },
+      {
+        name: "Candidature en sécurité",
+        objective: "O6",
+        notYet: "L'offre n'a pas été vérifiée pour repérer les signes d'arnaque.",
+        meets: "L'offre a été comparée aux signes d'arnaque et la candidature est suivie.",
+        exceeds: "Une date de relance est fixée environ une semaine plus tard."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Apprenants qui postulent à au moins trois emplois dans les 30 jours (questionnaire de suivi)",
+      "Apprenants qui obtiennent un entretien ou une offre d'emploi dans les 90 jours",
+      "Apprenants qui disent avoir repéré et évité une arnaque à l'emploi"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un smartphone avec internet, ou un ordinateur de bibliothèque, de service de l'emploi ou du programme",
+      "Un assistant d'IA gratuit (ChatGPT, Microsoft Copilot ou Google Gemini) et un modèle de CV gratuit dans Google Docs ou Word",
+      "Une vraie offre d'emploi à laquelle l'apprenant pourrait postuler",
+      "Du papier et un stylo pour la liste des compétences et les notes d'entretien",
+      "Environ 60 minutes en tout, en courtes séances, plus du temps d'entraînement"
+    ],
+    facilitatorNotes: [
+      "Faites le test de départ ensemble, puis un chapitre par séance, avec les exercices « Essayez maintenant » faits en direct.",
+      "Travaillez avec un conseiller en réinsertion ou un American Job Center pour aider les apprenants à lister le travail fait pendant leur détention.",
+      "Organisez des entretiens d'entraînement par deux ; laissez les apprenants choisir s'ils s'entraînent devant les autres à une question sur leur passé.",
+      "Ne demandez jamais aux apprenants de taper un numéro de sécurité sociale, de dossier ou d'écrou dans un outil d'IA ; utilisez des repères.",
+      "Rappelez aux apprenants en libération conditionnelle ou en mise à l'épreuve de respecter leurs conditions sur l'usage d'internet, et notez la tâche finale avec la grille d'évaluation, une ligne « Pas encore » à la fois."
     ]
   }
 };

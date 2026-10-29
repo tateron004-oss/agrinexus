@@ -34,11 +34,35 @@ module.exports = {
     "Each lesson takes about five minutes. Read the lesson, watch the slides, then do the \"Try it now\" task. There is a short knowledge check after each chapter and a 20-question quiz at the end. The tasks add up to your own setup plan."
   ],
   finalTask: "Make a one-page setup plan for your business with five columns: Step, Office (with the official website), Cost (or \"look up at ...\"), Due date, Done. Include your structure, name filing, EIN, seller's permit (or why you do not need one), city business license, any special permits CalGold lists for your business type, and the yearly $800 tax and Statement of Information if you form an LLC or corporation.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "People starting a small business in California, such as a food truck, hair salon, cleaning service, corner shop, online store or home bakery. Many are first-time and minority business owners doing this without a lawyer.",
+    startingPoint: "Have a business idea and can use a phone or computer to visit websites. Most do not know the setup steps, which office handles each one, what the state fees are or which yearly filings and taxes come with each structure.",
+    gap: "Missing a registration, permit or yearly filing can lead to fines and penalties, and paid look-alike websites overcharge for free services. Learners need a setup plan with each step in order, the official office, the cost and the due date, so they start legally and budget correctly.",
+    constraints: [
+      "Reading level: plain words and short sentences",
+      "Devices: a phone or computer with internet to open official .gov pages",
+      "Time: about 5-minute lessons that fit around running or planning a business",
+      "Fees and rules change, and city and county fees differ; learners check each official page before paying",
+      "Not legal or tax advice; privacy: a Social Security number goes only on the official IRS form"
+    ],
+    prerequisites: "None. \"Introduction to AI for Small Business\" helps if learners want to use AI to organize the plan."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given your business idea, owners and risks", action: "choose a business structure and list what it costs to form", standard: "with one reason for the choice and the fee checked on the Secretary of State page" },
+    { id: "O2", condition: "Given your business name and structure", action: "find how to register your business name", standard: "with the right office, its fee page and the publishing rule written in your plan" },
+    { id: "O3", condition: "Given your business type", action: "decide whether you need a seller's permit and list how to get a free EIN", standard: "naming the IRS and CDTFA as the offices and using no paid EIN service" },
+    { id: "O4", condition: "Using CalGold and your city's website", action: "list the local permits your business needs", standard: "with each agency's website and the fee or where to look it up" },
+    { id: "O5", condition: "Given your structure and hiring plans", action: "list the yearly state costs and deadlines", standard: "including the $800 tax, the Statement of Information and EDD registration where they apply, each checked on the official page" },
+    { id: "O6", condition: "Given every step from the course", action: "create a one-page setup plan with steps in order, offices, costs and due dates", standard: "with every cost checked on the official page or marked \"look up at\" with where" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Choosing and registering your business",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Choosing a business structure",
           minutes: 6,
           goal: "Pick the business structure that fits your business today, and know what it costs to form.",
@@ -58,9 +82,14 @@ module.exports = {
           ],
           sources: [SOS_LLC, SOS_CORP, FTB_FORMS],
           tryIt: "Start your setup plan. At the top write your business idea, who owns it, and its biggest risks. Then write the structure you would choose today and one reason why.",
-          youCanNow: "name the common business structures, say what forming an LLC or corporation costs at the state, and choose one for your business."
+          youCanNow: "name the common business structures, say what forming an LLC or corporation costs at the state, and choose one for your business.",
+          quickCheck: [
+            { objective: "O1", q: "Which structure needs no formation filing with the California Secretary of State?", options: ["LLC", "Corporation", "Sole proprietorship", "Nonprofit corporation"], answer: 2, why: "A sole proprietorship does not file formation papers with the Secretary of State." },
+            { objective: "O1", q: "You want to form an LLC and see a fee online. What would you do before paying?", options: ["Check the current fee on the Secretary of State's official page", "Pay the first website that appears", "Ask a friend what they paid years ago", "Use whatever AI says"], answer: 0, why: "Fees change, so you check the official page before paying." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Naming and registering your business",
           minutes: 5,
           goal: "Register your business name the right way for your structure.",
@@ -78,9 +107,14 @@ module.exports = {
           ],
           sources: [BIZFILE, LA_FBN, CALOSBA],
           tryIt: "Search your business name on bizfile Online. Then find your county clerk's FBN page and write down the filing fee and the publishing rule in your plan.",
-          youCanNow: "check whether a business name is free, and say when you need a Fictitious Business Name and where to file it."
+          youCanNow: "check whether a business name is free, and say when you need a Fictitious Business Name and where to file it.",
+          quickCheck: [
+            { objective: "O2", q: "What is a DBA?", options: ["A tax form", "A business license", "A type of LLC", "The name a business uses with the public, if not the owner's legal name"], answer: 3, why: "A DBA is the public name of a business that differs from the owner's legal name." },
+            { objective: "O2", q: "You filed a Fictitious Business Name with your county. What would you most likely do next?", options: ["Nothing else", "Publish it in a local newspaper as your county requires", "File it again with the IRS", "Wait five years"], answer: 1, why: "Most California counties require you to publish an FBN in a local newspaper." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Getting your free EIN and a seller's permit",
           minutes: 5,
           goal: "Apply for an EIN from the IRS and decide whether you need a California seller's permit.",
@@ -98,17 +132,21 @@ module.exports = {
           ],
           sources: [IRS_EIN, CDTFA, CDTFA_FAQ],
           tryIt: "Add two rows to your plan: EIN (IRS, free, apply on irs.gov) and seller's permit (CDTFA, no fee, possible deposit) or a note saying why you do not need one. Do not type your Social Security number anywhere except the official IRS form.",
-          youCanNow: "apply for a free EIN on the official IRS site and decide whether your business needs a seller's permit."
+          youCanNow: "apply for a free EIN on the official IRS site and decide whether your business needs a seller's permit.",
+          quickCheck: [
+            { objective: "O3", q: "Which agency issues California seller's permits?", options: ["The IRS", "Your county clerk", "CDTFA", "The Secretary of State"], answer: 2, why: "The California Department of Tax and Fee Administration issues seller's permits." },
+            { objective: "O3", q: "You plan to sell goods only at a holiday market for a few weeks. What would you do?", options: ["Ask CDTFA about a temporary seller's permit", "Skip permits because it is short", "Get an EIN instead", "Pay a private site for a permit"], answer: 0, why: "Short-term sellers can ask CDTFA about a temporary seller's permit." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Choosing and registering your business",
         questions: [
-          { q: "What does the Secretary of State list as the fee for LLC Articles of Organization (Form LLC-1)?", options: ["$800", "$70", "$20", "Free"], answer: 1, why: "The Secretary of State's LLC forms page lists Form LLC-1 at $70." },
-          { q: "Kevin runs a lawn-care business as a sole proprietor. Which is true?", options: ["He must pay $100 to the Secretary of State to form it", "He cannot use a business name", "He must form a corporation first", "He does not file formation papers with the Secretary of State"], answer: 3, why: "Sole proprietors do not file formation papers with the Secretary of State." },
-          { q: "Maria Lopez sells food as \"Sunrise Tamales\". Where does she file her Fictitious Business Name?", options: ["Her county clerk", "CDTFA", "The IRS", "The Franchise Tax Board"], answer: 0, why: "FBN statements are filed with the county clerk where the business is based." },
-          { q: "A website asks for $150 to get you an EIN. What do you do?", options: ["Pay it; it is faster", "Use a friend's EIN", "Apply free on irs.gov instead", "Skip the EIN forever"], answer: 2, why: "The IRS says you never have to pay a fee for an EIN." },
-          { q: "Which business most likely needs a California seller's permit?", options: ["A house-cleaning service", "A tutoring service", "A boutique selling clothes", "A bookkeeping service"], answer: 2, why: "Selling taxable goods, like clothing, needs a seller's permit." }
+          { objective: "O1", q: "What does the Secretary of State list as the fee for LLC Articles of Organization (Form LLC-1)?", options: ["$800", "$70", "$20", "Free"], answer: 1, why: "The Secretary of State's LLC forms page lists Form LLC-1 at $70." },
+          { objective: "O1", q: "Kevin runs a lawn-care business as a sole proprietor. Which is true?", options: ["He must pay $100 to the Secretary of State to form it", "He cannot use a business name", "He must form a corporation first", "He does not file formation papers with the Secretary of State"], answer: 3, why: "Sole proprietors do not file formation papers with the Secretary of State." },
+          { objective: "O2", q: "Maria Lopez sells food as \"Sunrise Tamales\". Where does she file her Fictitious Business Name?", options: ["Her county clerk", "CDTFA", "The IRS", "The Franchise Tax Board"], answer: 0, why: "FBN statements are filed with the county clerk where the business is based." },
+          { objective: "O3", q: "A website asks for $150 to get you an EIN. What do you do?", options: ["Pay it; it is faster", "Use a friend's EIN", "Apply free on irs.gov instead", "Skip the EIN forever"], answer: 2, why: "The IRS says you never have to pay a fee for an EIN." },
+          { objective: "O3", q: "Which business most likely needs a California seller's permit?", options: ["A house-cleaning service", "A tutoring service", "A boutique selling clothes", "A bookkeeping service"], answer: 2, why: "Selling taxable goods, like clothing, needs a seller's permit." }
         ]
       }
     },
@@ -116,6 +154,7 @@ module.exports = {
       name: "Chapter 2: Local permits, yearly costs and your plan",
       lessons: [
         {
+          objectives: ["O4","O6"],
           title: "Finding your city and county permits",
           minutes: 5,
           goal: "Use CalGold and your city's website to list the local permits your business needs.",
@@ -133,9 +172,14 @@ module.exports = {
           ],
           sources: [CALGOLD, CALOSBA],
           tryIt: "Run CalGold for your city and business type. Add every permit it lists to your plan, with the agency's website. For each one, write the fee or \"look up at\" plus where.",
-          youCanNow: "find the city and county permits your business needs and the office that issues each one."
+          youCanNow: "find the city and county permits your business needs and the office that issues each one.",
+          quickCheck: [
+            { objective: "O4", q: "What does CalGold do?", options: ["Issues every permit you need", "Collects your taxes", "Forms your LLC", "Lists permit information and agencies for your city and business type"], answer: 3, why: "CalGold lists permits and agencies, but does not issue them." },
+            { objective: "O4", q: "CalGold lists a permit for your food truck. What would you do next?", options: ["Assume you have it now", "Contact the listed agency to confirm the fee and apply", "Ask AI to apply for you", "Wait until an inspector visits"], answer: 1, why: "CalGold does not issue permits, so you contact each agency." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "The yearly costs: the $800 tax, filings and payroll",
           minutes: 6,
           goal: "List the yearly state costs and deadlines that come with your structure.",
@@ -154,9 +198,14 @@ module.exports = {
           ],
           sources: [FTB_LLC, FTB_CORP, SOS_LLC, SOS_CORP, EDD],
           tryIt: "Add the yearly rows to your plan that match your structure: the $800 tax and its due date, the Statement of Information and its fee, and EDD registration if you will hire. Open each official page and check the number before you write it.",
-          youCanNow: "list the yearly state costs and deadlines for your structure and say which office collects each one."
+          youCanNow: "list the yearly state costs and deadlines for your structure and say which office collects each one.",
+          quickCheck: [
+            { objective: "O5", q: "How often does an LLC file a Statement of Information after the first one?", options: ["Every month", "Every five years", "Only once", "Every two years"], answer: 3, why: "After the first one, an LLC files a Statement of Information every two years." },
+            { objective: "O5", q: "Your LLC made no money this year. What would you plan for?", options: ["Nothing, since there was no business", "Cancel the plan for taxes", "The $800 annual tax is still owed until the LLC is cancelled", "Only a federal tax"], answer: 2, why: "An LLC owes the $800 annual tax until it is cancelled, even with no business." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Putting it together: your setup plan and budget",
           minutes: 5,
           goal: "Build a one-page setup plan with steps in order, offices, costs and due dates.",
@@ -174,17 +223,21 @@ module.exports = {
           ],
           sources: [SOS_LLC, FTB_LLC, CDTFA, IRS_EIN, CALGOLD],
           tryIt: "Final task: finish your one-page plan with five columns: Step, Office (website), Cost, Due date, Done. Fill in every row from this course, total the known costs, and mark every local fee you still need to look up.",
-          youCanNow: "build and use a complete setup plan for starting a business in California."
+          youCanNow: "build and use a complete setup plan for starting a business in California.",
+          quickCheck: [
+            { objective: "O6", q: "In what order should you usually do these steps?", options: ["Choose a structure, form it, get the EIN, then local permits", "Local permits, then choose a structure", "Get the EIN before choosing a name or structure, then form it last", "Any order works the same"], answer: 0, why: "Each step depends on the one before it, starting with the structure." },
+            { objective: "O6", q: "You do not know your city's business license fee yet. What would you write in your plan?", options: ["A guess", "Zero", "\"Look up at\" plus the city's official website", "The fee from another city"], answer: 2, why: "Local fees differ, so you note where to look them up instead of guessing." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Local permits, yearly costs and your plan",
         questions: [
-          { q: "What does CalGold do?", options: ["Lists permit information and agencies for your city and business type", "Issues your business license", "Collects the $800 tax", "Gives you an EIN"], answer: 0, why: "CalGold finds permit information; it does not issue permits." },
-          { q: "Who sets the fee for a city business license?", options: ["The IRS", "The Secretary of State", "CDTFA", "Each city or county"], answer: 3, why: "Local license fees are set by each city or county." },
-          { q: "An LLC did no business this year. Does it owe the $800 annual tax?", options: ["No, only if it made money", "Yes, until the LLC is cancelled", "Only in the first year", "Only if it has workers"], answer: 1, why: "FTB says the annual tax is due even if the LLC is not doing business, until it is cancelled." },
-          { q: "When is an LLC's first Statement of Information due?", options: ["Within 90 days of forming", "Every month", "Only when it closes", "Within 10 years"], answer: 0, why: "The Secretary of State says it is due within 90 days of registering and every two years after." },
-          { q: "You will hire your first worker. Which office do you register with?", options: ["CalGold", "The county clerk", "EDD", "The DMV"], answer: 2, why: "Employers register with the EDD within 15 days after paying over $100 in wages in a quarter." }
+          { objective: "O4", q: "What does CalGold do?", options: ["Lists permit information and agencies for your city and business type", "Issues your business license", "Collects the $800 tax", "Gives you an EIN"], answer: 0, why: "CalGold finds permit information; it does not issue permits." },
+          { objective: "O4", q: "Who sets the fee for a city business license?", options: ["The IRS", "The Secretary of State", "CDTFA", "Each city or county"], answer: 3, why: "Local license fees are set by each city or county." },
+          { objective: "O5", q: "An LLC did no business this year. Does it owe the $800 annual tax?", options: ["No, only if it made money", "Yes, until the LLC is cancelled", "Only in the first year", "Only if it has workers"], answer: 1, why: "FTB says the annual tax is due even if the LLC is not doing business, until it is cancelled." },
+          { objective: "O5", q: "When is an LLC's first Statement of Information due?", options: ["Within 90 days of forming", "Every month", "Only when it closes", "Within 10 years"], answer: 0, why: "The Secretary of State says it is due within 90 days of registering and every two years after." },
+          { objective: "O5", q: "You will hire your first worker. Which office do you register with?", options: ["CalGold", "The county clerk", "EDD", "The DMV"], answer: 2, why: "Employers register with the EDD within 15 days after paying over $100 in wages in a quarter." }
         ]
       }
     }
@@ -192,26 +245,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Setting Up a Small Business in California, Including Costs",
     questions: [
-      { q: "Which structure needs no formation filing with the California Secretary of State?", options: ["LLC", "Sole proprietorship", "Corporation", "Nonprofit corporation"], answer: 1, why: "Sole proprietors do not file formation papers with the Secretary of State." },
-      { q: "What is a main reason owners form an LLC?", options: ["It is always free", "It replaces all permits", "It removes all taxes", "It can help keep personal things separate from business debts"], answer: 3, why: "An LLC is a separate legal body that can help protect the owner." },
-      { q: "The Secretary of State fee for general stock corporation Articles of Incorporation (ARTS-GS) is:", options: ["$20", "$70", "$100", "$800"], answer: 2, why: "The Secretary of State lists ARTS-GS at $100." },
-      { q: "Where do you file LLC formation papers online?", options: ["irs.gov", "bizfileonline.sos.ca.gov", "calgold.ca.gov", "edd.ca.gov"], answer: 1, why: "bizfile Online is the Secretary of State's filing site." },
-      { q: "What is a DBA?", options: ["A tax form", "A type of permit for food", "The name a business uses with the public, if not the owner's legal name", "A bank account"], answer: 2, why: "DBA means \"doing business as\"; it is filed as a Fictitious Business Name." },
-      { q: "After filing an FBN, most California counties also require you to:", options: ["Publish it in a local newspaper for four weeks", "Pay the IRS", "Get a seller's permit", "Form an LLC"], answer: 0, why: "Counties require the FBN to be published once a week for four weeks." },
-      { q: "Where should you look up your county's FBN fee?", options: ["An AI assistant", "The IRS", "Your county clerk's website", "A social media post"], answer: 2, why: "Each county sets its own FBN fee." },
-      { q: "How much does the IRS charge for an EIN?", options: ["Nothing", "$70", "$50", "$800"], answer: 0, why: "The IRS says you never have to pay a fee for an EIN." },
-      { q: "Which agency issues California seller's permits?", options: ["FTB", "CDTFA", "EDD", "The county clerk"], answer: 1, why: "The California Department of Tax and Fee Administration issues seller's permits." },
-      { q: "What might CDTFA ask for when you get a seller's permit, even though there is no fee?", options: ["A corporation filing", "Your bank password", "A newspaper notice", "A security deposit"], answer: 3, why: "CDTFA says it may require a security deposit." },
-      { q: "A seasonal pumpkin stand sells in one place for six weeks. What should the owner ask CDTFA about?", options: ["A temporary seller's permit", "An EIN", "An FBN", "A Statement of Information"], answer: 0, why: "Sales in one place for 90 days or less may need a temporary seller's permit." },
-      { q: "A food truck usually needs a health permit from:", options: ["The IRS", "EDD", "The Secretary of State", "The county environmental health department"], answer: 3, why: "Food businesses get health permits from county environmental health." },
-      { q: "CalGold says it does not issue permits. So after using it you should:", options: ["Ignore the list", "Pay CalGold", "Contact each listed agency to confirm the fee and apply", "Ask an AI to apply for you"], answer: 2, why: "CalGold lists the agencies; you apply with each one." },
-      { q: "A home-based tutoring business probably still needs:", options: ["A seller's permit", "A city business license or tax certificate", "A health permit", "A liquor license"], answer: 1, why: "Most cities require a business license, even for home businesses." },
-      { q: "How much is the yearly California LLC annual tax?", options: ["$20", "$70", "$250", "$800"], answer: 3, why: "FTB says every LLC must pay an $800 annual tax." },
-      { q: "When is an LLC's first $800 annual tax due?", options: ["Only when it earns $250,000", "Never in the first year", "By the 15th day of the 4th month after filing with the Secretary of State", "On December 31"], answer: 2, why: "FTB gives the 15th day of the 4th month after filing." },
-      { q: "A new corporation in its first taxable year:", options: ["Is not required to pay the $800 minimum franchise tax", "Pays $1,600", "Pays no taxes ever", "Must pay the LLC fee"], answer: 0, why: "FTB says newly formed corporations are not required to pay the minimum in their first taxable year." },
-      { q: "How often does an LLC file a Statement of Information after the first one?", options: ["Every month", "Every two years", "Every ten years", "Never"], answer: 1, why: "The Secretary of State says every two years after the first." },
-      { q: "In which order should you usually do these?", options: ["City license, then form the LLC, then choose a structure", "Choose a structure, form it, get the EIN, then local permits", "Seller's permit, then EIN, then structure", "Any order is fine"], answer: 1, why: "Many permits ask for your EIN and entity number, so form and get the EIN first." },
-      { q: "An AI assistant tells you the FBN fee in your county. What do you do?", options: ["Check it on your county clerk's official page first", "Put it in the plan without checking", "Pay the AI tool", "Type your SSN to get a better answer"], answer: 0, why: "AI can be wrong; fees come from the official page." }
+      { objective: "O1", q: "Which structure needs no formation filing with the California Secretary of State?", options: ["LLC", "Sole proprietorship", "Corporation", "Nonprofit corporation"], answer: 1, why: "Sole proprietors do not file formation papers with the Secretary of State." },
+      { objective: "O1", q: "What is a main reason owners form an LLC?", options: ["It is always free", "It replaces all permits", "It removes all taxes", "It can help keep personal things separate from business debts"], answer: 3, why: "An LLC is a separate legal body that can help protect the owner." },
+      { objective: "O1", q: "The Secretary of State fee for general stock corporation Articles of Incorporation (ARTS-GS) is:", options: ["$20", "$70", "$100", "$800"], answer: 2, why: "The Secretary of State lists ARTS-GS at $100." },
+      { objective: "O1", q: "Where do you file LLC formation papers online?", options: ["irs.gov", "bizfileonline.sos.ca.gov", "calgold.ca.gov", "edd.ca.gov"], answer: 1, why: "bizfile Online is the Secretary of State's filing site." },
+      { objective: "O2", q: "What is a DBA?", options: ["A tax form", "A type of permit for food", "The name a business uses with the public, if not the owner's legal name", "A bank account"], answer: 2, why: "DBA means \"doing business as\"; it is filed as a Fictitious Business Name." },
+      { objective: "O2", q: "After filing an FBN, most California counties also require you to:", options: ["Publish it in a local newspaper for four weeks", "Pay the IRS", "Get a seller's permit", "Form an LLC"], answer: 0, why: "Counties require the FBN to be published once a week for four weeks." },
+      { objective: "O2", q: "Where should you look up your county's FBN fee?", options: ["An AI assistant", "The IRS", "Your county clerk's website", "A social media post"], answer: 2, why: "Each county sets its own FBN fee." },
+      { objective: "O3", q: "How much does the IRS charge for an EIN?", options: ["Nothing", "$70", "$50", "$800"], answer: 0, why: "The IRS says you never have to pay a fee for an EIN." },
+      { objective: "O3", q: "Which agency issues California seller's permits?", options: ["FTB", "CDTFA", "EDD", "The county clerk"], answer: 1, why: "The California Department of Tax and Fee Administration issues seller's permits." },
+      { objective: "O3", q: "What might CDTFA ask for when you get a seller's permit, even though there is no fee?", options: ["A corporation filing", "Your bank password", "A newspaper notice", "A security deposit"], answer: 3, why: "CDTFA says it may require a security deposit." },
+      { objective: "O3", q: "A seasonal pumpkin stand sells in one place for six weeks. What should the owner ask CDTFA about?", options: ["A temporary seller's permit", "An EIN", "An FBN", "A Statement of Information"], answer: 0, why: "Sales in one place for 90 days or less may need a temporary seller's permit." },
+      { objective: "O4", q: "A food truck usually needs a health permit from:", options: ["The IRS", "EDD", "The Secretary of State", "The county environmental health department"], answer: 3, why: "Food businesses get health permits from county environmental health." },
+      { objective: "O6", q: "CalGold says it does not issue permits. So after using it you should:", options: ["Ignore the list", "Pay CalGold", "Contact each listed agency to confirm the fee and apply", "Ask an AI to apply for you"], answer: 2, why: "CalGold lists the agencies; you apply with each one." },
+      { objective: "O4", q: "A home-based tutoring business probably still needs:", options: ["A seller's permit", "A city business license or tax certificate", "A health permit", "A liquor license"], answer: 1, why: "Most cities require a business license, even for home businesses." },
+      { objective: "O5", q: "How much is the yearly California LLC annual tax?", options: ["$20", "$70", "$250", "$800"], answer: 3, why: "FTB says every LLC must pay an $800 annual tax." },
+      { objective: "O5", q: "When is an LLC's first $800 annual tax due?", options: ["Only when it earns $250,000", "Never in the first year", "By the 15th day of the 4th month after filing with the Secretary of State", "On December 31"], answer: 2, why: "FTB gives the 15th day of the 4th month after filing." },
+      { objective: "O5", q: "A new corporation in its first taxable year:", options: ["Is not required to pay the $800 minimum franchise tax", "Pays $1,600", "Pays no taxes ever", "Must pay the LLC fee"], answer: 0, why: "FTB says newly formed corporations are not required to pay the minimum in their first taxable year." },
+      { objective: "O5", q: "How often does an LLC file a Statement of Information after the first one?", options: ["Every month", "Every two years", "Every ten years", "Never"], answer: 1, why: "The Secretary of State says every two years after the first." },
+      { objective: "O6", q: "In which order should you usually do these?", options: ["City license, then form the LLC, then choose a structure", "Choose a structure, form it, get the EIN, then local permits", "Seller's permit, then EIN, then structure", "Any order is fine"], answer: 1, why: "Many permits ask for your EIN and entity number, so form and get the EIN first." },
+      { objective: "O6", q: "An AI assistant tells you the FBN fee in your county. What do you do?", options: ["Check it on your county clerk's official page first", "Put it in the plan without checking", "Pay the AI tool", "Type your SSN to get a better answer"], answer: 0, why: "AI can be wrong; fees come from the official page." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      3,
+      4,
+      7,
+      8,
+      11,
+      12,
+      14,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Structure and name",
+        objective: "O1",
+        notYet: "No structure chosen, or the name filing is missing.",
+        meets: "Structure with a reason, plus the right name filing and its office.",
+        exceeds: "Also notes the FBN publishing rule if it applies."
+      },
+      {
+        name: "EIN and seller's permit",
+        objective: "O3",
+        notYet: "Missing, or uses a paid EIN service.",
+        meets: "EIN from irs.gov at no cost, and a seller's permit row or a reason it is not needed.",
+        exceeds: "Notes a possible CDTFA security deposit."
+      },
+      {
+        name: "Local permits",
+        objective: "O4",
+        notYet: "No city license or CalGold permits listed.",
+        meets: "City business license and every CalGold permit, each with the agency's website.",
+        exceeds: "Each local fee is filled in from the official page."
+      },
+      {
+        name: "Yearly costs and due dates",
+        objective: "O5",
+        notYet: "The $800 tax or Statement of Information is missing for an LLC or corporation.",
+        meets: "Yearly rows that match the structure, with due dates.",
+        exceeds: "Includes EDD registration if hiring, and each number checked on the official page."
+      },
+      {
+        name: "Plan in order with costs",
+        objective: "O6",
+        notYet: "Steps out of order, or costs guessed.",
+        meets: "Five columns filled in order, with known costs totaled and unknown fees marked \"look up at\".",
+        exceeds: "Every official website is listed and the Done column is in use."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who complete at least one registration or permit within 60 days (follow-up survey)",
+      "Learners who open their business legally within 6 months",
+      "Learners who meet with a SCORE mentor or SBDC adviser within 60 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or computer with internet",
+      "Paper, or a free spreadsheet, for the five-column setup plan",
+      "The official pages listed in each lesson: bizfile Online, irs.gov, CDTFA, CalGold, FTB and EDD",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Before each session, open the official pages and check that the state fees in the course are still current.",
+      "Look up your local county clerk and city business license pages so you can show learners the real local sites.",
+      "Never ask learners to type a Social Security number on a shared screen; EIN applications are done only on irs.gov, privately.",
+      "This course is not legal or tax advice; invite a SCORE mentor, an SBDC adviser or a tax professional for questions about a learner's own situation.",
+      "Score the setup plan with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

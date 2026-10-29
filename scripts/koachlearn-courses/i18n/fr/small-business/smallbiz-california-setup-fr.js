@@ -31,11 +31,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes. Lisez la leçon, regardez les diapositives, puis faites la tâche \"Essayez maintenant\". Il y a un court contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin. Les tâches forment ensemble votre propre plan de création."
   ],
   finalTask: "Faites un plan de création d'une page pour votre entreprise avec cinq colonnes : Étape, Service (avec le site officiel), Coût (ou \"à vérifier sur ...\"), Échéance, Fait. Incluez votre forme d'entreprise, l'enregistrement du nom, l'EIN, le permis de vendeur (ou pourquoi vous n'en avez pas besoin), la licence d'entreprise de la ville, les permis particuliers que CalGold indique pour votre type d'entreprise, et l'impôt annuel de 800 $ et le Statement of Information si vous créez une LLC ou une société par actions.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des personnes qui créent une petite entreprise en Californie, comme un food truck, un salon de coiffure, un service de nettoyage, une épicerie de quartier, une boutique en ligne ou une boulangerie à domicile. Beaucoup créent leur première entreprise, sont issus de minorités et le font sans avocat.",
+    startingPoint: "Ils ont une idée d'entreprise et savent utiliser un téléphone ou un ordinateur pour visiter des sites web. La plupart ne connaissent pas les étapes de création, le bureau qui s'occupe de chacune, les frais de l'État, ni les déclarations et impôts annuels qui vont avec chaque forme d'entreprise.",
+    gap: "Oublier un enregistrement, un permis ou une déclaration annuelle peut entraîner des amendes et des pénalités, et des sites payants qui imitent les sites officiels font payer trop cher des services gratuits. Les apprenants ont besoin d'un plan de création avec chaque étape dans l'ordre, le bureau officiel, le coût et l'échéance, pour démarrer dans les règles et prévoir le bon budget.",
+    constraints: [
+      "Niveau de lecture : des mots simples et des phrases courtes",
+      "Appareils : un téléphone ou un ordinateur avec internet pour ouvrir les pages officielles en .gov",
+      "Temps : des leçons d'environ 5 minutes, à caser autour de la gestion ou de la préparation de l'entreprise",
+      "Les frais et les règles changent, et les frais varient selon la ville et le comté ; les apprenants consultent chaque page officielle avant de payer",
+      "Pas de conseil juridique ou fiscal ; vie privée : un numéro de sécurité sociale va seulement sur le formulaire officiel de l'IRS"
+    ],
+    prerequisites: "Aucun. Le cours « Introduction à l'IA pour les petites entreprises » aide si les apprenants veulent utiliser l'IA pour organiser leur plan."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir de votre idée d'entreprise, des propriétaires et des risques", action: "choisir une forme d'entreprise et lister ce que coûte sa création", standard: "avec une raison pour ce choix et les frais vérifiés sur la page du Secretary of State" },
+    { id: "O2", condition: "À partir du nom et de la forme de votre entreprise", action: "trouver comment enregistrer le nom de votre entreprise", standard: "avec le bon bureau, sa page de frais et la règle de publication notés dans votre plan" },
+    { id: "O3", condition: "À partir de votre type d'entreprise", action: "décider si vous avez besoin d'un permis de vendeur et lister comment obtenir un EIN gratuit", standard: "en nommant l'IRS et la CDTFA comme bureaux, et sans aucun service payant pour l'EIN" },
+    { id: "O4", condition: "Avec CalGold et le site de votre ville", action: "lister les permis locaux dont votre entreprise a besoin", standard: "avec le site web de chaque organisme et les frais ou l'endroit où les trouver" },
+    { id: "O5", condition: "À partir de votre forme d'entreprise et de vos projets d'embauche", action: "lister les coûts et les échéances annuels de l'État", standard: "y compris l'impôt de 800 $, le Statement of Information et l'inscription à l'EDD quand ils s'appliquent, chacun vérifié sur la page officielle" },
+    { id: "O6", condition: "À partir de toutes les étapes du cours", action: "créer un plan de création d'une page avec les étapes dans l'ordre, les bureaux, les coûts et les échéances", standard: "avec chaque coût vérifié sur la page officielle ou marqué « à chercher sur » avec l'endroit" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Choisir et enregistrer votre entreprise",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Choisir une forme d'entreprise",
           minutes: 6,
           goal: "Choisir la forme d'entreprise qui convient aujourd'hui à votre activité, et savoir combien coûte sa création.",
@@ -55,9 +79,14 @@ module.exports = {
           ],
           sources: [SOS_LLC, SOS_CORP, FTB_FORMS],
           tryIt: "Commencez votre plan de création. En haut, écrivez votre idée d'entreprise, qui la possède et ses plus grands risques. Puis écrivez la forme que vous choisiriez aujourd'hui et une raison.",
-          youCanNow: "nommer les formes d'entreprise courantes, dire ce que coûte à l'État la création d'une LLC ou d'une société par actions, et en choisir une pour votre entreprise."
+          youCanNow: "nommer les formes d'entreprise courantes, dire ce que coûte à l'État la création d'une LLC ou d'une société par actions, et en choisir une pour votre entreprise.",
+          quickCheck: [
+            { objective: "O1", q: "Quelle forme d'entreprise ne demande aucun dépôt de création auprès du Secretary of State de Californie ?", options: ["La LLC (société à responsabilité limitée)", "La corporation (société par actions)", "L'entreprise individuelle", "L'association à but non lucratif"], answer: 2, why: "Une entreprise individuelle ne dépose pas de papiers de création auprès du Secretary of State." },
+            { objective: "O1", q: "Vous voulez créer une LLC et vous voyez des frais en ligne. Que faites-vous avant de payer ?", options: ["Vérifier les frais actuels sur la page officielle du Secretary of State", "Payer sur le premier site qui apparaît", "Demander à un ami combien il a payé il y a des années", "Suivre ce que dit l'IA"], answer: 0, why: "Les frais changent, donc vous vérifiez la page officielle avant de payer." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Nommer et enregistrer votre entreprise",
           minutes: 5,
           goal: "Enregistrer le nom de votre entreprise de la bonne façon selon votre forme d'entreprise.",
@@ -75,9 +104,14 @@ module.exports = {
           ],
           sources: [BIZFILE, LA_FBN, CALOSBA],
           tryIt: "Cherchez le nom de votre entreprise sur bizfile Online. Puis trouvez la page FBN du greffe de votre comté et notez dans votre plan les frais de dépôt et la règle de publication.",
-          youCanNow: "vérifier si un nom d'entreprise est libre, et dire quand il faut un nom commercial fictif et où le déposer."
+          youCanNow: "vérifier si un nom d'entreprise est libre, et dire quand il faut un nom commercial fictif et où le déposer.",
+          quickCheck: [
+            { objective: "O2", q: "Qu'est-ce qu'un DBA ?", options: ["Un formulaire d'impôts", "Une licence commerciale", "Un type de LLC", "Le nom qu'une entreprise utilise auprès du public, s'il est différent du nom légal du propriétaire"], answer: 3, why: "Un DBA est le nom public d'une entreprise, différent du nom légal du propriétaire." },
+            { objective: "O2", q: "Vous avez déposé un Fictitious Business Name (nom commercial) auprès de votre comté. Que devez-vous très probablement faire ensuite ?", options: ["Rien d'autre", "Le publier dans un journal local, comme votre comté l'exige", "Le déposer de nouveau auprès de l'IRS", "Attendre cinq ans"], answer: 1, why: "La plupart des comtés de Californie exigent de publier un FBN dans un journal local." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Obtenir votre EIN gratuit et un permis de vendeur",
           minutes: 5,
           goal: "Demander un EIN à l'IRS et décider si vous avez besoin d'un permis de vendeur en Californie.",
@@ -95,17 +129,21 @@ module.exports = {
           ],
           sources: [IRS_EIN, CDTFA, CDTFA_FAQ],
           tryIt: "Ajoutez deux lignes à votre plan : EIN (IRS, gratuit, demande sur irs.gov) et permis de vendeur (CDTFA, gratuit, dépôt possible), ou une note qui explique pourquoi vous n'en avez pas besoin. Ne tapez votre numéro de sécurité sociale nulle part ailleurs que dans le formulaire officiel de l'IRS.",
-          youCanNow: "demander un EIN gratuit sur le site officiel de l'IRS et décider si votre entreprise a besoin d'un permis de vendeur."
+          youCanNow: "demander un EIN gratuit sur le site officiel de l'IRS et décider si votre entreprise a besoin d'un permis de vendeur.",
+          quickCheck: [
+            { objective: "O3", q: "Quel organisme délivre les permis de vendeur en Californie ?", options: ["L'IRS", "Le greffier de votre comté", "La CDTFA", "Le Secretary of State"], answer: 2, why: "La California Department of Tax and Fee Administration (CDTFA) délivre les permis de vendeur." },
+            { objective: "O3", q: "Vous prévoyez de vendre des produits seulement sur un marché de fin d'année pendant quelques semaines. Que faites-vous ?", options: ["Demander à la CDTFA un permis de vendeur temporaire", "Ne pas prendre de permis, puisque c'est court", "Prendre un EIN à la place", "Payer un site privé pour un permis"], answer: 0, why: "Les vendeurs de courte durée peuvent demander un permis de vendeur temporaire à la CDTFA." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Choisir et enregistrer votre entreprise",
         questions: [
-          { q: "Quels frais le Secretary of State indique-t-il pour les statuts d'une LLC (formulaire LLC-1) ?", options: ["800 $", "70 $", "20 $", "Gratuit"], answer: 1, why: "La page des formulaires LLC du Secretary of State indique 70 $ pour le formulaire LLC-1." },
-          { q: "Kevin a une entreprise d'entretien de pelouses en entreprise individuelle. Qu'est-ce qui est vrai ?", options: ["Il doit payer 100 $ au Secretary of State pour la créer", "Il ne peut pas utiliser de nom commercial", "Il doit d'abord créer une société par actions", "Il ne dépose pas de documents de création auprès du Secretary of State"], answer: 3, why: "Les entrepreneurs individuels ne déposent pas de documents de création auprès du Secretary of State." },
-          { q: "Maria Lopez vend de la nourriture sous le nom \"Sunrise Tamales\". Où dépose-t-elle son nom commercial fictif ?", options: ["Au greffe de son comté", "Au CDTFA", "À l'IRS", "Au Franchise Tax Board"], answer: 0, why: "Les déclarations de FBN se déposent au greffe du comté où se trouve l'entreprise." },
-          { q: "Un site demande 150 $ pour vous obtenir un EIN. Que faites-vous ?", options: ["Payer ; c'est plus rapide", "Utiliser l'EIN d'un ami", "Faire plutôt la demande gratuite sur irs.gov", "Ne jamais prendre d'EIN"], answer: 2, why: "L'IRS dit que vous n'avez jamais à payer de frais pour un EIN." },
-          { q: "Quelle entreprise a le plus probablement besoin d'un permis de vendeur en Californie ?", options: ["Une entreprise de ménage", "Un service de soutien scolaire", "Une boutique qui vend des vêtements", "Un service de tenue de comptes"], answer: 2, why: "Vendre des marchandises taxables, comme des vêtements, demande un permis de vendeur." }
+          { objective: "O1", q: "Quels frais le Secretary of State indique-t-il pour les statuts d'une LLC (formulaire LLC-1) ?", options: ["800 $", "70 $", "20 $", "Gratuit"], answer: 1, why: "La page des formulaires LLC du Secretary of State indique 70 $ pour le formulaire LLC-1." },
+          { objective: "O1", q: "Kevin a une entreprise d'entretien de pelouses en entreprise individuelle. Qu'est-ce qui est vrai ?", options: ["Il doit payer 100 $ au Secretary of State pour la créer", "Il ne peut pas utiliser de nom commercial", "Il doit d'abord créer une société par actions", "Il ne dépose pas de documents de création auprès du Secretary of State"], answer: 3, why: "Les entrepreneurs individuels ne déposent pas de documents de création auprès du Secretary of State." },
+          { objective: "O2", q: "Maria Lopez vend de la nourriture sous le nom \"Sunrise Tamales\". Où dépose-t-elle son nom commercial fictif ?", options: ["Au greffe de son comté", "Au CDTFA", "À l'IRS", "Au Franchise Tax Board"], answer: 0, why: "Les déclarations de FBN se déposent au greffe du comté où se trouve l'entreprise." },
+          { objective: "O3", q: "Un site demande 150 $ pour vous obtenir un EIN. Que faites-vous ?", options: ["Payer ; c'est plus rapide", "Utiliser l'EIN d'un ami", "Faire plutôt la demande gratuite sur irs.gov", "Ne jamais prendre d'EIN"], answer: 2, why: "L'IRS dit que vous n'avez jamais à payer de frais pour un EIN." },
+          { objective: "O3", q: "Quelle entreprise a le plus probablement besoin d'un permis de vendeur en Californie ?", options: ["Une entreprise de ménage", "Un service de soutien scolaire", "Une boutique qui vend des vêtements", "Un service de tenue de comptes"], answer: 2, why: "Vendre des marchandises taxables, comme des vêtements, demande un permis de vendeur." }
         ]
       }
     },
@@ -113,6 +151,7 @@ module.exports = {
       name: "Chapitre 2 : Permis locaux, coûts annuels et votre plan",
       lessons: [
         {
+          objectives: ["O4","O6"],
           title: "Trouver les permis de votre ville et de votre comté",
           minutes: 5,
           goal: "Utiliser CalGold et le site de votre ville pour lister les permis locaux dont votre entreprise a besoin.",
@@ -130,9 +169,14 @@ module.exports = {
           ],
           sources: [CALGOLD, CALOSBA],
           tryIt: "Lancez CalGold pour votre ville et votre type d'entreprise. Ajoutez à votre plan chaque permis qu'il liste, avec le site du service. Pour chacun, écrivez les frais ou \"à vérifier sur\" avec l'endroit.",
-          youCanNow: "trouver les permis de la ville et du comté dont votre entreprise a besoin et le service qui délivre chacun."
+          youCanNow: "trouver les permis de la ville et du comté dont votre entreprise a besoin et le service qui délivre chacun.",
+          quickCheck: [
+            { objective: "O4", q: "À quoi sert CalGold ?", options: ["À délivrer tous les permis dont vous avez besoin", "À percevoir vos impôts", "À créer votre LLC", "À lister les permis et les organismes pour votre ville et votre type d'entreprise"], answer: 3, why: "CalGold liste les permis et les organismes, mais ne les délivre pas." },
+            { objective: "O4", q: "CalGold liste un permis pour votre food truck. Que faites-vous ensuite ?", options: ["Considérer que vous l'avez déjà", "Contacter l'organisme indiqué pour confirmer les frais et faire la demande", "Demander à l'IA de faire la demande pour vous", "Attendre la visite d'un inspecteur"], answer: 1, why: "CalGold ne délivre pas de permis, donc vous contactez chaque organisme." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Les coûts annuels : l'impôt de 800 $, les déclarations et la paie",
           minutes: 6,
           goal: "Lister les coûts et les échéances annuels de l'État liés à votre forme d'entreprise.",
@@ -151,9 +195,14 @@ module.exports = {
           ],
           sources: [FTB_LLC, FTB_CORP, SOS_LLC, SOS_CORP, EDD],
           tryIt: "Ajoutez à votre plan les lignes annuelles qui correspondent à votre forme d'entreprise : l'impôt de 800 $ et son échéance, le Statement of Information et ses frais, et l'inscription à l'EDD si vous allez embaucher. Ouvrez chaque page officielle et vérifiez le montant avant de l'écrire.",
-          youCanNow: "lister les coûts et échéances annuels de l'État pour votre forme d'entreprise et dire quel service perçoit chacun."
+          youCanNow: "lister les coûts et échéances annuels de l'État pour votre forme d'entreprise et dire quel service perçoit chacun.",
+          quickCheck: [
+            { objective: "O5", q: "Après la première fois, à quelle fréquence une LLC dépose-t-elle un Statement of Information ?", options: ["Chaque mois", "Tous les cinq ans", "Une seule fois", "Tous les deux ans"], answer: 3, why: "Après la première fois, une LLC dépose un Statement of Information tous les deux ans." },
+            { objective: "O5", q: "Votre LLC n'a rien gagné cette année. À quoi devez-vous vous préparer ?", options: ["À rien, puisqu'il n'y a pas eu d'activité", "Annuler le budget prévu pour les impôts", "L'impôt annuel de 800 $ reste dû tant que la LLC n'est pas dissoute", "Seulement un impôt fédéral"], answer: 2, why: "Une LLC doit l'impôt annuel de 800 $ tant qu'elle n'est pas dissoute, même sans activité." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Tout rassembler : votre plan de création et votre budget",
           minutes: 5,
           goal: "Construire un plan de création d'une page avec les étapes dans l'ordre, les services, les coûts et les échéances.",
@@ -171,17 +220,21 @@ module.exports = {
           ],
           sources: [SOS_LLC, FTB_LLC, CDTFA, IRS_EIN, CALGOLD],
           tryIt: "Tâche finale : terminez votre plan d'une page avec cinq colonnes : Étape, Service (site web), Coût, Échéance, Fait. Remplissez chaque ligne à partir de ce cours, faites le total des coûts connus, et marquez chaque frais local que vous devez encore chercher.",
-          youCanNow: "construire et utiliser un plan de création complet pour lancer une entreprise en Californie."
+          youCanNow: "construire et utiliser un plan de création complet pour lancer une entreprise en Californie.",
+          quickCheck: [
+            { objective: "O6", q: "Dans quel ordre faites-vous en général ces étapes ?", options: ["Choisir une forme, créer l'entreprise, obtenir l'EIN, puis les permis locaux", "Les permis locaux, puis choisir une forme", "Obtenir l'EIN avant de choisir un nom ou une forme, puis créer l'entreprise en dernier", "N'importe quel ordre revient au même"], answer: 0, why: "Chaque étape dépend de la précédente, en commençant par la forme d'entreprise." },
+            { objective: "O6", q: "Vous ne connaissez pas encore les frais de licence commerciale de votre ville. Qu'écrivez-vous dans votre plan ?", options: ["Une supposition", "Zéro", "« À chercher sur » et le site officiel de la ville", "Les frais d'une autre ville"], answer: 2, why: "Les frais locaux varient, donc vous notez où les chercher au lieu de deviner." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Permis locaux, coûts annuels et votre plan",
         questions: [
-          { q: "À quoi sert CalGold ?", options: ["Il liste les informations sur les permis et les services pour votre ville et votre type d'entreprise", "Il délivre votre licence d'entreprise", "Il perçoit l'impôt de 800 $", "Il vous donne un EIN"], answer: 0, why: "CalGold trouve les informations sur les permis ; il ne délivre pas de permis." },
-          { q: "Qui fixe les frais de la licence d'entreprise d'une ville ?", options: ["L'IRS", "Le Secretary of State", "Le CDTFA", "Chaque ville ou comté"], answer: 3, why: "Les frais des licences locales sont fixés par chaque ville ou comté." },
-          { q: "Une LLC n'a eu aucune activité cette année. Doit-elle l'impôt annuel de 800 $ ?", options: ["Non, seulement si elle a gagné de l'argent", "Oui, jusqu'à la dissolution de la LLC", "Seulement la première année", "Seulement si elle a des employés"], answer: 1, why: "Le FTB dit que l'impôt annuel est dû même si la LLC n'a pas d'activité, jusqu'à sa dissolution." },
-          { q: "Quand le premier Statement of Information d'une LLC est-il dû ?", options: ["Dans les 90 jours suivant la création", "Chaque mois", "Seulement à la fermeture", "Dans les 10 ans"], answer: 0, why: "Le Secretary of State dit qu'il est dû dans les 90 jours suivant l'enregistrement, puis tous les deux ans." },
-          { q: "Vous allez embaucher votre premier employé. Auprès de quel service vous inscrivez-vous ?", options: ["CalGold", "Le greffe du comté", "L'EDD", "Le DMV"], answer: 2, why: "Les employeurs s'inscrivent à l'EDD dans les 15 jours après avoir versé plus de 100 $ de salaires dans un trimestre." }
+          { objective: "O4", q: "À quoi sert CalGold ?", options: ["Il liste les informations sur les permis et les services pour votre ville et votre type d'entreprise", "Il délivre votre licence d'entreprise", "Il perçoit l'impôt de 800 $", "Il vous donne un EIN"], answer: 0, why: "CalGold trouve les informations sur les permis ; il ne délivre pas de permis." },
+          { objective: "O4", q: "Qui fixe les frais de la licence d'entreprise d'une ville ?", options: ["L'IRS", "Le Secretary of State", "Le CDTFA", "Chaque ville ou comté"], answer: 3, why: "Les frais des licences locales sont fixés par chaque ville ou comté." },
+          { objective: "O5", q: "Une LLC n'a eu aucune activité cette année. Doit-elle l'impôt annuel de 800 $ ?", options: ["Non, seulement si elle a gagné de l'argent", "Oui, jusqu'à la dissolution de la LLC", "Seulement la première année", "Seulement si elle a des employés"], answer: 1, why: "Le FTB dit que l'impôt annuel est dû même si la LLC n'a pas d'activité, jusqu'à sa dissolution." },
+          { objective: "O5", q: "Quand le premier Statement of Information d'une LLC est-il dû ?", options: ["Dans les 90 jours suivant la création", "Chaque mois", "Seulement à la fermeture", "Dans les 10 ans"], answer: 0, why: "Le Secretary of State dit qu'il est dû dans les 90 jours suivant l'enregistrement, puis tous les deux ans." },
+          { objective: "O5", q: "Vous allez embaucher votre premier employé. Auprès de quel service vous inscrivez-vous ?", options: ["CalGold", "Le greffe du comté", "L'EDD", "Le DMV"], answer: 2, why: "Les employeurs s'inscrivent à l'EDD dans les 15 jours après avoir versé plus de 100 $ de salaires dans un trimestre." }
         ]
       }
     }
@@ -189,26 +242,106 @@ module.exports = {
   quiz: {
     title: "Quiz final : Créer une petite entreprise en Californie, coûts compris",
     questions: [
-      { q: "Quelle forme d'entreprise ne demande aucun dépôt de création auprès du Secretary of State de Californie ?", options: ["LLC", "Entreprise individuelle", "Société par actions", "Association à but non lucratif"], answer: 1, why: "Les entrepreneurs individuels ne déposent pas de documents de création auprès du Secretary of State." },
-      { q: "Quelle est une raison principale de créer une LLC ?", options: ["C'est toujours gratuit", "Elle remplace tous les permis", "Elle supprime tous les impôts", "Elle peut aider à séparer vos biens personnels des dettes de l'entreprise"], answer: 3, why: "Une LLC est une personne juridique séparée qui peut aider à protéger le propriétaire." },
-      { q: "Les frais du Secretary of State pour les statuts d'une société par actions ordinaire (ARTS-GS) sont de :", options: ["20 $", "70 $", "100 $", "800 $"], answer: 2, why: "Le Secretary of State indique 100 $ pour l'ARTS-GS." },
-      { q: "Où déposer en ligne les documents de création d'une LLC ?", options: ["irs.gov", "bizfileonline.sos.ca.gov", "calgold.ca.gov", "edd.ca.gov"], answer: 1, why: "bizfile Online est le site de dépôt du Secretary of State." },
-      { q: "Qu'est-ce qu'un DBA ?", options: ["Un formulaire fiscal", "Un type de permis pour l'alimentation", "Le nom qu'une entreprise utilise auprès du public, s'il n'est pas le nom légal du propriétaire", "Un compte bancaire"], answer: 2, why: "DBA veut dire \"doing business as\" ; il se dépose comme nom commercial fictif." },
-      { q: "Après avoir déposé un FBN, la plupart des comtés de Californie exigent aussi de :", options: ["Le publier dans un journal local pendant quatre semaines", "Payer l'IRS", "Obtenir un permis de vendeur", "Créer une LLC"], answer: 0, why: "Les comtés exigent que le FBN soit publié une fois par semaine pendant quatre semaines." },
-      { q: "Où chercher les frais de FBN de votre comté ?", options: ["Auprès d'un assistant d'IA", "À l'IRS", "Sur le site du greffe de votre comté", "Dans une publication sur les réseaux sociaux"], answer: 2, why: "Chaque comté fixe ses propres frais de FBN." },
-      { q: "Combien l'IRS fait-il payer un EIN ?", options: ["Rien", "70 $", "50 $", "800 $"], answer: 0, why: "L'IRS dit que vous n'avez jamais à payer de frais pour un EIN." },
-      { q: "Quel organisme délivre les permis de vendeur en Californie ?", options: ["Le FTB", "Le CDTFA", "L'EDD", "Le greffe du comté"], answer: 1, why: "Le California Department of Tax and Fee Administration délivre les permis de vendeur." },
-      { q: "Que peut demander le CDTFA quand vous obtenez un permis de vendeur, même s'il est gratuit ?", options: ["Un dépôt de société par actions", "Le mot de passe de votre banque", "Une annonce dans un journal", "Un dépôt de garantie"], answer: 3, why: "Le CDTFA dit qu'il peut exiger un dépôt de garantie." },
-      { q: "Un stand de citrouilles saisonnier vend au même endroit pendant six semaines. Sur quoi le propriétaire doit-il interroger le CDTFA ?", options: ["Un permis de vendeur temporaire", "Un EIN", "Un FBN", "Un Statement of Information"], answer: 0, why: "Des ventes au même endroit pendant 90 jours ou moins peuvent demander un permis de vendeur temporaire." },
-      { q: "Un food truck a en général besoin d'un permis sanitaire délivré par :", options: ["L'IRS", "L'EDD", "Le Secretary of State", "Le service de santé environnementale du comté"], answer: 3, why: "Les entreprises alimentaires obtiennent leur permis sanitaire auprès de la santé environnementale du comté." },
-      { q: "CalGold indique qu'il ne délivre pas de permis. Donc, après l'avoir utilisé, vous devez :", options: ["Ignorer la liste", "Payer CalGold", "Contacter chaque service listé pour confirmer les frais et faire la demande", "Demander à une IA de faire la demande pour vous"], answer: 2, why: "CalGold liste les services ; vous faites la demande auprès de chacun." },
-      { q: "Un service de soutien scolaire à domicile a probablement quand même besoin :", options: ["D'un permis de vendeur", "D'une licence d'entreprise ou d'un certificat de taxe de la ville", "D'un permis sanitaire", "D'une licence d'alcool"], answer: 1, why: "La plupart des villes exigent une licence d'entreprise, même pour une activité à domicile." },
-      { q: "Combien coûte l'impôt annuel d'une LLC en Californie ?", options: ["20 $", "70 $", "250 $", "800 $"], answer: 3, why: "Le FTB dit que toute LLC doit payer un impôt annuel de 800 $." },
-      { q: "Quand le premier impôt annuel de 800 $ d'une LLC est-il dû ?", options: ["Seulement quand elle gagne 250 000 $", "Jamais la première année", "Le 15e jour du 4e mois après le dépôt auprès du Secretary of State", "Le 31 décembre"], answer: 2, why: "Le FTB indique le 15e jour du 4e mois après le dépôt." },
-      { q: "Une société par actions nouvelle, pour sa première année fiscale :", options: ["N'a pas à payer l'impôt minimum de 800 $", "Paie 1 600 $", "Ne paie jamais d'impôts", "Doit payer la redevance LLC"], answer: 0, why: "Le FTB dit que les sociétés nouvellement créées n'ont pas à payer le minimum leur première année fiscale." },
-      { q: "À quelle fréquence une LLC dépose-t-elle un Statement of Information après le premier ?", options: ["Chaque mois", "Tous les deux ans", "Tous les dix ans", "Jamais"], answer: 1, why: "Le Secretary of State dit tous les deux ans après le premier." },
-      { q: "Dans quel ordre faire en général ces étapes ?", options: ["Licence de la ville, puis créer la LLC, puis choisir la forme", "Choisir la forme, la créer, obtenir l'EIN, puis les permis locaux", "Permis de vendeur, puis EIN, puis forme", "N'importe quel ordre"], answer: 1, why: "Beaucoup de permis demandent votre EIN et votre numéro d'entité, alors créez l'entreprise et obtenez l'EIN d'abord." },
-      { q: "Un assistant d'IA vous donne les frais de FBN de votre comté. Que faites-vous ?", options: ["Les vérifier d'abord sur la page officielle du greffe de votre comté", "Les mettre dans le plan sans vérifier", "Payer l'outil d'IA", "Taper votre SSN pour obtenir une meilleure réponse"], answer: 0, why: "L'IA peut se tromper ; les frais viennent de la page officielle." }
+      { objective: "O1", q: "Quelle forme d'entreprise ne demande aucun dépôt de création auprès du Secretary of State de Californie ?", options: ["LLC", "Entreprise individuelle", "Société par actions", "Association à but non lucratif"], answer: 1, why: "Les entrepreneurs individuels ne déposent pas de documents de création auprès du Secretary of State." },
+      { objective: "O1", q: "Quelle est une raison principale de créer une LLC ?", options: ["C'est toujours gratuit", "Elle remplace tous les permis", "Elle supprime tous les impôts", "Elle peut aider à séparer vos biens personnels des dettes de l'entreprise"], answer: 3, why: "Une LLC est une personne juridique séparée qui peut aider à protéger le propriétaire." },
+      { objective: "O1", q: "Les frais du Secretary of State pour les statuts d'une société par actions ordinaire (ARTS-GS) sont de :", options: ["20 $", "70 $", "100 $", "800 $"], answer: 2, why: "Le Secretary of State indique 100 $ pour l'ARTS-GS." },
+      { objective: "O1", q: "Où déposer en ligne les documents de création d'une LLC ?", options: ["irs.gov", "bizfileonline.sos.ca.gov", "calgold.ca.gov", "edd.ca.gov"], answer: 1, why: "bizfile Online est le site de dépôt du Secretary of State." },
+      { objective: "O2", q: "Qu'est-ce qu'un DBA ?", options: ["Un formulaire fiscal", "Un type de permis pour l'alimentation", "Le nom qu'une entreprise utilise auprès du public, s'il n'est pas le nom légal du propriétaire", "Un compte bancaire"], answer: 2, why: "DBA veut dire \"doing business as\" ; il se dépose comme nom commercial fictif." },
+      { objective: "O2", q: "Après avoir déposé un FBN, la plupart des comtés de Californie exigent aussi de :", options: ["Le publier dans un journal local pendant quatre semaines", "Payer l'IRS", "Obtenir un permis de vendeur", "Créer une LLC"], answer: 0, why: "Les comtés exigent que le FBN soit publié une fois par semaine pendant quatre semaines." },
+      { objective: "O2", q: "Où chercher les frais de FBN de votre comté ?", options: ["Auprès d'un assistant d'IA", "À l'IRS", "Sur le site du greffe de votre comté", "Dans une publication sur les réseaux sociaux"], answer: 2, why: "Chaque comté fixe ses propres frais de FBN." },
+      { objective: "O3", q: "Combien l'IRS fait-il payer un EIN ?", options: ["Rien", "70 $", "50 $", "800 $"], answer: 0, why: "L'IRS dit que vous n'avez jamais à payer de frais pour un EIN." },
+      { objective: "O3", q: "Quel organisme délivre les permis de vendeur en Californie ?", options: ["Le FTB", "Le CDTFA", "L'EDD", "Le greffe du comté"], answer: 1, why: "Le California Department of Tax and Fee Administration délivre les permis de vendeur." },
+      { objective: "O3", q: "Que peut demander le CDTFA quand vous obtenez un permis de vendeur, même s'il est gratuit ?", options: ["Un dépôt de société par actions", "Le mot de passe de votre banque", "Une annonce dans un journal", "Un dépôt de garantie"], answer: 3, why: "Le CDTFA dit qu'il peut exiger un dépôt de garantie." },
+      { objective: "O3", q: "Un stand de citrouilles saisonnier vend au même endroit pendant six semaines. Sur quoi le propriétaire doit-il interroger le CDTFA ?", options: ["Un permis de vendeur temporaire", "Un EIN", "Un FBN", "Un Statement of Information"], answer: 0, why: "Des ventes au même endroit pendant 90 jours ou moins peuvent demander un permis de vendeur temporaire." },
+      { objective: "O4", q: "Un food truck a en général besoin d'un permis sanitaire délivré par :", options: ["L'IRS", "L'EDD", "Le Secretary of State", "Le service de santé environnementale du comté"], answer: 3, why: "Les entreprises alimentaires obtiennent leur permis sanitaire auprès de la santé environnementale du comté." },
+      { objective: "O6", q: "CalGold indique qu'il ne délivre pas de permis. Donc, après l'avoir utilisé, vous devez :", options: ["Ignorer la liste", "Payer CalGold", "Contacter chaque service listé pour confirmer les frais et faire la demande", "Demander à une IA de faire la demande pour vous"], answer: 2, why: "CalGold liste les services ; vous faites la demande auprès de chacun." },
+      { objective: "O4", q: "Un service de soutien scolaire à domicile a probablement quand même besoin :", options: ["D'un permis de vendeur", "D'une licence d'entreprise ou d'un certificat de taxe de la ville", "D'un permis sanitaire", "D'une licence d'alcool"], answer: 1, why: "La plupart des villes exigent une licence d'entreprise, même pour une activité à domicile." },
+      { objective: "O5", q: "Combien coûte l'impôt annuel d'une LLC en Californie ?", options: ["20 $", "70 $", "250 $", "800 $"], answer: 3, why: "Le FTB dit que toute LLC doit payer un impôt annuel de 800 $." },
+      { objective: "O5", q: "Quand le premier impôt annuel de 800 $ d'une LLC est-il dû ?", options: ["Seulement quand elle gagne 250 000 $", "Jamais la première année", "Le 15e jour du 4e mois après le dépôt auprès du Secretary of State", "Le 31 décembre"], answer: 2, why: "Le FTB indique le 15e jour du 4e mois après le dépôt." },
+      { objective: "O5", q: "Une société par actions nouvelle, pour sa première année fiscale :", options: ["N'a pas à payer l'impôt minimum de 800 $", "Paie 1 600 $", "Ne paie jamais d'impôts", "Doit payer la redevance LLC"], answer: 0, why: "Le FTB dit que les sociétés nouvellement créées n'ont pas à payer le minimum leur première année fiscale." },
+      { objective: "O5", q: "À quelle fréquence une LLC dépose-t-elle un Statement of Information après le premier ?", options: ["Chaque mois", "Tous les deux ans", "Tous les dix ans", "Jamais"], answer: 1, why: "Le Secretary of State dit tous les deux ans après le premier." },
+      { objective: "O6", q: "Dans quel ordre faire en général ces étapes ?", options: ["Licence de la ville, puis créer la LLC, puis choisir la forme", "Choisir la forme, la créer, obtenir l'EIN, puis les permis locaux", "Permis de vendeur, puis EIN, puis forme", "N'importe quel ordre"], answer: 1, why: "Beaucoup de permis demandent votre EIN et votre numéro d'entité, alors créez l'entreprise et obtenez l'EIN d'abord." },
+      { objective: "O6", q: "Un assistant d'IA vous donne les frais de FBN de votre comté. Que faites-vous ?", options: ["Les vérifier d'abord sur la page officielle du greffe de votre comté", "Les mettre dans le plan sans vérifier", "Payer l'outil d'IA", "Taper votre SSN pour obtenir une meilleure réponse"], answer: 0, why: "L'IA peut se tromper ; les frais viennent de la page officielle." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      3,
+      4,
+      7,
+      8,
+      11,
+      12,
+      14,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Forme et nom",
+        objective: "O1",
+        notYet: "Aucune forme choisie, ou l'enregistrement du nom manque.",
+        meets: "Une forme avec une raison, plus le bon enregistrement du nom et son bureau.",
+        exceeds: "Il note aussi la règle de publication du FBN si elle s'applique."
+      },
+      {
+        name: "EIN et permis de vendeur",
+        objective: "O3",
+        notYet: "Absents, ou un service payant est utilisé pour l'EIN.",
+        meets: "L'EIN gratuit sur irs.gov, et une ligne pour le permis de vendeur ou la raison pour laquelle il n'est pas nécessaire.",
+        exceeds: "Il note un dépôt de garantie possible auprès de la CDTFA."
+      },
+      {
+        name: "Permis locaux",
+        objective: "O4",
+        notYet: "Pas de licence de la ville ni de permis CalGold listés.",
+        meets: "La licence commerciale de la ville et chaque permis CalGold, chacun avec le site web de l'organisme.",
+        exceeds: "Chaque frais local est rempli à partir de la page officielle."
+      },
+      {
+        name: "Coûts et échéances annuels",
+        objective: "O5",
+        notYet: "L'impôt de 800 $ ou le Statement of Information manque pour une LLC ou une corporation.",
+        meets: "Des lignes annuelles qui correspondent à la forme d'entreprise, avec les échéances.",
+        exceeds: "Il comprend l'inscription à l'EDD en cas d'embauche, et chaque chiffre est vérifié sur la page officielle."
+      },
+      {
+        name: "Plan dans l'ordre avec les coûts",
+        objective: "O6",
+        notYet: "Des étapes dans le désordre, ou des coûts devinés.",
+        meets: "Les cinq colonnes remplies dans l'ordre, avec les coûts connus additionnés et les frais inconnus marqués « à chercher sur ».",
+        exceeds: "Chaque site officiel est listé et la colonne « Fait » est utilisée."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Les apprenants qui font au moins un enregistrement ou obtiennent au moins un permis dans les 60 jours (enquête de suivi)",
+      "Les apprenants qui ouvrent leur entreprise dans les règles dans les 6 mois",
+      "Les apprenants qui rencontrent un mentor SCORE ou un conseiller SBDC dans les 60 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur avec internet",
+      "Du papier, ou un tableur gratuit, pour le plan de création en cinq colonnes",
+      "Les pages officielles citées dans chaque leçon : bizfile Online, irs.gov, CDTFA, CalGold, FTB et EDD",
+      "Environ 60 minutes en tout : leçons, pratique, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Avant chaque séance, ouvrez les pages officielles et vérifiez que les frais de l'État cités dans le cours sont toujours à jour.",
+      "Cherchez les pages de votre greffier de comté et de la licence commerciale de votre ville, pour montrer aux apprenants les vrais sites locaux.",
+      "Ne demandez jamais aux apprenants de taper un numéro de sécurité sociale sur un écran partagé ; la demande d'EIN se fait seulement sur irs.gov, en privé.",
+      "Ce cours ne donne pas de conseil juridique ou fiscal ; invitez un mentor SCORE, un conseiller SBDC ou un professionnel de la fiscalité pour les questions sur la situation d'un apprenant.",
+      "Notez le plan de création avec la grille et donnez votre retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

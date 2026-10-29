@@ -16,11 +16,35 @@ module.exports = {
     "Each lesson takes about five minutes. Read the lesson, look over the slides, then do the \"Try it now\" task. There is a knowledge check after each chapter and a 20-question quiz at the end. This course explains federal rules in plain words; it is not legal advice. State and city laws can give you more protection, and each lesson shows where to check."
   ],
   finalTask: "Make a one-page \"Work Ready\" plan for a real or practice job: your plan to arrive 10 minutes early (route, backup ride, alarm), what you will wear, a short message to send if you are running late or sick, your phone rule for the shift, a pay check routine (hours log and pay stub check), and the official place you would go to report unpaid wages, discrimination or harassment, and a safety hazard, plus your state's labor office.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Anyone starting or restarting work in the United States: young people in a first job, veterans moving into civilian workplaces, people coming home from prison and anyone who wants to feel more sure of themselves at work.",
+    startingPoint: "Ready to work and able to use a phone, but many have not had a steady job recently, are unsure what supervisors expect, have never checked a pay stub against their hours, and do not know where to report unpaid wages, discrimination, harassment or safety problems.",
+    gap: "New workers lose jobs over lateness, phone use and poor communication, and can lose pay or face unfair treatment without knowing their rights. Learners need habits that make them dependable and the know-how to check their pay and report problems to the right official place.",
+    constraints: [
+      "Reading level: plain words and short sentences",
+      "Federal rules in plain words; not legal advice, and state and city laws can give more protection",
+      "Learners check their own state's rules on official sites (dol.gov, eeoc.gov, osha.gov and the state labor office)",
+      "Devices: a phone for routes, messages and official websites",
+      "Some learners have parole, transport or childcare limits that affect scheduling"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "For a real or practice job", action: "plan your route, backup ride and morning so you arrive about 10 minutes early", standard: "with a ready-to-send message if you are late or sick" },
+    { id: "O2", condition: "In a new job", action: "dress for the job and write clear, polite messages to a supervisor, including owning a mistake", standard: "with each message short and respectful" },
+    { id: "O3", condition: "For your next shift", action: "write a phone rule that keeps you safe and focused at work", standard: "with no phone use while driving or using machines" },
+    { id: "O4", condition: "Given your hours log and a pay stub", action: "calculate your pay, including overtime, and check it against the pay stub", standard: "raising any difference with payroll using your hours log" },
+    { id: "O5", condition: "Given a case of possible discrimination or harassment", action: "list the steps to document and report it, inside the company and to the EEOC", standard: "in the right order and within the filing deadline" },
+    { id: "O6", condition: "Given a safety hazard or a question about state rules", action: "find where to report a safety problem and your state's labor office", standard: "naming OSHA and your state labor office's website" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Being professional at work",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Being on time and ready to work",
           minutes: 5,
           goal: "Plan your trip and your morning so you arrive early and ready.",
@@ -39,9 +63,14 @@ module.exports = {
             { title: "The night before", bullets: ["Clothes, ID, keys and lunch ready", "Tools and safety gear packed", "Get some rest"] }
           ],
           tryIt: "Pick a real or practice job address. Plan your route there for a 7 am start, choose a backup way to get there, and write the exact text you would send your supervisor if your bus broke down.",
-          youCanNow: "plan to arrive early and ready, and tell your supervisor the right way if you will be late or sick."
+          youCanNow: "plan to arrive early and ready, and tell your supervisor the right way if you will be late or sick.",
+          quickCheck: [
+            { objective: "O1", q: "What is a backup plan for getting to work?", options: ["A second way to get there if your usual ride fails", "Leaving after your shift starts", "Calling in sick", "Asking for a later shift"], answer: 0, why: "A backup ride keeps you on time when something goes wrong." },
+            { objective: "O1", q: "Your bus breaks down and you will be 20 minutes late. What would you do?", options: ["Say nothing and arrive late", "Go home and skip the shift", "Text or call your supervisor right away, the way they asked", "Wait until the next day to explain"], answer: 2, why: "Telling your supervisor right away shows you are dependable." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Dress and communication at work",
           minutes: 5,
           goal: "Dress for the job and speak and write to a supervisor clearly and politely.",
@@ -60,9 +89,14 @@ module.exports = {
             { title: "Work messages", bullets: ["Greeting, what you need, your name", "No slang, all capitals or emojis at first"] }
           ],
           tryIt: "Write a short text to a supervisor asking a question about tomorrow's shift. Then write a two-sentence message owning a small mistake, such as putting stock in the wrong aisle, and saying how you fixed it.",
-          youCanNow: "dress for the job and communicate with a supervisor clearly and respectfully, including owning a mistake."
+          youCanNow: "dress for the job and communicate with a supervisor clearly and respectfully, including owning a mistake.",
+          quickCheck: [
+            { objective: "O2", q: "What is the best way to check you understood a long instruction?", options: ["Nod and hope", "Repeat it back in your own words", "Ask a coworker later", "Do it your own way"], answer: 1, why: "Repeating it back catches mistakes before they happen." },
+            { objective: "O2", q: "You broke a box of glasses while stocking. What would you do?", options: ["Hide the box", "Blame another worker", "Wait to see if anyone notices", "Tell your supervisor what happened and what you did about it"], answer: 3, why: "Owning a mistake and saying how you fixed it builds trust." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Phone use at work",
           minutes: 4,
           goal: "Follow a simple phone rule that keeps you safe and focused at work.",
@@ -81,17 +115,21 @@ module.exports = {
             { title: "Careful what you post", bullets: ["No photos of customers or coworkers", "No posting work problems without knowing the rules"] }
           ],
           tryIt: "Write your personal phone rule for your next shift in one sentence. Then write what you would say to a supervisor if you are waiting for an important call from your child's school.",
-          youCanNow: "follow a phone rule that keeps you safe and focused, and handle an important call the right way."
+          youCanNow: "follow a phone rule that keeps you safe and focused, and handle an important call the right way.",
+          quickCheck: [
+            { objective: "O3", q: "Which is a good personal phone rule for most jobs?", options: ["Phone on silent and away while working; check it on breaks", "Phone in hand at all times", "Answer every call right away", "Use earbuds for music while serving customers"], answer: 0, why: "Silent and away during work, checked on breaks, keeps you focused." },
+            { objective: "O3", q: "You are driving a forklift and your phone buzzes. What would you do?", options: ["Check it quickly", "Answer on speaker", "Ignore it until you have safely stopped and are on a break", "Text back while driving slowly"], answer: 2, why: "Phone use while driving or using machines is never safe." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Being professional at work",
         questions: [
-          { q: "Your shift starts at 7:00. When should you plan to arrive?", options: ["At 7:00 exactly", "At 7:10", "About 6:50, ready to start at 7:00", "Whenever the bus comes"], answer: 2, why: "Arriving about 10 minutes early lets you be ready at your station on time." },
-          { q: "You wake up sick. What do you do?", options: ["Tell your supervisor before the shift, the way they asked you to", "Do not go and do not call", "Text a coworker and hope they pass it on", "Call after the shift is over"], answer: 0, why: "Telling your supervisor before the shift is professional; a no call, no show can cost you the job." },
-          { q: "Your supervisor gives you a long instruction. What is a good move?", options: ["Nod and guess later", "Ask a coworker to do it", "Ignore it", "Repeat it back to check you understood"], answer: 3, why: "Repeating it back catches mistakes before they happen." },
-          { q: "You put stock on the wrong shelf. What do you do?", options: ["Hide it", "Tell your supervisor what happened and how you fixed it", "Blame a coworker", "Quit"], answer: 1, why: "Owning a mistake quickly builds trust." },
-          { q: "Which is the best phone habit at most jobs?", options: ["Phone on loud in your hand", "Answer calls while driving a forklift", "Silent and away while working, check on breaks", "Post photos of customers"], answer: 2, why: "This keeps you focused and safe and fits most phone policies." }
+          { objective: "O1", q: "Your shift starts at 7:00. When should you plan to arrive?", options: ["At 7:00 exactly", "At 7:10", "About 6:50, ready to start at 7:00", "Whenever the bus comes"], answer: 2, why: "Arriving about 10 minutes early lets you be ready at your station on time." },
+          { objective: "O1", q: "You wake up sick. What do you do?", options: ["Tell your supervisor before the shift, the way they asked you to", "Do not go and do not call", "Text a coworker and hope they pass it on", "Call after the shift is over"], answer: 0, why: "Telling your supervisor before the shift is professional; a no call, no show can cost you the job." },
+          { objective: "O2", q: "Your supervisor gives you a long instruction. What is a good move?", options: ["Nod and guess later", "Ask a coworker to do it", "Ignore it", "Repeat it back to check you understood"], answer: 3, why: "Repeating it back catches mistakes before they happen." },
+          { objective: "O2", q: "You put stock on the wrong shelf. What do you do?", options: ["Hide it", "Tell your supervisor what happened and how you fixed it", "Blame a coworker", "Quit"], answer: 1, why: "Owning a mistake quickly builds trust." },
+          { objective: "O3", q: "Which is the best phone habit at most jobs?", options: ["Phone on loud in your hand", "Answer calls while driving a forklift", "Silent and away while working, check on breaks", "Post photos of customers"], answer: 2, why: "This keeps you focused and safe and fits most phone policies." }
         ]
       }
     },
@@ -99,6 +137,7 @@ module.exports = {
       name: "Chapter 2: Your rights at work in the US",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Minimum wage, overtime and your pay stub",
           minutes: 6,
           goal: "Check that your pay is right by comparing your hours to your pay stub.",
@@ -124,9 +163,14 @@ module.exports = {
             { name: "US Department of Labor: Fact Sheet 77A, retaliation under the FLSA", url: "https://www.dol.gov/agencies/whd/fact-sheets/77a-flsa-prohibiting-retaliation" }
           ],
           tryIt: "Practice: you earn $16 an hour and worked 44 hours this week (not exempt). Work out the pay: 40 x $16, plus 4 hours x $24. Then look up your state's minimum wage on the dol.gov state page and write it down.",
-          youCanNow: "check your hours and pay against your pay stub, spot missing overtime, and know where to go if your pay is wrong."
+          youCanNow: "check your hours and pay against your pay stub, spot missing overtime, and know where to go if your pay is wrong.",
+          quickCheck: [
+            { objective: "O4", q: "What is gross pay on a pay stub?", options: ["What you take home", "Your pay before deductions", "Only your overtime", "Your tax refund"], answer: 1, why: "Gross pay is before deductions; net pay is what you take home." },
+            { objective: "O4", q: "You earn $16 an hour and worked 42 hours (not exempt). How would you work out the pay?", options: ["42 x $16", "40 x $24 plus 2 x $16", "42 x $24", "40 x $16 plus 2 x $24"], answer: 3, why: "Overtime hours over 40 are paid at least 1.5 times the rate, so $24 here." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Discrimination and harassment, and how to report them",
           minutes: 5,
           goal: "Recognize workplace discrimination and harassment and know the steps to report it.",
@@ -149,12 +193,17 @@ module.exports = {
             { name: "EEOC: Harassment", url: "https://www.eeoc.gov/harassment" }
           ],
           tryIt: "Read this case: a coworker makes jokes about a new employee's religion every day, and the supervisor laughs. Write the first three things the new employee should do, in order, and where they could go if the company does nothing.",
-          youCanNow: "recognize discrimination and harassment, write down what happened, and report it inside the company or to the EEOC."
+          youCanNow: "recognize discrimination and harassment, write down what happened, and report it inside the company or to the EEOC.",
+          quickCheck: [
+            { objective: "O5", q: "What is retaliation at work?", options: ["Punishing someone for reporting a problem or using their rights", "A normal performance review", "A pay raise", "A schedule change you asked for"], answer: 0, why: "Retaliation is punishment for reporting or using your rights, and it is illegal." },
+            { objective: "O5", q: "A coworker keeps making jokes about your disability. What would you do first?", options: ["Quit right away", "Make jokes back", "Ignore it for a year", "Write down what happened, with dates, and save any messages"], answer: 3, why: "Writing it down and saving messages is the first step to reporting." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "A safe workplace and where to check your state's rules",
           minutes: 5,
-          goal: "Know your right to a safe job and find your state's labor office.",
+          goal: "Explain your right to a safe job, and find where to report a hazard and your state's labor office.",
           text: [
             "The Occupational Safety and Health Administration (OSHA) is the federal agency for workplace safety. Employers must provide a workplace free of serious known hazards, follow safety rules, provide required safety gear, and train you about hazards in a way you understand.",
             "You have the right to report a hazard or an injury, to ask OSHA to inspect your workplace, and to see records of work injuries. You can file a safety complaint with OSHA online, by phone at 1-800-321-OSHA (6742), by mail, or at an OSHA office, and you can ask that your name not be shared with your employer.",
@@ -176,17 +225,21 @@ module.exports = {
             { name: "US Department of Labor: State labor offices", url: "https://www.dol.gov/agencies/whd/state/contacts" }
           ],
           tryIt: "Final task: make your one-page \"Work Ready\" plan. Include your arrival plan, clothes, late or sick message, phone rule, pay check routine, and where you would report unpaid wages (dol.gov), discrimination or harassment (eeoc.gov), and a safety hazard (osha.gov), plus your own state labor office's website.",
-          youCanNow: "name your right to a safe workplace, report a hazard the right way, and find your state's extra rules."
+          youCanNow: "name your right to a safe workplace, report a hazard the right way, and find your state's extra rules.",
+          quickCheck: [
+            { objective: "O6", q: "Which agency handles workplace safety complaints?", options: ["The EEOC", "OSHA", "The IRS", "The post office"], answer: 1, why: "OSHA handles workplace safety." },
+            { objective: "O6", q: "You want to know if your state gives paid sick leave. What would you do?", options: ["Ask a friend in another state", "Guess", "Check your state labor office, found on the Department of Labor's list", "Ask an AI and trust its answer"], answer: 2, why: "Your state labor office has the official rules for your state." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Your rights at work in the US",
         questions: [
-          { q: "Your state's minimum wage is higher than the federal $7.25. Which must your employer pay?", options: ["The federal $7.25", "The higher state rate", "Whatever they choose", "The average of the two"], answer: 1, why: "Employers must follow both laws, so the higher rate applies." },
-          { q: "You are an hourly, non-exempt worker and worked 45 hours this week. What should you see?", options: ["5 hours of overtime at least 1.5 times your rate", "No overtime because it was one week", "Overtime only if you worked on Sunday", "A day off instead of pay"], answer: 0, why: "Hours over 40 in a workweek earn at least time and a half." },
-          { q: "Which agency enforces federal laws against job discrimination?", options: ["OSHA", "The IRS", "The DMV", "The EEOC"], answer: 3, why: "The US Equal Employment Opportunity Commission handles discrimination charges." },
-          { q: "What should you do FIRST if you are being harassed at work?", options: ["Post about it online", "Quit with no notice", "Write down what happened and save messages", "Wait a year"], answer: 2, why: "A written record helps every next step, inside or outside the company." },
-          { q: "You reported a broken guard on a machine and were cut from the schedule the next week. What can you do?", options: ["Nothing", "File a whistleblower complaint with OSHA, within 30 days", "Wait six months, then complain", "Only post about it"], answer: 1, why: "Punishing you for a safety report is illegal, and the federal deadline is short." }
+          { objective: "O4", q: "Your state's minimum wage is higher than the federal $7.25. Which must your employer pay?", options: ["The federal $7.25", "The higher state rate", "Whatever they choose", "The average of the two"], answer: 1, why: "Employers must follow both laws, so the higher rate applies." },
+          { objective: "O4", q: "You are an hourly, non-exempt worker and worked 45 hours this week. What should you see?", options: ["5 hours of overtime at least 1.5 times your rate", "No overtime because it was one week", "Overtime only if you worked on Sunday", "A day off instead of pay"], answer: 0, why: "Hours over 40 in a workweek earn at least time and a half." },
+          { objective: "O5", q: "Which agency enforces federal laws against job discrimination?", options: ["OSHA", "The IRS", "The DMV", "The EEOC"], answer: 3, why: "The US Equal Employment Opportunity Commission handles discrimination charges." },
+          { objective: "O5", q: "What should you do FIRST if you are being harassed at work?", options: ["Post about it online", "Quit with no notice", "Write down what happened and save messages", "Wait a year"], answer: 2, why: "A written record helps every next step, inside or outside the company." },
+          { objective: "O6", q: "You reported a broken guard on a machine and were cut from the schedule the next week. What can you do?", options: ["Nothing", "File a whistleblower complaint with OSHA, within 30 days", "Wait six months, then complain", "Only post about it"], answer: 1, why: "Punishing you for a safety report is illegal, and the federal deadline is short." }
         ]
       }
     }
@@ -194,26 +247,112 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Workplace Rights and Professionalism",
     questions: [
-      { q: "In many jobs, \"on time\" means:", options: ["Walking in the door at the start time", "At your station and ready when the shift begins", "Within 15 minutes of the start time", "Whenever your ride arrives"], answer: 1, why: "Be ready to work when the shift starts, so plan to arrive early." },
-      { q: "What is a \"no call, no show\"?", options: ["Missing a shift without telling anyone", "A day off you asked for", "A phone policy", "A paid holiday"], answer: 0, why: "It is one of the fastest ways to lose a job." },
-      { q: "A good backup plan for getting to work is:", options: ["Hoping for the best", "Leaving later", "A second bus or a friend who can give you a ride", "Calling in every time the bus is late"], answer: 2, why: "A backup route keeps you on time when something goes wrong." },
-      { q: "You are not sure what to wear on day one. You:", options: ["Wear whatever is comfortable", "Copy what you see on TV", "Wear sandals to be safe", "Ask about the uniform or dress code"], answer: 3, why: "Asking avoids mistakes, and some jobs need safety shoes." },
-      { q: "Which work message to a supervisor is best?", options: ["\"YO WHERE DO I GO\"", "\"Hi Ms. Lee, which entrance should I use tomorrow? Thanks, Sam\"", "A row of emojis", "No message; just guess"], answer: 1, why: "A greeting, the need and your name is clear and polite." },
-      { q: "A coworker disagrees with you loudly in front of customers. You:", options: ["Stay calm and talk privately later", "Shout back", "Post about it", "Walk off the job"], answer: 0, why: "Calm, private talk solves problems without making them worse." },
-      { q: "When is it NEVER OK to use your phone at work?", options: ["On your break", "In the break room", "Before your shift", "While driving a forklift or using a machine"], answer: 3, why: "Phones near vehicles and machines cause serious injuries." },
-      { q: "You expect an important call from your child's school. You:", options: ["Keep the phone in your hand all shift", "Tell your supervisor at the start and ask how to handle it", "Leave without saying anything", "Ignore it"], answer: 1, why: "Telling your supervisor ahead shows respect and avoids trouble." },
-      { q: "What is the federal minimum wage according to the Department of Labor?", options: ["$5.15 an hour", "$10.00 an hour", "$7.25 an hour", "$15.00 an hour"], answer: 2, why: "The federal minimum is $7.25; many states and cities set more." },
-      { q: "Federal overtime starts after how many hours in a workweek?", options: ["40", "35", "45", "50"], answer: 0, why: "Covered, non-exempt workers get overtime for hours over 40 in a workweek." },
-      { q: "You worked 30 hours one week and 50 the next. Under federal law:", options: ["They average out, so no overtime", "You get 10 hours of overtime for the second week", "You get 20 hours of overtime", "Overtime only counts on holidays"], answer: 1, why: "Each workweek stands alone; hours cannot be averaged across weeks." },
-      { q: "On a pay stub, \"net pay\" is:", options: ["Pay before taxes", "The tax amount", "Your hourly rate", "What you take home after deductions"], answer: 3, why: "Net pay is what is left after taxes and other deductions." },
-      { q: "Your pay stub shows 32 hours but your log says 38. What is the best first step?", options: ["Ask payroll politely and show your hours log", "Say nothing", "Quit", "Take items from the store to make up for it"], answer: 0, why: "Most errors are fixed fastest by asking payroll with your record." },
-      { q: "Which is a protected trait under federal job discrimination law?", options: ["Favorite sports team", "Disability", "Shoe size", "Music taste"], answer: 1, why: "Disability is protected, along with race, color, religion, sex, national origin, age 40+ and genetic information." },
-      { q: "How can you start an EEOC charge?", options: ["Only by hiring a lawyer", "Only by fax", "Online through the EEOC Public Portal, at an office, or by calling 1-800-669-4000", "By posting on social media"], answer: 2, why: "Filing is free and can be started online, in person or by phone." },
-      { q: "In most cases, how long do you have to file an EEOC charge?", options: ["7 days", "Five years", "There is no deadline", "180 days, or 300 days if a state or local agency enforces a similar law"], answer: 3, why: "Those are the EEOC's standard time limits; act quickly." },
-      { q: "Your boss cuts your hours after you report harassment. This may be:", options: ["Normal", "Retaliation, which is illegal", "A promotion", "Required by law"], answer: 1, why: "Punishing someone for reporting is retaliation." },
-      { q: "Which agency handles workplace safety complaints?", options: ["OSHA", "The EEOC", "The Post Office", "The FCC"], answer: 0, why: "The Occupational Safety and Health Administration handles safety." },
-      { q: "When you file a safety complaint with OSHA, you can:", options: ["Only file if your boss agrees", "Never stay anonymous", "Ask that your name not be shared with your employer", "Only file in English"], answer: 2, why: "OSHA lets workers ask for their name to be kept private." },
-      { q: "Where can you find extra rights your state gives, like paid sick leave or pay stub rules?", options: ["A social media post", "Your state labor office, found on the Department of Labor's list", "A coworker's guess", "Nowhere; only federal rules exist"], answer: 1, why: "State laws can add protections; the state labor office is the official place to check." }
+      { objective: "O1", q: "In many jobs, \"on time\" means:", options: ["Walking in the door at the start time", "At your station and ready when the shift begins", "Within 15 minutes of the start time", "Whenever your ride arrives"], answer: 1, why: "Be ready to work when the shift starts, so plan to arrive early." },
+      { objective: "O1", q: "What is a \"no call, no show\"?", options: ["Missing a shift without telling anyone", "A day off you asked for", "A phone policy", "A paid holiday"], answer: 0, why: "It is one of the fastest ways to lose a job." },
+      { objective: "O1", q: "A good backup plan for getting to work is:", options: ["Hoping for the best", "Leaving later", "A second bus or a friend who can give you a ride", "Calling in every time the bus is late"], answer: 2, why: "A backup route keeps you on time when something goes wrong." },
+      { objective: "O2", q: "You are not sure what to wear on day one. You:", options: ["Wear whatever is comfortable", "Copy what you see on TV", "Wear sandals to be safe", "Ask about the uniform or dress code"], answer: 3, why: "Asking avoids mistakes, and some jobs need safety shoes." },
+      { objective: "O2", q: "Which work message to a supervisor is best?", options: ["\"YO WHERE DO I GO\"", "\"Hi Ms. Lee, which entrance should I use tomorrow? Thanks, Sam\"", "A row of emojis", "No message; just guess"], answer: 1, why: "A greeting, the need and your name is clear and polite." },
+      { objective: "O2", q: "A coworker disagrees with you loudly in front of customers. You:", options: ["Stay calm and talk privately later", "Shout back", "Post about it", "Walk off the job"], answer: 0, why: "Calm, private talk solves problems without making them worse." },
+      { objective: "O3", q: "When is it NEVER OK to use your phone at work?", options: ["On your break", "In the break room", "Before your shift", "While driving a forklift or using a machine"], answer: 3, why: "Phones near vehicles and machines cause serious injuries." },
+      { objective: "O3", q: "You expect an important call from your child's school. You:", options: ["Keep the phone in your hand all shift", "Tell your supervisor at the start and ask how to handle it", "Leave without saying anything", "Ignore it"], answer: 1, why: "Telling your supervisor ahead shows respect and avoids trouble." },
+      { objective: "O4", q: "What is the federal minimum wage according to the Department of Labor?", options: ["$5.15 an hour", "$10.00 an hour", "$7.25 an hour", "$15.00 an hour"], answer: 2, why: "The federal minimum is $7.25; many states and cities set more." },
+      { objective: "O4", q: "Federal overtime starts after how many hours in a workweek?", options: ["40", "35", "45", "50"], answer: 0, why: "Covered, non-exempt workers get overtime for hours over 40 in a workweek." },
+      { objective: "O4", q: "You worked 30 hours one week and 50 the next. Under federal law:", options: ["They average out, so no overtime", "You get 10 hours of overtime for the second week", "You get 20 hours of overtime", "Overtime only counts on holidays"], answer: 1, why: "Each workweek stands alone; hours cannot be averaged across weeks." },
+      { objective: "O4", q: "On a pay stub, \"net pay\" is:", options: ["Pay before taxes", "The tax amount", "Your hourly rate", "What you take home after deductions"], answer: 3, why: "Net pay is what is left after taxes and other deductions." },
+      { objective: "O4", q: "Your pay stub shows 32 hours but your log says 38. What is the best first step?", options: ["Ask payroll politely and show your hours log", "Say nothing", "Quit", "Take items from the store to make up for it"], answer: 0, why: "Most errors are fixed fastest by asking payroll with your record." },
+      { objective: "O5", q: "Which is a protected trait under federal job discrimination law?", options: ["Favorite sports team", "Disability", "Shoe size", "Music taste"], answer: 1, why: "Disability is protected, along with race, color, religion, sex, national origin, age 40+ and genetic information." },
+      { objective: "O5", q: "How can you start an EEOC charge?", options: ["Only by hiring a lawyer", "Only by fax", "Online through the EEOC Public Portal, at an office, or by calling 1-800-669-4000", "By posting on social media"], answer: 2, why: "Filing is free and can be started online, in person or by phone." },
+      { objective: "O5", q: "In most cases, how long do you have to file an EEOC charge?", options: ["7 days", "Five years", "There is no deadline", "180 days, or 300 days if a state or local agency enforces a similar law"], answer: 3, why: "Those are the EEOC's standard time limits; act quickly." },
+      { objective: "O5", q: "Your boss cuts your hours after you report harassment. This may be:", options: ["Normal", "Retaliation, which is illegal", "A promotion", "Required by law"], answer: 1, why: "Punishing someone for reporting is retaliation." },
+      { objective: "O6", q: "Which agency handles workplace safety complaints?", options: ["OSHA", "The EEOC", "The Post Office", "The FCC"], answer: 0, why: "The Occupational Safety and Health Administration handles safety." },
+      { objective: "O6", q: "When you file a safety complaint with OSHA, you can:", options: ["Only file if your boss agrees", "Never stay anonymous", "Ask that your name not be shared with your employer", "Only file in English"], answer: 2, why: "OSHA lets workers ask for their name to be kept private." },
+      { objective: "O6", q: "Where can you find extra rights your state gives, like paid sick leave or pay stub rules?", options: ["A social media post", "Your state labor office, found on the Department of Labor's list", "A coworker's guess", "Nowhere; only federal rules exist"], answer: 1, why: "State laws can add protections; the state labor office is the official place to check." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      1,
+      4,
+      6,
+      9,
+      12,
+      13,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Arrival plan",
+        objective: "O1",
+        notYet: "No route, backup ride or alarm, or no late or sick message.",
+        meets: "Route, backup ride and alarm to arrive about 10 minutes early, plus a ready late or sick message.",
+        exceeds: "Times are checked on a map app and the message names who it goes to."
+      },
+      {
+        name: "Dress and messages",
+        objective: "O2",
+        notYet: "Clothes not planned, or the message is unclear or rude.",
+        meets: "Clothes fit the job, and the message is short, clear and polite.",
+        exceeds: "Also includes how to ask about the dress code if unsure."
+      },
+      {
+        name: "Phone rule",
+        objective: "O3",
+        notYet: "No phone rule, or it allows phone use while driving or on machines.",
+        meets: "A one-sentence rule that keeps the phone away while working.",
+        exceeds: "Also plans how to handle an important expected call."
+      },
+      {
+        name: "Pay check routine",
+        objective: "O4",
+        notYet: "No hours log or pay stub check.",
+        meets: "Keeps an hours log and compares it with each pay stub, including overtime.",
+        exceeds: "Knows what to say to payroll if the numbers differ."
+      },
+      {
+        name: "Where to report",
+        objective: "O5",
+        notYet: "Missing one of the official places, or wrong ones.",
+        meets: "Names dol.gov for wages, eeoc.gov for discrimination or harassment, and osha.gov for safety.",
+        exceeds: "Notes the filing deadlines and the steps to document a problem first."
+      },
+      {
+        name: "State labor office",
+        objective: "O6",
+        notYet: "No state labor office listed.",
+        meets: "Lists their state labor office's website.",
+        exceeds: "Notes one extra right their state gives, from the official site."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who start or keep a job for 90 days (follow-up survey)",
+      "Learners who report checking their pay stub against their hours",
+      "Learners who report a wage, discrimination, harassment or safety problem to the right place when needed",
+      "Learners who start another Koach Learn career course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone with a map app and internet",
+      "A sample pay stub or the learner's own (kept private)",
+      "Paper and pen or a notes app for the Work Ready plan",
+      "Official sites: dol.gov, eeoc.gov, osha.gov and the state labor office",
+      "About 60 minutes in total"
+    ],
+    facilitatorNotes: [
+      "Remind learners this course is not legal advice; for a real problem, contact the agency or a legal aid office.",
+      "Use sample pay stubs for practice; never ask learners to share their own pay details.",
+      "Help learners find their own state's minimum wage and labor office on the official sites during class.",
+      "For re-entry learners, plan around parole check-ins, transport limits and childcare when building arrival plans.",
+      "Score the Work Ready plan with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

@@ -16,11 +16,33 @@ module.exports = {
     "Cada lección dura unos cinco minutos e incluye una tarea de \"Pruébalo ahora\" que puedes hacer con los documentos de tu propia organización. Hay una comprobación de conocimientos después de cada capítulo y un examen de 20 preguntas al final. Este curso es educación general, no asesoría legal ni fiscal. Las reglas cambian de un estado a otro y con el tiempo, así que revisa las fuentes oficiales que se nombran en las lecciones y pide consejo a un abogado o contador de organizaciones sin fines de lucro para tu caso."
   ],
   finalTask: "Haz una lista de control de una página sobre el gobierno de la junta para una organización sin fines de lucro real o de ejemplo: los tres deberes en palabras sencillas, cómo se reparten entre la junta y el personal cinco decisiones comunes, un orden del día de reunión con un modelo de acta, una lista de pasos para los conflictos de intereses, un calendario anual de revisiones financieras y trámites (qué versión del Formulario 990, su fecha límite y cualquier registro estatal, como el Registro de Organizaciones Benéficas y Recaudadores de Fondos de California) y un plan para llenar dos puestos vacantes basado en una tabla de habilidades.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Miembros de juntas directivas de organizaciones sin fines de lucro, fundadores, directores ejecutivos, líderes de iglesias y grupos comunitarios, y personas a las que les piden entrar a una junta por primera vez.",
+    startingPoint: "Les importa una misión y quizás han ido a reuniones de la junta. Muchos nunca han leído sus estatutos, escrito un acta, revisado un Formulario 990 ni manejado un conflicto de intereses.",
+    gap: "Una junta es legalmente responsable de su organización. Los miembros que no conocen sus deberes, el límite entre la junta y el personal o los trámites anuales ponen en riesgo la exención de impuestos, el dinero y la reputación de la organización. Una lista de verificación clara les ayuda a gobernar bien y a mantener la confianza del público.",
+    constraints: [
+      "Voluntarios con poco tiempo; lecciones de 5 minutos",
+      "Las reglas cambian según el estado y con el tiempo; se revisan en irs.gov y en la oficina estatal de organizaciones benéficas",
+      "Educación general, no asesoría legal ni fiscal; las decisiones serias se consultan con un abogado o contador de organizaciones sin fines de lucro",
+      "Palabras sencillas para miembros nuevos de juntas y grupos pequeños formados solo por voluntarios"
+    ],
+    prerequisites: "Ninguno."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Ante una decisión o situación de la junta", action: "explicar los deberes de cuidado, lealtad y obediencia e identificar cuál deber está en riesgo", standard: "acertando al menos 4 de 5" },
+    { id: "O2", condition: "Usando tus estatutos y una tabla de habilidades", action: "repartir decisiones comunes entre la junta y el personal, encontrar las reglas clave de los estatutos y planear cómo llenar los puestos vacantes de la junta", standard: "con cinco decisiones repartidas y dos puestos asignados a habilidades que faltan" },
+    { id: "O3", condition: "Para una próxima reunión de la junta", action: "escribir una agenda con una agenda de consentimiento y redactar un acta con asistencia, quórum, mociones, votos y acciones", standard: "con todas las partes obligatorias del acta" },
+    { id: "O4", condition: "Cuando un miembro de la junta, su familia o su negocio podría ganar con una decisión", action: "seguir los pasos para un conflicto de intereses: declararlo, salirse, revisar que el trato sea justo y anotarlo", standard: "en el orden correcto y anotado en el acta" },
+    { id: "O5", condition: "Con los ingresos, los bienes y la fecha de cierre del año de una organización sin fines de lucro", action: "revisar sus informes financieros y armar un calendario anual de su Formulario 990 y sus trámites estatales", standard: "con la versión y la fecha límite confirmadas en irs.gov y en el sitio de la oficina estatal de organizaciones benéficas" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Qué hace una junta directiva",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Los tres deberes: cuidado, lealtad y obediencia",
           minutes: 5,
           goal: "Explicar los tres deberes principales de la junta y darte cuenta cuando uno está en riesgo.",
@@ -36,9 +58,14 @@ module.exports = {
             { title: "Cada miembro, cada vez", bullets: ["No solo el presidente o el tesorero", "\"No lo leí\" no es una excusa", "¿Decisión seria? Consulta a un abogado de organizaciones sin fines de lucro"] }
           ],
           tryIt: "Escribe un ejemplo real de cada deber para una organización sin fines de lucro que conozcas, como un banco de alimentos, una iglesia o una liga deportiva juvenil. Luego escribe una acción que rompería cada deber.",
-          youCanNow: "explicar los deberes de cuidado, lealtad y obediencia y darte cuenta cuando uno está en riesgo."
+          youCanNow: "explicar los deberes de cuidado, lealtad y obediencia y darte cuenta cuando uno está en riesgo.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué le pide el deber de lealtad a un miembro de la junta?", options: ["Llegar a tiempo a todas las reuniones", "Seguir los estatutos y la ley", "Poner los intereses de la organización antes que los suyos", "Recaudar la mayor cantidad de dinero"], answer: 2, why: "La lealtad significa no usar nunca tu puesto para beneficiarte a ti, a tu familia o a tu negocio." },
+            { objective: "O1", q: "Un miembro dice: \"Yo no leo los informes; el tesorero se encarga del dinero\". ¿Qué le dices?", options: ["Todos los miembros tienen el deber de cuidado, así que hay que leer los informes y hacer preguntas", "Está bien; solo el tesorero es responsable", "Pídele al personal que vote por ti", "No votes en temas de dinero"], answer: 0, why: "Los tres deberes son de todos los miembros de la junta, y no leer el presupuesto no es excusa." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Funciones de la junta y del personal, y los estatutos",
           minutes: 6,
           goal: "Repartir decisiones comunes entre la junta y el personal y encontrar las reglas clave en tus estatutos.",
@@ -56,9 +83,14 @@ module.exports = {
             { title: "Estatutos: tu reglamento", bullets: ["Tamaño de la junta, periodos, cargos directivos", "Reuniones, quórum, votación", "Léelos, cúmplelos y cámbialos solo con su proceso"] }
           ],
           tryIt: "Consigue los estatutos de tu organización (o un ejemplo de una organización sin fines de lucro que conozcas). Busca el tamaño de la junta, la duración de los periodos, el quórum y cómo se vota. Luego reparte cinco decisiones comunes entre la junta, el personal o ambos.",
-          youCanNow: "mantener claras las funciones de la junta y del personal y encontrar las reglas clave en unos estatutos."
+          youCanNow: "mantener claras las funciones de la junta y del personal y encontrar las reglas clave en unos estatutos.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué son los estatutos?", options: ["Las reglas de impuestos del estado", "La descripción del puesto del director ejecutivo", "Una lista de donantes", "El reglamento propio de la organización, como el tamaño de la junta, los periodos, el quórum y las votaciones"], answer: 3, why: "Los estatutos son las reglas propias de la organización sobre cómo funciona la junta." },
+            { objective: "O2", q: "La presidenta de la junta empieza a decirle al personal de los programas cómo hacer cada actividad diaria. ¿Cuál es el problema?", options: ["Ninguno; la presidenta dirige el trabajo diario", "La junta está microgestionando; el trabajo diario le corresponde al personal dirigido por el director ejecutivo", "La presidenta también debería hacer la nómina", "El personal debería votar el presupuesto en su lugar"], answer: 1, why: "La junta marca la dirección y supervisa; el personal hace el trabajo diario." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Reuniones de la junta y actas",
           minutes: 5,
           goal: "Dirigir una reunión de la junta que cumpla los estatutos y escribir un acta clara.",
@@ -76,17 +108,21 @@ module.exports = {
             { title: "El acta no es una transcripción", bullets: ["Breve y objetiva", "Se aprueba en la siguiente reunión", "Se guarda en un lugar seguro"] }
           ],
           tryIt: "Escribe un orden del día de una página para una reunión de la junta, con una sección de agenda de consentimiento y dos temas para discutir. Luego escribe un acta de ejemplo para una moción, con quién la presentó, el conteo de votos y el resultado.",
-          youCanNow: "dirigir una reunión de la junta que cumpla las reglas y escribir un acta oficial y clara."
+          youCanNow: "dirigir una reunión de la junta que cumpla las reglas y escribir un acta oficial y clara.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué es el acta de la junta?", options: ["Una transcripción palabra por palabra de todo lo que se dijo", "El registro oficial, corto y con hechos, de la reunión", "La agenda que se envía antes de la reunión", "Una lista de los teléfonos de los miembros"], answer: 1, why: "El acta es el registro oficial: quién estuvo, el quórum, las mociones, los votos, los conflictos y las acciones." },
+            { objective: "O3", q: "Solo llegan unos pocos miembros y no estás seguro de si pueden votar. ¿Qué revisas primero?", options: ["Si el café está listo", "Si el acta es lo bastante larga", "Si el personal está de acuerdo", "Si hay quórum según los estatutos"], answer: 3, why: "La junta solo puede tomar decisiones cuando hay quórum." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Qué hace una junta directiva",
         questions: [
-          { q: "¿Qué deber significa leer los informes y hacer preguntas antes de votar?", options: ["Deber de lealtad", "Deber de obediencia", "Deber de cuidado", "Deber de silencio"], answer: 2, why: "Cuidado significa tomar decisiones informadas y cuidadosas." },
-          { q: "Un miembro de la junta quiere que la organización le rente un local a su empresa a un precio alto. ¿Qué deber está en riesgo?", options: ["Deber de lealtad", "Deber de cuidado", "Deber de obediencia", "Ninguno"], answer: 0, why: "Lealtad significa poner a la organización antes que tus propios intereses." },
-          { q: "En una organización sin fines de lucro con personal pagado, ¿quién suele contratar al director ejecutivo?", options: ["El voluntario más nuevo", "El director ejecutivo", "Un donante", "La junta"], answer: 3, why: "Contratar y evaluar al director ejecutivo es una tarea central de la junta." },
-          { q: "¿Qué es el quórum?", options: ["La cuenta de banco de la junta", "El número mínimo de miembros presentes para tomar decisiones", "Un tipo de moción", "El presupuesto anual"], answer: 1, why: "Sin quórum, la junta no puede votar de forma válida." },
-          { q: "¿Qué debe ir en el acta de la junta?", options: ["Cada palabra que dijeron todos", "Los chistes de la reunión", "Cada moción y el resultado de la votación", "Las direcciones de casa de los miembros"], answer: 2, why: "El acta registra decisiones, no es una transcripción." }
+          { objective: "O1", q: "¿Qué deber significa leer los informes y hacer preguntas antes de votar?", options: ["Deber de lealtad", "Deber de obediencia", "Deber de cuidado", "Deber de silencio"], answer: 2, why: "Cuidado significa tomar decisiones informadas y cuidadosas." },
+          { objective: "O1", q: "Un miembro de la junta quiere que la organización le rente un local a su empresa a un precio alto. ¿Qué deber está en riesgo?", options: ["Deber de lealtad", "Deber de cuidado", "Deber de obediencia", "Ninguno"], answer: 0, why: "Lealtad significa poner a la organización antes que tus propios intereses." },
+          { objective: "O2", q: "En una organización sin fines de lucro con personal pagado, ¿quién suele contratar al director ejecutivo?", options: ["El voluntario más nuevo", "El director ejecutivo", "Un donante", "La junta"], answer: 3, why: "Contratar y evaluar al director ejecutivo es una tarea central de la junta." },
+          { objective: "O3", q: "¿Qué es el quórum?", options: ["La cuenta de banco de la junta", "El número mínimo de miembros presentes para tomar decisiones", "Un tipo de moción", "El presupuesto anual"], answer: 1, why: "Sin quórum, la junta no puede votar de forma válida." },
+          { objective: "O3", q: "¿Qué debe ir en el acta de la junta?", options: ["Cada palabra que dijeron todos", "Los chistes de la reunión", "Cada moción y el resultado de la votación", "Las direcciones de casa de los miembros"], answer: 2, why: "El acta registra decisiones, no es una transcripción." }
         ]
       }
     },
@@ -94,6 +130,7 @@ module.exports = {
       name: "Capítulo 2: Supervisión y formación de la junta",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Cómo manejar los conflictos de intereses",
           minutes: 5,
           goal: "Seguir pasos claros cuando un miembro de la junta tiene un conflicto de intereses.",
@@ -110,9 +147,14 @@ module.exports = {
             { title: "Cuando surge", bullets: ["Declararlo", "Retirarse de la discusión y de la votación", "La junta revisa que el trato sea justo", "Registrarlo en el acta"] }
           ],
           tryIt: "Escribe en palabras sencillas los cinco pasos que seguirá tu junta cuando surja un conflicto. Luego aplícalos a este caso: la esposa de un miembro de la junta quiere venderle a la organización una camioneta usada.",
-          youCanNow: "manejar un conflicto de intereses con una declaración, la abstención del miembro, una revisión justa y un registro escrito."
+          youCanNow: "manejar un conflicto de intereses con una declaración, la abstención del miembro, una revisión justa y un registro escrito.",
+          quickCheck: [
+            { objective: "O4", q: "¿Cuándo hay un conflicto de intereses?", options: ["Cuando un miembro, su familia o su negocio podría ganar con una decisión de la junta", "Cuando dos miembros no están de acuerdo", "Cuando una reunión se alarga", "Cuando el presupuesto está apretado"], answer: 0, why: "Hay un conflicto cuando alguien de la junta podría ganar personalmente con la decisión." },
+            { objective: "O4", q: "La hermana de un miembro tiene la empresa de comida que se ofrece para tu cena de gala. ¿Qué pasa después?", options: ["El miembro vota, ya que la familia ayuda", "Se oculta en el acta", "El miembro lo declara y se sale, y la junta compara cotizaciones", "Se cancela la gala"], answer: 2, why: "El miembro lo declara y sale de la conversación y del voto, y la junta revisa que el trato sea justo." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Supervisión financiera, Formulario 990 y registro estatal",
           minutes: 6,
           goal: "Revisar las finanzas de una organización sin fines de lucro como miembro de la junta y poner los trámites anuales en un calendario.",
@@ -138,9 +180,14 @@ module.exports = {
             { name: "Guía para organizaciones benéficas del Procurador General de California (PDF, en inglés)", url: "https://oag.ca.gov/system/files/media/Guide%20for%20Charities.pdf" }
           ],
           tryIt: "Busca una organización sin fines de lucro que conozcas en una base de datos pública o en su informe anual. Anota sus ingresos anuales aproximados y decide qué versión del Formulario 990 probablemente presenta; luego confirma la regla en irs.gov. Escribe en un calendario anual la fecha límite de su Formulario 990 y, si está en California, la renovación de su registro.",
-          youCanNow: "revisar las finanzas de una organización sin fines de lucro como miembro de la junta y planear sus trámites anuales ante el IRS y el estado."
+          youCanNow: "revisar las finanzas de una organización sin fines de lucro como miembro de la junta y planear sus trámites anuales ante el IRS y el estado.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué muestra un balance general?", options: ["Quién vino a la reunión", "Los límites de periodos de la junta", "Los eventos del próximo año", "Lo que la organización tiene y lo que debe"], answer: 3, why: "El balance general muestra lo que la organización tiene y lo que debe." },
+            { objective: "O5", q: "El año de tu organización termina el 31 de diciembre. ¿Qué pones en el calendario de la junta?", options: ["Nada; los trámites son opcionales", "La fecha límite del Formulario 990, el 15 de mayo, después de confirmar la versión en irs.gov", "Un recordatorio de hacer el trámite cada cinco años", "Solo la fiesta de fin de año"], answer: 1, why: "La declaración vence el día 15 del 5.º mes después del cierre del año, y la versión se confirma en irs.gov." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Reclutar y dar la bienvenida a los miembros de la junta",
           minutes: 5,
           goal: "Usar una tabla de habilidades para reclutar a los miembros de la junta que tu organización necesita.",
@@ -158,17 +205,21 @@ module.exports = {
             { title: "Mantén la junta renovada", bullets: ["Evalúa la junta cada año", "Usa límites de periodos"] }
           ],
           tryIt: "Tarea final: haz tu lista de control de una página sobre el gobierno de la junta. Incluye los tres deberes, el reparto de cinco decisiones entre la junta y el personal, un orden del día y un modelo de acta, los pasos para los conflictos de intereses, un calendario anual de trámites y finanzas, y un plan para llenar dos puestos a partir de una tabla de habilidades.",
-          youCanNow: "reclutar y dar la bienvenida a miembros de la junta que llenen huecos reales, y mantener la junta sana año tras año."
+          youCanNow: "reclutar y dar la bienvenida a miembros de la junta que llenen huecos reales, y mantener la junta sana año tras año.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué muestra una tabla de habilidades?", options: ["Los cumpleaños de los miembros", "El calendario de reuniones", "Las habilidades y contactos que necesita la junta, y qué miembros los tienen", "El presupuesto anual"], answer: 2, why: "Una tabla de habilidades muestra lo que falta, y eso te dice a quién reclutar." },
+            { objective: "O2", q: "Tu tabla muestra que nadie tiene habilidades de finanzas. ¿Cuál es un buen siguiente paso?", options: ["Buscar más allá de tus amigos a alguien con habilidades de finanzas, reunirte con esa persona e invitarla a una reunión", "Pedírselo a tu mejor amigo, tenga las habilidades que tenga", "Dejar el hueco; no importa", "Hacer que el tesorero lo haga todo"], answer: 0, why: "Recluta a propósito para llenar lo que falta, y reúnete con las personas candidatas e invítalas antes a una reunión." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Supervisión y formación de la junta",
         questions: [
-          { q: "Un miembro de la junta tiene un conflicto en un contrato. ¿Qué debe hacer?", options: ["Votar primero y mencionarlo después", "Declararlo y retirarse de la discusión y de la votación", "Quedarse callado", "Renunciar a la junta"], answer: 1, why: "La declaración y la abstención permiten que la junta decida de forma justa." },
-          { q: "¿Qué informe compara los ingresos y gastos planeados con los reales?", options: ["Presupuesto contra lo real", "Acta", "Estatutos", "Tabla de habilidades"], answer: 0, why: "El presupuesto contra lo real muestra dónde el plan y la realidad no coinciden." },
-          { q: "Según el IRS, ¿qué organizaciones pequeñas pueden presentar el Formulario 990-N (tarjeta electrónica)?", options: ["Cualquier organización", "Las que tienen ingresos brutos normalmente de $50,000 o menos", "Solo las iglesias", "Las que tienen más de $1 millón en activos"], answer: 1, why: "El IRS fija el límite del 990-N en ingresos brutos normalmente de $50,000 o menos." },
-          { q: "¿Qué pasa si una organización no presenta su declaración anual obligatoria tres años seguidos?", options: ["Nada", "Solo recibe una carta de advertencia", "Tiene que cambiar de nombre", "Pierde automáticamente su exención de impuestos"], answer: 3, why: "El IRS dice que la exención se revoca automáticamente." },
-          { q: "Una primera herramienta útil para reclutar miembros de la junta es:", options: ["Una tabla de habilidades", "Una lista solo de tus amigos", "Una rifa", "La portada de los estatutos"], answer: 0, why: "La tabla muestra qué habilidades faltan." }
+          { objective: "O4", q: "Un miembro de la junta tiene un conflicto en un contrato. ¿Qué debe hacer?", options: ["Votar primero y mencionarlo después", "Declararlo y retirarse de la discusión y de la votación", "Quedarse callado", "Renunciar a la junta"], answer: 1, why: "La declaración y la abstención permiten que la junta decida de forma justa." },
+          { objective: "O5", q: "¿Qué informe compara los ingresos y gastos planeados con los reales?", options: ["Presupuesto contra lo real", "Acta", "Estatutos", "Tabla de habilidades"], answer: 0, why: "El presupuesto contra lo real muestra dónde el plan y la realidad no coinciden." },
+          { objective: "O5", q: "Según el IRS, ¿qué organizaciones pequeñas pueden presentar el Formulario 990-N (tarjeta electrónica)?", options: ["Cualquier organización", "Las que tienen ingresos brutos normalmente de $50,000 o menos", "Solo las iglesias", "Las que tienen más de $1 millón en activos"], answer: 1, why: "El IRS fija el límite del 990-N en ingresos brutos normalmente de $50,000 o menos." },
+          { objective: "O5", q: "¿Qué pasa si una organización no presenta su declaración anual obligatoria tres años seguidos?", options: ["Nada", "Solo recibe una carta de advertencia", "Tiene que cambiar de nombre", "Pierde automáticamente su exención de impuestos"], answer: 3, why: "El IRS dice que la exención se revoca automáticamente." },
+          { objective: "O2", q: "Una primera herramienta útil para reclutar miembros de la junta es:", options: ["Una tabla de habilidades", "Una lista solo de tus amigos", "Una rifa", "La portada de los estatutos"], answer: 0, why: "La tabla muestra qué habilidades faltan." }
         ]
       }
     }
@@ -176,26 +227,106 @@ module.exports = {
   quiz: {
     title: "Examen final: Gobierno de la junta directiva de una organización sin fines de lucro",
     questions: [
-      { q: "¿Qué deber significa mantener a la organización fiel a su misión y a la ley?", options: ["Deber de cuidado", "Deber de lealtad", "Deber de obediencia", "Deber de rapidez"], answer: 2, why: "Obediencia significa misión, estatutos y la ley." },
-      { q: "Un miembro de la junta no lee el presupuesto y vota que sí de todos modos. ¿Qué deber está más débil?", options: ["Deber de cuidado", "Deber de lealtad", "Deber de obediencia", "Ninguno; está bien"], answer: 0, why: "El cuidado exige decisiones informadas." },
-      { q: "¿A quién se aplican los tres deberes de la junta?", options: ["Solo al presidente", "Solo al tesorero", "Solo al personal pagado", "A cada miembro de la junta"], answer: 3, why: "Cada miembro tiene estos deberes." },
-      { q: "En una organización sin fines de lucro con personal pagado, ¿quién dirige los programas diarios?", options: ["El presidente de la junta", "El personal, dirigido por el director ejecutivo", "Los donantes", "El IRS"], answer: 1, why: "El personal hace el trabajo diario; la junta supervisa." },
-      { q: "Una junta vota que sí a todo sin hacer preguntas. Esto se llama:", options: ["Buen gobierno", "Microgestión", "Aprobar sin revisar", "Abstenerse"], answer: 2, why: "Aprobar sin revisar no cumple con el deber de cuidado." },
-      { q: "¿Dónde encuentras el tamaño de tu junta, los periodos y las reglas de votación?", options: ["En los estatutos", "En el Formulario 990-N", "En una carta de un donante", "En un periódico"], answer: 0, why: "Los estatutos son el reglamento de la organización." },
-      { q: "Antes de que la junta vote, el presidente debe confirmar que:", options: ["Todos están de acuerdo", "Hay quórum", "La prensa está presente", "El voto es secreto"], answer: 1, why: "Las decisiones necesitan quórum para ser válidas." },
-      { q: "Una agenda de consentimiento se usa para:", options: ["Grandes debates de estrategia", "Despedir al director", "Conflictos de intereses", "Asuntos de rutina aprobados con una sola votación"], answer: 3, why: "Ahorra tiempo para los temas importantes." },
-      { q: "El acta de la junta debe ser:", options: ["Breve, objetiva y aprobada en la siguiente reunión", "Una transcripción palabra por palabra", "Secreta para la junta", "Escrita solo si hay tiempo"], answer: 0, why: "El acta registra decisiones y se aprueba formalmente." },
-      { q: "El formulario de declaración de conflictos de intereses debe firmarse:", options: ["Nunca", "Solo cuando te descubren", "Cada año, por cada miembro de la junta", "Solo por el personal"], answer: 2, why: "La declaración anual mantiene los conflictos a la vista." },
-      { q: "La esposa de un miembro quiere venderle una camioneta a la organización. La junta debe:", options: ["Comprarla a cualquier precio", "Hacer que el miembro lo declare y se retire, y luego revisar que el trato sea justo", "Dejar que el miembro decida", "Ocultarlo del acta"], answer: 1, why: "Declarar, abstenerse, revisar con justicia y registrar." },
-      { q: "\"Abstenerse\" (o \"recusarse\") significa:", options: ["Retirarse de una discusión y de una votación por un conflicto", "Renunciar para siempre", "Aprobar un presupuesto", "Convocar una reunión"], answer: 0, why: "Abstenerse mantiene justa la decisión." },
-      { q: "Una donación restringida es:", options: ["Una donación que la junta puede gastar en lo que sea", "Un préstamo", "Una donación que debe usarse para un fin específico", "Una donación que fue rechazada"], answer: 2, why: "Los donantes ponen restricciones que la organización debe respetar." },
-      { q: "Un buen control financiero es:", options: ["Una sola persona maneja todo el dinero", "No tener informes", "Pagar las cuentas solo en efectivo", "Que dos personas participen en el pago de cuentas"], answer: 3, why: "Dos personas reducen el riesgo de errores y robos." },
-      { q: "Según el IRS, una organización con ingresos brutos de menos de $200,000 y activos totales de menos de $500,000 puede presentar:", options: ["El Formulario 990-EZ o el 990", "Solo el Formulario 990-PF", "Ninguna declaración nunca", "El Formulario 1040"], answer: 0, why: "El IRS permite el 990-EZ o el 990 en ese rango." },
-      { q: "Para una organización cuyo año cierra el 31 de diciembre, el Formulario 990 vence el:", options: ["1 de enero", "1 de abril", "15 de mayo", "31 de diciembre"], answer: 2, why: "Vence el día 15 del 5.º mes después del cierre del año." },
-      { q: "¿Las declaraciones del Formulario 990 se mantienen en privado?", options: ["Sí, siempre", "No; deben estar a disposición del público para su consulta", "Solo la primera página es pública", "Solo los donantes pueden verlas"], answer: 1, why: "El IRS exige que las declaraciones anuales estén a disposición del público." },
-      { q: "En California, las organizaciones benéficas se registran y presentan informes anuales ante:", options: ["El DMV (Departamento de Vehículos Motorizados)", "La feria del condado", "La FAA (la agencia federal de aviación)", "El Registro de Organizaciones Benéficas y Recaudadores de Fondos del Procurador General"], answer: 3, why: "El Registro del Procurador General se encarga del registro de organizaciones benéficas en California." },
-      { q: "¿Dónde deben confirmar cada año los miembros de la junta las reglas actuales de los trámites?", options: ["En sitios oficiales como irs.gov y la oficina estatal de organizaciones benéficas", "En un blog cualquiera", "En lo que recuerdan del año pasado", "En lo que adivina un amigo"], answer: 0, why: "Las reglas cambian; las fuentes oficiales están al día." },
-      { q: "Un miembro nuevo de la junta debe recibir:", options: ["Nada; ya lo averiguará", "Solo una camiseta", "Una orientación con la misión, los estatutos, las finanzas, las actas y la política de conflictos", "Las contraseñas del director ejecutivo"], answer: 2, why: "La orientación prepara a los miembros para cumplir sus deberes." }
+      { objective: "O1", q: "¿Qué deber significa mantener a la organización fiel a su misión y a la ley?", options: ["Deber de cuidado", "Deber de lealtad", "Deber de obediencia", "Deber de rapidez"], answer: 2, why: "Obediencia significa misión, estatutos y la ley." },
+      { objective: "O1", q: "Un miembro de la junta no lee el presupuesto y vota que sí de todos modos. ¿Qué deber está más débil?", options: ["Deber de cuidado", "Deber de lealtad", "Deber de obediencia", "Ninguno; está bien"], answer: 0, why: "El cuidado exige decisiones informadas." },
+      { objective: "O1", q: "¿A quién se aplican los tres deberes de la junta?", options: ["Solo al presidente", "Solo al tesorero", "Solo al personal pagado", "A cada miembro de la junta"], answer: 3, why: "Cada miembro tiene estos deberes." },
+      { objective: "O2", q: "En una organización sin fines de lucro con personal pagado, ¿quién dirige los programas diarios?", options: ["El presidente de la junta", "El personal, dirigido por el director ejecutivo", "Los donantes", "El IRS"], answer: 1, why: "El personal hace el trabajo diario; la junta supervisa." },
+      { objective: "O2", q: "Una junta vota que sí a todo sin hacer preguntas. Esto se llama:", options: ["Buen gobierno", "Microgestión", "Aprobar sin revisar", "Abstenerse"], answer: 2, why: "Aprobar sin revisar no cumple con el deber de cuidado." },
+      { objective: "O2", q: "¿Dónde encuentras el tamaño de tu junta, los periodos y las reglas de votación?", options: ["En los estatutos", "En el Formulario 990-N", "En una carta de un donante", "En un periódico"], answer: 0, why: "Los estatutos son el reglamento de la organización." },
+      { objective: "O3", q: "Antes de que la junta vote, el presidente debe confirmar que:", options: ["Todos están de acuerdo", "Hay quórum", "La prensa está presente", "El voto es secreto"], answer: 1, why: "Las decisiones necesitan quórum para ser válidas." },
+      { objective: "O3", q: "Una agenda de consentimiento se usa para:", options: ["Grandes debates de estrategia", "Despedir al director", "Conflictos de intereses", "Asuntos de rutina aprobados con una sola votación"], answer: 3, why: "Ahorra tiempo para los temas importantes." },
+      { objective: "O3", q: "El acta de la junta debe ser:", options: ["Breve, objetiva y aprobada en la siguiente reunión", "Una transcripción palabra por palabra", "Secreta para la junta", "Escrita solo si hay tiempo"], answer: 0, why: "El acta registra decisiones y se aprueba formalmente." },
+      { objective: "O4", q: "El formulario de declaración de conflictos de intereses debe firmarse:", options: ["Nunca", "Solo cuando te descubren", "Cada año, por cada miembro de la junta", "Solo por el personal"], answer: 2, why: "La declaración anual mantiene los conflictos a la vista." },
+      { objective: "O4", q: "La esposa de un miembro quiere venderle una camioneta a la organización. La junta debe:", options: ["Comprarla a cualquier precio", "Hacer que el miembro lo declare y se retire, y luego revisar que el trato sea justo", "Dejar que el miembro decida", "Ocultarlo del acta"], answer: 1, why: "Declarar, abstenerse, revisar con justicia y registrar." },
+      { objective: "O4", q: "\"Abstenerse\" (o \"recusarse\") significa:", options: ["Retirarse de una discusión y de una votación por un conflicto", "Renunciar para siempre", "Aprobar un presupuesto", "Convocar una reunión"], answer: 0, why: "Abstenerse mantiene justa la decisión." },
+      { objective: "O5", q: "Una donación restringida es:", options: ["Una donación que la junta puede gastar en lo que sea", "Un préstamo", "Una donación que debe usarse para un fin específico", "Una donación que fue rechazada"], answer: 2, why: "Los donantes ponen restricciones que la organización debe respetar." },
+      { objective: "O5", q: "Un buen control financiero es:", options: ["Una sola persona maneja todo el dinero", "No tener informes", "Pagar las cuentas solo en efectivo", "Que dos personas participen en el pago de cuentas"], answer: 3, why: "Dos personas reducen el riesgo de errores y robos." },
+      { objective: "O5", q: "Según el IRS, una organización con ingresos brutos de menos de $200,000 y activos totales de menos de $500,000 puede presentar:", options: ["El Formulario 990-EZ o el 990", "Solo el Formulario 990-PF", "Ninguna declaración nunca", "El Formulario 1040"], answer: 0, why: "El IRS permite el 990-EZ o el 990 en ese rango." },
+      { objective: "O5", q: "Para una organización cuyo año cierra el 31 de diciembre, el Formulario 990 vence el:", options: ["1 de enero", "1 de abril", "15 de mayo", "31 de diciembre"], answer: 2, why: "Vence el día 15 del 5.º mes después del cierre del año." },
+      { objective: "O5", q: "¿Las declaraciones del Formulario 990 se mantienen en privado?", options: ["Sí, siempre", "No; deben estar a disposición del público para su consulta", "Solo la primera página es pública", "Solo los donantes pueden verlas"], answer: 1, why: "El IRS exige que las declaraciones anuales estén a disposición del público." },
+      { objective: "O5", q: "En California, las organizaciones benéficas se registran y presentan informes anuales ante:", options: ["El DMV (Departamento de Vehículos Motorizados)", "La feria del condado", "La FAA (la agencia federal de aviación)", "El Registro de Organizaciones Benéficas y Recaudadores de Fondos del Procurador General"], answer: 3, why: "El Registro del Procurador General se encarga del registro de organizaciones benéficas en California." },
+      { objective: "O5", q: "¿Dónde deben confirmar cada año los miembros de la junta las reglas actuales de los trámites?", options: ["En sitios oficiales como irs.gov y la oficina estatal de organizaciones benéficas", "En un blog cualquiera", "En lo que recuerdan del año pasado", "En lo que adivina un amigo"], answer: 0, why: "Las reglas cambian; las fuentes oficiales están al día." },
+      { objective: "O2", q: "Un miembro nuevo de la junta debe recibir:", options: ["Nada; ya lo averiguará", "Solo una camiseta", "Una orientación con la misión, los estatutos, las finanzas, las actas y la política de conflictos", "Las contraseñas del director ejecutivo"], answer: 2, why: "La orientación prepara a los miembros para cumplir sus deberes." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      1,
+      3,
+      5,
+      6,
+      8,
+      10,
+      11,
+      14,
+      15
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en todas las filas. Si una fila está en Todavía no, corrige esa parte y vuelve a intentarlo.",
+    criteria: [
+      {
+        name: "Los tres deberes",
+        objective: "O1",
+        notYet: "Falta un deber o está mal explicado.",
+        meets: "Cuidado, lealtad y obediencia, cada uno explicado con palabras sencillas.",
+        exceeds: "Cada deber tiene un ejemplo real de cumplirlo y de romperlo."
+      },
+      {
+        name: "Funciones y reclutamiento",
+        objective: "O2",
+        notYet: "Las decisiones no están repartidas, o solo se recluta entre amigos.",
+        meets: "Cinco decisiones repartidas entre junta, personal o ambos, y dos puestos vacantes asignados a lo que falta en una tabla de habilidades.",
+        exceeds: "Además anota reglas de los estatutos que la junta no está siguiendo y un plan de bienvenida para los miembros nuevos."
+      },
+      {
+        name: "Reuniones y actas",
+        objective: "O3",
+        notYet: "No hay agenda, o al acta le faltan el quórum, las mociones o los votos.",
+        meets: "Una agenda con agenda de consentimiento y un modelo de acta con todas las partes obligatorias.",
+        exceeds: "Un acta de ejemplo para una moción con quién la propuso, el conteo de votos y el resultado."
+      },
+      {
+        name: "Conflicto de intereses",
+        objective: "O4",
+        notYet: "Faltan pasos o están en desorden.",
+        meets: "Declarar, salirse, revisar que el trato sea justo y anotarlo, en orden.",
+        exceeds: "Además incluye el formulario de declaración firmado cada año y cuándo pedir asesoría legal."
+      },
+      {
+        name: "Finanzas y calendario de trámites",
+        objective: "O5",
+        notYet: "No hay versión ni fecha límite del Formulario 990, o falta el trámite estatal.",
+        meets: "Revisiones del presupuesto, la versión correcta del Formulario 990 y su fecha límite, y cualquier registro estatal, confirmados en sitios oficiales.",
+        exceeds: "Además enumera controles financieros, como dos personas para aprobar pagos, y dice dónde se revisó cada regla."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Personas que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Juntas que adoptan una política escrita de conflicto de intereses y formularios de declaración anuales dentro de 90 días",
+      "Organizaciones que presentan a tiempo su Formulario 990 y sus informes estatales el año siguiente",
+      "Juntas que llenan los puestos vacantes con una tabla de habilidades y hacen una sesión de bienvenida para los miembros nuevos"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Una computadora o un teléfono con internet para revisar irs.gov y la oficina estatal de organizaciones benéficas",
+      "Los estatutos de tu organización, el último informe del presupuesto y actas recientes, o un juego de ejemplo",
+      "Papel o un documento para la lista de verificación de una página",
+      "Unos 60 minutos en total: lecciones, práctica, comprobaciones y la tarea final"
+    ],
+    facilitatorNotes: [
+      "Hazlo como una sesión de retiro de la junta: los miembros arman juntos la lista de verificación con sus propios estatutos e informes.",
+      "Recuérdale al grupo que esto es educación general, no asesoría legal ni fiscal; las preguntas serias van a un abogado o contador de organizaciones sin fines de lucro.",
+      "Pide que confirmen durante la sesión los límites del Formulario 990 y las reglas estatales en los sitios oficiales, porque pueden cambiar.",
+      "Usa juegos de roles para los pasos del conflicto de intereses, para que los miembros practiquen salirse de una votación.",
+      "Califica la lista de verificación con la rúbrica y da retroalimentación sobre una fila en Todavía no a la vez."
     ]
   }
 };

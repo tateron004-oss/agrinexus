@@ -14,11 +14,35 @@ module.exports = {
     "Each lesson takes about five minutes and ends with a task for your own business. There is a knowledge check after each chapter and a 20-question quiz at the end. This course explains rules in plain words; it is not legal advice."
   ],
   finalTask: "Create a one-month marketing pack for your business: a one-paragraph ideal-customer profile, a one-sentence offer, a 12-post content calendar, three finished posts with graphics, and one marketing email that has an honest subject line, your physical address and a working unsubscribe line.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "US small business owners who know they should market but have little time, no agency budget and few ideas, such as bakers, cleaners, salons, trades and online sellers.",
+    startingPoint: "Post on social media now and then and may have a customer email list. Few have a written customer profile, an offer or a content plan, and many do not know the FTC and CAN-SPAM basics.",
+    gap: "Random posts reach the wrong people, and AI can easily produce false claims, fake-looking results or emails that break US rules. Owners need to aim marketing at a real customer, plan a month of honest content and send email that follows the rules, so marketing brings in business without legal or trust problems.",
+    constraints: [
+      "Plain words; rules explained simply and not as legal advice",
+      "Devices: a phone or computer with a free AI assistant and Canva",
+      "Time: about five minutes per lesson plus making posts for the owner's own business",
+      "Ads must be truthful, paid endorsements disclosed, fake reviews banned, and emails must follow CAN-SPAM",
+      "Customer stories and photos are used only with permission"
+    ],
+    prerequisites: "\"Introduction to AI for Entrepreneurs\". \"AI Tools Every Entrepreneur Should Know\" helps with Canva."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Using AI and at least one real customer conversation or sales record", action: "write a one-paragraph profile of your ideal customer", standard: "with every guess checked against real people" },
+    { id: "O2", condition: "Given your customer profile", action: "write a one-sentence offer that says who it is for, what they get and why it matters", standard: "with every claim true and provable" },
+    { id: "O3", condition: "Given your offer", action: "create a 12-post content calendar for one month with AI", standard: "with a mix of post types on one or two platforms your customers use, saved with dates" },
+    { id: "O4", condition: "Given three calendar ideas", action: "make finished posts with edited AI captions and Canva graphics", standard: "using real photos where possible and never faking results" },
+    { id: "O5", condition: "When asking for reviews or working with paid promoters", action: "write a review request and disclosures that follow FTC rules", standard: "asking all customers, offering no reward for good ratings and disclosing every paid connection" },
+    { id: "O6", condition: "Using AI to draft a marketing email", action: "check the email against the CAN-SPAM basics", standard: "with an honest subject line, your physical address and a working unsubscribe line" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Know who you are talking to",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Describing your ideal customer",
           minutes: 5,
           goal: "Write a one-paragraph profile of the customer you most want.",
@@ -35,9 +59,14 @@ module.exports = {
             { title: "Check with real people", bullets: ["Look at who already bought", "Ask three customers why they chose you", "Then write your profile"] }
           ],
           tryIt: "Use an AI assistant to draft your ideal-customer profile, then check it against at least one real customer conversation or your sales records. Save the final paragraph.",
-          youCanNow: "describe the customer your marketing is for, checked against real people."
+          youCanNow: "describe the customer your marketing is for, checked against real people.",
+          quickCheck: [
+            { objective: "O1", q: "What is an ideal-customer profile?", options: ["A short description of the customer you most want to reach", "A list of every person in your town", "Your competitor's customer list", "A customer's private contact details"], answer: 0, why: "A profile describes the person your marketing is aimed at." },
+            { objective: "O1", q: "AI says your customers mostly use one app, but your sales records show otherwise. What do you do?", options: ["Trust AI", "Go with what your real records show", "Use every app", "Stop marketing"], answer: 1, why: "Real customers and records beat AI's guesses." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Writing a clear, honest offer",
           minutes: 5,
           goal: "Write a one-sentence offer that says who it is for, what they get and why it matters.",
@@ -55,9 +84,14 @@ module.exports = {
           ],
           sources: [{ name: "FTC: Advertising and Marketing Basics", url: "https://www.ftc.gov/business-guidance/advertising-marketing/advertising-marketing-basics" }],
           tryIt: "Ask AI for five offers based on your customer profile, choose one, edit it, and check that every claim in it is true and provable.",
-          youCanNow: "write a short, honest offer that speaks to your ideal customer."
+          youCanNow: "write a short, honest offer that speaks to your ideal customer.",
+          quickCheck: [
+            { objective: "O2", q: "What must every claim in your offer be?", options: ["As big as possible", "Copied from a competitor", "True and provable", "Written by AI only"], answer: 2, why: "FTC rules require truthful, backed-up claims." },
+            { objective: "O2", q: "AI writes \"the fastest service in town\" but you have no proof. What do you do?", options: ["Keep it", "Add an exclamation mark", "Put it in small print", "Remove it or replace it with something you can prove"], answer: 3, why: "Claims you cannot back up should not go in your offer." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Planning a month of content",
           minutes: 5,
           goal: "Use AI to build a 12-post content calendar for one month.",
@@ -74,17 +108,21 @@ module.exports = {
             { title: "Pick your platforms", bullets: ["Where your customer already is", "One or two done well beats five done poorly"] }
           ],
           tryIt: "Have AI build your 12-post calendar, edit it to fit your business, and save it with dates in a spreadsheet or document.",
-          youCanNow: "plan a month of varied content for the platforms your customers use."
+          youCanNow: "plan a month of varied content for the platforms your customers use.",
+          quickCheck: [
+            { objective: "O3", q: "What does a good content mix include?", options: ["Tips, behind-the-scenes, customer stories and offers", "Only sales offers", "Only memes", "The same post every day"], answer: 0, why: "A mix keeps people interested and builds trust." },
+            { objective: "O3", q: "Your customers are mostly on one platform. Where do you post?", options: ["On every platform at once", "Start where your customers already are", "Only on a new platform", "Nowhere until you have more time"], answer: 1, why: "One or two platforms where customers already are is enough to start." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Know who you are talking to",
         questions: [
-          { q: "Which is the best ideal-customer description for a home bakery?", options: ["Everyone who eats", "Busy parents within 10 miles who order birthday cakes a few times a year", "People on the internet", "Other bakeries"], answer: 1, why: "It names a specific person, need and reach." },
-          { q: "AI guessed what your customers worry about. What should you do?", options: ["Ignore your customers", "Trust it fully", "Post it as fact", "Check it against real customers or sales records"], answer: 3, why: "AI guesses from general patterns; real customers confirm." },
-          { q: "An offer should answer which three questions?", options: ["Who is it for, what do they get, why should they care", "How old are you, where do you live, what is your password", "What is the weather, the time, the date", "Who are your competitors, what do they charge, where are they"], answer: 0, why: "Those three make an offer clear." },
-          { q: "AI wrote \"Guaranteed results or your money back\" in your offer, but you do not offer refunds. What do you do?", options: ["Make it bigger", "Keep it because it sounds good", "Remove it", "Add \"AI-powered\" too"], answer: 2, why: "Ads must be truthful; remove claims you cannot keep." },
-          { q: "How many platforms should a small business start with?", options: ["None", "Every platform that exists", "One or two where its customers already are", "Only ones its competitors avoid"], answer: 2, why: "Doing one or two well beats spreading thin." }
+          { objective: "O1", q: "Which is the best ideal-customer description for a home bakery?", options: ["Everyone who eats", "Busy parents within 10 miles who order birthday cakes a few times a year", "People on the internet", "Other bakeries"], answer: 1, why: "It names a specific person, need and reach." },
+          { objective: "O1", q: "AI guessed what your customers worry about. What should you do?", options: ["Ignore your customers", "Trust it fully", "Post it as fact", "Check it against real customers or sales records"], answer: 3, why: "AI guesses from general patterns; real customers confirm." },
+          { objective: "O2", q: "An offer should answer which three questions?", options: ["Who is it for, what do they get, why should they care", "How old are you, where do you live, what is your password", "What is the weather, the time, the date", "Who are your competitors, what do they charge, where are they"], answer: 0, why: "Those three make an offer clear." },
+          { objective: "O2", q: "AI wrote \"Guaranteed results or your money back\" in your offer, but you do not offer refunds. What do you do?", options: ["Make it bigger", "Keep it because it sounds good", "Remove it", "Add \"AI-powered\" too"], answer: 2, why: "Ads must be truthful; remove claims you cannot keep." },
+          { objective: "O3", q: "How many platforms should a small business start with?", options: ["None", "Every platform that exists", "One or two where its customers already are", "Only ones its competitors avoid"], answer: 2, why: "Doing one or two well beats spreading thin." }
         ]
       }
     },
@@ -92,6 +130,7 @@ module.exports = {
       name: "Chapter 2: Create, publish and follow the rules",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Making posts and graphics with AI",
           minutes: 5,
           goal: "Turn calendar ideas into finished posts with captions and graphics.",
@@ -110,9 +149,14 @@ module.exports = {
           ],
           sources: [{ name: "US Copyright Office: Copyright and Artificial Intelligence", url: "https://www.copyright.gov/ai/" }, { name: "US Copyright Office: Part 2 Copyrightability report announcement", url: "https://www.copyright.gov/newsnet/2025/1060.html" }],
           tryIt: "Turn three ideas from your calendar into finished posts: an AI-helped caption you edited, and a Canva graphic with your own photo where possible.",
-          youCanNow: "make finished social posts with AI captions and graphics, without faking results."
+          youCanNow: "make finished social posts with AI captions and graphics, without faking results.",
+          quickCheck: [
+            { objective: "O4", q: "What makes a strong caption request to AI?", options: ["Just \"write a caption\"", "Your password", "The idea, the customer, the length and a call to action", "A competitor's caption to copy"], answer: 2, why: "Specific direction gives a caption you can use." },
+            { objective: "O4", q: "AI makes a perfect before-and-after photo of a kitchen you did not clean. What do you do?", options: ["Post it as your work", "Post it without a caption", "Edit it slightly and post it", "Do not use it; use a real photo of your work"], answer: 3, why: "Images must not suggest results you did not deliver." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Reviews, testimonials and endorsements: the rules",
           minutes: 5,
           goal: "Use reviews and paid promotions in a way that follows FTC rules.",
@@ -130,9 +174,14 @@ module.exports = {
           ],
           sources: [{ name: "FTC: Final rule banning fake reviews and testimonials (press release)", url: "https://www.ftc.gov/news-events/news/press-releases/2024/08/federal-trade-commission-announces-final-rule-banning-fake-reviews-testimonials" }, { name: "FTC: Endorsement Guides, What People Are Asking", url: "https://www.ftc.gov/business-guidance/resources/ftcs-endorsement-guides-what-people-are-asking" }],
           tryIt: "Use AI to draft a short, honest message asking recent customers for a review (not just happy ones, and no reward for a good rating). Edit and save it.",
-          youCanNow: "collect and use reviews and paid promotions the honest, legal way."
+          youCanNow: "collect and use reviews and paid promotions the honest, legal way.",
+          quickCheck: [
+            { objective: "O5", q: "Which review request follows FTC rules?", options: ["Asking all recent customers for an honest review", "Offering a discount only for five-star reviews", "Writing reviews yourself", "Asking only happy customers"], answer: 0, why: "Asking everyone for honest reviews, with no reward for good ratings, is allowed." },
+            { objective: "O5", q: "A friend gets free products to post about your shop. What do you ask them to do?", options: ["Hide that they got anything", "Clearly disclose it, such as \"#ad\" at the start", "Post only in the comments", "Use a fake name"], answer: 1, why: "Paid or gifted connections must be clearly disclosed." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Writing a marketing email that follows CAN-SPAM",
           minutes: 5,
           goal: "Write a marketing email with AI that meets the CAN-SPAM basics.",
@@ -151,17 +200,21 @@ module.exports = {
           ],
           sources: [{ name: "FTC: CAN-SPAM Act Compliance Guide for Business", url: "https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business" }],
           tryIt: "Final task: write your marketing email with AI, check it against the CAN-SPAM basics (honest subject, ad identified, address, unsubscribe), and put it together with your profile, offer, calendar and three posts as your one-month marketing pack.",
-          youCanNow: "plan, create and send honest marketing that follows US advertising and email rules."
+          youCanNow: "plan, create and send honest marketing that follows US advertising and email rules.",
+          quickCheck: [
+            { objective: "O6", q: "What must a CAN-SPAM marketing email include?", options: ["A coupon", "A photo", "A valid physical postal address", "Your home phone number"], answer: 2, why: "CAN-SPAM requires a valid physical postal address." },
+            { objective: "O6", q: "You bought a list of email addresses from a stranger. What do you do?", options: ["Email them all", "Email half of them", "Add them to your newsletter quietly", "Do not use it; email only people who agreed"], answer: 3, why: "Send marketing email to people who gave you their address and agreed." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Create, publish and follow the rules",
         questions: [
-          { q: "Which photo builds the most trust in a post?", options: ["A real photo of your own work", "An AI image of a fake happy customer", "A competitor's photo", "A blurry stock image"], answer: 0, why: "Real photos of real work build trust; fake customers mislead." },
-          { q: "According to the US Copyright Office, purely AI-generated material is:", options: ["Automatically trademarked", "Always owned by you", "Owned by your customer", "Not protected by copyright"], answer: 3, why: "Copyright protects human authorship; your own creative edits can be protected." },
-          { q: "Can you use AI to write customer reviews for your business?", options: ["Yes, if they sound real", "No, fake reviews are banned by the FTC", "Yes, if you post them slowly", "Only on weekends"], answer: 1, why: "The FTC rule bans fake reviews, including AI-generated ones." },
-          { q: "You gave an influencer free products to post about you. What must happen?", options: ["The connection must be clearly disclosed, like \"#ad\" at the start", "Nothing", "Hide it in the comments", "Put it at the end of a long caption"], answer: 0, why: "Material connections must be disclosed clearly and conspicuously." },
-          { q: "Under CAN-SPAM, how quickly must you honor an unsubscribe request?", options: ["Never", "Within one year", "Within 10 business days", "Only if they ask twice"], answer: 2, why: "The FTC guide says opt-outs must be honored within 10 business days." }
+          { objective: "O4", q: "Which photo builds the most trust in a post?", options: ["A real photo of your own work", "An AI image of a fake happy customer", "A competitor's photo", "A blurry stock image"], answer: 0, why: "Real photos of real work build trust; fake customers mislead." },
+          { objective: "O4", q: "According to the US Copyright Office, purely AI-generated material is:", options: ["Automatically trademarked", "Always owned by you", "Owned by your customer", "Not protected by copyright"], answer: 3, why: "Copyright protects human authorship; your own creative edits can be protected." },
+          { objective: "O5", q: "Can you use AI to write customer reviews for your business?", options: ["Yes, if they sound real", "No, fake reviews are banned by the FTC", "Yes, if you post them slowly", "Only on weekends"], answer: 1, why: "The FTC rule bans fake reviews, including AI-generated ones." },
+          { objective: "O5", q: "You gave an influencer free products to post about you. What must happen?", options: ["The connection must be clearly disclosed, like \"#ad\" at the start", "Nothing", "Hide it in the comments", "Put it at the end of a long caption"], answer: 0, why: "Material connections must be disclosed clearly and conspicuously." },
+          { objective: "O6", q: "Under CAN-SPAM, how quickly must you honor an unsubscribe request?", options: ["Never", "Within one year", "Within 10 business days", "Only if they ask twice"], answer: 2, why: "The FTC guide says opt-outs must be honored within 10 business days." }
         ]
       }
     }
@@ -169,26 +222,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI Marketing and Content Creation",
     questions: [
-      { q: "Your ideal customer is someone who:", options: ["Lives anywhere in the world", "Needs what you sell, can pay, and is easy to reach", "Already works for you", "Is your competitor"], answer: 1, why: "That is the definition used in the course." },
-      { q: "Which AI request helps describe your ideal customer?", options: ["\"Find their home addresses.\"", "\"Write my taxes.\"", "\"Make up reviews.\"", "\"Describe their situation, biggest problem, worries and where they spend time online.\""], answer: 3, why: "Those questions build a useful profile." },
-      { q: "After AI drafts a customer profile, you should:", options: ["Sell it", "Post it publicly", "Never change it", "Check it against real customers"], answer: 3, why: "AI guesses; real customers confirm." },
-      { q: "Which is a clear offer?", options: ["\"We do stuff.\"", "\"Busy parents in Decatur: custom birthday cakes delivered, so the party is one less worry.\"", "\"Best ever, guaranteed!\"", "\"Call us.\""], answer: 1, why: "It says who, what and why." },
-      { q: "Under FTC rules, ad claims must be:", options: ["Written by AI", "Funny", "Truthful, not misleading and backed by evidence", "Very long"], answer: 2, why: "This is the basic truth-in-advertising standard." },
-      { q: "Should you call your service \"AI-powered\" if it does not use AI?", options: ["No, that is a false claim", "Yes, it sounds modern", "Only in small print", "Only on social media"], answer: 0, why: "False AI claims are deceptive advertising." },
-      { q: "A 12-post calendar for one month is about:", options: ["Twelve posts a day", "One post a month", "Three posts a week", "One post a year"], answer: 2, why: "12 posts over four weeks is three a week." },
-      { q: "A good content mix includes:", options: ["Tips, behind-the-scenes, customer stories and offers", "Only sales posts", "Only memes", "Only competitor news"], answer: 0, why: "A mix keeps followers interested." },
-      { q: "Customer stories should be shared:", options: ["Without asking", "With the customer's permission", "With their phone number", "Only if AI wrote them"], answer: 1, why: "Permission respects customers and avoids problems." },
-      { q: "A good caption request includes:", options: ["Someone else's caption", "Your bank details", "Only one word", "The idea, the customer, the length and a call to action"], answer: 3, why: "Clear details get a usable caption." },
-      { q: "When using an AI-generated image, you must not:", options: ["Make it look like a real result you did not deliver", "Check it for errors", "Use your brand colors", "Add your logo"], answer: 0, why: "Fake results mislead customers." },
-      { q: "Who can help if owning your logo artwork is important?", options: ["Nobody", "Only an AI image tool", "A random follower", "A human designer and a lawyer"], answer: 3, why: "Purely AI-made art is not protected by copyright." },
-      { q: "The FTC rule on fake reviews also bans:", options: ["Thanking customers", "Asking customers for honest reviews", "Offering rewards only for positive reviews", "Replying to reviews"], answer: 2, why: "Rewards conditioned on positive sentiment are banned." },
-      { q: "Which review practice is allowed?", options: ["Buying 50 five-star reviews", "Asking all customers for an honest review", "Writing reviews with AI", "Editing a bad review to sound good"], answer: 1, why: "Honest reviews from real customers are fine." },
-      { q: "Where should \"#ad\" go on a paid post?", options: ["Nowhere", "Hidden in the comments", "At the very end of a long caption", "At the start, where people will see it"], answer: 3, why: "Disclosures must be easy to notice." },
-      { q: "For a paid video, the disclosure should be:", options: ["Only in a link", "Only in the description", "In the video itself", "Not needed"], answer: 2, why: "The FTC says disclosures belong in the video." },
-      { q: "CAN-SPAM requires marketing emails to include:", options: ["A valid physical postal address", "Your bank account number", "A customer's address", "Your password"], answer: 0, why: "A physical address is one of the basics." },
-      { q: "A marketing email subject line must be:", options: ["In all capital letters", "Not deceptive", "A secret", "Written by AI"], answer: 1, why: "Deceptive subject lines are not allowed." },
-      { q: "Who should get your marketing emails?", options: ["Every email address you can find", "People who gave you their address and agreed", "Your competitor's customers", "Random people from a bought list"], answer: 1, why: "Email people who agreed to hear from you." },
-      { q: "If you email customers in other countries you should:", options: ["Check that country's rules too", "Assume US rules cover everything", "Stop marketing", "Remove your address"], answer: 0, why: "Each country can have its own email rules." }
+      { objective: "O1", q: "Your ideal customer is someone who:", options: ["Lives anywhere in the world", "Needs what you sell, can pay, and is easy to reach", "Already works for you", "Is your competitor"], answer: 1, why: "That is the definition used in the course." },
+      { objective: "O1", q: "Which AI request helps describe your ideal customer?", options: ["\"Find their home addresses.\"", "\"Write my taxes.\"", "\"Make up reviews.\"", "\"Describe their situation, biggest problem, worries and where they spend time online.\""], answer: 3, why: "Those questions build a useful profile." },
+      { objective: "O1", q: "After AI drafts a customer profile, you should:", options: ["Sell it", "Post it publicly", "Never change it", "Check it against real customers"], answer: 3, why: "AI guesses; real customers confirm." },
+      { objective: "O2", q: "Which is a clear offer?", options: ["\"We do stuff.\"", "\"Busy parents in Decatur: custom birthday cakes delivered, so the party is one less worry.\"", "\"Best ever, guaranteed!\"", "\"Call us.\""], answer: 1, why: "It says who, what and why." },
+      { objective: "O2", q: "Under FTC rules, ad claims must be:", options: ["Written by AI", "Funny", "Truthful, not misleading and backed by evidence", "Very long"], answer: 2, why: "This is the basic truth-in-advertising standard." },
+      { objective: "O2", q: "Should you call your service \"AI-powered\" if it does not use AI?", options: ["No, that is a false claim", "Yes, it sounds modern", "Only in small print", "Only on social media"], answer: 0, why: "False AI claims are deceptive advertising." },
+      { objective: "O3", q: "A 12-post calendar for one month is about:", options: ["Twelve posts a day", "One post a month", "Three posts a week", "One post a year"], answer: 2, why: "12 posts over four weeks is three a week." },
+      { objective: "O3", q: "A good content mix includes:", options: ["Tips, behind-the-scenes, customer stories and offers", "Only sales posts", "Only memes", "Only competitor news"], answer: 0, why: "A mix keeps followers interested." },
+      { objective: "O3", q: "Customer stories should be shared:", options: ["Without asking", "With the customer's permission", "With their phone number", "Only if AI wrote them"], answer: 1, why: "Permission respects customers and avoids problems." },
+      { objective: "O4", q: "A good caption request includes:", options: ["Someone else's caption", "Your bank details", "Only one word", "The idea, the customer, the length and a call to action"], answer: 3, why: "Clear details get a usable caption." },
+      { objective: "O4", q: "When using an AI-generated image, you must not:", options: ["Make it look like a real result you did not deliver", "Check it for errors", "Use your brand colors", "Add your logo"], answer: 0, why: "Fake results mislead customers." },
+      { objective: "O4", q: "Who can help if owning your logo artwork is important?", options: ["Nobody", "Only an AI image tool", "A random follower", "A human designer and a lawyer"], answer: 3, why: "Purely AI-made art is not protected by copyright." },
+      { objective: "O5", q: "The FTC rule on fake reviews also bans:", options: ["Thanking customers", "Asking customers for honest reviews", "Offering rewards only for positive reviews", "Replying to reviews"], answer: 2, why: "Rewards conditioned on positive sentiment are banned." },
+      { objective: "O5", q: "Which review practice is allowed?", options: ["Buying 50 five-star reviews", "Asking all customers for an honest review", "Writing reviews with AI", "Editing a bad review to sound good"], answer: 1, why: "Honest reviews from real customers are fine." },
+      { objective: "O5", q: "Where should \"#ad\" go on a paid post?", options: ["Nowhere", "Hidden in the comments", "At the very end of a long caption", "At the start, where people will see it"], answer: 3, why: "Disclosures must be easy to notice." },
+      { objective: "O5", q: "For a paid video, the disclosure should be:", options: ["Only in a link", "Only in the description", "In the video itself", "Not needed"], answer: 2, why: "The FTC says disclosures belong in the video." },
+      { objective: "O6", q: "CAN-SPAM requires marketing emails to include:", options: ["A valid physical postal address", "Your bank account number", "A customer's address", "Your password"], answer: 0, why: "A physical address is one of the basics." },
+      { objective: "O6", q: "A marketing email subject line must be:", options: ["In all capital letters", "Not deceptive", "A secret", "Written by AI"], answer: 1, why: "Deceptive subject lines are not allowed." },
+      { objective: "O6", q: "Who should get your marketing emails?", options: ["Every email address you can find", "People who gave you their address and agreed", "Your competitor's customers", "Random people from a bought list"], answer: 1, why: "Email people who agreed to hear from you." },
+      { objective: "O6", q: "If you email customers in other countries you should:", options: ["Check that country's rules too", "Assume US rules cover everything", "Stop marketing", "Remove your address"], answer: 0, why: "Each country can have its own email rules." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      3,
+      4,
+      6,
+      9,
+      10,
+      12,
+      14,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Ideal customer",
+        objective: "O1",
+        notYet: "Too broad, such as \"everyone\", or not checked against real customers.",
+        meets: "One paragraph on who they are, their problem and where they spend time, checked against real people.",
+        exceeds: "Notes which AI guesses were wrong and fixed."
+      },
+      {
+        name: "Offer",
+        objective: "O2",
+        notYet: "Missing who, what or why, or includes a claim that cannot be proven.",
+        meets: "One sentence with who it is for, what they get and why it matters, all true.",
+        exceeds: "Uses the customer's own words from a real conversation."
+      },
+      {
+        name: "Content calendar",
+        objective: "O3",
+        notYet: "Fewer than 12 posts, no dates, or one post type only.",
+        meets: "12 dated posts with a mix of types on one or two platforms.",
+        exceeds: "Each post links to the offer or the customer's problem."
+      },
+      {
+        name: "Finished posts",
+        objective: "O4",
+        notYet: "Captions unedited, or images suggest results not delivered.",
+        meets: "Three posts with edited captions, graphics and a call to action, honest images.",
+        exceeds: "Uses real photos of the owner's work, with permission for any customer shown."
+      },
+      {
+        name: "Rule-following email",
+        objective: "O6",
+        notYet: "Missing an honest subject, the address or the unsubscribe line.",
+        meets: "Honest subject, identified as an ad, physical address and working unsubscribe.",
+        exceeds: "Also notes how unsubscribes will be handled within 10 business days."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Owners who finish the course and pass the final task (rubric)",
+      "Owners who publish at least eight planned posts within 30 days (follow-up survey)",
+      "New customer inquiries or sales the owner links to the marketing pack",
+      "Learners who start another Koach Learn entrepreneur course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or computer with a free AI assistant and a free Canva account",
+      "Real photos of your work and one real customer conversation or sales record",
+      "A spreadsheet or document for the content calendar",
+      "About 60 to 75 minutes in total for lessons, tasks, checks and the marketing pack"
+    ],
+    facilitatorNotes: [
+      "Have owners interview one real customer before Lesson 1 so the profile is grounded.",
+      "Review every offer and post in pairs, circling any claim that cannot be proven.",
+      "Explain that the course covers basic US rules in plain words and is not legal advice.",
+      "Remind owners to get permission before sharing customer stories or photos.",
+      "Score the marketing pack with the rubric, one Not yet row at a time."
     ]
   }
 };

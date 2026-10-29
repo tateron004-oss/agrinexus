@@ -16,11 +16,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos y termina con una tarea práctica. La IA escribe borradores; tú decides, revisas y firmas. Una comprobación de conocimientos cierra cada capítulo y un examen de 20 preguntas cierra el curso."
   ],
   finalTask: "Escoge una oportunidad de subvención real que vaya con un programa que manejas. Con la IA, escribe el borrador de una declaración de necesidad (unas 250 palabras) y una descripción del programa que sigan las guías del financiador, usando solo datos de tus registros y fuentes que revisaste. Luego escribe el borrador de un correo de llamado a donantes de 150 palabras para el mismo programa, con espacios en blanco en lugar de datos de donantes, y edita los dos para que suenen a tu organización.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Líderes, personal de desarrollo de fondos y voluntarios de organizaciones sin fines de lucro y de fe que recaudan dinero y escriben solicitudes de subvenciones, muchas veces con poco tiempo y un equipo pequeño.",
+    startingPoint: "Conocen bien sus programas y su comunidad y han escrito algunas cartas de petición o solicitudes de subvenciones pequeñas. Muchos tienen poco tiempo para investigar y escribir, y pocos han usado la IA para subvenciones.",
+    gap: "Las fechas límite de subvenciones y las cartas de petición toman horas que un equipo pequeño no tiene, y un solo anexo olvidado o una afirmación falsa puede costar el dinero y la confianza del financiador. Necesitan usar la IA para encontrar oportunidades que les queden, leer las bases y escribir más rápido, manteniendo cada dato verdadero y los datos de los donantes en privado.",
+    constraints: [
+      "Honestidad: cada número sale de un registro o de una fuente revisada; la IA nunca inventa resultados, socios ni respaldos",
+      "Privacidad: las listas de donantes, los nombres y el historial de donativos no entran en herramientas de IA",
+      "Las subvenciones federales piden registro en SAM.gov, que es gratis y toma tiempo",
+      "Las afirmaciones fiscales y legales se revisan con un contador o con las guías oficiales del IRS",
+      "Tiempo: personal y voluntarios con mucho trabajo, así que cada lección dura unos 5 minutos"
+    ],
+    prerequisites: "\"Introducción a la IA para organizaciones sin fines de lucro\", o algo de experiencia usando un asistente de IA."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con uno de tus programas", action: "encontrar al menos dos oportunidades de subvención que le queden, usando Grants.gov, Candid o financiadores locales", standard: "con los requisitos revisados en cada convocatoria" },
+    { id: "O2", condition: "Con las bases públicas de un financiador", action: "crear con ayuda de la IA una lista de verificación de cada sección, límite, anexo y fecha límite", standard: "revisada línea por línea con el documento del propio financiador" },
+    { id: "O3", condition: "Con tus propios datos y fuentes revisadas", action: "preparar con la IA una declaración de necesidad y una descripción del programa", standard: "con cada número saliendo de tus registros o de una fuente que revisaste" },
+    { id: "O4", condition: "Para un programa", action: "escribir un correo corto de petición a donantes con una historia, lo que logra un donativo y una petición clara", standard: "con espacios en blanco en lugar de datos de donantes" },
+    { id: "O5", condition: "Con distintos tipos de donantes", action: "crear plantillas de agradecimiento con espacios en blanco que personalizas tú", standard: "con los nombres y montos agregados solo en tu base de datos de donantes o en la combinación de correspondencia" },
+    { id: "O6", condition: "Antes de enviar una solicitud de subvención o una carta de petición", action: "revisar cada número, cada afirmación, el permiso de cada historia y el límite de palabras", standard: "sin resultados, socios ni respaldos inventados" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Subvenciones con IA",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Encontrar subvenciones que van con tu misión",
           minutes: 5,
           goal: "Encontrar al menos dos oportunidades de subvención que vayan con uno de tus programas.",
@@ -43,9 +67,14 @@ module.exports = {
             { name: "Candid", url: "https://candid.org/" }
           ],
           tryIt: "Escoge uno de tus programas. Encuentra dos oportunidades de subvención que le queden, una federal o estatal y una de fundación o local. Escribe en una línea el nombre de cada financiador, la fecha límite y quién puede solicitar.",
-          youCanNow: "encontrar oportunidades de subvención que van con tu misión y saber qué registro piden las subvenciones federales."
+          youCanNow: "encontrar oportunidades de subvención que van con tu misión y saber qué registro piden las subvenciones federales.",
+          quickCheck: [
+            { objective: "O1", q: "¿Cuáles son las tres fuentes principales de subvenciones?", options: ["El gobierno, las fundaciones y las empresas", "Los bancos, las tarjetas de crédito y los préstamos", "Los donantes, los voluntarios y los miembros de la junta", "Las escuelas, los hospitales y los tribunales"], answer: 0, why: "Las subvenciones vienen del gobierno, de fundaciones privadas y familiares, y de empresas." },
+            { objective: "O1", q: "Quieres buscar fundaciones en Candid, pero no puedes pagar un plan. ¿Qué puedes intentar?", options: ["Olvidarte de las fundaciones", "Preguntar en tu biblioteca pública, porque muchas dan acceso", "Pagarle a un desconocido por una lista", "Pedirle a la IA que enumere todas las fundaciones"], answer: 1, why: "Muchas bibliotecas públicas dan acceso a las funciones pagadas de Candid." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Leer las guías del financiador con ayuda de la IA",
           minutes: 5,
           goal: "Convertir las guías de un financiador en una lista de control de lo que debes entregar.",
@@ -62,9 +91,14 @@ module.exports = {
             { title: "Revísala", bullets: ["Compara línea por línea", "El documento del financiador siempre manda"] }
           ],
           tryIt: "Toma las guías de una de tus dos oportunidades. Pide a un asistente de IA una lista de control, luego compárala con el original y corrige los errores.",
-          youCanNow: "convertir las guías de un financiador en una lista de control correcta para la entrega."
+          youCanNow: "convertir las guías de un financiador en una lista de control correcta para la entrega.",
+          quickCheck: [
+            { objective: "O2", q: "¿Por qué puedes pegar las bases de un financiador en un asistente de IA?", options: ["Porque las herramientas de IA siempre son privadas", "Porque el financiador lo dijo", "Porque las bases son públicas", "Porque la IA va a enviar la solicitud por ti"], answer: 2, why: "Las bases son públicas, así que pegarlas no comparte nada privado." },
+            { objective: "O2", q: "La lista de la IA dice que la fecha límite es el 15 de marzo, pero las bases dicen el 1 de marzo. ¿Qué haces?", options: ["Usas el 15 de marzo", "Escoges una fecha intermedia", "Le vuelves a preguntar a la IA hasta que esté de acuerdo", "Usas el 1 de marzo, del documento del financiador"], answer: 3, why: "La IA puede cambiar una fecha; el documento del propio financiador siempre manda." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Escribir la declaración de necesidad y la descripción del programa",
           minutes: 6,
           goal: "Usar la IA para escribir el borrador de una declaración de necesidad y una descripción del programa con tus propios datos.",
@@ -82,17 +116,21 @@ module.exports = {
             { title: "Sé honesto", bullets: ["Responde con la verdad si te preguntan si usaste IA"] }
           ],
           tryIt: "Reúne cinco datos sobre un programa. Pide a la IA una declaración de necesidad de 250 palabras usando solo esos datos. Marca cada número y confirma de dónde salió.",
-          youCanNow: "escribir con IA el borrador de una declaración de necesidad a partir de tus propios datos revisados."
+          youCanNow: "escribir con IA el borrador de una declaración de necesidad a partir de tus propios datos revisados.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué dice la descripción de un programa?", options: ["Qué vas a hacer, para quién y qué va a cambiar", "Las direcciones de casa de los miembros de tu junta", "Tu lista de donantes", "Solo el total del presupuesto"], answer: 0, why: "La descripción de un programa dice qué vas a hacer, para quién y qué va a cambiar." },
+            { objective: "O3", q: "Quieres agregar la historia de una familia a tu declaración de necesidad. ¿Qué haces?", options: ["Usas su nombre completo para que se vea real", "Pides permiso y quitas los datos que la identifiquen", "Dejas que la IA invente una historia", "Copias una historia de otro grupo"], answer: 1, why: "Una historia real necesita permiso y no debe tener datos que identifiquen a nadie." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Subvenciones con IA",
         questions: [
-          { q: "¿Dónde están las oportunidades de subvenciones federales?", options: ["En Grants.gov", "En un grupo de redes sociales", "En tu carpeta de correo no deseado", "En el directorio telefónico"], answer: 0, why: "Grants.gov tiene la lista de oportunidades de financiamiento federal." },
-          { q: "Una empresa ofrece registrarte en SAM.gov a cambio de un cobro. ¿Qué sabes?", options: ["Tienes que pagarlo", "El registro en SAM.gov es gratis, así que regístrate tú", "SAM.gov es opcional", "Solo las empresas pueden registrarte"], answer: 1, why: "Grants.gov dice que registrarse es gratis." },
-          { q: "La lista de control de la IA olvida un documento adjunto de las guías. ¿Qué es lo correcto?", options: ["La lista de control", "Ninguno", "Las guías del financiador", "Lo que sea más corto"], answer: 2, why: "El documento del propio financiador siempre manda." },
-          { q: "¿Qué instrucción te protege de estadísticas inventadas?", options: ["\"Escribe una declaración de necesidad.\"", "\"Hazla impresionante.\"", "\"Agrega números fuertes.\"", "\"Usando solo estos datos, escribe... No agregues estadísticas que no te di.\""], answer: 3, why: "Limitar a la IA a tus datos evita números inventados." },
-          { q: "¿Qué explica una declaración de necesidad?", options: ["El problema, a quién afecta y por qué ahora", "Los nombres de tu junta", "Tu horario de oficina", "La lista de donantes"], answer: 0, why: "Ese es el propósito de la sección de necesidad." }
+          { objective: "O1", q: "¿Dónde están las oportunidades de subvenciones federales?", options: ["En Grants.gov", "En un grupo de redes sociales", "En tu carpeta de correo no deseado", "En el directorio telefónico"], answer: 0, why: "Grants.gov tiene la lista de oportunidades de financiamiento federal." },
+          { objective: "O1", q: "Una empresa ofrece registrarte en SAM.gov a cambio de un cobro. ¿Qué sabes?", options: ["Tienes que pagarlo", "El registro en SAM.gov es gratis, así que regístrate tú", "SAM.gov es opcional", "Solo las empresas pueden registrarte"], answer: 1, why: "Grants.gov dice que registrarse es gratis." },
+          { objective: "O2", q: "La lista de control de la IA olvida un documento adjunto de las guías. ¿Qué es lo correcto?", options: ["La lista de control", "Ninguno", "Las guías del financiador", "Lo que sea más corto"], answer: 2, why: "El documento del propio financiador siempre manda." },
+          { objective: "O3", q: "¿Qué instrucción te protege de estadísticas inventadas?", options: ["\"Escribe una declaración de necesidad.\"", "\"Hazla impresionante.\"", "\"Agrega números fuertes.\"", "\"Usando solo estos datos, escribe... No agregues estadísticas que no te di.\""], answer: 3, why: "Limitar a la IA a tus datos evita números inventados." },
+          { objective: "O3", q: "¿Qué explica una declaración de necesidad?", options: ["El problema, a quién afecta y por qué ahora", "Los nombres de tu junta", "Tu horario de oficina", "La lista de donantes"], answer: 0, why: "Ese es el propósito de la sección de necesidad." }
         ]
       }
     },
@@ -100,6 +138,7 @@ module.exports = {
       name: "Capítulo 2: Donantes con IA",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Escribir un llamado a donantes con IA",
           minutes: 5,
           goal: "Escribir el borrador de un correo corto de llamado a donantes para un programa.",
@@ -116,9 +155,14 @@ module.exports = {
             { title: "Protege a los donantes", bullets: ["Nada de listas de donantes en la IA", "Agrega los nombres en tu base de datos de donantes"] }
           ],
           tryIt: "Escribe con la IA el borrador de un correo de llamado de 150 palabras para un programa. Revisa en tu presupuesto que el monto de \"lo que hace un donativo\" sea cierto.",
-          youCanNow: "escribir con IA un llamado a donantes corto y honesto."
+          youCanNow: "escribir con IA un llamado a donantes corto y honesto.",
+          quickCheck: [
+            { objective: "O4", q: "¿Cuántas peticiones debe tener una buena carta de petición?", options: ["Cinco", "Ninguna", "Una petición clara", "Una por cada programa"], answer: 2, why: "Una buena carta de petición tiene una persona o necesidad, lo que logra un donativo y una petición clara." },
+            { objective: "O4", q: "Quieres que la IA escriba una carta de petición a tus principales donantes por su nombre. ¿Qué haces?", options: ["Pegas tu lista de donantes en la IA", "Pegas los nombres y el historial de donativos", "No haces la carta", "Escribes el borrador con espacios en blanco y luego agregas los nombres en tu base de datos de donantes"], answer: 3, why: "Las listas de donantes no entran en la IA; agrega los nombres en tu base de datos cuando el borrador esté terminado." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Personalizar agradecimientos y actualizaciones",
           minutes: 4,
           goal: "Usar la IA para hacer plantillas de agradecimiento y actualización que personalizas tú.",
@@ -135,9 +179,14 @@ module.exports = {
             { title: "Hazlo personal", bullets: ["Llénala en tu base de datos de donantes", "Agrega una línea escrita a mano"] }
           ],
           tryIt: "Pide a la IA tres plantillas de agradecimiento para tres tipos de donantes. Agrega a cada una una frase de impacto que sea cierta.",
-          youCanNow: "crear plantillas de agradecimiento con IA y personalizarlas con seguridad."
+          youCanNow: "crear plantillas de agradecimiento con IA y personalizarlas con seguridad.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué donantes tienen más probabilidad de volver a donar?", options: ["Los donantes a quienes se les agradece rápido y se les cuenta lo que logró su donativo", "Los donantes que nunca reciben respuesta", "Los donantes que reciben la misma carta que todos", "Los donantes a quienes se les agradece un año después"], answer: 0, why: "Agradecer rápido y contar lo que logró el donativo hace más probable que los donantes vuelvan a dar." },
+            { objective: "O5", q: "Tienes lista una plantilla de agradecimiento para un donante mensual. ¿Qué la hace sentir humana?", options: ["Mandarla dos veces", "Agregar una línea escrita a mano cuando puedas", "Usar una letra más grande", "Quitar la oración sobre el impacto"], answer: 1, why: "La gente nota cuando ninguna persona participó; una línea escrita a mano ayuda." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Revisar, editar y mantenerse honesto",
           minutes: 5,
           goal: "Hacer una revisión final de cualquier borrador de solicitud o de llamado antes de que salga.",
@@ -157,17 +206,21 @@ module.exports = {
             { name: "IRS: contribuciones caritativas", url: "https://www.irs.gov/charities-non-profits/charitable-contributions" }
           ],
           tryIt: "Tarea final: para una oportunidad de subvención real, termina tu declaración de necesidad y una descripción del programa que sigan las guías, y termina un llamado a donantes de 150 palabras para el mismo programa. Haz la revisión final de los dos.",
-          youCanNow: "producir con ayuda de la IA secciones de solicitudes y llamados a donantes honestos y revisados."
+          youCanNow: "producir con ayuda de la IA secciones de solicitudes y llamados a donantes honestos y revisados.",
+          quickCheck: [
+            { objective: "O6", q: "¿Cuál es una buena forma de detectar un borrador que suena a robot?", options: ["Hacerlo más largo", "Agregar más estadísticas", "Leerlo en voz alta", "Mandarlo de inmediato"], answer: 2, why: "Léelo en voz alta y pide a un colega que conozca el programa que lo lea." },
+            { objective: "O6", q: "Tu borrador de subvención dice que atendieron a 300 jóvenes, pero ningún registro lo muestra. ¿Qué haces?", options: ["Lo dejas; suena bien", "Lo redondeas a 250", "Le preguntas a la IA de dónde sacó el número", "Lo quitas o usas el número de tus registros"], answer: 3, why: "Cada número debe salir de un registro o de una fuente." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Donantes con IA",
         questions: [
-          { q: "¿Qué frase de un llamado es la más fuerte, si es cierta?", options: ["\"Por favor apoye nuestro trabajo.\"", "\"$50 dan una semana de tutorías después de clases.\"", "\"Necesitamos dinero.\"", "\"Done si puede.\""], answer: 1, why: "Un impacto concreto y cierto ayuda a los donantes a ver lo que logra su donativo." },
-          { q: "¿Dónde agregas los nombres de los donantes a las cartas de agradecimiento?", options: ["Pegando la lista de donantes en la IA", "En redes sociales", "En tu base de datos de donantes o con combinación de correspondencia", "En ningún lado"], answer: 2, why: "Mantener los datos de donantes en tu propio sistema protege su privacidad." },
-          { q: "La IA agrega un socio con el que no trabajas. ¿Qué haces?", options: ["Lo dejas, suena bien", "Le preguntas al socio después", "Lo haces más pequeño", "Lo quitas"], answer: 3, why: "Nunca dejes que la IA invente socios o respaldos." },
-          { q: "Un borrador dice que los donativos son deducibles de impuestos. ¿Dónde lo revisas?", options: ["Con un contador o en la guía oficial del IRS", "En otro chat de IA", "Con un donante", "En ningún lado"], answer: 0, why: "Las afirmaciones de impuestos necesitan una fuente oficial o un profesional." },
-          { q: "¿Por qué pedir a un colega que conoce el programa que lea el borrador?", options: ["Para compartir la culpa", "Puede encontrar datos falsos o que faltan", "Para que sea más largo", "No sirve de nada"], answer: 1, why: "Alguien que conoce el programa encuentra errores." }
+          { objective: "O4", q: "¿Qué frase de un llamado es la más fuerte, si es cierta?", options: ["\"Por favor apoye nuestro trabajo.\"", "\"$50 dan una semana de tutorías después de clases.\"", "\"Necesitamos dinero.\"", "\"Done si puede.\""], answer: 1, why: "Un impacto concreto y cierto ayuda a los donantes a ver lo que logra su donativo." },
+          { objective: "O5", q: "¿Dónde agregas los nombres de los donantes a las cartas de agradecimiento?", options: ["Pegando la lista de donantes en la IA", "En redes sociales", "En tu base de datos de donantes o con combinación de correspondencia", "En ningún lado"], answer: 2, why: "Mantener los datos de donantes en tu propio sistema protege su privacidad." },
+          { objective: "O6", q: "La IA agrega un socio con el que no trabajas. ¿Qué haces?", options: ["Lo dejas, suena bien", "Le preguntas al socio después", "Lo haces más pequeño", "Lo quitas"], answer: 3, why: "Nunca dejes que la IA invente socios o respaldos." },
+          { objective: "O6", q: "Un borrador dice que los donativos son deducibles de impuestos. ¿Dónde lo revisas?", options: ["Con un contador o en la guía oficial del IRS", "En otro chat de IA", "Con un donante", "En ningún lado"], answer: 0, why: "Las afirmaciones de impuestos necesitan una fuente oficial o un profesional." },
+          { objective: "O6", q: "¿Por qué pedir a un colega que conoce el programa que lea el borrador?", options: ["Para compartir la culpa", "Puede encontrar datos falsos o que faltan", "Para que sea más largo", "No sirve de nada"], answer: 1, why: "Alguien que conoce el programa encuentra errores." }
         ]
       }
     }
@@ -175,26 +228,102 @@ module.exports = {
   quiz: {
     title: "Examen final: IA para recaudar fondos y escribir solicitudes de subvenciones",
     questions: [
-      { q: "Una subvención es:", options: ["Un préstamo", "Una cuenta de impuestos", "Dinero para un fin que no hay que devolver", "Una lista de donantes"], answer: 2, why: "Las subvenciones no se devuelven." },
-      { q: "NOFO significa:", options: ["Nueva oficina de operaciones", "Foro abierto sin fines de lucro", "Aviso de obligación financiera", "Aviso de oportunidad de financiamiento"], answer: 3, why: "Un NOFO describe una subvención federal y sus reglas." },
-      { q: "Antes de solicitar una subvención federal, tu organización debe:", options: ["Registrarse como entidad en SAM.gov", "Comprar una licencia especial", "Contratar a un cabildero", "Pagarle un cargo a Grants.gov"], answer: 0, why: "Grants.gov pide primero el registro en SAM.gov." },
-      { q: "SAM.gov le da a tu organización:", options: ["Una laptop gratis", "Un Identificador Único de Entidad (UEI)", "Una subvención", "Un reembolso de impuestos"], answer: 1, why: "El UEI identifica a tu organización para fondos federales." },
-      { q: "¿Cuál es un buen lugar para buscar fundaciones que financian?", options: ["Una aplicación del clima", "Un sitio de compras", "Candid", "Un juego"], answer: 2, why: "Candid tiene listas de organizaciones y financiadores." },
-      { q: "¿En qué parte de un NOFO encuentras quién puede solicitar?", options: ["En el logo", "En el pie de página", "En el color de la portada", "En la sección de quién puede solicitar"], answer: 3, why: "Cada NOFO tiene una sección sobre quién puede solicitar." },
-      { q: "¿Por qué convertir las guías en una lista de control?", options: ["Si falta una cosa te pueden descalificar", "A los financiadores les gustan las listas", "Hace más larga la solicitud", "Lo exige la ley"], answer: 0, why: "Una lista de control te ayuda a entregar todo." },
-      { q: "La lista de control de la IA y las guías del financiador no coinciden. Confía en:", options: ["La IA", "Las guías del financiador", "Lo que sea más fácil", "Ninguna, adivina"], answer: 1, why: "El documento del propio financiador manda." },
-      { q: "La mejor forma de empezar una declaración de necesidad con IA es:", options: ["Pedirle que invente números fuertes", "No darle nada", "Darle tus datos y decirle que no agregue estadísticas", "Pegar expedientes de personas atendidas"], answer: 2, why: "Tus datos mantienen cierto el borrador." },
-      { q: "Una descripción del programa explica:", options: ["Solo tu número de identificación fiscal", "El clima", "Quién está en la junta", "Qué vas a hacer, para quién y qué va a cambiar"], answer: 3, why: "Esa es su función en una solicitud." },
-      { q: "Quieres incluir la historia de una persona atendida. Necesitas:", options: ["Permiso y nada de datos que la identifiquen", "Su nombre completo y su dirección", "Nada", "Una foto de su identificación"], answer: 0, why: "Las historias necesitan consentimiento y privacidad." },
-      { q: "Un financiador pregunta si se usó IA. Debes:", options: ["Decir que no", "Responder con honestidad", "No hacer caso a la pregunta", "Pedirle a la IA que responda"], answer: 1, why: "La honestidad protege la confianza." },
-      { q: "Un llamado fuerte tiene:", options: ["Diez pedidos", "Ningún pedido", "Una historia, lo que hace un donativo y un pedido claro", "Un informe anual largo"], answer: 2, why: "Lo corto y concreto funciona mejor." },
-      { q: "¿Qué es un llamado a la acción?", options: ["Una llamada telefónica", "Un aviso legal", "Una votación de la junta", "Lo único y claro que le pides al lector que haga"], answer: 3, why: "Como \"Dona hoy\"." },
-      { q: "¿Qué NUNCA debe entrar en una herramienta de IA?", options: ["Tu lista de donantes con historiales de donación", "\"Hazlo más cálido\"", "El nombre público del programa", "Un límite de palabras"], answer: 0, why: "Los datos de donantes son privados." },
-      { q: "¿Por qué hacer plantillas de agradecimiento por tipo de donante?", options: ["Para ahorrar papel", "Los distintos donantes necesitan distintos mensajes", "Los donantes lo exigen", "La IA no puede escribir una"], answer: 1, why: "Los donantes por primera vez y los mensuales tienen una relación distinta con la organización." },
-      { q: "La combinación de correspondencia es:", options: ["La unión de dos organizaciones", "Un cobro del correo", "Una herramienta que pone nombres en cartas para muchas personas", "Un modelo de IA"], answer: 2, why: "Personaliza las cartas fuera de la herramienta de IA." },
-      { q: "¿Qué hace que un agradecimiento se sienta humano?", options: ["Más espacios en blanco", "Una plantilla más larga", "Mandarlo tarde", "Una línea personal escrita a mano"], answer: 3, why: "La gente nota un toque humano real." },
-      { q: "En una revisión final, cada número debe:", options: ["Salir de un registro o una fuente", "Redondearse hacia arriba", "Ser grande", "Venir de la IA"], answer: 0, why: "Los números ciertos mantienen la confianza." },
-      { q: "Si un financiador encuentra una afirmación falsa:", options: ["No pasa nada", "Puede no volver a confiar en ti nunca", "Da más dinero", "Es de esperarse"], answer: 1, why: "La confianza es difícil de recuperar." }
+      { objective: "O1", q: "Una subvención es:", options: ["Un préstamo", "Una cuenta de impuestos", "Dinero para un fin que no hay que devolver", "Una lista de donantes"], answer: 2, why: "Las subvenciones no se devuelven." },
+      { objective: "O1", q: "NOFO significa:", options: ["Nueva oficina de operaciones", "Foro abierto sin fines de lucro", "Aviso de obligación financiera", "Aviso de oportunidad de financiamiento"], answer: 3, why: "Un NOFO describe una subvención federal y sus reglas." },
+      { objective: "O1", q: "Antes de solicitar una subvención federal, tu organización debe:", options: ["Registrarse como entidad en SAM.gov", "Comprar una licencia especial", "Contratar a un cabildero", "Pagarle un cargo a Grants.gov"], answer: 0, why: "Grants.gov pide primero el registro en SAM.gov." },
+      { objective: "O1", q: "SAM.gov le da a tu organización:", options: ["Una laptop gratis", "Un Identificador Único de Entidad (UEI)", "Una subvención", "Un reembolso de impuestos"], answer: 1, why: "El UEI identifica a tu organización para fondos federales." },
+      { objective: "O1", q: "¿Cuál es un buen lugar para buscar fundaciones que financian?", options: ["Una aplicación del clima", "Un sitio de compras", "Candid", "Un juego"], answer: 2, why: "Candid tiene listas de organizaciones y financiadores." },
+      { objective: "O1", q: "¿En qué parte de un NOFO encuentras quién puede solicitar?", options: ["En el logo", "En el pie de página", "En el color de la portada", "En la sección de quién puede solicitar"], answer: 3, why: "Cada NOFO tiene una sección sobre quién puede solicitar." },
+      { objective: "O2", q: "¿Por qué convertir las guías en una lista de control?", options: ["Si falta una cosa te pueden descalificar", "A los financiadores les gustan las listas", "Hace más larga la solicitud", "Lo exige la ley"], answer: 0, why: "Una lista de control te ayuda a entregar todo." },
+      { objective: "O2", q: "La lista de control de la IA y las guías del financiador no coinciden. Confía en:", options: ["La IA", "Las guías del financiador", "Lo que sea más fácil", "Ninguna, adivina"], answer: 1, why: "El documento del propio financiador manda." },
+      { objective: "O3", q: "La mejor forma de empezar una declaración de necesidad con IA es:", options: ["Pedirle que invente números fuertes", "No darle nada", "Darle tus datos y decirle que no agregue estadísticas", "Pegar expedientes de personas atendidas"], answer: 2, why: "Tus datos mantienen cierto el borrador." },
+      { objective: "O3", q: "Una descripción del programa explica:", options: ["Solo tu número de identificación fiscal", "El clima", "Quién está en la junta", "Qué vas a hacer, para quién y qué va a cambiar"], answer: 3, why: "Esa es su función en una solicitud." },
+      { objective: "O3", q: "Quieres incluir la historia de una persona atendida. Necesitas:", options: ["Permiso y nada de datos que la identifiquen", "Su nombre completo y su dirección", "Nada", "Una foto de su identificación"], answer: 0, why: "Las historias necesitan consentimiento y privacidad." },
+      { objective: "O3", q: "Un financiador pregunta si se usó IA. Debes:", options: ["Decir que no", "Responder con honestidad", "No hacer caso a la pregunta", "Pedirle a la IA que responda"], answer: 1, why: "La honestidad protege la confianza." },
+      { objective: "O4", q: "Un llamado fuerte tiene:", options: ["Diez pedidos", "Ningún pedido", "Una historia, lo que hace un donativo y un pedido claro", "Un informe anual largo"], answer: 2, why: "Lo corto y concreto funciona mejor." },
+      { objective: "O4", q: "¿Qué es un llamado a la acción?", options: ["Una llamada telefónica", "Un aviso legal", "Una votación de la junta", "Lo único y claro que le pides al lector que haga"], answer: 3, why: "Como \"Dona hoy\"." },
+      { objective: "O4", q: "¿Qué NUNCA debe entrar en una herramienta de IA?", options: ["Tu lista de donantes con historiales de donación", "\"Hazlo más cálido\"", "El nombre público del programa", "Un límite de palabras"], answer: 0, why: "Los datos de donantes son privados." },
+      { objective: "O5", q: "¿Por qué hacer plantillas de agradecimiento por tipo de donante?", options: ["Para ahorrar papel", "Los distintos donantes necesitan distintos mensajes", "Los donantes lo exigen", "La IA no puede escribir una"], answer: 1, why: "Los donantes por primera vez y los mensuales tienen una relación distinta con la organización." },
+      { objective: "O5", q: "La combinación de correspondencia es:", options: ["La unión de dos organizaciones", "Un cobro del correo", "Una herramienta que pone nombres en cartas para muchas personas", "Un modelo de IA"], answer: 2, why: "Personaliza las cartas fuera de la herramienta de IA." },
+      { objective: "O5", q: "¿Qué hace que un agradecimiento se sienta humano?", options: ["Más espacios en blanco", "Una plantilla más larga", "Mandarlo tarde", "Una línea personal escrita a mano"], answer: 3, why: "La gente nota un toque humano real." },
+      { objective: "O6", q: "En una revisión final, cada número debe:", options: ["Salir de un registro o una fuente", "Redondearse hacia arriba", "Ser grande", "Venir de la IA"], answer: 0, why: "Los números ciertos mantienen la confianza." },
+      { objective: "O6", q: "Si un financiador encuentra una afirmación falsa:", options: ["No pasa nada", "Puede no volver a confiar en ti nunca", "Da más dinero", "Es de esperarse"], answer: 1, why: "La confianza es difícil de recuperar." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      2,
+      6,
+      8,
+      12,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte y vuelve a intentarlo.",
+    criteria: [
+      {
+        name: "Subvención adecuada",
+        objective: "O1",
+        notYet: "La subvención no le queda al programa, o no se revisaron los requisitos.",
+        meets: "Una oportunidad real que le queda al programa, con los requisitos revisados.",
+        exceeds: "Anota una segunda oportunidad y la fecha límite de cada una."
+      },
+      {
+        name: "Sigue las bases",
+        objective: "O2",
+        notYet: "Falta una sección, un límite o un anexo que se pide.",
+        meets: "Los borradores siguen la lista de verificación, las secciones y los límites de palabras del financiador.",
+        exceeds: "La lista de verificación se revisó línea por línea con el documento del financiador."
+      },
+      {
+        name: "Necesidad y programa con datos reales",
+        objective: "O3",
+        notYet: "Una estadística o un resultado no sale de ningún registro o fuente.",
+        meets: "Una declaración de necesidad de unas 250 palabras y una descripción del programa que usan solo datos revisados.",
+        exceeds: "Usa las palabras y las prioridades del financiador e incluye una historia con permiso."
+      },
+      {
+        name: "Carta de petición a donantes",
+        objective: "O4",
+        notYet: "No hay una petición clara, o hay datos de donantes en la instrucción.",
+        meets: "Unas 150 palabras con una historia, lo que logra un donativo y una petición clara, usando espacios en blanco.",
+        exceeds: "El monto y lo que logra salen de los costos reales del programa."
+      },
+      {
+        name: "Honesto y con nuestra voz",
+        objective: "O6",
+        notYet: "Queda un resultado, un socio o un respaldo inventado.",
+        meets: "Cada afirmación es cierta y las dos piezas suenan a la organización.",
+        exceeds: "Un colega que conoce el programa lo leyó y lo aprobó."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Estudiantes que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Solicitudes de subvención enviadas en 90 días (encuesta de seguimiento)",
+      "Subvenciones ganadas y dinero recaudado con cartas de petición, según informen las organizaciones",
+      "Estudiantes que empiezan otro curso de Koach Learn para organizaciones sin fines de lucro en 30 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Una computadora con internet",
+      "Un asistente de IA gratis",
+      "Los datos y registros de tu programa, y las bases públicas de un financiador",
+      "Unos 60 minutos en total, más tiempo para editar los borradores"
+    ],
+    facilitatorNotes: [
+      "Pide a los estudiantes que lleven a la sesión una oportunidad de subvención real y los números de su programa.",
+      "Recuerda a los estudiantes que nunca peguen listas de donantes, nombres ni historiales de donativos en herramientas de IA.",
+      "Advierte a los estudiantes sobre las empresas que cobran por registrarlos en SAM.gov; es gratis.",
+      "Forma parejas para que lean en voz alta el borrador del otro y busquen la fuente de cada número.",
+      "Califica la tarea final con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

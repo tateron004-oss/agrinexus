@@ -18,11 +18,35 @@ module.exports = {
     "Ce cours explique la loi en mots simples pour que vous sachiez quoi demander ; ce n'est pas un conseil juridique. Le conseiller juridique et le délégué à la protection des données de votre district ont le dernier mot. Un contrôle des connaissances termine chaque chapitre et un quiz de 20 questions termine le cours. Voici le cours 1 sur 8 de la série L'IA pour les chefs d'établissement et responsables éducatifs."
   ],
   finalTask: "Rédigez pour le personnel une fiche d'une page « L'IA dans notre école » : ce qu'est l'IA en deux phrases, trois façons dont elle peut aider les enseignants, trois risques pour les élèves, la règle de confidentialité (« aucun nom d'élève, aucune note ni autre information permettant d'identifier un élève dans des outils d'IA que le district n'a pas approuvés »), et à qui demander. Utilisez-la pour animer une discussion de 15 minutes avec le personnel et notez les trois principales questions soulevées.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des chefs d'établissement, des adjoints, des enseignants référents, des conseillers pédagogiques et des responsables de district dans des écoles des États-Unis. Aucune formation technique n'est nécessaire.",
+    startingPoint: "Ils savent que les enseignants et les élèves utilisent l'IA et ont peut-être essayé un chatbot. Ils ne savent pas encore expliquer clairement l'IA au personnel, recenser où elle est utilisée dans leur école, ni énoncer les bases de la protection de la vie privée des élèves qui s'appliquent aux outils d'IA.",
+    gap: "L'IA est déjà dans les classes, souvent sans consignes. Les responsables doivent l'expliquer simplement, voir où elle est utilisée, juger les usages utiles et nuisibles, et connaître les bases de FERPA et COPPA, pour piloter l'usage de l'IA au lieu de le subir et protéger la vie privée des élèves.",
+    constraints: [
+      "Des mots simples pour des responsables scolaires non techniciens ; le cours explique la loi mais ne constitue pas un avis juridique",
+      "Le conseiller juridique et le délégué à la protection des données du district ont le dernier mot sur les obligations en matière de vie privée",
+      "Aucun nom, aucune note ni autre information permettant d'identifier un élève dans des outils d'IA non approuvés, y compris pendant les exercices",
+      "Les orientations fédérales et des États changent : les responsables vérifient eux-mêmes la version actuelle",
+      "Temps : des leçons courtes à caser dans une journée d'école, plus une discussion de 15 minutes avec le personnel"
+    ],
+    prerequisites: "Aucun. C'est le cours 1 sur 8 de L'IA pour les chefs d'établissement et responsables éducatifs."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Quand un membre du personnel, un parent ou un élève demande ce qu'est l'IA", action: "expliquer l'IA et l'IA générative en mots simples, y compris pourquoi elle peut se tromper", standard: "en deux phrases qu'un nouvel enseignant, un parent et un élève de CM2 pourraient comprendre" },
+    { id: "O2", condition: "Avec votre coordinateur numérique ou deux enseignants", action: "recenser où l'IA apparaît déjà dans votre école", standard: "en listant au moins six endroits, chacun marqué approuvé ou non et indiquant s'il touche aux données des élèves" },
+    { id: "O3", condition: "À partir d'usages de l'IA observés dans les écoles", action: "classer chaque usage en utile, prudent ou nuisible", standard: "avec une raison pour chacun, en utilisant le test de la famille" },
+    { id: "O4", condition: "Quand le personnel utilise des outils d'IA", action: "énoncer les bases de FERPA et COPPA et reformuler une demande pour qu'elle ne contienne aucune information sur un élève", standard: "en indiquant quand consulter votre délégué à la protection des données ou le conseiller juridique" },
+    { id: "O5", condition: "À partir des orientations fédérales et de votre État sur l'IA à l'école", action: "résumer un principe fédéral et trouver les orientations actuelles de votre État", standard: "en notant leur date et un point qu'elles font, ou qu'il n'en existe pas encore" },
+    { id: "O6", condition: "Avec votre personnel", action: "animer une discussion de 15 minutes sur l'IA à l'aide d'une fiche d'une page « L'IA dans notre école »", standard: "avec toutes les parties de la fiche et les trois principales questions du personnel notées" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : L'IA dans les écoles d'aujourd'hui",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Ce qu'est l'IA, avec les mots de votre personnel",
           minutes: 5,
           goal: "Expliquer l'IA et l'IA générative au personnel en mots simples.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "À dire au personnel", bullets: ["Un partenaire rapide pour les premiers jets", "Ne remplace jamais le jugement de l'enseignant", "Jamais le dernier mot sur un élève"] }
           ],
           tryIt: "Écrivez une explication de l'IA en deux phrases qu'un nouvel enseignant, un parent et un élève de 10 ans pourraient tous comprendre. Testez-la sur un collègue.",
-          youCanNow: "expliquer l'IA et l'IA générative en mots simples au personnel et aux familles."
+          youCanNow: "expliquer l'IA et l'IA générative en mots simples au personnel et aux familles.",
+          quickCheck: [
+            { objective: "O1", q: "Qu'est-ce que l'IA générative ?", options: ["Une IA qui crée du texte, des images ou du code nouveaux", "Un programme qui corrige les contrôles automatiquement", "Un moteur de recherche pour les dossiers scolaires", "Un logiciel qui ne se trompe jamais"], answer: 0, why: "L'IA générative crée du contenu nouveau, c'est pourquoi elle peut aussi produire des erreurs." },
+            { objective: "O1", q: "Un parent demande pourquoi un chatbot a donné un fait faux à son enfant. Qu'expliqueriez-vous ?", options: ["L'enfant a dû mal taper", "L'IA prédit des mots probables et peut se tromper : ses réponses doivent être vérifiées", "L'outil était en panne ce jour-là", "Seuls les outils d'IA payants sont exacts"], answer: 1, why: "L'IA prédit un texte probable au lieu de vérifier les faits : elle peut paraître juste et pourtant se tromper." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Où l'IA est déjà présente dans votre école",
           minutes: 5,
           goal: "Recenser où l'IA est déjà utilisée dans votre école, officiellement ou non.",
@@ -57,9 +86,14 @@ module.exports = {
             { title: "La recenser", bullets: ["Approuvé ou non ?", "Touche aux données des élèves ?", "Où les élèves la rencontrent sans le savoir"] }
           ],
           tryIt: "Avec votre coordinateur numérique ou deux enseignants, listez au moins six endroits où l'IA apparaît dans votre école. Marquez chacun approuvé ou non, et s'il touche aux données des élèves.",
-          youCanNow: "recenser où l'IA est déjà utilisée dans votre école et quels usages touchent aux données des élèves."
+          youCanNow: "recenser où l'IA est déjà utilisée dans votre école et quels usages touchent aux données des élèves.",
+          quickCheck: [
+            { objective: "O2", q: "Qu'est-ce qu'un programme d'apprentissage adaptatif ?", options: ["Un programme que les enseignants modifient à la main chaque jour", "Un programme qui fonctionne sans internet", "Un programme qui choisit l'activité suivante d'après les réponses de l'élève", "Un programme que seuls les adultes peuvent utiliser"], answer: 2, why: "Les programmes adaptatifs utilisent les réponses de l'élève pour choisir la suite." },
+            { objective: "O2", q: "Vous apprenez qu'un outil que votre école possède déjà a une nouvelle fonction d'IA activée. Que feriez-vous ?", options: ["L'ignorer, puisque l'outil était déjà approuvé", "Interdire tout l'outil immédiatement", "Demander aux enseignants d'arrêter d'utiliser les ordinateurs", "L'ajouter à votre carte de l'IA et vérifier si elle touche aux données des élèves"], answer: 3, why: "Des fonctions d'IA peuvent apparaître dans des outils que vous avez déjà : elles ont leur place sur la carte." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Où l'IA aide l'apprentissage, et où elle nuit",
           minutes: 5,
           goal: "Classer les usages scolaires de l'IA en utiles, prudents et nuisibles.",
@@ -76,17 +110,21 @@ module.exports = {
             { title: "Le test de la famille", bullets: ["Expliquerais-je cet usage à la famille ?"] }
           ],
           tryIt: "Listez huit usages de l'IA que vous avez vus ou dont vous avez entendu parler à l'école. Marquez chacun UTILE, PRUDENT ou NUISIBLE et écrivez une raison.",
-          youCanNow: "juger quels usages scolaires de l'IA aident l'apprentissage et lesquels mettent les élèves en danger."
+          youCanNow: "juger quels usages scolaires de l'IA aident l'apprentissage et lesquels mettent les élèves en danger.",
+          quickCheck: [
+            { objective: "O3", q: "Que demande le test de la famille ?", options: ["Est-ce que j'expliquerais cet usage de l'IA à la famille de l'élève ?", "La famille a-t-elle un ordinateur ?", "La famille a-t-elle payé l'outil ?", "La famille utiliserait-elle l'IA à la maison ?"], answer: 0, why: "Si vous ne l'expliqueriez pas à une famille, l'usage mérite d'être réexaminé." },
+            { objective: "O3", q: "Un enseignant veut utiliser un détecteur d'IA pour décider si des rédactions sont du plagiat. Comment le classeriez-vous ?", options: ["UTILE : cela fait gagner du temps", "NUISIBLE : l'IA ne doit jamais être utilisée", "PRUDENT : les détecteurs peuvent accuser à tort des élèves, ils ne sont donc jamais la seule preuve", "Ce n'est pas la peine d'en parler"], answer: 2, why: "Les détecteurs peuvent accuser à tort des élèves, y compris ceux qui apprennent l'anglais." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : L'IA dans les écoles d'aujourd'hui",
         questions: [
-          { q: "Quelle est la meilleure description simple de l'IA générative pour le personnel ?", options: ["Une caméra de sécurité de l'école", "Un nouveau système de notation", "Une IA qui crée du texte, des images ou du code nouveaux", "Une application de présence"], answer: 2, why: "L'IA générative crée du contenu nouveau." },
-          { q: "Un enseignant dit : « C'est l'IA qui l'a écrit, donc c'est forcément exact. » Meilleure réponse ?", options: ["L'IA prédit des mots probables et peut se tromper ; vérifiez", "Être d'accord", "Seulement si c'est long", "Seulement s'il y a des mots savants"], answer: 0, why: "Un texte fluide peut quand même être faux." },
-          { q: "Pourquoi recenser d'abord l'usage de l'IA dans votre école ?", options: ["Pour tout interdire", "Les fournisseurs l'exigent", "C'est amusant", "Les responsables ne peuvent pas guider ce qu'ils ne voient pas"], answer: 3, why: "La carte montre l'usage approuvé, l'usage caché et le risque pour les données des élèves." },
-          { q: "Pourquoi les détecteurs de texte IA sont-ils un usage PRUDENT ?", options: ["Ils ont toujours raison", "Ils peuvent accuser à tort des élèves, notamment ceux qui apprennent la langue de l'école", "Ils sont gratuits", "Ils écrivent des dissertations"], answer: 1, why: "Les faux positifs peuvent nuire aux élèves." },
-          { q: "Quel usage est NUISIBLE ?", options: ["Préparer des exercices", "Créer un texte de lecture à trois niveaux", "Rédiger une lettre d'information", "Laisser l'IA décider de l'orientation d'un élève en éducation spécialisée"], answer: 3, why: "Les décisions sur les élèves restent à des personnes qualifiées." }
+          { objective: "O1", q: "Quelle est la meilleure description simple de l'IA générative pour le personnel ?", options: ["Une caméra de sécurité de l'école", "Un nouveau système de notation", "Une IA qui crée du texte, des images ou du code nouveaux", "Une application de présence"], answer: 2, why: "L'IA générative crée du contenu nouveau." },
+          { objective: "O1", q: "Un enseignant dit : « C'est l'IA qui l'a écrit, donc c'est forcément exact. » Meilleure réponse ?", options: ["L'IA prédit des mots probables et peut se tromper ; vérifiez", "Être d'accord", "Seulement si c'est long", "Seulement s'il y a des mots savants"], answer: 0, why: "Un texte fluide peut quand même être faux." },
+          { objective: "O2", q: "Pourquoi recenser d'abord l'usage de l'IA dans votre école ?", options: ["Pour tout interdire", "Les fournisseurs l'exigent", "C'est amusant", "Les responsables ne peuvent pas guider ce qu'ils ne voient pas"], answer: 3, why: "La carte montre l'usage approuvé, l'usage caché et le risque pour les données des élèves." },
+          { objective: "O3", q: "Pourquoi les détecteurs de texte IA sont-ils un usage PRUDENT ?", options: ["Ils ont toujours raison", "Ils peuvent accuser à tort des élèves, notamment ceux qui apprennent la langue de l'école", "Ils sont gratuits", "Ils écrivent des dissertations"], answer: 1, why: "Les faux positifs peuvent nuire aux élèves." },
+          { objective: "O3", q: "Quel usage est NUISIBLE ?", options: ["Préparer des exercices", "Créer un texte de lecture à trois niveaux", "Rédiger une lettre d'information", "Laisser l'IA décider de l'orientation d'un élève en éducation spécialisée"], answer: 3, why: "Les décisions sur les élèves restent à des personnes qualifiées." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Chapitre 2 : Ce que les responsables doivent savoir d'abord",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Les bases de la protection des données des élèves : FERPA et COPPA",
           minutes: 6,
           goal: "Énoncer les bases de FERPA et COPPA qui s'appliquent quand le personnel utilise des outils d'IA.",
@@ -111,9 +150,14 @@ module.exports = {
           ],
           sources: [{ name: "FERPA : protéger la vie privée des élèves (ministère de l'Éducation des États-Unis)", url: "https://studentprivacy.ed.gov/ferpa" }, { name: "FTC : se conformer à COPPA, questions fréquentes", url: "https://www.ftc.gov/business-guidance/resources/complying-coppa-frequently-asked-questions" }, { name: "FTC : la vie privée des enfants", url: "https://www.ftc.gov/business-guidance/privacy-security/childrens-privacy" }],
           tryIt: "Écrivez trois exemples de ce qu'un enseignant ne doit PAS coller dans un outil d'IA non approuvé, et réécrivez l'un d'eux pour demander la même aide sans aucune information sur l'élève.",
-          youCanNow: "énoncer les bases de FERPA et COPPA qui s'appliquent à l'usage de l'IA par le personnel et la règle qui en découle."
+          youCanNow: "énoncer les bases de FERPA et COPPA qui s'appliquent à l'usage de l'IA par le personnel et la règle qui en découle.",
+          quickCheck: [
+            { objective: "O4", q: "Que protège COPPA ?", options: ["Les comptes e-mail des enseignants", "La vie privée en ligne des enfants de moins de 13 ans", "Les bâtiments scolaires", "Seulement les résultats sportifs des élèves"], answer: 1, why: "COPPA protège la vie privée en ligne des enfants de moins de 13 ans." },
+            { objective: "O4", q: "Un enseignant veut l'aide de l'IA pour rédiger un commentaire pour un élève nommé qui a une mauvaise note. Que lui suggéreriez-vous ?", options: ["Coller le nom et la note dans n'importe quel outil gratuit", "Utiliser plutôt les initiales de l'élève, ce qui est toujours sûr", "Ne pas faire de commentaire pour cet élève", "Demander de l'aide pour le commentaire sans nom ni note d'élève, ou utiliser un outil approuvé par le district"], answer: 3, why: "Retirer les informations sur l'élève, ou utiliser un outil approuvé, protège le dossier scolaire." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Ce que disent les orientations fédérales sur l'IA à l'école",
           minutes: 5,
           goal: "Résumer les orientations fédérales sur l'IA et trouver vous-même la version actuelle.",
@@ -131,9 +175,14 @@ module.exports = {
           ],
           sources: [{ name: "K-12 Dive : le ministère de l'Éducation publie ses priorités sur l'IA (juillet 2025)", url: "https://www.k12dive.com/news/education-department-issues-ai-priorities-but-what-if-the-agency-closes/754015/" }, { name: "Vie privée et technologies éducatives (bureau de la protection des données des élèves)", url: "https://studentprivacy.ed.gov/privacy-and-education-technology" }],
           tryIt: "Trouvez la page sur l'IA de l'agence d'éducation de votre État ou de votre ministère de l'Éducation (cherchez « intelligence artificielle » sur son site). Notez la date de ses dernières orientations et un point qu'elles font, ou notez qu'il n'en existe pas encore.",
-          youCanNow: "résumer les orientations fédérales sur l'IA à l'école et trouver les versions fédérales et locales actuelles."
+          youCanNow: "résumer les orientations fédérales sur l'IA à l'école et trouver les versions fédérales et locales actuelles.",
+          quickCheck: [
+            { objective: "O5", q: "Où chercher les orientations de votre État sur l'IA pour les écoles ?", options: ["Sur le site de l'agence d'éducation de votre État", "Dans une publication sur les réseaux sociaux", "Dans la réponse de l'outil d'IA lui-même", "Sur la page commerciale d'un fournisseur"], answer: 0, why: "L'agence d'éducation de l'État est la source officielle des orientations de l'État." },
+            { objective: "O5", q: "Un collègue cite de mémoire des orientations fédérales sur l'IA. Que feriez-vous avant de les partager avec le personnel ?", options: ["Les partager, elles ont l'air justes", "Trouver le document officiel actuel et vérifier sa date et sa formulation", "Demander à un chatbot de les confirmer", "Attendre qu'un autre collègue soit d'accord"], answer: 1, why: "Les orientations changent : les responsables vérifient eux-mêmes la version officielle actuelle." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Ouvrir la discussion sur l'IA avec votre personnel",
           minutes: 6,
           goal: "Animer une discussion de 15 minutes avec le personnel sur l'IA à l'aide d'une fiche d'une page.",
@@ -150,17 +199,21 @@ module.exports = {
             { title: "Bien conclure", bullets: ["Une prochaine étape", "Recueillir les trois principales questions"] }
           ],
           tryIt: "Exercice final : rédigez votre fiche d'une page « L'IA dans notre école » (définition en deux phrases, trois aides, trois risques, règle de confidentialité, à qui demander). Animez avec elle une discussion de 15 minutes avec le personnel et notez les trois principales questions soulevées.",
-          youCanNow: "ouvrir et animer la discussion de votre école sur l'IA à partir d'un point de départ clair et partagé."
+          youCanNow: "ouvrir et animer la discussion de votre école sur l'IA à partir d'un point de départ clair et partagé.",
+          quickCheck: [
+            { objective: "O6", q: "Quelle est une bonne façon d'ouvrir une discussion sur l'IA avec le personnel ?", options: ["Annoncer une liste d'interdictions", "Montrer une longue présentation sur le fonctionnement de l'IA", "Poser une question d'écoute sur l'endroit où le personnel a vu de l'IA", "Commencer par un quiz"], answer: 2, why: "Commencer par écouter montre au personnel que son expérience compte." },
+            { objective: "O6", q: "À la fin de votre discussion de 15 minutes, le personnel a encore beaucoup de questions. Que faites-vous ?", options: ["Répondre à toutes, même si cela dure une heure", "Leur dire de chercher sur internet", "Terminer sans étape suivante", "Noter les trois principales questions et donner une étape suivante"], answer: 3, why: "Une étape suivante claire et les questions recueillies orientent ce que vous ferez ensuite." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Ce que les responsables doivent savoir d'abord",
         questions: [
-          { q: "Que protège FERPA ?", options: ["Les salaires des enseignants", "La sécurité des bâtiments scolaires", "La confidentialité des dossiers scolaires des élèves", "Les menus de la cantine"], answer: 2, why: "FERPA protège les dossiers scolaires des élèves." },
-          { q: "COPPA protège en ligne la vie privée des enfants :", options: ["De moins de 13 ans", "De moins de 18 ans", "De moins de 21 ans", "De tout âge"], answer: 0, why: "La FTC indique que la règle protège les enfants de moins de 13 ans." },
-          { q: "Selon la FTC, quand une école peut-elle consentir à la place des parents au titre de COPPA ?", options: ["Chaque fois qu'un enseignant le veut", "Quand le service collecte des données seulement pour l'usage et le bénéfice de l'école, sans autre but commercial", "Jamais", "Quand l'application est gratuite"], answer: 1, why: "Le consentement de l'école se limite à un usage éducatif sans autre but commercial." },
-          { q: "Quel est l'un des principes de la lettre de juillet 2025 du ministère de l'Éducation sur l'IA ?", options: ["Les initiatives d'IA doivent être pilotées par les éducateurs", "L'IA doit remplacer les enseignants", "L'IA doit être interdite", "Seules les écoles privées peuvent utiliser l'IA"], answer: 0, why: "La lettre demande des initiatives pilotées par les éducateurs." },
-          { q: "Comment ouvrir une discussion sur l'IA avec le personnel ?", options: ["Avec une politique de 30 pages", "Avec la présentation commerciale d'un fournisseur", "Avec une interdiction", "Avec une question d'écoute sur où le personnel a vu l'IA"], answer: 3, why: "Écouter d'abord crée la confiance et montre ce dont le personnel a besoin." }
+          { objective: "O4", q: "Que protège FERPA ?", options: ["Les salaires des enseignants", "La sécurité des bâtiments scolaires", "La confidentialité des dossiers scolaires des élèves", "Les menus de la cantine"], answer: 2, why: "FERPA protège les dossiers scolaires des élèves." },
+          { objective: "O4", q: "COPPA protège en ligne la vie privée des enfants :", options: ["De moins de 13 ans", "De moins de 18 ans", "De moins de 21 ans", "De tout âge"], answer: 0, why: "La FTC indique que la règle protège les enfants de moins de 13 ans." },
+          { objective: "O4", q: "Selon la FTC, quand une école peut-elle consentir à la place des parents au titre de COPPA ?", options: ["Chaque fois qu'un enseignant le veut", "Quand le service collecte des données seulement pour l'usage et le bénéfice de l'école, sans autre but commercial", "Jamais", "Quand l'application est gratuite"], answer: 1, why: "Le consentement de l'école se limite à un usage éducatif sans autre but commercial." },
+          { objective: "O5", q: "Quel est l'un des principes de la lettre de juillet 2025 du ministère de l'Éducation sur l'IA ?", options: ["Les initiatives d'IA doivent être pilotées par les éducateurs", "L'IA doit remplacer les enseignants", "L'IA doit être interdite", "Seules les écoles privées peuvent utiliser l'IA"], answer: 0, why: "La lettre demande des initiatives pilotées par les éducateurs." },
+          { objective: "O6", q: "Comment ouvrir une discussion sur l'IA avec le personnel ?", options: ["Avec une politique de 30 pages", "Avec la présentation commerciale d'un fournisseur", "Avec une interdiction", "Avec une question d'écoute sur où le personnel a vu l'IA"], answer: 3, why: "Écouter d'abord crée la confiance et montre ce dont le personnel a besoin." }
         ]
       }
     }
@@ -168,26 +221,106 @@ module.exports = {
   quiz: {
     title: "Quiz final : L'IA pour les chefs d'établissement et responsables éducatifs 1 : introduction à l'IA dans l'éducation",
     questions: [
-      { q: "Les outils de discussion comme ChatGPT reposent sur :", options: ["Des tableurs", "De grands modèles de langage", "Des imprimantes", "Des systèmes de présence"], answer: 1, why: "Les LLM font fonctionner les outils de discussion." },
-      { q: "Une hallucination de l'IA, c'est :", options: ["Une réponse rapide", "Un écran cassé", "Un contenu inventé qui paraît vrai", "Un exercice d'évacuation"], answer: 2, why: "L'IA peut inventer des faits et des sources." },
-      { q: "Le meilleur message en une ligne pour le personnel est :", options: ["L'IA note tout", "L'IA remplace la préparation des cours", "L'IA est un partenaire pour les premiers jets, jamais le dernier mot sur un élève", "L'IA a toujours raison"], answer: 2, why: "Il garde le jugement de l'enseignant au centre." },
-      { q: "Des fonctions d'IA peuvent apparaître dans des outils que vous avez déjà :", options: ["Parfois activées par défaut", "Jamais", "Seulement si vous payez plus", "Seulement sur téléphone"], answer: 0, why: "Les fournisseurs ajoutent des fonctions d'IA aux produits existants." },
-      { q: "Un programme adaptatif :", options: ["Imprime les bulletins", "Fait l'appel", "Ferme les portes", "Change l'activité suivante selon les réponses de l'élève"], answer: 3, why: "Il s'adapte aux réponses." },
-      { q: "Votre carte de l'IA doit indiquer pour chaque outil :", options: ["S'il a un joli logo", "S'il est approuvé et s'il touche aux données des élèves", "S'il est populaire", "S'il est récent"], answer: 1, why: "L'approbation et les données sont ce que les responsables doivent savoir." },
-      { q: "Lequel est un usage UTILE ?", options: ["Une surveillance secrète", "Décider des sanctions", "Coller des plans d'éducation individualisés dans un outil gratuit", "Créer des exercices à plusieurs niveaux de lecture"], answer: 3, why: "Il fait gagner du temps et élargit l'accès." },
-      { q: "Pourquoi l'usage de l'IA par les élèves dans les devoirs peut-il poser problème ?", options: ["C'est illégal", "C'est toujours de la triche", "Elle peut remplacer la réflexion que le devoir construit", "C'est trop lent"], answer: 2, why: "Les règles décident quand l'IA soutient ou remplace l'apprentissage." },
-      { q: "Le test de la famille demande :", options: ["Expliquerais-je cet usage de l'IA à la famille de l'élève ?", "La famille a-t-elle un ordinateur ?", "La famille est-elle en ligne ?", "La famille a-t-elle payé ?"], answer: 0, why: "Être à l'aise pour expliquer un usage est une bonne vérification." },
-      { q: "Les droits FERPA passent des parents à l'élève :", options: ["À 10 ans", "À 18 ans ou à l'entrée dans l'enseignement supérieur", "À 13 ans", "Jamais"], answer: 1, why: "L'élève devient alors titulaire de ces droits." },
-      { q: "Selon FERPA, les parents peuvent :", options: ["Consulter les dossiers scolaires de leur enfant", "Lire les carnets privés des enseignants", "Changer eux-mêmes les notes", "Rien"], answer: 0, why: "La consultation est un droit essentiel de FERPA." },
-      { q: "Un fournisseur ne peut être assimilé à un « personnel de l'école » au titre de FERPA que s'il :", options: ["A une application", "Est gratuit", "Est populaire", "Assure un service pour l'école sous son contrôle direct, avec des limites sur le partage ultérieur"], answer: 3, why: "Ces conditions viennent des orientations sur FERPA." },
-      { q: "Les informations d'annuaire peuvent être partagées :", options: ["Jamais", "Après information et possibilité de refus", "Seulement avec les fournisseurs", "Seulement par les élèves"], answer: 1, why: "Les écoles doivent informer et permettre le refus." },
-      { q: "Quelle agence fait appliquer COPPA ?", options: ["La Poste", "Le ministère de l'Agriculture", "La FTC (Commission fédérale du commerce)", "Le conseil d'école"], answer: 2, why: "La FTC fait appliquer COPPA." },
-      { q: "Un enseignant colle les noms et les notes d'élèves dans un outil d'IA gratuit non approuvé. Cela :", options: ["Est obligatoire", "Est toujours acceptable", "Peut divulguer des dossiers scolaires à une entreprise sans accord", "Améliore la confidentialité"], answer: 2, why: "C'est le risque FERPA des outils non approuvés." },
-      { q: "Pour les obligations exactes de votre district en matière de confidentialité, demandez :", options: ["Au délégué à la protection des données ou au conseiller juridique", "À un chatbot", "À un élève", "Au commercial d'un fournisseur"], answer: 0, why: "Les personnes qualifiées ont le dernier mot." },
-      { q: "La lettre du ministère de l'Éducation sur l'IA date du :", options: ["3 mars 2019", "1er janvier 2000", "27 octobre 2026", "22 juillet 2025"], answer: 3, why: "Elle a été envoyée le 22 juillet 2025." },
-      { q: "Où trouver la liste de contrôle des conditions d'utilisation types ?", options: ["Sur une application de réseau social", "Sur studentprivacy.ed.gov", "Dans une publicité de fournisseur", "Dans les commentaires d'un article"], answer: 1, why: "Elle figure sur le site du bureau de la protection des données des élèves." },
-      { q: "En plus des orientations fédérales, vous devez consulter :", options: ["Seulement les blogs des fournisseurs", "Les règles d'un autre pays", "Rien d'autre", "Les orientations sur l'IA de l'agence d'éducation de votre État"], answer: 3, why: "Beaucoup d'États publient leurs propres orientations sur l'IA." },
-      { q: "Une bonne discussion sur l'IA avec le personnel se termine par :", options: ["Une présentation commerciale", "Une interdiction", "Une prochaine étape et les principales questions recueillies", "Aucune conclusion"], answer: 2, why: "Les prochaines étapes et les questions guident la suite." }
+      { objective: "O1", q: "Les outils de discussion comme ChatGPT reposent sur :", options: ["Des tableurs", "De grands modèles de langage", "Des imprimantes", "Des systèmes de présence"], answer: 1, why: "Les LLM font fonctionner les outils de discussion." },
+      { objective: "O1", q: "Une hallucination de l'IA, c'est :", options: ["Une réponse rapide", "Un écran cassé", "Un contenu inventé qui paraît vrai", "Un exercice d'évacuation"], answer: 2, why: "L'IA peut inventer des faits et des sources." },
+      { objective: "O6", q: "Le meilleur message en une ligne pour le personnel est :", options: ["L'IA note tout", "L'IA remplace la préparation des cours", "L'IA est un partenaire pour les premiers jets, jamais le dernier mot sur un élève", "L'IA a toujours raison"], answer: 2, why: "Il garde le jugement de l'enseignant au centre." },
+      { objective: "O2", q: "Des fonctions d'IA peuvent apparaître dans des outils que vous avez déjà :", options: ["Parfois activées par défaut", "Jamais", "Seulement si vous payez plus", "Seulement sur téléphone"], answer: 0, why: "Les fournisseurs ajoutent des fonctions d'IA aux produits existants." },
+      { objective: "O2", q: "Un programme adaptatif :", options: ["Imprime les bulletins", "Fait l'appel", "Ferme les portes", "Change l'activité suivante selon les réponses de l'élève"], answer: 3, why: "Il s'adapte aux réponses." },
+      { objective: "O2", q: "Votre carte de l'IA doit indiquer pour chaque outil :", options: ["S'il a un joli logo", "S'il est approuvé et s'il touche aux données des élèves", "S'il est populaire", "S'il est récent"], answer: 1, why: "L'approbation et les données sont ce que les responsables doivent savoir." },
+      { objective: "O3", q: "Lequel est un usage UTILE ?", options: ["Une surveillance secrète", "Décider des sanctions", "Coller des plans d'éducation individualisés dans un outil gratuit", "Créer des exercices à plusieurs niveaux de lecture"], answer: 3, why: "Il fait gagner du temps et élargit l'accès." },
+      { objective: "O3", q: "Pourquoi l'usage de l'IA par les élèves dans les devoirs peut-il poser problème ?", options: ["C'est illégal", "C'est toujours de la triche", "Elle peut remplacer la réflexion que le devoir construit", "C'est trop lent"], answer: 2, why: "Les règles décident quand l'IA soutient ou remplace l'apprentissage." },
+      { objective: "O3", q: "Le test de la famille demande :", options: ["Expliquerais-je cet usage de l'IA à la famille de l'élève ?", "La famille a-t-elle un ordinateur ?", "La famille est-elle en ligne ?", "La famille a-t-elle payé ?"], answer: 0, why: "Être à l'aise pour expliquer un usage est une bonne vérification." },
+      { objective: "O4", q: "Les droits FERPA passent des parents à l'élève :", options: ["À 10 ans", "À 18 ans ou à l'entrée dans l'enseignement supérieur", "À 13 ans", "Jamais"], answer: 1, why: "L'élève devient alors titulaire de ces droits." },
+      { objective: "O4", q: "Selon FERPA, les parents peuvent :", options: ["Consulter les dossiers scolaires de leur enfant", "Lire les carnets privés des enseignants", "Changer eux-mêmes les notes", "Rien"], answer: 0, why: "La consultation est un droit essentiel de FERPA." },
+      { objective: "O4", q: "Un fournisseur ne peut être assimilé à un « personnel de l'école » au titre de FERPA que s'il :", options: ["A une application", "Est gratuit", "Est populaire", "Assure un service pour l'école sous son contrôle direct, avec des limites sur le partage ultérieur"], answer: 3, why: "Ces conditions viennent des orientations sur FERPA." },
+      { objective: "O4", q: "Les informations d'annuaire peuvent être partagées :", options: ["Jamais", "Après information et possibilité de refus", "Seulement avec les fournisseurs", "Seulement par les élèves"], answer: 1, why: "Les écoles doivent informer et permettre le refus." },
+      { objective: "O4", q: "Quelle agence fait appliquer COPPA ?", options: ["La Poste", "Le ministère de l'Agriculture", "La FTC (Commission fédérale du commerce)", "Le conseil d'école"], answer: 2, why: "La FTC fait appliquer COPPA." },
+      { objective: "O4", q: "Un enseignant colle les noms et les notes d'élèves dans un outil d'IA gratuit non approuvé. Cela :", options: ["Est obligatoire", "Est toujours acceptable", "Peut divulguer des dossiers scolaires à une entreprise sans accord", "Améliore la confidentialité"], answer: 2, why: "C'est le risque FERPA des outils non approuvés." },
+      { objective: "O4", q: "Pour les obligations exactes de votre district en matière de confidentialité, demandez :", options: ["Au délégué à la protection des données ou au conseiller juridique", "À un chatbot", "À un élève", "Au commercial d'un fournisseur"], answer: 0, why: "Les personnes qualifiées ont le dernier mot." },
+      { objective: "O5", q: "La lettre du ministère de l'Éducation sur l'IA date du :", options: ["3 mars 2019", "1er janvier 2000", "27 octobre 2026", "22 juillet 2025"], answer: 3, why: "Elle a été envoyée le 22 juillet 2025." },
+      { objective: "O5", q: "Où trouver la liste de contrôle des conditions d'utilisation types ?", options: ["Sur une application de réseau social", "Sur studentprivacy.ed.gov", "Dans une publicité de fournisseur", "Dans les commentaires d'un article"], answer: 1, why: "Elle figure sur le site du bureau de la protection des données des élèves." },
+      { objective: "O5", q: "En plus des orientations fédérales, vous devez consulter :", options: ["Seulement les blogs des fournisseurs", "Les règles d'un autre pays", "Rien d'autre", "Les orientations sur l'IA de l'agence d'éducation de votre État"], answer: 3, why: "Beaucoup d'États publient leurs propres orientations sur l'IA." },
+      { objective: "O6", q: "Une bonne discussion sur l'IA avec le personnel se termine par :", options: ["Une présentation commerciale", "Une interdiction", "Une prochaine étape et les principales questions recueillies", "Aucune conclusion"], answer: 2, why: "Les prochaines étapes et les questions guident la suite." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      2,
+      3,
+      6,
+      9,
+      13,
+      14,
+      16,
+      18,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Définition simple",
+        objective: "O1",
+        notYet: "La définition utilise du jargon ou dépasse deux phrases.",
+        meets: "Explique l'IA en deux phrases simples.",
+        exceeds: "Un collègue qui découvre l'IA l'a comprise dès la première lecture."
+      },
+      {
+        name: "Apports et risques",
+        objective: "O3",
+        notYet: "Moins de trois apports ou de trois risques, ou ils ne correspondent pas à l'école.",
+        meets: "Trois façons dont l'IA peut aider les enseignants et trois risques pour les élèves.",
+        exceeds: "Chaque risque dit ce que le personnel doit faire."
+      },
+      {
+        name: "Règle de vie privée",
+        objective: "O4",
+        notYet: "La règle de vie privée manque ou n'est pas claire.",
+        meets: "Indique qu'aucun nom, aucune note ni autre information permettant d'identifier un élève ne va dans des outils d'IA que le district n'a pas approuvés.",
+        exceeds: "Donne un court exemple de demande d'aide sans information sur un élève."
+      },
+      {
+        name: "À qui s'adresser",
+        objective: "O6",
+        notYet: "Ne dit pas à qui s'adresser.",
+        meets: "Nomme la personne à qui poser ses questions.",
+        exceeds: "Nomme aussi le délégué à la protection des données pour les questions de vie privée."
+      },
+      {
+        name: "Discussion avec le personnel",
+        objective: "O6",
+        notYet: "Pas de discussion, ou questions non notées.",
+        meets: "A animé une discussion de 15 minutes et noté les trois principales questions.",
+        exceeds: "A terminé par une étape suivante claire pour le personnel."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Responsables qui terminent le cours et réussissent l'exercice final (grille d'évaluation)",
+      "Écoles où le personnel a reçu une fiche « L'IA dans notre école » dans les 30 jours (enquête de suivi)",
+      "Écoles qui ont une carte des outils d'IA utilisés, marqués approuvés ou non (enquête de suivi)",
+      "Responsables qui passent au cours 2 de L'IA pour les chefs d'établissement et responsables éducatifs"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur avec internet",
+      "La liste des outils approuvés par votre district, s'il en existe une",
+      "Du papier ou un document pour la carte de l'IA et la fiche d'une page",
+      "Environ 60 minutes au total, plus une discussion de 15 minutes avec le personnel"
+    ],
+    facilitatorNotes: [
+      "Faites le test de départ ensemble, puis construisez la carte de l'IA en équipes d'école avec le coordinateur numérique.",
+      "Rappelez que le cours explique la loi en mots simples et ne constitue pas un avis juridique ; invitez si possible le délégué à la protection des données du district.",
+      "N'utilisez jamais de vraies informations sur des élèves dans les exemples d'exercice.",
+      "Laissez les responsables s'entraîner à deux à ouvrir la discussion avec le personnel avant de l'animer à l'école.",
+      "Notez l'exercice final avec la grille, et demandez les questions du personnel notées comme preuve."
     ]
   }
 };

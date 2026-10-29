@@ -17,11 +17,35 @@ module.exports = {
     "Los nombres, los precios y los detalles de los exámenes cambian a menudo, así que aprenderás a revisar la página oficial cada vez. Cada lección dura unos cinco minutos y tiene una tarea “Pruébalo ahora”, una comprobación de conocimientos después de cada capítulo y un examen de 20 preguntas al final."
   ],
   finalTask: "Elige una credencial de IA que encaje con una oferta de empleo real que te interese. De su página oficial, anota el nombre exacto, el proveedor, el costo, la duración y el formato del examen, las habilidades que evalúa, los requisitos de identificación y cuánto tiempo es válida. Luego haz un plan de estudio de cuatro semanas con capacitación oficial gratuita y al menos un examen de práctica, y reserva una sesión de práctica o una fecha de examen.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Adultos que vuelven a casa después de estar en prisión (reinserción) y que quieren una credencial reconocida para mostrar a los empleadores sus nuevas habilidades, a menudo con la mira en empleos de oficina, atención al cliente, administración, TI o la nube.",
+    startingPoint: "Algunos han usado un asistente de IA o terminado un curso corto en línea; algunos obtuvieron certificados mientras estaban en prisión. La mayoría nunca ha elegido, pagado ni presentado un examen supervisado, y puede que no tenga una identificación con foto vigente.",
+    gap: "Una credencial puede ayudar a explicar un periodo sin trabajo y mostrar habilidades actuales, pero la gente a menudo elige la equivocada, paga por capacitación que no necesitaba, se traba con las reglas de identificación o cae en estafas de respuestas de examen. Las personas necesitan elegir una credencial que coincida con ofertas de empleo reales, sacar los datos de la página oficial, estudiar con capacitación gratuita y estar listas el día del examen.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y oraciones cortas; las credenciales técnicas se explican de forma sencilla",
+      "Aparatos: puede que solo tengan un teléfono sencillo o una computadora de biblioteca con tiempo limitado; los exámenes en línea necesitan una computadora adecuada y un cuarto tranquilo",
+      "Dinero: el costo de los exámenes varía; las personas preguntan a programas de empleo, de reinserción o de veteranos si pueden ayudar antes de pagar",
+      "Los datos de los exámenes cambian; la página oficial del examen es la única fuente de confianza",
+      "Identificación: a menudo se exige una identificación oficial con foto vigente cuyo nombre coincida con el de la inscripción"
+    ],
+    prerequisites: "Ninguno. \"Introducción a la IA y a la confianza digital\" ayuda a quienes son nuevos en las herramientas de IA."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con la descripción de una credencial", action: "explicar si es un certificado de finalización o una certificación con examen supervisado y qué le muestra a un empleador", standard: "acertando al menos 4 de 5" },
+    { id: "O2", condition: "Con varias credenciales de IA para principiantes", action: "comparar las credenciales por proveedor, costo, tiempo y nivel", standard: "nombrando cuál sirve para un principiante y cuál es más técnica" },
+    { id: "O3", condition: "Con cinco ofertas de empleo reales, tu presupuesto y tu tiempo", action: "elegir una credencial y averiguar quién podría ayudar a pagarla", standard: "con una razón basada en las ofertas de empleo" },
+    { id: "O4", condition: "Usando la página oficial del examen de la credencial", action: "escribir una hoja de datos de una página con el nombre del examen, el costo, el formato, las habilidades que evalúa, las reglas de identificación y de repetición, y cuánto tiempo es válida", standard: "con cada dato sacado de la página oficial y la fecha en que lo revisaste" },
+    { id: "O5", condition: "Con las habilidades que evalúa el examen y la capacitación oficial gratuita", action: "crear un plan de estudio de cuatro semanas que use la IA como tutor e incluya un examen de práctica", standard: "con el tiempo de estudio repartido según el peso de cada tema en el examen" },
+    { id: "O6", condition: "Antes y después del examen", action: "prepararte para el día del examen y agregar la credencial a tu currículum", standard: "con el nombre exacto, el proveedor y la fecha" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Elegir la credencial correcta",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Certificados y certificaciones, y por qué importan",
           minutes: 4,
           goal: "Distinguir un certificado de un curso de una certificación con examen supervisado y explicar qué le muestra cada uno a un empleador.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "No garantiza un empleo", bullets: ["Combínala con práctica real", "Muestra cómo usaste la habilidad"] }
           ],
           tryIt: "Escribe un empleo que quieras. Al lado, escribe si le va mejor una credencial de IA de principiante o una técnica, y por qué.",
-          youCanNow: "distinguir un certificado de una certificación y elegir el nivel correcto para una meta laboral."
+          youCanNow: "distinguir un certificado de una certificación y elegir el nivel correcto para una meta laboral.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué muestra un certificado de finalización?", options: ["Que aprobaste un examen supervisado", "Que tienes un empleo", "Que tienes una licencia del estado", "Que terminaste un curso"], answer: 3, why: "Un certificado de finalización muestra que terminaste un curso." },
+            { objective: "O1", q: "Un empleador te pregunta qué demuestra tu nueva credencial de IA. Aprobaste un examen supervisado. ¿Qué le dices?", options: ["Que no demuestra nada", "Que muestra que aprobé un examen supervisado que evaluó mis habilidades", "Que me garantiza el empleo", "Que vi algunos videos"], answer: 1, why: "Una certificación suele significar que aprobaste un examen supervisado que evalúa habilidades." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Un recorrido por credenciales de IA conocidas para principiantes",
           minutes: 6,
           goal: "Comparar varias credenciales de IA para principiantes por proveedor, costo, tiempo y nivel.",
@@ -57,9 +86,14 @@ module.exports = {
           ],
           sources: [{ name: "Grow with Google: Google AI Essentials", url: "https://grow.google/ai-essentials/" }, { name: "AWS Certified AI Practitioner", url: "https://aws.amazon.com/certification/certified-ai-practitioner/" }, { name: "Google Cloud: Generative AI Leader", url: "https://cloud.google.com/learn/certification/generative-ai-leader" }, { name: "Microsoft Learn: Examen AI-901", url: "https://learn.microsoft.com/en-us/credentials/certifications/exams/ai-901/" }],
           tryIt: "Abre la página oficial de dos de estas credenciales. Para cada una, escribe el nombre exacto, el proveedor, el costo, la duración y para quién es. Anota lo que haya cambiado desde que se escribió este curso.",
-          youCanNow: "comparar credenciales de IA para principiantes usando sus páginas oficiales."
+          youCanNow: "comparar credenciales de IA para principiantes usando sus páginas oficiales.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué credencial de la lección es un curso a tu propio ritmo con certificado, y no un examen supervisado?", options: ["Google AI Essentials", "AWS Certified AI Practitioner", "Google Cloud Generative AI Leader", "Microsoft Azure AI Fundamentals (AI-901)"], answer: 0, why: "Google AI Essentials es un curso a tu propio ritmo en Coursera que termina con un certificado." },
+            { objective: "O2", q: "Eres totalmente nuevo en la IA y quieres usar herramientas de IA en un empleo de oficina. ¿Cuál es la que menos te sirve por ahora?", options: ["Un curso corto de IA para principiantes", "Google AI Essentials", "Microsoft Azure AI Fundamentals (AI-901), que ahora espera algo de Python y de Azure", "Primero, capacitación gratuita para principiantes"], answer: 2, why: "AI-901 ahora espera algo de conocimiento de Python y de Azure, así que es más técnica." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Elegir una credencial según un empleo y un presupuesto",
           minutes: 5,
           goal: "Elegir una credencial usando ofertas de empleo reales, tu presupuesto y tu tiempo.",
@@ -76,17 +110,21 @@ module.exports = {
             { title: "Busca ayuda para pagar", bullets: ["Programas laborales, de reinserción y de veteranos", "Empleadores, bibliotecas, descuentos del proveedor", "Nunca pagues por un aprobado “garantizado”"] }
           ],
           tryIt: "Busca cinco ofertas de empleo que quieras y haz una lista de las credenciales de IA o de tecnología que mencionan. Elige una credencial y escribe su costo total y quién te podría ayudar a pagarla.",
-          youCanNow: "elegir una credencial que encaje con empleos reales, tu presupuesto y tu tiempo."
+          youCanNow: "elegir una credencial que encaje con empleos reales, tu presupuesto y tu tiempo.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué incluye el costo total de una credencial?", options: ["Solo el costo del examen", "Solo la capacitación", "El costo del examen, cualquier costo por repetirlo y cualquier capacitación", "Nada si apruebas"], answer: 2, why: "El costo total incluye el examen, las repeticiones y la capacitación." },
+            { objective: "O3", q: "Tres de tus cinco ofertas de empleo mencionan la misma plataforma de nube. ¿Qué consideras?", options: ["La credencial de esa plataforma, y preguntarle a un programa de empleo si puede ayudar a pagarla", "Una credencial cualquiera de un anuncio", "Comprar las respuestas del examen para ahorrar tiempo", "No sacar ninguna credencial"], answer: 0, why: "Empieza por las ofertas de empleo; una plataforma que se menciona a menudo puede hacer que su credencial valga la pena." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Elegir la credencial correcta",
         questions: [
-          { q: "¿Cuál es la diferencia principal entre un certificado y una certificación?", options: ["No hay diferencia", "Un certificado siempre vale más", "Una certificación suele exigir aprobar un examen supervisado", "Las certificaciones nunca tienen examen"], answer: 2, why: "Las certificaciones evalúan las habilidades con un examen vigilado." },
-          { q: "Según la página de AWS, el examen AWS Certified AI Practitioner cuesta:", options: ["$100", "$1,000", "Es gratis", "$10"], answer: 0, why: "AWS indica un costo de $100." },
-          { q: "¿La página de qué credencial dice que ahora pide algo de conocimiento de Python y Azure?", options: ["Google AI Essentials", "Ninguna tiene página", "Una tarjeta de manipulador de alimentos", "Microsoft Azure AI Fundamentals (AI-901)"], answer: 3, why: "La página del AI-901 menciona conocer algo de Python y Azure." },
-          { q: "¿Por dónde debes empezar al elegir una credencial?", options: ["Por la más cara", "Por ofertas de empleo reales que quieras", "Por lo que recomiende un desconocido", "Por un anuncio cualquiera"], answer: 1, why: "Las ofertas de empleo muestran lo que quieren los empleadores." },
-          { q: "Alguien te ofrece vender las respuestas del examen y te “garantiza” que apruebas. Esto es:", options: ["Un atajo inteligente", "Una estafa que puede hacer que te anulen la credencial", "Algo permitido", "Capacitación gratuita"], answer: 1, why: "Comprar respuestas es hacer trampa y muchas veces es una estafa." }
+          { objective: "O1", q: "¿Cuál es la diferencia principal entre un certificado y una certificación?", options: ["No hay diferencia", "Un certificado siempre vale más", "Una certificación suele exigir aprobar un examen supervisado", "Las certificaciones nunca tienen examen"], answer: 2, why: "Las certificaciones evalúan las habilidades con un examen vigilado." },
+          { objective: "O2", q: "Según la página de AWS, el examen AWS Certified AI Practitioner cuesta:", options: ["$100", "$1,000", "Es gratis", "$10"], answer: 0, why: "AWS indica un costo de $100." },
+          { objective: "O2", q: "¿La página de qué credencial dice que ahora pide algo de conocimiento de Python y Azure?", options: ["Google AI Essentials", "Ninguna tiene página", "Una tarjeta de manipulador de alimentos", "Microsoft Azure AI Fundamentals (AI-901)"], answer: 3, why: "La página del AI-901 menciona conocer algo de Python y Azure." },
+          { objective: "O3", q: "¿Por dónde debes empezar al elegir una credencial?", options: ["Por la más cara", "Por ofertas de empleo reales que quieras", "Por lo que recomiende un desconocido", "Por un anuncio cualquiera"], answer: 1, why: "Las ofertas de empleo muestran lo que quieren los empleadores." },
+          { objective: "O3", q: "Alguien te ofrece vender las respuestas del examen y te “garantiza” que apruebas. Esto es:", options: ["Un atajo inteligente", "Una estafa que puede hacer que te anulen la credencial", "Algo permitido", "Capacitación gratuita"], answer: 1, why: "Comprar respuestas es hacer trampa y muchas veces es una estafa." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Capítulo 2: Prepararte y aprobar",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Leer la página oficial del examen",
           minutes: 5,
           goal: "Sacar los datos clave de la página oficial de un examen y ponerlos en una hoja de datos de una página.",
@@ -110,9 +149,14 @@ module.exports = {
             { title: "Revisa pronto las reglas", bullets: ["Identificación con foto y tu mismo nombre", "Reglas del cuarto si es en línea", "Reglas para cambiar la fecha y para repetir"] }
           ],
           tryIt: "Haz una hoja de datos de una página para la credencial que elegiste a partir de su página oficial, con las habilidades que se miden y sus porcentajes, las reglas de identificación y la fecha en que la revisaste.",
-          youCanNow: "leer la página oficial de un examen y convertirla en una hoja de datos."
+          youCanNow: "leer la página oficial de un examen y convertirla en una hoja de datos.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué es la lista de habilidades que se miden en la página de un examen?", options: ["Una lista de centros de examen", "Tu mapa de lo que evalúa el examen y de cuánto cuenta cada tema", "Una lista de personas que ya presentaron el examen", "Las respuestas del examen"], answer: 1, why: "La lista de habilidades que se miden muestra cada tema y su peso en el examen." },
+            { objective: "O4", q: "Tu identificación tiene un apellido distinto del que vas a usar para inscribirte. ¿Qué haces?", options: ["Esperar que nadie lo revise", "Usar la identificación de un amigo", "Saltarte las reglas de identificación", "Resolverlo con tiempo, porque el nombre de la identificación debe coincidir con el de la inscripción"], answer: 3, why: "A menudo el nombre de la identificación debe coincidir con el de la inscripción, así que resuélvelo con tiempo." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Armar un plan de estudio con capacitación gratuita e IA",
           minutes: 6,
           goal: "Hacer un plan de estudio de cuatro semanas con capacitación oficial gratuita, tutoría con IA y exámenes de práctica.",
@@ -129,9 +173,14 @@ module.exports = {
             { title: "Plan de cuatro semanas", bullets: ["Semanas 1 a 3: temas según su peso", "Semana 4: exámenes de práctica y puntos débiles", "Reserva cuando tus notas de práctica sean buenas"] }
           ],
           tryIt: "Escribe un plan de estudio de cuatro semanas para tu credencial. Luego pide a un asistente de IA que te explique un tema de la lista de habilidades y te haga cinco preguntas.",
-          youCanNow: "armar un plan de estudio con capacitación gratuita, tutoría con IA y exámenes de práctica."
+          youCanNow: "armar un plan de estudio con capacitación gratuita, tutoría con IA y exámenes de práctica.",
+          quickCheck: [
+            { objective: "O5", q: "En el plan de cuatro semanas, ¿para qué es la semana 4?", options: ["Para aprender temas totalmente nuevos", "Para descansar", "Para reservar un segundo examen", "Para exámenes de práctica y repasar los puntos débiles"], answer: 3, why: "La semana 4 es para los exámenes de práctica y los puntos débiles." },
+            { objective: "O5", q: "La IA explica un tema de una forma, pero la capacitación oficial dice algo distinto. ¿Qué haces?", options: ["Confiar en la IA", "Confiar en la capacitación oficial", "Saltarte el tema", "Preguntarle a la IA otra vez hasta que esté de acuerdo"], answer: 1, why: "La IA puede equivocarse o estar desactualizada; la capacitación oficial es la fuente de confianza." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Prepararte para el día del examen y usar tu credencial",
           minutes: 5,
           goal: "Prepararte para el día del examen y agregar tu nueva credencial a tu currículum y tus perfiles.",
@@ -148,17 +197,21 @@ module.exports = {
             { title: "Después del examen", bullets: ["Aprobaste: agrégala a tu currículum y reclama la insignia", "Todavía no: estudia los puntos débiles y repite"] }
           ],
           tryIt: "Tarea final: completa tu hoja de datos y tu plan de estudio de cuatro semanas, haz un examen de práctica oficial o un cuestionario con IA, y reserva una fecha para empezar a estudiar o para el examen. Escribe cómo aparecerá la credencial en tu currículum.",
-          youCanNow: "elegir, prepararte para y usar una credencial de IA que encaje con tu meta laboral."
+          youCanNow: "elegir, prepararte para y usar una credencial de IA que encaje con tu meta laboral.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué debes hacer antes de un examen supervisado en línea?", options: ["Hacer la comprobación del sistema del proveedor y preparar tu cuarto", "Descargar las respuestas del examen", "Invitar a un amigo a ayudarte", "Usar cualquier identificación que tengas"], answer: 0, why: "Una comprobación del sistema y un cuarto preparado según las reglas evitan problemas el día del examen." },
+            { objective: "O6", q: "Aprobaste. ¿Cómo lo pones en tu currículum?", options: ["\"Una cosa de IA\"", "Solo el logotipo del proveedor", "En la sección de Certificaciones, con el nombre exacto, el proveedor y la fecha", "No ponerlo hasta que alguien pregunte"], answer: 2, why: "Pon el nombre exacto, el proveedor y la fecha en la sección de Certificaciones." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Prepararte y aprobar",
         questions: [
-          { q: "¿Cuál es la fuente más confiable para el precio y el formato de un examen?", options: ["Una publicación en redes sociales", "La respuesta de un chat de IA", "Lo que recuerda un amigo", "La página oficial del examen del proveedor"], answer: 3, why: "Las páginas oficiales tienen los datos actuales." },
-          { q: "Un tema es el 40% del examen. ¿Cuánto tiempo de estudio debe recibir?", options: ["Más o menos el 40%", "Nada", "El 5%", "Todo"], answer: 0, why: "El tiempo de estudio debe seguir el peso en el examen." },
-          { q: "¿Cómo debes usar la IA mientras estudias?", options: ["Para que presente el examen por ti", "Para encontrar respuestas filtradas", "Como un tutor que te explica y te hace preguntas, comparándolo con la capacitación oficial", "No usarla para nada"], answer: 2, why: "La IA puede ser tutor, pero debes revisarla y nunca hacer trampa." },
-          { q: "¿Qué debes hacer antes de un examen supervisado en línea?", options: ["Nada", "Invitar a amigos a ayudarte", "Dejar notas abiertas en tu escritorio", "Hacer la comprobación del sistema del proveedor"], answer: 3, why: "Una comprobación del sistema evita problemas técnicos." },
-          { q: "No aprobaste. ¿Cuál es el mejor siguiente paso?", options: ["Rendirte para siempre", "Comprar las respuestas del examen", "Estudiar los puntos débiles del informe de resultados y repetir", "Mentir en tu currículum"], answer: 2, why: "Mucha gente aprueba en el segundo intento estudiando con enfoque." }
+          { objective: "O4", q: "¿Cuál es la fuente más confiable para el precio y el formato de un examen?", options: ["Una publicación en redes sociales", "La respuesta de un chat de IA", "Lo que recuerda un amigo", "La página oficial del examen del proveedor"], answer: 3, why: "Las páginas oficiales tienen los datos actuales." },
+          { objective: "O4", q: "Un tema es el 40% del examen. ¿Cuánto tiempo de estudio debe recibir?", options: ["Más o menos el 40%", "Nada", "El 5%", "Todo"], answer: 0, why: "El tiempo de estudio debe seguir el peso en el examen." },
+          { objective: "O5", q: "¿Cómo debes usar la IA mientras estudias?", options: ["Para que presente el examen por ti", "Para encontrar respuestas filtradas", "Como un tutor que te explica y te hace preguntas, comparándolo con la capacitación oficial", "No usarla para nada"], answer: 2, why: "La IA puede ser tutor, pero debes revisarla y nunca hacer trampa." },
+          { objective: "O6", q: "¿Qué debes hacer antes de un examen supervisado en línea?", options: ["Nada", "Invitar a amigos a ayudarte", "Dejar notas abiertas en tu escritorio", "Hacer la comprobación del sistema del proveedor"], answer: 3, why: "Una comprobación del sistema evita problemas técnicos." },
+          { objective: "O6", q: "No aprobaste. ¿Cuál es el mejor siguiente paso?", options: ["Rendirte para siempre", "Comprar las respuestas del examen", "Estudiar los puntos débiles del informe de resultados y repetir", "Mentir en tu currículum"], answer: 2, why: "Mucha gente aprueba en el segundo intento estudiando con enfoque." }
         ]
       }
     }
@@ -166,26 +219,100 @@ module.exports = {
   quiz: {
     title: "Examen final: Certificaciones de IA: cuál sacar y cómo prepararte",
     questions: [
-      { q: "Un certificado de finalización muestra que:", options: ["Aprobaste un examen supervisado", "Terminaste un curso", "Tienes licencia para ejercer como abogado", "Nada"], answer: 1, why: "Los certificados muestran que terminaste un curso." },
-      { q: "Un examen supervisado es:", options: ["Vigilado por una persona o una cámara para evitar trampas", "Un cuestionario a libro abierto con amigos", "Una encuesta", "Una entrevista de trabajo"], answer: 0, why: "La supervisión mantiene justo el examen." },
-      { q: "¿Una credencial garantiza un empleo?", options: ["Sí, siempre", "Solo los lunes", "No, combínala con práctica real y un buen currículum", "Solo si es cara"], answer: 2, why: "Las credenciales ayudan, pero no garantizan empleos." },
-      { q: "Según la página de Google, ¿en qué plataforma se ofrece Google AI Essentials?", options: ["Coursera", "Un banco", "Un canal de televisión", "Una compañía de teléfonos"], answer: 0, why: "Google lo ofrece en Coursera." },
-      { q: "Según Google, ¿cuánto dura el curso Google AI Essentials?", options: ["Cuatro años", "Cinco minutos", "Dos semestres", "Menos de 5 horas"], answer: 3, why: "Google indica menos de 5 horas, a tu propio ritmo." },
-      { q: "¿Cuánto dura el examen AWS Certified AI Practitioner?", options: ["3 días", "8 horas", "10 minutos", "90 minutos"], answer: 3, why: "AWS indica 90 minutos." },
-      { q: "¿Qué requisitos previos indica la certificación Generative AI Leader de Google Cloud?", options: ["Un título en informática", "Ninguno", "Cinco años programando", "Otra certificación de Google"], answer: 1, why: "Google no indica requisitos previos." },
-      { q: "Según Google Cloud, ¿cuánto tiempo es válida la certificación Generative AI Leader?", options: ["Para siempre", "1 mes", "10 años", "3 años"], answer: 3, why: "Google indica una validez de 3 años." },
-      { q: "El examen de Microsoft Certified: Azure AI Fundamentals ahora es:", options: ["AI-901", "AZ-104", "No hay examen", "PMP"], answer: 0, why: "Microsoft indica AI-901 como el examen requerido." },
-      { q: "El precio del examen Azure AI Fundamentals:", options: ["Siempre es gratis", "Es de $5 en todas partes", "Depende del país donde lo presentes", "Se paga con tarjetas de regalo"], answer: 2, why: "Microsoft fija el precio de los exámenes según el país o la región." },
-      { q: "¿Por qué volver a revisar las páginas oficiales antes de pagar?", options: ["Las páginas nunca cambian", "Para perder tiempo", "No hace falta", "Los nombres, los precios y los detalles cambian"], answer: 3, why: "Las credenciales se actualizan a menudo." },
-      { q: "Al elegir una credencial, empieza por:", options: ["El logo más llamativo", "El examen más largo", "Ofertas de los empleos que quieres", "Elegir al azar"], answer: 2, why: "Lo que necesitan los empleadores guía la elección." },
-      { q: "El costo total de una credencial incluye:", options: ["Solo el examen", "El examen, las repeticiones y la capacitación", "Nada", "Tu alquiler"], answer: 1, why: "Planifica todos los costos." },
-      { q: "¿Quién te podría ayudar a pagar la capacitación o los exámenes?", options: ["Programas laborales, de reinserción o de veteranos, o un empleador", "Nunca nadie", "Los estafadores", "Alguien que te llama al azar"], answer: 0, why: "Muchos programas pagan capacitación." },
-      { q: "La lista de habilidades que se miden es:", options: ["Una lista de vacantes", "Las respuestas del examen", "Tu mapa de qué estudiar", "Opcional de leer"], answer: 2, why: "Muestra lo que evalúa el examen." },
-      { q: "¿Qué problema de identificación debes resolver pronto?", options: ["Que tu identificación con foto tenga el mismo nombre que tu inscripción", "Tu color favorito", "La funda de tu teléfono", "La fuente de tu correo"], answer: 0, why: "Si el nombre no coincide, te pueden impedir presentar el examen." },
-      { q: "¿Dónde debes buscar primero la capacitación?", options: ["Solo en cursos intensivos caros y no oficiales", "En sitios de respuestas filtradas", "En ningún lado", "En la capacitación oficial gratuita del proveedor"], answer: 3, why: "La capacitación oficial gratuita coincide con el examen." },
-      { q: "La IA explica un tema distinto de la capacitación oficial. Debes:", options: ["Confiar en la IA", "Confiar en la capacitación oficial", "Saltarte el tema", "Denunciar al proveedor"], answer: 1, why: "La IA puede equivocarse o estar desactualizada." },
-      { q: "Durante el examen, una buena estrategia es:", options: ["Pasar todo el tiempo en la pregunta 1", "Responder primero las fáciles y marcar las difíciles", "Dejar muchas en blanco", "Adivinar sin leer"], answer: 1, why: "Así usas bien tu tiempo." },
-      { q: "Cuando apruebes, pon la credencial en tu currículum con:", options: ["Una nota inventada", "Solo “cosas de IA”", "Nada", "El nombre exacto, el proveedor y la fecha"], answer: 3, why: "Los datos exactos se pueden comprobar y se ven profesionales." }
+      { objective: "O1", q: "Un certificado de finalización muestra que:", options: ["Aprobaste un examen supervisado", "Terminaste un curso", "Tienes licencia para ejercer como abogado", "Nada"], answer: 1, why: "Los certificados muestran que terminaste un curso." },
+      { objective: "O1", q: "Un examen supervisado es:", options: ["Vigilado por una persona o una cámara para evitar trampas", "Un cuestionario a libro abierto con amigos", "Una encuesta", "Una entrevista de trabajo"], answer: 0, why: "La supervisión mantiene justo el examen." },
+      { objective: "O1", q: "¿Una credencial garantiza un empleo?", options: ["Sí, siempre", "Solo los lunes", "No, combínala con práctica real y un buen currículum", "Solo si es cara"], answer: 2, why: "Las credenciales ayudan, pero no garantizan empleos." },
+      { objective: "O2", q: "Según la página de Google, ¿en qué plataforma se ofrece Google AI Essentials?", options: ["Coursera", "Un banco", "Un canal de televisión", "Una compañía de teléfonos"], answer: 0, why: "Google lo ofrece en Coursera." },
+      { objective: "O2", q: "Según Google, ¿cuánto dura el curso Google AI Essentials?", options: ["Cuatro años", "Cinco minutos", "Dos semestres", "Menos de 5 horas"], answer: 3, why: "Google indica menos de 5 horas, a tu propio ritmo." },
+      { objective: "O2", q: "¿Cuánto dura el examen AWS Certified AI Practitioner?", options: ["3 días", "8 horas", "10 minutos", "90 minutos"], answer: 3, why: "AWS indica 90 minutos." },
+      { objective: "O2", q: "¿Qué requisitos previos indica la certificación Generative AI Leader de Google Cloud?", options: ["Un título en informática", "Ninguno", "Cinco años programando", "Otra certificación de Google"], answer: 1, why: "Google no indica requisitos previos." },
+      { objective: "O2", q: "Según Google Cloud, ¿cuánto tiempo es válida la certificación Generative AI Leader?", options: ["Para siempre", "1 mes", "10 años", "3 años"], answer: 3, why: "Google indica una validez de 3 años." },
+      { objective: "O2", q: "El examen de Microsoft Certified: Azure AI Fundamentals ahora es:", options: ["AI-901", "AZ-104", "No hay examen", "PMP"], answer: 0, why: "Microsoft indica AI-901 como el examen requerido." },
+      { objective: "O2", q: "El precio del examen Azure AI Fundamentals:", options: ["Siempre es gratis", "Es de $5 en todas partes", "Depende del país donde lo presentes", "Se paga con tarjetas de regalo"], answer: 2, why: "Microsoft fija el precio de los exámenes según el país o la región." },
+      { objective: "O4", q: "¿Por qué volver a revisar las páginas oficiales antes de pagar?", options: ["Las páginas nunca cambian", "Para perder tiempo", "No hace falta", "Los nombres, los precios y los detalles cambian"], answer: 3, why: "Las credenciales se actualizan a menudo." },
+      { objective: "O3", q: "Al elegir una credencial, empieza por:", options: ["El logo más llamativo", "El examen más largo", "Ofertas de los empleos que quieres", "Elegir al azar"], answer: 2, why: "Lo que necesitan los empleadores guía la elección." },
+      { objective: "O3", q: "El costo total de una credencial incluye:", options: ["Solo el examen", "El examen, las repeticiones y la capacitación", "Nada", "Tu alquiler"], answer: 1, why: "Planifica todos los costos." },
+      { objective: "O3", q: "¿Quién te podría ayudar a pagar la capacitación o los exámenes?", options: ["Programas laborales, de reinserción o de veteranos, o un empleador", "Nunca nadie", "Los estafadores", "Alguien que te llama al azar"], answer: 0, why: "Muchos programas pagan capacitación." },
+      { objective: "O4", q: "La lista de habilidades que se miden es:", options: ["Una lista de vacantes", "Las respuestas del examen", "Tu mapa de qué estudiar", "Opcional de leer"], answer: 2, why: "Muestra lo que evalúa el examen." },
+      { objective: "O4", q: "¿Qué problema de identificación debes resolver pronto?", options: ["Que tu identificación con foto tenga el mismo nombre que tu inscripción", "Tu color favorito", "La funda de tu teléfono", "La fuente de tu correo"], answer: 0, why: "Si el nombre no coincide, te pueden impedir presentar el examen." },
+      { objective: "O5", q: "¿Dónde debes buscar primero la capacitación?", options: ["Solo en cursos intensivos caros y no oficiales", "En sitios de respuestas filtradas", "En ningún lado", "En la capacitación oficial gratuita del proveedor"], answer: 3, why: "La capacitación oficial gratuita coincide con el examen." },
+      { objective: "O5", q: "La IA explica un tema distinto de la capacitación oficial. Debes:", options: ["Confiar en la IA", "Confiar en la capacitación oficial", "Saltarte el tema", "Denunciar al proveedor"], answer: 1, why: "La IA puede equivocarse o estar desactualizada." },
+      { objective: "O6", q: "Durante el examen, una buena estrategia es:", options: ["Pasar todo el tiempo en la pregunta 1", "Responder primero las fáciles y marcar las difíciles", "Dejar muchas en blanco", "Adivinar sin leer"], answer: 1, why: "Así usas bien tu tiempo." },
+      { objective: "O6", q: "Cuando apruebes, pon la credencial en tu currículum con:", options: ["Una nota inventada", "Solo “cosas de IA”", "Nada", "El nombre exacto, el proveedor y la fecha"], answer: 3, why: "Los datos exactos se pueden comprobar y se ven profesionales." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      2,
+      5,
+      9,
+      10,
+      11,
+      13,
+      14,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en todas las filas. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "La credencial coincide con un empleo",
+        objective: "O3",
+        notYet: "La credencial no se relaciona con una oferta de empleo real.",
+        meets: "Se eligió una credencial y se relacionó con una oferta de empleo real que la persona quiere.",
+        exceeds: "Comparó dos opciones por costo total, tiempo y nivel, y preguntó a un programa si puede ayudar a pagar."
+      },
+      {
+        name: "Datos oficiales",
+        objective: "O4",
+        notYet: "Faltan datos o vienen de un lugar que no es la página oficial.",
+        meets: "Nombre exacto, proveedor, costo, duración y formato, habilidades que evalúa, reglas de identificación y cuánto tiempo es válida, sacados de la página oficial.",
+        exceeds: "Incluye el enlace de la página, la fecha de revisión y la política para repetir el examen."
+      },
+      {
+        name: "Plan de estudio de cuatro semanas",
+        objective: "O5",
+        notYet: "No hay plan, o no hay examen de práctica.",
+        meets: "Cuatro semanas con capacitación oficial gratuita, los temas de más peso primero y al menos un examen de práctica.",
+        exceeds: "Incluye pedidos para usar la IA como tutor y una comprobación contra la capacitación oficial."
+      },
+      {
+        name: "Examen reservado y listo",
+        objective: "O6",
+        notYet: "No hay sesión de práctica ni fecha de examen.",
+        meets: "Hay reservada una sesión de práctica o una fecha de examen, y se conocen los requisitos de identificación.",
+        exceeds: "Se hizo la comprobación del sistema o se planeó cómo llegar, y hay una nota sobre cómo irá la credencial en el currículum."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Personas que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Personas que hacen un examen de práctica o reservan un examen en un plazo de 30 días (encuesta de seguimiento)",
+      "Personas que obtienen la credencial en un plazo de 90 días, y cuántas recibieron ayuda para pagarla",
+      "Personas que agregan la credencial a su currículum y se postulan a un empleo que la pide"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono inteligente o una computadora con internet; una computadora adecuada y un cuarto tranquilo para los exámenes en línea",
+      "Capacitación oficial gratuita (como Microsoft Learn, AWS Skill Builder o el aprendizaje gratuito de Google)",
+      "Un asistente de IA gratuito para tutoría y cuestionarios",
+      "Papel y lápiz, o un documento, para la hoja de datos y el plan de estudio",
+      "Unos 60 minutos para las lecciones y las comprobaciones, más cuatro semanas de estudio"
+    ],
+    facilitatorNotes: [
+      "Hagan juntos la prueba inicial y luego un capítulo por sesión; abran juntos la página oficial de un examen en una pantalla compartida.",
+      "Recuerda a las personas que los precios y los datos de los exámenes que aparecen en las lecciones pueden cambiar; siempre hay que revisar de nuevo la página oficial antes de pagar.",
+      "Ayuda a las personas a revisar con tiempo si su identificación con foto cumple las reglas del examen, y ponlas en contacto con ayuda para obtenerla si hace falta.",
+      "Pon a las personas en contacto con American Job Centers y programas de empleo o de reinserción que puedan pagar el examen; adviérteles contra cualquiera que venda respuestas de examen.",
+      "Califica la tarea final con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

@@ -16,11 +16,35 @@ module.exports = {
     "El uso de cualquier herramienta de IA por parte de los estudiantes depende de la aprobación de tu distrito, de las reglas de edad de la herramienta y, para niños menores de 13 años, de COPPA (la ley federal de privacidad infantil en línea). Cada capítulo termina con una comprobación de conocimientos y el curso termina con un examen de 20 preguntas. Este es el curso 5 de 8 de IA para líderes escolares y educativos."
   ],
   finalTask: "Prepara un paquete de alfabetización en IA para un grado: un plan de clase de 30 minutos en el que los estudiantes prueban una herramienta de IA (o ven una demostración del docente), detectan un error y conversan sobre el sesgo; una escala de uso de IA de cinco niveles para el aula con una tarea de ejemplo en cada nivel; un formato de declaración de una línea que usarán los estudiantes; y una carta de media página para las familias que explique qué aprenderán los estudiantes y las reglas de seguridad.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Docentes, bibliotecarios y especialistas en medios, orientadores, coaches y líderes escolares de escuelas de Estados Unidos que influyen en cómo los estudiantes aprenden con la IA y sobre la IA.",
+    startingPoint: "Conocen lo básico de la IA, las reglas de privacidad estudiantil y cómo revisar herramientas de los cursos anteriores. Los estudiantes de su escuela ya usan IA, pero no hay una forma común de enseñar alfabetización en IA, fijar reglas para las tareas ni pedir a los estudiantes que declaren su uso de IA.",
+    gap: "Sin alfabetización en IA, los estudiantes usan la IA para saltarse el aprendizaje, confían en respuestas equivocadas o sesgadas y comparten información privada. Los educadores necesitan enseñarles a entender y cuestionar la IA, fijar niveles de uso y una forma de declararlo claros, y explicar las reglas de seguridad a estudiantes y familias.",
+    constraints: [
+      "El uso de cualquier herramienta de IA por los estudiantes depende de la aprobación del distrito, de las reglas de edad de la herramienta y, para niños menores de 13 años, de COPPA",
+      "Los estudiantes más pequeños pueden aprender con demostraciones del docente y actividades desconectadas, sin cuentas",
+      "Los estudiantes nunca comparten con la IA su nombre completo, su dirección ni sus contraseñas",
+      "Las herramientas de IA cambian, así que las preguntas preparadas para la clase se prueban poco antes de enseñarla",
+      "Tiempo: lecciones cortas que caben en una jornada escolar, más una clase de 30 minutos con los estudiantes"
+    ],
+    prerequisites: "Se recomienda \"IA para líderes escolares y educativos 2: Herramientas de IA para educadores\"."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Para un grado que atiendes", action: "describir las cuatro habilidades estudiantiles de alfabetización en IA con palabras fáciles para los estudiantes", standard: "con un ejemplo para cada habilidad" },
+    { id: "O2", condition: "Con una herramienta aprobada o una demostración del docente", action: "planear una clase de 30 minutos en la que los estudiantes prueban la IA, detectan un error y conversan sobre el sesgo", standard: "con cinco preguntas preparadas y probadas antes, incluida una que la IA responde mal" },
+    { id: "O3", condition: "Sobre un tema que enseñas", action: "escribir instrucciones de compañera de aprendizaje que hagan que la IA haga preguntas en lugar de dar respuestas", standard: "y explicar por qué ayudan a un estudiante a aprender más que una instrucción de máquina de respuestas" },
+    { id: "O4", condition: "Con tus próximas tareas", action: "etiquetar cada tarea con un nivel de una escala de uso de IA de cinco niveles", standard: "con una razón ligada a la meta de aprendizaje" },
+    { id: "O5", condition: "Cuando los estudiantes usan IA en trabajos permitidos", action: "enseñar un formato de declaración de una línea para el uso de IA", standard: "nombrando la herramienta, lo que hizo, la fecha y lo que hizo el estudiante" },
+    { id: "O6", condition: "Para estudiantes y familias", action: "explicar las reglas de seguridad de la IA para estudiantes y planear la alfabetización en IA a lo largo de los grados", standard: "en una carta a las familias de media página que cubra las herramientas usadas, por qué y las reglas de seguridad" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Enseñar a los estudiantes sobre la IA",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Qué significa la alfabetización en IA para los estudiantes",
           minutes: 5,
           goal: "Definir la alfabetización en IA en cuatro habilidades estudiantiles que puedes enseñar.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Según el grado", bullets: ["Pequeños: demostraciones, actividades desconectadas", "Mayores: herramientas aprobadas, reglas claras"] }
           ],
           tryIt: "Escribe las cuatro habilidades de alfabetización en IA con palabras que tus estudiantes entenderían, para un grado que atiendes, con un ejemplo de cada una.",
-          youCanNow: "definir la alfabetización en IA como cuatro habilidades estudiantiles que se pueden enseñar."
+          youCanNow: "definir la alfabetización en IA como cuatro habilidades estudiantiles que se pueden enseñar.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué es la alfabetización en IA?", options: ["Saber cómo crear programas de IA", "Saber lo suficiente de la IA para usarla bien, cuestionarla y elegir con criterio", "Leer libros sobre robots", "Escribir rápido en el teclado"], answer: 1, why: "La alfabetización en IA se trata de usar bien la IA y cuestionarla, no de programar." },
+            { objective: "O1", q: "Tus estudiantes de segundo grado no tienen cuentas de IA. ¿Cómo enseñarías alfabetización en IA?", options: ["Esperar hasta la secundaria", "Pedirles que se registren con la cuenta de un padre o madre", "Usar demostraciones del docente y actividades desconectadas", "Saltarte el tema"], answer: 2, why: "Las demostraciones y las actividades desconectadas enseñan alfabetización en IA sin cuentas de estudiantes." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Una clase práctica de alfabetización en IA",
           minutes: 6,
           goal: "Planear una clase de 30 minutos en la que los estudiantes prueban la IA y detectan sus errores.",
@@ -55,9 +84,14 @@ module.exports = {
             { title: "Detecta el sesgo", bullets: ["Pídele que describa “un científico” varias veces", "Noten patrones; conversen de dónde vienen"] }
           ],
           tryIt: "Prepara cinco preguntas para la clase, incluida al menos una que la IA responda mal. Pruébalas en una herramienta aprobada y anota las respuestas que vas a usar.",
-          youCanNow: "planear una clase práctica que enseña a los estudiantes a cuestionar la IA."
+          youCanNow: "planear una clase práctica que enseña a los estudiantes a cuestionar la IA.",
+          quickCheck: [
+            { objective: "O2", q: "En la clase práctica, ¿con qué comparan los estudiantes las respuestas de la IA?", options: ["Con el libro de texto, un sitio web confiable o el docente", "Con otra herramienta de IA", "Con lo que adivina un compañero", "Con nada; confían en la primera respuesta"], answer: 0, why: "Las fuentes confiables permiten que los estudiantes detecten ellos mismos los errores de la IA." },
+            { objective: "O2", q: "La pregunta que preparaste para mostrar un error de la IA ahora recibe una respuesta correcta. ¿Qué haces?", options: ["Dices a los estudiantes que la IA nunca se equivoca", "La usas igual y finges que estaba mal", "Cancelas la clase", "Pruebas otras preguntas hasta encontrar una que la IA responda mal, y anotas las respuestas"], answer: 3, why: "Las herramientas de IA cambian, así que las preguntas se prueban poco antes de la clase." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "La IA como compañera de aprendizaje, no como máquina de respuestas",
           minutes: 5,
           goal: "Enseñar a los estudiantes instrucciones que hacen que la IA los ayude a pensar.",
@@ -74,17 +108,21 @@ module.exports = {
             { title: "Sigue siendo trabajo del estudiante", bullets: ["Verificar los datos", "Entregar el propio razonamiento"] }
           ],
           tryIt: "Prueba una instrucción de máquina de respuestas y otra de compañera de aprendizaje sobre un tema que enseñas. Escribe cuál ayudaría más a un estudiante a aprender y por qué.",
-          youCanNow: "enseñar a los estudiantes a usar la IA para apoyar su razonamiento, no para reemplazarlo."
+          youCanNow: "enseñar a los estudiantes a usar la IA para apoyar su razonamiento, no para reemplazarlo.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué es una instrucción de máquina de respuestas?", options: ["Una instrucción que le pide a la IA que te haga preguntas", "Una instrucción que le pide a la IA que haga el trabajo por ti", "Una instrucción que pide pistas", "Una instrucción que le pide a la IA que explique tus errores"], answer: 1, why: "Las instrucciones de máquina de respuestas se saltan el pensamiento que la tarea busca construir." },
+            { objective: "O3", q: "Un estudiante quiere ayuda de la IA para estudiar para un examen. ¿Qué instrucción le enseñarías?", options: ["\"Dame todas las respuestas.\"", "\"Escribe mis apuntes por mí.\"", "\"Haz mi tarea.\"", "\"Hazme preguntas una por una y dime en qué me equivoqué.\""], answer: 3, why: "Una instrucción de compañera de aprendizaje mantiene al estudiante pensando." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Enseñar a los estudiantes sobre la IA",
         questions: [
-          { q: "¿Cuál es una de las cuatro habilidades de alfabetización en IA?", options: ["Memorizar nombres de empresas de IA", "Escribir más rápido", "Cuestionar: la IA puede equivocarse o tener sesgos", "Evitar toda tecnología"], answer: 2, why: "Cuestionar la IA es central en la alfabetización en IA." },
-          { q: "¿Cómo pueden los estudiantes más pequeños aprender sobre la IA sin cuentas?", options: ["Con demostraciones del docente y actividades desconectadas", "No pueden", "Con la contraseña de un padre", "Registrándose con edades falsas"], answer: 0, why: "Las demostraciones y las clases desconectadas enseñan las ideas con seguridad." },
-          { q: "¿Por qué probar tus preguntas preparadas antes de la clase?", options: ["Para alargarla", "Es la ley", "Los estudiantes lo prefieren", "Las herramientas de IA cambian y pueden corregir errores o crear otros"], answer: 3, why: "Un error planeado puede ya no aparecer." },
-          { q: "¿Cuál es una instrucción de compañera de aprendizaje?", options: ["“Escribe mi ensayo.”", "“Hazme preguntas una a la vez; no me des la respuesta.”", "“Haz mi tarea.”", "“Dame las respuestas.”"], answer: 1, why: "Apoya el razonamiento en lugar de reemplazarlo." },
-          { q: "Pedir a la IA que describa “una enfermera” varias veces ayuda a los estudiantes a notar:", options: ["La ortografía", "El costo", "La velocidad", "Sesgos en los patrones"], answer: 3, why: "Los patrones repetidos pueden revelar sesgos." }
+          { objective: "O1", q: "¿Cuál es una de las cuatro habilidades de alfabetización en IA?", options: ["Memorizar nombres de empresas de IA", "Escribir más rápido", "Cuestionar: la IA puede equivocarse o tener sesgos", "Evitar toda tecnología"], answer: 2, why: "Cuestionar la IA es central en la alfabetización en IA." },
+          { objective: "O1", q: "¿Cómo pueden los estudiantes más pequeños aprender sobre la IA sin cuentas?", options: ["Con demostraciones del docente y actividades desconectadas", "No pueden", "Con la contraseña de un padre", "Registrándose con edades falsas"], answer: 0, why: "Las demostraciones y las clases desconectadas enseñan las ideas con seguridad." },
+          { objective: "O2", q: "¿Por qué probar tus preguntas preparadas antes de la clase?", options: ["Para alargarla", "Es la ley", "Los estudiantes lo prefieren", "Las herramientas de IA cambian y pueden corregir errores o crear otros"], answer: 3, why: "Un error planeado puede ya no aparecer." },
+          { objective: "O3", q: "¿Cuál es una instrucción de compañera de aprendizaje?", options: ["“Escribe mi ensayo.”", "“Hazme preguntas una a la vez; no me des la respuesta.”", "“Haz mi tarea.”", "“Dame las respuestas.”"], answer: 1, why: "Apoya el razonamiento en lugar de reemplazarlo." },
+          { objective: "O2", q: "Pedir a la IA que describa “una enfermera” varias veces ayuda a los estudiantes a notar:", options: ["La ortografía", "El costo", "La velocidad", "Sesgos en los patrones"], answer: 3, why: "Los patrones repetidos pueden revelar sesgos." }
         ]
       }
     },
@@ -92,6 +130,7 @@ module.exports = {
       name: "Capítulo 2: Reglas, seguridad y un plan para toda la escuela",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Niveles de uso de IA para las tareas",
           minutes: 6,
           goal: "Fijar una escala de uso de IA de cinco niveles y etiquetar las tareas con ella.",
@@ -108,9 +147,14 @@ module.exports = {
             { title: "Una escala, toda la escuela", bullets: ["Las mismas reglas en cada clase", "Adapta una escala publicada con el personal"] }
           ],
           tryIt: "Escribe la escala de cinco niveles con palabras fáciles para los estudiantes. Luego etiqueta cinco de tus próximas tareas con un nivel y una razón de una línea.",
-          youCanNow: "decir con claridad a los estudiantes cuánta IA pueden usar en cada tarea y por qué."
+          youCanNow: "decir con claridad a los estudiantes cuánta IA pueden usar en cada tarea y por qué.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué significa el Nivel 0 en la escala de uso de IA?", options: ["No se puede usar IA", "Se permite cualquier uso de IA", "La IA puede escribir el primer borrador", "La IA puede calificar el trabajo"], answer: 0, why: "El Nivel 0 es para tareas en las que los estudiantes deben mostrar su propio pensamiento sin IA." },
+            { objective: "O4", q: "La meta de una tarea es practicar escribir un primer borrador sin ayuda. ¿Qué etiqueta encaja?", options: ["El nivel de colaboradora, con la IA redactando partes", "Ningún nivel; que decidan los estudiantes", "Un nivel bajo, como sin IA, con la razón ligada a esa meta", "El nivel más alto, para que los estudiantes aprendan la herramienta"], answer: 2, why: "El nivel debe ajustarse a la meta de aprendizaje, con una razón que los estudiantes puedan ver." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Decir cómo usaste la IA",
           minutes: 5,
           goal: "Enseñar a los estudiantes una forma sencilla de declarar y citar el uso de IA.",
@@ -127,9 +171,14 @@ module.exports = {
             { title: "Premia la honestidad", bullets: ["Hazlo tú primero", "Nunca castigues la declaración honesta de un uso permitido"] }
           ],
           tryIt: "Escribe una línea de declaración para algo en lo que usaste la IA esta semana. Luego escribe las instrucciones que darás a los estudiantes para declarar el uso de IA.",
-          youCanNow: "enseñar a los estudiantes a declarar y citar con honestidad el uso de IA."
+          youCanNow: "enseñar a los estudiantes a declarar y citar con honestidad el uso de IA.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué debe incluir una declaración de uso de IA de una línea?", options: ["Solo la palabra \"IA\"", "La herramienta, lo que hizo, la fecha y lo que hizo el estudiante", "La contraseña del estudiante", "Una calificación"], answer: 1, why: "Una línea completa muestra exactamente cómo se usó la IA." },
+            { objective: "O5", q: "Un estudiante declara con honestidad un uso permitido de IA en su trabajo. ¿Cómo responderías?", options: ["Tomas la declaración como algo positivo", "Le bajas la calificación", "Lo reportas como trampa", "La ignoras"], answer: 0, why: "La declaración honesta es el hábito que quieres, así que debe recibirse bien." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Mantener seguros a los estudiantes y planear para toda la escuela",
           minutes: 6,
           goal: "Enseñar reglas de seguridad a los estudiantes y planear la alfabetización en IA a lo largo de los grados.",
@@ -147,17 +196,21 @@ module.exports = {
           ],
           sources: [{ name: "FTC: Cumplir con COPPA, preguntas frecuentes", url: "https://www.ftc.gov/business-guidance/resources/complying-coppa-frequently-asked-questions" }],
           tryIt: "Tarea final: arma tu paquete de alfabetización en IA para un grado: el plan de clase de 30 minutos, la escala de uso de IA de cinco niveles con una tarea de ejemplo en cada nivel, el formato de declaración de una línea y una carta de media página para las familias con las reglas de seguridad.",
-          youCanNow: "liderar la alfabetización en IA de los estudiantes con una clase, niveles de uso claros, declaración honesta y reglas de seguridad que las familias entienden."
+          youCanNow: "liderar la alfabetización en IA de los estudiantes con una clase, niveles de uso claros, declaración honesta y reglas de seguridad que las familias entienden.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué es un deepfake?", options: ["Un archivo de computadora dañado", "Una contraseña segura", "Una imagen, voz o video falso hecho con IA", "Un tipo de buscador"], answer: 2, why: "Los deepfakes son falsificaciones hechas con IA, y por eso los estudiantes nunca crean falsificaciones de personas reales." },
+            { objective: "O6", q: "Un estudiante dice que un chat con IA lo hizo sentir mal. ¿Qué se le debió enseñar a hacer?", options: ["Seguir chateando hasta que pare", "Borrar la aplicación y no decir nada", "Publicarlo en internet", "Contárselo a un adulto de confianza"], answer: 3, why: "Contárselo a un adulto de confianza es una de las reglas de seguridad para estudiantes." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Reglas, seguridad y un plan para toda la escuela",
         questions: [
-          { q: "En una tarea de nivel 2 (retroalimentación), los estudiantes pueden:", options: ["Hacer que la IA escriba todo", "No usar la IA en absoluto", "Recibir retroalimentación de la IA sobre su propio borrador y hacer ellos los cambios", "Copiar texto de la IA sin marcarlo"], answer: 2, why: "El nivel 2 es retroalimentación sobre el trabajo propio del estudiante." },
-          { q: "¿Por qué usar la misma escala de uso de IA en toda la escuela?", options: ["Los estudiantes tienen reglas coherentes en cada clase", "Es más barato", "Prohíbe la IA", "Lo exigen los proveedores"], answer: 0, why: "La coherencia evita confusiones." },
-          { q: "Un estudiante declara con honestidad un uso permitido de IA. Debes:", options: ["Bajarle la calificación", "Tratar la declaración como algo positivo", "Denunciarlo", "Ignorarlo"], answer: 1, why: "La declaración honesta es integridad en acción." },
-          { q: "¿Cuál es una de las cuatro reglas de seguridad para estudiantes?", options: ["Nunca crear falsificaciones de personas reales", "Compartir tu dirección para obtener mejores respuestas", "Usar cualquier aplicación que encuentres", "Guardar en secreto las conversaciones molestas"], answer: 0, why: "Los deepfakes de personas reales pueden causar daño." },
-          { q: "Para estudiantes menores de 13 años, ¿qué ley aplica a los servicios en línea?", options: ["Ninguna", "Una ley de tránsito", "Solo la de derechos de autor", "COPPA"], answer: 3, why: "COPPA protege en línea a los niños menores de 13 años." }
+          { objective: "O4", q: "En una tarea de nivel 2 (retroalimentación), los estudiantes pueden:", options: ["Hacer que la IA escriba todo", "No usar la IA en absoluto", "Recibir retroalimentación de la IA sobre su propio borrador y hacer ellos los cambios", "Copiar texto de la IA sin marcarlo"], answer: 2, why: "El nivel 2 es retroalimentación sobre el trabajo propio del estudiante." },
+          { objective: "O4", q: "¿Por qué usar la misma escala de uso de IA en toda la escuela?", options: ["Los estudiantes tienen reglas coherentes en cada clase", "Es más barato", "Prohíbe la IA", "Lo exigen los proveedores"], answer: 0, why: "La coherencia evita confusiones." },
+          { objective: "O5", q: "Un estudiante declara con honestidad un uso permitido de IA. Debes:", options: ["Bajarle la calificación", "Tratar la declaración como algo positivo", "Denunciarlo", "Ignorarlo"], answer: 1, why: "La declaración honesta es integridad en acción." },
+          { objective: "O6", q: "¿Cuál es una de las cuatro reglas de seguridad para estudiantes?", options: ["Nunca crear falsificaciones de personas reales", "Compartir tu dirección para obtener mejores respuestas", "Usar cualquier aplicación que encuentres", "Guardar en secreto las conversaciones molestas"], answer: 0, why: "Los deepfakes de personas reales pueden causar daño." },
+          { objective: "O6", q: "Para estudiantes menores de 13 años, ¿qué ley aplica a los servicios en línea?", options: ["Ninguna", "Una ley de tránsito", "Solo la de derechos de autor", "COPPA"], answer: 3, why: "COPPA protege en línea a los niños menores de 13 años." }
         ]
       }
     }
@@ -165,26 +218,106 @@ module.exports = {
   quiz: {
     title: "Examen final: IA para líderes escolares y educativos 5: Aprendizaje estudiantil y alfabetización en IA",
     questions: [
-      { q: "La alfabetización en IA significa:", options: ["Saber construir una IA", "Saber lo suficiente sobre la IA para usarla bien, cuestionarla y decidir con criterio", "No usar nunca la IA", "Escribir rápido"], answer: 1, why: "Es comprensión más criterio." },
-      { q: "Los estudiantes deben entender que la IA:", options: ["Lo sabe todo", "Piensa como una persona", "Predice respuestas probables a partir de patrones", "Nunca se equivoca"], answer: 2, why: "Eso explica tanto sus fortalezas como sus errores." },
-      { q: "Una actividad desconectada:", options: ["Es un corte de luz", "Requiere una computadora portátil", "Enseña sobre tecnología sin dispositivos", "Es un video"], answer: 2, why: "Es adecuada para los estudiantes más pequeños." },
-      { q: "En la clase práctica, los estudiantes verifican las respuestas de la IA con:", options: ["El libro de texto, un sitio web confiable o el docente", "Solo otra IA", "Lo que adivina un amigo", "Nada"], answer: 0, why: "Las fuentes confiables revelan los errores." },
-      { q: "Una buena pregunta preparada para la clase es una que:", options: ["Es muy larga", "Todos conocen", "No tiene respuesta", "La IA responde mal o inventa"], answer: 3, why: "Ver un error enseña el hábito de verificar." },
-      { q: "La prueba de describir a una persona ayuda a los estudiantes a ver:", options: ["Errores de ortografía", "Sesgos", "Precios", "La velocidad"], answer: 1, why: "Los patrones revelan sesgos." },
-      { q: "“Hazme preguntas y dime en qué me equivoqué” es:", options: ["Una contraseña", "Hacer trampa", "Una instrucción de máquina de respuestas", "Una instrucción de compañera de aprendizaje"], answer: 3, why: "Apoya el aprendizaje." },
-      { q: "“Escribe mi párrafo por mí” convierte a la IA en:", options: ["Una verificadora de datos", "Una tutora", "Una máquina de respuestas", "Una docente"], answer: 2, why: "Reemplaza el razonamiento del estudiante." },
-      { q: "El nivel 0 de la escala de uso de IA significa:", options: ["Sin IA", "IA para todo", "Solo retroalimentación", "Solo ideas"], answer: 0, why: "Algunas habilidades deben desarrollarse sin ayuda." },
-      { q: "El nivel 3 (colaboradora) exige que los estudiantes:", options: ["Oculten el uso de IA", "Marquen y expliquen las partes generadas por IA", "No usen IA", "Dejen que la IA califique"], answer: 1, why: "La transparencia es la condición." },
-      { q: "El nivel de IA de cada tarea debe venir con:", options: ["Una razón ligada a la meta de aprendizaje", "Un precio", "Una contraseña", "Ninguna explicación"], answer: 0, why: "Los estudiantes siguen las reglas que entienden." },
-      { q: "Una declaración de uso de IA de una línea incluye:", options: ["Nada", "La dirección del estudiante", "El precio de la herramienta", "La herramienta, lo que hizo, la fecha y lo que hizo el estudiante"], answer: 3, why: "Hace transparente el uso de la IA." },
-      { q: "En investigación, los datos deben citarse de:", options: ["Solo el chat de IA", "La fuente original", "La memoria", "Un rumor"], answer: 1, why: "La IA no es una fuente confiable de datos." },
-      { q: "Las orientaciones para citar la IA en estilo MLA o APA se encuentran:", options: ["En ningún lado", "Solo en la respuesta de la IA", "En los propios sitios web de esas guías de estilo", "En redes sociales"], answer: 2, why: "Las guías de estilo publican sus propias orientaciones." },
-      { q: "Los estudiantes nunca deben compartir con la IA:", options: ["Un tema de práctica", "Una pregunta de matemáticas", "Su nombre completo, su dirección y sus contraseñas", "Una palabra de vocabulario"], answer: 2, why: "La información personal se mantiene privada." },
-      { q: "Un deepfake es:", options: ["Una imagen, voz o video falso hecho con IA", "Una piscina profunda", "Un ensayo largo", "Una contraseña segura"], answer: 0, why: "La IA puede crear falsificaciones realistas." },
-      { q: "Si una conversación con la IA se vuelve molesta, los estudiantes deben:", options: ["Compartir datos personales", "Guardar el secreto", "Seguir conversando", "Avisar a un adulto de confianza"], answer: 3, why: "Los adultos pueden ayudar a mantenerlos seguros." },
-      { q: "Las edades mínimas de las herramientas de IA se encuentran en:", options: ["La memoria de un colega", "Los términos actuales de cada herramienta", "El menú de la escuela", "Un libro de texto de 2010"], answer: 1, why: "Cada herramienta fija y actualiza sus propias reglas." },
-      { q: "Un plan por bloques de grados significa:", options: ["Solo la preparatoria aprende sobre IA", "Una clase para todas las edades", "No tener plan", "Habilidades de alfabetización en IA que crecen año tras año"], answer: 3, why: "Las habilidades deben construirse a lo largo de los grados." },
-      { q: "A las familias se les debe informar:", options: ["Solo después de los problemas", "Nada", "Qué herramientas de IA se usan, por qué y las reglas de seguridad", "Solo los precios de las herramientas"], answer: 2, why: "La transparencia genera confianza y apoyo." }
+      { objective: "O1", q: "La alfabetización en IA significa:", options: ["Saber construir una IA", "Saber lo suficiente sobre la IA para usarla bien, cuestionarla y decidir con criterio", "No usar nunca la IA", "Escribir rápido"], answer: 1, why: "Es comprensión más criterio." },
+      { objective: "O1", q: "Los estudiantes deben entender que la IA:", options: ["Lo sabe todo", "Piensa como una persona", "Predice respuestas probables a partir de patrones", "Nunca se equivoca"], answer: 2, why: "Eso explica tanto sus fortalezas como sus errores." },
+      { objective: "O1", q: "Una actividad desconectada:", options: ["Es un corte de luz", "Requiere una computadora portátil", "Enseña sobre tecnología sin dispositivos", "Es un video"], answer: 2, why: "Es adecuada para los estudiantes más pequeños." },
+      { objective: "O2", q: "En la clase práctica, los estudiantes verifican las respuestas de la IA con:", options: ["El libro de texto, un sitio web confiable o el docente", "Solo otra IA", "Lo que adivina un amigo", "Nada"], answer: 0, why: "Las fuentes confiables revelan los errores." },
+      { objective: "O2", q: "Una buena pregunta preparada para la clase es una que:", options: ["Es muy larga", "Todos conocen", "No tiene respuesta", "La IA responde mal o inventa"], answer: 3, why: "Ver un error enseña el hábito de verificar." },
+      { objective: "O2", q: "La prueba de describir a una persona ayuda a los estudiantes a ver:", options: ["Errores de ortografía", "Sesgos", "Precios", "La velocidad"], answer: 1, why: "Los patrones revelan sesgos." },
+      { objective: "O3", q: "“Hazme preguntas y dime en qué me equivoqué” es:", options: ["Una contraseña", "Hacer trampa", "Una instrucción de máquina de respuestas", "Una instrucción de compañera de aprendizaje"], answer: 3, why: "Apoya el aprendizaje." },
+      { objective: "O3", q: "“Escribe mi párrafo por mí” convierte a la IA en:", options: ["Una verificadora de datos", "Una tutora", "Una máquina de respuestas", "Una docente"], answer: 2, why: "Reemplaza el razonamiento del estudiante." },
+      { objective: "O4", q: "El nivel 0 de la escala de uso de IA significa:", options: ["Sin IA", "IA para todo", "Solo retroalimentación", "Solo ideas"], answer: 0, why: "Algunas habilidades deben desarrollarse sin ayuda." },
+      { objective: "O4", q: "El nivel 3 (colaboradora) exige que los estudiantes:", options: ["Oculten el uso de IA", "Marquen y expliquen las partes generadas por IA", "No usen IA", "Dejen que la IA califique"], answer: 1, why: "La transparencia es la condición." },
+      { objective: "O4", q: "El nivel de IA de cada tarea debe venir con:", options: ["Una razón ligada a la meta de aprendizaje", "Un precio", "Una contraseña", "Ninguna explicación"], answer: 0, why: "Los estudiantes siguen las reglas que entienden." },
+      { objective: "O5", q: "Una declaración de uso de IA de una línea incluye:", options: ["Nada", "La dirección del estudiante", "El precio de la herramienta", "La herramienta, lo que hizo, la fecha y lo que hizo el estudiante"], answer: 3, why: "Hace transparente el uso de la IA." },
+      { objective: "O5", q: "En investigación, los datos deben citarse de:", options: ["Solo el chat de IA", "La fuente original", "La memoria", "Un rumor"], answer: 1, why: "La IA no es una fuente confiable de datos." },
+      { objective: "O5", q: "Las orientaciones para citar la IA en estilo MLA o APA se encuentran:", options: ["En ningún lado", "Solo en la respuesta de la IA", "En los propios sitios web de esas guías de estilo", "En redes sociales"], answer: 2, why: "Las guías de estilo publican sus propias orientaciones." },
+      { objective: "O6", q: "Los estudiantes nunca deben compartir con la IA:", options: ["Un tema de práctica", "Una pregunta de matemáticas", "Su nombre completo, su dirección y sus contraseñas", "Una palabra de vocabulario"], answer: 2, why: "La información personal se mantiene privada." },
+      { objective: "O6", q: "Un deepfake es:", options: ["Una imagen, voz o video falso hecho con IA", "Una piscina profunda", "Un ensayo largo", "Una contraseña segura"], answer: 0, why: "La IA puede crear falsificaciones realistas." },
+      { objective: "O6", q: "Si una conversación con la IA se vuelve molesta, los estudiantes deben:", options: ["Compartir datos personales", "Guardar el secreto", "Seguir conversando", "Avisar a un adulto de confianza"], answer: 3, why: "Los adultos pueden ayudar a mantenerlos seguros." },
+      { objective: "O6", q: "Las edades mínimas de las herramientas de IA se encuentran en:", options: ["La memoria de un colega", "Los términos actuales de cada herramienta", "El menú de la escuela", "Un libro de texto de 2010"], answer: 1, why: "Cada herramienta fija y actualiza sus propias reglas." },
+      { objective: "O6", q: "Un plan por bloques de grados significa:", options: ["Solo la preparatoria aprende sobre IA", "Una clase para todas las edades", "No tener plan", "Habilidades de alfabetización en IA que crecen año tras año"], answer: 3, why: "Las habilidades deben construirse a lo largo de los grados." },
+      { objective: "O6", q: "A las familias se les debe informar:", options: ["Solo después de los problemas", "Nada", "Qué herramientas de IA se usan, por qué y las reglas de seguridad", "Solo los precios de las herramientas"], answer: 2, why: "La transparencia genera confianza y apoyo." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      3,
+      5,
+      6,
+      8,
+      10,
+      11,
+      14,
+      16,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en todas las filas. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Clase práctica",
+        objective: "O2",
+        notYet: "Los estudiantes no prueban la IA, no detectan un error o no conversan sobre el sesgo.",
+        meets: "Un plan de 30 minutos en el que los estudiantes prueban una herramienta de IA o ven una demostración, detectan un error y conversan sobre el sesgo.",
+        exceeds: "Las preguntas preparadas se probaron antes y se ajustan al grado."
+      },
+      {
+        name: "Escala de uso de IA",
+        objective: "O4",
+        notYet: "Menos de cinco niveles, o niveles sin tareas de ejemplo.",
+        meets: "Una escala de cinco niveles con una tarea de ejemplo en cada nivel.",
+        exceeds: "Cada ejemplo tiene una razón ligada a la meta de aprendizaje."
+      },
+      {
+        name: "Formato de declaración",
+        objective: "O5",
+        notYet: "No hay formato de declaración, o le faltan partes clave.",
+        meets: "Un formato de una línea que los estudiantes usarán para decir cómo usaron la IA.",
+        exceeds: "Incluye la herramienta, lo que hizo, la fecha y lo que hizo el estudiante, con un ejemplo."
+      },
+      {
+        name: "Carta a las familias y seguridad",
+        objective: "O6",
+        notYet: "No hay carta a las familias, o faltan las reglas de seguridad.",
+        meets: "Una carta de media página que explica lo que aprenderán los estudiantes y las reglas de seguridad.",
+        exceeds: "También dice qué herramientas se usan y por qué, con palabras sencillas para las familias."
+      },
+      {
+        name: "Habilidades de alfabetización para estudiantes",
+        objective: "O1",
+        notYet: "El paquete no enseña a los estudiantes a cuestionar la IA.",
+        meets: "La clase enseña a los estudiantes que la IA puede equivocarse o tener sesgos y cómo revisarla.",
+        exceeds: "Usa instrucciones de compañera de aprendizaje para que la IA ayude a los estudiantes a pensar."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Educadores que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Clases que dan la clase de alfabetización en IA de 30 minutos en un plazo de 30 días (encuesta de seguimiento)",
+      "Escuelas que usan una sola escala de uso de IA compartida en las tareas (encuesta de seguimiento)",
+      "Familias que reciben una carta sobre el uso de IA y la seguridad de los estudiantes"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Una computadora con internet y una herramienta de IA aprobada por el distrito para uso de estudiantes o para demostraciones",
+      "Una lista de las próximas tareas de un grado",
+      "Papel para las actividades desconectadas con los estudiantes más pequeños",
+      "Unos 60 minutos en total, más la clase de 30 minutos con los estudiantes"
+    ],
+    facilitatorNotes: [
+      "Hagan juntos la prueba inicial y luego den la clase práctica con el personal en el papel de estudiantes.",
+      "Revisa las herramientas aprobadas por el distrito y las reglas de edad de cada herramienta antes de que un estudiante la use; usa demostraciones del docente con niños menores de 13 años cuando haga falta.",
+      "Acuerden una sola escala de uso de IA en toda la escuela para que los estudiantes encuentren reglas coherentes.",
+      "Recuerda al personal que reciba bien la declaración honesta en lugar de castigarla.",
+      "Califica la tarea final con la rúbrica y revisa que la carta a las familias use un lenguaje sencillo."
     ]
   }
 };

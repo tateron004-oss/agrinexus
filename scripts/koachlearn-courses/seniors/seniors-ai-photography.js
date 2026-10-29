@@ -15,11 +15,35 @@ module.exports = {
     "Each lesson takes about five minutes. Have your phone or tablet with you, and practice on your own photos. A knowledge check closes each chapter and a 20-question quiz closes the course."
   ],
   finalTask: "Take three photos of something you love (a person with their permission, a pet, a plant or a meal). Improve the best one with automatic enhance and one other edit, find two older photos by searching your photo app, and share all three in a small album or message with a family member.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Older adults who love taking and sharing photos of grandchildren, pets, gardens, meals and travels, and who often have boxes of old family prints.",
+    startingPoint: "Can take a photo with a phone camera. Many find their photos blurry or dark, have never opened the Edit screen, scroll for a long time to find old photos, and are unsure how to share an album.",
+    gap: "Photos are one of the main ways families stay close. Clear photos, simple AI edits, quick search, shared albums and digital copies of old prints help seniors share and keep memories, while asking permission and being honest about AI edits keeps trust in the family.",
+    constraints: [
+      "Reading level: plain words, short sentences and large, simple steps",
+      "Devices: a smartphone with a camera; photo apps and AI tools differ by phone, and some phones lack an AI eraser",
+      "Time: about 5 minutes per lesson at a relaxed pace, with practice",
+      "Permission: ask people, and children's parents, before sharing their photos",
+      "Honesty: AI edits and colorized photos are labeled, and originals are kept"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Using your phone camera", action: "take a sharp, well-lit photo by cleaning the lens, holding steady, using good light and tapping to focus", standard: "keeping the best of a few shots" },
+    { id: "O2", condition: "Given a photo on your phone", action: "improve it with automatic enhance, cropping and straightening", standard: "and undo with Revert if you change your mind" },
+    { id: "O3", condition: "Given a photo with a small distraction", action: "remove it with an AI eraser tool and be honest about how the photo was edited", standard: "without changing what really happened in a misleading way" },
+    { id: "O4", condition: "Given a photo library with many pictures", action: "find photos by searching for a thing, place or date, and mark favorites", standard: "finding two older photos without scrolling" },
+    { id: "O5", condition: "Given several photos to share", action: "create an album or message and share it with a family member", standard: "after asking permission for photos of other people" },
+    { id: "O6", condition: "Given an old printed photo", action: "make a digital copy and improve it, labeling any AI-colorized version", standard: "with square edges, little glare and the original kept" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Taking and improving photos",
       lessons: [
         {
+          objectives: ["O1","O5"],
           title: "Taking a clear photo with your phone",
           minutes: 5,
           goal: "Take a sharp, well-lit photo with your phone.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Get the best shot", bullets: ["Get close", "Take a few, keep the best", "Ask before sharing photos of people"] }
           ],
           tryIt: "Wipe your lens, then take three photos of a flower, pet or object near a window. Tap to focus on each one. Look at them and pick your favorite.",
-          youCanNow: "take a clear, well-lit photo with your phone."
+          youCanNow: "take a clear, well-lit photo with your phone.",
+          quickCheck: [
+            { objective: "O1", q: "Why tap the screen on a face before you take the photo?", options: ["It zooms out", "It focuses the camera on that spot", "It deletes the photo", "It turns on the flash"], answer: 1, why: "Tapping the screen tells the camera where to focus so that spot is sharp." },
+            { objective: "O1", q: "You are photographing your friend indoors. Where do you stand?", options: ["With the window behind your friend", "In a dark corner", "With the window behind you, so light falls on your friend", "Far away across the room"], answer: 2, why: "Light should face your subject, with the light behind you, not behind them." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Automatic enhance and simple edits",
           minutes: 5,
           goal: "Improve a photo with one-tap enhance, cropping and straightening.",
@@ -55,9 +84,14 @@ module.exports = {
             { title: "No harm done", bullets: ["Most apps keep your original", "Use Revert or Undo", "Tap Done or Save"] }
           ],
           tryIt: "Open your favorite photo from Lesson 1. Use automatic enhance, crop it a little, and save it. Then compare it to the original.",
-          youCanNow: "improve a photo with automatic enhance, cropping and straightening."
+          youCanNow: "improve a photo with automatic enhance, cropping and straightening.",
+          quickCheck: [
+            { objective: "O2", q: "What does cropping a photo do?", options: ["Cuts away the edges and empty space", "Makes the colors brighter", "Shares the photo", "Deletes the photo"], answer: 0, why: "Crop cuts away empty space so the picture is filled with what matters." },
+            { objective: "O2", q: "You made edits and now the photo looks worse. What do you do?", options: ["Delete the photo", "Take a screenshot", "Make more edits", "Tap Revert or Undo to go back"], answer: 3, why: "Edits usually do not destroy the original; Revert or Undo brings it back." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "AI tools that remove distractions",
           minutes: 5,
           goal: "Remove a small distraction from a photo with an AI eraser tool, and know when edits should be shared honestly.",
@@ -74,17 +108,21 @@ module.exports = {
             { title: "Be honest", bullets: ["Clean-ups are fine", "Don't change what really happened", "Say so if a photo was edited"] }
           ],
           tryIt: "Find a photo with a small distraction. Look in Edit for an eraser or clean-up tool and try removing it. If your phone does not have one, ask an AI assistant how to do it on your model.",
-          youCanNow: "use an AI eraser tool to clean up a photo, and use it honestly."
+          youCanNow: "use an AI eraser tool to clean up a photo, and use it honestly.",
+          quickCheck: [
+            { objective: "O3", q: "What does an AI eraser do?", options: ["Deletes the whole photo", "Removes a small thing you brush over and fills in the space", "Adds people to a photo", "Makes the photo black and white"], answer: 1, why: "You brush or circle a small distraction and the AI fills in the space." },
+            { objective: "O3", q: "Your grandson asks whether you edited the beach photo. You removed a trash can. What do you say?", options: ["Say no, it was never edited", "Change the subject", "Delete the photo", "Be honest that you removed a trash can"], answer: 3, why: "Small clean-ups are fine, but be honest if someone asks whether a photo was edited." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Taking and improving photos",
         questions: [
-          { q: "Your photos look blurry. What simple thing should you try first?", options: ["Shake the phone", "Buy a new phone", "Wipe the lens with a soft cloth", "Turn off the screen"], answer: 2, why: "Fingerprints on the lens cause blurry photos." },
-          { q: "Where should the light be for a good portrait?", options: ["On your subject, behind you", "Behind your subject", "Nowhere", "Under the table"], answer: 0, why: "Light on the face shows it clearly." },
-          { q: "What does tapping the screen before you shoot do?", options: ["Sends the photo", "Deletes the photo", "Turns on music", "Focuses on that spot"], answer: 3, why: "Tapping tells the camera where to focus." },
-          { q: "What does the magic wand or automatic button usually do?", options: ["Deletes the photo", "Fixes brightness and color in one tap", "Shares it publicly", "Prints it"], answer: 1, why: "It is a one-tap AI enhancement." },
-          { q: "When is it NOT OK to use an AI eraser?", options: ["To remove a trash can", "To change what really happened in a misleading way", "To remove a power line", "To tidy a family photo"], answer: 1, why: "Edits should not mislead people." }
+          { objective: "O1", q: "Your photos look blurry. What simple thing should you try first?", options: ["Shake the phone", "Buy a new phone", "Wipe the lens with a soft cloth", "Turn off the screen"], answer: 2, why: "Fingerprints on the lens cause blurry photos." },
+          { objective: "O1", q: "Where should the light be for a good portrait?", options: ["On your subject, behind you", "Behind your subject", "Nowhere", "Under the table"], answer: 0, why: "Light on the face shows it clearly." },
+          { objective: "O1", q: "What does tapping the screen before you shoot do?", options: ["Sends the photo", "Deletes the photo", "Turns on music", "Focuses on that spot"], answer: 3, why: "Tapping tells the camera where to focus." },
+          { objective: "O2", q: "What does the magic wand or automatic button usually do?", options: ["Deletes the photo", "Fixes brightness and color in one tap", "Shares it publicly", "Prints it"], answer: 1, why: "It is a one-tap AI enhancement." },
+          { objective: "O3", q: "When is it NOT OK to use an AI eraser?", options: ["To remove a trash can", "To change what really happened in a misleading way", "To remove a power line", "To tidy a family photo"], answer: 1, why: "Edits should not mislead people." }
         ]
       }
     },
@@ -92,6 +130,7 @@ module.exports = {
       name: "Chapter 2: Finding, organizing and sharing",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Finding photos by searching",
           minutes: 5,
           goal: "Find old photos by typing a word in your photo app's search.",
@@ -108,9 +147,14 @@ module.exports = {
             { title: "Keep your best", bullets: ["Tap the heart for favorites", "Face grouping is optional"] }
           ],
           tryIt: "Search your photo app for two things, such as \"flower\" and a place you visited. Mark one photo from each search as a favorite.",
-          youCanNow: "find old photos by searching and keep your best as favorites."
+          youCanNow: "find old photos by searching and keep your best as favorites.",
+          quickCheck: [
+            { objective: "O4", q: "How can a photo app find all your pictures of snow?", options: ["AI recognizes what is in your pictures, so you can search \"snow\"", "It asks your family", "It reads the file names you typed", "It cannot; you must scroll"], answer: 0, why: "Photo apps use AI to recognize things in pictures so you can search by a word." },
+            { objective: "O4", q: "You want to find photos from your trip in July 2019. What do you type in Search?", options: ["\"Photos\"", "\"July 2019\"", "\"Camera\"", "Nothing; scroll instead"], answer: 1, why: "You can search by month and year, by place or by a thing." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Making and sharing an album",
           minutes: 6,
           goal: "Create an album and share it with family.",
@@ -127,9 +171,14 @@ module.exports = {
             { title: "Share kindly", bullets: ["Invite family members", "Or send a few by text or email", "Ask parents before sharing children's photos"] }
           ],
           tryIt: "Make an album of five favorite photos with a clear name. Share it, or send two of the photos, to one family member.",
-          youCanNow: "make a photo album and share it with family."
+          youCanNow: "make a photo album and share it with family.",
+          quickCheck: [
+            { objective: "O5", q: "What is a shared album?", options: ["A paper photo book", "Photos only you can see", "An album that family members you invite can see and often add to", "A list of favorites"], answer: 2, why: "A shared album lets people you invite see the photos, and often add their own." },
+            { objective: "O5", q: "You want to share photos of your granddaughter in a family album. What do you do first?", options: ["Ask her parents if it is OK and how widely to share", "Post them publicly", "Share them with everyone in your contacts", "Edit her face out"], answer: 0, why: "Ask parents before sharing photos of children." }
+          ]
         },
         {
+          objectives: ["O6","O2"],
           title: "Bringing old prints into your phone",
           minutes: 5,
           goal: "Turn an old printed photo into a digital copy and improve it.",
@@ -146,17 +195,21 @@ module.exports = {
             { title: "AI colorizing", bullets: ["Colors are a guess", "Keep the original scan", "Label colorized copies"] }
           ],
           tryIt: "Final task: take three new photos of something you love, improve the best with enhance plus one other edit, find two older photos by searching, and share all three in a small album or message with family. If you have an old print, add a scanned copy too.",
-          youCanNow: "take, improve, find, organize and share photos, including copies of old family prints."
+          youCanNow: "take, improve, find, organize and share photos, including copies of old family prints.",
+          quickCheck: [
+            { objective: "O6", q: "What is glare on a photo of a print?", options: ["A blurry face", "A bright shine from light on the photo", "A crop mark", "A missing corner"], answer: 1, why: "Glare is a bright shine; scanning apps like PhotoScan help reduce it." },
+            { objective: "O6", q: "An app colorized your parents' wedding photo. How do you share it?", options: ["Say it was always in color", "Delete the black-and-white original", "Label it as colorized and keep the original scan", "Do not tell anyone"], answer: 2, why: "AI colors are a guess, so label colorized copies and keep the original." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Finding, organizing and sharing",
         questions: [
-          { q: "How do you find all your beach photos quickly?", options: ["Ask a stranger", "Scroll for an hour", "Delete other photos", "Search \"beach\" in your photo app"], answer: 3, why: "AI search recognizes what is in photos." },
-          { q: "What does tapping the heart on a photo do?", options: ["Marks it as a favorite", "Deletes it", "Posts it publicly", "Prints it"], answer: 0, why: "Favorites are kept together for easy finding." },
-          { q: "What is a shared album?", options: ["A paper book", "A deleted album", "An album people you invite can see", "A password list"], answer: 2, why: "Shared albums let family see and add photos." },
-          { q: "Before sharing photos of grandchildren, you should:", options: ["Nothing", "Post them everywhere", "Print them for strangers", "Ask their parents"], answer: 3, why: "Parents decide how widely to share their children's photos." },
-          { q: "An AI app colorizes an old black-and-white photo. The colors are:", options: ["Taken from the original film", "Exactly what happened", "The AI's guess", "Always correct"], answer: 2, why: "Colorizing is a guess; keep and label the original." }
+          { objective: "O4", q: "How do you find all your beach photos quickly?", options: ["Ask a stranger", "Scroll for an hour", "Delete other photos", "Search \"beach\" in your photo app"], answer: 3, why: "AI search recognizes what is in photos." },
+          { objective: "O4", q: "What does tapping the heart on a photo do?", options: ["Marks it as a favorite", "Deletes it", "Posts it publicly", "Prints it"], answer: 0, why: "Favorites are kept together for easy finding." },
+          { objective: "O5", q: "What is a shared album?", options: ["A paper book", "A deleted album", "An album people you invite can see", "A password list"], answer: 2, why: "Shared albums let family see and add photos." },
+          { objective: "O5", q: "Before sharing photos of grandchildren, you should:", options: ["Nothing", "Post them everywhere", "Print them for strangers", "Ask their parents"], answer: 3, why: "Parents decide how widely to share their children's photos." },
+          { objective: "O6", q: "An AI app colorizes an old black-and-white photo. The colors are:", options: ["Taken from the original film", "Exactly what happened", "The AI's guess", "Always correct"], answer: 2, why: "Colorizing is a guess; keep and label the original." }
         ]
       }
     }
@@ -164,26 +217,97 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI for Photography",
     questions: [
-      { q: "The lens is:", options: ["The screen", "The small glass the camera sees through", "The battery", "The charger"], answer: 1, why: "The lens takes in the picture." },
-      { q: "For steady photos, hold the phone:", options: ["With both hands, elbows in", "With one finger", "Above your head", "Upside down"], answer: 0, why: "Two hands keep it steady." },
-      { q: "For a portrait, the light should be:", options: ["On the person's face", "Behind the person", "Turned off", "Under the person"], answer: 0, why: "Light on the face shows it clearly." },
-      { q: "Taking several shots helps because:", options: ["Phones need practice", "You can keep the best", "It saves battery", "It deletes old photos"], answer: 1, why: "More shots, more chances for a great one." },
-      { q: "To start editing a photo, tap:", options: ["Share", "Delete", "Edit", "Settings"], answer: 2, why: "Edit opens the editing tools." },
-      { q: "\"Crop\" means:", options: ["Deleting", "Adding color", "Sharing", "Cutting away the edges"], answer: 3, why: "Cropping trims the photo." },
-      { q: "If you do not like your edits, you can usually:", options: ["Buy the original", "Never go back", "Revert or Undo", "Restart the phone"], answer: 2, why: "Most apps keep the original." },
-      { q: "An AI eraser is used to:", options: ["Remove a small distraction from a photo", "Delete your whole library", "Print photos", "Call family"], answer: 0, why: "It removes objects and fills the space." },
-      { q: "Your phone does not seem to have an AI eraser. A good step is:", options: ["Delete the photo app", "Give up photography", "Share your password", "Ask an AI assistant how to do it on your phone model"], answer: 3, why: "Tool names differ; AI can guide you." },
-      { q: "Using AI to change what really happened in a photo to fool people is:", options: ["Always fine", "Misleading and should be avoided", "Required", "A safety feature"], answer: 1, why: "Edits should not mislead." },
-      { q: "Photo app search can find pictures by:", options: ["Only file numbers", "Things, places and dates", "Only color", "Nothing"], answer: 1, why: "AI recognizes contents, places and dates." },
-      { q: "Face grouping in a photo app is:", options: ["A password", "Required", "A virus", "Optional and can be turned off"], answer: 3, why: "You can choose whether to use it." },
-      { q: "An album is:", options: ["A group of photos kept together", "A single photo", "A camera", "A filter"], answer: 0, why: "Albums collect related photos." },
-      { q: "To choose several photos at once, tap:", options: ["Camera", "Delete", "Select", "Settings"], answer: 2, why: "Select lets you pick many photos." },
-      { q: "A simple way to share a few photos is:", options: ["Post them on a stranger's page", "Mail the phone", "Print and fax", "Send them by text or email"], answer: 3, why: "Texts and emails share easily." },
-      { q: "To copy an old print, hold the phone:", options: ["Behind the photo", "At a sharp angle", "Straight above the photo", "Far across the room"], answer: 2, why: "Straight above keeps edges square." },
-      { q: "Glare is:", options: ["A type of album", "A bright shine from light on the photo", "A filter", "A password"], answer: 1, why: "Glare hides parts of the picture." },
-      { q: "Scanning apps like Google's PhotoScan help by:", options: ["Reducing glare", "Adding passwords", "Deleting prints", "Making calls"], answer: 0, why: "They are built to copy prints well." },
-      { q: "When you share an AI-colorized photo, you should:", options: ["Label it as colorized and keep the original", "Say it is the original", "Delete the original", "Hide it"], answer: 0, why: "Colors are a guess; honesty matters." },
-      { q: "AI can help with an old photo's caption by:", options: ["Knowing who is in it", "Helping write it once you give the names and year", "Finding their addresses", "Guessing their birthdays correctly"], answer: 1, why: "You supply the facts; AI helps with words." }
+      { objective: "O1", q: "The lens is:", options: ["The screen", "The small glass the camera sees through", "The battery", "The charger"], answer: 1, why: "The lens takes in the picture." },
+      { objective: "O1", q: "For steady photos, hold the phone:", options: ["With both hands, elbows in", "With one finger", "Above your head", "Upside down"], answer: 0, why: "Two hands keep it steady." },
+      { objective: "O1", q: "For a portrait, the light should be:", options: ["On the person's face", "Behind the person", "Turned off", "Under the person"], answer: 0, why: "Light on the face shows it clearly." },
+      { objective: "O1", q: "Taking several shots helps because:", options: ["Phones need practice", "You can keep the best", "It saves battery", "It deletes old photos"], answer: 1, why: "More shots, more chances for a great one." },
+      { objective: "O2", q: "To start editing a photo, tap:", options: ["Share", "Delete", "Edit", "Settings"], answer: 2, why: "Edit opens the editing tools." },
+      { objective: "O2", q: "\"Crop\" means:", options: ["Deleting", "Adding color", "Sharing", "Cutting away the edges"], answer: 3, why: "Cropping trims the photo." },
+      { objective: "O2", q: "If you do not like your edits, you can usually:", options: ["Buy the original", "Never go back", "Revert or Undo", "Restart the phone"], answer: 2, why: "Most apps keep the original." },
+      { objective: "O3", q: "An AI eraser is used to:", options: ["Remove a small distraction from a photo", "Delete your whole library", "Print photos", "Call family"], answer: 0, why: "It removes objects and fills the space." },
+      { objective: "O3", q: "Your phone does not seem to have an AI eraser. A good step is:", options: ["Delete the photo app", "Give up photography", "Share your password", "Ask an AI assistant how to do it on your phone model"], answer: 3, why: "Tool names differ; AI can guide you." },
+      { objective: "O3", q: "Using AI to change what really happened in a photo to fool people is:", options: ["Always fine", "Misleading and should be avoided", "Required", "A safety feature"], answer: 1, why: "Edits should not mislead." },
+      { objective: "O4", q: "Photo app search can find pictures by:", options: ["Only file numbers", "Things, places and dates", "Only color", "Nothing"], answer: 1, why: "AI recognizes contents, places and dates." },
+      { objective: "O4", q: "Face grouping in a photo app is:", options: ["A password", "Required", "A virus", "Optional and can be turned off"], answer: 3, why: "You can choose whether to use it." },
+      { objective: "O5", q: "An album is:", options: ["A group of photos kept together", "A single photo", "A camera", "A filter"], answer: 0, why: "Albums collect related photos." },
+      { objective: "O5", q: "To choose several photos at once, tap:", options: ["Camera", "Delete", "Select", "Settings"], answer: 2, why: "Select lets you pick many photos." },
+      { objective: "O5", q: "A simple way to share a few photos is:", options: ["Post them on a stranger's page", "Mail the phone", "Print and fax", "Send them by text or email"], answer: 3, why: "Texts and emails share easily." },
+      { objective: "O6", q: "To copy an old print, hold the phone:", options: ["Behind the photo", "At a sharp angle", "Straight above the photo", "Far across the room"], answer: 2, why: "Straight above keeps edges square." },
+      { objective: "O6", q: "Glare is:", options: ["A type of album", "A bright shine from light on the photo", "A filter", "A password"], answer: 1, why: "Glare hides parts of the picture." },
+      { objective: "O6", q: "Scanning apps like Google's PhotoScan help by:", options: ["Reducing glare", "Adding passwords", "Deleting prints", "Making calls"], answer: 0, why: "They are built to copy prints well." },
+      { objective: "O6", q: "When you share an AI-colorized photo, you should:", options: ["Label it as colorized and keep the original", "Say it is the original", "Delete the original", "Hide it"], answer: 0, why: "Colors are a guess; honesty matters." },
+      { objective: "O6", q: "AI can help with an old photo's caption by:", options: ["Knowing who is in it", "Helping write it once you give the names and year", "Finding their addresses", "Guessing their birthdays correctly"], answer: 1, why: "You supply the facts; AI helps with words." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      1,
+      4,
+      7,
+      9,
+      10,
+      12,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Clear photos",
+        objective: "O1",
+        notYet: "Photos are blurry or dark, or a person was photographed without asking.",
+        meets: "Three sharp, well-lit photos, with permission from any person in them.",
+        exceeds: "The subject fills the frame and the best shot was chosen from several."
+      },
+      {
+        name: "Photo improved",
+        objective: "O2",
+        notYet: "No edits, or edits made the photo worse.",
+        meets: "The best photo improved with automatic enhance and one other edit, such as a crop.",
+        exceeds: "Can show how to revert the edit and explain why they chose it."
+      },
+      {
+        name: "Old photos found",
+        objective: "O4",
+        notYet: "Found photos only by long scrolling, or not at all.",
+        meets: "Found two older photos using Search with a thing, place or date.",
+        exceeds: "Marked favorites so they are easy to find again."
+      },
+      {
+        name: "Shared with family",
+        objective: "O5",
+        notYet: "Photos were not shared, or shared without permission.",
+        meets: "All three photos shared in a small album or message with a family member.",
+        exceeds: "Gave the album a clear name and invited family to add photos."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who share a photo album with family within 30 days (follow-up survey)",
+      "Learners who digitize old family prints and share them",
+      "Learners who start another Seniors and Technology course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A smartphone with a camera and a photo app such as Apple Photos or Google Photos",
+      "A soft cloth for the lens, and one or two old printed photos",
+      "A free scanning app such as Google's PhotoScan (optional)",
+      "About 60 minutes in total, in short, relaxed sessions: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Group learners by phone type; Edit and eraser tools have different names on different phones.",
+      "Ask learners to bring an old print to practice making a digital copy.",
+      "Model asking permission before photographing or sharing pictures of other people, especially children.",
+      "Talk about honesty with AI edits and colorized photos, and keeping originals.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

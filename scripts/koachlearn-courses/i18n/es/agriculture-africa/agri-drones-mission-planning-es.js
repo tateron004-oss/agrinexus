@@ -22,11 +22,35 @@ module.exports = {
     "Los ejemplos son tipos de trabajo reales: mapear 40 hectáreas de aguacate para un exportador en Murang'a, contar plantas en 25 fincas de yuca de productores asociados en el estado de Oyo, inspeccionar el riego en una finca hortícola cerca de Naivasha. Nunca vueles una misión sin el registro, las licencias, el certificado de operador y las autorizaciones que exige tu país. Cada capítulo cierra con una comprobación de conocimientos y el curso cierra con un examen de 20 preguntas."
   ],
   finalTask: "Arma un expediente de misión completo para un trabajo agrícola con dron (real o de ejemplo, como mapear 40 hectáreas de aguacate para un exportador): el alcance de la misión acordado con el cliente, una inspección del sitio con los peligros y un croquis, la revisión del espacio aéreo y los permisos con sus fuentes, una tabla de evaluación de riesgos, el plan de vuelo (área, altura, detalle de imagen, traslape, velocidad, baterías, horarios, límites de clima), los papeles del equipo y las notas de la reunión, los planes de contingencia, y la lista de revisión y el registro posteriores al vuelo que vas a completar.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Pilotos a distancia, negocios de servicios con drones, equipos de drones de fincas grandes y agronegocios, y programas de extensión en Kenia, Nigeria y en toda África que hacen misiones con drones agrícolas para clientes.",
+    startingPoint: "Ya saben volar un dron, hacer un vuelo básico de mapeo y conocen las normas sobre drones de su país. Pocos convierten el pedido de un cliente en un alcance por escrito, escriben una evaluación de riesgos y planes de contingencia, dirigen la reunión previa del equipo o cierran un trabajo con revisión de datos, bitácoras y reportes de incidentes.",
+    gap: "Las misiones sin un alcance claro terminan en disputas, y las misiones sin inspección, evaluación de riesgos y reunión previa terminan en accidentes, datos rechazados y clientes perdidos. Un expediente de misión completo permite que un equipo de drones entregue lo que el cliente necesita de forma segura, legal y a tiempo, y muestra a los clientes y a las autoridades que el negocio es profesional.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas; los términos de drones y de seguridad se explican",
+      "Dispositivos: un teléfono o una laptop con una app de mapas; un dron y una app de planeación ayudan, pero no son obligatorios",
+      "Normas: cada misión necesita el registro, las licencias, el certificado de operador y las autorizaciones que pide el país",
+      "Condiciones del campo: calor, viento, lluvia, mala señal y curiosos en las fincas africanas",
+      "Tiempo: lecciones cortas, más tiempo para armar el expediente de misión"
+    ],
+    prerequisites: "\"Drones agrícolas en África: normas de aviación y licencias\" y la serie \"Drones para el monitoreo agrícola\", o experiencia de vuelo equivalente."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Ante el pedido de un cliente para un trabajo con dron", action: "escribir el alcance de la misión con la decisión, el área, los entregables, las fechas, el contacto, el precio y cómo se comparten los datos", standard: "incluyendo lo que el dron no puede hacer" },
+    { id: "O2", condition: "Para el sitio de una misión", action: "hacer una inspección de escritorio y en el terreno, y confirmar los límites del espacio aéreo y cada permiso", standard: "anotados con fechas y fuentes antes del vuelo" },
+    { id: "O3", condition: "Para una misión planeada", action: "escribir una evaluación de riesgos, un plan de vuelo y planes de contingencia", standard: "con un control para cada peligro y límites de clima fijados" },
+    { id: "O4", condition: "Antes del primer vuelo de una misión", action: "asignar los papeles del equipo y dirigir una reunión previa", standard: "que cubra los peligros, los límites, las contingencias, las órdenes estándar y quién puede ordenar parar" },
+    { id: "O5", condition: "Durante una misión", action: "vigilar el vuelo y la telemetría y tomar decisiones de seguir o no seguir", standard: "haciendo una pausa o aterrizando cada vez que se pasa un límite" },
+    { id: "O6", condition: "Al final de una misión", action: "revisar los datos, completar las bitácoras y reportar cualquier incidente", standard: "antes de dejar el sitio, con los huecos vueltos a volar y los datos respaldados" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Planear la misión",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Del pedido del cliente al alcance de la misión",
           minutes: 5,
           goal: "Convertir el pedido de un cliente en un alcance de misión claro y por escrito.",
@@ -43,9 +67,14 @@ module.exports = {
             { title: "Explica los límites", bullets: ["Los mapas muestran dónde, no siempre por qué", "Un alcance claro evita disputas"] }
           ],
           tryIt: "Un exportador de aguacate dice: \"Vuela nuestras 40 hectáreas la próxima semana.\" Escribe cinco preguntas que le harías y luego un alcance de misión de un párrafo con el área, los entregables, las fechas, el contacto, un espacio para el precio y los límites.",
-          youCanNow: "convertir el pedido vago de un cliente en un alcance de misión claro y por escrito."
+          youCanNow: "convertir el pedido vago de un cliente en un alcance de misión claro y por escrito.",
+          quickCheck: [
+            { objective: "O1", q: "En el alcance de una misión, ¿qué es un entregable?", options: ["La batería del dron", "El número de teléfono del cliente", "La altura de vuelo", "Lo que recibe el cliente, como un mapa o un informe"], answer: 3, why: "Los entregables son lo que entregas, como un ortomosaico, un mapa NDVI, un conteo de árboles o un informe." },
+            { objective: "O1", q: "Un cliente quiere que tu mapa NDVI diga qué enfermedad tienen sus aguacates. ¿Qué escribes en el alcance?", options: ["Que el mapa dirá cada enfermedad", "Que el mapa muestra los árboles estresados, pero la enfermedad se identifica en el terreno", "Nada sobre eso", "Que también vas a fumigar los árboles"], answer: 1, why: "Un mapa puede mostrar dónde están estresados los árboles, pero no puede decir por sí solo qué enfermedad es." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Inspección del sitio, espacio aéreo y permisos",
           minutes: 6,
           goal: "Inspeccionar un sitio y confirmar los límites del espacio aéreo y cada permiso antes del vuelo.",
@@ -64,9 +93,14 @@ module.exports = {
           ],
           sources: [KCAA_UAS, KCAA_PORTAL, NCAA_P21],
           tryIt: "Para una finca que puedas encontrar en una app de mapas, haz una inspección de escritorio: anota cada pista de aterrizaje, camino, cable eléctrico, poblado y área protegida que haya a pocos kilómetros, y escribe qué normas de aviación debes revisar y qué permisos necesitas.",
-          youCanNow: "inspeccionar un sitio, revisar los límites del espacio aéreo y asegurar cada permiso antes de una misión."
+          youCanNow: "inspeccionar un sitio, revisar los límites del espacio aéreo y asegurar cada permiso antes de una misión.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué es una inspección de escritorio?", options: ["Una reunión en el escritorio del cliente", "Un vuelo de prueba", "Revisar mapas y vistas satelitales en busca de peligros y zonas restringidas antes de ir al sitio", "Contar a los miembros del equipo"], answer: 2, why: "Una inspección de escritorio revisa mapas, vistas satelitales y las normas de la autoridad antes de visitar el sitio." },
+            { objective: "O2", q: "Tus líneas de vuelo van a cruzar el terreno de un vecino. ¿Qué haces antes del vuelo?", options: ["Pedir permiso al vecino y anotarlo en el expediente de misión", "Volar alto para que no se dé cuenta", "Volar solo temprano en la mañana", "Pedirle al cliente que le avise después"], answer: 0, why: "Los permisos de los dueños de los terrenos y de los vecinos se confirman y se anotan antes del vuelo." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Evaluación de riesgos y plan de vuelo",
           minutes: 6,
           goal: "Escribir una evaluación de riesgos y un plan de vuelo completo con planes de contingencia.",
@@ -85,17 +119,21 @@ module.exports = {
           ],
           sources: [KMD, NIMET, NCAA_P21],
           tryIt: "Escribe una tabla de evaluación de riesgos con al menos seis peligros para el trabajo de 40 hectáreas de aguacate, y luego escribe su plan de vuelo y cinco planes de contingencia.",
-          youCanNow: "escribir una evaluación de riesgos y un plan de vuelo completo con planes de contingencia."
+          youCanNow: "escribir una evaluación de riesgos y un plan de vuelo completo con planes de contingencia.",
+          quickCheck: [
+            { objective: "O3", q: "En una evaluación de riesgos, ¿qué es un peligro?", options: ["Algo que podría causar daño, como un cable eléctrico", "El pago del cliente", "El entregable del vuelo", "El color del dron"], answer: 0, why: "Un peligro es lo que podría salir mal; la evaluación de riesgos le agrega probabilidad, gravedad y un control." },
+            { objective: "O3", q: "Tu plan fija un viento máximo. El pronóstico de la mañana muestra viento por encima de ese límite todo el día. ¿Qué haces?", options: ["Volar de todos modos y esperar que salga bien", "Quitar el límite de viento del plan", "Volar solo el lado lejano de la finca", "Usar la fecha de reserva del plan de contingencia"], answer: 3, why: "Los planes de contingencia dicen qué hacer cuando las condiciones pasan un límite, como volver en la fecha de reserva." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Planear la misión",
         questions: [
-          { q: "Un cliente pide \"un vuelo con dron\". Tu primera pregunta debe ser:", options: ["¿De qué color quiere el dron?", "¿Qué decisión quiere tomar con los resultados?", "¿Puedo volar hoy?", "¿Tiene usted un dron?"], answer: 1, why: "La decisión define qué datos y entregables se necesitan." },
-          { q: "¿Qué va en un alcance de misión por escrito?", options: ["La música favorita del piloto", "Solo el precio", "Nada; se acuerda por teléfono", "Área, entregables, fechas, contacto, precio y datos compartidos"], answer: 3, why: "Un alcance claro y por escrito evita disputas." },
-          { q: "En la inspección de escritorio encuentras una pista de aterrizaje a 3 km. Debes:", options: ["Revisar las reglas de distancia a aeródromos y cualquier autorización necesaria", "Ignorarla", "Volar solo en la mañana", "Volar más alto"], answer: 0, why: "Muchas normas limitan los drones cerca de los aeródromos." },
-          { q: "En una evaluación de riesgos, un control es:", options: ["El control remoto", "Una acción que reduce un riesgo", "Una queja del cliente", "Una batería"], answer: 1, why: "Los controles bajan la probabilidad o la gravedad." },
-          { q: "El pronóstico muestra vientos fuertes por la tarde. Un plan sensato es:", options: ["Volar en la tarde de todos modos", "Cancelar el trabajo para siempre", "Fijar el horario en las horas más tranquilas y tener una fecha de reserva", "Quitar las hélices"], answer: 2, why: "Planea según los límites de clima y con una fecha de reserva." }
+          { objective: "O1", q: "Un cliente pide \"un vuelo con dron\". Tu primera pregunta debe ser:", options: ["¿De qué color quiere el dron?", "¿Qué decisión quiere tomar con los resultados?", "¿Puedo volar hoy?", "¿Tiene usted un dron?"], answer: 1, why: "La decisión define qué datos y entregables se necesitan." },
+          { objective: "O1", q: "¿Qué va en un alcance de misión por escrito?", options: ["La música favorita del piloto", "Solo el precio", "Nada; se acuerda por teléfono", "Área, entregables, fechas, contacto, precio y datos compartidos"], answer: 3, why: "Un alcance claro y por escrito evita disputas." },
+          { objective: "O2", q: "En la inspección de escritorio encuentras una pista de aterrizaje a 3 km. Debes:", options: ["Revisar las reglas de distancia a aeródromos y cualquier autorización necesaria", "Ignorarla", "Volar solo en la mañana", "Volar más alto"], answer: 0, why: "Muchas normas limitan los drones cerca de los aeródromos." },
+          { objective: "O3", q: "En una evaluación de riesgos, un control es:", options: ["El control remoto", "Una acción que reduce un riesgo", "Una queja del cliente", "Una batería"], answer: 1, why: "Los controles bajan la probabilidad o la gravedad." },
+          { objective: "O3", q: "El pronóstico muestra vientos fuertes por la tarde. Un plan sensato es:", options: ["Volar en la tarde de todos modos", "Cancelar el trabajo para siempre", "Fijar el horario en las horas más tranquilas y tener una fecha de reserva", "Quitar las hélices"], answer: 2, why: "Planea según los límites de clima y con una fecha de reserva." }
         ]
       }
     },
@@ -103,6 +141,7 @@ module.exports = {
       name: "Capítulo 2: Volar la misión",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Papeles del equipo y reunión previa",
           minutes: 5,
           goal: "Asignar los papeles del equipo y dirigir una reunión previa clara.",
@@ -119,9 +158,14 @@ module.exports = {
             { title: "Cuida al equipo", bullets: ["Cualquiera puede pedir parar", "Agua, protección solar, chalecos", "Área de despegue marcada, sin curiosos"] }
           ],
           tryIt: "Escribe un guion de una página para la reunión previa de la misión de aguacate, que un piloto al mando pueda leer en tres minutos, con cada punto de esta lección.",
-          youCanNow: "asignar los papeles del equipo y dirigir una reunión previa clara."
+          youCanNow: "asignar los papeles del equipo y dirigir una reunión previa clara.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué hace el observador?", options: ["Le paga al equipo", "Vigila el dron, el cielo y el suelo y avisa al piloto", "Escribe el informe para el cliente", "Le cobra al cliente"], answer: 1, why: "El observador vigila si hay aeronaves, aves, personas y animales, y avisa al piloto." },
+            { objective: "O4", q: "El contacto de la finca va a estar cerca del área de despegue. ¿Qué haces en la reunión previa?", options: ["Dejarlo fuera de la reunión", "Decirle que se quede callado", "Incluirlo, explicarle los peligros y las órdenes estándar, y decirle que cualquiera puede ordenar parar", "Pedirle que vuele el dron"], answer: 2, why: "La reunión previa incluye a todos los que están en el sitio, también al contacto de la finca, y cualquiera puede ordenar parar por seguridad." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Realizar y vigilar la misión",
           minutes: 5,
           goal: "Volar una misión planeada, vigilarla y tomar decisiones de seguir o no seguir.",
@@ -139,9 +183,14 @@ module.exports = {
           ],
           sources: [KCAA_UAS, NCAA_P21],
           tryIt: "Escribe una tarjeta de seguir / no seguir para tu misión: cinco condiciones que significan seguir y cinco que significan parar o aterrizar, con palabras cortas que un equipo pueda leer en el campo.",
-          youCanNow: "volar y vigilar una misión planeada y tomar buenas decisiones de seguir o no seguir."
+          youCanNow: "volar y vigilar una misión planeada y tomar buenas decisiones de seguir o no seguir.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué es la telemetría?", options: ["El contrato del cliente", "El pronóstico del clima", "Los datos del vuelo en vivo, como batería, altura, señal y advertencias", "La lista de turnos del equipo"], answer: 2, why: "La telemetría son los datos en vivo que el piloto vigila durante el vuelo." },
+            { objective: "O5", q: "Se está formando una tormenta y van la mitad de las líneas. ¿Qué haces?", options: ["Aterrizar y terminar el resto después", "Volar más rápido para terminar", "Apagar las advertencias", "Dejar que el observador vuele mientras tú recoges"], answer: 0, why: "Mejor terminar mañana que un accidente hoy; haz una pausa o aterriza cuando las condiciones dejan de ser seguras." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Cerrar la misión: revisión de datos, registros e incidentes",
           minutes: 5,
           goal: "Revisar los datos, completar los registros y manejar los reportes de incidentes antes de dejar el sitio.",
@@ -159,17 +208,21 @@ module.exports = {
           ],
           sources: [KCAA_UAS, NCAA_P21],
           tryIt: "Tarea final: arma tu expediente de misión completo: alcance, inspección del sitio y croquis, revisión del espacio aéreo y los permisos con fuentes, evaluación de riesgos, plan de vuelo, papeles del equipo y reunión previa, planes de contingencia, tarjeta de seguir / no seguir, y la lista de revisión y la plantilla de registro posteriores al vuelo.",
-          youCanNow: "cerrar una misión de forma profesional con revisión de datos, registros completos y un manejo correcto de los incidentes."
+          youCanNow: "cerrar una misión de forma profesional con revisión de datos, registros completos y un manejo correcto de los incidentes.",
+          quickCheck: [
+            { objective: "O6", q: "¿Para qué sirve un unido rápido de baja resolución?", options: ["Para hacer el informe final", "Para cargar las baterías", "Para mandar la factura", "Para buscar huecos en la cobertura antes de dejar el sitio"], answer: 3, why: "Un unido rápido muestra los huecos mientras el equipo y las condiciones siguen ahí para volver a volarlos." },
+            { objective: "O6", q: "Tu dron chocó con un poste de la cerca y rompió una hélice. ¿Qué haces primero?", options: ["Reportarlo el próximo mes", "Hacer seguro el lugar, y luego anotarlo y reportarlo como piden las normas", "Esconderle el daño al cliente", "Hacer la siguiente misión con la misma hélice"], answer: 1, why: "Primero haz seguro el lugar; luego anota el incidente y repórtalo a la autoridad y a la aseguradora como se pide." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Volar la misión",
         questions: [
-          { q: "¿Quién tiene la última palabra sobre la seguridad de un vuelo?", options: ["El cliente", "El observador", "El piloto al mando", "El fabricante del dron"], answer: 2, why: "El piloto al mando es responsable de la seguridad del vuelo." },
-          { q: "¿Quién puede pedir parar por seguridad durante una misión?", options: ["Cualquiera del equipo", "Solo el cliente", "Solo el observador", "Nadie una vez que el dron está volando"], answer: 0, why: "Cualquiera que vea un peligro puede pedir parar." },
-          { q: "La telemetría muestra que el viento ya pasó tu límite. Debes:", options: ["Volar más rápido para terminar", "Apagar las advertencias", "Subir más", "Hacer una pausa o aterrizar"], answer: 3, why: "Pasar los límites significa parar; termina después." },
-          { q: "Antes de dejar el sitio debes:", options: ["Borrar fotos para liberar espacio", "Revisar si hay imágenes borrosas o huecos y volver a volar los huecos", "Irte sin avisarle al cliente", "Formatear la tarjeta de memoria"], answer: 1, why: "Arreglar los huecos en el sitio te ahorra un segundo viaje." },
-          { q: "Tu dron tiene un casi accidente con una aeronave pequeña. Después de hacer seguro el lugar debes:", options: ["Anotarlo y reportarlo como lo exige tu autoridad", "Guardarlo en secreto", "Irte volando rápido", "Culpar a la aeronave"], answer: 0, why: "Reportar ayuda a la seguridad y a menudo lo exigen las normas." }
+          { objective: "O4", q: "¿Quién tiene la última palabra sobre la seguridad de un vuelo?", options: ["El cliente", "El observador", "El piloto al mando", "El fabricante del dron"], answer: 2, why: "El piloto al mando es responsable de la seguridad del vuelo." },
+          { objective: "O4", q: "¿Quién puede pedir parar por seguridad durante una misión?", options: ["Cualquiera del equipo", "Solo el cliente", "Solo el observador", "Nadie una vez que el dron está volando"], answer: 0, why: "Cualquiera que vea un peligro puede pedir parar." },
+          { objective: "O5", q: "La telemetría muestra que el viento ya pasó tu límite. Debes:", options: ["Volar más rápido para terminar", "Apagar las advertencias", "Subir más", "Hacer una pausa o aterrizar"], answer: 3, why: "Pasar los límites significa parar; termina después." },
+          { objective: "O6", q: "Antes de dejar el sitio debes:", options: ["Borrar fotos para liberar espacio", "Revisar si hay imágenes borrosas o huecos y volver a volar los huecos", "Irte sin avisarle al cliente", "Formatear la tarjeta de memoria"], answer: 1, why: "Arreglar los huecos en el sitio te ahorra un segundo viaje." },
+          { objective: "O6", q: "Tu dron tiene un casi accidente con una aeronave pequeña. Después de hacer seguro el lugar debes:", options: ["Anotarlo y reportarlo como lo exige tu autoridad", "Guardarlo en secreto", "Irte volando rápido", "Culpar a la aeronave"], answer: 0, why: "Reportar ayuda a la seguridad y a menudo lo exigen las normas." }
         ]
       }
     }
@@ -177,26 +230,113 @@ module.exports = {
   quiz: {
     title: "Examen final: Drones agrícolas: planeación de misiones y operaciones de vuelo",
     questions: [
-      { q: "El alcance de una misión es:", options: ["La cámara del dron", "El acuerdo escrito de lo que cubre y entrega un trabajo", "Un informe del clima", "Una bitácora de vuelo"], answer: 1, why: "Fija el área, los entregables, las fechas, el precio y los límites." },
-      { q: "¿Cuál es un entregable?", options: ["La licencia del piloto", "Una batería", "Un mapa NDVI y un informe de una página", "Una hélice"], answer: 2, why: "Los entregables son lo que recibe el cliente." },
-      { q: "¿Por qué explicar en el alcance los límites de un mapa hecho con dron?", options: ["Para evitar decepciones y disputas", "Para cobrar más", "Para confundir al cliente", "No hace falta"], answer: 0, why: "Unos límites claros fijan expectativas honestas." },
-      { q: "Una inspección de escritorio usa:", options: ["Solo una pala", "El dron en vuelo", "Un tractor", "Mapas y vistas satelitales antes de ir al sitio"], answer: 3, why: "Las inspecciones de escritorio encuentran pronto los peligros y los temas de espacio aéreo." },
-      { q: "¿Qué debes confirmar por escrito antes de volar sobre la finca de un cliente?", options: ["La talla de zapato del piloto", "El permiso del dueño o del administrador del terreno", "El precio del cultivo", "Nada"], answer: 1, why: "Un permiso por escrito protege a todos." },
-      { q: "¿Por qué revisar la cobertura de la red móvil en la inspección en el terreno?", options: ["Para escuchar música", "Para las redes sociales", "Las apps, los mapas y la comunicación pueden necesitarla", "No sirve"], answer: 2, why: "Sin red se pueden afectar los mapas, la coordinación y las emergencias." },
-      { q: "Una evaluación de riesgos enumera:", options: ["Peligros, probabilidad, gravedad y controles", "Solo costos", "Nombres de clientes", "Variedades de cultivos"], answer: 0, why: "Muestra lo que podría salir mal y cómo reducirlo." },
-      { q: "Un cable eléctrico pasa por la orilla del campo. Un buen control es:", options: ["Volar más cerca para tener mejores fotos", "Ignorarlo", "Volar de noche", "Mantener las líneas de vuelo bien lejos y fijar la altura de RTH por encima del cable"], answer: 3, why: "La distancia y una altura de RTH segura reducen el riesgo de choque." },
-      { q: "¿Por qué dividir un área grande en vuelos de una batería?", options: ["Para usar menos imágenes", "Para que cada vuelo termine con seguridad con una sola batería", "Para confundir al software", "Porque el traslape lo exige"], answer: 1, why: "Planear por batería evita emergencias por batería baja." },
-      { q: "¿De dónde debes sacar el pronóstico del clima?", options: ["De una suposición", "De la opinión de un amigo", "De tu servicio meteorológico nacional, el día anterior y esa mañana", "Del diario del año pasado"], answer: 2, why: "Los pronósticos oficiales son los más confiables." },
-      { q: "Un plan de contingencia es:", options: ["Una acción planeada de antemano por si algo cambia o sale mal", "Un ajuste de la cámara", "Un pago", "Una pieza del dron"], answer: 0, why: "Los planes de contingencia permiten que el equipo actúe rápido y con seguridad." },
-      { q: "El trabajo principal del observador es:", options: ["Procesar datos", "Pagarle al equipo", "Volar el dron", "Vigilar el dron, el cielo y el suelo y avisar al piloto"], answer: 3, why: "El observador está atento a los peligros." },
-      { q: "Las órdenes estándar como \"mantén\" y \"aterriza ya\" ayudan porque:", options: ["Suenan profesionales", "Todos las entienden al instante", "El dron las exige", "Ahorran batería"], answer: 1, why: "Palabras cortas y acordadas reducen la confusión con prisa." },
-      { q: "La telemetría incluye:", options: ["Precios de los cultivos", "Nombres de agricultores", "Batería, altura, posición, señal y advertencias", "El clima del próximo mes"], answer: 2, why: "La telemetría son datos del vuelo en vivo." },
-      { q: "Una persona entra al área de vuelo. El equipo debe:", options: ["Mantener el dron en posición o aterrizarlo", "Volar más bajo sobre ella", "Seguir volando las líneas", "Pedirle que corra"], answer: 0, why: "Las personas en el área aumentan el riesgo; haz una pausa o aterriza." },
-      { q: "\"Mejor terminar mañana que un accidente hoy\" significa:", options: ["Siempre volar tarde", "Nunca terminar los trabajos", "Cobrar extra por los retrasos", "Parar cuando las condiciones no son seguras, aunque el trabajo no esté terminado"], answer: 3, why: "La seguridad va antes que el horario." },
-      { q: "¿Por qué copiar los datos a un segundo aparato antes de irte?", options: ["Para llenar el almacenamiento", "Para que los datos sobrevivan si un aparato falla o se pierde", "Porque el dron lo exige", "Para compartirlos con desconocidos"], answer: 1, why: "Una segunda copia protege los datos del cliente y tu trabajo." },
-      { q: "Las bitácoras de vuelo después de una misión anotan:", options: ["Solo el nombre del cliente", "Solo el precio", "Hora, batería, piloto y problemas de cada vuelo", "Nada"], answer: 2, why: "Las bitácoras apoyan la seguridad, el mantenimiento y el cumplimiento." },
-      { q: "Después de un incidente, lo primero es:", options: ["Hacer seguro el lugar", "Publicar fotos en internet", "Irse rápido", "Borrar las bitácoras"], answer: 0, why: "Las personas y los bienes van primero." },
-      { q: "¿Por qué revisar un incidente con el equipo?", options: ["Para culpar a alguien", "Para pasar el tiempo", "No sirve", "Para actualizar los procedimientos y que no vuelva a pasar"], answer: 3, why: "Aprender de los incidentes mejora la seguridad." }
+      { objective: "O1", q: "El alcance de una misión es:", options: ["La cámara del dron", "El acuerdo escrito de lo que cubre y entrega un trabajo", "Un informe del clima", "Una bitácora de vuelo"], answer: 1, why: "Fija el área, los entregables, las fechas, el precio y los límites." },
+      { objective: "O1", q: "¿Cuál es un entregable?", options: ["La licencia del piloto", "Una batería", "Un mapa NDVI y un informe de una página", "Una hélice"], answer: 2, why: "Los entregables son lo que recibe el cliente." },
+      { objective: "O1", q: "¿Por qué explicar en el alcance los límites de un mapa hecho con dron?", options: ["Para evitar decepciones y disputas", "Para cobrar más", "Para confundir al cliente", "No hace falta"], answer: 0, why: "Unos límites claros fijan expectativas honestas." },
+      { objective: "O2", q: "Una inspección de escritorio usa:", options: ["Solo una pala", "El dron en vuelo", "Un tractor", "Mapas y vistas satelitales antes de ir al sitio"], answer: 3, why: "Las inspecciones de escritorio encuentran pronto los peligros y los temas de espacio aéreo." },
+      { objective: "O2", q: "¿Qué debes confirmar por escrito antes de volar sobre la finca de un cliente?", options: ["La talla de zapato del piloto", "El permiso del dueño o del administrador del terreno", "El precio del cultivo", "Nada"], answer: 1, why: "Un permiso por escrito protege a todos." },
+      { objective: "O2", q: "¿Por qué revisar la cobertura de la red móvil en la inspección en el terreno?", options: ["Para escuchar música", "Para las redes sociales", "Las apps, los mapas y la comunicación pueden necesitarla", "No sirve"], answer: 2, why: "Sin red se pueden afectar los mapas, la coordinación y las emergencias." },
+      { objective: "O3", q: "Una evaluación de riesgos enumera:", options: ["Peligros, probabilidad, gravedad y controles", "Solo costos", "Nombres de clientes", "Variedades de cultivos"], answer: 0, why: "Muestra lo que podría salir mal y cómo reducirlo." },
+      { objective: "O3", q: "Un cable eléctrico pasa por la orilla del campo. Un buen control es:", options: ["Volar más cerca para tener mejores fotos", "Ignorarlo", "Volar de noche", "Mantener las líneas de vuelo bien lejos y fijar la altura de RTH por encima del cable"], answer: 3, why: "La distancia y una altura de RTH segura reducen el riesgo de choque." },
+      { objective: "O3", q: "¿Por qué dividir un área grande en vuelos de una batería?", options: ["Para usar menos imágenes", "Para que cada vuelo termine con seguridad con una sola batería", "Para confundir al software", "Porque el traslape lo exige"], answer: 1, why: "Planear por batería evita emergencias por batería baja." },
+      { objective: "O3", q: "¿De dónde debes sacar el pronóstico del clima?", options: ["De una suposición", "De la opinión de un amigo", "De tu servicio meteorológico nacional, el día anterior y esa mañana", "Del diario del año pasado"], answer: 2, why: "Los pronósticos oficiales son los más confiables." },
+      { objective: "O3", q: "Un plan de contingencia es:", options: ["Una acción planeada de antemano por si algo cambia o sale mal", "Un ajuste de la cámara", "Un pago", "Una pieza del dron"], answer: 0, why: "Los planes de contingencia permiten que el equipo actúe rápido y con seguridad." },
+      { objective: "O4", q: "El trabajo principal del observador es:", options: ["Procesar datos", "Pagarle al equipo", "Volar el dron", "Vigilar el dron, el cielo y el suelo y avisar al piloto"], answer: 3, why: "El observador está atento a los peligros." },
+      { objective: "O4", q: "Las órdenes estándar como \"mantén\" y \"aterriza ya\" ayudan porque:", options: ["Suenan profesionales", "Todos las entienden al instante", "El dron las exige", "Ahorran batería"], answer: 1, why: "Palabras cortas y acordadas reducen la confusión con prisa." },
+      { objective: "O5", q: "La telemetría incluye:", options: ["Precios de los cultivos", "Nombres de agricultores", "Batería, altura, posición, señal y advertencias", "El clima del próximo mes"], answer: 2, why: "La telemetría son datos del vuelo en vivo." },
+      { objective: "O5", q: "Una persona entra al área de vuelo. El equipo debe:", options: ["Mantener el dron en posición o aterrizarlo", "Volar más bajo sobre ella", "Seguir volando las líneas", "Pedirle que corra"], answer: 0, why: "Las personas en el área aumentan el riesgo; haz una pausa o aterriza." },
+      { objective: "O5", q: "\"Mejor terminar mañana que un accidente hoy\" significa:", options: ["Siempre volar tarde", "Nunca terminar los trabajos", "Cobrar extra por los retrasos", "Parar cuando las condiciones no son seguras, aunque el trabajo no esté terminado"], answer: 3, why: "La seguridad va antes que el horario." },
+      { objective: "O6", q: "¿Por qué copiar los datos a un segundo aparato antes de irte?", options: ["Para llenar el almacenamiento", "Para que los datos sobrevivan si un aparato falla o se pierde", "Porque el dron lo exige", "Para compartirlos con desconocidos"], answer: 1, why: "Una segunda copia protege los datos del cliente y tu trabajo." },
+      { objective: "O6", q: "Las bitácoras de vuelo después de una misión anotan:", options: ["Solo el nombre del cliente", "Solo el precio", "Hora, batería, piloto y problemas de cada vuelo", "Nada"], answer: 2, why: "Las bitácoras apoyan la seguridad, el mantenimiento y el cumplimiento." },
+      { objective: "O6", q: "Después de un incidente, lo primero es:", options: ["Hacer seguro el lugar", "Publicar fotos en internet", "Irse rápido", "Borrar las bitácoras"], answer: 0, why: "Las personas y los bienes van primero." },
+      { objective: "O6", q: "¿Por qué revisar un incidente con el equipo?", options: ["Para culpar a alguien", "Para pasar el tiempo", "No sirve", "Para actualizar los procedimientos y que no vuelva a pasar"], answer: 3, why: "Aprender de los incidentes mejora la seguridad." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      1,
+      3,
+      4,
+      6,
+      10,
+      11,
+      13,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte del expediente y revísala de nuevo.",
+    criteria: [
+      {
+        name: "Alcance de la misión",
+        objective: "O1",
+        notYet: "Falta la decisión del cliente, el área o los entregables.",
+        meets: "Están escritos la decisión, el área, los entregables, el detalle, las fechas, el contacto, el precio y cómo se comparten los datos, con lo que el dron no puede hacer.",
+        exceeds: "El cliente lo firmó o lo confirmó por escrito."
+      },
+      {
+        name: "Inspección del sitio y permisos",
+        objective: "O2",
+        notYet: "No hay inspección, o faltan los permisos y la revisión del espacio aéreo.",
+        meets: "Inspección de escritorio y en el terreno con un croquis de los peligros, revisión del espacio aéreo con fuentes y permisos por escrito.",
+        exceeds: "Incluye la cobertura de la red, un refugio para el equipo y fechas para cada revisión."
+      },
+      {
+        name: "Evaluación de riesgos",
+        objective: "O3",
+        notYet: "Enumera peligros sin controles.",
+        meets: "Una tabla con peligro, probabilidad, gravedad y control para cada peligro principal.",
+        exceeds: "Cubre el calor, el viento, los curiosos, la pérdida de enlace y cualquier pista de aterrizaje cercana."
+      },
+      {
+        name: "Plan de vuelo y contingencias",
+        objective: "O3",
+        notYet: "Falta la altura, el traslape, las baterías o los límites de clima.",
+        meets: "El área dividida en vuelos, la altura, el detalle de imagen, el traslape, la velocidad, las baterías con repuestos, los horarios, los límites de clima y las contingencias.",
+        exceeds: "Muestra el cálculo del número de baterías y una fecha de reserva."
+      },
+      {
+        name: "Equipo y reunión previa",
+        objective: "O4",
+        notYet: "No hay papeles ni notas para la reunión previa.",
+        meets: "Papeles con nombre y notas de la reunión previa con los peligros, los límites, las contingencias y las órdenes estándar.",
+        exceeds: "Incluye el equipo de seguridad, el agua y cómo se mantiene lejos a los curiosos."
+      },
+      {
+        name: "Cierre de la misión",
+        objective: "O6",
+        notYet: "No hay lista para después del vuelo ni bitácora.",
+        meets: "Una lista para después del vuelo con la revisión de datos, los respaldos, las bitácoras de vuelo y los pasos para reportar incidentes.",
+        exceeds: "Incluye cómo las lecciones de los incidentes actualizan los procedimientos."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que terminan el curso y obtienen Cumple o Supera en cada fila de la rúbrica del expediente de misión",
+      "Participantes que dicen haber usado un expediente de misión escrito en un trabajo real con un cliente en un plazo de 60 días (encuesta de seguimiento)",
+      "Negocios de drones que reportan menos vuelos repetidos, disputas o incidentes después de la formación",
+      "Participantes que toman otro curso de drones o consiguen que un cliente vuelva a contratarlos"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono o una laptop con una app de mapas y vista satelital",
+      "Plantillas o un cuaderno para el alcance, la evaluación de riesgos, el plan de vuelo y las bitácoras",
+      "Un dron y su app de planeación, si los hay, para una misión de práctica",
+      "Unos 60 minutos en total, en sesiones cortas, más tiempo para armar el expediente de misión"
+    ],
+    facilitatorNotes: [
+      "Hagan juntos la prueba inicial y luego armen en grupo un expediente de misión de ejemplo antes de que cada quien arme el suyo.",
+      "Hagan una reunión previa actuada con un piloto, un observador y un contacto de la finca, y practiquen las órdenes estándar.",
+      "Cualquier vuelo de práctica debe seguir las normas sobre drones del país, con pilotos con licencia y las aprobaciones al día.",
+      "Usa los trabajos de ejemplo del curso si los participantes todavía no tienen cliente.",
+      "Califica el expediente de misión con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

@@ -20,11 +20,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes et se termine par un exercice « Essayez maintenant ». Un contrôle des connaissances termine chaque chapitre et un quiz de 20 questions termine le cours."
   ],
   finalTask: "Dans Google Colab, chargez les chiffres manuscrits MNIST, mettez-les à l'échelle, construisez et entraînez un réseau de neurones Keras, donnez sa précision sur les images de test, prédisez cinq images de test et comparez-les aux vraies étiquettes, puis faites un changement (plus de neurones ou plus d'époques), réentraînez, et écrivez deux phrases : le changement a-t-il aidé, et quelle est une limite du modèle.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des anciens militaires et des militaires en fin de service qui se reconvertissent dans la tech, les données ou l'IA, ainsi que des conjoints de militaires et d'autres adultes de programmes d'emploi pour anciens combattants qui ont un peu d'expérience en Python.",
+    startingPoint: "Ils savent écrire et exécuter de courts programmes Python dans Google Colab et connaissent l'idée de base de l'entraînement et du test d'un modèle. La plupart n'ont jamais vu l'intérieur d'un réseau de neurones, calculé ce que donne un neurone, ni construit et entraîné un réseau avec Keras.",
+    gap: "L'apprentissage profond fait tourner des outils d'image, de parole et de texte dans la défense, la logistique, la santé et l'industrie, et beaucoup de métiers de la tech demandent de savoir comment les réseaux de neurones apprennent et se trompent. La pratique concrète permet aux apprenants d'en parler avec assurance en entretien, de juger les résultats d'un modèle et de repérer où une personne doit rester dans la boucle.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes ; les termes comme poids, biais, perte et époque sont expliqués avec de petits exemples calculés",
+      "Appareils : un ordinateur fixe ou portable avec un navigateur web",
+      "Comptes et coût : un compte Google gratuit pour Google Colab ; Keras et les données MNIST sont gratuits ; les ressources gratuites de Colab sont limitées et peuvent changer",
+      "Temps : environ 5 à 6 minutes par leçon plus les exercices et le temps d'entraînement, environ 60 à 75 minutes au total",
+      "Maths : multiplier et additionner de petits nombres à la main ; aucun calcul différentiel nécessaire"
+    ],
+    prerequisites: "« Introduction à la programmation avec Python » ; « Introduction à l'apprentissage automatique » est utile."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Sans notes", action: "expliquer ce qu'est l'apprentissage profond et nommer les types de données sur lesquels il marche le mieux", standard: "en parlant de couches qui apprennent des régularités à partir d'exemples et en nommant au moins deux types de données adaptés" },
+    { id: "O2", condition: "À partir des entrées, des poids, du biais d'un neurone et de ReLU", action: "calculer à la main la sortie du neurone", standard: "en trouvant la bonne réponse chaque fois, y compris quand ReLU donne 0" },
+    { id: "O3", condition: "À partir d'un journal d'entraînement avec la perte et la précision", action: "expliquer comment l'entraînement change les poids et repérer les signes de surapprentissage", standard: "en utilisant correctement les mots perte, taux d'apprentissage, époque et validation" },
+    { id: "O4", condition: "Dans Google Colab avec Keras", action: "charger les chiffres MNIST, mettre les pixels à l'échelle et afficher une image avec son étiquette", standard: "avec des pixels entre 0 et 1 et l'étiquette qui correspond à l'image" },
+    { id: "O5", condition: "À partir des données MNIST préparées", action: "construire, compiler et entraîner un réseau de neurones Keras", standard: "avec un code qui s'exécute, une part de validation utilisée et la perte qui baisse au fil des époques" },
+    { id: "O6", condition: "À partir d'un réseau entraîné", action: "mesurer sa précision de test, prédire de nouvelles images, tester un changement et décrire ses limites", standard: "en changeant une seule chose à la fois et en nommant au moins une vraie limite" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Comment fonctionnent les réseaux de neurones",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Ce qu'est l'apprentissage profond",
           minutes: 4,
           goal: "Expliquer l'apprentissage profond avec vos mots et dire où il est utilisé.",
@@ -40,9 +64,14 @@ module.exports = {
             { title: "Là où il excelle", bullets: ["Images, sons, paroles et textes", "Beaucoup de données", "Demande plus de puissance de calcul (GPU)"] }
           ],
           tryIt: "Notez quatre outils que vous avez utilisés et qui utilisent probablement l'apprentissage profond (par exemple le déverrouillage par le visage, la dictée vocale, la recherche de photos, la traduction). Pour chacun, écrivez de quel type de données il apprend : images, sons ou texte.",
-          youCanNow: "expliquer ce qu'est l'apprentissage profond, pourquoi il utilise des couches et où il est utilisé."
+          youCanNow: "expliquer ce qu'est l'apprentissage profond, pourquoi il utilise des couches et où il est utilisé.",
+          quickCheck: [
+            { objective: "O1", q: "Que sont les neurones dans un réseau de neurones ?", options: ["Des cellules du cerveau copiées dans un ordinateur", "Des puces graphiques", "De petites unités de calcul reliées en couches", "Des images étiquetées"], answer: 2, why: "Un réseau de neurones est fait de nombreuses petites unités de calcul, appelées neurones, rangées en couches." },
+            { objective: "O1", q: "Votre unité veut trier par locuteur des milliers de messages radio enregistrés. Envisageriez-vous l'apprentissage profond ?", options: ["Oui ; il marche le mieux avec beaucoup de données riches comme le son", "Non ; l'apprentissage profond ne peut pas utiliser le son", "Non ; il ne marche que sur des nombres dans un tableau", "Seulement s'il y a moins de dix enregistrements"], answer: 0, why: "L'apprentissage profond marche le mieux avec beaucoup de données riches et désordonnées comme les images, le son et le texte." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Dans un neurone : poids, biais et activation",
           minutes: 6,
           goal: "Calculer à la main ce que donne un seul neurone.",
@@ -61,9 +90,14 @@ module.exports = {
             { title: "La dernière couche", bullets: ["Softmax donne une probabilité par réponse", "Les probabilités font 100 % au total"] }
           ],
           tryIt: "Calculez à la main la sortie d'un neurone : entrées 4 et 1, poids 0.5 et 2, biais -3, activation ReLU. Puis changez le biais en -6 et recalculez. (Réponses : 1, puis 0.)",
-          youCanNow: "calculer la sortie d'un neurone à partir de ses entrées, ses poids, son biais et son activation."
+          youCanNow: "calculer la sortie d'un neurone à partir de ses entrées, ses poids, son biais et son activation.",
+          quickCheck: [
+            { objective: "O2", q: "Dans un neurone, qu'est-ce que le biais ?", options: ["L'entrée qui a la plus grande valeur", "La fonction d'activation", "Une règle qui dit que le modèle est injuste", "Un nombre de plus ajouté après la somme des entrées pondérées"], answer: 3, why: "Le neurone ajoute le biais à la somme pondérée avant l'activation." },
+            { objective: "O2", q: "Entrées 4 et 1, poids 0.5 et 2, biais -1, ReLU. Quelle sortie calculez-vous ?", options: ["0", "3", "5", "-1"], answer: 1, why: "4 x 0.5 + 1 x 2 - 1 = 3, et ReLU garde les totaux positifs." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Comment un réseau apprend : perte, époques et petits pas",
           minutes: 5,
           goal: "Expliquer comment l'entraînement change les poids pour faire moins d'erreurs.",
@@ -80,17 +114,21 @@ module.exports = {
             { title: "Époques et validation", bullets: ["Époque : un passage sur les données", "Surveillez la précision de validation", "Entraînement en hausse, validation en baisse = surapprentissage"] }
           ],
           tryIt: "Jouez à « devine le nombre » avec un ami ou seul : choisissez un nombre caché entre 1 et 100, devinez, recevez « trop grand » ou « trop petit », et changez votre supposition d'un pas plus petit à chaque fois. Notez quelle partie du jeu ressemble à la perte, laquelle au taux d'apprentissage, et combien de tours (époques) il a fallu.",
-          youCanNow: "expliquer avec des mots simples la perte, la rétropropagation, la descente de gradient, le taux d'apprentissage, les époques et le surapprentissage."
+          youCanNow: "expliquer avec des mots simples la perte, la rétropropagation, la descente de gradient, le taux d'apprentissage, les époques et le surapprentissage.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce que le taux d'apprentissage ?", options: ["Le nombre d'images dans le jeu de données", "La taille de chaque pas que font les poids", "Le nombre de couches", "La précision finale"], answer: 1, why: "Un pas trop grand va trop loin ; un pas trop petit est très lent." },
+            { objective: "O3", q: "Après l'époque 4, la précision de validation commence à baisser alors que la précision d'entraînement continue de monter. Que faites-vous ?", options: ["Entraîner 50 époques de plus", "Supprimer l'ensemble de validation", "Arrêter l'entraînement ; le modèle commence à faire du surapprentissage", "Augmenter beaucoup le taux d'apprentissage"], answer: 2, why: "Une précision de validation qui baisse pendant que la précision d'entraînement monte est un signe de surapprentissage." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Comment fonctionnent les réseaux de neurones",
         questions: [
-          { q: "Que veut dire « profond » dans apprentissage profond ?", options: ["Il utilise beaucoup d'électricité", "Il ne marche que sous l'eau", "Le réseau a beaucoup de couches", "Il est difficile à expliquer"], answer: 2, why: "Profond veut dire beaucoup de couches de neurones." },
-          { q: "Le total d'un neurone est -2. Avec ReLU, quelle est la sortie ?", options: ["-2", "0", "1", "2"], answer: 1, why: "ReLU transforme tout total négatif en 0." },
-          { q: "Entrées 1 et 2, poids 3 et 1, biais 0, ReLU. Quelle est la sortie ?", options: ["0", "3", "5", "6"], answer: 2, why: "1 x 3 + 2 x 1 + 0 = 5, et 5 n'est pas négatif." },
-          { q: "Que mesure la fonction de perte ?", options: ["Combien il y a de couches", "À quel point les suppositions du réseau sont fausses", "La vitesse de l'ordinateur", "La quantité de données"], answer: 1, why: "La perte est la taille de l'erreur." },
-          { q: "La précision d'entraînement continue de monter mais la précision de validation baisse. Que se passe-t-il ?", options: ["Le réseau est parfait", "Du surapprentissage", "Le taux d'apprentissage est zéro", "Les données manquent"], answer: 1, why: "Faire mieux sur l'entraînement mais moins bien sur les données gardées de côté, c'est du surapprentissage." }
+          { objective: "O1", q: "Que veut dire « profond » dans apprentissage profond ?", options: ["Il utilise beaucoup d'électricité", "Il ne marche que sous l'eau", "Le réseau a beaucoup de couches", "Il est difficile à expliquer"], answer: 2, why: "Profond veut dire beaucoup de couches de neurones." },
+          { objective: "O2", q: "Le total d'un neurone est -2. Avec ReLU, quelle est la sortie ?", options: ["-2", "0", "1", "2"], answer: 1, why: "ReLU transforme tout total négatif en 0." },
+          { objective: "O2", q: "Entrées 1 et 2, poids 3 et 1, biais 0, ReLU. Quelle est la sortie ?", options: ["0", "3", "5", "6"], answer: 2, why: "1 x 3 + 2 x 1 + 0 = 5, et 5 n'est pas négatif." },
+          { objective: "O3", q: "Que mesure la fonction de perte ?", options: ["Combien il y a de couches", "À quel point les suppositions du réseau sont fausses", "La vitesse de l'ordinateur", "La quantité de données"], answer: 1, why: "La perte est la taille de l'erreur." },
+          { objective: "O3", q: "La précision d'entraînement continue de monter mais la précision de validation baisse. Que se passe-t-il ?", options: ["Le réseau est parfait", "Du surapprentissage", "Le taux d'apprentissage est zéro", "Les données manquent"], answer: 1, why: "Faire mieux sur l'entraînement mais moins bien sur les données gardées de côté, c'est du surapprentissage." }
         ]
       }
     },
@@ -98,6 +136,7 @@ module.exports = {
       name: "Chapitre 2 : Construire un réseau de neurones dans Colab",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Charger et préparer des images",
           minutes: 5,
           goal: "Charger les chiffres MNIST dans Colab, les mettre à l'échelle et regarder une image.",
@@ -115,9 +154,14 @@ module.exports = {
           ],
           sources: [KERAS_MNIST, COLAB],
           tryIt: "Chargez et mettez à l'échelle MNIST dans Colab. Affichez la forme des ensembles d'entraînement et de test. Dessinez les images aux positions 0, 1 et 2 et affichez leurs étiquettes pour vérifier qu'elles correspondent.",
-          youCanNow: "charger un jeu de données d'images, le normaliser et le vérifier à l'œil."
+          youCanNow: "charger un jeu de données d'images, le normaliser et le vérifier à l'œil.",
+          quickCheck: [
+            { objective: "O4", q: "Que veut dire ici normaliser les pixels de MNIST ?", options: ["Les mettre à l'échelle entre 0 et 1 en divisant par 255", "Retourner les images à l'envers", "Supprimer les pixels sombres", "Faire de chaque image le chiffre 0"], answer: 0, why: "Diviser par 255 transforme 0 à 255 en 0 à 1, ce qui aide l'apprentissage." },
+            { objective: "O4", q: "Vous avez chargé MNIST et voulez être sûr que les étiquettes sont justes. Que faites-vous ?", options: ["Entraîner d'abord et vérifier plus tard", "Diviser les étiquettes par 255", "Supprimer l'ensemble de test", "Dessiner une image avec matplotlib et vérifier qu'elle correspond à son étiquette"], answer: 3, why: "Regardez vos données avant l'entraînement pour vérifier que l'étiquette correspond à l'image." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Construire et entraîner le réseau",
           minutes: 6,
           goal: "Construire un réseau Keras, le compiler et l'entraîner sur quelques époques.",
@@ -135,9 +179,14 @@ module.exports = {
           ],
           sources: [KERAS_MNIST],
           tryIt: "Construisez, compilez et entraînez le réseau sur 5 époques. Notez accuracy et val_accuracy après l'époque 1 et après l'époque 5. Les deux ont-elles monté ?",
-          youCanNow: "construire un réseau de neurones avec Keras, le compiler et l'entraîner en surveillant le surapprentissage."
+          youCanNow: "construire un réseau de neurones avec Keras, le compiler et l'entraîner en surveillant le surapprentissage.",
+          quickCheck: [
+            { objective: "O5", q: "Qu'est-ce qu'un modèle Sequential dans Keras ?", options: ["Une liste d'images", "Un journal d'entraînement", "Une pile de couches, l'une après l'autre", "Un type de fonction de perte"], answer: 2, why: "Sequential empile les couches dans l'ordre, de l'entrée à la sortie." },
+            { objective: "O5", q: "Vous voulez voir pendant l'entraînement si le modèle commence à faire du surapprentissage. Qu'ajoutez-vous à fit ?", options: ["validation_split=0.1", "epochs=0", "activation=\"softmax\"", "Flatten()"], answer: 0, why: "validation_split garde de côté une partie des données d'entraînement pour vérifier le modèle à chaque époque." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Tester, prédire et améliorer",
           minutes: 6,
           goal: "Mesurer la précision de test, prédire de vraies images, essayer une amélioration et nommer les limites du modèle.",
@@ -157,17 +206,21 @@ module.exports = {
           ],
           sources: [KERAS_MNIST],
           tryIt: "Tâche finale : évaluez votre réseau sur l'ensemble de test, prédisez les cinq premières images de test et comparez-les avec les vraies étiquettes, puis changez Dense(128) en Dense(256) ou epochs en 10, réentraînez et réévaluez. Écrivez deux phrases : le changement a-t-il aidé, et quelle est une limite de ce modèle ?",
-          youCanNow: "entraîner, tester, utiliser et améliorer un réseau de neurones, et expliquer quand on peut lui faire confiance et quand on ne doit pas."
+          youCanNow: "entraîner, tester, utiliser et améliorer un réseau de neurones, et expliquer quand on peut lui faire confiance et quand on ne doit pas.",
+          quickCheck: [
+            { objective: "O6", q: "Que vous donne model.predict(x_test[:5]) ?", options: ["La précision de test", "10 probabilités pour chacune des 5 images", "Les 5 vraies étiquettes", "Un nouveau modèle entraîné"], answer: 1, why: "predict renvoie une probabilité pour chaque chiffre et chaque image ; argmax choisit le plus probable." },
+            { objective: "O6", q: "Vous voulez savoir si plus d'époques aident. Que faites-vous ?", options: ["Changer les époques, les neurones et les couches en même temps", "Juger seulement d'après la précision d'entraînement", "Se passer de l'ensemble de test cette fois", "Changer seulement le nombre d'époques, réentraîner et comparer la précision de test"], answer: 3, why: "Changez une seule chose à la fois pour savoir ce qui a causé la différence." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Construire un réseau de neurones dans Colab",
         questions: [
-          { q: "Pourquoi diviser les pixels MNIST par 255.0 ?", options: ["Pour agrandir les images", "Pour supprimer les pixels sombres", "Pour changer les étiquettes", "Pour les ramener entre 0 et 1 afin que l'entraînement marche mieux"], answer: 3, why: "Normaliser entre 0 et 1 aide le réseau à apprendre." },
-          { q: "Que fait layers.Flatten() ?", options: ["Il transforme une grille de 28 x 28 en une ligne de 784 nombres", "Il éclaircit l'image", "Il ajoute 10 neurones", "Il sépare les données"], answer: 0, why: "Flatten change la grille en une ligne pour les couches Dense." },
-          { q: "Pourquoi la dernière couche a-t-elle 10 neurones avec softmax ?", options: ["Il y a 10 époques", "C'est toujours 10", "Il y a 10 chiffres possibles, et softmax donne une probabilité pour chacun", "Pour économiser la mémoire"], answer: 2, why: "Une sortie par chiffre, sous forme de probabilités dont la somme fait 1." },
-          { q: "Quelle ligne donne le chiffre le plus probable pour chaque image ?", options: ["probs.sum()", "model.fit(probs)", "y_test.argmax()", "probs.argmax(axis=1)"], answer: 3, why: "argmax choisit la plus grande probabilité." },
-          { q: "Vous voulez savoir si Dense(256) est meilleur que Dense(128). Que faites-vous ?", options: ["Changer cinq choses à la fois", "Regarder seulement la perte d'entraînement", "Le changer, réentraîner et comparer la précision de test", "Deviner"], answer: 2, why: "Changez une seule chose et retestez sur le même ensemble de test." }
+          { objective: "O4", q: "Pourquoi diviser les pixels MNIST par 255.0 ?", options: ["Pour agrandir les images", "Pour supprimer les pixels sombres", "Pour changer les étiquettes", "Pour les ramener entre 0 et 1 afin que l'entraînement marche mieux"], answer: 3, why: "Normaliser entre 0 et 1 aide le réseau à apprendre." },
+          { objective: "O5", q: "Que fait layers.Flatten() ?", options: ["Il transforme une grille de 28 x 28 en une ligne de 784 nombres", "Il éclaircit l'image", "Il ajoute 10 neurones", "Il sépare les données"], answer: 0, why: "Flatten change la grille en une ligne pour les couches Dense." },
+          { objective: "O5", q: "Pourquoi la dernière couche a-t-elle 10 neurones avec softmax ?", options: ["Il y a 10 époques", "C'est toujours 10", "Il y a 10 chiffres possibles, et softmax donne une probabilité pour chacun", "Pour économiser la mémoire"], answer: 2, why: "Une sortie par chiffre, sous forme de probabilités dont la somme fait 1." },
+          { objective: "O6", q: "Quelle ligne donne le chiffre le plus probable pour chaque image ?", options: ["probs.sum()", "model.fit(probs)", "y_test.argmax()", "probs.argmax(axis=1)"], answer: 3, why: "argmax choisit la plus grande probabilité." },
+          { objective: "O6", q: "Vous voulez savoir si Dense(256) est meilleur que Dense(128). Que faites-vous ?", options: ["Changer cinq choses à la fois", "Regarder seulement la perte d'entraînement", "Le changer, réentraîner et comparer la précision de test", "Deviner"], answer: 2, why: "Changez une seule chose et retestez sur le même ensemble de test." }
         ]
       }
     }
@@ -175,26 +228,106 @@ module.exports = {
   quiz: {
     title: "Quiz final : Introduction à l'apprentissage profond et aux réseaux de neurones",
     questions: [
-      { q: "L'apprentissage profond, c'est :", options: ["Une façon de ranger des fichiers", "De l'apprentissage automatique avec des réseaux de neurones à plusieurs couches", "Une sorte de tableur", "Apprendre en dormant"], answer: 1, why: "Il utilise des réseaux profonds (à plusieurs couches)." },
-      { q: "Dans quelle tâche l'apprentissage profond est-il particulièrement bon ?", options: ["Reconnaître des visages sur des photos", "Additionner deux nombres", "Trier une courte liste", "Imprimer une page"], answer: 0, why: "Les images, les sons et les textes sont ses points forts." },
-      { q: "Dans un réseau pour images, les premières couches remarquent en général :", options: ["Des visages entiers", "Le nom du fichier", "Des contours simples", "L'étiquette"], answer: 2, why: "Les couches vont des contours aux formes puis aux objets." },
-      { q: "Pourquoi l'apprentissage profond a-t-il décollé ces dernières années ?", options: ["Les grands jeux de données et les GPU rapides", "Les écrans plus petits", "Moins d'ordinateurs", "De nouveaux claviers"], answer: 0, why: "Il demande beaucoup de données et de puissance de calcul." },
-      { q: "À quoi sert un poids dans un neurone ?", options: ["À compter les époques", "À garder l'étiquette", "À dessiner l'image", "À fixer combien une entrée compte"], answer: 3, why: "Les poids pondèrent chaque entrée." },
-      { q: "Entrées 2 et 2, poids 1 et -2, biais 1, ReLU. Sortie ?", options: ["-1", "0", "1", "3"], answer: 1, why: "2 - 4 + 1 = -1, et ReLU transforme -1 en 0." },
-      { q: "Softmax dans la dernière couche donne :", options: ["Le nombre de couches", "Une probabilité pour chaque réponse, dont la somme fait 100 %", "La perte", "Un nombre au hasard"], answer: 1, why: "Softmax transforme les sorties en probabilités." },
-      { q: "La perte qui baisse pendant l'entraînement veut dire :", options: ["Les données rétrécissent", "L'ordinateur ralentit", "Du surapprentissage à coup sûr", "Les suppositions du réseau sont de moins en moins fausses"], answer: 3, why: "Une perte plus basse veut dire des erreurs plus petites." },
-      { q: "Le taux d'apprentissage contrôle :", options: ["La taille de chaque pas de mise à jour des poids", "Le nombre d'images", "La taille de l'écran", "Le nombre d'étiquettes"], answer: 0, why: "Il fixe la taille de chaque pas." },
-      { q: "Une époque, c'est :", options: ["Un neurone", "Une image de test", "Un passage sur toutes les données d'entraînement", "Une minute d'entraînement"], answer: 2, why: "Une époque couvre une fois tout l'ensemble d'entraînement." },
-      { q: "Un ensemble de validation sert à :", options: ["Entraîner plus vite", "Enregistrer le modèle", "Étiqueter les images", "Repérer le surapprentissage pendant l'entraînement"], answer: 3, why: "Il est gardé de côté pour vérifier le modèle pendant qu'il apprend." },
-      { q: "Combien d'images MNIST met-il dans son ensemble de test ?", options: ["28", "784", "10 000", "60 000"], answer: 2, why: "MNIST a 60 000 images d'entraînement et 10 000 images de test." },
-      { q: "Chaque image MNIST est :", options: ["Une photo en couleur d'une rue", "28 x 28 pixels d'un chiffre écrit à la main", "Un extrait sonore", "Une phrase"], answer: 1, why: "De petites images en niveaux de gris de chiffres." },
-      { q: "Quelle couche Keras a chaque neurone relié à chaque entrée ?", options: ["Dense", "Flatten", "Input", "Softmax"], answer: 0, why: "Dense veut dire entièrement connectée." },
-      { q: "Que règle model.compile ?", options: ["Le jeu de données", "La taille des images", "L'optimiseur, la perte et les mesures", "La précision de test"], answer: 2, why: "compile règle comment le modèle apprend et ce qu'il affiche." },
-      { q: "Les étiquettes sont de simples nombres comme 7. Quelle perte convient ?", options: ["sparse_categorical_crossentropy", "accuracy", "relu", "adam"], answer: 0, why: "Cette perte attend des étiquettes entières." },
-      { q: "Que fait validation_split=0.1 dans fit ?", options: ["Il entraîne pendant 0.1 époque", "Il supprime 10 % des données", "Il règle le taux d'apprentissage", "Il garde de côté 10 % des données d'entraînement pour vérifier le modèle"], answer: 3, why: "Il réserve une part pour la validation." },
-      { q: "Quelle ligne mesure la précision sur des images jamais vues ?", options: ["model.fit(x_test, y_test)", "model.evaluate(x_test, y_test)", "model.summary()", "plt.imshow(x_test[0])"], answer: 1, why: "evaluate teste sur les données que vous lui donnez." },
-      { q: "Quel type de réseau parcourt de petits morceaux d'une image et est très bon pour les images ?", options: ["Un tableur", "Un réseau convolutif (CNN)", "Un chatbot à règles", "Un seul neurone"], answer: 1, why: "Les CNN sont faits pour les images." },
-      { q: "Votre modèle de chiffres sert à lire des formulaires manuscrits au travail. Quelle est une étape responsable ?", options: ["Faire confiance à chaque réponse", "Ne jamais le tester", "Cacher qu'un modèle est utilisé", "Faire vérifier par une personne les résultats peu sûrs et le tester d'abord sur de vrais formulaires"], answer: 3, why: "Les tests en conditions réelles et les vérifications humaines rattrapent les erreurs du modèle." }
+      { objective: "O1", q: "L'apprentissage profond, c'est :", options: ["Une façon de ranger des fichiers", "De l'apprentissage automatique avec des réseaux de neurones à plusieurs couches", "Une sorte de tableur", "Apprendre en dormant"], answer: 1, why: "Il utilise des réseaux profonds (à plusieurs couches)." },
+      { objective: "O1", q: "Dans quelle tâche l'apprentissage profond est-il particulièrement bon ?", options: ["Reconnaître des visages sur des photos", "Additionner deux nombres", "Trier une courte liste", "Imprimer une page"], answer: 0, why: "Les images, les sons et les textes sont ses points forts." },
+      { objective: "O1", q: "Dans un réseau pour images, les premières couches remarquent en général :", options: ["Des visages entiers", "Le nom du fichier", "Des contours simples", "L'étiquette"], answer: 2, why: "Les couches vont des contours aux formes puis aux objets." },
+      { objective: "O1", q: "Pourquoi l'apprentissage profond a-t-il décollé ces dernières années ?", options: ["Les grands jeux de données et les GPU rapides", "Les écrans plus petits", "Moins d'ordinateurs", "De nouveaux claviers"], answer: 0, why: "Il demande beaucoup de données et de puissance de calcul." },
+      { objective: "O2", q: "À quoi sert un poids dans un neurone ?", options: ["À compter les époques", "À garder l'étiquette", "À dessiner l'image", "À fixer combien une entrée compte"], answer: 3, why: "Les poids pondèrent chaque entrée." },
+      { objective: "O2", q: "Entrées 2 et 2, poids 1 et -2, biais 1, ReLU. Sortie ?", options: ["-1", "0", "1", "3"], answer: 1, why: "2 - 4 + 1 = -1, et ReLU transforme -1 en 0." },
+      { objective: "O2", q: "Softmax dans la dernière couche donne :", options: ["Le nombre de couches", "Une probabilité pour chaque réponse, dont la somme fait 100 %", "La perte", "Un nombre au hasard"], answer: 1, why: "Softmax transforme les sorties en probabilités." },
+      { objective: "O3", q: "La perte qui baisse pendant l'entraînement veut dire :", options: ["Les données rétrécissent", "L'ordinateur ralentit", "Du surapprentissage à coup sûr", "Les suppositions du réseau sont de moins en moins fausses"], answer: 3, why: "Une perte plus basse veut dire des erreurs plus petites." },
+      { objective: "O3", q: "Le taux d'apprentissage contrôle :", options: ["La taille de chaque pas de mise à jour des poids", "Le nombre d'images", "La taille de l'écran", "Le nombre d'étiquettes"], answer: 0, why: "Il fixe la taille de chaque pas." },
+      { objective: "O3", q: "Une époque, c'est :", options: ["Un neurone", "Une image de test", "Un passage sur toutes les données d'entraînement", "Une minute d'entraînement"], answer: 2, why: "Une époque couvre une fois tout l'ensemble d'entraînement." },
+      { objective: "O3", q: "Un ensemble de validation sert à :", options: ["Entraîner plus vite", "Enregistrer le modèle", "Étiqueter les images", "Repérer le surapprentissage pendant l'entraînement"], answer: 3, why: "Il est gardé de côté pour vérifier le modèle pendant qu'il apprend." },
+      { objective: "O4", q: "Combien d'images MNIST met-il dans son ensemble de test ?", options: ["28", "784", "10 000", "60 000"], answer: 2, why: "MNIST a 60 000 images d'entraînement et 10 000 images de test." },
+      { objective: "O4", q: "Chaque image MNIST est :", options: ["Une photo en couleur d'une rue", "28 x 28 pixels d'un chiffre écrit à la main", "Un extrait sonore", "Une phrase"], answer: 1, why: "De petites images en niveaux de gris de chiffres." },
+      { objective: "O5", q: "Quelle couche Keras a chaque neurone relié à chaque entrée ?", options: ["Dense", "Flatten", "Input", "Softmax"], answer: 0, why: "Dense veut dire entièrement connectée." },
+      { objective: "O5", q: "Que règle model.compile ?", options: ["Le jeu de données", "La taille des images", "L'optimiseur, la perte et les mesures", "La précision de test"], answer: 2, why: "compile règle comment le modèle apprend et ce qu'il affiche." },
+      { objective: "O5", q: "Les étiquettes sont de simples nombres comme 7. Quelle perte convient ?", options: ["sparse_categorical_crossentropy", "accuracy", "relu", "adam"], answer: 0, why: "Cette perte attend des étiquettes entières." },
+      { objective: "O5", q: "Que fait validation_split=0.1 dans fit ?", options: ["Il entraîne pendant 0.1 époque", "Il supprime 10 % des données", "Il règle le taux d'apprentissage", "Il garde de côté 10 % des données d'entraînement pour vérifier le modèle"], answer: 3, why: "Il réserve une part pour la validation." },
+      { objective: "O6", q: "Quelle ligne mesure la précision sur des images jamais vues ?", options: ["model.fit(x_test, y_test)", "model.evaluate(x_test, y_test)", "model.summary()", "plt.imshow(x_test[0])"], answer: 1, why: "evaluate teste sur les données que vous lui donnez." },
+      { objective: "O6", q: "Quel type de réseau parcourt de petits morceaux d'une image et est très bon pour les images ?", options: ["Un tableur", "Un réseau convolutif (CNN)", "Un chatbot à règles", "Un seul neurone"], answer: 1, why: "Les CNN sont faits pour les images." },
+      { objective: "O6", q: "Votre modèle de chiffres sert à lire des formulaires manuscrits au travail. Quelle est une étape responsable ?", options: ["Faire confiance à chaque réponse", "Ne jamais le tester", "Cacher qu'un modèle est utilisé", "Faire vérifier par une personne les résultats peu sûrs et le tester d'abord sur de vrais formulaires"], answer: 3, why: "Les tests en conditions réelles et les vérifications humaines rattrapent les erreurs du modèle." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      1,
+      5,
+      7,
+      9,
+      11,
+      12,
+      14,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Données préparées",
+        objective: "O4",
+        notYet: "MNIST n'est pas chargé ou les pixels ne sont pas mis à l'échelle.",
+        meets: "MNIST est chargé et les pixels sont mis à l'échelle entre 0 et 1.",
+        exceeds: "Une image est dessinée et comparée à son étiquette."
+      },
+      {
+        name: "Réseau construit et entraîné",
+        objective: "O5",
+        notYet: "Le modèle ne se compile pas ou ne s'entraîne pas.",
+        meets: "Un réseau Keras avec Flatten, une couche cachée Dense et une sortie softmax de 10 neurones s'entraîne avec une part de validation.",
+        exceeds: "Note comment la perte et la précision de validation ont changé au fil des époques."
+      },
+      {
+        name: "Précision de test et prédictions",
+        objective: "O6",
+        notYet: "Pas de précision de test, ou les prédictions ne sont pas comparées aux vraies étiquettes.",
+        meets: "Donne la précision de test et compare cinq prédictions aux vraies étiquettes.",
+        exceeds: "Regarde aussi une prédiction fausse et propose une raison."
+      },
+      {
+        name: "Un changement testé",
+        objective: "O6",
+        notYet: "Aucun changement fait, ou plusieurs choses changées à la fois.",
+        meets: "Un changement (plus de neurones ou plus d'époques), réentraîné, avec une phrase disant s'il a aidé.",
+        exceeds: "Vérifie aussi si le changement montre des signes de surapprentissage."
+      },
+      {
+        name: "Limites",
+        objective: "O6",
+        notYet: "Aucune limite nommée, ou la limite est fausse.",
+        meets: "Une vraie limite, comme ne connaître que des chiffres seuls et centrés.",
+        exceeds: "Dit aussi comment une personne vérifierait les résultats peu sûrs dans un vrai travail."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et obtiennent « Atteint » ou « Dépasse » sur chaque ligne de la grille de l'exercice final",
+      "Apprenants qui disent avoir entraîné un autre réseau de neurones ou un autre exemple Keras dans les 30 jours après le cours (enquête de suivi)",
+      "Apprenants qui ajoutent le notebook à un portfolio ou s'en servent pour parler d'IA en entretien d'embauche",
+      "Apprenants qui entrent dans un programme de formation, un certificat ou un emploi dans la tech, les données ou l'IA après le cours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur fixe ou portable avec un navigateur web",
+      "Un compte Google gratuit pour utiliser Google Colab",
+      "Du papier et un stylo pour le calcul à la main d'un neurone",
+      "Environ 60 à 75 minutes au total, plus le temps que l'entraînement tourne"
+    ],
+    facilitatorNotes: [
+      "Faites le calcul du neurone au tableau, en groupe, avant tout code ; cela rend les couches suivantes beaucoup plus faciles à suivre.",
+      "Lancez une fois le téléchargement de MNIST avant le cours pour vérifier que le réseau l'autorise.",
+      "L'entraînement prend quelques minutes ; profitez de l'attente pour discuter des chiffres de perte et de précision au fur et à mesure qu'ils s'affichent.",
+      "Reliez les exemples à des métiers que les apprenants connaissent, comme lire des formulaires ou inspecter des pièces, et insistez sur le fait qu'une personne vérifie les résultats peu sûrs.",
+      "Encouragez les apprenants à garder leur notebook pour un portfolio et à s'entraîner à l'expliquer en une minute, comme en entretien."
     ]
   }
 };

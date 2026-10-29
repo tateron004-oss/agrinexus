@@ -21,11 +21,35 @@ module.exports = {
     "You will learn to stop before you share, read sideways to check a source, run a reverse image search, spot AI fakes and fake-news scams, and catch your own bias. Each lesson takes about five minutes and ends with a practice on a real post. There is a knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Find a real post, picture or forwarded message that surprised you or made you feel strongly. Check it with the steps from this course: pause, read sideways about the source, look for other trusted coverage, reverse-search any picture, and look for scam signs. Write a three-sentence verdict (true, false, misleading or not sure yet) with the evidence, and decide whether to share it.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Everyone who sees posts and messages: seniors who get forwarded messages from family, young people on social media, nonprofit staff who share news, workers and job seekers, and people coming home who are catching up on what has changed online.",
+    startingPoint: "Use a phone or computer to read posts, watch videos and share messages. Most have never checked a source by reading other sites, run a reverse image search, or used a family code word against voice scams.",
+    gap: "False posts, AI fakes and scams spread fast and cost people money, health and trust. Learners need a few quick checking habits so they can decide what to believe and share, protect their families from scams, and notice when their own feelings are steering them.",
+    constraints: [
+      "Reading level: plain words and short sentences",
+      "Devices: a phone or computer with a web browser",
+      "Tool menus change; lessons describe the action when exact menu names may differ",
+      "Health, money and legal claims are checked with official sources or a professional",
+      "Privacy: learners do not share private family messages in class"
+    ],
+    prerequisites: "None. Learners new to phones or browsers can take \"Using a Smartphone and Tablet\" first."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "When a post makes you feel strongly", action: "pause and ask who made it, what the evidence is and what others say", standard: "before you believe or share it" },
+    { id: "O2", condition: "Given a website or account", action: "check who is behind it by reading what other trusted sources say about it", standard: "finding at least two other sources before you decide" },
+    { id: "O3", condition: "Given a dramatic picture", action: "run a reverse image search to find where and when it first appeared", standard: "writing down the oldest date you find and whether it matches the post" },
+    { id: "O4", condition: "Given a video, picture or voice that might be made by AI", action: "check it against the person's official account and trusted news, and use a family code word for calls", standard: "without relying only on how it looks or sounds" },
+    { id: "O5", condition: "Given an ad or post that promises money, a cure or a big deal", action: "list the scam warning signs and report it", standard: "finding every warning sign before you click, pay or sign up" },
+    { id: "O6", condition: "After checking a surprising post", action: "write a short verdict with evidence and note how your own feelings or beliefs may have pulled you", standard: "in three sentences with a clear true, false, misleading or not sure yet" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Checking what you see",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Stop and check a claim",
           minutes: 5,
           goal: "Pause before you believe or share, and ask three quick questions.",
@@ -46,9 +70,14 @@ module.exports = {
             { name: "Digital Inquiry Group: Civic Online Reasoning (free lessons on evaluating online information)", url: "https://cor.inquirygroup.org/" }
           ],
           tryIt: "Open your social media, news app or a family group chat. Find one post that made you feel something strong. Write down the answers to the three questions: who, what evidence, what others say.",
-          youCanNow: "pause when a post stirs strong feelings and ask who is behind it, what the evidence is and what others say."
+          youCanNow: "pause when a post stirs strong feelings and ask who is behind it, what the evidence is and what others say.",
+          quickCheck: [
+            { objective: "O1", q: "Which question helps you check a claim?", options: ["How many likes does it have?", "Who made this, and what is their evidence?", "Is the picture colorful?", "Did my friend share it?"], answer: 1, why: "Asking who made it and what evidence they have is part of stopping to check." },
+            { objective: "O1", q: "A family group chat forwards a shocking warning. What would you do first?", options: ["Forward it to everyone right away", "Delete the group chat", "Pause and check before you share", "Reply in all capitals"], answer: 2, why: "Strong feelings are a signal to stop and check first." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Lateral reading: checking the source",
           minutes: 5,
           goal: "Check who is behind a website or account by reading other sites about it.",
@@ -69,9 +98,14 @@ module.exports = {
             { name: "Digital Inquiry Group: Intro to Lateral Reading (Civic Online Reasoning)", url: "https://cor.inquirygroup.org/" }
           ],
           tryIt: "Take the post from Lesson 1. Open a new tab and search for the name of the site or account that posted it. Write one sentence about what other sources say about it, and whether any trusted outlet reports the same story.",
-          youCanNow: "check a website or account by reading what other trusted sources say about it."
+          youCanNow: "check a website or account by reading what other trusted sources say about it.",
+          quickCheck: [
+            { objective: "O2", q: "What is lateral reading?", options: ["Opening new tabs to see what other sources say about a site", "Reading a page from top to bottom slowly", "Reading only the headline", "Reading the site's About us page"], answer: 0, why: "Lateral reading checks a source by leaving it and reading others about it." },
+            { objective: "O2", q: "You find a news site you have never heard of with a big story. What would you do?", options: ["Trust it because it looks professional", "Share it so others can decide", "Read only its About us page", "Search the site's name and see what trusted sources say"], answer: 3, why: "What others say about a site tells you more than what it says about itself." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Reverse image search: where did this picture come from?",
           minutes: 5,
           goal: "Use a reverse image search to find where a picture first appeared.",
@@ -92,17 +126,21 @@ module.exports = {
             { name: "Google Search Help: Search with an image", url: "https://support.google.com/websearch/answer/1325808" }
           ],
           tryIt: "Find a dramatic photo in a post or news feed. Screenshot it and run a reverse image search. Write down the oldest date you can find and whether it matches the post's story.",
-          youCanNow: "run a reverse image search and tell whether a real photo is being used with a false story."
+          youCanNow: "run a reverse image search and tell whether a real photo is being used with a false story.",
+          quickCheck: [
+            { objective: "O3", q: "What does a reverse image search use to search?", options: ["A word you type", "A phone number", "A voice recording", "A picture"], answer: 3, why: "A reverse image search looks for other copies of a picture." },
+            { objective: "O3", q: "A reverse search shows a \"today's storm\" photo first appeared five years ago. What would you decide?", options: ["The post is misleading", "The post is true", "The photo is fake", "Reverse search is broken"], answer: 0, why: "A real old photo shared as new is misleading." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Checking what you see",
         questions: [
-          { q: "A post makes you very angry. What is the best first step?", options: ["Share it right away", "Stop and check before you share", "Comment in all capital letters", "Forward it to your whole family"], answer: 1, why: "Strong feelings are the signal to stop and check." },
-          { q: "What does lateral reading mean?", options: ["Reading the site's \"About us\" page carefully", "Reading only headlines", "Reading the comments", "Leaving the site to see what other sources say about it"], answer: 3, why: "Fact-checkers read sideways in new tabs." },
-          { q: "A brand-new website with a professional logo reports huge news no one else has. What should you do?", options: ["Look for the story from two trusted sources", "Believe it; the logo looks official", "Share it so others can decide", "Pay to read more"], answer: 0, why: "Big news should be confirmed by trusted sources." },
-          { q: "What does a reverse image search help you find?", options: ["The photographer's password", "Who liked the photo", "Where else a picture appears online and when it first appeared", "A better camera"], answer: 2, why: "It traces a picture back to its source." },
-          { q: "A real flood photo from 2015 is shared as \"today\". The post is:", options: ["True, because the photo is real", "Misleading", "A deepfake", "A fact-check"], answer: 1, why: "A real photo with a false story is misleading." }
+          { objective: "O1", q: "A post makes you very angry. What is the best first step?", options: ["Share it right away", "Stop and check before you share", "Comment in all capital letters", "Forward it to your whole family"], answer: 1, why: "Strong feelings are the signal to stop and check." },
+          { objective: "O2", q: "What does lateral reading mean?", options: ["Reading the site's \"About us\" page carefully", "Reading only headlines", "Reading the comments", "Leaving the site to see what other sources say about it"], answer: 3, why: "Fact-checkers read sideways in new tabs." },
+          { objective: "O2", q: "A brand-new website with a professional logo reports huge news no one else has. What should you do?", options: ["Look for the story from two trusted sources", "Believe it; the logo looks official", "Share it so others can decide", "Pay to read more"], answer: 0, why: "Big news should be confirmed by trusted sources." },
+          { objective: "O3", q: "What does a reverse image search help you find?", options: ["The photographer's password", "Who liked the photo", "Where else a picture appears online and when it first appeared", "A better camera"], answer: 2, why: "It traces a picture back to its source." },
+          { objective: "O3", q: "A real flood photo from 2015 is shared as \"today\". The post is:", options: ["True, because the photo is real", "Misleading", "A deepfake", "A fact-check"], answer: 1, why: "A real photo with a false story is misleading." }
         ]
       }
     },
@@ -110,6 +148,7 @@ module.exports = {
       name: "Chapter 2: AI fakes, scams and your own mind",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Spotting deepfakes and AI fakes",
           minutes: 5,
           goal: "Check a picture, video or voice that might be made by AI.",
@@ -130,9 +169,14 @@ module.exports = {
             { name: "FTC consumer alert: Scammers use AI to enhance their family emergency schemes", url: "https://consumer.ftc.gov/consumer-alerts/2023/03/scammers-use-ai-enhance-their-family-emergency-schemes" }
           ],
           tryIt: "Find a viral video or picture of a famous person. Check who posted it first, whether it appears on that person's official account, and whether trusted news outlets mention it. Then agree a family code word with someone you love.",
-          youCanNow: "check a possible AI fake by its context and protect yourself from cloned voices."
+          youCanNow: "check a possible AI fake by its context and protect yourself from cloned voices.",
+          quickCheck: [
+            { objective: "O4", q: "What is a family code word for?", options: ["Logging in to your bank", "Checking that a caller really is your family member", "Joining a group chat", "Making AI voices"], answer: 1, why: "A code word helps you check a caller when a voice could be faked." },
+            { objective: "O4", q: "A video shows a famous person saying something shocking. What would you do?", options: ["Share it because it looks real", "Decide by looking closely at the face", "Assume it is fake and share that", "Check their official account and trusted news first"], answer: 3, why: "Check the source and trusted coverage; looks alone are not enough." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Scams that use fake news",
           minutes: 5,
           goal: "Spot fake news stories and ads that are really scams.",
@@ -155,9 +199,14 @@ module.exports = {
             { name: "FTC: ReportFraud", url: "https://reportfraud.ftc.gov/" }
           ],
           tryIt: "Look through your social media or messages for one ad or post that promises money, a cure or a big discount. List every warning sign you can see. If it is a scam, use the platform's menu to report it.",
-          youCanNow: "spot scams that look like news, avoid their links and know where to report them."
+          youCanNow: "spot scams that look like news, avoid their links and know where to report them.",
+          quickCheck: [
+            { objective: "O5", q: "Which is a sign that a post is a scam?", options: ["It asks you to pay with gift cards", "It links to a real .gov address you typed yourself", "It gives time to think", "It comes from a charity you know and trust"], answer: 0, why: "Requests for gift card payments are a clear scam sign." },
+            { objective: "O5", q: "An ad says a famous doctor found a miracle cure and you must buy today. What would you do?", options: ["Buy it before it sells out", "Share it with sick friends", "Check with your doctor or official health sources and report the ad", "Give your card number to learn more"], answer: 2, why: "Health claims go to a doctor or official source, and scams should be reported." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Bias in your own thinking",
           minutes: 5,
           goal: "Notice when your own beliefs or feelings are steering what you accept as true.",
@@ -175,17 +224,21 @@ module.exports = {
             { title: "Before you share", bullets: ["Is it true?", "Is it helpful?", "Is it fair?"] }
           ],
           tryIt: "Final task: take one surprising post and check it with every step in this course. Write a three-sentence verdict (true, false, misleading or not sure yet) with your evidence, and note one way your own feelings might have pulled you.",
-          youCanNow: "check a post from start to finish and notice when your own bias is pulling you."
+          youCanNow: "check a post from start to finish and notice when your own bias is pulling you.",
+          quickCheck: [
+            { objective: "O6", q: "What is an echo chamber?", options: ["A place where you only hear views like your own", "A room with loud sound", "A fact-checking website", "A type of AI tool"], answer: 0, why: "In an echo chamber you mostly hear what you already think." },
+            { objective: "O6", q: "A post about a politician you dislike makes you happy and you want to share it. What would you do?", options: ["Share it because it fits what you think", "Share it with a joke", "Ask if you would believe it about the other side, and check it", "Ignore all news from now on"], answer: 2, why: "Asking that question helps catch your own bias before you share." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: AI fakes, scams and your own mind",
         questions: [
-          { q: "You get a call in your grandson's voice asking for money right now. What should you do?", options: ["Send the money fast", "Ask for his bank details", "Hang up and call him back on a number you know", "Buy gift cards as asked"], answer: 2, why: "Voices can be cloned; call back on a known number." },
-          { q: "A shocking celebrity video has no \"AI\" label. That means:", options: ["It is definitely real", "It is definitely fake", "The celebrity approved it", "Nothing yet; check who posted it first and if trusted outlets report it"], answer: 3, why: "Many fakes have no label; check the context." },
-          { q: "A news-style post says a famous person found a secret investment and asks you to sign up. This is most likely:", options: ["A scam", "A government program", "A fact-check", "Breaking news"], answer: 0, why: "Fake celebrity investment stories are a common scam." },
-          { q: "Where can people in the US report a scam?", options: ["In the scammer's comments", "ReportFraud.ftc.gov", "By replying to the scam text", "Nowhere"], answer: 1, why: "The FTC collects scam reports at ReportFraud.ftc.gov." },
-          { q: "Confirmation bias means:", options: ["Checking every fact", "Doubting everything", "Accepting what fits what we already think", "Only reading the news"], answer: 2, why: "We accept what fits our beliefs more easily." }
+          { objective: "O4", q: "You get a call in your grandson's voice asking for money right now. What should you do?", options: ["Send the money fast", "Ask for his bank details", "Hang up and call him back on a number you know", "Buy gift cards as asked"], answer: 2, why: "Voices can be cloned; call back on a known number." },
+          { objective: "O4", q: "A shocking celebrity video has no \"AI\" label. That means:", options: ["It is definitely real", "It is definitely fake", "The celebrity approved it", "Nothing yet; check who posted it first and if trusted outlets report it"], answer: 3, why: "Many fakes have no label; check the context." },
+          { objective: "O5", q: "A news-style post says a famous person found a secret investment and asks you to sign up. This is most likely:", options: ["A scam", "A government program", "A fact-check", "Breaking news"], answer: 0, why: "Fake celebrity investment stories are a common scam." },
+          { objective: "O5", q: "Where can people in the US report a scam?", options: ["In the scammer's comments", "ReportFraud.ftc.gov", "By replying to the scam text", "Nowhere"], answer: 1, why: "The FTC collects scam reports at ReportFraud.ftc.gov." },
+          { objective: "O6", q: "Confirmation bias means:", options: ["Checking every fact", "Doubting everything", "Accepting what fits what we already think", "Only reading the news"], answer: 2, why: "We accept what fits our beliefs more easily." }
         ]
       }
     }
@@ -193,26 +246,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Critical Thinking and Spotting Misinformation",
     questions: [
-      { q: "Misinformation is:", options: ["Always made on purpose", "False information people may share thinking it is true", "Only on TV", "True news"], answer: 1, why: "Misinformation can be shared by honest mistake." },
-      { q: "Which feeling is a signal to stop and check?", options: ["Feeling bored", "Feeling sleepy", "Feeling hungry", "Feeling angry or very excited about a post"], answer: 3, why: "False posts spread on strong emotions." },
-      { q: "What does the S in SIFT stand for?", options: ["Stop", "Share", "Search", "Save"], answer: 0, why: "SIFT starts with Stop." },
-      { q: "You are not sure a post is true. The safest choice is:", options: ["Share it with a warning", "Share it twice", "Wait and do not share yet", "Add your own guess"], answer: 2, why: "Not sharing is always an option." },
-      { q: "Why is a site's own \"About us\" page not enough to trust it?", options: ["It is always too long", "Fake sites can write anything about themselves", "It is in small print", "It costs money to read"], answer: 1, why: "You need what others say about the site." },
-      { q: "Which is a fact-checking organization?", options: ["A random blog", "A pop-up ad", "Reuters Fact Check", "A chain email"], answer: 2, why: "Reuters Fact Check is a known fact-checker." },
-      { q: "Official US government websites usually end in:", options: [".gov", ".win", ".xyz", ".shop"], answer: 0, why: "US government sites use .gov." },
-      { q: "A health post claims a fruit cures diabetes. Who should you check with?", options: ["The post's comments", "The person selling the fruit", "A friend who shared it", "Your doctor or official health sources"], answer: 3, why: "Health claims need a doctor or official source." },
-      { q: "On google.com, how do you start a search with a picture?", options: ["Type the word picture", "Click the camera icon and upload the image", "Call Google", "Print the picture"], answer: 1, why: "The camera icon opens search by image." },
-      { q: "In Chrome, right-clicking a picture lets you choose:", options: ["Search with Google Lens", "Delete the internet", "Buy the picture", "Send it to everyone"], answer: 0, why: "Chrome offers Search with Google Lens on images." },
-      { q: "In reverse image results, what are you mainly looking for?", options: ["The most likes", "The prettiest version", "The oldest copy and where it first appeared", "The biggest size"], answer: 2, why: "The first appearance shows the real story." },
-      { q: "A deepfake is:", options: ["A broken screen", "A deep sea photo", "A fact-check label", "A fake video, picture or audio made with AI"], answer: 3, why: "Deepfakes use AI to imitate real people." },
-      { q: "Why should you not rely only on looks to spot AI fakes?", options: ["Newer AI tools make fewer visible mistakes", "AI fakes are always obvious", "Looks never matter", "Only experts can see pictures"], answer: 0, why: "Context checks work better as fakes improve." },
-      { q: "A family code word helps you:", options: ["Log in to social media", "Check a caller really is your family member", "Pay bills", "Unlock your phone"], answer: 1, why: "A cloned voice will not know the code word." },
-      { q: "Which payment request is a clear scam sign?", options: ["Paying your known utility on its official site", "Paying a store at the counter", "\"Buy gift cards and send me the numbers\"", "A bill from your doctor's office you can verify"], answer: 2, why: "The FTC says only scammers ask for gift card payments." },
-      { q: "A disaster just happened and a new charity page asks for donations. What is wise?", options: ["Give to a charity you can look up and trust", "Send cash to the page right away", "Give your bank password", "Share the page without checking"], answer: 0, why: "Fake charities appear after disasters." },
-      { q: "A post links to a \"government payment\" sign-up. The safest step is:", options: ["Click and enter your details", "Send them your ID number", "Reply asking if it is real", "Type the real .gov address yourself to check"], answer: 3, why: "Going to the official site yourself avoids fake links." },
-      { q: "Which question helps catch your own bias?", options: ["\"Who agrees with me?\"", "\"Would I believe this if it were about the other side?\"", "\"How fast can I share this?\"", "\"Is it funny?\""], answer: 1, why: "Swapping sides shows if feelings are steering you." },
-      { q: "An echo chamber is:", options: ["A loud room", "A fact-checking site", "A place where you only hear views like your own", "A type of microphone"], answer: 2, why: "Echo chambers hide other views." },
-      { q: "Changing your mind when facts change is:", options: ["A weakness", "A strength of good thinking", "Not allowed", "A sign of bias"], answer: 1, why: "Good thinkers follow the evidence." }
+      { objective: "O1", q: "Misinformation is:", options: ["Always made on purpose", "False information people may share thinking it is true", "Only on TV", "True news"], answer: 1, why: "Misinformation can be shared by honest mistake." },
+      { objective: "O1", q: "Which feeling is a signal to stop and check?", options: ["Feeling bored", "Feeling sleepy", "Feeling hungry", "Feeling angry or very excited about a post"], answer: 3, why: "False posts spread on strong emotions." },
+      { objective: "O1", q: "What does the S in SIFT stand for?", options: ["Stop", "Share", "Search", "Save"], answer: 0, why: "SIFT starts with Stop." },
+      { objective: "O1", q: "You are not sure a post is true. The safest choice is:", options: ["Share it with a warning", "Share it twice", "Wait and do not share yet", "Add your own guess"], answer: 2, why: "Not sharing is always an option." },
+      { objective: "O2", q: "Why is a site's own \"About us\" page not enough to trust it?", options: ["It is always too long", "Fake sites can write anything about themselves", "It is in small print", "It costs money to read"], answer: 1, why: "You need what others say about the site." },
+      { objective: "O2", q: "Which is a fact-checking organization?", options: ["A random blog", "A pop-up ad", "Reuters Fact Check", "A chain email"], answer: 2, why: "Reuters Fact Check is a known fact-checker." },
+      { objective: "O2", q: "Official US government websites usually end in:", options: [".gov", ".win", ".xyz", ".shop"], answer: 0, why: "US government sites use .gov." },
+      { objective: "O2", q: "A health post claims a fruit cures diabetes. Who should you check with?", options: ["The post's comments", "The person selling the fruit", "A friend who shared it", "Your doctor or official health sources"], answer: 3, why: "Health claims need a doctor or official source." },
+      { objective: "O3", q: "On google.com, how do you start a search with a picture?", options: ["Type the word picture", "Click the camera icon and upload the image", "Call Google", "Print the picture"], answer: 1, why: "The camera icon opens search by image." },
+      { objective: "O3", q: "In Chrome, right-clicking a picture lets you choose:", options: ["Search with Google Lens", "Delete the internet", "Buy the picture", "Send it to everyone"], answer: 0, why: "Chrome offers Search with Google Lens on images." },
+      { objective: "O3", q: "In reverse image results, what are you mainly looking for?", options: ["The most likes", "The prettiest version", "The oldest copy and where it first appeared", "The biggest size"], answer: 2, why: "The first appearance shows the real story." },
+      { objective: "O4", q: "A deepfake is:", options: ["A broken screen", "A deep sea photo", "A fact-check label", "A fake video, picture or audio made with AI"], answer: 3, why: "Deepfakes use AI to imitate real people." },
+      { objective: "O4", q: "Why should you not rely only on looks to spot AI fakes?", options: ["Newer AI tools make fewer visible mistakes", "AI fakes are always obvious", "Looks never matter", "Only experts can see pictures"], answer: 0, why: "Context checks work better as fakes improve." },
+      { objective: "O4", q: "A family code word helps you:", options: ["Log in to social media", "Check a caller really is your family member", "Pay bills", "Unlock your phone"], answer: 1, why: "A cloned voice will not know the code word." },
+      { objective: "O5", q: "Which payment request is a clear scam sign?", options: ["Paying your known utility on its official site", "Paying a store at the counter", "\"Buy gift cards and send me the numbers\"", "A bill from your doctor's office you can verify"], answer: 2, why: "The FTC says only scammers ask for gift card payments." },
+      { objective: "O5", q: "A disaster just happened and a new charity page asks for donations. What is wise?", options: ["Give to a charity you can look up and trust", "Send cash to the page right away", "Give your bank password", "Share the page without checking"], answer: 0, why: "Fake charities appear after disasters." },
+      { objective: "O5", q: "A post links to a \"government payment\" sign-up. The safest step is:", options: ["Click and enter your details", "Send them your ID number", "Reply asking if it is real", "Type the real .gov address yourself to check"], answer: 3, why: "Going to the official site yourself avoids fake links." },
+      { objective: "O6", q: "Which question helps catch your own bias?", options: ["\"Who agrees with me?\"", "\"Would I believe this if it were about the other side?\"", "\"How fast can I share this?\"", "\"Is it funny?\""], answer: 1, why: "Swapping sides shows if feelings are steering you." },
+      { objective: "O6", q: "An echo chamber is:", options: ["A loud room", "A fact-checking site", "A place where you only hear views like your own", "A type of microphone"], answer: 2, why: "Echo chambers hide other views." },
+      { objective: "O6", q: "Changing your mind when facts change is:", options: ["A weakness", "A strength of good thinking", "Not allowed", "A sign of bias"], answer: 1, why: "Good thinkers follow the evidence." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      1,
+      3,
+      4,
+      7,
+      10,
+      11,
+      13,
+      14,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Paused and asked",
+        objective: "O1",
+        notYet: "Shared or believed it without checking.",
+        meets: "Wrote who made it, the evidence and what others say.",
+        exceeds: "Noted the feeling that made them want to share."
+      },
+      {
+        name: "Source checked",
+        objective: "O2",
+        notYet: "Relied on the site's own page or the post alone.",
+        meets: "Read what at least two other sources say about the site or account.",
+        exceeds: "Found the story, or its absence, in trusted outlets and fact-checkers."
+      },
+      {
+        name: "Picture traced",
+        objective: "O3",
+        notYet: "No reverse image search on a picture in the post.",
+        meets: "Ran a reverse image search and wrote the oldest date found.",
+        exceeds: "Explained whether the picture matches the post's time and place."
+      },
+      {
+        name: "Scam signs",
+        objective: "O5",
+        notYet: "Missed clear scam signs such as pressure or gift-card payment.",
+        meets: "Listed every scam sign, or confirmed there were none.",
+        exceeds: "Reported it on the platform if it was a scam."
+      },
+      {
+        name: "Verdict and bias",
+        objective: "O6",
+        notYet: "No clear verdict, or no evidence given.",
+        meets: "A three-sentence verdict with evidence and a decision about sharing.",
+        exceeds: "Also notes how their own feelings or beliefs may have pulled them."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who report checking a post before sharing it within 30 days (follow-up survey)",
+      "Learners who set up a family code word",
+      "Learners who report avoiding or reporting a scam",
+      "Learners who start another Koach Learn digital-safety course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or computer with a web browser",
+      "Access to a reverse image search such as Google Lens",
+      "A real post, picture or forwarded message to check",
+      "Paper or a notes app for the verdict",
+      "About 60 minutes in total"
+    ],
+    facilitatorNotes: [
+      "Bring a few safe sample posts (an old photo shared as new, a fake ad) for learners who do not want to use their own feeds.",
+      "Avoid political arguments in class; focus on the checking steps, not on who is right.",
+      "Remind learners never to click links or pay in suspicious posts during practice.",
+      "Help seniors set up a family code word with a relative during or after class.",
+      "Score the final task with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

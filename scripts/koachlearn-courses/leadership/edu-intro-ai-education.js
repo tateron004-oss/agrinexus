@@ -16,11 +16,35 @@ module.exports = {
     "This course explains the law in plain words so you know what to ask; it is not legal advice. Your district's legal counsel and privacy officer have the final word. A knowledge check closes each chapter and a 20-question quiz closes the course. This is course 1 of 8 in AI for School and Educational Leaders."
   ],
   finalTask: "Write a one-page \"AI at our school\" handout for staff: what AI is in two sentences, three ways it can help teachers, three risks for students, the privacy rule (\"no student names, grades or other personally identifiable information in AI tools the district has not approved\"), and who to ask. Use it to lead a 15-minute staff conversation and record the top three questions staff raised.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Principals, assistant principals, teacher leaders, instructional coaches and district leaders in US schools. No technical background is needed.",
+    startingPoint: "Know that teachers and students are using AI and may have tried a chatbot. Cannot yet explain AI clearly to staff, map where it is used in their school, or state the student-privacy basics that apply to AI tools.",
+    gap: "AI is already in classrooms, often without guidance. Leaders need to explain it plainly, see where it is used, judge helpful and harmful uses, and know the FERPA and COPPA basics, so they can lead AI use instead of reacting to it and protect students' privacy.",
+    constraints: [
+      "Plain words for non-technical school leaders; the course explains the law but is not legal advice",
+      "District legal counsel and privacy officer have the final word on privacy obligations",
+      "No student names, grades or other personally identifiable information in unapproved AI tools, including during practice",
+      "Federal and state guidance changes, so leaders check the current version themselves",
+      "Time: short lessons fitted around a school day, plus a 15-minute staff conversation"
+    ],
+    prerequisites: "None. This is course 1 of 8 in AI for School and Educational Leaders."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "When a staff member, parent or student asks what AI is", action: "explain AI and generative AI in plain words, including why it can be wrong", standard: "in two sentences a new teacher, a parent and a fifth grader could understand" },
+    { id: "O2", condition: "With your tech coordinator or two teachers", action: "map where AI already shows up in your school", standard: "listing at least six places, each marked approved or not and whether it touches student data" },
+    { id: "O3", condition: "Given AI uses seen in schools", action: "sort each use into helpful, careful or harmful", standard: "with one reason for each, using the family test" },
+    { id: "O4", condition: "When staff use AI tools", action: "state the FERPA and COPPA basics and rewrite a request so it contains no student information", standard: "naming when to ask your privacy officer or legal counsel" },
+    { id: "O5", condition: "Given federal and state guidance on AI in schools", action: "summarize one federal principle and find your state's current guidance", standard: "noting its date and one point it makes, or that none exists yet" },
+    { id: "O6", condition: "With your staff", action: "lead a 15-minute AI conversation using a one-page \"AI at our school\" handout", standard: "with every handout part included and the top three staff questions recorded" }
+  ],
   chapters: [
     {
       name: "Chapter 1: AI in today's schools",
       lessons: [
         {
+          objectives: ["O1"],
           title: "What AI is, in words your staff will use",
           minutes: 5,
           goal: "Explain AI and generative AI to staff in plain words.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Say it to staff", bullets: ["A fast first-draft partner", "Never replaces the teacher's judgment", "Never the final word on a student"] }
           ],
           tryIt: "Write a two-sentence explanation of AI that a new teacher, a parent and a fifth grader could all understand. Test it on one colleague.",
-          youCanNow: "explain AI and generative AI in plain words to staff and families."
+          youCanNow: "explain AI and generative AI in plain words to staff and families.",
+          quickCheck: [
+            { objective: "O1", q: "What is generative AI?", options: ["AI that creates new text, images or code", "A program that grades tests automatically", "A search engine for school records", "Software that never makes mistakes"], answer: 0, why: "Generative AI creates new content, which is why it can also produce errors." },
+            { objective: "O1", q: "A parent asks why a chatbot gave their child a wrong fact. What would you explain?", options: ["The child must have typed it wrong", "AI predicts likely words and can be wrong, so its answers need checking", "The tool was broken that day", "Only paid AI tools are accurate"], answer: 1, why: "AI predicts likely text instead of checking facts, so it can sound right and still be wrong." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Where AI already shows up in your school",
           minutes: 5,
           goal: "Map where AI is already used in your school, officially and unofficially.",
@@ -55,9 +84,14 @@ module.exports = {
             { title: "Map it", bullets: ["Approved or not?", "Touches student data?", "Where students meet AI unknowingly"] }
           ],
           tryIt: "With your tech coordinator or two teachers, list at least six places AI shows up in your school. Mark each approved or not, and whether it touches student data.",
-          youCanNow: "map where AI is already used in your school and which uses touch student data."
+          youCanNow: "map where AI is already used in your school and which uses touch student data.",
+          quickCheck: [
+            { objective: "O2", q: "What is an adaptive learning program?", options: ["A program teachers change by hand each day", "A program that works without internet", "A program that changes the next activity based on a student's answers", "A program that only adults can use"], answer: 2, why: "Adaptive programs use a student's answers to choose what comes next." },
+            { objective: "O2", q: "You learn that a tool your school already owns has a new AI feature switched on. What would you do?", options: ["Ignore it, since the tool was already approved", "Ban the whole tool at once", "Ask teachers to stop using computers", "Add it to your AI map and check whether it touches student data"], answer: 3, why: "AI features can appear in tools you already own, so they belong on the map." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Where AI helps learning, and where it harms",
           minutes: 5,
           goal: "Sort school uses of AI into helpful, careful and harmful.",
@@ -74,17 +108,21 @@ module.exports = {
             { title: "The family test", bullets: ["Would I explain this use to the family?"] }
           ],
           tryIt: "List eight AI uses you have seen or heard of in schools. Mark each HELPFUL, CAREFUL or HARMFUL and write one reason.",
-          youCanNow: "judge which school uses of AI help learning and which put students at risk."
+          youCanNow: "judge which school uses of AI help learning and which put students at risk.",
+          quickCheck: [
+            { objective: "O3", q: "What does the family test ask?", options: ["Would I explain this AI use to the student's family?", "Does the family own a computer?", "Did the family pay for the tool?", "Would the family use AI at home?"], answer: 0, why: "If you would not explain it to a family, the use needs a second look." },
+            { objective: "O3", q: "A teacher wants to use an AI detector to decide whether essays were cheated. How would you mark it?", options: ["HELPFUL: it saves time", "HARMFUL: AI should never be used", "CAREFUL: detectors can wrongly accuse students, so they are never the only evidence", "Not worth discussing"], answer: 2, why: "Detectors can wrongly accuse students, including English learners." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: AI in today's schools",
         questions: [
-          { q: "Which is the best plain description of generative AI for staff?", options: ["A school security camera", "A new grading system", "AI that creates new text, images or code", "An attendance app"], answer: 2, why: "Generative AI creates new content." },
-          { q: "A teacher says, \"The AI wrote it, so it must be accurate.\" Best reply?", options: ["AI predicts likely words and can be wrong; check it", "Agree", "Only if it is long", "Only if it uses big words"], answer: 0, why: "Fluent output can still be wrong." },
-          { q: "Why map AI use in your school first?", options: ["To ban everything", "Vendors require it", "It is fun", "Leaders cannot guide what they cannot see"], answer: 3, why: "The map shows approved use, hidden use and student-data risk." },
-          { q: "Why are AI-writing detectors a CAREFUL use?", options: ["They are always right", "They can wrongly accuse students, including English learners", "They are free", "They write essays"], answer: 1, why: "False positives can harm students." },
-          { q: "Which use is HARMFUL?", options: ["Drafting practice questions", "Making a reading passage at three levels", "Drafting a newsletter", "Letting AI decide a student's special education placement"], answer: 3, why: "Decisions about students stay with qualified people." }
+          { objective: "O1", q: "Which is the best plain description of generative AI for staff?", options: ["A school security camera", "A new grading system", "AI that creates new text, images or code", "An attendance app"], answer: 2, why: "Generative AI creates new content." },
+          { objective: "O1", q: "A teacher says, \"The AI wrote it, so it must be accurate.\" Best reply?", options: ["AI predicts likely words and can be wrong; check it", "Agree", "Only if it is long", "Only if it uses big words"], answer: 0, why: "Fluent output can still be wrong." },
+          { objective: "O2", q: "Why map AI use in your school first?", options: ["To ban everything", "Vendors require it", "It is fun", "Leaders cannot guide what they cannot see"], answer: 3, why: "The map shows approved use, hidden use and student-data risk." },
+          { objective: "O3", q: "Why are AI-writing detectors a CAREFUL use?", options: ["They are always right", "They can wrongly accuse students, including English learners", "They are free", "They write essays"], answer: 1, why: "False positives can harm students." },
+          { objective: "O3", q: "Which use is HARMFUL?", options: ["Drafting practice questions", "Making a reading passage at three levels", "Drafting a newsletter", "Letting AI decide a student's special education placement"], answer: 3, why: "Decisions about students stay with qualified people." }
         ]
       }
     },
@@ -92,6 +130,7 @@ module.exports = {
       name: "Chapter 2: What leaders must know first",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Student privacy basics: FERPA and COPPA",
           minutes: 6,
           goal: "State the FERPA and COPPA basics that apply when staff use AI tools.",
@@ -109,9 +148,14 @@ module.exports = {
           ],
           sources: [{ name: "FERPA: Protecting Student Privacy (US Department of Education)", url: "https://studentprivacy.ed.gov/ferpa" }, { name: "FTC: Complying with COPPA, Frequently Asked Questions", url: "https://www.ftc.gov/business-guidance/resources/complying-coppa-frequently-asked-questions" }, { name: "FTC: Children's Privacy", url: "https://www.ftc.gov/business-guidance/privacy-security/childrens-privacy" }],
           tryIt: "Write three examples of what a teacher must NOT paste into an unapproved AI tool, and rewrite one of them so it asks for the same help without any student information.",
-          youCanNow: "state the FERPA and COPPA basics that apply to staff AI use and the rule that follows from them."
+          youCanNow: "state the FERPA and COPPA basics that apply to staff AI use and the rule that follows from them.",
+          quickCheck: [
+            { objective: "O4", q: "What does COPPA protect?", options: ["Teachers' email accounts", "The online privacy of children under 13", "School buildings", "Student sports records only"], answer: 1, why: "COPPA protects the online privacy of children under 13." },
+            { objective: "O4", q: "A teacher wants AI help writing feedback for a named student with a low grade. What would you suggest?", options: ["Paste the name and grade into any free tool", "Use the student's initials instead, which is always safe", "Skip feedback for that student", "Ask for help with the feedback without any student name or grade, or use a district-approved tool"], answer: 3, why: "Removing student information, or using an approved tool, protects the education record." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "What federal guidance says about AI in schools",
           minutes: 5,
           goal: "Summarize federal AI guidance and find the current version yourself.",
@@ -129,9 +173,14 @@ module.exports = {
           ],
           sources: [{ name: "K-12 Dive: Education Department issues AI priorities (July 2025)", url: "https://www.k12dive.com/news/education-department-issues-ai-priorities-but-what-if-the-agency-closes/754015/" }, { name: "Privacy and Education Technology (Student Privacy Policy Office)", url: "https://studentprivacy.ed.gov/privacy-and-education-technology" }],
           tryIt: "Find your state education agency's page on AI (search its website for \"artificial intelligence\"). Write down the date of its latest guidance and one point it makes, or note that none exists yet.",
-          youCanNow: "summarize federal AI guidance for schools and find the current federal and state versions."
+          youCanNow: "summarize federal AI guidance for schools and find the current federal and state versions.",
+          quickCheck: [
+            { objective: "O5", q: "Where do you look for your state's AI guidance for schools?", options: ["Your state education agency's website", "A social media post", "The AI tool's own answer", "A vendor's sales page"], answer: 0, why: "The state education agency is the official source for state guidance." },
+            { objective: "O5", q: "A colleague quotes federal AI guidance from memory. What would you do before sharing it with staff?", options: ["Share it, since it sounds right", "Find the current official document and check its date and wording", "Ask an AI chatbot to confirm it", "Wait for another colleague to agree"], answer: 1, why: "Guidance changes, so leaders check the current official version themselves." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Opening the AI conversation with your staff",
           minutes: 6,
           goal: "Lead a 15-minute staff conversation on AI using a one-page handout.",
@@ -148,17 +197,21 @@ module.exports = {
             { title: "Close well", bullets: ["One next step", "Collect the top three questions"] }
           ],
           tryIt: "Final task: write your one-page \"AI at our school\" handout (two-sentence definition, three helps, three risks, privacy rule, who to ask). Lead a 15-minute staff conversation with it and record the top three questions staff raised.",
-          youCanNow: "open and lead your school's conversation about AI with a clear, shared starting point."
+          youCanNow: "open and lead your school's conversation about AI with a clear, shared starting point.",
+          quickCheck: [
+            { objective: "O6", q: "What is a good way to open a staff conversation on AI?", options: ["Announce a list of bans", "Show a long slide deck on how AI works", "Ask a listening question about where staff have seen AI", "Start with a quiz"], answer: 2, why: "Starting by listening shows staff their experience matters." },
+            { objective: "O6", q: "At the end of your 15-minute conversation, staff still have many questions. What do you do?", options: ["Answer every one, even if it runs an hour", "Tell them to search online", "End without a next step", "Record the top three questions and give one next step"], answer: 3, why: "A clear next step and the collected questions shape what you do next." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: What leaders must know first",
         questions: [
-          { q: "What does FERPA protect?", options: ["Teacher salaries", "School building safety", "The privacy of student education records", "Cafeteria menus"], answer: 2, why: "FERPA protects student education records." },
-          { q: "COPPA protects the online privacy of children:", options: ["Under 13", "Under 18", "Under 21", "Of any age"], answer: 0, why: "The FTC says the rule protects children under age 13." },
-          { q: "According to the FTC, when may a school consent in place of parents under COPPA?", options: ["Any time a teacher wants", "When the service collects data only for the school's use and benefit, with no other commercial purpose", "Never", "When the app is free"], answer: 1, why: "School consent is limited to educational use with no other commercial purpose." },
-          { q: "Which is one principle in the Department of Education's July 2025 AI letter?", options: ["AI initiatives should be educator-led", "AI should replace teachers", "AI must be banned", "Only private schools may use AI"], answer: 0, why: "The letter calls for educator-led initiatives." },
-          { q: "How should you open a staff conversation on AI?", options: ["With a 30-page policy", "With a vendor sales pitch", "With a ban", "With a listening question about where staff have seen AI"], answer: 3, why: "Listening first builds trust and shows what staff need." }
+          { objective: "O4", q: "What does FERPA protect?", options: ["Teacher salaries", "School building safety", "The privacy of student education records", "Cafeteria menus"], answer: 2, why: "FERPA protects student education records." },
+          { objective: "O4", q: "COPPA protects the online privacy of children:", options: ["Under 13", "Under 18", "Under 21", "Of any age"], answer: 0, why: "The FTC says the rule protects children under age 13." },
+          { objective: "O4", q: "According to the FTC, when may a school consent in place of parents under COPPA?", options: ["Any time a teacher wants", "When the service collects data only for the school's use and benefit, with no other commercial purpose", "Never", "When the app is free"], answer: 1, why: "School consent is limited to educational use with no other commercial purpose." },
+          { objective: "O5", q: "Which is one principle in the Department of Education's July 2025 AI letter?", options: ["AI initiatives should be educator-led", "AI should replace teachers", "AI must be banned", "Only private schools may use AI"], answer: 0, why: "The letter calls for educator-led initiatives." },
+          { objective: "O6", q: "How should you open a staff conversation on AI?", options: ["With a 30-page policy", "With a vendor sales pitch", "With a ban", "With a listening question about where staff have seen AI"], answer: 3, why: "Listening first builds trust and shows what staff need." }
         ]
       }
     }
@@ -166,26 +219,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI for School and Educational Leaders 1: Introduction to AI in Education",
     questions: [
-      { q: "Chat tools like ChatGPT are built on:", options: ["Spreadsheets", "Large language models", "Printers", "Attendance systems"], answer: 1, why: "LLMs power chat tools." },
-      { q: "An AI hallucination is:", options: ["A fast answer", "A broken screen", "Made-up content that sounds true", "A school drill"], answer: 2, why: "AI can invent facts and sources." },
-      { q: "The best one-line message to staff is:", options: ["AI grades everything", "AI replaces lesson planning", "AI is a first-draft partner, never the final word on a student", "AI is always right"], answer: 2, why: "It keeps teacher judgment central." },
-      { q: "AI features can appear in tools you already own:", options: ["Sometimes switched on by default", "Never", "Only if you pay extra", "Only on phones"], answer: 0, why: "Vendors add AI features to existing products." },
-      { q: "An adaptive program:", options: ["Prints report cards", "Takes attendance", "Locks doors", "Changes the next activity based on a student's answers"], answer: 3, why: "It adapts to answers." },
-      { q: "Your AI map should mark whether each tool:", options: ["Has a nice logo", "Is approved and touches student data", "Is popular", "Is new"], answer: 1, why: "Approval and data are what leaders must know." },
-      { q: "Which is a HELPFUL use?", options: ["Secret monitoring", "Deciding discipline", "Pasting IEPs into a free tool", "Making practice questions at several reading levels"], answer: 3, why: "It saves time and widens access." },
-      { q: "Why can student AI use on assignments be a problem?", options: ["It is illegal", "It is always cheating", "It can replace the thinking the assignment builds", "It is too slow"], answer: 2, why: "Rules decide when AI supports or replaces learning." },
-      { q: "The family test asks:", options: ["Would I explain this AI use to the student's family?", "Does the family own a computer?", "Is the family online?", "Did the family pay?"], answer: 0, why: "Comfort explaining a use is a good check." },
-      { q: "FERPA rights move from parents to the student at:", options: ["Age 10", "Age 18 or attending college", "Age 13", "Never"], answer: 1, why: "The student becomes an eligible student." },
-      { q: "Under FERPA, parents may:", options: ["Inspect and review their child's education records", "Read teachers' private diaries", "Change grades themselves", "Nothing"], answer: 0, why: "Inspection and review are core FERPA rights." },
-      { q: "A vendor can be a \"school official\" under FERPA only if it:", options: ["Has an app", "Is free", "Is popular", "Performs a school service under the school's direct control, with limits on re-sharing"], answer: 3, why: "Those conditions come from FERPA guidance." },
-      { q: "Directory information may be shared:", options: ["Never", "After notice and a chance to opt out", "Only with vendors", "Only by students"], answer: 1, why: "Schools must give notice and allow opt-out." },
-      { q: "Which agency enforces COPPA?", options: ["The Postal Service", "The Department of Agriculture", "The Federal Trade Commission", "The school board"], answer: 2, why: "The FTC enforces COPPA." },
-      { q: "A teacher pastes students' names and grades into a free, unapproved AI tool. This:", options: ["Is required", "Is always fine", "May disclose education records to a company with no agreement", "Improves privacy"], answer: 2, why: "That is the FERPA risk with unapproved tools." },
-      { q: "For your district's exact privacy obligations, ask:", options: ["Your privacy officer or legal counsel", "A chatbot", "A student", "A vendor's salesperson"], answer: 0, why: "Qualified people have the final word." },
-      { q: "The Department of Education's AI letter is dated:", options: ["March 3, 2019", "January 1, 2000", "October 27, 2026", "July 22, 2025"], answer: 3, why: "It was sent on July 22, 2025." },
-      { q: "Where can you find the Model Terms of Service checklist?", options: ["A social media app", "studentprivacy.ed.gov", "A vendor ad", "A news comment section"], answer: 1, why: "It is listed on the Student Privacy Policy Office site." },
-      { q: "Besides federal guidance, you should check:", options: ["Only vendor blogs", "Another country's rules", "Nothing else", "Your state education agency's AI guidance"], answer: 3, why: "Many states publish their own AI guidance." },
-      { q: "A good staff conversation on AI ends with:", options: ["A sales pitch", "A ban", "One next step and the top questions collected", "No conclusion"], answer: 2, why: "Next steps and questions guide what to do next." }
+      { objective: "O1", q: "Chat tools like ChatGPT are built on:", options: ["Spreadsheets", "Large language models", "Printers", "Attendance systems"], answer: 1, why: "LLMs power chat tools." },
+      { objective: "O1", q: "An AI hallucination is:", options: ["A fast answer", "A broken screen", "Made-up content that sounds true", "A school drill"], answer: 2, why: "AI can invent facts and sources." },
+      { objective: "O6", q: "The best one-line message to staff is:", options: ["AI grades everything", "AI replaces lesson planning", "AI is a first-draft partner, never the final word on a student", "AI is always right"], answer: 2, why: "It keeps teacher judgment central." },
+      { objective: "O2", q: "AI features can appear in tools you already own:", options: ["Sometimes switched on by default", "Never", "Only if you pay extra", "Only on phones"], answer: 0, why: "Vendors add AI features to existing products." },
+      { objective: "O2", q: "An adaptive program:", options: ["Prints report cards", "Takes attendance", "Locks doors", "Changes the next activity based on a student's answers"], answer: 3, why: "It adapts to answers." },
+      { objective: "O2", q: "Your AI map should mark whether each tool:", options: ["Has a nice logo", "Is approved and touches student data", "Is popular", "Is new"], answer: 1, why: "Approval and data are what leaders must know." },
+      { objective: "O3", q: "Which is a HELPFUL use?", options: ["Secret monitoring", "Deciding discipline", "Pasting IEPs into a free tool", "Making practice questions at several reading levels"], answer: 3, why: "It saves time and widens access." },
+      { objective: "O3", q: "Why can student AI use on assignments be a problem?", options: ["It is illegal", "It is always cheating", "It can replace the thinking the assignment builds", "It is too slow"], answer: 2, why: "Rules decide when AI supports or replaces learning." },
+      { objective: "O3", q: "The family test asks:", options: ["Would I explain this AI use to the student's family?", "Does the family own a computer?", "Is the family online?", "Did the family pay?"], answer: 0, why: "Comfort explaining a use is a good check." },
+      { objective: "O4", q: "FERPA rights move from parents to the student at:", options: ["Age 10", "Age 18 or attending college", "Age 13", "Never"], answer: 1, why: "The student becomes an eligible student." },
+      { objective: "O4", q: "Under FERPA, parents may:", options: ["Inspect and review their child's education records", "Read teachers' private diaries", "Change grades themselves", "Nothing"], answer: 0, why: "Inspection and review are core FERPA rights." },
+      { objective: "O4", q: "A vendor can be a \"school official\" under FERPA only if it:", options: ["Has an app", "Is free", "Is popular", "Performs a school service under the school's direct control, with limits on re-sharing"], answer: 3, why: "Those conditions come from FERPA guidance." },
+      { objective: "O4", q: "Directory information may be shared:", options: ["Never", "After notice and a chance to opt out", "Only with vendors", "Only by students"], answer: 1, why: "Schools must give notice and allow opt-out." },
+      { objective: "O4", q: "Which agency enforces COPPA?", options: ["The Postal Service", "The Department of Agriculture", "The Federal Trade Commission", "The school board"], answer: 2, why: "The FTC enforces COPPA." },
+      { objective: "O4", q: "A teacher pastes students' names and grades into a free, unapproved AI tool. This:", options: ["Is required", "Is always fine", "May disclose education records to a company with no agreement", "Improves privacy"], answer: 2, why: "That is the FERPA risk with unapproved tools." },
+      { objective: "O4", q: "For your district's exact privacy obligations, ask:", options: ["Your privacy officer or legal counsel", "A chatbot", "A student", "A vendor's salesperson"], answer: 0, why: "Qualified people have the final word." },
+      { objective: "O5", q: "The Department of Education's AI letter is dated:", options: ["March 3, 2019", "January 1, 2000", "October 27, 2026", "July 22, 2025"], answer: 3, why: "It was sent on July 22, 2025." },
+      { objective: "O5", q: "Where can you find the Model Terms of Service checklist?", options: ["A social media app", "studentprivacy.ed.gov", "A vendor ad", "A news comment section"], answer: 1, why: "It is listed on the Student Privacy Policy Office site." },
+      { objective: "O5", q: "Besides federal guidance, you should check:", options: ["Only vendor blogs", "Another country's rules", "Nothing else", "Your state education agency's AI guidance"], answer: 3, why: "Many states publish their own AI guidance." },
+      { objective: "O6", q: "A good staff conversation on AI ends with:", options: ["A sales pitch", "A ban", "One next step and the top questions collected", "No conclusion"], answer: 2, why: "Next steps and questions guide what to do next." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      2,
+      3,
+      6,
+      9,
+      13,
+      14,
+      16,
+      18,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Plain definition",
+        objective: "O1",
+        notYet: "The definition uses jargon or is longer than two sentences.",
+        meets: "Explains AI in two plain sentences.",
+        exceeds: "A colleague who is new to AI understood it on first reading."
+      },
+      {
+        name: "Helps and risks",
+        objective: "O3",
+        notYet: "Fewer than three helps or three risks, or they do not fit school.",
+        meets: "Three ways AI can help teachers and three risks for students.",
+        exceeds: "Each risk says what staff should do about it."
+      },
+      {
+        name: "Privacy rule",
+        objective: "O4",
+        notYet: "The privacy rule is missing or unclear.",
+        meets: "States that no student names, grades or other personally identifiable information go into AI tools the district has not approved.",
+        exceeds: "Gives a short example of asking for help without student information."
+      },
+      {
+        name: "Who to ask",
+        objective: "O6",
+        notYet: "Does not say who to ask.",
+        meets: "Names who to ask with questions.",
+        exceeds: "Also names the privacy officer for privacy questions."
+      },
+      {
+        name: "Staff conversation",
+        objective: "O6",
+        notYet: "No conversation held, or questions not recorded.",
+        meets: "Led a 15-minute conversation and recorded the top three questions.",
+        exceeds: "Ended with one clear next step for staff."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Leaders who finish the course and pass the final task (rubric)",
+      "Schools where staff have received an \"AI at our school\" handout within 30 days (follow-up survey)",
+      "Schools with a map of AI tools in use, marked approved or not (follow-up survey)",
+      "Leaders who go on to course 2 of AI for School and Educational Leaders"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer with internet",
+      "Your district's list of approved tools, if one exists",
+      "Paper or a document for the AI map and the one-page handout",
+      "About 60 minutes in total, plus a 15-minute staff conversation"
+    ],
+    facilitatorNotes: [
+      "Take the pre-test together, then build the AI map in school teams with the tech coordinator.",
+      "Remind leaders that the course explains the law in plain words and is not legal advice; invite the district privacy officer if possible.",
+      "Never use real student information in practice examples.",
+      "Let leaders practice opening the staff conversation in pairs before leading it at school.",
+      "Score the final task with the rubric, and ask for the recorded staff questions as evidence."
     ]
   }
 };

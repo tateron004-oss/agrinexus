@@ -16,11 +16,35 @@ module.exports = {
     "Usa descripciones de grupos inventadas. Nunca pongas nombres de estudiantes, detalles de planes IEP o 504 (planes de apoyo para estudiantes con discapacidad), calificaciones ni otros datos que los identifiquen en una herramienta que tu distrito no haya aprobado. Cada capítulo termina con una comprobación de conocimientos y el curso termina con un examen de 20 preguntas. Este es el curso 3 de 8 de IA para líderes escolares y educativos."
   ],
   finalTask: "Usa un asistente de IA para planear una clase completa que tú (o un docente al que acompañas) vas a dar: objetivo y criterios de logro a partir de un estándar que elijas, una actividad de enganche, práctica guiada e independiente, apoyos para tres grupos (necesita más apoyo, en nivel, listo para más) y un boleto de salida de tres preguntas con respuestas. Revísala con la lista de calidad, anota qué cambiaste y por qué, y guarda tus instrucciones como plantilla para tu equipo.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Docentes, coaches pedagógicos, jefes de departamento y directores de escuelas de Estados Unidos que planean clases o apoyan a docentes que lo hacen.",
+    startingPoint: "Pueden usar un modelo de instrucciones para docentes y conocen las reglas de privacidad estudiantil de los cursos 1 y 2. Planean las clases a mano, y quizá usaron la IA para sacar ideas, pero no para una clase completa y revisada.",
+    gap: "La IA puede reducir el tiempo de planeación, pero los planes rápidos suelen ser demasiado largos, estar desalineados o tener errores. Docentes y líderes necesitan un proceso de diseño inverso con IA, una revisión de calidad de la exactitud, la alineación y los sesgos, y una plantilla que el equipo pueda reutilizar.",
+    constraints: [
+      "Usa descripciones de clase inventadas; nunca pongas nombres de estudiantes, detalles del IEP o del plan 504, calificaciones ni otra información que los identifique en una herramienta que el distrito no ha aprobado",
+      "Los estándares salen de la fuente oficial del estado o del distrito, no de la IA",
+      "Las adaptaciones del IEP y del plan 504 se planean con colegas de educación especial y hay que darlas igual",
+      "Dispositivos: una computadora con internet y un asistente de IA",
+      "Tiempo: lecciones cortas que caben en una jornada de clases"
+    ],
+    prerequisites: "\"IA para líderes escolares y educativos 2: Herramientas de IA para educadores\"."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con un estándar copiado de la fuente oficial", action: "escribir un objetivo de \"Puedo\" y tres criterios de logro con ayuda de la IA", standard: "editados hasta que estén listos para el pizarrón, antes de pedir actividades" },
+    { id: "O2", condition: "Con tu objetivo", action: "escribir una instrucción reutilizable que le saque a la IA un borrador completo de la clase", standard: "incluyendo la duración de la clase, los conocimientos previos, los materiales y las secciones, con al menos dos preguntas de seguimiento" },
+    { id: "O3", condition: "Con un borrador de clase hecho por la IA", action: "revisarlo con la lista de calidad de cinco puntos y anotar tus cambios", standard: "corrigiendo todos los problemas encontrados" },
+    { id: "O4", condition: "Con una clase y un grupo descrito por sus necesidades", action: "planear apoyos para tres grupos: necesita más apoyo, en nivel y listo para más", standard: "con las adaptaciones del IEP y del plan 504 confirmadas con un colega de educación especial" },
+    { id: "O5", condition: "Con la unidad a la que pertenece tu clase", action: "preparar con IA el esquema de la unidad y ajustar su ritmo", standard: "añadiendo un día de repaso y tres errores comunes que conviene prever" },
+    { id: "O6", condition: "Para tu equipo o PLC", action: "convertir tus instrucciones de planeación y tu lista de revisión en una plantilla del equipo y acompañar a otros para usarla", standard: "registrando el tiempo ahorrado y los problemas de calidad" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Planear una clase con IA",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Empieza por el objetivo, no por la actividad",
           minutes: 5,
           goal: "Escribir un objetivo claro y criterios de logro antes de pedir actividades a la IA.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Objetivo y criterios de logro", bullets: ["“Puedo...” en palabras fáciles para los estudiantes", "Dos o tres cosas que los estudiantes mostrarán"] }
           ],
           tryIt: "Elige un estándar para una clase próxima. Cópialo de la fuente oficial y usa la IA para escribir un objetivo de “Puedo” y tres criterios de logro. Edítalos hasta que estén listos para el pizarrón.",
-          youCanNow: "empezar un plan de clase con IA a partir de un estándar real, un objetivo y criterios de logro."
+          youCanNow: "empezar un plan de clase con IA a partir de un estándar real, un objetivo y criterios de logro.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué son los criterios de logro?", options: ["Las calificaciones que tuvieron los estudiantes el año pasado", "Lo que los estudiantes mostrarán cuando logren el objetivo", "La lista de materiales", "Las metas del docente para el año"], answer: 1, why: "Los criterios de logro describen la evidencia de aprendizaje del objetivo." },
+            { objective: "O1", q: "La IA te da un código de estándar para tu objetivo. ¿Qué harías?", options: ["Usarlo, porque la IA conoce los estándares", "Pedirle a la IA que lo revise otra vez", "Copiar el estándar de la fuente oficial de tu estado o distrito en su lugar", "Dejar fuera el estándar"], answer: 2, why: "La IA puede citar mal o inventar estándares, así que salen de la fuente oficial." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Pedir la clase completa",
           minutes: 6,
           goal: "Obtener de la IA un borrador estructurado de plan de clase con una instrucción reutilizable.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Mejóralo", bullets: ["“Conecta el enganche con la vida de los estudiantes”", "“Agrega dos verificaciones de comprensión”"] }
           ],
           tryIt: "Usa el patrón de instrucción para obtener un borrador completo de clase para tu objetivo de la lección 1. Haz al menos dos seguimientos para mejorarlo.",
-          youCanNow: "obtener de la IA un borrador de clase útil y estructurado, y mejorarlo con seguimientos."
+          youCanNow: "obtener de la IA un borrador de clase útil y estructurado, y mejorarlo con seguimientos.",
+          quickCheck: [
+            { objective: "O2", q: "¿Cómo debes tratar un borrador de clase hecho por la IA?", options: ["Como el borrador de un colega rápido pero nuevo", "Como un plan terminado y listo para dar", "Como un plan aprobado por tu distrito", "Como algo que hay que esconder de los colegas"], answer: 0, why: "Los borradores de la IA son rápidos, pero necesitan tu criterio antes de usarlos." },
+            { objective: "O2", q: "La clase de la IA no tiene ninguna comprobación de comprensión. ¿Qué harías?", options: ["Darla tal como está", "Empezar un chat nuevo con otra herramienta", "Quitar las actividades de práctica", "Hacer una pregunta de seguimiento: \"Añade una comprobación rápida de comprensión después de la práctica guiada\""], answer: 3, why: "Las preguntas de seguimiento llenan los huecos del borrador sin empezar de nuevo." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Revisar el plan: exactitud, alineación y sesgo",
           minutes: 5,
           goal: "Revisar un plan de clase de IA con una lista de calidad de cinco puntos.",
@@ -75,17 +109,21 @@ module.exports = {
             { title: "Anota tus cambios", bullets: ["Muestra dónde fallan los planes de IA", "Desarrolla el criterio de tu equipo"] }
           ],
           tryIt: "Pasa tu borrador de clase por la revisión de cinco puntos. Corrige cada problema y haz una lista de los cambios que hiciste.",
-          youCanNow: "revisar un plan de clase de IA en exactitud, alineación, nivel, equidad y factibilidad."
+          youCanNow: "revisar un plan de clase de IA en exactitud, alineación, nivel, equidad y factibilidad.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué significa la alineación en un plan de clase?", options: ["Que la clase está impresa con orden", "Que la clase sigue el orden del libro de texto", "Que los objetivos, las actividades y la evaluación coinciden", "Que la clase usa las herramientas más nuevas"], answer: 2, why: "Las clases alineadas practican y evalúan lo mismo que nombra el objetivo." },
+            { objective: "O3", q: "El plan de la IA mete cinco actividades en una clase de 45 minutos. ¿Qué cambiarías?", options: ["Recortarlo para que quepa en el tiempo, dejando las actividades que practican el objetivo", "Dejar las cinco y apurarte", "Añadir una actividad más", "Pedir a los estudiantes que terminen en casa"], answer: 0, why: "Demasiado contenido para el tiempo es el problema más común de los planes de la IA." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Planear una clase con IA",
         questions: [
-          { q: "En el diseño inverso, ¿qué va primero?", options: ["Una actividad divertida", "La hoja de trabajo", "Lo que los estudiantes deben aprender", "El mapa de asientos"], answer: 2, why: "Se planea desde la meta de aprendizaje." },
-          { q: "¿De dónde debe salir el texto del estándar?", options: ["De la fuente oficial de tu estado o distrito", "De lo que diga la IA", "De cualquier sitio web", "De la memoria"], answer: 0, why: "La IA puede citar mal o inventar estándares." },
-          { q: "¿Qué dato ayuda más en una instrucción para planear una clase?", options: ["Los nombres de los estudiantes con dificultades", "El teléfono del director", "Las calificaciones de los estudiantes con su nombre", "Duración de la clase, objetivo, conocimientos previos y materiales"], answer: 3, why: "El contexto mejora el plan sin datos privados." },
-          { q: "Una actividad de la IA es divertida pero no practica el objetivo. ¿Qué punto falla?", options: ["Exacto", "Alineado", "Factible", "Justo"], answer: 1, why: "Alineación significa que las actividades sirven al objetivo." },
-          { q: "¿Cuál es el problema más común de los planes de clase de IA?", options: ["Muy poco contenido", "Tiempos perfectos", "No tienen texto", "Demasiado contenido para el tiempo"], answer: 3, why: "La IA suele llenar de más el tiempo." }
+          { objective: "O1", q: "En el diseño inverso, ¿qué va primero?", options: ["Una actividad divertida", "La hoja de trabajo", "Lo que los estudiantes deben aprender", "El mapa de asientos"], answer: 2, why: "Se planea desde la meta de aprendizaje." },
+          { objective: "O1", q: "¿De dónde debe salir el texto del estándar?", options: ["De la fuente oficial de tu estado o distrito", "De lo que diga la IA", "De cualquier sitio web", "De la memoria"], answer: 0, why: "La IA puede citar mal o inventar estándares." },
+          { objective: "O2", q: "¿Qué dato ayuda más en una instrucción para planear una clase?", options: ["Los nombres de los estudiantes con dificultades", "El teléfono del director", "Las calificaciones de los estudiantes con su nombre", "Duración de la clase, objetivo, conocimientos previos y materiales"], answer: 3, why: "El contexto mejora el plan sin datos privados." },
+          { objective: "O3", q: "Una actividad de la IA es divertida pero no practica el objetivo. ¿Qué punto falla?", options: ["Exacto", "Alineado", "Factible", "Justo"], answer: 1, why: "Alineación significa que las actividades sirven al objetivo." },
+          { objective: "O3", q: "¿Cuál es el problema más común de los planes de clase de IA?", options: ["Muy poco contenido", "Tiempos perfectos", "No tienen texto", "Demasiado contenido para el tiempo"], answer: 3, why: "La IA suele llenar de más el tiempo." }
         ]
       }
     },
@@ -93,6 +131,7 @@ module.exports = {
       name: "Capítulo 2: Diferenciación, unidades y planeación en equipo",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Incluir la diferenciación",
           minutes: 6,
           goal: "Usar la IA para planear apoyos para quienes necesitan más ayuda y retos para quienes están listos para más.",
@@ -110,9 +149,14 @@ module.exports = {
             { title: "IEP y planes 504", bullets: ["Las adaptaciones obligatorias siguen vigentes", "Los apoyos de IA nunca las reemplazan"] }
           ],
           tryIt: "Agrega diferenciación a tu clase: pide a la IA tres caminos hacia el objetivo, revísalos y confirma qué adaptaciones del IEP o del plan 504 todavía debes planear con tu colega de educación especial.",
-          youCanNow: "planear apoyos y retos para distintos estudiantes con IA respetando las adaptaciones obligatorias."
+          youCanNow: "planear apoyos y retos para distintos estudiantes con IA respetando las adaptaciones obligatorias.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué es el andamiaje?", options: ["Darles trabajo extra a los estudiantes avanzados", "Apoyos como ejemplos resueltos e inicios de frase", "Evaluar a los estudiantes antes de una clase", "Sentar a los estudiantes en grupos"], answer: 1, why: "Los andamiajes ayudan a los estudiantes a llegar a la misma meta con apoyo." },
+            { objective: "O4", q: "La IA sugiere apoyos distintos de la adaptación del IEP de un estudiante. ¿Qué haces?", options: ["Usar los apoyos de la IA en su lugar", "Pedirle a la IA que decida", "Dejar los dos y enseñar como siempre", "Dar la adaptación del IEP y planear con tu colega de educación especial"], answer: 3, why: "Las adaptaciones del IEP y del plan 504 hay que darlas igual, sugiera lo que sugiera la IA." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "De la clase a la unidad",
           minutes: 5,
           goal: "Preparar con IA el esquema de una unidad y revisar su ritmo.",
@@ -129,9 +173,14 @@ module.exports = {
             { title: "Lluvia de ideas con IA", bullets: ["Concepciones erróneas comunes", "Proyectos ancla", "Preguntas que hacen pensar"] }
           ],
           tryIt: "Pide a la IA un esquema de diez días de la unidad a la que pertenece tu clase. Ajusta el ritmo, agrega un día de repaso y anota tres concepciones erróneas que debes prever.",
-          youCanNow: "preparar el esquema de una unidad con IA y ajustar su ritmo."
+          youCanNow: "preparar el esquema de una unidad con IA y ajustar su ritmo.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué debe incluir una instrucción para el esquema de una unidad?", options: ["Los estándares, el número de días y los huecos del calendario", "Los nombres y las calificaciones de los estudiantes", "Solo el título de la unidad", "El sueldo del docente"], answer: 0, why: "Los días y los huecos del calendario permiten que la IA proponga un ritmo realista." },
+            { objective: "O5", q: "El esquema de la IA cubre la unidad en diez días sin ningún repaso. ¿Qué harías?", options: ["Aceptarlo tal como está", "Añadir tres unidades más", "Ajustar el ritmo y añadir un día de repaso", "Quitar la evaluación"], answer: 2, why: "El ritmo es lo primero que hay que revisar, y muchas veces falta el tiempo de repaso." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Acompañar a equipos para planear con IA",
           minutes: 6,
           goal: "Convertir tu proceso de planeación en una plantilla y acompañar a un equipo para usarla.",
@@ -148,17 +197,21 @@ module.exports = {
             { title: "Expectativas claras", bullets: ["Los docentes responden por lo que enseñan", "Herramientas aprobadas, sin datos de estudiantes", "Registra el tiempo ahorrado y la calidad"] }
           ],
           tryIt: "Tarea final: termina tu plan de clase completo (objetivo, criterios de logro, enganche, práctica guiada e independiente, tres grupos, boleto de salida con respuestas), revísalo con la lista de cinco puntos, anota tus cambios y guarda tus cuatro instrucciones y la lista como plantilla del equipo.",
-          youCanNow: "planear clases con IA con un alto nivel de calidad y ayudar a un equipo a hacer lo mismo."
+          youCanNow: "planear clases con IA con un alto nivel de calidad y ayudar a un equipo a hacer lo mismo.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué debe incluir una plantilla de planeación del equipo?", options: ["Solo la clase final", "Las instrucciones y la lista de calidad", "Una lista de herramientas prohibidas", "La contraseña de la herramienta de IA"], answer: 1, why: "Las instrucciones más la lista de revisión permiten que otros repitan el proceso y las revisiones." },
+            { objective: "O6", q: "Quieres saber si planear con IA está ayudando a tu equipo. ¿Qué registras?", options: ["Cuántas instrucciones escribe cada docente", "Qué herramienta de IA es la más nueva", "Nada; preguntas una vez al año", "El tiempo ahorrado y los problemas de calidad encontrados"], answer: 3, why: "El tiempo ahorrado y los problemas de calidad muestran si el proceso funciona." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Diferenciación, unidades y planeación en equipo",
         questions: [
-          { q: "¿Cómo debes describir los grupos de estudiantes en una instrucción?", options: ["Por nombre", "Por calificación y nombre", "Por necesidad, como “necesita más apoyo con problemas de varios pasos”", "Por el ingreso de la familia"], answer: 2, why: "Describe necesidades sin identificar a los estudiantes." },
-          { q: "El IEP de un estudiante indica una adaptación. La IA sugirió apoyos distintos. ¿Qué aplica?", options: ["La adaptación del IEP debe darse de todos modos", "Los apoyos de la IA reemplazan el IEP", "Ninguno", "Pedir a la IA que decida"], answer: 0, why: "Las sugerencias de la IA no reemplazan las adaptaciones obligatorias." },
-          { q: "¿Qué es lo primero que debes revisar en el esquema de unidad de la IA?", options: ["El tipo de letra", "El ritmo", "El título", "Los colores"], answer: 1, why: "La IA suele meter demasiado." },
-          { q: "En una PLC, ¿por qué las parejas revisan los planes de IA del otro?", options: ["Para formar un criterio compartido sobre dónde falla la IA", "Para calificar a los docentes", "Para no planear", "Para usar más IA"], answer: 0, why: "Conversar sobre los errores desarrolla el criterio del equipo." },
-          { q: "¿Quién es responsable de una clase con ayuda de IA que se da en el aula?", options: ["La empresa de IA", "Nadie", "Los estudiantes", "El docente"], answer: 3, why: "Los docentes siguen siendo responsables de lo que enseñan." }
+          { objective: "O4", q: "¿Cómo debes describir los grupos de estudiantes en una instrucción?", options: ["Por nombre", "Por calificación y nombre", "Por necesidad, como “necesita más apoyo con problemas de varios pasos”", "Por el ingreso de la familia"], answer: 2, why: "Describe necesidades sin identificar a los estudiantes." },
+          { objective: "O4", q: "El IEP de un estudiante indica una adaptación. La IA sugirió apoyos distintos. ¿Qué aplica?", options: ["La adaptación del IEP debe darse de todos modos", "Los apoyos de la IA reemplazan el IEP", "Ninguno", "Pedir a la IA que decida"], answer: 0, why: "Las sugerencias de la IA no reemplazan las adaptaciones obligatorias." },
+          { objective: "O5", q: "¿Qué es lo primero que debes revisar en el esquema de unidad de la IA?", options: ["El tipo de letra", "El ritmo", "El título", "Los colores"], answer: 1, why: "La IA suele meter demasiado." },
+          { objective: "O6", q: "En una PLC, ¿por qué las parejas revisan los planes de IA del otro?", options: ["Para formar un criterio compartido sobre dónde falla la IA", "Para calificar a los docentes", "Para no planear", "Para usar más IA"], answer: 0, why: "Conversar sobre los errores desarrolla el criterio del equipo." },
+          { objective: "O6", q: "¿Quién es responsable de una clase con ayuda de IA que se da en el aula?", options: ["La empresa de IA", "Nadie", "Los estudiantes", "El docente"], answer: 3, why: "Los docentes siguen siendo responsables de lo que enseñan." }
         ]
       }
     }
@@ -166,26 +219,107 @@ module.exports = {
   quiz: {
     title: "Examen final: IA para líderes escolares y educativos 3: IA para planear clases",
     questions: [
-      { q: "¿En qué orden planea el diseño inverso?", options: ["Actividades, meta, evidencia", "Meta, evidencia, actividades", "Hoja de trabajo, examen, meta", "Evidencia, actividades, meta"], answer: 1, why: "Se empieza por la meta." },
-      { q: "Los criterios de logro describen:", options: ["La distribución del salón", "El sueldo del docente", "Lo que los estudiantes mostrarán al cumplir el objetivo", "El horario de timbres"], answer: 2, why: "Hacen visible el objetivo." },
-      { q: "Un objetivo de “Puedo” es:", options: ["Una calificación", "Un eslogan", "El objetivo en palabras fáciles para los estudiantes", "Una regla"], answer: 2, why: "Los estudiantes deben entender la meta." },
-      { q: "¿Por qué no tomar los códigos de estándares de la IA?", options: ["La IA puede citarlos mal o inventarlos", "Son secretos", "La IA nunca conoce los estándares", "Son demasiado largos"], answer: 0, why: "Usa la fuente oficial." },
-      { q: "Una instrucción para una clase completa debe incluir:", options: ["Calificaciones con nombre", "Nombres de estudiantes", "Correos de los padres", "Duración, objetivo, conocimientos previos, materiales, secciones"], answer: 3, why: "Contexto, no datos privados." },
-      { q: "Un borrador de clase de la IA debe tratarse como:", options: ["El plan final", "El borrador de un colega rápido pero nuevo", "Un documento legal", "El trabajo de un estudiante"], answer: 1, why: "Los docentes lo revisan y editan." },
-      { q: "Una verificación de comprensión es:", options: ["Una reunión con padres", "Un cheque bancario", "Una boleta de calificaciones", "Una forma rápida de ver si los estudiantes van entendiendo"], answer: 3, why: "Detecta la confusión a tiempo." },
-      { q: "¿Qué forma parte de la revisión de cinco puntos?", options: ["El más largo", "El más colorido", "Justo e inclusivo", "El más popular"], answer: 2, why: "La equidad y el acceso son parte de la calidad." },
-      { q: "Alineación significa:", options: ["Objetivos, actividades y evaluación coinciden", "Pupitres en filas", "El plan es largo", "La IA estuvo de acuerdo"], answer: 0, why: "Todo sirve al objetivo." },
-      { q: "¿Por qué anotar lo que cambiaste en un plan de IA?", options: ["Lo exige la ley", "Muestra dónde fallan los planes de IA", "Alarga el plan", "Para culpar a la IA"], answer: 1, why: "Desarrolla el criterio con el tiempo." },
-      { q: "Diferenciación significa:", options: ["Ajustar la enseñanza para que distintos estudiantes alcancen la misma meta", "Dar calificaciones distintas", "Separar grupos para siempre", "Usar herramientas de IA distintas"], answer: 0, why: "La misma meta, caminos distintos." },
-      { q: "El andamiaje incluye:", options: ["Castigos", "Quitar todo apoyo", "Un examen más difícil", "Ejemplos resueltos e inicios de oración"], answer: 3, why: "Los apoyos temporales ayudan a alcanzar la meta." },
-      { q: "¿Qué significa UDL (DUA)?", options: ["Unidad diaria de lección", "Diseño Universal para el Aprendizaje", "Nivel de división superior", "Inicio de sesión unificado del distrito"], answer: 1, why: "Planear para una gran variedad de estudiantes desde el inicio." },
-      { q: "Una tarea de extensión es para estudiantes que:", options: ["Necesitan más apoyo", "Están ausentes", "Están listos para un reto mayor", "Terminaron el año"], answer: 2, why: "Profundiza el aprendizaje de quienes están listos." },
-      { q: "Las adaptaciones del IEP y del plan 504:", options: ["Se ponen en cualquier herramienta de IA", "Pueden reemplazarse con apoyos de IA", "Deben darse siempre, sugiera lo que sugiera la IA", "Son opcionales"], answer: 2, why: "Son obligatorias." },
-      { q: "Una instrucción para el esquema de una unidad debe incluir:", options: ["Estándares, número de días y huecos del calendario", "Nombres de estudiantes", "Sueldos del personal", "Nada"], answer: 0, why: "El ritmo depende del tiempo real disponible." },
-      { q: "En la planeación de unidades, la IA es especialmente útil para:", options: ["Aprobar herramientas", "Decidir calificaciones", "Escribir los IEP", "Pensar en concepciones erróneas y proyectos ancla"], answer: 3, why: "La lluvia de ideas es su fuerte; tú decides qué encaja." },
-      { q: "Una plantilla de planeación debe incluir:", options: ["Datos de estudiantes", "Las instrucciones y la lista de calidad", "Contraseñas", "Nada"], answer: 1, why: "Hace repetibles las buenas prácticas." },
-      { q: "¿Qué significa PLC?", options: ["Consejo de liderazgo del director", "Tarjeta de biblioteca pública", "Calendario de planeación de clases", "Comunidad profesional de aprendizaje"], answer: 3, why: "Docentes que mejoran juntos la enseñanza." },
-      { q: "Para saber si planear con IA está funcionando, los líderes deben registrar:", options: ["Nada", "Solo el tiempo ahorrado", "El tiempo ahorrado y los problemas de calidad", "El número de instrucciones escritas"], answer: 2, why: "La rapidez sin calidad no es éxito." }
+      { objective: "O1", q: "¿En qué orden planea el diseño inverso?", options: ["Actividades, meta, evidencia", "Meta, evidencia, actividades", "Hoja de trabajo, examen, meta", "Evidencia, actividades, meta"], answer: 1, why: "Se empieza por la meta." },
+      { objective: "O1", q: "Los criterios de logro describen:", options: ["La distribución del salón", "El sueldo del docente", "Lo que los estudiantes mostrarán al cumplir el objetivo", "El horario de timbres"], answer: 2, why: "Hacen visible el objetivo." },
+      { objective: "O1", q: "Un objetivo de “Puedo” es:", options: ["Una calificación", "Un eslogan", "El objetivo en palabras fáciles para los estudiantes", "Una regla"], answer: 2, why: "Los estudiantes deben entender la meta." },
+      { objective: "O1", q: "¿Por qué no tomar los códigos de estándares de la IA?", options: ["La IA puede citarlos mal o inventarlos", "Son secretos", "La IA nunca conoce los estándares", "Son demasiado largos"], answer: 0, why: "Usa la fuente oficial." },
+      { objective: "O2", q: "Una instrucción para una clase completa debe incluir:", options: ["Calificaciones con nombre", "Nombres de estudiantes", "Correos de los padres", "Duración, objetivo, conocimientos previos, materiales, secciones"], answer: 3, why: "Contexto, no datos privados." },
+      { objective: "O2", q: "Un borrador de clase de la IA debe tratarse como:", options: ["El plan final", "El borrador de un colega rápido pero nuevo", "Un documento legal", "El trabajo de un estudiante"], answer: 1, why: "Los docentes lo revisan y editan." },
+      { objective: "O2", q: "Una verificación de comprensión es:", options: ["Una reunión con padres", "Un cheque bancario", "Una boleta de calificaciones", "Una forma rápida de ver si los estudiantes van entendiendo"], answer: 3, why: "Detecta la confusión a tiempo." },
+      { objective: "O3", q: "¿Qué forma parte de la revisión de cinco puntos?", options: ["El más largo", "El más colorido", "Justo e inclusivo", "El más popular"], answer: 2, why: "La equidad y el acceso son parte de la calidad." },
+      { objective: "O3", q: "Alineación significa:", options: ["Objetivos, actividades y evaluación coinciden", "Pupitres en filas", "El plan es largo", "La IA estuvo de acuerdo"], answer: 0, why: "Todo sirve al objetivo." },
+      { objective: "O3", q: "¿Por qué anotar lo que cambiaste en un plan de IA?", options: ["Lo exige la ley", "Muestra dónde fallan los planes de IA", "Alarga el plan", "Para culpar a la IA"], answer: 1, why: "Desarrolla el criterio con el tiempo." },
+      { objective: "O4", q: "Diferenciación significa:", options: ["Ajustar la enseñanza para que distintos estudiantes alcancen la misma meta", "Dar calificaciones distintas", "Separar grupos para siempre", "Usar herramientas de IA distintas"], answer: 0, why: "La misma meta, caminos distintos." },
+      { objective: "O4", q: "El andamiaje incluye:", options: ["Castigos", "Quitar todo apoyo", "Un examen más difícil", "Ejemplos resueltos e inicios de oración"], answer: 3, why: "Los apoyos temporales ayudan a alcanzar la meta." },
+      { objective: "O4", q: "¿Qué significa UDL (DUA)?", options: ["Unidad diaria de lección", "Diseño Universal para el Aprendizaje", "Nivel de división superior", "Inicio de sesión unificado del distrito"], answer: 1, why: "Planear para una gran variedad de estudiantes desde el inicio." },
+      { objective: "O4", q: "Una tarea de extensión es para estudiantes que:", options: ["Necesitan más apoyo", "Están ausentes", "Están listos para un reto mayor", "Terminaron el año"], answer: 2, why: "Profundiza el aprendizaje de quienes están listos." },
+      { objective: "O4", q: "Las adaptaciones del IEP y del plan 504:", options: ["Se ponen en cualquier herramienta de IA", "Pueden reemplazarse con apoyos de IA", "Deben darse siempre, sugiera lo que sugiera la IA", "Son opcionales"], answer: 2, why: "Son obligatorias." },
+      { objective: "O5", q: "Una instrucción para el esquema de una unidad debe incluir:", options: ["Estándares, número de días y huecos del calendario", "Nombres de estudiantes", "Sueldos del personal", "Nada"], answer: 0, why: "El ritmo depende del tiempo real disponible." },
+      { objective: "O5", q: "En la planeación de unidades, la IA es especialmente útil para:", options: ["Aprobar herramientas", "Decidir calificaciones", "Escribir los IEP", "Pensar en concepciones erróneas y proyectos ancla"], answer: 3, why: "La lluvia de ideas es su fuerte; tú decides qué encaja." },
+      { objective: "O6", q: "Una plantilla de planeación debe incluir:", options: ["Datos de estudiantes", "Las instrucciones y la lista de calidad", "Contraseñas", "Nada"], answer: 1, why: "Hace repetibles las buenas prácticas." },
+      { objective: "O6", q: "¿Qué significa PLC?", options: ["Consejo de liderazgo del director", "Tarjeta de biblioteca pública", "Calendario de planeación de clases", "Comunidad profesional de aprendizaje"], answer: 3, why: "Docentes que mejoran juntos la enseñanza." },
+      { objective: "O6", q: "Para saber si planear con IA está funcionando, los líderes deben registrar:", options: ["Nada", "Solo el tiempo ahorrado", "El tiempo ahorrado y los problemas de calidad", "El número de instrucciones escritas"], answer: 2, why: "La rapidez sin calidad no es éxito." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      1,
+      3,
+      4,
+      7,
+      8,
+      10,
+      14,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en todas las filas. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Objetivo y criterios de logro",
+        objective: "O1",
+        notYet: "No hay objetivo, o el estándar no salió de una fuente oficial.",
+        meets: "Un objetivo y criterios de logro a partir de un estándar copiado de la fuente oficial.",
+        exceeds: "El objetivo está escrito como un \"Puedo\" claro que los estudiantes entienden."
+      },
+      {
+        name: "Clase completa",
+        objective: "O2",
+        notYet: "Falta el gancho, la práctica guiada o independiente, o el boleto de salida.",
+        meets: "Tiene un gancho, práctica guiada e independiente, y un boleto de salida de tres preguntas con respuestas.",
+        exceeds: "Incluye una comprobación de comprensión y cabe en la duración de la clase."
+      },
+      {
+        name: "Tres grupos",
+        objective: "O4",
+        notYet: "Faltan los apoyos de uno o más grupos.",
+        meets: "Apoyos para necesita más apoyo, en nivel y listo para más.",
+        exceeds: "Anota qué adaptaciones del IEP o del plan 504 todavía hay que planear con un colega de educación especial."
+      },
+      {
+        name: "Calidad revisada",
+        objective: "O3",
+        notYet: "No se revisó, o no se anotaron los cambios.",
+        meets: "Revisado con la lista de cinco puntos, con cada cambio y su razón anotados.",
+        exceeds: "El registro muestra patrones de dónde se equivocó el plan de la IA."
+      },
+      {
+        name: "Plantilla del equipo",
+        objective: "O6",
+        notYet: "Las instrucciones no se guardaron, o no hay lista de revisión.",
+        meets: "Las instrucciones y la lista de revisión guardadas como plantilla para el equipo.",
+        exceeds: "Un colega ya usó la plantilla para una clase suya."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Educadores que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Equipos que usan la plantilla de planeación compartida en un plazo de 30 días (encuesta de seguimiento)",
+      "Docentes que dicen ahorrar tiempo de planeación sin que baje la calidad de las clases (encuesta de seguimiento)",
+      "Líderes que pasan al curso 4 de IA para líderes escolares y educativos"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Una computadora con internet y un asistente de IA, de preferencia uno aprobado por el distrito",
+      "Un estándar próximo copiado de la fuente oficial del estado o del distrito",
+      "La descripción de una clase inventada",
+      "La lista de calidad de cinco puntos",
+      "Unos 60 minutos en total: lecciones, práctica, comprobaciones y la tarea final"
+    ],
+    facilitatorNotes: [
+      "Hagan juntos la prueba inicial y luego planeen una clase en grupo antes de que cada docente planee la suya.",
+      "Usa solo descripciones de clase inventadas; nunca nombres reales de estudiantes, detalles del IEP o del plan 504, ni calificaciones.",
+      "En una PLC, pide a las parejas que revisen los planes de IA del otro con la lista de cinco puntos.",
+      "Invita a un colega de educación especial a la sesión de diferenciación.",
+      "Califica la tarea final con la rúbrica y pide como evidencia el registro de cambios."
     ]
   }
 };

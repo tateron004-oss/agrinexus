@@ -16,11 +16,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes, avec une tâche \"Essayez maintenant\" que vous pouvez utiliser pour une vraie mission bénévole. Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin. Pour les questions juridiques, d'assurance et de fiscalité, consultez un professionnel et les sources officielles citées dans les leçons. (Si vous voulez utiliser l'IA pour trouver des bénévoles, voyez le cours sur l'IA pour recruter des bénévoles.)"
   ],
   finalTask: "Préparez un kit bénévole pour une vraie mission : une fiche de mission, un message de recrutement et les étapes de vérification (avec une vérification des antécédents si la mission concerne des enfants ou des adultes vulnérables), le plan d'une séance d'accueil de 30 minutes, un planning mensuel avec un responsable nommé, deux idées pour remercier, et une simple feuille de présence ou un tableur qui suit les heures.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des coordinateurs de bénévoles, du personnel d'associations, des responsables d'églises et de ministères, des associations de parents d'élèves, des ligues sportives de jeunes, des banques alimentaires et toute personne dont le travail repose sur des bénévoles.",
+    startingPoint: "Ils ont déjà recruté des bénévoles ou travaillé avec eux de façon informelle, souvent par le bouche-à-oreille. Peu utilisent des fiches de mission écrites, une vérification adaptée au risque, une séance d'accueil fixe ou un système pour suivre les heures.",
+    gap: "Les bénévoles donnent leur temps gratuitement : une mauvaise organisation, l'absence de formation ou de remerciements les fait partir, et une vérification trop légère peut mettre en danger des enfants et des adultes vulnérables. Un kit bénévole complet aide les organisations à garder de bons bénévoles, à protéger les personnes qu'elles servent et à montrer leur impact aux financeurs.",
+    constraints: [
+      "Les coordinateurs sont souvent à temps partiel ou eux-mêmes bénévoles ; des leçons de 5 minutes",
+      "Des outils gratuits ou peu coûteux : du papier, un tableur, un formulaire d'inscription gratuit",
+      "Les règles sur la vérification des antécédents changent selon l'État américain, le programme et l'assureur ; les apprenants vérifient auprès de leur assureur et d'un avocat",
+      "Vie privée : les dossiers des bénévoles et des bénéficiaires restent confidentiels ; pas de noms ni de photos de bénéficiaires sans accord",
+      "Pas de conseil fiscal ; les bénévoles sont orientés vers la IRS Publication 526 et un professionnel de la fiscalité"
+    ],
+    prerequisites: "Aucun."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Pour une mission bénévole dont votre organisation a besoin", action: "rédiger une fiche de mission qui dit l'impact, les tâches, le temps demandé, les compétences et à qui le bénévole rend compte", standard: "avec les cinq parties et une première phrase sur l'impact" },
+    { id: "O2", condition: "À partir d'une mission bénévole et des personnes qu'elle sert", action: "écrire un message de recrutement et choisir les étapes de vérification adaptées au risque de la mission", standard: "avec des références et une vérification des antécédents faite avec accord écrit pour toute mission auprès d'enfants ou d'adultes vulnérables" },
+    { id: "O3", condition: "Pour les nouveaux bénévoles de votre mission", action: "préparer une séance d'accueil de 30 minutes et former à la mission en quatre étapes : expliquer, montrer, essayer et donner un retour", standard: "en couvrant la sécurité, la confidentialité, la feuille de présence et la façon d'annuler" },
+    { id: "O4", condition: "Avec un tableur, un agenda partagé ou du papier", action: "construire un planning d'un mois avec un responsable de créneau nommé, des remplaçants et un message de rappel", standard: "avec chaque créneau couvert et un responsable nommé pour chacun" },
+    { id: "O5", condition: "Pour les bénévoles que vous encadrez", action: "prévoir des remerciements précis et repérer les raisons courantes pour lesquelles les bénévoles partent", standard: "avec un petit remerciement et un moment plus important" },
+    { id: "O6", condition: "Pour une mission bénévole", action: "mettre en place une feuille de présence ou un tableur qui suit les heures de bénévolat, et utiliser les totaux", standard: "en notant le nom, la date, le début, la fin, les heures et la mission, tout en gardant les dossiers confidentiels" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Faire venir des bénévoles",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Rédiger une fiche de mission bénévole",
           minutes: 5,
           goal: "Rédiger une fiche de mission claire et engageante pour un poste bénévole.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Une mission, une fiche", bullets: ["Accueil, tri, conduite, saisie de données", "Tâches différentes, besoins différents"] }
           ],
           tryIt: "Choisissez une mission bénévole dont votre organisation a besoin. Rédigez sa fiche en utilisant les cinq parties. Commencez par une phrase sur l'impact.",
-          youCanNow: "rédiger une fiche de mission claire qui dit aux bénévoles exactement ce qu'on attend d'eux et pourquoi c'est important."
+          youCanNow: "rédiger une fiche de mission claire qui dit aux bénévoles exactement ce qu'on attend d'eux et pourquoi c'est important.",
+          quickCheck: [
+            { objective: "O1", q: "Qu'est-ce qu'une fiche de mission bénévole ?", options: ["Une carte de remerciement pour les bénévoles", "Une courte fiche de poste qui dit ce qu'est la mission, pourquoi elle compte et ce qui est demandé", "Une feuille de présence", "Un formulaire de vérification des antécédents"], answer: 1, why: "Une fiche de mission dit aux bénévoles exactement ce qu'on attend d'eux, comme une courte fiche de poste." },
+            { objective: "O1", q: "Votre fiche dit « Aider de temps en temps ». Qu'ajoutez-vous d'abord ?", options: ["Rien ; rester vague est plus sympathique", "La liste de toutes vos règles", "Le salaire du bénévole", "Quand et combien de temps, et l'impact de la mission"], answer: 3, why: "Les bénévoles ont besoin d'informations honnêtes sur le temps demandé et d'une raison pour laquelle la mission compte." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Recruter et vérifier les bénévoles",
           minutes: 6,
           goal: "Recruter des bénévoles pour une mission et choisir les bonnes étapes de vérification.",
@@ -57,9 +86,14 @@ module.exports = {
             { title: "Règles de sécurité", bullets: ["Aucun adulte seul avec un enfant hors de vue", "Signalez chaque inquiétude à une personne désignée"] }
           ],
           tryIt: "Pour la mission décrite dans la leçon 1, écrivez un court message de recrutement et listez trois endroits où vous le partagerez. Puis listez les étapes de vérification dont la mission a besoin et expliquez pourquoi, selon son risque.",
-          youCanNow: "recruter des bénévoles en personne et choisir des étapes de vérification adaptées au risque de chaque mission."
+          youCanNow: "recruter des bénévoles en personne et choisir des étapes de vérification adaptées au risque de chaque mission.",
+          quickCheck: [
+            { objective: "O2", q: "Que doit comprendre la vérification de chaque mission bénévole, même à faible risque ?", options: ["Un formulaire avec les coordonnées et un contact d'urgence, et une courte discussion", "Une vérification des antécédents pour tout le monde", "Aucune vérification", "Une vérification de solvabilité"], answer: 0, why: "Chaque mission demande un formulaire, un contact d'urgence et une courte discussion ; les missions plus à risque en demandent davantage." },
+            { objective: "O2", q: "Une nouvelle mission consiste à lire avec des personnes âgées dans une maison de retraite. Qu'ajoutez-vous ?", options: ["Rien de plus", "Un mot de remerciement plus long", "Des références et une vérification des antécédents avec accord écrit", "Une publication sur les réseaux sociaux à propos des résidents"], answer: 2, why: "Les missions auprès d'adultes vulnérables demandent de contacter des références et une vérification des antécédents faite avec accord." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Accueillir et former les bénévoles",
           minutes: 5,
           goal: "Préparer une courte séance d'accueil et une formation qui rendent les nouveaux bénévoles prêts et bien accueillis.",
@@ -77,17 +111,21 @@ module.exports = {
             { title: "Après le premier créneau", bullets: ["Associez-les à un parrain", "Demandez : \"Comment ça s'est passé ? Qu'est-ce qui n'était pas clair ?\""] }
           ],
           tryIt: "Écrivez le plan d'une séance d'accueil de 30 minutes pour votre mission, avec la durée de chaque partie. Puis écrivez la formation à la mission en quatre étapes : expliquer, montrer, essayer, retour.",
-          youCanNow: "accueillir et former les nouveaux bénévoles pour qu'ils soient en sécurité, sûrs d'eux et qu'ils aient envie de revenir."
+          youCanNow: "accueillir et former les nouveaux bénévoles pour qu'ils soient en sécurité, sûrs d'eux et qu'ils aient envie de revenir.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce que l'intégration ?", options: ["Seulement le premier e-mail que vous envoyez", "La fin de la mission d'un bénévole", "Tout ce qui se passe entre le « oui » et le moment où le bénévole se sent à l'aise dans sa mission", "Le comptage des heures de bénévolat"], answer: 2, why: "L'intégration comprend l'accueil, la séance d'accueil, la formation à la mission et un premier créneau chaleureux." },
+            { objective: "O3", q: "Un nouveau bénévole commence samedi. Qu'est-ce qui aide le plus lors de son premier créneau ?", options: ["Le mettre en binôme avec un bénévole expérimenté et faire le point avec lui ensuite", "Le laisser se débrouiller seul", "Lui donner la tâche la plus difficile", "Sauter la séance d'accueil pour gagner du temps"], answer: 0, why: "Un binôme lui donne quelqu'un à qui poser des questions, et le point après montre ce qui n'était pas clair." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Faire venir des bénévoles",
         questions: [
-          { q: "Quelle est la meilleure façon de commencer une fiche de mission bénévole ?", options: ["Par les règles", "Par l'impact de la mission", "Par la date limite", "Par la vérification des antécédents"], answer: 1, why: "Commencer par l'impact rend la mission engageante." },
-          { q: "Quelle est la raison la plus fréquente pour laquelle les gens commencent le bénévolat ?", options: ["Quelqu'un le leur a demandé", "Un panneau publicitaire", "Un formulaire fiscal", "Un e-mail au hasard"], answer: 0, why: "Une demande personnelle est le meilleur outil de recrutement." },
-          { q: "Un bénévole va donner du soutien scolaire à des enfants après l'école. Quelle vérification faut-il ?", options: ["Rien", "Seulement un nom", "Seulement un sourire à la porte", "Un formulaire, des références et une vérification des antécédents avec accord écrit"], answer: 3, why: "Les missions avec des enfants demandent la vérification la plus sérieuse." },
-          { q: "À qui demander les règles sur la vérification des antécédents de vos bénévoles ?", options: ["À un ami d'un bénévole", "À personne", "À votre assureur et à un avocat", "À une publication sur les réseaux sociaux"], answer: 2, why: "Les règles changent selon l'État, et les assureurs peuvent avoir des exigences." },
-          { q: "Qu'est-ce qui a sa place dans une séance d'accueil des bénévoles ?", options: ["Les règles de confidentialité sur les personnes servies", "L'adresse des bénéficiaires", "Les salaires du personnel", "Des ragots sur les donateurs"], answer: 0, why: "Les bénévoles doivent savoir protéger la vie privée des personnes." }
+          { objective: "O1", q: "Quelle est la meilleure façon de commencer une fiche de mission bénévole ?", options: ["Par les règles", "Par l'impact de la mission", "Par la date limite", "Par la vérification des antécédents"], answer: 1, why: "Commencer par l'impact rend la mission engageante." },
+          { objective: "O2", q: "Quelle est la raison la plus fréquente pour laquelle les gens commencent le bénévolat ?", options: ["Quelqu'un le leur a demandé", "Un panneau publicitaire", "Un formulaire fiscal", "Un e-mail au hasard"], answer: 0, why: "Une demande personnelle est le meilleur outil de recrutement." },
+          { objective: "O2", q: "Un bénévole va donner du soutien scolaire à des enfants après l'école. Quelle vérification faut-il ?", options: ["Rien", "Seulement un nom", "Seulement un sourire à la porte", "Un formulaire, des références et une vérification des antécédents avec accord écrit"], answer: 3, why: "Les missions avec des enfants demandent la vérification la plus sérieuse." },
+          { objective: "O2", q: "À qui demander les règles sur la vérification des antécédents de vos bénévoles ?", options: ["À un ami d'un bénévole", "À personne", "À votre assureur et à un avocat", "À une publication sur les réseaux sociaux"], answer: 2, why: "Les règles changent selon l'État, et les assureurs peuvent avoir des exigences." },
+          { objective: "O3", q: "Qu'est-ce qui a sa place dans une séance d'accueil des bénévoles ?", options: ["Les règles de confidentialité sur les personnes servies", "L'adresse des bénéficiaires", "Les salaires du personnel", "Des ragots sur les donateurs"], answer: 0, why: "Les bénévoles doivent savoir protéger la vie privée des personnes." }
         ]
       }
     },
@@ -95,6 +133,7 @@ module.exports = {
       name: "Chapitre 2 : Garder les bénévoles",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Planifier les créneaux et encadrer les bénévoles",
           minutes: 5,
           goal: "Créer un planning de bénévoles avec des remplaçants et encadrer les bénévoles avec bienveillance.",
@@ -111,9 +150,14 @@ module.exports = {
             { title: "Encadrer les bénévoles", bullets: ["Tâches claires et points réguliers", "Retours rapides et bienveillants", "Ça ne marche pas ? Parlez en privé ; essayez une autre mission"] }
           ],
           tryIt: "Faites un planning d'un mois pour votre mission, dans un tableur ou sur papier : dates, horaires des créneaux, noms des bénévoles, un responsable de créneau nommé et deux noms de remplaçants. Écrivez le message de rappel que vous enverrez.",
-          youCanNow: "créer un planning de bénévoles avec des rappels et des remplaçants, et encadrer les bénévoles de façon claire et bienveillante."
+          youCanNow: "créer un planning de bénévoles avec des rappels et des remplaçants, et encadrer les bénévoles de façon claire et bienveillante.",
+          quickCheck: [
+            { objective: "O4", q: "Qu'est-ce qu'une liste de remplaçants ?", options: ["Une copie du budget", "La liste des bénévoles qui ont arrêté", "Les anciens plannings", "Les personnes à appeler quand quelqu'un annule un créneau important"], answer: 3, why: "Une liste de remplaçants permet de couvrir les créneaux importants quand les plans changent." },
+            { objective: "O4", q: "Un bénévole fait sans cesse des erreurs dans sa mission. Que faites-vous d'abord ?", options: ["Vous en parlez à toute l'équipe", "Vous lui parlez en privé, de façon précise, et lui demandez ce qui l'aiderait", "Vous arrêtez de le mettre au planning sans dire pourquoi", "Vous l'ignorez"], answer: 1, why: "Réglez les problèmes en privé et avec bienveillance ; une autre mission lui conviendrait peut-être mieux." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Reconnaître et fidéliser les bénévoles",
           minutes: 5,
           goal: "Prévoir des remerciements adaptés à vos bénévoles et repérer pourquoi les bénévoles partent.",
@@ -130,9 +174,14 @@ module.exports = {
             { title: "Aidez-les à évoluer", bullets: ["Demandez ce qu'ils cherchent", "Proposez des missions de formateur et de responsable", "Demandez à ceux qui partent pourquoi"] }
           ],
           tryIt: "Écrivez deux idées de remerciement pour vos bénévoles : un petit merci que vous pouvez donner cette semaine et un plus grand moment pour cette année. Puis écrivez trois questions que vous poserez à un bénévole sur ce qu'il attend de sa mission.",
-          youCanNow: "remercier les bénévoles d'une façon qui compte pour eux et agir sur les raisons qui les font partir."
+          youCanNow: "remercier les bénévoles d'une façon qui compte pour eux et agir sur les raisons qui les font partir.",
+          quickCheck: [
+            { objective: "O5", q: "Laquelle est une raison courante pour laquelle les bénévoles ne reviennent plus ?", options: ["Ils se sont sentis inutiles ou n'ont pas été remerciés", "Ils ont été remerciés trop souvent", "Les créneaux étaient bien organisés", "Ils avaient un binôme"], answer: 0, why: "Se sentir inutile, mal organisé, mal formé ou pas remercié fait souvent partir les bénévoles." },
+            { objective: "O5", q: "Un bénévole fidèle dit qu'il veut développer ses compétences de leader. Que lui proposez-vous ?", options: ["Rien ; les bénévoles n'évoluent pas", "Plus de la même tâche", "L'occasion de diriger un créneau ou de former de nouveaux bénévoles", "Une mission plus petite"], answer: 2, why: "Des missions pour progresser, comme diriger un créneau, aident à garder les bénévoles qui veulent plus." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Suivre les heures de bénévolat",
           minutes: 5,
           goal: "Mettre en place un système simple pour suivre les heures de bénévolat et utiliser les chiffres.",
@@ -151,17 +200,21 @@ module.exports = {
           ],
           sources: [{ name: "IRS, Publication 526 : dons de bienfaisance (en anglais)", url: "https://www.irs.gov/publications/p526" }],
           tryIt: "Tâche finale : préparez votre kit bénévole pour une mission : la fiche de mission, le message de recrutement et les étapes de vérification, le plan d'une séance d'accueil de 30 minutes, un planning mensuel avec un responsable de créneau, deux idées de remerciement, et une feuille de présence ou un tableur avec des colonnes pour le nom, la date, l'arrivée, le départ, les heures et la mission.",
-          youCanNow: "suivre simplement les heures de bénévolat et utiliser les chiffres pour les rapports, la planification, les remerciements et les attestations d'heures."
+          youCanNow: "suivre simplement les heures de bénévolat et utiliser les chiffres pour les rapports, la planification, les remerciements et les attestations d'heures.",
+          quickCheck: [
+            { objective: "O6", q: "Pourquoi suivre les heures de bénévolat ?", options: ["Pour faire payer les bénévoles", "Pour montrer l'impact dans les rapports de subvention et au conseil, et pour planifier les besoins en personnes", "Pour publier les informations des bénévoles", "Parce que les bénévoles sont payés à l'heure"], answer: 1, why: "Les totaux d'heures montrent l'impact, aident à planifier et aident à remercier les bénévoles fidèles." },
+            { objective: "O6", q: "Un bénévole demande s'il peut déduire la valeur de son temps de ses impôts. Que faites-vous ?", options: ["Vous dites oui, à n'importe quel taux horaire", "Vous faites sa déclaration à sa place", "Vous ignorez la question", "Vous l'orientez vers la IRS Publication 526 et un professionnel de la fiscalité"], answer: 3, why: "La leçon dit de ne pas donner de conseil fiscal ; orientez les bénévoles vers la IRS Publication 526 et un professionnel de la fiscalité." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Garder les bénévoles",
         questions: [
-          { q: "Des bénévoles manquent souvent leurs créneaux sans vous prévenir. Qu'est-ce qui aide en premier ?", options: ["Les exclure tous", "Arrêter de faire un planning", "Envoyer des rappels et rendre l'annulation facile", "Doubler la durée des créneaux"], answer: 2, why: "Les rappels et une annulation facile réduisent les absences." },
-          { q: "Qui faut-il nommer pour chaque créneau ?", options: ["Un donateur", "Un responsable de créneau", "Le bénévole le plus récent", "Personne"], answer: 1, why: "Un responsable nommé accueille, guide et règle les problèmes." },
-          { q: "Quel remerciement a le plus de chances de compter pour un bénévole ?", options: ["\"Merci à tous.\"", "Pas de merci ; c'est du bénévolat", "Un e-mail général une fois par an", "\"Vos créneaux du samedi nous ont aidés à préparer 600 colis ce mois-ci.\""], answer: 3, why: "Un merci précis qui nomme l'impact compte le plus." },
-          { q: "Un adolescent a besoin d'une attestation de 40 heures de bénévolat pour l'école. Vous devez :", options: ["Utiliser vos relevés d'heures et signer une lettre qui les confirme", "Refuser", "Deviner les heures", "Lui dire de demander à l'IRS"], answer: 0, why: "Un bon suivi permet de confirmer les heures avec exactitude." },
-          { q: "Selon l'IRS, un bénévole peut-il déduire la valeur de son temps ?", options: ["Oui, au taux qu'il choisit", "Oui, au salaire minimum", "Non, la valeur du temps ou des services n'est pas déductible", "Seulement le week-end"], answer: 2, why: "La Publication 526 de l'IRS dit que la valeur de votre temps n'est pas déductible." }
+          { objective: "O4", q: "Des bénévoles manquent souvent leurs créneaux sans vous prévenir. Qu'est-ce qui aide en premier ?", options: ["Les exclure tous", "Arrêter de faire un planning", "Envoyer des rappels et rendre l'annulation facile", "Doubler la durée des créneaux"], answer: 2, why: "Les rappels et une annulation facile réduisent les absences." },
+          { objective: "O4", q: "Qui faut-il nommer pour chaque créneau ?", options: ["Un donateur", "Un responsable de créneau", "Le bénévole le plus récent", "Personne"], answer: 1, why: "Un responsable nommé accueille, guide et règle les problèmes." },
+          { objective: "O5", q: "Quel remerciement a le plus de chances de compter pour un bénévole ?", options: ["\"Merci à tous.\"", "Pas de merci ; c'est du bénévolat", "Un e-mail général une fois par an", "\"Vos créneaux du samedi nous ont aidés à préparer 600 colis ce mois-ci.\""], answer: 3, why: "Un merci précis qui nomme l'impact compte le plus." },
+          { objective: "O6", q: "Un adolescent a besoin d'une attestation de 40 heures de bénévolat pour l'école. Vous devez :", options: ["Utiliser vos relevés d'heures et signer une lettre qui les confirme", "Refuser", "Deviner les heures", "Lui dire de demander à l'IRS"], answer: 0, why: "Un bon suivi permet de confirmer les heures avec exactitude." },
+          { objective: "O6", q: "Selon l'IRS, un bénévole peut-il déduire la valeur de son temps ?", options: ["Oui, au taux qu'il choisit", "Oui, au salaire minimum", "Non, la valeur du temps ou des services n'est pas déductible", "Seulement le week-end"], answer: 2, why: "La Publication 526 de l'IRS dit que la valeur de votre temps n'est pas déductible." }
         ]
       }
     }
@@ -169,26 +222,106 @@ module.exports = {
   quiz: {
     title: "Quiz final : Gérer des bénévoles",
     questions: [
-      { q: "Une fiche de mission bénévole doit indiquer :", options: ["Seulement le nom de la mission", "Ce qu'ils feront, quand, pourquoi c'est important et à qui ils rendent compte", "Le salaire du bénévole", "Le nom des donateurs"], answer: 1, why: "Des détails clairs aident les bénévoles à réussir." },
-      { q: "Pourquoi proposer des missions courtes et souples ?", options: ["Beaucoup de gens peuvent donner un peu de temps, mais pas chaque semaine", "On les oublie plus facilement", "Elles ne demandent aucune formation", "Elles remplacent le personnel"], answer: 0, why: "Les missions souples ouvrent la porte à plus de bénévoles." },
-      { q: "Une banque alimentaire a besoin d'accueillants, de trieurs et de chauffeurs. Combien de fiches de mission ?", options: ["Une pour tous", "Aucune", "Une pour chaque mission", "Seulement pour les chauffeurs"], answer: 2, why: "Chaque mission a des tâches et des besoins différents." },
-      { q: "Quelle façon de recruter marche le mieux en général ?", options: ["Attendre que les gens vous trouvent", "Publier une fois et espérer", "Demander seulement au personnel", "Demander aux gens en personne, y compris par vos bénévoles actuels"], answer: 3, why: "Les demandes personnelles attirent le plus de bénévoles." },
-      { q: "La vérification doit être adaptée :", options: ["Au risque de la mission", "À l'apparence du bénévole", "À la météo", "À l'humeur du coordinateur"], answer: 0, why: "Les missions plus à risque demandent plus de vérification." },
-      { q: "Une vérification des antécédents doit se faire :", options: ["En secret", "Avec l'accord écrit de la personne", "Seulement après un incident", "En interrogeant les voisins"], answer: 1, why: "L'accord est obligatoire et respectueux." },
-      { q: "Quelle est une bonne règle de sécurité pour les programmes de jeunes ?", options: ["N'importe quel adulte peut être seul avec un enfant n'importe où", "On garde les inquiétudes pour soi", "Aucun adulte ne reste seul avec un enfant hors de la vue des autres", "La vérification est facultative"], answer: 2, why: "Cette règle protège les enfants et les bénévoles." },
-      { q: "Les règles sur la vérification des antécédents des bénévoles :", options: ["Sont les mêmes partout", "N'existent pas", "Sont fixées par les bénévoles", "Changent selon l'État et le programme ; demandez à votre assureur et à un avocat"], answer: 3, why: "Les exigences varient, alors vérifiez ce qui s'applique à vous." },
-      { q: "L'intégration, c'est :", options: ["Tout ce qui aide un nouveau bénévole à démarrer et à se sentir bienvenu", "Renvoyer un bénévole", "Collecter des fonds", "Acheter du matériel"], answer: 0, why: "Elle comprend l'accueil, la séance d'accueil, la formation et le premier créneau." },
-      { q: "Les quatre étapes de la formation à la mission sont :", options: ["Lire, signer, partir, oublier", "Expliquer, montrer, laisser essayer, donner un retour", "Dire, tester, échouer, recommencer", "Regarder, attendre, deviner, partir"], answer: 1, why: "Une formation où l'on montre et où l'on essaie donne des compétences et de la confiance." },
-      { q: "Associer un nouveau bénévole à un parrain aide parce que :", options: ["Cela double la paperasse", "Cela remplace la séance d'accueil", "Il a quelqu'un à qui poser des questions lors de son premier créneau", "Le parrain fait tout le travail"], answer: 2, why: "Un parrain rend le premier créneau plus facile et plus chaleureux." },
-      { q: "Un bénévole publie en ligne la photo d'un bénéficiaire. Quel sujet de la séance d'accueil a été oublié ?", options: ["Le stationnement", "Les règles de confidentialité", "Le goûter", "La collecte de fonds"], answer: 1, why: "Les bénévoles doivent protéger l'identité des bénéficiaires." },
-      { q: "Un bon planning de bénévoles est :", options: ["Facile à voir et facile à modifier", "Gardé dans la tête d'une seule personne", "Publié la veille au soir", "Jamais partagé"], answer: 0, why: "Un planning visible et souple réduit les trous." },
-      { q: "Une liste de remplaçants sert à :", options: ["Renvoyer des bénévoles", "Faire les rapports aux bailleurs", "Ranger les vieux plannings", "Appeler quelqu'un quand un bénévole annule un créneau important"], answer: 3, why: "Les remplaçants permettent de couvrir les créneaux importants." },
-      { q: "Un bénévole a du mal avec la saisie de données mais adore parler aux gens. Vous pourriez :", options: ["L'ignorer", "Le mettre mal à l'aise en public", "Lui parler en privé et lui proposer une mission d'accueil", "L'écarter sans un mot"], answer: 2, why: "Une mission mieux adaptée règle souvent le problème." },
-      { q: "Quelle est une raison fréquente pour laquelle les bénévoles arrêtent de venir ?", options: ["On les a trop remerciés", "Ils se sont sentis inutiles ou jamais remerciés", "Les créneaux étaient bien organisés", "Ils avaient une formation claire"], answer: 1, why: "Se sentir inutile ou jamais remercié fait partir les gens." },
-      { q: "Quand vous partagez des histoires d'impact sur les personnes que vous servez, vous devez :", options: ["Obtenir leur accord", "Utiliser leur nom complet sans demander", "Inventer des détails", "Partager leur adresse"], answer: 0, why: "Le respect et la vie privée passent en premier." },
-      { q: "Un bénévole de longue date veut évoluer. Vous pourriez :", options: ["Le garder pour toujours sur la même tâche", "Lui demander de partir", "Lui donner seulement plus de ménage", "L'inviter à former les nouveaux bénévoles ou à diriger un créneau"], answer: 3, why: "Les missions pour évoluer gardent les bénévoles engagés motivés." },
-      { q: "Une ligne de la feuille de présence doit indiquer :", options: ["Ses coordonnées bancaires", "Le nom, la date, l'heure d'arrivée et de départ, et la mission", "Son mot de passe", "Seulement une signature"], answer: 1, why: "Ces éléments de base permettent de totaliser les heures avec exactitude." },
-      { q: "Un bénévole demande s'il peut déduire l'essence utilisée pour venir faire du bénévolat. Vous devez :", options: ["Dire oui, quel que soit le montant", "Dire que c'est illégal", "L'orienter vers la Publication 526 de l'IRS et un professionnel de la fiscalité", "Ignorer la question"], answer: 2, why: "Certains frais payés de sa poche peuvent être déductibles ; il doit vérifier la source officielle." }
+      { objective: "O1", q: "Une fiche de mission bénévole doit indiquer :", options: ["Seulement le nom de la mission", "Ce qu'ils feront, quand, pourquoi c'est important et à qui ils rendent compte", "Le salaire du bénévole", "Le nom des donateurs"], answer: 1, why: "Des détails clairs aident les bénévoles à réussir." },
+      { objective: "O1", q: "Pourquoi proposer des missions courtes et souples ?", options: ["Beaucoup de gens peuvent donner un peu de temps, mais pas chaque semaine", "On les oublie plus facilement", "Elles ne demandent aucune formation", "Elles remplacent le personnel"], answer: 0, why: "Les missions souples ouvrent la porte à plus de bénévoles." },
+      { objective: "O1", q: "Une banque alimentaire a besoin d'accueillants, de trieurs et de chauffeurs. Combien de fiches de mission ?", options: ["Une pour tous", "Aucune", "Une pour chaque mission", "Seulement pour les chauffeurs"], answer: 2, why: "Chaque mission a des tâches et des besoins différents." },
+      { objective: "O2", q: "Quelle façon de recruter marche le mieux en général ?", options: ["Attendre que les gens vous trouvent", "Publier une fois et espérer", "Demander seulement au personnel", "Demander aux gens en personne, y compris par vos bénévoles actuels"], answer: 3, why: "Les demandes personnelles attirent le plus de bénévoles." },
+      { objective: "O2", q: "La vérification doit être adaptée :", options: ["Au risque de la mission", "À l'apparence du bénévole", "À la météo", "À l'humeur du coordinateur"], answer: 0, why: "Les missions plus à risque demandent plus de vérification." },
+      { objective: "O2", q: "Une vérification des antécédents doit se faire :", options: ["En secret", "Avec l'accord écrit de la personne", "Seulement après un incident", "En interrogeant les voisins"], answer: 1, why: "L'accord est obligatoire et respectueux." },
+      { objective: "O2", q: "Quelle est une bonne règle de sécurité pour les programmes de jeunes ?", options: ["N'importe quel adulte peut être seul avec un enfant n'importe où", "On garde les inquiétudes pour soi", "Aucun adulte ne reste seul avec un enfant hors de la vue des autres", "La vérification est facultative"], answer: 2, why: "Cette règle protège les enfants et les bénévoles." },
+      { objective: "O2", q: "Les règles sur la vérification des antécédents des bénévoles :", options: ["Sont les mêmes partout", "N'existent pas", "Sont fixées par les bénévoles", "Changent selon l'État et le programme ; demandez à votre assureur et à un avocat"], answer: 3, why: "Les exigences varient, alors vérifiez ce qui s'applique à vous." },
+      { objective: "O3", q: "L'intégration, c'est :", options: ["Tout ce qui aide un nouveau bénévole à démarrer et à se sentir bienvenu", "Renvoyer un bénévole", "Collecter des fonds", "Acheter du matériel"], answer: 0, why: "Elle comprend l'accueil, la séance d'accueil, la formation et le premier créneau." },
+      { objective: "O3", q: "Les quatre étapes de la formation à la mission sont :", options: ["Lire, signer, partir, oublier", "Expliquer, montrer, laisser essayer, donner un retour", "Dire, tester, échouer, recommencer", "Regarder, attendre, deviner, partir"], answer: 1, why: "Une formation où l'on montre et où l'on essaie donne des compétences et de la confiance." },
+      { objective: "O3", q: "Associer un nouveau bénévole à un parrain aide parce que :", options: ["Cela double la paperasse", "Cela remplace la séance d'accueil", "Il a quelqu'un à qui poser des questions lors de son premier créneau", "Le parrain fait tout le travail"], answer: 2, why: "Un parrain rend le premier créneau plus facile et plus chaleureux." },
+      { objective: "O3", q: "Un bénévole publie en ligne la photo d'un bénéficiaire. Quel sujet de la séance d'accueil a été oublié ?", options: ["Le stationnement", "Les règles de confidentialité", "Le goûter", "La collecte de fonds"], answer: 1, why: "Les bénévoles doivent protéger l'identité des bénéficiaires." },
+      { objective: "O4", q: "Un bon planning de bénévoles est :", options: ["Facile à voir et facile à modifier", "Gardé dans la tête d'une seule personne", "Publié la veille au soir", "Jamais partagé"], answer: 0, why: "Un planning visible et souple réduit les trous." },
+      { objective: "O4", q: "Une liste de remplaçants sert à :", options: ["Renvoyer des bénévoles", "Faire les rapports aux bailleurs", "Ranger les vieux plannings", "Appeler quelqu'un quand un bénévole annule un créneau important"], answer: 3, why: "Les remplaçants permettent de couvrir les créneaux importants." },
+      { objective: "O4", q: "Un bénévole a du mal avec la saisie de données mais adore parler aux gens. Vous pourriez :", options: ["L'ignorer", "Le mettre mal à l'aise en public", "Lui parler en privé et lui proposer une mission d'accueil", "L'écarter sans un mot"], answer: 2, why: "Une mission mieux adaptée règle souvent le problème." },
+      { objective: "O5", q: "Quelle est une raison fréquente pour laquelle les bénévoles arrêtent de venir ?", options: ["On les a trop remerciés", "Ils se sont sentis inutiles ou jamais remerciés", "Les créneaux étaient bien organisés", "Ils avaient une formation claire"], answer: 1, why: "Se sentir inutile ou jamais remercié fait partir les gens." },
+      { objective: "O5", q: "Quand vous partagez des histoires d'impact sur les personnes que vous servez, vous devez :", options: ["Obtenir leur accord", "Utiliser leur nom complet sans demander", "Inventer des détails", "Partager leur adresse"], answer: 0, why: "Le respect et la vie privée passent en premier." },
+      { objective: "O5", q: "Un bénévole de longue date veut évoluer. Vous pourriez :", options: ["Le garder pour toujours sur la même tâche", "Lui demander de partir", "Lui donner seulement plus de ménage", "L'inviter à former les nouveaux bénévoles ou à diriger un créneau"], answer: 3, why: "Les missions pour évoluer gardent les bénévoles engagés motivés." },
+      { objective: "O6", q: "Une ligne de la feuille de présence doit indiquer :", options: ["Ses coordonnées bancaires", "Le nom, la date, l'heure d'arrivée et de départ, et la mission", "Son mot de passe", "Seulement une signature"], answer: 1, why: "Ces éléments de base permettent de totaliser les heures avec exactitude." },
+      { objective: "O6", q: "Un bénévole demande s'il peut déduire l'essence utilisée pour venir faire du bénévolat. Vous devez :", options: ["Dire oui, quel que soit le montant", "Dire que c'est illégal", "L'orienter vers la Publication 526 de l'IRS et un professionnel de la fiscalité", "Ignorer la question"], answer: 2, why: "Certains frais payés de sa poche peuvent être déductibles ; il doit vérifier la source officielle." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      2,
+      4,
+      6,
+      8,
+      11,
+      12,
+      14,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Fiche de mission",
+        objective: "O1",
+        notYet: "Il manque le temps demandé, les tâches ou à qui le bénévole rend compte.",
+        meets: "Les cinq parties, en commençant par l'impact.",
+        exceeds: "Propose aussi une option courte et souple pour les personnes qui ont moins de temps."
+      },
+      {
+        name: "Recrutement et vérification",
+        objective: "O2",
+        notYet: "Aucune vérification, ou une mission auprès d'enfants ou d'adultes vulnérables sans vérification des antécédents.",
+        meets: "Un message de recrutement et une vérification adaptée au risque de la mission, avec un accord écrit pour les vérifications.",
+        exceeds: "Ajoute aussi des règles de sécurité et la note de vérifier auprès de l'assureur et d'un avocat."
+      },
+      {
+        name: "Accueil et formation",
+        objective: "O3",
+        notYet: "Pas de plan de séance d'accueil, ou la sécurité et la confidentialité manquent.",
+        meets: "Un plan de 30 minutes avec les durées, qui couvre la sécurité, la confidentialité, la feuille de présence et l'annulation, plus expliquer, montrer, essayer, retour.",
+        exceeds: "Prévoit aussi un binôme et un point après le premier créneau."
+      },
+      {
+        name: "Planning et encadrement",
+        objective: "O4",
+        notYet: "Des créneaux n'ont pas de responsable ou il n'y a pas de remplaçants.",
+        meets: "Un planning d'un mois avec un responsable de créneau nommé, deux remplaçants et un message de rappel.",
+        exceeds: "Dit aussi comment les bénévoles annulent et qui règle les problèmes."
+      },
+      {
+        name: "Remerciements et heures",
+        objective: "O5",
+        notYet: "Pas de plan pour remercier ou pas de moyen de suivre les heures.",
+        meets: "Une petite idée et une idée plus importante pour remercier, et une feuille de présence avec le nom, la date, le début, la fin, les heures et la mission.",
+        exceeds: "Dit aussi comment les totaux d'heures serviront dans les rapports et les remerciements."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Les bénévoles encore actifs 90 jours après leur premier créneau, comparés à avant le cours",
+      "Les missions auprès d'enfants ou d'adultes vulnérables qui ont une vérification et des règles de sécurité écrites",
+      "Le total des heures de bénévolat suivies et présentées au conseil ou dans les rapports de subvention"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur ou un téléphone avec un tableur ou un outil d'inscription gratuit, ou du papier",
+      "Une vraie mission bénévole à préparer",
+      "Du papier ou un document pour le kit bénévole",
+      "Environ 60 minutes en tout : leçons, pratique, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Demandez à chaque apprenant de construire le kit pour une vraie mission de sa propre organisation, pour qu'il soit prêt à l'emploi.",
+      "Pour les missions auprès d'enfants ou d'adultes vulnérables, insistez sur la vérification et les règles de sécurité, et dites aux apprenants de confirmer les exigences auprès de leur assureur et d'un avocat.",
+      "Rappelez aux apprenants de ne pas recueillir plus d'informations sur les bénévoles que nécessaire et de garder les dossiers confidentiels.",
+      "Mettez les apprenants par deux pour échanger et relire leurs fiches de mission et leurs plans de séance d'accueil.",
+      "Évaluez le kit avec la grille et donnez un retour sur une ligne « Pas encore » à la fois."
     ]
   }
 };

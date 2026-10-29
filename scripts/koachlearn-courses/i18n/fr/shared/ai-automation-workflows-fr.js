@@ -16,11 +16,35 @@ module.exports = {
     "Vous cartographierez une vraie tâche, concevrez l'automatisation sur papier, puis la construirez dans un outil sans code comme Zapier, Microsoft Power Automate ou Make, ou avec les fonctions intégrées de Google Forms et Sheets. Chaque leçon dure environ cinq minutes avec une tâche « Essayez maintenant », un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Construisez une automatisation qui fonctionne pour une organisation réelle ou fictive : par exemple, un formulaire de demande qui enregistre chaque réponse dans un tableur, utilise une étape d'IA pour résumer et trier la demande, et envoie par e-mail un brouillon de réponse à un membre du personnel pour approbation. Documentez la carte du flux de travail, le déclencheur et les actions, cinq essais avec leurs résultats, et qui vérifie le résultat.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des propriétaires de petites entreprises, des responsables administratifs et leur personnel, et des coordinateurs d'associations ou d'églises qui gèrent chaque semaine les mêmes formulaires, e-mails, inscriptions et rappels.",
+    startingPoint: "Ils utilisent l'e-mail, les tableurs et les formulaires en ligne, et ont parfois essayé un assistant d'IA. La plupart n'ont jamais construit d'automatisation ni relié deux applications, et n'ont aucune expérience du code.",
+    gap: "Des heures partent à copier, classer, relancer et confirmer à la main, et des choses passent entre les mailles du filet. Les apprenants doivent concevoir et construire une automatisation sans code et sûre avec une étape d'IA, la tester, et garder une personne aux commandes là où une erreur ferait du tort, pour gagner du temps sans envoyer de mauvais messages ni laisser fuiter de données.",
+    constraints: [
+      "Niveau de lecture : mots simples ; pas de code",
+      "Appareils : un ordinateur est nécessaire pour construire l'automatisation",
+      "Coût : les offres gratuites et les essais ont des limites ; les outils et les prix changent, donc les apprenants vérifient chaque page de tarifs",
+      "Vie privée : aucun numéro de carte, de sécurité sociale, détail de santé ou mot de passe ne passe par une étape d'IA ; tests uniquement avec des données inventées",
+      "Temps : des leçons de 5 minutes, environ 60 minutes en tout, plus le temps de construire et de tester"
+    ],
+    prerequisites: "Aucun. Être à l'aise avec Google Forms ou Microsoft Forms et un tableur aide."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir d'une automatisation de tous les jours", action: "repérer son déclencheur, ses actions et la place d'une étape d'IA", standard: "en ayant au moins 4 réponses justes sur 5" },
+    { id: "O2", condition: "Pour une tâche faite au moins chaque semaine", action: "cartographier chaque étape avec qui la fait, l'outil et le temps, et marquer chaque étape : automatiser, brouillon de l'IA plus vérification humaine, ou garder humaine", standard: "avec une estimation du temps gagné chaque semaine" },
+    { id: "O3", condition: "Avant d'utiliser le moindre outil", action: "rédiger une conception d'automatisation avec le déclencheur, les actions, le prompt d'IA, les points de vérification humaine et les règles sur les données", standard: "avec une approbation humaine partout où une erreur ferait du tort" },
+    { id: "O4", condition: "Avec un formulaire, un tableur et un outil sans code", action: "construire une automatisation qui enregistre les réponses, lance une étape d'IA et envoie un brouillon pour approbation", standard: "pour que le flux de base marche avant d'ajouter l'étape d'IA" },
+    { id: "O5", condition: "À partir de votre automatisation construite", action: "la tester avec cinq entrées d'exemple, dont des cas pièges, et corriger ce qui casse", standard: "en n'utilisant que des données inventées, avec chaque échec corrigé et retesté" },
+    { id: "O6", condition: "Quand l'automatisation est mise en service", action: "surveiller l'historique des exécutions, régler une alerte d'erreur, nommer un responsable et rédiger une fiche d'instructions d'une page", standard: "pour qu'une autre personne puisse la faire tourner ou l'arrêter" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Concevoir des flux de travail intelligents",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Ce que sont l'automatisation et les flux de travail avec IA",
           minutes: 4,
           goal: "Expliquer les déclencheurs, les actions et la place d'une étape d'IA.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Même idée, noms différents", bullets: ["Zapier : Zap", "Power Automate : flux", "Make : scénario"] }
           ],
           tryIt: "Écrivez trois automatisations « quand ceci se produit, faire cela » que vous aimeriez avoir au travail, à la maison ou dans un groupe dont vous faites partie. Entourez celle qui pourrait utiliser une étape d'IA.",
-          youCanNow: "décrire toute automatisation comme un déclencheur suivi d'actions, et dire où l'IA pourrait aider."
+          youCanNow: "décrire toute automatisation comme un déclencheur suivi d'actions, et dire où l'IA pourrait aider.",
+          quickCheck: [
+            { objective: "O1", q: "Comment Power Automate appelle-t-il une automatisation ?", options: ["Un Zap", "Un scénario", "Un flux", "Une macro"], answer: 2, why: "Power Automate l'appelle un flux ; Zapier l'appelle un Zap et Make l'appelle un scénario." },
+            { objective: "O1", q: "Vous voulez que chaque nouveau message soit classé comme réclamation, question ou piste commerciale. Quelle partie s'en charge ?", options: ["Une étape d'IA", "Le déclencheur", "Une ligne du tableur", "L'adresse e-mail"], answer: 0, why: "Lire un message et le classer est un travail de jugement qui convient à une étape d'IA." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Cartographier un flux de travail et trouver quoi automatiser",
           minutes: 5,
           goal: "Cartographier une tâche répétée étape par étape et choisir les étapes à automatiser.",
@@ -55,9 +84,14 @@ module.exports = {
             { title: "Marquer chaque étape", bullets: ["Automatiser", "Brouillon IA plus vérification humaine", "Garder humaine"] }
           ],
           tryIt: "Cartographiez une tâche répétée d'au moins cinq étapes. Marquez chaque étape automatiser, brouillon IA plus vérification humaine, ou garder humaine, et estimez le temps gagné par semaine.",
-          youCanNow: "cartographier un flux de travail et décider quelles étapes automatiser, lesquelles l'IA peut rédiger et lesquelles restent humaines."
+          youCanNow: "cartographier un flux de travail et décider quelles étapes automatiser, lesquelles l'IA peut rédiger et lesquelles restent humaines.",
+          quickCheck: [
+            { objective: "O2", q: "Quelle étape est une bonne candidate pour être entièrement automatisée ?", options: ["Décider qui reçoit une bourse", "Réconforter un bénévole contrarié", "Choisir un nouvel employé", "Ajouter un rappel au calendrier après une inscription"], answer: 3, why: "Les étapes répétées qui suivent une règle, comme les rappels, sont bonnes à automatiser." },
+            { objective: "O2", q: "Votre carte contient « répondre à une famille qui demande de l'aide pour le loyer ». Comment la marquez-vous ?", options: ["Entièrement automatisée", "Brouillon de l'IA plus vérification humaine, ou garder humaine", "Supprimer l'étape", "Ne pas répondre"], answer: 1, why: "Les étapes qui demandent de la bienveillance ou touchent la vie de quelqu'un restent à une personne, ou l'IA ne fait qu'un brouillon." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Concevoir l'automatisation sur papier",
           minutes: 5,
           goal: "Rédiger une conception complète : déclencheur, actions, prompt d'IA, vérifications et règles sur les données.",
@@ -74,17 +108,21 @@ module.exports = {
             { title: "Règles sur les données", bullets: ["Ce qui passe et où c'est stocké", "Jamais de carte, sécurité sociale, santé ou mot de passe dans l'IA"] }
           ],
           tryIt: "Rédigez une conception d'une page pour votre automatisation : déclencheur, actions, prompt d'IA, point de contrôle humain et règles sur les données.",
-          youCanNow: "concevoir une automatisation avec une étape d'IA, un point de contrôle humain et des règles sûres sur les données."
+          youCanNow: "concevoir une automatisation avec une étape d'IA, un point de contrôle humain et des règles sûres sur les données.",
+          quickCheck: [
+            { objective: "O3", q: "Que disent les règles sur les données dans une conception ?", options: ["La police de caractères de l'e-mail", "Ce qui passe, où c'est stocké et ce qui ne passe jamais par l'IA", "La vitesse de l'ordinateur", "Qui a dessiné le logo"], answer: 1, why: "Les règles sur les données couvrent les informations qui circulent, où elles sont stockées et ce qui ne passe jamais par l'IA." },
+            { objective: "O3", q: "Votre automatisation va envoyer des réponses aux clients. Où ajoutez-vous un point de vérification humaine ?", options: ["Nulle part : ça fait gagner du temps", "Une seule fois par an", "Après l'envoi de la réponse", "Avant l'envoi de la réponse, pour qu'une personne approuve le brouillon"], answer: 3, why: "Tout ce qui est envoyé à un client doit attendre l'approbation d'une personne." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Concevoir des flux de travail intelligents",
         questions: [
-          { q: "Dans « Quand un formulaire est envoyé, ajouter une ligne dans un tableur », quel est le déclencheur ?", options: ["Ajouter une ligne", "Le tableur", "Un formulaire est envoyé", "L'e-mail"], answer: 2, why: "Le déclencheur est l'événement qui lance l'automatisation." },
-          { q: "Qu'apporte une étape d'IA à une automatisation ?", options: ["La capacité de lire, trier, résumer ou rédiger", "De l'électricité gratuite", "Des paiements automatiques à n'importe qui", "Rien"], answer: 0, why: "Les étapes d'IA gèrent des tâches de langage comme trier et rédiger." },
-          { q: "Quelle étape est la meilleure candidate à une automatisation complète ?", options: ["Décider d'accepter une demande de logement", "Réconforter un client contrarié", "Licencier un employé", "Recopier les réponses d'un formulaire dans un tableur"], answer: 3, why: "Recopier de façon répétée selon des règles est idéal à automatiser." },
-          { q: "Que veut dire « personne dans la boucle » ?", options: ["Une personne est coincée dans une boucle", "Une personne vérifie ou approuve avant que l'automatisation continue", "L'automatisation tourne sans personne", "Un type de déclencheur"], answer: 1, why: "Cela garde une personne aux commandes là où les erreurs comptent." },
-          { q: "Qu'est-ce qui ne doit jamais passer par une étape d'IA ?", options: ["Un résumé général de demande", "Les numéros de carte des clients", "Le mot « Question »", "Les horaires d'ouverture"], answer: 1, why: "Les données de paiement sont privées et risquées." }
+          { objective: "O1", q: "Dans « Quand un formulaire est envoyé, ajouter une ligne dans un tableur », quel est le déclencheur ?", options: ["Ajouter une ligne", "Le tableur", "Un formulaire est envoyé", "L'e-mail"], answer: 2, why: "Le déclencheur est l'événement qui lance l'automatisation." },
+          { objective: "O1", q: "Qu'apporte une étape d'IA à une automatisation ?", options: ["La capacité de lire, trier, résumer ou rédiger", "De l'électricité gratuite", "Des paiements automatiques à n'importe qui", "Rien"], answer: 0, why: "Les étapes d'IA gèrent des tâches de langage comme trier et rédiger." },
+          { objective: "O2", q: "Quelle étape est la meilleure candidate à une automatisation complète ?", options: ["Décider d'accepter une demande de logement", "Réconforter un client contrarié", "Licencier un employé", "Recopier les réponses d'un formulaire dans un tableur"], answer: 3, why: "Recopier de façon répétée selon des règles est idéal à automatiser." },
+          { objective: "O3", q: "Que veut dire « personne dans la boucle » ?", options: ["Une personne est coincée dans une boucle", "Une personne vérifie ou approuve avant que l'automatisation continue", "L'automatisation tourne sans personne", "Un type de déclencheur"], answer: 1, why: "Cela garde une personne aux commandes là où les erreurs comptent." },
+          { objective: "O3", q: "Qu'est-ce qui ne doit jamais passer par une étape d'IA ?", options: ["Un résumé général de demande", "Les numéros de carte des clients", "Le mot « Question »", "Les horaires d'ouverture"], answer: 1, why: "Les données de paiement sont privées et risquées." }
         ]
       }
     },
@@ -92,6 +130,7 @@ module.exports = {
       name: "Chapitre 2 : Construire, tester et faire tourner",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Construire votre première automatisation",
           minutes: 6,
           goal: "Construire une automatisation simple d'un formulaire vers un tableur puis vers un e-mail.",
@@ -109,9 +148,14 @@ module.exports = {
           ],
           sources: [{ name: "Zapier", url: "https://zapier.com/" }, { name: "Microsoft Power Automate", url: "https://www.microsoft.com/power-platform/products/power-automate" }, { name: "Make", url: "https://www.make.com/" }],
           tryIt: "Construisez la première partie de votre automatisation : un formulaire relié à un tableur. Si possible, ajoutez une action dans un outil sans code, comme un e-mail à vous-même pour chaque nouvelle réponse.",
-          youCanNow: "construire une automatisation de base formulaire-tableur-e-mail avec des outils sans code."
+          youCanNow: "construire une automatisation de base formulaire-tableur-e-mail avec des outils sans code.",
+          quickCheck: [
+            { objective: "O4", q: "Quel montage simple est déjà une automatisation, sans outil en plus ?", options: ["Microsoft Forms qui envoie les réponses dans Excel", "Recopier à la main les réponses du formulaire dans un tableur", "Imprimer chaque réponse", "Lire les réponses sur votre téléphone"], answer: 0, why: "Microsoft Forms peut envoyer automatiquement les réponses dans Excel." },
+            { objective: "O4", q: "Votre flux de base, du formulaire à l'e-mail, marche. Qu'ajoutez-vous ensuite ?", options: ["Cinq applications de plus d'un coup", "De vrais numéros de carte de clients", "L'étape d'IA avec le prompt de votre conception", "Rien : supprimer le flux"], answer: 2, why: "Ajoutez l'étape d'IA en dernier, une fois que le flux de base marche." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Tester avec des données d'exemple",
           minutes: 5,
           goal: "Tester une automatisation avec des entrées d'exemple normales et pièges, et corriger ce qui casse.",
@@ -128,9 +172,14 @@ module.exports = {
             { title: "Noter et corriger", bullets: ["Champs obligatoires et filtres", "Prompts d'IA plus précis", "Retester après chaque correction"] }
           ],
           tryIt: "Faites passer cinq entrées d'exemple dans votre automatisation, dont au moins deux pièges. Tenez un journal de tests et corrigez un problème.",
-          youCanNow: "tester une automatisation avec des données d'exemple, noter les résultats et corriger ce qui échoue."
+          youCanNow: "tester une automatisation avec des données d'exemple, noter les résultats et corriger ce qui échoue.",
+          quickCheck: [
+            { objective: "O5", q: "Que contient le journal de tests d'une automatisation ?", options: ["Les vraies coordonnées des clients", "Seulement les tests réussis", "Le prix de l'outil", "L'entrée, le résultat attendu, le résultat obtenu, réussi ou échoué, et la correction"], answer: 3, why: "Un journal de tests note ce qui est entré, ce qui devait se passer, ce qui s'est passé, et la correction." },
+            { objective: "O5", q: "Une entrée de test avec un champ e-mail vide fait casser le flux. Quelle est une correction courante ?", options: ["Rendre le champ e-mail obligatoire dans le formulaire", "Activer l'automatisation quand même", "Retirer l'étape d'e-mail", "Tester avec de vraies données de clients"], answer: 0, why: "Rendre le champ obligatoire empêche les entrées vides de casser le flux." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Faire tourner, surveiller et améliorer",
           minutes: 5,
           goal: "Activer l'automatisation en sécurité, la surveiller, et savoir quoi faire quand elle échoue.",
@@ -147,17 +196,21 @@ module.exports = {
             { title: "La garder en bonne santé", bullets: ["Alertes d'erreur et un responsable", "Fiche d'instructions d'une page", "Revoir tous les quelques mois"] }
           ],
           tryIt: "Tâche finale : terminez votre automatisation avec son étape d'IA et l'approbation humaine, faites cinq essais, puis rédigez la fiche d'instructions d'une page avec la carte du flux de travail, le déclencheur et les actions, les résultats des tests et le responsable.",
-          youCanNow: "concevoir, construire, tester et faire tourner une automatisation avec IA sous le contrôle d'une personne."
+          youCanNow: "concevoir, construire, tester et faire tourner une automatisation avec IA sous le contrôle d'une personne.",
+          quickCheck: [
+            { objective: "O6", q: "Que fait une alerte d'erreur ?", options: ["Elle accélère l'automatisation", "Elle envoie un e-mail au responsable quand une exécution échoue", "Elle supprime les anciennes exécutions", "Elle change votre mot de passe"], answer: 1, why: "Une alerte d'erreur prévient tout de suite le responsable quand quelque chose casse." },
+            { objective: "O6", q: "La personne qui a construit votre automatisation s'en va. Qu'est-ce qui la fait continuer à tourner ?", options: ["Espérer que rien ne casse", "L'arrêter pour de bon", "Une fiche d'instructions d'une page et un nouveau responsable qui surveille les alertes", "Changer tous les mots de passe sans prévenir personne"], answer: 2, why: "La fiche d'instructions et un responsable nommé permettent à quelqu'un d'autre de la faire tourner ou de l'arrêter." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Construire, tester et faire tourner",
         questions: [
-          { q: "Quelle est l'automatisation la plus simple à construire sans outil supplémentaire ?", options: ["Un bras robotisé", "Une application mobile sur mesure", "Un serveur payant", "Google Forms qui enregistre les réponses dans Google Sheets"], answer: 3, why: "Les formulaires peuvent enregistrer seuls les réponses dans un tableur." },
-          { q: "Quand faut-il ajouter l'étape d'IA ?", options: ["Une fois que le flux de base marche", "Avant tout le reste", "Jamais", "Seulement le week-end"], answer: 0, why: "On construit simple d'abord, puis on ajoute l'IA." },
-          { q: "Quelles données utiliser pour les tests ?", options: ["Les numéros de carte de vrais clients", "De vrais dossiers de patients", "Des entrées d'exemple inventées", "Des mots de passe"], answer: 2, why: "Tester avec des données d'exemple protège les vraies personnes." },
-          { q: "L'étape d'IA renvoie de longues phrases alors que vous vouliez un seul mot. Quelle est la correction ?", options: ["Supprimer l'automatisation", "L'ignorer", "Ajouter un deuxième formulaire", "Préciser le prompt : « Réponds par exactement un mot »"], answer: 3, why: "Des prompts plus clairs donnent des résultats d'IA plus prévisibles." },
-          { q: "Pourquoi rédiger une fiche d'instructions d'une page ?", options: ["Pour la ralentir", "C'est obligatoire par la loi", "Pour que quelqu'un d'autre puisse faire tourner ou arrêter l'automatisation", "Pour partager des mots de passe"], answer: 2, why: "Elle permet de garder l'automatisation en marche si le responsable part." }
+          { objective: "O4", q: "Quelle est l'automatisation la plus simple à construire sans outil supplémentaire ?", options: ["Un bras robotisé", "Une application mobile sur mesure", "Un serveur payant", "Google Forms qui enregistre les réponses dans Google Sheets"], answer: 3, why: "Les formulaires peuvent enregistrer seuls les réponses dans un tableur." },
+          { objective: "O4", q: "Quand faut-il ajouter l'étape d'IA ?", options: ["Une fois que le flux de base marche", "Avant tout le reste", "Jamais", "Seulement le week-end"], answer: 0, why: "On construit simple d'abord, puis on ajoute l'IA." },
+          { objective: "O5", q: "Quelles données utiliser pour les tests ?", options: ["Les numéros de carte de vrais clients", "De vrais dossiers de patients", "Des entrées d'exemple inventées", "Des mots de passe"], answer: 2, why: "Tester avec des données d'exemple protège les vraies personnes." },
+          { objective: "O5", q: "L'étape d'IA renvoie de longues phrases alors que vous vouliez un seul mot. Quelle est la correction ?", options: ["Supprimer l'automatisation", "L'ignorer", "Ajouter un deuxième formulaire", "Préciser le prompt : « Réponds par exactement un mot »"], answer: 3, why: "Des prompts plus clairs donnent des résultats d'IA plus prévisibles." },
+          { objective: "O6", q: "Pourquoi rédiger une fiche d'instructions d'une page ?", options: ["Pour la ralentir", "C'est obligatoire par la loi", "Pour que quelqu'un d'autre puisse faire tourner ou arrêter l'automatisation", "Pour partager des mots de passe"], answer: 2, why: "Elle permet de garder l'automatisation en marche si le responsable part." }
         ]
       }
     }
@@ -165,26 +218,107 @@ module.exports = {
   quiz: {
     title: "Quiz final : Automatisation par l'IA et flux de travail intelligents",
     questions: [
-      { q: "L'automatisation, c'est :", options: ["Embaucher plus de personnel", "Un logiciel qui fait des étapes à votre place sans personne à chaque fois", "Travailler plus longtemps", "Acheter un robot"], answer: 1, why: "Les automatisations font des étapes toutes seules." },
-      { q: "Un e-mail qui arrive et lance une automatisation est :", options: ["Un déclencheur", "Un filtre", "Un champ", "Un historique des exécutions"], answer: 0, why: "L'événement de départ est le déclencheur." },
-      { q: "« Envoyer un e-mail de confirmation » dans une automatisation est :", options: ["Un déclencheur", "Un prompt", "Une action", "Un responsable"], answer: 2, why: "Les actions sont ce qui se passe après le déclencheur." },
-      { q: "Zapier appelle une automatisation :", options: ["Un Zap", "Un flux", "Un scénario", "Une fiche recette"], answer: 0, why: "Le terme de Zapier est Zap." },
-      { q: "Quelle tâche vaut mieux laisser à une personne ?", options: ["Classer un reçu", "Envoyer un rappel", "Recopier les données d'un formulaire", "Décider si quelqu'un a droit à une aide"], answer: 3, why: "Les décisions sur des personnes demandent un jugement humain." },
-      { q: "Une carte du flux de travail liste :", options: ["Seulement le résultat final", "Chaque étape, qui la fait, l'outil et le temps", "Les salaires des employés", "Les adresses des bureaux"], answer: 1, why: "Elle montre comment la tâche se fait aujourd'hui." },
-      { q: "« Brouillon IA plus vérification humaine » convient à quelle étape ?", options: ["Ajouter une ligne dans une feuille", "Rédiger une réponse à un client", "Enregistrer un fichier", "Lancer l'automatisation"], answer: 1, why: "Les messages aux clients doivent être vérifiés avant l'envoi." },
-      { q: "Un bon prompt d'IA dans une automatisation est :", options: ["Vague, comme « fais quelque chose »", "Vide", "Un mot de passe", "Précis, comme « Réponds par un seul mot : Devis, Question ou Réclamation »"], answer: 3, why: "Des prompts précis donnent des résultats prévisibles." },
-      { q: "Où placer un point de contrôle humain ?", options: ["Partout où une erreur ferait du tort, comme les messages aux clients", "Nulle part", "Seulement au déclencheur", "Seulement après la suppression de l'automatisation"], answer: 0, why: "Les points de contrôle attrapent les erreurs coûteuses." },
-      { q: "Les règles sur les données de votre conception disent :", options: ["Quelle police utiliser", "Qui reçoit une prime", "Ce qui passe, où c'est stocké et ce qui ne passe jamais par l'IA", "Rien"], answer: 2, why: "Elles protègent les informations privées." },
-      { q: "Une question ou une case de formulaire s'appelle :", options: ["Un déclencheur", "Un Zap", "Un filtre", "Un champ"], answer: 3, why: "Chaque case est un champ." },
-      { q: "Les offres gratuites des outils sans code :", options: ["Sont illimitées pour toujours", "Coûtent toujours 1 000 $", "Ont des limites ; consultez la page des tarifs", "N'existent pas"], answer: 2, why: "Les offres changent, donc consultez la page officielle des tarifs." },
-      { q: "Connecter des applications dans un outil d'automatisation veut dire :", options: ["Brancher des câbles", "Donner à une application la permission de travailler avec une autre", "Partager publiquement votre mot de passe", "Acheter de nouveaux ordinateurs"], answer: 1, why: "Les connexions sont des permissions entre applications." },
-      { q: "Combien de cas de test, au minimum, le cours conseille-t-il ?", options: ["Cinq", "Un", "Zéro", "Cinq cents"], answer: 0, why: "Cinq cas couvrent les entrées normales et pièges." },
-      { q: "Lequel est un cas de test piège ?", options: ["Seulement une entrée parfaitement normale", "Aucune entrée, jamais testé", "Un formulaire avec un champ vide", "Votre mot de passe"], answer: 2, why: "Les champs vides cassent souvent les automatisations." },
-      { q: "Un filtre dans une automatisation :", options: ["Ne laisse continuer que certains éléments", "Nettoie l'écran", "Supprime le tableur", "Lance l'automatisation"], answer: 0, why: "Les filtres contrôlent quels éléments passent." },
-      { q: "Lors de la première mise en service, vous devez :", options: ["L'activer pour tout le monde et ne jamais vérifier", "Supprimer le journal de tests", "Retirer le point de contrôle humain", "Commencer petit et vérifier les résultats chaque jour"], answer: 3, why: "Commencer petit limite les dégâts en cas de problème." },
-      { q: "L'historique des exécutions montre :", options: ["Votre historique de navigation", "Chaque fois que l'automatisation a tourné et si cela a marché", "Les heures des employés", "Les mots de passe des clients"], answer: 1, why: "Il aide à repérer les échecs." },
-      { q: "Quelle est une raison courante de panne d'une automatisation ?", options: ["Le soleil s'est couché", "Un mot de passe ou un nom de champ a changé", "Trop de clients satisfaits", "Le logo a changé de couleur"], answer: 1, why: "Les changements dans les applications connectées cassent les automatisations." },
-      { q: "Chaque automatisation doit avoir :", options: ["Personne de responsable", "Un accès illimité à toutes les données", "Un emplacement secret", "Un responsable qui surveille les alertes d'erreur"], answer: 3, why: "Un responsable la garde en bonne santé." }
+      { objective: "O1", q: "L'automatisation, c'est :", options: ["Embaucher plus de personnel", "Un logiciel qui fait des étapes à votre place sans personne à chaque fois", "Travailler plus longtemps", "Acheter un robot"], answer: 1, why: "Les automatisations font des étapes toutes seules." },
+      { objective: "O1", q: "Un e-mail qui arrive et lance une automatisation est :", options: ["Un déclencheur", "Un filtre", "Un champ", "Un historique des exécutions"], answer: 0, why: "L'événement de départ est le déclencheur." },
+      { objective: "O1", q: "« Envoyer un e-mail de confirmation » dans une automatisation est :", options: ["Un déclencheur", "Un prompt", "Une action", "Un responsable"], answer: 2, why: "Les actions sont ce qui se passe après le déclencheur." },
+      { objective: "O1", q: "Zapier appelle une automatisation :", options: ["Un Zap", "Un flux", "Un scénario", "Une fiche recette"], answer: 0, why: "Le terme de Zapier est Zap." },
+      { objective: "O2", q: "Quelle tâche vaut mieux laisser à une personne ?", options: ["Classer un reçu", "Envoyer un rappel", "Recopier les données d'un formulaire", "Décider si quelqu'un a droit à une aide"], answer: 3, why: "Les décisions sur des personnes demandent un jugement humain." },
+      { objective: "O2", q: "Une carte du flux de travail liste :", options: ["Seulement le résultat final", "Chaque étape, qui la fait, l'outil et le temps", "Les salaires des employés", "Les adresses des bureaux"], answer: 1, why: "Elle montre comment la tâche se fait aujourd'hui." },
+      { objective: "O2", q: "« Brouillon IA plus vérification humaine » convient à quelle étape ?", options: ["Ajouter une ligne dans une feuille", "Rédiger une réponse à un client", "Enregistrer un fichier", "Lancer l'automatisation"], answer: 1, why: "Les messages aux clients doivent être vérifiés avant l'envoi." },
+      { objective: "O3", q: "Un bon prompt d'IA dans une automatisation est :", options: ["Vague, comme « fais quelque chose »", "Vide", "Un mot de passe", "Précis, comme « Réponds par un seul mot : Devis, Question ou Réclamation »"], answer: 3, why: "Des prompts précis donnent des résultats prévisibles." },
+      { objective: "O3", q: "Où placer un point de contrôle humain ?", options: ["Partout où une erreur ferait du tort, comme les messages aux clients", "Nulle part", "Seulement au déclencheur", "Seulement après la suppression de l'automatisation"], answer: 0, why: "Les points de contrôle attrapent les erreurs coûteuses." },
+      { objective: "O3", q: "Les règles sur les données de votre conception disent :", options: ["Quelle police utiliser", "Qui reçoit une prime", "Ce qui passe, où c'est stocké et ce qui ne passe jamais par l'IA", "Rien"], answer: 2, why: "Elles protègent les informations privées." },
+      { objective: "O4", q: "Une question ou une case de formulaire s'appelle :", options: ["Un déclencheur", "Un Zap", "Un filtre", "Un champ"], answer: 3, why: "Chaque case est un champ." },
+      { objective: "O4", q: "Les offres gratuites des outils sans code :", options: ["Sont illimitées pour toujours", "Coûtent toujours 1 000 $", "Ont des limites ; consultez la page des tarifs", "N'existent pas"], answer: 2, why: "Les offres changent, donc consultez la page officielle des tarifs." },
+      { objective: "O4", q: "Connecter des applications dans un outil d'automatisation veut dire :", options: ["Brancher des câbles", "Donner à une application la permission de travailler avec une autre", "Partager publiquement votre mot de passe", "Acheter de nouveaux ordinateurs"], answer: 1, why: "Les connexions sont des permissions entre applications." },
+      { objective: "O5", q: "Combien de cas de test, au minimum, le cours conseille-t-il ?", options: ["Cinq", "Un", "Zéro", "Cinq cents"], answer: 0, why: "Cinq cas couvrent les entrées normales et pièges." },
+      { objective: "O5", q: "Lequel est un cas de test piège ?", options: ["Seulement une entrée parfaitement normale", "Aucune entrée, jamais testé", "Un formulaire avec un champ vide", "Votre mot de passe"], answer: 2, why: "Les champs vides cassent souvent les automatisations." },
+      { objective: "O5", q: "Un filtre dans une automatisation :", options: ["Ne laisse continuer que certains éléments", "Nettoie l'écran", "Supprime le tableur", "Lance l'automatisation"], answer: 0, why: "Les filtres contrôlent quels éléments passent." },
+      { objective: "O6", q: "Lors de la première mise en service, vous devez :", options: ["L'activer pour tout le monde et ne jamais vérifier", "Supprimer le journal de tests", "Retirer le point de contrôle humain", "Commencer petit et vérifier les résultats chaque jour"], answer: 3, why: "Commencer petit limite les dégâts en cas de problème." },
+      { objective: "O6", q: "L'historique des exécutions montre :", options: ["Votre historique de navigation", "Chaque fois que l'automatisation a tourné et si cela a marché", "Les heures des employés", "Les mots de passe des clients"], answer: 1, why: "Il aide à repérer les échecs." },
+      { objective: "O6", q: "Quelle est une raison courante de panne d'une automatisation ?", options: ["Le soleil s'est couché", "Un mot de passe ou un nom de champ a changé", "Trop de clients satisfaits", "Le logo a changé de couleur"], answer: 1, why: "Les changements dans les applications connectées cassent les automatisations." },
+      { objective: "O6", q: "Chaque automatisation doit avoir :", options: ["Personne de responsable", "Un accès illimité à toutes les données", "Un emplacement secret", "Un responsable qui surveille les alertes d'erreur"], answer: 3, why: "Un responsable la garde en bonne santé." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      1,
+      2,
+      4,
+      6,
+      8,
+      9,
+      11,
+      14,
+      16,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Carte du flux de travail",
+        objective: "O2",
+        notYet: "Des étapes manquent, ou aucune étape n'est marquée.",
+        meets: "Chaque étape avec qui, l'outil et le temps, marquée : automatiser, brouillon de l'IA plus vérification humaine, ou garder humaine.",
+        exceeds: "Inclut une estimation du temps gagné chaque semaine."
+      },
+      {
+        name: "Déclencheur, actions et étape d'IA",
+        objective: "O4",
+        notYet: "L'automatisation ne part pas de son déclencheur, ou l'étape d'IA manque.",
+        meets: "Un déclencheur qui marche, des actions dans l'ordre et une étape d'IA qui résume et trie la demande.",
+        exceeds: "Utilise un filtre ou un prompt précis d'un seul mot pour que les résultats soient réguliers."
+      },
+      {
+        name: "Vérification humaine et règles sur les données",
+        objective: "O3",
+        notYet: "Les réponses partent sans approbation, ou des données privées passent par l'étape d'IA.",
+        meets: "Une personne approuve le brouillon de réponse, et les règles sur les données disent ce qui ne passe jamais par l'IA.",
+        exceeds: "Note ce que chaque outil connecté fait des données."
+      },
+      {
+        name: "Cinq essais",
+        objective: "O5",
+        notYet: "Moins de cinq tests, de vraies données utilisées, ou des échecs non corrigés.",
+        meets: "Cinq entrées de test inventées, dont des cas pièges, notées avec réussi ou échoué et les corrections.",
+        exceeds: "Chaque échec a été retesté et a réussi."
+      },
+      {
+        name: "Responsable et instructions",
+        objective: "O6",
+        notYet: "Pas de responsable nommé ni d'instructions.",
+        meets: "Un responsable nommé, une alerte d'erreur et une fiche d'instructions d'une page.",
+        exceeds: "La fiche dit comment arrêter l'automatisation et quand elle sera revue."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Automatisations qui tournent encore, avec un responsable, 60 jours plus tard (questionnaire de suivi)",
+      "Heures gagnées par semaine sur la tâche automatisée, selon l'organisation",
+      "Organisations qui ne signalent aucun mauvais message envoyé ni aucune donnée privée exposée par l'automatisation"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur avec internet",
+      "Google Forms et Sheets, ou Microsoft Forms et Excel",
+      "Un outil d'automatisation sans code comme Zapier, Power Automate ou Make (vérifiez les limites actuelles de l'offre gratuite)",
+      "Du papier ou un document pour la carte du flux de travail, la conception et le journal de tests",
+      "Environ 60 minutes pour les leçons et les contrôles, plus le temps de construire et de tester"
+    ],
+    facilitatorNotes: [
+      "Faites le test de départ ensemble, puis un chapitre par séance ; construisez en direct un flux du formulaire au tableur sur un écran partagé.",
+      "Faites concevoir les apprenants sur papier et faites relire leur conception par un binôme avant qu'ils ouvrent un outil.",
+      "Utilisez seulement des entrées d'exemple inventées pour les tests ; jamais de vraies données de clients, de bénéficiaires ou de donateurs.",
+      "Vérifiez que chaque automatisation qui envoie des messages à des personnes a une étape d'approbation humaine.",
+      "Notez la tâche finale avec la grille d'évaluation, et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

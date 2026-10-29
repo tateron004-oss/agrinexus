@@ -17,11 +17,35 @@ module.exports = {
     "Vous utiliserez des outils gratuits comme Google Sheets ou Excel avec ChatGPT, Microsoft Copilot ou Google Gemini. Vous vous exercerez avec des chiffres d'exemple ou nettoyés, jamais avec des numéros de compte. Chaque leçon dure environ cinq minutes avec une tâche « Essayez maintenant », un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin. Ce cours n'est pas un conseil fiscal, juridique ou d'investissement ; pour cela, consultez un professionnel agréé et, aux États-Unis, irs.gov (le site du fisc américain)."
   ],
   finalTask: "À partir d'un mois de transactions réelles ou d'exemple, dont tous les numéros de compte et les noms ont été retirés, construisez un tableau qui classe recettes et dépenses par catégorie, un tableau budget-réel avec les trois plus grands écarts expliqués, et une prévision de trésorerie sur 13 semaines avec la semaine la plus basse marquée. Rédigez ensuite un point financier de cinq phrases, en langage simple, pour un propriétaire, un associé ou un conseil d'administration.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des propriétaires de petites entreprises, des aides-comptables, des responsables administratifs et des trésoriers ou employés d'associations qui gèrent l'argent sans être comptables de formation.",
+    startingPoint: "Ils savent lire un relevé bancaire et utiliser un téléphone ou un ordinateur ; certains tiennent leurs comptes dans un tableur ou une application de comptabilité. Peu construisent des budgets, des prévisions de trésorerie ou des formules, et beaucoup n'ont jamais utilisé l'IA pour des tâches d'argent en toute sécurité.",
+    gap: "Beaucoup de petites organisations découvrent leurs problèmes de trésorerie trop tard, ratent des prélèvements en double ou des arnaques, et ont du mal à expliquer leurs chiffres à leurs associés ou à leur conseil d'administration. Les apprenants doivent utiliser l'IA et un tableur pour classer, planifier, prévoir et expliquer l'argent, tout en gardant les détails financiers privés hors des outils d'IA et en vérifiant chaque chiffre.",
+    constraints: [
+      "Niveau de lecture : mots simples ; les termes financiers sont expliqués la première fois",
+      "Appareils : un ordinateur est préférable pour les tableurs ; un téléphone rend ce travail difficile",
+      "Vie privée : aucun numéro de compte, code banque, numéro de carte, de sécurité sociale ou d'identification fiscale, aucun mot de passe ni nom de personne dans les outils d'IA",
+      "Pas de conseil fiscal, de paie, juridique ou d'investissement : vérifiez sur irs.gov, auprès de l'administration fiscale de l'État ou d'un professionnel agréé",
+      "Temps : des leçons de 5 minutes, environ 60 minutes en tout, plus le temps de construire le tableur"
+    ],
+    prerequisites: "Aucun. Un peu de pratique du tableur (saisir dans des cellules, une SOMME simple) aide."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir d'un mois de transactions exportées", action: "préparer les données pour l'IA en retirant les numéros de compte et en remplaçant les noms par des étiquettes", standard: "sans aucun détail financier privé restant, et avec les calculs de l'IA vérifiés dans le tableur" },
+    { id: "O2", condition: "À partir de vos transactions nettoyées et d'une liste de catégories", action: "classer chaque transaction dans une catégorie et totaliser chacune avec SUMIF", standard: "pour que les totaux par catégorie fassent le total général" },
+    { id: "O3", condition: "À partir d'un budget mensuel et des totaux réels", action: "créer un tableau budget-réel avec l'écart et le pourcentage d'écart", standard: "avec les trois plus grands écarts expliqués en une phrase chacun" },
+    { id: "O4", condition: "À partir de la trésorerie d'aujourd'hui et des entrées et sorties d'argent prévues", action: "construire une prévision de trésorerie sur 13 semaines et marquer la semaine la plus basse", standard: "avec la trésorerie de fin de chaque semaine reportée sur la semaine suivante" },
+    { id: "O5", condition: "À partir d'un mois de transactions nettoyées et de demandes de paiement", action: "repérer les doublons possibles, les dépenses inhabituelles et les arnaques au paiement", standard: "en confirmant tout changement de coordonnées bancaires par un appel à un numéro que vous connaissez déjà" },
+    { id: "O6", condition: "À partir des résultats de votre tableur", action: "rédiger un point financier de cinq phrases en langage simple et prévoir combien de temps garder les documents", standard: "avec chaque chiffre vérifié dans le tableur" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Organiser l'argent",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Utiliser l'IA avec l'argent en toute sécurité",
           minutes: 5,
           goal: "Préparer des données financières pour obtenir l'aide de l'IA sans exposer de détails privés.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "Nettoyer, puis vérifier", bullets: ["Supprimer les numéros, étiqueter les noms", "Laisser le tableur calculer", "Impôts : administration fiscale ou comptable"] }
           ],
           tryIt: "Exportez ou saisissez 20 transactions d'un mois réel ou d'exemple dans un tableur. Retirez tous les numéros de compte et remplacez les noms par des étiquettes.",
-          youCanNow: "préparer des données financières pour l'aide de l'IA sans exposer de détails privés."
+          youCanNow: "préparer des données financières pour l'aide de l'IA sans exposer de détails privés.",
+          quickCheck: [
+            { objective: "O1", q: "Quelle colonne devez-vous supprimer avant de coller des transactions dans un outil d'IA ?", options: ["La date", "Le montant", "La description de l'achat", "Le numéro de compte"], answer: 3, why: "Les numéros de compte sont privés et ne doivent jamais aller dans un outil d'IA grand public." },
+            { objective: "O1", q: "Vos transactions mentionnent une cliente nommée « Maria Lopez ». Que faites-vous avant de demander l'aide de l'IA ?", options: ["Laisser le nom : l'IA le garde privé", "Le remplacer par une étiquette comme « Cliente A »", "Ajouter aussi son numéro de téléphone", "Supprimer toute la transaction"], answer: 1, why: "Remplacer les noms par des étiquettes protège la vie privée tout en laissant l'IA aider." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Classer les recettes et les dépenses par catégorie",
           minutes: 5,
           goal: "Utiliser l'IA pour proposer des catégories et un tableur pour totaliser chacune.",
@@ -57,9 +86,14 @@ module.exports = {
             { title: "Totaliser avec SUMIF", bullets: ["=SUMIF(C:C, \"Loyer\", D:D) ; en français : SOMME.SI", "Les totaux des catégories doivent égaler le total général"] }
           ],
           tryIt: "Faites proposer par l'IA des catégories pour vos 20 transactions nettoyées, corrigez-les et totalisez chaque catégorie avec SUMIF (SOMME.SI). Vérifiez que les totaux correspondent au total général.",
-          youCanNow: "classer des transactions par catégorie et les totaliser avec une formule de tableur."
+          youCanNow: "classer des transactions par catégorie et les totaliser avec une formule de tableur.",
+          quickCheck: [
+            { objective: "O2", q: "Que fait SUMIF dans un tableur ?", options: ["Il additionne les montants qui correspondent à une étiquette", "Il trie les lignes par date", "Il supprime les cellules vides", "Il compte le nombre de colonnes"], answer: 0, why: "SUMIF additionne les montants dont l'étiquette correspond, par exemple toutes les lignes Loyer." },
+            { objective: "O2", q: "Vos totaux par catégorie font 4 800 $, mais le total général est de 5 000 $. Que faites-vous ?", options: ["Ignorer la différence", "Changer le total général en 4 800 $", "Trouver les transactions sans catégorie ou avec une mauvaise étiquette", "Demander à l'IA de faire correspondre les chiffres"], answer: 2, why: "Les totaux par catégorie doivent égaler le total général : cherchez les lignes sans catégorie ou mal étiquetées." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Construire un budget et le comparer au réel",
           minutes: 6,
           goal: "Construire un budget mensuel et un tableau budget-réel qui montre où vous vous écartez.",
@@ -76,17 +110,21 @@ module.exports = {
             { title: "Expliquer les gros écarts", bullets: ["Les trois plus grandes différences", "Une phrase chacune avec la vraie raison"] }
           ],
           tryIt: "Construisez un tableau budget-réel pour votre mois avec l'écart et le pourcentage d'écart. Expliquez les trois plus grands écarts en une phrase chacun.",
-          youCanNow: "construire un budget, le comparer aux résultats réels et expliquer les différences."
+          youCanNow: "construire un budget, le comparer aux résultats réels et expliquer les différences.",
+          quickCheck: [
+            { objective: "O3", q: "Dans un tableau budget-réel, comment calcule-t-on l'écart dans ce cours ?", options: ["Budget plus réel", "Budget divisé par réel", "Réel moins budget", "Réel multiplié par budget"], answer: 2, why: "L'écart, c'est le réel moins le budget." },
+            { objective: "O3", q: "Les fournitures ont dépassé le budget de 200 $. L'IA propose « les prix ont augmenté », mais vous savez que vous en avez acheté plus pour un événement. Qu'écrivez-vous ?", options: ["La vraie raison : des fournitures en plus achetées pour l'événement", "La raison de l'IA, puisqu'elle a l'air correcte", "Aucune raison", "Que le budget était faux"], answer: 0, why: "Vous seul connaissez la vraie raison ; l'IA peut aider à formuler, pas à fournir les faits." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Organiser l'argent",
         questions: [
-          { q: "Que ne devez-vous JAMAIS coller dans un outil d'IA grand public ?", options: ["Une liste de catégories", "Un tableau de montants nettoyé", "Vos numéros de compte et codes bancaires", "Une question sur le sens du mot « écart »"], answer: 2, why: "Les numéros de compte sont des données financières privées." },
-          { q: "L'IA donne un total qui semble faux. Que faites-vous ?", options: ["Laisser le tableur calculer et contrôler à la main", "Faire confiance à l'IA", "Supprimer les données", "L'envoyer au conseil"], answer: 0, why: "L'IA peut se tromper en calcul ; le tableur et un contrôle manuel confirment." },
-          { q: "Que fait =SUMIF(C:C, \"Loyer\", D:D) ?", options: ["Elle supprime les lignes de loyer", "Elle compte les clients", "Elle trie par date", "Elle additionne les montants de la colonne D quand la colonne C indique Loyer"], answer: 3, why: "SUMIF additionne les montants qui remplissent une condition." },
-          { q: "Le budget carburant était de 500 $ ; le réel est de 800 $. Quel est l'écart ?", options: ["1 300 $", "300 $ de dépassement", "300 $ d'économie", "500 $"], answer: 1, why: "Réel moins budget = 800 - 500 = 300 de dépassement." },
-          { q: "Qui doit expliquer pourquoi un écart s'est produit ?", options: ["L'IA seule", "Vous, à partir de ce qui s'est vraiment passé", "Personne", "Un site web au hasard"], answer: 1, why: "Vous seul connaissez les vraies raisons derrière les chiffres." }
+          { objective: "O1", q: "Que ne devez-vous JAMAIS coller dans un outil d'IA grand public ?", options: ["Une liste de catégories", "Un tableau de montants nettoyé", "Vos numéros de compte et codes bancaires", "Une question sur le sens du mot « écart »"], answer: 2, why: "Les numéros de compte sont des données financières privées." },
+          { objective: "O1", q: "L'IA donne un total qui semble faux. Que faites-vous ?", options: ["Laisser le tableur calculer et contrôler à la main", "Faire confiance à l'IA", "Supprimer les données", "L'envoyer au conseil"], answer: 0, why: "L'IA peut se tromper en calcul ; le tableur et un contrôle manuel confirment." },
+          { objective: "O2", q: "Que fait =SUMIF(C:C, \"Loyer\", D:D) ?", options: ["Elle supprime les lignes de loyer", "Elle compte les clients", "Elle trie par date", "Elle additionne les montants de la colonne D quand la colonne C indique Loyer"], answer: 3, why: "SUMIF additionne les montants qui remplissent une condition." },
+          { objective: "O3", q: "Le budget carburant était de 500 $ ; le réel est de 800 $. Quel est l'écart ?", options: ["1 300 $", "300 $ de dépassement", "300 $ d'économie", "500 $"], answer: 1, why: "Réel moins budget = 800 - 500 = 300 de dépassement." },
+          { objective: "O3", q: "Qui doit expliquer pourquoi un écart s'est produit ?", options: ["L'IA seule", "Vous, à partir de ce qui s'est vraiment passé", "Personne", "Un site web au hasard"], answer: 1, why: "Vous seul connaissez les vraies raisons derrière les chiffres." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Chapitre 2 : Planifier et expliquer",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Prévoir la trésorerie des 13 prochaines semaines",
           minutes: 6,
           goal: "Construire une prévision de trésorerie sur 13 semaines et trouver la semaine où l'argent est le plus serré.",
@@ -110,9 +149,14 @@ module.exports = {
             { title: "Trouver la semaine la plus basse", bullets: ["Reporter un achat", "Relancer un paiement", "Prévoir un financement tôt"] }
           ],
           tryIt: "Construisez une prévision de trésorerie sur 13 semaines avec l'aide de l'IA. Remplissez-la avec des chiffres réels ou d'exemple et marquez la semaine la plus basse avec une action que vous feriez.",
-          youCanNow: "construire une prévision de trésorerie sur 13 semaines et préparer la semaine la plus serrée."
+          youCanNow: "construire une prévision de trésorerie sur 13 semaines et préparer la semaine la plus serrée.",
+          quickCheck: [
+            { objective: "O4", q: "Que montre une prévision de trésorerie ?", options: ["Votre bénéfice de l'an dernier", "Quand l'argent entre et sort, semaine par semaine", "Votre score de crédit", "Votre impôt à payer"], answer: 1, why: "Une prévision de trésorerie montre les entrées et les sorties d'argent semaine par semaine." },
+            { objective: "O4", q: "Votre prévision montre une trésorerie sous zéro à la semaine 7. Que pourriez-vous faire ?", options: ["Rien : ce n'est qu'une prévision", "Cacher la semaine 7 au conseil d'administration", "Dépenser plus à la semaine 6", "Reporter un achat, relancer un paiement ou mettre en place une ligne de crédit"], answer: 3, why: "La semaine la plus basse, c'est le moment à préparer à l'avance pour couvrir le manque." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Repérer les problèmes et la fraude avec l'IA",
           minutes: 5,
           goal: "Utiliser l'IA et des vérifications simples pour repérer les dépenses inhabituelles, les doublons et les arnaques.",
@@ -130,9 +174,14 @@ module.exports = {
           ],
           sources: [{ name: "FTC : ReportFraud.ftc.gov", url: "https://reportfraud.ftc.gov/" }, { name: "FTC : reconnaître et éviter l'hameçonnage", url: "https://consumer.ftc.gov/articles/how-recognize-and-avoid-phishing-scams" }],
           tryIt: "Demandez à l'IA d'examiner vos transactions nettoyées pour trouver doublons et montants inhabituels. Examinez chaque alerte et notez ce que vous avez trouvé.",
-          youCanNow: "utiliser l'IA et des vérifications simples pour repérer les dépenses inhabituelles et les arnaques au paiement."
+          youCanNow: "utiliser l'IA et des vérifications simples pour repérer les dépenses inhabituelles et les arnaques au paiement.",
+          quickCheck: [
+            { objective: "O5", q: "Laquelle est une arnaque courante qui vise les entreprises et les associations ?", options: ["Un client qui paie à temps", "Un paiement mensuel de loyer", "Un relevé bancaire reçu par la poste", "Un e-mail qui vous demande de changer les coordonnées bancaires d'un fournisseur"], answer: 3, why: "Les demandes de changement des coordonnées bancaires d'un fournisseur sont une arnaque courante." },
+            { objective: "O5", q: "L'IA signale deux paiements identiques au même fournisseur le même jour. Que faites-vous ?", options: ["Supposer que l'IA a raison et annuler les deux", "Vérifier vous-même, par exemple en regardant les factures", "L'ignorer", "Payer le fournisseur une troisième fois"], answer: 1, why: "L'IA signale des problèmes possibles ; c'est vous qui vérifiez chacun." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Expliquer les chiffres et bien conserver les documents",
           minutes: 5,
           goal: "Rédiger un point financier en langage simple et savoir combien de temps garder les documents.",
@@ -150,17 +199,21 @@ module.exports = {
           ],
           sources: [{ name: "IRS : combien de temps garder les documents ?", url: "https://www.irs.gov/businesses/small-businesses-self-employed/how-long-should-i-keep-records" }],
           tryIt: "Tâche finale : rédigez un point financier de cinq phrases à partir de votre mois classé, de votre tableau budget-réel et de votre prévision sur 13 semaines. Vérifiez chaque chiffre, puis enregistrez tous les fichiers dans un dossier sauvegardé.",
-          youCanNow: "organiser, planifier et expliquer l'argent d'une organisation avec l'aide de l'IA tout en protégeant les données."
+          youCanNow: "organiser, planifier et expliquer l'argent d'une organisation avec l'aide de l'IA tout en protégeant les données.",
+          quickCheck: [
+            { objective: "O6", q: "Qu'est-ce qui a sa place dans un point financier de cinq phrases ?", options: ["Les perspectives de trésorerie tirées de votre prévision", "Toutes les transactions du mois", "Les numéros de compte bancaire", "Les adresses personnelles des employés"], answer: 0, why: "Le point couvre les entrées, les sorties, le plus grand écart, les perspectives de trésorerie et une décision à prendre." },
+            { objective: "O6", q: "Le brouillon de l'IA dit que les recettes ont augmenté de 20 %, mais votre tableur montre 12 %. Que faites-vous ?", options: ["L'envoyer : c'est assez proche", "Arrondir à 15 %", "Le corriger pour qu'il corresponde au tableur avant l'envoi", "Retirer tous les chiffres"], answer: 2, why: "Vérifiez chaque chiffre dans le tableur et retirez tout ce qui n'est pas vrai." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Planifier et expliquer",
         questions: [
-          { q: "Pourquoi une entreprise bénéficiaire peut-elle quand même manquer d'argent ?", options: ["Le bénéfice égale toujours la trésorerie", "Les banques gardent tous les bénéfices", "Cela ne peut pas arriver", "Les paiements arrivent en retard pendant que les factures tombent"], answer: 3, why: "Le calendrier des entrées et sorties compte." },
-          { q: "Dans une prévision de trésorerie, la trésorerie de début de la semaine prochaine égale :", options: ["La trésorerie de fin de cette semaine", "Le bénéfice de l'an dernier", "Le budget", "Zéro"], answer: 0, why: "Chaque semaine se reporte sur la suivante." },
-          { q: "Un e-mail d'un fournisseur vous demande d'envoyer les prochains paiements sur un nouveau compte bancaire. Que faites-vous ?", options: ["Le mettre à jour tout de suite", "Répondre avec vos identifiants bancaires", "Appeler le fournisseur à un numéro que vous connaissez déjà pour confirmer", "Le transférer à tout le personnel"], answer: 2, why: "Les demandes de changement de coordonnées bancaires sont une fraude courante." },
-          { q: "Selon l'IRS, quelle est la durée générale de conservation des documents qui justifient une déclaration ?", options: ["Une semaine", "Ne jamais les garder", "Exactement 50 ans", "En général 3 ans, plus dans certains cas"], answer: 3, why: "Les consignes de l'IRS donnent 3 ans comme durée générale, avec des exceptions." },
-          { q: "L'IA rédige un point financier pour le conseil. Que devez-vous faire avant de l'envoyer ?", options: ["L'envoyer sans le lire", "Ajouter des chiffres pour faire bonne impression", "Vérifier chaque chiffre dans le tableur", "Supprimer le tableur"], answer: 2, why: "L'IA peut se tromper de chiffres ; c'est vous qui vérifiez." }
+          { objective: "O4", q: "Pourquoi une entreprise bénéficiaire peut-elle quand même manquer d'argent ?", options: ["Le bénéfice égale toujours la trésorerie", "Les banques gardent tous les bénéfices", "Cela ne peut pas arriver", "Les paiements arrivent en retard pendant que les factures tombent"], answer: 3, why: "Le calendrier des entrées et sorties compte." },
+          { objective: "O4", q: "Dans une prévision de trésorerie, la trésorerie de début de la semaine prochaine égale :", options: ["La trésorerie de fin de cette semaine", "Le bénéfice de l'an dernier", "Le budget", "Zéro"], answer: 0, why: "Chaque semaine se reporte sur la suivante." },
+          { objective: "O5", q: "Un e-mail d'un fournisseur vous demande d'envoyer les prochains paiements sur un nouveau compte bancaire. Que faites-vous ?", options: ["Le mettre à jour tout de suite", "Répondre avec vos identifiants bancaires", "Appeler le fournisseur à un numéro que vous connaissez déjà pour confirmer", "Le transférer à tout le personnel"], answer: 2, why: "Les demandes de changement de coordonnées bancaires sont une fraude courante." },
+          { objective: "O6", q: "Selon l'IRS, quelle est la durée générale de conservation des documents qui justifient une déclaration ?", options: ["Une semaine", "Ne jamais les garder", "Exactement 50 ans", "En général 3 ans, plus dans certains cas"], answer: 3, why: "Les consignes de l'IRS donnent 3 ans comme durée générale, avec des exceptions." },
+          { objective: "O6", q: "L'IA rédige un point financier pour le conseil. Que devez-vous faire avant de l'envoyer ?", options: ["L'envoyer sans le lire", "Ajouter des chiffres pour faire bonne impression", "Vérifier chaque chiffre dans le tableur", "Supprimer le tableur"], answer: 2, why: "L'IA peut se tromper de chiffres ; c'est vous qui vérifiez." }
         ]
       }
     }
@@ -168,26 +221,106 @@ module.exports = {
   quiz: {
     title: "Quiz final : L'IA au service des finances",
     questions: [
-      { q: "Pour quoi l'IA est-elle douée dans le travail financier ?", options: ["Donner des décisions fiscales définitives", "Écrire des formules de tableur et expliquer des termes", "Garantir des rendements d'investissement", "Signer des documents bancaires"], answer: 1, why: "L'IA aide pour les formules et les explications, pas pour des réponses fiscales ou juridiques définitives." },
-      { q: "Avant de coller des transactions dans l'IA, vous devez :", options: ["Retirer les numéros de compte et remplacer les noms par des étiquettes", "Ajouter votre mot de passe", "Inclure les numéros de téléphone des donateurs", "Ajouter les numéros de sécurité sociale"], answer: 0, why: "Des données nettoyées protègent la vie privée." },
-      { q: "« Client A » à la place d'un vrai nom est :", options: ["Une faute de frappe", "Une catégorie", "Une étiquette qui protège la vie privée", "Un écart"], answer: 2, why: "Les étiquettes cachent les noms privés." },
-      { q: "Où confirmer une question fiscale ?", options: ["Auprès de l'administration fiscale (irs.gov aux États-Unis) ou d'un comptable agréé", "Dans une publication sur les réseaux sociaux", "Seulement dans un chat d'IA", "Auprès d'un ami qui devine"], answer: 0, why: "Les sources officielles et les professionnels donnent des réponses fiscales fiables." },
-      { q: "Laquelle est une catégorie de recettes typique d'une association ?", options: ["Coût des marchandises", "Carburant", "Loyer", "Subventions"], answer: 3, why: "Les subventions et les dons sont des recettes d'association." },
-      { q: "Qu'est-ce qu'une transaction ?", options: ["Un type de budget", "Un mouvement d'argent entrant ou sortant", "Un formulaire fiscal", "Un mot de passe bancaire"], answer: 1, why: "Chaque vente ou paiement est une transaction." },
-      { q: "Après que l'IA a proposé des catégories, vous devez :", options: ["Toutes les accepter", "Corriger celles qui sont fausses", "Supprimer la feuille", "Les envoyer aux clients"], answer: 1, why: "Les propositions de l'IA doivent être vérifiées." },
-      { q: "Les totaux des catégories doivent :", options: ["Dépasser le total général", "Être au hasard", "Rester vides", "Faire le total général"], answer: 3, why: "Cette vérification repère les lignes oubliées ou comptées deux fois." },
-      { q: "Un budget est :", options: ["Un plan de l'argent qui entre et qui sort", "Un compte bancaire", "Une déclaration d'impôts", "Un prêt"], answer: 0, why: "C'est le plan financier d'une période." },
-      { q: "Budget marketing de 1 000 $ ; réel de 700 $. L'écart est de :", options: ["300 $ de dépassement", "1 700 $", "300 $ sous le budget", "700 $"], answer: 2, why: "700 - 1 000 = -300, donc 300 $ sous le budget." },
-      { q: "Pourquoi expliquer chaque grand écart ?", options: ["Pour allonger le rapport", "Ce n'est jamais nécessaire", "Pour cacher des erreurs", "Pour que les décideurs sachent ce qui s'est passé et pourquoi"], answer: 3, why: "Les explications transforment les chiffres en décisions." },
-      { q: "Combien de semaines couvre la prévision de trésorerie du cours ?", options: ["2", "13", "52", "100"], answer: 1, why: "Une prévision sur 13 semaines couvre environ trois mois." },
-      { q: "La semaine la plus basse de votre prévision vous dit :", options: ["Votre bénéfice total", "Quand l'argent sera le plus serré, pour vous préparer", "Le montant de vos impôts", "Rien d'utile"], answer: 1, why: "Elle montre quand agir tôt." },
-      { q: "Une ligne de crédit est :", options: ["Un montant fixé qu'une banque vous permet d'emprunter en cas de besoin", "Une ligne de tableur", "Un type de don", "Une déduction fiscale"], answer: 0, why: "Elle peut couvrir de courts manques de trésorerie." },
-      { q: "Que peut aider à signaler l'IA dans vos transactions ?", options: ["Vos futurs gains au loto", "L'impôt exact que vous devez", "Des paiements en double possibles", "Les mots de passe des clients"], answer: 2, why: "L'IA peut repérer des schémas comme les doublons." },
-      { q: "Un e-mail urgent qui semble venir de votre patron demande un virement aujourd'hui. Vous devez :", options: ["Confirmer par téléphone à un numéro que vous connaissez déjà", "L'envoyer immédiatement", "Répondre avec les coordonnées bancaires", "Ignorer le patron pour toujours"], answer: 0, why: "Les demandes de paiement urgentes sont une arnaque courante." },
-      { q: "Où signaler une fraude aux États-Unis ?", options: ["Sur un forum au hasard", "À l'adresse e-mail de l'escroc", "Nulle part", "Sur ReportFraud.ftc.gov"], answer: 3, why: "La FTC recueille les signalements de fraude." },
-      { q: "Un bon point financier pour un conseil d'administration, c'est :", options: ["Seulement le tableur brut", "Cinq phrases claires avec les chiffres clés et une décision", "Un rapport de 40 pages", "Aucun chiffre"], answer: 1, why: "Court et clair aide les gens à décider." },
-      { q: "Selon l'IRS, les documents sur les impôts liés aux salaires doivent être gardés au moins :", options: ["1 mois", "4 ans", "1 an", "Aucune durée"], answer: 1, why: "L'IRS dit au moins 4 ans pour ces documents." },
-      { q: "Ce cours donne des conseils d'investissement.", options: ["Vrai : achetez ce que l'IA suggère", "Vrai : placez toujours l'argent des subventions", "Vrai : l'IA choisit les actions", "Faux : consultez un professionnel agréé pour cela"], answer: 3, why: "Le cours enseigne la gestion de l'argent, pas le conseil en investissement." }
+      { objective: "O1", q: "Pour quoi l'IA est-elle douée dans le travail financier ?", options: ["Donner des décisions fiscales définitives", "Écrire des formules de tableur et expliquer des termes", "Garantir des rendements d'investissement", "Signer des documents bancaires"], answer: 1, why: "L'IA aide pour les formules et les explications, pas pour des réponses fiscales ou juridiques définitives." },
+      { objective: "O1", q: "Avant de coller des transactions dans l'IA, vous devez :", options: ["Retirer les numéros de compte et remplacer les noms par des étiquettes", "Ajouter votre mot de passe", "Inclure les numéros de téléphone des donateurs", "Ajouter les numéros de sécurité sociale"], answer: 0, why: "Des données nettoyées protègent la vie privée." },
+      { objective: "O1", q: "« Client A » à la place d'un vrai nom est :", options: ["Une faute de frappe", "Une catégorie", "Une étiquette qui protège la vie privée", "Un écart"], answer: 2, why: "Les étiquettes cachent les noms privés." },
+      { objective: "O1", q: "Où confirmer une question fiscale ?", options: ["Auprès de l'administration fiscale (irs.gov aux États-Unis) ou d'un comptable agréé", "Dans une publication sur les réseaux sociaux", "Seulement dans un chat d'IA", "Auprès d'un ami qui devine"], answer: 0, why: "Les sources officielles et les professionnels donnent des réponses fiscales fiables." },
+      { objective: "O2", q: "Laquelle est une catégorie de recettes typique d'une association ?", options: ["Coût des marchandises", "Carburant", "Loyer", "Subventions"], answer: 3, why: "Les subventions et les dons sont des recettes d'association." },
+      { objective: "O2", q: "Qu'est-ce qu'une transaction ?", options: ["Un type de budget", "Un mouvement d'argent entrant ou sortant", "Un formulaire fiscal", "Un mot de passe bancaire"], answer: 1, why: "Chaque vente ou paiement est une transaction." },
+      { objective: "O2", q: "Après que l'IA a proposé des catégories, vous devez :", options: ["Toutes les accepter", "Corriger celles qui sont fausses", "Supprimer la feuille", "Les envoyer aux clients"], answer: 1, why: "Les propositions de l'IA doivent être vérifiées." },
+      { objective: "O2", q: "Les totaux des catégories doivent :", options: ["Dépasser le total général", "Être au hasard", "Rester vides", "Faire le total général"], answer: 3, why: "Cette vérification repère les lignes oubliées ou comptées deux fois." },
+      { objective: "O3", q: "Un budget est :", options: ["Un plan de l'argent qui entre et qui sort", "Un compte bancaire", "Une déclaration d'impôts", "Un prêt"], answer: 0, why: "C'est le plan financier d'une période." },
+      { objective: "O3", q: "Budget marketing de 1 000 $ ; réel de 700 $. L'écart est de :", options: ["300 $ de dépassement", "1 700 $", "300 $ sous le budget", "700 $"], answer: 2, why: "700 - 1 000 = -300, donc 300 $ sous le budget." },
+      { objective: "O3", q: "Pourquoi expliquer chaque grand écart ?", options: ["Pour allonger le rapport", "Ce n'est jamais nécessaire", "Pour cacher des erreurs", "Pour que les décideurs sachent ce qui s'est passé et pourquoi"], answer: 3, why: "Les explications transforment les chiffres en décisions." },
+      { objective: "O4", q: "Combien de semaines couvre la prévision de trésorerie du cours ?", options: ["2", "13", "52", "100"], answer: 1, why: "Une prévision sur 13 semaines couvre environ trois mois." },
+      { objective: "O4", q: "La semaine la plus basse de votre prévision vous dit :", options: ["Votre bénéfice total", "Quand l'argent sera le plus serré, pour vous préparer", "Le montant de vos impôts", "Rien d'utile"], answer: 1, why: "Elle montre quand agir tôt." },
+      { objective: "O4", q: "Une ligne de crédit est :", options: ["Un montant fixé qu'une banque vous permet d'emprunter en cas de besoin", "Une ligne de tableur", "Un type de don", "Une déduction fiscale"], answer: 0, why: "Elle peut couvrir de courts manques de trésorerie." },
+      { objective: "O5", q: "Que peut aider à signaler l'IA dans vos transactions ?", options: ["Vos futurs gains au loto", "L'impôt exact que vous devez", "Des paiements en double possibles", "Les mots de passe des clients"], answer: 2, why: "L'IA peut repérer des schémas comme les doublons." },
+      { objective: "O5", q: "Un e-mail urgent qui semble venir de votre patron demande un virement aujourd'hui. Vous devez :", options: ["Confirmer par téléphone à un numéro que vous connaissez déjà", "L'envoyer immédiatement", "Répondre avec les coordonnées bancaires", "Ignorer le patron pour toujours"], answer: 0, why: "Les demandes de paiement urgentes sont une arnaque courante." },
+      { objective: "O5", q: "Où signaler une fraude aux États-Unis ?", options: ["Sur un forum au hasard", "À l'adresse e-mail de l'escroc", "Nulle part", "Sur ReportFraud.ftc.gov"], answer: 3, why: "La FTC recueille les signalements de fraude." },
+      { objective: "O6", q: "Un bon point financier pour un conseil d'administration, c'est :", options: ["Seulement le tableur brut", "Cinq phrases claires avec les chiffres clés et une décision", "Un rapport de 40 pages", "Aucun chiffre"], answer: 1, why: "Court et clair aide les gens à décider." },
+      { objective: "O6", q: "Selon l'IRS, les documents sur les impôts liés aux salaires doivent être gardés au moins :", options: ["1 mois", "4 ans", "1 an", "Aucune durée"], answer: 1, why: "L'IRS dit au moins 4 ans pour ces documents." },
+      { objective: "O1", q: "Ce cours donne des conseils d'investissement.", options: ["Vrai : achetez ce que l'IA suggère", "Vrai : placez toujours l'argent des subventions", "Vrai : l'IA choisit les actions", "Faux : consultez un professionnel agréé pour cela"], answer: 3, why: "Le cours enseigne la gestion de l'argent, pas le conseil en investissement." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      1,
+      3,
+      6,
+      7,
+      9,
+      11,
+      12,
+      15,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Détails privés retirés",
+        objective: "O1",
+        notYet: "Les données contiennent encore des numéros de compte, des numéros d'identité ou de vrais noms.",
+        meets: "Tous les numéros de compte et d'identité sont retirés et les noms sont remplacés par des étiquettes.",
+        exceeds: "Sait montrer comment les calculs de l'IA ont été vérifiés par sondage dans le tableur."
+      },
+      {
+        name: "Catégories et totaux",
+        objective: "O2",
+        notYet: "Les transactions ne sont pas classées, ou les totaux ne correspondent pas au total général.",
+        meets: "Chaque transaction a une catégorie, SUMIF totalise chacune, et l'ensemble fait le total général.",
+        exceeds: "Les mauvaises catégories de l'IA ont été repérées et corrigées, avec une note indiquant lesquelles."
+      },
+      {
+        name: "Budget-réel",
+        objective: "O3",
+        notYet: "Pas de colonne d'écart, ou les grands écarts ne sont pas expliqués.",
+        meets: "L'écart et le pourcentage d'écart pour chaque catégorie, et les trois plus grands expliqués en une phrase chacun.",
+        exceeds: "Chaque explication dit ce qui sera fait à ce sujet le mois prochain."
+      },
+      {
+        name: "Prévision sur 13 semaines",
+        objective: "O4",
+        notYet: "La trésorerie de fin n'est pas reportée sur la semaine suivante, ou la semaine la plus basse n'est pas marquée.",
+        meets: "13 semaines avec les entrées, les sorties et la trésorerie de fin reportée, et la semaine la plus basse marquée.",
+        exceeds: "Inclut un plan pour la semaine la plus basse."
+      },
+      {
+        name: "Point financier",
+        objective: "O6",
+        notYet: "Absent, plus long que nécessaire, ou avec des chiffres qui ne correspondent pas au tableur.",
+        meets: "Cinq phrases : entrées, sorties, plus grand écart, perspectives de trésorerie et une décision, toutes conformes au tableur.",
+        exceeds: "Assez clair pour une personne sans formation financière, et dit où les documents sont conservés."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Organisations qui tiennent à jour chaque mois, pendant trois mois, un tableau budget-réel et une prévision sur 13 semaines (questionnaire de suivi)",
+      "Prélèvements en double, abonnements oubliés ou arnaques repérés et arrêtés dans les 60 jours",
+      "Propriétaires ou conseils d'administration qui disent recevoir un point financier mensuel clair"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur avec Google Sheets ou Excel",
+      "Un assistant d'IA gratuit (ChatGPT, Microsoft Copilot ou Google Gemini)",
+      "Un mois de transactions exportées d'une banque ou d'un outil de comptabilité, ou les données d'exemple du cours",
+      "Environ 60 minutes pour les leçons et les contrôles, plus le temps de construire le tableur"
+    ],
+    facilitatorNotes: [
+      "Faites le test de départ ensemble, puis un chapitre par séance ; construisez les formules SUMIF et la prévision sur un écran partagé.",
+      "Proposez un mois de transactions inventées aux apprenants qui ne veulent pas utiliser de vraies données.",
+      "Vérifiez que chaque apprenant a retiré les numéros de compte et les noms avant de coller quoi que ce soit dans l'IA.",
+      "Ne donnez pas de conseil fiscal, de paie, juridique ou d'investissement ; orientez ces questions vers irs.gov, l'administration fiscale de l'État ou un professionnel agréé.",
+      "Notez la tâche finale avec la grille d'évaluation, et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

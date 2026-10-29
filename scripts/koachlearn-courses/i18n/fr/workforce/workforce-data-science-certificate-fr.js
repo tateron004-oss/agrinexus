@@ -22,11 +22,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes, avec une tâche pratique. Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Réalisez un mini projet de portfolio : choisissez un jeu de données public et gratuit (ou le tableau de ventes d'exemple de la leçon 4), écrivez une question claire, nettoyez les données (cellules vides, doublons et formats), faites un tableau récapitulatif, faites un graphique qui répond à la question, et écrivez un constat en trois phrases avec une limite de vos données. Enregistrez-le dans Google Sheets, Excel ou Google Colab avec un titre court et une description.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des demandeurs d'emploi et des travailleurs qui veulent se tourner vers les métiers des données, ou utiliser les données dans leur emploi actuel, et qui envisagent un certificat en ligne connu sur les données (Google Data Analytics, IBM Data Science ou Microsoft Power BI Data Analyst).",
+    startingPoint: "Ils savent utiliser un ordinateur et les bases d'un tableur. La plupart n'ont pas comparé de certificats sur les données, tenu un long plan d'étude en ligne, ni nettoyé, résumé et représenté en graphique un vrai jeu de données.",
+    gap: "Les compétences en données ouvrent beaucoup d'emplois, mais les gens choisissent souvent le mauvais certificat, s'arrêtent en cours de route ou terminent sans travail à montrer. Les apprenants doivent choisir un certificat adapté à leur objectif, prévoir un rythme d'étude qu'ils peuvent tenir et réaliser un petit projet de portfolio du type que demandent ces certificats.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes ; les termes des données sont expliqués",
+      "Appareils : un ordinateur est nécessaire pour les tableurs et Google Colab ; un téléphone suffit pour planifier",
+      "Les coûts et le contenu des cours changent : les apprenants vérifient aujourd'hui la page officielle de chaque programme",
+      "Vie privée : aucune donnée privée de client dans un portfolio public sans autorisation ; seulement des jeux de données d'exemple ou publics",
+      "Temps : des leçons d'environ 5 minutes plus de la pratique ; les certificats prennent des mois après ce cours"
+    ],
+    prerequisites: "Aucun. Une pratique de base du tableur aide."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir d'un lieu de travail que vous connaissez", action: "décrire le parcours de travail sur les données et écrire trois questions auxquelles les données pourraient répondre dans ce lieu", standard: "en marquant chacune comme travail d'analyste ou de data scientist" },
+    { id: "O2", condition: "À partir de trois certificats connus sur les données", action: "comparer leur niveau, leurs outils principaux, leur durée et leur coût, et choisir celui qui correspond à votre objectif", standard: "avec le coût pris aujourd'hui sur la page officielle" },
+    { id: "O3", condition: "Pour le certificat choisi", action: "créer un plan d'étude hebdomadaire avec des moments d'étude fixes et un objectif par semaine", standard: "qui s'organise autour de votre travail et de votre famille" },
+    { id: "O4", condition: "À partir d'un petit jeu de données qui a des problèmes", action: "trouver et corriger les cellules vides, les doublons et les problèmes de format, et écrire un journal de nettoyage", standard: "en enregistrant d'abord une copie de l'original" },
+    { id: "O5", condition: "À partir d'un jeu de données nettoyé et d'une question", action: "faire un tableau récapitulatif et un graphique qui répond à la question", standard: "avec le bon type de graphique et un titre qui donne la réponse" },
+    { id: "O6", condition: "À partir de votre graphique et de votre tableau récapitulatif", action: "écrire un constat en trois phrases avec une limite et l'enregistrer comme projet de portfolio", standard: "avec un titre et une description courts et aucune donnée privée" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Choisir son certificat et prévoir d'aller au bout",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Ce que font les analystes de données et les data scientists",
           minutes: 5,
           goal: "Décrire le parcours de travail sur les données et dire quelle partie vous intéresse le plus.",
@@ -42,9 +66,14 @@ module.exports = {
             { title: "Data scientist", bullets: ["Prédit et classe aussi avec des modèles", "En général Python et plus de maths", "« Quels clients risquent d'arrêter d'acheter ? »"] }
           ],
           tryIt: "Pensez à votre emploi actuel ou au dernier (un magasin, un entrepôt, une clinique, un restaurant). Écrivez trois questions auxquelles les données pourraient répondre, comme « Quelles heures sont les plus chargées ? ». Marquez chacune « analyste » ou « data scientist ».",
-          youCanNow: "décrire le parcours de travail sur les données et la différence entre un analyste de données et un data scientist."
+          youCanNow: "décrire le parcours de travail sur les données et la différence entre un analyste de données et un data scientist.",
+          quickCheck: [
+            { objective: "O1", q: "Quelle est en général la première étape du travail sur les données ?", options: ["Faire un graphique", "Nettoyer les données", "Construire un modèle", "Poser une question"], answer: 3, why: "Le travail sur les données commence par une question claire, qui guide toutes les étapes suivantes." },
+            { objective: "O1", q: "Dans votre magasin, vous voulez savoir quelles heures sont les plus chargées. De quel type de travail s'agit-il ?", options: ["Seulement celui d'un data scientist", "Celui d'un analyste de données", "Celui de personne ; on ne peut pas y répondre", "Seulement celui d'un programmeur"], answer: 1, why: "Décrire ce qui s'est passé, comme les heures chargées, est un travail typique d'analyste." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Comparer les certificats en données les plus connus",
           minutes: 6,
           goal: "Comparer trois certificats en données très connus et choisir celui qui correspond à votre objectif.",
@@ -64,9 +93,14 @@ module.exports = {
           ],
           sources: [GOOGLE_DA, IBM_DS, MS_PL300],
           tryIt: "Faites un tableau comparatif de trois lignes : certificat, niveau, outils principaux, durée, coût actuel (d'après la page officielle). Entourez celui qui correspond à votre objectif et écrivez une phrase pour dire pourquoi.",
-          youCanNow: "comparer les certificats en données de Google, IBM et Microsoft et choisir celui qui correspond à votre objectif."
+          youCanNow: "comparer les certificats en données de Google, IBM et Microsoft et choisir celui qui correspond à votre objectif.",
+          quickCheck: [
+            { objective: "O2", q: "Que garantit l'obtention d'un certificat sur les données ?", options: ["Rien ; il montre ce que vous avez appris", "Une offre d'emploi", "Une augmentation", "Un diplôme universitaire"], answer: 0, why: "Un certificat montre des compétences ; il ne garantit pas un emploi." },
+            { objective: "O2", q: "Un ami dit qu'un certificat coûte une certaine somme par mois. Que faites-vous avant de vous inscrire ?", options: ["Croire votre ami", "Demander le prix à une IA", "Vérifier le coût aujourd'hui sur la page officielle du programme", "Vous inscrire et voir plus tard"], answer: 2, why: "Les coûts changent : vous vérifiez la page officielle au moment de vous inscrire." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Faire un plan d'étude que vous tiendrez",
           minutes: 5,
           goal: "Construire un plan d'étude hebdomadaire qui s'adapte au travail et à la famille.",
@@ -83,17 +117,21 @@ module.exports = {
             { title: "Chaque semaine", bullets: ["Un petit objectif que vous pouvez cocher", "Faites tous les travaux pratiques", "L'IA peut vous interroger ; le travail noté, c'est vous"] }
           ],
           tryIt: "Placez quatre blocs d'étude pour la semaine prochaine dans votre téléphone ou votre agenda papier. Écrivez un objectif hebdomadaire tiré du certificat choisi, par exemple « finir le premier module ».",
-          youCanNow: "faire un plan d'étude hebdomadaire avec des heures fixes et un objectif que vous pouvez cocher."
+          youCanNow: "faire un plan d'étude hebdomadaire avec des heures fixes et un objectif que vous pouvez cocher.",
+          quickCheck: [
+            { objective: "O3", q: "Où se construit la vraie compétence dans un cours en ligne ?", options: ["En regardant les vidéos en vitesse double", "En lisant les publicités du cours", "En faisant les travaux pratiques", "En sautant directement à l'examen final"], answer: 2, why: "La pratique dans les travaux pratiques construit la compétence que les employeurs veulent voir." },
+            { objective: "O3", q: "Vous travaillez le soir. Quel plan d'étude écrivez-vous ?", options: ["Des moments d'étude fixes dans votre agenda, adaptés à vos horaires, avec un objectif par semaine", "Étudier dès que vous avez un jour libre", "Étudier huit heures en une nuit chaque mois", "Attendre que vos horaires changent"], answer: 0, why: "Des moments réguliers dans votre agenda avec un objectif sont le plan qui a le plus de chances de marcher." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Choisir son certificat et prévoir d'aller au bout",
         questions: [
-          { q: "Quelle question ressemble le plus au travail d'un analyste de données ?", options: ["Comment réparer un moteur de voiture ?", "Quel produit s'est le mieux vendu le mois dernier ?", "Que cuisiner ce soir ?", "Qui va gagner le match ?"], answer: 1, why: "Les analystes expliquent ce qui s'est passé à partir de données existantes." },
-          { q: "Quel certificat s'obtient en réussissant l'examen PL-300 ?", options: ["Le certificat professionnel Google Data Analytics", "Le certificat professionnel IBM Data Science", "Un diplôme de fin d'études secondaires", "Microsoft Certified: Power BI Data Analyst Associate"], answer: 3, why: "Le Power BI Data Analyst Associate de Microsoft s'obtient en réussissant le PL-300." },
-          { q: "Votre objectif est de construire des modèles de prédiction en Python. Quel programme convient le mieux ?", options: ["Le certificat professionnel IBM Data Science", "Un cours de dactylographie", "Un permis de cariste", "Une carte d'hygiène alimentaire"], answer: 0, why: "Le programme d'IBM couvre Python, Scikit-learn et les modèles d'apprentissage automatique." },
-          { q: "Un programme coûtait 49 $ par mois l'an dernier. Que faites-vous maintenant ?", options: ["Supposer que c'est pareil", "Demander à un inconnu en ligne", "Vérifier la page officielle aujourd'hui", "Ne pas vérifier"], answer: 2, why: "Les coûts changent ; la page officielle a le coût actuel." },
-          { q: "Quel plan d'étude a le plus de chances de marcher pour quelqu'un en horaires décalés ?", options: ["Étudier 10 heures une fois par mois", "Étudier seulement quand on en a envie", "Trois blocs de 45 minutes en semaine et un bloc le week-end", "Sauter les travaux pratiques pour gagner du temps"], answer: 2, why: "De courts blocs réguliers dans l'agenda sont plus faciles à tenir." }
+          { objective: "O1", q: "Quelle question ressemble le plus au travail d'un analyste de données ?", options: ["Comment réparer un moteur de voiture ?", "Quel produit s'est le mieux vendu le mois dernier ?", "Que cuisiner ce soir ?", "Qui va gagner le match ?"], answer: 1, why: "Les analystes expliquent ce qui s'est passé à partir de données existantes." },
+          { objective: "O2", q: "Quel certificat s'obtient en réussissant l'examen PL-300 ?", options: ["Le certificat professionnel Google Data Analytics", "Le certificat professionnel IBM Data Science", "Un diplôme de fin d'études secondaires", "Microsoft Certified: Power BI Data Analyst Associate"], answer: 3, why: "Le Power BI Data Analyst Associate de Microsoft s'obtient en réussissant le PL-300." },
+          { objective: "O2", q: "Votre objectif est de construire des modèles de prédiction en Python. Quel programme convient le mieux ?", options: ["Le certificat professionnel IBM Data Science", "Un cours de dactylographie", "Un permis de cariste", "Une carte d'hygiène alimentaire"], answer: 0, why: "Le programme d'IBM couvre Python, Scikit-learn et les modèles d'apprentissage automatique." },
+          { objective: "O2", q: "Un programme coûtait 49 $ par mois l'an dernier. Que faites-vous maintenant ?", options: ["Supposer que c'est pareil", "Demander à un inconnu en ligne", "Vérifier la page officielle aujourd'hui", "Ne pas vérifier"], answer: 2, why: "Les coûts changent ; la page officielle a le coût actuel." },
+          { objective: "O3", q: "Quel plan d'étude a le plus de chances de marcher pour quelqu'un en horaires décalés ?", options: ["Étudier 10 heures une fois par mois", "Étudier seulement quand on en a envie", "Trois blocs de 45 minutes en semaine et un bloc le week-end", "Sauter les travaux pratiques pour gagner du temps"], answer: 2, why: "De courts blocs réguliers dans l'agenda sont plus faciles à tenir." }
         ]
       }
     },
@@ -101,6 +139,7 @@ module.exports = {
       name: "Chapitre 2 : Pratiquer les compétences de base",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Nettoyer un jeu de données",
           minutes: 6,
           goal: "Trouver et corriger les cellules vides, les doublons et les problèmes de format dans un petit jeu de données.",
@@ -118,9 +157,14 @@ module.exports = {
             { title: "Soyez digne de confiance", bullets: ["Gardez la copie d'origine", "Tenez un journal de chaque modification"] }
           ],
           tryIt: "Faites un petit tableau de 15 ventes : Date, Article, Magasin, Montant. Ajoutez 2 lignes en double, un montant vide et deux orthographes d'un même magasin. Puis nettoyez-le et écrivez votre journal de nettoyage.",
-          youCanNow: "trouver et corriger les problèmes de données courants et tenir un journal de nettoyage."
+          youCanNow: "trouver et corriger les problèmes de données courants et tenir un journal de nettoyage.",
+          quickCheck: [
+            { objective: "O4", q: "Qu'est-ce qu'un doublon dans un jeu de données ?", options: ["Une cellule vide", "Une ligne qui apparaît plus d'une fois", "Un graphique", "Un titre de colonne"], answer: 1, why: "Les doublons comptent deux fois la même chose et faussent les totaux." },
+            { objective: "O4", q: "Vous allez nettoyer un tableau de ventes. Que faites-vous d'abord ?", options: ["Supprimer les lignes qui paraissent bizarres", "Faire un graphique", "Trier seulement par date", "Enregistrer une copie de l'original"], answer: 3, why: "Enregistrer l'original vous permet de vérifier ou d'annuler votre nettoyage." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Résumer des données et faire un graphique clair",
           minutes: 5,
           goal: "Répondre à une question avec un tableau récapitulatif et un graphique.",
@@ -138,9 +182,14 @@ module.exports = {
           ],
           sources: [COLAB],
           tryIt: "Reprenez votre tableau nettoyé de la leçon 4. Faites un tableau croisé dynamique du Montant total par Magasin, puis un graphique en barres avec un titre qui énonce la réponse.",
-          youCanNow: "transformer une question en tableau récapitulatif et en graphique clair."
+          youCanNow: "transformer une question en tableau récapitulatif et en graphique clair.",
+          quickCheck: [
+            { objective: "O5", q: "Que fait un tableau croisé dynamique ?", options: ["Il dessine une carte", "Il supprime les doublons", "Il corrige l'orthographe", "Il regroupe et totalise les données"], answer: 3, why: "Un tableau croisé dynamique regroupe des lignes, par exemple par magasin, et en fait le total." },
+            { objective: "O5", q: "Vous voulez comparer le total des ventes de 5 magasins. Quel graphique faites-vous ?", options: ["Un graphique en courbe", "Un graphique en barres avec un titre qui donne la réponse", "Un graphique en secteurs à 50 parts", "Aucun graphique"], answer: 1, why: "Les graphiques en barres comparent des groupes, et un titre qui donne la réponse rend le message clair." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Raconter l'histoire et construire un projet de portfolio",
           minutes: 5,
           goal: "Écrire un court constat et présenter votre travail comme un projet de portfolio.",
@@ -157,17 +206,21 @@ module.exports = {
             { title: "Avant de partager", bullets: ["Vérifiez chaque chiffre avec votre tableau", "L'IA vérifie la clarté, pas vos faits", "Enregistrez-le là où vous pouvez partager un lien"] }
           ],
           tryIt: "Tâche finale : terminez votre mini projet de portfolio. Question, données nettoyées, journal de nettoyage, tableau récapitulatif, un graphique et un constat en trois phrases avec une limite. Enregistrez-le avec un titre et une courte description.",
-          youCanNow: "réaliser et expliquer un petit projet de données comme ceux que demandent les certificats en données."
+          youCanNow: "réaliser et expliquer un petit projet de données comme ceux que demandent les certificats en données.",
+          quickCheck: [
+            { objective: "O6", q: "Pourquoi indiquer une limite dans votre constat ?", options: ["Cela montre honnêtement ce que les données peuvent dire ou non", "Cela allonge le constat", "C'est exigé par la loi", "Cela cache les erreurs"], answer: 0, why: "Indiquer une limite, comme le fait de ne couvrir qu'un mois, renforce la confiance dans votre travail." },
+            { objective: "O6", q: "Vous voulez utiliser la liste de clients de votre employeur dans votre portfolio public. Que faites-vous ?", options: ["La publier telle quelle", "Enlever seulement les noms", "Utiliser plutôt un jeu de données public ou d'exemple, sauf si vous avez l'autorisation", "La publier et demander ensuite"], answer: 2, why: "Les données privées de clients ne vont pas dans un portfolio public sans autorisation." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Pratiquer les compétences de base",
         questions: [
-          { q: "Vos données contiennent « CA », « Calif. » et « California ». Que faites-vous ?", options: ["Les harmoniser avec Rechercher et remplacer", "Laisser tel quel", "Supprimer la colonne", "Deviner les totaux"], answer: 0, why: "Harmoniser l'orthographe évite de compter un lieu comme trois." },
-          { q: "Pourquoi tenir un journal de nettoyage ?", options: ["Ce n'est pas utile", "Pour grossir le fichier", "Parce que les graphiques en ont besoin", "Pour que les autres puissent faire confiance à vos modifications et les refaire"], answer: 3, why: "Un journal montre exactement ce que vous avez changé." },
-          { q: "Quel outil regroupe et totalise les données dans un tableur ?", options: ["Le correcteur d'orthographe", "Un tableau croisé dynamique", "L'aperçu avant impression", "Les commentaires"], answer: 1, why: "Les tableaux croisés dynamiques regroupent et résument." },
-          { q: "Vous voulez montrer l'évolution des ventes sur 12 mois. Quel graphique ?", options: ["Un graphique en courbe", "Un camembert", "Pas de graphique", "Une photo"], answer: 0, why: "Les courbes montrent l'évolution dans le temps." },
-          { q: "Lequel est un bon constat en trois phrases ?", options: ["« Voici un graphique. »", "« Les données, c'est intéressant. »", "« Eastside a le plus vendu en mars. Il faudrait peut-être plus de personnel le samedi. Les données couvrent un mois. »", "« J'ai utilisé Excel. »"], answer: 2, why: "Il donne le résultat, pourquoi c'est important et une limite." }
+          { objective: "O4", q: "Vos données contiennent « CA », « Calif. » et « California ». Que faites-vous ?", options: ["Les harmoniser avec Rechercher et remplacer", "Laisser tel quel", "Supprimer la colonne", "Deviner les totaux"], answer: 0, why: "Harmoniser l'orthographe évite de compter un lieu comme trois." },
+          { objective: "O4", q: "Pourquoi tenir un journal de nettoyage ?", options: ["Ce n'est pas utile", "Pour grossir le fichier", "Parce que les graphiques en ont besoin", "Pour que les autres puissent faire confiance à vos modifications et les refaire"], answer: 3, why: "Un journal montre exactement ce que vous avez changé." },
+          { objective: "O5", q: "Quel outil regroupe et totalise les données dans un tableur ?", options: ["Le correcteur d'orthographe", "Un tableau croisé dynamique", "L'aperçu avant impression", "Les commentaires"], answer: 1, why: "Les tableaux croisés dynamiques regroupent et résument." },
+          { objective: "O5", q: "Vous voulez montrer l'évolution des ventes sur 12 mois. Quel graphique ?", options: ["Un graphique en courbe", "Un camembert", "Pas de graphique", "Une photo"], answer: 0, why: "Les courbes montrent l'évolution dans le temps." },
+          { objective: "O6", q: "Lequel est un bon constat en trois phrases ?", options: ["« Voici un graphique. »", "« Les données, c'est intéressant. »", "« Eastside a le plus vendu en mars. Il faudrait peut-être plus de personnel le samedi. Les données couvrent un mois. »", "« J'ai utilisé Excel. »"], answer: 2, why: "Il donne le résultat, pourquoi c'est important et une limite." }
         ]
       }
     }
@@ -175,26 +228,107 @@ module.exports = {
   quiz: {
     title: "Quiz final : Préparation à un certificat professionnel en science des données",
     questions: [
-      { q: "Quelle est en général la première étape du parcours des données ?", options: ["Faire un graphique", "Poser une question", "Acheter un logiciel", "Partager les résultats"], answer: 1, why: "Une question claire guide tout le reste." },
-      { q: "Un data scientist, plus qu'un analyste, en général :", options: ["N'utilise que du papier", "Ne fait que saisir des données", "N'utilise jamais de données", "Construit des modèles qui prédisent"], answer: 3, why: "Les data scientists construisent des modèles de prédiction, souvent en Python." },
-      { q: "À quoi sert SQL ?", options: ["À dessiner", "À monter des vidéos", "À envoyer des e-mails", "À extraire des données des bases de données"], answer: 3, why: "SQL est un langage pour interroger les bases de données." },
-      { q: "Le certificat professionnel Google Data Analytics est proposé sur :", options: ["Microsoft Learn seulement", "Coursera", "Le service des permis de conduire", "Une boutique d'applications"], answer: 1, why: "Sa page officielle est sur Coursera." },
-      { q: "Selon sa page, combien de cours compte le certificat professionnel IBM Data Science ?", options: ["3", "9", "12", "20"], answer: 2, why: "La page Coursera d'IBM indique une série de 12 cours." },
-      { q: "Sur quel outil porte la certification de Microsoft ?", options: ["Power BI", "Photoshop", "Word", "Tableau"], answer: 0, why: "C'est le Power BI Data Analyst Associate." },
-      { q: "Que garantit l'obtention d'un certificat en données ?", options: ["Un emploi", "Une augmentation", "Rien ; il montre ce que vous avez appris", "Un diplôme universitaire"], answer: 2, why: "Les certificats montrent un apprentissage ; ils ne garantissent pas de résultat." },
-      { q: "Avant de vous inscrire, vérifiez le coût sur :", options: ["La page officielle du programme", "Une publicité sur les réseaux sociaux", "Vos notes de l'an dernier", "La mémoire d'une IA"], answer: 0, why: "La page officielle a le coût et le contenu actuels." },
-      { q: "Quel plan est le meilleur pour terminer un certificat ?", options: ["Étudier quand il y a du temps", "Fixer des blocs d'étude dans l'agenda avec un objectif hebdomadaire", "Sauter les travaux pratiques", "Étudier une journée par mois"], answer: 1, why: "Des blocs réguliers et planifiés avec des objectifs aident à finir." },
-      { q: "En utilisant un assistant d'IA pendant un certificat, vous devez :", options: ["Lui faire faire le travail noté", "L'éviter complètement, toujours", "Coller votre examen", "L'utiliser pour expliquer des idées et vous interroger, et respecter les règles d'honnêteté"], answer: 3, why: "L'IA peut aider à apprendre, mais le travail noté doit être le vôtre." },
-      { q: "Où la vraie compétence se construit-elle dans un cours en ligne ?", options: ["En faisant les travaux pratiques", "En regardant seulement les vidéos", "En lisant le titre", "En sautant les quiz"], answer: 0, why: "Les travaux pratiques sont de la pratique concrète." },
-      { q: "Qu'est-ce qu'un doublon dans un jeu de données ?", options: ["Une cellule vide", "Un nom de colonne", "Un graphique", "Une ligne qui apparaît plus d'une fois"], answer: 3, why: "Les doublons sont des lignes répétées." },
-      { q: "Avant de nettoyer, vous devez :", options: ["Supprimer l'original", "Faire un graphique", "Enregistrer une copie de l'original", "L'envoyer à tout le monde"], answer: 2, why: "Une copie permet de recommencer ou de vérifier votre travail." },
-      { q: "Des nombres enregistrés comme du texte peuvent causer :", options: ["Un travail plus rapide", "Des totaux faux", "De meilleurs graphiques", "Rien"], answer: 1, why: "Des nombres en texte peuvent mal s'additionner." },
-      { q: "En Python, quelle bibliothèque travaille avec des tableaux comme un tableur ?", options: ["Outlook", "Paint", "Zoom", "Pandas"], answer: 3, why: "Pandas sert à travailler avec des tableaux de données." },
-      { q: "Quel outil gratuit permet de faire tourner Python dans un navigateur web ?", options: ["Une calculatrice", "Le Bloc-notes", "Google Colab", "Paint"], answer: 2, why: "Google Colab exécute des notebooks Python en ligne." },
-      { q: "Pour comparer les ventes de 5 magasins, le meilleur graphique est en général :", options: ["Un graphique en barres", "Un camembert à 20 parts", "Une carte", "Pas de graphique"], answer: 0, why: "Les barres comparent clairement des groupes." },
-      { q: "Un bon titre de graphique :", options: ["« Graphique 1 »", "Énonce la réponse, comme « Eastside a le plus vendu en mars »", "Est laissé vide", "Est très long"], answer: 1, why: "Un titre qui énonce la réponse aide les lecteurs." },
-      { q: "Quelles données ne faut-il PAS utiliser dans un portfolio public ?", options: ["Les données ouvertes d'une ville", "Des données privées de clients sans autorisation", "Votre tableau d'entraînement", "Des jeux de données publics gratuits"], answer: 1, why: "Les données privées demandent une autorisation et ne doivent pas être partagées." },
-      { q: "Votre constat doit inclure une limite parce que :", options: ["Cela montre de l'honnêteté sur ce que les données peuvent et ne peuvent pas dire", "Cela le rallonge", "Les employeurs n'aiment pas ça", "La loi l'exige"], answer: 0, why: "Indiquer une limite montre une analyse soignée et fiable." }
+      { objective: "O1", q: "Quelle est en général la première étape du parcours des données ?", options: ["Faire un graphique", "Poser une question", "Acheter un logiciel", "Partager les résultats"], answer: 1, why: "Une question claire guide tout le reste." },
+      { objective: "O1", q: "Un data scientist, plus qu'un analyste, en général :", options: ["N'utilise que du papier", "Ne fait que saisir des données", "N'utilise jamais de données", "Construit des modèles qui prédisent"], answer: 3, why: "Les data scientists construisent des modèles de prédiction, souvent en Python." },
+      { objective: "O1", q: "À quoi sert SQL ?", options: ["À dessiner", "À monter des vidéos", "À envoyer des e-mails", "À extraire des données des bases de données"], answer: 3, why: "SQL est un langage pour interroger les bases de données." },
+      { objective: "O2", q: "Le certificat professionnel Google Data Analytics est proposé sur :", options: ["Microsoft Learn seulement", "Coursera", "Le service des permis de conduire", "Une boutique d'applications"], answer: 1, why: "Sa page officielle est sur Coursera." },
+      { objective: "O2", q: "Selon sa page, combien de cours compte le certificat professionnel IBM Data Science ?", options: ["3", "9", "12", "20"], answer: 2, why: "La page Coursera d'IBM indique une série de 12 cours." },
+      { objective: "O2", q: "Sur quel outil porte la certification de Microsoft ?", options: ["Power BI", "Photoshop", "Word", "Tableau"], answer: 0, why: "C'est le Power BI Data Analyst Associate." },
+      { objective: "O2", q: "Que garantit l'obtention d'un certificat en données ?", options: ["Un emploi", "Une augmentation", "Rien ; il montre ce que vous avez appris", "Un diplôme universitaire"], answer: 2, why: "Les certificats montrent un apprentissage ; ils ne garantissent pas de résultat." },
+      { objective: "O2", q: "Avant de vous inscrire, vérifiez le coût sur :", options: ["La page officielle du programme", "Une publicité sur les réseaux sociaux", "Vos notes de l'an dernier", "La mémoire d'une IA"], answer: 0, why: "La page officielle a le coût et le contenu actuels." },
+      { objective: "O3", q: "Quel plan est le meilleur pour terminer un certificat ?", options: ["Étudier quand il y a du temps", "Fixer des blocs d'étude dans l'agenda avec un objectif hebdomadaire", "Sauter les travaux pratiques", "Étudier une journée par mois"], answer: 1, why: "Des blocs réguliers et planifiés avec des objectifs aident à finir." },
+      { objective: "O3", q: "En utilisant un assistant d'IA pendant un certificat, vous devez :", options: ["Lui faire faire le travail noté", "L'éviter complètement, toujours", "Coller votre examen", "L'utiliser pour expliquer des idées et vous interroger, et respecter les règles d'honnêteté"], answer: 3, why: "L'IA peut aider à apprendre, mais le travail noté doit être le vôtre." },
+      { objective: "O3", q: "Où la vraie compétence se construit-elle dans un cours en ligne ?", options: ["En faisant les travaux pratiques", "En regardant seulement les vidéos", "En lisant le titre", "En sautant les quiz"], answer: 0, why: "Les travaux pratiques sont de la pratique concrète." },
+      { objective: "O4", q: "Qu'est-ce qu'un doublon dans un jeu de données ?", options: ["Une cellule vide", "Un nom de colonne", "Un graphique", "Une ligne qui apparaît plus d'une fois"], answer: 3, why: "Les doublons sont des lignes répétées." },
+      { objective: "O4", q: "Avant de nettoyer, vous devez :", options: ["Supprimer l'original", "Faire un graphique", "Enregistrer une copie de l'original", "L'envoyer à tout le monde"], answer: 2, why: "Une copie permet de recommencer ou de vérifier votre travail." },
+      { objective: "O4", q: "Des nombres enregistrés comme du texte peuvent causer :", options: ["Un travail plus rapide", "Des totaux faux", "De meilleurs graphiques", "Rien"], answer: 1, why: "Des nombres en texte peuvent mal s'additionner." },
+      { objective: "O4", q: "En Python, quelle bibliothèque travaille avec des tableaux comme un tableur ?", options: ["Outlook", "Paint", "Zoom", "Pandas"], answer: 3, why: "Pandas sert à travailler avec des tableaux de données." },
+      { objective: "O5", q: "Quel outil gratuit permet de faire tourner Python dans un navigateur web ?", options: ["Une calculatrice", "Le Bloc-notes", "Google Colab", "Paint"], answer: 2, why: "Google Colab exécute des notebooks Python en ligne." },
+      { objective: "O5", q: "Pour comparer les ventes de 5 magasins, le meilleur graphique est en général :", options: ["Un graphique en barres", "Un camembert à 20 parts", "Une carte", "Pas de graphique"], answer: 0, why: "Les barres comparent clairement des groupes." },
+      { objective: "O5", q: "Un bon titre de graphique :", options: ["« Graphique 1 »", "Énonce la réponse, comme « Eastside a le plus vendu en mars »", "Est laissé vide", "Est très long"], answer: 1, why: "Un titre qui énonce la réponse aide les lecteurs." },
+      { objective: "O6", q: "Quelles données ne faut-il PAS utiliser dans un portfolio public ?", options: ["Les données ouvertes d'une ville", "Des données privées de clients sans autorisation", "Votre tableau d'entraînement", "Des jeux de données publics gratuits"], answer: 1, why: "Les données privées demandent une autorisation et ne doivent pas être partagées." },
+      { objective: "O6", q: "Votre constat doit inclure une limite parce que :", options: ["Cela montre de l'honnêteté sur ce que les données peuvent et ne peuvent pas dire", "Cela le rallonge", "Les employeurs n'aiment pas ça", "La loi l'exige"], answer: 0, why: "Indiquer une limite montre une analyse soignée et fiable." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      1,
+      6,
+      8,
+      10,
+      11,
+      12,
+      16,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Question claire",
+        objective: "O1",
+        notYet: "Pas de question, ou une question à laquelle les données ne peuvent pas répondre.",
+        meets: "Une question claire à laquelle le jeu de données peut répondre.",
+        exceeds: "La question compte pour un vrai lieu de travail et dit pourquoi."
+      },
+      {
+        name: "Données nettoyées et journal",
+        objective: "O4",
+        notYet: "Il reste des cellules vides, des doublons ou des problèmes de format, ou il n'y a pas de journal.",
+        meets: "Cellules vides, doublons et formats corrigés, avec un journal de nettoyage et l'original enregistré.",
+        exceeds: "Le journal indique combien de lignes chaque correction a modifiées."
+      },
+      {
+        name: "Tableau récapitulatif et graphique",
+        objective: "O5",
+        notYet: "Pas de tableau récapitulatif, ou un graphique qui ne répond pas à la question.",
+        meets: "Un tableau récapitulatif et un graphique du bon type avec un titre qui donne la réponse.",
+        exceeds: "Les axes ont des titres et le graphique se lit d'un coup d'œil."
+      },
+      {
+        name: "Constat et limite",
+        objective: "O6",
+        notYet: "Pas de constat, ou aucune limite indiquée.",
+        meets: "Un constat en trois phrases avec une limite des données.",
+        exceeds: "Le constat propose une prochaine étape concrète."
+      },
+      {
+        name: "Prêt pour le portfolio",
+        objective: "O6",
+        notYet: "Pas enregistré, ou contient des données privées.",
+        meets: "Enregistré dans Google Sheets, Excel ou Google Colab avec un titre et une description courts, et sans données privées.",
+        exceeds: "Partagé sous forme de lien que l'apprenant peut ajouter à un CV ou un profil."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent l'exercice final (grille d'évaluation)",
+      "Apprenants qui s'inscrivent à un certificat sur les données dans les 30 jours (enquête de suivi)",
+      "Apprenants qui obtiennent un certificat sur les données dans les 6 mois",
+      "Apprenants qui utilisent leur projet de portfolio dans une candidature ou obtiennent un poste lié aux données"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur avec internet",
+      "Un tableur gratuit (Google Sheets ou Microsoft Excel en ligne), et si possible Google Colab",
+      "Un jeu de données public et gratuit, ou le tableau de ventes d'exemple de la leçon 4",
+      "Un agenda sur téléphone ou papier pour le plan d'étude",
+      "Environ 60 minutes pour les leçons et les contrôles, plus du temps de pratique pour le projet"
+    ],
+    facilitatorNotes: [
+      "Préparez le tableau de ventes d'exemple avec des problèmes volontaires pour que chaque apprenant s'entraîne à nettoyer les mêmes données.",
+      "Faites vérifier les coûts des certificats en direct sur les pages officielles pendant la séance plutôt que d'utiliser d'anciens chiffres.",
+      "Montrez pas à pas un tableau croisé dynamique et un graphique avant que les apprenants fassent les leurs.",
+      "Rappelez aux apprenants de n'utiliser que des données publiques ou d'exemple dans leur portfolio.",
+      "Notez le projet de portfolio avec la grille, et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

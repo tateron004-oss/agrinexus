@@ -31,11 +31,35 @@ module.exports = {
     "Esto es educación, no asesoría legal. Las normas sobre drones son ley, cambian, y otros países africanos tienen su propia autoridad y sus propias normas. Cada lección señala la fuente oficial; confirma todo allí, o con la autoridad o un abogado, antes de actuar. Nunca vueles sin el registro, la licencia y las aprobaciones que exige tu país."
   ],
   finalTask: "Arma un expediente de cumplimiento para un negocio de servicios con drones en tu país que hará mapas de cultivos para agricultores y plantaciones (y, si lo planeas, fumigará): la autoridad y los reglamentos que aplican, con enlaces y la fecha en que los revisaste; la clasificación de tu dron y la categoría de riesgo de la operación; cada registro, permiso, licencia, certificado y autorización necesarios, quién los emite y en qué estado están; los documentos obligatorios (manual de operaciones, seguro, registros de mantenimiento y de vuelo); las aprobaciones adicionales para cualquier fumigación; los pasos de protección de datos; y un calendario para revisar cambios en las normas y renovaciones.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Personas que planean volar drones de forma profesional en la agricultura africana: emprendedores de servicios con drones, administradores de agronegocios y fincas grandes, líderes de cooperativas y de extensión, y jóvenes que se forman como pilotos a distancia, sobre todo en Kenia y Nigeria.",
+    startingPoint: "La mayoría sabe qué hace un dron agrícola y quizás ha volado uno pequeño. Pocos han leído las normas sobre drones de su país, saben qué licencias y certificados necesita un trabajo pagado o guardan los documentos que pediría un inspector, un cliente o una aseguradora.",
+    gap: "Volar por pago sin el registro, la licencia, el certificado de operador o la autorización correctos puede traer multas, drones decomisados y clientes perdidos, y fumigar sin las aprobaciones de aviación y de plaguicidas pone en riesgo a las personas y a los cultivos. Saber leer las normas y armar un expediente de cumplimiento permite que un negocio de drones trabaje de forma legal, gane contratos y consiga seguro.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas; cada término legal y de aviación se explica",
+      "Dispositivos: un teléfono o una computadora con internet para abrir el sitio web de la autoridad y descargar las normas",
+      "Las normas, las tasas y los formularios cambian: hay que confirmar todo en el sitio oficial, con la autoridad o con un abogado",
+      "Esto es educación, no asesoría legal; el curso no incluye volar ni fumigar",
+      "Otros países africanos tienen su propia autoridad y sus propias normas, así que cada quien aplica el método a su país"
+    ],
+    prerequisites: "Se recomienda tomar antes \"Drones para el monitoreo agrícola 1: introducción, normas y seguridad\"."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Para tu propio país", action: "encontrar las normas sobre drones, las normas de aplicación y la tabla de tasas de la autoridad de aviación civil, y nombrar cada capa de la ley de drones", standard: "con los enlaces y la fecha en que los revisaste" },
+    { id: "O2", condition: "Ante un trabajo comercial de drones agrícolas en Kenia", action: "hacer una lista de los registros, licencias, certificados y autorizaciones de la KCAA que probablemente necesita", standard: "nombrando el reglamento del que sale cada uno y que hay que revisar las tasas vigentes y las normas nuevas" },
+    { id: "O3", condition: "Con el peso de un dron y una operación planeada en Nigeria", action: "clasificar el dron y la categoría de riesgo de la operación según la Parte 21, y hacer una lista de los límites de operación que aplican", standard: "con la clase de peso y la categoría de riesgo correctas" },
+    { id: "O4", condition: "Para un negocio de servicios con drones", action: "planear las licencias de piloto y el certificado de operador que necesita, y los documentos que pide el certificado de operador", standard: "separando las aprobaciones de la persona que vuela de las aprobaciones del negocio" },
+    { id: "O5", condition: "Ante un trabajo que incluye fumigar, volar fuera del alcance visual (BVLOS), volar de noche o acercarse a un aeródromo", action: "identificar las aprobaciones adicionales de aviación y de plaguicidas que necesita y quién las da", standard: "antes de ofrecer o planear el trabajo" },
+    { id: "O6", condition: "Para tu negocio de drones", action: "armar un expediente de cumplimiento y un calendario de renovaciones y de revisión de normas", standard: "con cada documento requerido en la lista y su estado" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: La ley de drones en África",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Cómo se construye la ley de drones",
           minutes: 5,
           goal: "Encontrar y nombrar las capas de la ley de drones que aplican en tu país.",
@@ -53,9 +77,14 @@ module.exports = {
           ],
           sources: [KCAA_UAS, NCAA_P21],
           tryIt: "Para tu país, escribe la autoridad de aviación, el nombre y el año de los reglamentos de drones, si hay normas de aplicación y una tabla de tasas, y la fecha en que lo revisaste. Guarda los documentos en una sola carpeta.",
-          youCanNow: "encontrar las capas de la ley de drones en tu país y ver cómo clasifican las operaciones según el riesgo."
+          youCanNow: "encontrar las capas de la ley de drones en tu país y ver cómo clasifican las operaciones según el riesgo.",
+          quickCheck: [
+            { objective: "O1", q: "En la ley de drones, ¿qué es una tabla de tasas?", options: ["Un plan de vuelo", "Una lista de pilotos", "Una lista de las aprobaciones que existen y lo que cuesta cada una", "Un pronóstico del clima"], answer: 2, why: "La tabla de tasas enumera las aprobaciones y sus cobros, así que muestra cuáles existen." },
+            { objective: "O1", q: "Quieres conocer las normas sobre drones de tu país. ¿Dónde buscas primero?", options: ["En el sitio web de la autoridad de aviación civil, en su sección de drones, UAS o RPAS", "En el anuncio de un vendedor de drones", "En un grupo de redes sociales", "En un video de otro país"], answer: 0, why: "La autoridad de aviación civil de cada país publica sus propias normas sobre drones, normas de aplicación y tasas." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Kenia: la KCAA y el Reglamento UAS de 2020",
           minutes: 6,
           goal: "Hacer una lista de las aprobaciones kenianas que probablemente necesita un operador comercial de drones agrícolas.",
@@ -72,9 +101,14 @@ module.exports = {
           ],
           sources: [KCAA_UAS, KENYA_LAW_UAS, KCAA_FEES, KCAA_ROC, KCAA_UTO, KCAA_PORTAL, KCAA_REGS_2026],
           tryIt: "Abre la página de drones y la tabla de tasas de la KCAA. Haz una tabla con cada aprobación que necesitaría un negocio que cobra por hacer mapas de plantaciones de té (dron, personas, organización, operación), con una columna de dónde solicitarla. Deja las tasas como \"revisar el día\".",
-          youCanNow: "hacer una lista de los registros, licencias, certificados y autorizaciones kenianos que probablemente necesita un operador comercial de drones agrícolas, y dónde solicitarlos."
+          youCanNow: "hacer una lista de los registros, licencias, certificados y autorizaciones kenianos que probablemente necesita un operador comercial de drones agrícolas, y dónde solicitarlos.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué es una RPL en Kenia?", options: ["Un número de registro del dron", "Un recibo de pago", "Una escuela de formación", "Una licencia de piloto a distancia para la persona que vuela"], answer: 3, why: "La licencia de piloto a distancia (RPL) es la licencia de la persona que vuela." },
+            { objective: "O2", q: "Planeas hacer tu solicitud a la KCAA el próximo mes con las normas de 2020. ¿Qué revisas primero?", options: ["Nada; las normas de 2020 nunca cambian", "Si los nuevos reglamentos publicados por la KCAA cambian las normas de drones, y las tasas vigentes", "Solo el color del dron", "La licencia vieja de un vecino"], answer: 1, why: "La KCAA publica sus reglamentos nuevos, y las tasas hay que revisarlas el día en que haces la solicitud." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Nigeria: la NCAA y la Parte 21 de las Nig.CARs",
           minutes: 6,
           goal: "Clasificar un dron y una operación según la Parte 21 de Nigeria y hacer una lista de lo que exige.",
@@ -92,17 +126,21 @@ module.exports = {
           ],
           sources: [NCAA_P21],
           tryIt: "Un agronegocio nigeriano quiere hacer mapas de fincas de yuca en el estado de Ogun con un multirrotor de 1.2 kg y un multirrotor de 15 kg para fumigar. Usando la Parte 21, escribe la clase de peso de cada dron, la categoría de riesgo probable de cada trabajo y tres preguntas que le harías a la NCAA.",
-          youCanNow: "clasificar un dron y una operación según la Parte 21 de Nigeria y hacer una lista de lo que exige."
+          youCanNow: "clasificar un dron y una operación según la Parte 21 de Nigeria y hacer una lista de lo que exige.",
+          quickCheck: [
+            { objective: "O3", q: "Según la Parte 21, ¿en qué categoría deben estar certificados la aeronave, el operador y el piloto?", options: ["Certificada", "Abierta", "Nano", "Micro"], answer: 0, why: "La categoría Certificada se trata más como la aviación tripulada, con aeronave, operador y piloto certificados." },
+            { objective: "O3", q: "Un agricultor en Nigeria te pide volar a 10 m de personas en un mercado del pueblo que no tienen nada que ver con el trabajo. ¿Qué haces?", options: ["Volar más bajo para ir a la segura", "Volar rápido e irte", "Mantenerte al menos a 30 m de las personas ajenas y evitar las zonas pobladas, salvo que tengas autorización", "Pedirle a la gente que no mire"], answer: 2, why: "La Parte 21 mantiene muchas operaciones a 30 m de las personas ajenas y lejos de las zonas pobladas." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: La ley de drones en África",
         questions: [
-          { q: "¿De dónde sacan su fuerza legal los reglamentos nacionales de drones?", options: ["Del manual de un fabricante de drones", "De una ley del parlamento, como una ley de aviación civil", "De las redes sociales", "Del agricultor"], answer: 1, why: "Los reglamentos se hacen bajo una ley aprobada por el parlamento." },
-          { q: "¿Qué operación suele tener el mayor riesgo?", options: ["Un dron pequeño a la vista sobre un campo vacío", "Quedarse suspendido a 5 metros", "Un dron pesado fumigando fuera del alcance visual", "Un vuelo en simulador"], answer: 2, why: "El peso, el BVLOS y la fumigación aumentan el riesgo y los requisitos." },
-          { q: "En Kenia, ¿qué aprobación de operador necesita una empresa que cobra por hacer mapas de plantaciones?", options: ["Un Certificado de Operador Aéreo Remoto (ROC) de la KCAA", "Una tarjeta de presentación", "Solo un permiso del condado", "Nada"], answer: 0, why: "La KCAA emite ROC a los operadores de drones." },
-          { q: "Según la Parte 21 de Nigeria, ¿en qué clase de peso está un dron de 1.2 kg?", options: ["Nano", "Pequeña", "Grande", "Micro"], answer: 3, why: "Micro va de 250 g a menos de 2 kg." },
-          { q: "En la Parte 21, la categoría Específica significa:", options: ["Que no aplica ninguna norma", "Mayor riesgo; se necesita autorización para operar", "Solo para juguetes", "Solo para aeronaves tripuladas"], answer: 1, why: "Las operaciones específicas tienen más riesgo y necesitan autorización." }
+          { objective: "O1", q: "¿De dónde sacan su fuerza legal los reglamentos nacionales de drones?", options: ["Del manual de un fabricante de drones", "De una ley del parlamento, como una ley de aviación civil", "De las redes sociales", "Del agricultor"], answer: 1, why: "Los reglamentos se hacen bajo una ley aprobada por el parlamento." },
+          { objective: "O1", q: "¿Qué operación suele tener el mayor riesgo?", options: ["Un dron pequeño a la vista sobre un campo vacío", "Quedarse suspendido a 5 metros", "Un dron pesado fumigando fuera del alcance visual", "Un vuelo en simulador"], answer: 2, why: "El peso, el BVLOS y la fumigación aumentan el riesgo y los requisitos." },
+          { objective: "O2", q: "En Kenia, ¿qué aprobación de operador necesita una empresa que cobra por hacer mapas de plantaciones?", options: ["Un Certificado de Operador Aéreo Remoto (ROC) de la KCAA", "Una tarjeta de presentación", "Solo un permiso del condado", "Nada"], answer: 0, why: "La KCAA emite ROC a los operadores de drones." },
+          { objective: "O3", q: "Según la Parte 21 de Nigeria, ¿en qué clase de peso está un dron de 1.2 kg?", options: ["Nano", "Pequeña", "Grande", "Micro"], answer: 3, why: "Micro va de 250 g a menos de 2 kg." },
+          { objective: "O3", q: "En la Parte 21, la categoría Específica significa:", options: ["Que no aplica ninguna norma", "Mayor riesgo; se necesita autorización para operar", "Solo para juguetes", "Solo para aeronaves tripuladas"], answer: 1, why: "Las operaciones específicas tienen más riesgo y necesitan autorización." }
         ]
       }
     },
@@ -110,6 +148,7 @@ module.exports = {
       name: "Capítulo 2: Licencias, certificación y cumplimiento",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Licencias de piloto y certificados de operador",
           minutes: 5,
           goal: "Planear las aprobaciones de las personas y de la organización para un negocio de servicios con drones.",
@@ -127,9 +166,14 @@ module.exports = {
           ],
           sources: [KCAA_ROC, KCAA_UTO, NCAA_P21],
           tryIt: "Escribe el índice de un manual de operaciones para un pequeño negocio de mapeo de cultivos, con al menos ocho secciones (por ejemplo: organización, responsabilidades, planeación del vuelo, revisiones antes del vuelo, emergencias, mantenimiento, registros, informes de incidentes).",
-          youCanNow: "planear las licencias de piloto y el certificado de operador que necesita un negocio de servicios con drones, y qué cubre un manual de operaciones."
+          youCanNow: "planear las licencias de piloto y el certificado de operador que necesita un negocio de servicios con drones, y qué cubre un manual de operaciones.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué es un certificado de operador?", options: ["Una licencia para la persona que vuela", "Una aprobación para la organización que vende servicios con drones", "El número de serie de un dron", "El contrato de un cliente"], answer: 1, why: "El certificado de operador, como el ROC de la KCAA o el Certificado de Operador de RPAS de la NCAA, es para el negocio." },
+            { objective: "O4", q: "Te preparas para solicitar un certificado de operador. ¿Qué documento escribes primero?", options: ["Una publicación en redes sociales", "Una lista de precios para los clientes", "Un logotipo del dron", "Un manual de operaciones para la planeación, el vuelo, el mantenimiento y los reportes"], answer: 3, why: "Para certificar a un operador casi siempre se pide un manual de operaciones que muestre cómo trabaja el negocio con seguridad." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Operaciones especiales: fumigación, BVLOS y aeródromos",
           minutes: 6,
           goal: "Identificar las operaciones que necesitan aprobaciones adicionales y quién las da.",
@@ -147,9 +191,14 @@ module.exports = {
           ],
           sources: [NCAA_P21, KCAA_FEES, PCPB, NAFDAC, FAO_WHO_AERIAL],
           tryIt: "Una plantación de caña de azúcar a 3 km de una pista de aterrizaje te pide fumigar un fungicida con dron. Haz una lista de cada aprobación y revisión que necesitarías (aviación, plaguicidas, dueño del terreno, aeródromo) y a quién contactarías para cada una.",
-          youCanNow: "reconocer las operaciones especiales y hacer una lista de las aprobaciones de aviación y de plaguicidas que necesitan."
+          youCanNow: "reconocer las operaciones especiales y hacer una lista de las aprobaciones de aviación y de plaguicidas que necesitan.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué organismo regula los agroquímicos en Nigeria?", options: ["La NCAA", "La ODPC", "La KCAA", "La NAFDAC"], answer: 3, why: "En Nigeria, los agroquímicos los regula la NAFDAC; las aprobaciones de aviación las da la NCAA." },
+            { objective: "O5", q: "Una finca grande te pide fumigar fungicida con dron la próxima semana. Solo tienes licencia de piloto. ¿Qué haces?", options: ["No ofrecer la fumigación hasta tener las aprobaciones de aviación y de plaguicidas", "Fumigar temprano en la mañana, cuando no hay nadie", "Fumigar solo la mitad de la finca", "Usar un dron más ligero y fumigar de todos modos"], answer: 0, why: "Fumigar necesita una autorización de aviación específica y aprobaciones de plaguicidas; nunca fumigues sin las dos." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Armar y mantener un expediente de cumplimiento",
           minutes: 5,
           goal: "Armar un expediente de cumplimiento y un calendario para mantenerlo al día.",
@@ -168,17 +217,21 @@ module.exports = {
           ],
           sources: [KCAA_UAS, KCAA_REGS_2026, NCAA_P21, ODPC, NDPC],
           tryIt: "Tarea final: arma el expediente de cumplimiento de un negocio de servicios con drones en tu país: autoridad y reglamentos con fechas, clasificación y categoría de riesgo, cada aprobación y su estado, documentos obligatorios, aprobaciones adicionales para fumigar si lo planeas, pasos de protección de datos y un calendario de renovaciones y revisión de normas.",
-          youCanNow: "armar y mantener un expediente de cumplimiento que demuestre que tu operación con drones es legal y segura."
+          youCanNow: "armar y mantener un expediente de cumplimiento que demuestre que tu operación con drones es legal y segura.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué va en un expediente de cumplimiento?", options: ["Solo el recibo del dron", "Solo fotos de vuelos anteriores", "Licencias, certificados, autorizaciones, el manual de operaciones, el seguro y los registros", "Solo los pagos de los clientes"], answer: 2, why: "Un expediente de cumplimiento guarda todo lo que demuestra que tu operación es legal y segura." },
+            { objective: "O6", q: "Tu licencia de piloto a distancia vence en tres meses. ¿Qué evita que se te pase?", options: ["Esperar a que la KCAA te llame", "Un calendario de renovaciones con la fecha de cada licencia y certificado", "Revisar solo cuando un cliente pregunta", "Guardar la licencia en el estuche del dron"], answer: 1, why: "Un calendario de renovaciones y revisiones fijas mantienen al día cada licencia y certificado." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Licencias, certificación y cumplimiento",
         questions: [
-          { q: "¿Quién suele necesitar un certificado de operador?", options: ["La organización que vende servicios con drones", "Cada agricultor cuyo campo se mapea", "La tienda de drones", "Nadie"], answer: 0, why: "Los certificados de operador aprueban al negocio que realiza las operaciones." },
-          { q: "¿Qué es un manual de operaciones?", options: ["La guía de usuario del dron", "Las reglas escritas de un negocio para planear, volar, dar mantenimiento y manejar emergencias", "Un folleto de ventas", "Un recibo de pago de tasas"], answer: 1, why: "Las autoridades piden a los operadores que muestren cómo operan con seguridad." },
-          { q: "En Kenia, ¿qué organismo regula los productos para el control de plagas?", options: ["La KCAA", "La ODPC", "La Junta de Productos para el Control de Plagas (PCPB)", "La NDPC"], answer: 2, why: "La PCPB regula los productos para el control de plagas; fumigar también necesita aprobación de aviación." },
-          { q: "Un cliente quiere que un dron fumigue cerca de una pista de aterrizaje. Tu primer paso es:", options: ["Fumigar temprano en la mañana", "Fumigar solo la mitad del campo", "Ignorar la pista", "Revisar las aprobaciones de aviación y de plaguicidas y las reglas de distancia a aeródromos"], answer: 3, why: "Tanto la fumigación como la cercanía a un aeródromo necesitan aprobaciones específicas." },
-          { q: "¿Con qué frecuencia debes revisar los cambios en las normas?", options: ["Con una frecuencia fija, como cada mes, y antes de nuevos tipos de trabajo", "Nunca", "Solo cuando te multen", "Cada diez años"], answer: 0, why: "Las normas y las tasas cambian; un calendario te mantiene al día." }
+          { objective: "O4", q: "¿Quién suele necesitar un certificado de operador?", options: ["La organización que vende servicios con drones", "Cada agricultor cuyo campo se mapea", "La tienda de drones", "Nadie"], answer: 0, why: "Los certificados de operador aprueban al negocio que realiza las operaciones." },
+          { objective: "O4", q: "¿Qué es un manual de operaciones?", options: ["La guía de usuario del dron", "Las reglas escritas de un negocio para planear, volar, dar mantenimiento y manejar emergencias", "Un folleto de ventas", "Un recibo de pago de tasas"], answer: 1, why: "Las autoridades piden a los operadores que muestren cómo operan con seguridad." },
+          { objective: "O5", q: "En Kenia, ¿qué organismo regula los productos para el control de plagas?", options: ["La KCAA", "La ODPC", "La Junta de Productos para el Control de Plagas (PCPB)", "La NDPC"], answer: 2, why: "La PCPB regula los productos para el control de plagas; fumigar también necesita aprobación de aviación." },
+          { objective: "O5", q: "Un cliente quiere que un dron fumigue cerca de una pista de aterrizaje. Tu primer paso es:", options: ["Fumigar temprano en la mañana", "Fumigar solo la mitad del campo", "Ignorar la pista", "Revisar las aprobaciones de aviación y de plaguicidas y las reglas de distancia a aeródromos"], answer: 3, why: "Tanto la fumigación como la cercanía a un aeródromo necesitan aprobaciones específicas." },
+          { objective: "O6", q: "¿Con qué frecuencia debes revisar los cambios en las normas?", options: ["Con una frecuencia fija, como cada mes, y antes de nuevos tipos de trabajo", "Nunca", "Solo cuando te multen", "Cada diez años"], answer: 0, why: "Las normas y las tasas cambian; un calendario te mantiene al día." }
         ]
       }
     }
@@ -186,26 +239,112 @@ module.exports = {
   quiz: {
     title: "Examen final: Drones agrícolas en África: normas de aviación y licencias",
     questions: [
-      { q: "La OACI es:", options: ["El regulador de drones de Kenia", "La Organización de Aviación Civil Internacional de la ONU", "Una marca de drones", "Un plaguicida"], answer: 1, why: "La OACI fija los estándares internacionales sobre los que construyen los países." },
-      { q: "¿Quién escribe y hace cumplir la ley de drones en cada país africano?", options: ["La OACI directamente", "Los fabricantes de drones", "La propia autoridad de aviación civil de cada país", "Solo la Unión Africana"], answer: 2, why: "Cada país controla su espacio aéreo y sus normas de drones." },
-      { q: "Las normas de aplicación son:", options: ["Reglas técnicas detalladas que explican cómo cumplir los reglamentos", "Normas de publicidad", "Variedades de cultivos", "Pólizas de seguro"], answer: 0, why: "Contienen el detalle técnico detrás de los reglamentos." },
-      { q: "Los principales reglamentos de drones de Kenia son:", options: ["La Parte 21 de las Nig.CARs", "La Ley de Protección de Datos de 2019", "La Ley de Productos para el Control de Plagas", "El Reglamento de Aviación Civil (sistemas de aeronaves no tripuladas) de 2020"], answer: 3, why: "La KCAA supervisa el Reglamento UAS de 2020." },
-      { q: "La tabla de tasas de la KCAA incluye autorizaciones de operación para:", options: ["La Categoría A, y las Categorías B y C", "Solo juguetes", "Solo aeronaves tripuladas", "Solo importaciones"], answer: 0, why: "Kenia autoriza las operaciones según su categoría de riesgo." },
-      { q: "En Kenia, las solicitudes de aprobaciones para drones se hacen en:", options: ["Una oficina del condado", "El sistema en línea de drones de la KCAA", "Una tienda de drones", "Las redes sociales"], answer: 1, why: "La KCAA tiene un sistema RPAS en línea." },
-      { q: "Antes de confiar en las normas de drones de Kenia de 2020, también debes revisar:", options: ["Artículos viejos de periódico", "La opinión de un amigo", "Los nuevos reglamentos publicados por la KCAA y las tasas vigentes", "Nada"], answer: 2, why: "Las normas y las tasas pueden cambiar; la KCAA publica los reglamentos nuevos." },
-      { q: "Las normas de drones de Nigeria están en:", options: ["El Reglamento UAS de Kenia", "La guía de la FAO", "La Ley de Protección de Datos", "La Parte 21 de las Nig.CARs 2023"], answer: 3, why: "La Parte 21 cubre los RPAS en Nigeria." },
-      { q: "Según la Parte 21, ¿en qué clase está un dron de 15 kg?", options: ["Pequeña", "Nano", "Micro", "Grande"], answer: 0, why: "Pequeña va de 2 kg a menos de 25 kg." },
-      { q: "La categoría Abierta de la Parte 21:", options: ["No necesita registro", "Es de riesgo más bajo, pero el dron debe estar registrado", "Es para drones pesados de fumigación", "Significa volar en cualquier lugar"], answer: 1, why: "Las operaciones abiertas son de bajo riesgo, pero igual se registran." },
-      { q: "La Parte 21 limita muchas operaciones a:", options: ["1,000 m sobre el suelo", "Sin límite", "120 m (400 pies) sobre el suelo", "10 m sobre el suelo"], answer: 2, why: "120 m (400 pies) sobre el suelo es un límite común en la Parte 21." },
-      { q: "¿A qué distancia horizontal mínima de las personas ajenas mantiene la Parte 21 muchas operaciones con drones?", options: ["1 m", "3 m", "30 m", "300 km"], answer: 2, why: "La Parte 21 usa 30 m de las personas que no participan en la operación." },
-      { q: "Una licencia de piloto a distancia es para:", options: ["La persona que vuela", "El dron", "La finca", "El negocio"], answer: 0, why: "Las licencias son para personas; los certificados son para organizaciones y aeronaves." },
-      { q: "El seguro de responsabilidad civil frente a terceros paga cuando:", options: ["Te roban el dron", "Tu operación causa daño a otras personas o a sus bienes", "Bajan los precios de los cultivos", "Apruebas un examen"], answer: 1, why: "Cubre el daño a otros." },
-      { q: "En Nigeria, los agroquímicos los regula:", options: ["La NCAA", "La NDPC", "La NAFDAC", "La KCAA"], answer: 2, why: "La NAFDAC regula los productos químicos, incluidos los agroquímicos." },
-      { q: "Muchos plaguicidas se clasifican como:", options: ["Alimentos", "Juguetes", "Repuestos", "Mercancías peligrosas"], answer: 3, why: "Las reglas de mercancías peligrosas aplican al llevarlos por aire." },
-      { q: "¿Cuál es una operación especial que necesita aprobación específica?", options: ["Volar fuera del alcance visual", "Un vuelo en simulador", "Leer los reglamentos", "Cargar las baterías"], answer: 0, why: "El BVLOS es de mayor riesgo y necesita aprobación." },
-      { q: "Un expediente de cumplimiento es:", options: ["Solo una lista de clientes", "Un solo lugar con todas las pruebas de que tu operación es legal y segura", "Una pieza del dron", "Una etiqueta de plaguicida"], answer: 1, why: "Guarda certificados, licencias, manuales, registros y más." },
-      { q: "Si tu negocio guarda números de teléfono de agricultores en Kenia, ¿qué ley también aplica?", options: ["Ninguna", "La Parte 21 de las Nig.CARs", "La Ley de Protección de Datos de 2019, supervisada por la ODPC", "Solo el manual del dron"], answer: 2, why: "Los datos personales están cubiertos por la ley de protección de datos de Kenia." },
-      { q: "Este curso es:", options: ["Asesoría legal para tu caso", "Una licencia de piloto a distancia", "Un permiso para volar", "Educación; confirma todo con la autoridad oficial"], answer: 3, why: "Las normas cambian; deciden las fuentes oficiales y los profesionales." }
+      { objective: "O1", q: "La OACI es:", options: ["El regulador de drones de Kenia", "La Organización de Aviación Civil Internacional de la ONU", "Una marca de drones", "Un plaguicida"], answer: 1, why: "La OACI fija los estándares internacionales sobre los que construyen los países." },
+      { objective: "O1", q: "¿Quién escribe y hace cumplir la ley de drones en cada país africano?", options: ["La OACI directamente", "Los fabricantes de drones", "La propia autoridad de aviación civil de cada país", "Solo la Unión Africana"], answer: 2, why: "Cada país controla su espacio aéreo y sus normas de drones." },
+      { objective: "O1", q: "Las normas de aplicación son:", options: ["Reglas técnicas detalladas que explican cómo cumplir los reglamentos", "Normas de publicidad", "Variedades de cultivos", "Pólizas de seguro"], answer: 0, why: "Contienen el detalle técnico detrás de los reglamentos." },
+      { objective: "O2", q: "Los principales reglamentos de drones de Kenia son:", options: ["La Parte 21 de las Nig.CARs", "La Ley de Protección de Datos de 2019", "La Ley de Productos para el Control de Plagas", "El Reglamento de Aviación Civil (sistemas de aeronaves no tripuladas) de 2020"], answer: 3, why: "La KCAA supervisa el Reglamento UAS de 2020." },
+      { objective: "O2", q: "La tabla de tasas de la KCAA incluye autorizaciones de operación para:", options: ["La Categoría A, y las Categorías B y C", "Solo juguetes", "Solo aeronaves tripuladas", "Solo importaciones"], answer: 0, why: "Kenia autoriza las operaciones según su categoría de riesgo." },
+      { objective: "O2", q: "En Kenia, las solicitudes de aprobaciones para drones se hacen en:", options: ["Una oficina del condado", "El sistema en línea de drones de la KCAA", "Una tienda de drones", "Las redes sociales"], answer: 1, why: "La KCAA tiene un sistema RPAS en línea." },
+      { objective: "O2", q: "Antes de confiar en las normas de drones de Kenia de 2020, también debes revisar:", options: ["Artículos viejos de periódico", "La opinión de un amigo", "Los nuevos reglamentos publicados por la KCAA y las tasas vigentes", "Nada"], answer: 2, why: "Las normas y las tasas pueden cambiar; la KCAA publica los reglamentos nuevos." },
+      { objective: "O3", q: "Las normas de drones de Nigeria están en:", options: ["El Reglamento UAS de Kenia", "La guía de la FAO", "La Ley de Protección de Datos", "La Parte 21 de las Nig.CARs 2023"], answer: 3, why: "La Parte 21 cubre los RPAS en Nigeria." },
+      { objective: "O3", q: "Según la Parte 21, ¿en qué clase está un dron de 15 kg?", options: ["Pequeña", "Nano", "Micro", "Grande"], answer: 0, why: "Pequeña va de 2 kg a menos de 25 kg." },
+      { objective: "O3", q: "La categoría Abierta de la Parte 21:", options: ["No necesita registro", "Es de riesgo más bajo, pero el dron debe estar registrado", "Es para drones pesados de fumigación", "Significa volar en cualquier lugar"], answer: 1, why: "Las operaciones abiertas son de bajo riesgo, pero igual se registran." },
+      { objective: "O3", q: "La Parte 21 limita muchas operaciones a:", options: ["1,000 m sobre el suelo", "Sin límite", "120 m (400 pies) sobre el suelo", "10 m sobre el suelo"], answer: 2, why: "120 m (400 pies) sobre el suelo es un límite común en la Parte 21." },
+      { objective: "O3", q: "¿A qué distancia horizontal mínima de las personas ajenas mantiene la Parte 21 muchas operaciones con drones?", options: ["1 m", "3 m", "30 m", "300 km"], answer: 2, why: "La Parte 21 usa 30 m de las personas que no participan en la operación." },
+      { objective: "O4", q: "Una licencia de piloto a distancia es para:", options: ["La persona que vuela", "El dron", "La finca", "El negocio"], answer: 0, why: "Las licencias son para personas; los certificados son para organizaciones y aeronaves." },
+      { objective: "O4", q: "El seguro de responsabilidad civil frente a terceros paga cuando:", options: ["Te roban el dron", "Tu operación causa daño a otras personas o a sus bienes", "Bajan los precios de los cultivos", "Apruebas un examen"], answer: 1, why: "Cubre el daño a otros." },
+      { objective: "O5", q: "En Nigeria, los agroquímicos los regula:", options: ["La NCAA", "La NDPC", "La NAFDAC", "La KCAA"], answer: 2, why: "La NAFDAC regula los productos químicos, incluidos los agroquímicos." },
+      { objective: "O5", q: "Muchos plaguicidas se clasifican como:", options: ["Alimentos", "Juguetes", "Repuestos", "Mercancías peligrosas"], answer: 3, why: "Las reglas de mercancías peligrosas aplican al llevarlos por aire." },
+      { objective: "O5", q: "¿Cuál es una operación especial que necesita aprobación específica?", options: ["Volar fuera del alcance visual", "Un vuelo en simulador", "Leer los reglamentos", "Cargar las baterías"], answer: 0, why: "El BVLOS es de mayor riesgo y necesita aprobación." },
+      { objective: "O6", q: "Un expediente de cumplimiento es:", options: ["Solo una lista de clientes", "Un solo lugar con todas las pruebas de que tu operación es legal y segura", "Una pieza del dron", "Una etiqueta de plaguicida"], answer: 1, why: "Guarda certificados, licencias, manuales, registros y más." },
+      { objective: "O6", q: "Si tu negocio guarda números de teléfono de agricultores en Kenia, ¿qué ley también aplica?", options: ["Ninguna", "La Parte 21 de las Nig.CARs", "La Ley de Protección de Datos de 2019, supervisada por la ODPC", "Solo el manual del dron"], answer: 2, why: "Los datos personales están cubiertos por la ley de protección de datos de Kenia." },
+      { objective: "O1", q: "Este curso es:", options: ["Asesoría legal para tu caso", "Una licencia de piloto a distancia", "Un permiso para volar", "Educación; confirma todo con la autoridad oficial"], answer: 3, why: "Las normas cambian; deciden las fuentes oficiales y los profesionales." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      3,
+      7,
+      8,
+      12,
+      14,
+      16,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte del expediente y revísala de nuevo.",
+    criteria: [
+      {
+        name: "Autoridad y normas",
+        objective: "O1",
+        notYet: "Falta la autoridad o las normas, o no hay enlaces ni fechas.",
+        meets: "La autoridad, las normas, las normas de aplicación y la tabla de tasas están en la lista con enlaces y la fecha de revisión.",
+        exceeds: "También anota cualquier norma nueva publicada y cómo cambia el trabajo."
+      },
+      {
+        name: "Clasificación y riesgo",
+        objective: "O3",
+        notYet: "Falta la clase del dron o la categoría de riesgo de la operación, o están mal.",
+        meets: "La clasificación del dron y la categoría de riesgo de la operación son correctas según las normas del país.",
+        exceeds: "Enumera los límites de operación que aplican, como la altura y la distancia de las personas."
+      },
+      {
+        name: "Aprobaciones necesarias",
+        objective: "O2",
+        notYet: "Faltan aprobaciones, o no dice quién las da.",
+        meets: "Cada registro, permiso, licencia, certificado y autorización está en la lista con quién lo da y su estado.",
+        exceeds: "Incluye las tasas vigentes y un plazo para conseguir cada uno."
+      },
+      {
+        name: "Documentos de las personas y del negocio",
+        objective: "O4",
+        notYet: "Falta el manual de operaciones, el seguro o los registros.",
+        meets: "Están en la lista las licencias de piloto, el certificado de operador, el manual de operaciones, el seguro, y los registros de mantenimiento y de vuelo.",
+        exceeds: "Nombra a las personas responsables y dónde se guarda cada documento."
+      },
+      {
+        name: "Fumigación y operaciones especiales",
+        objective: "O5",
+        notYet: "Planea fumigar u otras operaciones especiales sin aprobaciones adicionales.",
+        meets: "Las aprobaciones adicionales de aviación y de plaguicidas para cualquier operación especial están en la lista con quién las da.",
+        exceeds: "Explica cómo las distancias a los aeródromos y las reglas de mercancías peligrosas afectan el trabajo."
+      },
+      {
+        name: "Mantenerlo al día",
+        objective: "O6",
+        notYet: "No hay fechas de renovación ni calendario de revisión de normas; no hay pasos de protección de datos.",
+        meets: "Un calendario de renovaciones, un calendario fijo para revisar las normas y pasos para proteger los datos de los agricultores.",
+        exceeds: "Tiene un registro de las revisiones anteriores y de lo que cambió."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que terminan el curso y obtienen Cumple o Supera en cada fila de la rúbrica del expediente de cumplimiento",
+      "Participantes que solicitan un registro de dron, una licencia de piloto o un certificado de operador en un plazo de 90 días (encuesta de seguimiento)",
+      "Negocios de drones de egresados que tienen las aprobaciones para cada tipo de trabajo que ofrecen",
+      "Participantes que toman el siguiente curso de drones o empiezan una formación aprobada de piloto a distancia"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono o una computadora con internet para abrir el sitio web de la autoridad de aviación civil",
+      "Copias descargadas de las normas sobre drones, las normas de aplicación y la tabla de tasas del país",
+      "Un cuaderno o una carpeta para el expediente de cumplimiento, con una copia digital respaldada",
+      "Unos 60 minutos en total, en sesiones cortas, más tiempo para armar el expediente de cumplimiento"
+    ],
+    facilitatorNotes: [
+      "Hagan juntos la prueba inicial y luego abran en vivo la página de drones de la autoridad, para que vean dónde se guardan las normas.",
+      "Revisa en el sitio oficial si cambiaron las normas o las tasas antes de cada edición del curso; no enseñes con notas viejas.",
+      "Di con claridad que esto es educación, no asesoría legal, y manda las preguntas específicas a la autoridad o a un abogado.",
+      "No vuelen ni fumiguen como parte del curso; nunca animes a fumigar sin las aprobaciones de aviación y de plaguicidas.",
+      "Califica el expediente de cumplimiento con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

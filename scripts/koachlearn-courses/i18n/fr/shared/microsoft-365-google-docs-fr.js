@@ -17,11 +17,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes. Gardez l'application ouverte pendant la lecture pour faire tout de suite l'exercice « Essayez maintenant ». Un contrôle des connaissances termine chaque chapitre, et un quiz de 20 questions termine le cours."
   ],
   finalTask: "Faites une affiche ou une lettre d'une page (par exemple pour une vente de garage, une journée de bénévolat ou un mot au propriétaire) avec un titre en gras, une liste à puces et une ligne de contact, et un petit tableur qui liste au moins cinq dépenses et les additionne avec une formule SOMME. Partagez le document avec une personne en « lecture seule », puis téléchargez les deux fichiers en PDF.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des adultes qui ont besoin de documents de bureau au quotidien : seniors, chercheurs d'emploi, bénévoles, personnes qui reprennent le travail, membres de petites associations et de groupes de quartier, et jeunes qui commencent l'école ou le travail.",
+    startingPoint: "Ils savent utiliser une souris ou un écran tactile, ouvrir un navigateur web et taper. Beaucoup ont une adresse e-mail mais n'ont jamais créé de document ou de tableur en ligne, partagé un fichier ou enregistré un PDF.",
+    gap: "Les lettres, affiches, budgets, listes d'inscription et formulaires d'emploi se font et s'envoient maintenant en fichiers en ligne, et les bureaux demandent souvent des PDF. Sans ces compétences, on dépend des autres, on paie pour se faire aider à imprimer, ou on partage trop largement des fichiers avec des détails privés.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes ; les mots comme cellule, formule et PDF sont expliqués",
+      "Appareils : un ordinateur ou une tablette avec un navigateur web marche le mieux ; un téléphone est possible mais plus difficile",
+      "Comptes : un compte Google ou Microsoft gratuit est nécessaire ; aucune offre payante",
+      "Temps : des leçons de 4 à 6 minutes, environ 60 minutes au total",
+      "Vie privée : les fichiers avec des adresses, des numéros d'identité ou des informations de santé ne sont jamais partagés avec « Tous les utilisateurs disposant du lien »"
+    ],
+    prerequisites: "Aucun, mais « Les bases de l'ordinateur » ou « Les bases d'internet » aide les apprenants qui découvrent la souris et le navigateur."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Avec Google Docs ou Word sur le web", action: "ouvrir un nouveau document vierge, lui donner un nom clair et dire où il est enregistré", standard: "avec un nom qui dit ce qu'est le fichier et le bon stockage en ligne nommé (Google Drive ou OneDrive)" },
+    { id: "O2", condition: "À partir d'une page de texte brut", action: "mettre en forme un titre, une liste à puces et le texte pour que la page soit facile à lire", standard: "avec le titre en Titre 1, une liste à puces et un mot en gras" },
+    { id: "O3", condition: "À partir d'un document et d'une personne qui doit le voir", action: "partager le document au niveau d'accès le plus bas dont la personne a besoin et laisser un commentaire", standard: "en choisissant chaque fois le bon niveau et sans jamais utiliser « Tous les utilisateurs disposant du lien » pour des détails privés" },
+    { id: "O4", condition: "Avec Google Sheets ou Excel sur le web", action: "créer un tableur avec des en-têtes à la ligne 1 et cinq lignes de données", standard: "avec un élément par ligne et des nombres tapés sans mots" },
+    { id: "O5", condition: "À partir d'une colonne de nombres dans un tableur", action: "écrire une formule SOMME qui totalise la colonne et se met à jour toute seule", standard: "avec un total juste qui change quand on modifie un nombre" },
+    { id: "O6", condition: "À partir d'un document ou d'un tableur terminé", action: "le télécharger en PDF et l'imprimer après avoir vérifié l'aperçu", standard: "avec le PDF retrouvé dans le dossier Téléchargements et rien de coupé dans l'aperçu" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Écrire et partager un document",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Ouvrir Google Docs ou Word sur le web",
           minutes: 5,
           goal: "Ouvrir un nouveau document vierge, lui donner un nom et savoir où il est enregistré.",
@@ -39,9 +63,14 @@ module.exports = {
             { title: "Nommez chaque fichier", bullets: ["Cliquez sur le nom en haut à gauche", "Utilisez des noms clairs : « Affiche journée bénévoles - mai »"] }
           ],
           tryIt: "Ouvrez un document vierge dans Google Docs ou Word sur le web. Nommez-le « Mon document d'essai » et tapez une phrase sur votre semaine.",
-          youCanNow: "ouvrir un nouveau document, le nommer, et vous savez qu'il s'enregistre tout seul dans le cloud."
+          youCanNow: "ouvrir un nouveau document, le nommer, et vous savez qu'il s'enregistre tout seul dans le cloud.",
+          quickCheck: [
+            { objective: "O1", q: "Qu'est-ce que le cloud ?", options: ["Un stockage en ligne que vous pouvez ouvrir depuis n'importe quel appareil après vous être connecté", "Un dossier qui existe sur un seul ordinateur", "Un type d'imprimante", "Une application payante à acheter"], answer: 0, why: "Google Drive et OneDrive sont des stockages en ligne, qu'on appelle aussi le cloud." },
+            { objective: "O1", q: "Vous avez tapé une lettre dans Google Docs et vous voulez la retrouver la semaine prochaine. Que faites-vous maintenant ?", options: ["La laisser avec le nom « Document sans titre »", "L'imprimer pour ne pas la perdre", "Cliquer sur le nom en haut et taper un nom clair comme « Lettre au propriétaire - juin »", "La copier dans un e-mail à vous-même"], answer: 2, why: "Un nom de fichier clair rend le document facile à retrouver plus tard." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Rendre un document propre",
           minutes: 5,
           goal: "Mettre en forme un titre, une liste et le texte pour qu'une page soit facile à lire.",
@@ -59,9 +88,14 @@ module.exports = {
             { title: "Restez simple", bullets: ["Une seule police, taille 11 à 14", "Paragraphes courts et puces", "Ctrl+Z (Commande+Z sur Mac) annule une erreur"] }
           ],
           tryIt: "Dans votre document d'essai, tapez un titre et trois éléments, par exemple trois choses à apporter à un pique-nique en famille. Mettez le titre en Titre 1, faites des éléments une liste à puces et mettez un mot en gras.",
-          youCanNow: "mettre en forme une page avec un titre, une liste à puces et du texte en gras."
+          youCanNow: "mettre en forme une page avec un titre, une liste à puces et du texte en gras.",
+          quickCheck: [
+            { objective: "O2", q: "Quelle taille de texte la leçon conseille-t-elle pour le corps du texte ?", options: ["6 à 8", "20 à 24", "30 ou plus", "11 à 14"], answer: 3, why: "Une taille de 11 à 14 est facile à lire pour le corps du texte." },
+            { objective: "O2", q: "Vous voulez transformer trois lignes en liste à puces. Que faites-vous d'abord ?", options: ["Appuyer sur Ctrl+Z", "Sélectionner les trois lignes", "Changer la police de toute la page", "Cliquer sur Partager"], answer: 1, why: "On sélectionne d'abord le texte, puis on choisit le bouton de liste à puces." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Partager en sécurité et utiliser les commentaires",
           minutes: 5,
           goal: "Partager un document avec une personne au bon niveau d'accès et laisser un commentaire.",
@@ -78,17 +112,21 @@ module.exports = {
             { title: "Les commentaires", bullets: ["Un avis sans changer vos mots", "Sélectionnez du texte, choisissez Commentaire", "Résolvez-le une fois réglé"] }
           ],
           tryIt: "Partagez votre document d'essai avec un ami ou un membre de votre famille en lecture seule. Puis ajoutez sur votre titre un commentaire qui dit « Ce titre est-il clair ? »",
-          youCanNow: "partager un document au bon niveau d'accès et utiliser les commentaires pour recevoir des avis."
+          youCanNow: "partager un document au bon niveau d'accès et utiliser les commentaires pour recevoir des avis.",
+          quickCheck: [
+            { objective: "O3", q: "Quel niveau d'accès permet à quelqu'un de changer les mots de votre fichier ?", options: ["Lecture seule", "Commentaire", "Modification", "Téléchargement"], answer: 2, why: "La modification permet de changer le fichier ; la lecture et le commentaire, non." },
+            { objective: "O3", q: "Un ami a corrigé le problème que vous aviez signalé dans un commentaire. Que faites-vous du commentaire ?", options: ["Choisir Résoudre", "Supprimer tout le document", "Partager le fichier avec « Tous les utilisateurs disposant du lien »", "Laisser un nouveau commentaire sur chaque ligne"], answer: 0, why: "Résoudre ferme un commentaire une fois le problème corrigé." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Écrire et partager un document",
         questions: [
-          { q: "Où Google Docs enregistre-t-il votre travail ?", options: ["Seulement sur une clé USB", "Il n'enregistre pas", "Dans Google Drive, en ligne", "Sur une imprimante"], answer: 2, why: "Google Docs enregistre automatiquement dans Google Drive." },
-          { q: "Quel nom de fichier est le meilleur ?", options: ["« Document sans titre »", "« azer »", "« doc1 »", "« Affiche journée bénévoles - mai »"], answer: 3, why: "Un nom clair rend le fichier facile à retrouver." },
-          { q: "Avant de mettre du texte en gras, vous devez d'abord :", options: ["Fermer l'application", "Imprimer la page", "Sélectionner le texte", "Partager le fichier"], answer: 2, why: "On sélectionne le texte, puis on le change avec la barre d'outils." },
-          { q: "Votre voisin a seulement besoin de lire votre affiche. Quel niveau d'accès lui donnez-vous ?", options: ["Modification", "Propriétaire", "Lecture seule", "Tous les utilisateurs disposant du lien"], answer: 2, why: "Donnez le niveau le plus bas dont la personne a besoin." },
-          { q: "Un document contient votre adresse et votre téléphone. Quel choix de partage devez-vous éviter ?", options: ["Partager avec une personne par e-mail", "Lecture seule", "Commentaire seulement", "Tous les utilisateurs disposant du lien"], answer: 3, why: "Toute personne qui reçoit le lien pourrait ouvrir un fichier avec des détails privés." }
+          { objective: "O1", q: "Où Google Docs enregistre-t-il votre travail ?", options: ["Seulement sur une clé USB", "Il n'enregistre pas", "Dans Google Drive, en ligne", "Sur une imprimante"], answer: 2, why: "Google Docs enregistre automatiquement dans Google Drive." },
+          { objective: "O1", q: "Quel nom de fichier est le meilleur ?", options: ["« Document sans titre »", "« azer »", "« doc1 »", "« Affiche journée bénévoles - mai »"], answer: 3, why: "Un nom clair rend le fichier facile à retrouver." },
+          { objective: "O2", q: "Avant de mettre du texte en gras, vous devez d'abord :", options: ["Fermer l'application", "Imprimer la page", "Sélectionner le texte", "Partager le fichier"], answer: 2, why: "On sélectionne le texte, puis on le change avec la barre d'outils." },
+          { objective: "O3", q: "Votre voisin a seulement besoin de lire votre affiche. Quel niveau d'accès lui donnez-vous ?", options: ["Modification", "Propriétaire", "Lecture seule", "Tous les utilisateurs disposant du lien"], answer: 2, why: "Donnez le niveau le plus bas dont la personne a besoin." },
+          { objective: "O3", q: "Un document contient votre adresse et votre téléphone. Quel choix de partage devez-vous éviter ?", options: ["Partager avec une personne par e-mail", "Lecture seule", "Commentaire seulement", "Tous les utilisateurs disposant du lien"], answer: 3, why: "Toute personne qui reçoit le lien pourrait ouvrir un fichier avec des détails privés." }
         ]
       }
     },
@@ -96,6 +134,7 @@ module.exports = {
       name: "Chapitre 2 : Les tableurs et la touche finale",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Votre premier tableur",
           minutes: 5,
           goal: "Faire un tableur avec des en-têtes et cinq lignes de données.",
@@ -112,9 +151,14 @@ module.exports = {
             { title: "Préparez-le", bullets: ["Les en-têtes à la ligne 1", "Un élément par ligne", "Des nombres sans mots : 12,50"] }
           ],
           tryIt: "Faites un tableur appelé « Budget d'essai ». Mettez Article et Coût à la ligne 1, puis cinq vraies dépenses pour une semaine ou un événement, comme les courses, le bus ou la décoration.",
-          youCanNow: "préparer un tableur avec des en-têtes et des lignes de données."
+          youCanNow: "préparer un tableur avec des en-têtes et des lignes de données.",
+          quickCheck: [
+            { objective: "O4", q: "Dans un tableur, qu'est-ce qu'une cellule ?", options: ["Une page entière de données", "Une case, nommée par sa colonne et sa ligne", "Une formule qui additionne des nombres", "Le nom du fichier en haut"], answer: 1, why: "Chaque case est une cellule, comme B2 pour la colonne B, ligne 2." },
+            { objective: "O4", q: "Vous faites une liste d'inscription. Où tapez-vous les en-têtes « Nom » et « Téléphone » ?", options: ["En bas de la feuille", "Dans le nom du fichier", "Tous dans une seule cellule", "À la ligne 1, un en-tête par colonne"], answer: 3, why: "Les en-têtes vont à la ligne 1, avec un élément par ligne en dessous." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Additionner avec une formule",
           minutes: 5,
           goal: "Utiliser SOMME pour totaliser une colonne qui se met à jour toute seule.",
@@ -131,9 +175,14 @@ module.exports = {
             { title: "D'autres formules simples", bullets: ["=MOYENNE(B2:B6) donne la moyenne", "=B2*2 double une cellule", "#NOM? veut dire : vérifiez l'orthographe"] }
           ],
           tryIt: "Dans votre Budget d'essai, tapez Total en A7 et =SOMME(B2:B6) en B7. Puis changez une dépense et vérifiez que le total change.",
-          youCanNow: "totaliser une colonne avec SOMME, et vous savez que le total se met à jour quand les nombres changent."
+          youCanNow: "totaliser une colonne avec SOMME, et vous savez que le total se met à jour quand les nombres changent.",
+          quickCheck: [
+            { objective: "O5", q: "Quel est le grand avantage d'une formule SOMME par rapport à une calculatrice ?", options: ["Le total se met à jour tout seul quand un nombre change", "Elle met les nombres en gras", "Elle transforme la feuille en PDF", "Elle partage le fichier avec d'autres personnes"], answer: 0, why: "Une formule recalcule dès qu'un nombre de sa plage change." },
+            { objective: "O5", q: "Vos dépenses sont dans B2 à B8. Que tapez-vous dans B9 pour les totaliser ?", options: ["SOMME B2 B8", "=B2+B8", "=SOMME(B2:B8)", "=MOYENNE(B2:B8)"], answer: 2, why: "=SOMME(B2:B8) additionne de B2 à B8 ; =B2+B8 n'additionne que deux cellules." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Enregistrer en PDF et imprimer",
           minutes: 4,
           goal: "Télécharger un document ou un tableur en PDF et l'imprimer.",
@@ -150,17 +199,21 @@ module.exports = {
             { title: "L'imprimer", bullets: ["Ctrl+P (Commande+P sur Mac)", "Regardez d'abord l'aperçu"] }
           ],
           tryIt: "Tâche finale : faites une affiche ou une lettre d'une page avec un titre, une liste à puces et une ligne de contact, plus un tableur de cinq dépenses avec un total SOMME. Partagez le document en lecture seule, puis téléchargez les deux en PDF.",
-          youCanNow: "terminer un document et un tableur, les partager en sécurité et les enregistrer en PDF."
+          youCanNow: "terminer un document et un tableur, les partager en sécurité et les enregistrer en PDF.",
+          quickCheck: [
+            { objective: "O6", q: "Où va d'habitude un PDF téléchargé ?", options: ["Dans votre boîte de réception", "Dans la corbeille", "Seulement dans le cloud", "Dans votre dossier Téléchargements"], answer: 3, why: "Les fichiers téléchargés vont dans le dossier Téléchargements de votre appareil." },
+            { objective: "O6", q: "Vous allez imprimer une affiche à la bibliothèque. Que faites-vous d'abord ?", options: ["Imprimer dix copies tout de suite", "Vérifier l'aperçu avant impression pour que rien ne soit coupé", "Supprimer le fichier", "Transformer le fichier en tableur"], answer: 1, why: "L'aperçu montre si quelque chose est coupé avant que vous payiez l'impression." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Les tableurs et la touche finale",
         questions: [
-          { q: "Qu'est-ce que la cellule C4 ?", options: ["Ligne C, colonne 4", "Une formule", "Le quatrième fichier", "Colonne C, ligne 4"], answer: 3, why: "Les cellules sont nommées par la lettre de colonne, puis le numéro de ligne." },
-          { q: "Comment taper une dépense de douze euros cinquante ?", options: ["« douze cinquante »", "« 12,50 euros »", "12,50", "« environ 12 »"], answer: 2, why: "Des nombres sans mots permettent au tableur de calculer." },
-          { q: "Quelle formule additionne les cellules B2 à B6 ?", options: ["ajoute(B2-B6)", "SOMME B2 B6", "=SOMME(B2:B6)", "B2+B6"], answer: 2, why: "Les formules commencent par =, et B2:B6 veut dire de B2 à B6." },
-          { q: "Vous changez une dépense dans votre budget. Que devient le total SOMME ?", options: ["Rien", "Il devient une erreur", "Vous devez le retaper", "Il se met à jour tout seul"], answer: 3, why: "Les formules recalculent quand les nombres changent." },
-          { q: "Un bureau demande votre lettre dans un fichier qui a le même aspect partout. Vous envoyez :", options: ["Une capture d'écran de votre téléphone", "Une photo de l'écran", "Un lien pour tout le monde", "Un PDF"], answer: 3, why: "Un PDF a le même aspect sur tous les appareils." }
+          { objective: "O4", q: "Qu'est-ce que la cellule C4 ?", options: ["Ligne C, colonne 4", "Une formule", "Le quatrième fichier", "Colonne C, ligne 4"], answer: 3, why: "Les cellules sont nommées par la lettre de colonne, puis le numéro de ligne." },
+          { objective: "O4", q: "Comment taper une dépense de douze euros cinquante ?", options: ["« douze cinquante »", "« 12,50 euros »", "12,50", "« environ 12 »"], answer: 2, why: "Des nombres sans mots permettent au tableur de calculer." },
+          { objective: "O5", q: "Quelle formule additionne les cellules B2 à B6 ?", options: ["ajoute(B2-B6)", "SOMME B2 B6", "=SOMME(B2:B6)", "B2+B6"], answer: 2, why: "Les formules commencent par =, et B2:B6 veut dire de B2 à B6." },
+          { objective: "O5", q: "Vous changez une dépense dans votre budget. Que devient le total SOMME ?", options: ["Rien", "Il devient une erreur", "Vous devez le retaper", "Il se met à jour tout seul"], answer: 3, why: "Les formules recalculent quand les nombres changent." },
+          { objective: "O6", q: "Un bureau demande votre lettre dans un fichier qui a le même aspect partout. Vous envoyez :", options: ["Une capture d'écran de votre téléphone", "Une photo de l'écran", "Un lien pour tout le monde", "Un PDF"], answer: 3, why: "Un PDF a le même aspect sur tous les appareils." }
         ]
       }
     }
@@ -168,26 +221,105 @@ module.exports = {
   quiz: {
     title: "Quiz final : Les bases de Microsoft 365 et Google Docs",
     questions: [
-      { q: "De quoi avez-vous besoin pour utiliser Google Docs gratuitement ?", options: ["Un compte Google", "Une licence payante", "Une imprimante", "Un compte Microsoft"], answer: 0, why: "Google Docs est gratuit avec un compte Google." },
-      { q: "Où Word sur le web enregistre-t-il vos fichiers ?", options: ["Google Drive", "Une disquette", "OneDrive", "Nulle part"], answer: 2, why: "Microsoft enregistre dans OneDrive." },
-      { q: "Le cloud, c'est :", options: ["La météo", "Un virus", "Un type d'imprimante", "Un stockage sur internet accessible depuis n'importe quel appareil"], answer: 3, why: "Le stockage dans le cloud permet d'ouvrir vos fichiers partout après connexion." },
-      { q: "Où renommez-vous un document Google Docs ?", options: ["En cliquant sur le nom en haut à gauche", "En redémarrant l'ordinateur", "En l'imprimant d'abord", "En vous l'envoyant par e-mail"], answer: 0, why: "Le nom du fichier est en haut à gauche." },
-      { q: "Pour changer l'apparence d'un mot, vous devez d'abord :", options: ["Partager le fichier", "Télécharger un PDF", "Sélectionner le mot", "Fermer l'onglet"], answer: 2, why: "On sélectionne d'abord, puis on met en forme." },
-      { q: "Quelle est la meilleure façon de faire un titre ?", options: ["Le taper en majuscules avec des espaces", "Le mettre en bas", "L'écrire tout petit", "Choisir le style Titre 1"], answer: 3, why: "Les styles de titre sont propres et aident les lecteurs d'écran." },
-      { q: "Vous avez fait une erreur de mise en forme. Qu'est-ce qui l'annule ?", options: ["Ctrl+P", "Ctrl+Z (Commande+Z sur Mac)", "Fermer le navigateur", "Le bouton Partager"], answer: 1, why: "Ctrl+Z ou Commande+Z annule la dernière modification." },
-      { q: "Où se trouve le bouton Partager dans les deux applications ?", options: ["En haut à droite", "En bas de la page", "Dans l'aperçu avant impression", "Dans une cellule du tableur"], answer: 0, why: "Les deux applications placent Partager en haut à droite." },
-      { q: "Votre collègue doit proposer des changements sans modifier vos mots. Vous lui donnez :", options: ["Modification", "Commentaire", "Propriétaire", "Aucun accès"], answer: 1, why: "L'accès Commentaire lui permet de proposer sans modifier." },
-      { q: "Pourquoi faire attention à « Tous les utilisateurs disposant du lien » ?", options: ["Cela supprime le fichier", "Toute personne qui a le lien peut l'ouvrir", "Cela coûte de l'argent", "Cela transforme le fichier en PDF"], answer: 1, why: "Un lien transféré peut arriver chez des inconnus." },
-      { q: "Un commentaire, c'est :", options: ["Une modification de votre texte", "Une note sur le côté qui ne change pas le texte", "Un PDF", "Une formule"], answer: 1, why: "Les commentaires donnent un avis sans modifier." },
-      { q: "Quel est un bon usage d'un tableur ?", options: ["Un budget familial", "Une lettre d'amour", "Un album photo", "Un appel téléphonique"], answer: 0, why: "Les tableurs servent aux listes et aux nombres." },
-      { q: "Les colonnes d'un tableur sont nommées avec :", options: ["Des numéros", "Des lettres", "Des couleurs", "Des émojis"], answer: 1, why: "Les colonnes utilisent des lettres ; les lignes utilisent des numéros." },
-      { q: "Où vont d'habitude les en-têtes comme « Article » et « Coût » ?", options: ["À la ligne 1", "À la dernière ligne", "Dans un commentaire", "Dans le nom du fichier"], answer: 0, why: "Les en-têtes vont dans la ligne du haut." },
-      { q: "Toute formule commence par :", options: ["Un signe dollar", "Un signe égal (=)", "Le mot Total", "Un espace"], answer: 1, why: "Le = dit au tableur que c'est une formule." },
-      { q: "Dans =SOMME(B2:B6), les deux-points veulent dire :", options: ["Diviser", "Jusqu'à", "Moins", "Stop"], answer: 1, why: "B2:B6 veut dire de B2 jusqu'à B6." },
-      { q: "Vous voyez #NOM? dans une cellule. Que devez-vous vérifier ?", options: ["L'imprimante", "L'orthographe de la formule", "Votre mot de passe", "La couleur du fichier"], answer: 1, why: "#NOM? veut souvent dire qu'une formule est mal écrite." },
-      { q: "Quelle formule donne la moyenne de B2 à B6 ?", options: ["=MOYENNE(B2:B6)", "=SOMME(B2)", "MOY B2-B6", "=B2"], answer: 0, why: "MOYENNE calcule la moyenne d'une plage." },
-      { q: "Dans Google Docs, comment faire un PDF ?", options: ["Menu Fichier, Télécharger, PDF", "Partager, Tous les utilisateurs disposant du lien", "Appuyer sur Ctrl+Z", "Clic droit, puis Commentaire"], answer: 0, why: "Fichier, Télécharger, PDF enregistre un PDF." },
-      { q: "Avant d'imprimer, vous devez :", options: ["Regarder l'aperçu avant impression", "Supprimer le fichier", "Le partager avec tout le monde", "Changer toutes les polices"], answer: 0, why: "L'aperçu montre si quelque chose est coupé." }
+      { objective: "O1", q: "De quoi avez-vous besoin pour utiliser Google Docs gratuitement ?", options: ["Un compte Google", "Une licence payante", "Une imprimante", "Un compte Microsoft"], answer: 0, why: "Google Docs est gratuit avec un compte Google." },
+      { objective: "O1", q: "Où Word sur le web enregistre-t-il vos fichiers ?", options: ["Google Drive", "Une disquette", "OneDrive", "Nulle part"], answer: 2, why: "Microsoft enregistre dans OneDrive." },
+      { objective: "O1", q: "Le cloud, c'est :", options: ["La météo", "Un virus", "Un type d'imprimante", "Un stockage sur internet accessible depuis n'importe quel appareil"], answer: 3, why: "Le stockage dans le cloud permet d'ouvrir vos fichiers partout après connexion." },
+      { objective: "O1", q: "Où renommez-vous un document Google Docs ?", options: ["En cliquant sur le nom en haut à gauche", "En redémarrant l'ordinateur", "En l'imprimant d'abord", "En vous l'envoyant par e-mail"], answer: 0, why: "Le nom du fichier est en haut à gauche." },
+      { objective: "O2", q: "Pour changer l'apparence d'un mot, vous devez d'abord :", options: ["Partager le fichier", "Télécharger un PDF", "Sélectionner le mot", "Fermer l'onglet"], answer: 2, why: "On sélectionne d'abord, puis on met en forme." },
+      { objective: "O2", q: "Quelle est la meilleure façon de faire un titre ?", options: ["Le taper en majuscules avec des espaces", "Le mettre en bas", "L'écrire tout petit", "Choisir le style Titre 1"], answer: 3, why: "Les styles de titre sont propres et aident les lecteurs d'écran." },
+      { objective: "O2", q: "Vous avez fait une erreur de mise en forme. Qu'est-ce qui l'annule ?", options: ["Ctrl+P", "Ctrl+Z (Commande+Z sur Mac)", "Fermer le navigateur", "Le bouton Partager"], answer: 1, why: "Ctrl+Z ou Commande+Z annule la dernière modification." },
+      { objective: "O3", q: "Où se trouve le bouton Partager dans les deux applications ?", options: ["En haut à droite", "En bas de la page", "Dans l'aperçu avant impression", "Dans une cellule du tableur"], answer: 0, why: "Les deux applications placent Partager en haut à droite." },
+      { objective: "O3", q: "Votre collègue doit proposer des changements sans modifier vos mots. Vous lui donnez :", options: ["Modification", "Commentaire", "Propriétaire", "Aucun accès"], answer: 1, why: "L'accès Commentaire lui permet de proposer sans modifier." },
+      { objective: "O3", q: "Pourquoi faire attention à « Tous les utilisateurs disposant du lien » ?", options: ["Cela supprime le fichier", "Toute personne qui a le lien peut l'ouvrir", "Cela coûte de l'argent", "Cela transforme le fichier en PDF"], answer: 1, why: "Un lien transféré peut arriver chez des inconnus." },
+      { objective: "O3", q: "Un commentaire, c'est :", options: ["Une modification de votre texte", "Une note sur le côté qui ne change pas le texte", "Un PDF", "Une formule"], answer: 1, why: "Les commentaires donnent un avis sans modifier." },
+      { objective: "O4", q: "Quel est un bon usage d'un tableur ?", options: ["Un budget familial", "Une lettre d'amour", "Un album photo", "Un appel téléphonique"], answer: 0, why: "Les tableurs servent aux listes et aux nombres." },
+      { objective: "O4", q: "Les colonnes d'un tableur sont nommées avec :", options: ["Des numéros", "Des lettres", "Des couleurs", "Des émojis"], answer: 1, why: "Les colonnes utilisent des lettres ; les lignes utilisent des numéros." },
+      { objective: "O4", q: "Où vont d'habitude les en-têtes comme « Article » et « Coût » ?", options: ["À la ligne 1", "À la dernière ligne", "Dans un commentaire", "Dans le nom du fichier"], answer: 0, why: "Les en-têtes vont dans la ligne du haut." },
+      { objective: "O5", q: "Toute formule commence par :", options: ["Un signe dollar", "Un signe égal (=)", "Le mot Total", "Un espace"], answer: 1, why: "Le = dit au tableur que c'est une formule." },
+      { objective: "O5", q: "Dans =SOMME(B2:B6), les deux-points veulent dire :", options: ["Diviser", "Jusqu'à", "Moins", "Stop"], answer: 1, why: "B2:B6 veut dire de B2 jusqu'à B6." },
+      { objective: "O5", q: "Vous voyez #NOM? dans une cellule. Que devez-vous vérifier ?", options: ["L'imprimante", "L'orthographe de la formule", "Votre mot de passe", "La couleur du fichier"], answer: 1, why: "#NOM? veut souvent dire qu'une formule est mal écrite." },
+      { objective: "O5", q: "Quelle formule donne la moyenne de B2 à B6 ?", options: ["=MOYENNE(B2:B6)", "=SOMME(B2)", "MOY B2-B6", "=B2"], answer: 0, why: "MOYENNE calcule la moyenne d'une plage." },
+      { objective: "O6", q: "Dans Google Docs, comment faire un PDF ?", options: ["Menu Fichier, Télécharger, PDF", "Partager, Tous les utilisateurs disposant du lien", "Appuyer sur Ctrl+Z", "Clic droit, puis Commentaire"], answer: 0, why: "Fichier, Télécharger, PDF enregistre un PDF." },
+      { objective: "O6", q: "Avant d'imprimer, vous devez :", options: ["Regarder l'aperçu avant impression", "Supprimer le fichier", "Le partager avec tout le monde", "Changer toutes les polices"], answer: 0, why: "L'aperçu montre si quelque chose est coupé." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      2,
+      4,
+      5,
+      9,
+      13,
+      14,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Document propre d'une page",
+        objective: "O2",
+        notYet: "Le titre, la liste à puces ou la ligne de contact manque.",
+        meets: "Un titre en gras en Titre 1, une liste à puces et une ligne de contact, le tout sur une page.",
+        exceeds: "Utilise aussi une seule police facile à lire, des paragraphes courts et un nom de fichier clair."
+      },
+      {
+        name: "Partage en sécurité",
+        objective: "O3",
+        notYet: "Le document n'est pas partagé, ou il est partagé en modification ou avec « Tous les utilisateurs disposant du lien ».",
+        meets: "Partagé avec une personne en lecture seule.",
+        exceeds: "Laisse aussi un commentaire pour demander un avis et le résout après une réponse."
+      },
+      {
+        name: "Tableur",
+        objective: "O4",
+        notYet: "Les en-têtes manquent ou il y a moins de cinq dépenses.",
+        meets: "Les en-têtes Article et Coût à la ligne 1 et au moins cinq dépenses, une par ligne, tapées en nombres.",
+        exceeds: "La ligne 1 est en gras et le fichier a un nom clair."
+      },
+      {
+        name: "Total avec SOMME",
+        objective: "O5",
+        notYet: "Le total est tapé à la main ou la formule donne une erreur.",
+        meets: "Une formule SOMME donne le bon total et se met à jour quand une dépense change.",
+        exceeds: "Ajoute aussi une étiquette au total et une formule MOYENNE."
+      },
+      {
+        name: "PDF",
+        objective: "O6",
+        notYet: "Un des fichiers ou les deux ne sont pas enregistrés en PDF.",
+        meets: "Le document et le tableur sont tous deux téléchargés en PDF et se trouvent dans Téléchargements.",
+        exceeds: "Vérifie aussi l'aperçu avant impression pour que rien ne soit coupé."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et obtiennent « Atteint » ou « Dépasse » sur chaque ligne de la grille de l'exercice final",
+      "Apprenants qui disent avoir créé un vrai document, un budget ou une liste d'inscription dans les 30 jours après le cours (enquête de suivi)",
+      "Apprenants qui envoient un PDF pour une candidature, l'école ou un formulaire administratif sans aide",
+      "Apprenants qui suivent ensuite un autre cours, comme « L'e-mail et la communication en ligne » ou un cours de recherche d'emploi"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur ou une tablette avec internet et un navigateur web (un téléphone marche mais c'est plus difficile)",
+      "Un compte Google ou un compte Microsoft gratuit",
+      "Une vraie tâche pour s'exercer, comme une affiche, une lettre ou un budget de la semaine",
+      "Environ 60 minutes au total, en courtes séances"
+    ],
+    facilitatorNotes: [
+      "Avant la séance, vérifiez que chaque apprenant peut se connecter à un compte Google ou Microsoft ; aidez à créer les comptes à l'avance pour que le temps de cours serve aux documents.",
+      "Laissez chaque apprenant choisir Google ou Microsoft et le garder pendant tout le cours ; mettez en binôme les apprenants qui utilisent le même.",
+      "Pour l'exercice de partage, faites partager avec un partenaire présent dans la salle en lecture seule, jamais avec « Tous les utilisateurs disposant du lien », sans vraies adresses ni numéros d'identité.",
+      "Dans les salles informatiques, rappelez aux apprenants de se déconnecter à la fin pour que la personne suivante ne puisse pas ouvrir leurs fichiers.",
+      "Si l'impression est payante là où vous vous réunissez, montrez l'aperçu avant impression et le téléchargement en PDF, et n'imprimez que si c'est nécessaire."
     ]
   }
 };

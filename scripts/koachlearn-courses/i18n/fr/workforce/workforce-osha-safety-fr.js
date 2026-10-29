@@ -16,11 +16,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes. Lisez la leçon, regardez les diapositives, puis faites la tâche \"Essayez maintenant\". Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin. Ce cours est une formation générale à la sécurité. Suivez toujours la formation et les règles de votre employeur pour votre poste, et consultez osha.gov pour les règles à jour."
   ],
   finalTask: "Faites une tournée des dangers de 10 minutes dans un vrai lieu (votre lieu de travail, une réserve, un garage ou votre maison). Écrivez un rapport qui liste au moins cinq dangers, le type de chacun (glissade/trébuchement/chute, port de charges, produit chimique, machine, électricité, autre), l'EPI ou la correction nécessaire, et à qui vous signaleriez chacun. Ajoutez les sections de la fiche de données de sécurité que vous liriez pour un produit chimique trouvé, et écrivez les étapes que vous suivriez si quelqu'un était blessé.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des demandeurs d'emploi et des travailleurs nouveaux ou en poste dans les entrepôts, le bâtiment, les cuisines, le nettoyage, le commerce, l'industrie et la santé, y compris des jeunes travailleurs, des personnes en reconversion et des personnes qui reprennent le travail.",
+    startingPoint: "Ils ont une certaine expérience du travail ou de la maison et remarquent les dangers évidents, mais personne ne leur a appris à faire une tournée des dangers, à lire une fiche de données de sécurité, à signaler une blessure ni à connaître leurs droits auprès de l'OSHA.",
+    gap: "Les employeurs attendent des habitudes de sécurité de base dès le premier jour. Les travailleurs qui ne savent pas repérer les dangers, choisir les EPI, soulever une charge en sécurité ou signaler une blessure correctement risquent davantage de se blesser et peuvent perdre leurs droits à l'indemnisation des accidents du travail. Connaître ces bases les aide aussi à être embauchés et à prendre la parole sans risque.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes (niveau fin d'école primaire)",
+      "Appareils : un téléphone ou un ordinateur partagé ; la pratique se fait dans une pièce à la maison ou au travail",
+      "Temps : des leçons d'environ cinq minutes qui s'intègrent entre les heures de travail",
+      "Formation générale à la sécurité seulement : les apprenants suivent la formation de leur employeur et consultent osha.gov pour les règles à jour",
+      "La pratique doit être sans danger : pas d'escalade, pas de charges lourdes soulevées seul et pas de mélange de produits chimiques"
+    ],
+    prerequisites: "Aucun."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Pendant une tournée dans un lieu de travail, une réserve ou une maison", action: "repérer les dangers, nommer le type de chacun et décider s'il faut le corriger ou le signaler", standard: "en listant au moins cinq dangers avec le bon type" },
+    { id: "O2", condition: "Face à une tâche de travail et à ses dangers", action: "choisir et vérifier les bons EPI pour chaque danger", standard: "en associant l'équipement à chaque danger et en repérant l'équipement abîmé" },
+    { id: "O3", condition: "En travaillant sur un sol, sur une échelle ou avec des charges", action: "montrer les étapes qui évitent les glissades, les trébuchements et les chutes, et soulever une charge en sécurité", standard: "en suivant chaque étape sans tourner le dos" },
+    { id: "O4", condition: "Face à un produit chimique", action: "trouver les dangers, les EPI et les premiers secours sur son étiquette et dans sa fiche de données de sécurité", standard: "en nommant les bonnes sections de la FDS (2, 4 et 8)" },
+    { id: "O5", condition: "Quand quelqu'un est blessé ou que vous trouvez un danger", action: "lister les étapes pour réagir et écrire un court rapport d'accident ou de danger", standard: "en indiquant quoi, quand, où et qui l'a vu, signalé tout de suite" },
+    { id: "O6", condition: "Face à un problème de sécurité non corrigé ou à un emploi que vous visez", action: "expliquer vos droits en matière de sécurité, comment déposer une plainte auprès de l'OSHA, et si OSHA 10 ou OSHA 30 vous convient", standard: "en nommant les bonnes étapes et le bon cours sans aide" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Repérer et prévenir les dangers",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Repérer les dangers avec une tournée des dangers",
           minutes: 5,
           goal: "Parcourir une zone et lister par type les dangers que vous voyez.",
@@ -39,9 +63,14 @@ module.exports = {
             { title: "Que faire", bullets: ["Corrigez les petits dangers si c'est sans risque", "Éloignez les gens des gros dangers", "Prévenez toujours votre superviseur"] }
           ],
           tryIt: "Faites une tournée des dangers de cinq minutes dans une pièce de votre maison, une réserve ou votre lieu de travail. Notez au moins cinq dangers et le type de chacun.",
-          youCanNow: "parcourir une zone, repérer les dangers par type, et décider s'il faut corriger ou signaler chacun."
+          youCanNow: "parcourir une zone, repérer les dangers par type, et décider s'il faut corriger ou signaler chacun.",
+          quickCheck: [
+            { objective: "O1", q: "Pendant une tournée des dangers, que veut dire « regarder en bas » ?", options: ["Vérifier les sols, les câbles et les liquides renversés", "Vérifier les étagères hautes et les échelles", "Vérifier les machines et les véhicules", "Vérifier les alarmes et les bruits étranges"], answer: 0, why: "Regarder en bas, c'est vérifier le sol : câbles, liquides renversés et objets sur lesquels on peut trébucher." },
+            { objective: "O1", q: "Il manque le protecteur d'une machine que vous n'êtes pas formé à réparer. Que faites-vous ?", options: ["Le réparer vous-même rapidement", "Éloigner les gens et le signaler", "L'ignorer jusqu'à la pause", "Continuer à utiliser la machine avec prudence"], answer: 1, why: "Si un danger n'est pas sûr à corriger pour vous, éloignez les gens et signalez-le." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Bien utiliser les EPI",
           minutes: 5,
           goal: "Choisir, vérifier et porter le bon équipement de protection pour une tâche.",
@@ -63,9 +92,14 @@ module.exports = {
             { name: "OSHA : Équipements de protection individuelle", url: "https://www.osha.gov/personal-protective-equipment" }
           ],
           tryIt: "Prenez trois tâches : couper des cartons avec un cutter, laver le sol avec un produit de nettoyage, et utiliser un souffleur de feuilles. Pour chacune, écrivez les EPI que vous porteriez et pourquoi.",
-          youCanNow: "choisir, vérifier et porter les bons EPI pour une tâche, et savoir qu'ils sont la dernière ligne de défense."
+          youCanNow: "choisir, vérifier et porter les bons EPI pour une tâche, et savoir qu'ils sont la dernière ligne de défense.",
+          quickCheck: [
+            { objective: "O2", q: "Quelle est la raison principale de vérifier ses EPI avant chaque utilisation ?", options: ["Voir si c'est le modèle le plus récent", "Vérifier que la couleur va bien", "Trouver les fissures, les trous ou les sangles usées", "Compter combien vous en avez"], answer: 2, why: "Un équipement abîmé peut ne pas vous protéger, donc vous le vérifiez avant chaque utilisation." },
+            { objective: "O2", q: "Vous allez couper des cartons avec un cutter toute la journée. Quels gants choisissez-vous ?", options: ["Des gants pour produits chimiques", "Des gants fins en tissu", "Pas de gants", "Des gants anti-coupure"], answer: 3, why: "Les gants anti-coupure correspondent au danger d'une lame." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Glissades, trébuchements, chutes et port de charges en sécurité",
           minutes: 5,
           goal: "Prévenir les glissades, les trébuchements et les chutes, et soulever une charge en sécurité.",
@@ -88,17 +122,21 @@ module.exports = {
             { name: "OSHA : Surfaces de marche et de travail", url: "https://www.osha.gov/walking-working-surfaces" }
           ],
           tryIt: "Entraînez-vous à soulever en sécurité un carton de livres ou de courses : vérifiez le poids, placez-vous près, pliez les genoux, gardez le dos droit, soulevez avec les jambes et tournez avec les pieds. Puis écrivez trois choses que vous corrigeriez pour éviter les glissades et les trébuchements là où vous travaillez ou vivez.",
-          youCanNow: "prévenir les glissades, les trébuchements et les chutes, utiliser une échelle en sécurité, et soulever une charge de la bonne façon."
+          youCanNow: "prévenir les glissades, les trébuchements et les chutes, utiliser une échelle en sécurité, et soulever une charge de la bonne façon.",
+          quickCheck: [
+            { objective: "O3", q: "Sur quoi ne faut-il jamais monter quand on utilise une échelle ?", options: ["La marche du haut", "La marche du bas", "Une marche du milieu", "Un sol ferme et plat"], answer: 0, why: "Sur la marche du haut, on perd facilement l'équilibre et on tombe." },
+            { objective: "O3", q: "Vous devez tourner en portant un carton. Comment faites-vous ?", options: ["Tourner à la taille", "Tourner avec les pieds", "Tenir le carton loin du corps", "Bloquer les genoux et pivoter"], answer: 1, why: "Tourner avec les pieds garde le dos droit et évite les blessures." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Repérer et prévenir les dangers",
         questions: [
-          { q: "Vous voyez un câble électrique en travers d'un passage. Quel type de danger est-ce ?", options: ["Produit chimique", "Bruit", "Glissade, trébuchement ou chute", "Chaleur"], answer: 2, why: "Les câbles en travers des passages font trébucher." },
-          { q: "Que faire d'un petit liquide renversé que vous pouvez nettoyer sans risque ?", options: ["Le contourner", "Le nettoyer, signaler le sol s'il est mouillé, et prévenir votre superviseur", "Le couvrir avec une boîte", "Attendre l'équipe suivante"], answer: 1, why: "Corriger tout de suite les petits dangers et les signaler évite les blessures." },
-          { q: "Quel EPI convient pour un travail avec un souffleur de feuilles bruyant ?", options: ["Une protection auditive", "Seulement un casque de chantier", "Un harnais antichute", "Rien"], answer: 0, why: "La protection auditive protège contre le bruit fort." },
-          { q: "Pourquoi dit-on que les EPI sont la dernière ligne de défense ?", options: ["Ce sont les plus chers", "Ils sont facultatifs", "Ils empêchent toujours toutes les blessures", "Il vaut mieux d'abord supprimer le danger"], answer: 3, why: "Supprimer ou protéger un danger protège tout le monde ; l'EPI ne protège que celui qui le porte." },
-          { q: "Quelle est une bonne habitude pour soulever ?", options: ["Tordre le dos pour tourner", "Tenir la charge loin du corps", "Plier les genoux, garder la charge contre soi et tourner avec les pieds", "Soulever seul les charges lourdes pour gagner du temps"], answer: 2, why: "Ainsi l'effort porte sur les jambes, pas sur le dos." }
+          { objective: "O1", q: "Vous voyez un câble électrique en travers d'un passage. Quel type de danger est-ce ?", options: ["Produit chimique", "Bruit", "Glissade, trébuchement ou chute", "Chaleur"], answer: 2, why: "Les câbles en travers des passages font trébucher." },
+          { objective: "O1", q: "Que faire d'un petit liquide renversé que vous pouvez nettoyer sans risque ?", options: ["Le contourner", "Le nettoyer, signaler le sol s'il est mouillé, et prévenir votre superviseur", "Le couvrir avec une boîte", "Attendre l'équipe suivante"], answer: 1, why: "Corriger tout de suite les petits dangers et les signaler évite les blessures." },
+          { objective: "O2", q: "Quel EPI convient pour un travail avec un souffleur de feuilles bruyant ?", options: ["Une protection auditive", "Seulement un casque de chantier", "Un harnais antichute", "Rien"], answer: 0, why: "La protection auditive protège contre le bruit fort." },
+          { objective: "O2", q: "Pourquoi dit-on que les EPI sont la dernière ligne de défense ?", options: ["Ce sont les plus chers", "Ils sont facultatifs", "Ils empêchent toujours toutes les blessures", "Il vaut mieux d'abord supprimer le danger"], answer: 3, why: "Supprimer ou protéger un danger protège tout le monde ; l'EPI ne protège que celui qui le porte." },
+          { objective: "O3", q: "Quelle est une bonne habitude pour soulever ?", options: ["Tordre le dos pour tourner", "Tenir la charge loin du corps", "Plier les genoux, garder la charge contre soi et tourner avec les pieds", "Soulever seul les charges lourdes pour gagner du temps"], answer: 2, why: "Ainsi l'effort porte sur les jambes, pas sur le dos." }
         ]
       }
     },
@@ -106,6 +144,7 @@ module.exports = {
       name: "Chapitre 2 : Produits chimiques, blessures et vos droits",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Produits chimiques et fiches de données de sécurité",
           minutes: 5,
           goal: "Trouver les dangers, les EPI et les premiers secours d'un produit chimique dans sa fiche de données de sécurité.",
@@ -127,9 +166,14 @@ module.exports = {
             { name: "OSHA : Communication des dangers", url: "https://www.osha.gov/hazcom" }
           ],
           tryIt: "Trouvez un produit de nettoyage à la maison ou au travail. Lisez son étiquette (pictogrammes et mention d'avertissement). Puis cherchez le nom du produit avec \"fiche de données de sécurité\" (ou \"safety data sheet\") sur le site du fabricant, et notez ce que disent les sections 2, 4 et 8.",
-          youCanNow: "lire l'étiquette d'un produit chimique et trouver les dangers, les EPI et les premiers secours dans sa fiche de données de sécurité."
+          youCanNow: "lire l'étiquette d'un produit chimique et trouver les dangers, les EPI et les premiers secours dans sa fiche de données de sécurité.",
+          quickCheck: [
+            { objective: "O4", q: "Qu'est-ce qu'un pictogramme sur l'étiquette d'un produit chimique ?", options: ["Le prix du produit", "Le numéro de téléphone du fabricant", "Un symbole à bordure rouge qui montre un danger", "La date de fabrication"], answer: 2, why: "Les pictogrammes sont des symboles à bordure rouge qui montrent le type de danger." },
+            { objective: "O4", q: "Un produit éclabousse l'œil d'un collègue. Quelle section de la FDS consultez-vous ?", options: ["Section 2", "Section 7", "Section 8", "Section 4"], answer: 3, why: "La section 4 de la fiche de données de sécurité donne les étapes de premiers secours." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Signaler les blessures et les dangers",
           minutes: 5,
           goal: "Faire ce qu'il faut quand quelqu'un est blessé et le signaler correctement.",
@@ -152,9 +196,14 @@ module.exports = {
             { name: "OSHA : Règle de signalement 29 CFR 1904.39", url: "https://www.osha.gov/laws-regs/regulations/standardnumber/1904/1904.39" }
           ],
           tryIt: "Écrivez les étapes que vous suivriez si un collègue se coupait gravement la main avec un cutter. Puis écrivez un court rapport d'accident : ce qui s'est passé, quand, où, qui l'a vu, et ce qui devrait changer.",
-          youCanNow: "réagir à une blessure, la signaler correctement et à temps, et savoir ce que votre employeur doit déclarer."
+          youCanNow: "réagir à une blessure, la signaler correctement et à temps, et savoir ce que votre employeur doit déclarer.",
+          quickCheck: [
+            { objective: "O5", q: "Quelles informations faut-il mettre dans un rapport d'accident ?", options: ["Ce qui s'est passé, quand, où et qui l'a vu", "Seulement le nom du travailleur blessé", "Qui est selon vous le coupable", "Votre avis sur le superviseur"], answer: 0, why: "Un rapport clair dit ce qui s'est passé, quand, où et qui l'a vu." },
+            { objective: "O5", q: "Vous vous faites mal au dos en soulevant une charge, mais ça ne fait qu'un peu mal. Que faites-vous ?", options: ["Continuer à travailler sans rien dire", "Prévenir tout de suite votre superviseur", "Attendre un mois pour voir si ça empire", "Le dire seulement à un collègue"], answer: 1, why: "Signaler tôt vous permet d'être soigné et protège vos droits à l'indemnisation." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Vos droits en matière de sécurité, OSHA 10 et OSHA 30",
           minutes: 5,
           goal: "Expliquer votre droit à un travail sûr, comment déposer une plainte auprès de l'OSHA, et ce que sont OSHA 10 et OSHA 30.",
@@ -179,17 +228,21 @@ module.exports = {
             { name: "OSHA : Ce qu'il faut savoir pour obtenir une carte OSHA", url: "https://www.osha.gov/training/oshacardfacts" }
           ],
           tryIt: "Tâche finale : faites une tournée des dangers de 10 minutes et écrivez votre rapport : cinq dangers, leur type, l'EPI ou la correction, à qui vous signaleriez chacun, les sections de la FDS pour un produit chimique, et vos étapes en cas de blessure. En bas, écrivez si OSHA 10 ou OSHA 30 convient à votre poste et pourquoi.",
-          youCanNow: "expliquer votre droit à un travail sûr, déposer une plainte auprès de l'OSHA, et choisir entre OSHA 10 et OSHA 30."
+          youCanNow: "expliquer votre droit à un travail sûr, déposer une plainte auprès de l'OSHA, et choisir entre OSHA 10 et OSHA 30.",
+          quickCheck: [
+            { objective: "O6", q: "Qu'est-ce qu'une carte OSHA 10 ou OSHA 30 ?", options: ["Un permis de travail de l'État", "Une certification professionnelle", "Une carte de fin de cours délivrée par un formateur autorisé", "Une carte qui remplace la formation de l'employeur"], answer: 2, why: "Ces cartes montrent que vous avez fini un cours volontaire ; ce n'est pas un permis." },
+            { objective: "O6", q: "Vous avez signalé à votre superviseur une sortie de secours bloquée et rien n'a changé. Que pouvez-vous faire ensuite ?", options: ["Rien ; seuls les responsables peuvent agir", "Démissionner tout de suite", "En parler d'abord sur Internet", "Déposer une plainte auprès de l'OSHA et demander que votre nom reste confidentiel"], answer: 3, why: "Si un danger n'est pas corrigé, vous pouvez déposer une plainte auprès de l'OSHA et demander que votre nom ne soit pas communiqué." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Produits chimiques, blessures et vos droits",
         questions: [
-          { q: "Quelle section d'une fiche de données de sécurité vous indique les EPI à porter ?", options: ["Section 1", "Section 4", "Section 16", "Section 8"], answer: 3, why: "La section 8 traite des contrôles de l'exposition et de la protection individuelle." },
-          { q: "Sur l'étiquette d'un produit chimique, quelle mention indique le danger le plus grave ?", options: ["Danger", "Attention (Warning)", "Prudence (Caution)", "Avis (Notice)"], answer: 0, why: "\"Danger\" est utilisé pour les dangers plus graves ; \"Attention\" pour les moins graves." },
-          { q: "Vous vous faites une petite coupure au travail. Que devez-vous faire ?", options: ["La cacher", "Attendre qu'elle s'aggrave", "Prévenir tout de suite votre superviseur et noter ce qui s'est passé", "Démissionner"], answer: 2, why: "Signalez tôt chaque blessure, même petite." },
-          { q: "Dans quel délai un employeur doit-il signaler à l'OSHA un décès lié au travail ?", options: ["30 jours", "8 heures", "Une semaine", "Il n'est pas obligé"], answer: 1, why: "La règle de l'OSHA est de 8 heures pour un décès." },
-          { q: "Qu'est-ce que l'OSHA 10 ?", options: ["Une licence d'électricien obligatoire", "Une amende", "Un cours de sécurité volontaire de 10 heures pour les travailleurs débutants", "Une étiquette de produit chimique"], answer: 2, why: "C'est un cours du programme Outreach avec une carte de fin de cours, pas une licence." }
+          { objective: "O4", q: "Quelle section d'une fiche de données de sécurité vous indique les EPI à porter ?", options: ["Section 1", "Section 4", "Section 16", "Section 8"], answer: 3, why: "La section 8 traite des contrôles de l'exposition et de la protection individuelle." },
+          { objective: "O4", q: "Sur l'étiquette d'un produit chimique, quelle mention indique le danger le plus grave ?", options: ["Danger", "Attention (Warning)", "Prudence (Caution)", "Avis (Notice)"], answer: 0, why: "\"Danger\" est utilisé pour les dangers plus graves ; \"Attention\" pour les moins graves." },
+          { objective: "O5", q: "Vous vous faites une petite coupure au travail. Que devez-vous faire ?", options: ["La cacher", "Attendre qu'elle s'aggrave", "Prévenir tout de suite votre superviseur et noter ce qui s'est passé", "Démissionner"], answer: 2, why: "Signalez tôt chaque blessure, même petite." },
+          { objective: "O5", q: "Dans quel délai un employeur doit-il signaler à l'OSHA un décès lié au travail ?", options: ["30 jours", "8 heures", "Une semaine", "Il n'est pas obligé"], answer: 1, why: "La règle de l'OSHA est de 8 heures pour un décès." },
+          { objective: "O6", q: "Qu'est-ce que l'OSHA 10 ?", options: ["Une licence d'électricien obligatoire", "Une amende", "Un cours de sécurité volontaire de 10 heures pour les travailleurs débutants", "Une étiquette de produit chimique"], answer: 2, why: "C'est un cours du programme Outreach avec une carte de fin de cours, pas une licence." }
         ]
       }
     }
@@ -197,26 +250,106 @@ module.exports = {
   quiz: {
     title: "Quiz final : Les bases de la sécurité au travail (OSHA)",
     questions: [
-      { q: "Qu'est-ce qu'un danger ?", options: ["Tout ce qui au travail pourrait causer une blessure ou une maladie", "Une affiche de sécurité", "Un type d'EPI", "Une salle de pause"], answer: 0, why: "Un danger est une source possible de dommage." },
-      { q: "Pendant une tournée des dangers, \"regarder en haut\" veut dire vérifier :", options: ["Le sol, pour les liquides renversés", "Votre téléphone", "Les étagères hautes, les charges suspendues et les échelles", "L'heure"], answer: 2, why: "Ce qui est en hauteur peut tomber ou causer des chutes." },
-      { q: "Le protecteur d'une machine a été enlevé. Vous devez :", options: ["L'utiliser avec prudence", "Ne pas l'utiliser, éloigner les gens et le signaler", "Mettre la main dedans pour vérifier", "L'ignorer"], answer: 1, why: "Les protecteurs manquants causent des blessures graves ; signalez et restez à distance." },
-      { q: "Quels gants porter avec un produit de nettoyage chimique ?", options: ["N'importe quels gants", "Pas de gants", "Des gants anticoupure", "Le type indiqué par la fiche de données de sécurité"], answer: 3, why: "La FDS indique la bonne protection pour ce produit." },
-      { q: "Avant d'utiliser un appareil respiratoire, il vous faut :", options: ["Rien", "Un essai d'ajustement et une formation", "Seulement un coup d'œil rapide", "Le masque d'un collègue"], answer: 1, why: "Un appareil respiratoire doit être bien étanche et bien utilisé." },
-      { q: "Qui doit en général fournir les EPI obligatoires ?", options: ["L'employeur", "Le travailleur", "Un collègue", "Personne"], answer: 0, why: "Selon les règles de l'OSHA, l'employeur doit en général fournir les EPI obligatoires." },
-      { q: "Quelle est une bonne façon de prévenir les glissades ?", options: ["Laisser les liquides renversés pour plus tard", "Porter des chaussures à semelle lisse", "Éteindre la lumière", "Nettoyer tout de suite et poser un panneau \"sol mouillé\""], answer: 3, why: "Un nettoyage rapide et un avertissement évitent les chutes." },
-      { q: "Sur une échelle, \"trois points d'appui\" veut dire :", options: ["Trois personnes tiennent l'échelle", "Trois échelles ensemble", "Deux mains et un pied, ou deux pieds et une main, sur l'échelle", "Se tenir sur les trois dernières marches"], answer: 2, why: "Cela vous garde stable pendant que vous montez." },
-      { q: "Dans le bâtiment, la hauteur générale de l'OSHA pour la protection contre les chutes est :", options: ["6 pieds (environ 1,8 m)", "1 pied (environ 30 cm)", "20 pieds (environ 6 m)", "Il n'y a pas de règle"], answer: 0, why: "Dans le bâtiment, le seuil général est de 6 pieds ; dans l'industrie en général, il est de 4 pieds (environ 1,2 m)." },
-      { q: "Une boîte est lourde et encombrante. Que faites-vous ?", options: ["La soulever vite", "Vous tordre en la soulevant", "Demander de l'aide ou utiliser un chariot ou un diable", "La porter loin du corps"], answer: 2, why: "L'aide ou le matériel évitent les blessures au dos." },
-      { q: "Que veut dire le sigle anglais SDS (en français FDS) ?", options: ["Bon de livraison standard", "Planning des tâches du personnel", "Panneau de service d'équipe", "Fiche de données de sécurité"], answer: 3, why: "Une fiche de données de sécurité décrit les dangers d'un produit chimique et son usage sûr." },
-      { q: "Quelle section de la FDS donne les premiers secours ?", options: ["Section 2", "Section 4", "Section 16", "Section 8"], answer: 1, why: "La section 4 liste les mesures de premiers secours." },
-      { q: "Pourquoi ne faut-il jamais mélanger l'eau de Javel et l'ammoniaque ?", options: ["Ils coûtent plus cher", "Ils perdent leur odeur", "Ils tachent le sol", "Ils produisent un gaz toxique"], answer: 3, why: "Les mélanger dégage un gaz dangereux." },
-      { q: "Un collègue est gravement blessé. Quelle est la première étape ?", options: ["Appeler le 911 ou le numéro d'urgence du site", "Finir votre tâche", "Publier une photo", "Le déplacer tout de suite"], answer: 0, why: "Les secours d'urgence d'abord ; ne le déplacez pas sauf s'il est en danger." },
-      { q: "Pourquoi signaler même une petite blessure ?", options: ["Pour avoir un jour de congé", "Ce n'est pas nécessaire", "Pour être soigné, protéger vos droits à l'indemnisation et corriger le danger", "Pour accuser quelqu'un"], answer: 2, why: "Un signalement rapide vous protège, vous et les autres." },
-      { q: "Un travailleur perd un œil dans un accident du travail. L'employeur doit prévenir l'OSHA dans les :", options: ["8 heures", "24 heures", "Un an", "30 jours"], answer: 1, why: "L'hospitalisation, l'amputation et la perte d'un œil doivent être déclarées dans les 24 heures." },
-      { q: "Quel numéro de téléphone permet de joindre l'OSHA ?", options: ["1-800-321-6742", "1-800-669-4000", "911", "411"], answer: 0, why: "1-800-321-OSHA (6742) est le numéro de l'OSHA ; 1-800-669-4000 est celui de l'EEOC." },
-      { q: "On vous a retiré du planning parce que vous avez signalé un danger. Selon la loi fédérale, déposez une plainte de lanceur d'alerte dans les :", options: ["Un an", "Il n'y a pas de délai", "Cinq ans", "30 jours"], answer: 3, why: "Le délai fédéral pour les plaintes de représailles liées à la sécurité est de 30 jours." },
-      { q: "À qui s'adresse surtout l'OSHA 30 ?", options: ["Seulement aux chauffeurs de camion", "Aux superviseurs et aux travailleurs qui ont des responsabilités de sécurité", "Aux enfants", "Aux personnes qui veulent une licence d'électricien"], answer: 1, why: "L'OSHA 30 donne une formation plus poussée aux superviseurs et aux rôles de sécurité." },
-      { q: "Qu'est-ce qui est vrai pour les cartes OSHA 10 et 30 ?", options: ["Ce sont des licences", "N'importe qui peut en imprimer une", "Ce sont des cartes de formation volontaire que seuls les formateurs autorisés peuvent délivrer", "Elles n'expirent jamais nulle part"], answer: 2, why: "Ce ne sont pas des certifications, et seuls les formateurs autorisés délivrent de vraies cartes." }
+      { objective: "O1", q: "Qu'est-ce qu'un danger ?", options: ["Tout ce qui au travail pourrait causer une blessure ou une maladie", "Une affiche de sécurité", "Un type d'EPI", "Une salle de pause"], answer: 0, why: "Un danger est une source possible de dommage." },
+      { objective: "O1", q: "Pendant une tournée des dangers, \"regarder en haut\" veut dire vérifier :", options: ["Le sol, pour les liquides renversés", "Votre téléphone", "Les étagères hautes, les charges suspendues et les échelles", "L'heure"], answer: 2, why: "Ce qui est en hauteur peut tomber ou causer des chutes." },
+      { objective: "O1", q: "Le protecteur d'une machine a été enlevé. Vous devez :", options: ["L'utiliser avec prudence", "Ne pas l'utiliser, éloigner les gens et le signaler", "Mettre la main dedans pour vérifier", "L'ignorer"], answer: 1, why: "Les protecteurs manquants causent des blessures graves ; signalez et restez à distance." },
+      { objective: "O2", q: "Quels gants porter avec un produit de nettoyage chimique ?", options: ["N'importe quels gants", "Pas de gants", "Des gants anticoupure", "Le type indiqué par la fiche de données de sécurité"], answer: 3, why: "La FDS indique la bonne protection pour ce produit." },
+      { objective: "O2", q: "Avant d'utiliser un appareil respiratoire, il vous faut :", options: ["Rien", "Un essai d'ajustement et une formation", "Seulement un coup d'œil rapide", "Le masque d'un collègue"], answer: 1, why: "Un appareil respiratoire doit être bien étanche et bien utilisé." },
+      { objective: "O2", q: "Qui doit en général fournir les EPI obligatoires ?", options: ["L'employeur", "Le travailleur", "Un collègue", "Personne"], answer: 0, why: "Selon les règles de l'OSHA, l'employeur doit en général fournir les EPI obligatoires." },
+      { objective: "O3", q: "Quelle est une bonne façon de prévenir les glissades ?", options: ["Laisser les liquides renversés pour plus tard", "Porter des chaussures à semelle lisse", "Éteindre la lumière", "Nettoyer tout de suite et poser un panneau \"sol mouillé\""], answer: 3, why: "Un nettoyage rapide et un avertissement évitent les chutes." },
+      { objective: "O3", q: "Sur une échelle, \"trois points d'appui\" veut dire :", options: ["Trois personnes tiennent l'échelle", "Trois échelles ensemble", "Deux mains et un pied, ou deux pieds et une main, sur l'échelle", "Se tenir sur les trois dernières marches"], answer: 2, why: "Cela vous garde stable pendant que vous montez." },
+      { objective: "O3", q: "Dans le bâtiment, la hauteur générale de l'OSHA pour la protection contre les chutes est :", options: ["6 pieds (environ 1,8 m)", "1 pied (environ 30 cm)", "20 pieds (environ 6 m)", "Il n'y a pas de règle"], answer: 0, why: "Dans le bâtiment, le seuil général est de 6 pieds ; dans l'industrie en général, il est de 4 pieds (environ 1,2 m)." },
+      { objective: "O3", q: "Une boîte est lourde et encombrante. Que faites-vous ?", options: ["La soulever vite", "Vous tordre en la soulevant", "Demander de l'aide ou utiliser un chariot ou un diable", "La porter loin du corps"], answer: 2, why: "L'aide ou le matériel évitent les blessures au dos." },
+      { objective: "O4", q: "Que veut dire le sigle anglais SDS (en français FDS) ?", options: ["Bon de livraison standard", "Planning des tâches du personnel", "Panneau de service d'équipe", "Fiche de données de sécurité"], answer: 3, why: "Une fiche de données de sécurité décrit les dangers d'un produit chimique et son usage sûr." },
+      { objective: "O4", q: "Quelle section de la FDS donne les premiers secours ?", options: ["Section 2", "Section 4", "Section 16", "Section 8"], answer: 1, why: "La section 4 liste les mesures de premiers secours." },
+      { objective: "O4", q: "Pourquoi ne faut-il jamais mélanger l'eau de Javel et l'ammoniaque ?", options: ["Ils coûtent plus cher", "Ils perdent leur odeur", "Ils tachent le sol", "Ils produisent un gaz toxique"], answer: 3, why: "Les mélanger dégage un gaz dangereux." },
+      { objective: "O5", q: "Un collègue est gravement blessé. Quelle est la première étape ?", options: ["Appeler le 911 ou le numéro d'urgence du site", "Finir votre tâche", "Publier une photo", "Le déplacer tout de suite"], answer: 0, why: "Les secours d'urgence d'abord ; ne le déplacez pas sauf s'il est en danger." },
+      { objective: "O5", q: "Pourquoi signaler même une petite blessure ?", options: ["Pour avoir un jour de congé", "Ce n'est pas nécessaire", "Pour être soigné, protéger vos droits à l'indemnisation et corriger le danger", "Pour accuser quelqu'un"], answer: 2, why: "Un signalement rapide vous protège, vous et les autres." },
+      { objective: "O5", q: "Un travailleur perd un œil dans un accident du travail. L'employeur doit prévenir l'OSHA dans les :", options: ["8 heures", "24 heures", "Un an", "30 jours"], answer: 1, why: "L'hospitalisation, l'amputation et la perte d'un œil doivent être déclarées dans les 24 heures." },
+      { objective: "O6", q: "Quel numéro de téléphone permet de joindre l'OSHA ?", options: ["1-800-321-6742", "1-800-669-4000", "911", "411"], answer: 0, why: "1-800-321-OSHA (6742) est le numéro de l'OSHA ; 1-800-669-4000 est celui de l'EEOC." },
+      { objective: "O6", q: "On vous a retiré du planning parce que vous avez signalé un danger. Selon la loi fédérale, déposez une plainte de lanceur d'alerte dans les :", options: ["Un an", "Il n'y a pas de délai", "Cinq ans", "30 jours"], answer: 3, why: "Le délai fédéral pour les plaintes de représailles liées à la sécurité est de 30 jours." },
+      { objective: "O6", q: "À qui s'adresse surtout l'OSHA 30 ?", options: ["Seulement aux chauffeurs de camion", "Aux superviseurs et aux travailleurs qui ont des responsabilités de sécurité", "Aux enfants", "Aux personnes qui veulent une licence d'électricien"], answer: 1, why: "L'OSHA 30 donne une formation plus poussée aux superviseurs et aux rôles de sécurité." },
+      { objective: "O6", q: "Qu'est-ce qui est vrai pour les cartes OSHA 10 et 30 ?", options: ["Ce sont des licences", "N'importe qui peut en imprimer une", "Ce sont des cartes de formation volontaire que seuls les formateurs autorisés peuvent délivrer", "Elles n'expirent jamais nulle part"], answer: 2, why: "Ce ne sont pas des certifications, et seuls les formateurs autorisés délivrent de vraies cartes." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      2,
+      3,
+      7,
+      9,
+      11,
+      13,
+      14,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est à « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Dangers repérés",
+        objective: "O1",
+        notYet: "Moins de cinq dangers, ou des types manquants ou faux.",
+        meets: "Au moins cinq dangers, chacun avec le bon type.",
+        exceeds: "Indique aussi quels dangers corriger tout de suite et lesquels signaler."
+      },
+      {
+        name: "EPI et corrections",
+        objective: "O2",
+        notYet: "Aucun EPI ni correction, ou un équipement qui ne correspond pas au danger.",
+        meets: "Chaque danger a un EPI ou une correction qui lui correspond.",
+        exceeds: "Propose un moyen de supprimer le danger avant de compter sur les EPI."
+      },
+      {
+        name: "Fiche de données de sécurité",
+        objective: "O4",
+        notYet: "Aucun produit chimique, ou les mauvaises sections de la FDS.",
+        meets: "Nomme les sections 2, 4 et 8 pour un produit chimique et ce que chacune contient.",
+        exceeds: "Note aussi la mention d'avertissement et les pictogrammes de l'étiquette."
+      },
+      {
+        name: "Signalement",
+        objective: "O5",
+        notYet: "Personne à qui signaler, ou étapes en cas de blessure manquantes.",
+        meets: "Nomme à qui signaler chaque danger et liste dans l'ordre les étapes en cas de blessure.",
+        exceeds: "Les étapes en cas de blessure incluent d'écrire quoi, quand, où et qui l'a vu."
+      },
+      {
+        name: "Droits et formation",
+        objective: "O6",
+        notYet: "Ne dit pas si OSHA 10 ou OSHA 30 convient.",
+        meets: "Choisit OSHA 10 ou OSHA 30 et donne une raison adaptée à son poste.",
+        exceeds: "Explique aussi comment déposer une plainte auprès de l'OSHA si un danger n'est pas corrigé."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Apprenants qui s'inscrivent à un cours OSHA 10 ou OSHA 30 auprès d'un formateur autorisé dans les 90 jours",
+      "Apprenants qui trouvent ou gardent un emploi dans un métier manuel dans les 90 jours (questionnaire de suivi)",
+      "Les partenaires de l'emploi signalent moins de blessures ou plus de dangers signalés parmi les participants au programme"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur pour lire les leçons",
+      "Une pièce à parcourir pour la tournée des dangers : la maison, une réserve ou un lieu de travail (avec autorisation)",
+      "Un produit de nettoyage ménager avec une étiquette, et internet pour trouver sa fiche de données de sécurité",
+      "Du papier et un stylo pour le rapport sur les dangers",
+      "Environ 60 minutes au total : leçons, pratique, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Faites d'abord une tournée des dangers en groupe dans la salle de formation, puis laissez les apprenants faire la leur.",
+      "Entraînez-vous à soulever uniquement avec un carton léger ; personne ne monte sur une échelle ni ne soulève de charge lourde pendant la formation.",
+      "Ne laissez jamais les apprenants ouvrir ou mélanger des produits chimiques pendant la pratique ; ils lisent seulement l'étiquette et la FDS.",
+      "Rappelez aux apprenants que ce cours ne remplace pas une carte OSHA 10 ou OSHA 30 ni la formation de leur employeur.",
+      "Notez la tâche finale avec la grille d'évaluation, et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

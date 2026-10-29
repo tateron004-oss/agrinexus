@@ -24,11 +24,35 @@ module.exports = {
     "Les cultures, les sols et les ravageurs varient selon les zones. Utilisez ce cours avec votre agent de vulgarisation, un institut de recherche (comme le KALRO au Kenya, ou le programme de développement agricole de votre État au Nigeria ; ailleurs, l'institut national de recherche agricole de votre pays) et votre vendeur d'intrants agricoles. Un contrôle des connaissances termine chaque chapitre et un quiz de 20 questions termine le cours."
   ],
   finalTask: "Écrivez un plan de production pour la saison pour une grande culture (par exemple un demi-acre de maïs et de haricots) et une parcelle de légumes (par exemple un huitième d'acre de tomates ou de chou frisé) : vérifications du sol et analyse éventuelle, comment vous préparerez et nourrirez le sol, semences et écartement, dates de semis, une routine de surveillance hebdomadaire avec les principaux ravageurs et maladies à surveiller et vos étapes de lutte intégrée, un plan d'arrosage pour les légumes, et comment vous récolterez, trierez, stockerez et vendrez.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des petits exploitants, des jeunes qui débutent en horticulture, des groupements de femmes et de jeunes, et des agents de vulgarisation au Kenya, au Nigeria et partout en Afrique, qui cultivent des grandes cultures comme le maïs, les haricots, le manioc et le sorgho, et des légumes comme les tomates, le chou frisé et les oignons.",
+    startingPoint: "La plupart sèment et récoltent déjà chaque saison, souvent avec des semences gardées ou non certifiées, de l'engrais épandu à la volée et des pesticides achetés au détail. Peu ont fait une analyse de sol, surveillé leurs champs selon une routine fixe, lu une étiquette de pesticide en entier ou planifié l'arrosage et la manipulation après récolte.",
+    gap: "Un sol pauvre, des semis trop serrés ou tardifs, un engrais mal placé, des traitements inutiles et les pertes après récolte réduisent les rendements et les revenus, et un usage dangereux des pesticides nuit aux familles et aux acheteurs. Un plan de saison écrit, fondé sur les bonnes pratiques, aide les agriculteurs à produire plus, à dépenser moins en intrants et à vendre une production qui garde sa valeur.",
+    constraints: [
+      "Niveau de lecture : des mots simples et des phrases courtes ; chaque terme agricole est expliqué",
+      "Appareils : un téléphone simple et un cahier ; la plupart des exercices se font au champ",
+      "Temps : des leçons courtes qui s'adaptent aux travaux de la ferme et à la saison",
+      "Les sols, les variétés, les doses et les produits homologués varient selon les zones : les apprenants obtiennent les doses et les produits par une analyse de sol, la vulgarisation ou l'étiquette",
+      "Sécurité des pesticides : aucun traitement n'est pratiqué en classe ; les apprenants suivent l'étiquette et les règles de leur pays"
+    ],
+    prerequisites: "Aucun. « Santé et fertilité du sol » approfondit le sol, et « Lutte intégrée et lutte biologique contre les ravageurs » approfondit les ravageurs."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Sur une de vos propres parcelles", action: "vérifier la santé du sol au champ et décrire comment prélever un bon échantillon pour une analyse de sol", standard: "en citant au moins trois signes de sol sain ou pauvre" },
+    { id: "O2", condition: "Pour une grande culture et un légume", action: "choisir des semences certifiées ou du matériel de plantation sain, l'écartement et la date de semis ou de repiquage", standard: "chaque choix venant d'un vendeur d'intrants, de la vulgarisation ou du sachet de semences" },
+    { id: "O3", condition: "Pour votre grande culture principale", action: "écrire un plan de fertilisation qui combine matière organique, légumineuses et engrais bien placé", standard: "avec des doses indiquées comme venant d'une analyse de sol ou de la vulgarisation" },
+    { id: "O4", condition: "Face à une culture atteinte par des ravageurs ou des maladies", action: "la surveiller selon une routine hebdomadaire, choisir des actions de lutte intégrée et n'utiliser un pesticide homologué que selon son étiquette quand c'est justifié", standard: "en commençant par la prévention et les moyens non chimiques" },
+    { id: "O5", condition: "Pour une petite parcelle de légumes", action: "planifier un arrosage efficace avec le goutte-à-goutte ou l'arrosoir, le paillis et le bon moment de la journée", standard: "en vérifiant l'humidité du sol avant chaque arrosage" },
+    { id: "O6", condition: "À la récolte", action: "planifier comment récolter, trier, sécher et stocker la production pour réduire les pertes", standard: "avec la bonne maturité, une manipulation douce et un stockage sûr pour chaque culture" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Réussir une culture vigoureuse",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Connaître votre sol",
           minutes: 5,
           goal: "Vérifier la santé de votre sol au champ et savoir quand et comment faire une analyse de sol.",
@@ -47,9 +71,14 @@ module.exports = {
           ],
           sources: [KALRO, FAO_CSA],
           tryIt: "Faites la vérification au champ sur une parcelle : creusez, regardez, pressez, comptez les vers, et notez ce que vous avez trouvé. Puis renseignez-vous sur l'endroit où faire une analyse de sol près de chez vous et son coût.",
-          youCanNow: "vérifier la santé de votre sol au champ et savoir prélever un échantillon pour une analyse."
+          youCanNow: "vérifier la santé de votre sol au champ et savoir prélever un échantillon pour une analyse.",
+          quickCheck: [
+            { objective: "O1", q: "Après la pluie, l'eau reste plusieurs jours sur votre parcelle et le sol est pâle et dur. Qu'est-ce que cela montre ?", options: ["Un sol en très bonne santé", "Un sol qui a besoin de soins, par exemple plus de matière organique", "Un sol qui n'a besoin d'aucun changement", "Un sol avec trop de vers de terre"], answer: 1, why: "Un sol sain est sombre et grumeleux et absorbe la pluie ; l'eau stagnante et un sol dur et pâle sont des signes de sol pauvre." },
+            { objective: "O1", q: "Vous prélevez un échantillon de sol. Où creusez-vous ?", options: ["Seulement à côté du tas de fumier", "Seulement là où vous avez brûlé des résidus", "À un seul endroit au milieu de la parcelle", "À beaucoup de petits endroits sur la parcelle, mélangés ensemble"], answer: 3, why: "Beaucoup de petits échantillons mélangés représentent toute la parcelle ; les tas de fumier et les endroits brûlés donnent de faux résultats." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Bien semer : semences, écartement et calendrier",
           minutes: 5,
           goal: "Semer une grande culture et élever des plants de légumes avec de bonnes semences, un bon écartement et au bon moment.",
@@ -67,9 +96,14 @@ module.exports = {
           ],
           sources: [KALRO],
           tryIt: "Pour votre grande culture principale et un légume, écrivez : la variété, où vous achèterez des semences certifiées, l'écartement conseillé (demandez à un vendeur d'intrants ou à un agent de vulgarisation), et votre date prévue de semis ou de repiquage.",
-          youCanNow: "semer une grande culture et élever des plants de légumes avec de bonnes semences, un bon écartement et au bon moment."
+          youCanNow: "semer une grande culture et élever des plants de légumes avec de bonnes semences, un bon écartement et au bon moment.",
+          quickCheck: [
+            { objective: "O2", q: "Pourquoi planter le manioc à partir de boutures saines prises sur des plants sains ?", options: ["Les maladies virales se propagent par les boutures infectées", "Les boutures saines poussent sans eau", "Les plants sains n'ont pas besoin d'écartement", "Les boutures de plants malades coûtent plus cher"], answer: 0, why: "Les maladies virales du manioc se propagent par les boutures infectées : des boutures saines de plants sains protègent la nouvelle culture." },
+            { objective: "O2", q: "Vos plants de tomates sont prêts en pépinière. Que faites-vous avant de les repiquer ?", options: ["Les arroser deux fois plus", "Les mettre directement en plein soleil à midi", "Les endurcir avec plus de soleil et moins d'eau, puis les repiquer dans la fraîcheur du soir", "Couper toutes leurs feuilles"], answer: 2, why: "L'endurcissement prépare les plants au champ, et la fraîcheur du soir réduit le choc du repiquage." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Nourrir la culture : fumier, compost et engrais",
           minutes: 6,
           goal: "Planifier comment nourrir une culture avec des éléments organiques et minéraux, bien placés et au bon moment.",
@@ -88,17 +122,21 @@ module.exports = {
           ],
           sources: [FAO_CSA, KALRO],
           tryIt: "Écrivez un plan de fertilisation pour votre grande culture : la matière organique que vous ajouterez et quand, une éventuelle légumineuse, et les produits d'engrais et leur calendrier (notez « dose selon l'analyse ou la vulgarisation » si vous ne la connaissez pas encore). Commencez un tas de compost si vous n'en avez pas.",
-          youCanNow: "planifier comment nourrir une culture avec du fumier, du compost et de l'engrais bien placé."
+          youCanNow: "planifier comment nourrir une culture avec du fumier, du compost et de l'engrais bien placé.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'apportent le fumier et le compost en plus des nutriments ?", options: ["Du pesticide", "De la matière organique qui retient l'eau et nourrit la vie du sol", "Des semences certifiées", "De la chaux"], answer: 1, why: "La matière organique retient l'eau et nourrit la vie du sol, ce qui est aussi important que les nutriments." },
+            { objective: "O3", q: "Vous avez de l'engrais pour le semis du maïs. Où le mettez-vous ?", options: ["En petite quantité près du plant, sans toucher la semence", "Épandu largement sur tout le champ", "Directement sur la semence", "En tas au bord du champ"], answer: 0, why: "De petites quantités près du plant utilisent mieux l'engrais, et l'engrais posé sur la semence peut l'abîmer." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Réussir une culture vigoureuse",
         questions: [
-          { q: "Lequel est un signe de sol en bonne santé ?", options: ["Dur et pâle, il forme une croûte après la pluie", "Sombre, grumeleux, avec des vers de terre", "L'eau ruisselle toujours", "Il sent les produits chimiques"], answer: 1, why: "Un sol sain est grumeleux, sombre et plein de vie." },
-          { q: "Comment prélever un échantillon de sol ?", options: ["Une cuillère sur un tas de fumier", "Sur un endroit brûlé", "Beaucoup de petits échantillons sur la parcelle, mélangés", "Sur la route"], answer: 2, why: "Un échantillon mélangé représente toute la parcelle." },
-          { q: "Pourquoi utiliser des boutures de manioc saines ?", options: ["Les maladies virales se propagent par les boutures infectées", "Elles sont moins chères", "Elles poussent plus vite dans tous les sols", "Les acheteurs les demandent"], answer: 0, why: "Un matériel de plantation sain empêche la propagation des maladies." },
-          { q: "Qu'est-ce que l'endurcissement des plants ?", options: ["Arroser davantage", "Ajouter de l'engrais", "Planter dans un sol dur", "Donner peu à peu plus de soleil et moins d'eau avant le repiquage"], answer: 3, why: "Cela prépare les plants aux conditions du champ." },
-          { q: "D'où viennent les bonnes doses d'engrais ?", options: ["De la supposition d'un voisin", "De votre analyse de sol et des recommandations locales", "De la couleur du sac", "En mettre le plus possible"], answer: 1, why: "Le sol et la zone décident de ce dont la culture a besoin." }
+          { objective: "O1", q: "Lequel est un signe de sol en bonne santé ?", options: ["Dur et pâle, il forme une croûte après la pluie", "Sombre, grumeleux, avec des vers de terre", "L'eau ruisselle toujours", "Il sent les produits chimiques"], answer: 1, why: "Un sol sain est grumeleux, sombre et plein de vie." },
+          { objective: "O1", q: "Comment prélever un échantillon de sol ?", options: ["Une cuillère sur un tas de fumier", "Sur un endroit brûlé", "Beaucoup de petits échantillons sur la parcelle, mélangés", "Sur la route"], answer: 2, why: "Un échantillon mélangé représente toute la parcelle." },
+          { objective: "O2", q: "Pourquoi utiliser des boutures de manioc saines ?", options: ["Les maladies virales se propagent par les boutures infectées", "Elles sont moins chères", "Elles poussent plus vite dans tous les sols", "Les acheteurs les demandent"], answer: 0, why: "Un matériel de plantation sain empêche la propagation des maladies." },
+          { objective: "O2", q: "Qu'est-ce que l'endurcissement des plants ?", options: ["Arroser davantage", "Ajouter de l'engrais", "Planter dans un sol dur", "Donner peu à peu plus de soleil et moins d'eau avant le repiquage"], answer: 3, why: "Cela prépare les plants aux conditions du champ." },
+          { objective: "O3", q: "D'où viennent les bonnes doses d'engrais ?", options: ["De la supposition d'un voisin", "De votre analyse de sol et des recommandations locales", "De la couleur du sac", "En mettre le plus possible"], answer: 1, why: "Le sol et la zone décident de ce dont la culture a besoin." }
         ]
       }
     },
@@ -106,6 +144,7 @@ module.exports = {
       name: "Chapitre 2 : Protéger et terminer la culture",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Surveillance des champs et lutte intégrée",
           minutes: 6,
           goal: "Surveiller une culture chaque semaine et choisir des actions de lutte intégrée avant de recourir aux produits chimiques.",
@@ -124,9 +163,14 @@ module.exports = {
           ],
           sources: [FAO_IPM, ICIPE_PUSHPULL, FAO_FAMEWS],
           tryIt: "Faites une fiche de surveillance hebdomadaire (date, endroit, plants examinés, ravageurs, maladies, dégâts, action) et surveillez un champ ou une planche de légumes cette semaine.",
-          youCanNow: "surveiller une culture chaque semaine et choisir des actions de lutte intégrée en commençant par la prévention et les moyens non chimiques."
+          youCanNow: "surveiller une culture chaque semaine et choisir des actions de lutte intégrée en commençant par la prévention et les moyens non chimiques.",
+          quickCheck: [
+            { objective: "O4", q: "Laquelle est une mesure de prévention en lutte intégrée ?", options: ["Traiter chaque semaine au cas où", "Acheter un pesticide plus fort", "Mélanger deux pesticides", "Utiliser des variétés résistantes et arracher les plants infectés"], answer: 3, why: "La lutte intégrée commence par la prévention : variétés résistantes, semences saines, rotation et propreté du champ." },
+            { objective: "O4", q: "Vous trouvez quelques chenilles légionnaires d'automne dans votre maïs. Que faites-vous d'abord ?", options: ["Traiter toute la ferme aujourd'hui", "Le noter et le comparer au seuil d'intervention donné par la vulgarisation", "L'ignorer jusqu'à la récolte", "Brûler le champ"], answer: 1, why: "Les notes de surveillance sont comparées au seuil d'intervention pour décider si la lutte vaut son coût." }
+          ]
         },
         {
+          objectives: ["O4","O5"],
           title: "Pesticides sûrs et légaux, et arrosage des légumes",
           minutes: 6,
           goal: "Utiliser un pesticide en sécurité quand c'est justifié, et planifier un arrosage efficace pour une parcelle de légumes.",
@@ -145,9 +189,14 @@ module.exports = {
           ],
           sources: [PCPB, NAFDAC, FAO_IPM],
           tryIt: "Prenez une étiquette de pesticide (en magasin, sur internet ou dans votre réserve). Notez : les cultures et ravageurs pour lesquels il est homologué, la dose, les vêtements de protection et le délai avant récolte. Puis écrivez un plan d'arrosage pour votre parcelle de légumes.",
-          youCanNow: "utiliser un pesticide de façon sûre et légale quand c'est justifié, et arroser les légumes efficacement."
+          youCanNow: "utiliser un pesticide de façon sûre et légale quand c'est justifié, et arroser les légumes efficacement.",
+          quickCheck: [
+            { objective: "O4", q: "Qu'est-ce que le délai avant récolte sur une étiquette de pesticide ?", options: ["Le temps pour préparer la bouillie", "Les jours avant le semis", "Les jours à attendre entre le traitement et la récolte", "La durée de conservation de la bouteille"], answer: 2, why: "Le délai avant récolte est le nombre de jours entre le dernier traitement et la récolte." },
+            { objective: "O5", q: "Votre parcelle de chou frisé est sèche et vous avez un arrosoir. Quand arrosez-vous ?", options: ["À midi, un peu toutes les heures", "Tôt le matin ou le soir, après avoir vérifié l'humidité du sol", "Seulement après que les feuilles ont flétri pendant une semaine", "Jamais ; attendre la pluie"], answer: 1, why: "Arroser tôt le matin ou le soir, en profondeur et seulement quand le sol est sec, économise l'eau et convient aux légumes." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Récolte et manipulation après récolte",
           minutes: 5,
           goal: "Récolter au bon moment et manipuler, trier et stocker la production pour qu'elle garde sa valeur.",
@@ -165,17 +214,21 @@ module.exports = {
           ],
           sources: [FAO_IPM],
           tryIt: "Tâche finale : écrivez votre plan de production pour la saison pour une grande culture et une parcelle de légumes : vérifications et analyse du sol, préparation et fertilisation du sol, semences et écartement, dates de semis, surveillance hebdomadaire et étapes de lutte intégrée, arrosage des légumes, et récolte, tri, stockage et vente.",
-          youCanNow: "récolter, manipuler, trier et stocker la production pour réduire les pertes et garder sa valeur."
+          youCanNow: "récolter, manipuler, trier et stocker la production pour réduire les pertes et garder sa valeur.",
+          quickCheck: [
+            { objective: "O6", q: "Qu'est-ce que l'aflatoxine ?", options: ["Un engrais", "Un sac de stockage", "Une sorte de charançon", "Un poison produit par des moisissures sur le grain humide"], answer: 3, why: "Le maïs et l'arachide humides peuvent développer des moisissures qui produisent l'aflatoxine, un poison." },
+            { objective: "O6", q: "Vous récoltez des tomates pour les vendre. Comment les transportez-vous ?", options: ["Dans des caisses propres, gardées à l'ombre", "Dans des sacs au soleil", "En vrac dans la charrette", "Dans un sac avec les tomates abîmées"], answer: 0, why: "Des caisses propres et l'ombre protègent les produits fragiles ; les sacs et le soleil les meurtrissent et les abîment." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Protéger et terminer la culture",
         questions: [
-          { q: "En lutte intégrée, les pesticides sont utilisés :", options: ["Chaque semaine quoi qu'il arrive", "Jamais, en aucun cas", "Seulement quand c'est justifié, après avoir considéré les autres méthodes", "Seulement sur les légumes"], answer: 2, why: "La lutte intégrée de la FAO limite les pesticides à ce qui est justifié." },
-          { q: "Comment surveiller un champ ?", options: ["Regarder seulement le bord", "Parcourir le champ en W et examiner un nombre fixe de plants", "Regarder depuis la maison", "Seulement après la récolte"], answer: 1, why: "Un parcours en W échantillonne tout le champ équitablement." },
-          { q: "Le délai avant récolte est :", options: ["Le nombre de jours à attendre entre le traitement et la récolte", "Le moment de semer", "Le prix du pesticide", "La taille du pulvérisateur"], answer: 0, why: "Il garde les résidus sur les aliments à des niveaux sûrs." },
-          { q: "Pourquoi utiliser le goutte-à-goutte pour les tomates ?", options: ["Il mouille les feuilles", "Il utilise plus d'eau", "La loi l'exige", "Il apporte l'eau aux racines et garde les feuilles sèches, ce qui réduit les maladies"], answer: 3, why: "Des feuilles sèches veulent dire moins de maladies et moins d'eau gaspillée." },
-          { q: "Pourquoi bien sécher le maïs avant de le stocker ?", options: ["Pour le rendre plus lourd", "Le grain humide peut développer des moisissures qui produisent de l'aflatoxine", "Les acheteurs préfèrent le grain humide", "Pour changer sa couleur"], answer: 1, why: "L'aflatoxine est un poison dangereux produit par les moisissures sur le grain humide." }
+          { objective: "O4", q: "En lutte intégrée, les pesticides sont utilisés :", options: ["Chaque semaine quoi qu'il arrive", "Jamais, en aucun cas", "Seulement quand c'est justifié, après avoir considéré les autres méthodes", "Seulement sur les légumes"], answer: 2, why: "La lutte intégrée de la FAO limite les pesticides à ce qui est justifié." },
+          { objective: "O4", q: "Comment surveiller un champ ?", options: ["Regarder seulement le bord", "Parcourir le champ en W et examiner un nombre fixe de plants", "Regarder depuis la maison", "Seulement après la récolte"], answer: 1, why: "Un parcours en W échantillonne tout le champ équitablement." },
+          { objective: "O4", q: "Le délai avant récolte est :", options: ["Le nombre de jours à attendre entre le traitement et la récolte", "Le moment de semer", "Le prix du pesticide", "La taille du pulvérisateur"], answer: 0, why: "Il garde les résidus sur les aliments à des niveaux sûrs." },
+          { objective: "O5", q: "Pourquoi utiliser le goutte-à-goutte pour les tomates ?", options: ["Il mouille les feuilles", "Il utilise plus d'eau", "La loi l'exige", "Il apporte l'eau aux racines et garde les feuilles sèches, ce qui réduit les maladies"], answer: 3, why: "Des feuilles sèches veulent dire moins de maladies et moins d'eau gaspillée." },
+          { objective: "O6", q: "Pourquoi bien sécher le maïs avant de le stocker ?", options: ["Pour le rendre plus lourd", "Le grain humide peut développer des moisissures qui produisent de l'aflatoxine", "Les acheteurs préfèrent le grain humide", "Pour changer sa couleur"], answer: 1, why: "L'aflatoxine est un poison dangereux produit par les moisissures sur le grain humide." }
         ]
       }
     }
@@ -183,26 +236,111 @@ module.exports = {
   quiz: {
     title: "Quiz final : Production végétale et horticole durable",
     questions: [
-      { q: "Une analyse de sol vous indique :", options: ["La météo", "Le pH et les niveaux de nutriments", "Le prix des récoltes", "Le nom des ravageurs"], answer: 1, why: "Les analyses de sol mesurent l'acidité et les nutriments." },
-      { q: "Les sols acides peuvent avoir besoin :", options: ["De plus de brûlis", "De sel", "De chaux, si une analyse de sol le conseille", "De rien, jamais"], answer: 2, why: "Le chaulage réduit l'acidité et libère les nutriments." },
-      { q: "Qu'est-ce qui améliore la santé du sol ?", options: ["Ajouter du fumier et du compost et garder le sol couvert", "Brûler les résidus", "Labourer de nombreuses fois", "Laisser le sol nu"], answer: 0, why: "La matière organique et la couverture nourrissent et protègent le sol." },
-      { q: "Une semence certifiée est :", options: ["N'importe quel grain du marché", "Une semence sans paquet", "Une semence gardée dix ans", "Une semence contrôlée par l'autorité officielle des semences"], answer: 3, why: "La certification contrôle la variété et la qualité." },
-      { q: "Des plants trop serrés en général :", options: ["Rendent plus", "Se disputent la lumière, l'eau et les nutriments et perdent du rendement", "N'ont pas besoin d'engrais", "Résistent à tous les ravageurs"], answer: 1, why: "Le bon écartement équilibre le nombre de plants et les ressources." },
-      { q: "Quand faut-il repiquer les plants ?", options: ["À midi en plein soleil", "Pendant un orage", "Après l'endurcissement, de préférence dans la fraîcheur du soir", "Avant qu'ils aient des feuilles"], answer: 2, why: "La fraîcheur réduit le choc du repiquage." },
-      { q: "Quelles cultures ajoutent de l'azote au sol ?", options: ["Le haricot, le niébé et l'arachide", "Seulement le maïs", "Les tomates", "Les oignons"], answer: 0, why: "Les légumineuses fixent l'azote grâce à leurs racines." },
-      { q: "L'engrais de couverture du maïs veut en général dire apporter :", options: ["De la chaux au semis", "Des semences", "Seulement de l'eau", "De l'azote à la culture en croissance"], answer: 3, why: "L'azote de couverture soutient la croissance au bon stade." },
-      { q: "L'engrais doit être placé :", options: ["Directement sur la semence", "Près du plant, sans toucher la semence", "Sur la route", "Seulement sur les feuilles"], answer: 1, why: "Placé près des racines, il est bien utilisé sans brûler la semence." },
-      { q: "Les ennemis naturels sont :", options: ["Des mauvaises herbes", "Des pesticides", "Des insectes qui mangent ou attaquent les ravageurs", "Des voleurs"], answer: 2, why: "Les coccinelles et les guêpes parasitoïdes aident à contrôler les ravageurs." },
-      { q: "Un seuil d'intervention est :", options: ["La quantité de ravageurs à partir de laquelle la lutte vaut son coût", "Un type de pulvérisateur", "Le moment de la récolte", "Un résultat d'analyse de sol"], answer: 0, why: "Il aide à éviter les traitements inutiles." },
-      { q: "Le push-pull est surtout utilisé pour :", options: ["Les tomates", "Le chou frisé", "Les oignons", "Le maïs et le sorgho"], answer: 3, why: "L'icipe l'a mis au point contre les ravageurs des céréales comme le foreur de tiges et la chenille légionnaire d'automne." },
-      { q: "Au Kenya, les pesticides sont homologués par :", options: ["La KCAA", "Le Pest Control Products Board (PCPB)", "Le KMD", "L'ODPC"], answer: 1, why: "Le PCPB réglemente les produits de lutte contre les ravageurs au Kenya." },
-      { q: "Un pesticide vendu dans une bouteille reconditionnée sans étiquette :", options: ["Est une bonne affaire", "Convient s'il est bon marché", "Ne doit être ni acheté ni utilisé", "Est plus sûr"], answer: 2, why: "Sans étiquette, impossible de connaître le produit ou de l'utiliser en sécurité." },
-      { q: "Les emballages vides de pesticides doivent être :", options: ["Éliminés en sécurité, jamais réutilisés pour la nourriture ou l'eau", "Utilisés pour garder l'eau de boisson", "Donnés aux enfants", "Jetés dans la rivière"], answer: 0, why: "Les résidus peuvent empoisonner les gens et l'eau." },
-      { q: "Le meilleur moment pour arroser les légumes est :", options: ["Midi", "Seulement la nuit sous la pluie", "Jamais", "Tôt le matin ou le soir"], answer: 3, why: "Moins d'eau est perdue par la chaleur et l'évaporation." },
-      { q: "Le paillis autour des légumes :", options: ["Assèche le sol", "Garde l'humidité et empêche la terre d'éclabousser les feuilles", "Attire tous les ravageurs", "Remplace complètement l'eau"], answer: 1, why: "Le paillis économise l'eau et réduit les éclaboussures porteuses de maladies." },
-      { q: "Les produits fragiles comme les tomates doivent être transportés dans :", options: ["Des sacs serrés", "Les mains seulement", "Des caisses propres", "Des sacs plastiques au soleil"], answer: 2, why: "Les caisses protègent les produits fragiles de l'écrasement." },
-      { q: "Pourquoi ne récolter que le manioc que vous pouvez vendre ou transformer vite ?", options: ["Les racines s'abîment en quelques jours après la récolte", "Les acheteurs n'aiment pas le manioc", "Le manioc repousse en une nuit", "C'est la loi"], answer: 0, why: "Les racines fraîches de manioc se dégradent vite." },
-      { q: "Les sacs de stockage hermétiques contrôlent les charançons en :", options: ["Ajoutant du poison", "Faisant du bruit", "Laissant entrer la lumière", "Coupant l'air"], answer: 3, why: "Les sacs étanches privent les insectes d'oxygène." }
+      { objective: "O1", q: "Une analyse de sol vous indique :", options: ["La météo", "Le pH et les niveaux de nutriments", "Le prix des récoltes", "Le nom des ravageurs"], answer: 1, why: "Les analyses de sol mesurent l'acidité et les nutriments." },
+      { objective: "O1", q: "Les sols acides peuvent avoir besoin :", options: ["De plus de brûlis", "De sel", "De chaux, si une analyse de sol le conseille", "De rien, jamais"], answer: 2, why: "Le chaulage réduit l'acidité et libère les nutriments." },
+      { objective: "O1", q: "Qu'est-ce qui améliore la santé du sol ?", options: ["Ajouter du fumier et du compost et garder le sol couvert", "Brûler les résidus", "Labourer de nombreuses fois", "Laisser le sol nu"], answer: 0, why: "La matière organique et la couverture nourrissent et protègent le sol." },
+      { objective: "O2", q: "Une semence certifiée est :", options: ["N'importe quel grain du marché", "Une semence sans paquet", "Une semence gardée dix ans", "Une semence contrôlée par l'autorité officielle des semences"], answer: 3, why: "La certification contrôle la variété et la qualité." },
+      { objective: "O2", q: "Des plants trop serrés en général :", options: ["Rendent plus", "Se disputent la lumière, l'eau et les nutriments et perdent du rendement", "N'ont pas besoin d'engrais", "Résistent à tous les ravageurs"], answer: 1, why: "Le bon écartement équilibre le nombre de plants et les ressources." },
+      { objective: "O2", q: "Quand faut-il repiquer les plants ?", options: ["À midi en plein soleil", "Pendant un orage", "Après l'endurcissement, de préférence dans la fraîcheur du soir", "Avant qu'ils aient des feuilles"], answer: 2, why: "La fraîcheur réduit le choc du repiquage." },
+      { objective: "O3", q: "Quelles cultures ajoutent de l'azote au sol ?", options: ["Le haricot, le niébé et l'arachide", "Seulement le maïs", "Les tomates", "Les oignons"], answer: 0, why: "Les légumineuses fixent l'azote grâce à leurs racines." },
+      { objective: "O3", q: "L'engrais de couverture du maïs veut en général dire apporter :", options: ["De la chaux au semis", "Des semences", "Seulement de l'eau", "De l'azote à la culture en croissance"], answer: 3, why: "L'azote de couverture soutient la croissance au bon stade." },
+      { objective: "O3", q: "L'engrais doit être placé :", options: ["Directement sur la semence", "Près du plant, sans toucher la semence", "Sur la route", "Seulement sur les feuilles"], answer: 1, why: "Placé près des racines, il est bien utilisé sans brûler la semence." },
+      { objective: "O4", q: "Les ennemis naturels sont :", options: ["Des mauvaises herbes", "Des pesticides", "Des insectes qui mangent ou attaquent les ravageurs", "Des voleurs"], answer: 2, why: "Les coccinelles et les guêpes parasitoïdes aident à contrôler les ravageurs." },
+      { objective: "O4", q: "Un seuil d'intervention est :", options: ["La quantité de ravageurs à partir de laquelle la lutte vaut son coût", "Un type de pulvérisateur", "Le moment de la récolte", "Un résultat d'analyse de sol"], answer: 0, why: "Il aide à éviter les traitements inutiles." },
+      { objective: "O4", q: "Le push-pull est surtout utilisé pour :", options: ["Les tomates", "Le chou frisé", "Les oignons", "Le maïs et le sorgho"], answer: 3, why: "L'icipe l'a mis au point contre les ravageurs des céréales comme le foreur de tiges et la chenille légionnaire d'automne." },
+      { objective: "O4", q: "Au Kenya, les pesticides sont homologués par :", options: ["La KCAA", "Le Pest Control Products Board (PCPB)", "Le KMD", "L'ODPC"], answer: 1, why: "Le PCPB réglemente les produits de lutte contre les ravageurs au Kenya." },
+      { objective: "O4", q: "Un pesticide vendu dans une bouteille reconditionnée sans étiquette :", options: ["Est une bonne affaire", "Convient s'il est bon marché", "Ne doit être ni acheté ni utilisé", "Est plus sûr"], answer: 2, why: "Sans étiquette, impossible de connaître le produit ou de l'utiliser en sécurité." },
+      { objective: "O4", q: "Les emballages vides de pesticides doivent être :", options: ["Éliminés en sécurité, jamais réutilisés pour la nourriture ou l'eau", "Utilisés pour garder l'eau de boisson", "Donnés aux enfants", "Jetés dans la rivière"], answer: 0, why: "Les résidus peuvent empoisonner les gens et l'eau." },
+      { objective: "O5", q: "Le meilleur moment pour arroser les légumes est :", options: ["Midi", "Seulement la nuit sous la pluie", "Jamais", "Tôt le matin ou le soir"], answer: 3, why: "Moins d'eau est perdue par la chaleur et l'évaporation." },
+      { objective: "O5", q: "Le paillis autour des légumes :", options: ["Assèche le sol", "Garde l'humidité et empêche la terre d'éclabousser les feuilles", "Attire tous les ravageurs", "Remplace complètement l'eau"], answer: 1, why: "Le paillis économise l'eau et réduit les éclaboussures porteuses de maladies." },
+      { objective: "O6", q: "Les produits fragiles comme les tomates doivent être transportés dans :", options: ["Des sacs serrés", "Les mains seulement", "Des caisses propres", "Des sacs plastiques au soleil"], answer: 2, why: "Les caisses protègent les produits fragiles de l'écrasement." },
+      { objective: "O6", q: "Pourquoi ne récolter que le manioc que vous pouvez vendre ou transformer vite ?", options: ["Les racines s'abîment en quelques jours après la récolte", "Les acheteurs n'aiment pas le manioc", "Le manioc repousse en une nuit", "C'est la loi"], answer: 0, why: "Les racines fraîches de manioc se dégradent vite." },
+      { objective: "O6", q: "Les sacs de stockage hermétiques contrôlent les charançons en :", options: ["Ajoutant du poison", "Faisant du bruit", "Laissant entrer la lumière", "Coupant l'air"], answer: 3, why: "Les sacs étanches privent les insectes d'oxygène." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      3,
+      6,
+      8,
+      9,
+      12,
+      15,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie du plan et vérifiez-la de nouveau.",
+    criteria: [
+      {
+        name: "Vérifications du sol",
+        objective: "O1",
+        notYet: "Aucune vérification ni analyse de sol n'est mentionnée.",
+        meets: "Les résultats de la vérification au champ sont notés, avec où et comment un échantillon serait prélevé pour une analyse.",
+        exceeds: "Utilise les résultats d'une analyse de sol, ou une date pour en obtenir une, pour construire le plan."
+      },
+      {
+        name: "Semences, écartement et dates",
+        objective: "O2",
+        notYet: "La source des semences, l'écartement ou les dates de semis manquent.",
+        meets: "Semences certifiées ou matériel sain, écartement conseillé et dates de semis pour les deux cultures, avec la source de chaque choix.",
+        exceeds: "Inclut le plan de pépinière et d'endurcissement pour le légume."
+      },
+      {
+        name: "Nourrir le sol",
+        objective: "O3",
+        notYet: "Seul l'engrais est cité, ou les doses sont devinées.",
+        meets: "Matière organique, légumineuse éventuelle, calendrier et placement de l'engrais, avec des doses venant d'une analyse de sol ou de la vulgarisation.",
+        exceeds: "Inclut un plan de compost et une rotation pour la saison suivante."
+      },
+      {
+        name: "Surveillance et lutte intégrée",
+        objective: "O4",
+        notYet: "Prévoit de traiter selon un calendrier fixe sans surveillance.",
+        meets: "Une routine de surveillance hebdomadaire, les principaux ravageurs à surveiller, des mesures de prévention et non chimiques, et les règles de l'étiquette pour tout pesticide.",
+        exceeds: "Indique où obtenir un diagnostic et le seuil d'intervention pour un ravageur principal."
+      },
+      {
+        name: "Arrosage",
+        objective: "O5",
+        notYet: "Aucun plan d'arrosage pour les légumes.",
+        meets: "Méthode d'arrosage, moment de la journée, paillis et vérification de l'humidité du sol.",
+        exceeds: "Inclut un moyen de récupérer ou d'économiser l'eau."
+      },
+      {
+        name: "Récolte et stockage",
+        objective: "O6",
+        notYet: "La récolte, le tri ou le stockage manquent.",
+        meets: "Moment de la récolte, manipulation douce, tri, séchage, stockage et lieu de vente.",
+        exceeds: "Indique les exigences de qualité de l'acheteur et comment les pertes seront suivies."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent le cours et obtiennent « Atteint » ou « Dépasse » sur chaque ligne de la grille pour le plan de saison",
+      "Les apprenants qui déclarent une analyse de sol, des semences certifiées ou une surveillance hebdomadaire à la saison suivante (enquête de suivi)",
+      "L'évolution des pertes à la récolte et après récolte déclarée par les apprenants ou leur groupement après une saison",
+      "Les apprenants qui commencent un autre cours agricole Koach Learn dans les 30 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un cahier, un stylo et un téléphone simple",
+      "L'accès à un champ ou à une parcelle de légumes, et une bêche pour la vérification du sol",
+      "Une vraie étiquette de pesticide et un sachet de semences, si possible",
+      "Environ 60 minutes au total, en séances courtes, plus du temps au champ et pour écrire le plan de saison"
+    ],
+    facilitatorNotes: [
+      "Dans un groupement d'agriculteurs ou un champ-école : faites le test de départ ensemble, puis faites la vérification du sol et la tournée de surveillance dans un vrai champ.",
+      "Invitez un agent de vulgarisation ou un vendeur d'intrants agricoles à donner l'écartement, les variétés et les doses d'engrais locaux ; ne donnez pas de doses vous-même.",
+      "Ne préparez et ne pulvérisez aucun pesticide en classe ; montrez une étiquette et entraînez-vous à la lire.",
+      "Évaluez le plan de saison avec la grille et donnez un retour sur une ligne « Pas encore » à la fois."
     ]
   }
 };

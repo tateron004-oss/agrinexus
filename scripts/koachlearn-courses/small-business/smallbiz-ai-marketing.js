@@ -23,11 +23,35 @@ module.exports = {
     "Each lesson takes about five minutes with a \"Try it now\" task. There is a knowledge check after each chapter and a 20-question quiz at the end. The tasks build into one month of ready-to-post marketing."
   ],
   finalTask: "Make one month of marketing: write your core message, a four-week content calendar with at least eight posts, finished captions for four of them, one flyer made in a design tool, and a tracking table showing how you will tell which posts brought customers. Check every claim is true and every image is yours to use.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Small business owners who do their own marketing: restaurants and food trucks, salons and barbershops, shops, cleaning and repair services, and home businesses. Many are minority-owned businesses marketing to their neighborhoods and communities.",
+    startingPoint: "Post on social media now and then and may have made a flyer. No core message, content calendar or tracking, and little use of AI for marketing.",
+    gap: "Random posts take time and rarely bring customers, and AI can add claims or images that are not true, which can break FTC rules and hurt trust. Owners need a clear message, a month of planned, honest content and a simple way to see what brings customers in.",
+    constraints: [
+      "Reading level: plain words and short sentences",
+      "Devices: a smartphone with a camera; a computer helps for the flyer and table",
+      "Time: about 5-minute lessons that fit into a busy workday",
+      "Rules: FTC truth-in-advertising, the FTC review rule and CAN-SPAM for marketing email",
+      "Privacy and rights: permission before posting a customer's photo, and customer names kept out of AI"
+    ],
+    prerequisites: "\"Introduction to AI for Small Business\" is helpful but not required."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Using the core message formula and an AI assistant", action: "write a core message that says who you serve, what you do and why you are different", standard: "in one or two true sentences that sound like you" },
+    { id: "O2", condition: "Given your core message", action: "write social posts and captions with AI help", standard: "with a real detail added to each, nothing untrue, and permission for any customer photo" },
+    { id: "O3", condition: "Using a free design tool", action: "make a flyer for one offer or event", standard: "with a headline, one real picture, three details and a call to action, all checked" },
+    { id: "O4", condition: "Using an AI assistant and a table", action: "plan a four-week content calendar", standard: "with a number of posts you can keep up, a mix of post types and every date checked" },
+    { id: "O5", condition: "Given your captions and flyer", action: "check your marketing for claims you cannot prove, fake reviews and email rules", standard: "with every unproven claim changed or removed" },
+    { id: "O6", condition: "Given your posts and flyer", action: "create a tracking table that shows which marketing brings in customers", standard: "with a promo code on one offer and any AI pattern confirmed in the table" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Your message and your posts",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Finding your core marketing message",
           minutes: 5,
           goal: "Write one or two sentences that say who you serve, what you do and why you are different.",
@@ -44,9 +68,14 @@ module.exports = {
             { title: "Use AI to explore", bullets: ["Share what customers say about you", "Ask for five versions", "Pick the one that is true and sounds like you"] }
           ],
           tryIt: "Fill in the formula for your business. Then ask an AI assistant for five versions and choose the best one.",
-          youCanNow: "write a clear core message for your business."
+          youCanNow: "write a clear core message for your business.",
+          quickCheck: [
+            { objective: "O1", q: "What question does a core message answer for customers?", options: ["What time do you close?", "How many staff do you have?", "Why should I choose you?", "Where did you buy your equipment?"], answer: 2, why: "A core message tells customers why to choose you." },
+            { objective: "O1", q: "AI gives you five core message versions, and the best one claims you are \"the city's #1 salon\". What would you do?", options: ["Use it because it sounds strong", "Pick a version that is true and sounds like you", "Use all five", "Add \"maybe\" to it"], answer: 1, why: "Your core message must be true and sound like you." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Writing social posts and captions with AI",
           minutes: 5,
           goal: "Turn your core message into several social posts in your own voice.",
@@ -63,9 +92,14 @@ module.exports = {
             { title: "Then make it real", bullets: ["Add details only you know", "Cut anything fake or over the top", "Permission before customer photos or names"] }
           ],
           tryIt: "Ask AI for four captions for your business with your core message. Edit each one to add a real detail and remove anything that is not true.",
-          youCanNow: "write social posts with AI help that sound real and like your business."
+          youCanNow: "write social posts with AI help that sound real and like your business.",
+          quickCheck: [
+            { objective: "O2", q: "What is a caption?", options: ["The text with a social photo or video", "A business license", "A type of flyer", "A customer review"], answer: 0, why: "A caption is the text that goes with your photo or video post." },
+            { objective: "O2", q: "You want to post a great photo of a customer's new haircut. What would you do first?", options: ["Post it and tag them", "Blur it and post", "Ask AI if it is okay", "Get the customer's permission"], answer: 3, why: "You need the customer's permission before posting their photo." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Designing a flyer or promo graphic",
           minutes: 5,
           goal: "Make a clear flyer or graphic for one offer or event.",
@@ -82,17 +116,21 @@ module.exports = {
             { title: "Pictures customers trust", bullets: ["Use your own photos when you can", "AI images must not show things you do not offer"] }
           ],
           tryIt: "Make a flyer for one real offer or event with a headline, one picture, three details and a call to action. Check every detail before you save it.",
-          youCanNow: "design a clear flyer or promo graphic for your business."
+          youCanNow: "design a clear flyer or promo graphic for your business.",
+          quickCheck: [
+            { objective: "O3", q: "What is a call to action?", options: ["A phone call to a customer", "A big headline", "Words telling people what to do next", "A list of prices"], answer: 2, why: "A call to action tells people the next step, like \"Call to book\"." },
+            { objective: "O3", q: "Your flyer has an AI picture of a cake you do not make. What would you do?", options: ["Keep it because it looks nice", "Make it smaller", "Add a note saying it is AI", "Replace it with a real photo of what you sell"], answer: 3, why: "Pictures should show what you really sell." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Your message and your posts",
         questions: [
-          { q: "What does a core message answer?", options: ["What is your password?", "Why should I choose you?", "Where is the bank?", "How old is the owner?"], answer: 1, why: "The core message says why customers should choose you." },
-          { q: "Which is a strong core message?", options: ["\"We are the best.\"", "\"Come in.\"", "\"Food.\"", "\"We help busy families in South Sacramento get home-style Filipino meals in 10 minutes.\""], answer: 3, why: "It says who, what and what is different." },
-          { q: "Before posting a customer's photo you must:", options: ["Get their permission", "Add a filter", "Ask the AI", "Post it at night"], answer: 0, why: "Permission respects customers and avoids trouble." },
-          { q: "What is a call to action?", options: ["A hashtag", "A phone bill", "Words telling people what to do next", "A logo"], answer: 2, why: "It tells people the next step, like \"Call to book\"." },
-          { q: "An AI image shows a dish you do not sell. What do you do?", options: ["Use it anyway", "Add more fake dishes", "Replace it with a real photo or an image of what you sell", "Post it twice"], answer: 2, why: "Images must not mislead customers." }
+          { objective: "O1", q: "What does a core message answer?", options: ["What is your password?", "Why should I choose you?", "Where is the bank?", "How old is the owner?"], answer: 1, why: "The core message says why customers should choose you." },
+          { objective: "O1", q: "Which is a strong core message?", options: ["\"We are the best.\"", "\"Come in.\"", "\"Food.\"", "\"We help busy families in South Sacramento get home-style Filipino meals in 10 minutes.\""], answer: 3, why: "It says who, what and what is different." },
+          { objective: "O2", q: "Before posting a customer's photo you must:", options: ["Get their permission", "Add a filter", "Ask the AI", "Post it at night"], answer: 0, why: "Permission respects customers and avoids trouble." },
+          { objective: "O3", q: "What is a call to action?", options: ["A hashtag", "A phone bill", "Words telling people what to do next", "A logo"], answer: 2, why: "It tells people the next step, like \"Call to book\"." },
+          { objective: "O3", q: "An AI image shows a dish you do not sell. What do you do?", options: ["Use it anyway", "Add more fake dishes", "Replace it with a real photo or an image of what you sell", "Post it twice"], answer: 2, why: "Images must not mislead customers." }
         ]
       }
     },
@@ -100,6 +138,7 @@ module.exports = {
       name: "Chapter 2: Planning, honesty and results",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Planning a monthly content calendar",
           minutes: 5,
           goal: "Plan four weeks of posts in a simple calendar.",
@@ -116,9 +155,14 @@ module.exports = {
             { title: "Plan with AI", bullets: ["Two or three posts a week you can keep", "Mix offers, tips, team, community", "Check every date and event yourself"] }
           ],
           tryIt: "Ask AI for a four-week, two-posts-a-week calendar for your business. Put it in a table and check every date.",
-          youCanNow: "plan a month of posts in a content calendar."
+          youCanNow: "plan a month of posts in a content calendar.",
+          quickCheck: [
+            { objective: "O4", q: "What is a content calendar?", options: ["A schedule of what you post and when", "A list of holidays", "A sales report", "Your opening hours"], answer: 0, why: "A content calendar plans your posts by date." },
+            { objective: "O4", q: "AI's calendar plans two posts every day, but you have time for two a week. What would you do?", options: ["Try to post every day anyway", "Cut it to a number you can really keep up", "Skip the calendar", "Hire a marketing agency"], answer: 1, why: "Plan a number of posts you can really keep up." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Keeping your marketing honest and legal",
           minutes: 5,
           goal: "Check your marketing for claims you cannot back up, fake reviews and email rules.",
@@ -136,9 +180,14 @@ module.exports = {
           ],
           sources: [FTC_ADS, FTC_REVIEWS, CAN_SPAM],
           tryIt: "Take your four captions and your flyer. Underline every claim, and change or remove any you cannot prove.",
-          youCanNow: "check your marketing for unprovable claims, fake reviews and email rule problems."
+          youCanNow: "check your marketing for unprovable claims, fake reviews and email rule problems.",
+          quickCheck: [
+            { objective: "O5", q: "According to the FTC, what must ads be?", options: ["Funny", "Short", "Truthful and not misleading", "Posted daily"], answer: 2, why: "FTC rules say ads must be truthful and not misleading." },
+            { objective: "O5", q: "AI wrote \"Voted best tacos in LA\" in your caption, but no vote happened. What would you do?", options: ["Remove it", "Keep it; everyone says that", "Change it to \"Voted best tacos in town\"", "Ask friends to vote now"], answer: 0, why: "Claims you cannot prove must be removed." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Seeing what works",
           minutes: 5,
           goal: "Track which posts and flyers bring in customers.",
@@ -155,17 +204,21 @@ module.exports = {
             { title: "Monthly review with AI", bullets: ["Paste the table, no names", "Ask what brought the most bookings", "Confirm, then plan next month"] }
           ],
           tryIt: "Final task: finish your month of marketing: core message, four-week calendar, four finished captions, one flyer, and a tracking table with a promo code on one offer. Check every claim and image.",
-          youCanNow: "plan, make and measure a month of honest marketing for your business."
+          youCanNow: "plan, make and measure a month of honest marketing for your business.",
+          quickCheck: [
+            { objective: "O6", q: "What does reach mean?", options: ["How many people bought something", "How many people saw a post", "How far customers travel", "How many posts you made"], answer: 1, why: "Reach is the number of people who saw a post." },
+            { objective: "O6", q: "You want to know if your flyer brought in customers. What would you do?", options: ["Guess from how busy it feels", "Ask AI to guess", "Count your likes", "Put a special promo code on the flyer and track it"], answer: 3, why: "A special code shows which marketing brought each customer." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Planning, honesty and results",
         questions: [
-          { q: "What is a content calendar?", options: ["A schedule of what you post and when", "A tax calendar", "A staff schedule", "A wall clock"], answer: 0, why: "It plans your posts." },
-          { q: "AI's calendar lists a local festival on a date. What do you do?", options: ["Delete the calendar", "Trust it", "Post about it without checking", "Check the date yourself"], answer: 3, why: "AI can get dates and events wrong." },
-          { q: "Which claim needs proof?", options: ["\"Come say hi\"", "\"Our cleaning kills 99% of germs\"", "\"We love our neighborhood\"", "\"Open Saturday\""], answer: 1, why: "Specific factual claims need proof." },
-          { q: "Which is the best sign a post worked?", options: ["New bookings from people who mention it", "One more like", "A nice color", "A long caption"], answer: 0, why: "Customers matter more than likes." },
-          { q: "Why add a special code like FLYER10?", options: ["It is required by law", "To confuse customers", "To track which marketing brought customers", "To hide the price"], answer: 2, why: "Codes show which piece worked." }
+          { objective: "O4", q: "What is a content calendar?", options: ["A schedule of what you post and when", "A tax calendar", "A staff schedule", "A wall clock"], answer: 0, why: "It plans your posts." },
+          { objective: "O4", q: "AI's calendar lists a local festival on a date. What do you do?", options: ["Delete the calendar", "Trust it", "Post about it without checking", "Check the date yourself"], answer: 3, why: "AI can get dates and events wrong." },
+          { objective: "O5", q: "Which claim needs proof?", options: ["\"Come say hi\"", "\"Our cleaning kills 99% of germs\"", "\"We love our neighborhood\"", "\"Open Saturday\""], answer: 1, why: "Specific factual claims need proof." },
+          { objective: "O6", q: "Which is the best sign a post worked?", options: ["New bookings from people who mention it", "One more like", "A nice color", "A long caption"], answer: 0, why: "Customers matter more than likes." },
+          { objective: "O6", q: "Why add a special code like FLYER10?", options: ["It is required by law", "To confuse customers", "To track which marketing brought customers", "To hide the price"], answer: 2, why: "Codes show which piece worked." }
         ]
       }
     }
@@ -173,26 +226,113 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI in Marketing for Small Business",
     questions: [
-      { q: "The core message formula is: We help [who] get [what] with...", options: ["Our password", "What makes us different", "A discount always", "Our competitor's name"], answer: 1, why: "The differentiator completes it." },
-      { q: "Your core message should be:", options: ["Secret", "As big as possible", "Copied from a competitor", "True and sound like you"], answer: 3, why: "Customers trust true messages." },
-      { q: "Where should your core message appear?", options: ["Nowhere", "Only in your head", "Only on taxes", "In your posts, flyers and signs"], answer: 3, why: "Repeating it builds recognition." },
-      { q: "Which is a good small business post?", options: ["A stock photo of a beach", "A before-and-after haircut, with permission", "A fake review", "A competitor's photo"], answer: 1, why: "Real work builds trust." },
-      { q: "After AI writes captions you should:", options: ["Add more big claims", "Post them unchanged", "Add real details and cut anything fake", "Delete your page"], answer: 2, why: "Editing makes them real and accurate." },
-      { q: "What is a caption?", options: ["The text with a social photo or video", "A receipt", "A price tag", "A logo"], answer: 0, why: "Captions describe posts." },
-      { q: "Which free tools can make flyers?", options: ["A cash register", "A calculator", "Canva or Adobe Express", "A phone charger"], answer: 2, why: "They are design tools with templates." },
-      { q: "A flyer headline should be:", options: ["Big and about the offer", "Tiny", "Missing", "Your password"], answer: 0, why: "The headline catches attention." },
-      { q: "Which picture do customers trust most?", options: ["AI images of things you do not sell", "Your own real photos", "Random internet photos", "Competitors' photos"], answer: 1, why: "Real pictures build trust." },
-      { q: "How many posts a week should you plan?", options: ["As many as AI suggests", "Fifty", "None", "A number you can really keep up"], answer: 3, why: "Consistency beats burnout." },
-      { q: "Which is a content calendar column?", options: ["Post type", "Customer card number", "Password", "Bank PIN"], answer: 0, why: "Post type helps mix your content." },
-      { q: "Mixing post types means:", options: ["Only reposts", "Only discounts", "Only selfies", "Offers, tips, team and community posts"], answer: 3, why: "Variety keeps followers interested." },
-      { q: "According to the FTC, ads must be:", options: ["Long", "Funny", "Truthful and not misleading", "In color"], answer: 2, why: "That is the basic FTC rule." },
-      { q: "AI added \"award-winning\" but you have no award. You:", options: ["Keep it", "Remove it", "Make up an award", "Add \"guaranteed\""], answer: 1, why: "Unprovable claims mislead." },
-      { q: "Fake reviews written by AI are:", options: ["Required", "Fine if short", "Fine on weekends", "Banned under the FTC review rule"], answer: 3, why: "The rule covers AI-made fakes." },
-      { q: "A CAN-SPAM marketing email must include:", options: ["A fake sender", "The customer's card number", "Your postal address and an unsubscribe option", "No subject"], answer: 2, why: "Both are required." },
-      { q: "Reach means:", options: ["How many people saw a post", "How many bought", "How many staff", "Your Wi-Fi strength"], answer: 0, why: "Reach counts views." },
-      { q: "Where do you find free post numbers on a business account?", options: ["Your receipt printer", "The insights or analytics section", "Your bank", "Nowhere"], answer: 1, why: "Platforms show insights to business accounts." },
-      { q: "Before pasting tracking numbers into AI, remove:", options: ["Dates", "Customer names", "Post types", "Totals"], answer: 1, why: "Customer names are private." },
-      { q: "After AI says tips posts bring the most bookings, you:", options: ["Confirm it in your table, then plan more", "Stop all tips posts", "Ignore it", "Delete your account"], answer: 0, why: "Confirm, then act." }
+      { objective: "O1", q: "The core message formula is: We help [who] get [what] with...", options: ["Our password", "What makes us different", "A discount always", "Our competitor's name"], answer: 1, why: "The differentiator completes it." },
+      { objective: "O1", q: "Your core message should be:", options: ["Secret", "As big as possible", "Copied from a competitor", "True and sound like you"], answer: 3, why: "Customers trust true messages." },
+      { objective: "O1", q: "Where should your core message appear?", options: ["Nowhere", "Only in your head", "Only on taxes", "In your posts, flyers and signs"], answer: 3, why: "Repeating it builds recognition." },
+      { objective: "O2", q: "Which is a good small business post?", options: ["A stock photo of a beach", "A before-and-after haircut, with permission", "A fake review", "A competitor's photo"], answer: 1, why: "Real work builds trust." },
+      { objective: "O2", q: "After AI writes captions you should:", options: ["Add more big claims", "Post them unchanged", "Add real details and cut anything fake", "Delete your page"], answer: 2, why: "Editing makes them real and accurate." },
+      { objective: "O2", q: "What is a caption?", options: ["The text with a social photo or video", "A receipt", "A price tag", "A logo"], answer: 0, why: "Captions describe posts." },
+      { objective: "O3", q: "Which free tools can make flyers?", options: ["A cash register", "A calculator", "Canva or Adobe Express", "A phone charger"], answer: 2, why: "They are design tools with templates." },
+      { objective: "O3", q: "A flyer headline should be:", options: ["Big and about the offer", "Tiny", "Missing", "Your password"], answer: 0, why: "The headline catches attention." },
+      { objective: "O3", q: "Which picture do customers trust most?", options: ["AI images of things you do not sell", "Your own real photos", "Random internet photos", "Competitors' photos"], answer: 1, why: "Real pictures build trust." },
+      { objective: "O4", q: "How many posts a week should you plan?", options: ["As many as AI suggests", "Fifty", "None", "A number you can really keep up"], answer: 3, why: "Consistency beats burnout." },
+      { objective: "O4", q: "Which is a content calendar column?", options: ["Post type", "Customer card number", "Password", "Bank PIN"], answer: 0, why: "Post type helps mix your content." },
+      { objective: "O4", q: "Mixing post types means:", options: ["Only reposts", "Only discounts", "Only selfies", "Offers, tips, team and community posts"], answer: 3, why: "Variety keeps followers interested." },
+      { objective: "O5", q: "According to the FTC, ads must be:", options: ["Long", "Funny", "Truthful and not misleading", "In color"], answer: 2, why: "That is the basic FTC rule." },
+      { objective: "O5", q: "AI added \"award-winning\" but you have no award. You:", options: ["Keep it", "Remove it", "Make up an award", "Add \"guaranteed\""], answer: 1, why: "Unprovable claims mislead." },
+      { objective: "O5", q: "Fake reviews written by AI are:", options: ["Required", "Fine if short", "Fine on weekends", "Banned under the FTC review rule"], answer: 3, why: "The rule covers AI-made fakes." },
+      { objective: "O5", q: "A CAN-SPAM marketing email must include:", options: ["A fake sender", "The customer's card number", "Your postal address and an unsubscribe option", "No subject"], answer: 2, why: "Both are required." },
+      { objective: "O6", q: "Reach means:", options: ["How many people saw a post", "How many bought", "How many staff", "Your Wi-Fi strength"], answer: 0, why: "Reach counts views." },
+      { objective: "O6", q: "Where do you find free post numbers on a business account?", options: ["Your receipt printer", "The insights or analytics section", "Your bank", "Nowhere"], answer: 1, why: "Platforms show insights to business accounts." },
+      { objective: "O6", q: "Before pasting tracking numbers into AI, remove:", options: ["Dates", "Customer names", "Post types", "Totals"], answer: 1, why: "Customer names are private." },
+      { objective: "O6", q: "After AI says tips posts bring the most bookings, you:", options: ["Confirm it in your table, then plan more", "Stop all tips posts", "Ignore it", "Delete your account"], answer: 0, why: "Confirm, then act." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      4,
+      5,
+      7,
+      8,
+      9,
+      12,
+      13,
+      16
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Core message",
+        objective: "O1",
+        notYet: "Vague, or says something untrue.",
+        meets: "One or two true sentences: who you serve, what you do, why you are different.",
+        exceeds: "It appears in the posts and the flyer."
+      },
+      {
+        name: "Content calendar",
+        objective: "O4",
+        notYet: "Fewer than eight posts, or dates not checked.",
+        meets: "Four weeks with at least eight posts, dates checked.",
+        exceeds: "Mixes offers, tips, team and community posts."
+      },
+      {
+        name: "Captions",
+        objective: "O2",
+        notYet: "Fewer than four, or they contain untrue details.",
+        meets: "Four finished captions with a real detail in each.",
+        exceeds: "Each has a clear call to action and sounds like the owner."
+      },
+      {
+        name: "Flyer",
+        objective: "O3",
+        notYet: "Missing a headline, details or call to action.",
+        meets: "Headline, one real picture, three details and a call to action, all checked.",
+        exceeds: "Includes a promo code for tracking."
+      },
+      {
+        name: "Honest claims and images",
+        objective: "O5",
+        notYet: "A claim cannot be proven, or an image is not yours to use.",
+        meets: "Every claim can be proven and every image is yours or used with permission.",
+        exceeds: "The owner can say how each claim is backed up."
+      },
+      {
+        name: "Tracking table",
+        objective: "O6",
+        notYet: "No way to tell which posts worked.",
+        meets: "A table to record results, with a promo code on one offer.",
+        exceeds: "Uses free insights numbers and plans to review results at the end of the month."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Owners who post on their calendar for the full month (30-day follow-up survey)",
+      "Owners who can name which post or flyer brought new customers, from their tracking table",
+      "Owners who report more bookings or sales after the month"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A smartphone with a camera and internet; a computer helps for the flyer and table",
+      "A free AI assistant and a free design tool such as Canva or Adobe Express",
+      "Real photos of your business, products or work",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Ask owners to bring a few real photos and one upcoming offer or event to the session.",
+      "Remind owners to get permission before posting any customer's photo.",
+      "Have owners underline every claim in their captions and flyer together, then share how they would prove each one.",
+      "Customer names stay out of AI tools when pasting tracking numbers.",
+      "Score the month of marketing with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

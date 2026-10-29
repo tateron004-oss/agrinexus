@@ -15,11 +15,35 @@ module.exports = {
     "Check your school's rules on AI, the age rating of your games, and each app's minimum age, and involve a parent or guardian before you sign up for anything. Each lesson ends with a \"Try it now\" task. There is a knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Pick one game you play and one skill to improve. Use an AI assistant to build a one-week practice plan that fits around school, homework and sleep. Play and review one match with three written notes, ask the AI to find a pattern and suggest one drill, and write a short team or club message about what you will work on next.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Teens who play video games, from casual players to members of school or club esports teams.",
+    startingPoint: "Play at least one game regularly and chat with other players online. Few practice with a plan, review their matches, or know how to spot account scams and unsafe chats.",
+    gap: "Many teens play a lot without getting better, and gaming can crowd out school and sleep. Online games also bring scams, cheats and strangers. Using AI as a practice coach, with clear goals and safety habits, helps teens improve, stay balanced and see real careers around esports.",
+    constraints: [
+      "Age ratings, app minimum ages and school AI rules; a parent or guardian is involved before sign-ups",
+      "No expensive gear needed; any game and a free AI assistant",
+      "School, homework and sleep come first in every plan",
+      "Privacy and safety: no real names, schools, logins or other players' details in chats or AI tools",
+      "Short lessons with plain words"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Thinking about a game you play", action: "identify ways AI is used inside games and what an AI assistant can and cannot do to help you practice", standard: "getting at least 3 of 4 right" },
+    { id: "O2", condition: "Given one skill to improve and your real schedule", action: "build a one-week practice plan with AI using a small, measurable goal and short drills", standard: "fitting around school, homework and sleep" },
+    { id: "O3", condition: "After playing or watching a match", action: "write three match notes and ask AI to find a pattern and suggest one drill", standard: "with no other players' usernames or private messages" },
+    { id: "O4", condition: "For your team or club", action: "create a list of short callouts and a friendly team message in your own voice", standard: "keeping callouts short and calm and the message under 80 words" },
+    { id: "O5", condition: "When you meet cheats, scams or unsafe chats", action: "refuse cheats and scams, keep private details out of chats, and block, report and tell a trusted adult", standard: "sharing no login, code or personal details" },
+    { id: "O6", condition: "Using AI and a trusted source", action: "list jobs in esports besides pro player and check one with a counselor or a real job listing", standard: "naming the skills the job needs" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Practicing smarter with AI",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Where AI shows up in games, and how it can coach you",
           minutes: 4,
           goal: "Name ways AI is used in games and ways an AI assistant can help you practice.",
@@ -35,9 +59,14 @@ module.exports = {
             { title: "Its limits", bullets: ["It cannot see your screen or play for you", "It may not know the latest patch", "Check tips against real results"] }
           ],
           tryIt: "Write down the game you play most and three things in it you would like to get better at. Circle the one that matters most to you right now.",
-          youCanNow: "name ways AI is used in games and explain what an AI assistant can and cannot do as a practice coach."
+          youCanNow: "name ways AI is used in games and explain what an AI assistant can and cannot do as a practice coach.",
+          quickCheck: [
+            { objective: "O1", q: "Which of these can use AI inside a game?", options: ["The game's box art", "Your controller's battery", "The game's age rating", "The tools that catch cheaters"], answer: 3, why: "Computer players, matchmaking and anti-cheat tools can all use AI." },
+            { objective: "O1", q: "AI tells you a strategy that seems off after a new update. What do you do?", options: ["Use it in your next ranked match without checking", "Check it against the official game notes or your coach", "Stop playing the game", "Ask a stranger for your login"], answer: 1, why: "AI may not know the latest patch, so check its tips against official notes and your results." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Setting a goal and building a practice plan",
           minutes: 5,
           goal: "Use an AI assistant to turn one goal into a weekly practice plan that fits your life.",
@@ -54,9 +83,14 @@ module.exports = {
             { title: "A plan you can keep", bullets: ["School, homework and sleep first", "Short drills, short breaks", "Track progress each day"] }
           ],
           tryIt: "Ask an AI assistant for a one-week practice plan for the skill you circled in Lesson 1, using your real schedule. Ask it to make the plan shorter if it takes more than 30 to 45 minutes a day.",
-          youCanNow: "turn one gaming goal into a realistic weekly practice plan with an AI assistant."
+          youCanNow: "turn one gaming goal into a realistic weekly practice plan with an AI assistant.",
+          quickCheck: [
+            { objective: "O2", q: "What helps you improve most?", options: ["Practicing one skill on purpose", "Playing more hours without a goal", "Buying new gear", "Switching games every day"], answer: 0, why: "Getting better comes from practicing one thing on purpose." },
+            { objective: "O2", q: "You want to \"get good.\" How do you turn that into a better goal?", options: ["Keep it as \"get good\"", "Make it \"play all weekend\"", "Make it small and measurable, like landing more shots in practice mode", "Make it \"win every match\""], answer: 2, why: "A small, measurable goal lets you see real progress." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Reviewing a match with AI",
           minutes: 5,
           goal: "Write notes from a match and use AI to find a pattern and suggest a drill.",
@@ -73,17 +107,21 @@ module.exports = {
             { title: "Keep it about the game", bullets: ["No other players' names or messages", "Learn, do not beat yourself up"] }
           ],
           tryIt: "Play one match, write three notes, and ask an AI assistant what it notices and what one drill it suggests. Add that drill to your plan.",
-          youCanNow: "review a match with notes and use AI to find a pattern and choose a drill."
+          youCanNow: "review a match with notes and use AI to find a pattern and choose a drill.",
+          quickCheck: [
+            { objective: "O3", q: "What is the purpose of reviewing a match?", options: ["To blame teammates", "To feel bad about losing", "To post other players' names", "To learn from what went well and what went wrong"], answer: 3, why: "Reviewing helps you learn; the goal is not to feel bad." },
+            { objective: "O3", q: "Your notes include a teammate's username and chat. What do you do before pasting them into AI?", options: ["Remove the username and chat and keep notes about the game", "Paste them all", "Add their real name too", "Skip writing notes"], answer: 0, why: "Keep notes about the game, not about other people." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Practicing smarter with AI",
         questions: [
-          { q: "Which is an example of AI inside a game?", options: ["The power cord", "Computer-controlled characters you play against", "The game's box", "Your headset"], answer: 1, why: "Computer-controlled characters often use AI." },
-          { q: "Which is the best practice goal?", options: ["\"Get good\"", "\"Play all night\"", "\"Call out enemy positions every round this week\"", "\"Win everything\""], answer: 2, why: "It is small and measurable." },
-          { q: "What should you tell the AI to get a useful practice plan?", options: ["Your game, goal, level and real free time", "Your password", "Only the word \"plan\"", "Your home address"], answer: 0, why: "Those details let it build a plan that fits you." },
-          { q: "Your AI plan takes 3 hours every school night. What do you do?", options: ["Skip homework", "Stay up late", "Ask the AI to make it shorter and fit around school and sleep", "Follow it anyway"], answer: 2, why: "A plan you can keep puts school and sleep first." },
-          { q: "What should you leave out of match notes you give an AI?", options: ["When a mistake happened", "What went well", "Other players' usernames and private messages", "The name of the game"], answer: 2, why: "Keep notes about the game, not about other people's personal details." }
+          { objective: "O1", q: "Which is an example of AI inside a game?", options: ["The power cord", "Computer-controlled characters you play against", "The game's box", "Your headset"], answer: 1, why: "Computer-controlled characters often use AI." },
+          { objective: "O2", q: "Which is the best practice goal?", options: ["\"Get good\"", "\"Play all night\"", "\"Call out enemy positions every round this week\"", "\"Win everything\""], answer: 2, why: "It is small and measurable." },
+          { objective: "O2", q: "What should you tell the AI to get a useful practice plan?", options: ["Your game, goal, level and real free time", "Your password", "Only the word \"plan\"", "Your home address"], answer: 0, why: "Those details let it build a plan that fits you." },
+          { objective: "O2", q: "Your AI plan takes 3 hours every school night. What do you do?", options: ["Skip homework", "Stay up late", "Ask the AI to make it shorter and fit around school and sleep", "Follow it anyway"], answer: 2, why: "A plan you can keep puts school and sleep first." },
+          { objective: "O3", q: "What should you leave out of match notes you give an AI?", options: ["When a mistake happened", "What went well", "Other players' usernames and private messages", "The name of the game"], answer: 2, why: "Keep notes about the game, not about other people's personal details." }
         ]
       }
     },
@@ -91,6 +129,7 @@ module.exports = {
       name: "Chapter 2: Teams, safety and esports futures",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Talking well with your team",
           minutes: 5,
           goal: "Use AI to help write short team callouts and a clear club or team message.",
@@ -107,9 +146,14 @@ module.exports = {
             { title: "Stay positive", bullets: ["Focus on the next play", "No blame", "Make it sound like you"] }
           ],
           tryIt: "Ask an AI assistant to help you make a list of five callouts for your game. Then have it draft a short message to your team or club about your next practice, and rewrite it in your own voice.",
-          youCanNow: "create clear team callouts and a friendly team message with AI's help."
+          youCanNow: "create clear team callouts and a friendly team message with AI's help.",
+          quickCheck: [
+            { objective: "O4", q: "What is a callout?", options: ["A long speech after the match", "An angry message", "A short phrase that tells teammates what is happening", "A cheat code"], answer: 2, why: "Callouts are short words the team agrees on, like \"two left\"." },
+            { objective: "O4", q: "AI drafted your club message, but it sounds stiff. What do you do?", options: ["Send it anyway", "Rewrite it so it sounds like you before sharing", "Make it much longer", "Add teammates' phone numbers"], answer: 1, why: "Read and change AI drafts so they sound like you." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Gaming safely and fairly",
           minutes: 5,
           goal: "Spot cheats, scams and unsafe chats, and know what to do.",
@@ -127,9 +171,14 @@ module.exports = {
           ],
           sources: [{ name: "ESRB: Ratings guide", url: "https://www.esrb.org/ratings-guide/" }],
           tryIt: "Open the settings of a game or platform you use and find where to block and report a player. Then look up the age rating of your favorite game on the ESRB website.",
-          youCanNow: "spot cheats, account scams and unsafe chats, and know how to block, report and get help."
+          youCanNow: "spot cheats, account scams and unsafe chats, and know how to block, report and get help.",
+          quickCheck: [
+            { objective: "O5", q: "What usually happens on sites that promise free game currency or skins?", options: ["You get free items safely", "Your game runs faster", "Nothing at all", "They often steal accounts or install harmful software"], answer: 3, why: "Free-currency and cheat sites often steal accounts or install harmful software." },
+            { objective: "O5", q: "An online player keeps asking for your photo and says to keep it secret. What do you do?", options: ["Send one photo", "Block, report and tell a parent, guardian or trusted adult", "Keep the secret", "Share your school instead"], answer: 1, why: "Pressure and secrets are warning signs; block, report and tell a trusted adult." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Esports careers and putting it all together",
           minutes: 6,
           goal: "Explore jobs around esports and complete your practice plan and match review.",
@@ -146,17 +195,21 @@ module.exports = {
             { title: "Your final task", bullets: ["One goal and a one-week plan", "One match reviewed with three notes", "One drill and a team message"] }
           ],
           tryIt: "Final task: build a one-week practice plan with AI that fits around school and sleep, review one match with three notes, ask the AI for a pattern and one drill, and write a short team or club message about what you will work on next.",
-          youCanNow: "use AI as a practice coach, game safely and fairly, and name esports jobs beyond being a pro player."
+          youCanNow: "use AI as a practice coach, game safely and fairly, and name esports jobs beyond being a pro player.",
+          quickCheck: [
+            { objective: "O6", q: "Which of these is an esports job besides pro player?", options: ["Team manager", "Aimbot seller", "Account buyer", "Free skin giver"], answer: 0, why: "Esports needs coaches, managers, shoutcasters, editors, designers and event organizers." },
+            { objective: "O6", q: "AI lists esports jobs and the skills they need. What do you do next?", options: ["Trust every detail", "Pick a job at random", "Ignore the list", "Check one job with a school counselor or a real job listing"], answer: 3, why: "AI can be out of date, so check with a counselor or a real listing." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Teams, safety and esports futures",
         questions: [
-          { q: "What makes a good callout?", options: ["Long and detailed", "Short, calm and agreed by the team", "Loud and angry", "Different every time"], answer: 1, why: "Short agreed callouts are fast and clear." },
-          { q: "A website offers free game currency if you enter your login. What do you do?", options: ["Enter it quickly", "Share the link with friends", "Give them your phone code", "Do not enter it; it is likely a scam"], answer: 3, why: "Free-currency sites often steal accounts." },
-          { q: "Someone you only know online asks what school you go to. What do you do?", options: ["Tell them", "Send a photo of your uniform", "Do not share it; block and tell a trusted adult if they pressure you", "Give your address instead"], answer: 2, why: "Keep personal details private online." },
-          { q: "An ESRB rating of M means a game is generally for ages:", options: ["17 and up", "6 and up", "10 and up", "Everyone"], answer: 0, why: "M (Mature) is generally for 17 and up." },
-          { q: "Which is an esports job besides pro player?", options: ["Shoutcaster", "Aimbot maker", "Account seller", "Cheat tester"], answer: 0, why: "Shoutcasters commentate matches; the others break rules." }
+          { objective: "O4", q: "What makes a good callout?", options: ["Long and detailed", "Short, calm and agreed by the team", "Loud and angry", "Different every time"], answer: 1, why: "Short agreed callouts are fast and clear." },
+          { objective: "O5", q: "A website offers free game currency if you enter your login. What do you do?", options: ["Enter it quickly", "Share the link with friends", "Give them your phone code", "Do not enter it; it is likely a scam"], answer: 3, why: "Free-currency sites often steal accounts." },
+          { objective: "O5", q: "Someone you only know online asks what school you go to. What do you do?", options: ["Tell them", "Send a photo of your uniform", "Do not share it; block and tell a trusted adult if they pressure you", "Give your address instead"], answer: 2, why: "Keep personal details private online." },
+          { objective: "O5", q: "An ESRB rating of M means a game is generally for ages:", options: ["17 and up", "6 and up", "10 and up", "Everyone"], answer: 0, why: "M (Mature) is generally for 17 and up." },
+          { objective: "O6", q: "Which is an esports job besides pro player?", options: ["Shoutcaster", "Aimbot maker", "Account seller", "Cheat tester"], answer: 0, why: "Shoutcasters commentate matches; the others break rules." }
         ]
       }
     }
@@ -164,26 +217,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI for Gaming and Esports",
     questions: [
-      { q: "Matchmaking in a game is:", options: ["A way to buy skins", "The system that picks who you play with or against", "A cheat", "A type of controller"], answer: 1, why: "Matchmaking pairs players, often by skill." },
-      { q: "What can an AI assistant NOT do for your gaming?", options: ["Help plan practice", "Explain strategy ideas", "See your screen and play for you", "Find patterns in your notes"], answer: 2, why: "A chat assistant helps you think; it does not play for you." },
-      { q: "Why check AI strategy tips against official game notes?", options: ["AI may not know the latest patch", "AI is always right", "Official notes are illegal", "It is a school rule"], answer: 0, why: "Games change with patches and AI can be out of date." },
-      { q: "A measurable goal is one you can:", options: ["Never finish", "Only feel", "Check with a number or a yes or no", "Forget"], answer: 2, why: "Measurable means you can check it." },
-      { q: "Which belongs in your practice plan first?", options: ["Late-night sessions", "School, homework and sleep", "Buying new gear", "Playing other games"], answer: 1, why: "A good plan fits around school and rest." },
-      { q: "A drill is:", options: ["A short exercise that practices one skill", "A cheat code", "A team name", "A game rating"], answer: 0, why: "Drills practice one skill at a time." },
-      { q: "Your plan feels like too much. What do you do?", options: ["Quit gaming", "Ask the AI to make it shorter", "Skip sleep", "Ignore it"], answer: 1, why: "Follow-up requests adjust the plan." },
-      { q: "Which three notes should you write after a match?", options: ["Score, weather, snack", "Other players' names and messages", "Something good, a mistake, and when it happened", "Nothing"], answer: 2, why: "These notes help you learn from the match." },
-      { q: "Why give the AI notes from several matches?", options: ["So it can spot patterns that repeat", "To make it slower", "So it can log in for you", "It needs your password"], answer: 0, why: "Patterns show up across several matches." },
-      { q: "What should you do with the drill the AI suggests?", options: ["Ignore it", "Post it publicly", "Delete your notes", "Add it to your practice plan"], answer: 3, why: "A drill helps only if you practice it." },
-      { q: "A callout is:", options: ["A short phrase telling teammates what is happening", "A cheat", "A ban", "A rating"], answer: 0, why: "Callouts help teams talk fast." },
-      { q: "A teammate makes a mistake. The best response is:", options: ["Blame them in chat", "Leave the match", "Focus on the next play", "Report them"], answer: 2, why: "Positive teams play better." },
-      { q: "Before sharing an AI-drafted club message, you should:", options: ["Send it unread", "Read it and make it sound like you", "Add your password", "Make it longer"], answer: 1, why: "You are responsible for what you send." },
-      { q: "Using an aimbot can:", options: ["Get your account banned", "Help you learn faster", "Raise your age rating", "Make you a coach"], answer: 0, why: "Cheats break rules and can lead to a ban." },
-      { q: "Someone asks for the code that was just sent to your phone. You:", options: ["Read it to them", "Never share it", "Post it in chat", "Send it to your team"], answer: 1, why: "That code protects your account." },
-      { q: "A player online makes you uncomfortable. What do you do?", options: ["Keep chatting", "Give them your number", "Block, report and tell a trusted adult", "Send a photo"], answer: 2, why: "Blocking, reporting and telling an adult keeps you safe." },
-      { q: "ESRB T (Teen) is generally for ages:", options: ["3 and up", "13 and up", "18 and up only", "Under 10"], answer: 1, why: "T is generally appropriate for 13 and up." },
-      { q: "Before signing up for a new gaming or AI app, a teen should:", options: ["Use a fake birthday", "Skip the terms", "Share a parent's password", "Check the minimum age and involve a parent or guardian"], answer: 3, why: "Age limits and parent involvement keep you safe and within the rules." },
-      { q: "A shoutcaster:", options: ["Commentates esports matches", "Makes cheats", "Bans players", "Rates games"], answer: 0, why: "Shoutcasters are the voices of esports broadcasts." },
-      { q: "AI lists esports jobs for you. What next?", options: ["Believe every detail", "Quit school", "Check with a counselor or a real job listing", "Pay for a course right away"], answer: 2, why: "AI can be out of date; check with real sources." }
+      { objective: "O1", q: "Matchmaking in a game is:", options: ["A way to buy skins", "The system that picks who you play with or against", "A cheat", "A type of controller"], answer: 1, why: "Matchmaking pairs players, often by skill." },
+      { objective: "O1", q: "What can an AI assistant NOT do for your gaming?", options: ["Help plan practice", "Explain strategy ideas", "See your screen and play for you", "Find patterns in your notes"], answer: 2, why: "A chat assistant helps you think; it does not play for you." },
+      { objective: "O1", q: "Why check AI strategy tips against official game notes?", options: ["AI may not know the latest patch", "AI is always right", "Official notes are illegal", "It is a school rule"], answer: 0, why: "Games change with patches and AI can be out of date." },
+      { objective: "O2", q: "A measurable goal is one you can:", options: ["Never finish", "Only feel", "Check with a number or a yes or no", "Forget"], answer: 2, why: "Measurable means you can check it." },
+      { objective: "O2", q: "Which belongs in your practice plan first?", options: ["Late-night sessions", "School, homework and sleep", "Buying new gear", "Playing other games"], answer: 1, why: "A good plan fits around school and rest." },
+      { objective: "O2", q: "A drill is:", options: ["A short exercise that practices one skill", "A cheat code", "A team name", "A game rating"], answer: 0, why: "Drills practice one skill at a time." },
+      { objective: "O2", q: "Your plan feels like too much. What do you do?", options: ["Quit gaming", "Ask the AI to make it shorter", "Skip sleep", "Ignore it"], answer: 1, why: "Follow-up requests adjust the plan." },
+      { objective: "O3", q: "Which three notes should you write after a match?", options: ["Score, weather, snack", "Other players' names and messages", "Something good, a mistake, and when it happened", "Nothing"], answer: 2, why: "These notes help you learn from the match." },
+      { objective: "O3", q: "Why give the AI notes from several matches?", options: ["So it can spot patterns that repeat", "To make it slower", "So it can log in for you", "It needs your password"], answer: 0, why: "Patterns show up across several matches." },
+      { objective: "O3", q: "What should you do with the drill the AI suggests?", options: ["Ignore it", "Post it publicly", "Delete your notes", "Add it to your practice plan"], answer: 3, why: "A drill helps only if you practice it." },
+      { objective: "O4", q: "A callout is:", options: ["A short phrase telling teammates what is happening", "A cheat", "A ban", "A rating"], answer: 0, why: "Callouts help teams talk fast." },
+      { objective: "O4", q: "A teammate makes a mistake. The best response is:", options: ["Blame them in chat", "Leave the match", "Focus on the next play", "Report them"], answer: 2, why: "Positive teams play better." },
+      { objective: "O4", q: "Before sharing an AI-drafted club message, you should:", options: ["Send it unread", "Read it and make it sound like you", "Add your password", "Make it longer"], answer: 1, why: "You are responsible for what you send." },
+      { objective: "O5", q: "Using an aimbot can:", options: ["Get your account banned", "Help you learn faster", "Raise your age rating", "Make you a coach"], answer: 0, why: "Cheats break rules and can lead to a ban." },
+      { objective: "O5", q: "Someone asks for the code that was just sent to your phone. You:", options: ["Read it to them", "Never share it", "Post it in chat", "Send it to your team"], answer: 1, why: "That code protects your account." },
+      { objective: "O5", q: "A player online makes you uncomfortable. What do you do?", options: ["Keep chatting", "Give them your number", "Block, report and tell a trusted adult", "Send a photo"], answer: 2, why: "Blocking, reporting and telling an adult keeps you safe." },
+      { objective: "O5", q: "ESRB T (Teen) is generally for ages:", options: ["3 and up", "13 and up", "18 and up only", "Under 10"], answer: 1, why: "T is generally appropriate for 13 and up." },
+      { objective: "O5", q: "Before signing up for a new gaming or AI app, a teen should:", options: ["Use a fake birthday", "Skip the terms", "Share a parent's password", "Check the minimum age and involve a parent or guardian"], answer: 3, why: "Age limits and parent involvement keep you safe and within the rules." },
+      { objective: "O6", q: "A shoutcaster:", options: ["Commentates esports matches", "Makes cheats", "Bans players", "Rates games"], answer: 0, why: "Shoutcasters are the voices of esports broadcasts." },
+      { objective: "O6", q: "AI lists esports jobs for you. What next?", options: ["Believe every detail", "Quit school", "Check with a counselor or a real job listing", "Pay for a course right away"], answer: 2, why: "AI can be out of date; check with real sources." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      3,
+      4,
+      7,
+      8,
+      10,
+      13,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Goal and plan",
+        objective: "O2",
+        notYet: "The goal is vague, like \"get good\", or there is no plan.",
+        meets: "One small, measurable goal and a one-week plan with short drills.",
+        exceeds: "The plan includes a way to track progress each day."
+      },
+      {
+        name: "Balanced with life",
+        objective: "O2",
+        notYet: "The plan cuts into school, homework or sleep.",
+        meets: "School, homework and sleep come first, and practice fits around them.",
+        exceeds: "Also includes breaks, stretching or eye rest."
+      },
+      {
+        name: "Match review",
+        objective: "O3",
+        notYet: "Fewer than three notes, or notes about other people.",
+        meets: "Three notes (good, mistake, when) and one AI-suggested drill added to the plan.",
+        exceeds: "Notes from two or more matches, with the pattern the AI found explained in the learner's words."
+      },
+      {
+        name: "Team message",
+        objective: "O4",
+        notYet: "The message is missing, long or unkind.",
+        meets: "A short, friendly message about what the team will work on, in the learner's own voice.",
+        exceeds: "Also includes an agreed callout list."
+      },
+      {
+        name: "Safe and fair",
+        objective: "O5",
+        notYet: "The plan or notes include private details, or mention cheats.",
+        meets: "No private details anywhere, and no cheats or unsafe tools.",
+        exceeds: "The learner can show where to block and report in their game."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who follow their practice plan for a full week and report progress on their goal (follow-up survey)",
+      "Learners who join or start a school or club esports team within 90 days",
+      "Learners who report blocking and reporting an unsafe player or avoiding a scam in the 30-day follow-up"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A game the learner already plays and is allowed to play, on any device",
+      "A free AI assistant the learner is allowed to use",
+      "Paper or a notes app for match notes and the practice plan",
+      "About 60 minutes in total, plus a week of practice for the plan"
+    ],
+    facilitatorNotes: [
+      "Run it with a school or club esports team so learners can plan and review together.",
+      "Check the age ratings of games used in your program and share them with families.",
+      "Make sure every practice plan leaves time for school, homework and sleep before you approve it.",
+      "Show learners where to block and report in the games your group plays, and name the trusted adult they can tell.",
+      "Score the final task with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

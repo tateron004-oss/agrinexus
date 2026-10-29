@@ -15,11 +15,35 @@ module.exports = {
     "You will use free AI assistants such as ChatGPT, Microsoft Copilot or Google Gemini, and official free resources from the U.S. Small Business Administration (SBA) and the IRS. Each lesson is about five minutes with a \"Try it now\" task, a knowledge check after each chapter and a 20-question quiz at the end. This course is not legal or tax advice; check official sources and free business counselors."
   ],
   finalTask: "Create a business launch packet for your idea: a one-page lean business plan covering all nine parts, notes from at least ten customer conversations, a list of the business structure, registrations, licenses and tax ID steps you will check (with the official websites), a funding and free-help list with at least three real local or national options, and a 90-day launch roadmap with dates.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "People coming home from prison and members of underserved communities who want to start a real business: a food business, cleaning or landscaping company, barbershop, online store, trucking company or community service.",
+    startingPoint: "Have a business idea, a skill or a side hustle, and can use a phone. Most have not written a business plan, talked to customers in a structured way, registered a business or looked for startup funding.",
+    gap: "Many new businesses fail from weak planning, untested ideas, missed registrations or funding scams. Learners need a launch-ready plan built with AI help and checked against official sources, so they can start legally, avoid scams and build income for their families.",
+    constraints: [
+      "Reading level: plain words and short sentences",
+      "Devices: a phone or a library or program computer",
+      "Rules, fees and licenses differ by state and city; learners confirm them on official sites (SBA, IRS, state and local)",
+      "Not legal or tax advice; learners use free business counselors and official sources",
+      "People on parole or probation check their conditions before choosing a business"
+    ],
+    prerequisites: "None. Learners new to AI tools can take \"Introduction to AI and Digital Confidence\" first."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given your money, hours, skills and limits", action: "compare two or three business paths and choose the one that fits", standard: "writing at least one reason for your choice" },
+    { id: "O2", condition: "With AI interviewing you", action: "write a one-page lean business plan that covers all nine parts", standard: "with every guessed number marked to check" },
+    { id: "O3", condition: "With a list of three customer questions", action: "interview possible customers and use what they say to change your plan", standard: "talking to at least ten people and changing at least one part of the plan" },
+    { id: "O4", condition: "For your business", action: "list the structure, name registration, licenses, permits and tax ID steps, with the official website for each", standard: "with every step linked to an official source" },
+    { id: "O5", condition: "Given your startup costs", action: "build a funding plan and a free-help list, and spot funding scams", standard: "with at least three real options and no up-front-fee offers" },
+    { id: "O6", condition: "Using your plan and checklist", action: "create a 90-day launch roadmap with dates for setup, testing and launch", standard: "with a date for every step and an accountability partner named" }
+  ],
   chapters: [
     {
       name: "Chapter 1: From idea to plan",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Choosing your business path",
           minutes: 5,
           goal: "Compare business paths and choose the one that fits your goals and situation.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Compare with AI", bullets: ["Startup cost and time to first sale", "Licenses and risks", "Verify with official sources"] }
           ],
           tryIt: "Write your money, hours, skills and limits. Ask AI to compare two or three ideas, then choose one path and write why.",
-          youCanNow: "compare business paths and choose one that fits your life."
+          youCanNow: "compare business paths and choose one that fits your life.",
+          quickCheck: [
+            { objective: "O1", q: "What is a franchise?", options: ["A business owned by its members", "A business you buy into that uses another company's brand and system", "A loan for small businesses", "A free business counselor"], answer: 1, why: "A franchise uses another company's brand and system for a fee." },
+            { objective: "O1", q: "You have little money and evenings free. AI suggests opening a restaurant. What would you do?", options: ["Open the restaurant because AI said so", "Give up on business", "Compare it with lower-cost paths that fit your money and hours", "Borrow as much as you can"], answer: 2, why: "Choose the path that fits your real money, time and skills." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Building a lean business plan with AI",
           minutes: 6,
           goal: "Write a one-page lean business plan covering all nine parts.",
@@ -56,9 +85,14 @@ module.exports = {
           ],
           sources: [{ name: "SBA: Write your business plan", url: "https://www.sba.gov/business-guide/plan-your-business/write-your-business-plan" }],
           tryIt: "Fill out a one-page lean plan for your chosen business with AI interviewing you. Mark any part where you need to look up real numbers.",
-          youCanNow: "write a one-page lean business plan with AI help."
+          youCanNow: "write a one-page lean business plan with AI help.",
+          quickCheck: [
+            { objective: "O2", q: "What does \"revenue streams\" mean in a lean plan?", options: ["How the business makes money", "Who your customers are", "How you reach customers", "Your business name"], answer: 0, why: "Revenue streams are the ways money comes in." },
+            { objective: "O2", q: "AI fills in your monthly rent cost with a guess. What would you do?", options: ["Leave it; AI is usually right", "Delete the cost line", "Double the number to be safe", "Mark it and look up the real price"], answer: 3, why: "Guessed numbers must be checked against real prices." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Testing the idea with real customers",
           minutes: 5,
           goal: "Talk to ten possible customers and use what they say to improve the plan.",
@@ -75,17 +109,21 @@ module.exports = {
             { title: "Learn and adjust", bullets: ["AI finds patterns in notes", "Remove names first", "Update your plan"] }
           ],
           tryIt: "Talk to at least five possible customers this week using your three questions. Have AI summarize the patterns and change one part of your lean plan.",
-          youCanNow: "test a business idea with real customers and improve the plan."
+          youCanNow: "test a business idea with real customers and improve the plan.",
+          quickCheck: [
+            { objective: "O3", q: "What is the best question for a customer interview?", options: ["\"Would you buy my great product?\"", "\"How do you handle this problem now?\"", "\"Do you like my logo?\"", "\"Can you lend me money?\""], answer: 1, why: "Asking about their problem and what they do now gives honest evidence." },
+            { objective: "O3", q: "Eight of ten people say they would never pay for your service. What would you do?", options: ["Ignore them and launch anyway", "Ask AI to say they are wrong", "Stop talking to customers", "Change the plan, such as the price, the service or the customer"], answer: 3, why: "Customer evidence is meant to change the plan before you spend money." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: From idea to plan",
         questions: [
-          { q: "What is a cooperative?", options: ["A government office", "A loan", "A business owned and run by its members", "A type of license"], answer: 2, why: "Members own and run cooperatives." },
-          { q: "AI says your food business needs no permits. What should you do?", options: ["Verify with official city, county or state sources", "Trust it and start", "Ask a friend only", "Ignore permits"], answer: 0, why: "Licensing rules must be checked with official sources." },
-          { q: "How many parts does the SBA's lean startup plan have?", options: ["Two", "Fifty", "One", "Nine"], answer: 3, why: "The SBA lists nine components." },
-          { q: "What is a value proposition?", options: ["Your bank balance", "Why customers should choose you", "Your tax ID", "Your address"], answer: 1, why: "It explains your unique value." },
-          { q: "Which is the strongest proof customers want your idea?", options: ["They say \"great idea\"", "They pre-order or sign up", "Your family likes it", "AI likes it"], answer: 1, why: "Action is stronger than compliments." }
+          { objective: "O1", q: "What is a cooperative?", options: ["A government office", "A loan", "A business owned and run by its members", "A type of license"], answer: 2, why: "Members own and run cooperatives." },
+          { objective: "O4", q: "AI says your food business needs no permits. What should you do?", options: ["Verify with official city, county or state sources", "Trust it and start", "Ask a friend only", "Ignore permits"], answer: 0, why: "Licensing rules must be checked with official sources." },
+          { objective: "O2", q: "How many parts does the SBA's lean startup plan have?", options: ["Two", "Fifty", "One", "Nine"], answer: 3, why: "The SBA lists nine components." },
+          { objective: "O2", q: "What is a value proposition?", options: ["Your bank balance", "Why customers should choose you", "Your tax ID", "Your address"], answer: 1, why: "It explains your unique value." },
+          { objective: "O3", q: "Which is the strongest proof customers want your idea?", options: ["They say \"great idea\"", "They pre-order or sign up", "Your family likes it", "AI likes it"], answer: 1, why: "Action is stronger than compliments." }
         ]
       }
     },
@@ -93,6 +131,7 @@ module.exports = {
       name: "Chapter 2: Setting up, funding and launching",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Business structure, registration and tax ID basics",
           minutes: 6,
           goal: "List the setup steps your business needs and the official places to check them.",
@@ -110,9 +149,14 @@ module.exports = {
           ],
           sources: [{ name: "IRS: Get an Employer Identification Number", url: "https://www.irs.gov/businesses/small-businesses-self-employed/get-an-employer-identification-number" }, { name: "SBA: Choose a business structure", url: "https://www.sba.gov/business-guide/launch-your-business/choose-business-structure" }],
           tryIt: "Make a setup checklist for your business: structure, name registration, licenses, permits and EIN. Next to each, write the official website where you will confirm it.",
-          youCanNow: "list the setup steps a business needs and where to confirm each one."
+          youCanNow: "list the setup steps a business needs and where to confirm each one.",
+          quickCheck: [
+            { objective: "O4", q: "What is an EIN?", options: ["A business license from the city", "A type of business loan", "A tax ID number for a business from the IRS", "A business bank account"], answer: 2, why: "An EIN is the IRS tax ID number for a business." },
+            { objective: "O4", q: "A friend says you do not need a permit for a home food business. What would you do?", options: ["Check with your city, county or state health office", "Trust your friend", "Ask AI and trust its answer", "Start selling and wait to see"], answer: 0, why: "Permit rules differ by place, so confirm with the official office." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Funding your start and finding free help",
           minutes: 6,
           goal: "Build a realistic funding plan and a list of free help, and avoid funding scams.",
@@ -130,9 +174,14 @@ module.exports = {
           ],
           sources: [{ name: "SBA: Microloans", url: "https://www.sba.gov/funding-programs/loans/microloans" }, { name: "SBA: Local assistance", url: "https://www.sba.gov/local-assistance" }],
           tryIt: "List your startup costs and cut at least one. Then find two real funding options and one free counseling center near you (or online) and write how to contact them.",
-          youCanNow: "make a realistic funding plan, find free help and spot funding scams."
+          youCanNow: "make a realistic funding plan, find free help and spot funding scams.",
+          quickCheck: [
+            { objective: "O5", q: "What is a CDFI?", options: ["A government tax form", "A lender focused on underserved communities", "A type of franchise", "A business license"], answer: 1, why: "CDFIs are lenders that focus on underserved communities." },
+            { objective: "O5", q: "An online ad promises a guaranteed grant if you pay a fee first. What would you do?", options: ["Pay the fee quickly before it is gone", "Send your bank details to check", "Treat it as a likely scam and do not pay", "Ask for a smaller fee"], answer: 2, why: "Real grants do not ask for an up-front fee to guarantee money." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Building your 90-day launch roadmap",
           minutes: 5,
           goal: "Turn your plan into a 90-day launch roadmap with dates.",
@@ -149,17 +198,21 @@ module.exports = {
             { title: "Stay on track", bullets: ["Weekly check-in", "An accountability partner", "Celebrate the first sale"] }
           ],
           tryIt: "Final task: build your 90-day launch roadmap with AI and adjust it. Add it to your lean plan, customer notes, setup checklist and funding and help list to complete your business launch packet.",
-          youCanNow: "turn a business idea into a launch-ready plan and a 90-day roadmap."
+          youCanNow: "turn a business idea into a launch-ready plan and a 90-day roadmap.",
+          quickCheck: [
+            { objective: "O6", q: "What is the focus of days 31 to 60 in a 90-day roadmap?", options: ["Retiring from the business", "Selling the business", "Only paperwork", "Testing with first customers and improving"], answer: 3, why: "The middle month is for testing and improving before full launch." },
+            { objective: "O6", q: "You keep missing roadmap dates. What would you do?", options: ["Ask an accountability partner to check your progress each week", "Delete the roadmap", "Remove all the dates", "Start a different business"], answer: 0, why: "An accountability partner helps you keep going and adjust the plan." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Setting up, funding and launching",
         questions: [
-          { q: "A website charges $250 to get you an EIN. According to the IRS:", options: ["That is the official fee", "EINs cost $1,000", "Only lawyers can get them", "EINs are free from the IRS; beware of sites that charge"], answer: 3, why: "The IRS says an EIN is free." },
-          { q: "What is the maximum SBA microloan, per the SBA?", options: ["$50,000", "$5 million", "$500", "There is no maximum"], answer: 0, why: "The SBA says microloans go up to $50,000." },
-          { q: "A caller promises you a guaranteed business grant if you pay a $300 fee first. This is:", options: ["A normal grant process", "An SBA requirement", "A common scam", "A tax"], answer: 2, why: "Real grants do not require upfront fees for a guarantee." },
-          { q: "Which offers free or low-cost business counseling, per the SBA?", options: ["Payday lenders", "Social media ads", "Pawn shops", "Small Business Development Centers and SCORE"], answer: 3, why: "They are SBA resource partners." },
-          { q: "In the 90-day roadmap, what happens in days 1-30?", options: ["Launch party only", "Nothing", "Setup: registrations, licenses, bank account, tools", "Selling the business"], answer: 2, why: "Setup comes first." }
+          { objective: "O4", q: "A website charges $250 to get you an EIN. According to the IRS:", options: ["That is the official fee", "EINs cost $1,000", "Only lawyers can get them", "EINs are free from the IRS; beware of sites that charge"], answer: 3, why: "The IRS says an EIN is free." },
+          { objective: "O5", q: "What is the maximum SBA microloan, per the SBA?", options: ["$50,000", "$5 million", "$500", "There is no maximum"], answer: 0, why: "The SBA says microloans go up to $50,000." },
+          { objective: "O5", q: "A caller promises you a guaranteed business grant if you pay a $300 fee first. This is:", options: ["A normal grant process", "An SBA requirement", "A common scam", "A tax"], answer: 2, why: "Real grants do not require upfront fees for a guarantee." },
+          { objective: "O5", q: "Which offers free or low-cost business counseling, per the SBA?", options: ["Payday lenders", "Social media ads", "Pawn shops", "Small Business Development Centers and SCORE"], answer: 3, why: "They are SBA resource partners." },
+          { objective: "O6", q: "In the 90-day roadmap, what happens in days 1-30?", options: ["Launch party only", "Nothing", "Setup: registrations, licenses, bank account, tools", "Selling the business"], answer: 2, why: "Setup comes first." }
         ]
       }
     }
@@ -167,26 +220,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI Entrepreneurship Pathways",
     questions: [
-      { q: "An entrepreneur is:", options: ["A government worker", "A person who starts and runs a business", "A bank", "A type of loan"], answer: 1, why: "Entrepreneurs start businesses." },
-      { q: "A franchise is:", options: ["A business you buy into that uses another company's brand and system", "A free grant", "A tax form", "A cooperative"], answer: 0, why: "Franchises use an existing brand." },
-      { q: "When choosing a path, people on supervision should also check:", options: ["Their favorite color", "Nothing else", "Their parole or probation conditions", "A competitor's prices only"], answer: 2, why: "Conditions can limit some business activities." },
-      { q: "Which kind of plan does the SBA describe as one page?", options: ["Lean startup plan", "Traditional plan", "Tax return", "Loan application"], answer: 0, why: "The lean plan is a one-page chart." },
-      { q: "\"Customer segments\" in a lean plan means:", options: ["Your costs", "Your partners", "Your bank", "Who your customers are"], answer: 3, why: "Segments are groups of customers." },
-      { q: "\"Channels\" in a lean plan means:", options: ["TV stations only", "How you reach customers", "Your suppliers", "Your taxes"], answer: 1, why: "Channels are how you reach and sell to customers." },
-      { q: "AI guesses your equipment will cost $200. You should:", options: ["Use the guess", "Check real prices before trusting it", "Double it without checking", "Skip the cost"], answer: 1, why: "Real quotes beat AI guesses." },
-      { q: "When interviewing customers, ask about:", options: ["Whether they love your idea", "Their passwords", "Their income tax", "Their problem and how they solve it now"], answer: 3, why: "Problem questions give honest answers." },
-      { q: "Before pasting customer notes into AI, remove:", options: ["Names and phone numbers", "The patterns", "Your questions", "Nothing"], answer: 0, why: "Protect customers' privacy." },
-      { q: "To validate an idea means to:", options: ["Get a parking ticket stamped", "Register with the state", "Prove with real evidence that customers want it", "Pay taxes"], answer: 2, why: "Validation is evidence from customers." },
-      { q: "A sole proprietorship is:", options: ["A large corporation", "A nonprofit", "A government agency", "A business owned by one person with no separate legal entity"], answer: 3, why: "It is the simplest structure." },
-      { q: "An LLC can help:", options: ["Avoid all taxes", "Skip licenses", "Separate business debts from personal ones", "Guarantee profit"], answer: 2, why: "Limited liability is the main feature." },
-      { q: "Where do you often register a business name?", options: ["A social media page", "Your state, often the Secretary of State, or your county", "A bank only", "Nowhere"], answer: 1, why: "Registration is handled by state or local offices." },
-      { q: "Rules and fees for business setup:", options: ["Differ by state and city, so confirm on official sites", "Are the same everywhere", "Never change", "Are set by AI"], answer: 0, why: "Local rules vary." },
-      { q: "The SBA says microloans are made through:", options: ["Payday lenders", "Social media", "Nonprofit, community-based intermediary lenders", "The IRS"], answer: 2, why: "SBA funds intermediaries who make the loans." },
-      { q: "A CDFI is:", options: ["A lender focused on underserved communities", "A tax form", "A business license", "A credit card"], answer: 0, why: "CDFIs serve people banks often miss." },
-      { q: "Most small businesses start with:", options: ["Large guaranteed grants", "Venture capital", "Lottery wins", "Savings, early sales and community help"], answer: 3, why: "Starting small with sales is most common." },
-      { q: "SCORE offers:", options: ["Payday loans", "Mentoring for small business owners", "Business licenses", "Tax IDs"], answer: 1, why: "SCORE is an SBA mentoring partner." },
-      { q: "Days 61-90 of the roadmap focus on:", options: ["Choosing a path", "Launch, first sales, feedback and money tracking", "Setup paperwork", "Closing the business"], answer: 1, why: "The last part is launch and learn." },
-      { q: "An accountability partner:", options: ["Does your work for you", "Lends you money", "Files your taxes", "Checks on your progress and encourages you"], answer: 3, why: "Accountability helps you follow through." }
+      { objective: "O1", q: "An entrepreneur is:", options: ["A government worker", "A person who starts and runs a business", "A bank", "A type of loan"], answer: 1, why: "Entrepreneurs start businesses." },
+      { objective: "O1", q: "A franchise is:", options: ["A business you buy into that uses another company's brand and system", "A free grant", "A tax form", "A cooperative"], answer: 0, why: "Franchises use an existing brand." },
+      { objective: "O1", q: "When choosing a path, people on supervision should also check:", options: ["Their favorite color", "Nothing else", "Their parole or probation conditions", "A competitor's prices only"], answer: 2, why: "Conditions can limit some business activities." },
+      { objective: "O2", q: "Which kind of plan does the SBA describe as one page?", options: ["Lean startup plan", "Traditional plan", "Tax return", "Loan application"], answer: 0, why: "The lean plan is a one-page chart." },
+      { objective: "O2", q: "\"Customer segments\" in a lean plan means:", options: ["Your costs", "Your partners", "Your bank", "Who your customers are"], answer: 3, why: "Segments are groups of customers." },
+      { objective: "O2", q: "\"Channels\" in a lean plan means:", options: ["TV stations only", "How you reach customers", "Your suppliers", "Your taxes"], answer: 1, why: "Channels are how you reach and sell to customers." },
+      { objective: "O2", q: "AI guesses your equipment will cost $200. You should:", options: ["Use the guess", "Check real prices before trusting it", "Double it without checking", "Skip the cost"], answer: 1, why: "Real quotes beat AI guesses." },
+      { objective: "O3", q: "When interviewing customers, ask about:", options: ["Whether they love your idea", "Their passwords", "Their income tax", "Their problem and how they solve it now"], answer: 3, why: "Problem questions give honest answers." },
+      { objective: "O3", q: "Before pasting customer notes into AI, remove:", options: ["Names and phone numbers", "The patterns", "Your questions", "Nothing"], answer: 0, why: "Protect customers' privacy." },
+      { objective: "O3", q: "To validate an idea means to:", options: ["Get a parking ticket stamped", "Register with the state", "Prove with real evidence that customers want it", "Pay taxes"], answer: 2, why: "Validation is evidence from customers." },
+      { objective: "O4", q: "A sole proprietorship is:", options: ["A large corporation", "A nonprofit", "A government agency", "A business owned by one person with no separate legal entity"], answer: 3, why: "It is the simplest structure." },
+      { objective: "O4", q: "An LLC can help:", options: ["Avoid all taxes", "Skip licenses", "Separate business debts from personal ones", "Guarantee profit"], answer: 2, why: "Limited liability is the main feature." },
+      { objective: "O4", q: "Where do you often register a business name?", options: ["A social media page", "Your state, often the Secretary of State, or your county", "A bank only", "Nowhere"], answer: 1, why: "Registration is handled by state or local offices." },
+      { objective: "O4", q: "Rules and fees for business setup:", options: ["Differ by state and city, so confirm on official sites", "Are the same everywhere", "Never change", "Are set by AI"], answer: 0, why: "Local rules vary." },
+      { objective: "O5", q: "The SBA says microloans are made through:", options: ["Payday lenders", "Social media", "Nonprofit, community-based intermediary lenders", "The IRS"], answer: 2, why: "SBA funds intermediaries who make the loans." },
+      { objective: "O5", q: "A CDFI is:", options: ["A lender focused on underserved communities", "A tax form", "A business license", "A credit card"], answer: 0, why: "CDFIs serve people banks often miss." },
+      { objective: "O5", q: "Most small businesses start with:", options: ["Large guaranteed grants", "Venture capital", "Lottery wins", "Savings, early sales and community help"], answer: 3, why: "Starting small with sales is most common." },
+      { objective: "O5", q: "SCORE offers:", options: ["Payday loans", "Mentoring for small business owners", "Business licenses", "Tax IDs"], answer: 1, why: "SCORE is an SBA mentoring partner." },
+      { objective: "O6", q: "Days 61-90 of the roadmap focus on:", options: ["Choosing a path", "Launch, first sales, feedback and money tracking", "Setup paperwork", "Closing the business"], answer: 1, why: "The last part is launch and learn." },
+      { objective: "O6", q: "An accountability partner:", options: ["Does your work for you", "Lends you money", "Files your taxes", "Checks on your progress and encourages you"], answer: 3, why: "Accountability helps you follow through." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      1,
+      2,
+      4,
+      6,
+      9,
+      11,
+      13,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Lean business plan",
+        objective: "O2",
+        notYet: "Parts are missing, or guessed numbers are treated as facts.",
+        meets: "One page covering all nine parts, with guessed numbers marked or checked.",
+        exceeds: "Real prices are filled in and the plan reflects customer feedback."
+      },
+      {
+        name: "Customer evidence",
+        objective: "O3",
+        notYet: "Fewer than ten conversations, or no change to the plan.",
+        meets: "Notes from at least ten conversations and at least one change to the plan.",
+        exceeds: "Has stronger proof such as pre-orders or sign-ups."
+      },
+      {
+        name: "Setup checklist",
+        objective: "O4",
+        notYet: "Steps are missing or have no official source.",
+        meets: "Structure, registrations, licenses, permits and EIN listed, each with an official website.",
+        exceeds: "Notes which steps cost money and which office to call with questions."
+      },
+      {
+        name: "Funding and free help",
+        objective: "O5",
+        notYet: "Fewer than three real options, or includes an up-front-fee offer.",
+        meets: "At least three real funding or free-help options with how to contact them.",
+        exceeds: "Startup costs are cut and an appointment with a counselor is booked."
+      },
+      {
+        name: "90-day roadmap",
+        objective: "O6",
+        notYet: "No dates, or steps are out of order.",
+        meets: "Setup, testing and launch steps with a date for each.",
+        exceeds: "Names an accountability partner and weekly check-ins."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who register a business or get an EIN within 90 days (follow-up survey)",
+      "Learners who make their first sale within 90 days",
+      "Learners who meet with SCORE, a Small Business Development Center or another free counselor within 30 days",
+      "Learners who report avoiding a funding or grant scam"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or computer with internet",
+      "A free AI assistant such as ChatGPT, Microsoft Copilot or Google Gemini",
+      "Official sites: sba.gov, irs.gov and your state and city business pages",
+      "Paper, a notebook or a free document for the launch packet",
+      "About 60 minutes for lessons and checks, plus a week to talk with customers"
+    ],
+    facilitatorNotes: [
+      "Give learners a week between Chapter 1 and Chapter 2 to hold their customer conversations.",
+      "Remind learners this is not legal or tax advice; connect them with SCORE, a Small Business Development Center or a local business center.",
+      "Warn about funding scams: real grants and EINs never require an up-front fee to a third party.",
+      "Remind learners on parole or probation to check their conditions before choosing a business.",
+      "Score the launch packet with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

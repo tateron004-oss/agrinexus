@@ -15,11 +15,35 @@ module.exports = {
     "Each lesson takes about five minutes. Do the \"Try it now\" tasks; they build your own scam safety card. A knowledge check closes each chapter and a 20-question quiz closes the course. Being fooled is not a sign of weakness: these criminals are professionals, and anyone can be targeted."
   ],
   finalTask: "Make your own scam safety card: write down three trusted phone numbers (a family member, your bank from the back of your card, and your doctor's office), your family code word, the Stop, Check, Call steps, and the places to report a scam. Then judge two sample messages using the four signs.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Older adults in the United States who get calls, texts and emails every day, some of them scams. Many live alone, have savings or benefits, and have grandchildren whose voices or photos are online.",
+    startingPoint: "Use a phone and often email. Many know scams exist but have not heard of AI voice copies, and may trust messages with good spelling or official logos.",
+    gap: "AI lets scammers copy a loved one's voice and write perfect fake messages, so old warning signs like bad spelling no longer work. Seniors need to spot the four signs, use Stop, Check, Call, protect their money and information, and know where to report, so they do not lose savings or feel ashamed to ask for help.",
+    constraints: [
+      "Reading level: plain words, short sentences and large, simple steps",
+      "Devices: any phone; a computer or tablet for email and pop-ups",
+      "Time: about 5 minutes per lesson at a relaxed pace",
+      "US agencies and hotline details can change; learners check the official websites",
+      "No real private numbers are used in practice; sample messages only"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given a call, text or email", action: "identify the four signs of a scam: pretending, a problem or prize, pressure and an unusual payment", standard: "naming every sign the message shows" },
+    { id: "O2", condition: "When a caller sounds like a loved one in an emergency", action: "hang up and check with your loved one or their parent on a number you already have", standard: "sending no money before you check" },
+    { id: "O3", condition: "Given an unexpected text, email, website or pop-up", action: "contact the company yourself by typing its real address or calling a number from your card or bill", standard: "without clicking the link or calling the number in the message" },
+    { id: "O4", condition: "Every time a message or call worries you", action: "use the Stop, Check, Call steps", standard: "using only a number you already trust" },
+    { id: "O5", condition: "When an unexpected caller or message asks for information or money", action: "refuse to give private numbers, passwords, codes or unusual payments, and call your bank if you already did", standard: "sharing nothing with an unexpected contact" },
+    { id: "O6", condition: "After a scam or attempted scam", action: "name where to report it and get help in the United States", standard: "naming at least two correct places" }
+  ],
   chapters: [
     {
       name: "Chapter 1: How scams work today",
       lessons: [
         {
+          objectives: ["O1"],
           title: "The four signs of a scam",
           minutes: 5,
           goal: "Name the four signs that a call, text or email is probably a scam.",
@@ -37,9 +61,14 @@ module.exports = {
           ],
           sources: [{ name: "FTC: How to avoid a scam", url: "https://consumer.ftc.gov/articles/how-avoid-scam" }],
           tryIt: "Take an index card or piece of paper. Write \"My scam safety card\" at the top, then write the four signs in your own words.",
-          youCanNow: "name the four signs of a scam."
+          youCanNow: "name the four signs of a scam.",
+          quickCheck: [
+            { objective: "O1", q: "Which is one of the four signs of a scam?", options: ["A message from a number you saved yourself", "A letter you were expecting", "They want payment by gift card or wire transfer", "A friend asking how you are"], answer: 2, why: "An unusual payment, like gift cards or wire transfers, is one of the four signs." },
+            { objective: "O1", q: "A caller says you owe taxes and must pay today or be arrested. How many signs do you see, and what do you do?", options: ["None; pay to be safe", "Several signs: a problem and pressure; slow down and check before doing anything", "One sign, so it must be real", "No signs because it is the government"], answer: 1, why: "A problem plus pressure to act now are scam signs; even one sign means slow down and check." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "AI voice copies and fake family emergencies",
           minutes: 5,
           goal: "Recognize a fake emergency call that may use an AI copy of a loved one's voice.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "What to do", bullets: ["Hang up, even if it sounds real", "Call them on the number you have", "Ask for your family code word"] }
           ],
           tryIt: "On your safety card, write the names and phone numbers of two family members you would call to check an emergency. Then call one of them and agree on a family code word.",
-          youCanNow: "recognize a fake family emergency call and check it safely."
+          youCanNow: "recognize a fake family emergency call and check it safely.",
+          quickCheck: [
+            { objective: "O2", q: "How can scammers copy a loved one's voice?", options: ["Only by meeting them in person", "They cannot", "By guessing", "With AI and a short recording, such as a video posted online"], answer: 3, why: "A short recording is enough for AI to copy a voice." },
+            { objective: "O2", q: "A crying voice like your granddaughter's says she needs bail and not to tell her mom. What do you do?", options: ["Hang up and call her or her parent on the number you already have", "Send the money quickly", "Keep it secret as she asks", "Give the lawyer your bank number"], answer: 0, why: "Even if the voice sounds real, call back on a number you trust before doing anything." }
+          ]
         },
         {
+          objectives: ["O3","O1"],
           title: "Fake messages, websites and pop-ups",
           minutes: 5,
           goal: "Spot a fake text, email, website or pop-up warning.",
@@ -76,17 +110,21 @@ module.exports = {
           ],
           sources: [{ name: "Medicare: Reporting Medicare fraud and abuse", url: "https://www.medicare.gov/basics/reporting-medicare-fraud-and-abuse" }],
           tryIt: "On your safety card, write your bank's phone number copied from the back of your bank card, and your doctor's office number from a bill or appointment card. These are your trusted numbers.",
-          youCanNow: "spot fake messages and pop-ups and reach companies safely using numbers you trust."
+          youCanNow: "spot fake messages and pop-ups and reach companies safely using numbers you trust.",
+          quickCheck: [
+            { objective: "O3", q: "Why is perfect spelling no longer proof a message is real?", options: ["Banks never check spelling", "AI helps scammers write messages with perfect spelling", "All emails are checked by the government", "Spelling does not matter in texts"], answer: 1, why: "AI writes clean, real-looking messages, so good spelling proves nothing." },
+            { objective: "O3", q: "An email says there is unusual activity on your bank account and to log in at a link. What do you do?", options: ["Click the link and log in", "Reply with your password", "Call the number in the email", "Close it and type your bank's real address yourself, or call the number on your card"], answer: 3, why: "Links and numbers in unexpected messages lead to the scammer; reach the bank yourself." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: How scams work today",
         questions: [
-          { q: "Which is one of the four signs of a scam?", options: ["The message has a clear date", "You know the sender well and expected it", "They pressure you to act right now", "It arrived by regular mail"], answer: 2, why: "Pressure to act now is a classic scam sign." },
-          { q: "Someone asks you to pay a \"government fee\" with gift cards. This is:", options: ["A scam sign", "Normal", "A tax rule", "A bank rule"], answer: 0, why: "Real offices do not take payment in gift cards." },
-          { q: "A caller sounds exactly like your grandson and begs for bail money. What do you do?", options: ["Send the money fast", "Wait for the courier", "Give them your card number", "Hang up and call your grandson or his parent on the number you have"], answer: 3, why: "AI can copy voices; checking on a known number is safe." },
-          { q: "An email has perfect spelling and your bank's logo. Does that prove it is real?", options: ["Yes, always", "No, AI makes fake messages look real", "Yes, if it is long", "Yes, if it has a link"], answer: 1, why: "Good spelling and logos are easy for scammers to copy." },
-          { q: "A pop-up says your computer has a virus and to call a number. You should:", options: ["Call the number", "Not call; close it, or turn off the device and ask someone you trust", "Pay to fix it", "Give them remote access"], answer: 1, why: "Pop-up virus warnings with phone numbers are a common scam." }
+          { objective: "O1", q: "Which is one of the four signs of a scam?", options: ["The message has a clear date", "You know the sender well and expected it", "They pressure you to act right now", "It arrived by regular mail"], answer: 2, why: "Pressure to act now is a classic scam sign." },
+          { objective: "O1", q: "Someone asks you to pay a \"government fee\" with gift cards. This is:", options: ["A scam sign", "Normal", "A tax rule", "A bank rule"], answer: 0, why: "Real offices do not take payment in gift cards." },
+          { objective: "O2", q: "A caller sounds exactly like your grandson and begs for bail money. What do you do?", options: ["Send the money fast", "Wait for the courier", "Give them your card number", "Hang up and call your grandson or his parent on the number you have"], answer: 3, why: "AI can copy voices; checking on a known number is safe." },
+          { objective: "O3", q: "An email has perfect spelling and your bank's logo. Does that prove it is real?", options: ["Yes, always", "No, AI makes fake messages look real", "Yes, if it is long", "Yes, if it has a link"], answer: 1, why: "Good spelling and logos are easy for scammers to copy." },
+          { objective: "O3", q: "A pop-up says your computer has a virus and to call a number. You should:", options: ["Call the number", "Not call; close it, or turn off the device and ask someone you trust", "Pay to fix it", "Give them remote access"], answer: 1, why: "Pop-up virus warnings with phone numbers are a common scam." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Chapter 2: Protecting yourself",
       lessons: [
         {
+          objectives: ["O4"],
           title: "The Stop, Check, Call habit",
           minutes: 4,
           goal: "Use three steps every time a message or call worries you.",
@@ -111,12 +150,17 @@ module.exports = {
             { title: "AI as a helper", bullets: ["Remove private details first", "Ask: \"Does this show signs of a scam?\"", "Your own steps still come first"] }
           ],
           tryIt: "Write Stop, Check, Call on your safety card. Then ask an AI assistant: \"Does this message show signs of a scam? Your package is held. Pay $1.99 at this link today or it will be returned.\" Compare its answer with the four signs.",
-          youCanNow: "use the Stop, Check, Call habit and ask AI for a careful second opinion."
+          youCanNow: "use the Stop, Check, Call habit and ask AI for a careful second opinion.",
+          quickCheck: [
+            { objective: "O4", q: "In Stop, Check, Call, what does Call mean?", options: ["Call the number in the message", "Call back the person who called you", "Contact the person or company using a number you already trust", "Call a friend to pay for you"], answer: 2, why: "Call means using a number from your safety card, bank card, a bill or a website you typed yourself." },
+            { objective: "O4", q: "A caller says he is from the police and you must not hang up. What can you do?", options: ["Hang up; it is fine to hang up on anyone", "Stay on the line no matter what", "Give him your address", "Pay him to end the call"], answer: 0, why: "Stop means you can hang up on anyone, even someone who says they are the police." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Protecting your money and your information",
           minutes: 5,
-          goal: "Know which details and payments to never give to an unexpected caller or message.",
+          goal: "List the details and payments you never give to an unexpected caller or message.",
           text: [
             "Never give these to anyone who contacts you unexpectedly: your Social Security or Medicare number, bank or card numbers, passwords, or a code that was texted to your phone. Your bank already knows your account number; a real bank will not ask for your password or texted code.",
             "Never pay a stranger with gift cards, wire transfers, cryptocurrency or a payment app, and never deposit a check and send part of the money back. The FTC says real government offices will never tell you to move money to \"protect\" it, withdraw cash, or buy gold.",
@@ -132,12 +176,17 @@ module.exports = {
           ],
           sources: [{ name: "FTC: How to avoid a scam", url: "https://consumer.ftc.gov/articles/how-avoid-scam" }],
           tryIt: "On your safety card, write: \"I never share my numbers, passwords or codes with anyone who contacts me first. I never pay strangers with gift cards, wires or crypto.\"",
-          youCanNow: "protect your private details and refuse risky payments."
+          youCanNow: "protect your private details and refuse risky payments.",
+          quickCheck: [
+            { objective: "O5", q: "What will a real bank never ask you for?", options: ["To visit a branch", "Your password or a code texted to your phone", "To read your statement", "To call the number on your card"], answer: 1, why: "Your bank already knows your account; it will not ask for your password or texted code." },
+            { objective: "O5", q: "You realize you gave your card number to a scammer an hour ago. What do you do first?", options: ["Wait to see what happens", "Call the scammer back", "Post about it online", "Call your bank right away using the number on your card"], answer: 3, why: "Acting quickly with your bank is the first step if you already shared money or information." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Reporting a scam and getting help",
           minutes: 5,
-          goal: "Know where to report a scam and get support.",
+          goal: "Name where to report a scam and where to get support.",
           text: [
             "Reporting helps stop scammers and can help you. In the United States, you can report scams to the Federal Trade Commission at ReportFraud.ftc.gov. Internet crimes can also be reported to the FBI's Internet Crime Complaint Center at ic3.gov.",
             "If you are 60 or older, the National Elder Fraud Hotline, run by the Department of Justice, is free: call 833-FRAUD-11 (833-372-8311). When we checked, it was open Monday to Friday, 10 am to 6 pm Eastern time, with help in English, Spanish and other languages. Check the hotline's website for current hours.",
@@ -152,17 +201,21 @@ module.exports = {
           ],
           sources: [{ name: "FTC: Report fraud", url: "https://reportfraud.ftc.gov/" }, { name: "DOJ Office for Victims of Crime: National Elder Fraud Hotline", url: "https://ovc.ojp.gov/program/stop-elder-fraud/providing-help-restoring-hope" }, { name: "FBI Internet Crime Complaint Center", url: "https://www.ic3.gov/" }, { name: "FTC: What to know about identity theft", url: "https://consumer.ftc.gov/articles/what-know-about-identity-theft" }, { name: "Medicare: Reporting fraud and abuse", url: "https://www.medicare.gov/basics/reporting-medicare-fraud-and-abuse" }],
           tryIt: "Final task: finish your scam safety card. Add the places to report a scam and the Elder Fraud Hotline number. Then judge these two messages with the four signs: (1) \"Hi Grandpa, new number, I'm in trouble, send $500 in gift cards\"; (2) a reminder from your pharmacy that your prescription is ready, with no link and no request for money.",
-          youCanNow: "spot a scam, check it safely, protect your money, and report it to the right place."
+          youCanNow: "spot a scam, check it safely, protect your money, and report it to the right place.",
+          quickCheck: [
+            { objective: "O6", q: "What is IdentityTheft.gov for?", options: ["A free recovery plan if someone uses your information", "Buying identity insurance", "Paying your taxes", "Reporting a lost phone"], answer: 0, why: "IdentityTheft.gov gives a free recovery plan when your information is used." },
+            { objective: "O6", q: "A company calls offering to get your lost money back for a fee. What is this?", options: ["A government service", "A normal refund", "Probably another scam", "A bank you can trust"], answer: 2, why: "Real reporting sites never ask you to pay to get your money back." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Protecting yourself",
         questions: [
-          { q: "What are the three steps of the safety habit?", options: ["Click, Pay, Forget", "Reply, Share, Send", "Wait, Hope, Pay", "Stop, Check, Call"], answer: 3, why: "Stop, Check, Call slows the scammer down." },
-          { q: "When you call to check, which number should you use?", options: ["One from your safety card, card or bill", "The one in the message", "One the caller gives you", "One from a pop-up"], answer: 0, why: "Only numbers you already trust are safe." },
-          { q: "A caller says to move your savings to a \"safe account\" to protect it. This is:", options: ["Good advice", "A bank rule", "A scam; real offices never ask this", "A tax requirement"], answer: 2, why: "The FTC says real offices never tell you to move money to protect it." },
-          { q: "Where can you report a scam to the FTC?", options: ["A pop-up", "The scammer's website", "A social media post", "ReportFraud.ftc.gov"], answer: 3, why: "ReportFraud.ftc.gov is the FTC's reporting site." },
-          { q: "Someone offers to recover your lost money for a fee. What is this?", options: ["A government program", "Normal help", "Probably another scam", "Free advice"], answer: 2, why: "Real reporting sites never charge to get money back." }
+          { objective: "O4", q: "What are the three steps of the safety habit?", options: ["Click, Pay, Forget", "Reply, Share, Send", "Wait, Hope, Pay", "Stop, Check, Call"], answer: 3, why: "Stop, Check, Call slows the scammer down." },
+          { objective: "O4", q: "When you call to check, which number should you use?", options: ["One from your safety card, card or bill", "The one in the message", "One the caller gives you", "One from a pop-up"], answer: 0, why: "Only numbers you already trust are safe." },
+          { objective: "O5", q: "A caller says to move your savings to a \"safe account\" to protect it. This is:", options: ["Good advice", "A bank rule", "A scam; real offices never ask this", "A tax requirement"], answer: 2, why: "The FTC says real offices never tell you to move money to protect it." },
+          { objective: "O6", q: "Where can you report a scam to the FTC?", options: ["A pop-up", "The scammer's website", "A social media post", "ReportFraud.ftc.gov"], answer: 3, why: "ReportFraud.ftc.gov is the FTC's reporting site." },
+          { objective: "O6", q: "Someone offers to recover your lost money for a fee. What is this?", options: ["A government program", "Normal help", "Probably another scam", "Free advice"], answer: 2, why: "Real reporting sites never charge to get money back." }
         ]
       }
     }
@@ -170,26 +223,97 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI Safety and Scam Awareness for Seniors",
     questions: [
-      { q: "Which US agency describes the four signs of a scam?", options: ["The weather service", "The Federal Trade Commission (FTC)", "The post office", "A phone company"], answer: 1, why: "The FTC protects consumers from scams." },
-      { q: "A message says you won a prize but must pay a fee first. This is:", options: ["A scam sign", "A normal prize", "A tax rule", "A bank rule"], answer: 0, why: "A prize that needs a fee is a common scam." },
-      { q: "\"Don't hang up and don't tell anyone\" is a sign of:", options: ["Pressure, a scam sign", "Good service", "A real emergency", "A doctor's call"], answer: 0, why: "Pressure and secrecy are scam signs." },
-      { q: "Which payment method is a red flag when a stranger asks for it?", options: ["Paying your own utility bill on its official site", "Gift cards", "Paying at the grocery checkout", "A check you mail to your landlord"], answer: 1, why: "Scammers ask for gift cards because they are hard to trace." },
-      { q: "What is voice cloning?", options: ["A singing lesson", "A phone repair", "Using AI to copy someone's voice", "A type of hearing aid"], answer: 2, why: "AI can copy a voice from a short recording." },
-      { q: "In a fake emergency call, a second person may pretend to be:", options: ["A chef", "Your neighbor's dog", "A weather reporter", "A lawyer or police officer"], answer: 3, why: "Scammers add fake officials to seem real." },
-      { q: "A family code word helps you:", options: ["Unlock your phone", "Pay bills", "Check who is really calling", "Reset your password"], answer: 2, why: "Only your real family knows it." },
-      { q: "Does perfect spelling prove a message is real?", options: ["No", "Yes", "Only on Sundays", "Only from banks"], answer: 0, why: "AI writes fake messages with perfect spelling." },
-      { q: "A text says your package is held; pay a small fee at a link. You should:", options: ["Click and pay", "Forward it to friends", "Reply with your card number", "Not click; check with the delivery company yourself"], answer: 3, why: "Links in unexpected messages lead to scammers." },
-      { q: "A pop-up says \"Virus! Call this number now.\" You:", options: ["Call it", "Do not call; close it or turn off the device", "Pay for repair", "Let them connect to your computer"], answer: 1, why: "Pop-up virus warnings are a common scam." },
-      { q: "According to Medicare, Medicare will never:", options: ["Mail you information", "Call to sell you anything or visit your home", "Pay for care", "Have a website"], answer: 1, why: "Medicare says it will not call to sell or visit your home." },
-      { q: "In Stop, Check, Call, \"Stop\" means:", options: ["Stop paying bills", "Stop using your phone forever", "Stop talking to family", "Do not click, pay or share"], answer: 3, why: "Stopping takes away the scammer's rush." },
-      { q: "Before pasting a message into AI for a second opinion, you should:", options: ["Remove private details", "Add your bank number", "Add your password", "Add your address"], answer: 0, why: "Private details never go into AI." },
-      { q: "An AI assistant's opinion on a message is:", options: ["A legal decision", "Always right", "A helper, not the final word", "A bank decision"], answer: 2, why: "AI can be wrong; your own steps come first." },
-      { q: "A real bank will never ask you for:", options: ["To call its number", "To visit a branch", "To read your statement", "Your password or texted code"], answer: 3, why: "Banks do not ask for passwords or codes." },
-      { q: "Someone asks you to deposit their check and send part back. This is:", options: ["A bank rule", "A normal favor", "A fake check scam", "A tax refund"], answer: 2, why: "The check bounces and you lose the money you sent." },
-      { q: "If you already sent money to a scammer, the first call is to:", options: ["The scammer", "Your bank, using the number on your card", "A pop-up number", "Nobody"], answer: 1, why: "Your bank may be able to stop or reverse the payment." },
-      { q: "The National Elder Fraud Hotline number is:", options: ["833-372-8311", "911", "411", "A number from a text message"], answer: 0, why: "833-FRAUD-11 (833-372-8311) is the DOJ's hotline." },
-      { q: "If someone uses your personal information, a free recovery plan is at:", options: ["IdentityTheft.gov", "A pop-up ad", "The scammer's site", "A social media page"], answer: 0, why: "IdentityTheft.gov is the FTC's recovery site." },
-      { q: "The FBI site for reporting internet crime is:", options: ["fbi-refund.win", "ic3.gov", "a text link", "a gift card site"], answer: 1, why: "IC3 is the FBI's Internet Crime Complaint Center." }
+      { objective: "O1", q: "Which US agency describes the four signs of a scam?", options: ["The weather service", "The Federal Trade Commission (FTC)", "The post office", "A phone company"], answer: 1, why: "The FTC protects consumers from scams." },
+      { objective: "O1", q: "A message says you won a prize but must pay a fee first. This is:", options: ["A scam sign", "A normal prize", "A tax rule", "A bank rule"], answer: 0, why: "A prize that needs a fee is a common scam." },
+      { objective: "O1", q: "\"Don't hang up and don't tell anyone\" is a sign of:", options: ["Pressure, a scam sign", "Good service", "A real emergency", "A doctor's call"], answer: 0, why: "Pressure and secrecy are scam signs." },
+      { objective: "O1", q: "Which payment method is a red flag when a stranger asks for it?", options: ["Paying your own utility bill on its official site", "Gift cards", "Paying at the grocery checkout", "A check you mail to your landlord"], answer: 1, why: "Scammers ask for gift cards because they are hard to trace." },
+      { objective: "O2", q: "What is voice cloning?", options: ["A singing lesson", "A phone repair", "Using AI to copy someone's voice", "A type of hearing aid"], answer: 2, why: "AI can copy a voice from a short recording." },
+      { objective: "O2", q: "In a fake emergency call, a second person may pretend to be:", options: ["A chef", "Your neighbor's dog", "A weather reporter", "A lawyer or police officer"], answer: 3, why: "Scammers add fake officials to seem real." },
+      { objective: "O2", q: "A family code word helps you:", options: ["Unlock your phone", "Pay bills", "Check who is really calling", "Reset your password"], answer: 2, why: "Only your real family knows it." },
+      { objective: "O3", q: "Does perfect spelling prove a message is real?", options: ["No", "Yes", "Only on Sundays", "Only from banks"], answer: 0, why: "AI writes fake messages with perfect spelling." },
+      { objective: "O3", q: "A text says your package is held; pay a small fee at a link. You should:", options: ["Click and pay", "Forward it to friends", "Reply with your card number", "Not click; check with the delivery company yourself"], answer: 3, why: "Links in unexpected messages lead to scammers." },
+      { objective: "O3", q: "A pop-up says \"Virus! Call this number now.\" You:", options: ["Call it", "Do not call; close it or turn off the device", "Pay for repair", "Let them connect to your computer"], answer: 1, why: "Pop-up virus warnings are a common scam." },
+      { objective: "O3", q: "According to Medicare, Medicare will never:", options: ["Mail you information", "Call to sell you anything or visit your home", "Pay for care", "Have a website"], answer: 1, why: "Medicare says it will not call to sell or visit your home." },
+      { objective: "O4", q: "In Stop, Check, Call, \"Stop\" means:", options: ["Stop paying bills", "Stop using your phone forever", "Stop talking to family", "Do not click, pay or share"], answer: 3, why: "Stopping takes away the scammer's rush." },
+      { objective: "O4", q: "Before pasting a message into AI for a second opinion, you should:", options: ["Remove private details", "Add your bank number", "Add your password", "Add your address"], answer: 0, why: "Private details never go into AI." },
+      { objective: "O4", q: "An AI assistant's opinion on a message is:", options: ["A legal decision", "Always right", "A helper, not the final word", "A bank decision"], answer: 2, why: "AI can be wrong; your own steps come first." },
+      { objective: "O5", q: "A real bank will never ask you for:", options: ["To call its number", "To visit a branch", "To read your statement", "Your password or texted code"], answer: 3, why: "Banks do not ask for passwords or codes." },
+      { objective: "O5", q: "Someone asks you to deposit their check and send part back. This is:", options: ["A bank rule", "A normal favor", "A fake check scam", "A tax refund"], answer: 2, why: "The check bounces and you lose the money you sent." },
+      { objective: "O5", q: "If you already sent money to a scammer, the first call is to:", options: ["The scammer", "Your bank, using the number on your card", "A pop-up number", "Nobody"], answer: 1, why: "Your bank may be able to stop or reverse the payment." },
+      { objective: "O6", q: "The National Elder Fraud Hotline number is:", options: ["833-372-8311", "911", "411", "A number from a text message"], answer: 0, why: "833-FRAUD-11 (833-372-8311) is the DOJ's hotline." },
+      { objective: "O6", q: "If someone uses your personal information, a free recovery plan is at:", options: ["IdentityTheft.gov", "A pop-up ad", "The scammer's site", "A social media page"], answer: 0, why: "IdentityTheft.gov is the FTC's recovery site." },
+      { objective: "O6", q: "The FBI site for reporting internet crime is:", options: ["fbi-refund.win", "ic3.gov", "a text link", "a gift card site"], answer: 1, why: "IC3 is the FBI's Internet Crime Complaint Center." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      3,
+      4,
+      8,
+      11,
+      14,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Trusted numbers and steps",
+        objective: "O4",
+        notYet: "Fewer than three trusted numbers, or a number copied from a message.",
+        meets: "Three trusted numbers (family, bank from the back of the card, doctor's office) and the Stop, Check, Call steps written down.",
+        exceeds: "Can explain where each number came from and why it can be trusted."
+      },
+      {
+        name: "Family code word",
+        objective: "O2",
+        notYet: "No family code word, or it is easy to guess or posted online.",
+        meets: "A family code word is written on the card and shared with family.",
+        exceeds: "Has practiced asking for it in a pretend emergency call."
+      },
+      {
+        name: "Places to report",
+        objective: "O6",
+        notYet: "No places to report, or wrong ones.",
+        meets: "At least two correct places, such as ReportFraud.ftc.gov and the Elder Fraud Hotline.",
+        exceeds: "Also lists IdentityTheft.gov and says to call the bank first if money was taken."
+      },
+      {
+        name: "Sample messages judged",
+        objective: "O1",
+        notYet: "Missed that a sample message was a scam.",
+        meets: "Judged both sample messages correctly and named the signs found.",
+        exceeds: "Said what they would do next, using Stop, Check, Call."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who keep their scam safety card by the phone at the 30-day follow-up",
+      "Learners who report spotting and avoiding a scam call, text or email within 30 days (follow-up survey)",
+      "Families who agree on a family code word"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone, and a computer or tablet if available",
+      "A blank card or paper and pen for the scam safety card",
+      "Two printed sample messages (one scam, one real) for the final task",
+      "About 60 minutes in total, in short, relaxed sessions: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Use made-up sample messages; never ask learners to share real account, Medicare or Social Security numbers.",
+      "Role-play a fake grandchild call so learners practice hanging up and calling back.",
+      "Tell learners that anyone can be fooled; being scammed is nothing to be ashamed of, and reporting helps.",
+      "Hotline hours and numbers can change; check the official websites before the session.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

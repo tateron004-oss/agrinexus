@@ -16,11 +16,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes. Choisissez au début un vrai changement qui vous tient à cœur et utilisez-le dans chaque tâche \"Essayez maintenant\". Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Écrivez un plan de changement d'une page pour un vrai changement que vous voulez conduire. Il doit couvrir ce qui change, pourquoi (en deux ou trois phrases qui parlent aux gens), qui est concerné et comment vous allez l'associer, quand chaque étape a lieu, comment vous saurez que cela marche, trois messages pour trois groupes différents, un premier succès dans le premier mois, et deux moyens de faire durer le changement.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des chefs d'équipe, des superviseurs, des propriétaires de petites entreprises, et des responsables d'associations et de communautés qui doivent conduire un vrai changement, comme un nouveau système, une nouvelle façon de travailler ou une nouvelle façon de servir les gens.",
+    startingPoint: "Ils savent quel changement ils veulent et peuvent l'expliquer à quelqu'un qui est déjà d'accord. La plupart ont vu des changements échouer, mais n'ont jamais écrit de plan de changement ni prévu comment associer les personnes concernées.",
+    gap: "Les changements échouent souvent parce que les gens ne voient pas pourquoi, qu'on ne leur a pas demandé leur avis, qu'ils en entendent parler une seule fois, ou qu'ils reprennent leurs vieilles habitudes après le lancement. Les responsables ont besoin d'une façon simple de comprendre la résistance, d'expliquer pourquoi changer, d'associer les gens, de planifier, de communiquer et de faire durer le changement.",
+    constraints: [
+      "Niveau de lecture : des mots simples et des phrases courtes",
+      "Temps : des leçons courtes qui s'insèrent dans une journée de travail",
+      "Appareils : un téléphone ou un ordinateur ; le papier suffit pour le plan",
+      "Le plan de changement doit tenir sur une page",
+      "Les faits et les histoires qui expliquent le changement doivent venir de l'apprenant, pas être inventés par l'IA"
+    ],
+    prerequisites: "Aucun. Le cours « Gérer une équipe » est un bon complément."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir d'un changement que vous voulez conduire", action: "lister qui est concerné, ce que chaque groupe peut perdre et gagner, et les raisons probables pour lesquelles il pourrait résister", standard: "en traitant chaque inquiétude comme une information à laquelle répondre" },
+    { id: "O2", condition: "À partir d'un vrai changement", action: "écrire une explication du changement qui dit le problème, ce qui ira mieux et ce qui se passe si on ne fait rien", standard: "en deux ou trois phrases avec un vrai fait ou une vraie histoire" },
+    { id: "O3", condition: "À partir des personnes touchées par un changement", action: "prévoir comment les associer tôt, par exemple avec des idées, un essai pilote ou des relais du changement", standard: "en disant ce qui est ouvert et ce qui ne l'est pas, et comment vous ferez un retour" },
+    { id: "O4", condition: "À partir d'un vrai changement", action: "écrire un plan de changement d'une page qui répond à quoi, pourquoi, qui, quand et comment vous saurez", standard: "avec un responsable pour chaque étape et deux ou trois indicateurs avec des dates de vérification" },
+    { id: "O5", condition: "Au moment d'annoncer un changement", action: "écrire des messages pour trois groupes différents et prévoir un premier succès", standard: "chaque message disant ce qui change, pourquoi, quand, l'aide reçue et à qui s'adresser" },
+    { id: "O6", condition: "Après le lancement du changement", action: "prévoir deux moyens de faire durer le changement", standard: "par exemple vérifier les indicateurs à des dates fixées et intégrer la nouvelle façon de faire aux listes de contrôle ou à la formation" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Comprendre le changement et embarquer les gens",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Pourquoi les gens résistent au changement",
           minutes: 5,
           goal: "Nommer les raisons probables pour lesquelles les gens vont résister à votre changement, afin de pouvoir y répondre.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "Faites d'abord la carte", bullets: ["Qui est concerné", "Ce que chaque groupe peut perdre et gagner"] }
           ],
           tryIt: "Choisissez un vrai changement que vous voulez conduire. Écrivez-le en une phrase. Puis listez trois groupes concernés et, pour chacun, une chose qu'il peut perdre et une chose qu'il peut gagner.",
-          youCanNow: "prévoir pourquoi les gens peuvent résister à un changement et faire la carte de ce que chaque groupe peut perdre et gagner."
+          youCanNow: "prévoir pourquoi les gens peuvent résister à un changement et faire la carte de ce que chaque groupe peut perdre et gagner.",
+          quickCheck: [
+            { objective: "O1", q: "Laquelle est une raison compréhensible de résister à un changement ?", options: ["Les gens veulent que l'équipe échoue", "On ne leur a pas demandé leur avis", "Ils n'aiment jamais rien", "Ils sont payés pour résister"], answer: 1, why: "Ne pas avoir été consulté est l'une des raisons fréquentes et compréhensibles de résister." },
+            { objective: "O1", q: "Avant d'annoncer un changement, que faites-vous d'abord ?", options: ["Envoyer un e-mail à tout le monde en même temps", "Attendre que les gens se plaignent", "Demander à l'IA d'écrire l'annonce", "Lister qui est concerné et ce que chaque groupe peut perdre et gagner"], answer: 3, why: "Cette liste vous dit quoi expliquer, qui associer et quel soutien donner." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Expliquer pourquoi changer",
           minutes: 5,
           goal: "Expliquer en quelques phrases pourquoi un changement est nécessaire, avec des mots qui comptent pour les personnes concernées.",
@@ -58,9 +87,14 @@ module.exports = {
             { title: "Soyez honnête", bullets: ["Dites ce qui sera difficile", "Dites comment vous allez aider"] }
           ],
           tryIt: "Écrivez les raisons de votre changement en quatre phrases : le problème d'aujourd'hui avec un fait, ce qui ira mieux, ce qui se passe si rien ne change, et une phrase honnête sur ce qui sera difficile. Lisez-les à voix haute. Est-ce que cela parlerait aux personnes concernées ?",
-          youCanNow: "écrire une explication courte et honnête du changement qui répond au pourquoi, et pas seulement au quoi."
+          youCanNow: "écrire une explication courte et honnête du changement qui répond au pourquoi, et pas seulement au quoi.",
+          quickCheck: [
+            { objective: "O2", q: "Quelle explication du changement est la plus forte ?", options: ["« Le mois dernier, nos formulaires papier ont perdu 12 commandes et trois clients sont partis. »", "« Nous devons nous moderniser. »", "« Tout le monde le fait. »", "« Le patron le veut. »"], answer: 0, why: "Un vrai fait et une vraie histoire touchent plus les gens qu'un slogan." },
+            { objective: "O2", q: "La nouvelle façon de faire prendra plus de temps au début. Que dites-vous ?", options: ["Le cacher jusqu'au lancement", "Dire que ce sera facile", "Le dire honnêtement et dire comment vous allez aider", "Rejeter la faute sur l'ancien système"], answer: 2, why: "Les gens font confiance à un responsable qui reconnaît les coûts." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Associer les personnes concernées",
           minutes: 5,
           goal: "Prévoir comment associer les personnes touchées par un changement avant que les décisions soient définitives.",
@@ -77,17 +111,21 @@ module.exports = {
             { title: "Dites clairement ce qui est ouvert", bullets: ["\"La date est fixée ; vous aidez à décider comment former\"", "Faites un retour sur ce que vous avez fait de leurs idées"] }
           ],
           tryIt: "Pour votre changement, écrivez ce qui est fixé et ce qui est ouvert. Puis nommez deux façons d'associer les gens et deux personnes à qui vous pourriez demander d'être des relais du changement.",
-          youCanNow: "associer honnêtement les personnes touchées par un changement et leur faire un retour sur leurs idées."
+          youCanNow: "associer honnêtement les personnes touchées par un changement et leur faire un retour sur leurs idées.",
+          quickCheck: [
+            { objective: "O3", q: "Pourquoi demander des idées une fois que tout est décidé se retourne-t-il contre vous ?", options: ["Cela prend trop de temps", "Cela sonne faux, et les gens le sentent", "Cela coûte de l'argent", "Les gens n'ont pas d'idées"], answer: 1, why: "Associez les gens quand le plan peut encore changer." },
+            { objective: "O3", q: "Vous avez recueilli des idées mais n'avez pas pu en utiliser certaines. Que faites-vous ?", options: ["Ne rien en dire", "Les utiliser quand même", "Arrêter de demander des idées", "Faire un retour sur ce que vous avez fait des idées, et pourquoi"], answer: 3, why: "Montrer ce que vous avez fait des idées garde la confiance, même quand vous n'avez pas pu les utiliser." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Comprendre le changement et embarquer les gens",
         questions: [
-          { q: "Pourquoi les gens résistent-ils souvent, même à un bon changement ?", options: ["Parce qu'ils sont paresseux", "Parce que changer, c'est perdre quelque chose de familier", "Parce que tout changement est mauvais", "Parce que les responsables ont toujours tort"], answer: 1, why: "Le changement apporte de la perte et de l'incertitude, même quand il aide." },
-          { q: "Un membre du personnel s'oppose fortement à votre plan. Quelle est la meilleure première réaction ?", options: ["Lui demander ce qui l'inquiète, car il voit peut-être un vrai problème", "Lui dire d'arrêter de se plaindre", "Le retirer de l'équipe", "L'ignorer"], answer: 0, why: "La résistance est une information ; posez des questions avant de discuter." },
-          { q: "À quelles trois questions répond une bonne explication du changement ?", options: ["Qui, où, combien", "Qui est responsable, quand, pourquoi pas", "Combien cela va me coûter, qui a décidé, est-ce que je peux m'en passer", "Quel est le problème, qu'est-ce qui ira mieux, et si on ne fait rien"], answer: 3, why: "Elles montrent pourquoi le changement compte." },
-          { q: "Quand faut-il associer les gens à un changement ?", options: ["Une fois que tout est décidé", "Jamais", "Tôt, quand le plan peut encore changer", "Seulement s'ils se plaignent"], answer: 2, why: "Un avis demandé tôt est un vrai avis, et il crée du soutien." },
-          { q: "Qu'est-ce qu'un projet pilote ?", options: ["Un petit test du changement avec quelques personnes d'abord", "Le chef du responsable", "Une date limite finale", "Un type de vidéo de formation"], answer: 0, why: "Les projets pilotes permettent d'apprendre et de corriger les problèmes avant que tout le monde change." }
+          { objective: "O1", q: "Pourquoi les gens résistent-ils souvent, même à un bon changement ?", options: ["Parce qu'ils sont paresseux", "Parce que changer, c'est perdre quelque chose de familier", "Parce que tout changement est mauvais", "Parce que les responsables ont toujours tort"], answer: 1, why: "Le changement apporte de la perte et de l'incertitude, même quand il aide." },
+          { objective: "O1", q: "Un membre du personnel s'oppose fortement à votre plan. Quelle est la meilleure première réaction ?", options: ["Lui demander ce qui l'inquiète, car il voit peut-être un vrai problème", "Lui dire d'arrêter de se plaindre", "Le retirer de l'équipe", "L'ignorer"], answer: 0, why: "La résistance est une information ; posez des questions avant de discuter." },
+          { objective: "O2", q: "À quelles trois questions répond une bonne explication du changement ?", options: ["Qui, où, combien", "Qui est responsable, quand, pourquoi pas", "Combien cela va me coûter, qui a décidé, est-ce que je peux m'en passer", "Quel est le problème, qu'est-ce qui ira mieux, et si on ne fait rien"], answer: 3, why: "Elles montrent pourquoi le changement compte." },
+          { objective: "O3", q: "Quand faut-il associer les gens à un changement ?", options: ["Une fois que tout est décidé", "Jamais", "Tôt, quand le plan peut encore changer", "Seulement s'ils se plaignent"], answer: 2, why: "Un avis demandé tôt est un vrai avis, et il crée du soutien." },
+          { objective: "O3", q: "Qu'est-ce qu'un projet pilote ?", options: ["Un petit test du changement avec quelques personnes d'abord", "Le chef du responsable", "Une date limite finale", "Un type de vidéo de formation"], answer: 0, why: "Les projets pilotes permettent d'apprendre et de corriger les problèmes avant que tout le monde change." }
         ]
       }
     },
@@ -95,6 +133,7 @@ module.exports = {
       name: "Chapitre 2 : Planifier, communiquer et faire durer",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Écrire un plan de changement simple",
           minutes: 6,
           goal: "Écrire un plan de changement d'une page qui répond à quoi, pourquoi, qui, quand, et comment vous saurez que cela marche.",
@@ -111,9 +150,14 @@ module.exports = {
             { title: "N'oubliez pas", bullets: ["Un responsable pour chaque étape", "La formation avant le passage", "Un plan de secours en cas de problème"] }
           ],
           tryIt: "Écrivez le premier brouillon de votre plan d'une page avec les cinq parties. Pour \"comment vous saurez\", écrivez deux indicateurs et la date où vous les vérifierez.",
-          youCanNow: "écrire un court plan de changement avec des responsables clairs, des dates et des indicateurs de réussite."
+          youCanNow: "écrire un court plan de changement avec des responsables clairs, des dates et des indicateurs de réussite.",
+          quickCheck: [
+            { objective: "O4", q: "Quelle partie d'un plan de changement oublie-t-on le plus souvent ?", options: ["Ce qui change", "Qui est concerné", "Comment vous saurez que cela marche", "Quand cela commence"], answer: 2, why: "Choisissez deux ou trois signes que vous pouvez vérifier et une date pour les regarder." },
+            { objective: "O4", q: "Vous craignez que le nouveau système échoue la première semaine. Qu'ajoutez-vous au plan ?", options: ["Ce que vous ferez si cela tourne mal, par exemple garder l'ancienne façon de faire pendant peu de temps", "Rien ; prévoir seulement la réussite", "Une explication du changement plus longue", "Une deuxième date de lancement dans un an"], answer: 0, why: "Un bon plan dit ce que vous ferez si quelque chose tourne mal." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Communiquer le changement et obtenir des premiers succès",
           minutes: 5,
           goal: "Écrire des messages clairs pour différents groupes et prévoir un premier succès visible.",
@@ -131,9 +175,14 @@ module.exports = {
             { title: "Premiers succès", bullets: ["Une réussite rapide et visible", "Partagez-la et remerciez les personnes qui l'ont permise"] }
           ],
           tryIt: "Écrivez trois courts messages sur votre changement pour trois groupes différents (par exemple le personnel de terrain, les responsables et les clients). Puis écrivez un premier succès que vous pourriez montrer dans le premier mois.",
-          youCanNow: "communiquer clairement un changement à différents groupes et prévoir un premier succès qui crée du soutien."
+          youCanNow: "communiquer clairement un changement à différents groupes et prévoir un premier succès qui crée du soutien.",
+          quickCheck: [
+            { objective: "O5", q: "Qu'est-ce qu'un premier succès ?", options: ["Terminer le changement en un jour", "Une réussite rapide et visible qui montre que le changement marche", "Sauter la formation", "Un prix pour la première personne qui change"], answer: 1, why: "Les premiers succès convainquent les personnes qui hésitaient." },
+            { objective: "O5", q: "Comment annoncez-vous le changement aux personnes les plus concernées ?", options: ["Les laisser l'apprendre par quelqu'un d'autre", "Mettre une affiche au mur", "Envoyer un seul e-mail à tout le personnel", "Le leur dire en premier, en personne si possible"], answer: 3, why: "Les personnes les plus concernées doivent l'apprendre en premier, avant les rumeurs." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Faire durer le changement",
           minutes: 5,
           goal: "Prévoir comment faire durer un changement après le lancement pour que les gens ne reviennent pas à l'ancienne façon de faire.",
@@ -150,17 +199,21 @@ module.exports = {
             { title: "Continuez à écouter", bullets: ["Vérifiez vos indicateurs aux dates prévues", "Demandez ce qui reste difficile et corrigez-le", "Partagez les résultats et remerciez les gens"] }
           ],
           tryIt: "Tâche finale : terminez votre plan de changement d'une page. Ajoutez trois messages pour trois groupes, un premier succès dans le premier mois, et deux moyens de faire durer le changement après le lancement.",
-          youCanNow: "faire durer un changement après le lancement en vérifiant les résultats, en l'intégrant aux routines et en écoutant les personnes qui font le travail."
+          youCanNow: "faire durer un changement après le lancement en vérifiant les résultats, en l'intégrant aux routines et en écoutant les personnes qui font le travail.",
+          quickCheck: [
+            { objective: "O6", q: "Que se passe-t-il souvent pour un changement quelques semaines après le lancement ?", options: ["Il s'essouffle parce que les gens reprennent leurs vieilles habitudes", "Il tient toujours tout seul", "Tout le monde oublie l'ancienne façon de faire", "Il grandit tout seul"], answer: 0, why: "Le jour du lancement n'est pas la ligne d'arrivée ; les habitudes ramènent les gens en arrière." },
+            { objective: "O6", q: "La nouvelle façon de faire marche bien. Que faites-vous de l'ancienne ?", options: ["Garder les deux pour toujours", "Demander à chacun de choisir", "Supprimer l'ancienne et intégrer la nouvelle aux listes de contrôle et à la formation", "Cacher la nouvelle"], answer: 2, why: "Supprimer l'ancienne façon de faire et intégrer la nouvelle aide le changement à durer." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Planifier, communiquer et faire durer",
         questions: [
-          { q: "Quelle question fait partie d'un plan de changement simple ?", options: ["Qui pouvons-nous accuser ?", "Comment éviter de prévenir les gens ?", "Comment saurons-nous que cela marche ?", "Combien de temps pouvons-nous attendre ?"], answer: 2, why: "Les indicateurs montrent si le changement marche." },
-          { q: "Lequel est un bon indicateur de réussite ?", options: ["\"Les gens se sentent modernes\"", "\"Les choses vont mieux\"", "\"Nous avons fait de gros efforts\"", "\"Aucune livraison manquée pendant un mois\""], answer: 3, why: "C'est quelque chose que vous pouvez vraiment vérifier." },
-          { q: "Qui doit être informé d'un changement en premier ?", options: ["Les personnes les plus touchées, en personne si possible", "Le journal local", "Seulement l'équipe de direction, pour toujours", "Personne avant le début"], answer: 0, why: "Elles méritent de l'apprendre directement, pas par des rumeurs." },
-          { q: "Quelqu'un pose une question à laquelle vous ne pouvez pas encore répondre. Que faites-vous ?", options: ["Inventer une réponse", "Dire que vous ne savez pas et dire quand vous aurez la réponse", "Changer de sujet", "Terminer la réunion"], answer: 1, why: "L'honnêteté crée la confiance pendant un changement." },
-          { q: "Trois mois après le lancement, les gens reviennent à l'ancienne façon de faire. Qu'est-ce qui aide le plus ?", options: ["Ne plus en parler", "Remettre l'ancien système pour de bon", "Accuser l'équipe", "Intégrer la nouvelle façon aux listes de contrôle et à la formation, et demander ce qui reste difficile"], answer: 3, why: "Les routines et l'écoute font durer le changement." }
+          { objective: "O4", q: "Quelle question fait partie d'un plan de changement simple ?", options: ["Qui pouvons-nous accuser ?", "Comment éviter de prévenir les gens ?", "Comment saurons-nous que cela marche ?", "Combien de temps pouvons-nous attendre ?"], answer: 2, why: "Les indicateurs montrent si le changement marche." },
+          { objective: "O4", q: "Lequel est un bon indicateur de réussite ?", options: ["\"Les gens se sentent modernes\"", "\"Les choses vont mieux\"", "\"Nous avons fait de gros efforts\"", "\"Aucune livraison manquée pendant un mois\""], answer: 3, why: "C'est quelque chose que vous pouvez vraiment vérifier." },
+          { objective: "O5", q: "Qui doit être informé d'un changement en premier ?", options: ["Les personnes les plus touchées, en personne si possible", "Le journal local", "Seulement l'équipe de direction, pour toujours", "Personne avant le début"], answer: 0, why: "Elles méritent de l'apprendre directement, pas par des rumeurs." },
+          { objective: "O5", q: "Quelqu'un pose une question à laquelle vous ne pouvez pas encore répondre. Que faites-vous ?", options: ["Inventer une réponse", "Dire que vous ne savez pas et dire quand vous aurez la réponse", "Changer de sujet", "Terminer la réunion"], answer: 1, why: "L'honnêteté crée la confiance pendant un changement." },
+          { objective: "O6", q: "Trois mois après le lancement, les gens reviennent à l'ancienne façon de faire. Qu'est-ce qui aide le plus ?", options: ["Ne plus en parler", "Remettre l'ancien système pour de bon", "Accuser l'équipe", "Intégrer la nouvelle façon aux listes de contrôle et à la formation, et demander ce qui reste difficile"], answer: 3, why: "Les routines et l'écoute font durer le changement." }
         ]
       }
     }
@@ -168,26 +221,105 @@ module.exports = {
   quiz: {
     title: "Quiz final : Conduire le changement",
     questions: [
-      { q: "Quelle est une raison fréquente de résister au changement ?", options: ["La peur de ne pas être à la hauteur avec la nouvelle façon de faire", "Le goût du conflit", "L'envie d'avoir plus de réunions", "Ne jamais aimer son travail"], answer: 0, why: "La peur de ne pas réussir la nouvelle façon de faire est très fréquente." },
-      { q: "Traiter la résistance comme une information veut dire :", options: ["L'ignorer", "Enregistrer les gens en secret", "Demander ce qui inquiète les gens, car ils voient peut-être un vrai problème", "La punir"], answer: 2, why: "L'opposition peut signaler de vrais risques." },
-      { q: "Avant d'annoncer un changement, il est utile de lister :", options: ["Qui accuser si cela échoue", "Qui est concerné et ce que chaque groupe peut perdre et gagner", "Seulement les coûts", "Rien"], answer: 1, why: "Cette carte montre quoi expliquer et quel soutien apporter." },
-      { q: "Quelle explication du changement est la plus forte ?", options: ["\"Nous devons nous moderniser.\"", "\"Parce que je l'ai décidé.\"", "\"Tout le monde le fait.\"", "\"Les inscriptions papier ont perdu les noms de 30 bénévoles le mois dernier et deux familles n'ont pas été livrées.\""], answer: 3, why: "Un vrai fait et une histoire vraie montrent pourquoi c'est important." },
-      { q: "Pourquoi être honnête sur ce qui sera difficile ?", options: ["Pour faire peur aux gens", "Les gens font confiance à un responsable qui reconnaît les coûts", "Pour retarder le changement", "Ce n'est jamais une bonne idée"], answer: 1, why: "L'honnêteté crée la confiance et permet de prévoir le soutien." },
-      { q: "Une explication du changement doit dire :", options: ["Ce qui se passe si on ne fait rien", "Seulement l'avis du responsable", "Qui va perdre son emploi", "Rien sur le problème"], answer: 0, why: "Le coût de l'inaction montre pourquoi le changement est nécessaire." },
-      { q: "\"Les gens soutiennent ce qu'ils aident à construire\" veut dire que vous devez :", options: ["Garder les plans secrets", "Tout décider d'abord, puis demander", "Les associer tôt, quand le plan peut encore changer", "Associer seulement les responsables"], answer: 2, why: "Associer les gens tôt crée un vrai soutien." },
-      { q: "Un relais du changement est :", options: ["La personne qui résiste le plus", "Un membre respecté de l'équipe qui aide à conduire et à expliquer le changement", "Un trophée", "Un juge extérieur"], answer: 1, why: "Les relais aident les autres à faire confiance au changement." },
-      { q: "Vous avez demandé des idées et n'avez pas pu en utiliser certaines. Que faire ?", options: ["Ne rien dire", "Faire semblant de les avoir utilisées", "Arrêter de demander des idées", "Faire un retour sur ce que vous avez fait des idées, et pourquoi"], answer: 3, why: "Faire un retour garde la confiance, même quand les idées ne sont pas utilisées." },
-      { q: "Les cinq parties d'un plan de changement simple sont :", options: ["Quoi, pourquoi, qui, quand, comment vous saurez", "Qui, faute, coût, retard, annulation", "Prévoir, espérer, attendre, voir, abandonner", "Budget, logo, slogan, fête, photo"], answer: 0, why: "Ces cinq questions couvrent la plupart des changements." },
-      { q: "Chaque étape d'un plan de changement doit avoir :", options: ["Dix responsables", "Aucun responsable", "Un seul responsable chargé de la réaliser", "Un responsable choisi plus tard"], answer: 2, why: "Un responsable clair garantit que l'étape est faite." },
-      { q: "Quand la formation doit-elle avoir lieu ?", options: ["Des mois après le passage", "Avant le passage", "Jamais", "Seulement pour les responsables"], answer: 1, why: "Les gens ont besoin des compétences avant qu'on leur demande d'utiliser la nouvelle façon de faire." },
-      { q: "Pourquoi répéter votre message de différentes façons ?", options: ["Pour agacer les gens", "Parce que les gens doivent entendre un message plusieurs fois avant de le retenir", "Pour remplir le temps", "Parce que le premier message était faux"], answer: 1, why: "Les gens occupés ont besoin de l'entendre plus d'une fois." },
-      { q: "Le message pour chaque groupe doit inclure :", options: ["Seulement la date", "Seulement la raison", "Un long historique", "Ce qui change pour eux, pourquoi, quand, l'aide qu'ils reçoivent et à qui s'adresser"], answer: 3, why: "Cela répond aux questions que les gens se posent vraiment." },
-      { q: "Un premier succès est :", options: ["Une réussite rapide et visible qui montre que le changement marche", "Terminer le changement en un jour", "Gagner une dispute", "Sauter le plan"], answer: 0, why: "Les premiers succès créent la confiance et le soutien." },
-      { q: "Après un premier succès, vous devez :", options: ["Le garder pour vous", "En prendre tout le mérite", "Le partager et remercier les personnes qui l'ont rendu possible", "Arrêter le changement"], answer: 2, why: "Partager et remercier étend le soutien." },
-      { q: "Pourquoi le jour du lancement n'est-il \"pas la ligne d'arrivée\" ?", options: ["Parce que les changements s'essoufflent souvent quand les gens reprennent leurs vieilles habitudes", "Parce qu'il y a toujours une fête après", "Parce que les plans ne commencent jamais", "Parce que le jour du lancement est facultatif"], answer: 0, why: "Faire durer le changement demande un travail continu." },
-      { q: "Qu'est-ce qui aide un changement à durer ?", options: ["Garder aussi l'ancienne façon pour toujours", "L'intégrer aux listes de contrôle et à la formation des nouveaux employés", "Ne jamais vérifier les résultats", "Le changer à nouveau la semaine suivante"], answer: 1, why: "Les routines rendent la nouvelle façon de faire normale." },
-      { q: "Vous avez prévu de vérifier un indicateur à la semaine 4. À la semaine 4, vous devez :", options: ["Ne pas le faire", "Changer l'indicateur", "Attendre l'année prochaine", "Le vérifier et agir selon ce que vous trouvez"], answer: 3, why: "Les indicateurs ne servent que si vous les regardez à temps." },
-      { q: "Une fois que le changement fait partie de \"notre façon de faire ici\", une bonne dernière étape est de :", options: ["L'oublier", "Regarder ce que vous avez appris pour le prochain changement", "L'annuler", "Accuser ceux qui ont résisté"], answer: 1, why: "Les leçons apprises rendent le prochain changement plus facile." }
+      { objective: "O1", q: "Quelle est une raison fréquente de résister au changement ?", options: ["La peur de ne pas être à la hauteur avec la nouvelle façon de faire", "Le goût du conflit", "L'envie d'avoir plus de réunions", "Ne jamais aimer son travail"], answer: 0, why: "La peur de ne pas réussir la nouvelle façon de faire est très fréquente." },
+      { objective: "O1", q: "Traiter la résistance comme une information veut dire :", options: ["L'ignorer", "Enregistrer les gens en secret", "Demander ce qui inquiète les gens, car ils voient peut-être un vrai problème", "La punir"], answer: 2, why: "L'opposition peut signaler de vrais risques." },
+      { objective: "O1", q: "Avant d'annoncer un changement, il est utile de lister :", options: ["Qui accuser si cela échoue", "Qui est concerné et ce que chaque groupe peut perdre et gagner", "Seulement les coûts", "Rien"], answer: 1, why: "Cette carte montre quoi expliquer et quel soutien apporter." },
+      { objective: "O2", q: "Quelle explication du changement est la plus forte ?", options: ["\"Nous devons nous moderniser.\"", "\"Parce que je l'ai décidé.\"", "\"Tout le monde le fait.\"", "\"Les inscriptions papier ont perdu les noms de 30 bénévoles le mois dernier et deux familles n'ont pas été livrées.\""], answer: 3, why: "Un vrai fait et une histoire vraie montrent pourquoi c'est important." },
+      { objective: "O2", q: "Pourquoi être honnête sur ce qui sera difficile ?", options: ["Pour faire peur aux gens", "Les gens font confiance à un responsable qui reconnaît les coûts", "Pour retarder le changement", "Ce n'est jamais une bonne idée"], answer: 1, why: "L'honnêteté crée la confiance et permet de prévoir le soutien." },
+      { objective: "O2", q: "Une explication du changement doit dire :", options: ["Ce qui se passe si on ne fait rien", "Seulement l'avis du responsable", "Qui va perdre son emploi", "Rien sur le problème"], answer: 0, why: "Le coût de l'inaction montre pourquoi le changement est nécessaire." },
+      { objective: "O3", q: "\"Les gens soutiennent ce qu'ils aident à construire\" veut dire que vous devez :", options: ["Garder les plans secrets", "Tout décider d'abord, puis demander", "Les associer tôt, quand le plan peut encore changer", "Associer seulement les responsables"], answer: 2, why: "Associer les gens tôt crée un vrai soutien." },
+      { objective: "O3", q: "Un relais du changement est :", options: ["La personne qui résiste le plus", "Un membre respecté de l'équipe qui aide à conduire et à expliquer le changement", "Un trophée", "Un juge extérieur"], answer: 1, why: "Les relais aident les autres à faire confiance au changement." },
+      { objective: "O3", q: "Vous avez demandé des idées et n'avez pas pu en utiliser certaines. Que faire ?", options: ["Ne rien dire", "Faire semblant de les avoir utilisées", "Arrêter de demander des idées", "Faire un retour sur ce que vous avez fait des idées, et pourquoi"], answer: 3, why: "Faire un retour garde la confiance, même quand les idées ne sont pas utilisées." },
+      { objective: "O4", q: "Les cinq parties d'un plan de changement simple sont :", options: ["Quoi, pourquoi, qui, quand, comment vous saurez", "Qui, faute, coût, retard, annulation", "Prévoir, espérer, attendre, voir, abandonner", "Budget, logo, slogan, fête, photo"], answer: 0, why: "Ces cinq questions couvrent la plupart des changements." },
+      { objective: "O4", q: "Chaque étape d'un plan de changement doit avoir :", options: ["Dix responsables", "Aucun responsable", "Un seul responsable chargé de la réaliser", "Un responsable choisi plus tard"], answer: 2, why: "Un responsable clair garantit que l'étape est faite." },
+      { objective: "O4", q: "Quand la formation doit-elle avoir lieu ?", options: ["Des mois après le passage", "Avant le passage", "Jamais", "Seulement pour les responsables"], answer: 1, why: "Les gens ont besoin des compétences avant qu'on leur demande d'utiliser la nouvelle façon de faire." },
+      { objective: "O5", q: "Pourquoi répéter votre message de différentes façons ?", options: ["Pour agacer les gens", "Parce que les gens doivent entendre un message plusieurs fois avant de le retenir", "Pour remplir le temps", "Parce que le premier message était faux"], answer: 1, why: "Les gens occupés ont besoin de l'entendre plus d'une fois." },
+      { objective: "O5", q: "Le message pour chaque groupe doit inclure :", options: ["Seulement la date", "Seulement la raison", "Un long historique", "Ce qui change pour eux, pourquoi, quand, l'aide qu'ils reçoivent et à qui s'adresser"], answer: 3, why: "Cela répond aux questions que les gens se posent vraiment." },
+      { objective: "O5", q: "Un premier succès est :", options: ["Une réussite rapide et visible qui montre que le changement marche", "Terminer le changement en un jour", "Gagner une dispute", "Sauter le plan"], answer: 0, why: "Les premiers succès créent la confiance et le soutien." },
+      { objective: "O5", q: "Après un premier succès, vous devez :", options: ["Le garder pour vous", "En prendre tout le mérite", "Le partager et remercier les personnes qui l'ont rendu possible", "Arrêter le changement"], answer: 2, why: "Partager et remercier étend le soutien." },
+      { objective: "O6", q: "Pourquoi le jour du lancement n'est-il \"pas la ligne d'arrivée\" ?", options: ["Parce que les changements s'essoufflent souvent quand les gens reprennent leurs vieilles habitudes", "Parce qu'il y a toujours une fête après", "Parce que les plans ne commencent jamais", "Parce que le jour du lancement est facultatif"], answer: 0, why: "Faire durer le changement demande un travail continu." },
+      { objective: "O6", q: "Qu'est-ce qui aide un changement à durer ?", options: ["Garder aussi l'ancienne façon pour toujours", "L'intégrer aux listes de contrôle et à la formation des nouveaux employés", "Ne jamais vérifier les résultats", "Le changer à nouveau la semaine suivante"], answer: 1, why: "Les routines rendent la nouvelle façon de faire normale." },
+      { objective: "O6", q: "Vous avez prévu de vérifier un indicateur à la semaine 4. À la semaine 4, vous devez :", options: ["Ne pas le faire", "Changer l'indicateur", "Attendre l'année prochaine", "Le vérifier et agir selon ce que vous trouvez"], answer: 3, why: "Les indicateurs ne servent que si vous les regardez à temps." },
+      { objective: "O6", q: "Une fois que le changement fait partie de \"notre façon de faire ici\", une bonne dernière étape est de :", options: ["L'oublier", "Regarder ce que vous avez appris pour le prochain changement", "L'annuler", "Accuser ceux qui ont résisté"], answer: 1, why: "Les leçons apprises rendent le prochain changement plus facile." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      3,
+      6,
+      9,
+      11,
+      13,
+      14,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Pourquoi c'est important",
+        objective: "O2",
+        notYet: "La raison est un slogan, comme « nous devons nous moderniser ».",
+        meets: "Deux ou trois phrases sur le problème, ce qui ira mieux et ce qui se passe si rien ne change.",
+        exceeds: "Utilise un vrai fait ou une vraie histoire qui compte pour les personnes concernées."
+      },
+      {
+        name: "Qui est concerné et comment l'associer",
+        objective: "O3",
+        notYet: "Personne n'est associé avant que la décision soit définitive.",
+        meets: "Nomme qui est concerné et comment ces personnes seront associées tôt.",
+        exceeds: "Dit ce qui est ouvert et ce qui ne l'est pas, et comment un retour sera fait sur les idées reçues."
+      },
+      {
+        name: "Plan et indicateurs",
+        objective: "O4",
+        notYet: "Il manque quoi, pourquoi, qui, quand ou comment vous saurez.",
+        meets: "Répond aux cinq questions, avec la date de chaque étape et la façon de savoir que cela marche.",
+        exceeds: "Chaque étape a un responsable et chaque indicateur a une date de vérification."
+      },
+      {
+        name: "Messages et premier succès",
+        objective: "O5",
+        notYet: "Un seul message pour tout le monde, ou aucun premier succès.",
+        meets: "Trois messages pour trois groupes et un premier succès dans le premier mois.",
+        exceeds: "Chaque message dit l'aide que les gens recevront et à qui s'adresser."
+      },
+      {
+        name: "Faire durer",
+        objective: "O6",
+        notYet: "Le plan s'arrête au lancement.",
+        meets: "Deux moyens de faire durer le changement après le lancement.",
+        exceeds: "Prévoit d'intégrer la nouvelle façon de faire aux listes de contrôle, à la formation ou aux attentes du poste."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Les apprenants qui lancent le changement de leur plan dans les 90 jours (enquête de suivi)",
+      "Les changements toujours en place trois mois après le lancement",
+      "Les apprenants qui suivent un autre cours Koach Learn sur le leadership"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur pour regarder les leçons",
+      "Du papier ou un document pour le plan de changement d'une page",
+      "Un vrai changement que l'apprenant veut conduire",
+      "Environ 60 minutes au total : leçons, exercices, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Demandez à chaque apprenant d'apporter un vrai changement avant le début de la séance.",
+      "En binômes, faites jouer à l'un la personne qui résiste, pour que l'autre s'entraîne à demander ce qui l'inquiète.",
+      "Faites échanger aux apprenants leur explication du changement, et demandez à chacun si celle de l'autre le convaincrait.",
+      "Rappelez aux apprenants de garder leurs propres faits et histoires quand ils utilisent l'IA pour resserrer la formulation.",
+      "Notez la tâche finale avec la grille et donnez un retour sur une ligne « Pas encore » à la fois."
     ]
   }
 };

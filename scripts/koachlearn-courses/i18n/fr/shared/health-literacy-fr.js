@@ -18,11 +18,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes. Lisez la leçon, regardez les diapositives, puis faites la tâche \"Essayez maintenant\". Il y a un court contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Préparez une fiche de consultation d'une page pour un vrai rendez-vous ou un rendez-vous d'entraînement : une courte note sur votre symptôme ou votre inquiétude (quand cela a commencé, ce qui l'améliore ou l'aggrave), vos trois questions principales, et une liste complète de médicaments (sur ordonnance, sans ordonnance, vitamines, compléments alimentaires et allergies). Après la consultation (ou un entraînement avec un ami), écrivez le plan avec vos propres mots : quel est le problème, ce que vous devez faire, et pourquoi.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des personnes âgées qui prennent plusieurs médicaments, des jeunes qui vont seuls chez le médecin pour la première fois, des anciens combattants soignés par le VA, des salariés qui choisissent une assurance santé, des personnes qui sortent de prison et doivent reprendre leurs soins, et des aidants.",
+    startingPoint: "Ils vont chez le médecin et prennent des médicaments, mais repartent souvent sans être sûrs de ce qui a été dit, ne tiennent pas de liste complète de médicaments, n'ont jamais utilisé de portail patient et trouvent les mots de l'assurance déroutants.",
+    gap: "Mal comprendre les informations de santé entraîne des erreurs de médicaments, des soins manqués et des coûts surprises. Les apprenants doivent trouver des informations fiables, préparer leurs consultations, poser des questions jusqu'à comprendre et savoir à qui s'adresser pour les médicaments, les résultats et les coûts, afin de participer aux décisions sur leur santé et celle de leur famille.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes",
+      "Ce n'est pas un avis médical ; chaque décision de santé se vérifie avec un médecin, un infirmier ou un pharmacien",
+      "Confidentialité : aucun détail de santé ni mot de passe de portail partagé en groupe ou tapé dans des outils d'IA",
+      "Appareils : un téléphone ou un ordinateur ; certains apprenants n'ont pas encore de portail patient",
+      "Langue : certains apprenants ont besoin d'un interprète pendant les consultations"
+    ],
+    prerequisites: "Aucun."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir d'un site ou d'une publication sur la santé", action: "vérifier si la source est fiable et chercher un mot de santé sur un site fiable comme medlineplus.gov", standard: "en écrivant son sens avec vos propres mots" },
+    { id: "O2", condition: "Avant une consultation médicale", action: "écrire une fiche de consultation avec votre inquiétude, vos trois questions principales et une liste complète de médicaments", standard: "en indiquant quand le symptôme a commencé et ce qui l'améliore ou l'aggrave" },
+    { id: "O3", condition: "Pendant une consultation ou un jeu de rôle", action: "poser des questions jusqu'à comprendre et redire le plan avec vos propres mots", standard: "en couvrant quel est le problème, ce qu'il faut faire et pourquoi" },
+    { id: "O4", condition: "À partir d'un médicament, d'une vitamine ou d'un complément alimentaire", action: "lire l'étiquette et l'ajouter à votre liste de médicaments avec le nom, la dose, la fréquence, à quoi il sert et une mise en garde", standard: "avec une question écrite pour un pharmacien" },
+    { id: "O5", condition: "Avec un portail patient ou votre centre de soins", action: "trouver un résultat d'analyse ou un compte rendu de consultation et écrire des questions à son sujet", standard: "avec au moins deux questions pour votre soignant" },
+    { id: "O6", condition: "À partir de mots courants de l'assurance santé", action: "expliquer des mots comme franchise, copaiement et soignant du réseau, et dire à qui poser vos questions sur les coûts", standard: "avec vos propres mots et sans aide" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Se préparer et parler avec son soignant",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Trouver des informations de santé fiables",
           minutes: 5,
           goal: "Distinguer une source de santé fiable d'une source qui ne l'est pas.",
@@ -44,9 +68,14 @@ module.exports = {
             { name: "CDC : Qu'est-ce que la littératie en santé ? (en anglais)", url: "https://www.cdc.gov/health-literacy/php/about/index.html" }
           ],
           tryIt: "Choisissez un mot de santé que vous avez déjà entendu mais que vous ne comprenez pas bien (par exemple tension artérielle, cholestérol ou asthme). Cherchez-le sur medlineplus.gov ou sur le site du ministère de la Santé de votre pays, et écrivez sa définition en une phrase avec vos propres mots.",
-          youCanNow: "trouver des informations de santé sur des sites fiables et vérifier n'importe quelle source avec quatre questions simples."
+          youCanNow: "trouver des informations de santé sur des sites fiables et vérifier n'importe quelle source avec quatre questions simples.",
+          quickCheck: [
+            { objective: "O1", q: "Quel détail rend un site de santé plus fiable ?", options: ["Il vend un produit sur chaque page", "Il a beaucoup de points d'exclamation", "Il indique qui l'a écrit et quand il a été mis à jour pour la dernière fois", "Il promet une guérison"], answer: 2, why: "Savoir qui l'a écrit et quand vous aide à juger l'information." },
+            { objective: "O1", q: "Un ami partage une publication qui dit qu'une tisane guérit l'hypertension. Que faites-vous ?", options: ["Arrêter votre médicament contre la tension", "La partager avec la famille", "Acheter la tisane tout de suite", "Vérifier sur un site fiable et demander à votre médecin"], answer: 3, why: "Les affirmations de santé se vérifient sur des sites fiables et auprès de votre soignant." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Préparer une consultation médicale",
           minutes: 5,
           goal: "Faire une fiche de consultation avec votre inquiétude, vos questions et votre liste de médicaments.",
@@ -65,9 +94,14 @@ module.exports = {
           ],
           sources: [{ name: "MedlinePlus : Parler avec votre médecin (en anglais)", url: "https://medlineplus.gov/talkingwithyourdoctor.html" }],
           tryIt: "Commencez votre fiche de consultation. Écrivez une inquiétude réelle ou d'entraînement, avec le moment où elle a commencé et ce qui l'améliore ou l'aggrave, puis vos trois questions principales.",
-          youCanNow: "préparer une fiche de consultation avec votre inquiétude, vos questions principales et ce qu'il faut apporter."
+          youCanNow: "préparer une fiche de consultation avec votre inquiétude, vos questions principales et ce qu'il faut apporter.",
+          quickCheck: [
+            { objective: "O2", q: "Pourquoi apporter une liste complète de médicaments à une consultation ?", options: ["Pour que le médecin vérifie que tout ce que vous prenez va bien ensemble sans danger", "Parce que c'est obligatoire pour entrer", "Pour ne pas avoir à parler", "Pour montrer que vous en prenez beaucoup"], answer: 0, why: "Une liste complète aide votre soignant à éviter les mélanges dangereux et les erreurs." },
+            { objective: "O2", q: "Vous avez cinq inquiétudes mais une consultation courte. Que faites-vous ?", options: ["N'en parler d'aucune", "Écrire vos trois questions principales et poser d'abord la plus importante", "Parler très vite des cinq", "Les garder toutes pour l'année prochaine"], answer: 1, why: "Mettre vos questions principales en premier garantit une réponse aux plus importantes." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Pendant la consultation : poser des questions et vérifier que vous avez compris",
           minutes: 5,
           goal: "Poser des questions jusqu'à bien comprendre et redire le plan avec vos propres mots.",
@@ -86,17 +120,21 @@ module.exports = {
           ],
           sources: [{ name: "MedlinePlus : Parler avec votre médecin (en anglais)", url: "https://medlineplus.gov/talkingwithyourdoctor.html" }],
           tryIt: "Faites un jeu de rôle avec un ami ou dites-le à voix haute : votre ami lit une courte consigne de médecin (par exemple \"Prenez ceci deux fois par jour pendant 10 jours et finissez la boîte\"). Posez une question à ce sujet, puis reformulez la consigne avec vos propres mots.",
-          youCanNow: "poser des questions claires pendant une consultation et utiliser la reformulation pour vérifier que vous avez compris le plan."
+          youCanNow: "poser des questions claires pendant une consultation et utiliser la reformulation pour vérifier que vous avez compris le plan.",
+          quickCheck: [
+            { objective: "O3", q: "Laquelle fait partie des trois questions clés à poser en consultation ?", options: ["Combien gagne le médecin ?", "Pourquoi est-ce important que je le fasse ?", "Est-ce que je peux arrêter mon médicament ?", "Combien de temps faut-il attendre ?"], answer: 1, why: "Les trois questions clés sont : quel est mon problème principal, qu'est-ce que je dois faire, et pourquoi est-ce important." },
+            { objective: "O3", q: "Le médecin dit de prendre un comprimé « deux fois par jour avec de la nourriture ». Que faites-vous avant de partir ?", options: ["Hocher la tête et partir", "Demander à un inconnu dans la salle d'attente", "Le redire : « Donc je le prends au petit-déjeuner et au dîner, en mangeant, c'est bien ça ? »", "Deviner plus tard à la maison"], answer: 2, why: "La reformulation vérifie que vous avez bien compris le plan." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Se préparer et parler avec son soignant",
         questions: [
-          { q: "Quel site est un endroit fiable pour commencer à chercher des informations de santé ?", options: ["Une publication d'un inconnu sur les réseaux sociaux", "Une publicité pour une pilule miracle", "medlineplus.gov", "Un commentaire au hasard sur un forum"], answer: 2, why: "MedlinePlus est un site de santé gratuit du gouvernement américain, fait par la Bibliothèque nationale de médecine." },
-          { q: "Que devez-vous écrire sur un symptôme avant une consultation ?", options: ["Quand il a commencé et ce qui l'améliore ou l'aggrave", "Rien ; le médecin devinera", "Seulement votre couleur préférée", "Votre numéro de compte bancaire"], answer: 0, why: "Des détails clairs sur le symptôme aident le soignant à vous comprendre." },
-          { q: "Qu'est-ce qui a sa place dans votre liste de médicaments ?", options: ["Seulement les médicaments sur ordonnance", "Seulement les comprimés pris aujourd'hui", "Rien ; la pharmacie le sait", "Médicaments sur ordonnance et sans ordonnance, vitamines, compléments et allergies"], answer: 3, why: "Tout ce que vous prenez peut compter, y compris les vitamines et les compléments." },
-          { q: "Le médecin utilise un mot que vous ne comprenez pas. Que faites-vous ?", options: ["Vous hochez la tête et faites semblant", "Vous lui demandez de l'expliquer avec des mots plus simples", "Vous quittez la consultation", "Vous le cherchez l'année prochaine"], answer: 1, why: "Vous avez le droit de comprendre vos soins ; poser la question est normal." },
-          { q: "Qu'est-ce que la reformulation ?", options: ["Apprendre la médecine au médecin", "Demander un remboursement", "Redire le plan avec vos propres mots", "Lire le plan en silence"], answer: 2, why: "La reformulation vérifie que vous avez compris, pour corriger les erreurs tout de suite." }
+          { objective: "O1", q: "Quel site est un endroit fiable pour commencer à chercher des informations de santé ?", options: ["Une publication d'un inconnu sur les réseaux sociaux", "Une publicité pour une pilule miracle", "medlineplus.gov", "Un commentaire au hasard sur un forum"], answer: 2, why: "MedlinePlus est un site de santé gratuit du gouvernement américain, fait par la Bibliothèque nationale de médecine." },
+          { objective: "O2", q: "Que devez-vous écrire sur un symptôme avant une consultation ?", options: ["Quand il a commencé et ce qui l'améliore ou l'aggrave", "Rien ; le médecin devinera", "Seulement votre couleur préférée", "Votre numéro de compte bancaire"], answer: 0, why: "Des détails clairs sur le symptôme aident le soignant à vous comprendre." },
+          { objective: "O2", q: "Qu'est-ce qui a sa place dans votre liste de médicaments ?", options: ["Seulement les médicaments sur ordonnance", "Seulement les comprimés pris aujourd'hui", "Rien ; la pharmacie le sait", "Médicaments sur ordonnance et sans ordonnance, vitamines, compléments et allergies"], answer: 3, why: "Tout ce que vous prenez peut compter, y compris les vitamines et les compléments." },
+          { objective: "O3", q: "Le médecin utilise un mot que vous ne comprenez pas. Que faites-vous ?", options: ["Vous hochez la tête et faites semblant", "Vous lui demandez de l'expliquer avec des mots plus simples", "Vous quittez la consultation", "Vous le cherchez l'année prochaine"], answer: 1, why: "Vous avez le droit de comprendre vos soins ; poser la question est normal." },
+          { objective: "O3", q: "Qu'est-ce que la reformulation ?", options: ["Apprendre la médecine au médecin", "Demander un remboursement", "Redire le plan avec vos propres mots", "Lire le plan en silence"], answer: 2, why: "La reformulation vérifie que vous avez compris, pour corriger les erreurs tout de suite." }
         ]
       }
     },
@@ -104,6 +142,7 @@ module.exports = {
       name: "Chapitre 2 : Utiliser vos informations de santé",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Médicaments : lire l'étiquette et tenir une liste",
           minutes: 5,
           goal: "Lire l'étiquette d'un médicament et tenir à jour une liste de médicaments.",
@@ -122,9 +161,14 @@ module.exports = {
           ],
           sources: [{ name: "MedlinePlus : Erreurs de médication (en anglais)", url: "https://medlineplus.gov/medicationerrors.html" }],
           tryIt: "Prenez un médicament, une vitamine ou un complément que vous (ou un proche) utilisez. Lisez l'étiquette et ajoutez-le à votre liste de médicaments : nom, dose, fréquence, à quoi il sert et une mise en garde. Écrivez une question à poser à un pharmacien.",
-          youCanNow: "lire l'étiquette d'un médicament, tenir une liste complète de médicaments et poser les bonnes questions à un pharmacien."
+          youCanNow: "lire l'étiquette d'un médicament, tenir une liste complète de médicaments et poser les bonnes questions à un pharmacien.",
+          quickCheck: [
+            { objective: "O4", q: "Que veut dire « dose » sur l'étiquette d'un médicament ?", options: ["La quantité de médicament à prendre en une fois", "Le prix du médicament", "La date de fabrication", "Le nom de la pharmacie"], answer: 0, why: "La dose est la quantité que vous prenez en une fois." },
+            { objective: "O4", q: "Vous commencez une nouvelle vitamine. Que faites-vous avec votre liste de médicaments ?", options: ["Ne pas la noter parce que les vitamines ne comptent pas", "Attendre votre prochain anniversaire", "En parler seulement à vos amis", "L'ajouter à la liste et demander au pharmacien si elle est sans danger avec vos autres médicaments"], answer: 3, why: "Les vitamines et les compléments ont leur place sur la liste et peuvent interagir avec les médicaments." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Résultats d'analyses, portails patients et dossiers médicaux",
           minutes: 5,
           goal: "Trouver un résultat d'analyse dans un portail patient et écrire des questions à son sujet.",
@@ -142,9 +186,14 @@ module.exports = {
           ],
           sources: [{ name: "MedlinePlus : Parler avec votre médecin (en anglais)", url: "https://medlineplus.gov/talkingwithyourdoctor.html" }],
           tryIt: "Si vous avez un portail patient, connectez-vous et trouvez un résultat ou un compte rendu récent. Sinon, appelez ou demandez à votre clinique comment vous inscrire. Dans les deux cas, écrivez deux questions que vous poseriez sur un résultat d'analyse.",
-          youCanNow: "utiliser un portail patient en toute sécurité, lire un résultat à côté de ses valeurs de référence et demander à votre soignant ce qu'il veut dire pour vous."
+          youCanNow: "utiliser un portail patient en toute sécurité, lire un résultat à côté de ses valeurs de référence et demander à votre soignant ce qu'il veut dire pour vous.",
+          quickCheck: [
+            { objective: "O5", q: "Que peut-on faire en général dans un portail patient ?", options: ["Modifier soi-même ses ordonnances", "Voir son dossier et écrire à son équipe de soins", "Commander des médicaments sans ordonnance", "Lire les résultats d'autres patients"], answer: 1, why: "Un portail est un espace sécurisé pour voir votre dossier et écrire à votre équipe de soins." },
+            { objective: "O5", q: "Vous avez consulté votre portail sur un ordinateur de bibliothèque. Que faites-vous quand vous avez fini ?", options: ["Le laisser ouvert pour la prochaine fois", "Écrire votre mot de passe sur un papier à côté de l'ordinateur", "Vous déconnecter et fermer le navigateur", "Éteindre seulement l'écran"], answer: 2, why: "Vous déconnecter sur un ordinateur partagé garde votre dossier de santé privé." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Les mots de l'assurance santé et votre trousse de consultation",
           minutes: 6,
           goal: "Expliquer les mots courants de l'assurance santé et savoir à qui poser vos questions sur les coûts.",
@@ -168,17 +217,21 @@ module.exports = {
             { name: "HRSA : Trouver un centre de santé (en anglais)", url: "https://findahealthcenter.hrsa.gov/" }
           ],
           tryIt: "Tâche finale : terminez votre fiche de consultation d'une page avec votre inquiétude, vos trois questions principales et votre liste complète de médicaments. Après une vraie consultation, ou un entraînement avec un ami qui joue le médecin, écrivez le plan avec vos propres mots : le problème principal, quoi faire, et pourquoi.",
-          youCanNow: "expliquer les mots courants de l'assurance santé, poser des questions sur les coûts avant les soins et apporter une trousse complète à chaque rendez-vous."
+          youCanNow: "expliquer les mots courants de l'assurance santé, poser des questions sur les coûts avant les soins et apporter une trousse complète à chaque rendez-vous.",
+          quickCheck: [
+            { objective: "O6", q: "Que veut dire « du réseau » (in-network) pour un soignant ?", options: ["Le soignant est sur les réseaux sociaux", "Le soignant est dans votre quartier", "Le soignant est gratuit", "Le soignant a un contrat avec votre assurance et vous coûte en général moins cher"], answer: 3, why: "Les soignants du réseau ont un contrat avec votre assurance." },
+            { objective: "O6", q: "Vous ne savez pas combien une consultation va vous coûter. Que faites-vous ?", options: ["Demander à votre assurance ou au cabinet avant la consultation", "Ne pas aller à la consultation", "Deviner en espérant", "Demander à un inconnu sur Internet"], answer: 0, why: "Votre assurance ou le cabinet peuvent vous renseigner sur les coûts à l'avance." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Utiliser vos informations de santé",
         questions: [
-          { q: "Avant de prendre une dose de médicament, vous devez :", options: ["Vous fier à votre mémoire", "Lire l'étiquette à chaque fois", "Deviner la dose", "Prendre le comprimé d'un ami"], answer: 1, why: "Lire l'étiquette à chaque fois évite les erreurs." },
-          { q: "Vous voulez arrêter un médicament prescrit à cause d'un effet secondaire. Que faites-vous d'abord ?", options: ["Vous l'arrêtez tout de suite", "Vous doublez la dose", "Vous le donnez à un ami", "Vous demandez à votre médecin ou à votre pharmacien"], answer: 3, why: "N'arrêtez et ne changez jamais un médicament prescrit sans demander d'abord." },
-          { q: "Qu'est-ce qu'un portail patient ?", options: ["Un site web ou une application sécurisée pour voir votre dossier et écrire à votre équipe soignante", "Une porte d'hôpital", "Un groupe sur les réseaux sociaux", "Un bon de réduction de pharmacie"], answer: 0, why: "Les portails montrent les résultats et vous permettent d'écrire à votre équipe." },
-          { q: "Un résultat d'analyse est marqué \"élevé\" dans votre portail. Quelle est la meilleure étape suivante ?", options: ["Paniquer", "Changer votre médicament vous-même", "Noter vos questions et demander à votre soignant ce que cela veut dire pour vous", "L'ignorer pour toujours"], answer: 2, why: "Élevé ou bas n'est pas toujours un problème ; votre soignant vous explique ce que cela veut dire pour vous." },
-          { q: "Qu'est-ce qu'une franchise (deductible) ?", options: ["Un montant fixe pour chaque consultation", "Le coût mensuel de votre assurance", "Un bon de réduction", "Ce que vous payez pour les soins couverts avant que votre assurance commence à payer"], answer: 3, why: "HealthCare.gov définit la franchise comme ce que vous payez avant que votre assurance commence à payer." }
+          { objective: "O4", q: "Avant de prendre une dose de médicament, vous devez :", options: ["Vous fier à votre mémoire", "Lire l'étiquette à chaque fois", "Deviner la dose", "Prendre le comprimé d'un ami"], answer: 1, why: "Lire l'étiquette à chaque fois évite les erreurs." },
+          { objective: "O4", q: "Vous voulez arrêter un médicament prescrit à cause d'un effet secondaire. Que faites-vous d'abord ?", options: ["Vous l'arrêtez tout de suite", "Vous doublez la dose", "Vous le donnez à un ami", "Vous demandez à votre médecin ou à votre pharmacien"], answer: 3, why: "N'arrêtez et ne changez jamais un médicament prescrit sans demander d'abord." },
+          { objective: "O5", q: "Qu'est-ce qu'un portail patient ?", options: ["Un site web ou une application sécurisée pour voir votre dossier et écrire à votre équipe soignante", "Une porte d'hôpital", "Un groupe sur les réseaux sociaux", "Un bon de réduction de pharmacie"], answer: 0, why: "Les portails montrent les résultats et vous permettent d'écrire à votre équipe." },
+          { objective: "O5", q: "Un résultat d'analyse est marqué \"élevé\" dans votre portail. Quelle est la meilleure étape suivante ?", options: ["Paniquer", "Changer votre médicament vous-même", "Noter vos questions et demander à votre soignant ce que cela veut dire pour vous", "L'ignorer pour toujours"], answer: 2, why: "Élevé ou bas n'est pas toujours un problème ; votre soignant vous explique ce que cela veut dire pour vous." },
+          { objective: "O6", q: "Qu'est-ce qu'une franchise (deductible) ?", options: ["Un montant fixe pour chaque consultation", "Le coût mensuel de votre assurance", "Un bon de réduction", "Ce que vous payez pour les soins couverts avant que votre assurance commence à payer"], answer: 3, why: "HealthCare.gov définit la franchise comme ce que vous payez avant que votre assurance commence à payer." }
         ]
       }
     }
@@ -186,26 +239,97 @@ module.exports = {
   quiz: {
     title: "Quiz final : Littératie en santé : comprendre vos soins",
     questions: [
-      { q: "La littératie en santé, c'est :", options: ["Être médecin", "Être capable de trouver, comprendre et utiliser des informations de santé", "Lire vite", "Connaître tous les mots médicaux"], answer: 1, why: "C'est la compétence de trouver, comprendre et utiliser des informations de santé." },
-      { q: "Les sites officiels du gouvernement américain finissent par :", options: [".gov", ".shop", ".win", ".xyz"], answer: 0, why: "Les sites en .gov, comme medlineplus.gov et cdc.gov, sont officiels." },
-      { q: "Quelle question vous aide à juger un site de santé ?", options: ["Est-il coloré ?", "A-t-il beaucoup de publicités ?", "Quand a-t-il été mis à jour pour la dernière fois ?", "Est-il long ?"], answer: 2, why: "Une information ancienne peut être fausse ; vérifiez la date de mise à jour." },
-      { q: "Un assistant d'IA vous explique un mot médical. Que devez-vous faire ?", options: ["Taper votre numéro d'assurance pour avoir une meilleure réponse", "Changer votre traitement d'après sa réponse", "Le partager comme un fait certain", "Vérifier sur un site fiable et demander à votre soignant"], answer: 3, why: "L'IA peut se tromper ; vérifiez et laissez le dernier mot à votre soignant." },
-      { q: "Qu'est-ce qui a sa place sur une fiche de consultation ?", options: ["Vos trois questions principales", "Le mot de passe de votre banque", "Une liste de courses", "Rien"], answer: 0, why: "Écrire vos questions en premier garantit que les plus importantes reçoivent une réponse." },
-      { q: "Vous avez besoin d'un interprète pour une consultation. Quand devez-vous le demander ?", options: ["Jamais", "Après la consultation", "À l'avance, quand vous prenez rendez-vous", "Seulement si le médecin le propose"], answer: 2, why: "Le demander à l'avance permet au cabinet d'en trouver un." },
-      { q: "Laquelle décrit bien un symptôme ?", options: ["\"Je ne me sens pas bien.\"", "\"Douleur vive au genou depuis 2 semaines, pire dans les escaliers, mieux au repos.\"", "\"Quelque chose ne va pas.\"", "\"Comme d'habitude.\""], answer: 1, why: "Elle dit quoi, depuis quand, et ce qui améliore ou aggrave." },
-      { q: "Qui pouvez-vous emmener à une consultation pour vous aider ?", options: ["Personne n'est jamais autorisé", "Seulement un avocat", "Seulement un enfant de moins de 5 ans", "Un ami ou un proche de confiance pour prendre des notes"], answer: 3, why: "Un accompagnant peut écouter et prendre des notes." },
-      { q: "Laquelle fait partie des trois questions clés à poser en consultation ?", options: ["Qu'est-ce que je dois faire ?", "Quelle voiture conduisez-vous ?", "Quel âge a ce bâtiment ?", "Puis-je sauter mon rendez-vous de suivi ?"], answer: 0, why: "Problème principal, quoi faire et pourquoi : ces trois questions couvrent la plupart des consultations." },
-      { q: "Le médecin parle trop vite. Vous pouvez dire :", options: ["Rien", "\"Je me débrouillerai plus tard.\"", "\"Pouvez-vous ralentir et me l'écrire ?\"", "\"Laissez tomber.\""], answer: 2, why: "Lui demander de ralentir ou d'écrire est votre droit." },
-      { q: "Redire le plan avec vos propres mots s'appelle :", options: ["Un renouvellement", "La reformulation", "Une franchise", "Un copaiement"], answer: 1, why: "La reformulation vérifie que vous avez compris avant de partir." },
-      { q: "Avant de quitter une consultation, vous devez aussi demander :", options: ["Rien", "Où est la cafétéria", "Seulement des échantillons gratuits", "Comment joindre le cabinet et quoi faire si votre état s'aggrave"], answer: 3, why: "Savoir comment les joindre et quand appeler vous protège." },
-      { q: "Qui est un expert gratuit pour vos médicaments ?", options: ["Un influenceur sur les réseaux sociaux", "Une publicité en ligne", "Votre pharmacien", "Un inconnu à l'arrêt de bus"], answer: 2, why: "Les pharmaciens répondent gratuitement aux questions sur les médicaments." },
-      { q: "La \"dose\", c'est :", options: ["La quantité de médicament à prendre en une fois", "Le prix d'un médicament", "Le nom de la pharmacie", "La date de péremption"], answer: 0, why: "La dose est la quantité à prendre à chaque fois." },
-      { q: "Quelle question devez-vous poser à un pharmacien sur un nouveau médicament ?", options: ["De quelle couleur est la boîte ?", "Puis-je le partager avec ma famille ?", "Puis-je arrêter quand je veux ?", "Est-ce sans danger avec mes autres médicaments et compléments ?"], answer: 3, why: "Les médicaments et les compléments peuvent agir les uns sur les autres." },
-      { q: "Les \"valeurs de référence\" d'un résultat d'analyse sont :", options: ["Le numéro de téléphone de votre médecin", "La plage de résultats habituelle chez la plupart des personnes en bonne santé", "Le prix de l'analyse", "Un type d'assurance"], answer: 1, why: "Votre chiffre est affiché à côté de la plage habituelle." },
-      { q: "Comment protéger votre portail patient ?", options: ["Avec un mot de passe solide et en vous déconnectant sur les ordinateurs partagés", "En partageant votre mot de passe avec des amis", "En écrivant le mot de passe sur l'écran", "En restant connecté à la bibliothèque"], answer: 0, why: "Un mot de passe solide et privé et la déconnexion protègent votre dossier." },
-      { q: "Qu'est-ce qu'un copaiement (copay) ?", options: ["Le coût mensuel de votre assurance", "Une consultation gratuite", "Un montant fixe en dollars que vous payez pour un service couvert", "L'étiquette d'un médicament"], answer: 2, why: "HealthCare.gov définit le copaiement comme un montant fixe pour un service couvert." },
-      { q: "Aux États-Unis, où une personne couverte par Medicare peut-elle appeler pour poser ses questions ?", options: ["Le 911", "Le 411", "N'importe quel numéro reçu par SMS", "Le 1-800-MEDICARE (1-800-633-4227)"], answer: 3, why: "Le 1-800-MEDICARE est le numéro officiel de Medicare." },
-      { q: "Les soignants \"du réseau\" (in-network) :", options: ["N'acceptent jamais d'assurance", "Ont un contrat avec votre assurance et vous coûtent en général moins cher", "Travaillent seulement en ligne", "Sont toujours gratuits"], answer: 1, why: "Les soignants du réseau ont un contrat avec votre assurance, ce qui baisse en général votre coût." }
+      { objective: "O1", q: "La littératie en santé, c'est :", options: ["Être médecin", "Être capable de trouver, comprendre et utiliser des informations de santé", "Lire vite", "Connaître tous les mots médicaux"], answer: 1, why: "C'est la compétence de trouver, comprendre et utiliser des informations de santé." },
+      { objective: "O1", q: "Les sites officiels du gouvernement américain finissent par :", options: [".gov", ".shop", ".win", ".xyz"], answer: 0, why: "Les sites en .gov, comme medlineplus.gov et cdc.gov, sont officiels." },
+      { objective: "O1", q: "Quelle question vous aide à juger un site de santé ?", options: ["Est-il coloré ?", "A-t-il beaucoup de publicités ?", "Quand a-t-il été mis à jour pour la dernière fois ?", "Est-il long ?"], answer: 2, why: "Une information ancienne peut être fausse ; vérifiez la date de mise à jour." },
+      { objective: "O1", q: "Un assistant d'IA vous explique un mot médical. Que devez-vous faire ?", options: ["Taper votre numéro d'assurance pour avoir une meilleure réponse", "Changer votre traitement d'après sa réponse", "Le partager comme un fait certain", "Vérifier sur un site fiable et demander à votre soignant"], answer: 3, why: "L'IA peut se tromper ; vérifiez et laissez le dernier mot à votre soignant." },
+      { objective: "O2", q: "Qu'est-ce qui a sa place sur une fiche de consultation ?", options: ["Vos trois questions principales", "Le mot de passe de votre banque", "Une liste de courses", "Rien"], answer: 0, why: "Écrire vos questions en premier garantit que les plus importantes reçoivent une réponse." },
+      { objective: "O2", q: "Vous avez besoin d'un interprète pour une consultation. Quand devez-vous le demander ?", options: ["Jamais", "Après la consultation", "À l'avance, quand vous prenez rendez-vous", "Seulement si le médecin le propose"], answer: 2, why: "Le demander à l'avance permet au cabinet d'en trouver un." },
+      { objective: "O2", q: "Laquelle décrit bien un symptôme ?", options: ["\"Je ne me sens pas bien.\"", "\"Douleur vive au genou depuis 2 semaines, pire dans les escaliers, mieux au repos.\"", "\"Quelque chose ne va pas.\"", "\"Comme d'habitude.\""], answer: 1, why: "Elle dit quoi, depuis quand, et ce qui améliore ou aggrave." },
+      { objective: "O2", q: "Qui pouvez-vous emmener à une consultation pour vous aider ?", options: ["Personne n'est jamais autorisé", "Seulement un avocat", "Seulement un enfant de moins de 5 ans", "Un ami ou un proche de confiance pour prendre des notes"], answer: 3, why: "Un accompagnant peut écouter et prendre des notes." },
+      { objective: "O3", q: "Laquelle fait partie des trois questions clés à poser en consultation ?", options: ["Qu'est-ce que je dois faire ?", "Quelle voiture conduisez-vous ?", "Quel âge a ce bâtiment ?", "Puis-je sauter mon rendez-vous de suivi ?"], answer: 0, why: "Problème principal, quoi faire et pourquoi : ces trois questions couvrent la plupart des consultations." },
+      { objective: "O3", q: "Le médecin parle trop vite. Vous pouvez dire :", options: ["Rien", "\"Je me débrouillerai plus tard.\"", "\"Pouvez-vous ralentir et me l'écrire ?\"", "\"Laissez tomber.\""], answer: 2, why: "Lui demander de ralentir ou d'écrire est votre droit." },
+      { objective: "O3", q: "Redire le plan avec vos propres mots s'appelle :", options: ["Un renouvellement", "La reformulation", "Une franchise", "Un copaiement"], answer: 1, why: "La reformulation vérifie que vous avez compris avant de partir." },
+      { objective: "O3", q: "Avant de quitter une consultation, vous devez aussi demander :", options: ["Rien", "Où est la cafétéria", "Seulement des échantillons gratuits", "Comment joindre le cabinet et quoi faire si votre état s'aggrave"], answer: 3, why: "Savoir comment les joindre et quand appeler vous protège." },
+      { objective: "O4", q: "Qui est un expert gratuit pour vos médicaments ?", options: ["Un influenceur sur les réseaux sociaux", "Une publicité en ligne", "Votre pharmacien", "Un inconnu à l'arrêt de bus"], answer: 2, why: "Les pharmaciens répondent gratuitement aux questions sur les médicaments." },
+      { objective: "O4", q: "La \"dose\", c'est :", options: ["La quantité de médicament à prendre en une fois", "Le prix d'un médicament", "Le nom de la pharmacie", "La date de péremption"], answer: 0, why: "La dose est la quantité à prendre à chaque fois." },
+      { objective: "O4", q: "Quelle question devez-vous poser à un pharmacien sur un nouveau médicament ?", options: ["De quelle couleur est la boîte ?", "Puis-je le partager avec ma famille ?", "Puis-je arrêter quand je veux ?", "Est-ce sans danger avec mes autres médicaments et compléments ?"], answer: 3, why: "Les médicaments et les compléments peuvent agir les uns sur les autres." },
+      { objective: "O5", q: "Les \"valeurs de référence\" d'un résultat d'analyse sont :", options: ["Le numéro de téléphone de votre médecin", "La plage de résultats habituelle chez la plupart des personnes en bonne santé", "Le prix de l'analyse", "Un type d'assurance"], answer: 1, why: "Votre chiffre est affiché à côté de la plage habituelle." },
+      { objective: "O5", q: "Comment protéger votre portail patient ?", options: ["Avec un mot de passe solide et en vous déconnectant sur les ordinateurs partagés", "En partageant votre mot de passe avec des amis", "En écrivant le mot de passe sur l'écran", "En restant connecté à la bibliothèque"], answer: 0, why: "Un mot de passe solide et privé et la déconnexion protègent votre dossier." },
+      { objective: "O6", q: "Qu'est-ce qu'un copaiement (copay) ?", options: ["Le coût mensuel de votre assurance", "Une consultation gratuite", "Un montant fixe en dollars que vous payez pour un service couvert", "L'étiquette d'un médicament"], answer: 2, why: "HealthCare.gov définit le copaiement comme un montant fixe pour un service couvert." },
+      { objective: "O6", q: "Aux États-Unis, où une personne couverte par Medicare peut-elle appeler pour poser ses questions ?", options: ["Le 911", "Le 411", "N'importe quel numéro reçu par SMS", "Le 1-800-MEDICARE (1-800-633-4227)"], answer: 3, why: "Le 1-800-MEDICARE est le numéro officiel de Medicare." },
+      { objective: "O6", q: "Les soignants \"du réseau\" (in-network) :", options: ["N'acceptent jamais d'assurance", "Ont un contrat avec votre assurance et vous coûtent en général moins cher", "Travaillent seulement en ligne", "Sont toujours gratuits"], answer: 1, why: "Les soignants du réseau ont un contrat avec votre assurance, ce qui baisse en général votre coût." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      2,
+      4,
+      6,
+      10,
+      12,
+      13,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Note sur le symptôme",
+        objective: "O2",
+        notYet: "L'inquiétude est vague, ou il manque quand elle a commencé.",
+        meets: "Dit quelle est l'inquiétude, quand elle a commencé et ce qui l'améliore ou l'aggrave.",
+        exceeds: "Note aussi l'effet sur la vie de tous les jours."
+      },
+      {
+        name: "Trois questions principales",
+        objective: "O3",
+        notYet: "Moins de trois questions, ou des questions pas claires.",
+        meets: "Trois questions claires, la plus importante en premier.",
+        exceeds: "Comprend les trois questions clés : le problème, ce qu'il faut faire et pourquoi."
+      },
+      {
+        name: "Liste de médicaments",
+        objective: "O4",
+        notYet: "Il manque des médicaments sans ordonnance, des vitamines, des compléments ou des allergies.",
+        meets: "Chaque médicament sur ordonnance ou sans ordonnance, vitamine, complément et allergie, avec la dose et la fréquence.",
+        exceeds: "Indique aussi à quoi sert chacun et une question pour le pharmacien."
+      },
+      {
+        name: "Le plan avec vos mots",
+        objective: "O3",
+        notYet: "Le plan manque, ou recopie les mots du médecin sans les comprendre.",
+        meets: "Dit le problème principal, ce qu'il faut faire et pourquoi, avec les mots de l'apprenant.",
+        exceeds: "Note aussi comment joindre le cabinet et quoi faire si l'état s'aggrave."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui apportent une fiche de consultation ou une liste de médicaments à un vrai rendez-vous dans les 60 jours (questionnaire de suivi)",
+      "Apprenants qui disent avoir utilisé la reformulation ou posé une question qu'ils n'auraient pas posée avant",
+      "Apprenants qui s'inscrivent à un portail patient ou l'utilisent dans les 60 jours",
+      "Apprenants qui commencent un autre cours Koach Learn sur la santé ou les compétences de vie dans les 30 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Du papier et un stylo ou une note sur le téléphone pour la fiche de consultation",
+      "Les étiquettes d'un médicament, d'une vitamine ou d'un complément alimentaire",
+      "Un téléphone ou un ordinateur avec Internet pour medlineplus.gov et un portail patient, si l'apprenant en a un",
+      "Environ 60 minutes au total"
+    ],
+    facilitatorNotes: [
+      "Rappelez au début que ce cours enseigne des compétences et ne donne pas d'avis médical.",
+      "Utilisez des inquiétudes d'exercice et des exemples d'étiquettes en groupe ; les apprenants n'ont jamais à parler de leur propre santé.",
+      "Entraînez-vous à la reformulation par deux, un apprenant lisant une consigne d'exemple comme s'il était le médecin.",
+      "Aidez les apprenants qui ont besoin d'un interprète à savoir comment en demander un en prenant rendez-vous.",
+      "Notez la fiche de consultation et le plan avec la grille et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

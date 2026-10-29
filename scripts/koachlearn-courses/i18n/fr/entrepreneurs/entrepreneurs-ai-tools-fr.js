@@ -16,11 +16,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes et se termine par une tâche à faire sur votre propre entreprise. Une vérification des connaissances suit chaque chapitre, et un quiz de 20 questions vous attend à la fin. Les noms, les fonctions et les prix des outils changent souvent, donc le cours vous dit comment vérifier ce qui est à jour."
   ],
   finalTask: "Créez une page « Ma boîte à outils IA » pour votre entreprise : listez quatre tâches (écriture, design, documents ou chiffres, et réunions ou notes), l'outil gratuit que vous utiliserez pour chacune, une chose que vous avez créée avec pendant ce cours, et une règle pour protéger les données des clients dans cet outil.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des propriétaires de petites entreprises et des personnes avec une activité complémentaire qui veulent un petit ensemble pratique d'outils d'IA au lieu de courir après chaque nouvelle application.",
+    startingPoint: "Ils utilisent l'e-mail, un téléphone et parfois les outils de bureautique de Google ou de Microsoft. Certains ont essayé un assistant conversationnel. La plupart n'ont ni plan pour savoir quel outil fait quelle tâche, ni règles pour les données des clients dans ces outils.",
+    gap: "De nouveaux outils d'IA sortent chaque semaine, et les entrepreneurs perdent du temps et de l'argent à trop en essayer ou à payer deux fois pour la même tâche. D'autres mettent des données de clients dans des outils sans vérifier les réglages. Les entrepreneurs ont besoin d'un outil gratuit testé pour chaque tâche principale et d'une règle de sécurité pour chacun.",
+    constraints: [
+      "Des mots simples ; aucune formation technique nécessaire",
+      "Appareils : un téléphone ou un ordinateur ; offres gratuites seulement",
+      "Temps : environ cinq minutes par leçon, plus une courte tâche sur sa propre entreprise",
+      "Les noms, les fonctions et les prix des outils changent souvent ; vérifiez la page des tarifs de chaque outil",
+      "Demandez l'autorisation avant d'enregistrer quelqu'un, et gardez les données des clients hors des conversations avec l'IA"
+    ],
+    prerequisites: "« Introduction à l'IA pour les entrepreneurs », ou un peu d'expérience pour demander de l'aide à un assistant IA."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir de n'importe quel outil d'IA", action: "identifier laquelle des quatre tâches de l'entreprise il fait : écriture, design, documents et chiffres, ou réunions et notes", standard: "et vérifier sa tâche, son coût et son adéquation avant de l'ajouter" },
+    { id: "O2", condition: "Avec les comptes que votre entreprise a déjà", action: "choisir un assistant conversationnel gratuit et l'utiliser pour une vraie tâche d'écriture professionnelle", standard: "après avoir comparé le même prompt dans deux assistants" },
+    { id: "O3", condition: "Avec un modèle Canva", action: "créer un visuel aux couleurs de l'entreprise avec un message, une image et un appel à l'action", standard: "en vérifiant chaque image de l'IA pour les erreurs et les logos copiés avant de l'utiliser" },
+    { id: "O4", condition: "À partir d'un tableau de ventes simple ou d'un document", action: "utiliser l'IA pour écrire une formule de tableur et rédiger un document", standard: "en testant la formule sur des lignes vérifiées à la main et en faisant relire les documents juridiques" },
+    { id: "O5", condition: "À partir d'une réunion ou d'un mémo vocal", action: "transformer l'enregistrement en notes écrites et en liste d'actions avec l'IA", standard: "avec qui, quoi et pour quand pour chaque point, et une autorisation avant d'enregistrer d'autres personnes" },
+    { id: "O6", condition: "À la fin du cours", action: "créer une boîte à outils IA d'une page avec un outil par tâche et une règle de sécurité pour chacun", standard: "en listant quelque chose que vous avez fait avec chaque outil" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Les principaux types d'outils d'IA",
       lessons: [
         {
+          objectives: ["O1"],
           title: "La carte des outils d'IA : quatre tâches, pas quatre cents applications",
           minutes: 4,
           goal: "Classer les outils d'IA selon la tâche qu'ils font pour votre entreprise.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Avant d'ajouter un outil, demandez-vous", bullets: ["Quelle tâche fait-il ?", "En ai-je déjà un ?", "Offre gratuite ? Où vont mes données ?"] }
           ],
           tryIt: "Écrivez les quatre tâches sur une page. À côté de chacune, notez l'outil que vous utilisez déjà (même s'il n'utilise pas l'IA). Laissez vide là où vous n'en avez pas.",
-          youCanNow: "classer les outils d'IA en quatre tâches d'entreprise et poser quatre questions avant d'en ajouter un nouveau."
+          youCanNow: "classer les outils d'IA en quatre tâches d'entreprise et poser quatre questions avant d'en ajouter un nouveau.",
+          quickCheck: [
+            { objective: "O1", q: "Quelle tâche fait un outil de transcription ?", options: ["Réunions et notes", "Design", "Écriture de publicités", "Paiements"], answer: 0, why: "La transcription transforme la parole en notes, c'est la tâche réunions et notes." },
+            { objective: "O1", q: "Une nouvelle application d'IA promet d'écrire des publications pour les réseaux sociaux, mais votre assistant conversationnel le fait déjà. Que faites-vous ?", options: ["Vous inscrire tout de suite", "La laisser de côté, sauf si elle fait clairement mieux", "Payer les deux", "Supprimer votre assistant conversationnel"], answer: 1, why: "Un outil par tâche garde les choses simples et évite de payer deux fois." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Assistants conversationnels : en choisir un et bien l'utiliser",
           minutes: 5,
           goal: "Ouvrir un assistant conversationnel gratuit et l'utiliser pour une vraie tâche d'écriture professionnelle.",
@@ -55,9 +84,14 @@ module.exports = {
             { title: "Bien l'utiliser", bullets: ["Tâche + contexte + format", "Demandez un changement à la fois", "Vérifiez les limites sur la page de tarifs de l'outil"] }
           ],
           tryIt: "Écrivez un prompt qui demande une description de 50 mots de votre entreprise pour un profil sur les réseaux sociaux. Lancez-le dans deux assistants. Gardez la meilleure et notez quel outil vous avez choisi.",
-          youCanNow: "choisir un assistant conversationnel adapté à vos comptes et l'utiliser pour de vrais écrits professionnels."
+          youCanNow: "choisir un assistant conversationnel adapté à vos comptes et l'utiliser pour de vrais écrits professionnels.",
+          quickCheck: [
+            { objective: "O2", q: "Quelle est une façon équitable de comparer deux assistants conversationnels ?", options: ["Prendre celui qui a le plus beau logo", "Poser une question différente à chacun", "Utiliser le même prompt dans les deux", "Prendre celui qui s'ouvre en premier"], answer: 2, why: "Le même prompt montre quel outil répond le mieux à votre besoin." },
+            { objective: "O2", q: "Votre boutique utilise Outlook et Word tous les jours. Quel assistant conversationnel essayez-vous d'abord ?", options: ["Un qui demande un nouveau compte", "Un outil payant dont vous n'avez jamais entendu parler", "Aucun", "Microsoft Copilot"], answer: 3, why: "Un outil qui va avec les comptes que vous utilisez déjà est un premier choix naturel." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Le design avec l'IA dans Canva",
           minutes: 5,
           goal: "Créer un visuel simple aux couleurs de votre entreprise avec Canva.",
@@ -75,17 +109,21 @@ module.exports = {
             { title: "Vérifiez les images d'IA", bullets: ["Repérez les mains bizarres ou les mots mal écrits", "Ne copiez pas d'autres marques ni de vraies personnes"] }
           ],
           tryIt: "Créez dans Canva une publication ou un prospectus pour votre entreprise à partir d'un modèle. Utilisez la description de votre entreprise de la leçon précédente et un appel à l'action. Téléchargez-le.",
-          youCanNow: "créer un visuel propre aux couleurs de votre entreprise dans Canva et vérifier les images d'IA avant de les utiliser."
+          youCanNow: "créer un visuel propre aux couleurs de votre entreprise dans Canva et vérifier les images d'IA avant de les utiliser.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce qu'un appel à l'action sur un prospectus ?", options: ["Une prochaine étape claire, comme « Envoyez-nous un SMS pour réserver »", "L'image", "La taille de la police", "Votre logo"], answer: 0, why: "Un appel à l'action dit aux gens quoi faire ensuite." },
+            { objective: "O3", q: "L'IA crée pour vous une image qui ressemble au logo d'une marque célèbre. Que faites-vous ?", options: ["L'utiliser ; c'est l'IA qui l'a faite", "Ne pas l'utiliser et créer une autre image", "La réduire pour que personne ne le remarque", "Ajouter votre nom par-dessus"], answer: 1, why: "Vous ne devez pas utiliser d'images qui copient le logo d'une autre entreprise." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Les principaux types d'outils d'IA",
         questions: [
-          { q: "Quel outil correspond à la tâche « design » ?", options: ["Une calculatrice", "Canva", "Une boîte de réception e-mail", "Une application bancaire"], answer: 1, why: "Canva crée des prospectus, des images pour les réseaux et d'autres visuels." },
-          { q: "Votre entreprise utilise Microsoft Outlook et Word. Quel assistant conversationnel est un premier choix naturel ?", options: ["Une application de cartes", "Une application de dessin", "Une application de musique", "Microsoft Copilot"], answer: 3, why: "Copilot convient aux entreprises qui utilisent déjà des comptes Microsoft." },
-          { q: "Avant d'ajouter un nouvel outil d'IA, quelle question compte le plus ?", options: ["Quelle tâche fait-il, et ai-je déjà un outil pour ça ?", "Le logo est-il joli ?", "Est-il populaire sur TikTok ?", "A-t-il un mode sombre ?"], answer: 0, why: "Partez de la tâche ; évitez de payer des outils qui font la même chose que les vôtres." },
-          { q: "Quelle est la meilleure façon de commencer une création dans Canva ?", options: ["Une page blanche", "Copier le prospectus d'un concurrent", "Un modèle que vous modifiez", "Taper vos coordonnées bancaires"], answer: 2, why: "Les modèles vous donnent une mise en page propre à adapter." },
-          { q: "Une image d'IA pour votre prospectus a un mot mal écrit sur l'enseigne. Que faites-vous ?", options: ["Vous l'utilisez quand même", "Vous la publiez deux fois", "Vous la corrigez ou en créez une nouvelle avant de l'utiliser", "Vous accusez le client"], answer: 2, why: "Vérifiez les erreurs des images d'IA avant qu'elles soient diffusées." }
+          { objective: "O1", q: "Quel outil correspond à la tâche « design » ?", options: ["Une calculatrice", "Canva", "Une boîte de réception e-mail", "Une application bancaire"], answer: 1, why: "Canva crée des prospectus, des images pour les réseaux et d'autres visuels." },
+          { objective: "O2", q: "Votre entreprise utilise Microsoft Outlook et Word. Quel assistant conversationnel est un premier choix naturel ?", options: ["Une application de cartes", "Une application de dessin", "Une application de musique", "Microsoft Copilot"], answer: 3, why: "Copilot convient aux entreprises qui utilisent déjà des comptes Microsoft." },
+          { objective: "O1", q: "Avant d'ajouter un nouvel outil d'IA, quelle question compte le plus ?", options: ["Quelle tâche fait-il, et ai-je déjà un outil pour ça ?", "Le logo est-il joli ?", "Est-il populaire sur TikTok ?", "A-t-il un mode sombre ?"], answer: 0, why: "Partez de la tâche ; évitez de payer des outils qui font la même chose que les vôtres." },
+          { objective: "O3", q: "Quelle est la meilleure façon de commencer une création dans Canva ?", options: ["Une page blanche", "Copier le prospectus d'un concurrent", "Un modèle que vous modifiez", "Taper vos coordonnées bancaires"], answer: 2, why: "Les modèles vous donnent une mise en page propre à adapter." },
+          { objective: "O3", q: "Une image d'IA pour votre prospectus a un mot mal écrit sur l'enseigne. Que faites-vous ?", options: ["Vous l'utilisez quand même", "Vous la publiez deux fois", "Vous la corrigez ou en créez une nouvelle avant de l'utiliser", "Vous accusez le client"], answer: 2, why: "Vérifiez les erreurs des images d'IA avant qu'elles soient diffusées." }
         ]
       }
     },
@@ -93,6 +131,7 @@ module.exports = {
       name: "Chapitre 2 : L'IA dans vos outils de travail quotidiens",
       lessons: [
         {
+          objectives: ["O4"],
           title: "L'IA dans les documents et les tableurs",
           minutes: 5,
           goal: "Utiliser l'IA pour rédiger un document et pour comprendre un tableur.",
@@ -110,9 +149,14 @@ module.exports = {
           ],
           sources: [{ name: "Google Workspace : fonctions Gemini", url: "https://workspace.google.com/solutions/ai/" }, { name: "Assistance Microsoft : Copilot", url: "https://support.microsoft.com/en-us/copilot" }],
           tryIt: "Décrivez à un assistant IA un tableau de ventes simple (date, article, montant, payé ou non) et demandez une formule qui totalise seulement les ventes payées. Créez un tableau de test de cinq lignes et vérifiez la formule à la main.",
-          youCanNow: "utiliser l'IA pour rédiger des documents et pour écrire et tester des formules de tableur."
+          youCanNow: "utiliser l'IA pour rédiger des documents et pour écrire et tester des formules de tableur.",
+          quickCheck: [
+            { objective: "O4", q: "Qu'est-ce qu'une formule de tableur ?", options: ["Un graphique", "Une police", "Une instruction dans une cellule qui calcule quelque chose", "Un nom de fichier"], answer: 2, why: "Les formules calculent des résultats à partir des données de votre tableau." },
+            { objective: "O4", q: "Vous voulez que l'IA écrive une formule pour votre tableau des ventes clients. Que partagez-vous ?", options: ["Le tableau complet avec les noms des clients", "Les numéros de téléphone des clients", "Votre identifiant bancaire", "Une description des colonnes sans données privées"], answer: 3, why: "Décrire les colonnes vous donne la formule sans partager de données privées." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Notes de réunion et transcription",
           minutes: 4,
           goal: "Transformer une réunion ou un mémo vocal en notes claires et en actions à faire avec l'IA.",
@@ -129,9 +173,14 @@ module.exports = {
             { title: "Demandez toujours d'abord", bullets: ["Prévenez avant d'enregistrer", "Les lois sur l'enregistrement varient selon le lieu", "Certains endroits exigent l'accord de tous"] }
           ],
           tryIt: "Enregistrez un mémo vocal de deux minutes sur ce que votre entreprise doit faire cette semaine. Transcrivez-le avec la saisie vocale ou votre téléphone, puis demandez à un assistant IA d'en faire une liste d'actions avec des dates.",
-          youCanNow: "transformer des notes orales en liste d'actions écrite, et demander la permission avant d'enregistrer d'autres personnes."
+          youCanNow: "transformer des notes orales en liste d'actions écrite, et demander la permission avant d'enregistrer d'autres personnes.",
+          quickCheck: [
+            { objective: "O5", q: "Quelles sont les trois choses que doit dire chaque action à faire ?", options: ["Qui, quoi et pour quand", "Où, pourquoi et combien", "La date, la météo et le sujet", "Seulement le sujet"], answer: 0, why: "Qui fait quoi et pour quand rend une action claire." },
+            { objective: "O5", q: "Vous voulez enregistrer un appel avec un fournisseur pour prendre des notes. Que faites-vous d'abord ?", options: ["L'enregistrer discrètement", "Le prévenir et lui demander son autorisation", "N'enregistrer que la moitié de l'appel", "Demander à l'IA si c'est permis"], answer: 1, why: "Prévenez les gens et obtenez leur autorisation avant d'enregistrer." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Construire votre boîte à outils et la garder sûre",
           minutes: 5,
           goal: "Choisir un outil par tâche et fixer une règle de sécurité pour chacun.",
@@ -149,17 +198,21 @@ module.exports = {
             { title: "Revoyez tous les quelques mois", bullets: ["Les outils, les fonctions et les prix changent"] }
           ],
           tryIt: "Tâche finale : créez votre page « Ma boîte à outils IA » : quatre tâches, un outil pour chacune, une chose que vous avez créée avec pendant ce cours, et une règle de sécurité pour chaque outil.",
-          youCanNow: "faire tourner votre entreprise avec une petite boîte à outils IA sûre que vous revoyez régulièrement."
+          youCanNow: "faire tourner votre entreprise avec une petite boîte à outils IA sûre que vous revoyez régulièrement.",
+          quickCheck: [
+            { objective: "O6", q: "Qu'est-ce qu'une règle de sécurité dans une boîte à outils ?", options: ["Une liste de prix", "La page de connexion d'un outil", "Une règle comme « aucun numéro de téléphone de client dans les conversations avec l'IA »", "Une sauvegarde de vos fichiers"], answer: 2, why: "Une règle de sécurité dit comment vous protégez les données dans chaque outil." },
+            { objective: "O6", q: "Six mois après avoir créé votre boîte à outils, un outil change son offre gratuite. Que faites-vous ?", options: ["L'ignorer", "Supprimer la boîte à outils", "Continuer à payer sans regarder", "Vérifier la page des tarifs de l'outil et mettre à jour votre boîte à outils"], answer: 3, why: "Les outils et les prix changent, alors vous révisez la boîte à outils de temps en temps." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : L'IA dans vos outils de travail quotidiens",
         questions: [
-          { q: "Votre abonnement de tableur n'a pas d'aide d'IA intégrée. Que pouvez-vous faire ?", options: ["Décrire vos colonnes à un assistant conversationnel gratuit et demander une formule", "Abandonner", "Coller les numéros de carte de vos clients dans l'IA", "Acheter toutes les applications d'IA"], answer: 0, why: "Un assistant conversationnel peut écrire des formules à partir d'une description, sans données privées." },
-          { q: "L'IA vous a écrit une formule de tableur. Que faire avant de lui faire confiance ?", options: ["Supprimer le tableau", "L'utiliser d'un coup sur toute l'année", "L'envoyer aux clients", "La tester sur quelques lignes que vous pouvez vérifier à la main"], answer: 3, why: "Tester sur quelques lignes repère les erreurs." },
-          { q: "Que faire avant d'enregistrer un appel avec un client ?", options: ["Enregistrer en secret", "Le prévenir et obtenir sa permission", "N'enregistrer que la première minute", "Le publier en ligne"], answer: 1, why: "Les lois sur l'enregistrement varient, et certaines exigent l'accord de tous." },
-          { q: "Une action à faire doit dire :", options: ["Qui fait quoi et pour quand", "Seulement la date de la réunion", "Combien de temps a duré la réunion", "Qui était en retard"], answer: 0, why: "Une action à faire nomme une personne, une tâche et une échéance." },
-          { q: "Pourquoi revoir votre boîte à outils IA tous les quelques mois ?", options: ["Pour supprimer votre entreprise", "C'est exigé par la loi", "Les outils, les fonctions et les prix changent", "Parce que l'IA oublie"], answer: 2, why: "Des révisions régulières gardent votre boîte à outils à jour et abordable." }
+          { objective: "O4", q: "Votre abonnement de tableur n'a pas d'aide d'IA intégrée. Que pouvez-vous faire ?", options: ["Décrire vos colonnes à un assistant conversationnel gratuit et demander une formule", "Abandonner", "Coller les numéros de carte de vos clients dans l'IA", "Acheter toutes les applications d'IA"], answer: 0, why: "Un assistant conversationnel peut écrire des formules à partir d'une description, sans données privées." },
+          { objective: "O4", q: "L'IA vous a écrit une formule de tableur. Que faire avant de lui faire confiance ?", options: ["Supprimer le tableau", "L'utiliser d'un coup sur toute l'année", "L'envoyer aux clients", "La tester sur quelques lignes que vous pouvez vérifier à la main"], answer: 3, why: "Tester sur quelques lignes repère les erreurs." },
+          { objective: "O5", q: "Que faire avant d'enregistrer un appel avec un client ?", options: ["Enregistrer en secret", "Le prévenir et obtenir sa permission", "N'enregistrer que la première minute", "Le publier en ligne"], answer: 1, why: "Les lois sur l'enregistrement varient, et certaines exigent l'accord de tous." },
+          { objective: "O5", q: "Une action à faire doit dire :", options: ["Qui fait quoi et pour quand", "Seulement la date de la réunion", "Combien de temps a duré la réunion", "Qui était en retard"], answer: 0, why: "Une action à faire nomme une personne, une tâche et une échéance." },
+          { objective: "O6", q: "Pourquoi revoir votre boîte à outils IA tous les quelques mois ?", options: ["Pour supprimer votre entreprise", "C'est exigé par la loi", "Les outils, les fonctions et les prix changent", "Parce que l'IA oublie"], answer: 2, why: "Des révisions régulières gardent votre boîte à outils à jour et abordable." }
         ]
       }
     }
@@ -167,26 +220,105 @@ module.exports = {
   quiz: {
     title: "Quiz final : Les outils d'IA que tout entrepreneur devrait connaître",
     questions: [
-      { q: "Les quatre tâches d'outils d'IA de ce cours sont :", options: ["Banque, expédition, embauche, impôts", "Écriture, design, documents et chiffres, réunions et notes", "Musique, jeux, films, sport", "Téléphones, ordinateurs, tablettes, montres"], answer: 1, why: "Ces quatre tâches couvrent la plupart des besoins d'une petite entreprise." },
-      { q: "Lequel est un assistant conversationnel ?", options: ["Une camionnette de livraison", "Un lecteur de codes-barres", "Un tiroir-caisse", "Google Gemini"], answer: 3, why: "Gemini, ChatGPT et Copilot sont des assistants conversationnels." },
-      { q: "Pourquoi commencer avec un outil par tâche ?", options: ["Pour que les clients voient vos applications", "C'est la loi", "Les outils d'IA ne peuvent pas partager de tâches", "Cela reste simple et évite de payer deux fois"], answer: 3, why: "Une petite boîte à outils est plus facile à apprendre et moins chère." },
-      { q: "Où vérifier ce que l'offre gratuite d'un outil inclut aujourd'hui ?", options: ["Dans un commentaire de vidéo au hasard", "Sur la page de tarifs de l'outil", "Auprès de votre client", "Sur un vieux prospectus"], answer: 1, why: "Les offres changent ; la page officielle est à jour." },
-      { q: "Votre entreprise fonctionne avec Gmail et Google Drive. Un assistant conversationnel naturel à essayer d'abord :", options: ["Un fax", "Un filtre photo", "Google Gemini", "Un compteur de mots"], answer: 2, why: "Gemini convient aux entreprises qui utilisent des comptes Google." },
-      { q: "Une bonne façon de comparer deux assistants conversationnels :", options: ["Lancer le même prompt dans les deux", "Ne lire que leurs publicités", "Demander à un inconnu", "Prendre le plus récent"], answer: 0, why: "Le même prompt dans deux outils montre lequel correspond à votre style." },
-      { q: "Dans Canva, le chemin le plus rapide vers une création propre est de :", options: ["Copier le logo d'une autre marque", "Partir d'une page blanche", "Partir d'un modèle", "Utiliser dix polices"], answer: 2, why: "Les modèles vous donnent une mise en page toute prête." },
-      { q: "Un prospectus simple doit avoir :", options: ["Un message, une image, un appel à l'action", "Tous les produits que vous vendez", "Seulement du petit texte", "Pas de nom d'entreprise"], answer: 0, why: "Les créations simples sont plus faciles à lire." },
-      { q: "Vous ne devez PAS utiliser l'IA pour créer une image qui :", options: ["Montre votre propre produit", "Copie le logo d'une autre entreprise", "Utilise vos couleurs de marque", "A le nom de votre boutique bien écrit"], answer: 1, why: "Copier une autre marque peut enfreindre les règles sur les marques ou le droit d'auteur." },
-      { q: "Gemini dans Google Workspace et Copilot dans Microsoft 365 sont :", options: ["Des services de livraison", "Des imprimantes", "Des applications de paiement", "Des aides d'IA intégrées aux outils bureautiques dans beaucoup d'abonnements"], answer: 3, why: "Ils ajoutent l'IA aux documents, aux e-mails et aux tableurs." },
-      { q: "Quand vous demandez une formule de tableur à l'IA, vous partagez :", options: ["Une description des colonnes, sans données privées", "Les numéros de carte des clients", "Votre mot de passe bancaire", "Votre numéro fiscal"], answer: 0, why: "Décrire les colonnes suffit pour obtenir une formule." },
-      { q: "Une formule de tableur, c'est :", options: ["Une adresse e-mail", "Un type de graphique", "Une police", "Une instruction dans une cellule qui calcule quelque chose"], answer: 3, why: "Les formules calculent des valeurs comme des totaux." },
-      { q: "L'IA vous a rédigé un contrat de service. Et ensuite ?", options: ["Le publier en ligne", "Le faire signer tout de suite aux clients", "Le faire relire par un avocat avant de l'utiliser", "Supprimer l'ancien sans le lire"], answer: 2, why: "Les documents juridiques doivent être relus par un professionnel." },
-      { q: "La saisie vocale de Google Docs vous permet de :", options: ["Payer des factures", "Parler et voir vos mots s'écrire", "Créer des logos", "Expédier des produits"], answer: 1, why: "Elle transforme la parole en texte." },
-      { q: "Après avoir transcrit une réunion, une demande utile à l'IA est :", options: ["« Traduis en code. »", "« Rallonge-le. »", "« Ajoute des faits au hasard. »", "« Résume ceci en décisions et en actions à faire : qui, quoi, pour quand. »"], answer: 3, why: "Cela transforme une longue transcription en prochaines étapes claires." },
-      { q: "Avant d'enregistrer un appel, vous devez :", options: ["N'enregistrer que l'autre personne", "Cacher l'enregistreur", "Prévenir les gens et obtenir leur permission", "Demander à l'IA si c'est légal et ne pas leur demander"], answer: 2, why: "Les règles de consentement varient selon le lieu ; demander d'abord est sûr." },
-      { q: "Beaucoup d'outils d'IA permettent de changer les paramètres de données pour que :", options: ["Vos conversations ne soient pas conservées ni utilisées pour l'entraînement", "Vos prix augmentent", "Vos clients reçoivent des e-mails", "Votre logo change"], answer: 0, why: "Les paramètres de confidentialité contrôlent ce que l'outil conserve." },
-      { q: "Quelle est une bonne règle de sécurité pour la boîte à outils ?", options: ["« Partager les mots de passe avec l'IA »", "« Pas de numéros de téléphone de clients dans les conversations avec l'IA »", "« Ne jamais vérifier les images d'IA »", "« Utiliser chaque nouvelle application »"], answer: 1, why: "Des règles simples protègent vos clients." },
-      { q: "Votre page de boîte à outils indique pour chaque tâche :", options: ["Votre solde bancaire", "L'outil, gratuit ou payant, une création, une règle de sécurité", "Les mots de passe de vos concurrents", "Chaque application que vous avez essayée"], answer: 1, why: "Cela rend la boîte à outils pratique et sûre." },
-      { q: "Pourquoi choisir une offre professionnelle d'un outil d'IA ?", options: ["Elle peut offrir de meilleures garanties de confidentialité pour les documents d'entreprise", "Elle est toujours gratuite", "Elle évite de vérifier le travail", "Elle fait vos impôts"], answer: 0, why: "Les offres professionnelles protègent souvent mieux les données ; lisez la page de confidentialité." }
+      { objective: "O1", q: "Les quatre tâches d'outils d'IA de ce cours sont :", options: ["Banque, expédition, embauche, impôts", "Écriture, design, documents et chiffres, réunions et notes", "Musique, jeux, films, sport", "Téléphones, ordinateurs, tablettes, montres"], answer: 1, why: "Ces quatre tâches couvrent la plupart des besoins d'une petite entreprise." },
+      { objective: "O2", q: "Lequel est un assistant conversationnel ?", options: ["Une camionnette de livraison", "Un lecteur de codes-barres", "Un tiroir-caisse", "Google Gemini"], answer: 3, why: "Gemini, ChatGPT et Copilot sont des assistants conversationnels." },
+      { objective: "O1", q: "Pourquoi commencer avec un outil par tâche ?", options: ["Pour que les clients voient vos applications", "C'est la loi", "Les outils d'IA ne peuvent pas partager de tâches", "Cela reste simple et évite de payer deux fois"], answer: 3, why: "Une petite boîte à outils est plus facile à apprendre et moins chère." },
+      { objective: "O1", q: "Où vérifier ce que l'offre gratuite d'un outil inclut aujourd'hui ?", options: ["Dans un commentaire de vidéo au hasard", "Sur la page de tarifs de l'outil", "Auprès de votre client", "Sur un vieux prospectus"], answer: 1, why: "Les offres changent ; la page officielle est à jour." },
+      { objective: "O2", q: "Votre entreprise fonctionne avec Gmail et Google Drive. Un assistant conversationnel naturel à essayer d'abord :", options: ["Un fax", "Un filtre photo", "Google Gemini", "Un compteur de mots"], answer: 2, why: "Gemini convient aux entreprises qui utilisent des comptes Google." },
+      { objective: "O2", q: "Une bonne façon de comparer deux assistants conversationnels :", options: ["Lancer le même prompt dans les deux", "Ne lire que leurs publicités", "Demander à un inconnu", "Prendre le plus récent"], answer: 0, why: "Le même prompt dans deux outils montre lequel correspond à votre style." },
+      { objective: "O3", q: "Dans Canva, le chemin le plus rapide vers une création propre est de :", options: ["Copier le logo d'une autre marque", "Partir d'une page blanche", "Partir d'un modèle", "Utiliser dix polices"], answer: 2, why: "Les modèles vous donnent une mise en page toute prête." },
+      { objective: "O3", q: "Un prospectus simple doit avoir :", options: ["Un message, une image, un appel à l'action", "Tous les produits que vous vendez", "Seulement du petit texte", "Pas de nom d'entreprise"], answer: 0, why: "Les créations simples sont plus faciles à lire." },
+      { objective: "O3", q: "Vous ne devez PAS utiliser l'IA pour créer une image qui :", options: ["Montre votre propre produit", "Copie le logo d'une autre entreprise", "Utilise vos couleurs de marque", "A le nom de votre boutique bien écrit"], answer: 1, why: "Copier une autre marque peut enfreindre les règles sur les marques ou le droit d'auteur." },
+      { objective: "O4", q: "Gemini dans Google Workspace et Copilot dans Microsoft 365 sont :", options: ["Des services de livraison", "Des imprimantes", "Des applications de paiement", "Des aides d'IA intégrées aux outils bureautiques dans beaucoup d'abonnements"], answer: 3, why: "Ils ajoutent l'IA aux documents, aux e-mails et aux tableurs." },
+      { objective: "O4", q: "Quand vous demandez une formule de tableur à l'IA, vous partagez :", options: ["Une description des colonnes, sans données privées", "Les numéros de carte des clients", "Votre mot de passe bancaire", "Votre numéro fiscal"], answer: 0, why: "Décrire les colonnes suffit pour obtenir une formule." },
+      { objective: "O4", q: "Une formule de tableur, c'est :", options: ["Une adresse e-mail", "Un type de graphique", "Une police", "Une instruction dans une cellule qui calcule quelque chose"], answer: 3, why: "Les formules calculent des valeurs comme des totaux." },
+      { objective: "O4", q: "L'IA vous a rédigé un contrat de service. Et ensuite ?", options: ["Le publier en ligne", "Le faire signer tout de suite aux clients", "Le faire relire par un avocat avant de l'utiliser", "Supprimer l'ancien sans le lire"], answer: 2, why: "Les documents juridiques doivent être relus par un professionnel." },
+      { objective: "O5", q: "La saisie vocale de Google Docs vous permet de :", options: ["Payer des factures", "Parler et voir vos mots s'écrire", "Créer des logos", "Expédier des produits"], answer: 1, why: "Elle transforme la parole en texte." },
+      { objective: "O5", q: "Après avoir transcrit une réunion, une demande utile à l'IA est :", options: ["« Traduis en code. »", "« Rallonge-le. »", "« Ajoute des faits au hasard. »", "« Résume ceci en décisions et en actions à faire : qui, quoi, pour quand. »"], answer: 3, why: "Cela transforme une longue transcription en prochaines étapes claires." },
+      { objective: "O5", q: "Avant d'enregistrer un appel, vous devez :", options: ["N'enregistrer que l'autre personne", "Cacher l'enregistreur", "Prévenir les gens et obtenir leur permission", "Demander à l'IA si c'est légal et ne pas leur demander"], answer: 2, why: "Les règles de consentement varient selon le lieu ; demander d'abord est sûr." },
+      { objective: "O6", q: "Beaucoup d'outils d'IA permettent de changer les paramètres de données pour que :", options: ["Vos conversations ne soient pas conservées ni utilisées pour l'entraînement", "Vos prix augmentent", "Vos clients reçoivent des e-mails", "Votre logo change"], answer: 0, why: "Les paramètres de confidentialité contrôlent ce que l'outil conserve." },
+      { objective: "O6", q: "Quelle est une bonne règle de sécurité pour la boîte à outils ?", options: ["« Partager les mots de passe avec l'IA »", "« Pas de numéros de téléphone de clients dans les conversations avec l'IA »", "« Ne jamais vérifier les images d'IA »", "« Utiliser chaque nouvelle application »"], answer: 1, why: "Des règles simples protègent vos clients." },
+      { objective: "O6", q: "Votre page de boîte à outils indique pour chaque tâche :", options: ["Votre solde bancaire", "L'outil, gratuit ou payant, une création, une règle de sécurité", "Les mots de passe de vos concurrents", "Chaque application que vous avez essayée"], answer: 1, why: "Cela rend la boîte à outils pratique et sûre." },
+      { objective: "O6", q: "Pourquoi choisir une offre professionnelle d'un outil d'IA ?", options: ["Elle peut offrir de meilleures garanties de confidentialité pour les documents d'entreprise", "Elle est toujours gratuite", "Elle évite de vérifier le travail", "Elle fait vos impôts"], answer: 0, why: "Les offres professionnelles protègent souvent mieux les données ; lisez la page de confidentialité." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      4,
+      6,
+      8,
+      10,
+      11,
+      14,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Les quatre tâches couvertes",
+        objective: "O1",
+        notYet: "Une tâche manque, ou deux outils font la même tâche.",
+        meets: "Écriture, design, documents ou chiffres, et réunions ou notes, avec un outil chacune.",
+        exceeds: "Dit pourquoi chaque outil a été choisi plutôt qu'un autre."
+      },
+      {
+        name: "Réalisé avec chaque outil",
+        objective: "O3",
+        notYet: "Rien n'a été fait avec un ou plusieurs outils.",
+        meets: "Liste une vraie réalisation par outil, comme un texte de profil, un prospectus, une formule et une liste d'actions.",
+        exceeds: "Les réalisations servent déjà dans l'entreprise."
+      },
+      {
+        name: "Résultats vérifiés",
+        objective: "O4",
+        notYet: "Une formule, une image ou un document a été utilisé sans vérification.",
+        meets: "Formule testée sur des lignes vérifiées à la main ; images et documents vérifiés avant usage.",
+        exceeds: "Note quels documents doivent être relus par un avocat ou un professionnel."
+      },
+      {
+        name: "Règles de sécurité",
+        objective: "O6",
+        notYet: "Un outil n'a pas de règle de sécurité, ou une règle est floue.",
+        meets: "Chaque outil a une règle claire pour les données des clients.",
+        exceeds: "Note aussi le réglage de données modifié dans chaque outil et quand réviser la boîte à outils."
+      },
+      {
+        name: "Offre gratuite et adéquation",
+        objective: "O2",
+        notYet: "Gratuit ou payant n'est pas indiqué, ou l'outil ne va pas avec les comptes de l'entreprise.",
+        meets: "Gratuit ou payant noté pour chaque outil, vérifié sur sa page des tarifs.",
+        exceeds: "Note ce qu'une offre payante ajouterait et si elle en vaut la peine."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les entrepreneurs qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Les entrepreneurs qui utilisent encore les quatre outils de leur boîte à outils après 30 jours (enquête de suivi)",
+      "Les entrepreneurs qui disent avoir résilié un outil payant en double ou inutilisé",
+      "Les apprenants qui commencent un autre cours Koach Learn pour entrepreneurs dans les 30 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur avec Internet",
+      "Des comptes gratuits : un assistant conversationnel, Canva, et Google Docs et Sheets ou Microsoft 365",
+      "Un téléphone pour un court mémo vocal",
+      "Environ 60 minutes au total pour les leçons, les tâches, les vérifications et la page de la boîte à outils"
+    ],
+    facilitatorNotes: [
+      "Demandez aux entrepreneurs d'apporter la vraie description de leur entreprise ; elle resservira aux leçons 2 et 3.",
+      "Vérifiez les offres gratuites actuelles sur la page des tarifs de chaque outil avant la séance, car elles changent souvent.",
+      "Rappelez aux apprenants de demander l'autorisation avant d'enregistrer quelqu'un et de garder les données des clients hors des conversations avec l'IA.",
+      "Utilisez un tableau de test de cinq lignes avec des données inventées pour l'exercice sur les formules.",
+      "Notez la page de la boîte à outils avec la grille, une ligne « Pas encore » à la fois."
     ]
   }
 };

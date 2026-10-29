@@ -24,11 +24,35 @@ module.exports = {
     "À la fin, vous aurez une conception de programme que vous pourrez présenter au conseil d'une coopérative, à un bureau de comté ou d'État, à un bailleur ou à un investisseur. Un contrôle des connaissances termine chaque chapitre et un quiz de 20 questions termine le cours."
   ],
   finalTask: "Rédigez une conception de programme de deux pages pour la surveillance par drone d'une coopérative de 200 petits agriculteurs (par exemple maïs et haricot à Trans Nzoia, café à Nyeri, ou manioc dans l'État d'Ogun) : le problème et l'objectif, les utilisateurs et ce que reçoit chacun, le plan de données (stockage, couches SIG, usage du satellite, consentement et protection des données), l'équipe et le matériel, le calendrier des vols pour une saison, un budget simple avec le mode de financement du service, les mesures de réussite, et la façon de rendre compte des résultats.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des responsables de la vulgarisation, des dirigeants de coopératives et de groupements d'agriculteurs, des agents de l'agriculture des comtés et des États, des chargés de programme d'ONG, des gestionnaires d'agro-entreprises et des entrepreneurs du drone au Kenya, au Nigeria et partout en Afrique, qui veulent mener une surveillance par drone pour de nombreuses fermes.",
+    startingPoint: "Les apprenants savent faire et lire des cartes de drone et ont vu du travail par drone sur une seule ferme (cours 1 à 4). Peu ont organisé les données de centaines de fermes, combiné des cartes de drone avec des images satellite et des registres dans un SIG, traité les données personnelles des agriculteurs selon la loi, ou planifié et budgété un programme qui dure au-delà d'une subvention.",
+    gap: "Beaucoup de projets de drones partent du drone au lieu d'un problème, perdent des données, traitent mal les informations personnelles des agriculteurs ou s'arrêtent quand la subvention se termine. Une conception de programme claire, avec un plan de données, le consentement, une équipe, un calendrier, un budget et des mesures, permet à une coopérative, un comté ou une entreprise de faire tourner un service auquel les agriculteurs font confiance et qui se finance lui-même.",
+    constraints: [
+      "Niveau de lecture : des mots simples ; chaque terme de données et de SIG est expliqué",
+      "Appareils : un ordinateur portable avec QGIS gratuit et un tableur ; des données de drone et satellite ou des exemples",
+      "Loi : les lois sur la protection des données s'appliquent (Data Protection Act 2019 au Kenya, Nigeria Data Protection Act 2023 au Nigeria, ou la loi du pays de l'apprenant)",
+      "Règles de l'aviation : les pilotes ont besoin de licences et l'organisation peut avoir besoin d'un certificat d'exploitant",
+      "Les coûts et les frais varient selon les pays et changent : les apprenants utilisent de vrais devis locaux"
+    ],
+    prerequisites: "« Drones pour la surveillance agricole 4 : précision, climat et suivi du bétail », ou une expérience équivalente des cartes de drone."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Pour les données de drone de nombreuses fermes", action: "mettre en place une structure de dossiers, une règle de nommage, un registre des vols et une sauvegarde 3-2-1", standard: "en utilisant des ID ferme au lieu des noms et en vérifiant que les sauvegardes s'ouvrent" },
+    { id: "O2", condition: "À partir de cartes de drone, de limites de champs, d'images satellite et de registres des fermes", action: "planifier un projet SIG qui les superpose et relie les registres aux champs par ID", standard: "avec toutes les couches dans le même système de coordonnées" },
+    { id: "O3", condition: "Quand un programme collecte les données personnelles des agriculteurs", action: "rédiger une déclaration de consentement et des mesures de protection des données conformes à la loi", standard: "en disant ce qui est collecté, pourquoi, qui le voit, combien de temps c'est gardé et que les agriculteurs peuvent refuser" },
+    { id: "O4", condition: "Pour un groupe d'agriculteurs", action: "rédiger un objectif de programme avec un chiffre et une date, et lister les utilisateurs et ce que reçoit chacun", standard: "en partant d'un problème qui compte pour les utilisateurs et sur lequel ils peuvent agir" },
+    { id: "O5", condition: "Pour une saison du programme", action: "planifier l'équipe, le matériel, le calendrier des vols et le budget, et la façon dont le service est payé", standard: "en incluant les licences, les coûts ponctuels et les coûts de fonctionnement, et un plan pour l'après-subvention" },
+    { id: "O6", condition: "À la fin d'une saison", action: "choisir des mesures de réussite et rendre compte des résultats à chaque utilisateur", standard: "par rapport à une situation de départ et en étant honnête sur ce qui n'a pas marché" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Gestion et intégration des données",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Organiser, stocker et sauvegarder les données de drone",
           minutes: 5,
           goal: "Mettre en place un système de dossiers, de nommage et de sauvegarde pour les données de drone de nombreuses fermes.",
@@ -46,9 +70,14 @@ module.exports = {
             { title: "Sauvegarde 3-2-1", bullets: ["Trois copies", "Deux types de support", "Une copie dans un autre lieu"] }
           ],
           tryIt: "Créez sur votre ordinateur ou votre téléphone la structure de dossiers d'un programme d'exemple avec trois fermes, et commencez un tableur de registre des vols avec les colonnes de cette leçon. Ajoutez deux vols d'exemple.",
-          youCanNow: "organiser, enregistrer et sauvegarder les données de drone d'un programme sur plusieurs fermes."
+          youCanNow: "organiser, enregistrer et sauvegarder les données de drone d'un programme sur plusieurs fermes.",
+          quickCheck: [
+            { objective: "O1", q: "Pourquoi décider combien de temps garder les photos brutes ?", options: ["Il est illégal de garder les photos brutes", "Les agriculteurs les demandent tous les jours", "Les photos brutes remplissent vite le stockage", "On ne peut pas en faire de cartes"], answer: 2, why: "Les photos brutes remplissent vite le stockage : le programme décide donc combien de temps les garder." },
+            { objective: "O1", q: "Deux pilotes nomment différemment les fichiers d'une même ferme. Que faites-vous ?", options: ["Convenir d'une seule structure de dossiers et d'une seule règle de nommage pour tous", "Laisser chaque pilote utiliser son propre système", "Mettre le nom de l'agriculteur dans chaque fichier", "Supprimer les fichiers les plus anciens"], answer: 0, why: "Une structure de dossiers et une règle de nommage claires et communes évitent que les données soient perdues ou mélangées." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Combiner les cartes de drone avec le SIG, le satellite et les registres",
           minutes: 6,
           goal: "Construire un projet SIG qui superpose cartes de drone, limites des champs, images satellite et registres des fermes.",
@@ -66,9 +95,14 @@ module.exports = {
           ],
           sources: [QGIS, COPERNICUS],
           tryIt: "Ouvrez le Copernicus Browser et trouvez votre région. Puis, dans QGIS, dessinez deux limites de champs d'exemple, donnez-leur des ID champ, et joignez un petit tableur avec la date de semis et la variété de chacun.",
-          youCanNow: "combiner cartes de drone, images satellite, limites des champs et registres des fermes dans un seul projet SIG."
+          youCanNow: "combiner cartes de drone, images satellite, limites des champs et registres des fermes dans un seul projet SIG.",
+          quickCheck: [
+            { objective: "O2", q: "Que vous permet de faire un SIG ?", options: ["Faire voler le drone automatiquement", "Superposer différents types de données sur une seule carte", "Charger les batteries plus vite", "Payer les agriculteurs par mobile money"], answer: 1, why: "Un SIG superpose des couches comme les limites, les cartes de drone, les images satellite et les registres sur une seule carte." },
+            { objective: "O2", q: "Une coopérative veut surveiller ses 200 fermes chaque semaine mais n'a qu'un drone. Que prévoyez-vous ?", options: ["Survoler chaque ferme chaque jour", "Renoncer à la surveillance", "Survoler seulement la ferme du président", "Utiliser les images satellite gratuites pour surveiller toutes les fermes et envoyer le drone là où elles montrent un problème"], answer: 3, why: "Les satellites surveillent toutes les fermes entre les vols ; les drones apportent le détail là où il est nécessaire." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Protéger les données des agriculteurs et obtenir leur consentement",
           minutes: 5,
           goal: "Collecter et utiliser les données des agriculteurs dans le respect de la loi, avec un consentement clair et un stockage sûr.",
@@ -87,17 +121,21 @@ module.exports = {
           ],
           sources: [ODPC, NDPC],
           tryIt: "Rédigez une déclaration de consentement de cinq phrases pour les agriculteurs qui rejoignent un programme de surveillance par drone, en mots simples (et dans une langue locale si vous le pouvez) : ce que vous collectez, pourquoi, qui le voit, combien de temps vous le gardez, et comment refuser.",
-          youCanNow: "collecter et traiter les données des agriculteurs avec leur consentement, en suivant la loi de votre pays sur la protection des données."
+          youCanNow: "collecter et traiter les données des agriculteurs avec leur consentement, en suivant la loi de votre pays sur la protection des données.",
+          quickCheck: [
+            { objective: "O3", q: "Au Kenya, qui l'ODPC enregistre-t-il ?", options: ["Les pilotes de drones", "Les vendeurs de semences", "Seulement les acheteurs agricoles", "Les responsables et les sous-traitants du traitement des données"], answer: 3, why: "L'ODPC kényan enregistre les responsables et les sous-traitants du traitement selon le Data Protection Act 2019." },
+            { objective: "O3", q: "Une agricultrice vous demande de retirer ses données du programme. Que faites-vous ?", options: ["Refuser, car les données appartiennent au programme", "Respecter la demande et les retirer, comme le consentement le lui permettait", "Les vendre d'abord, puis les retirer", "Ignorer la demande"], answer: 1, why: "Le consentement dit aux agriculteurs qu'ils peuvent refuser ou demander que leurs données soient retirées." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Gestion et intégration des données",
         questions: [
-          { q: "Pourquoi utiliser des ID ferme plutôt que les noms des agriculteurs dans les noms de fichiers ?", options: ["Les noms sont trop longs", "Cela protège la vie privée et garde un nommage régulier", "Les logiciels ne lisent pas les noms", "Le drone l'exige"], answer: 1, why: "Les ID protègent les données personnelles et gardent les fichiers en ordre." },
-          { q: "Le principe de sauvegarde 3-2-1 veut dire :", options: ["Trois copies, deux types de support, une hors site", "Trois drones, deux pilotes, une ferme", "Sauvegarder une fois tous les trois ans", "Supprimer deux copies"], answer: 0, why: "Plusieurs copies à différents endroits protègent contre la perte." },
-          { q: "Dans un programme, les images Sentinel-2 gratuites servent surtout à :", options: ["Compter les plants un par un", "Remplacer tous les vols de drone", "Lire le nom des agriculteurs", "Surveiller toutes les fermes entre les vols et choisir où envoyer le drone"], answer: 3, why: "À environ 10 m, elles montrent les grandes tendances, pas les plants un par un." },
-          { q: "Deux couches de carte ne se superposent pas. Une cause probable est :", options: ["Trop de recouvrement", "Le téléphone de l'agriculteur", "Des systèmes de coordonnées différents", "Trop de fermes"], answer: 2, why: "Les couches doivent partager un système de coordonnées pour se superposer." },
-          { q: "Qui supervise la protection des données au Kenya ?", options: ["Le Bureau du Commissaire à la protection des données (ODPC)", "La KCAA", "Le vendeur de drones", "L'assemblée du comté"], answer: 0, why: "L'ODPC supervise la loi kényane de 2019 sur la protection des données." }
+          { objective: "O1", q: "Pourquoi utiliser des ID ferme plutôt que les noms des agriculteurs dans les noms de fichiers ?", options: ["Les noms sont trop longs", "Cela protège la vie privée et garde un nommage régulier", "Les logiciels ne lisent pas les noms", "Le drone l'exige"], answer: 1, why: "Les ID protègent les données personnelles et gardent les fichiers en ordre." },
+          { objective: "O1", q: "Le principe de sauvegarde 3-2-1 veut dire :", options: ["Trois copies, deux types de support, une hors site", "Trois drones, deux pilotes, une ferme", "Sauvegarder une fois tous les trois ans", "Supprimer deux copies"], answer: 0, why: "Plusieurs copies à différents endroits protègent contre la perte." },
+          { objective: "O2", q: "Dans un programme, les images Sentinel-2 gratuites servent surtout à :", options: ["Compter les plants un par un", "Remplacer tous les vols de drone", "Lire le nom des agriculteurs", "Surveiller toutes les fermes entre les vols et choisir où envoyer le drone"], answer: 3, why: "À environ 10 m, elles montrent les grandes tendances, pas les plants un par un." },
+          { objective: "O2", q: "Deux couches de carte ne se superposent pas. Une cause probable est :", options: ["Trop de recouvrement", "Le téléphone de l'agriculteur", "Des systèmes de coordonnées différents", "Trop de fermes"], answer: 2, why: "Les couches doivent partager un système de coordonnées pour se superposer." },
+          { objective: "O3", q: "Qui supervise la protection des données au Kenya ?", options: ["Le Bureau du Commissaire à la protection des données (ODPC)", "La KCAA", "Le vendeur de drones", "L'assemblée du comté"], answer: 0, why: "L'ODPC supervise la loi kényane de 2019 sur la protection des données." }
         ]
       }
     },
@@ -105,6 +143,7 @@ module.exports = {
       name: "Chapitre 2 : Concevoir un programme de surveillance par drone",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Partir du problème et des utilisateurs",
           minutes: 5,
           goal: "Rédiger un objectif de programme clair et lister les utilisateurs et ce que reçoit chacun.",
@@ -121,9 +160,14 @@ module.exports = {
             { title: "Les utilisateurs et ce qu'ils reçoivent", bullets: ["Agriculteurs : carte et conseil simple sur téléphone", "Vulgarisation : où aller en premier", "Conseil et partenaires : bilan de saison"] }
           ],
           tryIt: "Pour un programme que vous pourriez mener, écrivez le problème, une phrase d'objectif avec un chiffre et une date, et un tableau d'au moins quatre groupes d'utilisateurs avec ce que reçoit chacun.",
-          youCanNow: "définir clairement le problème, l'objectif et les utilisateurs d'un programme de drone."
+          youCanNow: "définir clairement le problème, l'objectif et les utilisateurs d'un programme de drone.",
+          quickCheck: [
+            { objective: "O4", q: "Qu'est-ce qui rend un objectif de programme clair ?", options: ["Une phrase avec un chiffre et une date", "Une longue liste de tout ce que font les drones", "La marque du drone", "Une photo de la ferme"], answer: 0, why: "Un objectif clair tient en une phrase avec un chiffre et une date, pour savoir quand il est atteint." },
+            { objective: "O4", q: "Un membre du conseil veut d'abord acheter des drones et trouver un usage plus tard. Que conseillez-vous ?", options: ["Acheter le drone le plus cher", "Acheter des drones et décider l'an prochain", "Partir d'un problème qui compte pour les agriculteurs et sur lequel ils peuvent agir", "Demander à un vendeur de drones quoi faire"], answer: 2, why: "Beaucoup de projets de drones échouent parce qu'ils partent du drone, pas du problème." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Planifier les personnes, le matériel, le calendrier et l'argent",
           minutes: 6,
           goal: "Planifier l'équipe, le matériel, le calendrier des vols et le budget d'une saison.",
@@ -142,9 +186,14 @@ module.exports = {
           ],
           sources: [KCAA_UAS, NCAA_P21, FAO_ITU_DRONES],
           tryIt: "Pour votre programme de la leçon 4, rédigez une liste de l'équipe, une liste du matériel, un calendrier de saison (quelles semaines vous volez et où) et un tableau budgétaire simple des coûts ponctuels et de fonctionnement avec le mode de paiement de chacun.",
-          youCanNow: "planifier l'équipe, le matériel, le calendrier et le budget d'un programme de surveillance par drone."
+          youCanNow: "planifier l'équipe, le matériel, le calendrier et le budget d'un programme de surveillance par drone.",
+          quickCheck: [
+            { objective: "O5", q: "Lequel est un coût ponctuel pour un programme de drones ?", options: ["Le transport chaque semaine", "Les forfaits de données chaque mois", "L'achat des drones et de l'ordinateur portable", "Les salaires de l'équipe"], answer: 2, why: "Le matériel comme les drones et l'ordinateur est un coût ponctuel ; le transport, les données et les salaires sont des coûts de fonctionnement." },
+            { objective: "O5", q: "Un bénévole propose de piloter pour le programme mais n'a pas de licence de télépilote. Que faites-vous ?", options: ["Ne pas le laisser voler avant qu'il ait la licence exigée par les règles", "Le laisser voler seulement sur les petites fermes", "Le laisser voler si le coordinateur surveille", "Le laisser voler le week-end"], answer: 0, why: "Chaque pilote a besoin de la licence exigée par les règles du pays." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Mesurer les résultats et rendre compte",
           minutes: 5,
           goal: "Choisir des mesures de réussite et rendre compte honnêtement des résultats aux agriculteurs et aux partenaires.",
@@ -161,17 +210,21 @@ module.exports = {
             { title: "Rendre compte et améliorer", bullets: ["Courts messages aux agriculteurs", "Une page et une carte pour le conseil", "Soyez honnête ; améliorez la saison suivante"] }
           ],
           tryIt: "Exercice final : rédigez votre conception de programme de deux pages pour une coopérative de 200 petits agriculteurs : problème et objectif, utilisateurs, plan de données avec SIG et consentement, équipe et matériel, calendrier de saison, budget et mode de financement, mesures de réussite avec situation de départ, et compte rendu.",
-          youCanNow: "mesurer, rendre compte et améliorer un programme de surveillance par drone, et présenter une conception de programme complète."
+          youCanNow: "mesurer, rendre compte et améliorer un programme de surveillance par drone, et présenter une conception de programme complète.",
+          quickCheck: [
+            { objective: "O6", q: "Lequel est un exemple de situation de départ ?", options: ["L'objectif de la saison prochaine", "Les rendements ou les délais de détection de la saison passée, notés avant de commencer", "Le prix du drone", "La date de réunion du conseil"], answer: 1, why: "La situation de départ est la situation avant le programme, pour pouvoir comparer les résultats." },
+            { objective: "O6", q: "Les agriculteurs disent que les cartes étaient justes mais que les conseils étaient difficiles à comprendre. Que faites-vous ?", options: ["Ne pas en parler dans le rapport", "Ne parler que des cartes justes", "Arrêter le programme", "Le dire honnêtement et changer la façon de donner les conseils la saison prochaine"], answer: 3, why: "Soyez honnête sur ce qui n'a pas marché, puis améliorez la conception pour la saison suivante." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Concevoir un programme de surveillance par drone",
         questions: [
-          { q: "Pourquoi beaucoup de projets de drones échouent-ils ?", options: ["Les drones sont trop petits", "Ils partent du drone au lieu d'un vrai problème", "Les agriculteurs n'aiment pas les cartes", "Les batteries sont trop grosses"], answer: 1, why: "Les programmes marchent quand ils règlent un problème qui compte pour les utilisateurs." },
-          { q: "Quel est le meilleur objectif de programme ?", options: ["Faire beaucoup voler les drones", "Utiliser la technologie", "Trouver les foyers de chenille légionnaire sur 200 fermes dans la semaine qui suit les premiers dégâts d'ici la fin des grandes pluies 2027", "Être innovant"], answer: 2, why: "Il a un chiffre, un délai et un résultat clairs." },
-          { q: "Votre programme va voler pour des agriculteurs qui paient. Que devez-vous vérifier ?", options: ["Si votre organisation a besoin d'un certificat d'exploitant et vos pilotes de licences", "Seulement la couleur du drone", "Seulement la météo", "Rien ; les agriculteurs sont d'accord"], answer: 0, why: "Le vol commercial demande en général un certificat d'exploitant et des pilotes titulaires d'une licence." },
-          { q: "Lequel est un coût de fonctionnement ?", options: ["L'achat du premier drone", "L'achat d'un ordinateur", "La formation initiale", "Le transport vers les fermes chaque semaine"], answer: 3, why: "Les coûts de fonctionnement reviennent tout au long du programme." },
-          { q: "Pourquoi relever une situation de départ ?", options: ["Pour remplir un formulaire", "Pour comparer les résultats avec la situation avant le programme", "Pour supprimer les anciennes données", "Pour choisir un drone"], answer: 1, why: "Sans point de départ, on ne peut pas montrer de changement." }
+          { objective: "O4", q: "Pourquoi beaucoup de projets de drones échouent-ils ?", options: ["Les drones sont trop petits", "Ils partent du drone au lieu d'un vrai problème", "Les agriculteurs n'aiment pas les cartes", "Les batteries sont trop grosses"], answer: 1, why: "Les programmes marchent quand ils règlent un problème qui compte pour les utilisateurs." },
+          { objective: "O4", q: "Quel est le meilleur objectif de programme ?", options: ["Faire beaucoup voler les drones", "Utiliser la technologie", "Trouver les foyers de chenille légionnaire sur 200 fermes dans la semaine qui suit les premiers dégâts d'ici la fin des grandes pluies 2027", "Être innovant"], answer: 2, why: "Il a un chiffre, un délai et un résultat clairs." },
+          { objective: "O5", q: "Votre programme va voler pour des agriculteurs qui paient. Que devez-vous vérifier ?", options: ["Si votre organisation a besoin d'un certificat d'exploitant et vos pilotes de licences", "Seulement la couleur du drone", "Seulement la météo", "Rien ; les agriculteurs sont d'accord"], answer: 0, why: "Le vol commercial demande en général un certificat d'exploitant et des pilotes titulaires d'une licence." },
+          { objective: "O5", q: "Lequel est un coût de fonctionnement ?", options: ["L'achat du premier drone", "L'achat d'un ordinateur", "La formation initiale", "Le transport vers les fermes chaque semaine"], answer: 3, why: "Les coûts de fonctionnement reviennent tout au long du programme." },
+          { objective: "O6", q: "Pourquoi relever une situation de départ ?", options: ["Pour remplir un formulaire", "Pour comparer les résultats avec la situation avant le programme", "Pour supprimer les anciennes données", "Pour choisir un drone"], answer: 1, why: "Sans point de départ, on ne peut pas montrer de changement." }
         ]
       }
     }
@@ -179,26 +232,113 @@ module.exports = {
   quiz: {
     title: "Quiz final : Drones pour la surveillance agricole 5 : intégration des données, SIG et conception de programmes",
     questions: [
-      { q: "Sans système de données, un grand programme de drones risque :", options: ["Des fichiers perdus, mélangés ou écrasés", "De meilleures cartes", "Des vols plus rapides", "Des drones moins chers"], answer: 0, why: "Des milliers de fichiers demandent un système clair." },
-      { q: "Un registre des vols note :", options: ["Les prix des cultures", "La date, la ferme, le champ, le pilote, le drone, les fichiers et l'état", "Seulement la météo", "Les coordonnées bancaires des agriculteurs"], answer: 1, why: "Il suit chaque vol et ses données." },
-      { q: "Quelle est une bonne règle de dossiers ?", options: ["Des noms au hasard", "Le nom complet et le numéro de téléphone de l'agriculteur", "Programme / ID ferme / ID champ / Date", "Tout dans un seul dossier"], answer: 2, why: "Une structure régulière fondée sur des ID garde les données en ordre et privées." },
-      { q: "Dans la règle 3-2-1, le 1 veut dire :", options: ["Un drone", "Un agriculteur", "Un jour", "Une copie dans un autre lieu"], answer: 3, why: "Une copie hors site survit au vol, à l'incendie ou à une panne au bureau." },
-      { q: "Dans un SIG, les couches de base d'un programme comprennent en général :", options: ["Les limites des champs et les points des fermes", "Des fichiers de musique", "Seulement des photos de l'équipe", "Des factures"], answer: 0, why: "Tout le reste se place par-dessus les champs et les fermes." },
-      { q: "Les images Sentinel-2 font environ combien de mètres par pixel ?", options: ["0,01", "10", "1 000", "100 000"], answer: 1, why: "Les images Sentinel-2 gratuites font environ 10 m par pixel." },
-      { q: "Joindre un tableur à une couche de champs demande :", options: ["La même couleur", "Un drone", "Un identifiant commun, comme l'ID champ", "Une imprimante"], answer: 2, why: "L'ID relie chaque ligne à son champ." },
-      { q: "À quelle question un projet SIG avec jointure peut-il aider à répondre ?", options: ["Quel est le mot de passe de l'agriculteur ?", "De quelle couleur est le drone ?", "Qui a gagné le match de football ?", "Les champs qui ont reçu les conseils issus du drone ont-ils mieux produit ?"], answer: 3, why: "Relier les registres aux champs permet ce genre de comparaison." },
-      { q: "La loi nigériane sur la protection des données est supervisée par :", options: ["La Commission nigériane de protection des données (NDPC)", "La NCAA", "Le fabricant du drone", "Une coopérative"], answer: 0, why: "La NDPC a été créée par la loi nigériane de 2023 sur la protection des données." },
-      { q: "Un consentement valable veut dire que l'agriculteur :", options: ["N'a rien été dit", "Comprend ce que vous collectez, pourquoi, qui le voit, et peut refuser", "A signé sans lire", "A donné son code PIN"], answer: 1, why: "Le consentement doit être éclairé et libre." },
-      { q: "Un acheteur demande une liste des noms et rendements des agriculteurs. Vous devez :", options: ["L'envoyer tout de suite", "La publier", "Ne la partager qu'avec la permission des agriculteurs", "La vendre"], answer: 2, why: "Les données personnelles ne se partagent pas sans permission." },
-      { q: "Ne collecter que ce dont on a besoin s'appelle :", options: ["L'accumulation de données", "La sauvegarde", "Le recouvrement", "La minimisation des données"], answer: 3, why: "Moins de données veut dire moins de risque ; c'est un principe de la protection des données." },
-      { q: "Un programme doit partir :", options: ["D'un problème qui compte pour les utilisateurs et sur lequel ils peuvent agir", "Du drone le plus récent", "D'un logo", "D'un communiqué de presse"], answer: 0, why: "Les programmes qui partent du problème apportent de la valeur." },
-      { q: "De quoi les agriculteurs ont-ils le plus besoin de la part du programme ?", options: ["Les fichiers photo bruts", "Une carte et un conseil simple sur leur téléphone", "Un logiciel SIG", "La licence du pilote"], answer: 1, why: "Une information simple et utilisable aide les agriculteurs à agir." },
-      { q: "Là où l'électricité est peu fiable, prévoyez :", options: ["Pas de batteries", "De voler seulement la nuit", "Une charge solaire ou par véhicule", "Un vol par an"], answer: 2, why: "Des options de charge permettent à l'équipe de voler toute la journée." },
-      { q: "Regrouper les fermes par zone dans le calendrier aide à :", options: ["Consommer plus de carburant", "Rendre les cartes floues", "Éviter les licences", "Couvrir de nombreuses fermes en une journée"], answer: 3, why: "Moins de trajets, c'est plus de fermes par jour et un coût plus bas." },
-      { q: "Une façon de financer un service de drone de coopérative est :", options: ["Une petite redevance par hectare payée par argent mobile", "La gratuité pour toujours sans plan", "Vendre les données des agriculteurs", "Ne pas faire les réparations"], answer: 0, why: "Redevances, prélèvements, acheteurs ou subventions peuvent financer honnêtement le service." },
-      { q: "Pourquoi prévoir l'après-subvention ?", options: ["Les subventions ne finissent jamais", "Pour que le service continue quand la subvention s'arrête", "Pour dépenser plus vite", "Ce n'est pas nécessaire"], answer: 1, why: "Les programmes qui ne dépendent que de subventions s'arrêtent souvent." },
-      { q: "Laquelle est une mesure de réussite ?", options: ["Le nombre de photos prises par le drone", "La couleur du drone", "Les agriculteurs conseillés dans les trois jours après la détection", "La taille du bureau"], answer: 2, why: "Elle mesure le résultat qui compte pour les utilisateurs." },
-      { q: "Pour rendre compte, vous devez :", options: ["Cacher ce qui n'a pas marché", "Envoyer à tous le même rapport de 50 pages", "Rendre compte seulement au bailleur", "Être honnête et utiliser une forme utile à chaque utilisateur"], answer: 3, why: "Des comptes rendus honnêtes et adaptés créent la confiance et l'amélioration." }
+      { objective: "O1", q: "Sans système de données, un grand programme de drones risque :", options: ["Des fichiers perdus, mélangés ou écrasés", "De meilleures cartes", "Des vols plus rapides", "Des drones moins chers"], answer: 0, why: "Des milliers de fichiers demandent un système clair." },
+      { objective: "O1", q: "Un registre des vols note :", options: ["Les prix des cultures", "La date, la ferme, le champ, le pilote, le drone, les fichiers et l'état", "Seulement la météo", "Les coordonnées bancaires des agriculteurs"], answer: 1, why: "Il suit chaque vol et ses données." },
+      { objective: "O1", q: "Quelle est une bonne règle de dossiers ?", options: ["Des noms au hasard", "Le nom complet et le numéro de téléphone de l'agriculteur", "Programme / ID ferme / ID champ / Date", "Tout dans un seul dossier"], answer: 2, why: "Une structure régulière fondée sur des ID garde les données en ordre et privées." },
+      { objective: "O1", q: "Dans la règle 3-2-1, le 1 veut dire :", options: ["Un drone", "Un agriculteur", "Un jour", "Une copie dans un autre lieu"], answer: 3, why: "Une copie hors site survit au vol, à l'incendie ou à une panne au bureau." },
+      { objective: "O2", q: "Dans un SIG, les couches de base d'un programme comprennent en général :", options: ["Les limites des champs et les points des fermes", "Des fichiers de musique", "Seulement des photos de l'équipe", "Des factures"], answer: 0, why: "Tout le reste se place par-dessus les champs et les fermes." },
+      { objective: "O2", q: "Les images Sentinel-2 font environ combien de mètres par pixel ?", options: ["0,01", "10", "1 000", "100 000"], answer: 1, why: "Les images Sentinel-2 gratuites font environ 10 m par pixel." },
+      { objective: "O2", q: "Joindre un tableur à une couche de champs demande :", options: ["La même couleur", "Un drone", "Un identifiant commun, comme l'ID champ", "Une imprimante"], answer: 2, why: "L'ID relie chaque ligne à son champ." },
+      { objective: "O2", q: "À quelle question un projet SIG avec jointure peut-il aider à répondre ?", options: ["Quel est le mot de passe de l'agriculteur ?", "De quelle couleur est le drone ?", "Qui a gagné le match de football ?", "Les champs qui ont reçu les conseils issus du drone ont-ils mieux produit ?"], answer: 3, why: "Relier les registres aux champs permet ce genre de comparaison." },
+      { objective: "O3", q: "La loi nigériane sur la protection des données est supervisée par :", options: ["La Commission nigériane de protection des données (NDPC)", "La NCAA", "Le fabricant du drone", "Une coopérative"], answer: 0, why: "La NDPC a été créée par la loi nigériane de 2023 sur la protection des données." },
+      { objective: "O3", q: "Un consentement valable veut dire que l'agriculteur :", options: ["N'a rien été dit", "Comprend ce que vous collectez, pourquoi, qui le voit, et peut refuser", "A signé sans lire", "A donné son code PIN"], answer: 1, why: "Le consentement doit être éclairé et libre." },
+      { objective: "O3", q: "Un acheteur demande une liste des noms et rendements des agriculteurs. Vous devez :", options: ["L'envoyer tout de suite", "La publier", "Ne la partager qu'avec la permission des agriculteurs", "La vendre"], answer: 2, why: "Les données personnelles ne se partagent pas sans permission." },
+      { objective: "O3", q: "Ne collecter que ce dont on a besoin s'appelle :", options: ["L'accumulation de données", "La sauvegarde", "Le recouvrement", "La minimisation des données"], answer: 3, why: "Moins de données veut dire moins de risque ; c'est un principe de la protection des données." },
+      { objective: "O4", q: "Un programme doit partir :", options: ["D'un problème qui compte pour les utilisateurs et sur lequel ils peuvent agir", "Du drone le plus récent", "D'un logo", "D'un communiqué de presse"], answer: 0, why: "Les programmes qui partent du problème apportent de la valeur." },
+      { objective: "O4", q: "De quoi les agriculteurs ont-ils le plus besoin de la part du programme ?", options: ["Les fichiers photo bruts", "Une carte et un conseil simple sur leur téléphone", "Un logiciel SIG", "La licence du pilote"], answer: 1, why: "Une information simple et utilisable aide les agriculteurs à agir." },
+      { objective: "O5", q: "Là où l'électricité est peu fiable, prévoyez :", options: ["Pas de batteries", "De voler seulement la nuit", "Une charge solaire ou par véhicule", "Un vol par an"], answer: 2, why: "Des options de charge permettent à l'équipe de voler toute la journée." },
+      { objective: "O5", q: "Regrouper les fermes par zone dans le calendrier aide à :", options: ["Consommer plus de carburant", "Rendre les cartes floues", "Éviter les licences", "Couvrir de nombreuses fermes en une journée"], answer: 3, why: "Moins de trajets, c'est plus de fermes par jour et un coût plus bas." },
+      { objective: "O5", q: "Une façon de financer un service de drone de coopérative est :", options: ["Une petite redevance par hectare payée par argent mobile", "La gratuité pour toujours sans plan", "Vendre les données des agriculteurs", "Ne pas faire les réparations"], answer: 0, why: "Redevances, prélèvements, acheteurs ou subventions peuvent financer honnêtement le service." },
+      { objective: "O5", q: "Pourquoi prévoir l'après-subvention ?", options: ["Les subventions ne finissent jamais", "Pour que le service continue quand la subvention s'arrête", "Pour dépenser plus vite", "Ce n'est pas nécessaire"], answer: 1, why: "Les programmes qui ne dépendent que de subventions s'arrêtent souvent." },
+      { objective: "O6", q: "Laquelle est une mesure de réussite ?", options: ["Le nombre de photos prises par le drone", "La couleur du drone", "Les agriculteurs conseillés dans les trois jours après la détection", "La taille du bureau"], answer: 2, why: "Elle mesure le résultat qui compte pour les utilisateurs." },
+      { objective: "O6", q: "Pour rendre compte, vous devez :", options: ["Cacher ce qui n'a pas marché", "Envoyer à tous le même rapport de 50 pages", "Rendre compte seulement au bailleur", "Être honnête et utiliser une forme utile à chaque utilisateur"], answer: 3, why: "Des comptes rendus honnêtes et adaptés créent la confiance et l'amélioration." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      3,
+      4,
+      6,
+      9,
+      10,
+      12,
+      13,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie de la conception et vérifiez-la de nouveau.",
+    criteria: [
+      {
+        name: "Problème, objectif et utilisateurs",
+        objective: "O4",
+        notYet: "Part du drone, ou l'objectif n'a ni chiffre ni date.",
+        meets: "Un vrai problème, un objectif avec un chiffre et une date, et chaque utilisateur avec ce qu'il reçoit.",
+        exceeds: "Montre que les utilisateurs ont validé le problème, par exemple lors d'une réunion d'agriculteurs."
+      },
+      {
+        name: "Plan de données",
+        objective: "O1",
+        notYet: "Pas de plan de stockage, de nommage ou de sauvegarde.",
+        meets: "Structure de dossiers, ID ferme, registre des vols et sauvegardes 3-2-1.",
+        exceeds: "Dit combien de temps les photos brutes sont gardées et qui vérifie les sauvegardes."
+      },
+      {
+        name: "Usage du SIG et du satellite",
+        objective: "O2",
+        notYet: "Pas de couches SIG ni d'usage du satellite.",
+        meets: "Les couches SIG sont listées, les registres reliés par ID champ, et les satellites servent à choisir où voler.",
+        exceeds: "Nomme une question à laquelle les données jointes répondront, comme le rendement avec et sans conseil."
+      },
+      {
+        name: "Consentement et protection des données",
+        objective: "O3",
+        notYet: "Pas de consentement ni de mesures de protection des données.",
+        meets: "Consentement dans la langue de l'agriculteur, minimisation des données, stockage sûr et aucun partage sans autorisation, selon la bonne loi.",
+        exceeds: "Vérifie si l'organisation doit s'enregistrer auprès de l'autorité de protection des données."
+      },
+      {
+        name: "Équipe, calendrier et budget",
+        objective: "O5",
+        notYet: "Les licences, le calendrier ou la façon de payer manquent.",
+        meets: "Équipe titulaire des licences, matériel, calendrier des vols de la saison, coûts ponctuels et de fonctionnement, et façon dont le service est payé.",
+        exceeds: "Montre un plan pour l'après-subvention."
+      },
+      {
+        name: "Mesures et compte rendu",
+        objective: "O6",
+        notYet: "Pas de mesures ni de situation de départ.",
+        meets: "Quelques mesures liées à l'objectif, une situation de départ et un modèle de compte rendu pour chaque utilisateur.",
+        exceeds: "Inclut l'avis des agriculteurs sur l'utilité des conseils et s'ils valent d'être payés."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent le cours et obtiennent « Atteint » ou « Dépasse » sur chaque ligne de la grille pour la conception du programme",
+      "Les apprenants qui présentent leur conception de programme au conseil d'une coopérative, à un bureau de comté ou d'État, à un bailleur ou à un investisseur dans les 90 jours (enquête de suivi)",
+      "Les programmes conçus dans le cours qui lancent une saison pilote avec le consentement écrit des agriculteurs",
+      "Les apprenants qui passent au cours 6 du parcours drones"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur portable avec QGIS gratuit et un tableur",
+      "Des cartes de drone, des limites de champs et des registres de fermes d'exemple, ou ceux de l'apprenant",
+      "Des devis locaux pour les drones, le transport, les données et l'assurance, si possible",
+      "Environ 60 minutes au total, en séances courtes, plus du temps pour écrire la conception de deux pages"
+    ],
+    facilitatorNotes: [
+      "Faites le test de départ ensemble, puis travaillez une coopérative d'exemple en groupe avant que les apprenants rédigent leur propre conception.",
+      "Utilisez des ID ferme, et non les vrais noms ou numéros des agriculteurs, dans tous les exemples en classe.",
+      "Demandez aux apprenants de consulter le site de l'autorité de protection des données de leur pays pour les règles d'enregistrement.",
+      "Encouragez les apprenants à tester leur objectif et leur budget avec une vraie coopérative ou un partenaire avant de terminer.",
+      "Évaluez la conception du programme avec la grille et donnez un retour sur une ligne « Pas encore » à la fois."
     ]
   }
 };

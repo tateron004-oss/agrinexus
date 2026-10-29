@@ -17,11 +17,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes avec une tâche « Essayez maintenant ». Un contrôle des connaissances clôt chaque chapitre et un quiz de 20 questions clôt le cours. Ici, le plaidoyer porte sur des enjeux, pas sur des candidats ; les associations ont des règles particulières, vues à la leçon 6."
   ],
   finalTask: "Construisez un kit de plaidoyer pour un vrai enjeu local : un problème en une phrase et une demande précise, trois faits avec leurs sources officielles, deux courts témoignages de la communauté partagés avec accord, le nom du décideur et la façon de le joindre, une lettre ou un commentaire public de moins de 300 mots, une fiche d'information d'une page, et une intervention de deux minutes répétée à voix haute.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Le personnel et les bénévoles d'associations, les groupes religieux et de quartier, et les habitants qui veulent changer un problème local, comme un passage piéton dangereux, une ligne de bus supprimée ou une règle qui empêche des personnes d'accéder à l'emploi ou au logement.",
+    startingPoint: "Ils tiennent à un enjeu local et savent en parler avec leurs voisins. Beaucoup n'ont jamais rédigé de commentaire public, trouvé le bon décideur, vérifié des faits dans des sources officielles ni pris la parole lors d'une réunion publique.",
+    gap: "Les communautés qui prennent la parole avec une demande claire, des faits vérifiés et de vrais témoignages sont plus souvent écoutées. Les apprenants doivent préparer une petite campagne avec l'aide de l'IA tout en gardant la voix de leur communauté au centre et en respectant les règles des associations, pour que leurs efforts mènent à un vrai changement.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes",
+      "Appareils : un téléphone ou un ordinateur avec un assistant d'IA gratuit et un outil gratuit de mise en page ou de document",
+      "Les témoignages sont partagés seulement avec accord, et les détails privés restent hors des demandes à l'IA",
+      "Règles des associations : plaidoyer sur des enjeux seulement, aucun soutien à des candidats ; les apprenants vérifient les consignes de l'IRS",
+      "Temps : des leçons d'environ cinq minutes plus le temps de recherche et d'entraînement"
+    ],
+    prerequisites: "Aucun. Les apprenants qui découvrent les outils d'IA peuvent suivre d'abord « Découvrir l'IA et prendre confiance avec le numérique »."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir d'une préoccupation de la communauté", action: "rédiger un énoncé de problème en une phrase et une demande précise qui dit quoi, à qui et pour quand", standard: "formulés avec au moins deux personnes concernées" },
+    { id: "O2", condition: "Pour votre enjeu", action: "trouver des faits dans des sources officielles ou fiables et recueillir des témoignages de la communauté", standard: "avec trois faits, chacun noté avec sa source, son lien et sa date, et des témoignages partagés seulement avec accord" },
+    { id: "O3", condition: "Avec des sites officiels", action: "identifier le décideur, la prochaine réunion ou date limite de commentaires, vos alliés et les opposants probables", standard: "avec le décideur confirmé sur une source officielle" },
+    { id: "O4", condition: "À partir de vos faits vérifiés et d'un témoignage", action: "rédiger une lettre ou un commentaire public respectueux qui formule votre demande", standard: "en moins de 300 mots, avec qui vous êtes, des faits, un témoignage et la demande" },
+    { id: "O5", condition: "Avec l'IA pour le texte et un outil gratuit de mise en page", action: "créer une fiche d'information d'une page avec la demande dans un encadré bien visible", standard: "pour qu'un lecteur puisse redire la demande après une minute" },
+    { id: "O6", condition: "Lors d'une réunion publique", action: "faire une intervention de deux minutes et prévoir l'action des soutiens dans le respect des règles du plaidoyer associatif", standard: "en deux minutes ou moins et sans aucun soutien à un candidat" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Construire votre argumentaire",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Définir l'enjeu et votre demande",
           minutes: 5,
           goal: "Transformer une préoccupation de la communauté en un énoncé de problème clair et une demande précise.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "La communauté d'abord", bullets: ["L'IA affine la formulation", "Les personnes concernées façonnent la demande"] }
           ],
           tryIt: "Choisissez une vraie préoccupation locale. Écrivez un problème en une phrase et une demande précise, affinez-les avec l'IA, et partagez-les avec deux personnes concernées.",
-          youCanNow: "transformer une préoccupation en un énoncé de problème clair et une demande précise."
+          youCanNow: "transformer une préoccupation en un énoncé de problème clair et une demande précise.",
+          quickCheck: [
+            { objective: "O1", q: "Quelles sont les trois choses que contient une demande solide ?", options: ["Votre nom, votre âge et votre adresse", "Quoi, à qui et pour quand", "Un slogan, un logo et une couleur", "Une plainte, une menace et une date limite"], answer: 1, why: "Une demande solide nomme l'action, le décideur et la date limite." },
+            { objective: "O1", q: "La préoccupation de votre groupe est « notre quartier n'est pas sûr ». Que faites-vous d'abord ?", options: ["La réduire à un problème précis sur lequel les élus peuvent agir", "L'envoyer à tous les élus de l'État", "La publier en ligne sans la changer", "Attendre que la situation empire"], answer: 0, why: "Des problèmes précis mènent à des actions précises que les élus peuvent prendre." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Rechercher des faits et vérifier les sources",
           minutes: 6,
           goal: "Trouver des faits qui soutiennent votre argumentaire et vérifier chacun auprès d'une source officielle ou fiable.",
@@ -58,9 +87,14 @@ module.exports = {
           ],
           sources: [{ name: "U.S. Census Bureau (bureau du recensement) : data.census.gov", url: "https://data.census.gov/" }],
           tryIt: "Trouvez trois faits sur votre enjeu auprès de sources officielles ou fiables, avec lien et date pour chacun. Demandez à deux personnes si vous pouvez partager leur histoire.",
-          youCanNow: "rechercher des faits vérifiés et recueillir des témoignages de la communauté avec accord."
+          youCanNow: "rechercher des faits vérifiés et recueillir des témoignages de la communauté avec accord.",
+          quickCheck: [
+            { objective: "O2", q: "Quelle est une source fiable pour un fait sur votre ville ?", options: ["Une publication prise au hasard sur les réseaux sociaux", "Une réponse de l'IA sans lien", "Le site officiel ou un rapport de la ville elle-même", "Une rumeur d'un voisin"], answer: 2, why: "Les sources officielles sont celles où l'on peut vérifier et citer les faits." },
+            { objective: "O2", q: "Un voisin vous raconte un témoignage fort : il a été blessé au passage piéton. Que faites-vous avant de l'utiliser ?", options: ["L'utiliser avec son nom complet et son adresse", "Changer les détails et l'utiliser quand même", "Le publier d'abord en ligne", "Lui demander son accord et comment il veut être nommé"], answer: 3, why: "Les témoignages se partagent seulement avec l'accord de la personne." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Trouver le décideur et le bon moment",
           minutes: 5,
           goal: "Identifier qui peut dire oui à votre demande et quand la décision sera prise.",
@@ -77,17 +111,21 @@ module.exports = {
             { title: "Cartographier le terrain", bullets: ["Alliés : voisins, écoles, églises, commerces", "Opposants et leurs raisons"] }
           ],
           tryIt: "Trouvez sur un site officiel le décideur pour votre enjeu et sa prochaine séance ou date limite de commentaires. Listez trois alliés et une inquiétude probable des opposants.",
-          youCanNow: "trouver le bon décideur, le bon moment et les alliés pour une demande de plaidoyer."
+          youCanNow: "trouver le bon décideur, le bon moment et les alliés pour une demande de plaidoyer.",
+          quickCheck: [
+            { objective: "O3", q: "Qui est le décideur dans le plaidoyer ?", options: ["La personne ou l'organe qui peut dire oui à votre demande", "Toute personne qui est d'accord avec vous", "Le journal", "La personne qui se plaint le plus fort"], answer: 0, why: "Le décideur a le pouvoir d'accorder votre demande." },
+            { objective: "O3", q: "Vous voulez un nouvel éclairage dans le parc, mais vous ne savez pas qui décide. Que faites-vous ?", options: ["Écrire au Président", "Regarder le site de la ville ou appeler la mairie pour le savoir", "Deviner et l'envoyer au conseil scolaire", "Attendre que quelqu'un vous le dise"], answer: 1, why: "Confirmez le décideur sur une source officielle avant de le contacter." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Construire votre argumentaire",
         questions: [
-          { q: "Quelle est la demande de plaidoyer la plus claire ?", options: ["« Améliorer les choses »", "« Régler la sécurité »", "« Nous demandons au service des transports d'installer un feu pour piétons au croisement de la rue Principale et de la 5e Avenue avant la prochaine rentrée »", "« Faites quelque chose maintenant »"], answer: 2, why: "Elle dit quoi, à qui et pour quand." },
-          { q: "L'IA donne une statistique sur les accidents à votre croisement. Que faites-vous ?", options: ["La trouver dans la source d'origine avant de l'utiliser", "L'utiliser tout de suite", "L'arrondir vers le haut", "La mettre en gras"], answer: 0, why: "L'IA peut inventer des statistiques." },
-          { q: "Avant de partager l'histoire d'un voisin dans votre campagne, vous devez :", options: ["Publier son adresse", "La modifier pour qu'elle paraisse pire", "Rien", "Obtenir son accord"], answer: 3, why: "Les histoires appartiennent à ceux qui les ont vécues." },
-          { q: "Pourquoi trouver le décideur ?", options: ["Pour publier son adresse personnelle", "Le plaidoyer échoue quand il s'adresse à la mauvaise personne", "Ça n'a pas d'importance", "Pour l'éviter"], answer: 1, why: "Seule la bonne personne peut dire oui." },
-          { q: "Qu'est-ce qu'une période de commentaires publics ?", options: ["Une émission de télé", "La possibilité pour le public de parler ou d'écrire avant une décision", "Une date limite fiscale", "Une réunion privée"], answer: 1, why: "C'est un moment officiel pour l'avis du public." }
+          { objective: "O1", q: "Quelle est la demande de plaidoyer la plus claire ?", options: ["« Améliorer les choses »", "« Régler la sécurité »", "« Nous demandons au service des transports d'installer un feu pour piétons au croisement de la rue Principale et de la 5e Avenue avant la prochaine rentrée »", "« Faites quelque chose maintenant »"], answer: 2, why: "Elle dit quoi, à qui et pour quand." },
+          { objective: "O2", q: "L'IA donne une statistique sur les accidents à votre croisement. Que faites-vous ?", options: ["La trouver dans la source d'origine avant de l'utiliser", "L'utiliser tout de suite", "L'arrondir vers le haut", "La mettre en gras"], answer: 0, why: "L'IA peut inventer des statistiques." },
+          { objective: "O2", q: "Avant de partager l'histoire d'un voisin dans votre campagne, vous devez :", options: ["Publier son adresse", "La modifier pour qu'elle paraisse pire", "Rien", "Obtenir son accord"], answer: 3, why: "Les histoires appartiennent à ceux qui les ont vécues." },
+          { objective: "O3", q: "Pourquoi trouver le décideur ?", options: ["Pour publier son adresse personnelle", "Le plaidoyer échoue quand il s'adresse à la mauvaise personne", "Ça n'a pas d'importance", "Pour l'éviter"], answer: 1, why: "Seule la bonne personne peut dire oui." },
+          { objective: "O3", q: "Qu'est-ce qu'une période de commentaires publics ?", options: ["Une émission de télé", "La possibilité pour le public de parler ou d'écrire avant une décision", "Une date limite fiscale", "Une réunion privée"], answer: 1, why: "C'est un moment officiel pour l'avis du public." }
         ]
       }
     },
@@ -95,6 +133,7 @@ module.exports = {
       name: "Chapitre 2 : Prendre la parole efficacement",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Rédiger une lettre ou un commentaire public avec l'IA",
           minutes: 5,
           goal: "Rédiger une lettre ou un commentaire public court et respectueux qui formule votre demande.",
@@ -111,9 +150,14 @@ module.exports = {
             { title: "Se faire entendre", bullets: ["Une lettre personnelle vaut mieux qu'une lettre identique", "Les soutiens ajoutent leur phrase", "Rester respectueux"] }
           ],
           tryIt: "Rédigez avec l'aide de l'IA une lettre ou un commentaire public de moins de 300 mots pour votre enjeu, avec vos faits vérifiés et un témoignage partagé avec accord. Lisez-le à voix haute et corrigez-le.",
-          youCanNow: "rédiger une lettre ou un commentaire public court et respectueux qui formule une demande claire."
+          youCanNow: "rédiger une lettre ou un commentaire public court et respectueux qui formule une demande claire.",
+          quickCheck: [
+            { objective: "O4", q: "Qu'est-ce qu'un administré (électeur) ?", options: ["Un salarié d'une association", "Un lobbyiste payé", "Un journaliste", "Une personne qui vit dans la circonscription d'un élu"], answer: 3, why: "Les élus font attention aux personnes qu'ils représentent." },
+            { objective: "O4", q: "L'IA rédige une lettre qui semble en colère et accuse le conseil. Que faites-vous ?", options: ["L'envoyer pour montrer votre colère", "La réécrire pour qu'elle soit respectueuse, avec des faits, un témoignage et la demande", "Ajouter des mots plus durs", "Envoyer la même lettre sous 100 faux noms"], answer: 1, why: "Les lettres respectueuses et personnelles avec une demande claire ont plus de chances d'être écoutées." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Faire une fiche d'information d'une page",
           minutes: 5,
           goal: "Créer une fiche d'information d'une page que les élus et les voisins occupés peuvent lire en une minute.",
@@ -130,9 +174,14 @@ module.exports = {
             { title: "La peaufiner", bullets: ["Canva ou Google Docs", "Revérifier chaque chiffre", "Traductions vérifiées par des locuteurs courants"] }
           ],
           tryIt: "Faites une fiche d'information d'une page pour votre enjeu, avec le texte rédigé par l'IA et la mise en page dans Canva ou Google Docs. Demandez à quelqu'un de la lire en une minute et de vous dire la demande.",
-          youCanNow: "créer une fiche d'information claire d'une page pour un enjeu de plaidoyer."
+          youCanNow: "créer une fiche d'information claire d'une page pour un enjeu de plaidoyer.",
+          quickCheck: [
+            { objective: "O5", q: "À qui s'adresse surtout une fiche d'information ?", options: ["Aux élus et voisins occupés qui ont besoin des points clés rapidement", "Seulement aux personnes qui l'ont écrite", "Aux avocats au tribunal", "Aux élèves qui rédigent des devoirs"], answer: 0, why: "Une fiche d'information donne aux lecteurs pressés le problème, les faits et la demande en une minute." },
+            { objective: "O5", q: "Votre brouillon de fiche d'information fait deux pages pleines en petits caractères. Que faites-vous ?", options: ["Réduire encore la taille du texte", "Ajouter une troisième page pour plus de faits", "La réduire à une page avec la demande dans un encadré bien visible", "Retirer la demande pour gagner de la place"], answer: 2, why: "Une page avec une demande claire est plus facile à lire et à suivre." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Intervention publique, soutiens et règles",
           minutes: 6,
           goal: "Faire une intervention de deux minutes, mobiliser des soutiens et respecter les règles du plaidoyer associatif.",
@@ -150,17 +199,21 @@ module.exports = {
           ],
           sources: [{ name: "IRS : le lobbying", url: "https://www.irs.gov/charities-non-profits/lobbying" }, { name: "IRS : interdiction de l'intervention dans les campagnes politiques pour les organisations 501(c)(3)", url: "https://www.irs.gov/charities-non-profits/charitable-organizations/the-restriction-of-political-campaign-intervention-by-section-501c3-tax-exempt-organizations" }],
           tryIt: "Tâche finale : raccourcissez votre lettre en une intervention de deux minutes et répétez-la à voix haute avec un minuteur. Rassemblez-la avec votre problème et votre demande, vos faits, vos témoignages, le décideur, votre lettre et votre fiche d'information pour compléter votre kit de plaidoyer.",
-          youCanNow: "planifier et mener avec l'aide de l'IA une petite campagne de plaidoyer fondée sur des faits, dans le respect des règles."
+          youCanNow: "planifier et mener avec l'aide de l'IA une petite campagne de plaidoyer fondée sur des faits, dans le respect des règles.",
+          quickCheck: [
+            { objective: "O6", q: "Que veut dire « non partisan » ?", options: ["Soutenir un parti", "Payé par le gouvernement", "Ne soutenir aucun candidat ni aucun parti", "Être contre tous les élus"], answer: 2, why: "Non partisan veut dire ne pas prendre parti pour des candidats ou des partis." },
+            { objective: "O6", q: "Votre intervention dure trois minutes et demie, mais vous avez droit à deux. Que faites-vous ?", options: ["Parler plus vite", "Continuer quand le temps est fini", "Supprimer la demande", "La réduire à votre nom, votre lien avec l'enjeu, un fait, un témoignage et la demande, et vous entraîner avec un minuteur"], answer: 3, why: "Garder l'essentiel et s'entraîner permet de respecter le temps de parole." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Prendre la parole efficacement",
         questions: [
-          { q: "Pourquoi des lettres personnelles valent-elles mieux que des centaines de lettres identiques ?", options: ["Les lettres identiques sont illégales", "Les lettres personnelles sont plus longues", "Elles ne valent pas mieux", "Les élus remarquent et apprécient les voix individuelles"], answer: 3, why: "Les mots et les histoires personnels pèsent plus." },
-          { q: "Une fiche d'information doit être :", options: ["Une page lisible en environ une minute", "Vingt pages", "Seulement des photos", "Écrite en jargon"], answer: 0, why: "Les lecteurs occupés ont besoin de court et clair." },
-          { q: "L'IA traduit votre fiche en espagnol. Que faites-vous ensuite ?", options: ["L'imprimer sans vérifier", "Supprimer la version originale", "La faire vérifier par une personne qui parle couramment", "Renoncer à la traduction"], answer: 2, why: "Les traductions de l'IA peuvent contenir des erreurs." },
-          { q: "Environ combien de mots dit-on à l'oral en deux minutes ?", options: ["Environ 2 500", "Environ 20", "Environ 1 000", "Environ 250"], answer: 3, why: "La plupart des gens disent environ 120 à 130 mots par minute." },
-          { q: "Selon l'IRS, une association 501(c)(3) peut-elle soutenir publiquement un candidat à une élection ?", options: ["Oui, à tout moment", "Seulement sur les réseaux sociaux", "Non, c'est absolument interdit", "Seulement par de petits dons"], answer: 2, why: "L'IRS dit que l'intervention dans une campagne est absolument interdite." }
+          { objective: "O4", q: "Pourquoi des lettres personnelles valent-elles mieux que des centaines de lettres identiques ?", options: ["Les lettres identiques sont illégales", "Les lettres personnelles sont plus longues", "Elles ne valent pas mieux", "Les élus remarquent et apprécient les voix individuelles"], answer: 3, why: "Les mots et les histoires personnels pèsent plus." },
+          { objective: "O5", q: "Une fiche d'information doit être :", options: ["Une page lisible en environ une minute", "Vingt pages", "Seulement des photos", "Écrite en jargon"], answer: 0, why: "Les lecteurs occupés ont besoin de court et clair." },
+          { objective: "O5", q: "L'IA traduit votre fiche en espagnol. Que faites-vous ensuite ?", options: ["L'imprimer sans vérifier", "Supprimer la version originale", "La faire vérifier par une personne qui parle couramment", "Renoncer à la traduction"], answer: 2, why: "Les traductions de l'IA peuvent contenir des erreurs." },
+          { objective: "O6", q: "Environ combien de mots dit-on à l'oral en deux minutes ?", options: ["Environ 2 500", "Environ 20", "Environ 1 000", "Environ 250"], answer: 3, why: "La plupart des gens disent environ 120 à 130 mots par minute." },
+          { objective: "O6", q: "Selon l'IRS, une association 501(c)(3) peut-elle soutenir publiquement un candidat à une élection ?", options: ["Oui, à tout moment", "Seulement sur les réseaux sociaux", "Non, c'est absolument interdit", "Seulement par de petits dons"], answer: 2, why: "L'IRS dit que l'intervention dans une campagne est absolument interdite." }
         ]
       }
     }
@@ -168,26 +221,105 @@ module.exports = {
   quiz: {
     title: "Quiz final : L'IA au service du plaidoyer communautaire",
     questions: [
-      { q: "Le plaidoyer, c'est :", options: ["Seulement voter", "Prendre la parole pour changer une politique, une pratique ou une décision", "Se présenter à une élection", "Poursuivre quelqu'un en justice"], answer: 1, why: "Le plaidoyer vise le changement par la prise de parole." },
-      { q: "Pourquoi resserrer une grande préoccupation en un problème précis ?", options: ["Les élus peuvent agir sur des problèmes précis", "Ça paraît moins grave", "L'IA l'exige", "Pour éviter d'agir"], answer: 0, why: "Des problèmes précis mènent à des solutions précises." },
-      { q: "Une demande solide contient :", options: ["Seulement des sentiments", "Une menace", "Quoi, à qui et pour quand", "Aucun détail"], answer: 2, why: "Il est plus facile de dire oui à une demande claire." },
-      { q: "Qui doit façonner la demande ?", options: ["Les personnes les plus concernées", "Seulement l'IA", "Seulement des personnes extérieures", "Personne"], answer: 0, why: "Un plaidoyer mené par la communauté est plus fort." },
-      { q: "Où trouver les données de population et de revenus aux États-Unis ?", options: ["Dans un mème au hasard", "Dans une supposition de l'IA", "Dans un commentaire sur un réseau social", "Sur data.census.gov"], answer: 3, why: "Le Census Bureau publie les données officielles." },
-      { q: "Une source primaire est :", options: ["N'importe quel blog", "L'endroit d'origine où l'information a été publiée", "Un résumé fait par l'IA", "Une rumeur"], answer: 1, why: "Les sources primaires sont les plus fiables." },
-      { q: "Pour chaque fait recueilli, notez :", options: ["Seulement le chiffre", "La source, le lien et la date", "Rien", "Votre supposition"], answer: 1, why: "Les sources permettent aux autres de vérifier vos faits." },
-      { q: "Un compte rendu de séance est :", options: ["La durée d'une réunion", "Un type d'horloge", "Un journal intime", "Le relevé écrit officiel d'une réunion publique"], answer: 3, why: "Le compte rendu enregistre ce qui a été décidé." },
-      { q: "L'IA dit que c'est le conseil scolaire qui décide des passages piétons. Vous devez :", options: ["Confirmer sur le site de votre ville ou par téléphone", "La croire", "Écrire à tous les bureaux sans vérifier", "Abandonner"], answer: 0, why: "Les procédures locales varient ; confirmez officiellement." },
-      { q: "Pourquoi connaître le calendrier budgétaire ?", options: ["Les budgets sont secrets", "Ce n'est pas utile", "Beaucoup de décisions se prennent quand les budgets sont votés", "Pour sauter des séances"], answer: 2, why: "Faire coïncider sa demande avec les décisions budgétaires compte." },
-      { q: "Un allié est :", options: ["Un opposant", "Seulement un décideur", "Un site web", "Une personne ou un groupe qui soutient votre cause"], answer: 3, why: "Les alliés apportent de la force et des voix." },
-      { q: "Pourquoi comprendre l'opposition probable ?", options: ["Pour l'insulter", "Pour l'ignorer", "Pour pouvoir répondre à ses inquiétudes", "Pour la copier"], answer: 2, why: "Répondre aux inquiétudes élargit le soutien." },
-      { q: "Un administré (électeur) est :", options: ["Un type de loi", "Une personne qui vit dans la circonscription d'un élu", "Un avocat", "Un bâtiment municipal"], answer: 1, why: "Les élus sont attentifs à leurs administrés." },
-      { q: "Un commentaire public efficace :", options: ["Fait moins de 300 mots avec qui vous êtes, des faits, un témoignage et une demande", "Est le plus long possible", "Est en colère et insultant", "Ne contient que des statistiques"], answer: 0, why: "Court, personnel et précis, c'est ce qui marche le mieux." },
-      { q: "Vous êtes en colère contre les élus. Dans votre lettre, vous devez :", options: ["Utiliser des insultes", "Faire des menaces", "Rester respectueux", "Tout écrire en majuscules"], answer: 2, why: "Les messages respectueux sont lus et pris en compte." },
-      { q: "Où placer la demande sur une fiche d'information ?", options: ["Dans un encadré bien visible", "Cachée en bas en petits caractères", "Nulle part", "Seulement au dos"], answer: 0, why: "La demande doit ressortir." },
-      { q: "En séance publique, vous devez commencer par :", options: ["Un long historique", "Seulement votre demande", "Une blague", "Votre nom et votre lien avec l'enjeu"], answer: 3, why: "Cela dit aux élus pourquoi votre voix compte sur cet enjeu." },
-      { q: "Selon l'IRS, informer le public sur une politique :", options: ["Est toujours illégal", "N'est pas considéré comme du lobbying", "Compte comme faire campagne", "Est interdit aux associations"], answer: 1, why: "L'IRS dit que les activités éducatives ne sont pas du lobbying." },
-      { q: "Une association 501(c)(3) peut faire un peu de lobbying, mais :", options: ["En quantité illimitée", "Pas comme une part importante de ses activités", "Seulement pour des candidats", "Jamais du tout"], answer: 1, why: "Trop de lobbying menace l'exonération d'impôt." },
-      { q: "Selon l'IRS, les campagnes d'inscription des électeurs non partisanes menées par une 501(c)(3) sont :", options: ["Toujours interdites", "Permises seulement pour un parti", "Obligatoires", "En général permises si elles sont vraiment non partisanes"], answer: 3, why: "L'inscription non partisane des électeurs n'est pas interdite." }
+      { objective: "O1", q: "Le plaidoyer, c'est :", options: ["Seulement voter", "Prendre la parole pour changer une politique, une pratique ou une décision", "Se présenter à une élection", "Poursuivre quelqu'un en justice"], answer: 1, why: "Le plaidoyer vise le changement par la prise de parole." },
+      { objective: "O1", q: "Pourquoi resserrer une grande préoccupation en un problème précis ?", options: ["Les élus peuvent agir sur des problèmes précis", "Ça paraît moins grave", "L'IA l'exige", "Pour éviter d'agir"], answer: 0, why: "Des problèmes précis mènent à des solutions précises." },
+      { objective: "O1", q: "Une demande solide contient :", options: ["Seulement des sentiments", "Une menace", "Quoi, à qui et pour quand", "Aucun détail"], answer: 2, why: "Il est plus facile de dire oui à une demande claire." },
+      { objective: "O1", q: "Qui doit façonner la demande ?", options: ["Les personnes les plus concernées", "Seulement l'IA", "Seulement des personnes extérieures", "Personne"], answer: 0, why: "Un plaidoyer mené par la communauté est plus fort." },
+      { objective: "O2", q: "Où trouver les données de population et de revenus aux États-Unis ?", options: ["Dans un mème au hasard", "Dans une supposition de l'IA", "Dans un commentaire sur un réseau social", "Sur data.census.gov"], answer: 3, why: "Le Census Bureau publie les données officielles." },
+      { objective: "O2", q: "Une source primaire est :", options: ["N'importe quel blog", "L'endroit d'origine où l'information a été publiée", "Un résumé fait par l'IA", "Une rumeur"], answer: 1, why: "Les sources primaires sont les plus fiables." },
+      { objective: "O2", q: "Pour chaque fait recueilli, notez :", options: ["Seulement le chiffre", "La source, le lien et la date", "Rien", "Votre supposition"], answer: 1, why: "Les sources permettent aux autres de vérifier vos faits." },
+      { objective: "O3", q: "Un compte rendu de séance est :", options: ["La durée d'une réunion", "Un type d'horloge", "Un journal intime", "Le relevé écrit officiel d'une réunion publique"], answer: 3, why: "Le compte rendu enregistre ce qui a été décidé." },
+      { objective: "O3", q: "L'IA dit que c'est le conseil scolaire qui décide des passages piétons. Vous devez :", options: ["Confirmer sur le site de votre ville ou par téléphone", "La croire", "Écrire à tous les bureaux sans vérifier", "Abandonner"], answer: 0, why: "Les procédures locales varient ; confirmez officiellement." },
+      { objective: "O3", q: "Pourquoi connaître le calendrier budgétaire ?", options: ["Les budgets sont secrets", "Ce n'est pas utile", "Beaucoup de décisions se prennent quand les budgets sont votés", "Pour sauter des séances"], answer: 2, why: "Faire coïncider sa demande avec les décisions budgétaires compte." },
+      { objective: "O3", q: "Un allié est :", options: ["Un opposant", "Seulement un décideur", "Un site web", "Une personne ou un groupe qui soutient votre cause"], answer: 3, why: "Les alliés apportent de la force et des voix." },
+      { objective: "O3", q: "Pourquoi comprendre l'opposition probable ?", options: ["Pour l'insulter", "Pour l'ignorer", "Pour pouvoir répondre à ses inquiétudes", "Pour la copier"], answer: 2, why: "Répondre aux inquiétudes élargit le soutien." },
+      { objective: "O4", q: "Un administré (électeur) est :", options: ["Un type de loi", "Une personne qui vit dans la circonscription d'un élu", "Un avocat", "Un bâtiment municipal"], answer: 1, why: "Les élus sont attentifs à leurs administrés." },
+      { objective: "O4", q: "Un commentaire public efficace :", options: ["Fait moins de 300 mots avec qui vous êtes, des faits, un témoignage et une demande", "Est le plus long possible", "Est en colère et insultant", "Ne contient que des statistiques"], answer: 0, why: "Court, personnel et précis, c'est ce qui marche le mieux." },
+      { objective: "O4", q: "Vous êtes en colère contre les élus. Dans votre lettre, vous devez :", options: ["Utiliser des insultes", "Faire des menaces", "Rester respectueux", "Tout écrire en majuscules"], answer: 2, why: "Les messages respectueux sont lus et pris en compte." },
+      { objective: "O5", q: "Où placer la demande sur une fiche d'information ?", options: ["Dans un encadré bien visible", "Cachée en bas en petits caractères", "Nulle part", "Seulement au dos"], answer: 0, why: "La demande doit ressortir." },
+      { objective: "O6", q: "En séance publique, vous devez commencer par :", options: ["Un long historique", "Seulement votre demande", "Une blague", "Votre nom et votre lien avec l'enjeu"], answer: 3, why: "Cela dit aux élus pourquoi votre voix compte sur cet enjeu." },
+      { objective: "O6", q: "Selon l'IRS, informer le public sur une politique :", options: ["Est toujours illégal", "N'est pas considéré comme du lobbying", "Compte comme faire campagne", "Est interdit aux associations"], answer: 1, why: "L'IRS dit que les activités éducatives ne sont pas du lobbying." },
+      { objective: "O6", q: "Une association 501(c)(3) peut faire un peu de lobbying, mais :", options: ["En quantité illimitée", "Pas comme une part importante de ses activités", "Seulement pour des candidats", "Jamais du tout"], answer: 1, why: "Trop de lobbying menace l'exonération d'impôt." },
+      { objective: "O6", q: "Selon l'IRS, les campagnes d'inscription des électeurs non partisanes menées par une 501(c)(3) sont :", options: ["Toujours interdites", "Permises seulement pour un parti", "Obligatoires", "En général permises si elles sont vraiment non partisanes"], answer: 3, why: "L'inscription non partisane des électeurs n'est pas interdite." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      2,
+      5,
+      6,
+      8,
+      13,
+      15,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Problème et demande",
+        objective: "O1",
+        notYet: "Le problème est trop large, ou il manque à la demande le quoi, le à qui ou le pour quand.",
+        meets: "Un problème en une phrase et une demande précise avec quoi, à qui et pour quand.",
+        exceeds: "Montre comment les personnes concernées ont aidé à formuler la demande."
+      },
+      {
+        name: "Faits et témoignages",
+        objective: "O2",
+        notYet: "Un fait n'a pas de source, ou un témoignage est utilisé sans accord.",
+        meets: "Trois faits avec source, lien et date, et deux témoignages partagés avec accord.",
+        exceeds: "Les faits viennent des sources d'origine et les témoignages utilisent les noms choisis par les personnes."
+      },
+      {
+        name: "Décideur",
+        objective: "O3",
+        notYet: "Décideur erroné ou non confirmé.",
+        meets: "Le décideur et la prochaine date limite confirmés sur un site officiel.",
+        exceeds: "Liste aussi les alliés et une réponse à la principale inquiétude des opposants."
+      },
+      {
+        name: "Lettre ou commentaire et fiche d'information",
+        objective: "O4",
+        notYet: "Plus de 300 mots, irrespectueux, ou sans demande claire.",
+        meets: "Moins de 300 mots, respectueux, avec qui vous êtes, des faits, un témoignage et la demande ; la fiche tient sur une page.",
+        exceeds: "Un lecteur peut redire la demande après une minute avec la fiche d'information."
+      },
+      {
+        name: "Intervention et règles",
+        objective: "O6",
+        notYet: "Plus de deux minutes, pas répétée, ou mentionne un soutien à un candidat.",
+        meets: "Répétée à voix haute en deux minutes ou moins, commence par le nom et le lien avec l'enjeu, et porte seulement sur l'enjeu.",
+        exceeds: "Comprend un plan pour que des soutiens viennent ou envoient un commentaire."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui envoient une lettre ou un commentaire public, ou qui prennent la parole lors d'une réunion publique, dans les 60 jours (questionnaire de suivi)",
+      "Campagnes où le décideur répond, inscrit l'enjeu à l'ordre du jour ou accorde la demande",
+      "Nombre d'habitants qui rejoignent une campagne après le cours",
+      "Apprenants qui commencent un autre cours Koach Learn sur les associations dans les 30 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur avec Internet",
+      "Un assistant d'IA gratuit comme ChatGPT, Microsoft Copilot ou Google Gemini",
+      "Canva ou Google Docs pour la fiche d'information",
+      "Un minuteur pour s'entraîner à l'intervention",
+      "Environ 60 minutes pour les leçons et les contrôles, plus le temps de recherche et d'entraînement"
+    ],
+    facilitatorNotes: [
+      "Faites travailler les groupes sur un même enjeu local pour que les apprenants se partagent la recherche et répètent ensemble leurs interventions.",
+      "Rappelez au personnel des associations que les organisations 501(c)(3) ne peuvent pas soutenir de candidats ; orientez-les vers les consignes de l'IRS pour leur propre situation.",
+      "Les témoignages se partagent seulement avec accord ; gardez les détails privés hors des demandes à l'IA.",
+      "Faites répéter l'intervention à voix haute, avec un minuteur, devant le groupe.",
+      "Notez le kit de plaidoyer avec la grille et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

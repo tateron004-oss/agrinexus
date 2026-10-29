@@ -20,11 +20,35 @@ module.exports = {
     "The examples use real farm jobs: a 2-hectare maize plot, a tea block, a cassava field, a horticulture greenhouse. Every lesson ends with a short practice task. A knowledge check closes each chapter and a 20-question quiz closes the course."
   ],
   finalTask: "Write a complete imaging flight plan for a 2-hectare maize plot (real or example): goal of the flight, sensor, flight height and the resulting image detail shown by your flight app, front and side overlap, flight speed, number of batteries, time of day, weather limits, take-off spot, and a pre-flight checklist. If you have a drone and the required approvals, fly it and check every image before you leave the field.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Farmers, extension officers, agribusiness staff and young drone service providers in Kenya, Nigeria and across Africa taking Course 2 of the drone monitoring track.",
+    startingPoint: "Learners know what a drone can do on a farm and how to find their country's drone rules (Course 1). Few have run a written pre-flight check, flown a planned mapping grid, set height and overlap for the detail they need, or know which sensor and lighting give a usable map.",
+    gap: "Poorly prepared flights cause crashes, and badly planned or badly timed flights give blurred, patchy images that cannot be stitched or compared, wasting batteries, time and clients' money. Planning and preparing a mapping flight properly gives a complete, sharp image set the first time.",
+    constraints: [
+      "Reading level: plain words; every flying and imaging term is explained",
+      "Devices: a phone or tablet with a mapping app helps; a drone is only needed for the optional flight",
+      "Rules: flying is only with the registration, licence and approvals the country requires",
+      "Field conditions: wind, heat, patchy cloud and no mobile network on many farms",
+      "Time: short lessons, plus time to write the flight plan"
+    ],
+    prerequisites: "\"Drones for Agricultural Monitoring 1: Introduction, Regulations and Safety\"."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Before every flight", action: "run a complete pre-flight check of the aircraft, batteries, controller, settings and papers", standard: "with no checklist item skipped" },
+    { id: "O2", condition: "On a practice or approved flight", action: "take off, fly a simple pattern and land while keeping the drone in sight", standard: "within the legal height limit and landing with battery to spare" },
+    { id: "O3", condition: "For a field to be mapped", action: "plan a grid mapping flight with height, image detail, overlap, speed and batteries", standard: "with overlap of about 70 to 80 percent forward and 60 to 70 percent to the side" },
+    { id: "O4", condition: "Given a high-resolution colour drone image", action: "point out gaps, weeds, water, lodging and damage", standard: "and mark each spot to check on foot" },
+    { id: "O5", condition: "Given a farm question", action: "choose between an RGB, multispectral and thermal sensor", standard: "with a reason that fits the question and the cost" },
+    { id: "O6", condition: "On the day of a mapping flight", action: "set the time, light and wind limits and check every image before leaving the field", standard: "so the images are sharp, evenly lit and complete" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Flight operations",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Getting the drone ready: the pre-flight check",
           minutes: 5,
           goal: "Run a complete pre-flight check on a drone before every flight.",
@@ -43,9 +67,14 @@ module.exports = {
           ],
           sources: [KCAA_UAS, NCAA_P21],
           tryIt: "Write your own pre-flight checklist with at least 12 items under four headings: papers, aircraft, batteries and controller, settings. Keep it on your phone.",
-          youCanNow: "prepare a drone with a full pre-flight check covering papers, aircraft, batteries, controller and settings."
+          youCanNow: "prepare a drone with a full pre-flight check covering papers, aircraft, batteries, controller and settings.",
+          quickCheck: [
+            { objective: "O1", q: "What is the home point?", options: ["The pilot's house", "The place the drone returns to by itself on return-to-home", "The highest point of the farm", "The drone shop"], answer: 1, why: "The home point is recorded before take-off so return-to-home flies the drone back there." },
+            { objective: "O1", q: "You are going to a farm with no mobile network. What do you do before you leave home?", options: ["Nothing; the app will work anyway", "Plan to update the app in the field", "Leave the batteries uncharged", "Download offline maps and update the app"], answer: 3, why: "Apps should be updated and offline maps downloaded before you leave, because there may be no network in the field." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Flying safely within sight",
           minutes: 5,
           goal: "Take off, fly a simple pattern and land while keeping the drone in sight.",
@@ -64,9 +93,14 @@ module.exports = {
           ],
           sources: [NCAA_P21, KCAA_UAS],
           tryIt: "If you have a drone and approval, fly a slow square in front of you and land with battery to spare. If not, use a free drone simulator app or watch a training video and write down the steps you saw.",
-          youCanNow: "take off, fly a simple pattern within sight, and land safely with battery to spare."
+          youCanNow: "take off, fly a simple pattern within sight, and land safely with battery to spare.",
+          quickCheck: [
+            { objective: "O2", q: "What does keeping the drone \"in front of you\" help with?", options: ["Charging the battery", "Making the photos brighter", "Knowing which way the drone faces", "Flying beyond sight"], answer: 2, why: "Keeping the drone in front of you, not overhead or behind, helps you keep track of its direction." },
+            { objective: "O2", q: "Right after take-off the drone drifts strongly in the wind. What do you do?", options: ["Bring it back and land", "Climb higher to escape the wind", "Fly faster to finish", "Look away and let it fly"], answer: 0, why: "If the drone drifts strongly in the wind, bring it back and land." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Planning an automatic mapping flight",
           minutes: 6,
           goal: "Plan a grid mapping flight with the right height, overlap and speed.",
@@ -84,17 +118,21 @@ module.exports = {
             { title: "Before you go", bullets: ["Check GSD, flight time, batteries", "Save the plan and review it"] }
           ],
           tryIt: "Open a free mapping or flight-planning app (or a flight planner inside your drone's app) and draw a 2-hectare field. Try three heights and write down the GSD and flight time for each.",
-          youCanNow: "plan a grid mapping flight and choose height, overlap and speed for the job."
+          youCanNow: "plan a grid mapping flight and choose height, overlap and speed for the job.",
+          quickCheck: [
+            { objective: "O3", q: "What is a grid or lawnmower pattern?", options: ["Straight back-and-forth lines over the field", "A circle around one tree", "A single photo from very high", "A flight along the road"], answer: 0, why: "Mapping flights fly straight back-and-forth lines so the photos cover the whole field with overlap." },
+            { objective: "O3", q: "You want to count maize plants but your plan gives coarse detail. What do you change?", options: ["Fly faster", "Reduce the overlap", "Fly lower for a finer GSD, within the legal limit", "Fly in the evening"], answer: 2, why: "Flying lower gives finer detail per pixel, but never above or beyond your legal limits." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Flight operations",
         questions: [
-          { q: "Why use a written pre-flight checklist every time?", options: ["It looks professional", "Most accidents start with something missed on the ground", "The drone needs it to start", "It replaces the licence"], answer: 1, why: "A checklist catches cracked propellers, weak batteries and wrong settings." },
-          { q: "What should the return-to-home height be set to?", options: ["As low as possible", "Below the tallest tree", "Above the tallest tree or mast on the site", "It does not matter"], answer: 2, why: "The drone must clear every obstacle when it flies home by itself." },
-          { q: "What does VLOS mean?", options: ["You can see the drone with your own eyes the whole flight", "The drone sees you", "The drone flies at night", "The drone flies beyond the horizon"], answer: 0, why: "Visual line of sight means unaided sight of the drone at all times." },
-          { q: "You fly higher on a mapping flight. What happens?", options: ["More detail per pixel", "The photos stop overlapping", "Nothing changes", "Each pixel covers more ground and you finish faster"], answer: 3, why: "Higher flights give coarser GSD but cover the field faster." },
-          { q: "Why do mapping photos need a lot of overlap?", options: ["To use more battery", "So the software can stitch them into one map", "To make photos brighter", "Because the law says 100 percent"], answer: 1, why: "Stitching software matches features shared between overlapping photos." }
+          { objective: "O1", q: "Why use a written pre-flight checklist every time?", options: ["It looks professional", "Most accidents start with something missed on the ground", "The drone needs it to start", "It replaces the licence"], answer: 1, why: "A checklist catches cracked propellers, weak batteries and wrong settings." },
+          { objective: "O1", q: "What should the return-to-home height be set to?", options: ["As low as possible", "Below the tallest tree", "Above the tallest tree or mast on the site", "It does not matter"], answer: 2, why: "The drone must clear every obstacle when it flies home by itself." },
+          { objective: "O2", q: "What does VLOS mean?", options: ["You can see the drone with your own eyes the whole flight", "The drone sees you", "The drone flies at night", "The drone flies beyond the horizon"], answer: 0, why: "Visual line of sight means unaided sight of the drone at all times." },
+          { objective: "O3", q: "You fly higher on a mapping flight. What happens?", options: ["More detail per pixel", "The photos stop overlapping", "Nothing changes", "Each pixel covers more ground and you finish faster"], answer: 3, why: "Higher flights give coarser GSD but cover the field faster." },
+          { objective: "O3", q: "Why do mapping photos need a lot of overlap?", options: ["To use more battery", "So the software can stitch them into one map", "To make photos brighter", "Because the law says 100 percent"], answer: 1, why: "Stitching software matches features shared between overlapping photos." }
         ]
       }
     },
@@ -102,6 +140,7 @@ module.exports = {
       name: "Chapter 2: Aerial imaging and sensors",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Colour (RGB) images: what you can see",
           minutes: 5,
           goal: "Read a high-resolution colour drone image for gaps, weeds, water and damage.",
@@ -118,9 +157,14 @@ module.exports = {
             { title: "Limits", bullets: ["Shows disease and nutrient stress late", "Always check spots on foot"] }
           ],
           tryIt: "Find a drone photo or a satellite view of a farm online (or use your own). List five things you can see, mark where each one is, and say what you would check on the ground.",
-          youCanNow: "read a colour drone image and mark gaps, weeds, water and damage to check on the ground."
+          youCanNow: "read a colour drone image and mark gaps, weeds, water and damage to check on the ground.",
+          quickCheck: [
+            { objective: "O4", q: "In a colour image, what can a gap in a row show?", options: ["Too much fertilizer", "A strong battery", "A good harvest", "Poor germination or plants eaten by pests"], answer: 3, why: "Gaps in rows often mean seeds did not come up or plants were eaten." },
+            { objective: "O4", q: "The image shows an uneven, yellowish patch in a bean field. What do you do?", options: ["Spray the whole field", "Mark the spot and check it on foot", "Ignore it", "Delete the image"], answer: 1, why: "Colour images can hint at problems, but the spot must be checked on the ground." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Multispectral and thermal sensors",
           minutes: 6,
           goal: "Choose between RGB, multispectral and thermal sensors for a farm question.",
@@ -137,9 +181,14 @@ module.exports = {
           ],
           sources: [{ name: "FAO GIEWS Earth Observation (NDVI and vegetation indicators)", url: "https://www.fao.org/giews/earthobservation/index.jsp" }, FAO_ITU_DRONES],
           tryIt: "For each question, choose RGB, multispectral or thermal and write why: (a) Is my drip line blocked? (b) Where did the beans not germinate? (c) Is one block of tea under stress before the leaves change colour?",
-          youCanNow: "say what multispectral and thermal sensors show and choose the right sensor for a farm question."
+          youCanNow: "say what multispectral and thermal sensors show and choose the right sensor for a farm question.",
+          quickCheck: [
+            { objective: "O5", q: "What does a thermal camera measure?", options: ["Plant height", "Surface temperature", "Soil nutrients", "Rainfall"], answer: 1, why: "A thermal camera measures surface temperature, which can show water stress." },
+            { objective: "O5", q: "A tea estate wants to spot stress early across its blocks. Which sensor do you suggest?", options: ["None", "A thermal camera only for animals", "A phone camera", "A multispectral camera"], answer: 3, why: "Multispectral cameras measure near-infrared and red edge, which show plant stress earlier." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Capturing good images: light, wind and timing",
           minutes: 5,
           goal: "Set up a flight so every image is sharp, evenly lit and usable.",
@@ -157,17 +206,21 @@ module.exports = {
             { title: "Check before you leave", bullets: ["Look through the photos", "Refly blurred, dark or missing parts"] }
           ],
           tryIt: "Final task: write your complete imaging flight plan for a 2-hectare maize plot: goal, sensor, height and GSD, overlap, speed, batteries, time of day, weather limits, take-off spot and checklist. If you have a drone and the required approvals, fly it and check every image before you leave.",
-          youCanNow: "plan and capture a set of sharp, evenly lit images that can be stitched into a farm map and compared over time."
+          youCanNow: "plan and capture a set of sharp, evenly lit images that can be stitched into a farm map and compared over time.",
+          quickCheck: [
+            { objective: "O6", q: "What is a calibration panel?", options: ["A spare propeller", "A battery case", "A card of known reflectance photographed before and after a multispectral flight", "The controller's screen"], answer: 2, why: "Photographing the calibration panel lets software correct for the light that day." },
+            { objective: "O6", q: "Patchy clouds are moving fast over the field at midday. What do you do?", options: ["Wait for full sun or even cloud before flying", "Fly now and hope", "Fly at dusk instead", "Fly higher to get above the clouds"], answer: 0, why: "Steady light, either full sun or even cloud, gives evenly lit images that can be compared." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Aerial imaging and sensors",
         questions: [
-          { q: "Which sensor is enough to find gaps in a 1-acre bean plot?", options: ["Thermal only", "Multispectral only", "A normal colour (RGB) camera", "No sensor can do this"], answer: 2, why: "Gaps are easy to see in colour images at a few centimetres per pixel." },
-          { q: "Healthy green leaves reflect a lot of:", options: ["Near-infrared light", "Sound", "Heat only", "Radio waves"], answer: 0, why: "Healthy leaf structure reflects strongly in near-infrared; vegetation indices use this." },
-          { q: "A thermal image shows one block of tomatoes much warmer than the rest. A likely cause to check is:", options: ["Too much fertilizer colour", "The drone was too high", "The block is greener", "Water stress or a blocked drip line"], answer: 3, why: "Plants short of water warm up because they close their pores." },
-          { q: "When is the best time to fly for comparable images?", options: ["At sunrise one week and sunset the next", "Near midday, in steady light, the same way each time", "In patchy moving cloud", "At night"], answer: 1, why: "Short shadows and steady light make images comparable." },
-          { q: "Some photos are blurred when you check them in the field. You should:", options: ["Refly that section before you leave", "Go home and hope stitching works", "Delete the whole set", "Fly faster next time"], answer: 0, why: "Fixing it on site saves another trip and gives a complete map." }
+          { objective: "O4", q: "Which sensor is enough to find gaps in a 1-acre bean plot?", options: ["Thermal only", "Multispectral only", "A normal colour (RGB) camera", "No sensor can do this"], answer: 2, why: "Gaps are easy to see in colour images at a few centimetres per pixel." },
+          { objective: "O5", q: "Healthy green leaves reflect a lot of:", options: ["Near-infrared light", "Sound", "Heat only", "Radio waves"], answer: 0, why: "Healthy leaf structure reflects strongly in near-infrared; vegetation indices use this." },
+          { objective: "O5", q: "A thermal image shows one block of tomatoes much warmer than the rest. A likely cause to check is:", options: ["Too much fertilizer colour", "The drone was too high", "The block is greener", "Water stress or a blocked drip line"], answer: 3, why: "Plants short of water warm up because they close their pores." },
+          { objective: "O6", q: "When is the best time to fly for comparable images?", options: ["At sunrise one week and sunset the next", "Near midday, in steady light, the same way each time", "In patchy moving cloud", "At night"], answer: 1, why: "Short shadows and steady light make images comparable." },
+          { objective: "O6", q: "Some photos are blurred when you check them in the field. You should:", options: ["Refly that section before you leave", "Go home and hope stitching works", "Delete the whole set", "Fly faster next time"], answer: 0, why: "Fixing it on site saves another trip and gives a complete map." }
         ]
       }
     }
@@ -175,26 +228,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Drones for Agricultural Monitoring 2: Flight Operations, Imaging and Sensors",
     questions: [
-      { q: "Where do most drone accidents start?", options: ["In the air only", "On the ground, with something missed in preparation", "In the office", "In the software after landing"], answer: 1, why: "Cracked propellers, weak batteries and wrong settings cause many accidents." },
-      { q: "Which is part of the paper check?", options: ["Propeller tightness", "Lens cleaning", "Registration, licence and approvals for the site", "Battery swelling"], answer: 2, why: "The paper check confirms you are allowed to fly there." },
-      { q: "A battery looks swollen. You should:", options: ["Not use it", "Use it for a short flight", "Squeeze it flat", "Charge it more"], answer: 0, why: "A swollen battery can fail or catch fire; do not fly with it." },
-      { q: "Why download offline maps before going to a rural farm?", options: ["To save money on fuel", "To make the drone faster", "Because the law requires it", "There may be no mobile network in the field"], answer: 3, why: "Without network, the app may not load maps it needs." },
-      { q: "Return-to-home is:", options: ["A setting that flies the drone back to its take-off point by itself", "A button that switches off the motors", "A camera mode", "A type of battery"], answer: 0, why: "RTH brings the drone home on low battery or lost signal." },
-      { q: "Flying beyond visual line of sight:", options: ["Is always allowed", "Needs special approval", "Is required for mapping", "Is safer"], answer: 1, why: "BVLOS is higher risk and needs authorisation." },
-      { q: "Nigeria's Part 21 sets a common maximum height of:", options: ["10 metres", "1,000 metres", "120 metres (400 feet) above ground", "No limit"], answer: 2, why: "Part 21 uses 120 m (400 ft) AGL for many operations; check your country's own limit." },
-      { q: "During a flight, where should you keep the drone?", options: ["Behind you", "Directly overhead", "Out of sight", "In front of you, in view"], answer: 3, why: "In front and in view, you can tell which way it faces." },
-      { q: "When should you land?", options: ["With battery to spare", "At 0 percent", "Only when the drone lands itself", "When the phone is full"], answer: 0, why: "Leave enough battery for a safe descent and landing." },
-      { q: "A mapping flight flies:", options: ["In circles", "In straight back-and-forth lines", "Randomly", "Straight up and down"], answer: 1, why: "A grid pattern covers the whole field with overlapping photos." },
-      { q: "GSD means:", options: ["Ground speed of the drone", "Global safety distance", "How much ground one pixel covers", "Battery size"], answer: 2, why: "Ground sampling distance is image detail, such as 2 cm per pixel." },
-      { q: "To count single maize plants you should:", options: ["Fly as high as possible", "Use only satellites", "Fly at night", "Fly lower for finer detail, within the legal limit"], answer: 3, why: "Finer GSD shows single plants; stay under the height limit." },
-      { q: "A common forward overlap for mapping is about:", options: ["70 to 80 percent", "5 percent", "0 percent", "100 percent exactly"], answer: 0, why: "High overlap lets the software stitch photos." },
-      { q: "Lodging in a colour image means:", options: ["Plants that are too green", "Stalks that have bent or fallen", "Weeds between rows", "Water on the soil"], answer: 1, why: "Lodged maize or sorghum lies flat and is easy to see from above." },
-      { q: "A colour image shows a yellowing patch. The best next step is:", options: ["Spray it", "Ignore it", "Mark it and check it on foot", "Fly higher"], answer: 2, why: "Images show where; you confirm the cause on the ground." },
-      { q: "NDVI is calculated from:", options: ["Sound and heat", "Blue light only", "Soil samples", "Red and near-infrared light"], answer: 3, why: "NDVI compares red and near-infrared reflectance." },
-      { q: "A high NDVI value usually means:", options: ["Dense, healthy green vegetation", "Bare soil", "Water", "A broken camera"], answer: 0, why: "FAO describes high positive NDVI as dense, healthy vegetation." },
-      { q: "A thermal camera is a good choice to:", options: ["Read a number plate", "Find water stress and animals at dawn", "Count seeds in a bag", "See colours more brightly"], answer: 1, why: "Thermal measures heat, linked to water stress and warm-bodied animals." },
-      { q: "Why photograph a calibration panel with a multispectral camera?", options: ["It is a souvenir", "To test the propellers", "So software can correct for the light that day", "To measure wind"], answer: 2, why: "The panel's known reflectance lets software correct the readings." },
-      { q: "Strong, gusty wind on the day of a mapping flight means:", options: ["Fly faster", "Fly higher", "Remove the propellers", "Do not fly; reschedule"], answer: 3, why: "Strong wind risks control and ruins images." }
+      { objective: "O1", q: "Where do most drone accidents start?", options: ["In the air only", "On the ground, with something missed in preparation", "In the office", "In the software after landing"], answer: 1, why: "Cracked propellers, weak batteries and wrong settings cause many accidents." },
+      { objective: "O1", q: "Which is part of the paper check?", options: ["Propeller tightness", "Lens cleaning", "Registration, licence and approvals for the site", "Battery swelling"], answer: 2, why: "The paper check confirms you are allowed to fly there." },
+      { objective: "O1", q: "A battery looks swollen. You should:", options: ["Not use it", "Use it for a short flight", "Squeeze it flat", "Charge it more"], answer: 0, why: "A swollen battery can fail or catch fire; do not fly with it." },
+      { objective: "O1", q: "Why download offline maps before going to a rural farm?", options: ["To save money on fuel", "To make the drone faster", "Because the law requires it", "There may be no mobile network in the field"], answer: 3, why: "Without network, the app may not load maps it needs." },
+      { objective: "O1", q: "Return-to-home is:", options: ["A setting that flies the drone back to its take-off point by itself", "A button that switches off the motors", "A camera mode", "A type of battery"], answer: 0, why: "RTH brings the drone home on low battery or lost signal." },
+      { objective: "O2", q: "Flying beyond visual line of sight:", options: ["Is always allowed", "Needs special approval", "Is required for mapping", "Is safer"], answer: 1, why: "BVLOS is higher risk and needs authorisation." },
+      { objective: "O2", q: "Nigeria's Part 21 sets a common maximum height of:", options: ["10 metres", "1,000 metres", "120 metres (400 feet) above ground", "No limit"], answer: 2, why: "Part 21 uses 120 m (400 ft) AGL for many operations; check your country's own limit." },
+      { objective: "O2", q: "During a flight, where should you keep the drone?", options: ["Behind you", "Directly overhead", "Out of sight", "In front of you, in view"], answer: 3, why: "In front and in view, you can tell which way it faces." },
+      { objective: "O2", q: "When should you land?", options: ["With battery to spare", "At 0 percent", "Only when the drone lands itself", "When the phone is full"], answer: 0, why: "Leave enough battery for a safe descent and landing." },
+      { objective: "O3", q: "A mapping flight flies:", options: ["In circles", "In straight back-and-forth lines", "Randomly", "Straight up and down"], answer: 1, why: "A grid pattern covers the whole field with overlapping photos." },
+      { objective: "O3", q: "GSD means:", options: ["Ground speed of the drone", "Global safety distance", "How much ground one pixel covers", "Battery size"], answer: 2, why: "Ground sampling distance is image detail, such as 2 cm per pixel." },
+      { objective: "O3", q: "To count single maize plants you should:", options: ["Fly as high as possible", "Use only satellites", "Fly at night", "Fly lower for finer detail, within the legal limit"], answer: 3, why: "Finer GSD shows single plants; stay under the height limit." },
+      { objective: "O3", q: "A common forward overlap for mapping is about:", options: ["70 to 80 percent", "5 percent", "0 percent", "100 percent exactly"], answer: 0, why: "High overlap lets the software stitch photos." },
+      { objective: "O4", q: "Lodging in a colour image means:", options: ["Plants that are too green", "Stalks that have bent or fallen", "Weeds between rows", "Water on the soil"], answer: 1, why: "Lodged maize or sorghum lies flat and is easy to see from above." },
+      { objective: "O4", q: "A colour image shows a yellowing patch. The best next step is:", options: ["Spray it", "Ignore it", "Mark it and check it on foot", "Fly higher"], answer: 2, why: "Images show where; you confirm the cause on the ground." },
+      { objective: "O5", q: "NDVI is calculated from:", options: ["Sound and heat", "Blue light only", "Soil samples", "Red and near-infrared light"], answer: 3, why: "NDVI compares red and near-infrared reflectance." },
+      { objective: "O5", q: "A high NDVI value usually means:", options: ["Dense, healthy green vegetation", "Bare soil", "Water", "A broken camera"], answer: 0, why: "FAO describes high positive NDVI as dense, healthy vegetation." },
+      { objective: "O5", q: "A thermal camera is a good choice to:", options: ["Read a number plate", "Find water stress and animals at dawn", "Count seeds in a bag", "See colours more brightly"], answer: 1, why: "Thermal measures heat, linked to water stress and warm-bodied animals." },
+      { objective: "O6", q: "Why photograph a calibration panel with a multispectral camera?", options: ["It is a souvenir", "To test the propellers", "So software can correct for the light that day", "To measure wind"], answer: 2, why: "The panel's known reflectance lets software correct the readings." },
+      { objective: "O6", q: "Strong, gusty wind on the day of a mapping flight means:", options: ["Fly faster", "Fly higher", "Remove the propellers", "Do not fly; reschedule"], answer: 3, why: "Strong wind risks control and ruins images." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      5,
+      6,
+      10,
+      12,
+      13,
+      15,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part of the plan and check it again.",
+    criteria: [
+      {
+        name: "Goal and sensor",
+        objective: "O5",
+        notYet: "No goal, or the sensor does not fit the goal.",
+        meets: "A clear goal for the flight and a sensor that fits it, with a reason.",
+        exceeds: "Explains why a cheaper or costlier sensor was not chosen."
+      },
+      {
+        name: "Height, detail and overlap",
+        objective: "O3",
+        notYet: "Height, GSD or overlap is missing, or above the legal height limit.",
+        meets: "Height and the GSD shown by the app, forward and side overlap, speed and number of batteries.",
+        exceeds: "Shows how the detail fits the job, such as counting plants."
+      },
+      {
+        name: "Light, wind and timing",
+        objective: "O6",
+        notYet: "No time of day or weather limits.",
+        meets: "Time of day, light, wind limits and a plan to check every image before leaving.",
+        exceeds: "Includes calibration panel steps or a reserve date."
+      },
+      {
+        name: "Pre-flight checklist",
+        objective: "O1",
+        notYet: "The checklist misses aircraft, batteries, settings or papers.",
+        meets: "Covers aircraft, batteries, controller and app, return-to-home settings and papers.",
+        exceeds: "Adds the take-off spot and how the drone stays in sight."
+      },
+      {
+        name: "Safe flying",
+        objective: "O2",
+        notYet: "No take-off spot, or flying beyond sight without approval.",
+        meets: "A clear take-off spot, flying within sight and the legal height, and landing with battery to spare.",
+        exceeds: "Names an observer and the steps if the wind rises."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and score Meets or Exceeds on every rubric row of the flight plan",
+      "Learners with approvals who report flying a planned mapping flight and getting a complete image set within 60 days (follow-up survey)",
+      "Learners who go on to Course 3 of the drone track",
+      "Drone service providers who report fewer reflights or crashes after training"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or tablet with a drone mapping app, or screenshots of one",
+      "A notebook or printed checklist",
+      "A drone with its registration, licence and approvals, only for the optional practice flight",
+      "About 60 minutes in total, in short sessions, plus time to write the flight plan"
+    ],
+    facilitatorNotes: [
+      "Take the pre-test together, then plan one example mapping flight on a screen so everyone sees height, GSD and overlap change.",
+      "Any practice flight must follow the country's rules, with a licensed pilot and the approvals in place, and spectators kept clear.",
+      "Run the pre-flight checklist out loud on a real or pictured drone, and do not use swollen batteries.",
+      "Use sample images if no drone is available, so learners can practise reading colour, multispectral and thermal images.",
+      "Score the flight plan with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

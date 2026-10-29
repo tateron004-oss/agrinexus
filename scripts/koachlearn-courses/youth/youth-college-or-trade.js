@@ -19,11 +19,35 @@ module.exports = {
     "Each lesson takes about five minutes and ends with a task you do right away. There is a knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Write a one-page two-year plan: your main path and a backup, a comparison of at least two paths using the same five questions (cost, time, pay while learning, likely jobs, what you need to get in), how you will pay for it, what you will do each six months, and the people who will help you.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "High school students and recent graduates in the United States deciding what to do after school, and the parents, counselors and mentors who help them.",
+    startingPoint: "Know some of their interests and have heard about college, trades or the military from friends and family. Few have compared paths with the same questions, looked at net price, filled out the FAFSA or learned to spot aid scams.",
+    gap: "Choosing a path on hearsay can lead to debt for a program that does not fit, missed aid deadlines or losing money to scams. Comparing options with the same questions, understanding financial aid, and writing a two-year plan with a backup helps young people start a path that fits and that they can pay for.",
+    constraints: [
+      "Money rules, aid dates and programs change every year; learners check studentaid.gov, apprenticeship.gov and official school sites",
+      "No financial advice: learners talk plans over with a counselor, parent or trusted adult",
+      "Privacy and scams: never share an FSA ID, bank or card numbers, and never pay to file the FAFSA",
+      "Devices: a phone or school or library computer with internet",
+      "Short lessons and plain words; many learners will be first in their family to make these choices"
+    ],
+    prerequisites: "None. \"AI and Career Exploration\" is a helpful first course."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Before comparing schools or jobs", action: "list your interests, strengths, learning style and money needs, and choose the paths that fit best so far", standard: "circling two or three of the five main paths" },
+    { id: "O2", condition: "Using school websites and net price calculators", action: "compare a community college and a four-year college using the same five questions", standard: "with every question answered or marked to ask" },
+    { id: "O3", condition: "Using apprenticeship.gov and official sources", action: "compare an apprenticeship, the military or a job with training using the same five questions", standard: "asking about finish rates, job placement and accreditation before signing anything" },
+    { id: "O4", condition: "Using studentaid.gov", action: "explain the four kinds of financial aid and plan when and with whom you will file the FAFSA", standard: "with this year's opening date and deadlines written down and no fee paid" },
+    { id: "O5", condition: "Given aid offers and scholarship offers", action: "sort each offer into free money, earned money and loans, calculate what is left to pay, and spot scam warning signs", standard: "getting the amounts right and naming where to report a scam" },
+    { id: "O6", condition: "Using your comparisons and aid plan", action: "write a two-year plan with a main path, a backup, six-month milestones, how you will pay and who will help", standard: "with every part included and a date to review it" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Comparing your paths",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Know yourself before you choose",
           minutes: 5,
           goal: "Write down your interests, strengths, learning style and money needs so you can judge each path.",
@@ -42,9 +66,14 @@ module.exports = {
             { title: "Using AI to brainstorm", bullets: ["Ask for careers that match your answers", "Treat it as a starting list", "Check facts with a counselor"] }
           ],
           tryIt: "Answer the four questions in this lesson on paper. Then ask an AI assistant: Here are my interests and strengths. Suggest five careers and the training each needs. Circle the two or three paths that fit you best.",
-          youCanNow: "describe your interests, strengths, learning style and money needs, and pick the paths worth comparing."
+          youCanNow: "describe your interests, strengths, learning style and money needs, and pick the paths worth comparing.",
+          quickCheck: [
+            { objective: "O1", q: "What are the five main paths after high school in this course?", options: ["Only college and work", "College, gap year, travel, sports and music", "Online courses only", "Four-year college, community college, trade school or apprenticeship, the military, and work"], answer: 3, why: "The course compares these five paths, and many people mix them over time." },
+            { objective: "O1", q: "You need to earn money soon to help your family. How does that affect your choice?", options: ["It does not matter", "Look closely at paths where you can earn while you learn, like an apprenticeship or work with training", "Only a four-year college is possible", "Wait a few years before deciding"], answer: 1, why: "Your money needs are part of what makes a path fit you." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Community college and four-year college",
           minutes: 5,
           goal: "Compare a community college and a four-year college using the same five questions.",
@@ -63,9 +92,14 @@ module.exports = {
             { title: "Start local, then transfer", bullets: ["Saves money for many students", "Check which schools accept the credits first"] }
           ],
           tryIt: "Make a table with the five questions down the side and two schools across the top: one community college and one four-year college. Fill in what you can find on their websites and mark what you still need to ask.",
-          youCanNow: "compare a community college and a four-year college with the same five questions and spot a start-and-transfer route."
+          youCanNow: "compare a community college and a four-year college with the same five questions and spot a start-and-transfer route.",
+          quickCheck: [
+            { objective: "O2", q: "What does a net price calculator show?", options: ["An estimate of what a school costs after grants and scholarships", "The school's football score", "Your test scores", "How many students live in dorms"], answer: 0, why: "Net price is what college costs after grants and scholarships." },
+            { objective: "O2", q: "You compare two colleges but only look at the sticker price. What are you missing?", options: ["Nothing; price is all that matters", "The school colors", "The other questions: time, earning while learning, jobs and pay, and what you need to get in", "The number of buildings"], answer: 2, why: "Use the same five questions for every option." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Trades, apprenticeships, the military and work",
           minutes: 6,
           goal: "Compare an apprenticeship, the military and a job with training using the same five questions.",
@@ -88,17 +122,21 @@ module.exports = {
             { name: "Apprenticeship.gov", url: "https://www.apprenticeship.gov/" }
           ],
           tryIt: "Find one apprenticeship near you on apprenticeship.gov and one job that offers training. Add them to your table from the last lesson and answer the five questions for each.",
-          youCanNow: "compare apprenticeships, trade schools, the military and work with the same five questions you used for college."
+          youCanNow: "compare apprenticeships, trade schools, the military and work with the same five questions you used for college.",
+          quickCheck: [
+            { objective: "O3", q: "What makes a Registered Apprenticeship different from a trade school?", options: ["You are paid while you learn on the job", "It has no classes", "It always costs more", "It only teaches computers"], answer: 0, why: "In an apprenticeship you earn pay while learning from experienced workers." },
+            { objective: "O3", q: "A military recruiter wants you to sign today. What do you do?", options: ["Sign so you do not lose the spot", "Ask a friend to sign for you", "Skip reading the contract", "Talk to more than one branch, check the official website and read before signing"], answer: 3, why: "Read everything and compare branches before committing to several years of service." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Comparing your paths",
         questions: [
-          { q: "What should you look at first before comparing schools or jobs?", options: ["What your friends are doing", "Your interests, strengths, learning style and needs", "Which school has the best sports team", "Only the cheapest option"], answer: 1, why: "The best path fits you, so start by knowing yourself." },
-          { q: "Which is usually true about community college?", options: ["It costs much more than a private university", "It only offers four-year degrees", "You can never transfer", "It is close to home and usually costs less"], answer: 3, why: "Community colleges are local and usually much cheaper." },
-          { q: "You want to start at community college and transfer later. What should you check first?", options: ["Which four-year schools accept its credits", "The cafeteria menu", "The parking lot size", "Nothing; all credits always transfer"], answer: 0, why: "Checking transfer agreements first keeps your credits from being wasted." },
-          { q: "What is a Registered Apprenticeship?", options: ["An unpaid internship", "A paid job where you learn a skilled trade with training", "A video game", "A four-year degree"], answer: 1, why: "Apprentices are paid while they learn from experienced workers." },
-          { q: "A trade school salesperson says you must sign today. What do you do?", options: ["Sign right away", "Give them your bank card", "Ask about finish rates, job placement and accreditation, and take time to decide", "Borrow as much as possible"], answer: 2, why: "Pressure to sign today is a warning sign; good schools give you facts and time." }
+          { objective: "O1", q: "What should you look at first before comparing schools or jobs?", options: ["What your friends are doing", "Your interests, strengths, learning style and needs", "Which school has the best sports team", "Only the cheapest option"], answer: 1, why: "The best path fits you, so start by knowing yourself." },
+          { objective: "O2", q: "Which is usually true about community college?", options: ["It costs much more than a private university", "It only offers four-year degrees", "You can never transfer", "It is close to home and usually costs less"], answer: 3, why: "Community colleges are local and usually much cheaper." },
+          { objective: "O2", q: "You want to start at community college and transfer later. What should you check first?", options: ["Which four-year schools accept its credits", "The cafeteria menu", "The parking lot size", "Nothing; all credits always transfer"], answer: 0, why: "Checking transfer agreements first keeps your credits from being wasted." },
+          { objective: "O3", q: "What is a Registered Apprenticeship?", options: ["An unpaid internship", "A paid job where you learn a skilled trade with training", "A video game", "A four-year degree"], answer: 1, why: "Apprentices are paid while they learn from experienced workers." },
+          { objective: "O3", q: "A trade school salesperson says you must sign today. What do you do?", options: ["Sign right away", "Give them your bank card", "Ask about finish rates, job placement and accreditation, and take time to decide", "Borrow as much as possible"], answer: 2, why: "Pressure to sign today is a warning sign; good schools give you facts and time." }
         ]
       }
     },
@@ -106,6 +144,7 @@ module.exports = {
       name: "Chapter 2: Paying for it and planning",
       lessons: [
         {
+          objectives: ["O4"],
           title: "The FAFSA and financial aid",
           minutes: 6,
           goal: "Explain the kinds of financial aid and get ready to fill out the FAFSA for free on studentaid.gov.",
@@ -128,9 +167,14 @@ module.exports = {
             { name: "FTC: How to avoid scholarship and financial aid scams", url: "https://consumer.ftc.gov/articles/how-avoid-scholarship-and-financial-aid-scams" }
           ],
           tryIt: "Go to studentaid.gov and find this year's FAFSA opening date. Then find the financial aid deadline for one school and your state. Write both dates down, and write who will help you fill out the form.",
-          youCanNow: "explain grants, scholarships, work-study and loans, and get ready to file the free FAFSA safely and on time."
+          youCanNow: "explain grants, scholarships, work-study and loans, and get ready to file the free FAFSA safely and on time.",
+          quickCheck: [
+            { objective: "O4", q: "Which kinds of aid do you not pay back?", options: ["Loans", "Grants and scholarships", "Credit cards", "Private loans"], answer: 1, why: "Grants and scholarships are free money; loans are paid back with interest." },
+            { objective: "O4", q: "A website ending in .com offers to file your FAFSA for a fee. What do you do?", options: ["Pay; it saves time", "Give them your FSA ID", "File for free at studentaid.gov or with a counselor's help", "Skip the FAFSA"], answer: 2, why: "The FAFSA is free at studentaid.gov; never pay to file it or share your FSA ID." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Avoiding debt traps and scams",
           minutes: 5,
           goal: "Compare aid offers and spot the warning signs of debt traps and scams.",
@@ -153,9 +197,14 @@ module.exports = {
             { name: "FTC: How to avoid scholarship and financial aid scams", url: "https://consumer.ftc.gov/articles/how-avoid-scholarship-and-financial-aid-scams" }
           ],
           tryIt: "Look at this example offer: $3,000 grant, $2,000 scholarship, $2,500 work-study, $5,500 loan, for a school that costs $14,000 a year. Write how much is free money, how much must be earned or paid back, and how much is still left to pay. (Free: $5,000. Earned: $2,500. Loan: $5,500. Still left: $1,000.)",
-          youCanNow: "read an aid offer line by line, borrow carefully, and spot financial aid scams and pushy schools."
+          youCanNow: "read an aid offer line by line, borrow carefully, and spot financial aid scams and pushy schools.",
+          quickCheck: [
+            { objective: "O5", q: "Why read each line of an aid offer?", options: ["Some offers mix loans in so they look like free money", "Aid offers are always all grants", "To find the school mascot", "Lines do not matter"], answer: 0, why: "Sorting grants, scholarships, work-study and loans shows what you will really pay." },
+            { objective: "O5", q: "An email says you won a scholarship you never applied for and asks for your bank number. What is it?", options: ["A real award", "A scam warning sign; do not give your bank number", "A normal bank form", "A FAFSA step"], answer: 1, why: "Contests you never entered and requests for bank numbers are scam signs." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Making your two-year plan",
           minutes: 6,
           goal: "Write a two-year plan with a main path, a backup, money and milestones.",
@@ -174,17 +223,21 @@ module.exports = {
             { title: "Keep it alive", bullets: ["Review every few months", "Change it when life changes"] }
           ],
           tryIt: "Final task: write your one-page two-year plan with a main path and backup, your five-question comparison of at least two paths, how you will pay, your six-month milestones and the people who will help. Show it to a counselor or adult you trust.",
-          youCanNow: "write a two-year plan with a main path, a backup, milestones, a way to pay and people to help, and update it as life changes."
+          youCanNow: "write a two-year plan with a main path, a backup, milestones, a way to pay and people to help, and update it as life changes.",
+          quickCheck: [
+            { objective: "O6", q: "What is a milestone in a two-year plan?", options: ["A random wish", "Your backup path", "A list of people", "A clear step with a time, like finishing a class by June"], answer: 3, why: "Milestones break the plan into six-month steps you can check." },
+            { objective: "O6", q: "Your main path is delayed by six months. What does a good plan help you do?", options: ["Give up", "Wait without doing anything", "Move to your backup path and keep making progress", "Start over with no plan"], answer: 2, why: "A backup keeps you moving if the main path is delayed." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Paying for it and planning",
         questions: [
-          { q: "Which kind of aid do you have to pay back?", options: ["A grant", "A scholarship", "Work-study pay", "A loan"], answer: 3, why: "Loans must be paid back with interest; grants and scholarships do not." },
-          { q: "How much does it cost to file the FAFSA on studentaid.gov?", options: ["Nothing; it is free", "$25", "$100", "It depends on your school"], answer: 0, why: "The FAFSA is free; never pay anyone to file it." },
-          { q: "A company offers to fill out your FAFSA if you give them your FSA ID. What do you do?", options: ["Give it to them", "Say no and ask a school counselor for free help", "Text it to them", "Post it online"], answer: 1, why: "Never share your FSA ID; counselors help for free." },
-          { q: "Which is a scholarship scam sign?", options: ["A free application", "An essay question", "A guaranteed award if you pay a fee", "A deadline"], answer: 2, why: "Real scholarships do not charge fees or guarantee awards." },
-          { q: "Why does a two-year plan need a backup?", options: ["To keep you moving if the main path is delayed", "Because the law requires it", "To impress friends", "It does not need one"], answer: 0, why: "A backup keeps you making progress when plans change." }
+          { objective: "O4", q: "Which kind of aid do you have to pay back?", options: ["A grant", "A scholarship", "Work-study pay", "A loan"], answer: 3, why: "Loans must be paid back with interest; grants and scholarships do not." },
+          { objective: "O4", q: "How much does it cost to file the FAFSA on studentaid.gov?", options: ["Nothing; it is free", "$25", "$100", "It depends on your school"], answer: 0, why: "The FAFSA is free; never pay anyone to file it." },
+          { objective: "O4", q: "A company offers to fill out your FAFSA if you give them your FSA ID. What do you do?", options: ["Give it to them", "Say no and ask a school counselor for free help", "Text it to them", "Post it online"], answer: 1, why: "Never share your FSA ID; counselors help for free." },
+          { objective: "O5", q: "Which is a scholarship scam sign?", options: ["A free application", "An essay question", "A guaranteed award if you pay a fee", "A deadline"], answer: 2, why: "Real scholarships do not charge fees or guarantee awards." },
+          { objective: "O6", q: "Why does a two-year plan need a backup?", options: ["To keep you moving if the main path is delayed", "Because the law requires it", "To impress friends", "It does not need one"], answer: 0, why: "A backup keeps you making progress when plans change." }
         ]
       }
     }
@@ -192,26 +245,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Choosing College, a Trade or Work After School",
     questions: [
-      { q: "Which is the right path for everyone after high school?", options: ["A four-year college", "There is no single right path; it depends on you", "The military", "Working right away"], answer: 1, why: "The best path fits your interests, strengths and needs." },
-      { q: "You learn best by doing things with your hands. Which path might fit well?", options: ["Only online lectures", "Nothing fits", "An apprenticeship in a trade", "Reading textbooks all day"], answer: 2, why: "Apprenticeships teach skills through hands-on work." },
-      { q: "How should you use an AI assistant when choosing a path?", options: ["Let it decide for you", "Trust every number it gives", "Never use it", "Use it to brainstorm, then check facts with a counselor and official sites"], answer: 3, why: "AI can suggest ideas, but facts need checking." },
-      { q: "An associate degree usually takes about:", options: ["Two years", "Six months", "Eight years", "One week"], answer: 0, why: "Associate degrees usually take about two years." },
-      { q: "What is net price?", options: ["The cost of a laptop", "What college costs after grants and scholarships", "The cost of one class", "A tax"], answer: 1, why: "Net price is the cost after free aid is taken off." },
-      { q: "Which careers usually need a bachelor's degree?", options: ["None", "Only sports", "Teaching and engineering", "Only retail"], answer: 2, why: "Teaching and engineering usually need a bachelor's degree." },
-      { q: "Which is one of the five questions to ask about every path?", options: ["Do my friends go there?", "Is the logo nice?", "Is it on TV?", "How long will it take?"], answer: 3, why: "Time to finish is one of the five comparison questions." },
-      { q: "Where can you search for apprenticeships?", options: ["apprenticeship.gov's Apprenticeship Job Finder", "A random social media post", "A text from a stranger", "Nowhere"], answer: 0, why: "Apprenticeship.gov has an official job finder." },
-      { q: "Before signing with a trade school, ask:", options: ["What color the building is", "How many students finish and get jobs in the field", "Whether they have a pool", "Nothing"], answer: 1, why: "Finish and job placement rates show if the school delivers." },
-      { q: "The ASVAB is:", options: ["A college loan", "A trade school", "A test that helps decide which military jobs you qualify for", "A tax form"], answer: 2, why: "The ASVAB is used by the military to match people to jobs." },
-      { q: "A smart step if you are thinking about the military is to:", options: ["Sign the first paper you see", "Skip reading the contract", "Talk to only one friend", "Talk to recruiters from more than one branch and read before signing"], answer: 3, why: "Comparing branches and reading carefully protects you." },
-      { q: "Going straight to work can be a good path when the employer:", options: ["Offers training and helps pay for classes", "Never trains anyone", "Pays in gift cards", "Has no future roles"], answer: 0, why: "Training, promotion and tuition help make a job a real path." },
-      { q: "Which aid is a part-time job that helps pay for school?", options: ["Grant", "Work-study", "Loan", "Scholarship"], answer: 1, why: "Work-study pays you for part-time work." },
-      { q: "Where do you fill out the FAFSA?", options: ["fafsa-help.win", "A paid website", "studentaid.gov", "Your bank's app"], answer: 2, why: "The official, free FAFSA is on studentaid.gov." },
-      { q: "Why file the FAFSA as early as you can?", options: ["Late forms get more money", "It is only open one day", "There is no reason", "Some aid runs out, and states and colleges have deadlines"], answer: 3, why: "Filing early helps you get aid before it runs out." },
-      { q: "Which loans should you usually use first?", options: ["Federal student loans", "Private loans", "Credit cards", "Payday loans"], answer: 0, why: "Federal loans usually have more protections than private ones." },
-      { q: "An aid offer lists a $5,500 loan with grants. The loan is:", options: ["Free money", "Money you must pay back", "A scholarship", "A gift"], answer: 1, why: "Loans must be repaid even when listed next to grants." },
-      { q: "Where do you report a financial aid scam?", options: ["The school cafeteria", "A social media comment", "ReportFraud.ftc.gov", "Nowhere"], answer: 2, why: "The FTC collects scam reports at ReportFraud.ftc.gov." },
-      { q: "Which is a good milestone in a two-year plan?", options: ["Be famous", "Feel better someday", "Get rich", "Finish the first certificate class by June"], answer: 3, why: "A milestone is a clear, checkable step." },
-      { q: "How often should you look at your plan?", options: ["Every few months", "Never", "Only once", "Only if you fail"], answer: 0, why: "Regular reviews let you update the plan as life changes." }
+      { objective: "O1", q: "Which is the right path for everyone after high school?", options: ["A four-year college", "There is no single right path; it depends on you", "The military", "Working right away"], answer: 1, why: "The best path fits your interests, strengths and needs." },
+      { objective: "O1", q: "You learn best by doing things with your hands. Which path might fit well?", options: ["Only online lectures", "Nothing fits", "An apprenticeship in a trade", "Reading textbooks all day"], answer: 2, why: "Apprenticeships teach skills through hands-on work." },
+      { objective: "O1", q: "How should you use an AI assistant when choosing a path?", options: ["Let it decide for you", "Trust every number it gives", "Never use it", "Use it to brainstorm, then check facts with a counselor and official sites"], answer: 3, why: "AI can suggest ideas, but facts need checking." },
+      { objective: "O2", q: "An associate degree usually takes about:", options: ["Two years", "Six months", "Eight years", "One week"], answer: 0, why: "Associate degrees usually take about two years." },
+      { objective: "O2", q: "What is net price?", options: ["The cost of a laptop", "What college costs after grants and scholarships", "The cost of one class", "A tax"], answer: 1, why: "Net price is the cost after free aid is taken off." },
+      { objective: "O2", q: "Which careers usually need a bachelor's degree?", options: ["None", "Only sports", "Teaching and engineering", "Only retail"], answer: 2, why: "Teaching and engineering usually need a bachelor's degree." },
+      { objective: "O2", q: "Which is one of the five questions to ask about every path?", options: ["Do my friends go there?", "Is the logo nice?", "Is it on TV?", "How long will it take?"], answer: 3, why: "Time to finish is one of the five comparison questions." },
+      { objective: "O3", q: "Where can you search for apprenticeships?", options: ["apprenticeship.gov's Apprenticeship Job Finder", "A random social media post", "A text from a stranger", "Nowhere"], answer: 0, why: "Apprenticeship.gov has an official job finder." },
+      { objective: "O3", q: "Before signing with a trade school, ask:", options: ["What color the building is", "How many students finish and get jobs in the field", "Whether they have a pool", "Nothing"], answer: 1, why: "Finish and job placement rates show if the school delivers." },
+      { objective: "O3", q: "The ASVAB is:", options: ["A college loan", "A trade school", "A test that helps decide which military jobs you qualify for", "A tax form"], answer: 2, why: "The ASVAB is used by the military to match people to jobs." },
+      { objective: "O3", q: "A smart step if you are thinking about the military is to:", options: ["Sign the first paper you see", "Skip reading the contract", "Talk to only one friend", "Talk to recruiters from more than one branch and read before signing"], answer: 3, why: "Comparing branches and reading carefully protects you." },
+      { objective: "O3", q: "Going straight to work can be a good path when the employer:", options: ["Offers training and helps pay for classes", "Never trains anyone", "Pays in gift cards", "Has no future roles"], answer: 0, why: "Training, promotion and tuition help make a job a real path." },
+      { objective: "O4", q: "Which aid is a part-time job that helps pay for school?", options: ["Grant", "Work-study", "Loan", "Scholarship"], answer: 1, why: "Work-study pays you for part-time work." },
+      { objective: "O4", q: "Where do you fill out the FAFSA?", options: ["fafsa-help.win", "A paid website", "studentaid.gov", "Your bank's app"], answer: 2, why: "The official, free FAFSA is on studentaid.gov." },
+      { objective: "O4", q: "Why file the FAFSA as early as you can?", options: ["Late forms get more money", "It is only open one day", "There is no reason", "Some aid runs out, and states and colleges have deadlines"], answer: 3, why: "Filing early helps you get aid before it runs out." },
+      { objective: "O5", q: "Which loans should you usually use first?", options: ["Federal student loans", "Private loans", "Credit cards", "Payday loans"], answer: 0, why: "Federal loans usually have more protections than private ones." },
+      { objective: "O5", q: "An aid offer lists a $5,500 loan with grants. The loan is:", options: ["Free money", "Money you must pay back", "A scholarship", "A gift"], answer: 1, why: "Loans must be repaid even when listed next to grants." },
+      { objective: "O5", q: "Where do you report a financial aid scam?", options: ["The school cafeteria", "A social media comment", "ReportFraud.ftc.gov", "Nowhere"], answer: 2, why: "The FTC collects scam reports at ReportFraud.ftc.gov." },
+      { objective: "O6", q: "Which is a good milestone in a two-year plan?", options: ["Be famous", "Feel better someday", "Get rich", "Finish the first certificate class by June"], answer: 3, why: "A milestone is a clear, checkable step." },
+      { objective: "O6", q: "How often should you look at your plan?", options: ["Every few months", "Never", "Only once", "Only if you fail"], answer: 0, why: "Regular reviews let you update the plan as life changes." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      4,
+      6,
+      7,
+      9,
+      12,
+      13,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Main path and backup",
+        objective: "O1",
+        notYet: "Only one path, or the path does not connect to the learner's interests and needs.",
+        meets: "A main path and a backup that fit the learner's interests, strengths and money needs.",
+        exceeds: "Explains why the backup still moves them toward their goal."
+      },
+      {
+        name: "Five-question comparison",
+        objective: "O2",
+        notYet: "Fewer than two paths compared, or questions skipped.",
+        meets: "At least two paths compared on cost, time, pay while learning, likely jobs and what you need to get in.",
+        exceeds: "Uses net price or apprenticeship pay from official sources and notes where each answer came from."
+      },
+      {
+        name: "How to pay",
+        objective: "O4",
+        notYet: "No money plan, or relies on unknown loans.",
+        meets: "Says how each step will be paid for, including the FAFSA date and deadlines if aid is needed.",
+        exceeds: "Shows grants and scholarships first, loans last, and the amount left to pay."
+      },
+      {
+        name: "Safe from scams",
+        objective: "O5",
+        notYet: "Plans to pay for FAFSA help or a guaranteed scholarship.",
+        meets: "No paid FAFSA help, no shared FSA ID, and no offers with scam signs.",
+        exceeds: "Names where to report a scam and who to ask for free help."
+      },
+      {
+        name: "Milestones and helpers",
+        objective: "O6",
+        notYet: "No six-month steps or no helpers named.",
+        meets: "Four six-month steps with milestones, the people who will help, and a review date.",
+        exceeds: "Has been shown to a counselor or trusted adult, with their feedback noted."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who file the FAFSA on time or apply to an apprenticeship or program within the school year",
+      "Learners enrolled in college, a trade program, an apprenticeship, the military or a job with training six months after the course",
+      "Learners who report avoiding a scholarship or aid scam in the follow-up survey"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or a school or library computer with internet",
+      "Official sites: studentaid.gov, apprenticeship.gov and school net price calculators",
+      "Paper or a document for the comparison table and two-year plan",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Partner with the school counselor and invite them to review learners' plans.",
+      "Have learners look up this year's FAFSA opening date and deadlines in class, since they change every year.",
+      "Never ask learners to share family income, FSA IDs or bank details in a group; practice with the course's example aid offer.",
+      "Invite speakers from a community college, an apprenticeship program and a local employer so all paths are shown fairly.",
+      "Score the two-year plan with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

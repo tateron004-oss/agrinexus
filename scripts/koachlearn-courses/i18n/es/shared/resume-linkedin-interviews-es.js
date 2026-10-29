@@ -16,11 +16,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos. Lee la lección, mira las diapositivas y luego haz la tarea de \"Pruébalo ahora\". Hay una comprobación de conocimientos corta después de cada capítulo y un examen de 20 preguntas al final. Herramientas de IA como ChatGPT o Microsoft Copilot pueden ayudarte con las palabras, pero los datos y la voz deben ser tuyos."
   ],
   finalTask: "Elige una oferta de trabajo real. Escribe para ella un currículum de una página con al menos cuatro viñetas de logros, actualiza tu titular y tu sección Acerca de en LinkedIn para que coincidan, y luego grábate respondiendo en voz alta tres preguntas de entrevista con el método STAR, incluida una respuesta honesta sobre una pausa laboral o antecedentes si te aplica. Termina escribiendo una nota de agradecimiento corta que podrías enviar después de la entrevista.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Cualquiera que se prepara para buscar empleo: estudiantes que buscan su primer trabajo, deportistas que pasan a una carrera después del deporte, veteranos que pasan al trabajo civil, personas que vuelven a casa después de la prisión y personas que cambian de empleo después de años en un mismo lugar.",
+    startingPoint: "Tienen experiencia de trabajo, estudios, deporte, servicio o vida, y saben usar un teléfono o una computadora. Muchos tienen un currículum viejo o ninguno, no tienen perfil de LinkedIn y no han practicado en voz alta las respuestas de entrevista, sobre todo sobre una pausa laboral o antecedentes.",
+    gap: "Los empleadores deciden rápido a partir de un currículum, un perfil y una entrevista corta. Necesitan un currículum claro de una página, un perfil sencillo de LinkedIn y respuestas honestas y practicadas, para que se vean sus habilidades reales y consigan entrevistas y ofertas.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y frases cortas",
+      "Dispositivos: un teléfono o una computadora con una herramienta de documentos gratuita y una grabadora de voz",
+      "Honestidad: todo lo que hay en un currículum, un perfil o una reescritura de la IA debe ser verdad",
+      "Privacidad: nada de dirección de casa ni números de identificación en LinkedIn ni en las herramientas de IA",
+      "Las reglas sobre antecedentes y de oportunidad justa cambian según el lugar; cada persona revisa sus reglas locales"
+    ],
+    prerequisites: "Ninguno."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con una oferta de trabajo real", action: "organizar un currículum de una página con datos de contacto, un resumen, habilidades que coincidan y experiencia con fechas", standard: "en una página y adaptado a la oferta" },
+    { id: "O2", condition: "Con tareas de trabajo escritas de forma simple", action: "escribir viñetas de logros con un verbo de acción, lo que hiciste y un resultado o un número", standard: "con al menos cuatro viñetas, todas verdaderas" },
+    { id: "O3", condition: "Usando tu currículum", action: "crear un perfil de LinkedIn con foto, titular, sección Acerca de y experiencia", standard: "sin dirección de casa ni números de identificación y con tres solicitudes de conexión enviadas" },
+    { id: "O4", condition: "Con una pregunta de entrevista de comportamiento", action: "responder con una historia STAR: situación, tarea, acción y resultado", standard: "en uno o dos minutos, con la mayor parte del tiempo en la acción" },
+    { id: "O5", condition: "Cuando te hacen una pregunta difícil sobre una pausa laboral o antecedentes", action: "dar en voz alta una respuesta corta y honesta que diga lo que has hecho desde entonces", standard: "grabada, escuchada y mejorada al menos una vez" },
+    { id: "O6", condition: "Al final de una entrevista", action: "hacer buenas preguntas y escribir una nota de agradecimiento", standard: "con la nota enviada en las siguientes 24 horas" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Tu currículum y LinkedIn",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Crear un currículum de una página",
           minutes: 5,
           goal: "Organizar un currículum limpio de una página con las secciones correctas en el orden correcto.",
@@ -39,9 +63,14 @@ module.exports = {
             { title: "Ajústalo a cada oferta", bullets: ["Encuentra las habilidades que pide la oferta", "Usa las mismas palabras para las habilidades que de verdad tienes"] }
           ],
           tryIt: "Busca una oferta de trabajo real a la que te postularías. Abre un documento nuevo y arma el esquema del currículum para ella: tus datos de contacto, un resumen de dos líneas, seis habilidades que coincidan con la oferta y tu experiencia con fechas. Deja las viñetas para la siguiente lección.",
-          youCanNow: "organizar un currículum de una página con las secciones correctas y ajustarlo a una oferta de trabajo."
+          youCanNow: "organizar un currículum de una página con las secciones correctas y ajustarlo a una oferta de trabajo.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué es el resumen de un currículum?", options: ["Dos líneas arriba que dicen quién eres y qué ofreces", "Una lista de todos los trabajos que has tenido", "Los teléfonos de tus referencias", "Tu historial de sueldos"], answer: 0, why: "Un resumen corto le dice rápido al empleador lo que aportas." },
+            { objective: "O1", q: "Una oferta de trabajo pide habilidades con montacargas e inventario, y tú las tienes. ¿Qué harías con tu currículum?", options: ["Dejarlo igual para todos los trabajos", "Agregar la historia completa de tu vida", "Agregar esas habilidades a tu sección de habilidades y a tu experiencia", "Hacerlo de tres páginas"], answer: 2, why: "Adaptar tu currículum a la oferta muestra que encajas en el trabajo." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Escribir viñetas de logros",
           minutes: 5,
           goal: "Convertir tareas simples en viñetas que muestren lo que lograste.",
@@ -60,9 +89,14 @@ module.exports = {
             { title: "Di siempre la verdad", bullets: ["Nunca inventes números ni puestos", "Usa \"unos\" o \"aproximadamente\" para un cálculo justo", "Describe el resultado con palabras si no tienes un número"] }
           ],
           tryIt: "Escribe cuatro viñetas de logros para tu currículum usando la fórmula. Puedes pedirle a un asistente de IA: \"Haz más fuerte esta viñeta de currículum sin agregar nada que no sea verdad: [tu viñeta].\" Revisa que cada palabra que te dé sea verdad antes de quedártela.",
-          youCanNow: "escribir viñetas de logros que empiezan con un verbo de acción y muestran un resultado."
+          youCanNow: "escribir viñetas de logros que empiezan con un verbo de acción y muestran un resultado.",
+          quickCheck: [
+            { objective: "O2", q: "¿Cuál es un verbo de acción para empezar una viñeta fuerte?", options: ["Responsable de", "Capacité", "Entre mis tareas estaban", "Estaba a cargo"], answer: 1, why: "Las viñetas empiezan con un verbo de acción que muestra lo que hiciste." },
+            { objective: "O2", q: "Tu viñeta dice \"Hice servicio al cliente\". ¿Qué escribirías en su lugar?", options: ["\"Hice mucho servicio al cliente\"", "\"Servicio al cliente, caja, teléfonos\"", "\"Fui el mejor en servicio al cliente\"", "\"Atendí a unos 50 clientes al día y manejé las devoluciones con calma\""], answer: 3, why: "Las viñetas fuertes muestran lo que hiciste con un resultado o un número." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Crear un perfil de LinkedIn",
           minutes: 5,
           goal: "Crear un perfil de LinkedIn con foto, titular, sección Acerca de y experiencia.",
@@ -81,17 +115,21 @@ module.exports = {
             { title: "Mantente seguro", bullets: ["Sin dirección de casa, fecha de nacimiento ni números de identificación", "Muestra tus habilidades; tú decides qué compartir"] }
           ],
           tryIt: "Crea o actualiza tu perfil de LinkedIn. Escribe tu titular y tu sección Acerca de, agrega un trabajo con tus viñetas nuevas y envía solicitudes de conexión con una nota corta a tres personas que conoces.",
-          youCanNow: "crear un perfil de LinkedIn con foto, titular, sección Acerca de y experiencia, y empezar a armar tu red de contactos."
+          youCanNow: "crear un perfil de LinkedIn con foto, titular, sección Acerca de y experiencia, y empezar a armar tu red de contactos.",
+          quickCheck: [
+            { objective: "O3", q: "¿Para qué sirve la sección Acerca de en LinkedIn?", options: ["Para poner tu dirección de casa", "Para contar en unas pocas líneas tu historia de trabajo y lo que buscas", "Para mostrar tus contraseñas", "Para enumerar a tus amigos de redes sociales"], answer: 1, why: "La sección Acerca de es una historia corta de tus habilidades y tus metas." },
+            { objective: "O3", q: "Quieres conectar en LinkedIn con un antiguo supervisor. ¿Qué harías?", options: ["Enviar una solicitud con una nota corta y amable", "Enviar una solicitud sin nota y con tu número de teléfono", "Escribirle para pedirle trabajo de inmediato", "Esperar a que te encuentre"], answer: 0, why: "Una nota corta le recuerda quién eres y empieza una buena conexión." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Tu currículum y LinkedIn",
         questions: [
-          { q: "¿Qué largo debe tener un currículum para la mayoría de los trabajos de nivel inicial y medio?", options: ["Tres páginas", "Una página", "Media página", "Lo más largo posible"], answer: 1, why: "Una página es fácil de leer y es lo normal para la mayoría de los trabajos." },
-          { q: "¿Cuál es la viñeta más fuerte?", options: ["\"Encargado del almacén\"", "\"Hice varias tareas\"", "\"Muy trabajador\"", "\"Organicé el almacén y reduje a la mitad, aproximadamente, el tiempo para buscar piezas\""], answer: 3, why: "Empieza con un verbo de acción y muestra un resultado." },
-          { q: "Estuviste a cargo de la línea de cocina en un programa del centro mientras estabas en prisión. ¿Debe ir en tu currículum?", options: ["Sí, como experiencia, describiendo las habilidades que usaste", "No, nunca cuenta", "Solo si te pagaban mucho", "Solo en LinkedIn"], answer: 0, why: "Los programas de trabajo y capacitación son experiencia real; describe lo que hiciste." },
-          { q: "¿Cuál es un buen titular de LinkedIn?", options: ["\"Buscando\"", "Tu dirección de casa", "\"Soldador certificado | La seguridad primero | Abierto a programas de aprendiz\"", "Tu fecha de nacimiento"], answer: 2, why: "Un titular dice lo que haces o quieres hacer y muestra tus fortalezas." },
-          { q: "Una herramienta de IA reescribió tu viñeta y agregó un puesto de gerente que nunca tuviste. ¿Qué haces?", options: ["Lo dejas, suena mejor", "Lo quitas, porque todo en un currículum debe ser verdad", "Agregas otro puesto", "Lo pones solo en LinkedIn"], answer: 1, why: "Un currículum debe ser verdadero; tú revisas cada palabra que escribe la IA." }
+          { objective: "O1", q: "¿Qué largo debe tener un currículum para la mayoría de los trabajos de nivel inicial y medio?", options: ["Tres páginas", "Una página", "Media página", "Lo más largo posible"], answer: 1, why: "Una página es fácil de leer y es lo normal para la mayoría de los trabajos." },
+          { objective: "O2", q: "¿Cuál es la viñeta más fuerte?", options: ["\"Encargado del almacén\"", "\"Hice varias tareas\"", "\"Muy trabajador\"", "\"Organicé el almacén y reduje a la mitad, aproximadamente, el tiempo para buscar piezas\""], answer: 3, why: "Empieza con un verbo de acción y muestra un resultado." },
+          { objective: "O1", q: "Estuviste a cargo de la línea de cocina en un programa del centro mientras estabas en prisión. ¿Debe ir en tu currículum?", options: ["Sí, como experiencia, describiendo las habilidades que usaste", "No, nunca cuenta", "Solo si te pagaban mucho", "Solo en LinkedIn"], answer: 0, why: "Los programas de trabajo y capacitación son experiencia real; describe lo que hiciste." },
+          { objective: "O3", q: "¿Cuál es un buen titular de LinkedIn?", options: ["\"Buscando\"", "Tu dirección de casa", "\"Soldador certificado | La seguridad primero | Abierto a programas de aprendiz\"", "Tu fecha de nacimiento"], answer: 2, why: "Un titular dice lo que haces o quieres hacer y muestra tus fortalezas." },
+          { objective: "O2", q: "Una herramienta de IA reescribió tu viñeta y agregó un puesto de gerente que nunca tuviste. ¿Qué haces?", options: ["Lo dejas, suena mejor", "Lo quitas, porque todo en un currículum debe ser verdad", "Agregas otro puesto", "Lo pones solo en LinkedIn"], answer: 1, why: "Un currículum debe ser verdadero; tú revisas cada palabra que escribe la IA." }
         ]
       }
     },
@@ -99,6 +137,7 @@ module.exports = {
       name: "Capítulo 2: Entrevistas y seguimiento",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Responder con el método STAR",
           minutes: 5,
           goal: "Responder una pregunta de comportamiento en una entrevista con una historia STAR corta.",
@@ -117,9 +156,14 @@ module.exports = {
             { title: "Sé breve", bullets: ["Uno o dos minutos, más o menos", "Habla en primera persona de tus acciones", "Termina con un resultado"] }
           ],
           tryIt: "Escribe una historia STAR para \"Cuénteme de una vez en que trabajó en equipo.\" Usa una oración para la Situación y otra para la Tarea, dos o tres para la Acción y una para el Resultado.",
-          youCanNow: "responder una pregunta de \"cuénteme de una vez en que\" con una historia STAR clara."
+          youCanNow: "responder una pregunta de \"cuénteme de una vez en que\" con una historia STAR clara.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué significa la S de STAR?", options: ["Skill (habilidad)", "Strength (fortaleza)", "Situation (situación)", "Summary (resumen)"], answer: 2, why: "STAR es Situation, Task, Action y Result: situación, tarea, acción y resultado." },
+            { objective: "O4", q: "Te preguntan: \"Cuénteme de una vez en que resolvió un problema\". ¿Qué harías?", options: ["Decir \"Soy bueno para resolver problemas\" y nada más", "Hablar diez minutos de muchos problemas", "Decir que nunca has tenido un problema", "Contar una historia corta: la situación, la tarea, lo que hiciste y el resultado"], answer: 3, why: "Una historia STAR corta demuestra tu habilidad con un ejemplo real." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Practicar en voz alta y responder con honestidad sobre una pausa laboral o antecedentes",
           minutes: 6,
           goal: "Practicar respuestas en voz alta, incluida una respuesta corta y honesta sobre una pausa laboral o antecedentes penales.",
@@ -141,9 +185,14 @@ module.exports = {
             { name: "EEOC: Antecedentes de arresto y condena, lo que deben saber quienes buscan trabajo y los trabajadores (en inglés)", url: "https://www.eeoc.gov/arrestandconviction" }
           ],
           tryIt: "Grábate respondiendo \"Hábleme de usted\" y una pregunta difícil (una pausa laboral, antecedentes o \"¿Por qué dejó su último trabajo?\"). Escúchate. Quita todo lo que no haga falta y grábalo otra vez.",
-          youCanNow: "practicar respuestas en voz alta y dar una respuesta corta, honesta y con la mirada hacia adelante sobre una pausa laboral o antecedentes."
+          youCanNow: "practicar respuestas en voz alta y dar una respuesta corta, honesta y con la mirada hacia adelante sobre una pausa laboral o antecedentes.",
+          quickCheck: [
+            { objective: "O5", q: "¿Por qué grabarte respondiendo preguntas de entrevista?", options: ["Para oír qué recortar y mejorar", "Para publicarlo en internet", "Para enviárselo al empleador", "Porque las entrevistas siempre se graban"], answer: 0, why: "Escucharte te muestra qué acortar y qué corregir." },
+            { objective: "O5", q: "Quien te entrevista pregunta por una pausa de dos años en la que estuviste en prisión. ¿Qué dirías?", options: ["Inventar otro trabajo", "Negarte a responder e irte", "Contar una historia larga sobre el caso", "Dar una respuesta corta y honesta y decir lo que has hecho desde entonces"], answer: 3, why: "Corta y honesta, y luego enfócate en lo que has hecho desde entonces." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Hacer preguntas y dar seguimiento",
           minutes: 4,
           goal: "Hacer buenas preguntas al final de una entrevista y enviar una nota de agradecimiento.",
@@ -162,17 +211,21 @@ module.exports = {
             { title: "¿Todavía sin respuesta?", bullets: ["Haz un solo seguimiento cuando pase su fecha", "Sigue solicitando en otros lugares"] }
           ],
           tryIt: "Tarea final: escribe una nota de agradecimiento corta para la entrevista para la que practicaste. Luego junta todo: tu currículum de una página, tu titular y tu sección Acerca de actualizados en LinkedIn, y tres respuestas STAR grabadas.",
-          youCanNow: "hacer buenas preguntas al final de una entrevista y dar seguimiento con una nota de agradecimiento corta."
+          youCanNow: "hacer buenas preguntas al final de una entrevista y dar seguimiento con una nota de agradecimiento corta.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué incluye una buena nota de agradecimiento?", options: ["El agradecimiento, una cosa de la que hablaron y por qué quieres el trabajo", "Solo la palabra gracias", "Un pedido de más sueldo", "Tu currículum completo otra vez"], answer: 0, why: "Mencionar algo de lo que hablaron muestra un interés real." },
+            { objective: "O6", q: "Al final de la entrevista te preguntan si tienes preguntas. ¿Qué preguntarías?", options: ["\"¿Qué tan pronto puedo tomar vacaciones?\"", "\"No, así estoy bien.\"", "\"¿Cuáles son los siguientes pasos y cuándo puedo esperar una respuesta?\"", "\"¿Me dieron el trabajo?\""], answer: 2, why: "Preguntar por los siguientes pasos muestra interés y te dice cuándo dar seguimiento." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Entrevistas y seguimiento",
         questions: [
-          { q: "¿Qué significa la A de STAR?", options: ["Answer (respuesta)", "Attitude (actitud)", "Action (acción)", "Award (premio)"], answer: 2, why: "STAR es Situation, Task, Action, Result: situación, tarea, acción, resultado." },
-          { q: "¿Cuál es la mejor forma de practicar respuestas de entrevista?", options: ["Leerlas en silencio una vez", "Memorizar un guion palabra por palabra y nunca decirlo en voz alta", "No practicar para sonar natural", "Decirlas en voz alta y grabarte"], answer: 3, why: "Hablar y escucharte te muestra qué tienes que arreglar." },
-          { q: "Estuviste un año sin trabajar cuidando a tu papá o tu mamá. ¿Cuál es la mejor respuesta?", options: ["\"Cuidé a mi mamá durante un año, mantuve mis habilidades al día con un curso y estoy listo para trabajar tiempo completo.\"", "\"Prefiero no decirlo.\"", "Inventar un trabajo para llenar la pausa", "Una historia de diez minutos sobre problemas familiares"], answer: 0, why: "Es corta, honesta y mira hacia adelante, a por qué estás listo." },
-          { q: "Quien te entrevista pregunta por tus antecedentes penales. ¿Qué debes hacer?", options: ["Negarlo", "Dar una respuesta corta y honesta y decir lo que has hecho desde entonces", "Irte", "Contar cada detalle durante diez minutos"], answer: 1, why: "La honestidad más lo que has hecho desde entonces genera confianza; mentir puede costarte el trabajo después." },
-          { q: "¿Cuándo debes enviar una nota de agradecimiento?", options: ["En las siguientes 24 horas", "Después de un mes", "Solo si te dan el trabajo", "Nunca"], answer: 0, why: "Una nota rápida muestra interés mientras todavía te tienen presente." }
+          { objective: "O4", q: "¿Qué significa la A de STAR?", options: ["Answer (respuesta)", "Attitude (actitud)", "Action (acción)", "Award (premio)"], answer: 2, why: "STAR es Situation, Task, Action, Result: situación, tarea, acción, resultado." },
+          { objective: "O5", q: "¿Cuál es la mejor forma de practicar respuestas de entrevista?", options: ["Leerlas en silencio una vez", "Memorizar un guion palabra por palabra y nunca decirlo en voz alta", "No practicar para sonar natural", "Decirlas en voz alta y grabarte"], answer: 3, why: "Hablar y escucharte te muestra qué tienes que arreglar." },
+          { objective: "O5", q: "Estuviste un año sin trabajar cuidando a tu papá o tu mamá. ¿Cuál es la mejor respuesta?", options: ["\"Cuidé a mi mamá durante un año, mantuve mis habilidades al día con un curso y estoy listo para trabajar tiempo completo.\"", "\"Prefiero no decirlo.\"", "Inventar un trabajo para llenar la pausa", "Una historia de diez minutos sobre problemas familiares"], answer: 0, why: "Es corta, honesta y mira hacia adelante, a por qué estás listo." },
+          { objective: "O5", q: "Quien te entrevista pregunta por tus antecedentes penales. ¿Qué debes hacer?", options: ["Negarlo", "Dar una respuesta corta y honesta y decir lo que has hecho desde entonces", "Irte", "Contar cada detalle durante diez minutos"], answer: 1, why: "La honestidad más lo que has hecho desde entonces genera confianza; mentir puede costarte el trabajo después." },
+          { objective: "O6", q: "¿Cuándo debes enviar una nota de agradecimiento?", options: ["En las siguientes 24 horas", "Después de un mes", "Solo si te dan el trabajo", "Nunca"], answer: 0, why: "Una nota rápida muestra interés mientras todavía te tienen presente." }
         ]
       }
     }
@@ -180,26 +233,112 @@ module.exports = {
   quiz: {
     title: "Examen final: Currículum, LinkedIn y entrevistas de trabajo",
     questions: [
-      { q: "¿Qué va en la parte más alta de un currículum?", options: ["Tus pasatiempos", "Tus referencias", "Tu nombre y tus datos de contacto", "Tu fecha de nacimiento"], answer: 2, why: "El nombre y los datos de contacto van primero para que el empleador pueda comunicarse contigo." },
-      { q: "¿Por qué cambiar un poco tu currículum para cada trabajo?", options: ["Para que coincida con las habilidades que pide la oferta", "Porque lo exige la ley", "Para hacerlo más largo", "Para agregar trabajos que no tuviste"], answer: 0, why: "Relacionar tus habilidades reales con la oferta ayuda a que las personas y los programas te encuentren." },
-      { q: "¿Qué correo es mejor en un currículum?", options: ["partyking99@example.com", "jordan.smith@example.com", "Ningún correo", "Tu correo viejo de la escuela que ya no puedes abrir"], answer: 1, why: "Lo mejor es una dirección sencilla y profesional que revises seguido." },
-      { q: "Un veterano dirigió a un equipo de 9 en revisiones diarias de equipo. ¿Cuál es la viñeta más fuerte?", options: ["\"Estuve en el ejército\"", "\"Hice revisiones\"", "\"Tareas varias\"", "\"Dirigí a 9 soldados en revisiones diarias de equipo sin ninguna pérdida\""], answer: 3, why: "Verbo de acción, lo que se hizo y un resultado." },
-      { q: "¿Cuál es la fórmula de la viñeta?", options: ["Puesto + sueldo", "Verbo de acción + lo que hiciste + un resultado o número", "Adjetivo + adjetivo + adjetivo", "Fecha + lugar"], answer: 1, why: "Esa fórmula convierte tareas en logros." },
-      { q: "No estás seguro del número exacto para una viñeta. ¿Qué haces?", options: ["Usar un cálculo justo con \"aproximadamente\" o describir el resultado con palabras", "Inventar un número grande", "Quitar todo ese trabajo", "Copiar un número del currículum de un amigo"], answer: 0, why: "Di la verdad; los cálculos deben ser justos y decir que son aproximados." },
-      { q: "¿Qué es un titular de LinkedIn?", options: ["Tu dirección de casa", "Una noticia", "La línea corta debajo de tu nombre que dice lo que haces", "Tu contraseña"], answer: 2, why: "El titular les dice a los reclutadores lo que haces o quieres hacer." },
-      { q: "¿Qué foto es mejor para LinkedIn?", options: ["Una foto de grupo en una fiesta", "Una foto de tu carro", "Sin cara, solo un logotipo", "Una foto clara de tu cara con un fondo sencillo"], answer: 3, why: "Una foto clara y amable de tu cara se ve profesional." },
-      { q: "¿Qué NO debes poner en tu perfil de LinkedIn?", options: ["Tus habilidades", "Tu dirección de casa y tus números de identificación", "Tu experiencia laboral", "Tus certificados"], answer: 1, why: "Los datos privados se pueden usar mal; no los pongas." },
-      { q: "¿Con quién es bueno conectar primero en LinkedIn?", options: ["Un antiguo entrenador o supervisor que conoce tu trabajo", "Una celebridad cualquiera", "Con nadie", "Solo con personas que nunca has visto"], answer: 0, why: "Las personas que conocen tu trabajo pueden pasarte ofertas y hablar bien de ti." },
-      { q: "\"Cuénteme de una vez en que cometió un error.\" ¿Qué tipo de pregunta es?", options: ["Una pregunta trampa que hay que evitar", "Una pregunta sobre el sueldo", "Una pregunta de comportamiento, buena para una respuesta STAR", "Una pregunta de sí o no"], answer: 2, why: "Pide un ejemplo real, y STAR lo responde bien." },
-      { q: "En una respuesta STAR, ¿qué parte debe llevar más tiempo?", options: ["La situación", "La tarea", "El resultado", "La acción: lo que hiciste"], answer: 3, why: "Lo que más quiere escuchar el empleador es lo que hiciste." },
-      { q: "¿Cuánto debe durar, más o menos, una respuesta STAR?", options: ["Uno o dos minutos", "Diez segundos", "Diez minutos", "Media hora"], answer: 0, why: "Una respuesta corta y clara mantiene la atención de quien entrevista." },
-      { q: "¿Cómo puede ayudarte a practicar un asistente de IA?", options: ["Yendo a la entrevista por ti", "Haciendo de entrevistador y haciéndote una pregunta a la vez", "Inventando tu historial laboral", "Guardando tu número de identificación"], answer: 1, why: "La IA puede hacerte preguntas de práctica; las respuestas igual deben ser tuyas." },
-      { q: "¿Cuál es una respuesta fuerte y honesta sobre antecedentes?", options: ["\"No tengo\" cuando sí tienes", "\"Eso no es asunto suyo\"", "\"Cometí un error en 2019 y cumplí mi condena. Desde entonces saqué un certificado y no he faltado ni un día.\"", "Una historia larga culpando a otros"], answer: 2, why: "Reconócelo, muestra lo que has hecho desde entonces y vuelve al trabajo." },
-      { q: "Según la guía de la EEOC, un arresto por sí solo:", options: ["Es prueba de un delito", "No es prueba de un delito", "Debe ir en todo currículum", "Nunca se puede preguntar"], answer: 1, why: "Un arresto solo no prueba que alguien cometió un delito." },
-      { q: "¿Qué son las leyes \"ban the box\" o de oportunidad justa?", options: ["Reglas para enviar cajas", "Leyes que prohíben para siempre todas las verificaciones de antecedentes", "Leyes que prohíben los currículums", "Leyes de muchos lugares que retrasan las preguntas sobre antecedentes en la primera solicitud"], answer: 3, why: "Dan a quien solicita la oportunidad de ser juzgado primero por sus habilidades; las reglas cambian según el lugar." },
-      { q: "Al final de la entrevista te preguntan: \"¿Tiene alguna pregunta para nosotros?\" Tú dices:", options: ["\"¿Cuáles son los siguientes pasos y cuándo puedo esperar una respuesta?\"", "\"No.\"", "\"¿Qué tan pronto puedo tomar vacaciones?\"", "\"¿A qué se dedica esta empresa?\""], answer: 0, why: "Una pregunta útil y preparada muestra interés." },
-      { q: "Una buena nota de agradecimiento:", options: ["Tiene tres páginas", "Vuelve a pedir un sueldo más alto", "Agradece, menciona una cosa de la que hablaron y dice por qué quieres el trabajo", "Se envía un mes después"], answer: 2, why: "Lo que mejor funciona es corta, concreta y rápida." },
-      { q: "El empleador dijo que llamaría a más tardar el viernes. Ya es miércoles de la semana siguiente. Tú:", options: ["Llamas diez veces al día", "Envías un seguimiento amable y sigues solicitando en otros lugares", "Dejas de buscar trabajo por completo", "Te presentas sin invitación en su oficina todos los días"], answer: 1, why: "Un solo seguimiento amable es profesional; sigue con tu búsqueda." }
+      { objective: "O1", q: "¿Qué va en la parte más alta de un currículum?", options: ["Tus pasatiempos", "Tus referencias", "Tu nombre y tus datos de contacto", "Tu fecha de nacimiento"], answer: 2, why: "El nombre y los datos de contacto van primero para que el empleador pueda comunicarse contigo." },
+      { objective: "O1", q: "¿Por qué cambiar un poco tu currículum para cada trabajo?", options: ["Para que coincida con las habilidades que pide la oferta", "Porque lo exige la ley", "Para hacerlo más largo", "Para agregar trabajos que no tuviste"], answer: 0, why: "Relacionar tus habilidades reales con la oferta ayuda a que las personas y los programas te encuentren." },
+      { objective: "O1", q: "¿Qué correo es mejor en un currículum?", options: ["partyking99@example.com", "jordan.smith@example.com", "Ningún correo", "Tu correo viejo de la escuela que ya no puedes abrir"], answer: 1, why: "Lo mejor es una dirección sencilla y profesional que revises seguido." },
+      { objective: "O2", q: "Un veterano dirigió a un equipo de 9 en revisiones diarias de equipo. ¿Cuál es la viñeta más fuerte?", options: ["\"Estuve en el ejército\"", "\"Hice revisiones\"", "\"Tareas varias\"", "\"Dirigí a 9 soldados en revisiones diarias de equipo sin ninguna pérdida\""], answer: 3, why: "Verbo de acción, lo que se hizo y un resultado." },
+      { objective: "O2", q: "¿Cuál es la fórmula de la viñeta?", options: ["Puesto + sueldo", "Verbo de acción + lo que hiciste + un resultado o número", "Adjetivo + adjetivo + adjetivo", "Fecha + lugar"], answer: 1, why: "Esa fórmula convierte tareas en logros." },
+      { objective: "O2", q: "No estás seguro del número exacto para una viñeta. ¿Qué haces?", options: ["Usar un cálculo justo con \"aproximadamente\" o describir el resultado con palabras", "Inventar un número grande", "Quitar todo ese trabajo", "Copiar un número del currículum de un amigo"], answer: 0, why: "Di la verdad; los cálculos deben ser justos y decir que son aproximados." },
+      { objective: "O3", q: "¿Qué es un titular de LinkedIn?", options: ["Tu dirección de casa", "Una noticia", "La línea corta debajo de tu nombre que dice lo que haces", "Tu contraseña"], answer: 2, why: "El titular les dice a los reclutadores lo que haces o quieres hacer." },
+      { objective: "O3", q: "¿Qué foto es mejor para LinkedIn?", options: ["Una foto de grupo en una fiesta", "Una foto de tu carro", "Sin cara, solo un logotipo", "Una foto clara de tu cara con un fondo sencillo"], answer: 3, why: "Una foto clara y amable de tu cara se ve profesional." },
+      { objective: "O3", q: "¿Qué NO debes poner en tu perfil de LinkedIn?", options: ["Tus habilidades", "Tu dirección de casa y tus números de identificación", "Tu experiencia laboral", "Tus certificados"], answer: 1, why: "Los datos privados se pueden usar mal; no los pongas." },
+      { objective: "O3", q: "¿Con quién es bueno conectar primero en LinkedIn?", options: ["Un antiguo entrenador o supervisor que conoce tu trabajo", "Una celebridad cualquiera", "Con nadie", "Solo con personas que nunca has visto"], answer: 0, why: "Las personas que conocen tu trabajo pueden pasarte ofertas y hablar bien de ti." },
+      { objective: "O4", q: "\"Cuénteme de una vez en que cometió un error.\" ¿Qué tipo de pregunta es?", options: ["Una pregunta trampa que hay que evitar", "Una pregunta sobre el sueldo", "Una pregunta de comportamiento, buena para una respuesta STAR", "Una pregunta de sí o no"], answer: 2, why: "Pide un ejemplo real, y STAR lo responde bien." },
+      { objective: "O4", q: "En una respuesta STAR, ¿qué parte debe llevar más tiempo?", options: ["La situación", "La tarea", "El resultado", "La acción: lo que hiciste"], answer: 3, why: "Lo que más quiere escuchar el empleador es lo que hiciste." },
+      { objective: "O4", q: "¿Cuánto debe durar, más o menos, una respuesta STAR?", options: ["Uno o dos minutos", "Diez segundos", "Diez minutos", "Media hora"], answer: 0, why: "Una respuesta corta y clara mantiene la atención de quien entrevista." },
+      { objective: "O5", q: "¿Cómo puede ayudarte a practicar un asistente de IA?", options: ["Yendo a la entrevista por ti", "Haciendo de entrevistador y haciéndote una pregunta a la vez", "Inventando tu historial laboral", "Guardando tu número de identificación"], answer: 1, why: "La IA puede hacerte preguntas de práctica; las respuestas igual deben ser tuyas." },
+      { objective: "O5", q: "¿Cuál es una respuesta fuerte y honesta sobre antecedentes?", options: ["\"No tengo\" cuando sí tienes", "\"Eso no es asunto suyo\"", "\"Cometí un error en 2019 y cumplí mi condena. Desde entonces saqué un certificado y no he faltado ni un día.\"", "Una historia larga culpando a otros"], answer: 2, why: "Reconócelo, muestra lo que has hecho desde entonces y vuelve al trabajo." },
+      { objective: "O5", q: "Según la guía de la EEOC, un arresto por sí solo:", options: ["Es prueba de un delito", "No es prueba de un delito", "Debe ir en todo currículum", "Nunca se puede preguntar"], answer: 1, why: "Un arresto solo no prueba que alguien cometió un delito." },
+      { objective: "O5", q: "¿Qué son las leyes \"ban the box\" o de oportunidad justa?", options: ["Reglas para enviar cajas", "Leyes que prohíben para siempre todas las verificaciones de antecedentes", "Leyes que prohíben los currículums", "Leyes de muchos lugares que retrasan las preguntas sobre antecedentes en la primera solicitud"], answer: 3, why: "Dan a quien solicita la oportunidad de ser juzgado primero por sus habilidades; las reglas cambian según el lugar." },
+      { objective: "O6", q: "Al final de la entrevista te preguntan: \"¿Tiene alguna pregunta para nosotros?\" Tú dices:", options: ["\"¿Cuáles son los siguientes pasos y cuándo puedo esperar una respuesta?\"", "\"No.\"", "\"¿Qué tan pronto puedo tomar vacaciones?\"", "\"¿A qué se dedica esta empresa?\""], answer: 0, why: "Una pregunta útil y preparada muestra interés." },
+      { objective: "O6", q: "Una buena nota de agradecimiento:", options: ["Tiene tres páginas", "Vuelve a pedir un sueldo más alto", "Agradece, menciona una cosa de la que hablaron y dice por qué quieres el trabajo", "Se envía un mes después"], answer: 2, why: "Lo que mejor funciona es corta, concreta y rápida." },
+      { objective: "O6", q: "El empleador dijo que llamaría a más tardar el viernes. Ya es miércoles de la semana siguiente. Tú:", options: ["Llamas diez veces al día", "Envías un seguimiento amable y sigues solicitando en otros lugares", "Dejas de buscar trabajo por completo", "Te presentas sin invitación en su oficina todos los días"], answer: 1, why: "Un solo seguimiento amable es profesional; sigue con tu búsqueda." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      1,
+      4,
+      6,
+      8,
+      11,
+      14,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Currículum de una página",
+        objective: "O1",
+        notYet: "Más de una página, le faltan secciones o no está adaptado a la oferta.",
+        meets: "Una página con datos de contacto, resumen, habilidades que coinciden y experiencia con fechas.",
+        exceeds: "Las habilidades y el resumen usan palabras de la oferta de trabajo."
+      },
+      {
+        name: "Viñetas de logros",
+        objective: "O2",
+        notYet: "Las viñetas solo enumeran tareas, o algo no es verdad.",
+        meets: "Al menos cuatro viñetas verdaderas con un verbo de acción y un resultado o un número.",
+        exceeds: "Cada viñeta muestra un resultado claro."
+      },
+      {
+        name: "Perfil de LinkedIn",
+        objective: "O3",
+        notYet: "No tiene titular ni sección Acerca de, o muestra datos privados.",
+        meets: "El titular y la sección Acerca de coinciden con el currículum, sin datos privados.",
+        exceeds: "Agregó la foto y envió tres solicitudes de conexión con notas."
+      },
+      {
+        name: "Respuestas STAR",
+        objective: "O4",
+        notYet: "Las respuestas son vagas o les falta una parte de STAR.",
+        meets: "Tres respuestas STAR grabadas con las cuatro partes, de uno a dos minutos cada una.",
+        exceeds: "Las respuestas terminan con un resultado claro, y la mayor parte del tiempo es para la acción."
+      },
+      {
+        name: "Respuesta honesta a la pregunta difícil",
+        objective: "O5",
+        notYet: "No preparó ninguna respuesta, o es larga, defensiva o falsa.",
+        meets: "Una respuesta corta y honesta sobre una pausa laboral o antecedentes que pasa a lo que ha hecho desde entonces.",
+        exceeds: "La grabó, la mejoró y la dice con calma."
+      },
+      {
+        name: "Nota de agradecimiento",
+        objective: "O6",
+        notYet: "No hay nota, o es una nota genérica de una palabra.",
+        meets: "Una nota corta con el agradecimiento, una cosa de la que hablaron y por qué quiere el trabajo.",
+        exceeds: "Está lista para enviarse en 24 horas y tiene un plan de seguimiento amable."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que solicitan al menos un trabajo con el nuevo currículum en 30 días (encuesta de seguimiento)",
+      "Participantes que consiguen una entrevista en 60 días",
+      "Participantes que reciben una oferta de trabajo en 90 días",
+      "Participantes que empiezan otro curso de carrera de Koach Learn en 30 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono o una computadora con una herramienta de documentos gratuita como Google Docs o Microsoft Word",
+      "Una cuenta gratuita de LinkedIn",
+      "Una grabadora de voz o de video en el teléfono",
+      "Una oferta de trabajo real",
+      "Unos 60 minutos para las lecciones y las comprobaciones, más tiempo para terminar el currículum y las grabaciones"
+    ],
+    facilitatorNotes: [
+      "Hagan entrevistas de práctica en parejas para que cada persona responda en voz alta al menos tres veces.",
+      "Ayuda a convertir el deporte, el servicio militar, el cuidado de personas y el trabajo hecho en prisión en experiencia honesta para el currículum.",
+      "Revisa que las reescrituras de la IA sigan siendo verdad; quita todo lo que la persona no hizo.",
+      "Recuerda que no deben poner su dirección de casa ni números de identificación en LinkedIn ni en las herramientas de IA.",
+      "Califica el paquete final con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

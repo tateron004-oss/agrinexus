@@ -15,11 +15,35 @@ module.exports = {
     "Each lesson is about five minutes with a hands-on task. There is a knowledge check after each chapter and a 20-question quiz at the end. The legal points were checked on official US government pages (ftc.gov and copyright.gov) and are listed in each lesson. This course is education, not legal advice: laws change and differ by state and country, so talk to a lawyer about your own situation."
   ],
   finalTask: "Write a one-page AI use policy for your business that covers: which AI tools are approved, what information must never go into them, which outputs need a human check (facts, money, legal, health, anything customers see), how you make honest AI claims and disclose paid endorsements, how you handle copyright for AI-made content, who to ask when unsure (including a lawyer), and when you will review the policy.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "US small business owners who already use, or plan to use, AI for marketing, customer service, hiring or content, and want to do it responsibly.",
+    startingPoint: "Use one or more AI tools for business tasks. Few have a written list of risks, a review step, rules for customer data, or a basic grasp of FTC advertising rules and copyright for AI-made work.",
+    gap: "AI can produce wrong facts, unfair results, data leaks, misleading claims and copyright surprises, and the owner is responsible for all of them. Owners need simple checks and a written AI use policy so they keep customers' trust and stay out of legal trouble.",
+    constraints: [
+      "Plain words; this is education, not legal advice, and laws differ by state and country",
+      "Devices: a phone or computer with the owner's current AI tools and website or social pages",
+      "Time: about five minutes per lesson plus reviewing the owner's own materials",
+      "Legal points rely only on the official ftc.gov and copyright.gov pages cited in the lessons",
+      "No real customer data used in any practice task"
+    ],
+    prerequisites: "\"Introduction to AI for Entrepreneurs\", or regular use of AI tools in the business."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given at least three ways your business uses AI", action: "list the main AI risks that apply and rate how serious each one is", standard: "with one check written for every serious risk" },
+    { id: "O2", condition: "Given an AI output that customers see or that affects a decision", action: "check it for wrong facts, wrong math, unprovable claims and unfair results", standard: "using a written review step and keeping hiring, lending and housing decisions with a person" },
+    { id: "O3", condition: "Given the customer information you hold", action: "write a never-in-AI list and check the privacy settings of your main AI tool", standard: "following the FTC's five data principles" },
+    { id: "O4", condition: "Given your website or social posts", action: "mark every AI or results claim keep, fix or remove, and check paid posts and reviews", standard: "so every claim is true and provable, every paid post is clearly disclosed and no review is fake or bought" },
+    { id: "O5", condition: "Given business assets made with AI", action: "explain who can own AI-assisted work and plan the human creative work you will add", standard: "noting any asset that needs a lawyer's advice" },
+    { id: "O6", condition: "For your own business", action: "write a one-page AI use policy with all seven parts", standard: "naming who is responsible, when to ask a lawyer and a review date" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Know the risks and check the work",
       lessons: [
         {
+          objectives: ["O1"],
           title: "The main risks of AI in a business",
           minutes: 5,
           goal: "Name the main AI risks and find where they show up in your business.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Your risk list", bullets: ["Where you use AI", "What could go wrong, how bad", "One check for each serious risk"] }
           ],
           tryIt: "Make a risk list with at least three ways your business uses AI. Mark which of the five risks apply, rate each, and write one check for the serious ones.",
-          youCanNow: "name the main AI risks and map them to your own business."
+          youCanNow: "name the main AI risks and map them to your own business.",
+          quickCheck: [
+            { objective: "O1", q: "Which is a privacy risk of AI in a business?", options: ["Customer details leaking through an AI tool", "AI writing too slowly", "A tool costing money", "AI using long sentences"], answer: 0, why: "Putting customer data into AI tools can expose it." },
+            { objective: "O1", q: "Your AI chatbot answers customers' delivery questions. How do you treat this on your risk list?", options: ["Leave it off; it is just a chatbot", "List it, rate it and write a check for wrong answers", "Turn off all AI", "Let customers find mistakes"], answer: 1, why: "Anything customers see goes on the risk list with a check." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Checking AI work for accuracy and fairness",
           minutes: 5,
           goal: "Set up a human review step that catches wrong facts and unfair results.",
@@ -55,9 +84,14 @@ module.exports = {
             { title: "High-stakes = a person decides", bullets: ["Hiring, firing, lending, housing, health", "AI organizes; a person decides", "Ask a lawyer about the rules"] }
           ],
           tryIt: "Pick one AI output your customers see. Check it for facts, math, unprovable claims and unfair wording. Write the review step you will use every time.",
-          youCanNow: "review AI work for accuracy and fairness before it affects customers or decisions."
+          youCanNow: "review AI work for accuracy and fairness before it affects customers or decisions.",
+          quickCheck: [
+            { objective: "O2", q: "What is bias in an AI result?", options: ["A typing mistake", "A slow answer", "A result that is unfair to some groups", "A short answer"], answer: 2, why: "Bias means AI treats some groups of people unfairly." },
+            { objective: "O2", q: "AI ranks job applicants for you. What do you do?", options: ["Hire the top name", "Reject the bottom half", "Let AI email the results", "Check the ranking for unfairness and make the decision yourself"], answer: 3, why: "A person makes hiring decisions, and anti-discrimination laws still apply." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Protecting customer data",
           minutes: 5,
           goal: "Decide what data may and may not go into AI tools, using the FTC's five principles.",
@@ -76,17 +110,21 @@ module.exports = {
           ],
           sources: [{ name: "FTC: Protecting Personal Information, A Guide for Business", url: "https://www.ftc.gov/business-guidance/resources/protecting-personal-information-guide-business" }],
           tryIt: "Take stock of the customer information you hold, write your never-in-AI list, and check the privacy settings of the AI tool you use most.",
-          youCanNow: "decide what customer data may go into AI tools and protect the rest."
+          youCanNow: "decide what customer data may go into AI tools and protect the rest.",
+          quickCheck: [
+            { objective: "O3", q: "What does \"scale down\" mean in the FTC's data principles?", options: ["Keep only the information you need", "Use smaller fonts", "Hire fewer staff", "Delete your website"], answer: 0, why: "Keeping less data means less can be lost." },
+            { objective: "O3", q: "You want AI to summarize customer emails. What do you check first?", options: ["How fast the tool is", "The tool's privacy terms and settings for training on your data", "The tool's colors", "Nothing"], answer: 1, why: "Know how a tool stores and uses data before customer information goes in." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Know the risks and check the work",
         questions: [
-          { q: "Which is an accuracy risk?", options: ["AI uses your brand colors", "AI makes up a price you never set", "AI writes a short email", "AI makes a list"], answer: 1, why: "Made-up facts are the accuracy risk." },
-          { q: "You use AI to sort job applications. What else must you check?", options: ["The weather", "Only the font", "Nothing, AI is neutral", "Whether it treats groups of people unfairly"], answer: 3, why: "Anti-discrimination laws still apply when AI helps decide." },
-          { q: "Who should make a hiring decision?", options: ["A person, with AI only organizing information", "The AI alone", "A random tool", "The applicant"], answer: 0, why: "High-stakes decisions stay with a person." },
-          { q: "Which is one of the FTC's five data principles?", options: ["Share data with all tools", "Collect everything forever", "Scale down: keep only what you need", "Never plan ahead"], answer: 2, why: "Scale down is one of the five." },
-          { q: "Which should never go into an AI chat tool?", options: ["A summary with no names", "Your opening hours", "A customer's card number", "Your list of services"], answer: 2, why: "Card numbers are sensitive personal information." }
+          { objective: "O1", q: "Which is an accuracy risk?", options: ["AI uses your brand colors", "AI makes up a price you never set", "AI writes a short email", "AI makes a list"], answer: 1, why: "Made-up facts are the accuracy risk." },
+          { objective: "O2", q: "You use AI to sort job applications. What else must you check?", options: ["The weather", "Only the font", "Nothing, AI is neutral", "Whether it treats groups of people unfairly"], answer: 3, why: "Anti-discrimination laws still apply when AI helps decide." },
+          { objective: "O2", q: "Who should make a hiring decision?", options: ["A person, with AI only organizing information", "The AI alone", "A random tool", "The applicant"], answer: 0, why: "High-stakes decisions stay with a person." },
+          { objective: "O3", q: "Which is one of the FTC's five data principles?", options: ["Share data with all tools", "Collect everything forever", "Scale down: keep only what you need", "Never plan ahead"], answer: 2, why: "Scale down is one of the five." },
+          { objective: "O3", q: "Which should never go into an AI chat tool?", options: ["A summary with no names", "Your opening hours", "A customer's card number", "Your list of services"], answer: 2, why: "Card numbers are sensitive personal information." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Chapter 2: Honest claims, ownership and your policy",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Honest AI claims, endorsements and reviews",
           minutes: 5,
           goal: "Check your marketing for misleading AI claims, undisclosed endorsements and fake reviews.",
@@ -111,9 +150,14 @@ module.exports = {
           ],
           sources: [{ name: "FTC: Advertising and Marketing Basics", url: "https://www.ftc.gov/business-guidance/advertising-marketing/advertising-marketing-basics" }, { name: "FTC: Orders against Cox Media Group and two other firms over AI marketing claims (2026)", url: "https://www.ftc.gov/news-events/news/press-releases/2026/08/ftc-finalizes-orders-cox-media-group-two-other-firms-settling-charges-they-deceived-customers-about" }, { name: "FTC: Endorsement Guides, What People Are Asking", url: "https://www.ftc.gov/business-guidance/resources/ftcs-endorsement-guides-what-people-are-asking" }, { name: "FTC: Final rule banning fake reviews and testimonials (press release)", url: "https://www.ftc.gov/news-events/news/press-releases/2024/08/federal-trade-commission-announces-final-rule-banning-fake-reviews-testimonials" }],
           tryIt: "Go through your website or social posts. List each claim about AI or results, and mark it keep (true and provable), fix, or remove. Check any paid post for a clear disclosure.",
-          youCanNow: "check your marketing for honest AI claims, proper disclosures and real reviews."
+          youCanNow: "check your marketing for honest AI claims, proper disclosures and real reviews.",
+          quickCheck: [
+            { objective: "O4", q: "What makes an AI claim in an ad acceptable under FTC rules?", options: ["It sounds exciting", "Competitors say it too", "It is true, not misleading and backed by evidence", "It is in small print"], answer: 2, why: "FTC advertising rules apply to AI claims like any other." },
+            { objective: "O4", q: "A creator you paid posts about your shop without a disclosure. What do you do?", options: ["Nothing; it is their post", "Share it more widely", "Pay them again", "Ask them to add a clear disclosure such as \"#ad\" at the start"], answer: 3, why: "The business is responsible for what its paid promoters say." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Copyright and AI-made work",
           minutes: 5,
           goal: "Explain who can own AI-assisted work and how to reduce copying risks.",
@@ -132,9 +176,14 @@ module.exports = {
           ],
           sources: [{ name: "US Copyright Office: Copyright and Artificial Intelligence", url: "https://www.copyright.gov/ai/" }, { name: "US Copyright Office: Part 2 Copyrightability report announcement (January 2025)", url: "https://www.copyright.gov/newsnet/2025/1060.html" }],
           tryIt: "List three business assets you have made or plan to make with AI. For each, write whether you need to own it and what human creative work you will add, and note any that need a lawyer's advice.",
-          youCanNow: "explain the basics of copyright for AI-made work and lower your copying risk."
+          youCanNow: "explain the basics of copyright for AI-made work and lower your copying risk.",
+          quickCheck: [
+            { objective: "O5", q: "According to the US Copyright Office, what is protected in AI-assisted work?", options: ["The human creative contributions", "Everything the AI made", "Only the prompt", "Nothing at all, ever"], answer: 0, why: "Human creative work can be protected; purely AI-generated material is not." },
+            { objective: "O5", q: "You need to own your new logo. What do you do?", options: ["Use a pure AI image as it is", "Add real human creative work, keep records and ask a lawyer if unsure", "Copy a famous logo", "Skip a logo"], answer: 1, why: "Human creative work and records make protection more likely; a lawyer can advise." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Writing your AI use policy",
           minutes: 6,
           goal: "Write a one-page AI use policy for your business.",
@@ -151,17 +200,21 @@ module.exports = {
             { title: "Make it real", bullets: ["Let AI draft from your notes", "Edit every rule to fit you", "Share it, review every six months"] }
           ],
           tryIt: "Final task: write your one-page AI use policy with all seven parts, edit it to fit your business, and set a review date.",
-          youCanNow: "run your business's AI use under a clear, honest, written policy, and know when to call a lawyer."
+          youCanNow: "run your business's AI use under a clear, honest, written policy, and know when to call a lawyer.",
+          quickCheck: [
+            { objective: "O6", q: "What is an AI use policy?", options: ["A list of AI tool prices", "An AI-written blog post", "A written set of rules for how your business uses AI", "A customer contract"], answer: 2, why: "A policy tells everyone how AI is used safely in the business." },
+            { objective: "O6", q: "A new AI tool comes out that your staff want to use. What does your policy tell you to do?", options: ["Let everyone try it with customer data", "Ban all AI", "Ignore the policy", "Check it against the policy before adding it to the approved list"], answer: 3, why: "The policy lists approved tools and how new ones are added." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Honest claims, ownership and your policy",
         questions: [
-          { q: "Your app does not use AI. Can you advertise it as \"AI-powered\"?", options: ["No, that is a false claim", "Yes, everyone does", "Only in small print", "Only online"], answer: 0, why: "Ad claims, including AI claims, must be truthful." },
-          { q: "Which review practice does the FTC rule ban?", options: ["Showing real reviews with permission", "Asking customers for honest reviews", "Replying to reviews", "Posting AI-generated reviews from people who do not exist"], answer: 3, why: "The rule bans fake reviews, including AI-generated ones." },
-          { q: "According to the US Copyright Office, does writing a prompt make you the author of the AI's output?", options: ["Yes, always", "No, a prompt alone is not enough", "Only for long prompts", "Only for images"], answer: 1, why: "The Office says prompts alone do not make someone the author." },
-          { q: "How can you make AI-assisted work more likely to be protected?", options: ["Add real human creative work and keep records", "Use more prompts", "Add the word \"copyright\"", "Use a paid AI tool"], answer: 0, why: "Human creative contributions can be protected." },
-          { q: "How often should you review your AI use policy?", options: ["Only after a lawsuit", "Never", "On a set date, such as every six months", "Every day"], answer: 2, why: "Tools and laws change, so regular reviews keep it current." }
+          { objective: "O4", q: "Your app does not use AI. Can you advertise it as \"AI-powered\"?", options: ["No, that is a false claim", "Yes, everyone does", "Only in small print", "Only online"], answer: 0, why: "Ad claims, including AI claims, must be truthful." },
+          { objective: "O4", q: "Which review practice does the FTC rule ban?", options: ["Showing real reviews with permission", "Asking customers for honest reviews", "Replying to reviews", "Posting AI-generated reviews from people who do not exist"], answer: 3, why: "The rule bans fake reviews, including AI-generated ones." },
+          { objective: "O5", q: "According to the US Copyright Office, does writing a prompt make you the author of the AI's output?", options: ["Yes, always", "No, a prompt alone is not enough", "Only for long prompts", "Only for images"], answer: 1, why: "The Office says prompts alone do not make someone the author." },
+          { objective: "O5", q: "How can you make AI-assisted work more likely to be protected?", options: ["Add real human creative work and keep records", "Use more prompts", "Add the word \"copyright\"", "Use a paid AI tool"], answer: 0, why: "Human creative contributions can be protected." },
+          { objective: "O6", q: "How often should you review your AI use policy?", options: ["Only after a lawsuit", "Never", "On a set date, such as every six months", "Every day"], answer: 2, why: "Tools and laws change, so regular reviews keep it current." }
         ]
       }
     }
@@ -169,26 +222,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI Ethics, Risks and Legal Considerations",
     questions: [
-      { q: "Which is NOT one of the five AI risks in this course?", options: ["Accuracy", "Battery life", "Privacy", "Fairness"], answer: 1, why: "The five are accuracy, fairness, privacy, honesty and ownership." },
-      { q: "Being ethical with AI includes:", options: ["Collecting all data you can", "Letting AI decide everything", "Hiding AI use from everyone", "Keeping a human responsible"], answer: 3, why: "A person stays responsible for AI use." },
-      { q: "A risk list records:", options: ["Your social media followers", "Your competitors' passwords", "Only your tool prices", "Where you use AI, what could go wrong, how bad, and a check"], answer: 3, why: "That makes risks manageable." },
-      { q: "Which AI output needs a human check every time?", options: ["A private brainstorm you will throw away", "A price list customers will see", "A list of lunch ideas", "A joke for yourself"], answer: 1, why: "Customer-facing money information must be checked." },
-      { q: "Bias in AI means:", options: ["A spelling error", "A slow answer", "Results that are unfair to some groups", "A type of tool"], answer: 2, why: "That is the definition." },
-      { q: "Do anti-discrimination laws apply when AI helps make a hiring decision?", options: ["Yes", "No, computers are exempt", "Only for big companies abroad", "Only on paper applications"], answer: 0, why: "The law applies to the decision, however it is made." },
-      { q: "For lending or housing decisions, AI should:", options: ["Be hidden from the customer", "Decide alone", "Organize information while a person decides", "Replace your lawyer"], answer: 2, why: "High-stakes decisions stay with a person." },
-      { q: "\"Take stock\" in the FTC guide means:", options: ["Know what personal information you have", "Buy shares", "Count your inventory only", "Delete everything"], answer: 0, why: "It is the first of the five principles." },
-      { q: "\"Pitch it\" in the FTC guide means:", options: ["Make a sales pitch", "Dispose of information you no longer need properly", "Throw a ball", "Post it online"], answer: 1, why: "Old data you do not need is a risk." },
-      { q: "If you must use customer information with an AI tool, prefer:", options: ["Emailing it to yourself", "Any free tool without reading terms", "Posting it publicly", "A plan whose terms say it will not train on your data"], answer: 3, why: "Business terms can protect data better." },
-      { q: "If AI tools process customer data, your privacy notice should:", options: ["Say so honestly", "Hide it", "Say you never use computers", "Be removed"], answer: 0, why: "Honesty with customers is required and ethical." },
-      { q: "FTC advertising rules say claims must be:", options: ["Approved by an AI tool", "Funny", "Short", "Truthful, not misleading and backed by evidence"], answer: 3, why: "That is the truth-in-advertising standard." },
-      { q: "The 2026 FTC orders discussed in this course were about:", options: ["Store opening hours", "Late tax filing", "False claims about what an AI marketing service did", "Shipping delays"], answer: 2, why: "The firms claimed to use voice data when they did not." },
-      { q: "An influencer you paid posts about you. They must:", options: ["Hide it in comments", "Clearly disclose it, like \"#ad\" at the start", "Say nothing", "Mention it once a year"], answer: 1, why: "Material connections must be disclosed clearly." },
-      { q: "Who is responsible for what your paid promoters say about you?", options: ["Nobody", "Only the promoter", "The platform", "You, the business"], answer: 3, why: "The FTC says businesses are responsible for their promoters' claims." },
-      { q: "Offering a discount only to customers who leave 5-star reviews is:", options: ["Required", "A great idea", "Banned by the FTC's fake-review rule", "Fine if disclosed in tiny print"], answer: 2, why: "Rewards conditioned on positive reviews are banned." },
-      { q: "According to the Copyright Office, purely AI-generated material is:", options: ["Not protected by copyright", "Automatically yours", "Owned by the AI", "Protected for 100 years"], answer: 0, why: "Copyright requires human authorship." },
-      { q: "Using AI as a tool in your creative work:", options: ["Always cancels copyright", "Does not by itself block copyright for your human contributions", "Makes everything public domain", "Is illegal"], answer: 1, why: "The Office says AI-assisted works can be protected where human creativity shows." },
-      { q: "Which request raises copying risk?", options: ["\"Give me ideas for a bakery logo\"", "\"Make a logo exactly like [famous brand]'s\"", "\"Suggest colors for a cleaning business\"", "\"Write a slogan about fresh bread\""], answer: 1, why: "Copying a brand's logo can infringe trademark or copyright." },
-      { q: "When unsure about a legal question for your business, you should:", options: ["Talk to a lawyer about your situation", "Trust whatever an AI says", "Ignore it", "Copy what a competitor does"], answer: 0, why: "Laws change and differ by place; a lawyer can advise you." }
+      { objective: "O1", q: "Which is NOT one of the five AI risks in this course?", options: ["Accuracy", "Battery life", "Privacy", "Fairness"], answer: 1, why: "The five are accuracy, fairness, privacy, honesty and ownership." },
+      { objective: "O6", q: "Being ethical with AI includes:", options: ["Collecting all data you can", "Letting AI decide everything", "Hiding AI use from everyone", "Keeping a human responsible"], answer: 3, why: "A person stays responsible for AI use." },
+      { objective: "O1", q: "A risk list records:", options: ["Your social media followers", "Your competitors' passwords", "Only your tool prices", "Where you use AI, what could go wrong, how bad, and a check"], answer: 3, why: "That makes risks manageable." },
+      { objective: "O2", q: "Which AI output needs a human check every time?", options: ["A private brainstorm you will throw away", "A price list customers will see", "A list of lunch ideas", "A joke for yourself"], answer: 1, why: "Customer-facing money information must be checked." },
+      { objective: "O2", q: "Bias in AI means:", options: ["A spelling error", "A slow answer", "Results that are unfair to some groups", "A type of tool"], answer: 2, why: "That is the definition." },
+      { objective: "O2", q: "Do anti-discrimination laws apply when AI helps make a hiring decision?", options: ["Yes", "No, computers are exempt", "Only for big companies abroad", "Only on paper applications"], answer: 0, why: "The law applies to the decision, however it is made." },
+      { objective: "O2", q: "For lending or housing decisions, AI should:", options: ["Be hidden from the customer", "Decide alone", "Organize information while a person decides", "Replace your lawyer"], answer: 2, why: "High-stakes decisions stay with a person." },
+      { objective: "O3", q: "\"Take stock\" in the FTC guide means:", options: ["Know what personal information you have", "Buy shares", "Count your inventory only", "Delete everything"], answer: 0, why: "It is the first of the five principles." },
+      { objective: "O3", q: "\"Pitch it\" in the FTC guide means:", options: ["Make a sales pitch", "Dispose of information you no longer need properly", "Throw a ball", "Post it online"], answer: 1, why: "Old data you do not need is a risk." },
+      { objective: "O3", q: "If you must use customer information with an AI tool, prefer:", options: ["Emailing it to yourself", "Any free tool without reading terms", "Posting it publicly", "A plan whose terms say it will not train on your data"], answer: 3, why: "Business terms can protect data better." },
+      { objective: "O3", q: "If AI tools process customer data, your privacy notice should:", options: ["Say so honestly", "Hide it", "Say you never use computers", "Be removed"], answer: 0, why: "Honesty with customers is required and ethical." },
+      { objective: "O4", q: "FTC advertising rules say claims must be:", options: ["Approved by an AI tool", "Funny", "Short", "Truthful, not misleading and backed by evidence"], answer: 3, why: "That is the truth-in-advertising standard." },
+      { objective: "O4", q: "The 2026 FTC orders discussed in this course were about:", options: ["Store opening hours", "Late tax filing", "False claims about what an AI marketing service did", "Shipping delays"], answer: 2, why: "The firms claimed to use voice data when they did not." },
+      { objective: "O4", q: "An influencer you paid posts about you. They must:", options: ["Hide it in comments", "Clearly disclose it, like \"#ad\" at the start", "Say nothing", "Mention it once a year"], answer: 1, why: "Material connections must be disclosed clearly." },
+      { objective: "O4", q: "Who is responsible for what your paid promoters say about you?", options: ["Nobody", "Only the promoter", "The platform", "You, the business"], answer: 3, why: "The FTC says businesses are responsible for their promoters' claims." },
+      { objective: "O4", q: "Offering a discount only to customers who leave 5-star reviews is:", options: ["Required", "A great idea", "Banned by the FTC's fake-review rule", "Fine if disclosed in tiny print"], answer: 2, why: "Rewards conditioned on positive reviews are banned." },
+      { objective: "O5", q: "According to the Copyright Office, purely AI-generated material is:", options: ["Not protected by copyright", "Automatically yours", "Owned by the AI", "Protected for 100 years"], answer: 0, why: "Copyright requires human authorship." },
+      { objective: "O5", q: "Using AI as a tool in your creative work:", options: ["Always cancels copyright", "Does not by itself block copyright for your human contributions", "Makes everything public domain", "Is illegal"], answer: 1, why: "The Office says AI-assisted works can be protected where human creativity shows." },
+      { objective: "O5", q: "Which request raises copying risk?", options: ["\"Give me ideas for a bakery logo\"", "\"Make a logo exactly like [famous brand]'s\"", "\"Suggest colors for a cleaning business\"", "\"Write a slogan about fresh bread\""], answer: 1, why: "Copying a brand's logo can infringe trademark or copyright." },
+      { objective: "O6", q: "When unsure about a legal question for your business, you should:", options: ["Talk to a lawyer about your situation", "Trust whatever an AI says", "Ignore it", "Copy what a competitor does"], answer: 0, why: "Laws change and differ by place; a lawyer can advise you." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      3,
+      4,
+      7,
+      9,
+      11,
+      13,
+      16,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Approved tools and data",
+        objective: "O3",
+        notYet: "No list of approved tools or no never-in-AI list.",
+        meets: "Approved tools named and a clear list of information that must never go into them.",
+        exceeds: "Notes the privacy setting checked in each approved tool."
+      },
+      {
+        name: "Human checks",
+        objective: "O2",
+        notYet: "Does not say which outputs need a person to check them.",
+        meets: "Facts, money, legal, health and anything customers see all need a human check.",
+        exceeds: "Names who checks and what they look for, including fairness."
+      },
+      {
+        name: "Honest claims and endorsements",
+        objective: "O4",
+        notYet: "No rule on AI claims, paid endorsements or reviews.",
+        meets: "Claims must be true and provable; paid posts disclosed; no fake or bought reviews.",
+        exceeds: "Includes the results of the owner's keep, fix or remove review."
+      },
+      {
+        name: "Copyright",
+        objective: "O5",
+        notYet: "No rule for AI-made content.",
+        meets: "Says when human creative work is added and when to ask a lawyer about ownership.",
+        exceeds: "Lists the business's key AI-assisted assets and how each is handled."
+      },
+      {
+        name: "Responsibility and review",
+        objective: "O6",
+        notYet: "No one named as responsible, or no review date.",
+        meets: "Names who is responsible, when to call a lawyer and a review date.",
+        exceeds: "Links back to the risk list so each serious risk has a rule."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Owners who finish the course and pass the final task (rubric)",
+      "Owners who adopt and share their AI use policy with staff within 30 days (follow-up survey)",
+      "Owners who fix or remove at least one misleading claim on their website or social pages",
+      "Learners who start another Koach Learn entrepreneur course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or computer with the AI tools the business uses",
+      "The business's website, social pages and a list of customer information held",
+      "A one-page policy template with the seven parts",
+      "About 60 to 75 minutes in total for lessons, reviews, checks and the policy"
+    ],
+    facilitatorNotes: [
+      "Say at the start that the course is education, not legal advice, and that laws differ by state and country.",
+      "Have owners review their own website claims in pairs, marking keep, fix or remove.",
+      "Do not use real customer data in practice; use the categories of data instead.",
+      "Keep a list of local small business legal aid or lawyer referral services to share.",
+      "Score the policy with the rubric, one Not yet row at a time."
     ]
   }
 };

@@ -15,11 +15,35 @@ module.exports = {
     "These tools support memory; they do not diagnose or treat anything. If you or your family are worried about memory changes, talk with your doctor. Each lesson takes about five minutes. A knowledge check closes each chapter and a 20-question quiz closes the course."
   ],
   finalTask: "Build your memory toolkit: set two repeating voice reminders, start a \"Things to remember\" note, take one photo memory aid (such as where you parked or a label you need), ask AI for a \"before I leave the house\" checklist, and use all of it for one full day.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Older adults who notice everyday forgetfulness, such as appointments, names, where they parked or what the doctor said, and want simple tools to stay organized and independent. Some are supported by family caregivers.",
+    startingPoint: "Own a smartphone and make calls and texts. Many rely on paper notes or memory alone and have not used voice reminders, pinned notes, photo albums or AI checklists.",
+    gap: "Forgetting appointments, medicines or what was said at a visit causes stress and can affect health and safety. A simple phone toolkit used every day helps seniors remember more and stay independent, while private numbers stay out of notes and photos and worrying memory changes go to a doctor.",
+    constraints: [
+      "Reading level: plain words, short sentences and large, simple steps",
+      "Devices: a smartphone with a voice assistant, Notes or Google Keep, and a camera",
+      "Time: about 5 minutes per lesson at a relaxed pace, then one full day of practice",
+      "Health: the course supports everyday memory; worrying changes go to a doctor",
+      "Privacy: no passwords, bank or Social Security numbers in notes, photos or AI prompts"
+    ],
+    prerequisites: "None. \"AI for Daily Life\" is a helpful companion course."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "The moment you think of something to do", action: "capture a voice reminder that says what and when, using \"every\" for repeating ones", standard: "and mark it done when finished" },
+    { id: "O2", condition: "Using Notes or Google Keep", action: "keep a pinned \"Things to remember\" note and add to it by typing or voice", standard: "with no passwords or private numbers in it" },
+    { id: "O3", condition: "Given something you need to remember, such as where you parked", action: "take a photo memory aid and find it again in your recent photos or an album", standard: "without photographing private cards or documents" },
+    { id: "O4", condition: "Given a task you do often", action: "ask AI for a short checklist, edit it to fit your life and put it where you will see it", standard: "with no more than about eight simple items" },
+    { id: "O5", condition: "After an appointment or important call", action: "turn your notes into a short summary and to-do list with AI help", standard: "with private details removed and anything unclear confirmed with the office" },
+    { id: "O6", condition: "Every day", action: "follow a simple memory routine of morning and evening checks", standard: "and talk with your doctor about memory changes that worry you" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Capturing what you need to remember",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Voice reminders the moment you think of them",
           minutes: 5,
           goal: "Capture a reminder by voice before you forget it.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "When it appears", bullets: ["Do it, or snooze it", "Mark it done"] }
           ],
           tryIt: "Set two reminders by voice: one for tomorrow and one that repeats every week.",
-          youCanNow: "capture one-time and repeating reminders by voice."
+          youCanNow: "capture one-time and repeating reminders by voice.",
+          quickCheck: [
+            { objective: "O1", q: "What does snoozing a reminder do?", options: ["Deletes it", "Delays it a little so it comes back", "Marks it done", "Sends it to family"], answer: 1, why: "Snooze delays the reminder a little; mark it done when you have finished." },
+            { objective: "O1", q: "You remember while cooking that you must call the bank tomorrow. What do you do?", options: ["Hope you remember", "Write it on a napkin later", "Say to your phone: \"Remind me to call the bank tomorrow at 10 am.\"", "Call the bank now at night"], answer: 2, why: "Capture a reminder the moment you think of it, by voice, with what and when." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "A notes list for things to remember",
           minutes: 5,
           goal: "Keep a \"Things to remember\" note on your phone and add to it by voice.",
@@ -55,9 +84,14 @@ module.exports = {
             { title: "Keep it simple and safe", bullets: ["One line per item", "Use the keyboard microphone", "No passwords or bank numbers"] }
           ],
           tryIt: "Create a \"Things to remember\" note and add three items, at least one by speaking with the keyboard microphone.",
-          youCanNow: "keep a notes list for things you want to remember and add to it by voice."
+          youCanNow: "keep a notes list for things you want to remember and add to it by voice.",
+          quickCheck: [
+            { objective: "O2", q: "What does pinning a note do?", options: ["Keeps it at the top of your notes", "Locks it with a password", "Deletes it after a day", "Shares it with family"], answer: 0, why: "Pinning keeps your \"Things to remember\" note at the top where you can find it." },
+            { objective: "O2", q: "A friend recommends a book while you are out. Where does it go?", options: ["In a timed reminder", "In your bank app", "Nowhere; you will remember", "In your \"Things to remember\" note"], answer: 3, why: "Things not tied to a time, like a book name, belong in your note." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Photos as memory aids",
           minutes: 4,
           goal: "Use your camera to remember where things are and what they say.",
@@ -74,17 +108,21 @@ module.exports = {
             { title: "Keep it safe", bullets: ["No photos of bank or ID cards"] }
           ],
           tryIt: "Take one photo memory aid today, such as the inside of your fridge or where you parked. Find it again in your photos an hour later.",
-          youCanNow: "use photos to remember where things are and what they say."
+          youCanNow: "use photos to remember where things are and what they say.",
+          quickCheck: [
+            { objective: "O3", q: "Why should you not keep a photo of your bank card as a memory aid?", options: ["Photos of cards are blurry", "If your phone is lost, the photo could be misused", "It uses too much space", "The bank does not allow photos"], answer: 1, why: "Photos of private cards could be misused if the phone is lost." },
+            { objective: "O3", q: "You park on level 3 of a big garage. What is a quick way to remember?", options: ["Take a photo of the level sign", "Write it in a text to a stranger", "Count the cars", "Leave the car unlocked"], answer: 0, why: "A quick photo of the parking sign remembers it for you." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Capturing what you need to remember",
         questions: [
-          { q: "When is the best time to capture a reminder?", options: ["Only on Sundays", "Next week", "The moment you think of it", "Never"], answer: 2, why: "Capturing right away prevents forgetting." },
-          { q: "Which voice request makes a weekly reminder?", options: ["\"Remind me to water the plants every Monday.\"", "\"Plants.\"", "\"Monday.\"", "\"Water.\""], answer: 0, why: "\"Every\" makes it repeat." },
-          { q: "Where should a new neighbor's name go?", options: ["In a text to strangers", "In a password field", "Nowhere", "In your \"Things to remember\" note"], answer: 3, why: "Notes hold things not tied to a time." },
-          { q: "What should NEVER go in a plain note?", options: ["A book title", "Passwords and bank numbers", "A neighbor's name", "A recipe"], answer: 1, why: "Plain notes are not safe for private numbers." },
-          { q: "Which is a good photo memory aid?", options: ["Your bank card", "The parking level sign", "Your Social Security card", "Your password"], answer: 1, why: "Private cards should not be photographed for reminders." }
+          { objective: "O1", q: "When is the best time to capture a reminder?", options: ["Only on Sundays", "Next week", "The moment you think of it", "Never"], answer: 2, why: "Capturing right away prevents forgetting." },
+          { objective: "O1", q: "Which voice request makes a weekly reminder?", options: ["\"Remind me to water the plants every Monday.\"", "\"Plants.\"", "\"Monday.\"", "\"Water.\""], answer: 0, why: "\"Every\" makes it repeat." },
+          { objective: "O2", q: "Where should a new neighbor's name go?", options: ["In a text to strangers", "In a password field", "Nowhere", "In your \"Things to remember\" note"], answer: 3, why: "Notes hold things not tied to a time." },
+          { objective: "O2", q: "What should NEVER go in a plain note?", options: ["A book title", "Passwords and bank numbers", "A neighbor's name", "A recipe"], answer: 1, why: "Plain notes are not safe for private numbers." },
+          { objective: "O3", q: "Which is a good photo memory aid?", options: ["Your bank card", "The parking level sign", "Your Social Security card", "Your password"], answer: 1, why: "Private cards should not be photographed for reminders." }
         ]
       }
     },
@@ -92,6 +130,7 @@ module.exports = {
       name: "Chapter 2: Routines and AI helpers",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Checklists made with AI",
           minutes: 5,
           goal: "Ask AI for a short checklist for a task you do often.",
@@ -108,9 +147,14 @@ module.exports = {
             { title: "Put it in the right place", bullets: ["Tape it by the door", "Or save it in Notes"] }
           ],
           tryIt: "Ask an AI assistant for a \"before I leave the house\" checklist of no more than eight items. Change it to fit your home, and print it or save it.",
-          youCanNow: "make a personal checklist with AI and put it where it helps."
+          youCanNow: "make a personal checklist with AI and put it where it helps.",
+          quickCheck: [
+            { objective: "O4", q: "When does a checklist help most?", options: ["When it is saved where you never look", "When it is very long", "When it is where you will see it at the right moment", "When only the AI can read it"], answer: 2, why: "A checklist only helps if you see it at the right moment, such as by the door." },
+            { objective: "O4", q: "The AI's checklist says \"feed the cat\" but you have no cat. What do you do?", options: ["Get a cat", "Ask for a new list every day", "Ignore the whole list", "Remove that item and add any you need"], answer: 3, why: "Edit the checklist so it fits your home." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Remembering what was said at appointments",
           minutes: 5,
           goal: "Capture the key points of an appointment or call and turn them into a clear summary.",
@@ -127,9 +171,14 @@ module.exports = {
             { title: "Confirm", bullets: ["Call the office if unclear", "Check the patient portal", "Ask before recording anyone"] }
           ],
           tryIt: "Write three rough notes from a recent call or appointment (leave out names and numbers). Ask an AI assistant to turn them into a short summary with a to-do list, and save it.",
-          youCanNow: "capture and summarize what was said at an appointment or call."
+          youCanNow: "capture and summarize what was said at an appointment or call.",
+          quickCheck: [
+            { objective: "O5", q: "What is a patient portal?", options: ["A hospital door", "A website or app where your doctor's office can share visit notes", "A pharmacy", "An AI assistant"], answer: 1, why: "Many doctor's offices post a visit summary in their patient portal." },
+            { objective: "O5", q: "You want to record what the doctor says on your phone. What do you do first?", options: ["Ask permission", "Hide the phone", "Record without saying anything", "Post the recording online"], answer: 0, why: "Always ask permission before recording a visit." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "A daily memory routine",
           minutes: 5,
           goal: "Put your memory tools together into a simple daily routine.",
@@ -147,17 +196,21 @@ module.exports = {
           ],
           sources: [{ name: "MedlinePlus (National Library of Medicine)", url: "https://medlineplus.gov/" }],
           tryIt: "Final task: build your memory toolkit (two repeating voice reminders, a \"Things to remember\" note, one photo memory aid, and an AI-made \"before I leave the house\" checklist) and use it all for one full day with the morning and evening check.",
-          youCanNow: "use reminders, notes, photos, checklists and AI summaries in a daily routine that supports your memory."
+          youCanNow: "use reminders, notes, photos, checklists and AI summaries in a daily routine that supports your memory.",
+          quickCheck: [
+            { objective: "O6", q: "What is a good evening memory habit?", options: ["Delete all reminders", "Turn off your phone for a week", "Check tomorrow's reminders and your \"Things to remember\" note", "Write a new checklist every night"], answer: 2, why: "Before bed, check tomorrow's reminders and your note." },
+            { objective: "O6", q: "You keep losing your glasses around the house. What simple habit helps?", options: ["Buy new glasses each week", "Keep keys, glasses and phone in one bowl by the door", "Stop wearing glasses", "Ask AI where they are"], answer: 1, why: "Keeping things in the same place every day means you know where they are." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Routines and AI helpers",
         questions: [
-          { q: "Where should a \"leaving the house\" checklist go?", options: ["Nowhere", "In a drawer", "In the car trunk", "By the door where you will see it"], answer: 3, why: "Checklists help when seen at the right moment." },
-          { q: "Before typing appointment notes into AI, remove:", options: ["Names, birth dates and account numbers", "The to-do items", "The word \"doctor\"", "Nothing"], answer: 0, why: "Private details stay out of AI." },
-          { q: "Before recording a conversation at an appointment, you should:", options: ["Record secretly", "Hide the phone", "Ask permission", "Post it online"], answer: 2, why: "Always ask before recording someone." },
-          { q: "A good evening habit is to:", options: ["Share your passwords", "Delete all reminders", "Turn off the phone for a week", "Check tomorrow's reminders and your note"], answer: 3, why: "It prepares you for the next day." },
-          { q: "You notice you got lost in a familiar place. What should you do?", options: ["Ignore it", "Ask AI for a diagnosis", "Talk with your doctor", "Buy a supplement online"], answer: 2, why: "Worrying memory changes should be checked by a doctor." }
+          { objective: "O4", q: "Where should a \"leaving the house\" checklist go?", options: ["Nowhere", "In a drawer", "In the car trunk", "By the door where you will see it"], answer: 3, why: "Checklists help when seen at the right moment." },
+          { objective: "O5", q: "Before typing appointment notes into AI, remove:", options: ["Names, birth dates and account numbers", "The to-do items", "The word \"doctor\"", "Nothing"], answer: 0, why: "Private details stay out of AI." },
+          { objective: "O5", q: "Before recording a conversation at an appointment, you should:", options: ["Record secretly", "Hide the phone", "Ask permission", "Post it online"], answer: 2, why: "Always ask before recording someone." },
+          { objective: "O6", q: "A good evening habit is to:", options: ["Share your passwords", "Delete all reminders", "Turn off the phone for a week", "Check tomorrow's reminders and your note"], answer: 3, why: "It prepares you for the next day." },
+          { objective: "O6", q: "You notice you got lost in a familiar place. What should you do?", options: ["Ignore it", "Ask AI for a diagnosis", "Talk with your doctor", "Buy a supplement online"], answer: 2, why: "Worrying memory changes should be checked by a doctor." }
         ]
       }
     }
@@ -165,26 +218,104 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI for Memory Support",
     questions: [
-      { q: "Why capture a reminder right away?", options: ["It saves battery", "So you do not forget it", "It is required", "It costs less"], answer: 1, why: "The moment passes quickly." },
-      { q: "\"Snooze\" means:", options: ["Delay the reminder a little", "Delete it", "Share it", "Print it"], answer: 0, why: "Snooze brings it back later." },
-      { q: "Which word makes a reminder repeat?", options: ["\"every\"", "\"maybe\"", "\"once\"", "\"never\""], answer: 0, why: "\"Every Monday\" repeats weekly." },
-      { q: "When you finish a reminder, you should:", options: ["Leave it forever", "Mark it done", "Set it again", "Delete the app"], answer: 1, why: "Marking done keeps your list clear." },
-      { q: "A notes list is best for:", options: ["Bank numbers", "Passwords", "Things not tied to a time", "Social Security numbers"], answer: 2, why: "Notes hold names, ideas and locations." },
-      { q: "Pinning a note:", options: ["Locks your phone", "Deletes it", "Shares it publicly", "Keeps it at the top"], answer: 3, why: "Pinned notes are easy to find." },
-      { q: "To add to a note without typing, use:", options: ["The volume button", "The camera", "The keyboard microphone", "The flashlight"], answer: 2, why: "The microphone types what you say." },
-      { q: "A good photo memory aid is:", options: ["The inside of your fridge before shopping", "Your bank card", "Your passport page", "Your PIN"], answer: 0, why: "Private documents should not be photographed for reminders." },
-      { q: "When memory photos are no longer needed:", options: ["Email them to strangers", "Post them", "Print them all", "Delete them"], answer: 3, why: "Deleting keeps photos tidy and private." },
-      { q: "A checklist is:", options: ["A bank statement", "A list of steps you tick off", "A password", "A phone"], answer: 1, why: "Checklists guide routines." },
-      { q: "A good AI checklist request is:", options: ["\"list\"", "\"A short checklist for leaving the house, no more than eight items, simple words.\"", "\"stuff\"", "\"help\""], answer: 1, why: "It says the task, length and style." },
-      { q: "After AI makes a checklist, you should:", options: ["Share your password", "Use it unchanged no matter what", "Delete it", "Edit it to fit your home"], answer: 3, why: "Your home is unique." },
-      { q: "At a doctor's appointment, a family member can help by:", options: ["Taking notes", "Answering for you without asking", "Sharing your passwords", "Recording secretly"], answer: 0, why: "A second listener catches more." },
-      { q: "AI can turn rough notes into:", options: ["A prescription", "A diagnosis", "A short summary with a to-do list", "A legal ruling"], answer: 2, why: "Summarizing is a strength; diagnosing is not." },
-      { q: "A patient portal is:", options: ["A bank", "A hospital door", "A bus stop", "A website or app where your doctor shares visit notes"], answer: 3, why: "Portals share visit summaries and results." },
-      { q: "If a summary is unclear, you should:", options: ["Ignore it", "Guess", "Call the office to confirm", "Ask a stranger online"], answer: 2, why: "The office is the reliable source." },
-      { q: "A morning routine check includes:", options: ["Changing passwords", "Today's reminders and calendar", "Deleting notes", "Buying a new phone"], answer: 1, why: "It sets up your day." },
-      { q: "Keeping keys, glasses and phone in one bowl helps because:", options: ["You always know where they are", "It looks nice", "It charges them", "It is required"], answer: 0, why: "Same place, less searching." },
-      { q: "A tracking tag on keys lets you:", options: ["Find them with your phone", "Unlock any door", "Start the car remotely", "Pay bills"], answer: 0, why: "Your phone can locate the tag." },
-      { q: "Where can you find trusted information about memory?", options: ["A pop-up ad", "MedlinePlus (medlineplus.gov) and your doctor", "A supplement seller", "A social media rumor"], answer: 1, why: "MedlinePlus is a free government health site." }
+      { objective: "O1", q: "Why capture a reminder right away?", options: ["It saves battery", "So you do not forget it", "It is required", "It costs less"], answer: 1, why: "The moment passes quickly." },
+      { objective: "O1", q: "\"Snooze\" means:", options: ["Delay the reminder a little", "Delete it", "Share it", "Print it"], answer: 0, why: "Snooze brings it back later." },
+      { objective: "O1", q: "Which word makes a reminder repeat?", options: ["\"every\"", "\"maybe\"", "\"once\"", "\"never\""], answer: 0, why: "\"Every Monday\" repeats weekly." },
+      { objective: "O1", q: "When you finish a reminder, you should:", options: ["Leave it forever", "Mark it done", "Set it again", "Delete the app"], answer: 1, why: "Marking done keeps your list clear." },
+      { objective: "O2", q: "A notes list is best for:", options: ["Bank numbers", "Passwords", "Things not tied to a time", "Social Security numbers"], answer: 2, why: "Notes hold names, ideas and locations." },
+      { objective: "O2", q: "Pinning a note:", options: ["Locks your phone", "Deletes it", "Shares it publicly", "Keeps it at the top"], answer: 3, why: "Pinned notes are easy to find." },
+      { objective: "O2", q: "To add to a note without typing, use:", options: ["The volume button", "The camera", "The keyboard microphone", "The flashlight"], answer: 2, why: "The microphone types what you say." },
+      { objective: "O3", q: "A good photo memory aid is:", options: ["The inside of your fridge before shopping", "Your bank card", "Your passport page", "Your PIN"], answer: 0, why: "Private documents should not be photographed for reminders." },
+      { objective: "O3", q: "When memory photos are no longer needed:", options: ["Email them to strangers", "Post them", "Print them all", "Delete them"], answer: 3, why: "Deleting keeps photos tidy and private." },
+      { objective: "O4", q: "A checklist is:", options: ["A bank statement", "A list of steps you tick off", "A password", "A phone"], answer: 1, why: "Checklists guide routines." },
+      { objective: "O4", q: "A good AI checklist request is:", options: ["\"list\"", "\"A short checklist for leaving the house, no more than eight items, simple words.\"", "\"stuff\"", "\"help\""], answer: 1, why: "It says the task, length and style." },
+      { objective: "O4", q: "After AI makes a checklist, you should:", options: ["Share your password", "Use it unchanged no matter what", "Delete it", "Edit it to fit your home"], answer: 3, why: "Your home is unique." },
+      { objective: "O5", q: "At a doctor's appointment, a family member can help by:", options: ["Taking notes", "Answering for you without asking", "Sharing your passwords", "Recording secretly"], answer: 0, why: "A second listener catches more." },
+      { objective: "O5", q: "AI can turn rough notes into:", options: ["A prescription", "A diagnosis", "A short summary with a to-do list", "A legal ruling"], answer: 2, why: "Summarizing is a strength; diagnosing is not." },
+      { objective: "O5", q: "A patient portal is:", options: ["A bank", "A hospital door", "A bus stop", "A website or app where your doctor shares visit notes"], answer: 3, why: "Portals share visit summaries and results." },
+      { objective: "O5", q: "If a summary is unclear, you should:", options: ["Ignore it", "Guess", "Call the office to confirm", "Ask a stranger online"], answer: 2, why: "The office is the reliable source." },
+      { objective: "O6", q: "A morning routine check includes:", options: ["Changing passwords", "Today's reminders and calendar", "Deleting notes", "Buying a new phone"], answer: 1, why: "It sets up your day." },
+      { objective: "O6", q: "Keeping keys, glasses and phone in one bowl helps because:", options: ["You always know where they are", "It looks nice", "It charges them", "It is required"], answer: 0, why: "Same place, less searching." },
+      { objective: "O6", q: "A tracking tag on keys lets you:", options: ["Find them with your phone", "Unlock any door", "Start the car remotely", "Pay bills"], answer: 0, why: "Your phone can locate the tag." },
+      { objective: "O6", q: "Where can you find trusted information about memory?", options: ["A pop-up ad", "MedlinePlus (medlineplus.gov) and your doctor", "A supplement seller", "A social media rumor"], answer: 1, why: "MedlinePlus is a free government health site." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      2,
+      4,
+      7,
+      10,
+      13,
+      16,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Voice reminders",
+        objective: "O1",
+        notYet: "Fewer than two reminders, or they do not repeat.",
+        meets: "Two repeating reminders set by voice, each with what and when.",
+        exceeds: "Marked them done or snoozed them as they came up during the day."
+      },
+      {
+        name: "Things to remember note",
+        objective: "O2",
+        notYet: "No note, or it holds passwords or private numbers.",
+        meets: "A \"Things to remember\" note with at least one item and no private numbers.",
+        exceeds: "The note is pinned and an item was added by voice."
+      },
+      {
+        name: "Photo memory aid",
+        objective: "O3",
+        notYet: "No photo, or a photo of a private card or document.",
+        meets: "One useful photo memory aid, such as where you parked or a label.",
+        exceeds: "Saved in a \"Memory aids\" album and deleted when no longer needed."
+      },
+      {
+        name: "Leaving-the-house checklist",
+        objective: "O4",
+        notYet: "No checklist, or it does not fit your home.",
+        meets: "A short AI checklist edited to fit your home and placed where you will see it.",
+        exceeds: "Used the checklist each time you left the house that day."
+      },
+      {
+        name: "Used for one full day",
+        objective: "O6",
+        notYet: "The tools were set up but not used.",
+        meets: "Used the toolkit for one full day, with a morning and evening check.",
+        exceeds: "Can say which tool helped most and what to change."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who still use their memory routine and reminders at the 30-day follow-up",
+      "Learners who report fewer missed appointments or less worry about forgetting",
+      "Learners who start another Seniors and Technology course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A smartphone with a voice assistant, Notes or Google Keep, and a camera",
+      "A free AI assistant (ChatGPT, Microsoft Copilot or Google Gemini)",
+      "A printer or paper and tape for the checklist (optional)",
+      "About 60 minutes in total, in short, relaxed sessions, plus one full day of practice"
+    ],
+    facilitatorNotes: [
+      "Keep the tone warm and practical; forgetting some things is normal and nothing to be ashamed of.",
+      "Help learners turn on their voice assistant and find the keyboard microphone before Lesson 1.",
+      "Remind learners never to put passwords or private numbers in notes, photos or AI prompts.",
+      "Do not assess memory health; encourage learners or family with concerns to talk with a doctor.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

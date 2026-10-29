@@ -24,11 +24,35 @@ module.exports = {
     "Water rules and permits differ by country, so check with your water authority and extension officer before you dig a borehole, pump from a river or build a large pond. Each lesson takes about five minutes and ends with a task on your own farm. A knowledge check closes each chapter and a 20-question quiz closes the course."
   ],
   finalTask: "Write a one-page irrigation plan for a small plot (your own, or an example such as 200 square metres of tomatoes near Nakuru, or 500 square metres of onions and peppers near Kano): the crop and its thirstiest growth stages, where the water will come from and how much you can store, the drip or other system you will use, a weekly watering schedule with how you will check the soil, how you will avoid waterlogging and salt build-up, and the pump you would choose and why.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Smallholder and growing farmers, farm workers and young farmers in Kenya, Nigeria, Ghana and across Africa who want to grow through dry spells, grow a dry-season crop, or use their water more wisely on small plots of vegetables, maize or seedlings.",
+    startingPoint: "Most depend on rain and water by hand with cans or buckets when they can. Few check soil moisture at root depth, know their crop's thirstiest stages, harvest roof or field runoff, run a drip kit, or know how to size a pump.",
+    gap: "Dry spells at flowering and fruiting cost the most yield, and wasted, dirty or badly managed water leads to disease, waterlogging and salty soil. Planning water for a small plot lets farmers harvest more, grow in the dry season and spend less on water and fuel.",
+    constraints: [
+      "Reading level: plain words and short sentences; every water term is explained",
+      "Devices: a basic phone and a notebook; a small plot to practise on",
+      "Money: low-cost methods first; learners compare supplier prices themselves",
+      "Water rules and permits differ by country: check with the water authority before drilling, damming or pumping",
+      "Safety: ponds and tanks are covered and fenced; drinking water needs treatment advice from the health office"
+    ],
+    prerequisites: "None. \"Soil Health and Fertility\" helps with mulch and drainage."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "For your main crop", action: "name its thirstiest growth stages and check soil moisture at root depth by hand", standard: "deciding correctly whether to water or wait" },
+    { id: "O2", condition: "For your roof and land", action: "estimate how much rain a roof can collect and choose a field method to keep rain on your land", standard: "using about 1 litre per square metre for every millimetre of rain, and planning on less" },
+    { id: "O3", condition: "For harvested water", action: "choose a water store and keep it clean, covered and legal", standard: "with the store covered or fenced and any permit checked" },
+    { id: "O4", condition: "For a plot of about 100 to 500 square metres", action: "set up and look after a gravity drip kit", standard: "with the drum at least 1 metre high, a clean filter and no blocked emitters" },
+    { id: "O5", condition: "Over a growing season", action: "make a weekly watering schedule and spot waterlogging and salt build-up early", standard: "checking the soil before each watering" },
+    { id: "O6", condition: "When water must be lifted or moved", action: "compare treadle, fuel and solar pumps and list what to ask a supplier", standard: "giving the daily water need, lift and distance, and pumping only what the crop needs" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Finding and keeping water",
       lessons: [
         {
+          objectives: ["O1"],
           title: "How much water does your crop need, and when?",
           minutes: 5,
           goal: "Name the thirstiest growth stages of your crop and check soil moisture by hand.",
@@ -46,9 +70,14 @@ module.exports = {
           ],
           sources: [FAO_WATERNEEDS],
           tryIt: "For one crop you grow, write the weeks after planting when it reaches its thirstiest stages. Then check your soil at root depth today with a finger, stick or small hole and write: moist or dry.",
-          youCanNow: "say when your crop needs water most and check soil moisture at root depth."
+          youCanNow: "say when your crop needs water most and check soil moisture at root depth.",
+          quickCheck: [
+            { objective: "O1", q: "When do beans need water most?", options: ["Just after harvest", "At flowering and pod fill", "Only as seeds", "When the pods are dry"], answer: 1, why: "Beans are hurt most by drought at flowering and pod fill." },
+            { objective: "O1", q: "You dig a small hole near the roots. The soil crumbles and feels dry at that depth. What do you do?", options: ["Wait another week", "Water only the leaves", "Add fertilizer instead", "Water the crop now"], answer: 3, why: "If the soil crumbles and feels dry at root depth, it is time to water." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Harvesting rainwater from roofs and fields",
           minutes: 5,
           goal: "Work out how much rain your roof can collect and choose a field method to keep rain on your land.",
@@ -66,9 +95,14 @@ module.exports = {
           ],
           sources: [FAO_HARVEST],
           tryIt: "Measure your house or store roof and find your yearly rainfall. Work out how many litres it could collect in a year. Use your phone calculator, or ask a phone AI assistant to check your sum.",
-          youCanNow: "estimate how much rainwater you can harvest and choose a field method to keep rain on your land."
+          youCanNow: "estimate how much rainwater you can harvest and choose a field method to keep rain on your land.",
+          quickCheck: [
+            { objective: "O2", q: "Which is a field method that keeps rain on your land?", options: ["Planting pits or contour ridges", "Burning the grass", "Ploughing up and down the slope", "Leaving the soil bare"], answer: 0, why: "Planting pits, bunds and contour ridges catch rain where it falls." },
+            { objective: "O2", q: "In the next storm, water rushes along your farm road. What could you do with it?", options: ["Let it wash into the river", "Block the road", "Lead it into a lined water pan or farm pond", "Dig a hole in the middle of the road"], answer: 2, why: "Runoff from roads and paths can be led into a lined water pan or pond for later use." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Storing water safely",
           minutes: 4,
           goal: "Choose a water store and keep it clean, covered and legal.",
@@ -86,17 +120,21 @@ module.exports = {
           ],
           sources: [WRA],
           tryIt: "Write which store suits your farm and your budget, how you will cover and fence it, and the name of the office in your country that you would ask before drilling or pumping.",
-          youCanNow: "choose a water store, keep it safe, and know when you need a permit."
+          youCanNow: "choose a water store, keep it safe, and know when you need a permit.",
+          quickCheck: [
+            { objective: "O3", q: "Which store loses the most water unless it is lined and covered?", options: ["A covered plastic tank", "A ferro-cement tank", "An underground tank", "An open, unlined farm pond"], answer: 3, why: "Ponds lose water into the ground unless lined, and to the sun unless shaded or covered." },
+            { objective: "O3", q: "You want to use some stored rainwater for drinking. What do you do?", options: ["Drink it straight from the pond", "Ask your health office how to treat it", "Add fertilizer to clean it", "Use the first-flush water"], answer: 1, why: "Drinking water needs more care than water for crops; ask the health office how to treat it." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Finding and keeping water",
         questions: [
-          { q: "When does maize suffer most from drought?", options: ["At tasselling and silking", "Right after harvest", "Before planting", "When the cobs are dry"], answer: 0, why: "Flowering stages are the most sensitive; a dry spell then costs the most yield." },
-          { q: "How should you check if a crop needs water?", options: ["Look only at the top of the soil", "Wait until leaves die", "Check moisture at root depth with a finger, stick or small hole", "Water every hour"], answer: 2, why: "The roots feel the soil below the surface, so check there." },
-          { q: "A roof is 40 square metres and gets 500 mm of rain a year. About how much could it collect at most?", options: ["200 litres", "2,000 litres", "540 litres", "20,000 litres"], answer: 3, why: "40 x 500 = 20,000 litres; real collection will be a bit less." },
-          { q: "What does a first-flush pipe do?", options: ["Pumps water uphill", "Throws away the first, dirtiest rain from the roof", "Heats the water", "Measures rainfall"], answer: 1, why: "It keeps dust and droppings out of the tank." },
-          { q: "Why cover a water tank or pond?", options: ["To keep out dirt and animals and stop mosquitoes breeding", "To make the water warmer", "To make it heavier", "Covers are not useful"], answer: 0, why: "Covering keeps water clean and safe." }
+          { objective: "O1", q: "When does maize suffer most from drought?", options: ["At tasselling and silking", "Right after harvest", "Before planting", "When the cobs are dry"], answer: 0, why: "Flowering stages are the most sensitive; a dry spell then costs the most yield." },
+          { objective: "O1", q: "How should you check if a crop needs water?", options: ["Look only at the top of the soil", "Wait until leaves die", "Check moisture at root depth with a finger, stick or small hole", "Water every hour"], answer: 2, why: "The roots feel the soil below the surface, so check there." },
+          { objective: "O2", q: "A roof is 40 square metres and gets 500 mm of rain a year. About how much could it collect at most?", options: ["200 litres", "2,000 litres", "540 litres", "20,000 litres"], answer: 3, why: "40 x 500 = 20,000 litres; real collection will be a bit less." },
+          { objective: "O2", q: "What does a first-flush pipe do?", options: ["Pumps water uphill", "Throws away the first, dirtiest rain from the roof", "Heats the water", "Measures rainfall"], answer: 1, why: "It keeps dust and droppings out of the tank." },
+          { objective: "O3", q: "Why cover a water tank or pond?", options: ["To keep out dirt and animals and stop mosquitoes breeding", "To make the water warmer", "To make it heavier", "Covers are not useful"], answer: 0, why: "Covering keeps water clean and safe." }
         ]
       }
     },
@@ -104,6 +142,7 @@ module.exports = {
       name: "Chapter 2: Putting water on the crop",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Low-cost drip irrigation",
           minutes: 6,
           goal: "Set up and look after a bucket or drum drip kit for a small plot.",
@@ -121,9 +160,14 @@ module.exports = {
           ],
           sources: [FAO_DRIP],
           tryIt: "Sketch a drip layout for a small plot: where the drum stands (at least 1 m high), the filter, the main pipe and each drip line. Then ask two suppliers or agro-dealers the price of a kit for that size and write both down.",
-          youCanNow: "set up, run and look after a low-cost gravity drip kit."
+          youCanNow: "set up, run and look after a low-cost gravity drip kit.",
+          quickCheck: [
+            { objective: "O4", q: "What is an emitter on a drip line?", options: ["The water tank", "The pump", "A small hole or dripper that lets water out at each plant", "The filter"], answer: 2, why: "Emitters are the small holes that drip water at the base of each plant." },
+            { objective: "O4", q: "Your water comes from a muddy pond. How do you protect your drip kit?", options: ["Keep the filter in place, clean it often and flush the line ends", "Remove the filter so water flows faster", "Never check the emitters", "Run the kit only at noon"], answer: 0, why: "Clean water, a clean filter and regular flushing prevent clogging, the main drip problem." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Scheduling: without waterlogging or salt",
           minutes: 5,
           goal: "Make a weekly watering schedule and spot waterlogging and salt build-up early.",
@@ -141,9 +185,14 @@ module.exports = {
           ],
           sources: [FAO_WATERNEEDS, FAO_SALINITY],
           tryIt: "Write a one-week watering schedule for one crop: days, time of day and how long. Next to it, write the two warning signs of waterlogging and the two of salt build-up you will look for each time you water.",
-          youCanNow: "schedule irrigation and spot waterlogging and salt build-up before they ruin a crop."
+          youCanNow: "schedule irrigation and spot waterlogging and salt build-up before they ruin a crop.",
+          quickCheck: [
+            { objective: "O5", q: "What does a watering schedule decide?", options: ["Which seed to buy", "When to water and how much", "Where to sell", "Which pump to buy"], answer: 1, why: "A schedule answers when to water and how much, and the soil check has the final word." },
+            { objective: "O5", q: "You water with borehole water in a dry area, and growth gets poorer each season. What do you do?", options: ["Water twice as much", "Stop all watering", "Add more fertilizer", "Ask your extension officer or a soil lab to test the water and soil"], answer: 3, why: "Borehole water in dry areas can bring salt; a water and soil test shows what is wrong." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Choosing a pump, including solar pumps",
           minutes: 5,
           goal: "Compare treadle, fuel and solar pumps and list what to ask a supplier.",
@@ -162,17 +211,21 @@ module.exports = {
           ],
           sources: [FAO_SOLAR, WRA],
           tryIt: "Final task: write your one-page irrigation plan. Include your crop's thirsty stages, your water source and storage, your drip or other system, a weekly schedule, how you will avoid waterlogging and salt, and the pump you would choose with your lift, distance and daily water need.",
-          youCanNow: "choose the right kind of pump and put together a full irrigation plan for a small plot."
+          youCanNow: "choose the right kind of pump and put together a full irrigation plan for a small plot.",
+          quickCheck: [
+            { objective: "O6", q: "Which pump uses your own effort and suits a small plot near shallow water?", options: ["A treadle or hand pump", "A large diesel pump", "A big solar system", "No pump at all"], answer: 0, why: "Treadle and hand pumps are cheap and suit small plots near shallow water." },
+            { objective: "O6", q: "Your new solar pump can run all day for free, but the river is getting low. What do you do?", options: ["Pump all day because it is free", "Sell the extra water", "Pump only what the crop needs and share water fairly with neighbours", "Move the pump further upstream"], answer: 2, why: "Free pumping can take too much water; pump only what the crop needs and follow the water authority's rules." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Putting water on the crop",
         questions: [
-          { q: "What is the main problem to prevent with drip kits?", options: ["Too much pressure", "Clogged emitters", "Too many plants", "Wet leaves"], answer: 1, why: "Dirt blocks emitters; a clean filter and flushing prevent it." },
-          { q: "How high should the drum of a gravity drip kit be raised?", options: ["On the ground", "Buried below the beds", "At least 1 metre above the beds", "It does not matter"], answer: 2, why: "FAO says drums should be raised at least 1 metre to give enough pressure." },
-          { q: "Plants are yellow and wilting, the soil smells sour and water is standing. What is wrong?", options: ["Too little water", "Too much sun", "Salt in the air", "Waterlogging"], answer: 3, why: "Standing water and a sour smell mean roots have no air." },
-          { q: "You see a white crust on the soil and burnt leaf edges. What should you do?", options: ["Ask for a water and soil test and improve drainage", "Water much more every day", "Add more salt", "Ignore it"], answer: 0, why: "These are signs of salt build-up; FAO links it to over-irrigation and poor drainage." },
-          { q: "Why does FAO warn about solar pumps?", options: ["They never work", "They are too noisy", "Free pumping can lead to taking too much water", "They need petrol"], answer: 2, why: "With almost no running cost, farmers may over-pump rivers and groundwater." }
+          { objective: "O4", q: "What is the main problem to prevent with drip kits?", options: ["Too much pressure", "Clogged emitters", "Too many plants", "Wet leaves"], answer: 1, why: "Dirt blocks emitters; a clean filter and flushing prevent it." },
+          { objective: "O4", q: "How high should the drum of a gravity drip kit be raised?", options: ["On the ground", "Buried below the beds", "At least 1 metre above the beds", "It does not matter"], answer: 2, why: "FAO says drums should be raised at least 1 metre to give enough pressure." },
+          { objective: "O5", q: "Plants are yellow and wilting, the soil smells sour and water is standing. What is wrong?", options: ["Too little water", "Too much sun", "Salt in the air", "Waterlogging"], answer: 3, why: "Standing water and a sour smell mean roots have no air." },
+          { objective: "O5", q: "You see a white crust on the soil and burnt leaf edges. What should you do?", options: ["Ask for a water and soil test and improve drainage", "Water much more every day", "Add more salt", "Ignore it"], answer: 0, why: "These are signs of salt build-up; FAO links it to over-irrigation and poor drainage." },
+          { objective: "O6", q: "Why does FAO warn about solar pumps?", options: ["They never work", "They are too noisy", "Free pumping can lead to taking too much water", "They need petrol"], answer: 2, why: "With almost no running cost, farmers may over-pump rivers and groundwater." }
         ]
       }
     }
@@ -180,26 +233,113 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Irrigation and Water Management",
     questions: [
-      { q: "According to FAO, a crop's water need depends on:", options: ["Only the price of water", "Climate, crop type and growth stage", "The colour of the crop", "The day of the week"], answer: 1, why: "FAO lists climate, crop type and growth stage." },
-      { q: "Which weather makes crops use the most water?", options: ["Cool and cloudy", "Still and misty", "Hot, sunny, dry and windy", "Cold and wet"], answer: 2, why: "Heat, sun, dry air and wind increase water use." },
-      { q: "Tomatoes are most sensitive to water stress at:", options: ["Flowering and fruit set", "Seed buying", "After the last harvest", "When the field is bare"], answer: 0, why: "Flowering and fruit set are the thirstiest stages." },
-      { q: "Effective rainfall is:", options: ["All the rain that falls", "Rain that falls at night", "Rain measured by the radio", "The part of the rain the crop can actually use"], answer: 3, why: "Some rain runs off or drains too deep; the rest is effective." },
-      { q: "About how much water does 1 mm of rain give on 1 square metre of roof?", options: ["1 litre", "10 litres", "100 litres", "1,000 litres"], answer: 0, why: "1 mm on 1 square metre is about 1 litre." },
-      { q: "A zai pit is:", options: ["A borehole", "A small planting pit with manure that catches rain at the roots", "A type of pump", "A water tank"], answer: 1, why: "Zai pits concentrate rain and nutrients at the plant." },
-      { q: "Why line a farm pond?", options: ["To make the water salty", "To attract animals", "To stop water leaking into the ground", "Lining is never needed"], answer: 2, why: "Unlined ponds lose much water into the soil." },
-      { q: "Why should farm ponds be fenced?", options: ["To keep children and animals safe", "To make them deeper", "To stop rain", "To heat the water"], answer: 0, why: "Open ponds are a drowning risk." },
-      { q: "In Kenya, which body issues water use permits, for example for boreholes?", options: ["Kenya Bureau of Standards", "Kenya Revenue Authority", "Kenya Power", "Water Resources Authority (WRA)"], answer: 3, why: "WRA regulates water use and issues permits." },
-      { q: "A key benefit of drip irrigation is:", options: ["It wets the leaves", "Water goes to the roots with less lost", "It needs no water", "It makes weeds grow faster"], answer: 1, why: "Drip delivers water at the roots with little waste." },
-      { q: "FAO describes family drip kits as suited to plots of about:", options: ["1 to 5 square metres", "100 hectares", "Any size of whole county", "100 to 500 square metres"], answer: 3, why: "FAO's handbook covers simplified family drip for about 100 to 500 square metres." },
-      { q: "One plant in your drip line is dry. The most likely cause is:", options: ["A blocked emitter", "Too much sun on the drum", "The plant is too green", "The filter is too clean"], answer: 0, why: "A dry plant usually means its emitter is blocked." },
-      { q: "Why put mulch over drip lines?", options: ["To hide them from the sun only", "To make the water hotter", "To block the emitters", "To cut evaporation from the soil"], answer: 3, why: "Mulch keeps soil moisture from evaporating." },
-      { q: "The best time of day to irrigate is usually:", options: ["Midday in full sun", "Early morning or late afternoon", "Only at midnight", "Any time; it makes no difference"], answer: 1, why: "Less water is lost to the sun in the cool parts of the day." },
-      { q: "It rained well last night. Your schedule says water today. What do you do?", options: ["Water double", "Water as planned anyway", "Check the soil; skip if it is moist at root depth", "Drain the field"], answer: 2, why: "The soil has the final word; skip after good rain." },
-      { q: "On heavy clay that waterlogs easily, a good practice is:", options: ["Flood the field", "Add more water", "Plant in a hollow", "Raised beds or ridges and open drains"], answer: 3, why: "Raised beds and drains let extra water leave." },
-      { q: "According to FAO, a common cause of salt build-up in irrigated soil is:", options: ["Mulching", "Planting legumes", "Over-irrigation and poor drainage", "Using a filter"], answer: 2, why: "More salt comes in than drains away when there is too much water and poor drainage." },
-      { q: "To size a pump, a supplier needs to know:", options: ["Your favourite colour", "Daily water need, lift and distance", "Only your budget", "Your bank PIN"], answer: 1, why: "Water need, lift and distance decide the right pump." },
-      { q: "Compared with a petrol pump, a solar pump usually:", options: ["Costs more to buy but very little to run", "Costs less to buy and more to run", "Needs diesel", "Works only at night"], answer: 0, why: "Solar pumps have a higher purchase price but use free sunlight." },
-      { q: "A supplier offers a pay-as-you-go solar pump. What should you do first?", options: ["Sign at once", "Give them your PIN", "Read the full price, terms, warranty and service in writing", "Buy two"], answer: 2, why: "Know the full cost and what support you get before you sign." }
+      { objective: "O1", q: "According to FAO, a crop's water need depends on:", options: ["Only the price of water", "Climate, crop type and growth stage", "The colour of the crop", "The day of the week"], answer: 1, why: "FAO lists climate, crop type and growth stage." },
+      { objective: "O1", q: "Which weather makes crops use the most water?", options: ["Cool and cloudy", "Still and misty", "Hot, sunny, dry and windy", "Cold and wet"], answer: 2, why: "Heat, sun, dry air and wind increase water use." },
+      { objective: "O1", q: "Tomatoes are most sensitive to water stress at:", options: ["Flowering and fruit set", "Seed buying", "After the last harvest", "When the field is bare"], answer: 0, why: "Flowering and fruit set are the thirstiest stages." },
+      { objective: "O1", q: "Effective rainfall is:", options: ["All the rain that falls", "Rain that falls at night", "Rain measured by the radio", "The part of the rain the crop can actually use"], answer: 3, why: "Some rain runs off or drains too deep; the rest is effective." },
+      { objective: "O2", q: "About how much water does 1 mm of rain give on 1 square metre of roof?", options: ["1 litre", "10 litres", "100 litres", "1,000 litres"], answer: 0, why: "1 mm on 1 square metre is about 1 litre." },
+      { objective: "O2", q: "A zai pit is:", options: ["A borehole", "A small planting pit with manure that catches rain at the roots", "A type of pump", "A water tank"], answer: 1, why: "Zai pits concentrate rain and nutrients at the plant." },
+      { objective: "O3", q: "Why line a farm pond?", options: ["To make the water salty", "To attract animals", "To stop water leaking into the ground", "Lining is never needed"], answer: 2, why: "Unlined ponds lose much water into the soil." },
+      { objective: "O3", q: "Why should farm ponds be fenced?", options: ["To keep children and animals safe", "To make them deeper", "To stop rain", "To heat the water"], answer: 0, why: "Open ponds are a drowning risk." },
+      { objective: "O3", q: "In Kenya, which body issues water use permits, for example for boreholes?", options: ["Kenya Bureau of Standards", "Kenya Revenue Authority", "Kenya Power", "Water Resources Authority (WRA)"], answer: 3, why: "WRA regulates water use and issues permits." },
+      { objective: "O4", q: "A key benefit of drip irrigation is:", options: ["It wets the leaves", "Water goes to the roots with less lost", "It needs no water", "It makes weeds grow faster"], answer: 1, why: "Drip delivers water at the roots with little waste." },
+      { objective: "O4", q: "FAO describes family drip kits as suited to plots of about:", options: ["1 to 5 square metres", "100 hectares", "Any size of whole county", "100 to 500 square metres"], answer: 3, why: "FAO's handbook covers simplified family drip for about 100 to 500 square metres." },
+      { objective: "O4", q: "One plant in your drip line is dry. The most likely cause is:", options: ["A blocked emitter", "Too much sun on the drum", "The plant is too green", "The filter is too clean"], answer: 0, why: "A dry plant usually means its emitter is blocked." },
+      { objective: "O4", q: "Why put mulch over drip lines?", options: ["To hide them from the sun only", "To make the water hotter", "To block the emitters", "To cut evaporation from the soil"], answer: 3, why: "Mulch keeps soil moisture from evaporating." },
+      { objective: "O5", q: "The best time of day to irrigate is usually:", options: ["Midday in full sun", "Early morning or late afternoon", "Only at midnight", "Any time; it makes no difference"], answer: 1, why: "Less water is lost to the sun in the cool parts of the day." },
+      { objective: "O5", q: "It rained well last night. Your schedule says water today. What do you do?", options: ["Water double", "Water as planned anyway", "Check the soil; skip if it is moist at root depth", "Drain the field"], answer: 2, why: "The soil has the final word; skip after good rain." },
+      { objective: "O5", q: "On heavy clay that waterlogs easily, a good practice is:", options: ["Flood the field", "Add more water", "Plant in a hollow", "Raised beds or ridges and open drains"], answer: 3, why: "Raised beds and drains let extra water leave." },
+      { objective: "O5", q: "According to FAO, a common cause of salt build-up in irrigated soil is:", options: ["Mulching", "Planting legumes", "Over-irrigation and poor drainage", "Using a filter"], answer: 2, why: "More salt comes in than drains away when there is too much water and poor drainage." },
+      { objective: "O6", q: "To size a pump, a supplier needs to know:", options: ["Your favourite colour", "Daily water need, lift and distance", "Only your budget", "Your bank PIN"], answer: 1, why: "Water need, lift and distance decide the right pump." },
+      { objective: "O6", q: "Compared with a petrol pump, a solar pump usually:", options: ["Costs more to buy but very little to run", "Costs less to buy and more to run", "Needs diesel", "Works only at night"], answer: 0, why: "Solar pumps have a higher purchase price but use free sunlight." },
+      { objective: "O6", q: "A supplier offers a pay-as-you-go solar pump. What should you do first?", options: ["Sign at once", "Give them your PIN", "Read the full price, terms, warranty and service in writing", "Buy two"], answer: 2, why: "Know the full cost and what support you get before you sign." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      2,
+      4,
+      6,
+      8,
+      9,
+      11,
+      13,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part of the plan and check it again.",
+    criteria: [
+      {
+        name: "Crop and thirsty stages",
+        objective: "O1",
+        notYet: "The crop's thirstiest stages are missing or wrong.",
+        meets: "Names the crop and its thirstiest growth stages, with how the soil will be checked.",
+        exceeds: "Notes the planting date so the thirsty stages are on the calendar."
+      },
+      {
+        name: "Water source and storage",
+        objective: "O2",
+        notYet: "No water source, or no estimate of how much can be stored.",
+        meets: "Water source, a roof or runoff estimate, and a covered store, with any permit checked.",
+        exceeds: "Includes a field method such as planting pits to keep rain on the land."
+      },
+      {
+        name: "Irrigation system",
+        objective: "O4",
+        notYet: "No system, or no plan to prevent clogging.",
+        meets: "A drip or other system that fits the plot, with drum height, filter and flushing.",
+        exceeds: "Includes mulch over the lines and a list of spare parts."
+      },
+      {
+        name: "Schedule and soil checks",
+        objective: "O5",
+        notYet: "No schedule, or watering at noon with no soil check.",
+        meets: "A weekly schedule with time of day, more water at thirsty stages, and a soil check before watering.",
+        exceeds: "Says what to do after good rain and in hot, windy weeks."
+      },
+      {
+        name: "Waterlogging and salt",
+        objective: "O5",
+        notYet: "No plan for waterlogging or salt.",
+        meets: "Signs to watch for and steps such as drains, raised beds and not over-watering.",
+        exceeds: "Plans a water and soil test if using borehole water in a dry area."
+      },
+      {
+        name: "Pump choice",
+        objective: "O6",
+        notYet: "No pump choice, or no reason.",
+        meets: "A pump type with its reason, the daily water need, lift and distance.",
+        exceeds: "Lists warranty, spare parts and service to ask for in writing."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and score Meets or Exceeds on every rubric row of the irrigation plan",
+      "Learners who report setting up rainwater storage or a drip kit within one season (follow-up survey)",
+      "Learners who report growing a dry-season crop or less yield lost in a dry spell",
+      "Learners who start another Koach Learn farming course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A notebook, pen and a basic phone with a calculator",
+      "A small plot to practise soil moisture checks",
+      "A low-cost drip kit or bucket, if available, for a demonstration",
+      "About 60 minutes in total, in short sessions, plus time to write the irrigation plan"
+    ],
+    facilitatorNotes: [
+      "In a farmer group or field school: take the pre-test together, then do soil moisture checks in a real plot.",
+      "Work out one roof catchment estimate together using a real roof on site.",
+      "Set up a bucket or drum drip kit as a group and practise cleaning the filter and flushing the lines.",
+      "Remind learners to check water permits with their water authority and to fence and cover ponds and tanks.",
+      "Score the irrigation plan with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

@@ -19,11 +19,35 @@ module.exports = {
     "Each lesson takes about five minutes and ends with a task you do right away. There is a knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Write a one-page capability statement for your business with four parts: core competencies, past performance, what makes you different, and company data (legal name, UEI, NAICS codes, certifications, contact details). Then find one real opportunity on SAM.gov or Cal eProcure that matches a NAICS code on your statement.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Small business owners, many of them minority, women and veteran owners in California, who sell services or products such as cleaning, catering, construction, landscaping, printing, IT, training or trucking and want to sell to federal, state and local government.",
+    startingPoint: "Run a working business with customers and know their own services well. Most have never registered in SAM.gov, looked up a NAICS code or read a government solicitation.",
+    gap: "Government buyers spend a lot with small and certified businesses, but the registration steps, codes and long solicitations keep many owners out, and scam companies charge for free registrations. Learners need to register themselves for free, find bids that fit, decide when to bid and introduce their business with a capability statement.",
+    constraints: [
+      "Rules, size standards and certification limits change; learners check SAM.gov, SBA and the California Department of General Services",
+      "Privacy: bank details and EIN go only into SAM.gov, never into an AI tool or email",
+      "Scam risk: official-looking offers to register or renew for a fee",
+      "Time: about 60 minutes in total, plus time for the real registration",
+      "Plain words for owners who are new to government buying"
+    ],
+    prerequisites: "A registered business with a legal name, address and EIN or tax ID."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given your business's legal name, address, EIN and bank details", action: "register your business in SAM.gov yourself and get a UEI", standard: "for free, renewing every 365 days and ignoring paid registration offers" },
+    { id: "O2", condition: "Using the Census NAICS page and SBA's Size Standards Tool", action: "choose a primary NAICS code and check whether your business counts as small for it", standard: "with the code matching your main service" },
+    { id: "O3", condition: "Given the basic rules for SBA and California certifications", action: "identify which certifications your business might qualify for and where to apply", standard: "naming the right site for each one" },
+    { id: "O4", condition: "Using SAM.gov and Cal eProcure", action: "find and save a search for opportunities that match your NAICS codes", standard: "so new matches come to your email" },
+    { id: "O5", condition: "Given a solicitation", action: "find its statement of work, instructions, evaluation criteria and due date, and decide whether to bid", standard: "answering every bid or no-bid question" },
+    { id: "O6", condition: "For government buyers and prime contractors", action: "write a one-page capability statement with core competencies, past performance, differentiators and company data", standard: "with no private numbers such as bank details or EIN" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Getting ready to sell to the government",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Registering in SAM.gov and getting a UEI",
           minutes: 6,
           goal: "Gather what you need and register your business in SAM.gov yourself, for free.",
@@ -46,9 +70,14 @@ module.exports = {
             { name: "SBA: Basic requirements for government contracting", url: "https://www.sba.gov/federal-contracting/contracting-guide/basic-requirements" }
           ],
           tryIt: "Make a SAM.gov registration checklist for your business: legal name, physical address, EIN, bank details, contact person. Mark which you already have. If you are already registered, look up your expiration date and set a renewal reminder.",
-          youCanNow: "get ready for and complete a free SAM.gov registration, explain what a UEI is, and spot paid registration scams."
+          youCanNow: "get ready for and complete a free SAM.gov registration, explain what a UEI is, and spot paid registration scams.",
+          quickCheck: [
+            { objective: "O1", q: "What must your legal name and address in SAM.gov match?", options: ["What the IRS has for your business", "Your social media page", "Your logo", "Your personal mailing address"], answer: 0, why: "Your legal name and address must match the IRS exactly." },
+            { objective: "O1", q: "You are stuck on a SAM.gov registration step. Where can you get free help?", options: ["A company that emailed you offering help for $300", "An APEX Accelerator", "An AI tool, by pasting in your bank details", "Nowhere; you must pay someone"], answer: 1, why: "APEX Accelerators give free help; you never have to pay to register." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Choosing NAICS codes and checking your size",
           minutes: 5,
           goal: "Pick a primary NAICS code and check whether your business counts as small for it.",
@@ -70,9 +99,14 @@ module.exports = {
             { name: "US Census Bureau: NAICS", url: "https://www.census.gov/naics/" }
           ],
           tryIt: "Search census.gov/naics for your main service and write down your primary NAICS code and two more. Then check one of them in SBA's Size Standards Tool and write whether your business counts as small.",
-          youCanNow: "choose NAICS codes for your business and check whether you count as small for each one."
+          youCanNow: "choose NAICS codes for your business and check whether you count as small for each one.",
+          quickCheck: [
+            { objective: "O2", q: "How many NAICS codes is each government contract given?", options: ["None", "Ten", "One", "As many as the bidder wants"], answer: 2, why: "Each contract is given one NAICS code, and buyers search by code." },
+            { objective: "O2", q: "You run a cleaning company that also sells some supplies. How do you choose codes?", options: ["Pick one code at random", "Pick only the supplies code", "Skip codes; buyers search by name", "Choose cleaning as the primary code and add others for what else you sell"], answer: 3, why: "Choose one primary code for your main service and add others for other things you sell." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "SBA and California certifications",
           minutes: 6,
           goal: "Decide which federal and California certifications your business might qualify for.",
@@ -97,17 +131,21 @@ module.exports = {
             { name: "California DGS: Apply for Small Business and DVBE certification", url: "https://www.dgs.ca.gov/PD/Services/Page-Content/Procurement-Division-Services-List-Folder/Apply-for-or-Re-apply-as-Small-Business-Disabled-Veteran-Business-Enterprise" }
           ],
           tryIt: "Make a table of the six certifications in this lesson (8(a), HUBZone, WOSB, VOSB or SDVOSB, California SB, California DVBE). For each, write yes, maybe or no for your business, and the one rule that decides it. Circle the one you will look into first.",
-          youCanNow: "name the main SBA and California certifications, check which ones your business might qualify for, and know where to apply."
+          youCanNow: "name the main SBA and California certifications, check which ones your business might qualify for, and know where to apply.",
+          quickCheck: [
+            { objective: "O3", q: "Where do you apply for federal SBA certifications?", options: ["certifications.sba.gov", "census.gov/naics", "Any county office", "A private website that charges a fee"], answer: 0, why: "Federal certifications are applied for at certifications.sba.gov." },
+            { objective: "O3", q: "You are a disabled veteran who owns a California business. Which state certification should you look into?", options: ["HUBZone", "DVBE through Cal eProcure", "WOSB", "None; California has no certifications"], answer: 1, why: "California's DVBE is for businesses at least 51% owned and managed by disabled veterans." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Getting ready to sell to the government",
         questions: [
-          { q: "What do you get when you register in SAM.gov?", options: ["A bank loan", "A Unique Entity ID (UEI)", "A guaranteed contract", "A business license"], answer: 1, why: "SAM.gov registration gives your business a 12-character Unique Entity ID." },
-          { q: "A company emails that it will renew your SAM.gov registration for $500. What do you do?", options: ["Pay quickly before it expires", "Send them your EIN and bank details", "Reply with your password", "Ignore it and renew yourself for free at sam.gov"], answer: 3, why: "SAM.gov registration is free; you never have to pay a third party." },
-          { q: "How often must you renew your SAM.gov registration?", options: ["Every 365 days", "Every 10 years", "Never", "Every week"], answer: 0, why: "SAM.gov says you must renew every 365 days to stay active." },
-          { q: "What does a NAICS code describe?", options: ["Your bank account", "Your home address", "What kind of business you are and what you sell", "Your credit score"], answer: 2, why: "NAICS codes sort businesses by their products or services." },
-          { q: "Your main office is in a HUBZone and 40% of your workers live in one. Which certification should you look into?", options: ["WOSB", "DVBE", "8(a) only", "HUBZone"], answer: 3, why: "HUBZone needs a main office in a HUBZone and at least 35% of employees living in one." }
+          { objective: "O1", q: "What do you get when you register in SAM.gov?", options: ["A bank loan", "A Unique Entity ID (UEI)", "A guaranteed contract", "A business license"], answer: 1, why: "SAM.gov registration gives your business a 12-character Unique Entity ID." },
+          { objective: "O1", q: "A company emails that it will renew your SAM.gov registration for $500. What do you do?", options: ["Pay quickly before it expires", "Send them your EIN and bank details", "Reply with your password", "Ignore it and renew yourself for free at sam.gov"], answer: 3, why: "SAM.gov registration is free; you never have to pay a third party." },
+          { objective: "O1", q: "How often must you renew your SAM.gov registration?", options: ["Every 365 days", "Every 10 years", "Never", "Every week"], answer: 0, why: "SAM.gov says you must renew every 365 days to stay active." },
+          { objective: "O2", q: "What does a NAICS code describe?", options: ["Your bank account", "Your home address", "What kind of business you are and what you sell", "Your credit score"], answer: 2, why: "NAICS codes sort businesses by their products or services." },
+          { objective: "O3", q: "Your main office is in a HUBZone and 40% of your workers live in one. Which certification should you look into?", options: ["WOSB", "DVBE", "8(a) only", "HUBZone"], answer: 3, why: "HUBZone needs a main office in a HUBZone and at least 35% of employees living in one." }
         ]
       }
     },
@@ -115,6 +153,7 @@ module.exports = {
       name: "Chapter 2: Finding and winning contracts",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Finding opportunities",
           minutes: 5,
           goal: "Search SAM.gov and Cal eProcure for opportunities that match your NAICS codes and save the search.",
@@ -137,9 +176,14 @@ module.exports = {
             { name: "Cal eProcure: Find bid opportunities", url: "https://caleprocure.ca.gov/pages/Events-BS3/event-search.aspx" }
           ],
           tryIt: "Search SAM.gov Contract Opportunities using your primary NAICS code and your state. Write down two opportunities: the agency, what they want, the set-aside and the due date. Save the search.",
-          youCanNow: "find federal and California contract opportunities that match your codes and set up alerts."
+          youCanNow: "find federal and California contract opportunities that match your codes and set up alerts.",
+          quickCheck: [
+            { objective: "O4", q: "Where do California state agencies post bids?", options: ["SAM.gov only", "Social media", "Cal eProcure", "The Census Bureau"], answer: 2, why: "California state agencies post bids on Cal eProcure." },
+            { objective: "O4", q: "You find a huge contract far outside your area that you could not handle. What do you do?", options: ["Bid anyway", "Ask AI to bid for you", "Copy another company's offer", "Look for opportunities that match what you do well at a size you can handle"], answer: 3, why: "Look for work you do well, in an area you can serve, at a size you can handle." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Reading a solicitation",
           minutes: 6,
           goal: "Read a solicitation's key parts and decide whether to bid.",
@@ -158,9 +202,14 @@ module.exports = {
             { title: "Follow every instruction", bullets: ["One miss can get you rejected", "Make a checklist and tick each item"] }
           ],
           tryIt: "Open one of the opportunities you found in the last lesson. Write down the statement of work in one sentence, the evaluation criteria, the due date and time, and the questions deadline. Then answer the four bid or no-bid questions and decide.",
-          youCanNow: "find the key parts of a solicitation and make a clear bid or no-bid decision."
+          youCanNow: "find the key parts of a solicitation and make a clear bid or no-bid decision.",
+          quickCheck: [
+            { objective: "O5", q: "Which is another name for a solicitation?", options: ["Request for Proposal (RFP)", "Capability statement", "UEI", "Size standard"], answer: 0, why: "A solicitation may be called an RFQ, RFP or IFB." },
+            { objective: "O5", q: "The instructions set a 10-page limit. What do you do?", options: ["Send 15 pages to show more", "Add it to your checklist and tick it before you submit", "Let AI decide the length", "Ignore it; it is only a suggestion"], answer: 1, why: "Missing one instruction, such as a page limit, can get your offer rejected." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Writing a capability statement",
           minutes: 6,
           goal: "Write a one-page capability statement that tells a buyer what you do and how to reach you.",
@@ -179,17 +228,21 @@ module.exports = {
             { title: "Using AI to polish", bullets: ["Shorten and clarify bullets", "No bank details or EIN in prompts", "UEI and NAICS codes are fine to show"] }
           ],
           tryIt: "Final task: write your one-page capability statement with core competencies, past performance, differentiators and company data. Then find one real opportunity on SAM.gov or Cal eProcure that matches a NAICS code on your statement and write down its title and due date.",
-          youCanNow: "write a one-page capability statement and match it to real government opportunities."
+          youCanNow: "write a one-page capability statement and match it to real government opportunities.",
+          quickCheck: [
+            { objective: "O6", q: "How long should a capability statement be?", options: ["Ten pages", "As long as possible", "One page", "One sentence"], answer: 2, why: "It is a one-page summary that is easy to scan." },
+            { objective: "O6", q: "You are writing your company data section. What do you leave out?", options: ["Your UEI", "Your NAICS codes", "Your contact details", "Your bank details and EIN"], answer: 3, why: "UEI and NAICS codes are fine to show; private numbers like bank details and EIN are not." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Finding and winning contracts",
         questions: [
-          { q: "Where do federal agencies post contract opportunities?", options: ["SAM.gov", "A social media site", "Your bank's website", "The DMV"], answer: 0, why: "Federal contract opportunities are posted on SAM.gov." },
-          { q: "Which part of a solicitation tells you how the winner will be chosen?", options: ["The cover page", "The evaluation criteria", "The agency logo", "The page numbers"], answer: 1, why: "The evaluation criteria explain how offers are judged." },
-          { q: "You cannot deliver by the required date. What is the smart decision?", options: ["Bid anyway and hope", "Promise and be late", "Decide not to bid on this one", "Ignore the date"], answer: 2, why: "If you cannot meet a key requirement, a no-bid protects your reputation." },
-          { q: "Which belongs in the company data part of a capability statement?", options: ["Your bank account number", "Your EIN", "Your password", "Your UEI and NAICS codes"], answer: 3, why: "UEI, NAICS codes, certifications and contact details help buyers find and check you." },
-          { q: "What is a good way for a new small business to start?", options: ["Only bid on the largest contracts", "Subcontract to a prime contractor", "Pay someone to win contracts for you", "Wait for the government to call"], answer: 1, why: "Subcontracting builds past performance with less risk." }
+          { objective: "O4", q: "Where do federal agencies post contract opportunities?", options: ["SAM.gov", "A social media site", "Your bank's website", "The DMV"], answer: 0, why: "Federal contract opportunities are posted on SAM.gov." },
+          { objective: "O5", q: "Which part of a solicitation tells you how the winner will be chosen?", options: ["The cover page", "The evaluation criteria", "The agency logo", "The page numbers"], answer: 1, why: "The evaluation criteria explain how offers are judged." },
+          { objective: "O5", q: "You cannot deliver by the required date. What is the smart decision?", options: ["Bid anyway and hope", "Promise and be late", "Decide not to bid on this one", "Ignore the date"], answer: 2, why: "If you cannot meet a key requirement, a no-bid protects your reputation." },
+          { objective: "O6", q: "Which belongs in the company data part of a capability statement?", options: ["Your bank account number", "Your EIN", "Your password", "Your UEI and NAICS codes"], answer: 3, why: "UEI, NAICS codes, certifications and contact details help buyers find and check you." },
+          { objective: "O6", q: "What is a good way for a new small business to start?", options: ["Only bid on the largest contracts", "Subcontract to a prime contractor", "Pay someone to win contracts for you", "Wait for the government to call"], answer: 1, why: "Subcontracting builds past performance with less risk." }
         ]
       }
     }
@@ -197,26 +250,103 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Winning Government Contracts",
     questions: [
-      { q: "What is SAM.gov?", options: ["The federal site where businesses register to sell to the government", "A loan program", "A tax form", "A state website only"], answer: 0, why: "SAM.gov is the System for Award Management." },
-      { q: "How many characters is a UEI?", options: ["4", "12", "20", "100"], answer: 1, why: "A UEI is a 12-character code of letters and numbers." },
-      { q: "With only a UEI and no full registration, you:", options: ["Can win any contract", "Get paid automatically", "Cannot apply directly for federal awards", "Are certified 8(a)"], answer: 2, why: "SAM.gov says a UEI alone does not let you apply for federal awards." },
-      { q: "How much does SAM.gov registration cost?", options: ["$500", "$99 a year", "A percent of each contract", "Nothing; it is free"], answer: 3, why: "Registration is free; ignore paid offers to register for you." },
-      { q: "Where should you type your bank details for SAM.gov?", options: ["Only into SAM.gov itself", "Into an AI assistant", "In an email to a stranger", "On social media"], answer: 0, why: "Private details go only into the official site." },
-      { q: "Where can you look up NAICS codes?", options: ["A random blog", "census.gov/naics", "Your phone's camera", "A text message"], answer: 1, why: "The US Census Bureau publishes the NAICS codes." },
-      { q: "A size standard tells you:", options: ["Your logo size", "How big your office must be", "The largest you can be and still count as small for a NAICS code", "How many contracts you can win"], answer: 2, why: "Size standards set the small-business limit for each NAICS code." },
-      { q: "A set-aside is:", options: ["A tax refund", "A loan", "A late fee", "A contract only certain businesses can compete for"], answer: 3, why: "Set-asides reserve contracts for groups such as small businesses." },
-      { q: "Where do you apply for federal SBA certifications like WOSB and VetCert?", options: ["certifications.sba.gov", "A paid consultant only", "Your county library", "irs.gov"], answer: 0, why: "SBA certifications are applied for at certifications.sba.gov." },
-      { q: "Which certification is for businesses at least 51% owned and controlled by women who are US citizens?", options: ["HUBZone", "WOSB", "DVBE", "8(a) only"], answer: 1, why: "WOSB stands for Women-Owned Small Business." },
-      { q: "Who certifies veteran-owned and service-disabled veteran-owned small businesses for federal contracts now?", options: ["The IRS", "Your city", "SBA, through VetCert", "No one"], answer: 2, why: "SBA's VetCert program took over certification in 2023." },
-      { q: "Where do you apply for California Small Business and DVBE certification?", options: ["SAM.gov", "The FBI", "A bank", "Cal eProcure, through the Department of General Services"], answer: 3, why: "California SB and DVBE certification is done through Cal eProcure." },
-      { q: "A California DVBE must be at least 51% owned by:", options: ["Disabled veterans", "Any veterans' friends", "Out-of-state investors", "Government workers"], answer: 0, why: "DVBEs are at least 51% owned and managed by disabled veterans." },
-      { q: "How can you get new SAM.gov opportunities sent to you?", options: ["Call every agency daily", "Save your search so matches come by email", "Pay for alerts", "You cannot"], answer: 1, why: "Saved searches send new matches by email." },
-      { q: "A prime contractor is:", options: ["A government worker", "A bank", "The business that holds the contract with the government", "A certification"], answer: 2, why: "The prime holds the contract and may hire subcontractors." },
-      { q: "Who can help you find bids for free?", options: ["A company that charges to register you", "A stranger online", "Nobody", "An APEX Accelerator"], answer: 3, why: "APEX Accelerators give free help with government contracting." },
-      { q: "What is an amendment to a solicitation?", options: ["A change posted after it first comes out", "Your company logo", "A tax form", "A bank deposit"], answer: 0, why: "Amendments change a solicitation, so always check for them." },
-      { q: "Which part says exactly what work is wanted?", options: ["The due date", "The statement of work", "The contracting officer's title", "The agency address"], answer: 1, why: "The statement of work describes the work." },
-      { q: "Why turn a solicitation's instructions into a checklist?", options: ["To make it longer", "To skip steps", "Missing one instruction can get your offer rejected", "It is required by SAM.gov"], answer: 2, why: "A checklist helps you meet every instruction." },
-      { q: "Which is a part of a capability statement?", options: ["Your bank password", "Your home address only", "A ten-page history", "Past performance"], answer: 3, why: "Past performance shows buyers you can deliver." }
+      { objective: "O1", q: "What is SAM.gov?", options: ["The federal site where businesses register to sell to the government", "A loan program", "A tax form", "A state website only"], answer: 0, why: "SAM.gov is the System for Award Management." },
+      { objective: "O1", q: "How many characters is a UEI?", options: ["4", "12", "20", "100"], answer: 1, why: "A UEI is a 12-character code of letters and numbers." },
+      { objective: "O1", q: "With only a UEI and no full registration, you:", options: ["Can win any contract", "Get paid automatically", "Cannot apply directly for federal awards", "Are certified 8(a)"], answer: 2, why: "SAM.gov says a UEI alone does not let you apply for federal awards." },
+      { objective: "O1", q: "How much does SAM.gov registration cost?", options: ["$500", "$99 a year", "A percent of each contract", "Nothing; it is free"], answer: 3, why: "Registration is free; ignore paid offers to register for you." },
+      { objective: "O1", q: "Where should you type your bank details for SAM.gov?", options: ["Only into SAM.gov itself", "Into an AI assistant", "In an email to a stranger", "On social media"], answer: 0, why: "Private details go only into the official site." },
+      { objective: "O2", q: "Where can you look up NAICS codes?", options: ["A random blog", "census.gov/naics", "Your phone's camera", "A text message"], answer: 1, why: "The US Census Bureau publishes the NAICS codes." },
+      { objective: "O2", q: "A size standard tells you:", options: ["Your logo size", "How big your office must be", "The largest you can be and still count as small for a NAICS code", "How many contracts you can win"], answer: 2, why: "Size standards set the small-business limit for each NAICS code." },
+      { objective: "O2", q: "A set-aside is:", options: ["A tax refund", "A loan", "A late fee", "A contract only certain businesses can compete for"], answer: 3, why: "Set-asides reserve contracts for groups such as small businesses." },
+      { objective: "O3", q: "Where do you apply for federal SBA certifications like WOSB and VetCert?", options: ["certifications.sba.gov", "A paid consultant only", "Your county library", "irs.gov"], answer: 0, why: "SBA certifications are applied for at certifications.sba.gov." },
+      { objective: "O3", q: "Which certification is for businesses at least 51% owned and controlled by women who are US citizens?", options: ["HUBZone", "WOSB", "DVBE", "8(a) only"], answer: 1, why: "WOSB stands for Women-Owned Small Business." },
+      { objective: "O3", q: "Who certifies veteran-owned and service-disabled veteran-owned small businesses for federal contracts now?", options: ["The IRS", "Your city", "SBA, through VetCert", "No one"], answer: 2, why: "SBA's VetCert program took over certification in 2023." },
+      { objective: "O3", q: "Where do you apply for California Small Business and DVBE certification?", options: ["SAM.gov", "The FBI", "A bank", "Cal eProcure, through the Department of General Services"], answer: 3, why: "California SB and DVBE certification is done through Cal eProcure." },
+      { objective: "O3", q: "A California DVBE must be at least 51% owned by:", options: ["Disabled veterans", "Any veterans' friends", "Out-of-state investors", "Government workers"], answer: 0, why: "DVBEs are at least 51% owned and managed by disabled veterans." },
+      { objective: "O4", q: "How can you get new SAM.gov opportunities sent to you?", options: ["Call every agency daily", "Save your search so matches come by email", "Pay for alerts", "You cannot"], answer: 1, why: "Saved searches send new matches by email." },
+      { objective: "O6", q: "A prime contractor is:", options: ["A government worker", "A bank", "The business that holds the contract with the government", "A certification"], answer: 2, why: "The prime holds the contract and may hire subcontractors." },
+      { objective: "O4", q: "Who can help you find bids for free?", options: ["A company that charges to register you", "A stranger online", "Nobody", "An APEX Accelerator"], answer: 3, why: "APEX Accelerators give free help with government contracting." },
+      { objective: "O5", q: "What is an amendment to a solicitation?", options: ["A change posted after it first comes out", "Your company logo", "A tax form", "A bank deposit"], answer: 0, why: "Amendments change a solicitation, so always check for them." },
+      { objective: "O5", q: "Which part says exactly what work is wanted?", options: ["The due date", "The statement of work", "The contracting officer's title", "The agency address"], answer: 1, why: "The statement of work describes the work." },
+      { objective: "O5", q: "Why turn a solicitation's instructions into a checklist?", options: ["To make it longer", "To skip steps", "Missing one instruction can get your offer rejected", "It is required by SAM.gov"], answer: 2, why: "A checklist helps you meet every instruction." },
+      { objective: "O6", q: "Which is a part of a capability statement?", options: ["Your bank password", "Your home address only", "A ten-page history", "Past performance"], answer: 3, why: "Past performance shows buyers you can deliver." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      3,
+      5,
+      9,
+      13,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Core competencies",
+        objective: "O6",
+        notYet: "Vague or missing, such as \"we do everything\".",
+        meets: "Short bullet points of what the business does best.",
+        exceeds: "Uses the buyer's words from a statement of work where they fit."
+      },
+      {
+        name: "Past performance",
+        objective: "O6",
+        notYet: "No past jobs, or jobs without results.",
+        meets: "Two or three jobs with customer type, what was done and the result.",
+        exceeds: "Picks the jobs most like the work government buyers want."
+      },
+      {
+        name: "Differentiators",
+        objective: "O6",
+        notYet: "Nothing that sets the business apart.",
+        meets: "States clearly what makes the business different.",
+        exceeds: "Backs each point with a fact from real work, such as speed or local presence."
+      },
+      {
+        name: "Company data",
+        objective: "O2",
+        notYet: "Missing the UEI or NAICS codes, or shows bank details or EIN.",
+        meets: "Legal name, UEI, NAICS codes, certifications and contact details, with no private numbers.",
+        exceeds: "Primary NAICS code is checked against the size standard."
+      },
+      {
+        name: "Matching opportunity",
+        objective: "O4",
+        notYet: "No opportunity found, or it does not match a NAICS code on the statement.",
+        meets: "One real opportunity on SAM.gov or Cal eProcure that matches a NAICS code on the statement.",
+        exceeds: "The search is saved and a bid or no-bid decision is written down."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Businesses with an active SAM.gov registration within 60 days (follow-up survey)",
+      "Businesses that apply for an SBA or California certification, or submit a first bid or subcontract offer",
+      "Contracts or subcontracts won within 12 months, as reported by learners or partners"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer with internet",
+      "Your legal business name, address, EIN and bank details, typed only into SAM.gov",
+      "A free AI assistant for shortening capability statement bullets",
+      "About 60 minutes in total, plus time to complete the real registration"
+    ],
+    facilitatorNotes: [
+      "Partner with a local APEX Accelerator or SB/DVBE Advocate to answer registration and certification questions.",
+      "Show a real example of a paid-registration scam email so learners can spot it.",
+      "Remind learners never to type bank details or their EIN into an AI tool or email.",
+      "Use a real public solicitation for the bid or no-bid exercise, and have learners build the instructions checklist together.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

@@ -18,11 +18,35 @@ module.exports = {
     "Which features you see depends on your employer's licenses and settings, so we describe what to do instead of exact button names. Each lesson takes about five minutes, with a knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Complete a workplace AI task set using only tools your workplace allows (or free tools with made-up data if you are job seeking): (1) write down the three key rules of your workplace AI policy, or the three rules you would follow; (2) turn rough notes into a clear work email; (3) summarize a long document into five bullet points and three action items; (4) get AI help to add a formula to a spreadsheet; and (5) mark what you checked in each before sharing.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Working people and job seekers who want practical AI skills for the job: office and admin staff, retail and warehouse leads, healthcare support, customer service, and anyone who writes emails, reads policies or uses spreadsheets at work.",
+    startingPoint: "Use email, documents and sometimes spreadsheets at work, on a computer or phone. Many have seen AI tools but have not used them for work tasks, and may not know their employer's AI policy.",
+    gap: "Employers increasingly expect staff to use approved AI tools to save time, and mistakes or leaked confidential information can cost a job. Learners need to use the tools their workplace allows for writing, summarizing and spreadsheets, and check every result before sharing it.",
+    constraints: [
+      "Reading level: plain words and short sentences",
+      "Devices: a computer is best for documents and spreadsheets; tools depend on what the employer allows",
+      "Policy and privacy: the employer's AI policy comes first; no customer or employee personal data in AI tools; job seekers use free tools with made-up data",
+      "Built-in AI features in Microsoft 365 and Google Workspace depend on the employer's plan and settings",
+      "Time: about 5-minute lessons that fit around a working day"
+    ],
+    prerequisites: "None. \"AI and the New Workforce\" is a helpful companion course."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Before you use AI at work", action: "find your workplace AI policy and write down its three key rules, or three safe-default rules if there is none", standard: "with no customer or employee personal data going into AI tools" },
+    { id: "O2", condition: "Given rough notes for a work message", action: "write a clear work email with a chat assistant using a prompt with purpose, reader, key points and tone", standard: "with every fact checked and the email sounding like you" },
+    { id: "O3", condition: "In the office apps you use", action: "find and use the built-in AI helper, or an approved chat assistant if your account does not have one", standard: "using only non-confidential text in any tool your workplace has not approved" },
+    { id: "O4", condition: "Given a long document or meeting notes", action: "summarize it into five key points and three action items with owners", standard: "checked against the original" },
+    { id: "O5", condition: "Given a small spreadsheet", action: "use AI to write and explain a formula, then test it", standard: "against an answer you worked out by hand" },
+    { id: "O6", condition: "Before you share any AI output", action: "check it for facts, fit, safety and source", standard: "and take responsibility for the final version" }
+  ],
   chapters: [
     {
       name: "Chapter 1: The rules and the basic tools",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Your employer's AI policy comes first",
           minutes: 5,
           goal: "Find and follow your workplace's rules for AI tools.",
@@ -39,9 +63,14 @@ module.exports = {
             { title: "Safe defaults", bullets: ["No customer, patient or employee data", "No passwords or confidential plans", "Check every fact before sharing"] }
           ],
           tryIt: "Find your workplace AI policy, or ask about it. Write down the three most important rules. If you are job seeking, write the three safe-default rules you will follow.",
-          youCanNow: "find and follow the rules for AI tools at your workplace."
+          youCanNow: "find and follow the rules for AI tools at your workplace.",
+          quickCheck: [
+            { objective: "O1", q: "Where can you usually find your workplace AI policy?", options: ["On a social media page", "In the handbook or intranet, or by asking your manager or IT", "In the AI tool's ads", "Nowhere; policies do not exist"], answer: 1, why: "Policies are usually in the handbook or intranet, and your manager or IT can tell you." },
+            { objective: "O1", q: "Your workplace has no AI policy and you want help with a customer complaint reply. What do you do?", options: ["Paste the customer's name, address and order history", "Use AI with any data you like", "Never write replies again", "Leave the customer's personal details out and use a safe default"], answer: 3, why: "With no policy, the safe default is to keep customer and employee personal data out." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "A chat assistant for everyday work writing",
           minutes: 5,
           goal: "Turn rough notes into a clear work message with a chat assistant.",
@@ -58,9 +87,14 @@ module.exports = {
             { title: "Before you send", bullets: ["Ask for changes one at a time", "Check names, dates, times, numbers", "Make it sound like you"] }
           ],
           tryIt: "Write rough notes for a real or sample work message. Use a chat assistant to turn them into a clear email, ask for one change, and check every fact.",
-          youCanNow: "turn rough notes into a clear work message with a chat assistant."
+          youCanNow: "turn rough notes into a clear work message with a chat assistant.",
+          quickCheck: [
+            { objective: "O2", q: "What does \"for my manager, friendly tone\" set in a prompt?", options: ["The reader and the tone", "The length", "The deadline", "The file type"], answer: 0, why: "Naming the reader and the tone helps the AI write the right kind of message." },
+            { objective: "O2", q: "The AI's email draft says the meeting is Thursday, but your notes say Wednesday. What do you do?", options: ["Send it; the AI is probably right", "Delete your notes", "Fix the day before you send it", "Add both days"], answer: 2, why: "You check every fact against your notes before sending." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "AI inside Microsoft 365 and Google Workspace",
           minutes: 5,
           goal: "Find and use the AI helper in the office apps you use, if your account has it.",
@@ -77,17 +111,21 @@ module.exports = {
             { title: "No built-in AI?", bullets: ["Use an approved chat assistant", "Only non-confidential text", "You check the final version"] }
           ],
           tryIt: "Open a work document or email (or a sample one). Use the built-in AI helper if you have it, or an approved chat assistant if not, to draft a reply or a summary. Check it.",
-          youCanNow: "use the AI helper in your office apps, or a safe alternative, to draft and summarize."
+          youCanNow: "use the AI helper in your office apps, or a safe alternative, to draft and summarize.",
+          quickCheck: [
+            { objective: "O3", q: "What is Copilot in Word or Outlook?", options: ["A free add-on everyone has", "A spreadsheet formula", "A virus", "An AI helper built into Microsoft 365, on some plans"], answer: 3, why: "Copilot is built into Microsoft 365 apps, depending on the employer's plan and settings." },
+            { objective: "O3", q: "You do not see an AI icon in your office app. What do you do?", options: ["Install any AI extension you find", "Ask IT, or use an approved chat assistant with non-confidential text", "Paste confidential files into a personal AI account", "Give up on AI"], answer: 1, why: "IT can tell you what is available, and an approved assistant works with non-confidential text." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: The rules and the basic tools",
         questions: [
-          { q: "Before using AI at work, you should first:", options: ["Paste in customer data", "Know your employer's AI policy", "Share your password", "Use any app you find"], answer: 1, why: "Policies set what is allowed." },
-          { q: "There is no policy. Which safe default should you follow?", options: ["Skip checking facts", "Paste anything", "Share passwords", "No customer or employee personal data in AI tools"], answer: 3, why: "Private data stays out." },
-          { q: "A good work prompt includes:", options: ["Purpose, reader, key points and tone", "Only one word", "Your password", "A customer's address"], answer: 0, why: "Those parts give a useful draft." },
-          { q: "Copilot inside Word or Outlook is available:", options: ["Never", "To everyone automatically", "Depending on your employer's plan and settings", "Only on phones"], answer: 2, why: "Access depends on licenses and settings." },
-          { q: "Who owns the final version of AI-drafted work?", options: ["IT", "The AI", "You", "Nobody"], answer: 2, why: "You are responsible for what you send." }
+          { objective: "O1", q: "Before using AI at work, you should first:", options: ["Paste in customer data", "Know your employer's AI policy", "Share your password", "Use any app you find"], answer: 1, why: "Policies set what is allowed." },
+          { objective: "O1", q: "There is no policy. Which safe default should you follow?", options: ["Skip checking facts", "Paste anything", "Share passwords", "No customer or employee personal data in AI tools"], answer: 3, why: "Private data stays out." },
+          { objective: "O2", q: "A good work prompt includes:", options: ["Purpose, reader, key points and tone", "Only one word", "Your password", "A customer's address"], answer: 0, why: "Those parts give a useful draft." },
+          { objective: "O3", q: "Copilot inside Word or Outlook is available:", options: ["Never", "To everyone automatically", "Depending on your employer's plan and settings", "Only on phones"], answer: 2, why: "Access depends on licenses and settings." },
+          { objective: "O6", q: "Who owns the final version of AI-drafted work?", options: ["IT", "The AI", "You", "Nobody"], answer: 2, why: "You are responsible for what you send." }
         ]
       }
     },
@@ -95,6 +133,7 @@ module.exports = {
       name: "Chapter 2: Summaries, spreadsheets and checking",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Summarizing documents and meetings",
           minutes: 5,
           goal: "Turn a long document or meeting notes into key points and action items.",
@@ -111,9 +150,14 @@ module.exports = {
             { title: "Check against the original", bullets: ["Numbers, dates and names", "Who agreed to do what", "Anything important left out"] }
           ],
           tryIt: "Take a long work document or meeting notes (or a public policy if job seeking). Ask AI for five bullets and three action items with owners, then check them against the original.",
-          youCanNow: "summarize documents and meetings into clear points and action items, and check them."
+          youCanNow: "summarize documents and meetings into clear points and action items, and check them.",
+          quickCheck: [
+            { objective: "O4", q: "What is an action item?", options: ["A summary of the whole meeting", "A question nobody answered", "A task with an owner and a due date", "The meeting's start time"], answer: 2, why: "Action items say who does what by when." },
+            { objective: "O4", q: "The AI's summary leaves out a deadline that is in the original document. What do you do?", options: ["Add the deadline after comparing with the original", "Share the summary as it is", "Delete the original", "Ask for a longer summary and do not check it"], answer: 0, why: "Summaries can leave out details, so you compare with the original and fix it." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Getting spreadsheet help from AI",
           minutes: 5,
           goal: "Use AI to write and explain a spreadsheet formula, then test it.",
@@ -130,9 +174,14 @@ module.exports = {
             { title: "Test it", bullets: ["Check rows where you know the answer", "Watch for header rows and wrong ranges"] }
           ],
           tryIt: "Make a small sheet with 10 rows of sample data. Ask AI for one formula (count, sum or average), paste it in and test it against an answer you work out by hand.",
-          youCanNow: "get, understand and test spreadsheet formulas with AI help."
+          youCanNow: "get, understand and test spreadsheet formulas with AI help.",
+          quickCheck: [
+            { objective: "O5", q: "What is a range in a spreadsheet?", options: ["A chart", "A group of cells, like B2:B50", "A file name", "A formula error"], answer: 1, why: "A range is a group of cells that a formula works on." },
+            { objective: "O5", q: "The AI's COUNTIF formula gives 11, but you count 10 \"Late\" rows by hand. What do you do?", options: ["Use 11 anyway", "Delete the data", "Ask for a different AI", "Check the range, for example whether it includes the header row, and fix it"], answer: 3, why: "A common mistake is the wrong range or counting the header, so you test and fix." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Checking AI work before you share it",
           minutes: 5,
           goal: "Use a short checklist to review any AI output before it goes to others.",
@@ -149,17 +198,21 @@ module.exports = {
             { title: "Watch for", bullets: ["Made-up details (hallucinations)", "Bias, such as in job descriptions", "Say you used AI if required"] }
           ],
           tryIt: "Final task: complete your workplace AI task set: three policy rules, a clear email from notes, a five-bullet summary with action items, a tested spreadsheet formula, and a note of what you checked in each using Facts, Fit, Safety and Source.",
-          youCanNow: "use workplace AI tools to get work done faster, safely and with your own careful check."
+          youCanNow: "use workplace AI tools to get work done faster, safely and with your own careful check.",
+          quickCheck: [
+            { objective: "O6", q: "What does the Safety check ask before you share AI work?", options: ["Whether it contains confidential or personal information that should not be shared", "Whether it is long enough", "Whether it uses big words", "Whether the AI liked it"], answer: 0, why: "The Safety check makes sure nothing confidential or personal goes where it does not belong." },
+            { objective: "O6", q: "AI wrote a policy summary that quotes a rule. What do you do before sharing?", options: ["Share it fast", "Remove your name from it", "Check where the rule came from (Source) and that it is correct", "Add more rules"], answer: 2, why: "The Source check confirms where any rule or number came from." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Summaries, spreadsheets and checking",
         questions: [
-          { q: "A good meeting summary lists:", options: ["Decisions, action items with owners and dates, and open questions", "Only the meeting title", "Everyone's passwords", "Nothing"], answer: 0, why: "That shape makes follow-up easy." },
-          { q: "Before a meeting is transcribed, people should:", options: ["Turn off their cameras", "Not be told", "Leave", "Know it is being recorded or transcribed"], answer: 3, why: "Follow workplace rules and be open." },
-          { q: "What does =COUNTIF(B:B,\"Late\") do?", options: ["Adds column B", "Counts cells in column B that say Late", "Deletes Late rows", "Sorts the sheet"], answer: 1, why: "COUNTIF counts matching cells." },
-          { q: "How do you know an AI formula works?", options: ["Test it on rows where you know the answer", "It looks right", "AI says so", "Nobody complains"], answer: 0, why: "Testing proves it." },
-          { q: "Which is NOT one of the four checks?", options: ["Fit", "Facts", "Fame", "Safety"], answer: 2, why: "The checks are Facts, Fit, Safety and Source." }
+          { objective: "O4", q: "A good meeting summary lists:", options: ["Decisions, action items with owners and dates, and open questions", "Only the meeting title", "Everyone's passwords", "Nothing"], answer: 0, why: "That shape makes follow-up easy." },
+          { objective: "O4", q: "Before a meeting is transcribed, people should:", options: ["Turn off their cameras", "Not be told", "Leave", "Know it is being recorded or transcribed"], answer: 3, why: "Follow workplace rules and be open." },
+          { objective: "O5", q: "What does =COUNTIF(B:B,\"Late\") do?", options: ["Adds column B", "Counts cells in column B that say Late", "Deletes Late rows", "Sorts the sheet"], answer: 1, why: "COUNTIF counts matching cells." },
+          { objective: "O5", q: "How do you know an AI formula works?", options: ["Test it on rows where you know the answer", "It looks right", "AI says so", "Nobody complains"], answer: 0, why: "Testing proves it." },
+          { objective: "O6", q: "Which is NOT one of the four checks?", options: ["Fit", "Facts", "Fame", "Safety"], answer: 2, why: "The checks are Facts, Fit, Safety and Source." }
         ]
       }
     }
@@ -167,26 +220,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Essential AI Tools for the Workplace",
     questions: [
-      { q: "Where can you usually find your workplace AI policy?", options: ["A social media post", "Handbook, intranet, or by asking your manager or IT", "An AI chat", "Nowhere"], answer: 1, why: "Policies live in official company places." },
-      { q: "A work account version of an AI tool may:", options: ["Not exist", "Be less safe always", "Share your data publicly", "Have more data protection than a personal free account"], answer: 3, why: "Business versions can offer more protection; check your employer's guidance." },
-      { q: "Which should never go into a personal AI account?", options: ["A general question", "\"Make this shorter\"", "A public news article", "Customer personal information"], answer: 3, why: "Customer data is private." },
-      { q: "ChatGPT, Copilot and Gemini are:", options: ["Spreadsheets", "Chat assistants", "Printers", "Phones"], answer: 1, why: "They are AI chat assistants." },
-      { q: "\"Under 100 words\" in a prompt sets the:", options: ["Purpose", "Reader", "Length", "Password"], answer: 2, why: "It controls length." },
-      { q: "After AI drafts an email, you:", options: ["Check facts and make it sound like you", "Send it unread", "Add more facts it made up", "Delete it"], answer: 0, why: "You own the final version." },
-      { q: "Copilot appears in:", options: ["Paper notebooks", "Only Gmail", "Microsoft 365 apps, on some plans", "Nothing"], answer: 2, why: "Microsoft adds Copilot to its apps on some plans." },
-      { q: "Gemini appears in:", options: ["Google Workspace apps, on some plans", "Only Excel", "Fax machines", "Nothing"], answer: 0, why: "Google adds Gemini to its apps on some plans." },
-      { q: "You do not see an AI icon in your office app. You can:", options: ["Install random add-ons", "Ask IT, or use an approved chat assistant with non-confidential text", "Give up", "Use a coworker's login"], answer: 1, why: "Stay within approved tools." },
-      { q: "An action item should have:", options: ["Nothing", "A secret", "A password", "An owner and a due date"], answer: 3, why: "Owners and dates make it happen." },
-      { q: "Why compare a summary with the original?", options: ["Summaries can leave out or change details", "To waste time", "It is not needed", "For fun"], answer: 0, why: "Checking catches mistakes." },
-      { q: "To transcribe means to:", options: ["Send an email", "Delete a file", "Translate a language", "Turn speech into written text"], answer: 3, why: "Transcription writes down speech." },
-      { q: "Instead of pasting confidential spreadsheet data into AI, you can:", options: ["Email it to friends", "Paste it anyway", "Describe the columns", "Post it online"], answer: 2, why: "Descriptions keep data safe." },
-      { q: "A range in a spreadsheet is:", options: ["A stove", "A group of cells, like B2:B50", "A password", "A chart"], answer: 1, why: "Ranges are groups of cells." },
-      { q: "A common AI formula mistake is:", options: ["Nothing", "Being too short", "Using color", "Counting the header row or using the wrong range"], answer: 3, why: "Test to catch these." },
-      { q: "An AI hallucination is:", options: ["A meeting", "A screen glitch", "A made-up detail that sounds true", "A virus"], answer: 2, why: "AI can invent facts." },
-      { q: "The \"Fit\" check asks whether:", options: ["The tone and length suit the reader", "The file fits on a USB", "The chair fits", "It fits in a tweet"], answer: 0, why: "Fit is about the reader." },
-      { q: "The \"Source\" check asks:", options: ["Which keyboard you used", "Where any rule or number came from", "Who typed fastest", "Nothing"], answer: 1, why: "Rules and numbers need a source." },
-      { q: "If your workplace requires you to say you used AI, you should:", options: ["Hide it", "Say so", "Blame a coworker", "Ignore the rule"], answer: 1, why: "Openness builds trust and follows policy." },
-      { q: "Whose name is on AI-assisted work you share?", options: ["Yours", "The AI's", "IT's", "Nobody's"], answer: 0, why: "You are responsible for it." }
+      { objective: "O1", q: "Where can you usually find your workplace AI policy?", options: ["A social media post", "Handbook, intranet, or by asking your manager or IT", "An AI chat", "Nowhere"], answer: 1, why: "Policies live in official company places." },
+      { objective: "O1", q: "A work account version of an AI tool may:", options: ["Not exist", "Be less safe always", "Share your data publicly", "Have more data protection than a personal free account"], answer: 3, why: "Business versions can offer more protection; check your employer's guidance." },
+      { objective: "O1", q: "Which should never go into a personal AI account?", options: ["A general question", "\"Make this shorter\"", "A public news article", "Customer personal information"], answer: 3, why: "Customer data is private." },
+      { objective: "O2", q: "ChatGPT, Copilot and Gemini are:", options: ["Spreadsheets", "Chat assistants", "Printers", "Phones"], answer: 1, why: "They are AI chat assistants." },
+      { objective: "O2", q: "\"Under 100 words\" in a prompt sets the:", options: ["Purpose", "Reader", "Length", "Password"], answer: 2, why: "It controls length." },
+      { objective: "O2", q: "After AI drafts an email, you:", options: ["Check facts and make it sound like you", "Send it unread", "Add more facts it made up", "Delete it"], answer: 0, why: "You own the final version." },
+      { objective: "O3", q: "Copilot appears in:", options: ["Paper notebooks", "Only Gmail", "Microsoft 365 apps, on some plans", "Nothing"], answer: 2, why: "Microsoft adds Copilot to its apps on some plans." },
+      { objective: "O3", q: "Gemini appears in:", options: ["Google Workspace apps, on some plans", "Only Excel", "Fax machines", "Nothing"], answer: 0, why: "Google adds Gemini to its apps on some plans." },
+      { objective: "O3", q: "You do not see an AI icon in your office app. You can:", options: ["Install random add-ons", "Ask IT, or use an approved chat assistant with non-confidential text", "Give up", "Use a coworker's login"], answer: 1, why: "Stay within approved tools." },
+      { objective: "O4", q: "An action item should have:", options: ["Nothing", "A secret", "A password", "An owner and a due date"], answer: 3, why: "Owners and dates make it happen." },
+      { objective: "O4", q: "Why compare a summary with the original?", options: ["Summaries can leave out or change details", "To waste time", "It is not needed", "For fun"], answer: 0, why: "Checking catches mistakes." },
+      { objective: "O4", q: "To transcribe means to:", options: ["Send an email", "Delete a file", "Translate a language", "Turn speech into written text"], answer: 3, why: "Transcription writes down speech." },
+      { objective: "O5", q: "Instead of pasting confidential spreadsheet data into AI, you can:", options: ["Email it to friends", "Paste it anyway", "Describe the columns", "Post it online"], answer: 2, why: "Descriptions keep data safe." },
+      { objective: "O5", q: "A range in a spreadsheet is:", options: ["A stove", "A group of cells, like B2:B50", "A password", "A chart"], answer: 1, why: "Ranges are groups of cells." },
+      { objective: "O5", q: "A common AI formula mistake is:", options: ["Nothing", "Being too short", "Using color", "Counting the header row or using the wrong range"], answer: 3, why: "Test to catch these." },
+      { objective: "O6", q: "An AI hallucination is:", options: ["A meeting", "A screen glitch", "A made-up detail that sounds true", "A virus"], answer: 2, why: "AI can invent facts." },
+      { objective: "O6", q: "The \"Fit\" check asks whether:", options: ["The tone and length suit the reader", "The file fits on a USB", "The chair fits", "It fits in a tweet"], answer: 0, why: "Fit is about the reader." },
+      { objective: "O6", q: "The \"Source\" check asks:", options: ["Which keyboard you used", "Where any rule or number came from", "Who typed fastest", "Nothing"], answer: 1, why: "Rules and numbers need a source." },
+      { objective: "O6", q: "If your workplace requires you to say you used AI, you should:", options: ["Hide it", "Say so", "Blame a coworker", "Ignore the rule"], answer: 1, why: "Openness builds trust and follows policy." },
+      { objective: "O6", q: "Whose name is on AI-assisted work you share?", options: ["Yours", "The AI's", "IT's", "Nobody's"], answer: 0, why: "You are responsible for it." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      2,
+      4,
+      8,
+      9,
+      10,
+      14,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Policy rules",
+        objective: "O1",
+        notYet: "No rules written, or rules that allow personal data in AI tools.",
+        meets: "Three key rules from the workplace AI policy, or three safe-default rules.",
+        exceeds: "Says where the policy is and who to ask about it."
+      },
+      {
+        name: "Clear email",
+        objective: "O2",
+        notYet: "The email is unclear, or a fact is wrong.",
+        meets: "A clear email from rough notes, with facts checked against the notes.",
+        exceeds: "The learner asked for one change and made it sound like them."
+      },
+      {
+        name: "Summary and action items",
+        objective: "O4",
+        notYet: "Fewer than five points, or action items without owners.",
+        meets: "Five bullet points and three action items with owners, checked against the original.",
+        exceeds: "Action items also have due dates, and a missing detail was found and added."
+      },
+      {
+        name: "Tested formula",
+        objective: "O5",
+        notYet: "The formula was not tested or gives a wrong answer.",
+        meets: "A working formula tested against an answer worked out by hand.",
+        exceeds: "The learner can explain what each part of the formula does."
+      },
+      {
+        name: "Checks before sharing",
+        objective: "O6",
+        notYet: "No note of what was checked.",
+        meets: "Each item has a note of the Facts, Fit, Safety and Source checks.",
+        exceeds: "The notes name a specific fix made after a check."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who report using an approved AI tool for a work task each week, 30 days later (follow-up survey)",
+      "Learners or managers who report time saved on emails, summaries or spreadsheets",
+      "Learners who start another Koach Learn workforce course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer with internet",
+      "The AI tools the workplace allows, or a free chat assistant (ChatGPT, Microsoft Copilot or Google Gemini) with made-up data for job seekers",
+      "A free spreadsheet: Google Sheets or Microsoft Excel online",
+      "A sample long document or meeting notes with no confidential information",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "In a workplace group, bring the employer's AI policy to the first session and go over it together.",
+      "Provide sample notes, documents and spreadsheet data so no one uses confidential information.",
+      "Built-in tools vary by plan; have a free chat assistant ready for learners whose accounts lack them.",
+      "Have learners swap outputs and run the Facts, Fit, Safety and Source checks on each other's work.",
+      "Score the task set with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

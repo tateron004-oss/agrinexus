@@ -18,11 +18,35 @@ module.exports = {
     "This course teaches you to plan and test an idea; it is not legal, tax or investment advice. Check rules with official sources and qualified local professionals. Each lesson takes about five minutes, with a knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Write a one-page business model for one business idea in a named emerging economy: the customer, the problem, your solution and how your military skills fit, how you will reach customers, how you will earn money, your main costs and your top three risks. Add a research plan that names the official sources you will check (the country's Country Commercial Guide and its business registration agency) and one free official help program you will contact.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Veterans curious about starting a business in a fast-growing economy (Africa, South and Southeast Asia, Latin America) or selling to customers there from the United States. Many know these regions from deployments.",
+    startingPoint: "Bring logistics, security, training and cross-cultural experience, and can use a computer or smartphone. Most have not written a business model or researched a foreign market and its rules.",
+    gap: "Business ideas built on guesses can lose savings fast, and foreign markets have their own rules, risks and corruption laws. Learners need to turn a military skill into a clear business idea, write a one-page model, and plan to check the market and the rules on official sources before spending money.",
+    constraints: [
+      "Reading level: plain words and short sentences; no business background assumed",
+      "Devices: a computer or smartphone with internet and a free AI assistant",
+      "Facts that change (registration steps, taxes, licenses, currency) are checked on official sources such as trade.gov Country Commercial Guides and the country's business registry",
+      "Legal limits: no bribes of any kind (U.S. FCPA); contracts, tax and registration questions go to a qualified local lawyer or accountant",
+      "Time: about 5-minute lessons; this course plans a business, it does not start one"
+    ],
+    prerequisites: "None. Learners new to AI assistants can take \"Introduction to AI and the Future Workforce\" first."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "For one emerging economy you choose", action: "explain what an emerging economy is and name two opportunities and two challenges there", standard: "marking every fact that needs checking" },
+    { id: "O2", condition: "Given your military skills", action: "write a one-sentence business idea that matches one skill to a real local problem", standard: "naming the service, customer, place and how they pay" },
+    { id: "O3", condition: "For your business idea", action: "plan market research with AI and check key facts in the official Country Commercial Guide and business registry", standard: "answering at least two research questions from official sources" },
+    { id: "O4", condition: "Using your one-sentence idea", action: "write a one-page business model with AI help", standard: "with all seven parts and every guess marked \"to test\"" },
+    { id: "O5", condition: "For your business model", action: "list your start-up costs and your top three risks with one way to reduce each", standard: "with prices from real quotes and no plan that relies on a bribe" },
+    { id: "O6", condition: "Before you spend real money", action: "plan a small, cheap pilot of your idea and choose one official help program to contact", standard: "with the program named and a date to contact it" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Finding the opportunity",
       lessons: [
         {
+          objectives: ["O1"],
           title: "What an emerging economy is",
           minutes: 5,
           goal: "Explain what an emerging economy is and name two opportunities and two challenges.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "Challenges", bullets: ["Rules that change and slower paperwork", "Currency swings", "Corruption risk: local partners and facts matter"] }
           ],
           tryIt: "Pick one emerging economy you know or are curious about. Ask an AI assistant: \"In plain words, name three growing needs and three business challenges in [country].\" Mark each fact you will need to check.",
-          youCanNow: "explain what an emerging economy is and name its opportunities and challenges."
+          youCanNow: "explain what an emerging economy is and name its opportunities and challenges.",
+          quickCheck: [
+            { objective: "O1", q: "What makes a country an emerging economy?", options: ["It has no businesses yet", "Its economy is growing and changing fast", "It only sells oil", "It has the same rules as the United States"], answer: 1, why: "Emerging economies grow and change quickly, which brings both opportunities and challenges." },
+            { objective: "O1", q: "An AI lists three business challenges in a country you chose. What do you do?", options: ["Treat them as proven facts", "Delete the answer", "Pick a different country right away", "Mark each fact you will need to check on an official source"], answer: 3, why: "AI answers about other countries can be wrong or out of date, so you mark facts to check." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Turning military skills into a business idea",
           minutes: 5,
           goal: "Match one of your military skills to a real local problem and write a one-sentence business idea.",
@@ -57,9 +86,14 @@ module.exports = {
             { title: "Write it in one sentence", bullets: ["Service", "Customer", "Place", "How they pay"] }
           ],
           tryIt: "Ask an AI assistant for ten business ideas that use your military skills in your chosen country. Pick one and write it as one sentence: service, customer, place, how they pay.",
-          youCanNow: "turn a military skill into a one-sentence business idea that solves a local problem."
+          youCanNow: "turn a military skill into a one-sentence business idea that solves a local problem.",
+          quickCheck: [
+            { objective: "O2", q: "What makes a business idea strong?", options: ["It solves a real problem people will pay to fix", "It copies the biggest company", "It needs no customers", "It sounds exciting to you"], answer: 0, why: "A business lasts when it fixes a real problem customers will pay for." },
+            { objective: "O2", q: "The AI gives you ten business ideas. What do you do?", options: ["Start all ten", "Let the AI pick one", "Choose one that uses your skills and write it as one sentence", "Pick the one with the biggest numbers"], answer: 2, why: "You choose the idea that fits your skills and write it clearly: service, customer, place, how they pay." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Researching the market with AI and official guides",
           minutes: 6,
           goal: "Use AI to plan market research and check key facts in the official Country Commercial Guide.",
@@ -83,17 +117,21 @@ module.exports = {
             { name: "Nigeria Corporate Affairs Commission", url: "https://www.cac.gov.ng/" }
           ],
           tryIt: "Ask an AI assistant for the ten questions you must answer before starting your idea. Then open the Country Commercial Guide for your country on trade.gov and answer two of them from it.",
-          youCanNow: "plan market research with AI and check key facts in official guides and registries."
+          youCanNow: "plan market research with AI and check key facts in official guides and registries.",
+          quickCheck: [
+            { objective: "O3", q: "What is a Country Commercial Guide?", options: ["A travel guide for tourists", "A guide written by an AI", "A list of hotels", "An official guide to doing business in a country, from the International Trade Administration"], answer: 3, why: "Country Commercial Guides are official market guides prepared by U.S. Embassy staff and published by the ITA." },
+            { objective: "O3", q: "The AI tells you the steps to register a company in Kenya. What do you do?", options: ["Follow them as written", "Check them with Kenya's Business Registration Service", "Ask a friend online", "Skip registration"], answer: 1, why: "Registration steps come from the country's own official registry." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Finding the opportunity",
         questions: [
-          { q: "An emerging economy is best described as:", options: ["A country whose economy is growing and changing fast", "A country with no businesses", "Any island nation", "A country with no phones"], answer: 0, why: "Emerging economies are growing and changing quickly." },
-          { q: "What is mobile money?", options: ["Cash kept in a car", "Sending, receiving and storing money on a phone", "A type of credit card", "A U.S. government program"], answer: 1, why: "Services like M-Pesa let people pay by phone, often without a bank account." },
-          { q: "A former logistics NCO wants a business idea. The best starting point is:", options: ["Whatever is trendy online", "The idea with the biggest price", "A skill they have matched to a real local problem", "Copying a friend's idea"], answer: 2, why: "Good ideas solve real problems people will pay to fix." },
-          { q: "Who prepares the Country Commercial Guides?", options: ["An AI company", "A social media group", "Local newspapers", "U.S. Embassy staff, published by the International Trade Administration"], answer: 3, why: "The International Trade Administration publishes them, prepared by U.S. Embassy staff." },
-          { q: "Where do you check the steps to register a company in Nigeria?", options: ["The Corporate Affairs Commission (CAC)", "A pop-up ad", "Only an AI chatbot", "A U.S. state website"], answer: 0, why: "The CAC is Nigeria's official company registry." }
+          { objective: "O1", q: "An emerging economy is best described as:", options: ["A country whose economy is growing and changing fast", "A country with no businesses", "Any island nation", "A country with no phones"], answer: 0, why: "Emerging economies are growing and changing quickly." },
+          { objective: "O1", q: "What is mobile money?", options: ["Cash kept in a car", "Sending, receiving and storing money on a phone", "A type of credit card", "A U.S. government program"], answer: 1, why: "Services like M-Pesa let people pay by phone, often without a bank account." },
+          { objective: "O2", q: "A former logistics NCO wants a business idea. The best starting point is:", options: ["Whatever is trendy online", "The idea with the biggest price", "A skill they have matched to a real local problem", "Copying a friend's idea"], answer: 2, why: "Good ideas solve real problems people will pay to fix." },
+          { objective: "O3", q: "Who prepares the Country Commercial Guides?", options: ["An AI company", "A social media group", "Local newspapers", "U.S. Embassy staff, published by the International Trade Administration"], answer: 3, why: "The International Trade Administration publishes them, prepared by U.S. Embassy staff." },
+          { objective: "O3", q: "Where do you check the steps to register a company in Nigeria?", options: ["The Corporate Affairs Commission (CAC)", "A pop-up ad", "Only an AI chatbot", "A U.S. state website"], answer: 0, why: "The CAC is Nigeria's official company registry." }
         ]
       }
     },
@@ -101,6 +139,7 @@ module.exports = {
       name: "Chapter 2: Planning the business",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Writing a one-page business model",
           minutes: 6,
           goal: "Write a one-page business model with AI help.",
@@ -117,9 +156,14 @@ module.exports = {
             { title: "Then challenge it", bullets: ["Did a real customer say that?", "Replace guesses with facts", "Mark the rest \"to test\""] }
           ],
           tryIt: "Ask an AI assistant to turn your one-sentence idea into a one-page business model with the seven headings. Mark every line that is a guess as \"to test\".",
-          youCanNow: "write a one-page business model and separate facts from guesses."
+          youCanNow: "write a one-page business model and separate facts from guesses.",
+          quickCheck: [
+            { objective: "O4", q: "In a business model, what is revenue?", options: ["Money you spend on equipment", "Your total savings", "Money that comes in from customers", "The number of staff"], answer: 2, why: "Revenue is money coming in from customers." },
+            { objective: "O4", q: "Your model says customers will pay $20 a month, but nobody has told you that. What do you do?", options: ["Mark it \"to test\" and ask real customers", "Raise it to $40", "Leave it as fact", "Delete the revenue section"], answer: 0, why: "Guesses stay marked \"to test\" until real customers confirm them." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Planning for money, risk and the law",
           minutes: 5,
           goal: "List your start-up costs, your top three risks and how you will reduce each.",
@@ -137,9 +181,14 @@ module.exports = {
           ],
           sources: [{ name: "U.S. Department of Justice: Foreign Corrupt Practices Act", url: "https://www.justice.gov/criminal/criminal-fraud/foreign-corrupt-practices-act" }],
           tryIt: "Ask an AI assistant for a start-up cost checklist for your idea. Then write your top three risks and one way to reduce each.",
-          youCanNow: "plan start-up costs, name your top risks with fixes, and know the legal lines you must not cross."
+          youCanNow: "plan start-up costs, name your top risks with fixes, and know the legal lines you must not cross.",
+          quickCheck: [
+            { objective: "O5", q: "Which is a start-up cost?", options: ["Money customers pay you", "Registration fees and equipment", "A customer's phone number", "Your business idea sentence"], answer: 1, why: "Start-up costs include equipment, registration, staff and months of running costs." },
+            { objective: "O5", q: "A clerk says a small cash payment will speed up your license. What do you do?", options: ["Pay it quietly", "Pay it through a friend", "Promise to pay later", "Refuse, because bribery is illegal, including under the U.S. FCPA"], answer: 3, why: "Paying a foreign official for business is a crime under the U.S. Foreign Corrupt Practices Act." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Testing the idea and getting official help",
           minutes: 5,
           goal: "Plan a small, cheap test of your idea and choose one official help program to contact.",
@@ -161,17 +210,21 @@ module.exports = {
             { name: "International Trade Administration: Export solutions", url: "https://www.trade.gov/export-solutions" }
           ],
           tryIt: "Final task: finish your one-page business model with customer, problem, solution and military-skill fit, channels, revenue, costs and top three risks. Add a research plan naming the Country Commercial Guide, the country's business registry and one official help program you will contact.",
-          youCanNow: "plan a small test of your business idea and get free official help to build it."
+          youCanNow: "plan a small test of your business idea and get free official help to build it.",
+          quickCheck: [
+            { objective: "O6", q: "What is a pilot?", options: ["A small, short test of your idea", "A full launch in every city", "A business loan", "A type of license"], answer: 0, why: "A pilot tests your idea cheaply before you spend real money." },
+            { objective: "O6", q: "You finished your one-page model. What official help do you add to your plan?", options: ["A paid seminar from an online ad", "No help, just start", "Boots to Business or another free official program", "A stranger who promises fast profits"], answer: 2, why: "Free official programs like the SBA's Boots to Business teach veterans to start businesses." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Planning the business",
         questions: [
-          { q: "Which is part of a one-page business model?", options: ["Your favorite color", "Customer, problem and how you earn money", "Your military awards list", "Your bank password"], answer: 1, why: "The model answers who, what problem, what solution and how you earn money." },
-          { q: "The AI's model says customers \"will gladly pay\". No customer told you that. You:", options: ["Keep it as a fact", "Delete the whole model", "Mark it \"to test\" and ask real customers", "Double the price"], answer: 2, why: "Guesses must be tested with real customers." },
-          { q: "Where should your start-up prices come from?", options: ["AI guesses", "A friend's guess", "Last year's news", "Real quotes from local suppliers"], answer: 3, why: "AI price guesses can be far off; get real local prices." },
-          { q: "An official hints that a payment would speed up your license. You:", options: ["Refuse; bribery is illegal, including under the U.S. FCPA", "Pay a small amount", "Pay through a friend", "Ask AI how to hide it"], answer: 0, why: "The FCPA makes paying foreign officials for business a crime for U.S. persons." },
-          { q: "Which free SBA program teaches entrepreneurship to transitioning service members?", options: ["VET TEC 2.0", "Boots to Business", "TRICARE", "The Military Crosswalk"], answer: 1, why: "Boots to Business is the SBA's entrepreneurship course in TAP." }
+          { objective: "O4", q: "Which is part of a one-page business model?", options: ["Your favorite color", "Customer, problem and how you earn money", "Your military awards list", "Your bank password"], answer: 1, why: "The model answers who, what problem, what solution and how you earn money." },
+          { objective: "O4", q: "The AI's model says customers \"will gladly pay\". No customer told you that. You:", options: ["Keep it as a fact", "Delete the whole model", "Mark it \"to test\" and ask real customers", "Double the price"], answer: 2, why: "Guesses must be tested with real customers." },
+          { objective: "O5", q: "Where should your start-up prices come from?", options: ["AI guesses", "A friend's guess", "Last year's news", "Real quotes from local suppliers"], answer: 3, why: "AI price guesses can be far off; get real local prices." },
+          { objective: "O5", q: "An official hints that a payment would speed up your license. You:", options: ["Refuse; bribery is illegal, including under the U.S. FCPA", "Pay a small amount", "Pay through a friend", "Ask AI how to hide it"], answer: 0, why: "The FCPA makes paying foreign officials for business a crime for U.S. persons." },
+          { objective: "O6", q: "Which free SBA program teaches entrepreneurship to transitioning service members?", options: ["VET TEC 2.0", "Boots to Business", "TRICARE", "The Military Crosswalk"], answer: 1, why: "Boots to Business is the SBA's entrepreneurship course in TAP." }
         ]
       }
     }
@@ -179,26 +232,107 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Entrepreneurship in Emerging Economies",
     questions: [
-      { q: "Which is an opportunity common in emerging economies?", options: ["Shrinking populations", "Fast phone and mobile money growth", "No need for services", "Fixed, unchanging rules"], answer: 1, why: "Phone and mobile money growth open new ways to reach customers." },
-      { q: "Which is a common challenge in emerging economies?", options: ["Too few customers everywhere", "No phones at all", "Currency swings and changing rules", "No young people"], answer: 2, why: "Currency swings and changing rules are common risks." },
-      { q: "M-Pesa in Kenya is an example of:", options: ["A bank robbery", "A government registry", "A military unit", "Mobile money"], answer: 3, why: "M-Pesa lets people pay and store money by phone." },
-      { q: "A strong business idea:", options: ["Solves a real problem people will pay to fix", "Copies whatever is trending", "Has no customers", "Needs no testing"], answer: 0, why: "Customers pay to solve real problems." },
-      { q: "Which military skill often fits emerging markets?", options: ["None of them", "Logistics, supply and storage", "Only marching", "Only paperwork"], answer: 1, why: "Moving and storing goods is a common gap." },
-      { q: "A one-sentence business idea should include:", options: ["Your rank", "Your SSN", "Service, customer, place and how they pay", "Only the price"], answer: 2, why: "Those four parts make the idea clear." },
-      { q: "When AI brainstorms business ideas for you, who chooses?", options: ["The AI", "A stranger online", "The first idea on the list", "You"], answer: 3, why: "AI suggests; you decide based on your skills and the market." },
-      { q: "What should you use AI for in market research?", options: ["Planning questions and drafting, then checking facts on official sources", "Final legal answers", "Exact local prices", "Registering your company"], answer: 0, why: "AI drafts; official sources and real customers confirm." },
-      { q: "Country Commercial Guides are published by:", options: ["A private blog", "The International Trade Administration", "The VA", "An AI company"], answer: 1, why: "They come from the U.S. Department of Commerce's International Trade Administration." },
-      { q: "Kenya's official office for registering a business is:", options: ["The VA", "The SBA", "The Business Registration Service", "The Corporate Affairs Commission"], answer: 2, why: "Kenya's Business Registration Service handles company registration." },
-      { q: "Before spending real money, you should talk to:", options: ["No one", "Only family", "Only the AI", "At least five possible customers"], answer: 3, why: "Real customers tell you whether the problem and price are real." },
-      { q: "Revenue is:", options: ["Money that comes in from customers", "Money you spend on rent", "A type of loan", "A tax form"], answer: 0, why: "Revenue is income from sales." },
-      { q: "A \"channel\" in a business model is:", options: ["A TV station", "The way you reach and sell to customers", "A river", "A bank account"], answer: 1, why: "Channels are how customers find and buy from you." },
-      { q: "Lines in your model that no customer has confirmed should be:", options: ["Deleted", "Made bigger", "Marked \"to test\"", "Treated as facts"], answer: 2, why: "Unproven guesses need testing." },
-      { q: "Start-up costs include:", options: ["Only the first sale", "Only your phone bill", "Nothing; businesses are free", "Equipment, registration, staff and months of running costs"], answer: 3, why: "You need money to run until sales cover costs." },
-      { q: "One way to reduce currency risk is to:", options: ["Review your prices often", "Ignore exchange rates", "Keep all prices fixed forever", "Pay in gift cards"], answer: 0, why: "Regular price reviews help you keep up with currency swings." },
-      { q: "The U.S. Foreign Corrupt Practices Act makes it a crime to:", options: ["Start a business abroad", "Pay a foreign official to win or keep business", "Use mobile money", "Hire local staff"], answer: 1, why: "The FCPA bans bribing foreign officials for business." },
-      { q: "For contracts, tax and registration questions you should use:", options: ["Only AI", "A social media poll", "A qualified local lawyer or accountant", "Guesswork"], answer: 2, why: "Legal and tax rules need a qualified professional." },
-      { q: "A pilot is:", options: ["Moving abroad with your savings", "A loan", "A government form", "A small, short test of your idea"], answer: 3, why: "A pilot tests the idea before you go all in." },
-      { q: "Boots to Business Reboot extends the SBA course to:", options: ["Veterans of all eras", "Only active-duty officers", "Only foreign citizens", "No one"], answer: 0, why: "The SBA says Reboot extends Boots to Business to veterans of all eras." }
+      { objective: "O1", q: "Which is an opportunity common in emerging economies?", options: ["Shrinking populations", "Fast phone and mobile money growth", "No need for services", "Fixed, unchanging rules"], answer: 1, why: "Phone and mobile money growth open new ways to reach customers." },
+      { objective: "O1", q: "Which is a common challenge in emerging economies?", options: ["Too few customers everywhere", "No phones at all", "Currency swings and changing rules", "No young people"], answer: 2, why: "Currency swings and changing rules are common risks." },
+      { objective: "O1", q: "M-Pesa in Kenya is an example of:", options: ["A bank robbery", "A government registry", "A military unit", "Mobile money"], answer: 3, why: "M-Pesa lets people pay and store money by phone." },
+      { objective: "O2", q: "A strong business idea:", options: ["Solves a real problem people will pay to fix", "Copies whatever is trending", "Has no customers", "Needs no testing"], answer: 0, why: "Customers pay to solve real problems." },
+      { objective: "O2", q: "Which military skill often fits emerging markets?", options: ["None of them", "Logistics, supply and storage", "Only marching", "Only paperwork"], answer: 1, why: "Moving and storing goods is a common gap." },
+      { objective: "O2", q: "A one-sentence business idea should include:", options: ["Your rank", "Your SSN", "Service, customer, place and how they pay", "Only the price"], answer: 2, why: "Those four parts make the idea clear." },
+      { objective: "O2", q: "When AI brainstorms business ideas for you, who chooses?", options: ["The AI", "A stranger online", "The first idea on the list", "You"], answer: 3, why: "AI suggests; you decide based on your skills and the market." },
+      { objective: "O3", q: "What should you use AI for in market research?", options: ["Planning questions and drafting, then checking facts on official sources", "Final legal answers", "Exact local prices", "Registering your company"], answer: 0, why: "AI drafts; official sources and real customers confirm." },
+      { objective: "O3", q: "Country Commercial Guides are published by:", options: ["A private blog", "The International Trade Administration", "The VA", "An AI company"], answer: 1, why: "They come from the U.S. Department of Commerce's International Trade Administration." },
+      { objective: "O3", q: "Kenya's official office for registering a business is:", options: ["The VA", "The SBA", "The Business Registration Service", "The Corporate Affairs Commission"], answer: 2, why: "Kenya's Business Registration Service handles company registration." },
+      { objective: "O3", q: "Before spending real money, you should talk to:", options: ["No one", "Only family", "Only the AI", "At least five possible customers"], answer: 3, why: "Real customers tell you whether the problem and price are real." },
+      { objective: "O4", q: "Revenue is:", options: ["Money that comes in from customers", "Money you spend on rent", "A type of loan", "A tax form"], answer: 0, why: "Revenue is income from sales." },
+      { objective: "O4", q: "A \"channel\" in a business model is:", options: ["A TV station", "The way you reach and sell to customers", "A river", "A bank account"], answer: 1, why: "Channels are how customers find and buy from you." },
+      { objective: "O4", q: "Lines in your model that no customer has confirmed should be:", options: ["Deleted", "Made bigger", "Marked \"to test\"", "Treated as facts"], answer: 2, why: "Unproven guesses need testing." },
+      { objective: "O5", q: "Start-up costs include:", options: ["Only the first sale", "Only your phone bill", "Nothing; businesses are free", "Equipment, registration, staff and months of running costs"], answer: 3, why: "You need money to run until sales cover costs." },
+      { objective: "O5", q: "One way to reduce currency risk is to:", options: ["Review your prices often", "Ignore exchange rates", "Keep all prices fixed forever", "Pay in gift cards"], answer: 0, why: "Regular price reviews help you keep up with currency swings." },
+      { objective: "O5", q: "The U.S. Foreign Corrupt Practices Act makes it a crime to:", options: ["Start a business abroad", "Pay a foreign official to win or keep business", "Use mobile money", "Hire local staff"], answer: 1, why: "The FCPA bans bribing foreign officials for business." },
+      { objective: "O5", q: "For contracts, tax and registration questions you should use:", options: ["Only AI", "A social media poll", "A qualified local lawyer or accountant", "Guesswork"], answer: 2, why: "Legal and tax rules need a qualified professional." },
+      { objective: "O6", q: "A pilot is:", options: ["Moving abroad with your savings", "A loan", "A government form", "A small, short test of your idea"], answer: 3, why: "A pilot tests the idea before you go all in." },
+      { objective: "O6", q: "Boots to Business Reboot extends the SBA course to:", options: ["Veterans of all eras", "Only active-duty officers", "Only foreign citizens", "No one"], answer: 0, why: "The SBA says Reboot extends Boots to Business to veterans of all eras." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      3,
+      5,
+      7,
+      8,
+      11,
+      13,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Customer, problem and fit",
+        objective: "O2",
+        notYet: "The customer or problem is vague, or the military skill is not linked.",
+        meets: "A named customer, a real problem, a solution and how a military skill fits.",
+        exceeds: "The learner can say how they know the problem is real."
+      },
+      {
+        name: "Complete business model",
+        objective: "O4",
+        notYet: "Channels, revenue or costs are missing.",
+        meets: "All seven parts on one page, with guesses marked \"to test\".",
+        exceeds: "Each \"to test\" line has a way to test it."
+      },
+      {
+        name: "Risks",
+        objective: "O5",
+        notYet: "Fewer than three risks, or no way to reduce them.",
+        meets: "Top three risks, each with one way to reduce it, and no plan that relies on a bribe.",
+        exceeds: "Risks include currency and rules, with a named professional to ask."
+      },
+      {
+        name: "Research plan",
+        objective: "O3",
+        notYet: "No official sources named.",
+        meets: "Names the Country Commercial Guide and the country's business registration agency.",
+        exceeds: "Shows two research questions already answered from those sources."
+      },
+      {
+        name: "Official help",
+        objective: "O6",
+        notYet: "No help program named.",
+        meets: "One free official help program the learner will contact.",
+        exceeds: "Includes a date to contact it and a small pilot to run first."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who talk to at least five possible customers within 30 days (follow-up survey)",
+      "Learners who enroll in Boots to Business or another official program within 90 days",
+      "Learners who run a small pilot or register a business within 6 months"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer or smartphone with internet",
+      "A free AI assistant: ChatGPT, Microsoft Copilot or Google Gemini",
+      "The free trade.gov Country Commercial Guides and the chosen country's business registry website",
+      "Paper or a document for the one-page business model",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Let learners pick countries they know; group learners who chose the same region so they can share sources.",
+      "Insist that every fact about registration, taxes or licenses comes from an official source, not the AI.",
+      "Make clear that bribes are never part of a plan, and that contracts and tax questions go to a qualified local lawyer or accountant.",
+      "Score the final business model with the rubric, and give feedback on one Not yet row at a time.",
+      "Point learners to the SBA's Boots to Business and Veterans Business Outreach Centers for next steps."
     ]
   }
 };

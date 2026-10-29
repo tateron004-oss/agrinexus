@@ -17,11 +17,35 @@ module.exports = {
     "Every lesson takes about five minutes. Read it, watch the slides, then type the code yourself in \"Try it now\". By the end you will build a small shopping budget checker from scratch. A knowledge check closes each chapter and a 20-question quiz closes the course."
   ],
   finalTask: "In Google Colab, write a shopping budget checker: a function that takes a list of prices and a budget, adds up the prices with a loop, and prints the total and either \"Under budget\" or \"Over budget\" with the difference. Ask the user for the budget with input(), call your function, and test it with two different budgets.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Young people and adults trying programming for the first time: high school and college students, youth program members, career changers and workforce trainees curious about coding, data or AI.",
+    startingPoint: "Can use a computer and web browser and sign in to a Google account. Most have never written code, and do not know what a variable, condition, list, loop or function is.",
+    gap: "Programming is a starting point for jobs in technology, data and AI and a useful tool in many other jobs. Learners who have never written a working program often think coding is not for them; a first program that solves a real problem builds the skills and the confidence to keep going.",
+    constraints: [
+      "Reading level: plain words and short sentences; every programming word is explained with an example",
+      "Devices: a computer or laptop with a web browser works best; a tablet is possible but harder for typing code",
+      "Accounts and cost: a free Google account for Google Colab; nothing to install or buy",
+      "Time: about 5 to 6 minutes a lesson plus practice, about 60 to 75 minutes in total",
+      "Math: only adding, comparing and simple decimals"
+    ],
+    prerequisites: "None. Basic Computer Skills helps learners who are new to typing and using a browser."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Using Google Colab in a web browser", action: "open a notebook, write and run a print line, and read the last line of an error message", standard: "with the program running and any typo fixed using the error message" },
+    { id: "O2", condition: "Given information a program needs", action: "store it in variables of the right type, get input from the user and print it with an f-string", standard: "converting input to a number with float() or int() before doing math" },
+    { id: "O3", condition: "Given a rule with two or more outcomes", action: "write an if, elif and else block that chooses the right outcome", standard: "with correct comparison signs, colons and indentation, giving the right result for each test value" },
+    { id: "O4", condition: "Given several values", action: "create a list, add an item and read items by index, and use len() and sum() on it", standard: "with every index and result correct" },
+    { id: "O5", condition: "Given a list or a task to repeat", action: "write a for loop with a running total and a while loop that stops", standard: "with the total correct and no loop that runs forever" },
+    { id: "O6", condition: "Given a small problem such as a budget check", action: "write a function with parameters and a return value, call it in a full program and test it", standard: "with the program giving correct results for at least two different inputs" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Your first programs",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Opening Google Colab and running your first line",
           minutes: 5,
           goal: "Open a Colab notebook, type a line of Python and run it.",
@@ -40,9 +64,14 @@ module.exports = {
           ],
           sources: [COLAB],
           tryIt: "Open a new Colab notebook. In one cell, print your first name. In a second cell, print a sentence about your favorite food. Then remove one quote mark on purpose, run it, and read the error. Put the quote back and run it again.",
-          youCanNow: "open Google Colab, write a print line, run it, and read an error message."
+          youCanNow: "open Google Colab, write a print line, run it, and read an error message.",
+          quickCheck: [
+            { objective: "O1", q: "In a Colab notebook, what is a cell?", options: ["A Google Drive folder", "A box where you type code and run it", "An error message", "A type of number"], answer: 1, why: "A notebook is made of cells where you type and run code." },
+            { objective: "O1", q: "You typed prnt(\"Hi\") and Python shows a long error. What would you do?", options: ["Close Colab and start a new account", "Ignore it and type more code", "Read the last line of the error, then fix the spelling to print", "Delete the whole notebook"], answer: 2, why: "The last line of the error tells you what went wrong, here a misspelled name." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Variables: giving data a name",
           minutes: 5,
           goal: "Store information in variables and ask the user for input.",
@@ -61,9 +90,14 @@ module.exports = {
             { title: "Printing with f-strings", bullets: ["print(f\"Hi {name}!\")", "Put variables inside curly brackets"] }
           ],
           tryIt: "Write a program that asks for the user's name and their hourly pay, and the hours they worked this week. Store each in a variable, multiply pay by hours, and print: Hi <name>, you earned <amount> this week.",
-          youCanNow: "store values in variables, ask the user for input, change text to numbers, and print a clear result."
+          youCanNow: "store values in variables, ask the user for input, change text to numbers, and print a clear result.",
+          quickCheck: [
+            { objective: "O2", q: "What type is the value 3.75?", options: ["str", "int", "list", "float"], answer: 3, why: "A number with a decimal point is a float." },
+            { objective: "O2", q: "You want the user to type their pay rate so you can multiply it by hours. Which line would you write?", options: ["rate = float(input(\"Pay rate: \"))", "rate = input(\"Pay rate: \")", "print(\"Pay rate\")", "rate == input(\"Pay rate: \")"], answer: 0, why: "input() gives a string, so float() turns it into a number you can do math with." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Making decisions with if, elif and else",
           minutes: 6,
           goal: "Write code that does different things depending on a condition.",
@@ -82,17 +116,21 @@ module.exports = {
             { title: "Test every branch", bullets: ["Try a value for each path", "Try the edge, like exactly 40"] }
           ],
           tryIt: "Write a program that asks for a temperature in Fahrenheit. If it is 85 or more, print \"Hot: drink water.\" If it is 50 or more, print \"Nice day.\" Otherwise print \"Bring a jacket.\" Run it three times with 90, 50 and 30.",
-          youCanNow: "write if, elif and else blocks and test every branch."
+          youCanNow: "write if, elif and else blocks and test every branch.",
+          quickCheck: [
+            { objective: "O3", q: "What does the sign != mean?", options: ["Equal to", "Greater than", "Not equal to", "Store this value"], answer: 2, why: "!= means not equal to; == means equal to." },
+            { objective: "O3", q: "You want to print \"Ticket free\" if age is under 5 or at least 65. Which condition would you use?", options: ["if age < 5 and age >= 65:", "if age < 5 or age >= 65:", "if age = 5 or 65:", "if age > 5 or age < 65:"], answer: 1, why: "or makes the condition True when either part is True; no age is both under 5 and at least 65." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Your first programs",
         questions: [
-          { q: "What does print(\"Hello\") do?", options: ["Saves a file called Hello", "Sends Hello to a printer", "Shows the word Hello under the cell", "Deletes the cell"], answer: 2, why: "print shows text as output." },
-          { q: "Your code shows an error. Where do you look first?", options: ["The last line of the error message", "The first word of the notebook", "Your Google Drive", "The browser's history"], answer: 0, why: "The last line of a Python error says what went wrong." },
-          { q: "You run age = input(\"Age: \") and type 16. What type is age?", options: ["int", "float", "Boolean", "str (text)"], answer: 3, why: "input() always gives back a string; use int() to make it a number." },
-          { q: "Which line correctly checks if hours is more than 40?", options: ["if hours = 40", "if hours > 40:", "if hours more 40", "hours > 40 if:"], answer: 1, why: "if, the condition, then a colon." },
-          { q: "When does the else part run?", options: ["Always, first", "Only when none of the if or elif conditions were True", "Only when the if was True", "Never"], answer: 1, why: "else catches every case the earlier checks did not." }
+          { objective: "O1", q: "What does print(\"Hello\") do?", options: ["Saves a file called Hello", "Sends Hello to a printer", "Shows the word Hello under the cell", "Deletes the cell"], answer: 2, why: "print shows text as output." },
+          { objective: "O1", q: "Your code shows an error. Where do you look first?", options: ["The last line of the error message", "The first word of the notebook", "Your Google Drive", "The browser's history"], answer: 0, why: "The last line of a Python error says what went wrong." },
+          { objective: "O2", q: "You run age = input(\"Age: \") and type 16. What type is age?", options: ["int", "float", "Boolean", "str (text)"], answer: 3, why: "input() always gives back a string; use int() to make it a number." },
+          { objective: "O3", q: "Which line correctly checks if hours is more than 40?", options: ["if hours = 40", "if hours > 40:", "if hours more 40", "hours > 40 if:"], answer: 1, why: "if, the condition, then a colon." },
+          { objective: "O3", q: "When does the else part run?", options: ["Always, first", "Only when none of the if or elif conditions were True", "Only when the if was True", "Never"], answer: 1, why: "else catches every case the earlier checks did not." }
         ]
       }
     },
@@ -100,6 +138,7 @@ module.exports = {
       name: "Chapter 2: Programs that repeat and remember",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Lists: keeping many values together",
           minutes: 5,
           goal: "Create a list, add to it, and read items from it.",
@@ -116,9 +155,14 @@ module.exports = {
             { title: "List tools", bullets: ["append() adds to the end", "len() counts items", "sum() adds up numbers", "in checks if an item is there"] }
           ],
           tryIt: "Make a list of three things you need to buy, with their prices in a second list. Append one more item and price. Print how many items there are, the first item, and the total of the prices with sum().",
-          youCanNow: "create a list, read items by index, add items and count or total them."
+          youCanNow: "create a list, read items by index, add items and count or total them.",
+          quickCheck: [
+            { objective: "O4", q: "What is an index in a list?", options: ["The position number of an item, starting from 0", "The total of the list", "The name of the list", "The last item only"], answer: 0, why: "Each item has an index, and Python counts from 0." },
+            { objective: "O4", q: "chores = [\"dishes\", \"laundry\"]. You want to check if \"laundry\" is on the list. What would you type?", options: ["len(\"laundry\")", "chores[\"laundry\"]", "sum(chores)", "\"laundry\" in chores"], answer: 3, why: "\"laundry\" in chores is True if the item is in the list." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Loops: repeating steps without retyping",
           minutes: 6,
           goal: "Use a for loop to go through a list and a while loop to repeat until done.",
@@ -137,9 +181,14 @@ module.exports = {
             { title: "while: until a condition changes", bullets: ["Repeats while the condition is True", "Change something inside, or it never ends", "Stop button ends a stuck loop"] }
           ],
           tryIt: "Write a while loop that keeps asking \"Add a price (or type done): \". Append each number to a list. When the user types done, use a for loop and a running total to add the prices and print the total.",
-          youCanNow: "repeat code with for and while loops and keep a running total."
+          youCanNow: "repeat code with for and while loops and keep a running total.",
+          quickCheck: [
+            { objective: "O5", q: "Which numbers does range(4) give?", options: ["1, 2, 3, 4", "0, 1, 2, 3", "0, 1, 2, 3, 4", "4 only"], answer: 1, why: "range(4) counts from 0 and stops before 4." },
+            { objective: "O5", q: "Your loop adds prices but total keeps going back to 0 each time. Where would you move total = 0?", options: ["Inside the loop", "After the loop", "Before the loop", "Into a print line"], answer: 2, why: "Set total = 0 once before the loop, then add to it inside." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Functions: packaging code you can reuse",
           minutes: 6,
           goal: "Write a function with inputs and a return value, then use it in a full program.",
@@ -158,17 +207,21 @@ module.exports = {
             { title: "Final task plan", bullets: ["Get the budget with input()", "Add the prices with a loop", "Compare with if, print the result"] }
           ],
           tryIt: "Final task: write check_budget(prices, budget). Inside, use a loop to total the prices, then print the total and \"Under budget by X\" or \"Over budget by X\". Ask the user for the budget with float(input()), call the function with your shopping list, and test it with a high and a low budget.",
-          youCanNow: "write and call your own function and combine variables, input, if, lists and loops in one working program."
+          youCanNow: "write and call your own function and combine variables, input, if, lists and loops in one working program.",
+          quickCheck: [
+            { objective: "O6", q: "What are parameters in a function?", options: ["Error messages", "Loops inside the function", "The function's name", "The inputs the function needs"], answer: 3, why: "Parameters, such as prices and budget, are the inputs a function needs." },
+            { objective: "O6", q: "Before writing the budget checker, what would you do first?", options: ["Plan it in plain words: get budget, add prices, compare, print", "Type as much code as possible and hope it works", "Write the function name only", "Test it with no budget"], answer: 0, why: "Planning in plain words first makes each line easy to turn into code." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Programs that repeat and remember",
         questions: [
-          { q: "colors = [\"red\", \"blue\", \"green\"]. What is colors[0]?", options: ["\"blue\"", "\"green\"", "An error", "\"red\""], answer: 3, why: "Python counts list positions from 0, so index 0 is the first item." },
-          { q: "Which line adds 4.99 to the end of the list prices?", options: ["prices.append(4.99)", "prices + 4.99", "append.prices(4.99)", "prices[4.99]"], answer: 0, why: "append adds one item to the end of a list." },
-          { q: "How many times does for i in range(3): run?", options: ["2", "4", "3", "Forever"], answer: 2, why: "range(3) gives 0, 1 and 2: three times." },
-          { q: "Your while loop never stops. What is the most likely cause?", options: ["You used a list", "Colab is offline", "You used print", "Nothing inside the loop ever makes the condition False"], answer: 3, why: "A while loop ends only when its condition becomes False." },
-          { q: "What does return do inside a function?", options: ["Deletes the function", "Restarts Colab", "Sends a value back to where the function was called", "Prints an error"], answer: 2, why: "return hands the result back to the caller." }
+          { objective: "O4", q: "colors = [\"red\", \"blue\", \"green\"]. What is colors[0]?", options: ["\"blue\"", "\"green\"", "An error", "\"red\""], answer: 3, why: "Python counts list positions from 0, so index 0 is the first item." },
+          { objective: "O4", q: "Which line adds 4.99 to the end of the list prices?", options: ["prices.append(4.99)", "prices + 4.99", "append.prices(4.99)", "prices[4.99]"], answer: 0, why: "append adds one item to the end of a list." },
+          { objective: "O5", q: "How many times does for i in range(3): run?", options: ["2", "4", "3", "Forever"], answer: 2, why: "range(3) gives 0, 1 and 2: three times." },
+          { objective: "O5", q: "Your while loop never stops. What is the most likely cause?", options: ["You used a list", "Colab is offline", "You used print", "Nothing inside the loop ever makes the condition False"], answer: 3, why: "A while loop ends only when its condition becomes False." },
+          { objective: "O6", q: "What does return do inside a function?", options: ["Deletes the function", "Restarts Colab", "Sends a value back to where the function was called", "Prints an error"], answer: 2, why: "return hands the result back to the caller." }
         ]
       }
     }
@@ -176,26 +229,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Introduction to Programming with Python",
     questions: [
-      { q: "What is a program?", options: ["A type of computer screen", "A list of instructions a computer follows in order", "A website address", "A Google account"], answer: 1, why: "A program is a set of instructions run in order." },
-      { q: "Why is Google Colab handy for beginners?", options: ["It runs Python in the browser with nothing to install", "It only works offline", "It writes all the code for you", "It needs a paid licence"], answer: 0, why: "Colab is a free hosted notebook; you do not install anything." },
-      { q: "How do you run a code cell in Colab?", options: ["Close the tab", "Type run at the top of the page", "Press the play button or Shift + Enter", "Email it to yourself"], answer: 2, why: "The play button or Shift + Enter runs the cell." },
-      { q: "Which line prints the text Good job?", options: ["print(\"Good job\")", "print(Good job)", "print \"Good job\"", "say(\"Good job\")"], answer: 0, why: "Text goes inside quotes inside print's brackets." },
-      { q: "In Python, what does = do in pay = 15?", options: ["Checks if pay equals 15", "Prints 15", "Deletes pay", "Stores 15 in the variable pay"], answer: 3, why: "A single = stores a value; == compares." },
-      { q: "What does \"5\" + \"5\" give?", options: ["10", "\"55\"", "An error every time", "5"], answer: 1, why: "Two strings joined together make \"55\"." },
-      { q: "You need to do math with what the user types. Which line is right?", options: ["hours = input(\"Hours: \") * 2", "hours = float(input(\"Hours: \"))", "hours = print(\"Hours\")", "hours = text(input())"], answer: 1, why: "input gives text; float() turns it into a number." },
-      { q: "name = \"Ana\". Which prints Hi Ana?", options: ["print(\"Hi {name}\")", "print(Hi name)", "print(f(Hi name))", "print(f\"Hi {name}\")"], answer: 3, why: "The f before the quotes lets {name} show the variable." },
-      { q: "Which sign means \"is equal to\" in a condition?", options: ["==", "=", "=>", "!="], answer: 0, why: "== compares; = stores." },
-      { q: "What must come at the end of an if line?", options: ["A semicolon", "A period", "A colon", "Nothing"], answer: 2, why: "if, elif, else, for, while and def lines end with a colon." },
-      { q: "score = 85. Which branch runs? if score >= 90 / elif score >= 80 / else", options: ["The if", "The else", "None of them", "The elif"], answer: 3, why: "85 is not 90 or more, but it is 80 or more, so the elif runs." },
-      { q: "How does Python know which lines belong to an if?", options: ["By the color of the text", "By capital letters", "By the indentation", "By line numbers"], answer: 2, why: "Indented lines under the if are its block." },
-      { q: "nums = [4, 8, 2]. What does len(nums) give?", options: ["2", "3", "8", "14"], answer: 1, why: "len counts items; there are three." },
-      { q: "nums = [4, 8, 2]. What does sum(nums) give?", options: ["3", "8", "14", "482"], answer: 2, why: "sum adds the numbers: 4 + 8 + 2 = 14." },
-      { q: "What is prices[-1]?", options: ["The first item", "An error", "The last item", "Minus the first price"], answer: 2, why: "Index -1 means the last item." },
-      { q: "You want to total a list in a loop. What comes before the loop?", options: ["total = 0", "return total", "print(total)", "def total"], answer: 0, why: "A running total starts at 0 before the loop." },
-      { q: "What does for chore in chores: do?", options: ["Deletes the list", "Runs only once", "Sorts the list", "Runs once for each item in chores"], answer: 3, why: "A for loop goes through each item in order." },
-      { q: "Which word starts a new function?", options: ["func", "def", "new", "make"], answer: 1, why: "def defines a function." },
-      { q: "In def check_budget(prices, budget):, what are prices and budget?", options: ["Errors", "Parameters: the inputs the function needs", "Lists of functions", "Comments"], answer: 1, why: "Names in the brackets are the parameters." },
-      { q: "You wrote a budget checker. What is the best way to test it?", options: ["Run it once and hope", "Delete the comments", "Share it before running it", "Run it with a high budget and a low budget and check both results"], answer: 3, why: "Testing different inputs checks every branch works." }
+      { objective: "O1", q: "What is a program?", options: ["A type of computer screen", "A list of instructions a computer follows in order", "A website address", "A Google account"], answer: 1, why: "A program is a set of instructions run in order." },
+      { objective: "O1", q: "Why is Google Colab handy for beginners?", options: ["It runs Python in the browser with nothing to install", "It only works offline", "It writes all the code for you", "It needs a paid licence"], answer: 0, why: "Colab is a free hosted notebook; you do not install anything." },
+      { objective: "O1", q: "How do you run a code cell in Colab?", options: ["Close the tab", "Type run at the top of the page", "Press the play button or Shift + Enter", "Email it to yourself"], answer: 2, why: "The play button or Shift + Enter runs the cell." },
+      { objective: "O1", q: "Which line prints the text Good job?", options: ["print(\"Good job\")", "print(Good job)", "print \"Good job\"", "say(\"Good job\")"], answer: 0, why: "Text goes inside quotes inside print's brackets." },
+      { objective: "O2", q: "In Python, what does = do in pay = 15?", options: ["Checks if pay equals 15", "Prints 15", "Deletes pay", "Stores 15 in the variable pay"], answer: 3, why: "A single = stores a value; == compares." },
+      { objective: "O2", q: "What does \"5\" + \"5\" give?", options: ["10", "\"55\"", "An error every time", "5"], answer: 1, why: "Two strings joined together make \"55\"." },
+      { objective: "O2", q: "You need to do math with what the user types. Which line is right?", options: ["hours = input(\"Hours: \") * 2", "hours = float(input(\"Hours: \"))", "hours = print(\"Hours\")", "hours = text(input())"], answer: 1, why: "input gives text; float() turns it into a number." },
+      { objective: "O2", q: "name = \"Ana\". Which prints Hi Ana?", options: ["print(\"Hi {name}\")", "print(Hi name)", "print(f(Hi name))", "print(f\"Hi {name}\")"], answer: 3, why: "The f before the quotes lets {name} show the variable." },
+      { objective: "O3", q: "Which sign means \"is equal to\" in a condition?", options: ["==", "=", "=>", "!="], answer: 0, why: "== compares; = stores." },
+      { objective: "O3", q: "What must come at the end of an if line?", options: ["A semicolon", "A period", "A colon", "Nothing"], answer: 2, why: "if, elif, else, for, while and def lines end with a colon." },
+      { objective: "O3", q: "score = 85. Which branch runs? if score >= 90 / elif score >= 80 / else", options: ["The if", "The else", "None of them", "The elif"], answer: 3, why: "85 is not 90 or more, but it is 80 or more, so the elif runs." },
+      { objective: "O3", q: "How does Python know which lines belong to an if?", options: ["By the color of the text", "By capital letters", "By the indentation", "By line numbers"], answer: 2, why: "Indented lines under the if are its block." },
+      { objective: "O4", q: "nums = [4, 8, 2]. What does len(nums) give?", options: ["2", "3", "8", "14"], answer: 1, why: "len counts items; there are three." },
+      { objective: "O4", q: "nums = [4, 8, 2]. What does sum(nums) give?", options: ["3", "8", "14", "482"], answer: 2, why: "sum adds the numbers: 4 + 8 + 2 = 14." },
+      { objective: "O4", q: "What is prices[-1]?", options: ["The first item", "An error", "The last item", "Minus the first price"], answer: 2, why: "Index -1 means the last item." },
+      { objective: "O5", q: "You want to total a list in a loop. What comes before the loop?", options: ["total = 0", "return total", "print(total)", "def total"], answer: 0, why: "A running total starts at 0 before the loop." },
+      { objective: "O5", q: "What does for chore in chores: do?", options: ["Deletes the list", "Runs only once", "Sorts the list", "Runs once for each item in chores"], answer: 3, why: "A for loop goes through each item in order." },
+      { objective: "O6", q: "Which word starts a new function?", options: ["func", "def", "new", "make"], answer: 1, why: "def defines a function." },
+      { objective: "O6", q: "In def check_budget(prices, budget):, what are prices and budget?", options: ["Errors", "Parameters: the inputs the function needs", "Lists of functions", "Comments"], answer: 1, why: "Names in the brackets are the parameters." },
+      { objective: "O6", q: "You wrote a budget checker. What is the best way to test it?", options: ["Run it once and hope", "Delete the comments", "Share it before running it", "Run it with a high budget and a low budget and check both results"], answer: 3, why: "Testing different inputs checks every branch works." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      3,
+      5,
+      6,
+      8,
+      10,
+      12,
+      14,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Function",
+        objective: "O6",
+        notYet: "There is no function, or it does not take prices and a budget.",
+        meets: "A function with parameters for the prices and the budget that returns or prints the result.",
+        exceeds: "The function has a clear name, does one job and uses return."
+      },
+      {
+        name: "Loop and total",
+        objective: "O5",
+        notYet: "The total is wrong or no loop is used.",
+        meets: "A for loop adds the prices into a running total that starts at 0.",
+        exceeds: "Also prints how many items were checked using len()."
+      },
+      {
+        name: "Decision",
+        objective: "O3",
+        notYet: "The program does not say Under budget or Over budget, or says the wrong one.",
+        meets: "if and else print the right message with the difference.",
+        exceeds: "Also handles exactly on budget with elif."
+      },
+      {
+        name: "Input",
+        objective: "O2",
+        notYet: "The budget is not asked for, or is used as text so the math fails.",
+        meets: "input() asks for the budget and float() turns it into a number.",
+        exceeds: "Prints the result with an f-string that is easy to read."
+      },
+      {
+        name: "Testing",
+        objective: "O6",
+        notYet: "The program was run once or not at all.",
+        meets: "Run with two different budgets, and both results are correct.",
+        exceeds: "Also tested with a budget that is exactly the total, or with an empty list."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and score Meets or Exceeds on every rubric row of the budget checker",
+      "Learners who report writing another Python program of their own in the 30 days after the course (follow-up survey)",
+      "Learners who go on to a next course, such as AI Programming with Python or Data Science for Beginners",
+      "Learners who join a coding club, class, internship or training program after the course"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer or laptop with a web browser",
+      "A free Google account to use Google Colab",
+      "Paper and pen to plan the program in plain words",
+      "About 60 to 75 minutes in total, plus practice time"
+    ],
+    facilitatorNotes: [
+      "Check before class that every learner can sign in to Google Colab; school accounts sometimes block it, so have personal accounts or another free Python notebook ready.",
+      "Encourage learners to type the code themselves rather than copy and paste, and to read error messages aloud together.",
+      "Use pair programming: one types, one reads and checks, then switch every lesson.",
+      "Celebrate errors as part of coding; show how you fix one of your own on the screen.",
+      "For the final task, give example price lists and budgets so learners can check their results against yours."
     ]
   }
 };

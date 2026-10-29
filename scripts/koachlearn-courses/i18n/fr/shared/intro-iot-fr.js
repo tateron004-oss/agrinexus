@@ -21,11 +21,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes et se termine par un exercice « Essayez maintenant ». Un contrôle des connaissances termine chaque chapitre et un quiz de 20 questions termine le cours."
   ],
   finalTask: "Écrivez un plan d'une page pour un projet de surveillance IoT, comme une alerte de température pour un local serveur, un congélateur de banque alimentaire ou un jardin qui a besoin d'eau : nommez le capteur, l'appareil, sa connexion et où vont les données, dessinez le trajet des données du capteur à l'alerte, écrivez la règle d'alerte sous forme d'une courte instruction if en Python, et listez cinq étapes que vous suivrez pour sécuriser les appareils.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des anciens militaires et des militaires en transition qui explorent des métiers du numérique, comme le support informatique, la technique des bâtiments, le suivi logistique ou la cybersécurité. Beaucoup ont travaillé avec des radios, des capteurs, des véhicules ou du matériel dans l'armée.",
+    startingPoint: "Ils sont à l'aise pour suivre des procédures, utiliser un ordinateur et un smartphone, et connaissent souvent les vérifications de matériel et les transmissions. La plupart n'ont jamais écrit de code ni installé un appareil connecté.",
+    gap: "Les employeurs de la maintenance des bâtiments, de la logistique, de l'industrie et de l'informatique utilisent de plus en plus de capteurs connectés et attendent du personnel qu'il comprenne leur fonctionnement, sache régler des alertes simples et les garder en sécurité. Les apprenants doivent planifier un petit projet de surveillance de bout en bout pour montrer cette compétence et traduire leur expérience militaire vers des métiers civils du numérique.",
+    constraints: [
+      "Niveau de lecture : mots simples ; les termes techniques sont expliqués la première fois",
+      "Appareils : un ordinateur avec un navigateur web pour le simulateur ; aucun matériel à acheter",
+      "Temps : des leçons de 5 minutes, environ 60 minutes en tout",
+      "Les fonctions et les comptes du simulateur peuvent changer ; les apprenants vérifient les conditions actuelles du site",
+      "Réseaux de travail : ne jamais connecter un appareil sans l'accord du service informatique ou sécurité"
+    ],
+    prerequisites: "Aucun. Un premier cours de Python aide mais n'est pas obligatoire."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir d'exemples à la maison, au travail et sur le terrain", action: "repérer des appareils IoT et expliquer l'intérêt et le risque de chacun", standard: "en nommant correctement au moins trois appareils" },
+    { id: "O2", condition: "À partir d'un projet IoT comme une alarme de congélateur", action: "suivre les données du capteur à l'appareil, puis par la connexion jusqu'au cloud et à l'action", standard: "en nommant les quatre couches dans le bon ordre" },
+    { id: "O3", condition: "En sachant où se trouve un appareil, son alimentation et la quantité de données qu'il envoie", action: "choisir une connexion adaptée et expliquer comment un protocole comme MQTT transporte ses messages", standard: "avec une raison qui tient compte de la portée, de l'alimentation et des données" },
+    { id: "O4", condition: "À partir d'une mesure de capteur et d'une plage sûre", action: "écrire une règle d'alerte sous forme d'instruction if en Python qui évite les fausses alertes", standard: "pour que la règle donne le bon résultat avec des mesures de test" },
+    { id: "O5", condition: "Avec un simulateur en ligne gratuit", action: "faire tourner un microcontrôleur simulé avec un capteur de température et tester votre règle d'alerte", standard: "en voyant l'alerte se déclencher quand vous changez la mesure" },
+    { id: "O6", condition: "Pour chaque appareil connecté de votre plan", action: "lister les étapes qui gardent les appareils en sécurité", standard: "avec au moins cinq étapes justes" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Comment fonctionnent les systèmes IoT",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Ce qu'est l'Internet des objets",
           minutes: 4,
           goal: "Expliquer l'IoT et repérer les appareils IoT autour de vous.",
@@ -41,9 +65,14 @@ module.exports = {
             { title: "Valeur et risque", bullets: ["Repérer les problèmes tôt, économiser l'énergie", "Agir à distance", "Chaque appareil est une porte d'entrée possible"] }
           ],
           tryIt: "Faites le tour de votre maison, de votre travail ou d'un magasin et listez cinq appareils connectés que vous voyez ou utilisez. Pour chacun, écrivez ce qu'il mesure et ce qu'il fait des données.",
-          youCanNow: "expliquer ce qu'est l'IoT et nommer des appareils IoT de la vie quotidienne et du travail."
+          youCanNow: "expliquer ce qu'est l'IoT et nommer des appareils IoT de la vie quotidienne et du travail.",
+          quickCheck: [
+            { objective: "O1", q: "Qu'est-ce qui fait qu'un appareil fait partie de l'Internet des objets ?", options: ["Il a un grand écran", "Il coûte plus cher qu'un appareil normal", "Il mesure quelque chose, se connecte à un réseau et partage des données", "Il ne marche qu'avec un clavier"], answer: 2, why: "Les appareils IoT mesurent le monde, se connectent et partagent des données, souvent sans que personne ne tape quoi que ce soit." },
+            { objective: "O1", q: "Le parc automobile de votre unité veut que les camions signalent leurs problèmes avant de tomber en panne. Comment s'appelle cet usage de l'IoT ?", options: ["La maintenance prédictive", "L'informatique en périphérie", "Un réseau invité", "Le micrologiciel"], answer: 0, why: "Des machines qui signalent un besoin de réparation avant de tomber en panne, c'est la maintenance prédictive." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Les quatre couches : capteurs, appareils, connexion et cloud",
           minutes: 5,
           goal: "Suivre les données d'un système IoT du capteur jusqu'à l'action.",
@@ -60,9 +89,14 @@ module.exports = {
             { title: "L'informatique en périphérie", bullets: ["Décider sur l'appareil lui-même", "Plus rapide, marche hors ligne", "Envoie moins de données"] }
           ],
           tryIt: "Choisissez un appareil de votre liste de la leçon 1. Dessinez des cases pour ses quatre couches (capteur, appareil, connexion, cloud ou application) reliées par des flèches, et ajoutez l'action à la fin.",
-          youCanNow: "suivre les données à travers les quatre couches d'un système IoT et nommer les capteurs et les actionneurs."
+          youCanNow: "suivre les données à travers les quatre couches d'un système IoT et nommer les capteurs et les actionneurs.",
+          quickCheck: [
+            { objective: "O2", q: "Dans un système IoT, quel est le rôle d'un microcontrôleur ?", options: ["Mesurer lui-même la température", "Stocker les données dans le cloud", "Allumer un ventilateur", "Lire le capteur et envoyer les données"], answer: 3, why: "L'appareil, souvent un microcontrôleur, lit le capteur et transmet les données." },
+            { objective: "O2", q: "Le capteur d'un portail éloigné doit continuer à marcher quand internet est coupé. Quelle conception aide ?", options: ["Envoyer d'abord chaque mesure au cloud", "Laisser l'appareil prendre la décision lui-même (informatique en périphérie)", "Utiliser un plus grand écran", "Retirer le capteur"], answer: 1, why: "L'informatique en périphérie permet à l'appareil de décider seul, donc il continue à marcher sans internet." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Comment les appareils se connectent et se parlent",
           minutes: 5,
           goal: "Choisir une connexion adaptée pour un appareil IoT.",
@@ -79,17 +113,21 @@ module.exports = {
             { title: "Économiser la batterie", bullets: ["Dormir la plupart du temps", "Se réveiller, mesurer, envoyer, se rendormir"] }
           ],
           tryIt: "Choisissez la meilleure connexion pour chaque cas et écrivez une raison : un podomètre à votre poignet, un capteur de sol dans un champ à 5 km de tout bâtiment, un traceur GPS sur un camion de livraison, et une prise connectée dans un salon.",
-          youCanNow: "choisir une connexion adaptée et expliquer comment les appareils IoT envoient des messages."
+          youCanNow: "choisir une connexion adaptée et expliquer comment les appareils IoT envoient des messages.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce que MQTT ?", options: ["Un protocole léger où les appareils publient leurs mesures sur des sujets", "Un type de batterie", "Une radio longue portée", "Une marque de capteur"], answer: 0, why: "MQTT est un protocole léger : les appareils publient sur un sujet et les applications abonnées reçoivent le message." },
+            { objective: "O3", q: "Un capteur sur batterie dans un dépôt sans Wi-Fi envoie une petite mesure par heure. Que choisissez-vous ?", options: ["Le Wi-Fi", "Le Bluetooth Low Energy", "LoRaWAN", "Un clavier filaire"], answer: 2, why: "LoRaWAN consomme peu et porte loin pour de petites quantités de données." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Comment fonctionnent les systèmes IoT",
         questions: [
-          { q: "Lequel est un appareil IoT ?", options: ["Un calendrier en papier", "Une carte imprimée", "Un thermostat intelligent qui règle le chauffage tout seul", "Une chaise en bois"], answer: 2, why: "Il mesure, se connecte et agit selon les données." },
-          { q: "Dans un système IoT, que fait un capteur ?", options: ["Il mesure quelque chose dans le monde réel", "Il garde les données dans le cloud", "Il paie la facture internet", "Il affiche le tableau de bord"], answer: 0, why: "Les capteurs mesurent des choses comme la température ou le mouvement." },
-          { q: "Un relais qui allume un ventilateur est :", options: ["Un capteur", "Un protocole", "Un tableau de bord", "Un actionneur"], answer: 3, why: "Les actionneurs agissent dans le monde physique." },
-          { q: "Un capteur de sol est dans un champ loin du Wi-Fi et fonctionne sur batterie. Quelle connexion convient le mieux ?", options: ["Le Wi-Fi", "LoRaWAN", "Un câble USB", "Le Bluetooth vers un téléphone dans votre poche"], answer: 1, why: "LoRaWAN est longue portée et basse consommation pour peu de données." },
-          { q: "Avec MQTT, comment une application reçoit-elle les mesures d'un congélateur ?", options: ["Elle appelle le congélateur au téléphone", "Elle s'abonne au sujet sur lequel le congélateur publie", "Elle les imprime", "Elle les devine"], answer: 1, why: "Les applications MQTT s'abonnent aux sujets sur lesquels les appareils publient." }
+          { objective: "O1", q: "Lequel est un appareil IoT ?", options: ["Un calendrier en papier", "Une carte imprimée", "Un thermostat intelligent qui règle le chauffage tout seul", "Une chaise en bois"], answer: 2, why: "Il mesure, se connecte et agit selon les données." },
+          { objective: "O2", q: "Dans un système IoT, que fait un capteur ?", options: ["Il mesure quelque chose dans le monde réel", "Il garde les données dans le cloud", "Il paie la facture internet", "Il affiche le tableau de bord"], answer: 0, why: "Les capteurs mesurent des choses comme la température ou le mouvement." },
+          { objective: "O2", q: "Un relais qui allume un ventilateur est :", options: ["Un capteur", "Un protocole", "Un tableau de bord", "Un actionneur"], answer: 3, why: "Les actionneurs agissent dans le monde physique." },
+          { objective: "O3", q: "Un capteur de sol est dans un champ loin du Wi-Fi et fonctionne sur batterie. Quelle connexion convient le mieux ?", options: ["Le Wi-Fi", "LoRaWAN", "Un câble USB", "Le Bluetooth vers un téléphone dans votre poche"], answer: 1, why: "LoRaWAN est longue portée et basse consommation pour peu de données." },
+          { objective: "O3", q: "Avec MQTT, comment une application reçoit-elle les mesures d'un congélateur ?", options: ["Elle appelle le congélateur au téléphone", "Elle s'abonne au sujet sur lequel le congélateur publie", "Elle les imprime", "Elle les devine"], answer: 1, why: "Les applications MQTT s'abonnent aux sujets sur lesquels les appareils publient." }
         ]
       }
     },
@@ -97,6 +135,7 @@ module.exports = {
       name: "Chapitre 2 : Construire et sécuriser un projet IoT",
       lessons: [
         {
+          objectives: ["O4"],
           title: "De la mesure à l'action : écrire une règle d'alerte",
           minutes: 6,
           goal: "Écrire en Python une règle simple qui transforme une mesure de capteur en alerte.",
@@ -113,9 +152,14 @@ module.exports = {
             { title: "Éviter les fausses alertes", bullets: ["Attendre plusieurs mesures de suite", "Fixer les limites avec les experts", "Décider qui agit, et comment"] }
           ],
           tryIt: "Ouvrez Google Colab (colab.research.google.com) ou n'importe quel éditeur Python. Faites une liste de six mesures de température, comme [22, 23, 29, 30, 31, 24]. Parcourez-les et affichez « ALERTE » pour toute mesure au-dessus de 27 et « OK » pour les autres. Bonus : n'alertez que quand deux mesures de suite dépassent 27.",
-          youCanNow: "écrire en Python une règle d'alerte simple qui transforme des mesures de capteur en action."
+          youCanNow: "écrire en Python une règle d'alerte simple qui transforme des mesures de capteur en action.",
+          quickCheck: [
+            { objective: "O4", q: "La règle est : if temp > 27: print(\"ALERT\"). La mesure est 25. Qu'est-ce qui s'affiche ?", options: ["ALERT", "Rien", "Une erreur", "27"], answer: 1, why: "25 n'est pas plus grand que 27, donc l'instruction if ne s'exécute pas." },
+            { objective: "O4", q: "L'alarme d'un local serveur se déclenche chaque fois que la porte s'ouvre une seconde. Que changez-vous ?", options: ["Désactiver l'alarme pour de bon", "Monter la limite à 100 degrés", "Retirer le capteur", "Alerter seulement après plusieurs mesures élevées à la suite"], answer: 3, why: "Attendre plusieurs mesures à la suite évite les fausses alertes dues à de courts pics." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Essayer un appareil simulé dans votre navigateur",
           minutes: 6,
           goal: "Faire tourner un microcontrôleur simulé avec un capteur et voir les mesures changer.",
@@ -133,9 +177,14 @@ module.exports = {
           ],
           sources: [WOKWI],
           tryIt: "Ouvrez un exemple ESP32 et DHT22 dans un simulateur en ligne et lancez-le. Changez au moins deux fois la température du capteur virtuel et notez les mesures. Si vous pouvez, ajoutez une instruction if qui affiche « ALERTE » au-dessus de 27 degrés Celsius. Si vous ne pouvez pas utiliser le simulateur, suivez le code d'exemple sur papier : marquez la ligne qui lit le capteur et la ligne qui affiche.",
-          youCanNow: "faire tourner et tester un appareil IoT simulé et relier ses mesures à une règle d'alerte."
+          youCanNow: "faire tourner et tester un appareil IoT simulé et relier ses mesures à une règle d'alerte.",
+          quickCheck: [
+            { objective: "O5", q: "En MicroPython, quelle ligne lit la température après sensor.measure() ?", options: ["print(15)", "if temp > 27:", "t = sensor.temperature()", "machine.Pin()"], answer: 2, why: "sensor.temperature() renvoie la mesure après sensor.measure()." },
+            { objective: "O5", q: "Votre règle d'alerte simulée ne se déclenche jamais. Comment la testez-vous ?", options: ["Cliquer sur le capteur virtuel et monter sa température au-dessus de la limite", "Acheter d'abord un vrai capteur", "Effacer le code et tout recommencer", "Changer le numéro de broche au hasard"], answer: 0, why: "Changer la mesure du capteur virtuel vous permet de voir la règle réagir." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Sécuriser les appareils IoT et préparer votre projet",
           minutes: 6,
           goal: "Appliquer les étapes de sécurité clés aux appareils connectés et terminer votre plan de projet.",
@@ -153,17 +202,21 @@ module.exports = {
           ],
           sources: [FTC, CISA],
           tryIt: "Tâche finale : écrivez votre plan IoT d'une page (par exemple un local serveur, un congélateur de banque alimentaire ou un jardin). Nommez le capteur, l'appareil, la connexion et où vont les données, dessinez le trajet du capteur à l'alerte, écrivez la règle d'alerte sous forme d'instruction if en Python, et listez cinq étapes de sécurité que vous suivrez.",
-          youCanNow: "sécuriser des appareils connectés et préparer un projet complet de surveillance IoT."
+          youCanNow: "sécuriser des appareils connectés et préparer un projet complet de surveillance IoT.",
+          quickCheck: [
+            { objective: "O6", q: "Pourquoi les appareils IoT sont-ils une cible fréquente des attaquants ?", options: ["Ils sont toujours éteints", "Ils consomment trop d'énergie", "Ils n'ont pas de connexion réseau", "Beaucoup sont livrés avec des mots de passe par défaut faibles et ne sont jamais mis à jour"], answer: 3, why: "Des mots de passe par défaut faibles et des mises à jour manquantes rendent beaucoup d'appareils faciles à pirater." },
+            { objective: "O6", q: "Une nouvelle caméra de porte a une fonction de gestion à distance que vous n'utiliserez pas. Que faites-vous ?", options: ["La laisser activée au cas où", "La désactiver", "Partager son mot de passe avec l'équipe", "Y réutiliser le mot de passe de votre e-mail"], answer: 1, why: "Désactiver les fonctions inutilisées supprime des portes d'entrée pour les attaquants." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Construire et sécuriser un projet IoT",
         questions: [
-          { q: "Quelle ligne est une règle d'alerte correcte en Python ?", options: ["temp > 27 then alert", "alert if temp", "print if temp > 27", "if temp > 27: print(\"ALERT\")"], answer: 3, why: "Python utilise if, une condition et deux-points." },
-          { q: "Pourquoi attendre plusieurs mesures élevées de suite avant d'alerter ?", options: ["Pour éviter les fausses alertes dues à un pic bref", "Pour économiser du papier", "Parce que les capteurs se trompent toujours", "Pour ralentir l'appareil"], answer: 0, why: "Un pic isolé, comme une porte ouverte, n'est peut-être pas un vrai problème." },
-          { q: "Dans le simulateur, votre code lit la broche 15 mais le capteur est branché sur la broche 4. Que se passe-t-il ?", options: ["Cela marche quand même", "La carte prend feu", "Le code ne recevra pas de mesures du capteur", "La température double"], answer: 2, why: "La broche dans le code doit correspondre au branchement." },
-          { q: "Quelle est la PREMIÈRE chose à faire avec une nouvelle caméra connectée ?", options: ["Garder le mot de passe par défaut", "Partager ses identifiants avec des amis", "Désactiver les mises à jour", "Remplacer le mot de passe par défaut par un mot de passe unique et fort"], answer: 3, why: "Les mots de passe par défaut sont bien connus des attaquants." },
-          { q: "Pourquoi mettre les appareils intelligents sur un réseau invité ?", options: ["Pour les rendre plus rapides", "Parce qu'ils n'ont pas besoin de mot de passe", "Pour les tenir à l'écart des ordinateurs qui contiennent des fichiers privés", "Pour désactiver le chiffrement"], answer: 2, why: "La séparation limite ce qu'un appareil piraté peut atteindre." }
+          { objective: "O4", q: "Quelle ligne est une règle d'alerte correcte en Python ?", options: ["temp > 27 then alert", "alert if temp", "print if temp > 27", "if temp > 27: print(\"ALERT\")"], answer: 3, why: "Python utilise if, une condition et deux-points." },
+          { objective: "O4", q: "Pourquoi attendre plusieurs mesures élevées de suite avant d'alerter ?", options: ["Pour éviter les fausses alertes dues à un pic bref", "Pour économiser du papier", "Parce que les capteurs se trompent toujours", "Pour ralentir l'appareil"], answer: 0, why: "Un pic isolé, comme une porte ouverte, n'est peut-être pas un vrai problème." },
+          { objective: "O5", q: "Dans le simulateur, votre code lit la broche 15 mais le capteur est branché sur la broche 4. Que se passe-t-il ?", options: ["Cela marche quand même", "La carte prend feu", "Le code ne recevra pas de mesures du capteur", "La température double"], answer: 2, why: "La broche dans le code doit correspondre au branchement." },
+          { objective: "O6", q: "Quelle est la PREMIÈRE chose à faire avec une nouvelle caméra connectée ?", options: ["Garder le mot de passe par défaut", "Partager ses identifiants avec des amis", "Désactiver les mises à jour", "Remplacer le mot de passe par défaut par un mot de passe unique et fort"], answer: 3, why: "Les mots de passe par défaut sont bien connus des attaquants." },
+          { objective: "O6", q: "Pourquoi mettre les appareils intelligents sur un réseau invité ?", options: ["Pour les rendre plus rapides", "Parce qu'ils n'ont pas besoin de mot de passe", "Pour les tenir à l'écart des ordinateurs qui contiennent des fichiers privés", "Pour désactiver le chiffrement"], answer: 2, why: "La séparation limite ce qu'un appareil piraté peut atteindre." }
         ]
       }
     }
@@ -171,26 +224,106 @@ module.exports = {
   quiz: {
     title: "Quiz final : Introduction à l'Internet des objets (IoT)",
     questions: [
-      { q: "L'Internet des objets, c'est :", options: ["Seulement les réseaux sociaux", "Des objets physiques avec des capteurs qui se connectent et partagent des données", "Un type de papier pour imprimante", "Un jeu vidéo"], answer: 1, why: "L'IoT, ce sont des objets connectés qui mesurent et partagent." },
-      { q: "Utiliser les données des capteurs pour réparer une machine avant qu'elle tombe en panne s'appelle :", options: ["La maintenance prédictive", "L'hameçonnage", "Le stockage en périphérie", "Le micrologiciel"], answer: 0, why: "La maintenance prédictive repère les problèmes tôt." },
-      { q: "Pourquoi la sécurité fait-elle partie de chaque métier de l'IoT ?", options: ["Les appareils IoT ne peuvent pas être piratés", "Elle n'est nécessaire que pour les téléphones", "Chaque appareil connecté peut être une porte d'entrée pour les attaquants", "Elle rend les appareils moins chers"], answer: 2, why: "Plus d'appareils, c'est plus de portes d'entrée." },
-      { q: "Quelles sont les quatre couches d'un système IoT ?", options: ["Capteur, appareil, connexion, cloud ou application", "Clavier, souris, écran, imprimante", "E-mail, SMS, appel, publication", "Chaud, froid, très froid, archive"], answer: 0, why: "Les données vont du capteur à l'appareil, puis à la connexion, puis au cloud ou à l'application." },
-      { q: "Un petit ordinateur bon marché sur une puce qui fait tourner un seul programme est :", options: ["Une ferme de serveurs", "Un routeur", "Un tableau de bord", "Un microcontrôleur"], answer: 3, why: "Les cartes comme l'ESP32 et l'Arduino sont des microcontrôleurs." },
-      { q: "Un moteur qui ouvre une vanne d'eau est :", options: ["Un capteur", "Un actionneur", "Un protocole", "Un sujet"], answer: 1, why: "Les actionneurs agissent sur le monde physique." },
-      { q: "Prendre les décisions sur l'appareil plutôt que dans le cloud, c'est :", options: ["La facturation du cloud", "L'informatique en périphérie", "Le Bluetooth", "Une fausse alerte"], answer: 1, why: "L'informatique en périphérie traite les données près de l'endroit où elles sont collectées." },
-      { q: "Quelle connexion est la meilleure pour un bracelet de sport qui parle à votre téléphone ?", options: ["LoRaWAN", "Un câble", "La télévision par satellite", "Le Bluetooth Low Energy"], answer: 3, why: "Le BLE consomme peu et a une courte portée." },
-      { q: "Quelle connexion convient à un traceur GPS sur un camion de livraison ?", options: ["Le réseau mobile", "Le Wi-Fi de la maison", "Un câble USB", "Le Bluetooth seulement"], answer: 0, why: "Le réseau mobile marche presque partout où il y a du signal." },
-      { q: "Avec MQTT, un congélateur envoie sa mesure en :", options: ["L'imprimant", "Appelant le responsable", "Publiant sur un sujet", "L'enregistrant sur une clé USB"], answer: 2, why: "Les appareils publient ; les applications s'abonnent." },
-      { q: "Comment les appareils IoT sur batterie durent-ils longtemps ?", options: ["Ils ne s'allument jamais", "Ils utilisent le Wi-Fi le plus rapide", "Ils envoient de la vidéo toute la journée", "Ils dorment la plupart du temps et se réveillent pour mesurer et envoyer"], answer: 3, why: "Dormir économise l'énergie." },
-      { q: "En IoT, une règle veut en général dire :", options: ["Une règle graduée pour mesurer", "Une règle de mot de passe", "Si une mesure dépasse une limite, faire quelque chose", "Un câble"], answer: 2, why: "Les règles transforment les mesures en actions." },
-      { q: "readings = [20, 28, 22]. Avec la règle « alerte au-dessus de 27 », combien d'alertes ?", options: ["0", "1", "2", "3"], answer: 1, why: "Seul 28 est au-dessus de 27." },
-      { q: "Une alerte se déclenche quand quelqu'un ouvre la porte du congélateur une seconde. C'est :", options: ["Une fausse alerte", "De l'informatique en périphérie", "Une mise à jour du micrologiciel", "Du chiffrement"], answer: 0, why: "Un pic bref qui n'est pas un vrai problème est une fausse alerte." },
-      { q: "Pourquoi utiliser un simulateur avant d'acheter des pièces ?", options: ["Parce que les vrais appareils ne marchent jamais", "Pour éviter d'apprendre à coder", "Pour tester d'abord le montage et le code gratuitement ou à petit prix", "Les simulateurs sont obligatoires par la loi"], answer: 2, why: "Les simulateurs permettent de tester sans matériel." },
-      { q: "MicroPython est :", options: ["Une petite version de Python pour les microcontrôleurs", "Un serpent", "Un type de capteur", "Une marque de Wi-Fi"], answer: 0, why: "Il fait tourner du code Python sur de petites cartes." },
-      { q: "Un DHT22 mesure :", options: ["La position GPS", "La fréquence cardiaque", "La vidéo", "La température et l'humidité"], answer: 3, why: "C'est un capteur de température et d'humidité." },
-      { q: "Quel est le choix le plus sûr pour le mot de passe d'une nouvelle prise connectée ?", options: ["Garder celui par défaut", "Un mot de passe unique et fort", "Le même mot de passe que votre e-mail", "« motdepasse123 »"], answer: 1, why: "Des mots de passe uniques et forts empêchent les intrusions faciles." },
-      { q: "Que faut-il faire du micrologiciel des appareils IoT ?", options: ["Ne jamais le mettre à jour", "Le garder à jour", "Le supprimer", "Le partager en ligne"], answer: 1, why: "Les mises à jour corrigent les failles de sécurité." },
-      { q: "Vous voulez brancher un capteur sur le réseau de votre travail. Que faites-vous d'abord ?", options: ["Le brancher discrètement", "Désactiver le pare-feu", "Partager le mot de passe Wi-Fi en ligne", "Demander au service informatique ou sécurité"], answer: 3, why: "Les réseaux de travail ont des règles ; l'informatique doit approuver les nouveaux appareils." }
+      { objective: "O1", q: "L'Internet des objets, c'est :", options: ["Seulement les réseaux sociaux", "Des objets physiques avec des capteurs qui se connectent et partagent des données", "Un type de papier pour imprimante", "Un jeu vidéo"], answer: 1, why: "L'IoT, ce sont des objets connectés qui mesurent et partagent." },
+      { objective: "O1", q: "Utiliser les données des capteurs pour réparer une machine avant qu'elle tombe en panne s'appelle :", options: ["La maintenance prédictive", "L'hameçonnage", "Le stockage en périphérie", "Le micrologiciel"], answer: 0, why: "La maintenance prédictive repère les problèmes tôt." },
+      { objective: "O1", q: "Pourquoi la sécurité fait-elle partie de chaque métier de l'IoT ?", options: ["Les appareils IoT ne peuvent pas être piratés", "Elle n'est nécessaire que pour les téléphones", "Chaque appareil connecté peut être une porte d'entrée pour les attaquants", "Elle rend les appareils moins chers"], answer: 2, why: "Plus d'appareils, c'est plus de portes d'entrée." },
+      { objective: "O2", q: "Quelles sont les quatre couches d'un système IoT ?", options: ["Capteur, appareil, connexion, cloud ou application", "Clavier, souris, écran, imprimante", "E-mail, SMS, appel, publication", "Chaud, froid, très froid, archive"], answer: 0, why: "Les données vont du capteur à l'appareil, puis à la connexion, puis au cloud ou à l'application." },
+      { objective: "O2", q: "Un petit ordinateur bon marché sur une puce qui fait tourner un seul programme est :", options: ["Une ferme de serveurs", "Un routeur", "Un tableau de bord", "Un microcontrôleur"], answer: 3, why: "Les cartes comme l'ESP32 et l'Arduino sont des microcontrôleurs." },
+      { objective: "O2", q: "Un moteur qui ouvre une vanne d'eau est :", options: ["Un capteur", "Un actionneur", "Un protocole", "Un sujet"], answer: 1, why: "Les actionneurs agissent sur le monde physique." },
+      { objective: "O2", q: "Prendre les décisions sur l'appareil plutôt que dans le cloud, c'est :", options: ["La facturation du cloud", "L'informatique en périphérie", "Le Bluetooth", "Une fausse alerte"], answer: 1, why: "L'informatique en périphérie traite les données près de l'endroit où elles sont collectées." },
+      { objective: "O3", q: "Quelle connexion est la meilleure pour un bracelet de sport qui parle à votre téléphone ?", options: ["LoRaWAN", "Un câble", "La télévision par satellite", "Le Bluetooth Low Energy"], answer: 3, why: "Le BLE consomme peu et a une courte portée." },
+      { objective: "O3", q: "Quelle connexion convient à un traceur GPS sur un camion de livraison ?", options: ["Le réseau mobile", "Le Wi-Fi de la maison", "Un câble USB", "Le Bluetooth seulement"], answer: 0, why: "Le réseau mobile marche presque partout où il y a du signal." },
+      { objective: "O3", q: "Avec MQTT, un congélateur envoie sa mesure en :", options: ["L'imprimant", "Appelant le responsable", "Publiant sur un sujet", "L'enregistrant sur une clé USB"], answer: 2, why: "Les appareils publient ; les applications s'abonnent." },
+      { objective: "O3", q: "Comment les appareils IoT sur batterie durent-ils longtemps ?", options: ["Ils ne s'allument jamais", "Ils utilisent le Wi-Fi le plus rapide", "Ils envoient de la vidéo toute la journée", "Ils dorment la plupart du temps et se réveillent pour mesurer et envoyer"], answer: 3, why: "Dormir économise l'énergie." },
+      { objective: "O4", q: "En IoT, une règle veut en général dire :", options: ["Une règle graduée pour mesurer", "Une règle de mot de passe", "Si une mesure dépasse une limite, faire quelque chose", "Un câble"], answer: 2, why: "Les règles transforment les mesures en actions." },
+      { objective: "O4", q: "readings = [20, 28, 22]. Avec la règle « alerte au-dessus de 27 », combien d'alertes ?", options: ["0", "1", "2", "3"], answer: 1, why: "Seul 28 est au-dessus de 27." },
+      { objective: "O4", q: "Une alerte se déclenche quand quelqu'un ouvre la porte du congélateur une seconde. C'est :", options: ["Une fausse alerte", "De l'informatique en périphérie", "Une mise à jour du micrologiciel", "Du chiffrement"], answer: 0, why: "Un pic bref qui n'est pas un vrai problème est une fausse alerte." },
+      { objective: "O5", q: "Pourquoi utiliser un simulateur avant d'acheter des pièces ?", options: ["Parce que les vrais appareils ne marchent jamais", "Pour éviter d'apprendre à coder", "Pour tester d'abord le montage et le code gratuitement ou à petit prix", "Les simulateurs sont obligatoires par la loi"], answer: 2, why: "Les simulateurs permettent de tester sans matériel." },
+      { objective: "O5", q: "MicroPython est :", options: ["Une petite version de Python pour les microcontrôleurs", "Un serpent", "Un type de capteur", "Une marque de Wi-Fi"], answer: 0, why: "Il fait tourner du code Python sur de petites cartes." },
+      { objective: "O5", q: "Un DHT22 mesure :", options: ["La position GPS", "La fréquence cardiaque", "La vidéo", "La température et l'humidité"], answer: 3, why: "C'est un capteur de température et d'humidité." },
+      { objective: "O6", q: "Quel est le choix le plus sûr pour le mot de passe d'une nouvelle prise connectée ?", options: ["Garder celui par défaut", "Un mot de passe unique et fort", "Le même mot de passe que votre e-mail", "« motdepasse123 »"], answer: 1, why: "Des mots de passe uniques et forts empêchent les intrusions faciles." },
+      { objective: "O6", q: "Que faut-il faire du micrologiciel des appareils IoT ?", options: ["Ne jamais le mettre à jour", "Le garder à jour", "Le supprimer", "Le partager en ligne"], answer: 1, why: "Les mises à jour corrigent les failles de sécurité." },
+      { objective: "O6", q: "Vous voulez brancher un capteur sur le réseau de votre travail. Que faites-vous d'abord ?", options: ["Le brancher discrètement", "Désactiver le pare-feu", "Partager le mot de passe Wi-Fi en ligne", "Demander au service informatique ou sécurité"], answer: 3, why: "Les réseaux de travail ont des règles ; l'informatique doit approuver les nouveaux appareils." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      2,
+      3,
+      6,
+      7,
+      9,
+      11,
+      14,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Parties du système",
+        objective: "O2",
+        notYet: "Le capteur, l'appareil ou la destination manque.",
+        meets: "Nomme le capteur, l'appareil, la connexion et l'endroit où vont les données.",
+        exceeds: "Nomme aussi un actionneur ou une décision en périphérie et dit pourquoi cela aide."
+      },
+      {
+        name: "Schéma du trajet des données",
+        objective: "O2",
+        notYet: "Pas de schéma, ou les étapes ne sont pas dans l'ordre.",
+        meets: "Le schéma montre dans l'ordre le capteur, l'appareil, la connexion, le cloud ou l'application, et l'alerte.",
+        exceeds: "Le schéma montre aussi qui reçoit l'alerte et ce que cette personne fait."
+      },
+      {
+        name: "Choix de la connexion",
+        objective: "O3",
+        notYet: "La connexion ne convient pas au lieu ou à l'alimentation, comme du Wi-Fi dans un champ sans Wi-Fi.",
+        meets: "La connexion convient à la portée, à l'alimentation et aux données du projet.",
+        exceeds: "Explique pourquoi une autre connexion conviendrait moins bien."
+      },
+      {
+        name: "Règle d'alerte",
+        objective: "O4",
+        notYet: "La règle manque ou ne marcherait pas, par exemple à cause d'une mauvaise comparaison.",
+        meets: "Une instruction if correcte en Python, avec une limite et une action raisonnables.",
+        exceeds: "Évite aussi les fausses alertes, par exemple en attendant plusieurs mesures, et a été testée dans le simulateur."
+      },
+      {
+        name: "Étapes de sécurité",
+        objective: "O6",
+        notYet: "Moins de cinq étapes, ou des étapes qui ne protègent pas les appareils.",
+        meets: "Cinq étapes justes, comme des mots de passe uniques, les mises à jour et un réseau séparé.",
+        exceeds: "Inclut aussi une liste des appareils et l'accord du service informatique avant de connecter au travail."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Apprenants qui ajoutent des compétences IoT ou capteurs à leur CV, ou postulent à un poste en maintenance des bâtiments, logistique ou informatique dans les 60 jours",
+      "Apprenants qui disent avoir changé des mots de passe par défaut ou mis à jour des appareils connectés à la maison dans les 30 jours (questionnaire de suivi)",
+      "Apprenants qui commencent ensuite un cours de Python, de réseaux ou de cybersécurité"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur avec un navigateur web et internet",
+      "Un simulateur IoT en ligne gratuit, comme Wokwi (vérifiez ses fonctions gratuites actuelles)",
+      "Du papier et un stylo, ou un document, pour le plan d'une page et le schéma du trajet des données",
+      "Environ 60 minutes en tout : leçons, exercice sur le simulateur, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Faites le test de départ ensemble, puis un chapitre par séance ; montrez le simulateur sur un écran partagé avant que les apprenants l'essaient.",
+      "Invitez les anciens militaires à comparer l'IoT aux vérifications de matériel, aux liaisons radio et aux procédures d'alerte qu'ils connaissent déjà.",
+      "Donnez à chaque apprenant ou binôme un projet différent (local serveur, congélateur de banque alimentaire, jardin) pour pouvoir comparer les plans.",
+      "Ne connectez aucun vrai appareil au réseau d'un programme ou d'un lieu de travail sans l'accord du service informatique ou sécurité.",
+      "Notez le plan final avec la grille d'évaluation, et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

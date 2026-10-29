@@ -20,11 +20,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes, avec une tâche \"Essayez maintenant\". Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Construisez un kit pour votre métier : une carte des services avec les prix, un modèle de devis avec la description des travaux, le prix, ce qui n'est pas inclus et la durée de validité, des modèles de confirmation de réservation et de rappel, une liste de contrôle pour votre intervention la plus courante, et un message de suivi qui remercie le client et lui demande un avis honnête et une recommandation.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des personnes qui vendent leur temps et leur savoir-faire : agents d'entretien, coiffeurs et barbiers, prothésistes ongulaires, jardiniers paysagistes, plombiers et bricoleurs, déménageurs, mécaniciens à domicile, peintres, toiletteurs pour animaux et professeurs particuliers. Beaucoup travaillent seuls ou en famille.",
+    startingPoint: "Ils connaissent bien leur métier et trouvent du travail par téléphone, par SMS et par le bouche-à-oreille. Beaucoup font tout sur leur téléphone et ont peu d'expérience des assistants d'IA, des modèles de documents ou des outils de réservation.",
+    gap: "Les réponses lentes, les devis flous et les clients absents font perdre des chantiers et de l'argent. Les apprenants ont besoin de documents clairs et prêts à l'emploi (carte des services, devis, messages de réservation, liste de contrôle et suivi) pour décrocher plus de travail, éviter les disputes et fidéliser leurs clients.",
+    constraints: [
+      "Temps : les patrons sont sur le terrain toute la journée, donc chaque leçon dure environ 5 minutes",
+      "Appareils : souvent seulement un téléphone",
+      "Les règles sur les contrats et les licences dépendent de l'État et du métier",
+      "Les messages publicitaires demandent une autorisation et un moyen de se désabonner ; les faux avis et les avis payés sont interdits par la FTC",
+      "Vie privée : ne jamais demander aux clients un numéro de carte ou une pièce d'identité par SMS ou par message sur les réseaux sociaux"
+    ],
+    prerequisites: "Aucun. Les débutants avec les assistants d'IA peuvent d'abord suivre un cours d'introduction à l'IA."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir de vos vrais services et de vos vrais prix", action: "rédiger une carte des services qui indique ce qui est inclus, ce qui coûte en plus et le prix", standard: "avec chaque prix et chaque prestation incluse vérifiés par vous" },
+    { id: "O2", condition: "À partir d'une intervention réelle ou d'un exemple", action: "créer un modèle de devis et le remplir avec la description des travaux, le prix, ce qui n'est pas inclus et la durée de validité", standard: "avec un prix fixé à partir de vos propres coûts plus un bénéfice" },
+    { id: "O3", condition: "Face à une nouvelle demande par SMS, e-mail, message sur les réseaux sociaux ou appel manqué", action: "rédiger un modèle de première réponse qui remercie la personne, pose les questions utiles et propose une prochaine étape", standard: "sans demander de numéro de carte ni de pièce d'identité" },
+    { id: "O4", condition: "À partir de votre politique d'annulation", action: "rédiger une confirmation de réservation et un rappel pour la veille", standard: "avec la date, le créneau horaire, l'adresse, le prix et la politique d'annulation" },
+    { id: "O5", condition: "Pour votre intervention la plus courante", action: "créer une liste de contrôle pour avant l'arrivée, sur place et avant le départ", standard: "avec les règles de sécurité de votre métier et une dernière vérification avec le client" },
+    { id: "O6", condition: "Après avoir terminé une intervention", action: "rédiger un message de suivi qui remercie le client et demande un avis honnête, une recommandation et la prochaine réservation", standard: "en respectant la règle de la FTC sur les avis" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Décrocher le travail",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Une carte des services claire",
           minutes: 5,
           goal: "Rédiger une carte des services avec des descriptions et des prix clairs.",
@@ -41,9 +65,14 @@ module.exports = {
             { title: "Évitez les disputes", bullets: ["Dites ce qui coûte en plus", "Exemple : four, poils d'animaux, déplacement de plus de 15 miles"] }
           ],
           tryIt: "Rédigez votre carte des services avec au moins trois services, ce qui est inclus et les options. Utilisez l'IA pour la mise en forme, puis vérifiez chaque prix.",
-          youCanNow: "rédiger une carte des services claire avec ce qui est inclus, les options et les prix."
+          youCanNow: "rédiger une carte des services claire avec ce qui est inclus, les options et les prix.",
+          quickCheck: [
+            { objective: "O1", q: "Qu'indique une carte des services pour chaque service ?", options: ["Ce qui est inclus, la durée et le prix", "Seulement le nom du service", "Votre adresse personnelle et votre numéro d'identité", "Les prix de vos concurrents"], answer: 0, why: "Une carte des services indique chaque service, ce qui est inclus, la durée et le prix ou la fourchette de prix." },
+            { objective: "O1", q: "La carte de l'IA dit qu'un grand ménage inclut l'intérieur du four, mais vous le faites payer en plus. Que faites-vous ?", options: ["Vous laissez ainsi et vous discuterez plus tard", "Vous corrigez pour dire que l'intérieur du four coûte en plus", "Vous supprimez le grand ménage", "Vous augmentez tous les prix"], answer: 1, why: "Vous vérifiez chaque prestation incluse, et dire clairement ce qui coûte en plus évite les disputes plus tard." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Rédiger des devis et des estimations",
           minutes: 6,
           goal: "Créer un modèle de devis clair, juste et qui vous protège.",
@@ -60,9 +89,14 @@ module.exports = {
             { title: "Vous fixez le prix", bullets: ["Matériaux + heures + déplacement + bénéfice", "Gros chantiers : vérifiez les licences et les contrats"] }
           ],
           tryIt: "Créez votre modèle de devis avec l'IA, puis remplissez-le pour un chantier réel ou fictif. Calculez le prix sur papier d'après vos coûts.",
-          youCanNow: "rédiger un devis clair qui fixe les travaux, le prix et les conditions."
+          youCanNow: "rédiger un devis clair qui fixe les travaux, le prix et les conditions.",
+          quickCheck: [
+            { objective: "O2", q: "Que disent au client les « conditions de paiement » d'un devis ?", options: ["Quelle couleur de peinture vous utiliserez", "Qui est votre aide", "Comment et quand il paie", "Combien de temps durera le chantier"], answer: 2, why: "Les conditions de paiement disent comment et quand le client paie." },
+            { objective: "O2", q: "L'IA propose un prix pour votre devis de peinture. Que faites-vous ?", options: ["Vous l'utilisez parce que l'IA connaît le marché", "Vous le doublez par sécurité", "Vous laissez le prix vide", "Vous fixez le prix vous-même à partir du matériel, des heures, du déplacement et du bénéfice"], answer: 3, why: "L'IA peut aider à décrire les travaux, mais c'est vous qui fixez le prix à partir de vos propres coûts." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Répondre vite aux nouvelles demandes",
           minutes: 4,
           goal: "Répondre rapidement aux demandes avec des modèles qui posent les bonnes questions.",
@@ -79,17 +113,21 @@ module.exports = {
             { title: "À portée de main et sûr", bullets: ["Modèles enregistrés sur votre téléphone", "Jamais de numéro de carte par SMS"] }
           ],
           tryIt: "Écrivez vos trois questions indispensables. Demandez à l'IA un modèle de première réponse par SMS et par e-mail dans votre style, et enregistrez-les sur votre téléphone.",
-          youCanNow: "répondre vite aux nouvelles demandes avec des modèles qui recueillent ce qu'il faut pour le devis."
+          youCanNow: "répondre vite aux nouvelles demandes avec des modèles qui recueillent ce qu'il faut pour le devis.",
+          quickCheck: [
+            { objective: "O3", q: "Où garder vos modèles de première réponse ?", options: ["Sur votre téléphone, pour répondre entre deux interventions", "Seulement sur un ordinateur à la maison", "Sur papier au bureau", "Nulle part ; vous écrivez chaque réponse de zéro"], answer: 0, why: "Garder les modèles sur votre téléphone vous permet de répondre vite entre deux interventions." },
+            { objective: "O3", q: "Un nouveau client écrit : « Combien pour tondre une pelouse ? » Quelle est une bonne première réponse ?", options: ["« Envoyez-moi votre numéro de carte pour réserver. »", "Le remercier, demander la taille de la pelouse et le jour qui lui convient, et proposer une prochaine étape", "Attendre le week-end pour répondre", "Envoyer toute votre liste de prix sans saluer"], answer: 1, why: "Une bonne première réponse remercie, pose les questions utiles et propose une prochaine étape." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Décrocher le travail",
         questions: [
-          { q: "Pourquoi indiquer sur votre carte ce qui coûte en plus ?", options: ["Pour embrouiller les clients", "Pour éviter les disputes plus tard", "Pour facturer des frais cachés", "Ce n'est pas utile"], answer: 1, why: "Des options claires fixent les attentes." },
-          { q: "Qu'est-ce qui a sa place dans un devis ?", options: ["Une fausse réduction", "Votre mot de passe", "Le numéro de carte du client", "La description des travaux et la durée de validité"], answer: 3, why: "La description et la validité protègent les deux parties." },
-          { q: "Qui fixe le prix d'un devis ?", options: ["Vous, d'après vos coûts et votre bénéfice", "L'IA", "Le client seul", "Un concurrent"], answer: 0, why: "Vous seul connaissez vos vrais coûts." },
-          { q: "Où vérifiez-vous les règles de licence pour les gros chantiers ?", options: ["Auprès d'un voisin", "Dans une discussion avec l'IA", "Auprès de l'organisme de licences de votre État ou d'un professionnel", "Dans une publication sur les réseaux"], answer: 2, why: "Les licences dépendent de votre État et de votre métier." },
-          { q: "Que doit contenir une première réponse à un prospect ?", options: ["Une demande de numéro de carte", "Seulement votre prix", "Des remerciements, les questions nécessaires et une étape suivante", "Rien ; attendez une semaine"], answer: 2, why: "Cela fait avancer le prospect vers une réservation." }
+          { objective: "O1", q: "Pourquoi indiquer sur votre carte ce qui coûte en plus ?", options: ["Pour embrouiller les clients", "Pour éviter les disputes plus tard", "Pour facturer des frais cachés", "Ce n'est pas utile"], answer: 1, why: "Des options claires fixent les attentes." },
+          { objective: "O2", q: "Qu'est-ce qui a sa place dans un devis ?", options: ["Une fausse réduction", "Votre mot de passe", "Le numéro de carte du client", "La description des travaux et la durée de validité"], answer: 3, why: "La description et la validité protègent les deux parties." },
+          { objective: "O2", q: "Qui fixe le prix d'un devis ?", options: ["Vous, d'après vos coûts et votre bénéfice", "L'IA", "Le client seul", "Un concurrent"], answer: 0, why: "Vous seul connaissez vos vrais coûts." },
+          { objective: "O2", q: "Où vérifiez-vous les règles de licence pour les gros chantiers ?", options: ["Auprès d'un voisin", "Dans une discussion avec l'IA", "Auprès de l'organisme de licences de votre État ou d'un professionnel", "Dans une publication sur les réseaux"], answer: 2, why: "Les licences dépendent de votre État et de votre métier." },
+          { objective: "O3", q: "Que doit contenir une première réponse à un prospect ?", options: ["Une demande de numéro de carte", "Seulement votre prix", "Des remerciements, les questions nécessaires et une étape suivante", "Rien ; attendez une semaine"], answer: 2, why: "Cela fait avancer le prospect vers une réservation." }
         ]
       }
     },
@@ -97,6 +135,7 @@ module.exports = {
       name: "Chapitre 2 : Faire le travail et garder le client",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Confirmations de réservation et rappels",
           minutes: 4,
           goal: "Mettre en place des messages de réservation et de rappel qui réduisent les absences.",
@@ -114,9 +153,14 @@ module.exports = {
           ],
           sources: [CAN_SPAM],
           tryIt: "Écrivez votre politique d'annulation en deux lignes. Demandez à l'IA un modèle de confirmation et un modèle de rappel la veille avec des cases à remplir, et enregistrez-les.",
-          youCanNow: "envoyer des confirmations de réservation et des rappels qui réduisent les absences."
+          youCanNow: "envoyer des confirmations de réservation et des rappels qui réduisent les absences.",
+          quickCheck: [
+            { objective: "O4", q: "Quel problème les confirmations et les rappels aident-ils à éviter ?", options: ["Le mauvais temps", "La hausse du prix du matériel", "Les clients absents et les portes fermées", "Les faux avis"], answer: 2, why: "La leçon dit que les clients absents et les portes fermées coûtent une journée de travail, et que les rappels aident à les réduire." },
+            { objective: "O4", q: "Vous voulez envoyer une promotion de fêtes par SMS à tous vos anciens clients. De quoi avez-vous besoin d'abord ?", options: ["De rien ; les rappels et la publicité, c'est pareil", "D'un nouveau numéro de téléphone", "De l'accord de l'IA", "De leur autorisation, et d'un moyen de se désabonner"], answer: 3, why: "Contrairement aux rappels, les messages publicitaires demandent une autorisation et un moyen de se désabonner." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Des listes de contrôle pour la même qualité à chaque fois",
           minutes: 5,
           goal: "Transformer votre savoir-faire en une liste de contrôle que vous et vos aides suivez.",
@@ -133,9 +177,14 @@ module.exports = {
             { title: "Finissez en beauté", bullets: ["Les étapes de sécurité de votre métier", "Visite finale avec le client", "Photos avant et après avec autorisation"] }
           ],
           tryIt: "Décrivez votre intervention la plus courante en quelques lignes. Demandez à l'IA d'en faire une liste en trois parties, ajoutez les étapes de sécurité, et utilisez-la à votre prochaine intervention.",
-          youCanNow: "créer et utiliser une liste de contrôle qui garde la même qualité à chaque fois."
+          youCanNow: "créer et utiliser une liste de contrôle qui garde la même qualité à chaque fois.",
+          quickCheck: [
+            { objective: "O5", q: "Quelles sont les trois parties de la liste de contrôle dans cette leçon ?", options: ["Avant l'arrivée, sur place, avant le départ", "Matin, midi, soir", "Prix, taxe, pourboire", "Appel, SMS, e-mail"], answer: 0, why: "L'IA transforme vos notes en une liste en trois parties : avant l'arrivée, sur place et avant le départ." },
+            { objective: "O5", q: "Vous voulez ajouter une règle de sécurité pour l'utilisation d'une échelle. Où la vérifiez-vous ?", options: ["Vous demandez à l'IA et vous la croyez", "Dans les consignes de sécurité officielles ou votre formation professionnelle", "Dans un avis de client", "Vous sautez les règles de sécurité pour gagner du temps"], answer: 1, why: "Les règles de sécurité se vérifient dans les consignes officielles ou votre formation professionnelle." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Suivi, avis honnêtes et clients fidèles",
           minutes: 5,
           goal: "Faire un suivi après l'intervention pour obtenir des avis honnêtes, des recommandations et de nouvelles réservations.",
@@ -153,17 +202,21 @@ module.exports = {
           ],
           sources: [FTC_REVIEWS],
           tryIt: "Tâche finale : rassemblez votre kit de services : carte des services, modèle de devis, modèles de première réponse, de confirmation et de rappel, une liste de contrôle d'intervention, et un message de remerciement avec une demande d'avis et une proposition de prochaine réservation.",
-          youCanNow: "gérer avec l'aide de l'IA l'administration d'une entreprise de services, du premier appel au client fidèle."
+          youCanNow: "gérer avec l'aide de l'IA l'administration d'une entreprise de services, du premier appel au client fidèle.",
+          quickCheck: [
+            { objective: "O6", q: "Quand envoyer un message de remerciement après une intervention ?", options: ["Le mois suivant", "Seulement si le client se plaint", "Le jour même", "Jamais"], answer: 2, why: "Un remerciement le jour même, avec un lien pour un avis et une offre de prochaine réservation, fait revenir les clients." },
+            { objective: "O6", q: "Un client n'était pas content d'une partie du travail. Comment lui demander un avis ?", options: ["Vous ne lui demandez rien du tout", "Vous lui offrez une remise seulement s'il donne 5 étoiles", "Vous écrivez un bon avis à sa place", "Vous lui demandez un avis honnête, de la même façon qu'à tout le monde"], answer: 3, why: "Vous demandez un avis honnête à chaque client de la même façon ; les récompenses réservées aux avis positifs sont interdites." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Faire le travail et garder le client",
         questions: [
-          { q: "Qu'est-ce qui a sa place dans une confirmation de réservation ?", options: ["Date, créneau, adresse, prix et politique d'annulation", "Le numéro de carte du client", "Votre mot de passe", "Rien"], answer: 0, why: "Ces détails évitent la confusion et les absences." },
-          { q: "Avant d'envoyer des e-mails publicitaires, il vous faut :", options: ["Un faux nom d'expéditeur", "Rien", "La pièce d'identité du client", "Une autorisation et une option de désinscription"], answer: 3, why: "La loi américaine CAN-SPAM exige une désinscription et de l'honnêteté." },
-          { q: "Pourquoi utiliser une liste de contrôle d'intervention ?", options: ["Pour ralentir", "La même qualité à chaque fois et une formation plus facile", "Pour sauter la sécurité", "Pour facturer plus"], answer: 1, why: "Les listes de contrôle gardent une qualité constante." },
-          { q: "Avant de prendre des photos avant et après, vous devez :", options: ["Obtenir l'autorisation du client", "Les prendre en cachette", "Publier l'adresse", "Ne rien faire de spécial"], answer: 0, why: "Respectez la vie privée du client." },
-          { q: "Quelle demande d'avis respecte la règle de la FTC ?", options: ["Écrire des avis depuis les comptes d'amis", "10 % de réduction seulement pour les avis 5 étoiles", "Demander à chaque client un avis honnête", "Acheter des avis"], answer: 2, why: "Une demande honnête et sans condition est acceptable." }
+          { objective: "O4", q: "Qu'est-ce qui a sa place dans une confirmation de réservation ?", options: ["Date, créneau, adresse, prix et politique d'annulation", "Le numéro de carte du client", "Votre mot de passe", "Rien"], answer: 0, why: "Ces détails évitent la confusion et les absences." },
+          { objective: "O4", q: "Avant d'envoyer des e-mails publicitaires, il vous faut :", options: ["Un faux nom d'expéditeur", "Rien", "La pièce d'identité du client", "Une autorisation et une option de désinscription"], answer: 3, why: "La loi américaine CAN-SPAM exige une désinscription et de l'honnêteté." },
+          { objective: "O5", q: "Pourquoi utiliser une liste de contrôle d'intervention ?", options: ["Pour ralentir", "La même qualité à chaque fois et une formation plus facile", "Pour sauter la sécurité", "Pour facturer plus"], answer: 1, why: "Les listes de contrôle gardent une qualité constante." },
+          { objective: "O5", q: "Avant de prendre des photos avant et après, vous devez :", options: ["Obtenir l'autorisation du client", "Les prendre en cachette", "Publier l'adresse", "Ne rien faire de spécial"], answer: 0, why: "Respectez la vie privée du client." },
+          { objective: "O6", q: "Quelle demande d'avis respecte la règle de la FTC ?", options: ["Écrire des avis depuis les comptes d'amis", "10 % de réduction seulement pour les avis 5 étoiles", "Demander à chaque client un avis honnête", "Acheter des avis"], answer: 2, why: "Une demande honnête et sans condition est acceptable." }
         ]
       }
     }
@@ -171,26 +224,103 @@ module.exports = {
   quiz: {
     title: "Quiz final : L'IA pour les entreprises de services",
     questions: [
-      { q: "Une carte des services liste :", options: ["Les adresses des clients", "Les services, ce qui est inclus et les prix", "Les mots de passe", "Les numéros de sécurité sociale du personnel"], answer: 1, why: "Elle montre ce que vous proposez et le coût." },
-      { q: "Une option, c'est :", options: ["Un avis", "Un cadeau gratuit", "Une taxe", "Un service en plus qui coûte davantage"], answer: 3, why: "Les options sont des extras." },
-      { q: "L'IA met en forme votre carte. Vous devez vérifier :", options: ["Les couleurs", "Seulement la police", "Rien", "Chaque prix et ce qui est inclus"], answer: 3, why: "L'IA peut changer des détails." },
-      { q: "La description des travaux, c'est :", options: ["Vos outils", "Exactement ce que vous ferez et ne ferez pas", "Votre camionnette", "Vos horaires"], answer: 1, why: "Elle définit le travail." },
-      { q: "Un devis doit dire combien de temps il est :", options: ["Imprimé", "Prononcé", "Valable", "Tapé"], answer: 2, why: "Les prix changent ; le devis doit avoir une date limite." },
-      { q: "Un prix calculé d'après vos coûts comprend :", options: ["Matériaux, heures, déplacement et bénéfice", "Seulement les matériaux", "Seulement le déplacement", "Ce que l'IA propose"], answer: 0, why: "Tous les coûts plus le bénéfice." },
-      { q: "Un prospect, c'est :", options: ["Un outil", "Un métal", "Une personne qui s'est renseignée mais n'a pas réservé", "Une facture"], answer: 2, why: "Les prospects sont des clients possibles." },
-      { q: "Pourquoi répondre vite aux prospects ?", options: ["La première réponse décroche souvent le travail", "C'est obligatoire", "Pour les agacer", "Ça n'a pas d'importance"], answer: 0, why: "La rapidité fait gagner des clients." },
-      { q: "Que ne faut-il jamais demander par SMS ?", options: ["Le nombre de chambres", "Un numéro de carte", "Un jour qui convient", "La présence d'animaux"], answer: 1, why: "Les numéros de carte sont privés." },
-      { q: "Un créneau, c'est :", options: ["Un jour férié", "Une vitre", "Une date limite de paiement", "Une plage d'heures d'arrivée"], answer: 3, why: "Il fixe les attentes sur l'heure d'arrivée." },
-      { q: "Un rappel la veille aide à :", options: ["Réduire les absences et les portes fermées", "Augmenter les prix", "Sauter l'intervention", "Cacher la politique"], answer: 0, why: "Les rappels réduisent les rendez-vous manqués." },
-      { q: "Où peut-on souvent activer les rappels automatiques ?", options: ["Nulle part", "Dans un agenda papier", "À la banque", "Dans les réglages de votre outil de réservation"], answer: 3, why: "Beaucoup d'outils de réservation envoient des rappels." },
-      { q: "Comment construire une liste de contrôle d'intervention ?", options: ["Laisser l'IA l'inventer à partir de rien", "Copier un concurrent", "Décrire votre travail, laisser l'IA l'organiser, puis la tester", "Ne pas en faire"], answer: 2, why: "Votre savoir-faire, organisé par l'IA." },
-      { q: "Les étapes de sécurité de votre liste doivent être vérifiées avec :", options: ["L'IA seulement", "Les consignes de sécurité officielles ou votre formation professionnelle", "Une publication sur les réseaux", "Rien"], answer: 1, why: "La sécurité exige une source fiable." },
-      { q: "Une visite finale, c'est :", options: ["Un avis", "Un couloir", "Un devis", "Le tour du travail terminé avec le client"], answer: 3, why: "Elle confirme que le client est satisfait." },
-      { q: "Quand envoyer un remerciement ?", options: ["Jamais", "Un an après", "Le jour même", "Seulement s'il se plaint"], answer: 2, why: "Un remerciement rapide apporte plus d'avis et de réservations." },
-      { q: "Offrir une réduction seulement pour les avis 5 étoiles est :", options: ["Interdit par la règle de la FTC sur les avis", "Acceptable", "Obligatoire", "Malin"], answer: 0, why: "Les récompenses liées aux avis positifs sont interdites." },
-      { q: "Un exemple de service régulier :", options: ["Un déménagement unique", "Le nettoyage des gouttières chaque automne", "Une vitre cassée une fois", "Une livraison unique"], answer: 1, why: "Il revient à intervalles fixes." },
-      { q: "Une recommandation, c'est :", options: ["Des frais", "Un client qui vous envoie un ami", "Une taxe", "Un outil"], answer: 1, why: "Les recommandations apportent de nouveaux clients." },
-      { q: "Quelle partie du travail reste à vous, et pas à l'IA ?", options: ["Fixer les prix et bien faire le travail", "Mettre en forme un modèle", "Formuler un rappel", "Organiser des notes"], answer: 0, why: "L'IA aide pour les mots ; vous dirigez l'entreprise." }
+      { objective: "O1", q: "Une carte des services liste :", options: ["Les adresses des clients", "Les services, ce qui est inclus et les prix", "Les mots de passe", "Les numéros de sécurité sociale du personnel"], answer: 1, why: "Elle montre ce que vous proposez et le coût." },
+      { objective: "O1", q: "Une option, c'est :", options: ["Un avis", "Un cadeau gratuit", "Une taxe", "Un service en plus qui coûte davantage"], answer: 3, why: "Les options sont des extras." },
+      { objective: "O1", q: "L'IA met en forme votre carte. Vous devez vérifier :", options: ["Les couleurs", "Seulement la police", "Rien", "Chaque prix et ce qui est inclus"], answer: 3, why: "L'IA peut changer des détails." },
+      { objective: "O2", q: "La description des travaux, c'est :", options: ["Vos outils", "Exactement ce que vous ferez et ne ferez pas", "Votre camionnette", "Vos horaires"], answer: 1, why: "Elle définit le travail." },
+      { objective: "O2", q: "Un devis doit dire combien de temps il est :", options: ["Imprimé", "Prononcé", "Valable", "Tapé"], answer: 2, why: "Les prix changent ; le devis doit avoir une date limite." },
+      { objective: "O2", q: "Un prix calculé d'après vos coûts comprend :", options: ["Matériaux, heures, déplacement et bénéfice", "Seulement les matériaux", "Seulement le déplacement", "Ce que l'IA propose"], answer: 0, why: "Tous les coûts plus le bénéfice." },
+      { objective: "O3", q: "Un prospect, c'est :", options: ["Un outil", "Un métal", "Une personne qui s'est renseignée mais n'a pas réservé", "Une facture"], answer: 2, why: "Les prospects sont des clients possibles." },
+      { objective: "O3", q: "Pourquoi répondre vite aux prospects ?", options: ["La première réponse décroche souvent le travail", "C'est obligatoire", "Pour les agacer", "Ça n'a pas d'importance"], answer: 0, why: "La rapidité fait gagner des clients." },
+      { objective: "O3", q: "Que ne faut-il jamais demander par SMS ?", options: ["Le nombre de chambres", "Un numéro de carte", "Un jour qui convient", "La présence d'animaux"], answer: 1, why: "Les numéros de carte sont privés." },
+      { objective: "O4", q: "Un créneau, c'est :", options: ["Un jour férié", "Une vitre", "Une date limite de paiement", "Une plage d'heures d'arrivée"], answer: 3, why: "Il fixe les attentes sur l'heure d'arrivée." },
+      { objective: "O4", q: "Un rappel la veille aide à :", options: ["Réduire les absences et les portes fermées", "Augmenter les prix", "Sauter l'intervention", "Cacher la politique"], answer: 0, why: "Les rappels réduisent les rendez-vous manqués." },
+      { objective: "O4", q: "Où peut-on souvent activer les rappels automatiques ?", options: ["Nulle part", "Dans un agenda papier", "À la banque", "Dans les réglages de votre outil de réservation"], answer: 3, why: "Beaucoup d'outils de réservation envoient des rappels." },
+      { objective: "O5", q: "Comment construire une liste de contrôle d'intervention ?", options: ["Laisser l'IA l'inventer à partir de rien", "Copier un concurrent", "Décrire votre travail, laisser l'IA l'organiser, puis la tester", "Ne pas en faire"], answer: 2, why: "Votre savoir-faire, organisé par l'IA." },
+      { objective: "O5", q: "Les étapes de sécurité de votre liste doivent être vérifiées avec :", options: ["L'IA seulement", "Les consignes de sécurité officielles ou votre formation professionnelle", "Une publication sur les réseaux", "Rien"], answer: 1, why: "La sécurité exige une source fiable." },
+      { objective: "O5", q: "Une visite finale, c'est :", options: ["Un avis", "Un couloir", "Un devis", "Le tour du travail terminé avec le client"], answer: 3, why: "Elle confirme que le client est satisfait." },
+      { objective: "O6", q: "Quand envoyer un remerciement ?", options: ["Jamais", "Un an après", "Le jour même", "Seulement s'il se plaint"], answer: 2, why: "Un remerciement rapide apporte plus d'avis et de réservations." },
+      { objective: "O6", q: "Offrir une réduction seulement pour les avis 5 étoiles est :", options: ["Interdit par la règle de la FTC sur les avis", "Acceptable", "Obligatoire", "Malin"], answer: 0, why: "Les récompenses liées aux avis positifs sont interdites." },
+      { objective: "O6", q: "Un exemple de service régulier :", options: ["Un déménagement unique", "Le nettoyage des gouttières chaque automne", "Une vitre cassée une fois", "Une livraison unique"], answer: 1, why: "Il revient à intervalles fixes." },
+      { objective: "O6", q: "Une recommandation, c'est :", options: ["Des frais", "Un client qui vous envoie un ami", "Une taxe", "Un outil"], answer: 1, why: "Les recommandations apportent de nouveaux clients." },
+      { objective: "O2", q: "Quelle partie du travail reste à vous, et pas à l'IA ?", options: ["Fixer les prix et bien faire le travail", "Mettre en forme un modèle", "Formuler un rappel", "Organiser des notes"], answer: 0, why: "L'IA aide pour les mots ; vous dirigez l'entreprise." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      3,
+      7,
+      8,
+      10,
+      12,
+      16
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Carte des services claire",
+        objective: "O1",
+        notYet: "Des prix ou des prestations incluses manquent ou sont faux.",
+        meets: "Chaque service indique ce qui est inclus, ce qui coûte en plus et le prix.",
+        exceeds: "Indique aussi la durée de chaque service et les options en supplément."
+      },
+      {
+        name: "Modèle de devis complet",
+        objective: "O2",
+        notYet: "Il manque au devis la description des travaux, le prix, ce qui n'est pas inclus ou la durée de validité.",
+        meets: "Toutes les parties sont présentes et le prix vient de vos coûts plus un bénéfice.",
+        exceeds: "Contient aussi les conditions de paiement et une note sur l'endroit où les règles de licence ont été vérifiées pour les gros chantiers."
+      },
+      {
+        name: "Messages de réservation",
+        objective: "O4",
+        notYet: "Il manque à la confirmation ou au rappel le créneau horaire, l'adresse ou la politique d'annulation.",
+        meets: "Une confirmation et un rappel la veille avec la date, le créneau horaire, l'adresse, le prix et la politique d'annulation.",
+        exceeds: "Dit aussi au client comment se préparer et part automatiquement."
+      },
+      {
+        name: "Liste de contrôle de l'intervention",
+        objective: "O5",
+        notYet: "La liste saute des étapes ou n'a pas de règles de sécurité.",
+        meets: "Une liste en trois parties avec les règles de sécurité et une dernière vérification avec le client.",
+        exceeds: "Testée sur une vraie intervention et corrigée ensuite."
+      },
+      {
+        name: "Suivi honnête",
+        objective: "O6",
+        notYet: "Le message offre une récompense seulement pour les bons avis ou ne demande pas d'avis.",
+        meets: "Remercie le client, demande un avis honnête et une recommandation, et propose la prochaine réservation.",
+        exceeds: "Programme aussi un rappel pour le prochain service régulier."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Patrons qui disent répondre plus vite aux demandes et réserver plus d'interventions dans les 30 jours (enquête de suivi)",
+      "Patrons qui signalent moins de clients absents ou de disputes sur les prix dans les 30 jours",
+      "Apprenants qui commencent un autre cours Koach Learn pour les petites entreprises dans les 30 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur avec internet",
+      "Un assistant d'IA gratuit et des documents gratuits comme Google Docs ou Word",
+      "Vos vrais services, prix et coûts, ou des exemples",
+      "Environ 60 minutes au total : leçons, pratique, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Si possible, regroupez les apprenants par métier pour qu'ils partagent leurs listes de contrôle et la formulation de leurs devis.",
+      "Rappelez que les prix viennent de leurs propres coûts, et que les règles de licence et de contrat viennent de l'organisme de leur État ou d'un professionnel, pas de l'IA.",
+      "Faites enregistrer les modèles sur les téléphones pendant la séance, pour que les apprenants repartent prêts à les utiliser.",
+      "Rappelez de ne jamais demander aux clients un numéro de carte ou une pièce d'identité par SMS, et de ne jamais faire de faux avis ni en acheter.",
+      "Notez la tâche finale avec la grille, et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

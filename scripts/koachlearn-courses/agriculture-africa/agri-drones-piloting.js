@@ -22,11 +22,34 @@ module.exports = {
     "Important: this course does not give you a licence and does not allow you to fly. In Kenya and Nigeria, as in most countries, a remote pilot licence comes from the civil aviation authority after training at an approved organisation and passing its tests. Never fly a real drone without the registration, licence and approvals your country requires."
   ],
   finalTask: "In a drone simulator, complete the five drills from this course (hover, box, figure eight, orbit, and a lawnmower grid) until you can fly each one smoothly three times in a row, practise the three emergency drills, record every session in a log book, and write a one-page personal licensing plan: your country's authority, the approved training organisations you found, the licence you need, the steps, the documents, the estimated cost from official sources, and your target dates.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Anyone in Kenya, Nigeria or elsewhere in Africa who wants to become a skilled, licensed drone pilot for agriculture, taking the final course of the drone monitoring track online.",
+    startingPoint: "Learners know what drones do on farms, the basic rules and how mapping works (Courses 1 to 5). Many have little or no stick time, have never practised emergencies, keep no flight log, and do not know the steps, documents and approved schools for a remote pilot licence.",
+    gap: "New pilots crash when they panic in an emergency, lose GPS or fly nose-in, and some pay unapproved schools or fly without a licence. Practising drills and emergencies in a simulator, keeping a log book and following a clear licensing plan lets learners arrive at approved training ready to learn fast and fly legally.",
+    constraints: [
+      "Devices: a computer or phone that can run a free or low-cost drone simulator; a controller helps",
+      "This course gives no licence and no permission to fly; licences come from the aviation authority after approved training and tests",
+      "Never fly a real drone without the registration, licence and approvals the country requires",
+      "Time: short daily practice sessions of 15 to 20 minutes",
+      "Fees and steps change: learners check the authority's official pages"
+    ],
+    prerequisites: "\"Drones for Agricultural Monitoring 1: Introduction, Regulations and Safety\"; Courses 2 to 5 help but are not required."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Using a drone controller or simulator", action: "name what each stick movement does and read the main items on the flight screen", standard: "and find the return-to-home and pause buttons without looking" },
+    { id: "O2", condition: "In a drone simulator", action: "fly the hover, box, figure eight, orbit and lawnmower drills and record every session in a log book", standard: "flying each drill smoothly three times in a row" },
+    { id: "O3", condition: "When GPS is strong or weak", action: "explain the main flight modes and fly calmly when the drone drops into attitude mode", standard: "keeping the drone in sight and landing safely" },
+    { id: "O4", condition: "In a simulated lost link, low battery or GPS loss", action: "follow the right emergency steps", standard: "calmly and in the right order, then logging the event" },
+    { id: "O5", condition: "For your country", action: "write a personal plan to earn a remote pilot licence", standard: "with the authority, approved schools, steps, documents, costs from official sources and target dates" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Learning to fly",
       lessons: [
         {
+          objectives: ["O1"],
           title: "The controls: sticks, buttons and screen",
           minutes: 5,
           goal: "Name what each stick movement does and read the main items on the flight screen.",
@@ -43,9 +66,14 @@ module.exports = {
             { title: "Know your buttons", bullets: ["Return-to-home", "Pause or brake", "Find them without looking"] }
           ],
           tryIt: "Install a drone simulator on a computer or phone (search your app store or computer for a drone flight simulator; some drone makers offer one in their app). Find the stick mode setting, set Mode 2, and move each stick gently to see what it does.",
-          youCanNow: "say what each stick does in Mode 2, read the flight screen, and find the emergency buttons."
+          youCanNow: "say what each stick does in Mode 2, read the flight screen, and find the emergency buttons.",
+          quickCheck: [
+            { objective: "O1", q: "What is pitch?", options: ["Turning on the spot", "Moving the drone forward and back", "Climbing", "Returning home"], answer: 1, why: "Pitch moves the drone forward and back; in Mode 2 it is on the right stick." },
+            { objective: "O1", q: "Your drone is drifting towards a tree and you must stop it fast. What should you already know?", options: ["The drone's price", "The farmer's phone number", "How to change the camera colour", "Where the pause or brake button is, without looking"], answer: 3, why: "Pilots learn where the pause or brake and return-to-home buttons are so they can act without looking." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Practice drills in a simulator",
           minutes: 6,
           goal: "Fly five standard drills smoothly in a simulator.",
@@ -62,9 +90,14 @@ module.exports = {
             { title: "The hard one: nose-in", bullets: ["Left and right feel reversed", "Where most beginners crash", "Practise every drill nose-in too"] }
           ],
           tryIt: "In your simulator, fly drills 1 and 2 today. Write in a notebook: date, minutes, which drills, how many smooth runs, one thing to improve.",
-          youCanNow: "practise five standard drills in a simulator and track your progress."
+          youCanNow: "practise five standard drills in a simulator and track your progress.",
+          quickCheck: [
+            { objective: "O2", q: "What is the box drill?", options: ["Flying a square, first with the nose forward, then turning at each corner", "Hovering in one spot", "Circling a tree", "Flying in a figure eight"], answer: 0, why: "The box drill flies a square with the nose facing forward, then with the nose turning at each corner." },
+            { objective: "O2", q: "You have flown the hover drill smoothly once. What do you do next?", options: ["Move straight to real flying", "Stop practising hover forever", "Keep practising until it is smooth three times in a row, then move on", "Skip to the hardest drill"], answer: 2, why: "Practise each drill until you can fly it smoothly three times in a row." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Flight modes and when to use them",
           minutes: 5,
           goal: "Explain the main flight modes and switch safely when GPS is weak.",
@@ -80,17 +113,21 @@ module.exports = {
             { title: "Other modes", bullets: ["Sport: fast, less protection", "Tripod / cine: slow and smooth", "Practise flying without GPS help"] }
           ],
           tryIt: "In your simulator, switch off GPS help or choose attitude mode, add some wind, and hold a hover for 30 seconds by correcting drift. Then fly the box drill in this mode.",
-          youCanNow: "explain the main flight modes and keep control when the drone drifts without GPS."
+          youCanNow: "explain the main flight modes and keep control when the drone drifts without GPS.",
+          quickCheck: [
+            { objective: "O3", q: "What does tripod or cine mode do?", options: ["Flies as fast as possible", "Turns off the motors", "Maps automatically", "Flies slowly and smoothly for filming"], answer: 3, why: "Tripod or cine mode is slow and smooth, for filming." },
+            { objective: "O3", q: "You will map a field next to a tall metal grain silo. What do you prepare for?", options: ["Nothing; GPS always works", "The drone dropping into attitude mode and drifting, so you practise flying without GPS help", "Flying in sport mode", "Flying nose-in only"], answer: 1, why: "Near tall metal structures GPS can be weak, and the drone may drift in attitude mode." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Learning to fly",
         questions: [
-          { q: "In Mode 2, what does pushing the left stick up do?", options: ["Moves forward", "Turns right", "Climbs", "Moves sideways"], answer: 2, why: "The left stick controls throttle (height) and yaw in Mode 2." },
-          { q: "What is yaw?", options: ["Turning the drone left or right on the spot", "Climbing", "Landing", "Taking a photo"], answer: 0, why: "Yaw rotates the drone around its centre." },
-          { q: "Which practice plan builds skill best?", options: ["One three-hour session a month", "Short daily sessions of the same drills", "Only watching videos", "Flying a real drone without training"], answer: 1, why: "Short, regular repetition builds smooth control." },
-          { q: "Why practise flying nose-in?", options: ["It is faster", "It saves battery", "Simulators require it", "Controls feel reversed, and many beginners crash there"], answer: 3, why: "Practising it makes the reversed feeling familiar." },
-          { q: "In attitude (ATTI) mode the drone:", options: ["Holds height but drifts with the wind", "Lands automatically", "Holds its place perfectly", "Cannot move"], answer: 0, why: "Without GPS positioning it holds height but not place." }
+          { objective: "O1", q: "In Mode 2, what does pushing the left stick up do?", options: ["Moves forward", "Turns right", "Climbs", "Moves sideways"], answer: 2, why: "The left stick controls throttle (height) and yaw in Mode 2." },
+          { objective: "O1", q: "What is yaw?", options: ["Turning the drone left or right on the spot", "Climbing", "Landing", "Taking a photo"], answer: 0, why: "Yaw rotates the drone around its centre." },
+          { objective: "O2", q: "Which practice plan builds skill best?", options: ["One three-hour session a month", "Short daily sessions of the same drills", "Only watching videos", "Flying a real drone without training"], answer: 1, why: "Short, regular repetition builds smooth control." },
+          { objective: "O2", q: "Why practise flying nose-in?", options: ["It is faster", "It saves battery", "Simulators require it", "Controls feel reversed, and many beginners crash there"], answer: 3, why: "Practising it makes the reversed feeling familiar." },
+          { objective: "O3", q: "In attitude (ATTI) mode the drone:", options: ["Holds height but drifts with the wind", "Lands automatically", "Holds its place perfectly", "Cannot move"], answer: 0, why: "Without GPS positioning it holds height but not place." }
         ]
       }
     },
@@ -98,6 +135,7 @@ module.exports = {
       name: "Chapter 2: Becoming a licensed pilot",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Emergency drills: lost link, low battery, GPS loss",
           minutes: 6,
           goal: "Follow the right steps in three common emergencies.",
@@ -116,9 +154,14 @@ module.exports = {
           ],
           sources: [NCAA_P21, KCAA_UAS],
           tryIt: "In your simulator, practise each emergency: set a low-battery warning and fly home, switch off GPS mid-flight and land by hand, and (if the simulator allows) trigger a signal loss and watch return-to-home. Write the steps from memory afterwards.",
-          youCanNow: "follow the right steps for lost link, low battery and GPS loss."
+          youCanNow: "follow the right steps for lost link, low battery and GPS loss.",
+          quickCheck: [
+            { objective: "O4", q: "Before every real flight, what do you check to prepare for a lost link?", options: ["The camera's colour setting", "The farmer's address", "That return-to-home height and the lost-signal action are set correctly", "The log book's last page"], answer: 2, why: "Correct return-to-home height and lost-signal action let the drone come home safely if the link is lost." },
+            { objective: "O4", q: "After a hard landing with a real drone, it looks fine. What do you do?", options: ["Check it for damage and write it in the log book", "Fly again at once without checking", "Forget about it", "Hide it from your instructor"], answer: 0, why: "After any emergency or crash, check for damage and log it; report it if the rules require." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Keeping a pilot log book",
           minutes: 4,
           goal: "Record every simulator and real flight in a log book.",
@@ -135,9 +178,14 @@ module.exports = {
             { title: "Keep it well", bullets: ["Every session, backed up", "Simulator and real time separate", "Use the format your trainer accepts"] }
           ],
           tryIt: "Start your log book now as a spreadsheet with the columns from this lesson, and enter every simulator session you have done in this course so far.",
-          youCanNow: "keep a complete pilot log book for simulator and real flights."
+          youCanNow: "keep a complete pilot log book for simulator and real flights.",
+          quickCheck: [
+            { objective: "O2", q: "Why do training organisations and authorities look at flight logs?", options: ["To set the drone's price", "To check a pilot's experience", "To choose the weather", "To change the stick mode"], answer: 1, why: "Flight logs show a pilot's experience to schools, authorities, employers and clients." },
+            { objective: "O2", q: "You flew a real drone today under an approval. What do you add to the log entry?", options: ["Nothing more than the date", "The weather next week", "Your bank details", "The drone's registration and the approval used"], answer: 3, why: "For real flights, also note the drone's registration and any approval used." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Your path to a remote pilot licence",
           minutes: 6,
           goal: "Write a personal plan to earn a remote pilot licence in your country.",
@@ -155,17 +203,21 @@ module.exports = {
           ],
           sources: [KCAA_UTO, KCAA_PORTAL, KCAA_UAS, NCAA_P21],
           tryIt: "Final task: finish the five drills and three emergency drills in your simulator, keep every session in your log book, and write your one-page licensing plan: authority, approved schools found, licence needed, steps, documents, cost from official sources, and target dates.",
-          youCanNow: "fly standard drills and emergency procedures in a simulator, keep a log book, and follow a clear plan to an official remote pilot licence."
+          youCanNow: "fly standard drills and emergency procedures in a simulator, keep a log book, and follow a clear plan to an official remote pilot licence.",
+          quickCheck: [
+            { objective: "O5", q: "Which is a usual step on the path to a remote pilot licence?", options: ["Training at an approved organisation, then a practical test", "Buying the biggest drone", "Finishing an online course only", "Flying for a client first"], answer: 0, why: "The usual path is approved training, theory, flying lessons and a test, then the licence application." },
+            { objective: "O5", q: "A website offers a remote pilot licence online in one day with no test, for a fee. What do you do?", options: ["Pay quickly before the offer ends", "Pay half now", "Check the authority's official pages and approved list before paying anything", "Share it with friends"], answer: 2, why: "Licences come from the aviation authority; check that a school is on its approved list before you pay." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Becoming a licensed pilot",
         questions: [
-          { q: "The controller loses signal with the drone. A good first step is:", options: ["Switch off the controller", "Run after the drone", "Stay calm, point the antennas at the drone and watch for return-to-home", "Turn the drone motors off"], answer: 2, why: "Most drones return home after lost link; better antenna position may restore it." },
-          { q: "The low-battery warning sounds with one mapping line left. You should:", options: ["Fly the last line quickly", "Stop the task and fly home or land safely", "Climb higher", "Ignore it"], answer: 1, why: "Never push a low battery; land safely and finish later." },
-          { q: "What should a pilot log book record?", options: ["Date, place, aircraft, minutes, type, conditions, problems, lessons", "Only crashes", "Only the drone's price", "Nothing; it is optional"], answer: 0, why: "A full log proves experience and shows patterns." },
-          { q: "Does finishing this online course give you a licence?", options: ["Yes, at once", "Yes, after the quiz", "Only in Nigeria", "No; licences come from the aviation authority after approved training and tests"], answer: 3, why: "Only the national authority issues remote pilot licences." },
-          { q: "Before paying a drone school, you should:", options: ["Check it is on the aviation authority's approved list", "Trust its advert", "Ask a friend only", "Pay in cash to save time"], answer: 0, why: "Only approved training counts toward a licence." }
+          { objective: "O4", q: "The controller loses signal with the drone. A good first step is:", options: ["Switch off the controller", "Run after the drone", "Stay calm, point the antennas at the drone and watch for return-to-home", "Turn the drone motors off"], answer: 2, why: "Most drones return home after lost link; better antenna position may restore it." },
+          { objective: "O4", q: "The low-battery warning sounds with one mapping line left. You should:", options: ["Fly the last line quickly", "Stop the task and fly home or land safely", "Climb higher", "Ignore it"], answer: 1, why: "Never push a low battery; land safely and finish later." },
+          { objective: "O2", q: "What should a pilot log book record?", options: ["Date, place, aircraft, minutes, type, conditions, problems, lessons", "Only crashes", "Only the drone's price", "Nothing; it is optional"], answer: 0, why: "A full log proves experience and shows patterns." },
+          { objective: "O5", q: "Does finishing this online course give you a licence?", options: ["Yes, at once", "Yes, after the quiz", "Only in Nigeria", "No; licences come from the aviation authority after approved training and tests"], answer: 3, why: "Only the national authority issues remote pilot licences." },
+          { objective: "O5", q: "Before paying a drone school, you should:", options: ["Check it is on the aviation authority's approved list", "Trust its advert", "Ask a friend only", "Pay in cash to save time"], answer: 0, why: "Only approved training counts toward a licence." }
         ]
       }
     }
@@ -173,26 +225,99 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Drones for Agricultural Monitoring 6: Online Drone Piloting Course",
     questions: [
-      { q: "In Mode 2, the right stick controls:", options: ["Height and turning", "Forward/back and sideways", "Camera zoom", "Return-to-home"], answer: 1, why: "The right stick controls pitch and roll in Mode 2." },
-      { q: "Throttle controls:", options: ["Turning", "Sideways movement", "Climbing and descending", "The camera"], answer: 2, why: "Throttle moves the drone up and down." },
-      { q: "Smooth flying comes from:", options: ["Small, gentle stick movements", "Pushing the sticks fully every time", "Flying fast", "Flying at night"], answer: 0, why: "Gentle inputs give smooth, controlled flight." },
-      { q: "Which is NOT normally on the flight screen?", options: ["Battery level", "GPS satellites", "Height", "The farmer's bank balance"], answer: 3, why: "The screen shows flight data, not personal finances." },
-      { q: "Why practise in a simulator first?", options: ["It is the law everywhere", "Mistakes cost nothing and break no rules", "It gives you a licence", "Real drones cannot hover"], answer: 1, why: "Simulators let you learn safely before real flights." },
-      { q: "How long should a good daily practice session be?", options: ["About 15 to 20 minutes", "Five hours", "One minute", "Only once a year"], answer: 0, why: "Short, regular sessions build skill best." },
-      { q: "The lawnmower drill practises:", options: ["Cutting grass", "Landing", "Straight parallel lines like a mapping flight", "Taking selfies"], answer: 2, why: "It builds the control used in mapping patterns." },
-      { q: "An orbit drill means:", options: ["Flying straight up", "Hovering", "Landing on a tree", "Circling a point with the camera on it"], answer: 3, why: "Orbits keep the camera on a target while circling." },
-      { q: "When flying nose-in, controls feel:", options: ["Reversed left and right", "Exactly the same", "Slower", "Locked"], answer: 0, why: "The drone faces you, so left and right are swapped from your view." },
-      { q: "In GPS mode, when you let go of the sticks the drone:", options: ["Falls", "Holds its place", "Flies home", "Spins"], answer: 1, why: "Satellite positioning holds the drone in place." },
-      { q: "A drone may drop into attitude mode when:", options: ["The battery is full", "The sky is clear", "GPS is weak, for example under thick trees or near metal structures", "You take a photo"], answer: 2, why: "Weak satellite signal removes position hold." },
-      { q: "In attitude mode in wind, the drone will:", options: ["Hold perfectly still", "Land by itself", "Climb forever", "Drift with the wind"], answer: 3, why: "It holds height but not place." },
-      { q: "Sport mode usually means:", options: ["Faster flying with less protection", "Slow, smooth filming", "Automatic landing", "No camera"], answer: 0, why: "Sport mode trades safety features for speed." },
-      { q: "After any crash or serious incident, you should:", options: ["Hide it", "Make the area safe, check damage, log it, and report if required", "Fly again at once without checks", "Delete the log"], answer: 1, why: "Safety first, then records and any required report." },
-      { q: "During GPS loss, the safest plan is to:", options: ["Fly further away", "Climb as high as possible", "Fly gently back by hand against the wind and land soon", "Let go of the sticks and wait"], answer: 2, why: "Manual control and an early landing prevent a fly-away." },
-      { q: "A fly-away is:", options: ["A normal mapping flight", "A type of propeller", "A landing pad", "A drone flying off out of the pilot's control"], answer: 3, why: "It is a loss of control, often after GPS or link problems." },
-      { q: "In a log book, simulator time and real flight time should be:", options: ["Kept in separate columns", "Added together with no labels", "Not recorded", "Recorded only if over one hour"], answer: 0, why: "Authorities and trainers need to see each kind separately." },
-      { q: "In Kenya, approved drone schools are called:", options: ["Drone clubs", "Unmanned Aircraft Systems Training Organizations (UTOs)", "Agrovets", "Plant clinics"], answer: 1, why: "KCAA approves and lists UTOs." },
-      { q: "Which topic is part of remote pilot theory training?", options: ["Cooking", "Football rules", "Air law, airspace and weather", "Music"], answer: 2, why: "Pilots must know air law, airspace, weather and their aircraft." },
-      { q: "Where should you check the licence fee?", options: ["A social media post", "A seller's advert", "An old friend's memory", "The aviation authority's official fee schedule"], answer: 3, why: "Fees change; only the official schedule is reliable." }
+      { objective: "O1", q: "In Mode 2, the right stick controls:", options: ["Height and turning", "Forward/back and sideways", "Camera zoom", "Return-to-home"], answer: 1, why: "The right stick controls pitch and roll in Mode 2." },
+      { objective: "O1", q: "Throttle controls:", options: ["Turning", "Sideways movement", "Climbing and descending", "The camera"], answer: 2, why: "Throttle moves the drone up and down." },
+      { objective: "O1", q: "Smooth flying comes from:", options: ["Small, gentle stick movements", "Pushing the sticks fully every time", "Flying fast", "Flying at night"], answer: 0, why: "Gentle inputs give smooth, controlled flight." },
+      { objective: "O1", q: "Which is NOT normally on the flight screen?", options: ["Battery level", "GPS satellites", "Height", "The farmer's bank balance"], answer: 3, why: "The screen shows flight data, not personal finances." },
+      { objective: "O2", q: "Why practise in a simulator first?", options: ["It is the law everywhere", "Mistakes cost nothing and break no rules", "It gives you a licence", "Real drones cannot hover"], answer: 1, why: "Simulators let you learn safely before real flights." },
+      { objective: "O2", q: "How long should a good daily practice session be?", options: ["About 15 to 20 minutes", "Five hours", "One minute", "Only once a year"], answer: 0, why: "Short, regular sessions build skill best." },
+      { objective: "O2", q: "The lawnmower drill practises:", options: ["Cutting grass", "Landing", "Straight parallel lines like a mapping flight", "Taking selfies"], answer: 2, why: "It builds the control used in mapping patterns." },
+      { objective: "O2", q: "An orbit drill means:", options: ["Flying straight up", "Hovering", "Landing on a tree", "Circling a point with the camera on it"], answer: 3, why: "Orbits keep the camera on a target while circling." },
+      { objective: "O2", q: "When flying nose-in, controls feel:", options: ["Reversed left and right", "Exactly the same", "Slower", "Locked"], answer: 0, why: "The drone faces you, so left and right are swapped from your view." },
+      { objective: "O3", q: "In GPS mode, when you let go of the sticks the drone:", options: ["Falls", "Holds its place", "Flies home", "Spins"], answer: 1, why: "Satellite positioning holds the drone in place." },
+      { objective: "O3", q: "A drone may drop into attitude mode when:", options: ["The battery is full", "The sky is clear", "GPS is weak, for example under thick trees or near metal structures", "You take a photo"], answer: 2, why: "Weak satellite signal removes position hold." },
+      { objective: "O3", q: "In attitude mode in wind, the drone will:", options: ["Hold perfectly still", "Land by itself", "Climb forever", "Drift with the wind"], answer: 3, why: "It holds height but not place." },
+      { objective: "O3", q: "Sport mode usually means:", options: ["Faster flying with less protection", "Slow, smooth filming", "Automatic landing", "No camera"], answer: 0, why: "Sport mode trades safety features for speed." },
+      { objective: "O4", q: "After any crash or serious incident, you should:", options: ["Hide it", "Make the area safe, check damage, log it, and report if required", "Fly again at once without checks", "Delete the log"], answer: 1, why: "Safety first, then records and any required report." },
+      { objective: "O4", q: "During GPS loss, the safest plan is to:", options: ["Fly further away", "Climb as high as possible", "Fly gently back by hand against the wind and land soon", "Let go of the sticks and wait"], answer: 2, why: "Manual control and an early landing prevent a fly-away." },
+      { objective: "O4", q: "A fly-away is:", options: ["A normal mapping flight", "A type of propeller", "A landing pad", "A drone flying off out of the pilot's control"], answer: 3, why: "It is a loss of control, often after GPS or link problems." },
+      { objective: "O2", q: "In a log book, simulator time and real flight time should be:", options: ["Kept in separate columns", "Added together with no labels", "Not recorded", "Recorded only if over one hour"], answer: 0, why: "Authorities and trainers need to see each kind separately." },
+      { objective: "O5", q: "In Kenya, approved drone schools are called:", options: ["Drone clubs", "Unmanned Aircraft Systems Training Organizations (UTOs)", "Agrovets", "Plant clinics"], answer: 1, why: "KCAA approves and lists UTOs." },
+      { objective: "O5", q: "Which topic is part of remote pilot theory training?", options: ["Cooking", "Football rules", "Air law, airspace and weather", "Music"], answer: 2, why: "Pilots must know air law, airspace, weather and their aircraft." },
+      { objective: "O5", q: "Where should you check the licence fee?", options: ["A social media post", "A seller's advert", "An old friend's memory", "The aviation authority's official fee schedule"], answer: 3, why: "Fees change; only the official schedule is reliable." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      4,
+      8,
+      9,
+      11,
+      13,
+      14,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, practise or fix that part and check it again.",
+    criteria: [
+      {
+        name: "Five drills",
+        objective: "O2",
+        notYet: "One or more drills are not yet smooth three times in a row.",
+        meets: "Hover, box, figure eight, orbit and lawnmower each flown smoothly three times in a row.",
+        exceeds: "Also flies the box and figure eight smoothly nose-in."
+      },
+      {
+        name: "Emergency drills",
+        objective: "O4",
+        notYet: "Panics or skips steps in an emergency drill.",
+        meets: "Follows the right steps for lost link, low battery and GPS loss.",
+        exceeds: "Lands safely from attitude mode against the wind without help."
+      },
+      {
+        name: "Log book",
+        objective: "O2",
+        notYet: "Sessions are missing or entries lack key fields.",
+        meets: "Every session logged with date, simulator, minutes, type, conditions, problems and lessons.",
+        exceeds: "Simulator and real time are in separate columns and the log is backed up."
+      },
+      {
+        name: "Licensing plan",
+        objective: "O5",
+        notYet: "The authority, licence or steps are missing, or costs are guessed.",
+        meets: "Authority, approved schools found, licence needed, steps, documents, cost from official sources and target dates.",
+        exceeds: "Has contacted a school on the approved list and noted the date checked."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and score Meets or Exceeds on every rubric row",
+      "Learners who enrol with an approved training organisation within 90 days (follow-up survey)",
+      "Learners who earn a remote pilot licence within a year",
+      "Learners who report flying only with the registration, licence and approvals their country requires"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer or phone with a free or low-cost drone simulator; a controller if available",
+      "A paper log book, spreadsheet or logging app",
+      "Internet access to the aviation authority's pages and approved school list",
+      "About 60 minutes of lessons, plus short daily simulator sessions of 15 to 20 minutes over several weeks"
+    ],
+    facilitatorNotes: [
+      "Take the pre-test together, then run the first drills on a shared screen so learners see the stick movements.",
+      "Make clear that the course gives no licence and no permission to fly real drones.",
+      "Hold short drill check-ins where learners show each drill three times in a row.",
+      "Check the approved training organisation lists with learners and warn against paying unlisted schools.",
+      "Score the drills, log book and licensing plan with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

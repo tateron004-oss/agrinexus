@@ -17,11 +17,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes et se termine par une tâche à faire tout de suite. Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Faites un plan d'action d'une page pour alléger votre casier : où vous obtiendrez votre casier, chaque affaire que vous connaissez (comté, année, accusation) et le type d'allègement qui pourrait lui convenir, l'aide juridique gratuite que vous contacterez en premier, les papiers que vous allez réunir, et une courte déclaration honnête sur votre réhabilitation à donner à un employeur après une offre d'emploi.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des adultes qui ont un casier judiciaire, dont beaucoup sortent de prison, et dont le casier les gêne pour trouver un emploi, un logement ou suivre des études. Les exemples portent sur la Californie, avec des indications pour vérifier les règles dans les autres États.",
+    startingPoint: "Ils connaissent certaines de leurs affaires de mémoire. La plupart n'ont jamais vu leur casier officiel, ne connaissent pas les mots de l'allègement du casier et ne savent pas où trouver une aide juridique gratuite.",
+    gap: "Beaucoup de personnes qui ont droit à un allègement du casier ne le demandent jamais, parce que personne ne leur a montré comment faire. Les apprenants doivent obtenir leur casier, nommer l'allègement qui pourrait leur convenir, trouver une aide juridique gratuite et préparer leurs papiers, pour qu'un avocat ou une clinique puisse déposer la demande pour eux et qu'ils puissent défendre leurs droits à l'embauche.",
+    constraints: [
+      "Niveau de lecture : des mots simples et des phrases courtes (fin d'école primaire environ)",
+      "Appareils : un smartphone ou un ordinateur de bibliothèque avec internet",
+      "Temps : des leçons d'environ 5 minutes, à caser autour du travail et des rendez-vous",
+      "Pas de conseil juridique : les lois varient selon l'État et changent ; les apprenants se font aider par un avocat, l'aide juridique ou le centre d'aide du tribunal avant de déposer quoi que ce soit",
+      "Vie privée : les détails des affaires restent hors des outils d'IA et des ordinateurs partagés"
+    ],
+    prerequisites: "Aucun. Le cours « Introduction à l'IA et confiance numérique » aide les apprenants qui débutent dans la recherche de sites officiels."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Avec le site officiel de votre État", action: "demander une copie de votre propre casier judiciaire et trouver où obtenir vos dossiers fédéraux et ceux des tribunaux", standard: "en notant le nom du formulaire, les frais, la dispense de frais et le lieu de prise d'empreintes le plus proche" },
+    { id: "O2", condition: "À partir des mots de l'allègement du casier", action: "expliquer la différence entre expungement, sealing, set-aside ou dismissal, certificate of rehabilitation et pardon", standard: "avec une phrase simple et juste pour chacun" },
+    { id: "O3", condition: "À partir de la liste de vos affaires", action: "dire si chaque affaire est fédérale ou d'État et vérifier si un allègement automatique peut s'appliquer", standard: "avec chaque affaire étiquetée et un plan pour consulter votre casier le plus récent" },
+    { id: "O4", condition: "Avec des sources officielles et des associations", action: "trouver deux endroits gratuits qui aident pour l'allègement du casier et préparer des questions pour le premier appel", standard: "avec le nom, le téléphone, les horaires et trois questions pour chacun, et aucun service payant qui garantit le résultat" },
+    { id: "O5", condition: "À partir de vos affaires et des preuves de votre vie actuelle", action: "monter un dossier d'allègement du casier qu'un avocat ou une clinique peut utiliser", standard: "avec le comté, l'année et le chef d'accusation de chaque affaire, et une liste des preuves qui manquent encore" },
+    { id: "O6", condition: "En vous appuyant sur le Fair Chance Act de Californie", action: "expliquer quand un employeur peut consulter votre casier et écrire une courte déclaration de réhabilitation", standard: "avec une déclaration honnête, courte, qui dit ce que vous avez fait depuis" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Connaître votre casier et vos options",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Obtenir une copie de votre propre casier",
           minutes: 5,
           goal: "Demander une copie de votre casier judiciaire d'État et savoir où trouver vos dossiers fédéraux et ceux des tribunaux.",
@@ -45,9 +69,14 @@ module.exports = {
             { name: "FBI : Vérifications Identity History Summary", url: "https://www.fbi.gov/how-we-can-help-you/more-fbi-services-and-information/identity-history-summary-checks" }
           ],
           tryIt: "Trouvez la page officielle où votre État vous permet de demander votre propre casier (en Californie, Record Review sur oag.ca.gov). Notez le nom du formulaire, les frais, s'il existe une dispense de frais, et l'endroit le plus proche pour donner vos empreintes.",
-          youCanNow: "demander une copie de votre casier d'État, dire où sont gardés vos dossiers du FBI et des tribunaux, et repérer les erreurs à contester."
+          youCanNow: "demander une copie de votre casier d'État, dire où sont gardés vos dossiers du FBI et des tribunaux, et repérer les erreurs à contester.",
+          quickCheck: [
+            { objective: "O1", q: "En Californie, que devez-vous faire pour voir votre propre casier d'État ?", options: ["Appeler le commissariat de police", "Remplir le formulaire Record Review du DOJ et donner vos empreintes dans un site Live Scan", "Demander à un assistant d'IA de le chercher", "Payer un site de vérification des antécédents"], answer: 1, why: "Le Record Review du DOJ de Californie passe par un formulaire et des empreintes Live Scan." },
+            { objective: "O1", q: "Vous recevez votre casier et vous voyez une affaire qui n'est pas la vôtre. Que faites-vous ?", options: ["L'ignorer", "Demander à l'IA de l'effacer", "Attendre qu'un employeur pose la question", "La contester avec le formulaire officiel prévu pour les erreurs"], answer: 3, why: "Obtenir votre casier vous permet de repérer les erreurs et de les contester officiellement." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Ce que veulent dire les mots de l'allègement du casier",
           minutes: 5,
           goal: "Expliquer la différence entre expungement, dismissal, sealing, set-aside, certificate of rehabilitation et pardon.",
@@ -68,9 +97,14 @@ module.exports = {
             { name: "Guide d'aide des tribunaux de Californie : Nettoyer votre casier", url: "https://selfhelp.courts.ca.gov/clean-your-record" }
           ],
           tryIt: "Faites un petit tableau de cinq lignes : expungement, sealing, set-aside ou dismissal, certificate of rehabilitation, pardon. À côté de chacun, écrivez une phrase simple sur ce qu'il fait. Puis écrivez une question sur votre propre affaire à poser à un avocat.",
-          youCanNow: "expliquer avec des mots simples les principaux types d'allègement du casier, et dire pourquoi vous demandez quand même à un avocat ce que chacun fait pour vous."
+          youCanNow: "expliquer avec des mots simples les principaux types d'allègement du casier, et dire pourquoi vous demandez quand même à un avocat ce que chacun fait pour vous.",
+          quickCheck: [
+            { objective: "O2", q: "Que fait en général le sealing (mise sous scellés) d'un casier ?", options: ["Il garde le casier mais le cache à la plupart des gens", "Il détruit toutes les copies pour toujours", "Il transforme un crime en simple contravention", "Il vous donne une grâce"], answer: 0, why: "Un casier sous scellés existe encore, mais la plupart des gens ne peuvent pas le voir." },
+            { objective: "O2", q: "Vous ne savez pas quel allègement convient à votre affaire. Que faites-vous ?", options: ["Choisir celui qui a le plus joli nom", "Les demander tous en même temps", "Noter votre question et la poser à un avocat ou à l'aide juridique", "Demander à un ami qui avait une autre affaire"], answer: 2, why: "Un avocat ou l'aide juridique peut dire quel allègement convient à votre propre affaire." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Fédéral, État et Clean Slate en Californie",
           minutes: 5,
           goal: "Dire si chacune de vos affaires est fédérale ou d'État, et vérifier si l'allègement automatique de Californie s'applique peut-être déjà.",
@@ -93,17 +127,21 @@ module.exports = {
             { name: "Office of the Pardon Attorney du DOJ des États-Unis : Demander une grâce", url: "https://www.justice.gov/pardon/apply-clemency" }
           ],
           tryIt: "À partir de votre casier ou de vos souvenirs, listez chaque affaire et écrivez à côté État ou fédéral. Si vous vivez en Californie, notez si votre casier du DOJ le plus récent montre un allègement automatique pour une affaire, ou prévoyez de le demander pour le savoir.",
-          youCanNow: "classer vos affaires entre fédérales et d'État, expliquer ce que fait et ne fait pas l'allègement automatique de Californie, et lister les affaires qui ont encore besoin d'une requête."
+          youCanNow: "classer vos affaires entre fédérales et d'État, expliquer ce que fait et ne fait pas l'allègement automatique de Californie, et lister les affaires qui ont encore besoin d'une requête.",
+          quickCheck: [
+            { objective: "O3", q: "Votre affaire a été jugée par la cour supérieure d'un comté. De quel type d'affaire s'agit-il ?", options: ["Une affaire fédérale", "Une affaire d'État", "Une affaire militaire", "Seulement une affaire civile"], answer: 1, why: "Les cours supérieures de comté jugent les affaires d'État." },
+            { objective: "O3", q: "Vous vivez en Californie et pensez qu'un allègement automatique peut s'appliquer à une ancienne affaire. Que faites-vous ?", options: ["Supposer qu'elle a été effacée", "Déposer une demande fédérale", "Demander à un employeur de vérifier", "Demander votre casier le plus récent au DOJ et y chercher la mention de l'allègement"], answer: 3, why: "Votre casier le plus récent du DOJ montre si un allègement automatique a été appliqué." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Connaître votre casier et vos options",
         questions: [
-          { q: "Quelle est la meilleure première étape avant de demander un allègement du casier ?", options: ["Dire à chaque employeur que vous n'avez pas de casier", "Obtenir une copie de votre propre casier", "Payer un site web pour effacer votre casier", "Attendre que le tribunal vous appelle"], answer: 1, why: "Votre casier montre chaque affaire et son résultat : vous savez quoi corriger et vous pouvez repérer les erreurs." },
-          { q: "En Californie, comment voir votre propre casier d'État ?", options: ["Demander à un ami au tribunal", "Chercher votre nom sur les réseaux sociaux", "Appeler le 911", "Remplir le formulaire Record Review du DOJ et donner vos empreintes dans un site Live Scan"], answer: 3, why: "La Record Review du DOJ de Californie utilise le formulaire BCIA 8016RR et les empreintes Live Scan." },
-          { q: "Quelle option garde le casier mais le cache à la plupart des gens ?", options: ["Le sealing (mise sous scellés)", "Une contravention routière", "La mise à l'épreuve", "Un mandat d'arrêt"], answer: 0, why: "Avec le sealing, le casier existe encore, mais la plupart du public ne peut pas le voir." },
-          { q: "Votre seule condamnation vient d'une US District Court. Quelle voie est la plus probable ?", options: ["Un dismissal en Californie", "Un programme Clean Slate de comté", "Une grâce présidentielle", "Un changement de relevé de notes scolaire"], answer: 2, why: "Une affaire d'une US District Court est fédérale et l'allègement d'un État ne peut pas l'effacer ; la voie principale est la grâce présidentielle." },
-          { q: "Qu'est-ce qui est vrai sur l'allègement automatique du casier en Californie ?", options: ["Il efface complètement l'affaire", "Vous devez déposer une requête pour l'obtenir", "Le DOJ vous appelle quand c'est fait", "Il limite qui peut voir une affaire, mais ne l'annule pas"], answer: 3, why: "L'allègement automatique ajoute une mention qui limite la communication ; l'affaire n'est ni annulée ni effacée." }
+          { objective: "O1", q: "Quelle est la meilleure première étape avant de demander un allègement du casier ?", options: ["Dire à chaque employeur que vous n'avez pas de casier", "Obtenir une copie de votre propre casier", "Payer un site web pour effacer votre casier", "Attendre que le tribunal vous appelle"], answer: 1, why: "Votre casier montre chaque affaire et son résultat : vous savez quoi corriger et vous pouvez repérer les erreurs." },
+          { objective: "O1", q: "En Californie, comment voir votre propre casier d'État ?", options: ["Demander à un ami au tribunal", "Chercher votre nom sur les réseaux sociaux", "Appeler le 911", "Remplir le formulaire Record Review du DOJ et donner vos empreintes dans un site Live Scan"], answer: 3, why: "La Record Review du DOJ de Californie utilise le formulaire BCIA 8016RR et les empreintes Live Scan." },
+          { objective: "O2", q: "Quelle option garde le casier mais le cache à la plupart des gens ?", options: ["Le sealing (mise sous scellés)", "Une contravention routière", "La mise à l'épreuve", "Un mandat d'arrêt"], answer: 0, why: "Avec le sealing, le casier existe encore, mais la plupart du public ne peut pas le voir." },
+          { objective: "O3", q: "Votre seule condamnation vient d'une US District Court. Quelle voie est la plus probable ?", options: ["Un dismissal en Californie", "Un programme Clean Slate de comté", "Une grâce présidentielle", "Un changement de relevé de notes scolaire"], answer: 2, why: "Une affaire d'une US District Court est fédérale et l'allègement d'un État ne peut pas l'effacer ; la voie principale est la grâce présidentielle." },
+          { objective: "O3", q: "Qu'est-ce qui est vrai sur l'allègement automatique du casier en Californie ?", options: ["Il efface complètement l'affaire", "Vous devez déposer une requête pour l'obtenir", "Le DOJ vous appelle quand c'est fait", "Il limite qui peut voir une affaire, mais ne l'annule pas"], answer: 3, why: "L'allègement automatique ajoute une mention qui limite la communication ; l'affaire n'est ni annulée ni effacée." }
         ]
       }
     },
@@ -111,6 +149,7 @@ module.exports = {
       name: "Chapitre 2 : Trouver de l'aide, vous préparer et utiliser vos droits",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Trouver une aide juridique gratuite",
           minutes: 5,
           goal: "Trouver deux endroits gratuits qui peuvent vous aider pour l'allègement du casier, et préparer le premier appel.",
@@ -133,9 +172,14 @@ module.exports = {
             { name: "Guide d'aide des tribunaux de Californie : Aide juridique pour nettoyer votre casier", url: "https://selfhelp.courts.ca.gov/clean-your-record/legal-help" }
           ],
           tryIt: "Trouvez près de chez vous deux aides juridiques gratuites pour l'allègement du casier. Pour chacune, notez le nom, le numéro de téléphone, les horaires et ce qu'il faut apporter. Puis écrivez trois questions que vous poserez, par exemple : Lesquelles de mes affaires peuvent être effacées ? Quel type d'allègement convient ? Combien de temps cela prendra-t-il ?",
-          youCanNow: "trouver une aide juridique gratuite pour l'allègement du casier, préparer le premier appel, et repérer les offres payantes qui sont des signaux d'alerte."
+          youCanNow: "trouver une aide juridique gratuite pour l'allègement du casier, préparer le premier appel, et repérer les offres payantes qui sont des signaux d'alerte.",
+          quickCheck: [
+            { objective: "O4", q: "Lequel est un endroit gratuit pour trouver de l'aide pour l'allègement du casier ?", options: ["Un site qui garantit le résultat pour de gros frais", "Le centre d'aide d'un tribunal", "Un inconnu sur les réseaux sociaux", "Un bureau de cautionnement"], answer: 1, why: "Les centres d'aide des tribunaux aident gratuitement à remplir les formulaires du tribunal." },
+            { objective: "O4", q: "Quelqu'un promet d'effacer votre casier à coup sûr si vous payez 1 000 $ aujourd'hui. Que faites-vous ?", options: ["Partir et contacter plutôt une aide juridique gratuite", "Payer la moitié maintenant", "Payer avec une carte cadeau", "Lui donner les détails de vos affaires pour qu'il vérifie"], answer: 0, why: "Les garanties et les gros frais payés d'avance sont des signaux d'alerte." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Préparer et déposer votre demande avec de l'aide",
           minutes: 6,
           goal: "Monter un dossier d'allègement du casier qu'un avocat ou une clinique peut utiliser pour déposer la demande pour vous.",
@@ -154,9 +198,14 @@ module.exports = {
             { title: "Après le dépôt", bullets: ["Gardez des copies et notez chaque date", "Obtenez une copie de la décision du juge", "Vérifiez de nouveau votre casier quelques mois plus tard"] }
           ],
           tryIt: "Commencez aujourd'hui votre dossier d'allègement du casier. Écrivez la liste des affaires que vous connaissez (comté, année, accusation) et une liste des preuves qu'il vous reste à réunir. Mettez une étoile à côté des deux premiers papiers que vous obtiendrez cette semaine.",
-          youCanNow: "monter un dossier d'allègement du casier, travailler avec une personne qui vous aide pour déposer la demande, et vérifier ensuite que votre casier a été mis à jour."
+          youCanNow: "monter un dossier d'allègement du casier, travailler avec une personne qui vous aide pour déposer la demande, et vérifier ensuite que votre casier a été mis à jour.",
+          quickCheck: [
+            { objective: "O5", q: "Qu'est-ce qu'un numéro d'affaire ?", options: ["Votre numéro de sécurité sociale", "Votre numéro d'écrou", "Le numéro qu'un tribunal donne à chaque affaire", "Votre numéro de téléphone"], answer: 2, why: "Chaque affaire au tribunal a son propre numéro." },
+            { objective: "O5", q: "Le tribunal a accordé votre allègement. Que faites-vous plus tard ?", options: ["Ne plus jamais y penser", "Redemander votre casier pour vérifier qu'il a été mis à jour", "Dire aux employeurs que vous n'avez pas de casier sans vérifier", "Jeter votre dossier"], answer: 1, why: "Revérifier votre casier permet de s'assurer que l'allègement y apparaît." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "L'embauche équitable et vos droits",
           minutes: 6,
           goal: "Expliquer le Fair Chance Act de Californie et préparer une courte déclaration de réhabilitation pour un employeur.",
@@ -179,17 +228,21 @@ module.exports = {
             { name: "California Civil Rights Department : Fiche sur les antécédents judiciaires et l'emploi (juin 2025)", url: "https://calcivilrights.ca.gov/wp-content/uploads/sites/32/2025/07/Fair-Chance-Act-Factsheet_English.pdf" }
           ],
           tryIt: "Tâche finale : faites votre plan d'action d'une page pour alléger votre casier. Indiquez où vous obtiendrez votre casier, chaque affaire et l'allègement qui pourrait lui convenir, l'aide juridique gratuite que vous contacterez en premier, les papiers que vous allez réunir, et votre courte déclaration de réhabilitation pour les employeurs.",
-          youCanNow: "expliquer vos droits d'embauche équitable en Californie, trouver les règles de votre État, et répondre à un employeur sur votre casier avec une déclaration courte et honnête et des preuves."
+          youCanNow: "expliquer vos droits d'embauche équitable en Californie, trouver les règles de votre État, et répondre à un employeur sur votre casier avec une déclaration courte et honnête et des preuves.",
+          quickCheck: [
+            { objective: "O6", q: "Selon le Fair Chance Act de Californie, quand la plupart des employeurs concernés peuvent-ils vérifier vos antécédents ?", options: ["Avant l'entretien", "Sur le formulaire de candidature", "Jamais", "Après une offre d'emploi sous condition"], answer: 3, why: "Les employeurs concernés attendent d'avoir fait une offre sous condition pour vérifier votre casier." },
+            { objective: "O6", q: "Un employeur vous interroge sur votre passé après vous avoir fait une offre. Que faites-vous ?", options: ["Donner une déclaration courte et honnête sur ce que vous avez fait depuis", "Raconter une longue histoire sur l'affaire", "Refuser de parler et partir", "Dire que vous n'avez pas de casier"], answer: 0, why: "Une déclaration de réhabilitation courte et honnête montre que vous êtes prêt pour le poste." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Trouver de l'aide, vous préparer et utiliser vos droits",
         questions: [
-          { q: "Quel est un signal d'alerte quand quelqu'un propose d'effacer votre casier ?", options: ["Il explique d'abord vos options", "Il travaille dans un centre d'aide du tribunal", "Il garantit le résultat et veut une grosse somme à l'avance", "Il vous demande d'apporter votre casier"], answer: 2, why: "Les garanties et les grosses sommes à l'avance sont des signes d'arnaque ; une vraie aide explique d'abord les options." },
-          { q: "Vous n'êtes pas citoyen américain et vous voulez un allègement du casier. Que devez-vous faire d'abord ?", options: ["Parler à un avocat en immigration", "Déposer seul les formulaires tout de suite", "Vous passer d'aide juridique", "Demander à un ami de déposer pour vous"], answer: 0, why: "Les décisions des tribunaux peuvent toucher votre statut d'immigration, donc un avocat en immigration doit d'abord vous conseiller." },
-          { q: "Qu'est-ce qui a sa place dans votre dossier d'allègement du casier ?", options: ["Le mot de passe de votre banque", "La preuve que vous avez fini votre probation", "Vos identifiants de réseaux sociaux", "Une page blanche"], answer: 1, why: "La preuve de la fin de la probation aide à montrer que vous y avez droit et que vous avez fait ce que le tribunal demandait." },
-          { q: "Selon le Fair Chance Act de Californie, quand la plupart des employeurs concernés peuvent-ils faire une vérification des antécédents ?", options: ["Avant votre candidature", "Pendant le premier appel", "Dans l'annonce d'emploi", "Après une offre d'emploi conditionnelle"], answer: 3, why: "La plupart des employeurs concernés doivent attendre une offre d'emploi conditionnelle." },
-          { q: "Un employeur veut retirer votre offre à cause de votre casier. Combien de temps avez-vous pour répondre en Californie ?", options: ["Pas de temps du tout", "Une heure", "Au moins cinq jours ouvrables", "Un an"], answer: 2, why: "L'employeur doit vous laisser au moins cinq jours ouvrables pour répondre avec des preuves ou montrer une erreur." }
+          { objective: "O4", q: "Quel est un signal d'alerte quand quelqu'un propose d'effacer votre casier ?", options: ["Il explique d'abord vos options", "Il travaille dans un centre d'aide du tribunal", "Il garantit le résultat et veut une grosse somme à l'avance", "Il vous demande d'apporter votre casier"], answer: 2, why: "Les garanties et les grosses sommes à l'avance sont des signes d'arnaque ; une vraie aide explique d'abord les options." },
+          { objective: "O4", q: "Vous n'êtes pas citoyen américain et vous voulez un allègement du casier. Que devez-vous faire d'abord ?", options: ["Parler à un avocat en immigration", "Déposer seul les formulaires tout de suite", "Vous passer d'aide juridique", "Demander à un ami de déposer pour vous"], answer: 0, why: "Les décisions des tribunaux peuvent toucher votre statut d'immigration, donc un avocat en immigration doit d'abord vous conseiller." },
+          { objective: "O5", q: "Qu'est-ce qui a sa place dans votre dossier d'allègement du casier ?", options: ["Le mot de passe de votre banque", "La preuve que vous avez fini votre probation", "Vos identifiants de réseaux sociaux", "Une page blanche"], answer: 1, why: "La preuve de la fin de la probation aide à montrer que vous y avez droit et que vous avez fait ce que le tribunal demandait." },
+          { objective: "O6", q: "Selon le Fair Chance Act de Californie, quand la plupart des employeurs concernés peuvent-ils faire une vérification des antécédents ?", options: ["Avant votre candidature", "Pendant le premier appel", "Dans l'annonce d'emploi", "Après une offre d'emploi conditionnelle"], answer: 3, why: "La plupart des employeurs concernés doivent attendre une offre d'emploi conditionnelle." },
+          { objective: "O6", q: "Un employeur veut retirer votre offre à cause de votre casier. Combien de temps avez-vous pour répondre en Californie ?", options: ["Pas de temps du tout", "Une heure", "Au moins cinq jours ouvrables", "Un an"], answer: 2, why: "L'employeur doit vous laisser au moins cinq jours ouvrables pour répondre avec des preuves ou montrer une erreur." }
         ]
       }
     }
@@ -197,26 +250,106 @@ module.exports = {
   quiz: {
     title: "Quiz final : Effacer votre casier : expungement et allègement du casier judiciaire",
     questions: [
-      { q: "Pourquoi obtenir d'abord une copie de votre propre casier ?", options: ["Pour le publier en ligne", "Pour voir chaque affaire et repérer les erreurs", "Parce que les employeurs exigent que vous le montriez", "Ce n'est pas utile"], answer: 1, why: "Votre casier montre ce qui a besoin d'un allègement et peut contenir des erreurs à corriger." },
-      { q: "En Californie, l'endroit où l'on donne ses empreintes pour la Record Review est :", options: ["Un site Live Scan", "Une banque", "Une boîte postale", "Un concessionnaire automobile"], answer: 0, why: "La Record Review utilise des empreintes Live Scan prises dans les sites Live Scan." },
-      { q: "Vous trouvez une erreur dans votre casier du DOJ de Californie. Quel formulaire sert à la contester ?", options: ["Une candidature d'emploi", "Une FAFSA", "Le BCIA 8706, la Claim of Alleged Inaccuracy or Incompleteness", "Un formulaire de permis de conduire"], answer: 2, why: "Le DOJ joint le BCIA 8706 à votre casier pour que vous puissiez contester les erreurs." },
-      { q: "Où pouvez-vous demander votre casier national du FBI ?", options: ["À la bibliothèque de votre comté", "Sur un réseau social", "À votre propriétaire", "Au FBI, par fbi.gov"], answer: 3, why: "Le FBI garde l'Identity History Summary national ; fbi.gov explique comment le demander." },
-      { q: "Que veut dire en général mettre un casier sous scellés (sealing) ?", options: ["Le casier existe encore, mais la plupart des gens ne peuvent pas le voir", "Vous retournez au tribunal pour un nouveau procès", "Vous payez de nouveau une amende", "L'affaire devient plus longue"], answer: 0, why: "Un casier sous scellés existe, mais il est caché à la plupart du public." },
-      { q: "Un set-aside ou dismissal veut dire :", options: ["Vous êtes de nouveau arrêté", "Le tribunal rouvre une condamnation et l'annule", "Vos empreintes sont supprimées", "Vous devez déménager dans un autre État"], answer: 1, why: "Un set-aside ou dismissal, c'est un tribunal qui annule une condamnation passée." },
-      { q: "Qu'est-ce qu'un certificate of rehabilitation ?", options: ["Un diplôme de lycée", "Un permis de stationnement", "Une décision du tribunal qui dit que vous avez respecté la loi depuis votre peine", "Un contrat de travail"], answer: 2, why: "C'est une déclaration officielle du tribunal disant que vous êtes réhabilité." },
-      { q: "Qu'est-ce qui est vrai sur le mot expungement en Californie ?", options: ["Il efface toujours tous les casiers", "Seul le FBI l'utilise", "C'est un programme fédéral", "Les tribunaux disent que le vrai expungement n'y existe pas"], answer: 3, why: "Les tribunaux de Californie disent que le vrai expungement n'existe pas ; l'allègement habituel est un dismissal." },
-      { q: "Votre affaire a été jugée par une superior court de comté. C'est une :", options: ["Affaire d'État", "Affaire fédérale", "Affaire militaire", "Affaire tribale"], answer: 0, why: "Les tribunaux de comté jugent les affaires d'État." },
-      { q: "Une annulation dans un État peut-elle effacer une condamnation fédérale ?", options: ["Oui, toujours", "Oui, si vous payez plus", "Non, chaque système n'efface que ses propres affaires", "Seulement le week-end"], answer: 2, why: "L'allègement d'un État ne peut pas effacer une condamnation fédérale." },
-      { q: "Comment obtenir l'allègement automatique Clean Slate de Californie ?", options: ["Vous devez déposer une requête", "Le DOJ l'applique aux affaires qui y ont droit, sans requête", "Vous appelez le 911", "Vous le demandez à votre employeur"], answer: 1, why: "Le DOJ vérifie les dossiers chaque mois et accorde automatiquement l'allègement quand on y a droit." },
-      { q: "Comment savoir si vous avez reçu l'allègement automatique en Californie ?", options: ["Attendre une lettre du DOJ", "Demander à un voisin", "Chercher dans les actualités", "Demander votre propre casier au DOJ et chercher la mention d'allègement"], answer: 3, why: "Le DOJ ne prévient pas les gens, donc vous vérifiez votre propre casier." },
-      { q: "Quel est un endroit gratuit où chercher de l'aide pour l'allègement du casier ?", options: ["Un centre d'aide du tribunal", "Un site web qui garantit le résultat contre une grosse somme", "Un inconnu sur les réseaux sociaux", "Un prêteur sur gages"], answer: 0, why: "Les centres d'aide des tribunaux, l'aide juridique et les programmes des public defenders aident souvent gratuitement." },
-      { q: "Avant d'appeler une aide juridique, une bonne idée est de :", options: ["Jeter vos papiers", "Écrire trois questions et réunir votre casier", "Deviner vos numéros d'affaire", "Signer des formulaires vides"], answer: 1, why: "Être préparé aide la personne à travailler plus vite et à répondre à vos vraies questions." },
-      { q: "Qu'est-ce qu'un numéro d'affaire ?", options: ["Votre numéro de téléphone", "Un compte bancaire", "Le numéro qu'un tribunal donne à chaque affaire", "Votre pointure"], answer: 2, why: "Les numéros d'affaire aident une personne qui vous aide ou le greffe à trouver le bon dossier." },
-      { q: "Après que le tribunal a accordé l'allègement, que devez-vous faire plus tard ?", options: ["Plus rien, jamais", "Jeter la décision", "N'en parler à personne", "Demander de nouveau votre casier pour vérifier qu'il a été mis à jour"], answer: 3, why: "Les casiers ne sont pas toujours mis à jour, alors vous vérifiez et vous corrigez tout problème." },
-      { q: "Quelle est une bonne preuve de votre vie actuelle ?", options: ["Des certificats de cours et des lettres de soutien", "Une ancienne carte d'identité de prison", "Un chèque en blanc", "Votre liste de mots de passe"], answer: 0, why: "Les certificats et les lettres de soutien sont des preuves de réhabilitation." },
-      { q: "Quels employeurs sont concernés par le Fair Chance Act de Californie ?", options: ["Seulement le gouvernement de l'État", "Les employeurs publics et les employeurs privés de cinq salariés ou plus", "Seulement les employeurs de 500 salariés ou plus", "Seulement les restaurants"], answer: 1, why: "La loi s'applique aux employeurs publics et aux employeurs privés de cinq salariés ou plus, avec quelques exceptions." },
-      { q: "Après une offre conditionnelle, qu'est-ce qu'un employeur californien ne peut JAMAIS utiliser ?", options: ["Votre test de compétences", "Vos références professionnelles", "Une condamnation qui a été annulée", "Votre date de début"], answer: 2, why: "Les condamnations sous scellés, annulées ou effacées sont interdites." },
-      { q: "Une bonne déclaration de réhabilitation pour un employeur :", options: ["Accuse tout le monde", "Fait trois pages", "Dit en une phrase ce qui s'est passé, ce que vous avez fait depuis, et pourquoi vous êtes prêt", "Ment sur le casier"], answer: 2, why: "Une déclaration courte, honnête et centrée sur le changement et la préparation marche le mieux." }
+      { objective: "O1", q: "Pourquoi obtenir d'abord une copie de votre propre casier ?", options: ["Pour le publier en ligne", "Pour voir chaque affaire et repérer les erreurs", "Parce que les employeurs exigent que vous le montriez", "Ce n'est pas utile"], answer: 1, why: "Votre casier montre ce qui a besoin d'un allègement et peut contenir des erreurs à corriger." },
+      { objective: "O1", q: "En Californie, l'endroit où l'on donne ses empreintes pour la Record Review est :", options: ["Un site Live Scan", "Une banque", "Une boîte postale", "Un concessionnaire automobile"], answer: 0, why: "La Record Review utilise des empreintes Live Scan prises dans les sites Live Scan." },
+      { objective: "O1", q: "Vous trouvez une erreur dans votre casier du DOJ de Californie. Quel formulaire sert à la contester ?", options: ["Une candidature d'emploi", "Une FAFSA", "Le BCIA 8706, la Claim of Alleged Inaccuracy or Incompleteness", "Un formulaire de permis de conduire"], answer: 2, why: "Le DOJ joint le BCIA 8706 à votre casier pour que vous puissiez contester les erreurs." },
+      { objective: "O1", q: "Où pouvez-vous demander votre casier national du FBI ?", options: ["À la bibliothèque de votre comté", "Sur un réseau social", "À votre propriétaire", "Au FBI, par fbi.gov"], answer: 3, why: "Le FBI garde l'Identity History Summary national ; fbi.gov explique comment le demander." },
+      { objective: "O2", q: "Que veut dire en général mettre un casier sous scellés (sealing) ?", options: ["Le casier existe encore, mais la plupart des gens ne peuvent pas le voir", "Vous retournez au tribunal pour un nouveau procès", "Vous payez de nouveau une amende", "L'affaire devient plus longue"], answer: 0, why: "Un casier sous scellés existe, mais il est caché à la plupart du public." },
+      { objective: "O2", q: "Un set-aside ou dismissal veut dire :", options: ["Vous êtes de nouveau arrêté", "Le tribunal rouvre une condamnation et l'annule", "Vos empreintes sont supprimées", "Vous devez déménager dans un autre État"], answer: 1, why: "Un set-aside ou dismissal, c'est un tribunal qui annule une condamnation passée." },
+      { objective: "O2", q: "Qu'est-ce qu'un certificate of rehabilitation ?", options: ["Un diplôme de lycée", "Un permis de stationnement", "Une décision du tribunal qui dit que vous avez respecté la loi depuis votre peine", "Un contrat de travail"], answer: 2, why: "C'est une déclaration officielle du tribunal disant que vous êtes réhabilité." },
+      { objective: "O2", q: "Qu'est-ce qui est vrai sur le mot expungement en Californie ?", options: ["Il efface toujours tous les casiers", "Seul le FBI l'utilise", "C'est un programme fédéral", "Les tribunaux disent que le vrai expungement n'y existe pas"], answer: 3, why: "Les tribunaux de Californie disent que le vrai expungement n'existe pas ; l'allègement habituel est un dismissal." },
+      { objective: "O3", q: "Votre affaire a été jugée par une superior court de comté. C'est une :", options: ["Affaire d'État", "Affaire fédérale", "Affaire militaire", "Affaire tribale"], answer: 0, why: "Les tribunaux de comté jugent les affaires d'État." },
+      { objective: "O3", q: "Une annulation dans un État peut-elle effacer une condamnation fédérale ?", options: ["Oui, toujours", "Oui, si vous payez plus", "Non, chaque système n'efface que ses propres affaires", "Seulement le week-end"], answer: 2, why: "L'allègement d'un État ne peut pas effacer une condamnation fédérale." },
+      { objective: "O3", q: "Comment obtenir l'allègement automatique Clean Slate de Californie ?", options: ["Vous devez déposer une requête", "Le DOJ l'applique aux affaires qui y ont droit, sans requête", "Vous appelez le 911", "Vous le demandez à votre employeur"], answer: 1, why: "Le DOJ vérifie les dossiers chaque mois et accorde automatiquement l'allègement quand on y a droit." },
+      { objective: "O3", q: "Comment savoir si vous avez reçu l'allègement automatique en Californie ?", options: ["Attendre une lettre du DOJ", "Demander à un voisin", "Chercher dans les actualités", "Demander votre propre casier au DOJ et chercher la mention d'allègement"], answer: 3, why: "Le DOJ ne prévient pas les gens, donc vous vérifiez votre propre casier." },
+      { objective: "O4", q: "Quel est un endroit gratuit où chercher de l'aide pour l'allègement du casier ?", options: ["Un centre d'aide du tribunal", "Un site web qui garantit le résultat contre une grosse somme", "Un inconnu sur les réseaux sociaux", "Un prêteur sur gages"], answer: 0, why: "Les centres d'aide des tribunaux, l'aide juridique et les programmes des public defenders aident souvent gratuitement." },
+      { objective: "O4", q: "Avant d'appeler une aide juridique, une bonne idée est de :", options: ["Jeter vos papiers", "Écrire trois questions et réunir votre casier", "Deviner vos numéros d'affaire", "Signer des formulaires vides"], answer: 1, why: "Être préparé aide la personne à travailler plus vite et à répondre à vos vraies questions." },
+      { objective: "O5", q: "Qu'est-ce qu'un numéro d'affaire ?", options: ["Votre numéro de téléphone", "Un compte bancaire", "Le numéro qu'un tribunal donne à chaque affaire", "Votre pointure"], answer: 2, why: "Les numéros d'affaire aident une personne qui vous aide ou le greffe à trouver le bon dossier." },
+      { objective: "O5", q: "Après que le tribunal a accordé l'allègement, que devez-vous faire plus tard ?", options: ["Plus rien, jamais", "Jeter la décision", "N'en parler à personne", "Demander de nouveau votre casier pour vérifier qu'il a été mis à jour"], answer: 3, why: "Les casiers ne sont pas toujours mis à jour, alors vous vérifiez et vous corrigez tout problème." },
+      { objective: "O5", q: "Quelle est une bonne preuve de votre vie actuelle ?", options: ["Des certificats de cours et des lettres de soutien", "Une ancienne carte d'identité de prison", "Un chèque en blanc", "Votre liste de mots de passe"], answer: 0, why: "Les certificats et les lettres de soutien sont des preuves de réhabilitation." },
+      { objective: "O6", q: "Quels employeurs sont concernés par le Fair Chance Act de Californie ?", options: ["Seulement le gouvernement de l'État", "Les employeurs publics et les employeurs privés de cinq salariés ou plus", "Seulement les employeurs de 500 salariés ou plus", "Seulement les restaurants"], answer: 1, why: "La loi s'applique aux employeurs publics et aux employeurs privés de cinq salariés ou plus, avec quelques exceptions." },
+      { objective: "O6", q: "Après une offre conditionnelle, qu'est-ce qu'un employeur californien ne peut JAMAIS utiliser ?", options: ["Votre test de compétences", "Vos références professionnelles", "Une condamnation qui a été annulée", "Votre date de début"], answer: 2, why: "Les condamnations sous scellés, annulées ou effacées sont interdites." },
+      { objective: "O6", q: "Une bonne déclaration de réhabilitation pour un employeur :", options: ["Accuse tout le monde", "Fait trois pages", "Dit en une phrase ce qui s'est passé, ce que vous avez fait depuis, et pourquoi vous êtes prêt", "Ment sur le casier"], answer: 2, why: "Une déclaration courte, honnête et centrée sur le changement et la préparation marche le mieux." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      1,
+      4,
+      7,
+      8,
+      10,
+      12,
+      14,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Obtenir le casier",
+        objective: "O1",
+        notYet: "Pas de plan, ou il prévoit d'utiliser un site privé de vérification des antécédents.",
+        meets: "Il nomme l'endroit officiel où demander le casier et le lieu de prise d'empreintes.",
+        exceeds: "Il note aussi les frais, la dispense de frais et où obtenir un casier fédéral si besoin."
+      },
+      {
+        name: "Affaires et allègement possible",
+        objective: "O3",
+        notYet: "Des affaires manquent, ou aucune n'est étiquetée « État » ou « fédérale ».",
+        meets: "Chaque affaire connue a son comté, son année, son chef d'accusation, l'étiquette « État » ou « fédérale » et un type d'allègement possible.",
+        exceeds: "Il note quelles affaires vérifier pour l'allègement automatique et une question pour un avocat."
+      },
+      {
+        name: "Aide juridique gratuite",
+        objective: "O4",
+        notYet: "Aucune aide nommée, ou un service payant qui garantit le résultat.",
+        meets: "Une aide juridique gratuite à contacter en premier, avec le téléphone et les horaires.",
+        exceeds: "Une deuxième aide et trois questions à poser sont aussi notées."
+      },
+      {
+        name: "Papiers à réunir",
+        objective: "O5",
+        notYet: "Pas de liste de papiers.",
+        meets: "Une liste des dossiers et des preuves de la vie actuelle à réunir.",
+        exceeds: "Les deux premiers papiers à obtenir cette semaine sont marqués d'une étoile."
+      },
+      {
+        name: "Déclaration de réhabilitation",
+        objective: "O6",
+        notYet: "Absente, trop longue ou pas honnête.",
+        meets: "Une déclaration courte et honnête : ce qui s'est passé en une phrase, ce que vous avez fait depuis, et pourquoi vous êtes prêt.",
+        exceeds: "Répétée à voix haute, elle cite des preuves comme des certificats ou des lettres de soutien."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Les apprenants qui demandent une copie de leur propre casier dans les 30 jours (enquête de suivi)",
+      "Les apprenants qui contactent une aide juridique gratuite ou déposent une demande d'allègement du casier dans les 90 jours",
+      "Les apprenants qui disent avoir reçu une offre d'emploi ou de logement après avoir utilisé leur déclaration de réhabilitation"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un smartphone ou un ordinateur avec internet",
+      "Du papier et un stylo, ou une chemise, pour le plan d'action et les papiers d'allègement du casier",
+      "Les coordonnées d'un bureau d'aide juridique local ou du centre d'aide d'un tribunal",
+      "Environ 60 minutes en tout, en séances courtes : leçons, pratique, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Ce cours ne donne pas de conseil juridique ; travaillez avec un bureau d'aide juridique ou une clinique, et invitez-les à une séance si possible.",
+      "Les apprenants qui vivent hors de Californie doivent chercher les pages officielles de leur propre État ; ayez ces liens prêts.",
+      "Les apprenants ne doivent pas dire à voix haute les détails de leurs affaires en groupe ni les taper dans l'IA ; laissez-les faire leur liste d'affaires en privé.",
+      "Dites aux apprenants qui ne sont pas citoyens américains de parler à un avocat en immigration avant de demander un allègement du casier.",
+      "Notez le plan d'action avec la grille et donnez votre retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

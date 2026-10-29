@@ -17,11 +17,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes. Lisez la leçon, regardez les diapositives, puis faites l'exercice « Essayez maintenant » avec votre appareil en main. Il y a un court contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Avec votre propre téléphone ou tablette : déverrouillez-le, appelez ou faites un appel vidéo à quelqu'un que vous connaissez, envoyez-lui un SMS avec une photo que vous venez de prendre, installez une application gratuite et utile depuis le magasin d'applications officiel, et vérifiez que le verrouillage de l'écran est activé et que le logiciel est à jour.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des adultes avec un smartphone ou une tablette neufs ou peu utilisés : seniors, personnes qui ont reçu un téléphone de leur famille ou d'un programme, personnes qui reviennent dans la communauté, nouveaux arrivants et aidants.",
+    startingPoint: "Ils savent allumer l'appareil et répondent parfois aux appels. Beaucoup ne savent pas bien se déplacer sur l'écran tactile, changer la taille du texte, enregistrer des contacts, envoyer une photo, installer une application en sécurité ni garder l'appareil verrouillé et à jour.",
+    gap: "Les téléphones et les tablettes sont maintenant le moyen de joindre la famille, les médecins, les pharmacies, les banques et les services. Les personnes qui ne savent pas les utiliser seules ratent des appels et des messages, ont du mal à lire l'écran, installent de fausses applications ou perdent des informations privées quand un téléphone est perdu.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes ; les gestes des doigts et les mots comme icône et autorisation sont expliqués",
+      "Appareils : le téléphone Android, l'iPhone ou la tablette de l'apprenant ; les étapes sont données pour les deux",
+      "Temps : environ 5 minutes par leçon, environ 60 minutes au total",
+      "Coût : seulement des applications gratuites, venant du magasin d'applications officiel",
+      "Vie privée : les apprenants ne donnent jamais un code reçu par SMS à quelqu'un qui appelle et n'envoient jamais de photos de pièce d'identité ou de carte bancaire à des inconnus"
+    ],
+    prerequisites: "Aucun. Il faut un téléphone ou une tablette chargés."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Avec votre propre téléphone ou tablette", action: "le déverrouiller, utiliser le toucher, le balayage, l'appui long et le pincement, ouvrir une application et revenir à l'écran d'accueil", standard: "sans aide" },
+    { id: "O2", condition: "Dans l'application Réglages", action: "changer la taille du texte, la luminosité et le volume pour que l'appareil soit facile à voir et à entendre", standard: "avec chacun réglé à un niveau confortable" },
+    { id: "O3", condition: "À partir d'une personne que vous voulez joindre", action: "l'enregistrer comme contact, l'appeler et lui envoyer un SMS, et réagir sans danger aux appels inconnus", standard: "avec l'appel et le SMS envoyés et aucun code jamais donné à quelqu'un qui appelle" },
+    { id: "O4", condition: "Avec les applications Appareil photo et Photos ou Galerie", action: "prendre une photo nette et l'envoyer par SMS à quelqu'un que vous connaissez", standard: "avec la photo nette et rien de privé dessus" },
+    { id: "O5", condition: "Dans le magasin d'applications officiel", action: "trouver et installer une application gratuite après avoir vérifié le développeur, la note et les avis, et choisir les autorisations à accepter", standard: "en n'acceptant que les autorisations dont l'application a vraiment besoin" },
+    { id: "O6", condition: "Sur votre propre appareil", action: "activer un verrouillage d'écran solide, chercher une mise à jour du logiciel et activer Localiser mon appareil ou Localiser", standard: "avec un verrouillage difficile à deviner et l'appareil à jour" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Se sentir à l'aise avec son appareil",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Les bases de l'écran tactile : toucher, balayer et l'écran d'accueil",
           minutes: 5,
           goal: "Déverrouiller votre appareil, ouvrir une application et revenir à l'écran d'accueil.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "Revenir à l'accueil", bullets: ["Balayez vers le haut depuis le bord du bas", "Ou appuyez sur le bouton d'accueil si vous en avez un"] }
           ],
           tryIt: "Réveillez et déverrouillez votre appareil. Ouvrez l'application Appareil photo ou Météo, balayez un peu, puis revenez à l'écran d'accueil. Faites-le trois fois jusqu'à ce que ce soit facile.",
-          youCanNow: "déverrouiller votre appareil, ouvrir une application d'un toucher, faire défiler en balayant et revenir à l'écran d'accueil."
+          youCanNow: "déverrouiller votre appareil, ouvrir une application d'un toucher, faire défiler en balayant et revenir à l'écran d'accueil.",
+          quickCheck: [
+            { objective: "O1", q: "À quoi sert l'appui long ?", options: ["À éteindre le téléphone", "À montrer plus de choix", "À prendre une photo", "À passer un appel"], answer: 1, why: "Garder le doigt appuyé montre plus de choix." },
+            { objective: "O1", q: "Vous êtes dans une application et vous voulez revenir à l'écran d'accueil. Que faites-vous ?", options: ["Éteindre et rallumer le téléphone", "Pincer deux doigts ensemble", "Retirer la batterie", "Balayer vers le haut depuis le bas de l'écran, ou appuyer sur le bouton d'accueil"], answer: 3, why: "Balayer vers le haut depuis le bas, ou le bouton d'accueil, vous ramène à l'écran d'accueil." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Mieux voir et mieux entendre",
           minutes: 4,
           goal: "Agrandir le texte et régler le volume et la luminosité à votre goût.",
@@ -57,9 +86,14 @@ module.exports = {
             { title: "Vous ne trouvez pas ?", bullets: ["Utilisez la case de recherche en haut des Réglages", "Tapez un mot comme « taille du texte »"] }
           ],
           tryIt: "Ouvrez Réglages ou Paramètres, cherchez « taille du texte » et agrandissez le texte d'un cran. Puis balayez vers le bas depuis le haut et changez la luminosité.",
-          youCanNow: "agrandir le texte et régler la luminosité et le volume pour que votre appareil soit confortable à utiliser."
+          youCanNow: "agrandir le texte et régler la luminosité et le volume pour que votre appareil soit confortable à utiliser.",
+          quickCheck: [
+            { objective: "O2", q: "Quelle icône a d'habitude l'application Réglages ?", options: ["Un appareil photo", "Une bulle de dialogue", "Un engrenage", "Un trombone"], answer: 2, why: "Réglages a d'habitude une icône en forme d'engrenage." },
+            { objective: "O2", q: "Dehors, l'écran est trop sombre pour lire. Que faites-vous ?", options: ["Balayer vers le bas depuis le haut de l'écran et monter la luminosité", "Acheter un nouveau téléphone", "Appuyer sur les boutons de volume", "Supprimer une application"], answer: 0, why: "Les réglages rapides de luminosité s'ouvrent en balayant vers le bas depuis le haut de l'écran." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Appels, contacts et SMS",
           minutes: 5,
           goal: "Enregistrer un contact, passer un appel et envoyer un SMS.",
@@ -77,17 +111,21 @@ module.exports = {
             { title: "Appels inconnus", bullets: ["Laissez aller sur la messagerie vocale", "Ne donnez jamais un code reçu par SMS à un appelant"] }
           ],
           tryIt: "Enregistrez un membre de votre famille ou un ami comme contact. Appelez-le en touchant son nom, puis envoyez-lui un court SMS : « Je m'entraîne avec mon téléphone ! »",
-          youCanNow: "enregistrer un contact, appeler quelqu'un par son nom et envoyer un SMS."
+          youCanNow: "enregistrer un contact, appeler quelqu'un par son nom et envoyer un SMS.",
+          quickCheck: [
+            { objective: "O3", q: "Quelle application envoie des SMS ?", options: ["Messages", "Appareil photo", "Réglages", "Photos"], answer: 0, why: "L'application Messages envoie des SMS." },
+            { objective: "O3", q: "Un numéro que vous ne connaissez pas vous appelle. Que faites-vous ?", options: ["Répondre et donner vos coordonnées bancaires", "Rappeler tout de suite et lire à voix haute les codes reçus", "Laisser aller sur la messagerie vocale ; une vraie personne laissera un message", "Éteindre votre téléphone pendant une semaine"], answer: 2, why: "Laisser les appels inconnus aller sur la messagerie vocale est sûr ; les vraies personnes laissent un message." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Se sentir à l'aise avec son appareil",
         questions: [
-          { q: "Quel geste agrandit une photo ?", options: ["Toucher une fois", "Écarter deux doigts", "Appuyer sur le bouton du volume", "Balayer vers le bas"], answer: 1, why: "Écarter deux doigts zoome." },
-          { q: "Comment revenez-vous en général à l'écran d'accueil ?", options: ["Éteindre le téléphone", "Secouer le téléphone", "Balayer vers le haut depuis le bas ou appuyer sur le bouton d'accueil", "Ouvrir l'appareil photo"], answer: 2, why: "Balayer vers le haut depuis le bas ou appuyer sur accueil ramène à l'écran d'accueil." },
-          { q: "Le texte de votre téléphone est trop petit. Où le corriger ?", options: ["Réglages, dans Affichage ou Accessibilité", "L'application Appareil photo", "L'application Téléphone", "Un SMS"], answer: 0, why: "La taille du texte se trouve dans Réglages, sous Affichage ou Accessibilité." },
-          { q: "Pourquoi enregistrer quelqu'un comme contact ?", options: ["Cela rend le téléphone plus rapide", "Cela charge la batterie", "Cela cache son numéro", "Pour l'appeler ou lui écrire en touchant son nom"], answer: 3, why: "Un contact vous permet de joindre quelqu'un par son nom." },
-          { q: "Quelqu'un appelle et vous demande de lui lire un code que vous venez de recevoir par SMS. Que faites-vous ?", options: ["Le lui lire", "Le lui envoyer par SMS", "Ne pas le partager et raccrocher", "Le publier en ligne"], answer: 2, why: "Ce code protège votre compte ; les vraies entreprises ne le demandent pas." }
+          { objective: "O1", q: "Quel geste agrandit une photo ?", options: ["Toucher une fois", "Écarter deux doigts", "Appuyer sur le bouton du volume", "Balayer vers le bas"], answer: 1, why: "Écarter deux doigts zoome." },
+          { objective: "O1", q: "Comment revenez-vous en général à l'écran d'accueil ?", options: ["Éteindre le téléphone", "Secouer le téléphone", "Balayer vers le haut depuis le bas ou appuyer sur le bouton d'accueil", "Ouvrir l'appareil photo"], answer: 2, why: "Balayer vers le haut depuis le bas ou appuyer sur accueil ramène à l'écran d'accueil." },
+          { objective: "O2", q: "Le texte de votre téléphone est trop petit. Où le corriger ?", options: ["Réglages, dans Affichage ou Accessibilité", "L'application Appareil photo", "L'application Téléphone", "Un SMS"], answer: 0, why: "La taille du texte se trouve dans Réglages, sous Affichage ou Accessibilité." },
+          { objective: "O3", q: "Pourquoi enregistrer quelqu'un comme contact ?", options: ["Cela rend le téléphone plus rapide", "Cela charge la batterie", "Cela cache son numéro", "Pour l'appeler ou lui écrire en touchant son nom"], answer: 3, why: "Un contact vous permet de joindre quelqu'un par son nom." },
+          { objective: "O3", q: "Quelqu'un appelle et vous demande de lui lire un code que vous venez de recevoir par SMS. Que faites-vous ?", options: ["Le lui lire", "Le lui envoyer par SMS", "Ne pas le partager et raccrocher", "Le publier en ligne"], answer: 2, why: "Ce code protège votre compte ; les vraies entreprises ne le demandent pas." }
         ]
       }
     },
@@ -95,6 +133,7 @@ module.exports = {
       name: "Chapitre 2 : Photos, applications et sécurité de l'appareil",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Prendre et envoyer des photos",
           minutes: 5,
           goal: "Prendre une photo et l'envoyer à quelqu'un par SMS.",
@@ -111,9 +150,14 @@ module.exports = {
             { title: "Réfléchissez avant de partager", bullets: ["Pas de photos de papiers d'identité ou de cartes bancaires", "Pas de documents privés à des inconnus"] }
           ],
           tryIt: "Prenez en photo quelque chose de joli près de vous, une plante, un repas ou un paysage. Envoyez-la par SMS au contact que vous avez enregistré à la leçon 3.",
-          youCanNow: "prendre une photo nette et la partager avec quelqu'un par SMS."
+          youCanNow: "prendre une photo nette et la partager avec quelqu'un par SMS.",
+          quickCheck: [
+            { objective: "O4", q: "Que vous permet le bouton Partager avec une photo ?", options: ["La supprimer", "L'agrandir", "La reprendre", "L'envoyer par SMS ou par e-mail"], answer: 3, why: "Partager vous laisse choisir Messages ou l'e-mail, et la personne à qui envoyer la photo." },
+            { objective: "O4", q: "Vos photos sont toujours floues. Que faites-vous ?", options: ["Secouer le téléphone pendant la prise", "Rester immobile et toucher le sujet à l'écran avant de prendre la photo", "Baisser la luminosité", "La prendre de très loin"], answer: 1, why: "Rester immobile et toucher le sujet rend la photo nette." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Installer des applications en sécurité",
           minutes: 5,
           goal: "Trouver et installer une application gratuite depuis le magasin d'applications officiel.",
@@ -130,9 +174,14 @@ module.exports = {
             { title: "Les autorisations", bullets: ["L'application en a-t-elle vraiment besoin ?", "Une lampe de poche n'a pas besoin de vos contacts", "Vous pouvez changer cela plus tard dans les Réglages"] }
           ],
           tryIt: "Ouvrez votre magasin d'applications officiel et installez une application gratuite qui vous est utile, par exemple une application météo, celle de votre pharmacie ou celle des bus. Vérifiez d'abord le nom du développeur.",
-          youCanNow: "trouver, vérifier et installer une application depuis le magasin officiel, et choisir les autorisations à accepter."
+          youCanNow: "trouver, vérifier et installer une application depuis le magasin officiel, et choisir les autorisations à accepter.",
+          quickCheck: [
+            { objective: "O5", q: "Pourquoi vérifier le nom du développeur avant d'installer une application ?", options: ["Pour trouver le prix de l'application dans un magasin", "Pour changer la taille du texte du téléphone", "Les fausses applications copient les vrais noms : il faut vérifier qu'elle vient de la vraie entreprise", "Pour voir qui vous a appelé"], answer: 2, why: "Les fausses applications copient les noms des vraies, et le nom du développeur montre si elle est authentique." },
+            { objective: "O5", q: "Une application de jeu demande l'autorisation d'utiliser votre micro et vos contacts. Que faites-vous ?", options: ["Refuser sauf si elle en a vraiment besoin ; vous pourrez changer cela plus tard dans Réglages", "Toujours tout accepter", "Supprimer vos contacts", "Lui donner votre mot de passe"], answer: 0, why: "N'acceptez que les autorisations dont une application a vraiment besoin ; vous pouvez les changer plus tard." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Garder votre appareil verrouillé, à jour et chargé",
           minutes: 5,
           goal: "Activer le verrouillage de l'écran et chercher une mise à jour du logiciel.",
@@ -149,17 +198,21 @@ module.exports = {
             { title: "S'il est perdu", bullets: ["Android : Localiser mon appareil", "Apple : Localiser", "Activez-le maintenant"] }
           ],
           tryIt: "Entraînement pour la tâche finale : vérifiez que le verrouillage de l'écran est activé, cherchez « mise à jour » dans les Réglages pour voir s'il y en a une, et activez Localiser mon appareil ou Localiser. Puis faites la tâche finale : appelez, envoyez par SMS une photo toute fraîche et installez une application utile.",
-          youCanNow: "garder votre appareil verrouillé, à jour et facile à retrouver s'il est perdu."
+          youCanNow: "garder votre appareil verrouillé, à jour et facile à retrouver s'il est perdu.",
+          quickCheck: [
+            { objective: "O6", q: "Lequel de ces verrouillages d'écran est faible ?", options: ["Votre empreinte digitale", "Votre visage", "Un code PIN de six chiffres difficile à deviner", "123456"], answer: 3, why: "123456 ou votre date de naissance sont faciles à deviner." },
+            { objective: "O6", q: "Vous voulez pouvoir retrouver votre téléphone si vous le perdez. Que faites-vous maintenant ?", options: ["Attendre de l'avoir perdu, puis chercher un réglage", "Activer Localiser mon appareil (Android) ou Localiser (Apple)", "Écrire votre code PIN au dos du téléphone", "Désactiver le verrouillage de l'écran"], answer: 1, why: "Ces outils doivent être activés tant que vous avez encore le téléphone." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Photos, applications et sécurité de l'appareil",
         questions: [
-          { q: "Où sont enregistrées les photos que vous prenez ?", options: ["Dans l'application Téléphone", "Dans Photos ou Galerie", "Dans les Réglages", "Dans le magasin d'applications"], answer: 1, why: "L'application Photos ou Galerie contient vos images." },
-          { q: "Où trouver des applications en sécurité sur un iPhone ?", options: ["Un lien dans un SMS d'un inconnu", "N'importe quel site web", "Une fenêtre publicitaire", "L'App Store"], answer: 3, why: "N'installez des applications que depuis le magasin officiel." },
-          { q: "Une application de lampe de poche demande à voir vos contacts. Quel est le meilleur choix ?", options: ["Refuser ; elle n'en a pas besoin", "Tout accepter", "Lui donner votre mot de passe", "Désinstaller vos contacts"], answer: 0, why: "N'acceptez que les autorisations dont l'application a vraiment besoin." },
-          { q: "Quel verrouillage d'écran est le plus fort ?", options: ["Aucun verrouillage", "123456", "Votre date de naissance", "Un code PIN de six chiffres difficile à deviner"], answer: 3, why: "Un code qui n'est pas évident est plus difficile à deviner." },
-          { q: "Pourquoi installer les mises à jour du logiciel ?", options: ["Elles suppriment vos photos", "Elles corrigent des problèmes de sécurité", "Elles coûtent de l'argent", "Elles éteignent le téléphone pour toujours"], answer: 1, why: "Les mises à jour corrigent des problèmes que des criminels pourraient utiliser." }
+          { objective: "O4", q: "Où sont enregistrées les photos que vous prenez ?", options: ["Dans l'application Téléphone", "Dans Photos ou Galerie", "Dans les Réglages", "Dans le magasin d'applications"], answer: 1, why: "L'application Photos ou Galerie contient vos images." },
+          { objective: "O5", q: "Où trouver des applications en sécurité sur un iPhone ?", options: ["Un lien dans un SMS d'un inconnu", "N'importe quel site web", "Une fenêtre publicitaire", "L'App Store"], answer: 3, why: "N'installez des applications que depuis le magasin officiel." },
+          { objective: "O5", q: "Une application de lampe de poche demande à voir vos contacts. Quel est le meilleur choix ?", options: ["Refuser ; elle n'en a pas besoin", "Tout accepter", "Lui donner votre mot de passe", "Désinstaller vos contacts"], answer: 0, why: "N'acceptez que les autorisations dont l'application a vraiment besoin." },
+          { objective: "O6", q: "Quel verrouillage d'écran est le plus fort ?", options: ["Aucun verrouillage", "123456", "Votre date de naissance", "Un code PIN de six chiffres difficile à deviner"], answer: 3, why: "Un code qui n'est pas évident est plus difficile à deviner." },
+          { objective: "O6", q: "Pourquoi installer les mises à jour du logiciel ?", options: ["Elles suppriment vos photos", "Elles corrigent des problèmes de sécurité", "Elles coûtent de l'argent", "Elles éteignent le téléphone pour toujours"], answer: 1, why: "Les mises à jour corrigent des problèmes que des criminels pourraient utiliser." }
         ]
       }
     }
@@ -167,26 +220,99 @@ module.exports = {
   quiz: {
     title: "Quiz final : Utiliser un smartphone et une tablette",
     questions: [
-      { q: "Quelle entreprise fabrique l'iPhone ?", options: ["Samsung", "Google", "Apple", "Motorola"], answer: 2, why: "Apple fabrique l'iPhone et l'iPad." },
-      { q: "Que fait un toucher ?", options: ["Il ouvre quelque chose", "Il éteint le téléphone", "Il supprime une application", "Il passe un appel tout seul"], answer: 0, why: "Un toucher rapide ouvre une application ou choisit quelque chose." },
-      { q: "Pour faire défiler une page vers le bas, vous :", options: ["Pincez", "Appuyez sur le bouton marche", "Balayez vers le haut ou le bas", "Secouez l'appareil"], answer: 2, why: "Balayer fait bouger la page." },
-      { q: "Les petites images de l'écran d'accueil s'appellent :", options: ["Des contacts", "Des icônes", "Des SMS", "Des mises à jour"], answer: 1, why: "Les icônes sont les images que vous touchez pour ouvrir les applications." },
-      { q: "Quelle application a une icône d'engrenage et permet de changer la taille du texte ?", options: ["Appareil photo", "Messages", "Réglages", "Photos"], answer: 2, why: "Les Réglages servent à changer le fonctionnement de l'appareil." },
-      { q: "Vous ne trouvez pas un réglage. Qu'est-ce qui est le plus rapide ?", options: ["Acheter un nouveau téléphone", "Utiliser la case de recherche en haut des Réglages", "L'éteindre et le rallumer", "Ouvrir l'appareil photo"], answer: 1, why: "La recherche des Réglages trouve les choses par leur nom." },
-      { q: "Où pouvez-vous changer rapidement la luminosité sur la plupart des appareils ?", options: ["En balayant vers le bas depuis le haut de l'écran", "Dans l'application Téléphone", "Dans le magasin d'applications", "Dans vos contacts"], answer: 0, why: "Les réglages rapides en haut comprennent la luminosité." },
-      { q: "Pour appeler quelqu'un en touchant son nom, il faut d'abord :", options: ["Installer une nouvelle application", "L'enregistrer comme contact", "Le prendre en photo", "Mettre à jour le téléphone"], answer: 1, why: "Un contact enregistré relie un nom à un numéro." },
-      { q: "Quelle application envoie des SMS ?", options: ["Appareil photo", "Réglages", "Météo", "Messages"], answer: 3, why: "Messages envoie et reçoit les SMS." },
-      { q: "Un numéro inconnu appelle. Un choix sûr est de :", options: ["Le laisser aller sur la messagerie vocale", "Lui donner un code reçu par SMS", "Lui dire votre code PIN", "Lui envoyer la photo de votre carte bancaire"], answer: 0, why: "Une vraie personne laissera un message vocal." },
-      { q: "Pour qu'une photo soit nette, vous :", options: ["Secouez le téléphone", "Touchez le sujet à l'écran avant de la prendre", "Éteignez l'écran", "Pincez les doigts"], answer: 1, why: "Toucher le sujet dit à l'appareil où faire la mise au point." },
-      { q: "Pour envoyer une photo, ouvrez-la et touchez :", options: ["Supprimer", "Volume", "Réglages", "Partager"], answer: 3, why: "Partager envoie la photo à une personne ou à une application." },
-      { q: "Quelle photo ne faut-il jamais envoyer à un inconnu ?", options: ["Un coucher de soleil", "Une fleur", "Votre pièce d'identité ou votre carte bancaire", "Votre déjeuner"], answer: 2, why: "Les papiers et les cartes peuvent servir à vous voler." },
-      { q: "Le magasin d'applications officiel sur Android est :", options: ["Un lien reçu par SMS", "Une fenêtre publicitaire", "N'importe quel site web", "Le Google Play Store"], answer: 3, why: "Google Play est le magasin officiel d'Android." },
-      { q: "Avant d'installer une application, vérifiez :", options: ["Rien", "Seulement la couleur de l'icône", "Le développeur, la note et les avis", "Le solde de votre compte bancaire"], answer: 2, why: "Les fausses applications copient les noms, alors vérifiez qui l'a faite." },
-      { q: "Une autorisation, c'est :", options: ["Une sorte de photo", "Votre accord pour qu'une application utilise des choses comme l'appareil photo ou la position", "Une facture de téléphone", "Un type de SMS"], answer: 1, why: "Les applications demandent l'autorisation d'utiliser des parties de votre appareil." },
-      { q: "Le verrouillage de l'écran aide parce que :", options: ["Il rend les appels moins chers", "Il prend des photos", "Il agrandit le texte", "Il empêche les autres d'utiliser votre téléphone s'il est perdu"], answer: 3, why: "Le verrouillage garde vos informations privées." },
-      { q: "Sur un iPhone, Mise à jour logicielle se trouve dans :", options: ["Appareil photo", "Photos", "Messages", "Réglages, puis Général"], answer: 3, why: "Les mises à jour de l'iPhone sont dans Réglages, Général, Mise à jour logicielle." },
-      { q: "Pour installer une grosse mise à jour, il vaut mieux :", options: ["Couper le Wi-Fi", "Avoir une batterie faible", "Utiliser le Wi-Fi et brancher l'appareil", "La faire pendant un appel"], answer: 2, why: "Le Wi-Fi et le courant évitent que la mise à jour s'arrête." },
-      { q: "Localiser mon appareil (Android) et Localiser (Apple) vous aident à :", options: ["Trouver des forfaits moins chers", "Trouver de nouveaux amis", "Trouver des applications gratuites", "Retrouver un appareil perdu sur une carte"], answer: 3, why: "Ils montrent, verrouillent ou font sonner un appareil perdu." }
+      { objective: "O1", q: "Quelle entreprise fabrique l'iPhone ?", options: ["Samsung", "Google", "Apple", "Motorola"], answer: 2, why: "Apple fabrique l'iPhone et l'iPad." },
+      { objective: "O1", q: "Que fait un toucher ?", options: ["Il ouvre quelque chose", "Il éteint le téléphone", "Il supprime une application", "Il passe un appel tout seul"], answer: 0, why: "Un toucher rapide ouvre une application ou choisit quelque chose." },
+      { objective: "O1", q: "Pour faire défiler une page vers le bas, vous :", options: ["Pincez", "Appuyez sur le bouton marche", "Balayez vers le haut ou le bas", "Secouez l'appareil"], answer: 2, why: "Balayer fait bouger la page." },
+      { objective: "O1", q: "Les petites images de l'écran d'accueil s'appellent :", options: ["Des contacts", "Des icônes", "Des SMS", "Des mises à jour"], answer: 1, why: "Les icônes sont les images que vous touchez pour ouvrir les applications." },
+      { objective: "O2", q: "Quelle application a une icône d'engrenage et permet de changer la taille du texte ?", options: ["Appareil photo", "Messages", "Réglages", "Photos"], answer: 2, why: "Les Réglages servent à changer le fonctionnement de l'appareil." },
+      { objective: "O2", q: "Vous ne trouvez pas un réglage. Qu'est-ce qui est le plus rapide ?", options: ["Acheter un nouveau téléphone", "Utiliser la case de recherche en haut des Réglages", "L'éteindre et le rallumer", "Ouvrir l'appareil photo"], answer: 1, why: "La recherche des Réglages trouve les choses par leur nom." },
+      { objective: "O2", q: "Où pouvez-vous changer rapidement la luminosité sur la plupart des appareils ?", options: ["En balayant vers le bas depuis le haut de l'écran", "Dans l'application Téléphone", "Dans le magasin d'applications", "Dans vos contacts"], answer: 0, why: "Les réglages rapides en haut comprennent la luminosité." },
+      { objective: "O3", q: "Pour appeler quelqu'un en touchant son nom, il faut d'abord :", options: ["Installer une nouvelle application", "L'enregistrer comme contact", "Le prendre en photo", "Mettre à jour le téléphone"], answer: 1, why: "Un contact enregistré relie un nom à un numéro." },
+      { objective: "O3", q: "Quelle application envoie des SMS ?", options: ["Appareil photo", "Réglages", "Météo", "Messages"], answer: 3, why: "Messages envoie et reçoit les SMS." },
+      { objective: "O3", q: "Un numéro inconnu appelle. Un choix sûr est de :", options: ["Le laisser aller sur la messagerie vocale", "Lui donner un code reçu par SMS", "Lui dire votre code PIN", "Lui envoyer la photo de votre carte bancaire"], answer: 0, why: "Une vraie personne laissera un message vocal." },
+      { objective: "O4", q: "Pour qu'une photo soit nette, vous :", options: ["Secouez le téléphone", "Touchez le sujet à l'écran avant de la prendre", "Éteignez l'écran", "Pincez les doigts"], answer: 1, why: "Toucher le sujet dit à l'appareil où faire la mise au point." },
+      { objective: "O4", q: "Pour envoyer une photo, ouvrez-la et touchez :", options: ["Supprimer", "Volume", "Réglages", "Partager"], answer: 3, why: "Partager envoie la photo à une personne ou à une application." },
+      { objective: "O4", q: "Quelle photo ne faut-il jamais envoyer à un inconnu ?", options: ["Un coucher de soleil", "Une fleur", "Votre pièce d'identité ou votre carte bancaire", "Votre déjeuner"], answer: 2, why: "Les papiers et les cartes peuvent servir à vous voler." },
+      { objective: "O5", q: "Le magasin d'applications officiel sur Android est :", options: ["Un lien reçu par SMS", "Une fenêtre publicitaire", "N'importe quel site web", "Le Google Play Store"], answer: 3, why: "Google Play est le magasin officiel d'Android." },
+      { objective: "O5", q: "Avant d'installer une application, vérifiez :", options: ["Rien", "Seulement la couleur de l'icône", "Le développeur, la note et les avis", "Le solde de votre compte bancaire"], answer: 2, why: "Les fausses applications copient les noms, alors vérifiez qui l'a faite." },
+      { objective: "O5", q: "Une autorisation, c'est :", options: ["Une sorte de photo", "Votre accord pour qu'une application utilise des choses comme l'appareil photo ou la position", "Une facture de téléphone", "Un type de SMS"], answer: 1, why: "Les applications demandent l'autorisation d'utiliser des parties de votre appareil." },
+      { objective: "O6", q: "Le verrouillage de l'écran aide parce que :", options: ["Il rend les appels moins chers", "Il prend des photos", "Il agrandit le texte", "Il empêche les autres d'utiliser votre téléphone s'il est perdu"], answer: 3, why: "Le verrouillage garde vos informations privées." },
+      { objective: "O6", q: "Sur un iPhone, Mise à jour logicielle se trouve dans :", options: ["Appareil photo", "Photos", "Messages", "Réglages, puis Général"], answer: 3, why: "Les mises à jour de l'iPhone sont dans Réglages, Général, Mise à jour logicielle." },
+      { objective: "O6", q: "Pour installer une grosse mise à jour, il vaut mieux :", options: ["Couper le Wi-Fi", "Avoir une batterie faible", "Utiliser le Wi-Fi et brancher l'appareil", "La faire pendant un appel"], answer: 2, why: "Le Wi-Fi et le courant évitent que la mise à jour s'arrête." },
+      { objective: "O6", q: "Localiser mon appareil (Android) et Localiser (Apple) vous aident à :", options: ["Trouver des forfaits moins chers", "Trouver de nouveaux amis", "Trouver des applications gratuites", "Retrouver un appareil perdu sur une carte"], answer: 3, why: "Ils montrent, verrouillent ou font sonner un appareil perdu." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      1,
+      3,
+      4,
+      6,
+      7,
+      9,
+      11,
+      12,
+      14,
+      16
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Appel",
+        objective: "O3",
+        notYet: "Aucun appel ni appel vidéo n'a été passé, ou l'apprenant a eu besoin d'aide pour trouver la personne.",
+        meets: "Appelle ou fait un appel vidéo à un contact enregistré sans aide.",
+        exceeds: "Enregistre aussi d'abord un nouveau contact avec un nom et un numéro."
+      },
+      {
+        name: "SMS avec une photo",
+        objective: "O4",
+        notYet: "Le SMS ou la photo n'a pas été envoyé, ou la photo montre des informations privées.",
+        meets: "Prend une photo nette et l'envoie par SMS à quelqu'un qu'il connaît.",
+        exceeds: "Utilise le bouton Partager depuis Photos ou Galerie et ajoute un court message."
+      },
+      {
+        name: "Installer une application",
+        objective: "O5",
+        notYet: "Aucune application installée, ou elle vient d'ailleurs que du magasin officiel.",
+        meets: "Une application gratuite installée depuis le magasin officiel après vérification du développeur et des avis.",
+        exceeds: "Refuse aussi une autorisation dont l'application n'a pas besoin."
+      },
+      {
+        name: "Verrouillage et mises à jour",
+        objective: "O6",
+        notYet: "Pas de verrouillage d'écran, ou un verrouillage facile comme 123456.",
+        meets: "Un verrouillage d'écran solide est activé et le logiciel est à jour.",
+        exceeds: "Localiser mon appareil ou Localiser est aussi activé."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et obtiennent « Atteint » ou « Dépasse » sur chaque ligne de la grille de l'exercice final",
+      "Apprenants qui disent utiliser seuls leur téléphone ou leur tablette pour les appels, les SMS et les photos 30 jours plus tard (enquête de suivi)",
+      "Apprenants qui disent avoir installé en sécurité, depuis le magasin officiel, une application utile comme celle d'une pharmacie, d'une banque ou d'appel vidéo",
+      "Apprenants qui suivent ensuite un autre cours, comme « Les bases d'internet » ou « L'e-mail et la communication en ligne »"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Le smartphone ou la tablette chargés de l'apprenant (Android, iPhone ou iPad)",
+      "Du Wi-Fi pour installer les applications et les mises à jour",
+      "Le numéro d'un ami, d'un membre de la famille ou d'un camarade à appeler et à qui envoyer un SMS",
+      "Environ 60 minutes au total, en courtes séances"
+    ],
+    facilitatorNotes: [
+      "Regroupez les apprenants par type d'appareil (Android ou Apple) pour que les étapes correspondent à ce qu'ils voient à l'écran.",
+      "Laissez les apprenants faire chaque geste eux-mêmes ; si vous devez montrer quelque chose, utilisez votre propre appareil.",
+      "Certaines installations demandent le mot de passe d'un compte ; laissez l'apprenant le taper en privé, et ne demandez ni ne notez jamais son code PIN ou son mot de passe.",
+      "Faites s'appeler et s'envoyer des SMS les apprenants entre eux en classe, pour que personne n'ait à partager un numéro personnel qu'il préfère garder privé.",
+      "Apportez un chargeur et prévoyez les mises à jour en fin de séance, car elles peuvent prendre longtemps."
     ]
   }
 };

@@ -17,11 +17,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes. Lisez la leçon, regardez les diapositives, puis faites la tâche \"Essayez maintenant\" dans un vrai tableur. Vous construirez une seule feuille d'entraînement tout au long du cours. Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Créez une feuille \"Ventes de la semaine\" (ou \"Heures des bénévoles\" ou \"Heures de travail\") d'au moins 8 lignes : en-têtes en gras, montants affichés en format monétaire, un total avec SUM (SOMME) et une moyenne avec AVERAGE (MOYENNE), une colonne avec IF (SI) qui étiquette chaque ligne (par exemple \"Objectif atteint\" ou \"Sous l'objectif\"), les données triées de la plus grande à la plus petite, un filtre sur la ligne d'en-tête, un graphique en colonnes, la ligne du haut figée, et le fichier partagé avec une personne en lecture seule.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des propriétaires de petites entreprises, leurs employés, des personnes qui cherchent un emploi et des bénévoles qui doivent suivre des ventes, des heures, du stock ou des dons au travail. Beaucoup ont déjà vu des tableurs mais n'en ont jamais créé un eux-mêmes.",
+    startingPoint: "Ils savent utiliser un ordinateur ou un téléphone, taper et ouvrir un navigateur web. Ils utilisent peu ou pas les formules, le tri, les graphiques ou les réglages de partage.",
+    gap: "Beaucoup d'emplois et de petites entreprises attendent des bases en tableur, et les registres sur papier ou dans des feuilles désordonnées causent des erreurs. Créer une feuille propre avec des totaux, des étiquettes, un graphique et un partage sûr fait gagner du temps et aide à trouver un emploi.",
+    constraints: [
+      "Niveau de lecture : mots simples et étapes courtes",
+      "Appareils : un ordinateur avec Excel, Excel sur le web ou Google Sheets est le mieux ; un téléphone est plus difficile",
+      "Temps : environ 5 minutes par leçon, plus un exercice pratique",
+      "Les menus sont un peu différents entre Excel et Google Sheets ; les deux sont montrés",
+      "Vie privée : aucun mot de passe, numéro de sécurité sociale ou coordonnée bancaire dans les exercices ou les feuilles partagées"
+    ],
+    prerequisites: "Aucun. Les débutants en informatique peuvent d'abord suivre un cours de bases de l'ordinateur."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Dans un fichier Excel ou Google Sheets vide", action: "saisir un petit tableau avec des en-têtes sur la ligne 1 et un enregistrement par ligne", standard: "avec un seul type de données par colonne" },
+    { id: "O2", condition: "À partir d'un tableau de données", action: "mettre les en-têtes en gras, les montants au format monétaire et ajuster la largeur des colonnes", standard: "pour qu'il se lise clairement d'un coup d'œil" },
+    { id: "O3", condition: "À partir d'une colonne de nombres", action: "écrire des formules SUM, AVERAGE et de ligne, et les recopier vers le bas avec la poignée de recopie", standard: "avec des résultats justes et aucun message d'erreur" },
+    { id: "O4", condition: "À partir d'une règle comme un objectif de ventes ou 40 heures", action: "écrire une formule IF qui donne une étiquette à chaque ligne", standard: "avec la bonne étiquette sur chaque ligne" },
+    { id: "O5", condition: "À partir d'un tableau d'au moins 8 lignes", action: "trier tout le tableau, ajouter un filtre et figer la ligne d'en-tête", standard: "sans mélanger aucune ligne" },
+    { id: "O6", condition: "À partir d'étiquettes et de nombres", action: "créer un graphique en colonnes et partager le fichier avec le plus petit accès dont la personne a besoin", standard: "sans aucune information privée dans la feuille partagée" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Construire votre feuille",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Cellules, lignes, colonnes et saisie des données",
           minutes: 5,
           goal: "Ouvrir une nouvelle feuille de calcul et saisir un petit tableau de données avec des en-têtes.",
@@ -39,9 +63,14 @@ module.exports = {
             { title: "Corriger et enregistrer", bullets: ["Tapez par-dessus ou double-cliquez pour modifier", "Annuler : Ctrl+Z (Windows) ou Cmd+Z (Mac)", "Les versions web enregistrent au fur et à mesure"] }
           ],
           tryIt: "Ouvrez une feuille de calcul vierge. À la ligne 1, tapez les en-têtes Jour, Article, Quantité, Prix. Saisissez 8 lignes de ventes d'entraînement (par exemple Lun, Café, 12, 3,50 ; ou 3.50 si votre ordinateur utilise le point pour les décimales). Nommez le fichier \"Ventes entraînement\".",
-          youCanNow: "ouvrir une feuille de calcul, trouver n'importe quelle cellule par son nom, et saisir un tableau propre avec des en-têtes."
+          youCanNow: "ouvrir une feuille de calcul, trouver n'importe quelle cellule par son nom, et saisir un tableau propre avec des en-têtes.",
+          quickCheck: [
+            { objective: "O1", q: "Qu'est-ce qu'une cellule ?", options: ["Une colonne entière", "Un onglet en bas du fichier", "Une case de la grille, nommée par sa colonne et sa ligne", "Le nom du fichier"], answer: 2, why: "Chaque case de la grille est une cellule, nommée par la lettre de sa colonne et le numéro de sa ligne, comme A1." },
+            { objective: "O1", q: "Vous faites une liste de prix. Que mettez-vous dans la colonne Prix ?", options: ["Des prix et des noms d'articles mélangés", "Seulement des prix", "Des prix et des notes sur chaque client", "Tout ce qui rentre"], answer: 1, why: "Gardez un seul type de données par colonne, donc la colonne Prix ne contient que des nombres." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Mettre en forme pour faciliter la lecture",
           minutes: 4,
           goal: "Mettre en forme les en-têtes, les montants et la largeur des colonnes pour que la feuille soit claire.",
@@ -60,9 +89,14 @@ module.exports = {
             { title: "Ajustez les colonnes", bullets: ["Double-cliquez sur le trait entre les lettres de colonnes", "Marche dans Excel et Google Sheets"] }
           ],
           tryIt: "Dans votre feuille Ventes entraînement, mettez la ligne 1 en gras avec une couleur de remplissage claire, affichez la colonne Prix en format monétaire, et ajustez la largeur de toutes les colonnes.",
-          youCanNow: "mettre en forme les en-têtes, les montants et la largeur des colonnes pour qu'une feuille soit claire et professionnelle."
+          youCanNow: "mettre en forme les en-têtes, les montants et la largeur des colonnes pour qu'une feuille soit claire et professionnelle.",
+          quickCheck: [
+            { objective: "O2", q: "Que change la mise en forme ?", options: ["L'apparence des données, pas ce qu'elles sont", "Les nombres dans vos cellules", "Les formules de votre feuille", "Qui peut ouvrir le fichier"], answer: 0, why: "La mise en forme change l'apparence des données, comme le gras ou le format monétaire, pas leur valeur." },
+            { objective: "O2", q: "Une colonne est trop étroite et coupe le texte. Que faites-vous ?", options: ["Supprimer les longues entrées", "Mettre une toute petite police", "Retaper le texte dans deux cellules", "Double-cliquer sur la ligne entre les lettres des colonnes, en haut"], answer: 3, why: "Double-cliquer sur la bordure ajuste la colonne à son entrée la plus longue." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Totaux et moyennes avec SUM et AVERAGE",
           minutes: 5,
           goal: "Écrire des formules SUM et AVERAGE (SOMME et MOYENNE) et recopier une formule vers le bas.",
@@ -81,17 +115,21 @@ module.exports = {
             { title: "Erreurs", bullets: ["#NAME? (#NOM?) : vérifiez l'orthographe", "#VALUE! (#VALEUR!) : du texte à la place d'un nombre"] }
           ],
           tryIt: "Dans votre feuille, ajoutez une colonne Total avec =C2*D2 recopiée vers le bas, puis ajoutez sous la colonne un total général avec SUM (SOMME) et la vente moyenne avec AVERAGE (MOYENNE). Changez une quantité et regardez les totaux se mettre à jour.",
-          youCanNow: "écrire des formules SUM et AVERAGE (SOMME et MOYENNE), multiplier des cellules, et recopier une formule vers le bas."
+          youCanNow: "écrire des formules SUM et AVERAGE (SOMME et MOYENNE), multiplier des cellules, et recopier une formule vers le bas.",
+          quickCheck: [
+            { objective: "O3", q: "Que fait =C2*D2 ?", options: ["Il additionne C2 et D2", "Il multiplie la valeur de C2 par la valeur de D2", "Il copie C2 dans D2", "Il affiche une erreur"], answer: 1, why: "Le signe * multiplie, donc =C2*D2 multiplie la quantité par le prix." },
+            { objective: "O3", q: "Vous avez besoin du total de E2 à E9. Que tapez-vous ?", options: ["SUM E2 à E9", "=E2+E9", "=SUM(E2:E9)", "=TOTAL E2-E9"], answer: 2, why: "SUM additionne une plage écrite sous la forme première cellule, deux-points, dernière cellule, et chaque formule commence par =." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Construire votre feuille",
         questions: [
-          { q: "Quel est le nom de la cellule de la colonne C, ligne 4 ?", options: ["4C", "C4", "Ligne C", "Cellule 34"], answer: 1, why: "Une cellule se nomme par la lettre de sa colonne, puis le numéro de sa ligne." },
-          { q: "Où doivent aller vos en-têtes ?", options: ["À la ligne 1, un par colonne", "En bas", "Dans des cellules au hasard", "Dans un autre fichier"], answer: 0, why: "Les en-têtes de la ligne 1 nomment chaque colonne de données en dessous." },
-          { q: "Vous voulez que les prix s'affichent avec un symbole monétaire. Que faites-vous ?", options: ["Taper $ avant chaque nombre", "Mettre la colonne en gras", "Supprimer les prix", "Choisir le format monétaire dans le menu de format des nombres"], answer: 3, why: "Le format monétaire ajoute le symbole et les décimales à chaque cellule." },
-          { q: "Quelle formule additionne les cellules B2 à B10 ?", options: ["SUM B2-B10", "=ADD(B2,B10)", "=SUM(B2:B10)", "B2+B10"], answer: 2, why: "Les formules commencent par =, et une plage utilise les deux-points. Dans Excel en français : =SOMME(B2:B10)." },
-          { q: "Que se passe-t-il quand vous faites glisser la poignée de recopie depuis une cellule avec =C2*D2 ?", options: ["La formule est recopiée et s'adapte à chaque ligne", "La cellule est supprimée", "Chaque ligne reçoit exactement =C2*D2", "La feuille est partagée"], answer: 0, why: "Les noms des cellules changent ligne par ligne : C3*D3, C4*D4, et ainsi de suite." }
+          { objective: "O1", q: "Quel est le nom de la cellule de la colonne C, ligne 4 ?", options: ["4C", "C4", "Ligne C", "Cellule 34"], answer: 1, why: "Une cellule se nomme par la lettre de sa colonne, puis le numéro de sa ligne." },
+          { objective: "O1", q: "Où doivent aller vos en-têtes ?", options: ["À la ligne 1, un par colonne", "En bas", "Dans des cellules au hasard", "Dans un autre fichier"], answer: 0, why: "Les en-têtes de la ligne 1 nomment chaque colonne de données en dessous." },
+          { objective: "O2", q: "Vous voulez que les prix s'affichent avec un symbole monétaire. Que faites-vous ?", options: ["Taper $ avant chaque nombre", "Mettre la colonne en gras", "Supprimer les prix", "Choisir le format monétaire dans le menu de format des nombres"], answer: 3, why: "Le format monétaire ajoute le symbole et les décimales à chaque cellule." },
+          { objective: "O3", q: "Quelle formule additionne les cellules B2 à B10 ?", options: ["SUM B2-B10", "=ADD(B2,B10)", "=SUM(B2:B10)", "B2+B10"], answer: 2, why: "Les formules commencent par =, et une plage utilise les deux-points. Dans Excel en français : =SOMME(B2:B10)." },
+          { objective: "O3", q: "Que se passe-t-il quand vous faites glisser la poignée de recopie depuis une cellule avec =C2*D2 ?", options: ["La formule est recopiée et s'adapte à chaque ligne", "La cellule est supprimée", "Chaque ligne reçoit exactement =C2*D2", "La feuille est partagée"], answer: 0, why: "Les noms des cellules changent ligne par ligne : C3*D3, C4*D4, et ainsi de suite." }
         ]
       }
     },
@@ -99,6 +137,7 @@ module.exports = {
       name: "Chapitre 2 : Travailler avec vos données",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Prendre des décisions avec IF (SI)",
           minutes: 5,
           goal: "Écrire une formule IF (SI) qui étiquette chaque ligne selon une règle.",
@@ -116,9 +155,14 @@ module.exports = {
             { title: "Signes de comparaison", bullets: ["> plus grand, < plus petit", ">= au moins, <= au plus", "= égal, <> différent"] }
           ],
           tryIt: "Ajoutez une colonne Statut à votre feuille avec =IF(E2>=50,\"Objectif atteint\",\"Sous l'objectif\") (dans Excel en français : =SI(E2>=50;\"Objectif atteint\";\"Sous l'objectif\")) et recopiez-la vers le bas. Changez un total pour qu'il passe au-dessus de 50 et regardez l'étiquette changer.",
-          youCanNow: "écrire une formule IF (SI) qui étiquette les lignes automatiquement selon une règle."
+          youCanNow: "écrire une formule IF (SI) qui étiquette les lignes automatiquement selon une règle.",
+          quickCheck: [
+            { objective: "O4", q: "Que fait la fonction IF ?", options: ["Elle additionne une colonne de nombres", "Elle trie le tableau", "Elle crée un graphique", "Elle affiche un résultat si un test est vrai et un autre s'il est faux"], answer: 3, why: "Le modèle est =IF(test, valeur si vrai, valeur si faux)." },
+            { objective: "O4", q: "Vous voulez marquer « Objectif atteint » les ventes de 50 ou plus. Quelle formule tapez-vous sur la ligne 2 ?", options: ["=IF(E2>=50,\"Objectif atteint\",\"Sous l'objectif\")", "=IF(E2<50,Objectif atteint,Sous l'objectif)", "=SUM(E2>=50)", "=IF(\"Objectif atteint\")"], answer: 0, why: "Le test E2>=50 vient en premier, et les résultats en texte vont entre guillemets droits." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Trier, filtrer et figer la ligne d'en-tête",
           minutes: 5,
           goal: "Trier vos données, les filtrer pour n'afficher que certaines lignes, et figer la ligne d'en-tête.",
@@ -137,9 +181,14 @@ module.exports = {
             { title: "Gardez les lignes ensemble", bullets: ["Triez le tableau entier, jamais une seule colonne"] }
           ],
           tryIt: "Triez votre feuille par Total, du plus grand au plus petit. Ajoutez un filtre et n'affichez que les lignes \"Sous l'objectif\", puis effacez le filtre. Figez la ligne du haut et descendez pour vérifier que les en-têtes restent visibles.",
-          youCanNow: "trier et filtrer des données sans risque et figer la ligne d'en-tête."
+          youCanNow: "trier et filtrer des données sans risque et figer la ligne d'en-tête.",
+          quickCheck: [
+            { objective: "O5", q: "Que fait le fait de figer la ligne d'en-tête ?", options: ["Il verrouille le fichier pour que personne ne puisse le modifier", "Il garde la ligne d'en-tête à l'écran quand vous faites défiler vers le bas", "Il supprime les lignes en dessous", "Il met l'en-tête en bleu"], answer: 1, why: "Figer garde l'en-tête visible pendant que vous parcourez une longue liste." },
+            { objective: "O5", q: "Vous voulez voir seulement les lignes « Sous l'objectif » pour le moment, sans perdre de données. Qu'utilisez-vous ?", options: ["Supprimer les autres lignes", "Trier une seule colonne", "Un filtre sur la ligne d'en-tête", "Figer les volets"], answer: 2, why: "Un filtre cache les lignes dont vous n'avez pas besoin pour l'instant et ne supprime rien." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Créer un graphique et partager votre feuille",
           minutes: 5,
           goal: "Créer un graphique en colonnes simple et partager la feuille avec la bonne autorisation.",
@@ -158,17 +207,21 @@ module.exports = {
             { title: "Partagez prudemment", bullets: ["Donnez l'accès le plus faible nécessaire", "Pas de mots de passe, de numéros d'identité ou de banque dans une feuille partagée"] }
           ],
           tryIt: "Tâche finale : terminez votre feuille avec au moins 8 lignes, des en-têtes en gras, le format monétaire, SUM et AVERAGE (SOMME et MOYENNE), une colonne Statut avec IF (SI), un tri du plus grand au plus petit, un filtre, un graphique en colonnes de Jour et Total, et la ligne du haut figée. Puis partagez-la avec une personne en lecture seule.",
-          youCanNow: "créer un graphique en colonnes à partir de vos données et partager une feuille de calcul avec la bonne autorisation."
+          youCanNow: "créer un graphique en colonnes à partir de vos données et partager une feuille de calcul avec la bonne autorisation.",
+          quickCheck: [
+            { objective: "O6", q: "Quel graphique est bon pour comparer des quantités, comme les heures par personne ?", options: ["Un graphique en colonnes", "Une feuille vide", "Un filtre", "Une ligne figée"], answer: 0, why: "La leçon dit qu'un graphique en colonnes est bon pour comparer des quantités." },
+            { objective: "O6", q: "Votre responsable a seulement besoin de lire votre feuille. Quel accès donnez-vous quand vous la partagez ?", options: ["Éditeur", "Propriétaire", "Toute personne disposant du lien peut modifier", "Lecteur"], answer: 3, why: "Donnez le plus petit accès dont la personne a besoin : la lecture seule si elle doit seulement lire." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Travailler avec vos données",
         questions: [
-          { q: "Qu'affiche =IF(C2>40,\"Heures sup\",\"Normal\") quand C2 vaut 45 ?", options: ["Normal", "45", "Heures sup", "Une erreur"], answer: 2, why: "45 est plus grand que 40, donc le résultat \"si vrai\" s'affiche." },
-          { q: "Dans une formule IF (SI), où vont les résultats en texte ?", options: ["Entre guillemets doubles", "Entre crochets", "Après un signe #", "Nulle part"], answer: 0, why: "Les résultats en texte doivent être entre guillemets doubles." },
-          { q: "Que fait un filtre ?", options: ["Il supprime des lignes", "Il change les nombres", "Il partage le fichier", "Il cache les lignes qui ne correspondent pas, sans les supprimer"], answer: 3, why: "Filtrer cache seulement des lignes ; en effaçant le filtre, elles réapparaissent." },
-          { q: "Comment garder la ligne d'en-tête à l'écran dans Google Sheets ?", options: ["Format > Gras", "Affichage > Figer > 1 ligne", "Insertion > Graphique", "Données > Trier une plage"], answer: 1, why: "Figer la ligne 1 la garde visible pendant que vous faites défiler." },
-          { q: "Un bénévole a seulement besoin de lire votre feuille. Quel accès lui donnez-vous ?", options: ["Éditeur", "Propriétaire", "Lecteur", "Aucun ; envoyez-lui votre mot de passe"], answer: 2, why: "Donnez l'accès le plus faible dont la personne a besoin." }
+          { objective: "O4", q: "Qu'affiche =IF(C2>40,\"Heures sup\",\"Normal\") quand C2 vaut 45 ?", options: ["Normal", "45", "Heures sup", "Une erreur"], answer: 2, why: "45 est plus grand que 40, donc le résultat \"si vrai\" s'affiche." },
+          { objective: "O4", q: "Dans une formule IF (SI), où vont les résultats en texte ?", options: ["Entre guillemets doubles", "Entre crochets", "Après un signe #", "Nulle part"], answer: 0, why: "Les résultats en texte doivent être entre guillemets doubles." },
+          { objective: "O5", q: "Que fait un filtre ?", options: ["Il supprime des lignes", "Il change les nombres", "Il partage le fichier", "Il cache les lignes qui ne correspondent pas, sans les supprimer"], answer: 3, why: "Filtrer cache seulement des lignes ; en effaçant le filtre, elles réapparaissent." },
+          { objective: "O5", q: "Comment garder la ligne d'en-tête à l'écran dans Google Sheets ?", options: ["Format > Gras", "Affichage > Figer > 1 ligne", "Insertion > Graphique", "Données > Trier une plage"], answer: 1, why: "Figer la ligne 1 la garde visible pendant que vous faites défiler." },
+          { objective: "O6", q: "Un bénévole a seulement besoin de lire votre feuille. Quel accès lui donnez-vous ?", options: ["Éditeur", "Propriétaire", "Lecteur", "Aucun ; envoyez-lui votre mot de passe"], answer: 2, why: "Donnez l'accès le plus faible dont la personne a besoin." }
         ]
       }
     }
@@ -176,26 +229,111 @@ module.exports = {
   quiz: {
     title: "Quiz final : Excel et les tableurs au travail",
     questions: [
-      { q: "Dans une feuille de calcul, les colonnes sont nommées avec :", options: ["Des chiffres", "Des lettres", "Des couleurs", "Des dates"], answer: 1, why: "Les colonnes utilisent des lettres ; les lignes utilisent des chiffres." },
-      { q: "Quelle touche vous fait passer à la cellule de droite après avoir tapé ?", options: ["Tab", "Entrée", "Maj", "Échap"], answer: 0, why: "Tab va à droite ; Entrée va en bas." },
-      { q: "Quelle est la meilleure présentation pour une liste de dons ?", options: ["Chaque don dans un fichier différent", "Toutes les données dans une seule cellule", "Des cellules au hasard dans la feuille", "Les en-têtes à la ligne 1 et un don par ligne"], answer: 3, why: "Un enregistrement par ligne sous des en-têtes clairs garde les données utilisables." },
-      { q: "Vous avez tapé le mauvais nombre. Le moyen le plus rapide d'effacer votre dernier changement est :", options: ["Fermer le fichier", "Annuler : Ctrl+Z (Cmd+Z sur Mac)", "Supprimer la colonne", "Commencer un nouveau fichier"], answer: 1, why: "Annuler défait votre dernière action." },
-      { q: "Mettre un nombre en format monétaire :", options: ["Change son apparence, pas sa valeur", "Double sa valeur", "Supprime le nombre", "Le transforme en texte qu'on ne peut pas additionner"], answer: 0, why: "La mise en forme change seulement l'apparence." },
-      { q: "Comment ajuster une colonne à son contenu le plus long ?", options: ["Taper des espaces", "Supprimer l'en-tête", "Double-cliquer sur le trait entre les lettres de colonnes", "Appuyer deux fois sur Entrée"], answer: 2, why: "Double-cliquer sur la limite ajuste automatiquement la colonne." },
-      { q: "Chaque formule commence par :", options: ["Seulement un signe plus", "Un signe dollar", "Une lettre", "Un signe égal"], answer: 3, why: "Le = dit à l'application qu'il s'agit d'une formule." },
-      { q: "Quelle formule calcule la moyenne de D2 à D20 ?", options: ["=AVERAGE(D2:D20)", "=AVG D2 D20", "AVERAGE=D2:D20", "=SUM(D2:D20)"], answer: 0, why: "AVERAGE avec une plage écrite première:dernière. Dans Excel en français : =MOYENNE(D2:D20)." },
-      { q: "Vous changez une quantité utilisée par une formule SUM. Que devient le total ?", options: ["Rien", "Il se met à jour tout seul", "Il affiche une erreur", "Il est supprimé"], answer: 1, why: "Les formules se recalculent quand leurs données changent." },
-      { q: "Une cellule affiche #NAME? (en français : #NOM?). Quelle est la cause probable ?", options: ["Le fichier est partagé", "La colonne est en gras", "Le nom de la fonction est mal écrit", "La feuille est figée"], answer: 2, why: "#NAME? veut souvent dire que l'application ne reconnaît pas le nom de la fonction." },
-      { q: "Qu'est-ce que la poignée de recopie ?", options: ["Un menu", "Le petit carré en bas à droite d'une cellule, qui sert à recopier", "Le bouton Partager", "Un type de graphique"], answer: 1, why: "La faire glisser recopie la formule et adapte les noms des cellules." },
-      { q: "Quelle formule affiche \"Manquant\" quand D2 est vide et \"OK\" sinon ?", options: ["=IF(D2=\"\",\"Manquant\",\"OK\")", "=SUM(D2)", "=IF(D2,OK,Manquant)", "=AVERAGE(\"Manquant\")"], answer: 0, why: "Le test D2=\"\" vérifie si la cellule est vide. Dans Excel en français : =SI(D2=\"\";\"Manquant\";\"OK\")." },
-      { q: "Que veut dire <> dans une formule ?", options: ["Plus grand que", "Égal à", "Plus petit que", "Différent de"], answer: 3, why: "<> veut dire différent de." },
-      { q: "Dans Excel, où se trouvent Trier et Filtrer ?", options: ["Onglet Fichier", "Onglet Données", "Onglet Aide", "Onglet Dessin"], answer: 1, why: "Trier et Filtrer sont dans l'onglet Données (Data) d'Excel." },
-      { q: "Dans Google Sheets, comment ajouter des flèches de filtre à la ligne d'en-tête ?", options: ["Données > Créer un filtre", "Insertion > Graphique", "Format > Nombre", "Fichier > Partager"], answer: 0, why: "Créer un filtre ajoute des flèches à chaque en-tête." },
-      { q: "Pourquoi ne faut-il jamais trier une seule colonne d'un tableau ?", options: ["C'est trop lent", "Cela supprime la feuille", "Les lignes se mélangent", "Cela partage le fichier"], answer: 2, why: "Trier une seule colonne sépare les valeurs du reste de leur ligne." },
-      { q: "Dans Excel, comment garder la ligne 1 visible en faisant défiler ?", options: ["Insertion > Graphique", "Accueil > Gras", "Données > Filtrer", "Affichage > Figer les volets > Figer la ligne supérieure"], answer: 3, why: "Figer la ligne supérieure garde l'en-tête à l'écran." },
-      { q: "Quel graphique est le meilleur pour comparer les ventes par jour ?", options: ["Un graphique en colonnes", "Aucun graphique", "Un graphique sans étiquettes", "Un dessin de camembert fait à la main"], answer: 0, why: "Les graphiques en colonnes comparent des quantités côte à côte." },
-      { q: "Dans Google Sheets, comment commencer un graphique ?", options: ["Données > Trier une plage", "Insertion > Graphique", "Affichage > Figer", "Format > Gras"], answer: 1, why: "Insertion > Graphique ouvre l'éditeur de graphique." },
-      { q: "Qu'est-ce qu'il ne faut JAMAIS mettre dans une feuille que vous partagez ?", options: ["Les totaux des ventes", "Les noms des produits", "Les mots de passe et les numéros de sécurité sociale", "Les dates"], answer: 2, why: "Les numéros privés peuvent être mal utilisés si le fichier est partagé." }
+      { objective: "O1", q: "Dans une feuille de calcul, les colonnes sont nommées avec :", options: ["Des chiffres", "Des lettres", "Des couleurs", "Des dates"], answer: 1, why: "Les colonnes utilisent des lettres ; les lignes utilisent des chiffres." },
+      { objective: "O1", q: "Quelle touche vous fait passer à la cellule de droite après avoir tapé ?", options: ["Tab", "Entrée", "Maj", "Échap"], answer: 0, why: "Tab va à droite ; Entrée va en bas." },
+      { objective: "O1", q: "Quelle est la meilleure présentation pour une liste de dons ?", options: ["Chaque don dans un fichier différent", "Toutes les données dans une seule cellule", "Des cellules au hasard dans la feuille", "Les en-têtes à la ligne 1 et un don par ligne"], answer: 3, why: "Un enregistrement par ligne sous des en-têtes clairs garde les données utilisables." },
+      { objective: "O1", q: "Vous avez tapé le mauvais nombre. Le moyen le plus rapide d'effacer votre dernier changement est :", options: ["Fermer le fichier", "Annuler : Ctrl+Z (Cmd+Z sur Mac)", "Supprimer la colonne", "Commencer un nouveau fichier"], answer: 1, why: "Annuler défait votre dernière action." },
+      { objective: "O2", q: "Mettre un nombre en format monétaire :", options: ["Change son apparence, pas sa valeur", "Double sa valeur", "Supprime le nombre", "Le transforme en texte qu'on ne peut pas additionner"], answer: 0, why: "La mise en forme change seulement l'apparence." },
+      { objective: "O2", q: "Comment ajuster une colonne à son contenu le plus long ?", options: ["Taper des espaces", "Supprimer l'en-tête", "Double-cliquer sur le trait entre les lettres de colonnes", "Appuyer deux fois sur Entrée"], answer: 2, why: "Double-cliquer sur la limite ajuste automatiquement la colonne." },
+      { objective: "O3", q: "Chaque formule commence par :", options: ["Seulement un signe plus", "Un signe dollar", "Une lettre", "Un signe égal"], answer: 3, why: "Le = dit à l'application qu'il s'agit d'une formule." },
+      { objective: "O3", q: "Quelle formule calcule la moyenne de D2 à D20 ?", options: ["=AVERAGE(D2:D20)", "=AVG D2 D20", "AVERAGE=D2:D20", "=SUM(D2:D20)"], answer: 0, why: "AVERAGE avec une plage écrite première:dernière. Dans Excel en français : =MOYENNE(D2:D20)." },
+      { objective: "O3", q: "Vous changez une quantité utilisée par une formule SUM. Que devient le total ?", options: ["Rien", "Il se met à jour tout seul", "Il affiche une erreur", "Il est supprimé"], answer: 1, why: "Les formules se recalculent quand leurs données changent." },
+      { objective: "O3", q: "Une cellule affiche #NAME? (en français : #NOM?). Quelle est la cause probable ?", options: ["Le fichier est partagé", "La colonne est en gras", "Le nom de la fonction est mal écrit", "La feuille est figée"], answer: 2, why: "#NAME? veut souvent dire que l'application ne reconnaît pas le nom de la fonction." },
+      { objective: "O3", q: "Qu'est-ce que la poignée de recopie ?", options: ["Un menu", "Le petit carré en bas à droite d'une cellule, qui sert à recopier", "Le bouton Partager", "Un type de graphique"], answer: 1, why: "La faire glisser recopie la formule et adapte les noms des cellules." },
+      { objective: "O4", q: "Quelle formule affiche \"Manquant\" quand D2 est vide et \"OK\" sinon ?", options: ["=IF(D2=\"\",\"Manquant\",\"OK\")", "=SUM(D2)", "=IF(D2,OK,Manquant)", "=AVERAGE(\"Manquant\")"], answer: 0, why: "Le test D2=\"\" vérifie si la cellule est vide. Dans Excel en français : =SI(D2=\"\";\"Manquant\";\"OK\")." },
+      { objective: "O4", q: "Que veut dire <> dans une formule ?", options: ["Plus grand que", "Égal à", "Plus petit que", "Différent de"], answer: 3, why: "<> veut dire différent de." },
+      { objective: "O5", q: "Dans Excel, où se trouvent Trier et Filtrer ?", options: ["Onglet Fichier", "Onglet Données", "Onglet Aide", "Onglet Dessin"], answer: 1, why: "Trier et Filtrer sont dans l'onglet Données (Data) d'Excel." },
+      { objective: "O5", q: "Dans Google Sheets, comment ajouter des flèches de filtre à la ligne d'en-tête ?", options: ["Données > Créer un filtre", "Insertion > Graphique", "Format > Nombre", "Fichier > Partager"], answer: 0, why: "Créer un filtre ajoute des flèches à chaque en-tête." },
+      { objective: "O5", q: "Pourquoi ne faut-il jamais trier une seule colonne d'un tableau ?", options: ["C'est trop lent", "Cela supprime la feuille", "Les lignes se mélangent", "Cela partage le fichier"], answer: 2, why: "Trier une seule colonne sépare les valeurs du reste de leur ligne." },
+      { objective: "O5", q: "Dans Excel, comment garder la ligne 1 visible en faisant défiler ?", options: ["Insertion > Graphique", "Accueil > Gras", "Données > Filtrer", "Affichage > Figer les volets > Figer la ligne supérieure"], answer: 3, why: "Figer la ligne supérieure garde l'en-tête à l'écran." },
+      { objective: "O6", q: "Quel graphique est le meilleur pour comparer les ventes par jour ?", options: ["Un graphique en colonnes", "Aucun graphique", "Un graphique sans étiquettes", "Un dessin de camembert fait à la main"], answer: 0, why: "Les graphiques en colonnes comparent des quantités côte à côte." },
+      { objective: "O6", q: "Dans Google Sheets, comment commencer un graphique ?", options: ["Données > Trier une plage", "Insertion > Graphique", "Affichage > Figer", "Format > Gras"], answer: 1, why: "Insertion > Graphique ouvre l'éditeur de graphique." },
+      { objective: "O6", q: "Qu'est-ce qu'il ne faut JAMAIS mettre dans une feuille que vous partagez ?", options: ["Les totaux des ventes", "Les noms des produits", "Les mots de passe et les numéros de sécurité sociale", "Les dates"], answer: 2, why: "Les numéros privés peuvent être mal utilisés si le fichier est partagé." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      4,
+      6,
+      8,
+      11,
+      13,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est à « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Tableau de données propre",
+        objective: "O1",
+        notYet: "Moins de 8 lignes, des en-têtes manquants ou des données mélangées dans une colonne.",
+        meets: "Des en-têtes sur la ligne 1, au moins 8 lignes, un seul type de données par colonne.",
+        exceeds: "Le fichier et l'onglet de la feuille ont des noms clairs."
+      },
+      {
+        name: "Facile à lire",
+        objective: "O2",
+        notYet: "Les en-têtes sont simples, les montants n'ont pas de format monétaire, ou du texte est coupé.",
+        meets: "En-têtes en gras, montants au format monétaire, colonnes ajustées à leurs entrées.",
+        exceeds: "La ligne d'en-tête a aussi une couleur de fond et la feuille est bien rangée."
+      },
+      {
+        name: "Totaux et moyenne",
+        objective: "O3",
+        notYet: "Totaux tapés à la main ou une formule qui affiche une erreur.",
+        meets: "Un total SUM et une moyenne AVERAGE qui donnent les bons résultats.",
+        exceeds: "Les totaux de ligne utilisent une formule recopiée vers le bas avec la poignée de recopie."
+      },
+      {
+        name: "Étiquettes IF",
+        objective: "O4",
+        notYet: "Pas de colonne IF, ou des étiquettes fausses.",
+        meets: "Une colonne IF donne la bonne étiquette à chaque ligne, comme « Objectif atteint » ou « Sous l'objectif ».",
+        exceeds: "Peut expliquer le test et changer le chiffre de l'objectif pour mettre les étiquettes à jour."
+      },
+      {
+        name: "Trié, filtré et figé",
+        objective: "O5",
+        notYet: "Des lignes sont mélangées, ou le tri, le filtre ou la ligne figée manque.",
+        meets: "Données triées du plus grand au plus petit, un filtre sur la ligne d'en-tête, et la ligne du haut figée.",
+        exceeds: "Peut utiliser le filtre pour n'afficher qu'une seule étiquette, puis l'effacer."
+      },
+      {
+        name: "Graphique et partage sûr",
+        objective: "O6",
+        notYet: "Pas de graphique, ou partagé avec un accès en modification par défaut ou avec des données privées.",
+        meets: "Un graphique en colonnes avec un titre, et le fichier partagé avec une personne comme Lecteur, sans données privées.",
+        exceeds: "Peut dire pourquoi il a choisi ce niveau d'accès."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Apprenants qui disent utiliser un tableur au travail ou dans leur activité dans les 30 jours (questionnaire de suivi)",
+      "Apprenants qui ajoutent les compétences en tableur à leur CV ou trouvent un emploi qui les utilise",
+      "Apprenants qui commencent un autre cours de Koach Learn dans les 30 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur avec Excel, Excel sur le web ou Google Sheets (gratuit avec un compte Google)",
+      "Des données d'exemple : une semaine de ventes, d'heures de travail ou d'heures de bénévolat, avec au moins 8 lignes",
+      "L'adresse e-mail d'une personne avec qui partager la feuille terminée",
+      "Environ 60 minutes au total, en courtes séances : leçons, exercices, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Montrez chaque étape une fois sur un écran projeté, dans Excel et dans Google Sheets, puis laissez les apprenants la refaire.",
+      "Donnez aux apprenants un jeu de données d'exemple prêt, pour que personne n'ait à utiliser de vraies données de clients ou des données privées.",
+      "Surveillez les apprenants qui trient une seule colonne ; faites-leur annuler et trier tout le tableau.",
+      "Rappelez aux apprenants de partager en tant que Lecteur sauf si la personne doit modifier, et de ne jamais mettre de mots de passe ou de numéros d'identité dans une feuille partagée.",
+      "Notez la tâche finale avec la grille d'évaluation, et faites un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

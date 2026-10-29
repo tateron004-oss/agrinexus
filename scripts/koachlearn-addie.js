@@ -28,7 +28,8 @@ function summary(file) {
   const out = {
     file: path.relative(process.cwd(), file), id: c.id, lang: c.lang || "en", category: c.category, name: c.name, outcome: c.outcome, finalTask: c.finalTask, about: c.about,
     hasAddie: !!c.objectives,
-    lessons: lessons.map((l, i) => ({ n: i + 1, title: l.title, goal: l.goal, tryIt: l.tryIt, youCanNow: l.youCanNow })),
+    // the English writer needs what each lesson teaches, so the quick checks test only that; a translator works from the English ADDIE parts below
+    lessons: lessons.map((l, i) => ({ n: i + 1, title: l.title, goal: l.goal, ...(c.translationOf ? {} : { text: l.text, steps: l.steps, slides: l.slides.map(s => `${s.title}: ${s.bullets.join(" / ")}`) }), tryIt: l.tryIt, youCanNow: l.youCanNow })),
     checks: c.chapters.map(ch => ch.check.questions.map((q, i) => ({ i, q: q.q, right: q.options[q.answer] }))),
     quiz: c.quiz.questions.map((q, i) => ({ i, q: q.q, right: q.options[q.answer] }))
   };

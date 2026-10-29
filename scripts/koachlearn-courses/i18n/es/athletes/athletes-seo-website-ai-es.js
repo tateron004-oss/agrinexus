@@ -16,11 +16,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos y tiene una tarea “Pruébalo ahora”. Vas a planear, escribir, crear y publicar gratis un sitio de una página. Cada capítulo termina con una comprobación de conocimientos y el curso termina con un examen de 20 preguntas."
   ],
   finalTask: "Publica en Google Sites un sitio web de una página para deportistas con: un título de página que incluya tu nombre y tu deporte, una sección Sobre mí escrita con IA y editada por ti, una sección de estadísticas y jugadas destacadas, una forma de contacto que no muestre tus datos privados, texto alternativo en las imágenes y un enlace al sitio desde uno de tus perfiles de redes sociales. Luego busca en Google tu nombre y tu deporte y anota lo que aparece.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Deportistas de secundaria, universidad y de los primeros años de carrera que quieren un lugar en internet que ellos controlen, donde entrenadores, reclutadores, marcas y aficionados vean quiénes son, y entrenadores que los ayudan.",
+    startingPoint: "Usan redes sociales y un teléfono todos los días y quizá tienen un perfil de reclutamiento o un video de jugadas destacadas. Pocos han hecho un sitio web, y la mayoría nunca ha oído hablar del título de la página, el texto alternativo u otras bases del SEO.",
+    gap: "A los entrenadores y las marcas les cuesta leer los perfiles de redes sociales, y esos perfiles pueden cambiar o desaparecer. Un sitio sencillo y seguro que los buscadores entienden les da a los deportistas una página clara que ayuda a las personas correctas a encontrarlos y contactarlos.",
+    constraints: [
+      "Lenguaje sencillo, a un nivel de lectura de alrededor de octavo grado",
+      "Una computadora o un teléfono, una cuenta gratuita de Google, Google Sites y un asistente de IA gratuito",
+      "Unos 60 minutos en total",
+      "Ningún dato privado en la página; los deportistas menores de 18 años ponen como contacto a su madre, padre o entrenador",
+      "Las reglas de permiso de fotos y de logotipos de la escuela; los resultados de búsqueda pueden tardar en aparecer"
+    ],
+    prerequisites: "Ninguno. \"Marca personal en redes sociales para deportistas\" te ayuda a escribir primero tu frase de marca."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Antes de crear tu sitio", action: "elegir tu público principal y anotar lo que necesita en cuatro secciones", standard: "con Sobre mí, Estadísticas o Servicios, Jugadas destacadas y Contacto pensados para ese público" },
+    { id: "O2", condition: "Usando tus datos verdaderos y un asistente de IA", action: "escribir una sección Sobre mí y elegir una forma de contacto segura", standard: "con cada dato revisado, nada falso, tu propia voz y sin tu dirección, tu número de teléfono, tu fecha de nacimiento completa ni tu horario" },
+    { id: "O3", condition: "Para tu sitio de una página", action: "escribir un título de página, encabezados de sección, una descripción corta y texto alternativo para las imágenes que ayuden en las búsquedas", standard: "con tu nombre y tu deporte en el título, texto alternativo en cada imagen y sin llenar la página de palabras clave" },
+    { id: "O4", condition: "Usando Google Sites", action: "crear un sitio de una página con cuatro secciones, fotos, un video de jugadas destacadas insertado y un botón de contacto", standard: "usando solo fotos que tienes permiso para usar y siguiendo las reglas de logotipos de tu escuela" },
+    { id: "O5", condition: "Cuando tu sitio esté listo", action: "publicarlo, probarlo en un teléfono y compartir el enlace en tus biografías", standard: "con cada enlace, botón y video funcionando y el sitio revisado por un entrenador, tu madre o tu padre" },
+    { id: "O6", condition: "Después de publicar", action: "planear una rutina de actualización y revisar cómo aparece tu sitio en las búsquedas", standard: "con un recordatorio para actualizar después de cada temporada y una nota de lo que aparece cuando buscas tu nombre y tu deporte" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Planear y escribir tu sitio",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Por qué un deportista necesita un sitio web sencillo",
           minutes: 4,
           goal: "Decidir para quién es tu sitio y qué debe mostrar.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Empieza con una página", bullets: ["Sobre mí", "Estadísticas o Servicios", "Jugadas destacadas", "Contacto"] }
           ],
           tryIt: "Escribe el público principal de tu sitio y haz la lista de lo que necesita ver debajo de los cuatro encabezados de sección.",
-          youCanNow: "planear un sitio de una página para deportistas pensado para un público claro."
+          youCanNow: "planear un sitio de una página para deportistas pensado para un público claro.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué debe mostrar el sitio de un deportista enfocado en las marcas?", options: ["Solo tu horario de clases", "Tu público, tus colaboraciones anteriores y tu kit de prensa", "Tu dirección", "Todos los marcadores desde que eras niño"], answer: 1, why: "Las marcas quieren ver tu público, tus colaboraciones y tu kit de prensa." },
+            { objective: "O1", q: "Diriges un campamento de habilidades para jóvenes y quieres un sitio para él. ¿Qué secciones encajan?", options: ["Sobre mí, Servicios, Jugadas destacadas y Contacto con inscripción", "Solo una galería de fotos", "Solo tus estadísticas", "Una lista de rivales"], answer: 0, why: "El sitio de un entrenador o de un campamento necesita servicios, horario e inscripción." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Escribir tu página con IA",
           minutes: 5,
           goal: "Usar un asistente de IA para hacer el borrador de tu sección Sobre mí y del texto de las secciones, y luego editarlo.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Contacto seguro", bullets: ["Correo aparte para el deporte o un formulario", "Nada de dirección, teléfono ni fecha de nacimiento", "Menores: pon también a un padre o un entrenador"] }
           ],
           tryIt: "Usa un asistente de IA para hacer el borrador de tu sección Sobre mí. Revisa cada dato, edítalo con tu voz y crea un correo aparte para el deporte si no tienes uno.",
-          youCanNow: "escribir con ayuda de la IA un texto exacto para tu sitio web y elegir una forma de contacto segura."
+          youCanNow: "escribir con ayuda de la IA un texto exacto para tu sitio web y elegir una forma de contacto segura.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué dato no debe estar en tu sitio?", options: ["Tu deporte y tu posición", "Tu año de graduación", "Tu dirección", "El enlace a tus jugadas destacadas"], answer: 2, why: "No pongas en la página tu dirección, tu número de teléfono, tu fecha de nacimiento completa ni tu horario." },
+            { objective: "O2", q: "El borrador de la IA dice que estuviste en el equipo ideal del estado, pero no es cierto. ¿Qué haces?", options: ["Dejarlo; nadie lo revisa", "Cambiarlo a \"casi en el equipo ideal del estado\"", "Pedirle a la IA que agregue más premios", "Quitarlo y escribir solo datos verdaderos"], answer: 3, why: "Revisa cada dato y quita todo lo que no puedas demostrar." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "SEO básico: ayudar a Google a entender tu página",
           minutes: 5,
           goal: "Escribir un título de página, encabezados, una descripción corta y texto alternativo para las imágenes que ayuden en las búsquedas.",
@@ -76,17 +110,21 @@ module.exports = {
           ],
           sources: [{ name: "Google Search Central: Guía de introducción al SEO", url: "https://developers.google.com/search/docs/fundamentals/seo-starter-guide" }],
           tryIt: "Escribe tu título de página, los cuatro encabezados de sección, una descripción de la página de una frase y el texto alternativo de dos fotos que piensas usar.",
-          youCanNow: "escribir un título de página, encabezados, una descripción y texto alternativo que ayuden a la gente a encontrar tu página."
+          youCanNow: "escribir un título de página, encabezados, una descripción y texto alternativo que ayuden a la gente a encontrar tu página.",
+          quickCheck: [
+            { objective: "O3", q: "¿Para qué sirve el SEO?", options: ["Para que los buscadores entiendan tu página y la encuentren las personas correctas", "Para que tu página cargue las fotos más rápido", "Para esconder tu página de Google", "Para pagar anuncios"], answer: 0, why: "SEO significa hacer que los buscadores entiendan fácilmente tu página." },
+            { objective: "O3", q: "Vas a agregar una foto tuya en una carrera de vallas. ¿Qué texto alternativo escribes?", options: ["\"IMG_4432\"", "\"foto\"", "\"Sam Ortiz pasando una valla en la competencia del condado\"", "\"vallas vallas vallas atletismo atletismo\""], answer: 2, why: "El texto alternativo es una línea corta que describe la imagen, sin amontonar palabras clave." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Planear y escribir tu sitio",
         questions: [
-          { q: "¿Por qué tener tu propio sitio web?", options: ["Las redes sociales son ilegales", "Los entrenadores solo leen papel", "Es una página que tú controlas y que es fácil de leer", "Reemplaza el entrenamiento"], answer: 2, why: "Tu sitio sigue igual y es fácil de recorrer para entrenadores y marcas." },
-          { q: "La IA agrega a tu sección Sobre mí un premio que no ganaste. ¿Qué haces?", options: ["Lo quitas", "Lo dejas", "Agregas más premios", "Lo escondes en letra pequeña"], answer: 0, why: "Incluye solo datos ciertos que puedas demostrar." },
-          { q: "¿Cuál es una forma de contacto segura para un menor de edad?", options: ["El teléfono de su casa", "La dirección de su casa", "Su horario de clases", "Un correo para el deporte o un formulario, más el contacto de un padre o un entrenador"], answer: 3, why: "Deja que la gente te contacte sin mostrar datos privados." },
-          { q: "¿Cuál es un buen título de página?", options: ["“Inicio”", "“Jordan Lee | Atacante externa de voleibol, promoción 2027”", "“¡¡¡Bienvenidos!!!”", "“Página 1”"], answer: 1, why: "Les dice a las personas y a Google exactamente qué es la página." },
-          { q: "¿Qué es el texto alternativo?", options: ["Una contraseña secreta", "Una descripción corta de una imagen", "Un segundo sitio web", "Un hashtag"], answer: 1, why: "El texto alternativo describe las imágenes para los buscadores y los lectores de pantalla." }
+          { objective: "O1", q: "¿Por qué tener tu propio sitio web?", options: ["Las redes sociales son ilegales", "Los entrenadores solo leen papel", "Es una página que tú controlas y que es fácil de leer", "Reemplaza el entrenamiento"], answer: 2, why: "Tu sitio sigue igual y es fácil de recorrer para entrenadores y marcas." },
+          { objective: "O2", q: "La IA agrega a tu sección Sobre mí un premio que no ganaste. ¿Qué haces?", options: ["Lo quitas", "Lo dejas", "Agregas más premios", "Lo escondes en letra pequeña"], answer: 0, why: "Incluye solo datos ciertos que puedas demostrar." },
+          { objective: "O2", q: "¿Cuál es una forma de contacto segura para un menor de edad?", options: ["El teléfono de su casa", "La dirección de su casa", "Su horario de clases", "Un correo para el deporte o un formulario, más el contacto de un padre o un entrenador"], answer: 3, why: "Deja que la gente te contacte sin mostrar datos privados." },
+          { objective: "O3", q: "¿Cuál es un buen título de página?", options: ["“Inicio”", "“Jordan Lee | Atacante externa de voleibol, promoción 2027”", "“¡¡¡Bienvenidos!!!”", "“Página 1”"], answer: 1, why: "Les dice a las personas y a Google exactamente qué es la página." },
+          { objective: "O3", q: "¿Qué es el texto alternativo?", options: ["Una contraseña secreta", "Una descripción corta de una imagen", "Un segundo sitio web", "Un hashtag"], answer: 1, why: "El texto alternativo describe las imágenes para los buscadores y los lectores de pantalla." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Capítulo 2: Crear y publicar",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Crear tu página en Google Sites",
           minutes: 6,
           goal: "Crear tu sitio de una página en Google Sites.",
@@ -110,9 +149,14 @@ module.exports = {
             { title: "Mantenlo limpio", bullets: ["Texto fácil de leer, colores del equipo", "Un botón claro", "Tus fotos; respeta las reglas de logotipos"] }
           ],
           tryIt: "Crea tu página en Google Sites con tu título, las cuatro secciones, al menos una foto con texto alternativo y tu video de jugadas destacadas o un espacio reservado para él.",
-          youCanNow: "crear en Google Sites un sitio web limpio de una página para deportistas."
+          youCanNow: "crear en Google Sites un sitio web limpio de una página para deportistas.",
+          quickCheck: [
+            { objective: "O4", q: "¿Adónde vas para empezar una página de Google Sites?", options: ["sites.google.com", "El sitio web de tu escuela", "Una aplicación de redes sociales", "Search Console"], answer: 0, why: "Abre sites.google.com e inicia sesión con una cuenta de Google." },
+            { objective: "O4", q: "Quieres tu video de jugadas destacadas en tu sitio. ¿Qué haces?", options: ["Pegar una captura de pantalla del video", "Describirlo solo con palabras", "Enviarlo por correo a los visitantes", "Insertar tu video de YouTube en la página"], answer: 3, why: "Google Sites puede insertar un video de jugadas destacadas de YouTube." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Publicar y revisar tu sitio",
           minutes: 5,
           goal: "Publicar tu sitio, probarlo en un teléfono y compartir el enlace.",
@@ -129,9 +173,14 @@ module.exports = {
             { title: "Compártelo", bullets: ["Biografías de redes sociales", "Firma del correo", "Perfiles de reclutamiento"] }
           ],
           tryIt: "Publica tu sitio, pruébalo en un teléfono, pídele a un adulto que lo revise y agrega el enlace a uno de tus perfiles de redes sociales.",
-          youCanNow: "publicar, probar y compartir tu sitio web de deportista."
+          youCanNow: "publicar, probar y compartir tu sitio web de deportista.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué hace que una dirección web sea buena para tu sitio?", options: ["Una serie larga de números", "Que sea corta, con tu nombre y tu deporte", "Tu número de teléfono", "Solo el nombre de tu escuela"], answer: 1, why: "Elige una dirección corta con tu nombre y tu deporte." },
+            { objective: "O5", q: "Cambiaste tu correo deportivo. ¿Qué haces con tu sitio?", options: ["Dejarlo así; nadie lo lee", "Borrar el sitio", "Actualizar de inmediato los datos de contacto", "Esperar hasta la próxima temporada"], answer: 2, why: "Si cambian tus datos de contacto, actualiza el sitio de inmediato." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Mantenerlo actualizado y revisar las búsquedas",
           minutes: 5,
           goal: "Fijar una rutina de actualización y ver cómo aparece tu sitio en las búsquedas.",
@@ -149,17 +198,21 @@ module.exports = {
           ],
           sources: [{ name: "Google Search Central: Guía de introducción al SEO", url: "https://developers.google.com/search/docs/fundamentals/seo-starter-guide" }],
           tryIt: "Tarea final: asegúrate de que tu sitio publicado tenga un título claro, una sección Sobre mí hecha con IA y editada por ti, estadísticas y jugadas destacadas, una forma de contacto segura, texto alternativo en las imágenes y un enlace a él desde una red social. Busca en Google tu nombre y tu deporte y anota lo que aparece.",
-          youCanNow: "mantener tu sitio actualizado y revisar cómo aparece en las búsquedas."
+          youCanNow: "mantener tu sitio actualizado y revisar cómo aparece en las búsquedas.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué es Google Search Console?", options: ["Una herramienta gratuita de Google que muestra cómo le va a tu sitio en las búsquedas", "Un servicio de anuncios pagados", "Un creador de sitios web", "Una aplicación de redes sociales"], answer: 0, why: "Search Console les deja a los dueños de sitios ver cómo le va a su sitio en las búsquedas." },
+            { objective: "O6", q: "Tu temporada acaba de terminar. ¿Qué dice tu rutina de actualización?", options: ["Nada hasta que te gradúes", "Borrar solo las jugadas destacadas viejas", "Cambiar la dirección de tu sitio", "Actualizar tus estadísticas, tus jugadas destacadas y la fecha en tu sección Sobre mí"], answer: 3, why: "Actualiza después de cada temporada o evento importante para que la página siga al día." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Crear y publicar",
         questions: [
-          { q: "¿Qué necesitas para usar Google Sites?", options: ["Un plan pago", "Un título en programación", "Un servidor", "Una cuenta de Google"], answer: 3, why: "Google Sites es gratis con una cuenta de Google." },
-          { q: "¿Qué fotos puedes poner en tu sitio?", options: ["Fotos que tomaste tú o que tienes permiso para usar", "Cualquier foto que encuentres en internet", "Fotos de otros deportistas", "Logotipos de la escuela sin preguntar"], answer: 0, why: "Usa solo fotos tuyas o que puedes usar." },
-          { q: "¿Por qué probar tu sitio en un teléfono?", options: ["Los teléfonos están prohibidos", "Se ve peor en las computadoras", "La mayoría de los visitantes lo van a abrir en un teléfono", "Por nada"], answer: 2, why: "Los entrenadores y los aficionados suelen abrir los enlaces en el teléfono." },
-          { q: "Tu sitio no aparece en Google el día que lo publicas. ¿Por qué puede ser?", options: ["Está roto para siempre", "Google prohíbe a los deportistas", "Tienes que pagar", "Los sitios nuevos pueden tardar en aparecer"], answer: 3, why: "Los buscadores necesitan tiempo para encontrar páginas nuevas." },
-          { q: "¿Cuándo debes actualizar tus estadísticas y jugadas destacadas?", options: ["Nunca", "Después de cada temporada o evento importante", "Una vez cada diez años", "Solo cuando un entrenador se queja"], answer: 1, why: "El contenido actualizado ayuda a los visitantes y a las búsquedas." }
+          { objective: "O4", q: "¿Qué necesitas para usar Google Sites?", options: ["Un plan pago", "Un título en programación", "Un servidor", "Una cuenta de Google"], answer: 3, why: "Google Sites es gratis con una cuenta de Google." },
+          { objective: "O4", q: "¿Qué fotos puedes poner en tu sitio?", options: ["Fotos que tomaste tú o que tienes permiso para usar", "Cualquier foto que encuentres en internet", "Fotos de otros deportistas", "Logotipos de la escuela sin preguntar"], answer: 0, why: "Usa solo fotos tuyas o que puedes usar." },
+          { objective: "O5", q: "¿Por qué probar tu sitio en un teléfono?", options: ["Los teléfonos están prohibidos", "Se ve peor en las computadoras", "La mayoría de los visitantes lo van a abrir en un teléfono", "Por nada"], answer: 2, why: "Los entrenadores y los aficionados suelen abrir los enlaces en el teléfono." },
+          { objective: "O6", q: "Tu sitio no aparece en Google el día que lo publicas. ¿Por qué puede ser?", options: ["Está roto para siempre", "Google prohíbe a los deportistas", "Tienes que pagar", "Los sitios nuevos pueden tardar en aparecer"], answer: 3, why: "Los buscadores necesitan tiempo para encontrar páginas nuevas." },
+          { objective: "O6", q: "¿Cuándo debes actualizar tus estadísticas y jugadas destacadas?", options: ["Nunca", "Después de cada temporada o evento importante", "Una vez cada diez años", "Solo cuando un entrenador se queja"], answer: 1, why: "El contenido actualizado ayuda a los visitantes y a las búsquedas." }
         ]
       }
     }
@@ -167,26 +220,104 @@ module.exports = {
   quiz: {
     title: "Examen final: SEO y cómo crear tu sitio web con IA",
     questions: [
-      { q: "¿Qué significa SEO?", options: ["Social everyday output (producción social diaria)", "Sports event organizer (organizador de eventos deportivos)", "Search engine optimization (optimización para motores de búsqueda)", "Site editing online (edición de sitios en línea)"], answer: 2, why: "Significa ayudar a los buscadores a entender tu página." },
-      { q: "Un sitio para el reclutamiento debe mostrar:", options: ["Estadísticas, información académica, jugadas destacadas", "Tu dirección", "Tu contraseña", "Chismes de los rivales"], answer: 0, why: "Eso es lo que necesitan los entrenadores." },
-      { q: "¿Con cuántas páginas debes empezar?", options: ["Una", "Veinte", "Ninguna", "Cien"], answer: 0, why: "Una página clara alcanza para empezar." },
-      { q: "¿Qué sección ayuda a la gente a comunicarse contigo?", options: ["El dibujo del pie de página", "Los colores del tema", "Contacto", "Los tipos de letra"], answer: 2, why: "Contacto le dice a la gente cómo comunicarse contigo." },
-      { q: "Cuando la IA hace el borrador de tu sección Sobre mí, debes:", options: ["Publicarlo sin leerlo", "Revisar cada dato", "Agregar premios de más", "Hacerlo más largo"], answer: 1, why: "La IA puede inventar datos." },
-      { q: "¿Qué NO debe estar en tu sitio?", options: ["Tu posición", "Tu video de jugadas destacadas", "Tu año de graduación", "Tu fecha de nacimiento completa y tu dirección"], answer: 3, why: "Esos son datos privados." },
-      { q: "Un formulario de contacto le permite a la gente:", options: ["Ver tu contraseña", "Editar tu sitio", "Enviarte un mensaje sin ver tu correo", "Pagarte"], answer: 2, why: "Protege tu dirección de correo." },
-      { q: "¿Qué ayuda a Google a entender tu página?", options: ["Todo en mayúsculas", "Texto oculto", "Ninguna palabra", "Un título de página claro y encabezados"], answer: 3, why: "La guía de Google recomienda títulos y encabezados claros." },
-      { q: "Llenar la página de palabras clave significa:", options: ["Repetir palabras de búsqueda de forma poco natural", "Escribir para personas", "Agregar texto alternativo", "Usar encabezados"], answer: 0, why: "Escribe para personas, no amontones palabras clave." },
-      { q: "Un buen texto alternativo para una foto en acción es:", options: ["“IMG_2034”", "“Jordan Lee rematando en la semifinal estatal”", "“foto”", "Vacío"], answer: 1, why: "Corto y descriptivo." },
-      { q: "La descripción de una página debe ser:", options: ["Un ensayo completo", "Una lista de contraseñas", "Una o dos frases sobre la página", "Vacía"], answer: 2, why: "Las descripciones cortas pueden aparecer en los resultados de búsqueda." },
-      { q: "Google Sites es:", options: ["Una herramienta gratuita para crear sitios web", "Solo una aplicación paga", "Una red social", "Un videojuego"], answer: 0, why: "Es la herramienta gratuita de Google." },
-      { q: "Para mostrar tu video de jugadas destacadas en tu sitio, tú:", options: ["Solo lo describes", "Se lo envías por correo a los visitantes", "Lo imprimes", "Lo insertas"], answer: 3, why: "Insertarlo hace que se reproduzca en tu página." },
-      { q: "Antes de usar el logotipo de tu escuela, debes:", options: ["Redibujarlo", "Respetar las reglas de tu escuela sobre logotipos", "No hacer caso a las reglas", "Venderlo"], answer: 1, why: "Las escuelas controlan sus logotipos." },
-      { q: "Una buena dirección para tu sitio es:", options: ["Números al azar", "Corta, con tu nombre y tu deporte", "Muy larga", "Tu contraseña"], answer: 1, why: "Fácil de recordar y de compartir." },
-      { q: "Después de publicarlo, ¿quién debe revisar tu sitio?", options: ["Nadie", "Un desconocido en internet", "Un rival", "Un entrenador o tu padre o madre"], answer: 3, why: "Una segunda mirada encuentra los errores." },
-      { q: "¿Dónde debes compartir el enlace de tu sitio?", options: ["En tus biografías, la firma de tu correo y tus perfiles de reclutamiento", "En ningún lado", "Solo en papel", "En mensajes de spam"], answer: 0, why: "Ahí es donde miran los entrenadores y las marcas." },
-      { q: "Search Console es:", options: ["Una consola de videojuegos", "Un anuncio pago", "La herramienta gratuita de Google que muestra cómo aparece tu sitio en las búsquedas", "Una red social"], answer: 2, why: "Los dueños de sitios la usan para revisar cómo les va en las búsquedas." },
-      { q: "¿Cómo revisas cómo aparece tu sitio en las búsquedas?", options: ["Le pides a la IA que adivine", "Miras el clima", "Reinicias tu teléfono", "Buscas tu nombre más tu deporte"], answer: 3, why: "Buscar te muestra lo que ven los demás." },
-      { q: "La IA sugiere tres cambios para tu sitio. Tú:", options: ["Debes usarlos todos", "Decides cuáles usar", "No debes usar ninguno", "Borras tu sitio"], answer: 1, why: "La IA sugiere; tú decides." }
+      { objective: "O3", q: "¿Qué significa SEO?", options: ["Social everyday output (producción social diaria)", "Sports event organizer (organizador de eventos deportivos)", "Search engine optimization (optimización para motores de búsqueda)", "Site editing online (edición de sitios en línea)"], answer: 2, why: "Significa ayudar a los buscadores a entender tu página." },
+      { objective: "O1", q: "Un sitio para el reclutamiento debe mostrar:", options: ["Estadísticas, información académica, jugadas destacadas", "Tu dirección", "Tu contraseña", "Chismes de los rivales"], answer: 0, why: "Eso es lo que necesitan los entrenadores." },
+      { objective: "O1", q: "¿Con cuántas páginas debes empezar?", options: ["Una", "Veinte", "Ninguna", "Cien"], answer: 0, why: "Una página clara alcanza para empezar." },
+      { objective: "O1", q: "¿Qué sección ayuda a la gente a comunicarse contigo?", options: ["El dibujo del pie de página", "Los colores del tema", "Contacto", "Los tipos de letra"], answer: 2, why: "Contacto le dice a la gente cómo comunicarse contigo." },
+      { objective: "O2", q: "Cuando la IA hace el borrador de tu sección Sobre mí, debes:", options: ["Publicarlo sin leerlo", "Revisar cada dato", "Agregar premios de más", "Hacerlo más largo"], answer: 1, why: "La IA puede inventar datos." },
+      { objective: "O2", q: "¿Qué NO debe estar en tu sitio?", options: ["Tu posición", "Tu video de jugadas destacadas", "Tu año de graduación", "Tu fecha de nacimiento completa y tu dirección"], answer: 3, why: "Esos son datos privados." },
+      { objective: "O2", q: "Un formulario de contacto le permite a la gente:", options: ["Ver tu contraseña", "Editar tu sitio", "Enviarte un mensaje sin ver tu correo", "Pagarte"], answer: 2, why: "Protege tu dirección de correo." },
+      { objective: "O3", q: "¿Qué ayuda a Google a entender tu página?", options: ["Todo en mayúsculas", "Texto oculto", "Ninguna palabra", "Un título de página claro y encabezados"], answer: 3, why: "La guía de Google recomienda títulos y encabezados claros." },
+      { objective: "O3", q: "Llenar la página de palabras clave significa:", options: ["Repetir palabras de búsqueda de forma poco natural", "Escribir para personas", "Agregar texto alternativo", "Usar encabezados"], answer: 0, why: "Escribe para personas, no amontones palabras clave." },
+      { objective: "O3", q: "Un buen texto alternativo para una foto en acción es:", options: ["“IMG_2034”", "“Jordan Lee rematando en la semifinal estatal”", "“foto”", "Vacío"], answer: 1, why: "Corto y descriptivo." },
+      { objective: "O3", q: "La descripción de una página debe ser:", options: ["Un ensayo completo", "Una lista de contraseñas", "Una o dos frases sobre la página", "Vacía"], answer: 2, why: "Las descripciones cortas pueden aparecer en los resultados de búsqueda." },
+      { objective: "O4", q: "Google Sites es:", options: ["Una herramienta gratuita para crear sitios web", "Solo una aplicación paga", "Una red social", "Un videojuego"], answer: 0, why: "Es la herramienta gratuita de Google." },
+      { objective: "O4", q: "Para mostrar tu video de jugadas destacadas en tu sitio, tú:", options: ["Solo lo describes", "Se lo envías por correo a los visitantes", "Lo imprimes", "Lo insertas"], answer: 3, why: "Insertarlo hace que se reproduzca en tu página." },
+      { objective: "O4", q: "Antes de usar el logotipo de tu escuela, debes:", options: ["Redibujarlo", "Respetar las reglas de tu escuela sobre logotipos", "No hacer caso a las reglas", "Venderlo"], answer: 1, why: "Las escuelas controlan sus logotipos." },
+      { objective: "O5", q: "Una buena dirección para tu sitio es:", options: ["Números al azar", "Corta, con tu nombre y tu deporte", "Muy larga", "Tu contraseña"], answer: 1, why: "Fácil de recordar y de compartir." },
+      { objective: "O5", q: "Después de publicarlo, ¿quién debe revisar tu sitio?", options: ["Nadie", "Un desconocido en internet", "Un rival", "Un entrenador o tu padre o madre"], answer: 3, why: "Una segunda mirada encuentra los errores." },
+      { objective: "O5", q: "¿Dónde debes compartir el enlace de tu sitio?", options: ["En tus biografías, la firma de tu correo y tus perfiles de reclutamiento", "En ningún lado", "Solo en papel", "En mensajes de spam"], answer: 0, why: "Ahí es donde miran los entrenadores y las marcas." },
+      { objective: "O6", q: "Search Console es:", options: ["Una consola de videojuegos", "Un anuncio pago", "La herramienta gratuita de Google que muestra cómo aparece tu sitio en las búsquedas", "Una red social"], answer: 2, why: "Los dueños de sitios la usan para revisar cómo les va en las búsquedas." },
+      { objective: "O6", q: "¿Cómo revisas cómo aparece tu sitio en las búsquedas?", options: ["Le pides a la IA que adivine", "Miras el clima", "Reinicias tu teléfono", "Buscas tu nombre más tu deporte"], answer: 3, why: "Buscar te muestra lo que ven los demás." },
+      { objective: "O6", q: "La IA sugiere tres cambios para tu sitio. Tú:", options: ["Debes usarlos todos", "Decides cuáles usar", "No debes usar ninguno", "Borras tu sitio"], answer: 1, why: "La IA sugiere; tú decides." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      1,
+      4,
+      7,
+      9,
+      11,
+      14,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Título de la página y bases del SEO",
+        objective: "O3",
+        notYet: "Al título le falta tu nombre o tu deporte, o las imágenes no tienen texto alternativo.",
+        meets: "Un título con nombre y deporte, encabezados para cada sección, una descripción corta y texto alternativo en cada imagen.",
+        exceeds: "Usa las palabras que buscaría el público, como la posición, el año de graduación y la región, sin llenar la página de palabras clave."
+      },
+      {
+        name: "Sección Sobre mí",
+        objective: "O2",
+        notYet: "Tiene datos falsos o parece texto copiado de la IA.",
+        meets: "Cada dato es verdadero y está revisado, escrito con la propia voz del deportista.",
+        exceeds: "Está pensada para el público principal, por ejemplo con lo académico y el carácter para los entrenadores universitarios."
+      },
+      {
+        name: "Estadísticas y jugadas destacadas",
+        objective: "O4",
+        notYet: "Faltan, están desactualizadas o usan fotos sin permiso.",
+        meets: "Estadísticas al día y un video de jugadas destacadas insertado, solo con fotos permitidas y siguiendo las reglas de logotipos de la escuela.",
+        exceeds: "Incluye la fecha de la última actualización de las estadísticas y una descripción corta de cada jugada destacada."
+      },
+      {
+        name: "Contacto seguro",
+        objective: "O2",
+        notYet: "Muestra una dirección, un número de teléfono personal o la fecha de nacimiento completa.",
+        meets: "Un correo deportivo o un formulario de contacto, más el contacto de la madre, el padre o el entrenador en el caso de menores de edad.",
+        exceeds: "El botón de contacto está probado y las respuestas llegan a una cuenta que se revisa con regularidad."
+      },
+      {
+        name: "Publicado, enlazado y revisado",
+        objective: "O5",
+        notYet: "No está publicado, tiene enlaces rotos o no está enlazado desde ningún perfil.",
+        meets: "Publicado en una dirección corta, probado en un teléfono, revisado por un entrenador, la madre o el padre y enlazado desde un perfil de redes sociales.",
+        exceeds: "Se anotaron los resultados de búsqueda del nombre y el deporte, y hay un recordatorio de actualización."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que publican su sitio y obtienen Cumple o Supera en cada fila de la rúbrica",
+      "Participantes cuyo sitio aparece al buscar su nombre y su deporte en el seguimiento de 30 días",
+      "Participantes que dicen haber recibido el contacto de un entrenador, un reclutador o una marca a través de su sitio",
+      "Participantes que actualizan su sitio después de su siguiente temporada o evento importante"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Una computadora (lo más fácil) o un teléfono con internet",
+      "Una cuenta gratuita de Google para usar Google Sites",
+      "Un asistente de IA gratuito (ChatGPT, Microsoft Copilot o Google Gemini)",
+      "Tus estadísticas, el enlace a un video de jugadas destacadas y fotos que tienes permiso para usar",
+      "Unos 60 minutos"
+    ],
+    facilitatorNotes: [
+      "Ayuda a los deportistas a crear un correo deportivo aparte o un formulario de contacto para que sus datos personales sigan privados.",
+      "Con menores de edad, pide que su madre, padre o tutor revise el sitio antes de publicarlo y de aparecer como contacto.",
+      "Revisa las reglas de la escuela sobre logotipos y fotos antes de la lección de creación del sitio.",
+      "Pide a los deportistas que intercambien teléfonos y prueben los sitios de los demás para encontrar enlaces rotos y revisar que se lean bien.",
+      "Recuerda a los participantes que los sitios nuevos pueden tardar en aparecer en las búsquedas; vuelvan a revisar en el seguimiento de 30 días."
     ]
   }
 };

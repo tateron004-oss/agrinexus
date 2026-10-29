@@ -16,11 +16,35 @@ module.exports = {
     "Aprenderás la idea de sentir-pensar-actuar, planificarás en papel los movimientos de un robot y luego programarás un robot virtual gratuito en el navegador usando bloques. Cada lección dura unos cinco minutos y termina con una tarea “Pruébalo ahora”. Cada capítulo cierra con una comprobación de conocimientos y el curso cierra con un examen de 20 preguntas."
   ],
   finalTask: "En una herramienta gratuita de robot virtual como VEXcode VR, escribe un programa de bloques que haga que el robot recorra un cuadrado, y luego un segundo programa que avance hasta que un sensor detecte una pared, se detenga, gire y siga. Pruébalo, corrige al menos un error y escribe tres oraciones que expliquen qué detecta el robot, cómo decide y cómo actúa.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Jóvenes (desde la secundaria hasta adultos jóvenes) con curiosidad por los robots, la programación o las carreras de tecnología, en la escuela, en programas después de clases, en bibliotecas o en centros juveniles.",
+    startingPoint: "Saben usar una computadora, una Chromebook o una tableta y un navegador web, y han visto robots en videos o en tiendas. La mayoría no ha escrito un programa ni ha planeado un algoritmo.",
+    gap: "Los robots y la automatización crecen en almacenes, fábricas, granjas y hospitales, y los empleos de técnico y de programación necesitan personas que sepan planear pasos, programar, probar y corregir. Las personas necesitan un primer logro práctico con un robot virtual para ganar confianza y ver un camino hacia estas carreras.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y oraciones cortas (más o menos de 6.º a 8.º grado)",
+      "Aparatos: una computadora, Chromebook o tableta con navegador web; no hace falta un robot real",
+      "Tiempo: lecciones de 5 minutos, unos 60 minutos en total",
+      "Las versiones y funciones de las herramientas gratuitas pueden cambiar; usa la que prefiera la escuela o la biblioteca",
+      "Seguridad: los robots industriales reales solo se usan con capacitación de seguridad del lugar"
+    ],
+    prerequisites: "Ninguno."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con ejemplos de máquinas reales", action: "identificar cuáles son robots, cuáles son automatización y cuáles usan IA, y describir el ciclo sentir-pensar-actuar", standard: "acertando al menos 4 de 5" },
+    { id: "O2", condition: "Con un trabajo que debe hacer un robot", action: "elegir los sensores y actuadores que necesita", standard: "con una razón para cada parte" },
+    { id: "O3", condition: "Con una tarea para un robot", action: "escribir un algoritmo con palabras sencillas, con pasos exactos, un bucle y una decisión si-entonces", standard: "de modo que funcione cuando tú mismo lo recorres paso a paso" },
+    { id: "O4", condition: "Usando una herramienta gratuita de robot virtual como VEXcode VR", action: "programar el robot con bloques para que recorra un cuadrado", standard: "de modo que vuelva cerca de donde empezó" },
+    { id: "O5", condition: "Con un robot que debe evitar una pared", action: "agregar al programa un si-entonces basado en un sensor y corregir al menos un error", standard: "cambiando una cosa a la vez hasta que el robot se detenga y gire en la pared" },
+    { id: "O6", condition: "Con un lugar de trabajo que usa robots", action: "nombrar empleos reales con robots y las reglas de seguridad que siguen las personas cerca de ellos", standard: "nombrando al menos dos empleos y dos reglas de seguridad" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Cómo funcionan los robots y la automatización",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Robots, automatización e IA: ¿cuál es la diferencia?",
           minutes: 4,
           goal: "Clasificar máquinas reales como robots, automatización o IA, y explicar sentir-pensar-actuar.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Dónde entra la IA", bullets: ["La IA aprende patrones a partir de ejemplos", "Muchos robots usan reglas sencillas, no IA", "Algunos usan IA para ver, planear o escuchar"] }
           ],
           tryIt: "Elige tres máquinas que hayas visto (por ejemplo, una aspiradora robot, una caja de autopago, un dron de reparto). Para cada una, escribe si es automatización o un robot, y una forma en que siente, piensa y actúa.",
-          youCanNow: "distinguir entre automatización, robots e IA y describir cualquier robot con sentir-pensar-actuar."
+          youCanNow: "distinguir entre automatización, robots e IA y describir cualquier robot con sentir-pensar-actuar.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué hace un robot en el paso de \"actuar\" de sentir-pensar-actuar?", options: ["Se mueve o hace algo con motores, ruedas o pinzas", "Mide el mundo con sensores", "Decide qué hacer con un programa", "Se apaga solo"], answer: 0, why: "Actuar significa moverse o hacer algo con motores, ruedas, brazos o pinzas." },
+            { objective: "O1", q: "Un amigo dice que todos los robots usan IA. ¿Qué le dices?", options: ["Tiene razón; los robots no pueden funcionar sin IA", "IA significa que un robot tiene ruedas", "Muchos robots siguen reglas sencillas; solo algunos usan IA", "Los robots y la IA son lo mismo"], answer: 2, why: "Muchos robots usan reglas sencillas; algunos usan IA para ver, planear rutas o entender el habla." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Sensores y actuadores: los sentidos y músculos del robot",
           minutes: 5,
           goal: "Relacionar sensores y actuadores comunes con el trabajo que hacen.",
@@ -54,9 +83,14 @@ module.exports = {
             { title: "Empieza por el trabajo", bullets: ["Parar antes de una pared: sensor de distancia + motores", "Separar por color: sensor de color + pinza"] }
           ],
           tryIt: "Diseña en papel un robot para un trabajo, como regar plantas o llevar una caja de un lado a otro de un cuarto. Haz una lista de los sensores y actuadores que necesita y por qué.",
-          youCanNow: "elegir los sensores y actuadores que necesita un robot para un trabajo."
+          youCanNow: "elegir los sensores y actuadores que necesita un robot para un trabajo.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué parte es un actuador?", options: ["Una cámara", "Una pinza", "Un sensor de choque", "Un sensor de línea"], answer: 1, why: "Los actuadores hacen que el robot se mueva o actúe; una pinza recoge cosas." },
+            { objective: "O2", q: "Estás diseñando un robot que sigue una línea negra en el piso. ¿Qué sensor le agregas?", options: ["Un GPS", "Un sensor de choque", "Un micrófono", "Un sensor de línea o de color"], answer: 3, why: "Un sensor de línea o de color mira el piso y puede seguir una línea." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Escribir un algoritmo antes de programar",
           minutes: 5,
           goal: "Escribir un plan paso a paso con un bucle y una decisión que un robot pueda seguir.",
@@ -73,17 +107,21 @@ module.exports = {
             { title: "Prueba primero en papel", bullets: ["Escríbelo o dibuja un diagrama de flujo", "Recórrelo como si fueras el robot", "Corrígelo antes de programar"] }
           ],
           tryIt: "Escribe un algoritmo, con un bucle, para que un robot recorra un cuadrado. Luego agrega un paso si-entonces para que se detenga si algo le bloquea el camino. Recórrelo con un juguete, un teléfono o tus propios pies.",
-          youCanNow: "escribir un algoritmo claro con un bucle y una decisión si-entonces, y probarlo en papel."
+          youCanNow: "escribir un algoritmo claro con un bucle y una decisión si-entonces, y probarlo en papel.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué hace un bucle en un algoritmo?", options: ["Detiene el robot", "Elige entre dos acciones", "Repite un grupo de pasos", "Mide la distancia"], answer: 2, why: "Un bucle repite pasos, como avanzar y girar cuatro veces para hacer un cuadrado." },
+            { objective: "O3", q: "Tu plan dice \"avanza un poco\". ¿Qué cambias antes de programar?", options: ["Dar una cantidad exacta, como 50 centímetros", "Nada; el robot lo adivinará", "Agregar más pasos después", "Quitar el paso"], answer: 0, why: "Los robots no pueden adivinar, así que cada paso necesita una cantidad exacta." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Cómo funcionan los robots y la automatización",
         questions: [
-          { q: "¿Cuáles son los tres pasos que repite todo robot?", options: ["Comprar, construir, vender", "Empezar, parar, pausar", "Sentir, pensar, actuar", "Cargar, avanzar, estacionar"], answer: 2, why: "Los robots sienten, deciden con un programa, luego actúan, y repiten." },
-          { q: "¿Qué pieza es un sensor?", options: ["Un sensor de distancia", "El motor de una rueda", "Una pinza", "Una batería"], answer: 0, why: "Un sensor de distancia recibe información; los motores y las pinzas son actuadores." },
-          { q: "Un robot debe separar cajas rojas de cajas azules. ¿Qué necesita más?", options: ["Una unidad GPS", "Un parlante más fuerte", "Solo una batería más grande", "Un sensor de color y una pinza"], answer: 3, why: "Debe ver el color y levantar las cajas." },
-          { q: "¿Qué instrucción es lo bastante clara para un robot?", options: ["“Avanza un poco”", "“Avanza 50 centímetros”", "“Gira más o menos a la derecha”", "“Haz la cosa”"], answer: 1, why: "Los robots necesitan cantidades exactas." },
-          { q: "“Repite 4 veces: avanza, gira a la derecha 90 grados” usa un:", options: ["Sensor", "Bucle", "Pinza", "Contraseña"], answer: 1, why: "Un bucle repite pasos; este recorre un cuadrado." }
+          { objective: "O1", q: "¿Cuáles son los tres pasos que repite todo robot?", options: ["Comprar, construir, vender", "Empezar, parar, pausar", "Sentir, pensar, actuar", "Cargar, avanzar, estacionar"], answer: 2, why: "Los robots sienten, deciden con un programa, luego actúan, y repiten." },
+          { objective: "O2", q: "¿Qué pieza es un sensor?", options: ["Un sensor de distancia", "El motor de una rueda", "Una pinza", "Una batería"], answer: 0, why: "Un sensor de distancia recibe información; los motores y las pinzas son actuadores." },
+          { objective: "O2", q: "Un robot debe separar cajas rojas de cajas azules. ¿Qué necesita más?", options: ["Una unidad GPS", "Un parlante más fuerte", "Solo una batería más grande", "Un sensor de color y una pinza"], answer: 3, why: "Debe ver el color y levantar las cajas." },
+          { objective: "O3", q: "¿Qué instrucción es lo bastante clara para un robot?", options: ["“Avanza un poco”", "“Avanza 50 centímetros”", "“Gira más o menos a la derecha”", "“Haz la cosa”"], answer: 1, why: "Los robots necesitan cantidades exactas." },
+          { objective: "O3", q: "“Repite 4 veces: avanza, gira a la derecha 90 grados” usa un:", options: ["Sensor", "Bucle", "Pinza", "Contraseña"], answer: 1, why: "Un bucle repite pasos; este recorre un cuadrado." }
         ]
       }
     },
@@ -91,6 +129,7 @@ module.exports = {
       name: "Capítulo 2: Programar y usar robots",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Programar un robot virtual con bloques",
           minutes: 6,
           goal: "Abrir un robot virtual gratuito y programarlo para que recorra un cuadrado.",
@@ -108,9 +147,14 @@ module.exports = {
           ],
           sources: [{ name: "VEX Robotics: VEXcode VR", url: "https://www.vexrobotics.com/vexcode-vr" }],
           tryIt: "En VEXcode VR u otro robot virtual gratuito, programa el robot para que recorra un cuadrado usando un bloque de repetir. Haz que termine cerca de donde empezó.",
-          youCanNow: "programar un robot virtual con bloques, usando un bucle para recorrer un cuadrado."
+          youCanNow: "programar un robot virtual con bloques, usando un bucle para recorrer un cuadrado.",
+          quickCheck: [
+            { objective: "O4", q: "En la programación por bloques, ¿qué hace el botón Iniciar?", options: ["Borra tus bloques", "Guarda tu programa en una memoria USB", "Abre un área de juego nueva", "Ejecuta el programa para que veas al robot seguirlo"], answer: 3, why: "Al presionar Iniciar, el programa se ejecuta en el área de juego virtual." },
+            { objective: "O4", q: "Agregaste cinco bloques nuevos a la vez y el robot choca. ¿Qué debiste hacer?", options: ["Agregar todavía más bloques", "Ejecutar el programa después de cada cambio", "Usar un robot real", "Apagar el sensor"], answer: 1, why: "Ejecutar después de cada cambio muestra qué bloque causó qué." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Usar un sensor para decidir, y luego depurar",
           minutes: 6,
           goal: "Agregar a un programa de robot un si-entonces basado en un sensor y corregir un error.",
@@ -127,9 +171,14 @@ module.exports = {
             { title: "Depurar", bullets: ["Cambia una cosa a la vez", "Revisa giros, unidades y dónde están los bloques", "Los errores son normales"] }
           ],
           tryIt: "Programa el robot para que avance hasta que su sensor de distancia detecte una pared, y luego se detenga, gire y siga. Anota un error que encontraste y cómo lo corregiste.",
-          youCanNow: "usar una lectura de sensor en un si-entonces-si no para que un robot reaccione, y depurar el programa."
+          youCanNow: "usar una lectura de sensor en un si-entonces-si no para que un robot reaccione, y depurar el programa.",
+          quickCheck: [
+            { objective: "O5", q: "En el programa que evita la pared, ¿por qué usar un bucle infinito?", options: ["Para que el robot siga revisando el sensor una y otra vez", "Para que el robot revise solo una vez", "Para que el programa nunca empiece", "Para que el robot recorra un cuadrado"], answer: 0, why: "El bucle infinito repite la revisión del sensor, que es sentir-pensar-actuar en código." },
+            { objective: "O5", q: "Tu robot se detiene a 1 metro de la pared en lugar de cerca. ¿Cuál es un error probable?", options: ["El robot necesita una batería nueva", "El área de juego está dañada", "El número de la distancia está en la unidad equivocada", "La pared es demasiado alta"], answer: 2, why: "Una distancia en la unidad equivocada, como centímetros en lugar de milímetros, es un error común." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Dónde trabajan los robots, y cómo trabajar seguro con ellos",
           minutes: 5,
           goal: "Nombrar trabajos reales con robots y las reglas de seguridad que se siguen cerca de ellos.",
@@ -145,17 +194,21 @@ module.exports = {
             { title: "La seguridad primero", bullets: ["No entres en las áreas marcadas para robots", "Conoce el paro de emergencia", "Sigue la capacitación de seguridad del lugar"] }
           ],
           tryIt: "Tarea final: termina tu programa del cuadrado y tu programa con sensor en la herramienta de robot virtual, corrige al menos un error y escribe tres oraciones que expliquen qué detecta tu robot, cómo decide y cómo actúa.",
-          youCanNow: "programar un robot virtual que detecta y reacciona, explicar cómo funciona y nombrar trabajos reales con robots y reglas de seguridad."
+          youCanNow: "programar un robot virtual que detecta y reacciona, explicar cómo funciona y nombrar trabajos reales con robots y reglas de seguridad.",
+          quickCheck: [
+            { objective: "O6", q: "¿Quién repara y mantiene los robots en una fábrica o un almacén?", options: ["Un cajero", "Un técnico en robótica", "Un repartidor", "Un cliente"], answer: 1, why: "Los técnicos en robótica reparan y mantienen los robots." },
+            { objective: "O6", q: "Estás de visita en un almacén y ves robots que se mueven detrás de una línea marcada. ¿Qué haces?", options: ["Cruzar la línea para ver de cerca", "Tocar un robot para ver si se detiene", "Presionar botones al azar", "Quedarte fuera del área marcada y seguir las reglas de seguridad del guía"], answer: 3, why: "Los robots industriales pueden moverse rápido y golpear fuerte, así que las personas se quedan fuera de las áreas marcadas." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Programar y usar robots",
         questions: [
-          { q: "¿Qué es un simulador?", options: ["Un robot real", "Un tipo de sensor", "La batería de un robot", "Un programa que se comporta como una máquina real para que practiques"], answer: 3, why: "Un simulador te deja practicar sin riesgo y sin la máquina real." },
-          { q: "¿Qué bloque hace que el robot repita pasos?", options: ["Repetir", "Detener", "Iniciar", "Imprimir"], answer: 0, why: "Un bloque de repetir crea un bucle." },
-          { q: "¿Qué programa permite que un robot evite una pared?", options: ["Avanzar para siempre sin revisar nada", "Girar a la derecha una vez", "Para siempre: si la pared está cerca, detente y gira; si no, avanza", "Detenerse al inicio"], answer: 2, why: "El si-entonces-si no usa el sensor para reaccionar." },
-          { q: "Tu robot gira un poco de más cada vez. ¿Cuál es la mejor forma de depurar?", options: ["Borrar todo el programa", "Cambiar cinco bloques a la vez", "Rendirte", "Cambiar un poco la cantidad del giro y volver a ejecutarlo"], answer: 3, why: "Cambia una cosa a la vez y prueba." },
-          { q: "¿Qué debe hacer un trabajador antes de reparar un robot industrial?", options: ["Meterse mientras funciona", "Pedirle al robot que se detenga", "Seguir la capacitación de seguridad y cortar y bloquear la energía", "Apagar las luces"], answer: 2, why: "Cortar la energía y seguir la capacitación mantiene seguras a las personas." }
+          { objective: "O4", q: "¿Qué es un simulador?", options: ["Un robot real", "Un tipo de sensor", "La batería de un robot", "Un programa que se comporta como una máquina real para que practiques"], answer: 3, why: "Un simulador te deja practicar sin riesgo y sin la máquina real." },
+          { objective: "O4", q: "¿Qué bloque hace que el robot repita pasos?", options: ["Repetir", "Detener", "Iniciar", "Imprimir"], answer: 0, why: "Un bloque de repetir crea un bucle." },
+          { objective: "O5", q: "¿Qué programa permite que un robot evite una pared?", options: ["Avanzar para siempre sin revisar nada", "Girar a la derecha una vez", "Para siempre: si la pared está cerca, detente y gira; si no, avanza", "Detenerse al inicio"], answer: 2, why: "El si-entonces-si no usa el sensor para reaccionar." },
+          { objective: "O5", q: "Tu robot gira un poco de más cada vez. ¿Cuál es la mejor forma de depurar?", options: ["Borrar todo el programa", "Cambiar cinco bloques a la vez", "Rendirte", "Cambiar un poco la cantidad del giro y volver a ejecutarlo"], answer: 3, why: "Cambia una cosa a la vez y prueba." },
+          { objective: "O6", q: "¿Qué debe hacer un trabajador antes de reparar un robot industrial?", options: ["Meterse mientras funciona", "Pedirle al robot que se detenga", "Seguir la capacitación de seguridad y cortar y bloquear la energía", "Apagar las luces"], answer: 2, why: "Cortar la energía y seguir la capacitación mantiene seguras a las personas." }
         ]
       }
     }
@@ -163,26 +216,106 @@ module.exports = {
   quiz: {
     title: "Examen final: Introducción a la robótica, la IA y la automatización",
     questions: [
-      { q: "Un lavaplatos que hace su ciclo es un ejemplo de:", options: ["Un cobot", "Automatización", "Un sensor", "Un diagrama de flujo"], answer: 1, why: "Hace una tarea fija por sí solo una vez que empieza." },
-      { q: "¿Qué hace que una máquina sea un robot?", options: ["Puede detectar lo que la rodea y actuar en ello", "Es cara", "Tiene una pantalla", "Usa electricidad"], answer: 0, why: "Los robots detectan y actúan en el mundo." },
-      { q: "En sentir-pensar-actuar, la parte de “pensar” la hace:", options: ["Las ruedas", "La batería", "El programa", "La pintura"], answer: 2, why: "El programa decide qué hacer." },
-      { q: "¿Todos los robots usan IA?", options: ["No, muchos siguen reglas sencillas", "Sí, siempre", "Solo las aspiradoras robot", "Solo en las películas"], answer: 0, why: "Muchos robots usan programas sencillos basados en reglas." },
-      { q: "¿Cuál es un actuador?", options: ["Cámara", "Sensor de choque", "GPS", "Motor"], answer: 3, why: "Los motores hacen que el robot se mueva." },
-      { q: "Un servo es:", options: ["Un sensor de distancia", "Un motor que gira hasta un ángulo exacto", "Un cargador de baterías", "Un tipo de bucle"], answer: 1, why: "Los servos se usan en articulaciones que necesitan ángulos exactos." },
-      { q: "Un robot debe saber cuándo toca algo. ¿Qué sensor sirve?", options: ["Parlante", "Sensor de choque", "Luz de color", "Reloj"], answer: 1, why: "Un sensor de choque detecta el contacto." },
-      { q: "Un algoritmo es:", options: ["Una marca de robots", "Un tipo de motor", "Una regla de seguridad", "Una lista de pasos exactos para terminar una tarea"], answer: 3, why: "Los algoritmos son planes paso a paso." },
-      { q: "¿Por qué probar primero un algoritmo en papel?", options: ["Para encontrar errores antes de programar", "Porque los robots necesitan papel", "Para hacerlo más largo", "Lo exige la ley"], answer: 0, why: "Recorrerlo encuentra errores temprano." },
-      { q: "“Si la pared está cerca, detente; si no, avanza” es:", options: ["Un bucle", "Una pinza", "Una decisión si-entonces", "Un área de juego"], answer: 2, why: "Elige entre acciones según una condición." },
-      { q: "Un diagrama de flujo muestra un algoritmo con:", options: ["Notas musicales", "Fotos", "Contraseñas", "Cajas y flechas"], answer: 3, why: "Los diagramas de flujo dibujan los pasos como cajas unidas por flechas." },
-      { q: "Programar con bloques significa:", options: ["Solo escribir código largo", "Bloquear sitios web", "Unir bloques visuales para programar", "Construir con bloques de madera"], answer: 2, why: "Los bloques son piezas visuales de código." },
-      { q: "¿Cuántas veces debes repetir “avanza, gira a la derecha 90” para recorrer un cuadrado?", options: ["2", "3", "4", "10"], answer: 2, why: "Un cuadrado tiene cuatro lados y cuatro giros." },
-      { q: "¿Por qué ejecutar tu programa después de cada cambio pequeño?", options: ["Para saber qué cambio causó qué", "Para gastar más batería", "Porque es obligatorio", "Para borrar bloques"], answer: 0, why: "Los pasos pequeños hacen fácil encontrar los problemas." },
-      { q: "Un bucle infinito:", options: ["Se ejecuta una vez", "Apaga el robot", "Sigue repitiéndose hasta que el programa se detiene", "Es un sensor"], answer: 2, why: "Se repite una y otra vez." },
-      { q: "Depurar significa:", options: ["Encontrar y corregir errores en un programa", "Quitarle insectos a un robot", "Comprar un robot nuevo", "Apagar los sensores"], answer: 0, why: "Los bugs son errores del programa." },
-      { q: "Tu robot nunca se detiene ante la pared. ¿Cuál es un error probable?", options: ["El robot es del color equivocado", "La pantalla tiene demasiado brillo", "El área de juego es demasiado bonita", "La comprobación del sensor está fuera del bucle o usa la distancia equivocada"], answer: 3, why: "La posición o los números equivocados en la comprobación del sensor son errores comunes." },
-      { q: "¿Cuál es un trabajo real con robots?", options: ["Adivino de robots", "Técnico en robótica", "Solo pintor de sensores", "No existe ninguno"], answer: 1, why: "Los técnicos instalan, mantienen y reparan robots." },
-      { q: "Un cobot es:", options: ["Solo un robot de cocina", "Un robot diseñado para trabajar cerca de las personas", "Un robot descompuesto", "Un robot sin sensores"], answer: 1, why: "Los robots colaborativos se hacen para trabajar junto a las personas." },
-      { q: "Ves un brazo robótico rápido trabajando detrás de una línea marcada. ¿Qué haces?", options: ["Entrar para verlo de cerca", "Tocarlo para probarlo", "Apagarle los sensores", "Quedarte fuera del área marcada y seguir las reglas de seguridad del lugar"], answer: 3, why: "Las áreas marcadas mantienen a las personas fuera del camino del robot." }
+      { objective: "O1", q: "Un lavaplatos que hace su ciclo es un ejemplo de:", options: ["Un cobot", "Automatización", "Un sensor", "Un diagrama de flujo"], answer: 1, why: "Hace una tarea fija por sí solo una vez que empieza." },
+      { objective: "O1", q: "¿Qué hace que una máquina sea un robot?", options: ["Puede detectar lo que la rodea y actuar en ello", "Es cara", "Tiene una pantalla", "Usa electricidad"], answer: 0, why: "Los robots detectan y actúan en el mundo." },
+      { objective: "O1", q: "En sentir-pensar-actuar, la parte de “pensar” la hace:", options: ["Las ruedas", "La batería", "El programa", "La pintura"], answer: 2, why: "El programa decide qué hacer." },
+      { objective: "O1", q: "¿Todos los robots usan IA?", options: ["No, muchos siguen reglas sencillas", "Sí, siempre", "Solo las aspiradoras robot", "Solo en las películas"], answer: 0, why: "Muchos robots usan programas sencillos basados en reglas." },
+      { objective: "O2", q: "¿Cuál es un actuador?", options: ["Cámara", "Sensor de choque", "GPS", "Motor"], answer: 3, why: "Los motores hacen que el robot se mueva." },
+      { objective: "O2", q: "Un servo es:", options: ["Un sensor de distancia", "Un motor que gira hasta un ángulo exacto", "Un cargador de baterías", "Un tipo de bucle"], answer: 1, why: "Los servos se usan en articulaciones que necesitan ángulos exactos." },
+      { objective: "O2", q: "Un robot debe saber cuándo toca algo. ¿Qué sensor sirve?", options: ["Parlante", "Sensor de choque", "Luz de color", "Reloj"], answer: 1, why: "Un sensor de choque detecta el contacto." },
+      { objective: "O3", q: "Un algoritmo es:", options: ["Una marca de robots", "Un tipo de motor", "Una regla de seguridad", "Una lista de pasos exactos para terminar una tarea"], answer: 3, why: "Los algoritmos son planes paso a paso." },
+      { objective: "O3", q: "¿Por qué probar primero un algoritmo en papel?", options: ["Para encontrar errores antes de programar", "Porque los robots necesitan papel", "Para hacerlo más largo", "Lo exige la ley"], answer: 0, why: "Recorrerlo encuentra errores temprano." },
+      { objective: "O3", q: "“Si la pared está cerca, detente; si no, avanza” es:", options: ["Un bucle", "Una pinza", "Una decisión si-entonces", "Un área de juego"], answer: 2, why: "Elige entre acciones según una condición." },
+      { objective: "O3", q: "Un diagrama de flujo muestra un algoritmo con:", options: ["Notas musicales", "Fotos", "Contraseñas", "Cajas y flechas"], answer: 3, why: "Los diagramas de flujo dibujan los pasos como cajas unidas por flechas." },
+      { objective: "O4", q: "Programar con bloques significa:", options: ["Solo escribir código largo", "Bloquear sitios web", "Unir bloques visuales para programar", "Construir con bloques de madera"], answer: 2, why: "Los bloques son piezas visuales de código." },
+      { objective: "O4", q: "¿Cuántas veces debes repetir “avanza, gira a la derecha 90” para recorrer un cuadrado?", options: ["2", "3", "4", "10"], answer: 2, why: "Un cuadrado tiene cuatro lados y cuatro giros." },
+      { objective: "O4", q: "¿Por qué ejecutar tu programa después de cada cambio pequeño?", options: ["Para saber qué cambio causó qué", "Para gastar más batería", "Porque es obligatorio", "Para borrar bloques"], answer: 0, why: "Los pasos pequeños hacen fácil encontrar los problemas." },
+      { objective: "O5", q: "Un bucle infinito:", options: ["Se ejecuta una vez", "Apaga el robot", "Sigue repitiéndose hasta que el programa se detiene", "Es un sensor"], answer: 2, why: "Se repite una y otra vez." },
+      { objective: "O5", q: "Depurar significa:", options: ["Encontrar y corregir errores en un programa", "Quitarle insectos a un robot", "Comprar un robot nuevo", "Apagar los sensores"], answer: 0, why: "Los bugs son errores del programa." },
+      { objective: "O5", q: "Tu robot nunca se detiene ante la pared. ¿Cuál es un error probable?", options: ["El robot es del color equivocado", "La pantalla tiene demasiado brillo", "El área de juego es demasiado bonita", "La comprobación del sensor está fuera del bucle o usa la distancia equivocada"], answer: 3, why: "La posición o los números equivocados en la comprobación del sensor son errores comunes." },
+      { objective: "O6", q: "¿Cuál es un trabajo real con robots?", options: ["Adivino de robots", "Técnico en robótica", "Solo pintor de sensores", "No existe ninguno"], answer: 1, why: "Los técnicos instalan, mantienen y reparan robots." },
+      { objective: "O6", q: "Un cobot es:", options: ["Solo un robot de cocina", "Un robot diseñado para trabajar cerca de las personas", "Un robot descompuesto", "Un robot sin sensores"], answer: 1, why: "Los robots colaborativos se hacen para trabajar junto a las personas." },
+      { objective: "O6", q: "Ves un brazo robótico rápido trabajando detrás de una línea marcada. ¿Qué haces?", options: ["Entrar para verlo de cerca", "Tocarlo para probarlo", "Apagarle los sensores", "Quedarte fuera del área marcada y seguir las reglas de seguridad del lugar"], answer: 3, why: "Las áreas marcadas mantienen a las personas fuera del camino del robot." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      1,
+      3,
+      4,
+      6,
+      7,
+      9,
+      12,
+      15,
+      16,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en todas las filas. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Programa del cuadrado",
+        objective: "O4",
+        notYet: "El robot no recorre un cuadrado, o el programa no tiene bucle.",
+        meets: "Un bloque de repetir hace que el robot recorra un cuadrado que termina cerca del inicio.",
+        exceeds: "Se ajustaron la distancia y el giro para que el cuadrado quede limpio y parejo."
+      },
+      {
+        name: "Programa que evita la pared",
+        objective: "O5",
+        notYet: "El robot choca con la pared o no vuelve a moverse.",
+        meets: "Un bucle infinito con un si-entonces-si no: se detiene y gira en la pared, y luego sigue avanzando.",
+        exceeds: "Funciona desde más de un punto de partida en el área de juego."
+      },
+      {
+        name: "Prueba y depuración",
+        objective: "O5",
+        notYet: "No se encontró ni se corrigió ningún error.",
+        meets: "Se encontró y corrigió al menos un error cambiando una cosa a la vez.",
+        exceeds: "Puede explicar qué causó el error y cómo lo encontró."
+      },
+      {
+        name: "Plan antes del código",
+        objective: "O3",
+        notYet: "No hay plan escrito, o tiene pasos como \"avanza un poco\".",
+        meets: "Un plan con palabras sencillas, con pasos exactos, un bucle y un si-entonces.",
+        exceeds: "El plan se recorrió en papel y se corrigió antes de programar."
+      },
+      {
+        name: "Sentir, pensar y actuar explicados",
+        objective: "O1",
+        notYet: "Faltan las tres oraciones o no nombran un sensor.",
+        meets: "Tres oraciones dicen qué detecta el robot, cómo decide y cómo actúa.",
+        exceeds: "También dice si el robot usa IA o reglas sencillas, y por qué."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Personas que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Personas que se unen a un club de robótica, una clase de programación o un programa STEM en un plazo de 60 días",
+      "Personas que empiezan otro curso de tecnología de Koach Learn en un plazo de 30 días",
+      "Personas que dicen tener interés en ser técnico en robótica, programador o ingeniero (encuesta de seguimiento)"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Una computadora, Chromebook o tableta con navegador web e internet",
+      "Una herramienta gratuita de robot virtual como VEXcode VR (vr.vex.com), o la que prefiera la escuela o la biblioteca",
+      "Papel y lápiz para los algoritmos y los diagramas de flujo",
+      "Unos 60 minutos en total, en sesiones cortas: lecciones, práctica de programación, comprobaciones y la tarea final"
+    ],
+    facilitatorNotes: [
+      "Hagan juntos la prueba inicial y luego un capítulo por sesión; muestra los primeros bloques en una pantalla compartida.",
+      "Pide a las personas que actúen un algoritmo: una lee los pasos y otra los camina tal cual, para mostrar por qué los pasos deben ser exactos.",
+      "Formen parejas para depurar: una persona ejecuta el programa y la otra busca el error.",
+      "Si visitan un lugar con robots reales, sigan las reglas de seguridad del lugar y quédense con el guía en todo momento.",
+      "Califica la tarea final con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

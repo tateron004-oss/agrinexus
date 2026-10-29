@@ -22,11 +22,35 @@ module.exports = {
     "Examples include maize and beans in the Rift Valley, cassava and yam in south-west Nigeria, tea in Kericho, and mixed crop-livestock farms. A knowledge check closes each chapter and a 20-question quiz closes the course."
   ],
   finalTask: "Write a season-long drone monitoring plan for a mixed farm (real or example, such as 10 hectares with maize, beans, a pasture paddock, 30 cattle, a water pan and a fenced boundary): the zones in the main crop field and what each zone gets, which flights you will make and when (crop, climate risk, livestock, infrastructure), what you will look for each time, and what action each finding could lead to.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Farmers, farm managers, cooperative and extension staff, and drone service providers in Kenya, Nigeria and across Africa taking Course 4 of the drone monitoring track, often on mixed crop-livestock farms.",
+    startingPoint: "Learners can make and read a drone map (Courses 2 and 3). Most still treat a whole field the same, check livestock, pasture and infrastructure on foot, and react to erosion, flooding and drought after the damage. Few plan flights across a whole season.",
+    gap: "Uneven fields waste inputs where they do not pay, and late warning of erosion, dry spells, overgrazing or a leaking dam costs harvests and money. A season-long monitoring plan with zones lets farms put inputs and labour where they pay and act early on climate, livestock and infrastructure risks.",
+    constraints: [
+      "Reading level: plain words; every precision farming term is explained",
+      "Devices: drone maps from a real farm or examples; a phone with GPS to mark zones",
+      "Rules: flights need the country's approvals; spraying by drone also needs pesticide approvals",
+      "Animal welfare and privacy: do not scare or chase animals; do not film people or homesteads without permission",
+      "Rates and yield figures come from local experience or extension, not from the course"
+    ],
+    prerequisites: "\"Drones for Agricultural Monitoring 3: Crop Health, Pests and Data Processing\"."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given drone maps from more than one date and the farmer's knowledge", action: "divide a field into two to four management zones and mark them on the ground", standard: "with each zone named and its reason stated" },
+    { id: "O2", condition: "For each management zone", action: "decide what the zone gets: seed, fertilizer, labour or a fix", standard: "matching the action to the zone's cause and never planning drone spraying without approvals" },
+    { id: "O3", condition: "Given a drone map and sample counts", action: "calculate plant stand and a rough yield range", standard: "with the stand worked out against the target spacing and the yield given as a range" },
+    { id: "O4", condition: "Across a season", action: "plan drone flights to spot erosion, flooding and drought risk and to track climate-smart practices", standard: "on fixed dates so maps can be compared" },
+    { id: "O5", condition: "For a livestock or pasture flight", action: "plan a calm, safe flight to count animals and check pasture and water points", standard: "with the herder's agreement and without scaring the animals" },
+    { id: "O6", condition: "For farm dams, canals, fences, greenhouses and stores", action: "inspect them from the air and write a repair list", standard: "with item, location, problem, urgency and who will fix it" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Precision agriculture",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Management zones: one field, different needs",
           minutes: 5,
           goal: "Divide a field into two to four management zones from a drone map and farm knowledge.",
@@ -43,9 +67,14 @@ module.exports = {
             { title: "Keep it simple", bullets: ["Two to four zones", "Strong, average, weak or wet", "Mark them on the ground"] }
           ],
           tryIt: "Sketch a field you know (or use an example map). Draw two to four zones, name them, and write why each zone is different.",
-          youCanNow: "divide a field into simple management zones using maps and the farmer's knowledge."
+          youCanNow: "divide a field into simple management zones using maps and the farmer's knowledge.",
+          quickCheck: [
+            { objective: "O1", q: "Which is a sensible set of management zones for a smallholder field?", options: ["A strong zone, an average zone and a weak, wet zone", "One zone for every plant", "Twenty zones of equal size", "No zones at all"], answer: 0, why: "Two to four simple zones are enough for most smallholder and medium farms." },
+            { objective: "O1", q: "The farmer says one corner always does badly, but this season's single map shows it green. What do you do?", options: ["Ignore the farmer", "Draw zones from this one map only", "Check maps from other dates and seasons and use the farmer's knowledge", "Give up on zones"], answer: 2, why: "Zones are drawn from several maps and dates together with what the farmer knows." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Targeting inputs by zone",
           minutes: 6,
           goal: "Decide what each zone gets: seed, fertilizer, labour or a fix.",
@@ -63,9 +92,14 @@ module.exports = {
           ],
           sources: [FAO_WHO_AERIAL, KCAA_UAS, NCAA_P21],
           tryIt: "Using your zones from Lesson 1, write a one-line instruction for each zone that a farm worker could follow (for example: Zone C, wet corner: dig a drain before topdressing; no extra fertilizer).",
-          youCanNow: "decide and write what each management zone should get, and know when spraying needs special approval."
+          youCanNow: "decide and write what each management zone should get, and know when spraying needs special approval.",
+          quickCheck: [
+            { objective: "O2", q: "On a large farm, what is a prescription map used for?", options: ["Counting cattle", "Inspecting fences", "Writing the farm's budget", "Telling machines what rate to apply in each place"], answer: 3, why: "On large farms, machines can apply variable rates from a prescription map." },
+            { objective: "O2", q: "The drone shows gaps only in the average zone. What do you tell the workers?", options: ["Replant the whole field", "Replant gaps only where the drone shows them", "Add fertilizer to the gaps", "Leave the gaps"], answer: 1, why: "On smallholder farms, workers replant only where the drone shows gaps." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Plant counts and early yield estimates",
           minutes: 5,
           goal: "Estimate plant stand and a rough yield range from a drone map and sample counts.",
@@ -82,17 +116,21 @@ module.exports = {
             { title: "Early yield estimate", bullets: ["Plants per ha x expected yield per plant", "Give a range, not a promise", "Helps plan storage, sales and transport"] }
           ],
           tryIt: "A maize zone of 1 hectare was planted at 75 cm by 25 cm. Your sample counts suggest 44,000 plants per hectare. Work out the stand percentage, then write what could explain the gaps and what you would check.",
-          youCanNow: "estimate plant stand and a rough yield range by zone from a drone map and sample counts."
+          youCanNow: "estimate plant stand and a rough yield range by zone from a drone map and sample counts.",
+          quickCheck: [
+            { objective: "O3", q: "Why count plants in sample areas of known size?", options: ["To find the farm's boundary", "To work out plants per hectare and compare with the target", "To measure rainfall", "To check the drone's battery"], answer: 1, why: "Counts in areas of known size give plants per hectare, which is compared with the target spacing." },
+            { objective: "O3", q: "A buyer asks for your exact harvest a month before harvest. What do you give?", options: ["One exact number as a promise", "Nothing at all", "Last year's number", "A rough range, explaining that weather, pests and losses can change it"], answer: 3, why: "An early yield estimate is a range, not a promise." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Precision agriculture",
         questions: [
-          { q: "What is a management zone?", options: ["Any random square", "A part of a field that behaves the same way season after season", "The farm office", "A no-fly area"], answer: 1, why: "Zones group areas that respond alike, so they can be managed alike." },
-          { q: "Which is the best way to draw zones?", options: ["Use one map from one day only", "Copy a neighbour's zones", "Combine maps from more than one date with the farmer's knowledge", "Draw equal squares"], answer: 2, why: "Several maps plus local knowledge show stable patterns." },
-          { q: "A zone is weak because water stands there after rain. The best action is:", options: ["Improve drainage", "Add double fertilizer", "Spray pesticide", "Plant more seed"], answer: 0, why: "Fix the cause; fertilizer does not fix waterlogging." },
-          { q: "A drone service offers to spray pesticide on a client's maize. What must be in place?", options: ["Only the farmer's permission", "Nothing extra", "A good camera", "Aviation and pesticide approvals and licensed operators"], answer: 3, why: "Spraying by drone is a regulated, higher-risk operation." },
-          { q: "Maize planted at 75 cm x 25 cm has a target of about:", options: ["5,300 plants per hectare", "53,000 plants per hectare", "530,000 plants per hectare", "530 plants per hectare"], answer: 1, why: "10,000 m2 divided by 0.1875 m2 per plant is about 53,000." }
+          { objective: "O1", q: "What is a management zone?", options: ["Any random square", "A part of a field that behaves the same way season after season", "The farm office", "A no-fly area"], answer: 1, why: "Zones group areas that respond alike, so they can be managed alike." },
+          { objective: "O1", q: "Which is the best way to draw zones?", options: ["Use one map from one day only", "Copy a neighbour's zones", "Combine maps from more than one date with the farmer's knowledge", "Draw equal squares"], answer: 2, why: "Several maps plus local knowledge show stable patterns." },
+          { objective: "O2", q: "A zone is weak because water stands there after rain. The best action is:", options: ["Improve drainage", "Add double fertilizer", "Spray pesticide", "Plant more seed"], answer: 0, why: "Fix the cause; fertilizer does not fix waterlogging." },
+          { objective: "O2", q: "A drone service offers to spray pesticide on a client's maize. What must be in place?", options: ["Only the farmer's permission", "Nothing extra", "A good camera", "Aviation and pesticide approvals and licensed operators"], answer: 3, why: "Spraying by drone is a regulated, higher-risk operation." },
+          { objective: "O3", q: "Maize planted at 75 cm x 25 cm has a target of about:", options: ["5,300 plants per hectare", "53,000 plants per hectare", "530,000 plants per hectare", "530 plants per hectare"], answer: 1, why: "10,000 m2 divided by 0.1875 m2 per plant is about 53,000." }
         ]
       }
     },
@@ -100,6 +138,7 @@ module.exports = {
       name: "Chapter 2: Climate, livestock and infrastructure",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Monitoring climate and environmental risk",
           minutes: 6,
           goal: "Use drone flights to spot erosion, flooding and drought risk and to track climate-smart practices.",
@@ -117,9 +156,14 @@ module.exports = {
           ],
           sources: [FAO_CSA, FAO_ITU_DRONES],
           tryIt: "Write a yearly calendar of four climate flights for a farm you know, linked to its rainy and dry seasons. For each flight, list two things you will look for.",
-          youCanNow: "plan drone flights that track erosion, flooding and drought risk and check whether climate-smart practices work."
+          youCanNow: "plan drone flights that track erosion, flooding and drought risk and check whether climate-smart practices work.",
+          quickCheck: [
+            { objective: "O4", q: "After heavy rain, what does an elevation model help show?", options: ["Which cattle are sick", "The price of maize", "Where water will run next time", "Which seed was certified"], answer: 2, why: "Elevation models show the height of the ground, so you can see where water will run next time." },
+            { objective: "O4", q: "After a big storm, your maps show gullies across several farms in the group. What do you do?", options: ["Share the maps with the farmer group and county or state officers", "Keep the maps to yourself", "Delete them because the storm is over", "Fly only your own farm next time"], answer: 0, why: "Shared maps show the whole community where to act first." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Monitoring livestock and pasture",
           minutes: 5,
           goal: "Plan a calm, safe drone flight to count animals and check pasture and water points.",
@@ -136,9 +180,14 @@ module.exports = {
             { title: "Pasture maps", bullets: ["Strong, overgrazed or bare grass", "Plan rotational grazing", "Spot land that needs rest"] }
           ],
           tryIt: "Write a short flight plan for counting 60 cattle in a 40-hectare paddock: time of day, height, approach, what else you will check, and when you would stop.",
-          youCanNow: "plan a calm, safe livestock and pasture flight and use it to support grazing decisions."
+          youCanNow: "plan a calm, safe livestock and pasture flight and use it to support grazing decisions.",
+          quickCheck: [
+            { objective: "O5", q: "What can a drone do on a ranch?", options: ["Count animals and check that water points and troughs work", "Herd cattle into the boma", "Treat sick animals", "Milk the cows"], answer: 0, why: "Drones can count animals, find lost or sick ones and check water points, saving walking or driving." },
+            { objective: "O5", q: "A herder is moving goats near your planned flight. What do you do?", options: ["Fly low to get close photos", "Chase the goats into one group", "Ask the herder first, fly high and approach slowly from the side", "Fly straight over them quickly"], answer: 2, why: "Ask the herder, and fly high and slowly from the side so the animals are not frightened." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Inspecting farm infrastructure",
           minutes: 5,
           goal: "Inspect dams, canals, fences, greenhouses and stores from the air and list repairs.",
@@ -155,17 +204,21 @@ module.exports = {
             { title: "Turn photos into repairs", bullets: ["Item, location, problem, urgency, who", "Fly again after repairs and before rains"] }
           ],
           tryIt: "Final task: write your season-long monitoring plan for a mixed farm: zones and what each gets, crop flights, climate flights, a livestock and pasture flight, an infrastructure flight, what you look for each time and what action each finding could lead to.",
-          youCanNow: "inspect farm infrastructure by drone and plan whole-farm monitoring across a season."
+          youCanNow: "inspect farm infrastructure by drone and plan whole-farm monitoring across a season.",
+          quickCheck: [
+            { objective: "O6", q: "Which problem can a drone flight find on a greenhouse?", options: ["The crop's sale price", "The soil's pH", "A pest's name", "Tears in the roof plastic or nets"], answer: 3, why: "Flights can show tears in greenhouse roofs and nets before they get worse." },
+            { objective: "O6", q: "The rains start in three weeks and the water pan wall was repaired last week. What do you do?", options: ["Wait until after the rains", "Fly again to check the repair before the rains", "Never check it again", "Fly straight down only, high above it"], answer: 1, why: "Fly again after repairs and before the rains, when a failure would hurt most." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Climate, livestock and infrastructure",
         questions: [
-          { q: "FAO's climate-smart agriculture has three aims. Which is one of them?", options: ["Helping farms adapt and build resilience", "Using as much fertilizer as possible", "Clearing all trees", "Farming only one crop"], answer: 0, why: "CSA aims at productivity, adaptation and resilience, and lower emissions." },
-          { q: "When is a good time for a climate flight to find gullies and washouts?", options: ["Only at midnight", "Never", "After the first heavy storm of the season", "During a drone exhibition"], answer: 2, why: "Fresh damage shows clearly right after heavy rain." },
-          { q: "Cattle start to run while the drone is overhead. You should:", options: ["Fly lower to calm them", "Chase them back", "Keep circling", "Stop and move the drone away"], answer: 3, why: "Animal welfare and safety come first." },
-          { q: "A pasture map shows a paddock with much bare ground. This suggests:", options: ["Overgrazing; the paddock may need rest", "The drone is broken", "Too much rain only", "Perfect pasture"], answer: 0, why: "Bare ground in pasture often means animals ate faster than grass regrew." },
-          { q: "When inspecting a water pan wall, you should:", options: ["Fly straight down only, very fast", "Fly slowly along it with the camera angled", "Fly over people nearby", "Skip it"], answer: 1, why: "An angled camera shows cracks and seepage on the wall." }
+          { objective: "O4", q: "FAO's climate-smart agriculture has three aims. Which is one of them?", options: ["Helping farms adapt and build resilience", "Using as much fertilizer as possible", "Clearing all trees", "Farming only one crop"], answer: 0, why: "CSA aims at productivity, adaptation and resilience, and lower emissions." },
+          { objective: "O4", q: "When is a good time for a climate flight to find gullies and washouts?", options: ["Only at midnight", "Never", "After the first heavy storm of the season", "During a drone exhibition"], answer: 2, why: "Fresh damage shows clearly right after heavy rain." },
+          { objective: "O5", q: "Cattle start to run while the drone is overhead. You should:", options: ["Fly lower to calm them", "Chase them back", "Keep circling", "Stop and move the drone away"], answer: 3, why: "Animal welfare and safety come first." },
+          { objective: "O5", q: "A pasture map shows a paddock with much bare ground. This suggests:", options: ["Overgrazing; the paddock may need rest", "The drone is broken", "Too much rain only", "Perfect pasture"], answer: 0, why: "Bare ground in pasture often means animals ate faster than grass regrew." },
+          { objective: "O6", q: "When inspecting a water pan wall, you should:", options: ["Fly straight down only, very fast", "Fly slowly along it with the camera angled", "Fly over people nearby", "Skip it"], answer: 1, why: "An angled camera shows cracks and seepage on the wall." }
         ]
       }
     }
@@ -173,26 +226,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Drones for Agricultural Monitoring 4: Precision, Climate and Livestock Monitoring",
     questions: [
-      { q: "Precision agriculture means:", options: ["Treating every part of a field the same", "Managing each part of a field according to its needs", "Using only drones", "Farming at night"], answer: 1, why: "It matches inputs and work to what each area needs." },
-      { q: "Why are most fields uneven?", options: ["Drones make them uneven", "They are not", "Soil, slope, water, shade and past use differ", "Seeds are always bad"], answer: 2, why: "Natural and farming history make some areas grow better." },
-      { q: "How many zones are usually enough on a smallholder farm?", options: ["Two to four", "Fifty", "One hundred", "None"], answer: 0, why: "A few simple zones are easy to manage and mark." },
-      { q: "Why mark zones on the ground?", options: ["To decorate the farm", "The law requires pegs", "To scare birds", "So workers can find and treat each zone"], answer: 3, why: "Workers need to see where each zone starts and ends." },
-      { q: "Variable-rate means:", options: ["Different amounts in different places", "Same amount everywhere", "Changing the drone's speed", "Changing crop prices"], answer: 0, why: "Rates change by zone according to need." },
-      { q: "On a smallholder farm, variable-rate can be done by:", options: ["Only large machines", "Workers using more or less fertilizer per hole by zone", "Satellites", "Not at all"], answer: 1, why: "The idea works by hand with clear zone instructions." },
-      { q: "A weak zone on shallow, stony soil may:", options: ["Always need double fertilizer", "Be the best place for more seed", "Not repay extra fertilizer", "Need spraying"], answer: 2, why: "The soil limits growth; extra input may be wasted." },
-      { q: "Who must approve pesticide spraying by drone?", options: ["Only the drone seller", "Only the farmer", "Only a neighbour", "The aviation authority and the pesticide regulator"], answer: 3, why: "Both aviation and pesticide rules apply to spray drones." },
-      { q: "Plant stand is:", options: ["Plants that came up vs plants planted", "The height of the drone", "The farm's sign", "The price of seed"], answer: 0, why: "It shows how well the crop established." },
-      { q: "You count 40,000 maize plants per hectare against a target of about 53,000. Stand is about:", options: ["25 percent", "50 percent", "75 percent", "100 percent"], answer: 2, why: "40,000 divided by 53,000 is about 0.75." },
-      { q: "An early yield estimate should be given as:", options: ["An exact promise", "A secret", "A range that can change", "A loan amount"], answer: 2, why: "Weather, pests and losses change the final yield." },
-      { q: "Which is a climate-smart practice drones can help track?", options: ["Burning crop residue", "Ploughing up and down slopes", "Removing all trees", "Terraces, mulching and tree planting"], answer: 3, why: "Maps show whether these practices are working over time." },
-      { q: "In a dry spell, which maps show which areas dry first?", options: ["NDVI or thermal maps", "A road map", "A price list", "A rainfall poster"], answer: 0, why: "NDVI and thermal show plant vigour and heat stress." },
-      { q: "Why fly the same area on fixed dates?", options: ["To use more batteries", "To compare changes over time", "Because drones need routine", "To film neighbours"], answer: 1, why: "Repeated maps show trends and the effect of actions." },
-      { q: "Before a livestock flight you should:", options: ["Fly low over the herd", "Chase animals into one place", "Ask the herder and agree time and area", "Fly at maximum speed"], answer: 2, why: "Permission and a calm approach protect animals and people." },
-      { q: "Thermal cameras on a ranch help to:", options: ["Make grass grow", "Repair fences", "Read ear tags", "Find animals at dawn or in thick bush"], answer: 3, why: "Animals show up as warm spots." },
-      { q: "Rotational grazing means:", options: ["Moving animals between paddocks so grass can regrow", "Keeping animals in one place all year", "Grazing at night only", "Feeding only hay"], answer: 0, why: "Resting paddocks lets grass recover." },
-      { q: "Seepage on a dam wall means:", options: ["The dam is full of fish", "Water is slowly leaking through", "The wall is new", "It is raining"], answer: 1, why: "Seepage can weaken the wall and should be repaired." },
-      { q: "A good infrastructure repair list includes:", options: ["Only photos", "The drone model", "Item, location, problem, urgency and who will fix it", "Market prices"], answer: 2, why: "Clear details get repairs done." },
-      { q: "When is an infrastructure check most useful?", options: ["Never", "Only after a failure", "During a storm", "Before the rains and after repairs"], answer: 3, why: "Fixing problems before the rains prevents failures." }
+      { objective: "O1", q: "Precision agriculture means:", options: ["Treating every part of a field the same", "Managing each part of a field according to its needs", "Using only drones", "Farming at night"], answer: 1, why: "It matches inputs and work to what each area needs." },
+      { objective: "O1", q: "Why are most fields uneven?", options: ["Drones make them uneven", "They are not", "Soil, slope, water, shade and past use differ", "Seeds are always bad"], answer: 2, why: "Natural and farming history make some areas grow better." },
+      { objective: "O1", q: "How many zones are usually enough on a smallholder farm?", options: ["Two to four", "Fifty", "One hundred", "None"], answer: 0, why: "A few simple zones are easy to manage and mark." },
+      { objective: "O1", q: "Why mark zones on the ground?", options: ["To decorate the farm", "The law requires pegs", "To scare birds", "So workers can find and treat each zone"], answer: 3, why: "Workers need to see where each zone starts and ends." },
+      { objective: "O2", q: "Variable-rate means:", options: ["Different amounts in different places", "Same amount everywhere", "Changing the drone's speed", "Changing crop prices"], answer: 0, why: "Rates change by zone according to need." },
+      { objective: "O2", q: "On a smallholder farm, variable-rate can be done by:", options: ["Only large machines", "Workers using more or less fertilizer per hole by zone", "Satellites", "Not at all"], answer: 1, why: "The idea works by hand with clear zone instructions." },
+      { objective: "O2", q: "A weak zone on shallow, stony soil may:", options: ["Always need double fertilizer", "Be the best place for more seed", "Not repay extra fertilizer", "Need spraying"], answer: 2, why: "The soil limits growth; extra input may be wasted." },
+      { objective: "O2", q: "Who must approve pesticide spraying by drone?", options: ["Only the drone seller", "Only the farmer", "Only a neighbour", "The aviation authority and the pesticide regulator"], answer: 3, why: "Both aviation and pesticide rules apply to spray drones." },
+      { objective: "O3", q: "Plant stand is:", options: ["Plants that came up vs plants planted", "The height of the drone", "The farm's sign", "The price of seed"], answer: 0, why: "It shows how well the crop established." },
+      { objective: "O3", q: "You count 40,000 maize plants per hectare against a target of about 53,000. Stand is about:", options: ["25 percent", "50 percent", "75 percent", "100 percent"], answer: 2, why: "40,000 divided by 53,000 is about 0.75." },
+      { objective: "O3", q: "An early yield estimate should be given as:", options: ["An exact promise", "A secret", "A range that can change", "A loan amount"], answer: 2, why: "Weather, pests and losses change the final yield." },
+      { objective: "O4", q: "Which is a climate-smart practice drones can help track?", options: ["Burning crop residue", "Ploughing up and down slopes", "Removing all trees", "Terraces, mulching and tree planting"], answer: 3, why: "Maps show whether these practices are working over time." },
+      { objective: "O4", q: "In a dry spell, which maps show which areas dry first?", options: ["NDVI or thermal maps", "A road map", "A price list", "A rainfall poster"], answer: 0, why: "NDVI and thermal show plant vigour and heat stress." },
+      { objective: "O4", q: "Why fly the same area on fixed dates?", options: ["To use more batteries", "To compare changes over time", "Because drones need routine", "To film neighbours"], answer: 1, why: "Repeated maps show trends and the effect of actions." },
+      { objective: "O5", q: "Before a livestock flight you should:", options: ["Fly low over the herd", "Chase animals into one place", "Ask the herder and agree time and area", "Fly at maximum speed"], answer: 2, why: "Permission and a calm approach protect animals and people." },
+      { objective: "O5", q: "Thermal cameras on a ranch help to:", options: ["Make grass grow", "Repair fences", "Read ear tags", "Find animals at dawn or in thick bush"], answer: 3, why: "Animals show up as warm spots." },
+      { objective: "O5", q: "Rotational grazing means:", options: ["Moving animals between paddocks so grass can regrow", "Keeping animals in one place all year", "Grazing at night only", "Feeding only hay"], answer: 0, why: "Resting paddocks lets grass recover." },
+      { objective: "O6", q: "Seepage on a dam wall means:", options: ["The dam is full of fish", "Water is slowly leaking through", "The wall is new", "It is raining"], answer: 1, why: "Seepage can weaken the wall and should be repaired." },
+      { objective: "O6", q: "A good infrastructure repair list includes:", options: ["Only photos", "The drone model", "Item, location, problem, urgency and who will fix it", "Market prices"], answer: 2, why: "Clear details get repairs done." },
+      { objective: "O6", q: "When is an infrastructure check most useful?", options: ["Never", "Only after a failure", "During a storm", "Before the rains and after repairs"], answer: 3, why: "Fixing problems before the rains prevents failures." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      2,
+      4,
+      7,
+      8,
+      9,
+      11,
+      14,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part of the plan and check it again.",
+    criteria: [
+      {
+        name: "Management zones",
+        objective: "O1",
+        notYet: "No zones, or zones drawn from one map with no reason.",
+        meets: "Two to four named zones in the main field, from maps and the farmer's knowledge, with how they are marked.",
+        exceeds: "Uses maps from more than one date or season."
+      },
+      {
+        name: "What each zone gets",
+        objective: "O2",
+        notYet: "Every zone gets the same treatment, or drone spraying is planned without approvals.",
+        meets: "Each zone has an action that fits its cause: seed, fertilizer, labour or a fix.",
+        exceeds: "Includes a plant stand check and a rough yield range by zone."
+      },
+      {
+        name: "Climate flights",
+        objective: "O4",
+        notYet: "No climate or environmental flights.",
+        meets: "Flights on fixed dates to check erosion, flooding and drought, and what each finding would lead to.",
+        exceeds: "Tracks a climate-smart practice such as terraces or mulching over the season."
+      },
+      {
+        name: "Livestock and pasture",
+        objective: "O5",
+        notYet: "No livestock flights, or flights that would scare animals.",
+        meets: "Flights to count animals and check pasture and water points, with the herder's agreement and safe height.",
+        exceeds: "Links pasture maps to a rotational grazing plan."
+      },
+      {
+        name: "Infrastructure",
+        objective: "O6",
+        notYet: "Dams, fences or other structures are not included.",
+        meets: "Flights to inspect the water pan, fences and other structures, with a repair list format.",
+        exceeds: "Timed before the rains and after repairs, with photos from the same spots."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and score Meets or Exceeds on every rubric row of the monitoring plan",
+      "Learners who report managing a field by zones or following a season monitoring plan within one season (follow-up survey)",
+      "Farms or groups that report acting early on erosion, drought, overgrazing or an infrastructure fault",
+      "Learners who go on to Course 5 of the drone track"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Drone maps of a real farm, or the course's example mixed farm",
+      "A phone with GPS, and pegs or flags to mark zones",
+      "A notebook or spreadsheet for the zone table and season plan",
+      "About 60 minutes in total, in short sessions, plus time to write the monitoring plan"
+    ],
+    facilitatorNotes: [
+      "Take the pre-test together, then draw zones on one example map as a group before learners draw their own.",
+      "Bring local expected yields and fertilizer advice from extension; do not give rates yourself.",
+      "Do not plan or demonstrate drone spraying without aviation and pesticide approvals.",
+      "If flying near livestock, ask the herder first, fly high and stop if animals start to run.",
+      "Score the monitoring plan with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

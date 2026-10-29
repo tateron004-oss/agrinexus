@@ -22,11 +22,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos y termina con una tarea \"Pruébalo ahora\". Cada capítulo termina con una comprobación de conocimientos y el curso termina con un examen de 20 preguntas. Este curso te ayuda a prepararte; no es el examen oficial, y las páginas de Microsoft tienen la última palabra sobre los detalles del examen. El examen se puede presentar en varios idiomas; revisa en la página oficial si está en español."
   ],
   finalTask: "Escribe un plan de Azure de una página para el sitio web y el almacenamiento de archivos de una pequeña organización comunitaria: nombra el tipo de servicio (IaaS, PaaS o SaaS) y los servicios de Azure que usarías, la región y el grupo de recursos, cómo iniciarán sesión las personas con seguridad, cómo controlarás los costos (presupuesto, etiquetas) y el costo mensual estimado con la calculadora de precios de Azure. Luego haz la evaluación de práctica gratuita del AZ-900 de Microsoft y anota tus dos áreas más débiles para estudiar después.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Adultos de comunidades desatendidas que son nuevos en la tecnología o que cambian de carrera, y miembros de la comunidad que quieren una primera certificación reconocida. Muchos buscan empleos de soporte de TI, mesa de ayuda o puestos iniciales en la nube.",
+    startingPoint: "Saben usar una computadora y un navegador web, el correo y las aplicaciones de todos los días. Tienen poca o ninguna experiencia con servidores, redes o plataformas en la nube, y no se da por hecho que tengan una cuenta de Azure.",
+    gap: "Los empleos iniciales de TI y de la nube a menudo piden conocimientos básicos de la nube y una primera certificación como el AZ-900. Las personas necesitan las ideas y las palabras clave, y la costumbre de planear, proteger y calcular el precio de una configuración pequeña, para postularse con confianza y evitar facturas sorpresa de la nube.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y oraciones cortas; los términos técnicos se explican la primera vez",
+      "Aparatos: una computadora o tableta con navegador web; en un teléfono es difícil usar la calculadora de precios",
+      "Costo: no se necesita cuenta de Azure ni tarjeta de pago; las partes prácticas usan las herramientas públicas gratuitas de Microsoft",
+      "Tiempo: lecciones de 5 minutos, unos 60 minutos en total más la evaluación de práctica",
+      "Los detalles y precios del examen cambian; las personas revisan las páginas oficiales de Microsoft"
+    ],
+    prerequisites: "Ninguno. \"Fundamentos de la computación en la nube\" es un comienzo más suave para quienes nunca han oído la palabra nube."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con un ejemplo de todos los días, como el sitio web de un banco de alimentos con mucho tráfico", action: "explicar qué es la computación en la nube y nombrar sus principales beneficios y modelos de nube", standard: "con tus propias palabras, con al menos dos beneficios correctos" },
+    { id: "O2", condition: "Con un servicio en la nube", action: "clasificar un servicio en IaaS, PaaS o SaaS y decir qué protege el proveedor y qué protege el cliente", standard: "acertando al menos 4 de 5" },
+    { id: "O3", condition: "Para un proyecto pequeño en Azure", action: "elegir una región y un grupo de recursos y describir cómo encajan en una suscripción", standard: "con una razón para la región que elijas" },
+    { id: "O4", condition: "Con una necesidad común, como un sitio web, un servidor completo o copias de seguridad", action: "relacionar la necesidad con el servicio básico de Azure correcto", standard: "acertando al menos 4 de 5" },
+    { id: "O5", condition: "Para las personas y los recursos de tu plan", action: "enumerar cómo protegerás el inicio de sesión y el acceso y cómo aplicarás reglas con MFA, RBAC, etiquetas, Azure Policy o bloqueos de recursos", standard: "nombrando al menos tres de estas herramientas y lo que hace cada una" },
+    { id: "O6", condition: "Usando la calculadora de precios gratuita de Azure y Microsoft Learn", action: "calcular un costo mensual para tu plan y escribir un plan de estudio para el AZ-900", standard: "con un total estimado y tus dos áreas más débiles del examen" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Conceptos de la nube y las piezas de Azure",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Qué es la nube y por qué la usan las organizaciones",
           minutes: 5,
           goal: "Explicar la computación en la nube y sus principales beneficios con un ejemplo de todos los días.",
@@ -44,9 +68,14 @@ module.exports = {
           ],
           sources: [STUDY],
           tryIt: "Elige una organización local que conozcas (una iglesia, una clínica, una escuela, un banco de alimentos o una tienda pequeña). Escribe dos formas en que podría usar la nube y qué beneficio (escalabilidad, disponibilidad, pago por uso) le da cada una.",
-          youCanNow: "explicar la computación en la nube, el modelo de pago por uso, sus beneficios y los tres modelos de nube."
+          youCanNow: "explicar la computación en la nube, el modelo de pago por uso, sus beneficios y los tres modelos de nube.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué es OpEx en la computación en la nube?", options: ["Una gran compra de servidores por adelantado", "Un costo continuo que pagas a medida que usas el servicio", "Un tipo de máquina virtual", "Una prueba gratuita que nunca termina"], answer: 1, why: "El pago por uso convierte una gran compra por adelantado (CapEx) en un gasto de operación continuo (OpEx)." },
+            { objective: "O1", q: "Una clínica debe guardar algunos datos en sus propios servidores, pero quiere Azure para su sitio web. ¿Qué modelo de nube le sirve?", options: ["Solo pública", "Solo privada", "Ninguna nube", "Híbrida"], answer: 3, why: "La nube híbrida combina los servidores propios de una organización con una nube pública como Azure." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "IaaS, PaaS, SaaS y quién es responsable de qué",
           minutes: 5,
           goal: "Clasificar un servicio como IaaS, PaaS o SaaS y decir quién se encarga de qué.",
@@ -64,9 +93,14 @@ module.exports = {
           ],
           sources: [STUDY],
           tryIt: "Clasifica estos en IaaS, PaaS o SaaS: el correo de Microsoft Outlook, una máquina virtual de Azure, Azure App Service para un sitio web, Microsoft Teams, Azure Functions. Luego escribe una cosa de la que siempre eres responsable, sin importar el tipo.",
-          youCanNow: "distinguir IaaS, PaaS y SaaS y explicar el modelo de responsabilidad compartida."
+          youCanNow: "distinguir IaaS, PaaS y SaaS y explicar el modelo de responsabilidad compartida.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué tipo se parece a alquilar un apartamento amueblado: el proveedor maneja los servidores y tú traes tu aplicación?", options: ["PaaS", "IaaS", "SaaS", "Una nube privada"], answer: 0, why: "En PaaS el proveedor maneja los servidores y el software del sistema; tú traes tu aplicación o tus datos." },
+            { objective: "O2", q: "Tu organización sin fines de lucro pasa de IaaS a SaaS. ¿Qué pasa con su trabajo de seguridad?", options: ["Ahora debe cuidar el centro de datos", "No cambia nada", "El proveedor se encarga de más, pero tus datos y tus cuentas siguen siendo tu trabajo", "El proveedor se vuelve responsable de tus contraseñas"], answer: 2, why: "Al acercarte a SaaS, el proveedor hace más trabajo, pero tus datos y el acceso siempre siguen siendo tuyos." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Cómo se organiza Azure: regiones, zonas y grupos de recursos",
           minutes: 6,
           goal: "Describir dónde funciona Azure y cómo se organizan y se encuentran los recursos en el portal de Azure.",
@@ -84,17 +118,21 @@ module.exports = {
           ],
           sources: [STUDY],
           tryIt: "Planea la estructura para un centro comunitario que quiere un sitio web y un lugar para guardar formularios de inscripción: nombra un grupo de recursos, haz una lista de dos recursos que van en él y elige una región cerca de ti. Escribe una razón para tu elección de región.",
-          youCanNow: "explicar las regiones, las zonas de disponibilidad, los recursos, los grupos de recursos, las suscripciones y los grupos de administración."
+          youCanNow: "explicar las regiones, las zonas de disponibilidad, los recursos, los grupos de recursos, las suscripciones y los grupos de administración.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué es un grupo de recursos en Azure?", options: ["Un equipo de empleados de Microsoft", "Un tipo de máquina virtual", "Una cuenta de facturación", "Una carpeta para recursos que van juntos, como un sitio web"], answer: 3, why: "Los grupos de recursos reúnen recursos relacionados; la suscripción es la cuenta de facturación." },
+            { objective: "O3", q: "Tus usuarios están en Sudáfrica y sus datos deben quedarse en el país. ¿Cómo eliges una región?", options: ["Eliges la región más barata de cualquier lugar", "Eliges una región cerca de tus usuarios que cumpla las reglas sobre los datos", "Eliges una región al azar", "Usas todas las regiones a la vez"], answer: 1, why: "Elige una región cerca de los usuarios que también cumpla las reglas sobre dónde deben quedarse los datos." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Conceptos de la nube y las piezas de Azure",
         questions: [
-          { q: "¿Qué es el modelo basado en el consumo?", options: ["Compras todos los servidores por adelantado", "Todo es siempre gratis", "Pagas solo lo que usas", "Pagas un precio fijo para siempre"], answer: 2, why: "Los servicios en la nube suelen ser de pago por uso." },
-          { q: "El sitio web de un banco de alimentos se llena mucho una vez al mes. ¿Qué beneficio de la nube ayuda más?", options: ["Escalabilidad", "Nube privada", "CapEx", "SaaS"], answer: 0, why: "La escalabilidad agrega recursos cuando sube la demanda y los quita después." },
-          { q: "Microsoft Teams usado desde un navegador web es un ejemplo de:", options: ["IaaS", "PaaS", "Una región", "SaaS"], answer: 3, why: "Es un programa listo para usar que se entrega por internet." },
-          { q: "Según el modelo de responsabilidad compartida, ¿qué es SIEMPRE tu trabajo?", options: ["Construir el centro de datos", "Tus datos y quién tiene acceso a ellos", "Refrigerar los servidores", "Cambiar los discos duros rotos"], answer: 1, why: "Los clientes siempre son dueños de sus datos, cuentas y accesos." },
-          { q: "¿Qué guarda los recursos de Azure relacionados, como todo lo de un sitio web?", options: ["Una región", "Un grupo de recursos", "Una zona de disponibilidad", "Una contraseña"], answer: 1, why: "Los grupos de recursos organizan los recursos que van juntos." }
+          { objective: "O1", q: "¿Qué es el modelo basado en el consumo?", options: ["Compras todos los servidores por adelantado", "Todo es siempre gratis", "Pagas solo lo que usas", "Pagas un precio fijo para siempre"], answer: 2, why: "Los servicios en la nube suelen ser de pago por uso." },
+          { objective: "O1", q: "El sitio web de un banco de alimentos se llena mucho una vez al mes. ¿Qué beneficio de la nube ayuda más?", options: ["Escalabilidad", "Nube privada", "CapEx", "SaaS"], answer: 0, why: "La escalabilidad agrega recursos cuando sube la demanda y los quita después." },
+          { objective: "O2", q: "Microsoft Teams usado desde un navegador web es un ejemplo de:", options: ["IaaS", "PaaS", "Una región", "SaaS"], answer: 3, why: "Es un programa listo para usar que se entrega por internet." },
+          { objective: "O2", q: "Según el modelo de responsabilidad compartida, ¿qué es SIEMPRE tu trabajo?", options: ["Construir el centro de datos", "Tus datos y quién tiene acceso a ellos", "Refrigerar los servidores", "Cambiar los discos duros rotos"], answer: 1, why: "Los clientes siempre son dueños de sus datos, cuentas y accesos." },
+          { objective: "O3", q: "¿Qué guarda los recursos de Azure relacionados, como todo lo de un sitio web?", options: ["Una región", "Un grupo de recursos", "Una zona de disponibilidad", "Una contraseña"], answer: 1, why: "Los grupos de recursos organizan los recursos que van juntos." }
         ]
       }
     },
@@ -102,6 +140,7 @@ module.exports = {
       name: "Capítulo 2: Servicios básicos, costos y tu certificación",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Servicios básicos de Azure: cómputo, redes, almacenamiento y bases de datos",
           minutes: 6,
           goal: "Relacionar una necesidad común con el servicio básico de Azure correcto.",
@@ -119,9 +158,14 @@ module.exports = {
           ],
           sources: [STUDY],
           tryIt: "Para el centro comunitario de la Lección 3, elige un servicio para cada necesidad: un sitio web público, un lugar para guardar los formularios de inscripción escaneados y unas fotos viejas que casi nunca se abren. Escribe qué servicio y, para las fotos, qué nivel de almacenamiento.",
-          youCanNow: "relacionar necesidades comunes con los servicios de cómputo, redes, almacenamiento y bases de datos de Azure."
+          youCanNow: "relacionar necesidades comunes con los servicios de cómputo, redes, almacenamiento y bases de datos de Azure.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué servicio de Azure ejecuta pequeñas partes de código solo cuando algo lo activa?", options: ["Azure Virtual Machines", "Azure DNS", "Azure Functions", "ExpressRoute"], answer: 2, why: "Azure Functions es sin servidor: el código se ejecuta cuando algo lo activa y pagas por uso." },
+            { objective: "O4", q: "Un centro juvenil necesita una carpeta compartida que todo su personal pueda abrir. ¿Qué le sugerirías?", options: ["Azure Files en una cuenta de almacenamiento", "Azure Virtual Desktop", "Una VPN Gateway", "Azure SQL Database"], answer: 0, why: "Azure Files en una cuenta de almacenamiento ofrece carpetas compartidas." }
+          ]
         },
         {
+          objectives: ["O5","O6"],
           title: "Seguridad, gobernanza y control de costos",
           minutes: 6,
           goal: "Nombrar las herramientas de Azure que protegen las cuentas, aplican reglas y evitan facturas sorpresa.",
@@ -139,9 +183,14 @@ module.exports = {
           ],
           sources: [STUDY, CALC],
           tryIt: "Escribe tres reglas de seguridad y costos para la configuración de Azure del centro comunitario, una para el inicio de sesión, una para los accesos y una para los gastos. Ejemplo: \"Toda cuenta de voluntario usa MFA.\" Luego escribe dos etiquetas que pondrías en todos los recursos.",
-          youCanNow: "describir cómo Azure protege las cuentas, aplica reglas y mantiene los costos bajo control."
+          youCanNow: "describir cómo Azure protege las cuentas, aplica reglas y mantiene los costos bajo control.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué significa Confianza cero (Zero Trust)?", options: ["Confiar en toda solicitud que viene desde la oficina", "Verificar siempre; nunca dar por hecho que una solicitud es segura", "Desactivar las contraseñas", "Confiar solo en el proveedor de nube"], answer: 1, why: "Confianza cero significa que cada solicitud se revisa en lugar de darla por segura." },
+            { objective: "O5", q: "Le robaron la contraseña a un voluntario, pero el ladrón no pudo iniciar sesión. ¿Qué ajuste lo detuvo con más probabilidad?", options: ["Una etiqueta en el recurso", "Un nivel de almacenamiento más frío", "Un grupo de recursos", "La autenticación multifactor (MFA)"], answer: 3, why: "La MFA pide una segunda prueba, así que una contraseña robada no basta por sí sola." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Calcular costos y planear tu camino al AZ-900",
           minutes: 6,
           goal: "Calcular un costo mensual en la calculadora de precios y hacer un plan de estudio para el AZ-900.",
@@ -160,17 +209,21 @@ module.exports = {
           ],
           sources: [CALC, FREE, CERT, STUDY],
           tryIt: "Tarea final: escribe el plan de Azure de una página para el sitio web y el almacenamiento de archivos de una organización comunitaria (servicios y tipo, región, grupo de recursos, inicio de sesión seguro, etiquetas y presupuesto), agrega el estimado mensual de la calculadora de precios y luego haz la evaluación de práctica gratuita del AZ-900 y anota tus dos áreas más débiles.",
-          youCanNow: "planear y ponerle precio a una pequeña configuración de Azure y seguir un camino claro hacia la certificación AZ-900."
+          youCanNow: "planear y ponerle precio a una pequeña configuración de Azure y seguir un camino claro hacia la certificación AZ-900.",
+          quickCheck: [
+            { objective: "O6", q: "¿Por qué usar la calculadora de precios de Azure en lugar de un precio que leíste en internet?", options: ["Los precios cambian y dependen de la región, así que la calculadora da un cálculo actual", "La calculadora hace que Azure sea gratis", "Los precios en internet siempre son más altos", "La calculadora te inscribe automáticamente"], answer: 0, why: "Los precios cambian y varían según la región, así que calcula con la calculadora para tus propias opciones." },
+            { objective: "O6", q: "Hiciste la evaluación de práctica gratuita del AZ-900. ¿Cuál es el mejor paso siguiente?", options: ["Reservar el examen hoy sin estudiar", "Repetirla hasta memorizar las respuestas", "Anotar tus dos áreas más débiles y buscar los módulos gratuitos de Microsoft Learn para ellas", "Parar, porque los puntajes de práctica no importan"], answer: 2, why: "Tus áreas más débiles muestran qué estudiar después, y Microsoft Learn tiene módulos gratuitos para cada una." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Servicios básicos, costos y tu certificación",
         questions: [
-          { q: "¿Qué servicio de Azure aloja un sitio web sin que tengas que manejar servidores?", options: ["Azure Virtual Machines", "ExpressRoute", "Bloqueos de recursos", "Azure App Service"], answer: 3, why: "App Service es alojamiento web PaaS." },
-          { q: "Unas fotos viejas casi nunca se abren. ¿Qué opción de almacenamiento ahorra dinero?", options: ["Un nivel más frío, como esporádico, poco frecuente o de archivo", "El nivel frecuente", "Una máquina virtual más grande", "Una segunda suscripción"], answer: 0, why: "Los niveles más fríos cuestan menos para los datos que casi no abres." },
-          { q: "¿Qué herramienta evita que un recurso importante se borre por error?", options: ["Una etiqueta", "La calculadora de precios", "Un bloqueo de recurso", "Una región"], answer: 2, why: "Los bloqueos evitan que se borre o se cambie por accidente." },
-          { q: "¿Qué agrega la MFA al inicio de sesión?", options: ["Un nombre de usuario más largo", "Una suscripción gratuita", "Una región nueva", "Una segunda prueba, como un código en una aplicación"], answer: 3, why: "Con MFA, una contraseña robada no basta." },
-          { q: "¿Dónde debes consultar el precio actual del examen AZ-900?", options: ["En lo que adivine un amigo", "En una publicación vieja de un blog", "En la página oficial del examen de Microsoft para tu país", "En cualquier chatbot de IA"], answer: 2, why: "El precio depende del país, y la página oficial está al día." }
+          { objective: "O4", q: "¿Qué servicio de Azure aloja un sitio web sin que tengas que manejar servidores?", options: ["Azure Virtual Machines", "ExpressRoute", "Bloqueos de recursos", "Azure App Service"], answer: 3, why: "App Service es alojamiento web PaaS." },
+          { objective: "O4", q: "Unas fotos viejas casi nunca se abren. ¿Qué opción de almacenamiento ahorra dinero?", options: ["Un nivel más frío, como esporádico, poco frecuente o de archivo", "El nivel frecuente", "Una máquina virtual más grande", "Una segunda suscripción"], answer: 0, why: "Los niveles más fríos cuestan menos para los datos que casi no abres." },
+          { objective: "O5", q: "¿Qué herramienta evita que un recurso importante se borre por error?", options: ["Una etiqueta", "La calculadora de precios", "Un bloqueo de recurso", "Una región"], answer: 2, why: "Los bloqueos evitan que se borre o se cambie por accidente." },
+          { objective: "O5", q: "¿Qué agrega la MFA al inicio de sesión?", options: ["Un nombre de usuario más largo", "Una suscripción gratuita", "Una región nueva", "Una segunda prueba, como un código en una aplicación"], answer: 3, why: "Con MFA, una contraseña robada no basta." },
+          { objective: "O6", q: "¿Dónde debes consultar el precio actual del examen AZ-900?", options: ["En lo que adivine un amigo", "En una publicación vieja de un blog", "En la página oficial del examen de Microsoft para tu país", "En cualquier chatbot de IA"], answer: 2, why: "El precio depende del país, y la página oficial está al día." }
         ]
       }
     }
@@ -178,26 +231,106 @@ module.exports = {
   quiz: {
     title: "Examen final: Fundamentos de Microsoft Azure",
     questions: [
-      { q: "La computación en la nube significa:", options: ["Guardar archivos solo en una memoria USB", "Alquilar potencia de cálculo y servicios por internet", "Pronosticar el clima", "Comprar una computadora portátil nueva"], answer: 1, why: "La nube significa usar las computadoras de un proveedor por internet." },
-      { q: "Pagar una gran cantidad por adelantado para comprar servidores es:", options: ["CapEx", "OpEx", "SaaS", "Sin servidor"], answer: 0, why: "El gasto de capital es una compra por adelantado." },
-      { q: "Un servicio sigue funcionando aunque una máquina falle. Esto es:", options: ["Una etiqueta", "Un grupo de administración", "Alta disponibilidad", "CapEx"], answer: 2, why: "La alta disponibilidad mantiene los servicios funcionando a pesar de las fallas." },
-      { q: "Una organización usa sus propios servidores junto con Azure. Eso es:", options: ["Nube híbrida", "Solo nube privada", "Solo nube pública", "SaaS"], answer: 0, why: "La híbrida mezcla la privada y la pública." },
-      { q: "Alquilas una máquina virtual y manejas su sistema operativo. Eso es:", options: ["SaaS", "PaaS", "Una región", "IaaS"], answer: 3, why: "Manejar el sistema operativo de máquinas alquiladas es IaaS." },
-      { q: "El código que se ejecuta solo cuando se activa, sin servidor que manejar, se llama:", options: ["Un bloqueo de recurso", "Sin servidor (serverless)", "Almacenamiento de archivo", "Una VPN"], answer: 1, why: "Sin servidor se ejecuta bajo demanda; Azure Functions es un ejemplo." },
-      { q: "¿Quién protege siempre el centro de datos físico?", options: ["El cliente", "El proveedor de nube", "El banco del usuario", "Nadie"], answer: 1, why: "La seguridad física siempre es trabajo del proveedor." },
-      { q: "Una región de Azure es:", options: ["Una cuenta de facturación", "Un tipo de base de datos", "Una regla de contraseñas", "Una zona geográfica con uno o más centros de datos"], answer: 3, why: "Las regiones son donde están los centros de datos de Azure." },
-      { q: "Las zonas de disponibilidad son:", options: ["Centros de datos separados dentro de una región, con su propia electricidad y refrigeración", "Niveles de precio del almacenamiento", "Grupos de usuarios", "Países"], answer: 0, why: "Las zonas protegen contra la falla de un centro de datos." },
-      { q: "¿Cuál es la cuenta de facturación que contiene los grupos de recursos?", options: ["Una etiqueta", "Un contenedor", "Una suscripción", "Una región"], answer: 2, why: "Las suscripciones se facturan y contienen los grupos de recursos." },
-      { q: "¿Dónde administras Azure en un navegador web?", options: ["En una tienda de aplicaciones", "En un nivel de almacenamiento", "En ExpressRoute", "En el portal de Azure"], answer: 3, why: "El portal de Azure es el sitio web de administración." },
-      { q: "¿Qué servicio te da una computadora completa en la nube?", options: ["Azure DNS", "Azure Policy", "Azure Virtual Machines", "Etiquetas"], answer: 2, why: "Virtual Machines es cómputo IaaS." },
-      { q: "¿Cuál es una conexión privada a Azure que no usa el internet público?", options: ["VPN Gateway", "ExpressRoute", "Azure DNS", "Blob Storage"], answer: 1, why: "ExpressRoute es una conexión privada." },
-      { q: "¿Dónde guardarías copias de seguridad y videos?", options: ["En Blob Storage dentro de una cuenta de almacenamiento", "En Azure Policy", "En un grupo de administración", "En Microsoft Entra ID"], answer: 0, why: "Blob Storage guarda archivos grandes." },
-      { q: "¿Cuál es el servicio de inicio de sesión y directorio de Azure?", options: ["Azure Advisor", "Azure Functions", "Microsoft Entra ID", "Nivel de archivo"], answer: 2, why: "Entra ID administra las identidades y el inicio de sesión." },
-      { q: "Un voluntario solo necesita leer informes. ¿Qué idea lo limita a eso?", options: ["Control de acceso basado en roles (RBAC)", "Nube híbrida", "Escalabilidad", "Almacenamiento de archivo"], answer: 0, why: "RBAC da solo el acceso que necesita un rol." },
-      { q: "Quieres impedir que alguien cree recursos fuera de tu región. ¿Qué herramienta usas?", options: ["Etiquetas", "La calculadora de precios", "Un contenedor", "Azure Policy"], answer: 3, why: "Azure Policy aplica reglas como las regiones permitidas." },
-      { q: "Los rótulos como proyecto=sitioweb en los recursos se llaman:", options: ["Bloqueos", "Etiquetas", "Zonas", "Niveles"], answer: 1, why: "Las etiquetas ordenan los recursos y ayudan a seguir los costos." },
-      { q: "Antes de construir nada, ¿cómo estimas el costo mensual?", options: ["Adivinando", "Con la calculadora de precios de Azure", "Esperando la primera factura", "Preguntándole a un desconocido en internet"], answer: 1, why: "La calculadora estima los costos antes de construir." },
-      { q: "Según la guía de estudio de Microsoft, ¿qué puntuación necesitas para aprobar el AZ-900?", options: ["500", "600", "700 o más", "900 o más"], answer: 2, why: "La guía de estudio de Microsoft dice que se necesita una puntuación de 700 o más." }
+      { objective: "O1", q: "La computación en la nube significa:", options: ["Guardar archivos solo en una memoria USB", "Alquilar potencia de cálculo y servicios por internet", "Pronosticar el clima", "Comprar una computadora portátil nueva"], answer: 1, why: "La nube significa usar las computadoras de un proveedor por internet." },
+      { objective: "O1", q: "Pagar una gran cantidad por adelantado para comprar servidores es:", options: ["CapEx", "OpEx", "SaaS", "Sin servidor"], answer: 0, why: "El gasto de capital es una compra por adelantado." },
+      { objective: "O1", q: "Un servicio sigue funcionando aunque una máquina falle. Esto es:", options: ["Una etiqueta", "Un grupo de administración", "Alta disponibilidad", "CapEx"], answer: 2, why: "La alta disponibilidad mantiene los servicios funcionando a pesar de las fallas." },
+      { objective: "O1", q: "Una organización usa sus propios servidores junto con Azure. Eso es:", options: ["Nube híbrida", "Solo nube privada", "Solo nube pública", "SaaS"], answer: 0, why: "La híbrida mezcla la privada y la pública." },
+      { objective: "O2", q: "Alquilas una máquina virtual y manejas su sistema operativo. Eso es:", options: ["SaaS", "PaaS", "Una región", "IaaS"], answer: 3, why: "Manejar el sistema operativo de máquinas alquiladas es IaaS." },
+      { objective: "O2", q: "El código que se ejecuta solo cuando se activa, sin servidor que manejar, se llama:", options: ["Un bloqueo de recurso", "Sin servidor (serverless)", "Almacenamiento de archivo", "Una VPN"], answer: 1, why: "Sin servidor se ejecuta bajo demanda; Azure Functions es un ejemplo." },
+      { objective: "O2", q: "¿Quién protege siempre el centro de datos físico?", options: ["El cliente", "El proveedor de nube", "El banco del usuario", "Nadie"], answer: 1, why: "La seguridad física siempre es trabajo del proveedor." },
+      { objective: "O3", q: "Una región de Azure es:", options: ["Una cuenta de facturación", "Un tipo de base de datos", "Una regla de contraseñas", "Una zona geográfica con uno o más centros de datos"], answer: 3, why: "Las regiones son donde están los centros de datos de Azure." },
+      { objective: "O3", q: "Las zonas de disponibilidad son:", options: ["Centros de datos separados dentro de una región, con su propia electricidad y refrigeración", "Niveles de precio del almacenamiento", "Grupos de usuarios", "Países"], answer: 0, why: "Las zonas protegen contra la falla de un centro de datos." },
+      { objective: "O3", q: "¿Cuál es la cuenta de facturación que contiene los grupos de recursos?", options: ["Una etiqueta", "Un contenedor", "Una suscripción", "Una región"], answer: 2, why: "Las suscripciones se facturan y contienen los grupos de recursos." },
+      { objective: "O3", q: "¿Dónde administras Azure en un navegador web?", options: ["En una tienda de aplicaciones", "En un nivel de almacenamiento", "En ExpressRoute", "En el portal de Azure"], answer: 3, why: "El portal de Azure es el sitio web de administración." },
+      { objective: "O4", q: "¿Qué servicio te da una computadora completa en la nube?", options: ["Azure DNS", "Azure Policy", "Azure Virtual Machines", "Etiquetas"], answer: 2, why: "Virtual Machines es cómputo IaaS." },
+      { objective: "O4", q: "¿Cuál es una conexión privada a Azure que no usa el internet público?", options: ["VPN Gateway", "ExpressRoute", "Azure DNS", "Blob Storage"], answer: 1, why: "ExpressRoute es una conexión privada." },
+      { objective: "O4", q: "¿Dónde guardarías copias de seguridad y videos?", options: ["En Blob Storage dentro de una cuenta de almacenamiento", "En Azure Policy", "En un grupo de administración", "En Microsoft Entra ID"], answer: 0, why: "Blob Storage guarda archivos grandes." },
+      { objective: "O5", q: "¿Cuál es el servicio de inicio de sesión y directorio de Azure?", options: ["Azure Advisor", "Azure Functions", "Microsoft Entra ID", "Nivel de archivo"], answer: 2, why: "Entra ID administra las identidades y el inicio de sesión." },
+      { objective: "O5", q: "Un voluntario solo necesita leer informes. ¿Qué idea lo limita a eso?", options: ["Control de acceso basado en roles (RBAC)", "Nube híbrida", "Escalabilidad", "Almacenamiento de archivo"], answer: 0, why: "RBAC da solo el acceso que necesita un rol." },
+      { objective: "O5", q: "Quieres impedir que alguien cree recursos fuera de tu región. ¿Qué herramienta usas?", options: ["Etiquetas", "La calculadora de precios", "Un contenedor", "Azure Policy"], answer: 3, why: "Azure Policy aplica reglas como las regiones permitidas." },
+      { objective: "O5", q: "Los rótulos como proyecto=sitioweb en los recursos se llaman:", options: ["Bloqueos", "Etiquetas", "Zonas", "Niveles"], answer: 1, why: "Las etiquetas ordenan los recursos y ayudan a seguir los costos." },
+      { objective: "O6", q: "Antes de construir nada, ¿cómo estimas el costo mensual?", options: ["Adivinando", "Con la calculadora de precios de Azure", "Esperando la primera factura", "Preguntándole a un desconocido en internet"], answer: 1, why: "La calculadora estima los costos antes de construir." },
+      { objective: "O6", q: "Según la guía de estudio de Microsoft, ¿qué puntuación necesitas para aprobar el AZ-900?", options: ["500", "600", "700 o más", "900 o más"], answer: 2, why: "La guía de estudio de Microsoft dice que se necesita una puntuación de 700 o más." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      3,
+      4,
+      6,
+      7,
+      9,
+      11,
+      13,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en todas las filas. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Tipo de servicio y servicios",
+        objective: "O4",
+        notYet: "El plan no nombra servicios de Azure, o no sirven para un sitio web y el almacenamiento de archivos.",
+        meets: "Nombra el tipo de servicio (IaaS, PaaS o SaaS) y servicios adecuados, como App Service y una cuenta de almacenamiento.",
+        exceeds: "Dice por qué cada servicio sirve mejor que otra opción."
+      },
+      {
+        name: "Región y organización",
+        objective: "O3",
+        notYet: "No se nombra ninguna región ni grupo de recursos.",
+        meets: "Nombra una región con una razón y pone los recursos en un solo grupo de recursos.",
+        exceeds: "También nombra la suscripción que paga y si se necesitan zonas de disponibilidad."
+      },
+      {
+        name: "Inicio de sesión seguro y reglas",
+        objective: "O5",
+        notYet: "No dice cómo inician sesión las personas ni quién puede hacer qué.",
+        meets: "Usa MFA y da a cada persona solo el acceso que necesita (RBAC).",
+        exceeds: "También añade etiquetas, una directiva o un bloqueo de recursos y dice qué protege cada uno."
+      },
+      {
+        name: "Costo estimado",
+        objective: "O6",
+        notYet: "No hay cálculo, o el número no viene de la calculadora de precios.",
+        meets: "Da un total mensual estimado con la calculadora de precios y una alerta de presupuesto.",
+        exceeds: "Nombra un cambio que bajaría el costo, como un nivel de almacenamiento más frío."
+      },
+      {
+        name: "Plan de estudio",
+        objective: "O6",
+        notYet: "No se hizo la evaluación de práctica.",
+        meets: "Hizo la evaluación de práctica gratuita y anotó las dos áreas más débiles.",
+        exceeds: "Relacionó cada área débil con un módulo gratuito de Microsoft Learn y una fecha para estudiarlo."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Personas que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Personas que presentan el examen oficial AZ-900 en un plazo de 90 días, y cuántas lo aprueban",
+      "Personas que se postulan o empiezan un empleo o una práctica de soporte de TI, mesa de ayuda o nube",
+      "Organizaciones comunitarias que usan el plan de una persona para pasar un sitio web o archivos a la nube"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Una computadora o tableta con navegador web e internet",
+      "La calculadora de precios gratuita de Azure de Microsoft y una cuenta gratuita de Microsoft Learn para la evaluación de práctica",
+      "Una plantilla de plan de una página, o papel y lápiz",
+      "Unos 60 minutos para las lecciones, las comprobaciones y el plan, más unos 45 minutos para la evaluación de práctica"
+    ],
+    facilitatorNotes: [
+      "Hagan juntos la prueba inicial y luego un capítulo por sesión; recorran la calculadora de precios en una pantalla compartida.",
+      "No se necesita cuenta de Azure. Si alguien decide abrir una cuenta gratuita, pídele que lea las condiciones actuales, configure una alerta de presupuesto y borre los recursos de práctica al terminar.",
+      "Usen una organización local real, como un banco de alimentos o un centro juvenil, como ejemplo para el plan de una página.",
+      "Recuerda a las personas que los detalles y precios del examen cambian; envíalas a la página oficial del examen de Microsoft para su país.",
+      "Califica el plan con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

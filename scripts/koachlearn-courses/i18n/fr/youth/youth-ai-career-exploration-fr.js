@@ -17,11 +17,35 @@ module.exports = {
     "Les sites officiels cités sont américains. Si vous vivez dans un autre pays, cherchez aussi le site officiel d'orientation ou d'emploi de votre pays."
   ],
   finalTask: "Faites un plan de carrière d'une page pour un métier qui vous intéresse : pourquoi il correspond à vos centres d'intérêt, sa formation habituelle, son salaire et ses perspectives d'après un site officiel, une façon dont l'IA est utilisée dans ce travail, et trois étapes à faire cette année scolaire (un cours, un club ou une activité, et une personne à qui parler).",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des jeunes d'environ 13 à 18 ans aux États-Unis qui se demandent ce qu'ils pourraient faire plus tard, y compris ceux qui n'en ont encore aucune idée et ceux qui pensent aux métiers manuels, à l'université ou à un premier emploi.",
+    startingPoint: "Ils savent ce qu'ils aiment faire et ont parfois une idée de petit boulot, mais ont rarement utilisé un questionnaire d'intérêts, un site officiel sur les métiers ou un plan étape par étape. Beaucoup prennent des informations sur les métiers auprès d'amis, des réseaux sociaux ou de l'IA sans les vérifier.",
+    gap: "Sans vraies informations, les jeunes choisissent ou écartent des métiers sur des suppositions au sujet du salaire et de la formation, et passent à côté de cours et de programmes qu'ils pourraient commencer dès maintenant. Apprendre à explorer avec l'IA et à vérifier sur des sites officiels les aide à choisir une direction et à faire de vraies étapes dès cette année scolaire.",
+    constraints: [
+      "Âges minimum et implication d'un parent ou tuteur pour les nouveaux comptes, les emplois et le bénévolat",
+      "Les règles de l'école sur l'IA ; le conseiller d'orientation est un partenaire clé",
+      "Le salaire, la formation et les règles sur le travail des jeunes changent et varient selon l'État ; les apprenants vérifient sur des sites officiels",
+      "Vie privée : pas d'adresse, de numéro de téléphone ni d'autres informations privées dans les outils d'IA",
+      "Appareils : un téléphone, un ordinateur de l'école ou de la bibliothèque ; des leçons courtes"
+    ],
+    prerequisites: "Aucun."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Avec un questionnaire d'intérêts gratuit comme celui de mynextmove.org", action: "lister vos principaux centres d'intérêt et les trois activités que vous aimez le plus", standard: "en répondant honnêtement au questionnaire et en notant les résultats" },
+    { id: "O2", condition: "À partir de vos centres d'intérêt et d'un assistant d'IA que vous avez le droit d'utiliser", action: "créer une liste de métiers avec des parcours de formation différents et en choisir deux à étudier", standard: "sans partager d'informations privées et en traitant la liste comme des idées à vérifier" },
+    { id: "O3", condition: "Pour chacun de vos deux métiers", action: "chercher le salaire habituel, la formation et les perspectives d'emploi sur bls.gov/ooh ou mynextmove.org", standard: "en faisant confiance au site officiel chaque fois qu'il n'est pas d'accord avec l'IA" },
+    { id: "O4", condition: "Pour un métier qui vous plaît", action: "décrire une façon dont l'IA est utilisée dans ce travail et deux compétences humaines qui comptent toujours", standard: "en vérifiant auprès d'une vraie personne ou d'une source fiable" },
+    { id: "O5", condition: "À partir de votre classe et d'un métier visé", action: "planifier un parcours étape par étape d'aujourd'hui jusqu'à un premier emploi, avec trois étapes pour cette année scolaire", standard: "avec au moins une étape vérifiée auprès de votre conseiller d'orientation ou sur un site officiel" },
+    { id: "O6", condition: "Avant un premier emploi, du bénévolat ou une journée d'observation en entreprise", action: "vérifier les règles fédérales et celles de votre État sur le travail des jeunes, et écrire une présentation de vous en trois phrases", standard: "en suivant la règle la plus stricte et en répétant la présentation à voix haute" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Trouver des métiers qui vous correspondent",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Partir de ce que vous aimez",
           minutes: 5,
           goal: "Faire un questionnaire d'intérêts gratuit et noter vos principaux centres d'intérêt.",
@@ -39,9 +63,14 @@ module.exports = {
             { title: "Notez vos indices", bullets: ["Vos principaux domaines d'intérêt", "Trois activités que vous adorez"] }
           ],
           tryIt: "Faites le questionnaire d'intérêts sur mynextmove.org (ou celui que vous donne votre conseiller). Notez vos principaux domaines d'intérêt et trois choses que vous adorez faire.",
-          youCanNow: "décrire vos centres d'intérêt d'une façon qui vous aide à chercher des métiers."
+          youCanNow: "décrire vos centres d'intérêt d'une façon qui vous aide à chercher des métiers.",
+          quickCheck: [
+            { objective: "O1", q: "Quelle est la première étape d'une bonne recherche de métier ?", options: ["Choisir le métier qui paie le plus", "Regarder ce que vous aimez, ce que vous faites bien et ce qui compte pour vous", "Choisir ce que choisissent vos amis", "Postuler tout de suite à des emplois"], answer: 1, why: "Une bonne recherche commence par vous : vos centres d'intérêt, vos points forts et vos valeurs." },
+            { objective: "O1", q: "Vous avez fini le questionnaire d'intérêts sur mynextmove.org. Que faites-vous ensuite ?", options: ["Vous le fermez et oubliez les résultats", "Vous le refaites jusqu'à ce qu'il dise ce que vous voulez", "Vous donnez votre adresse au site", "Vous notez vos principaux centres d'intérêt et trois activités que vous adorez"], answer: 3, why: "Vos résultats et vos activités préférées sont vos premiers indices." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Trouver des idées de métiers avec l'IA",
           minutes: 5,
           goal: "Utiliser l'IA pour transformer vos centres d'intérêt en une liste de métiers à explorer.",
@@ -58,9 +87,14 @@ module.exports = {
             { title: "Des idées, pas des faits", bullets: ["L'IA peut se tromper sur salaires et formations", "Choisissez deux métiers à vérifier"] }
           ],
           tryIt: "Donnez vos centres d'intérêt à un assistant d'IA et demandez 10 métiers avec des formations différentes. Demandez à quoi ressemble une journée dans deux d'entre eux, puis choisissez vos deux préférés.",
-          youCanNow: "utiliser l'IA pour trouver des métiers qui correspondent à vos centres d'intérêt."
+          youCanNow: "utiliser l'IA pour trouver des métiers qui correspondent à vos centres d'intérêt.",
+          quickCheck: [
+            { objective: "O2", q: "Comment traiter une liste de métiers donnée par l'IA ?", options: ["Comme des idées à vérifier", "Comme des faits sur le salaire", "Comme une décision finale", "Comme une offre d'emploi"], answer: 0, why: "L'IA est bonne pour les idées, mais elle peut se tromper sur le salaire, la formation et les chiffres de l'emploi." },
+            { objective: "O2", q: "Vous aimez la musique et réparer des choses. Quelle demande aide le plus ?", options: ["« métiers »", "« Donne-moi mon adresse et un emploi. »", "« J'aime la musique et réparer des choses. Propose 10 métiers avec des parcours de formation différents. »", "« Quel métier est le meilleur ? »"], answer: 2, why: "Donner vos centres d'intérêt et demander des parcours de formation différents donne des idées utiles." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Vérifier les faits sur des sites officiels",
           minutes: 5,
           goal: "Trouver le salaire, la formation et les perspectives d'un métier sur un site officiel.",
@@ -78,17 +112,21 @@ module.exports = {
             { title: "Comparez et décidez", bullets: ["L'IA contre le site officiel", "En cas de désaccord, croyez le site officiel"] }
           ],
           tryIt: "Cherchez vos deux métiers sur bls.gov/ooh ou mynextmove.org. Notez pour chacun la formation habituelle, le salaire et les perspectives, et une chose que l'IA a dite différemment.",
-          youCanNow: "vérifier les vrais chiffres d'un métier sur un site officiel."
+          youCanNow: "vérifier les vrais chiffres d'un métier sur un site officiel.",
+          quickCheck: [
+            { objective: "O3", q: "Que montre l'Occupational Outlook Handbook sur bls.gov/ooh ?", options: ["Des critiques de jeux vidéo", "Des notes scolaires", "Les salaires des célébrités", "Le salaire habituel, la formation et les perspectives de centaines de métiers"], answer: 3, why: "C'est un guide officiel et gratuit des métiers, publié par le Bureau des statistiques du travail des États-Unis." },
+            { objective: "O3", q: "Un ami dit qu'un métier paie beaucoup, et l'IA donne un autre chiffre. Que faites-vous ?", options: ["Vous cherchez le salaire actuel sur un site officiel", "Vous faites confiance à votre ami", "Vous faites la moyenne des deux chiffres", "Vous faites confiance à l'IA"], answer: 0, why: "Les salaires changent selon l'époque et le lieu, alors vérifiez le chiffre actuel sur un site officiel." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Trouver des métiers qui vous correspondent",
         questions: [
-          { q: "Que fait un questionnaire d'intérêts ?", options: ["Il trouve votre mot de passe", "Il relie ce que vous aimez à des types de travail", "Il vous donne un emploi", "Il note vos devoirs"], answer: 1, why: "Il propose des métiers à partir de vos centres d'intérêt." },
-          { q: "Qui propose My Next Move ?", options: ["Une entreprise de jeux vidéo", "Un réseau social", "La cantine de votre école", "Le ministère du Travail des États-Unis"], answer: 3, why: "Le site est soutenu par le ministère du Travail des États-Unis." },
-          { q: "Quelle demande est la meilleure pour trouver des idées de métiers ?", options: ["\"J'aime les jeux, le dessin et aider les enfants. Propose 10 métiers avec des formations différentes.\"", "\"métiers\"", "\"donne-moi un travail\"", "\"c'est quoi le travail\""], answer: 0, why: "Elle donne vos centres d'intérêt et demande de la variété." },
-          { q: "L'IA dit qu'un métier paie une certaine somme. Vous devez :", options: ["La croire", "Le dire à tout le monde", "Vérifier le salaire actuel sur un site officiel", "Choisir ce métier tout de suite"], answer: 2, why: "L'IA peut se tromper ; les sites officiels ont les chiffres actuels." },
-          { q: "Qu'est-ce que le salaire médian ?", options: ["Le salaire le plus haut", "Le salaire le plus bas", "Le salaire du milieu : la moitié gagne plus, l'autre moins", "Le salaire des stagiaires seulement"], answer: 2, why: "La médiane est le point du milieu." }
+          { objective: "O1", q: "Que fait un questionnaire d'intérêts ?", options: ["Il trouve votre mot de passe", "Il relie ce que vous aimez à des types de travail", "Il vous donne un emploi", "Il note vos devoirs"], answer: 1, why: "Il propose des métiers à partir de vos centres d'intérêt." },
+          { objective: "O1", q: "Qui propose My Next Move ?", options: ["Une entreprise de jeux vidéo", "Un réseau social", "La cantine de votre école", "Le ministère du Travail des États-Unis"], answer: 3, why: "Le site est soutenu par le ministère du Travail des États-Unis." },
+          { objective: "O2", q: "Quelle demande est la meilleure pour trouver des idées de métiers ?", options: ["\"J'aime les jeux, le dessin et aider les enfants. Propose 10 métiers avec des formations différentes.\"", "\"métiers\"", "\"donne-moi un travail\"", "\"c'est quoi le travail\""], answer: 0, why: "Elle donne vos centres d'intérêt et demande de la variété." },
+          { objective: "O3", q: "L'IA dit qu'un métier paie une certaine somme. Vous devez :", options: ["La croire", "Le dire à tout le monde", "Vérifier le salaire actuel sur un site officiel", "Choisir ce métier tout de suite"], answer: 2, why: "L'IA peut se tromper ; les sites officiels ont les chiffres actuels." },
+          { objective: "O3", q: "Qu'est-ce que le salaire médian ?", options: ["Le salaire le plus haut", "Le salaire le plus bas", "Le salaire du milieu : la moitié gagne plus, l'autre moins", "Le salaire des stagiaires seulement"], answer: 2, why: "La médiane est le point du milieu." }
         ]
       }
     },
@@ -96,6 +134,7 @@ module.exports = {
       name: "Chapitre 2 : Planifier votre parcours",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Comment l'IA change le travail",
           minutes: 5,
           goal: "Décrire une façon dont l'IA est utilisée dans un métier qui vous plaît et les compétences humaines qui comptent toujours.",
@@ -111,9 +150,14 @@ module.exports = {
             { title: "Renseignez-vous pour votre métier", bullets: ["Demandez à l'IA comment elle y est utilisée", "Vérifiez auprès d'une vraie personne ou d'un site fiable"] }
           ],
           tryIt: "Demandez à l'IA comment l'IA est utilisée dans l'un de vos deux métiers et quelles compétences humaines comptent le plus. Notez une utilisation de l'IA, deux compétences humaines et une question que vous poseriez à une vraie personne de ce métier.",
-          youCanNow: "expliquer comment l'IA touche un métier et quelles compétences humaines comptent toujours."
+          youCanNow: "expliquer comment l'IA touche un métier et quelles compétences humaines comptent toujours.",
+          quickCheck: [
+            { objective: "O4", q: "Laquelle est une compétence humaine qui compte davantage à mesure que l'IA se répand ?", options: ["Taper vite", "Parler avec les gens et résoudre des problèmes nouveaux", "Apprendre des numéros de téléphone par cœur", "Copier des réponses"], answer: 1, why: "La communication, la créativité, la fiabilité et le fait de savoir quand l'IA se trompe comptent encore plus." },
+            { objective: "O4", q: "L'IA vous dit comment elle est utilisée chez les infirmiers. Comment le vérifier ?", options: ["Reposer la question à la même IA", "Supposer que c'est juste", "Le publier en ligne", "Demander à un vrai infirmier ou lire un site fiable du secteur ou d'actualité"], answer: 3, why: "Vérifiez ce que dit l'IA auprès d'une vraie personne du métier ou d'une source fiable." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Construire un parcours à partir du lycée",
           minutes: 5,
           goal: "Faire un plan étape par étape d'aujourd'hui jusqu'à un premier emploi dans un métier.",
@@ -130,12 +174,17 @@ module.exports = {
             { title: "Vérifiez et demandez", bullets: ["Licences et programmes changent selon l'État", "Parlez CTE et double inscription au conseiller"] }
           ],
           tryIt: "Demandez à l'IA un parcours étape par étape vers l'un de vos métiers. Choisissez trois choses à faire cette année scolaire et vérifiez-en une avec votre conseiller ou sur un site officiel.",
-          youCanNow: "construire un plan de parcours professionnel réaliste."
+          youCanNow: "construire un plan de parcours professionnel réaliste.",
+          quickCheck: [
+            { objective: "O5", q: "Qu'est-ce qu'un parcours professionnel ?", options: ["La route entre là où vous êtes aujourd'hui et le métier que vous voulez", "Un seul cours", "Un formulaire de candidature", "Une liste de noms d'entreprises"], answer: 0, why: "Un parcours liste les étapes, comme les cours, les programmes et la formation, d'aujourd'hui jusqu'à un emploi." },
+            { objective: "O5", q: "Le parcours donné par l'IA dit qu'il vous faut une certaine licence. Que faites-vous ?", options: ["Vous supposez que c'est pareil dans tous les États", "Vous laissez tomber la licence", "Vous vérifiez les règles de la licence sur un site officiel de votre État", "Vous demandez à l'IA de vous délivrer la licence"], answer: 2, why: "Les licences et les programmes changent selon l'État, alors vérifiez sur des sites officiels." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Se préparer à un premier emploi",
           minutes: 5,
-          goal: "Connaître les règles de base sur le travail des jeunes et préparer une courte présentation de vous pour un premier emploi.",
+          goal: "Vérifier les règles de base sur le travail des jeunes et préparer une courte présentation de vous pour un premier emploi.",
           text: [
             "Un premier emploi, du bénévolat ou une journée d'observation vous aident à tester un métier. Aux États-Unis, la loi fédérale exige le plus souvent d'avoir au moins 14 ans. À 14 ou 15 ans, vos heures sont limitées, par exemple 3 heures maximum un jour d'école et seulement entre 7 h et 19 h la plus grande partie de l'année (jusqu'à 21 h du 1er juin à Labor Day, début septembre). À 16 et 17 ans, la loi fédérale ne limite pas les heures, mais personne de moins de 18 ans ne peut faire un travail dangereux.",
             "Beaucoup d'États ont des règles plus strictes et peuvent demander un permis de travail. Quand la loi fédérale et celle de l'État s'appliquent, c'est la plus stricte qui compte. Renseignez-vous auprès du service du travail de votre État et parlez-en à un parent ou tuteur. Si vous vivez dans un autre pays, cherchez les règles officielles sur le travail des jeunes dans votre pays.",
@@ -150,17 +199,21 @@ module.exports = {
             { title: "Votre présentation pour un premier emploi", bullets: ["3 phrases sur vous", "Écrite avec l'IA, sans détails privés", "Entraînez-vous à voix haute"] }
           ],
           tryIt: "Tâche finale : faites votre plan de carrière d'une page : pourquoi le métier vous correspond, sa formation, son salaire et ses perspectives d'après un site officiel, une façon dont l'IA y est utilisée, et trois étapes pour cette année scolaire. Ajoutez en bas votre présentation en 3 phrases pour un premier emploi.",
-          youCanNow: "explorer des métiers, vérifier les faits, planifier votre parcours et vous présenter pour un premier emploi."
+          youCanNow: "explorer des métiers, vérifier les faits, planifier votre parcours et vous présenter pour un premier emploi.",
+          quickCheck: [
+            { objective: "O6", q: "D'après la loi fédérale, quel type de travail est interdit à toute personne de moins de 18 ans ?", options: ["Les travaux dangereux", "Le bénévolat", "Une journée d'observation en entreprise", "Garder des enfants de la famille"], answer: 0, why: "La loi fédérale interdit les travaux dangereux à toute personne de moins de 18 ans." },
+            { objective: "O6", q: "Vous voulez que l'IA vous aide à écrire votre présentation pour un premier emploi. Que laissez-vous hors de la demande ?", options: ["Que vous êtes fiable", "Votre adresse et votre numéro de téléphone", "Que vous entraînez une équipe de sport", "Ce que vous voulez apprendre"], answer: 1, why: "Gardez les informations privées comme votre adresse et votre numéro de téléphone hors des outils d'IA." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Planifier votre parcours",
         questions: [
-          { q: "Quelle compétence compte PLUS à mesure que l'IA se répand ?", options: ["Communiquer et résoudre des problèmes nouveaux", "Ignorer les gens", "Ne jamais apprendre de nouveaux outils", "Copier les réponses"], answer: 0, why: "Les compétences humaines prennent de la valeur quand l'IA fait les tâches répétitives." },
-          { q: "Qu'est-ce qu'un parcours professionnel ?", options: ["Un sentier de randonnée", "Une carte de jeu vidéo", "Un type de CV", "Les étapes entre l'école et un emploi dans un domaine"], answer: 3, why: "Un parcours est la route d'aujourd'hui jusqu'au métier." },
-          { q: "Qui peut vous dire quels cours CTE ou de double inscription propose votre école ?", options: ["Une publicité", "Votre conseiller d'orientation", "Une application au hasard", "Personne"], answer: 1, why: "Les conseillers connaissent les programmes de l'école." },
-          { q: "Selon la loi fédérale américaine, un jeune de 15 ans peut travailler au maximum, un jour d'école :", options: ["3 heures", "8 heures", "12 heures", "Sans limite"], answer: 0, why: "La limite fédérale pour les 14-15 ans est de 3 heures un jour d'école." },
-          { q: "La règle de votre État sur le travail des jeunes est plus stricte que la règle fédérale. Laquelle compte ?", options: ["La règle fédérale", "Aucune", "La règle la plus stricte", "Celle que préfère votre ami"], answer: 2, why: "Quand les deux s'appliquent, il faut suivre la plus stricte." }
+          { objective: "O4", q: "Quelle compétence compte PLUS à mesure que l'IA se répand ?", options: ["Communiquer et résoudre des problèmes nouveaux", "Ignorer les gens", "Ne jamais apprendre de nouveaux outils", "Copier les réponses"], answer: 0, why: "Les compétences humaines prennent de la valeur quand l'IA fait les tâches répétitives." },
+          { objective: "O5", q: "Qu'est-ce qu'un parcours professionnel ?", options: ["Un sentier de randonnée", "Une carte de jeu vidéo", "Un type de CV", "Les étapes entre l'école et un emploi dans un domaine"], answer: 3, why: "Un parcours est la route d'aujourd'hui jusqu'au métier." },
+          { objective: "O5", q: "Qui peut vous dire quels cours CTE ou de double inscription propose votre école ?", options: ["Une publicité", "Votre conseiller d'orientation", "Une application au hasard", "Personne"], answer: 1, why: "Les conseillers connaissent les programmes de l'école." },
+          { objective: "O6", q: "Selon la loi fédérale américaine, un jeune de 15 ans peut travailler au maximum, un jour d'école :", options: ["3 heures", "8 heures", "12 heures", "Sans limite"], answer: 0, why: "La limite fédérale pour les 14-15 ans est de 3 heures un jour d'école." },
+          { objective: "O6", q: "La règle de votre État sur le travail des jeunes est plus stricte que la règle fédérale. Laquelle compte ?", options: ["La règle fédérale", "Aucune", "La règle la plus stricte", "Celle que préfère votre ami"], answer: 2, why: "Quand les deux s'appliquent, il faut suivre la plus stricte." }
         ]
       }
     }
@@ -168,26 +221,107 @@ module.exports = {
   quiz: {
     title: "Quiz final : L'IA et la découverte des métiers",
     questions: [
-      { q: "Une bonne recherche de métier commence par :", options: ["Le métier le mieux payé seulement", "Ce que vous aimez et savez bien faire", "Un choix au hasard", "Ce que dit un inconnu"], answer: 1, why: "Vos centres d'intérêt sont les meilleurs premiers indices." },
-      { q: "mynextmove.org est :", options: ["Un magasin de jeux", "Un site de rencontre", "Un réseau social", "Un site gratuit sur les métiers du ministère du Travail des États-Unis"], answer: 3, why: "Il est soutenu par le ministère du Travail." },
-      { q: "Après un questionnaire d'intérêts, vous devez :", options: ["Oublier les résultats", "Publier votre mot de passe", "Quitter l'école", "Noter vos principaux domaines d'intérêt"], answer: 3, why: "Vos résultats sont des indices pour l'étape suivante." },
-      { q: "Quand vous cherchez des métiers avec l'IA, ne donnez pas :", options: ["Vos centres d'intérêt", "Des détails privés comme votre adresse", "Votre tranche d'âge", "Votre matière préférée"], answer: 1, why: "Ne mettez jamais d'informations privées dans l'IA." },
-      { q: "Un apprentissage est :", options: ["Un jeu vidéo", "Un test non payé", "Un emploi payé où vous apprenez un métier en travaillant", "Une résidence universitaire"], answer: 2, why: "Les apprentis gagnent de l'argent en apprenant." },
-      { q: "La liste de métiers donnée par l'IA doit être vue comme :", options: ["Des idées à vérifier", "Des faits garantis", "Une offre d'emploi", "Une note scolaire"], answer: 0, why: "L'IA peut se tromper sur les salaires et les formations." },
-      { q: "bls.gov/ooh montre pour chaque métier :", options: ["Des paroles de chansons", "Le salaire, la formation et les perspectives", "Des scores de jeux", "La météo"], answer: 1, why: "L'Occupational Outlook Handbook donne ces informations." },
-      { q: "L'IA et bls.gov ne disent pas la même chose sur la formation d'un métier. Faites confiance à :", options: ["L'IA", "Aucun des deux", "Un mème", "Le site officiel"], answer: 3, why: "Les sites officiels sont vérifiés et à jour." },
-      { q: "Les perspectives d'emploi, c'est :", options: ["Le nombre d'emplois attendus à l'avenir", "La vue depuis le bureau", "Votre tenue de travail", "L'humeur de votre patron"], answer: 0, why: "Les perspectives parlent du nombre d'emplois futurs." },
-      { q: "L'automatisation, c'est :", options: ["Conduire une voiture", "Une règle de l'école", "Des machines ou logiciels qui font des tâches que des personnes faisaient avant", "Un style de musique"], answer: 2, why: "L'automatisation fait passer des tâches aux machines." },
-      { q: "Lequel est un savoir-être ?", options: ["Seulement la vitesse de frappe", "Avoir un ordinateur portable", "Le travail d'équipe", "Connaître un mot de passe"], answer: 2, why: "Le savoir-être, ce sont les compétences relationnelles comme le travail d'équipe." },
-      { q: "Pour vérifier ce que dit l'IA sur l'IA dans un métier, vous pouvez :", options: ["Demander à une vraie personne de ce métier", "La croire totalement", "Demander à une publicité", "Ne rien vérifier"], answer: 0, why: "Les gens du métier savent comment il se passe vraiment." },
-      { q: "La double inscription, c'est :", options: ["Avoir deux casiers", "Avoir deux téléphones", "Avoir deux déjeuners", "Suivre des cours universitaires tout en étant au lycée"], answer: 3, why: "Les élèves gagnent des crédits universitaires plus tôt." },
-      { q: "Pourquoi vérifier les licences sur des sites officiels ?", options: ["L'IA a toujours raison", "Les règles changent selon l'État", "Elles ne changent jamais", "Ce n'est pas utile"], answer: 1, why: "Les règles de formation et de licence varient selon l'État." },
-      { q: "Une bonne demande de parcours à l'IA contient :", options: ["Votre classe et le métier visé", "Votre mot de passe", "Votre adresse", "Rien"], answer: 0, why: "La classe et l'objectif permettent à l'IA de faire un plan adapté." },
-      { q: "Selon la loi fédérale américaine, les jeunes de 14 et 15 ans peuvent en général travailler seulement entre :", options: ["Minuit et 6 h", "N'importe quand", "7 h et 19 h (21 h du 1er juin à Labor Day)", "Seulement les jours d'école"], answer: 2, why: "Ce sont les limites horaires fédérales." },
-      { q: "Selon la loi fédérale américaine, qui ne peut pas faire de travail dangereux ?", options: ["Seulement les moins de 12 ans", "Toute personne de moins de 18 ans", "Les adultes", "Personne"], answer: 1, why: "Les travaux dangereux sont interdits à toute personne de moins de 18 ans." },
-      { q: "Avant de prendre un premier emploi, vous devez :", options: ["Mentir sur votre âge", "Sécher l'école", "Donner votre numéro de téléphone à l'IA", "Vérifier les règles de votre État et parler à un parent ou tuteur"], answer: 3, why: "Votre État peut demander un permis, et un parent ou tuteur doit être au courant." },
-      { q: "Une journée d'observation, c'est :", options: ["Se cacher de son patron", "Un mode de jeu vidéo", "Un type de CV", "Suivre un travailleur pendant une journée pour voir son métier"], answer: 3, why: "L'observation permet de voir un métier de près." },
-      { q: "Une présentation pour un premier emploi doit être :", options: ["Un texte de 10 pages", "Environ 3 phrases sur vous, répétées à voix haute", "Votre adresse et votre numéro de téléphone", "Écrite par l'IA et jamais relue"], answer: 1, why: "Courte et répétée, elle est facile à dire avec assurance." }
+      { objective: "O1", q: "Une bonne recherche de métier commence par :", options: ["Le métier le mieux payé seulement", "Ce que vous aimez et savez bien faire", "Un choix au hasard", "Ce que dit un inconnu"], answer: 1, why: "Vos centres d'intérêt sont les meilleurs premiers indices." },
+      { objective: "O1", q: "mynextmove.org est :", options: ["Un magasin de jeux", "Un site de rencontre", "Un réseau social", "Un site gratuit sur les métiers du ministère du Travail des États-Unis"], answer: 3, why: "Il est soutenu par le ministère du Travail." },
+      { objective: "O1", q: "Après un questionnaire d'intérêts, vous devez :", options: ["Oublier les résultats", "Publier votre mot de passe", "Quitter l'école", "Noter vos principaux domaines d'intérêt"], answer: 3, why: "Vos résultats sont des indices pour l'étape suivante." },
+      { objective: "O2", q: "Quand vous cherchez des métiers avec l'IA, ne donnez pas :", options: ["Vos centres d'intérêt", "Des détails privés comme votre adresse", "Votre tranche d'âge", "Votre matière préférée"], answer: 1, why: "Ne mettez jamais d'informations privées dans l'IA." },
+      { objective: "O2", q: "Un apprentissage est :", options: ["Un jeu vidéo", "Un test non payé", "Un emploi payé où vous apprenez un métier en travaillant", "Une résidence universitaire"], answer: 2, why: "Les apprentis gagnent de l'argent en apprenant." },
+      { objective: "O2", q: "La liste de métiers donnée par l'IA doit être vue comme :", options: ["Des idées à vérifier", "Des faits garantis", "Une offre d'emploi", "Une note scolaire"], answer: 0, why: "L'IA peut se tromper sur les salaires et les formations." },
+      { objective: "O3", q: "bls.gov/ooh montre pour chaque métier :", options: ["Des paroles de chansons", "Le salaire, la formation et les perspectives", "Des scores de jeux", "La météo"], answer: 1, why: "L'Occupational Outlook Handbook donne ces informations." },
+      { objective: "O3", q: "L'IA et bls.gov ne disent pas la même chose sur la formation d'un métier. Faites confiance à :", options: ["L'IA", "Aucun des deux", "Un mème", "Le site officiel"], answer: 3, why: "Les sites officiels sont vérifiés et à jour." },
+      { objective: "O3", q: "Les perspectives d'emploi, c'est :", options: ["Le nombre d'emplois attendus à l'avenir", "La vue depuis le bureau", "Votre tenue de travail", "L'humeur de votre patron"], answer: 0, why: "Les perspectives parlent du nombre d'emplois futurs." },
+      { objective: "O4", q: "L'automatisation, c'est :", options: ["Conduire une voiture", "Une règle de l'école", "Des machines ou logiciels qui font des tâches que des personnes faisaient avant", "Un style de musique"], answer: 2, why: "L'automatisation fait passer des tâches aux machines." },
+      { objective: "O4", q: "Lequel est un savoir-être ?", options: ["Seulement la vitesse de frappe", "Avoir un ordinateur portable", "Le travail d'équipe", "Connaître un mot de passe"], answer: 2, why: "Le savoir-être, ce sont les compétences relationnelles comme le travail d'équipe." },
+      { objective: "O4", q: "Pour vérifier ce que dit l'IA sur l'IA dans un métier, vous pouvez :", options: ["Demander à une vraie personne de ce métier", "La croire totalement", "Demander à une publicité", "Ne rien vérifier"], answer: 0, why: "Les gens du métier savent comment il se passe vraiment." },
+      { objective: "O5", q: "La double inscription, c'est :", options: ["Avoir deux casiers", "Avoir deux téléphones", "Avoir deux déjeuners", "Suivre des cours universitaires tout en étant au lycée"], answer: 3, why: "Les élèves gagnent des crédits universitaires plus tôt." },
+      { objective: "O5", q: "Pourquoi vérifier les licences sur des sites officiels ?", options: ["L'IA a toujours raison", "Les règles changent selon l'État", "Elles ne changent jamais", "Ce n'est pas utile"], answer: 1, why: "Les règles de formation et de licence varient selon l'État." },
+      { objective: "O5", q: "Une bonne demande de parcours à l'IA contient :", options: ["Votre classe et le métier visé", "Votre mot de passe", "Votre adresse", "Rien"], answer: 0, why: "La classe et l'objectif permettent à l'IA de faire un plan adapté." },
+      { objective: "O6", q: "Selon la loi fédérale américaine, les jeunes de 14 et 15 ans peuvent en général travailler seulement entre :", options: ["Minuit et 6 h", "N'importe quand", "7 h et 19 h (21 h du 1er juin à Labor Day)", "Seulement les jours d'école"], answer: 2, why: "Ce sont les limites horaires fédérales." },
+      { objective: "O6", q: "Selon la loi fédérale américaine, qui ne peut pas faire de travail dangereux ?", options: ["Seulement les moins de 12 ans", "Toute personne de moins de 18 ans", "Les adultes", "Personne"], answer: 1, why: "Les travaux dangereux sont interdits à toute personne de moins de 18 ans." },
+      { objective: "O6", q: "Avant de prendre un premier emploi, vous devez :", options: ["Mentir sur votre âge", "Sécher l'école", "Donner votre numéro de téléphone à l'IA", "Vérifier les règles de votre État et parler à un parent ou tuteur"], answer: 3, why: "Votre État peut demander un permis, et un parent ou tuteur doit être au courant." },
+      { objective: "O6", q: "Une journée d'observation, c'est :", options: ["Se cacher de son patron", "Un mode de jeu vidéo", "Un type de CV", "Suivre un travailleur pendant une journée pour voir son métier"], answer: 3, why: "L'observation permet de voir un métier de près." },
+      { objective: "O6", q: "Une présentation pour un premier emploi doit être :", options: ["Un texte de 10 pages", "Environ 3 phrases sur vous, répétées à voix haute", "Votre adresse et votre numéro de téléphone", "Écrite par l'IA et jamais relue"], answer: 1, why: "Courte et répétée, elle est facile à dire avec assurance." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      1,
+      5,
+      6,
+      7,
+      9,
+      11,
+      13,
+      15,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Pourquoi il me correspond",
+        objective: "O1",
+        notYet: "Aucun lien entre le métier et les centres d'intérêt de l'apprenant.",
+        meets: "Cite des résultats du questionnaire d'intérêts ou des activités préférées qui vont avec le métier.",
+        exceeds: "Cite aussi un point fort ou une valeur qui va avec le métier."
+      },
+      {
+        name: "Faits officiels",
+        objective: "O3",
+        notYet: "Le salaire, la formation ou les perspectives manquent ou viennent seulement de l'IA.",
+        meets: "La formation habituelle, le salaire et les perspectives d'emploi d'après bls.gov/ooh ou mynextmove.org.",
+        exceeds: "Note aussi une chose que l'IA a donnée différemment du site officiel."
+      },
+      {
+        name: "L'IA dans le travail",
+        objective: "O4",
+        notYet: "Aucune utilisation de l'IA ni compétence humaine citée.",
+        meets: "Une façon dont l'IA est utilisée dans le métier et deux compétences humaines qui comptent toujours.",
+        exceeds: "Comprend une question à poser à une vraie personne de ce métier, ou sa réponse."
+      },
+      {
+        name: "Les étapes de cette année",
+        objective: "O5",
+        notYet: "Moins de trois étapes, ou des étapes vagues comme « travailler dur ».",
+        meets: "Trois étapes concrètes : un cours, un club ou une activité, et une personne à qui parler.",
+        exceeds: "Au moins une étape est vérifiée auprès d'un conseiller d'orientation ou sur un site officiel."
+      },
+      {
+        name: "Présentation pour un premier emploi",
+        objective: "O6",
+        notYet: "Pas de présentation, ou elle contient des informations privées.",
+        meets: "Une présentation de l'apprenant en trois phrases, répétée à voix haute.",
+        exceeds: "Note aussi les règles sur le travail des jeunes qui s'appliquent à l'âge et à l'État de l'apprenant."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Les apprenants qui font l'une de leurs trois étapes prévues (cours, club ou rencontre) dans les 30 jours",
+      "Les apprenants qui rencontrent un conseiller d'orientation au sujet de leur plan de carrière",
+      "Les apprenants qui commencent un emploi, du bénévolat, une journée d'observation ou un programme professionnel dans les 90 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone, un ordinateur de l'école ou de la bibliothèque avec Internet",
+      "Des sites gratuits : mynextmove.org et bls.gov/ooh",
+      "Un assistant d'IA gratuit que l'apprenant a le droit d'utiliser",
+      "Du papier ou un document pour le plan de carrière d'une page",
+      "Environ 60 minutes en tout : leçons, pratique, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Travaillez avec le conseiller d'orientation pour que les apprenants puissent vérifier pendant le cours les cours, les options CTE et la double inscription (dual enrollment).",
+      "Rappelez aux apprenants que le salaire et les règles sur le travail des jeunes changent et varient selon l'État ; faites-les vérifier sur des sites officiels en classe.",
+      "Ne demandez jamais aux apprenants de mettre des informations privées dans les outils d'IA ; utilisez seulement les prénoms, ou aucun nom, dans les présentations.",
+      "Invitez une personne d'un métier ou d'un emploi local pour que les apprenants puissent poser leur question à une « vraie personne ».",
+      "Évaluez le plan de carrière avec la grille et donnez un retour sur une ligne « Pas encore » à la fois."
     ]
   }
 };

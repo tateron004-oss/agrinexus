@@ -17,11 +17,35 @@ module.exports = {
     "Vous vous entraînerez avec un assistant d'IA qui joue le client. Chaque leçon dure environ cinq minutes avec une tâche « Essayez maintenant ». Un contrôle des connaissances clôt chaque chapitre et un quiz de 20 questions clôt le cours."
   ],
   finalTask: "Faites trois jeux de rôle de contacts clients avec un assistant d'IA qui joue le client : une question simple, un client mécontent et un problème que vous ne pouvez pas régler du premier coup. Utilisez le contact en cinq étapes, rédigez les notes de ticket de chacun, puis écrivez trois points de CV et une réponse d'entretien STAR sur une fois où vous avez calmé un client mécontent.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des personnes qui sortent de prison, des demandeurs d'emploi suivis par des programmes d'insertion et toute personne qui veut un premier emploi au service client dans un centre d'appels, une équipe de chat, un magasin, une banque, un centre de santé ou une société de livraison.",
+    startingPoint: "Ils savent parler avec les gens, rester calmes et régler les problèmes de tous les jours. Beaucoup ont utilisé un téléphone et des SMS ; peu ont utilisé un service d'assistance, un système de tickets ou un assistant d'IA au travail.",
+    gap: "Les emplois du service client mêlent maintenant contact humain et outils d'IA. Les apprenants ont besoin d'une méthode claire pour gérer un contact, calmer un client mécontent, vérifier les suggestions de l'IA, rédiger des notes de ticket et montrer ces compétences en entretien, afin d'être embauchés et de garder leur emploi.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes",
+      "Appareils : un téléphone ou un ordinateur partagé de bibliothèque ou de programme",
+      "Temps : des leçons d'environ cinq minutes avec de courts exercices pratiques",
+      "Confidentialité : les exercices utilisent des clients inventés et aucune vraie donnée de compte",
+      "Les règles et les outils changent d'une entreprise à l'autre ; les apprenants suivent la politique de chaque employeur"
+    ],
+    prerequisites: "Aucun. Les apprenants qui découvrent les outils d'IA peuvent suivre d'abord « Découvrir l'IA et prendre confiance avec le numérique »."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir de trois offres d'emploi au service client", action: "décrire les principaux emplois du service client et la façon dont les agents utilisent les outils d'IA comme les chatbots, les réponses suggérées et les bases de connaissances", standard: "en citant au moins un outil et une tâche humaine pour chaque emploi" },
+    { id: "O2", condition: "Dans un jeu de rôle avec un client", action: "gérer le contact de l'accueil à la conclusion avec les cinq étapes : accueillir, écouter, reformuler, résoudre et conclure", standard: "en suivant les cinq étapes dans l'ordre" },
+    { id: "O3", condition: "Dans un jeu de rôle avec un client mécontent", action: "calmer le client avec les étapes HEAT et décider quand transférer le dossier", standard: "sans vous disputer ni dire « calmez-vous »" },
+    { id: "O4", condition: "À partir d'une réponse suggérée par l'IA", action: "vérifier la réponse dans la base de connaissances et la politique, puis la corriger avant de l'envoyer", standard: "pour que chaque fait et chaque promesse respectent la politique" },
+    { id: "O5", condition: "Après un contact client", action: "rédiger des notes de ticket qui indiquent le problème, ce que vous avez fait, ce qui a été promis et le suivi", standard: "avec toutes les parties demandées et sans mot de passe ni donnée privée" },
+    { id: "O6", condition: "À partir d'une offre d'emploi", action: "rédiger des points de CV et une réponse d'entretien STAR qui montrent vos compétences de service client", standard: "avec trois points et une histoire STAR complète" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Bien servir les clients",
       lessons: [
         {
+          objectives: ["O1"],
           title: "À quoi ressemble le service client avec l'IA",
           minutes: 4,
           goal: "Décrire les emplois du service client et la façon dont les outils d'IA y sont utilisés.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Les qualités humaines comptent plus", bullets: ["Écoute et empathie", "Calme et jugement", "Vous décidez ; l'IA suggère"] }
           ],
           tryIt: "Regardez trois offres d'emploi au service client. Notez les intitulés de poste, si elles parlent d'IA, de chat ou d'outils précis, et trois compétences demandées par chacune.",
-          youCanNow: "décrire les emplois du service client et la façon dont les agents utilisent les outils d'IA."
+          youCanNow: "décrire les emplois du service client et la façon dont les agents utilisent les outils d'IA.",
+          quickCheck: [
+            { objective: "O1", q: "Que traite en général un agent humain quand une entreprise utilise des chatbots ?", options: ["Seulement les mots de passe à réinitialiser", "Rien, car les chatbots font tout le travail", "Les cas plus difficiles et plus émotionnels", "Seulement les cas dans une autre langue"], answer: 2, why: "Les chatbots prennent les questions simples, donc les humains reçoivent les cas difficiles qui demandent attention et jugement." },
+            { objective: "O1", q: "Une offre d'emploi demande « une expérience d'un système de tickets ». Vous n'en avez jamais utilisé. Que faites-vous ?", options: ["Laisser tomber l'offre parce que vous n'avez pas le profil", "Postuler en montrant des compétences proches, et apprendre à quoi sert un système de tickets", "Écrire sur votre CV que vous en avez utilisé un", "Demander à un chatbot de postuler à votre place"], answer: 1, why: "Vous pouvez postuler honnêtement, montrer des compétences proches et apprendre l'outil ; mentir sur un CV n'est jamais la solution." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Le contact client en cinq étapes",
           minutes: 5,
           goal: "Gérer un contact client de l'accueil à la conclusion en cinq étapes.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Protéger le compte", bullets: ["Vérifier l'identité selon la procédure", "Ne demander que ce qui est exigé", "Jamais de mot de passe complet"] }
           ],
           tryIt: "Demandez à un assistant d'IA : « Joue un client dont le colis est indiqué livré mais n'est jamais arrivé. Reste dans ton rôle. Quand on a fini, note-moi sur accueillir, écouter, reformuler, résoudre et conclure. » Faites le jeu de rôle.",
-          youCanNow: "gérer un contact client de l'accueil à la conclusion en cinq étapes."
+          youCanNow: "gérer un contact client de l'accueil à la conclusion en cinq étapes.",
+          quickCheck: [
+            { objective: "O2", q: "Quelle étape vient juste après l'accueil du client ?", options: ["Résoudre", "Conclure", "Reformuler", "Écouter"], answer: 3, why: "Après l'accueil, vous écoutez tout le problème avant de le reformuler ou de le résoudre." },
+            { objective: "O2", q: "Vous pensez que le problème est réglé. Que faites-vous avant de terminer le contact ?", options: ["Vérifier que c'est réglé, demander s'il y a autre chose et remercier", "Raccrocher vite pour prendre l'appel suivant", "Dire au client de rappeler si ça ne marche plus", "Lui demander de vous donner cinq étoiles"], answer: 0, why: "Une bonne conclusion vérifie la solution, demande s'il y a autre chose et remercie le client." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Calmer un client mécontent",
           minutes: 6,
           goal: "Utiliser des étapes d'apaisement pour calmer un client mécontent et trouver une solution.",
@@ -75,17 +109,21 @@ module.exports = {
             { title: "Connaître ses limites", bullets: ["Injures ou menaces : suivre la politique", "Appeler un superviseur", "Prendre soin de soi après les appels durs"] }
           ],
           tryIt: "Demandez à un assistant d'IA de jouer un client en colère dont la facture a été débitée deux fois. Utilisez HEAT. Demandez ensuite à l'IA quelles phrases ont marché et lesquelles changer.",
-          youCanNow: "calmer un client mécontent avec HEAT et savoir quand transférer le dossier."
+          youCanNow: "calmer un client mécontent avec HEAT et savoir quand transférer le dossier.",
+          quickCheck: [
+            { objective: "O3", q: "Que veut dire le T de HEAT ?", options: ["Talk faster (parler plus vite)", "Transfer (transférer)", "Take action (agir)", "Thank (remercier)"], answer: 2, why: "HEAT veut dire Écouter (Hear), Empathie, S'excuser (Apologize) et Agir (Take action)." },
+            { objective: "O3", q: "Un client crie à cause d'un double débit. Que dites-vous d'abord ?", options: ["« Je vous entends, et je suis désolé que ce soit arrivé. Je regarde tout de suite. »", "« Calmez-vous pour que je puisse vous aider. »", "« Ce n'est pas mon service. »", "« Vous avez dû cliquer deux fois. »"], answer: 0, why: "Écouter et montrer de l'empathie d'abord fait baisser la tension ; accuser ou dire « calmez-vous » la fait monter." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Bien servir les clients",
         questions: [
-          { q: "Qu'est-ce qu'une base de connaissances ?", options: ["Le compte bancaire d'un client", "Un type de chatbot", "La bibliothèque de réponses et de modes d'emploi d'une entreprise", "Seulement une vidéo de formation"], answer: 2, why: "Les agents y cherchent les bonnes réponses." },
-          { q: "Pourquoi les qualités humaines comptent-elles plus à mesure que l'IA grandit dans le service client ?", options: ["Les humains reçoivent les cas plus difficiles et plus émotionnels", "L'IA est interdite", "Les clients n'utilisent jamais le chat", "Les humains ne répondent qu'aux questions simples"], answer: 0, why: "Les chatbots prennent les cas simples ; les personnes gèrent les cas difficiles." },
-          { q: "Quelle étape vient juste après l'écoute ?", options: ["Conclure l'appel", "Demander son mot de passe", "Le transférer", "Reformuler le problème avec vos mots"], answer: 3, why: "Reformuler montre que vous avez compris." },
-          { q: "Que veut dire le E de HEAT ?", options: ["Escalader", "Empathie", "Sortie", "E-mail"], answer: 1, why: "HEAT : écouter, Empathie, s'excuser, agir." },
-          { q: "Quelle phrase faut-il éviter avec un client mécontent ?", options: ["« Je comprends à quel point c'est frustrant. »", "« Calmez-vous. »", "« Voici ce que je vais faire. »", "« Merci de votre patience. »"], answer: 1, why: "« Calmez-vous » met en général les gens encore plus en colère." }
+          { objective: "O1", q: "Qu'est-ce qu'une base de connaissances ?", options: ["Le compte bancaire d'un client", "Un type de chatbot", "La bibliothèque de réponses et de modes d'emploi d'une entreprise", "Seulement une vidéo de formation"], answer: 2, why: "Les agents y cherchent les bonnes réponses." },
+          { objective: "O1", q: "Pourquoi les qualités humaines comptent-elles plus à mesure que l'IA grandit dans le service client ?", options: ["Les humains reçoivent les cas plus difficiles et plus émotionnels", "L'IA est interdite", "Les clients n'utilisent jamais le chat", "Les humains ne répondent qu'aux questions simples"], answer: 0, why: "Les chatbots prennent les cas simples ; les personnes gèrent les cas difficiles." },
+          { objective: "O2", q: "Quelle étape vient juste après l'écoute ?", options: ["Conclure l'appel", "Demander son mot de passe", "Le transférer", "Reformuler le problème avec vos mots"], answer: 3, why: "Reformuler montre que vous avez compris." },
+          { objective: "O3", q: "Que veut dire le E de HEAT ?", options: ["Escalader", "Empathie", "Sortie", "E-mail"], answer: 1, why: "HEAT : écouter, Empathie, s'excuser, agir." },
+          { objective: "O3", q: "Quelle phrase faut-il éviter avec un client mécontent ?", options: ["« Je comprends à quel point c'est frustrant. »", "« Calmez-vous. »", "« Voici ce que je vais faire. »", "« Merci de votre patience. »"], answer: 1, why: "« Calmez-vous » met en général les gens encore plus en colère." }
         ]
       }
     },
@@ -93,6 +131,7 @@ module.exports = {
       name: "Chapitre 2 : Les outils d'IA et l'embauche",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Utiliser les réponses suggérées par l'IA et la base de connaissances",
           minutes: 5,
           goal: "Utiliser les suggestions de l'IA comme point de départ et les vérifier avant d'envoyer.",
@@ -109,9 +148,14 @@ module.exports = {
             { title: "S'entraîner chez soi", bullets: ["Coller un message inventé dans l'IA", "Lui donner la politique", "Corriger comme un agent"] }
           ],
           tryIt: "Écrivez un e-mail client inventé sur un remboursement en retard. Demandez à l'IA une réponse fondée sur une politique que vous inventez, puis corrigez-la et marquez chaque changement fait.",
-          youCanNow: "utiliser en sécurité les réponses suggérées par l'IA en les vérifiant, en les personnalisant et en suivant la politique."
+          youCanNow: "utiliser en sécurité les réponses suggérées par l'IA en les vérifiant, en les personnalisant et en suivant la politique.",
+          quickCheck: [
+            { objective: "O4", q: "Qu'est-ce qu'une réponse suggérée par l'IA ?", options: ["Une réponse finale que vous devez envoyer", "Un brouillon écrit par l'IA que vous vérifiez et corrigez", "Un message de votre superviseur", "Un questionnaire que le client remplit"], answer: 1, why: "La suggestion n'est qu'un point de départ ; c'est vous qui la vérifiez et décidez quoi envoyer." },
+            { objective: "O4", q: "Un brouillon de l'IA promet un remboursement en deux jours, mais la politique dit cinq à sept jours. Que faites-vous ?", options: ["L'envoyer puisque l'IA l'a écrit", "Supprimer toute la réponse et ne rien envoyer", "Corriger le délai pour respecter la politique avant d'envoyer", "Demander au client quel délai il préfère"], answer: 2, why: "Chaque fait et chaque promesse doivent respecter la politique avant l'envoi." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Rédiger des notes de ticket et protéger les données des clients",
           minutes: 5,
           goal: "Rédiger des notes de ticket claires et traiter les informations des clients en sécurité.",
@@ -128,9 +172,14 @@ module.exports = {
             { title: "Protéger les données clients", bullets: ["Seulement les comptes que vous aidez", "Pas de données clients dans les IA non approuvées", "Ni numéro de carte ni mot de passe dans les notes"] }
           ],
           tryIt: "Rédigez les notes de ticket des deux jeux de rôle faits au chapitre 1. Demandez ensuite à l'IA de résumer l'un d'eux et comparez son résumé à vos notes.",
-          youCanNow: "rédiger des notes de ticket claires et protéger les informations des clients."
+          youCanNow: "rédiger des notes de ticket claires et protéger les informations des clients.",
+          quickCheck: [
+            { objective: "O5", q: "Pourquoi les notes de ticket sont-elles importantes ?", options: ["Elles permettent à l'agent suivant de reprendre le dossier sans redemander au client", "Elles servent seulement aux avocats de l'entreprise", "Elles remplacent la conversation avec le client", "On y écrit son opinion sur le client"], answer: 0, why: "Des notes claires permettent à n'importe qui de continuer le dossier sans faire tout répéter au client." },
+            { objective: "O5", q: "Un client vous lit son numéro de carte par erreur. Qu'écrivez-vous dans les notes ?", options: ["Le numéro de carte complet pour le garder", "Le numéro de carte et son mot de passe", "Rien du tout sur l'appel", "Le problème et les actions faites, sans numéro de carte"], answer: 3, why: "Les notes indiquent le problème et les actions, jamais un numéro de carte complet ni un mot de passe." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Se faire embaucher au service client",
           minutes: 5,
           goal: "Montrer vos compétences de service client sur un CV et en entretien.",
@@ -147,17 +196,21 @@ module.exports = {
             { title: "Préparer l'entretien", bullets: ["Mises en situation avec HEAT", "Une histoire STAR où vous avez calmé quelqu'un", "S'entraîner à taper"] }
           ],
           tryIt: "Tâche finale : faites trois jeux de rôle de contacts clients avec l'IA (question simple, client mécontent, problème non réglé du premier coup), rédigez les notes de ticket de chacun, puis écrivez trois points de CV et une réponse STAR sur une fois où vous avez calmé un client mécontent.",
-          youCanNow: "gérer des clients avec les outils d'IA comme un agent de support et montrer ces compétences pour être embauché."
+          youCanNow: "gérer des clients avec les outils d'IA comme un agent de support et montrer ces compétences pour être embauché.",
+          quickCheck: [
+            { objective: "O6", q: "Que veut dire le R d'une réponse STAR ?", options: ["Raison", "Réponse", "Retour", "Résultat"], answer: 3, why: "STAR veut dire Situation, Tâche, Action et Résultat." },
+            { objective: "O6", q: "Vous avez travaillé dans la cuisine d'une prison en servant 200 personnes par jour. Comment l'utiliser sur un CV pour le service client ?", options: ["Ne pas le mettre parce que ça ne compte pas", "Écrire un point sur le service de 200 personnes par jour, avec rapidité et politesse", "Dire seulement que vous étiez occupé", "Le présenter comme un poste de responsable"], answer: 1, why: "Une vraie expérience de service aux gens compte ; décrivez-la honnêtement avec un chiffre." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Les outils d'IA et l'embauche",
         questions: [
-          { q: "Une réponse suggérée par l'IA propose un remboursement que votre politique n'autorise pas. Que faites-vous ?", options: ["L'envoyer quand même", "Laisser le client décider", "Supprimer le ticket", "Ne pas l'envoyer ; suivre la politique"], answer: 3, why: "Les agents suivent la politique, pas les suppositions de l'IA." },
-          { q: "De bonnes notes de ticket contiennent :", options: ["Le problème, ce que vous avez fait, ce qui a été promis et le suivi", "Le numéro de carte complet du client", "Votre avis sur le client", "Rien"], answer: 0, why: "Les notes aident l'agent suivant." },
-          { q: "Un résumé de l'IA oublie une promesse que vous avez faite. Vous devez :", options: ["La laisser de côté", "Supprimer toutes les notes", "Ajouter la promesse aux notes", "Accuser l'IA plus tard"], answer: 2, why: "Vérifiez et corrigez les résumés de l'IA." },
-          { q: "Qu'est-ce qui ne doit jamais être écrit dans les notes de ticket ?", options: ["La date de commande", "La date de suivi", "Ce que vous avez vérifié", "Le mot de passe complet d'un client"], answer: 3, why: "Les mots de passe ne doivent jamais être notés." },
-          { q: "En entretien, on vous demande comment vous géreriez un client qui crie. Meilleure réponse :", options: ["« Je crierais aussi. »", "« Je raccrocherais tout de suite. »", "Expliquer HEAT et les étapes que vous suivriez", "« Je ne sais pas. »"], answer: 2, why: "Montrer vos étapes prouve la compétence." }
+          { objective: "O4", q: "Une réponse suggérée par l'IA propose un remboursement que votre politique n'autorise pas. Que faites-vous ?", options: ["L'envoyer quand même", "Laisser le client décider", "Supprimer le ticket", "Ne pas l'envoyer ; suivre la politique"], answer: 3, why: "Les agents suivent la politique, pas les suppositions de l'IA." },
+          { objective: "O5", q: "De bonnes notes de ticket contiennent :", options: ["Le problème, ce que vous avez fait, ce qui a été promis et le suivi", "Le numéro de carte complet du client", "Votre avis sur le client", "Rien"], answer: 0, why: "Les notes aident l'agent suivant." },
+          { objective: "O5", q: "Un résumé de l'IA oublie une promesse que vous avez faite. Vous devez :", options: ["La laisser de côté", "Supprimer toutes les notes", "Ajouter la promesse aux notes", "Accuser l'IA plus tard"], answer: 2, why: "Vérifiez et corrigez les résumés de l'IA." },
+          { objective: "O5", q: "Qu'est-ce qui ne doit jamais être écrit dans les notes de ticket ?", options: ["La date de commande", "La date de suivi", "Ce que vous avez vérifié", "Le mot de passe complet d'un client"], answer: 3, why: "Les mots de passe ne doivent jamais être notés." },
+          { objective: "O6", q: "En entretien, on vous demande comment vous géreriez un client qui crie. Meilleure réponse :", options: ["« Je crierais aussi. »", "« Je raccrocherais tout de suite. »", "Expliquer HEAT et les étapes que vous suivriez", "« Je ne sais pas. »"], answer: 2, why: "Montrer vos étapes prouve la compétence." }
         ]
       }
     }
@@ -165,26 +218,106 @@ module.exports = {
   quiz: {
     title: "Quiz final : L'IA pour les métiers du service client",
     questions: [
-      { q: "Lequel est un intitulé de poste du service client ?", options: ["Cariste", "Agent de support", "Soudeur", "Pilote"], answer: 1, why: "Les agents de support aident les clients." },
-      { q: "Dans beaucoup d'entreprises aujourd'hui, les questions simples sont souvent traitées par :", options: ["Des chatbots", "Le courrier seulement", "Personne", "Le PDG"], answer: 0, why: "Les chatbots gèrent les questions simples et fréquentes." },
-      { q: "Un ticket est :", options: ["Une place de cinéma", "Une amende de stationnement", "Le dossier d'un problème client et de ce qui a été fait", "Une fiche de paie"], answer: 2, why: "Les tickets suivent chaque problème." },
-      { q: "Qui décide en dernier ce qu'on dit à un client ?", options: ["Vous, en suivant la politique", "L'IA", "Le client", "Un collègue au hasard"], answer: 0, why: "L'IA suggère ; les agents décident." },
-      { q: "La première étape d'un contact client est :", options: ["Conclure", "Résoudre", "Transférer", "Accueillir avec votre nom et proposer votre aide"], answer: 3, why: "Un accueil chaleureux commence bien." },
-      { q: "« Donc votre commande est indiquée livrée mais n'est pas arrivée » est un exemple :", options: ["De conclusion", "De reformulation du problème", "De transfert", "De vérification d'identité"], answer: 1, why: "Répéter le problème le confirme." },
-      { q: "Avant de communiquer des détails du compte, vous devez :", options: ["Les donner tout de suite", "Vérifier l'identité selon la procédure de l'entreprise", "Demander le mot de passe complet", "Demander à un collègue de deviner"], answer: 1, why: "La vérification protège le compte." },
-      { q: "Comment conclure un contact ?", options: ["Raccrocher brusquement", "Ne rien dire", "Demander un pourboire", "Vérifier que c'est réglé, demander s'il y a autre chose, remercier"], answer: 3, why: "Une bonne conclusion laisse le client satisfait." },
-      { q: "Les clients mécontents en veulent en général :", options: ["À la situation, pas à vous", "À vous personnellement", "À la météo", "À rien"], answer: 0, why: "S'en souvenir aide à rester calme." },
-      { q: "Dans ce cours, HEAT veut dire :", options: ["Aider, Finir, Demander, Transférer", "Se presser, Expliquer, Discuter, Parler", "Écouter (Hear), Empathie, S'excuser (Apologize), Agir (Take action)", "Patienter, Écrire, Répondre, Remercier"], answer: 2, why: "Ce sont les quatre étapes de HEAT." },
-      { q: "Un client devient injurieux et menaçant. Vous devez :", options: ["Le menacer en retour", "Communiquer son adresse", "Subir les injures indéfiniment", "Suivre la politique de l'entreprise : avertissement, fin du contact ou superviseur"], answer: 3, why: "Les politiques protègent les agents et les clients." },
-      { q: "Transférer (escalader) un dossier veut dire :", options: ["Prendre un escalator", "Hausser le ton", "Passer un dossier à un superviseur ou à un spécialiste", "Fermer le dossier"], answer: 2, why: "Le transfert fait monter les cas difficiles." },
-      { q: "Les réponses suggérées par l'IA peuvent être :", options: ["Toujours parfaites", "Fausses, dépassées ou inadaptées au client", "Illégales à lire", "Seulement en langue étrangère"], answer: 1, why: "Vérifiez-les toujours." },
-      { q: "Avant d'envoyer une réponse suggérée par l'IA, vérifiez les faits dans :", options: ["La base de connaissances ou la politique", "Les réseaux sociaux", "Seulement votre mémoire", "Le site d'un concurrent"], answer: 0, why: "Les sources officielles gardent les réponses exactes." },
-      { q: "Qu'est-ce qui ne doit jamais entrer dans un outil d'IA non approuvé par votre entreprise ?", options: ["Un message d'entraînement inventé", "Une question de grammaire", "Des informations sur les clients", "Une formule d'accueil générale"], answer: 2, why: "Les données des clients doivent être protégées." },
-      { q: "La protection des données, c'est :", options: ["Garder les informations personnelles en sécurité et ne les utiliser que comme c'est permis", "Partager les données avec des amis", "Supprimer toutes les données", "Publier les données en ligne"], answer: 0, why: "C'est un devoir de base du métier." },
-      { q: "Quel point de CV est le plus fort pour le service client ?", options: ["« Fait des trucs »", "« Travaillé parfois »", "« Bonne personne »", "« Servi plus de 60 clients par jour avec calme et amabilité »"], answer: 3, why: "Il montre des chiffres et la compétence." },
-      { q: "L'expérience acquise où peut compter pour le service client ?", options: ["Seulement dans les centres d'appels", "Dans la restauration, l'aide aux personnes, l'église ou le travail en détention", "Seulement à l'université", "Nulle part"], answer: 1, why: "Aider des gens, n'importe où, développe la compétence." },
-      { q: "Une histoire STAR sur une fois où vous avez calmé quelqu'un montre :", options: ["Vos anciens salaires", "Situation, Tâche, Action et Résultat", "Vos films préférés", "Rien"], answer: 1, why: "STAR prouve la compétence par un exemple." },
-      { q: "Quelle compétence certains employeurs testent-ils avant d'embaucher ?", options: ["Le jonglage", "La natation", "Le chant", "La vitesse et la précision de frappe"], answer: 3, why: "Les agents tapent beaucoup ; entraînez-vous avec un test de frappe gratuit." }
+      { objective: "O1", q: "Lequel est un intitulé de poste du service client ?", options: ["Cariste", "Agent de support", "Soudeur", "Pilote"], answer: 1, why: "Les agents de support aident les clients." },
+      { objective: "O1", q: "Dans beaucoup d'entreprises aujourd'hui, les questions simples sont souvent traitées par :", options: ["Des chatbots", "Le courrier seulement", "Personne", "Le PDG"], answer: 0, why: "Les chatbots gèrent les questions simples et fréquentes." },
+      { objective: "O1", q: "Un ticket est :", options: ["Une place de cinéma", "Une amende de stationnement", "Le dossier d'un problème client et de ce qui a été fait", "Une fiche de paie"], answer: 2, why: "Les tickets suivent chaque problème." },
+      { objective: "O4", q: "Qui décide en dernier ce qu'on dit à un client ?", options: ["Vous, en suivant la politique", "L'IA", "Le client", "Un collègue au hasard"], answer: 0, why: "L'IA suggère ; les agents décident." },
+      { objective: "O2", q: "La première étape d'un contact client est :", options: ["Conclure", "Résoudre", "Transférer", "Accueillir avec votre nom et proposer votre aide"], answer: 3, why: "Un accueil chaleureux commence bien." },
+      { objective: "O2", q: "« Donc votre commande est indiquée livrée mais n'est pas arrivée » est un exemple :", options: ["De conclusion", "De reformulation du problème", "De transfert", "De vérification d'identité"], answer: 1, why: "Répéter le problème le confirme." },
+      { objective: "O2", q: "Avant de communiquer des détails du compte, vous devez :", options: ["Les donner tout de suite", "Vérifier l'identité selon la procédure de l'entreprise", "Demander le mot de passe complet", "Demander à un collègue de deviner"], answer: 1, why: "La vérification protège le compte." },
+      { objective: "O2", q: "Comment conclure un contact ?", options: ["Raccrocher brusquement", "Ne rien dire", "Demander un pourboire", "Vérifier que c'est réglé, demander s'il y a autre chose, remercier"], answer: 3, why: "Une bonne conclusion laisse le client satisfait." },
+      { objective: "O3", q: "Les clients mécontents en veulent en général :", options: ["À la situation, pas à vous", "À vous personnellement", "À la météo", "À rien"], answer: 0, why: "S'en souvenir aide à rester calme." },
+      { objective: "O3", q: "Dans ce cours, HEAT veut dire :", options: ["Aider, Finir, Demander, Transférer", "Se presser, Expliquer, Discuter, Parler", "Écouter (Hear), Empathie, S'excuser (Apologize), Agir (Take action)", "Patienter, Écrire, Répondre, Remercier"], answer: 2, why: "Ce sont les quatre étapes de HEAT." },
+      { objective: "O3", q: "Un client devient injurieux et menaçant. Vous devez :", options: ["Le menacer en retour", "Communiquer son adresse", "Subir les injures indéfiniment", "Suivre la politique de l'entreprise : avertissement, fin du contact ou superviseur"], answer: 3, why: "Les politiques protègent les agents et les clients." },
+      { objective: "O3", q: "Transférer (escalader) un dossier veut dire :", options: ["Prendre un escalator", "Hausser le ton", "Passer un dossier à un superviseur ou à un spécialiste", "Fermer le dossier"], answer: 2, why: "Le transfert fait monter les cas difficiles." },
+      { objective: "O4", q: "Les réponses suggérées par l'IA peuvent être :", options: ["Toujours parfaites", "Fausses, dépassées ou inadaptées au client", "Illégales à lire", "Seulement en langue étrangère"], answer: 1, why: "Vérifiez-les toujours." },
+      { objective: "O4", q: "Avant d'envoyer une réponse suggérée par l'IA, vérifiez les faits dans :", options: ["La base de connaissances ou la politique", "Les réseaux sociaux", "Seulement votre mémoire", "Le site d'un concurrent"], answer: 0, why: "Les sources officielles gardent les réponses exactes." },
+      { objective: "O5", q: "Qu'est-ce qui ne doit jamais entrer dans un outil d'IA non approuvé par votre entreprise ?", options: ["Un message d'entraînement inventé", "Une question de grammaire", "Des informations sur les clients", "Une formule d'accueil générale"], answer: 2, why: "Les données des clients doivent être protégées." },
+      { objective: "O5", q: "La protection des données, c'est :", options: ["Garder les informations personnelles en sécurité et ne les utiliser que comme c'est permis", "Partager les données avec des amis", "Supprimer toutes les données", "Publier les données en ligne"], answer: 0, why: "C'est un devoir de base du métier." },
+      { objective: "O6", q: "Quel point de CV est le plus fort pour le service client ?", options: ["« Fait des trucs »", "« Travaillé parfois »", "« Bonne personne »", "« Servi plus de 60 clients par jour avec calme et amabilité »"], answer: 3, why: "Il montre des chiffres et la compétence." },
+      { objective: "O6", q: "L'expérience acquise où peut compter pour le service client ?", options: ["Seulement dans les centres d'appels", "Dans la restauration, l'aide aux personnes, l'église ou le travail en détention", "Seulement à l'université", "Nulle part"], answer: 1, why: "Aider des gens, n'importe où, développe la compétence." },
+      { objective: "O6", q: "Une histoire STAR sur une fois où vous avez calmé quelqu'un montre :", options: ["Vos anciens salaires", "Situation, Tâche, Action et Résultat", "Vos films préférés", "Rien"], answer: 1, why: "STAR prouve la compétence par un exemple." },
+      { objective: "O6", q: "Quelle compétence certains employeurs testent-ils avant d'embaucher ?", options: ["Le jonglage", "La natation", "Le chant", "La vitesse et la précision de frappe"], answer: 3, why: "Les agents tapent beaucoup ; entraînez-vous avec un test de frappe gratuit." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      1,
+      4,
+      7,
+      9,
+      11,
+      13,
+      14,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Déroulé du contact",
+        objective: "O2",
+        notYet: "Des étapes sautées, par exemple résoudre avant d'écouter ou finir sans conclusion.",
+        meets: "A suivi accueillir, écouter, reformuler, résoudre et conclure dans les trois contacts.",
+        exceeds: "A aussi vérifié l'identité quand il le fallait et fixé une prochaine étape claire pour le problème non réglé."
+      },
+      {
+        name: "Calmer le client mécontent",
+        objective: "O3",
+        notYet: "S'est disputé, a accusé ou a dit « calmez-vous ».",
+        meets: "A utilisé Écouter, Empathie, S'excuser et Agir, et le client s'est calmé.",
+        exceeds: "A aussi su quand transférer le dossier et a expliqué clairement la suite."
+      },
+      {
+        name: "IA vérifiée",
+        objective: "O4",
+        notYet: "A envoyé une suggestion de l'IA qui ne respectait pas la politique.",
+        meets: "A vérifié chaque suggestion de l'IA dans la base de connaissances ou la politique avant de l'utiliser.",
+        exceeds: "Peut montrer chaque changement fait et dire pourquoi."
+      },
+      {
+        name: "Notes de ticket",
+        objective: "O5",
+        notYet: "Il manque le problème, les actions, la promesse ou le suivi, ou les notes contiennent des données privées.",
+        meets: "Chaque ticket indique le problème, ce qui a été fait, ce qui a été promis et le suivi, sans donnée privée.",
+        exceeds: "Les notes sont assez courtes pour qu'un autre agent continue sans rien demander."
+      },
+      {
+        name: "Prêt à être embauché",
+        objective: "O6",
+        notYet: "Les points sont vagues, ou il manque une partie à la réponse STAR.",
+        meets: "Trois points de CV clairs et une réponse STAR avec ses quatre parties.",
+        exceeds: "Les points contiennent des chiffres, et la réponse STAR finit par un vrai résultat."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui postulent à un emploi au service client dans les 30 jours (questionnaire de suivi)",
+      "Apprenants qui obtiennent un entretien ou une offre d'emploi au service client dans les 90 jours",
+      "Apprenants qui réussissent la tâche finale selon la grille",
+      "Apprenants qui commencent un autre cours de carrière Koach Learn dans les 30 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur avec Internet",
+      "Un assistant d'IA gratuit comme ChatGPT, Microsoft Copilot ou Google Gemini pour jouer le client",
+      "Trois vraies offres d'emploi au service client prises sur un site d'emploi",
+      "Du papier et un stylo pour les notes de ticket et les points de CV",
+      "Environ 60 minutes au total : leçons, jeux de rôle, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Faites les jeux de rôle par deux : un apprenant joue le client, l'autre l'agent, puis on échange ; l'IA peut jouer le client pour ceux qui travaillent seuls.",
+      "Utilisez seulement des clients et des comptes inventés ; ne vous entraînez jamais avec de vrais numéros de carte ou mots de passe.",
+      "Notez la tâche finale avec la grille et donnez un retour sur une seule ligne « Pas encore » à la fois.",
+      "Aidez les apprenants qui sortent de détention à décrire honnêtement leur expérience dans la restauration, l'aide aux personnes ou le travail en détention.",
+      "Si possible, invitez un employeur local ou un recruteur de centre d'appels à assister aux jeux de rôle finaux."
     ]
   }
 };

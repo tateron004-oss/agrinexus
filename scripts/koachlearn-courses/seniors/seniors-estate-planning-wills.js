@@ -17,11 +17,35 @@ module.exports = {
     "Each lesson takes about five minutes and ends with a \"Try it now\" task. There is a knowledge check after each chapter and a 20-question quiz at the end. Laws about wills and these documents are different in each US state and in each country. This course helps you get ready; to make the documents legal, see a lawyer or free legal aid where you live."
   ],
   finalTask: "Build your estate-planning folder: (1) a list of what you own and owe; (2) a beneficiary check for each account or policy that has one; (3) the people you would name as executor, financial agent and health care agent, with a backup for each; (4) at least five questions for a lawyer or legal aid; (5) a one-page \"where my papers are\" note for your family. Then find one place near you that offers legal help.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Older adults, and the family members who help them, who have not made an estate plan or have one that is out of date. Some are raising grandchildren; many have life insurance, retirement accounts or a home.",
+    startingPoint: "Know that wills exist, but many have no will, have never checked their beneficiary forms, and do not know what a power of attorney or health care directive does. Papers are often scattered around the house.",
+    gap: "Without a plan, the law decides who inherits, old beneficiary forms can send money to the wrong person, and families may need to go to court if a person cannot decide for themselves. Preparing the lists, people and questions, and organizing papers, saves families stress and money and makes a lawyer visit faster and cheaper.",
+    constraints: [
+      "Reading level: plain words, short sentences and large, simple steps",
+      "Devices: paper and a folder are enough; a phone or computer helps to find legal help",
+      "Time: about 5 minutes per lesson at a relaxed pace, plus time to gather papers",
+      "Laws differ by state and country; the course prepares, and a lawyer or legal aid makes documents legal",
+      "Privacy: only the last four digits of account numbers, no passwords, and no private details in AI tools"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given the basic estate planning words", action: "explain what a will does, what an executor does and what can happen without a will", standard: "in your own words, getting at least 4 of 5 questions right" },
+    { id: "O2", condition: "Given your life insurance, retirement and bank accounts", action: "check who is named as beneficiary and backup on each one", standard: "marking every form that is out of date" },
+    { id: "O3", condition: "Given the people in your life", action: "choose an executor, a financial agent and a health care agent, with a backup for each", standard: "choosing people who are trustworthy, reachable and will follow your wishes" },
+    { id: "O4", condition: "Using paper or a private file", action: "list what you own and what you owe", standard: "showing only the last four digits of any number and no passwords" },
+    { id: "O5", condition: "Before you meet a lawyer or legal aid", action: "find a source of legal help near you and write at least five clear questions", standard: "including what it will cost and what is included" },
+    { id: "O6", condition: "Given your important papers", action: "organize them in one folder and write a \"where my papers are\" note for your family", standard: "shared with the people you named" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Know the documents",
       lessons: [
         {
+          objectives: ["O1"],
           title: "What estate planning is, and what a will does",
           minutes: 5,
           goal: "Explain what a will does and what can happen without one.",
@@ -40,9 +64,14 @@ module.exports = {
           ],
           sources: [{ name: "LawHelp.org: find free legal help and information in your state", url: "https://www.lawhelp.org/" }],
           tryIt: "Write down three things that matter most to you to pass on, such as a home, savings, a family Bible, a car or a pet's care, and who you would want to have each one. This is a private list for you, not a legal document.",
-          youCanNow: "explain what a will and an executor are, and why a will must follow the rules where you live."
+          youCanNow: "explain what a will and an executor are, and why a will must follow the rules where you live.",
+          quickCheck: [
+            { objective: "O1", q: "What is an executor?", options: ["The person who carries out the wishes in your will", "A judge", "A bank account", "Your doctor"], answer: 0, why: "The executor carries out your wishes, pays final bills and hands out what is left." },
+            { objective: "O1", q: "Your friend says, \"I don't need a will; my family will sort it out.\" What could happen without one?", options: ["Nothing changes", "The family votes", "The law where they live decides who inherits, which may not match their wishes", "The bank keeps everything"], answer: 2, why: "Without a will, the law decides who inherits and a court picks who handles the estate." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Checking your beneficiaries",
           minutes: 5,
           goal: "Find every account or policy that has a beneficiary and check who is named.",
@@ -62,9 +91,14 @@ module.exports = {
           ],
           sources: [{ name: "CFPB: Managing someone else's money (guides for families)", url: "https://www.consumerfinance.gov/consumer-tools/managing-someone-elses-money/" }],
           tryIt: "List every account or policy you have that could have a beneficiary. Pick one, check who is named (online, on your paperwork or by calling the company), and write down whether it is still right.",
-          youCanNow: "find your accounts that have beneficiaries, check who is named, and know when to update them."
+          youCanNow: "find your accounts that have beneficiaries, check who is named, and know when to update them.",
+          quickCheck: [
+            { objective: "O2", q: "What is a beneficiary?", options: ["The person who writes your will", "The person named to get the money from an account or policy when you die", "Your lawyer", "Your bank manager"], answer: 1, why: "A beneficiary is the person named on an account or policy to receive that money." },
+            { objective: "O2", q: "Your pension form still names your late husband as beneficiary. What do you do?", options: ["Leave it; the will covers it", "Cross out his name on your copy", "Tell a friend", "Update it using the company's own form"], answer: 3, why: "Beneficiary forms usually control who gets that money, so update them with the company's form." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Power of attorney and health care directives",
           minutes: 6,
           goal: "Explain who would decide for you about money and about health care if you could not.",
@@ -86,17 +120,21 @@ module.exports = {
             { name: "CFPB: Managing someone else's money", url: "https://www.consumerfinance.gov/consumer-tools/managing-someone-elses-money/" }
           ],
           tryIt: "Write the name of the person you would choose as your financial agent and as your health care proxy, and a backup for each. Next to each name, write one reason you trust them.",
-          youCanNow: "explain a financial power of attorney, a health care proxy and a living will, and choose who you trust for each."
+          youCanNow: "explain a financial power of attorney, a health care proxy and a living will, and choose who you trust for each.",
+          quickCheck: [
+            { objective: "O3", q: "What does a financial power of attorney do?", options: ["Names someone to handle your money and property if you cannot", "Says who gets your house when you die", "Lists your medicines", "Closes your bank account"], answer: 0, why: "A financial power of attorney names an agent to manage money for you while you are alive." },
+            { objective: "O3", q: "You are choosing a health care agent. Who is the best choice?", options: ["The relative who argues most", "Someone you have not seen in years", "A trusted person you can reach who will follow your wishes, with a backup", "Whoever asks first"], answer: 2, why: "Choose someone trustworthy, reachable and willing to follow your wishes, and name a backup." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Know the documents",
         questions: [
-          { q: "What does an executor do?", options: ["Carries out the wishes in your will and settles your estate", "Writes your medical records", "Sells you insurance", "Decides your Medicare plan"], answer: 0, why: "The executor is named in the will to carry out your wishes." },
-          { q: "What can happen if you die without a will?", options: ["Nothing happens to your belongings", "Your bank keeps everything", "The law where you live decides who inherits", "Your neighbor chooses"], answer: 2, why: "Without a will, state or national law and a court decide." },
-          { q: "Your will leaves everything to your daughter, but your life insurance form still names your ex-husband. Who usually gets the insurance?", options: ["Your daughter", "The court", "The insurance agent", "The person named on the beneficiary form"], answer: 3, why: "Beneficiary forms usually control that money, even if the will says something different." },
-          { q: "Which document names someone to make medical decisions if you cannot?", options: ["A bank statement", "A health care proxy or health care power of attorney", "A beneficiary form", "A grocery list"], answer: 1, why: "A health care proxy is the person you name for health decisions." },
-          { q: "Why do you need a lawyer or legal aid to finish these documents?", options: ["Because AI tools are not allowed to read them", "Because they must be typed", "Because the rules for making them legal differ by state and country", "Because only lawyers can own a home"], answer: 2, why: "A document that does not follow local rules may not count." }
+          { objective: "O1", q: "What does an executor do?", options: ["Carries out the wishes in your will and settles your estate", "Writes your medical records", "Sells you insurance", "Decides your Medicare plan"], answer: 0, why: "The executor is named in the will to carry out your wishes." },
+          { objective: "O1", q: "What can happen if you die without a will?", options: ["Nothing happens to your belongings", "Your bank keeps everything", "The law where you live decides who inherits", "Your neighbor chooses"], answer: 2, why: "Without a will, state or national law and a court decide." },
+          { objective: "O2", q: "Your will leaves everything to your daughter, but your life insurance form still names your ex-husband. Who usually gets the insurance?", options: ["Your daughter", "The court", "The insurance agent", "The person named on the beneficiary form"], answer: 3, why: "Beneficiary forms usually control that money, even if the will says something different." },
+          { objective: "O3", q: "Which document names someone to make medical decisions if you cannot?", options: ["A bank statement", "A health care proxy or health care power of attorney", "A beneficiary form", "A grocery list"], answer: 1, why: "A health care proxy is the person you name for health decisions." },
+          { objective: "O1", q: "Why do you need a lawyer or legal aid to finish these documents?", options: ["Because AI tools are not allowed to read them", "Because they must be typed", "Because the rules for making them legal differ by state and country", "Because only lawyers can own a home"], answer: 2, why: "A document that does not follow local rules may not count." }
         ]
       }
     },
@@ -104,6 +142,7 @@ module.exports = {
       name: "Chapter 2: Prepare and organize",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Listing what you own and what you owe",
           minutes: 5,
           goal: "Make a simple list of your assets and debts that a lawyer and your family can use.",
@@ -122,9 +161,14 @@ module.exports = {
             { title: "Keep it private", bullets: ["Only the last four digits", "No passwords on the list", "Never paste it into an AI tool"] }
           ],
           tryIt: "Start your list now on paper: write at least five things you own and every debt you have, with the company name and only the last four digits of any number.",
-          youCanNow: "make a private, organized list of what you own and owe for your lawyer and family."
+          youCanNow: "make a private, organized list of what you own and owe for your lawyer and family.",
+          quickCheck: [
+            { objective: "O4", q: "What are your assets?", options: ["Your debts", "Your doctors", "Your questions for a lawyer", "What you own, such as accounts, property and valued items"], answer: 3, why: "Assets are what you own; debts are what you owe." },
+            { objective: "O4", q: "You are writing your savings account on your list. How do you write the number?", options: ["The full number and password", "\"Ends in 1234\"", "The full number only", "Leave the account off"], answer: 1, why: "Write only the last four digits, and never write passwords on the list." }
+          ]
         },
         {
+          objectives: ["O5","O3"],
           title: "Getting ready for a lawyer or legal aid",
           minutes: 5,
           goal: "Find legal help near you and prepare the choices and questions to bring.",
@@ -147,9 +191,14 @@ module.exports = {
             { name: "Eldercare Locator (Administration for Community Living)", url: "https://eldercare.acl.gov/" }
           ],
           tryIt: "Go to LawHelp.org, choose your state and find one legal aid group or senior legal service near you. Write its name and phone number, and write five questions you would ask it.",
-          youCanNow: "find free or low-cost legal help near you and come to the meeting prepared."
+          youCanNow: "find free or low-cost legal help near you and come to the meeting prepared.",
+          quickCheck: [
+            { objective: "O5", q: "What is LawHelp.org?", options: ["A site to find free legal help from nonprofit legal aid in your state", "An online will kit", "A bank", "A government benefits office"], answer: 0, why: "LawHelp.org lets you choose your state to find free legal help." },
+            { objective: "O5", q: "You want AI to help write your questions for the lawyer. What do you leave out?", options: ["The word \"will\"", "Your questions", "Names and account numbers", "The word \"cost\""], answer: 2, why: "AI can help with clear wording, but leave out names and numbers and let the lawyer answer." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Organizing and storing your important papers",
           minutes: 5,
           goal: "Put your papers in one safe place and tell the right people where they are.",
@@ -169,17 +218,21 @@ module.exports = {
           ],
           sources: [{ name: "MedlinePlus: Advance directives", url: "https://medlineplus.gov/advancedirectives.html" }],
           tryIt: "Final task: build your estate-planning folder with your list of what you own and owe, your beneficiary check, the people you would name with backups, at least five questions for a lawyer or legal aid, and a one-page \"where my papers are\" note. Then find one legal help office near you and write down how to contact it.",
-          youCanNow: "organize your important papers, store them safely and tell the right people where they are."
+          youCanNow: "organize your important papers, store them safely and tell the right people where they are.",
+          quickCheck: [
+            { objective: "O6", q: "Why give a copy of your health care directive to your doctor?", options: ["So it is there in an emergency", "So the doctor can change it", "To pay less for care", "It is not needed"], answer: 0, why: "Your proxy and doctor need a copy so it is available when it matters." },
+            { objective: "O6", q: "You updated your will. What do you do with the old version?", options: ["Keep both in the binder", "Mail the old one to a relative", "Hide the new one", "Follow your lawyer's advice and make sure nobody uses the old one"], answer: 3, why: "Remove old versions so nobody uses the wrong one, and tell your family about the change." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Prepare and organize",
         questions: [
-          { q: "How should account numbers appear on your list of what you own?", options: ["The full number and password", "Only the last four digits, no passwords", "Written on the outside of the folder", "Posted online for your family"], answer: 1, why: "The last four digits identify the account without exposing it." },
-          { q: "Which is a debt?", options: ["Your savings account", "Your car", "A life insurance policy", "A credit card balance"], answer: 3, why: "A debt is money you owe." },
-          { q: "Where can you look for free legal help in your state?", options: ["LawHelp.org", "A random online ad", "A text message link", "A social media comment"], answer: 0, why: "LawHelp.org lists nonprofit legal aid by state." },
-          { q: "Who should get a copy of your health care directive?", options: ["Nobody", "Your bank teller", "Your health care proxy and your doctor", "A stranger online"], answer: 2, why: "They need it to follow your wishes in an emergency." },
-          { q: "You changed your will. What should you do with the old version?", options: ["Keep both in the binder with no note", "Give it to a neighbor", "Hide it in a different room", "Follow your lawyer's advice and make sure nobody uses the old one"], answer: 3, why: "Old versions can confuse your family; your lawyer can say how to handle them." }
+          { objective: "O4", q: "How should account numbers appear on your list of what you own?", options: ["The full number and password", "Only the last four digits, no passwords", "Written on the outside of the folder", "Posted online for your family"], answer: 1, why: "The last four digits identify the account without exposing it." },
+          { objective: "O4", q: "Which is a debt?", options: ["Your savings account", "Your car", "A life insurance policy", "A credit card balance"], answer: 3, why: "A debt is money you owe." },
+          { objective: "O5", q: "Where can you look for free legal help in your state?", options: ["LawHelp.org", "A random online ad", "A text message link", "A social media comment"], answer: 0, why: "LawHelp.org lists nonprofit legal aid by state." },
+          { objective: "O6", q: "Who should get a copy of your health care directive?", options: ["Nobody", "Your bank teller", "Your health care proxy and your doctor", "A stranger online"], answer: 2, why: "They need it to follow your wishes in an emergency." },
+          { objective: "O6", q: "You changed your will. What should you do with the old version?", options: ["Keep both in the binder with no note", "Give it to a neighbor", "Hide it in a different room", "Follow your lawyer's advice and make sure nobody uses the old one"], answer: 3, why: "Old versions can confuse your family; your lawyer can say how to handle them." }
         ]
       }
     }
@@ -187,26 +240,104 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Estate Planning and Wills",
     questions: [
-      { q: "Your estate is:", options: ["Only your house", "Only your bank account", "Your garden", "Everything you own, minus what you owe"], answer: 3, why: "An estate includes all your property, minus debts." },
-      { q: "A will mainly says:", options: ["Which doctor you see", "Who gets your belongings and who carries out your wishes", "Your monthly budget", "Your Medicare plan"], answer: 1, why: "A will names who inherits and an executor." },
-      { q: "A grandmother is raising her two grandchildren. What can a will often do for them?", options: ["Nothing", "Pay their school fees automatically", "Name a guardian for them", "Change their birth certificates"], answer: 2, why: "In many places a will can name a guardian for children under 18." },
-      { q: "Why might a will written on a free form fail?", options: ["It may not follow the signing and witness rules where you live", "Free forms are always illegal", "Wills must be in color", "It is too short"], answer: 0, why: "Each state and country has its own rules for a valid will." },
-      { q: "Life insurance usually goes to:", options: ["Whoever the will names", "The executor", "The person named on the beneficiary form", "The government"], answer: 2, why: "Beneficiary forms usually control that money." },
-      { q: "When should you review your beneficiaries?", options: ["Never", "Only once when you open the account", "Only when the company calls", "After a marriage, divorce, death or birth"], answer: 3, why: "Life events are when forms go out of date." },
-      { q: "A contingent beneficiary is:", options: ["The backup if the first beneficiary has died", "Your lawyer", "Your doctor", "The bank manager"], answer: 0, why: "The contingent beneficiary is the backup." },
-      { q: "A financial power of attorney names someone to:", options: ["Make medical decisions", "Handle your money and property if you cannot", "Read your will out loud", "Choose your church"], answer: 1, why: "The agent acts for you on money matters." },
-      { q: "Without a financial power of attorney, if you cannot manage money, your family may need to:", options: ["Do nothing", "Go to court to get a guardian or conservator named", "Call a radio station", "Close all your accounts"], answer: 1, why: "Court can be slow and costly; a power of attorney avoids it." },
-      { q: "A living will says:", options: ["Who gets your house", "Your bank balance", "Which treatments you want or do not want near the end of life", "Your grocery list"], answer: 2, why: "A living will records your treatment wishes." },
-      { q: "Who is a good choice for health care proxy?", options: ["Someone who will follow their own wishes", "A stranger who calls you", "Anyone who asks", "A trusted, reachable person who will follow your wishes"], answer: 3, why: "Your proxy must speak for you, not for themselves." },
-      { q: "Besides your lawyer, who should you talk with about your health care wishes?", options: ["Your doctor and your health care proxy", "A sales caller", "Nobody", "A social media group"], answer: 0, why: "They are the ones who will act on your wishes." },
-      { q: "Which belongs on your list of what you own?", options: ["Your full password", "Your neighbor's car", "Your PIN", "Your home, accounts, vehicles and valued items"], answer: 3, why: "List assets with the company and last four digits, not passwords." },
-      { q: "Should you paste your full list of accounts into an AI assistant?", options: ["Yes, to save time", "No; keep private details out of AI tools", "Yes, if the AI asks", "Only on a library computer"], answer: 1, why: "Never type private numbers or account details into AI tools." },
-      { q: "What phone number reaches the Eldercare Locator?", options: ["1-800-677-1116", "911", "1-800-MEDICARE", "411"], answer: 0, why: "The Eldercare Locator connects older adults to local services." },
-      { q: "Before you hire a lawyer, a smart question is:", options: ["What is your favorite color?", "Can you guess my wishes?", "What will this cost, and what is included?", "Can I skip signing?"], answer: 2, why: "Knowing the cost up front avoids surprises." },
-      { q: "What is a good use of an AI assistant in estate planning?", options: ["Writing your legal will alone", "Helping you write your questions in clear words, without names or numbers", "Storing your passwords", "Deciding who inherits"], answer: 1, why: "AI can help with wording, but legal answers come from a lawyer." },
-      { q: "Where should the signed original will be kept?", options: ["Wherever, it does not matter", "In the car", "Thrown away after copying", "Where your lawyer advises, and your executor should know"], answer: 3, why: "Rules and choices differ; ask your lawyer." },
-      { q: "A \"where my papers are\" note should go to:", options: ["Everyone online", "Nobody", "The people you named in your plan", "A sales caller"], answer: 2, why: "The people who will act for you need to find your papers." },
-      { q: "Estate planning laws:", options: ["Are different in each state and country", "Are the same everywhere in the world", "Never change", "Only apply to rich people"], answer: 0, why: "Rules vary by place, so see a lawyer or legal aid where you live." }
+      { objective: "O1", q: "Your estate is:", options: ["Only your house", "Only your bank account", "Your garden", "Everything you own, minus what you owe"], answer: 3, why: "An estate includes all your property, minus debts." },
+      { objective: "O1", q: "A will mainly says:", options: ["Which doctor you see", "Who gets your belongings and who carries out your wishes", "Your monthly budget", "Your Medicare plan"], answer: 1, why: "A will names who inherits and an executor." },
+      { objective: "O1", q: "A grandmother is raising her two grandchildren. What can a will often do for them?", options: ["Nothing", "Pay their school fees automatically", "Name a guardian for them", "Change their birth certificates"], answer: 2, why: "In many places a will can name a guardian for children under 18." },
+      { objective: "O1", q: "Why might a will written on a free form fail?", options: ["It may not follow the signing and witness rules where you live", "Free forms are always illegal", "Wills must be in color", "It is too short"], answer: 0, why: "Each state and country has its own rules for a valid will." },
+      { objective: "O2", q: "Life insurance usually goes to:", options: ["Whoever the will names", "The executor", "The person named on the beneficiary form", "The government"], answer: 2, why: "Beneficiary forms usually control that money." },
+      { objective: "O2", q: "When should you review your beneficiaries?", options: ["Never", "Only once when you open the account", "Only when the company calls", "After a marriage, divorce, death or birth"], answer: 3, why: "Life events are when forms go out of date." },
+      { objective: "O2", q: "A contingent beneficiary is:", options: ["The backup if the first beneficiary has died", "Your lawyer", "Your doctor", "The bank manager"], answer: 0, why: "The contingent beneficiary is the backup." },
+      { objective: "O3", q: "A financial power of attorney names someone to:", options: ["Make medical decisions", "Handle your money and property if you cannot", "Read your will out loud", "Choose your church"], answer: 1, why: "The agent acts for you on money matters." },
+      { objective: "O3", q: "Without a financial power of attorney, if you cannot manage money, your family may need to:", options: ["Do nothing", "Go to court to get a guardian or conservator named", "Call a radio station", "Close all your accounts"], answer: 1, why: "Court can be slow and costly; a power of attorney avoids it." },
+      { objective: "O3", q: "A living will says:", options: ["Who gets your house", "Your bank balance", "Which treatments you want or do not want near the end of life", "Your grocery list"], answer: 2, why: "A living will records your treatment wishes." },
+      { objective: "O3", q: "Who is a good choice for health care proxy?", options: ["Someone who will follow their own wishes", "A stranger who calls you", "Anyone who asks", "A trusted, reachable person who will follow your wishes"], answer: 3, why: "Your proxy must speak for you, not for themselves." },
+      { objective: "O3", q: "Besides your lawyer, who should you talk with about your health care wishes?", options: ["Your doctor and your health care proxy", "A sales caller", "Nobody", "A social media group"], answer: 0, why: "They are the ones who will act on your wishes." },
+      { objective: "O4", q: "Which belongs on your list of what you own?", options: ["Your full password", "Your neighbor's car", "Your PIN", "Your home, accounts, vehicles and valued items"], answer: 3, why: "List assets with the company and last four digits, not passwords." },
+      { objective: "O4", q: "Should you paste your full list of accounts into an AI assistant?", options: ["Yes, to save time", "No; keep private details out of AI tools", "Yes, if the AI asks", "Only on a library computer"], answer: 1, why: "Never type private numbers or account details into AI tools." },
+      { objective: "O5", q: "What phone number reaches the Eldercare Locator?", options: ["1-800-677-1116", "911", "1-800-MEDICARE", "411"], answer: 0, why: "The Eldercare Locator connects older adults to local services." },
+      { objective: "O5", q: "Before you hire a lawyer, a smart question is:", options: ["What is your favorite color?", "Can you guess my wishes?", "What will this cost, and what is included?", "Can I skip signing?"], answer: 2, why: "Knowing the cost up front avoids surprises." },
+      { objective: "O5", q: "What is a good use of an AI assistant in estate planning?", options: ["Writing your legal will alone", "Helping you write your questions in clear words, without names or numbers", "Storing your passwords", "Deciding who inherits"], answer: 1, why: "AI can help with wording, but legal answers come from a lawyer." },
+      { objective: "O6", q: "Where should the signed original will be kept?", options: ["Wherever, it does not matter", "In the car", "Thrown away after copying", "Where your lawyer advises, and your executor should know"], answer: 3, why: "Rules and choices differ; ask your lawyer." },
+      { objective: "O6", q: "A \"where my papers are\" note should go to:", options: ["Everyone online", "Nobody", "The people you named in your plan", "A sales caller"], answer: 2, why: "The people who will act for you need to find your papers." },
+      { objective: "O1", q: "Estate planning laws:", options: ["Are different in each state and country", "Are the same everywhere in the world", "Never change", "Only apply to rich people"], answer: 0, why: "Rules vary by place, so see a lawyer or legal aid where you live." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      4,
+      7,
+      9,
+      12,
+      14,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "What I own and owe",
+        objective: "O4",
+        notYet: "The list is missing major items, or shows full account numbers or passwords.",
+        meets: "A list of assets and debts with the company and kind of account, using only the last four digits.",
+        exceeds: "Also lists online accounts and pets, and is stored in a safe place."
+      },
+      {
+        name: "Beneficiary check",
+        objective: "O2",
+        notYet: "Some accounts or policies were not checked.",
+        meets: "Every account or policy with a beneficiary is listed, with the named person and backup.",
+        exceeds: "Out-of-date forms are marked and the update form has been requested."
+      },
+      {
+        name: "People named",
+        objective: "O3",
+        notYet: "One or more roles is missing, or there are no backups.",
+        meets: "An executor, financial agent and health care agent, each with a backup.",
+        exceeds: "Has talked with the people chosen about their role and your wishes."
+      },
+      {
+        name: "Questions for a lawyer",
+        objective: "O5",
+        notYet: "Fewer than five questions, or no source of legal help.",
+        meets: "At least five clear questions, including cost, and one place near you that offers legal help.",
+        exceeds: "Has contacted the legal help or booked an appointment."
+      },
+      {
+        name: "Where my papers are",
+        objective: "O6",
+        notYet: "No note, or it leaves out where key papers are.",
+        meets: "A one-page note saying where each important paper is.",
+        exceeds: "The note has been given to the people named in the plan."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who update at least one beneficiary form within 60 days (follow-up survey)",
+      "Learners who meet a lawyer or legal aid and sign a will, power of attorney or health care directive",
+      "Learners who share a \"where my papers are\" note with family"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A folder or binder, paper and pen",
+      "The learner's insurance policies, account statements and any existing will or directive (kept private)",
+      "A phone or computer to find legal help on LawHelp.org or call the Eldercare Locator",
+      "About 60 minutes in total, in short, relaxed sessions, plus time at home to gather papers"
+    ],
+    facilitatorNotes: [
+      "Do not give legal advice or help write a will; the course prepares learners for a lawyer or legal aid.",
+      "Learners keep their own papers private; never collect account numbers or documents.",
+      "Some learners may be grieving or uneasy talking about death; keep the tone gentle and practical.",
+      "Find local legal aid or senior legal services before the session so learners leave with a real contact.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

@@ -19,11 +19,35 @@ module.exports = {
     "Each lesson takes about five minutes and ends with a task you do right away. There is a knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Make a one-page housing-and-jobs plan: two housing options with contact details and what to bring, your rental packet checklist, your nearest American Job Center, three second-chance employers or job leads, and a two-sentence pitch telling an employer about the Work Opportunity Tax Credit and the Federal Bonding Program.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Adults coming home from prison (re-entry) who need a safe place to live and a steady job, often with a record that makes both harder to get. Some are on parole or probation.",
+    startingPoint: "Can make calls and use a basic phone. Most do not know about 211, public housing record rules, rental packets, American Job Centers, the Work Opportunity Tax Credit or the Federal Bonding Program.",
+    gap: "Housing and a job are the two things that help most after release, but many people give up after early rejections or fall for rental scams. Learners need to find the programs, rules and employers set up to help, and present themselves with confidence and honesty.",
+    constraints: [
+      "Reading level: plain words and short sentences (about grade 5 to 6)",
+      "Devices: a basic phone or smartphone, sometimes a library computer",
+      "Time: about 5-minute lessons that fit around appointments and work",
+      "Rules differ by state and city and change; legal questions go to legal aid or a reentry counselor",
+      "Parole or probation conditions may limit where learners can live; privacy: no case numbers in AI tools"
+    ],
+    prerequisites: "None. \"Everyday AI Tools\" helps learners who want to use maps and reminders to get to appointments."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Using 211 and reentry programs", action: "list housing options you can apply for", standard: "with phone number, cost, rules and what to bring for each" },
+    { id: "O2", condition: "Given a housing provider and the rules about records", action: "explain what the rules say about records and ask for a fair look at your application", standard: "asking whether there is a written policy and whether you can give proof of rehabilitation" },
+    { id: "O3", condition: "Given the papers you have", action: "put together a rental packet and spot rental scams", standard: "with a papers checklist and a short letter about what you have done since, and no payment before seeing a place" },
+    { id: "O4", condition: "Using CareerOneStop or 211", action: "find your nearest American Job Center and second-chance job leads", standard: "with address, phone, hours and questions to ask on your first visit" },
+    { id: "O5", condition: "Given the Work Opportunity Tax Credit and the Federal Bonding Program", action: "explain to an employer how they can help them hire you", standard: "in a two-sentence pitch, checked against irs.gov for whether WOTC is in effect" },
+    { id: "O6", condition: "Given a question about your record in an interview", action: "answer it briefly and honestly", standard: "saying what happened, what you have done since and why you are ready, with no case numbers typed into AI" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Finding a place to live",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Your housing options and where to start",
           minutes: 5,
           goal: "Use 211 and reentry programs to list three housing options you can apply for.",
@@ -46,9 +70,14 @@ module.exports = {
             { name: "HUD: Public housing program", url: "https://www.hud.gov/topics/rental_assistance/phprog" }
           ],
           tryIt: "Call 211 or visit 211.org and ask for reentry or transitional housing near you. Write down three options with the phone number, cost, rules and what each asks you to bring.",
-          youCanNow: "use 211 and your local Public Housing Agency to find housing options and list what each one needs."
+          youCanNow: "use 211 and your local Public Housing Agency to find housing options and list what each one needs.",
+          quickCheck: [
+            { objective: "O1", q: "What is transitional housing?", options: ["A hotel you pay by the night", "Short-term housing with support, often for people coming home", "A house you buy", "A shelter that only opens in winter"], answer: 1, why: "Transitional housing is short-term housing with support while you get settled." },
+            { objective: "O1", q: "You are on parole and a friend offers you a room. What would you do before moving in?", options: ["Move in tonight", "Sign a lease right away", "Check that your officer approves the address", "Tell no one"], answer: 2, why: "Parole conditions may limit where you can live, so you check first." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Applying for housing with a record",
           minutes: 6,
           goal: "Explain what housing rules say about records and how to ask for a fair look at your application.",
@@ -72,9 +101,14 @@ module.exports = {
             { name: "California Civil Rights Department: Housing", url: "https://calcivilrights.ca.gov/housing/" }
           ],
           tryIt: "Call or visit the website of one housing provider from your list and ask: Do you have a written policy on criminal records? Can I give you proof of rehabilitation with my application? Write down the answers.",
-          youCanNow: "explain the main housing rules about records, ask a provider for its policy, and ask for a review if you are denied."
+          youCanNow: "explain the main housing rules about records, ask a provider for its policy, and ask for a review if you are denied.",
+          quickCheck: [
+            { objective: "O2", q: "Who runs public housing and Housing Choice Vouchers in your area?", options: ["The local Public Housing Agency", "The police department", "Your parole officer", "The IRS"], answer: 0, why: "Your local Public Housing Agency runs these programs and sets its own policy." },
+            { objective: "O2", q: "You want to apply to a housing provider but worry about your record. What would you do?", options: ["Leave the record off and hope", "Give up and not apply", "Pay extra to skip the check", "Ask for their written policy and whether you can add proof of rehabilitation"], answer: 3, why: "Asking about the policy and offering proof helps get a fair look." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Building a rental packet",
           minutes: 5,
           goal: "Put together a rental packet that answers a landlord's worries before they ask.",
@@ -93,17 +127,21 @@ module.exports = {
             { title: "Know your numbers", bullets: ["Rent about a third of income or less", "Ask about deposit, first month and fees"] }
           ],
           tryIt: "Start your rental packet. Make a checklist of the papers you have and the ones you still need. Write the first draft of your short letter: one sentence about what happened, two about what you have done since, and one about why you will be a good tenant.",
-          youCanNow: "build a rental packet that shows a landlord you will pay, take care of the place and be a good neighbor, and spot rental scams."
+          youCanNow: "build a rental packet that shows a landlord you will pay, take care of the place and be a good neighbor, and spot rental scams.",
+          quickCheck: [
+            { objective: "O3", q: "Which belongs in a rental packet?", options: ["Proof of income and reference letters", "Your full case file", "Your bank password", "A copy of your Social Security card for anyone"], answer: 0, why: "Income proof and references answer a landlord's main worries." },
+            { objective: "O3", q: "A landlord wants a deposit by wire transfer before you see the apartment. What would you do?", options: ["Send it quickly before someone else does", "Send half", "Refuse and look for another place", "Send it by gift card instead"], answer: 2, why: "Asking for payment before you see the place is a scam warning sign." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Finding a place to live",
         questions: [
-          { q: "You just got home and need housing help tonight. What is a good first step?", options: ["Wait a month", "Call 211 or visit 211.org", "Sign any lease you see online", "Send a deposit by gift card"], answer: 1, why: "211 connects you to local housing and other help." },
-          { q: "Who runs public housing and Housing Choice Vouchers in your area?", options: ["The local Public Housing Agency", "The post office", "Your bank", "The DMV"], answer: 0, why: "Your local Public Housing Agency runs these programs and their waiting lists." },
-          { q: "Before a public housing agency denies you because of a criminal record, it must:", options: ["Charge you for the check", "Post it online", "Tell you and give you a copy of the record and a chance to dispute it", "Call your family"], answer: 2, why: "The rules require notice, a copy of the record and a chance to dispute it." },
-          { q: "In California, which can a landlord NOT use against you?", options: ["Your income", "Your references", "Your rental history", "A sealed record"], answer: 3, why: "California does not allow landlords to use sealed or expunged records, arrests without conviction, or juvenile records." },
-          { q: "A landlord asks you to pay a deposit by gift card before you see the apartment. What do you do?", options: ["Pay quickly so you do not lose it", "Pay half", "Refuse; it is a scam warning sign", "Send your bank password"], answer: 2, why: "Paying before seeing the place, with gift cards, is a classic rental scam." }
+          { objective: "O1", q: "You just got home and need housing help tonight. What is a good first step?", options: ["Wait a month", "Call 211 or visit 211.org", "Sign any lease you see online", "Send a deposit by gift card"], answer: 1, why: "211 connects you to local housing and other help." },
+          { objective: "O2", q: "Who runs public housing and Housing Choice Vouchers in your area?", options: ["The local Public Housing Agency", "The post office", "Your bank", "The DMV"], answer: 0, why: "Your local Public Housing Agency runs these programs and their waiting lists." },
+          { objective: "O2", q: "Before a public housing agency denies you because of a criminal record, it must:", options: ["Charge you for the check", "Post it online", "Tell you and give you a copy of the record and a chance to dispute it", "Call your family"], answer: 2, why: "The rules require notice, a copy of the record and a chance to dispute it." },
+          { objective: "O2", q: "In California, which can a landlord NOT use against you?", options: ["Your income", "Your references", "Your rental history", "A sealed record"], answer: 3, why: "California does not allow landlords to use sealed or expunged records, arrests without conviction, or juvenile records." },
+          { objective: "O3", q: "A landlord asks you to pay a deposit by gift card before you see the apartment. What do you do?", options: ["Pay quickly so you do not lose it", "Pay half", "Refuse; it is a scam warning sign", "Send your bank password"], answer: 2, why: "Paying before seeing the place, with gift cards, is a classic rental scam." }
         ]
       }
     },
@@ -111,6 +149,7 @@ module.exports = {
       name: "Chapter 2: Finding second-chance work",
       lessons: [
         {
+          objectives: ["O4"],
           title: "American Job Centers and reentry job programs",
           minutes: 5,
           goal: "Find your nearest American Job Center and a reentry job program and know what to ask them.",
@@ -131,9 +170,14 @@ module.exports = {
             { name: "US Department of Labor: Reentry employment", url: "https://www.dol.gov/agencies/eta/reentry" }
           ],
           tryIt: "Find your nearest American Job Center. Write down its address, phone number and hours, and the four questions you will ask on your first visit.",
-          youCanNow: "find an American Job Center and a reentry job program and ask them for the help you need."
+          youCanNow: "find an American Job Center and a reentry job program and ask them for the help you need.",
+          quickCheck: [
+            { objective: "O4", q: "What does an American Job Center offer?", options: ["Paid jobs only at the center", "Free help with job searches, résumés and training", "Housing vouchers", "Loans for cars"], answer: 1, why: "American Job Centers give free job search, résumé and training help." },
+            { objective: "O4", q: "You are at a job center for the first time. Which question would you ask?", options: ["Can you write my record off?", "How much do you charge?", "Can I skip the application?", "Which employers here hire people with records?"], answer: 3, why: "Job center staff often know local second-chance employers." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Second-chance employers, WOTC and federal bonding",
           minutes: 6,
           goal: "Explain to an employer how the Work Opportunity Tax Credit and the Federal Bonding Program can help them hire you.",
@@ -157,9 +201,14 @@ module.exports = {
             { name: "Federal Bonding Program: About", url: "https://bonds4jobs.com/about-us" }
           ],
           tryIt: "Write your two-sentence employer pitch. For example: If you hire me, you may be able to claim the Work Opportunity Tax Credit. I can also come with a free Federal Bonding Program bond that covers my first six months. Then find your state bonding coordinator on bonds4jobs.com.",
-          youCanNow: "find second-chance employers and explain WOTC and federal bonding to an employer in plain words."
+          youCanNow: "find second-chance employers and explain WOTC and federal bonding to an employer in plain words.",
+          quickCheck: [
+            { objective: "O5", q: "Who receives the Work Opportunity Tax Credit?", options: ["The worker", "The parole office", "The employer", "The job center"], answer: 2, why: "WOTC is a tax credit the employer may claim for hiring you." },
+            { objective: "O5", q: "You plan to tell an employer about WOTC in an interview. What would you do first?", options: ["Check irs.gov to see whether it is in effect now", "Promise them a set dollar amount", "Ask AI to fill in Form 8850 with your details", "Skip it because employers never care"], answer: 0, why: "WOTC rules can change, so you check irs.gov before mentioning it." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Applying and answering questions about your record",
           minutes: 6,
           goal: "Apply to a second-chance job and answer questions about your record with confidence.",
@@ -178,17 +227,21 @@ module.exports = {
             { title: "Bring proof", bullets: ["Certificates and a reference letter", "WOTC and bonding information", "Practice with AI, but no private details"] }
           ],
           tryIt: "Final task: make your one-page housing-and-jobs plan with two housing options, your rental packet checklist, your nearest American Job Center, three second-chance employers or job leads, and your two-sentence WOTC and bonding pitch. Then say your three-part answer about your record out loud once.",
-          youCanNow: "apply to second-chance jobs, track your applications, and answer questions about your record honestly and calmly."
+          youCanNow: "apply to second-chance jobs, track your applications, and answer questions about your record honestly and calmly.",
+          quickCheck: [
+            { objective: "O6", q: "What are the three parts of a good answer about your record?", options: ["Your case number, your sentence and your release date", "What happened, what you have done since and why you are ready", "Who was to blame, how unfair it was and how long ago", "Nothing, because you should not answer"], answer: 1, why: "A brief, honest three-part answer shows growth and readiness." },
+            { objective: "O6", q: "You want AI to help you practice interview answers. What would you do?", options: ["Type your case numbers so it knows your history", "Paste your full record into it", "Use general words and keep case numbers out", "Ask it to invent a clean record"], answer: 2, why: "You can practice with AI without sharing private case details." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Finding second-chance work",
         questions: [
-          { q: "Where can you find your nearest American Job Center?", options: ["A shopping mall", "Your landlord", "CareerOneStop (careeronestop.org) or 211", "A text from a stranger"], answer: 2, why: "CareerOneStop, a Department of Labor website, and 211 can point you to a job center." },
-          { q: "Who receives the Work Opportunity Tax Credit?", options: ["The employer", "The job seeker as a cash payment", "The parole office", "The landlord"], answer: 0, why: "WOTC is a tax credit for employers who hire people from certain groups." },
-          { q: "What does the Federal Bonding Program give an employer?", options: ["A free car", "A loan", "A tax bill", "A free bond for the first six months of the job"], answer: 3, why: "The program gives a free fidelity bond covering the first six months." },
-          { q: "An interviewer asks about your record. What is the best approach?", options: ["Deny it", "Be honest: what happened, what you did since, why you are ready", "Get angry", "Leave the interview"], answer: 1, why: "A short, honest answer focused on change and readiness builds trust." },
-          { q: "Which should you NEVER type into an AI assistant while practicing for interviews?", options: ["\"Ask me a common interview question\"", "\"Make my answer shorter\"", "Your case numbers", "\"Give me feedback\""], answer: 2, why: "Case numbers and other private details should stay out of AI tools." }
+          { objective: "O4", q: "Where can you find your nearest American Job Center?", options: ["A shopping mall", "Your landlord", "CareerOneStop (careeronestop.org) or 211", "A text from a stranger"], answer: 2, why: "CareerOneStop, a Department of Labor website, and 211 can point you to a job center." },
+          { objective: "O5", q: "Who receives the Work Opportunity Tax Credit?", options: ["The employer", "The job seeker as a cash payment", "The parole office", "The landlord"], answer: 0, why: "WOTC is a tax credit for employers who hire people from certain groups." },
+          { objective: "O5", q: "What does the Federal Bonding Program give an employer?", options: ["A free car", "A loan", "A tax bill", "A free bond for the first six months of the job"], answer: 3, why: "The program gives a free fidelity bond covering the first six months." },
+          { objective: "O6", q: "An interviewer asks about your record. What is the best approach?", options: ["Deny it", "Be honest: what happened, what you did since, why you are ready", "Get angry", "Leave the interview"], answer: 1, why: "A short, honest answer focused on change and readiness builds trust." },
+          { objective: "O6", q: "Which should you NEVER type into an AI assistant while practicing for interviews?", options: ["\"Ask me a common interview question\"", "\"Make my answer shorter\"", "Your case numbers", "\"Give me feedback\""], answer: 2, why: "Case numbers and other private details should stay out of AI tools." }
         ]
       }
     }
@@ -196,26 +249,105 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Finding Housing and Second-Chance Jobs",
     questions: [
-      { q: "What is 211?", options: ["A free, confidential service that connects you to local help", "A police line", "A bank", "A job ad website"], answer: 0, why: "211 connects people to local housing, food and other help." },
-      { q: "Transitional housing is:", options: ["A hotel for tourists", "Short-term housing with support, often for people coming home", "A storage unit", "A car"], answer: 1, why: "Transitional housing is a short-term step with support." },
-      { q: "You are on parole and found a room to rent. What should you do before signing?", options: ["Sign right away", "Keep it secret", "Check that your officer approves the address", "Pay cash to a stranger"], answer: 2, why: "Parole or probation may require your officer to approve where you live." },
-      { q: "Public housing waiting lists can be long. What is smart?", options: ["Never apply", "Apply only once you are homeless", "Apply once and change your phone number", "Apply early and keep your contact details up to date"], answer: 3, why: "Getting on lists early and staying reachable keeps your place." },
-      { q: "Which is a required denial for federal public housing?", options: ["Lifetime sex offender registration", "Any traffic ticket", "Being unemployed", "Having children"], answer: 0, why: "Federal rules require denial for anyone subject to lifetime sex offender registration." },
-      { q: "For most other records, who decides on a public housing application?", options: ["The FBI", "The local Public Housing Agency, using its own policy", "Your neighbors", "The applicant"], answer: 1, why: "Outside the required denials, the housing agency decides under its own written policy." },
-      { q: "May a public housing agency charge you for its criminal records check?", options: ["Yes, any amount", "Only on weekends", "No, it may not charge you", "Only in cash"], answer: 2, why: "The rule says the agency may not charge the applicant for the records check." },
-      { q: "Is a criminal record a protected class under the federal Fair Housing Act?", options: ["Yes, always", "Only for vouchers", "Only in summer", "No; state and city laws may give more protection"], answer: 3, why: "The federal Fair Housing Act does not list criminal records as a protected class." },
-      { q: "In California, a landlord wants to deny everyone with any record. This is:", options: ["Not allowed: blanket bans are not permitted", "Required by law", "A good policy", "Allowed only for apartments"], answer: 0, why: "California does not allow blanket bans on everyone with a criminal history." },
-      { q: "Which belongs in a rental packet?", options: ["Your Social Security card number written on the cover", "Proof of income and reference letters", "Your bank password", "Nothing"], answer: 1, why: "Proof of income and references answer a landlord's main worries." },
-      { q: "A rule of thumb many programs use for rent is:", options: ["All of your income", "Twice your income", "About a third of your income or less", "Rent does not matter"], answer: 2, why: "Keeping rent near a third of income or less leaves money for other needs." },
-      { q: "What is a sign of a rental scam?", options: ["You see the place in person first", "You get a written lease", "The landlord gives a receipt", "They want payment by wire before you see the place"], answer: 3, why: "Wire or gift card payment before seeing the place is a common scam." },
-      { q: "What does an American Job Center offer?", options: ["Free help with job searches, résumés and training", "Free cars", "Loans for vacations", "Housing deeds"], answer: 0, why: "American Job Centers are public offices that help with jobs and training." },
-      { q: "Which question is good to ask at a job center?", options: ["Can you lie to employers for me?", "Which employers here hire people with records?", "Can I skip work?", "Can you pay my rent forever?"], answer: 1, why: "Job centers often know local second-chance employers." },
-      { q: "A second-chance employer is:", options: ["An employer that hires only once", "A government jail", "A business open to hiring people with records", "A temp job that never pays"], answer: 2, why: "Second-chance employers are open to hiring people with records." },
-      { q: "Which IRS form starts the WOTC process?", options: ["Form 1040", "Form W-2", "Form 1099", "Form 8850"], answer: 3, why: "Form 8850 is filled out on or before the day of the job offer." },
-      { q: "Before telling an employer about WOTC, you should:", options: ["Check irs.gov to see whether it is in effect now", "Promise them a certain dollar amount", "Fill out their taxes", "Skip it"], answer: 0, why: "The credit has an end date and must be renewed by law, so check its current status." },
-      { q: "How much does a Federal Bonding Program bond cost the employer?", options: ["$500", "Nothing; it is free", "Half your pay", "$5,000"], answer: 1, why: "The bond is free to the employer and the job seeker; $5,000 is the coverage limit." },
-      { q: "Who arranges a federal bond in your state?", options: ["Your landlord", "The bank", "Your state bonding coordinator", "Your doctor"], answer: 2, why: "State bonding coordinators, listed on bonds4jobs.com, arrange the bonds." },
-      { q: "The best way to answer a question about your record is:", options: ["Say it never happened", "Tell your whole life story", "Change the subject", "Briefly say what happened, what you have done since and why you are ready"], answer: 3, why: "A short, honest three-part answer builds trust and moves back to your skills." }
+      { objective: "O1", q: "What is 211?", options: ["A free, confidential service that connects you to local help", "A police line", "A bank", "A job ad website"], answer: 0, why: "211 connects people to local housing, food and other help." },
+      { objective: "O1", q: "Transitional housing is:", options: ["A hotel for tourists", "Short-term housing with support, often for people coming home", "A storage unit", "A car"], answer: 1, why: "Transitional housing is a short-term step with support." },
+      { objective: "O1", q: "You are on parole and found a room to rent. What should you do before signing?", options: ["Sign right away", "Keep it secret", "Check that your officer approves the address", "Pay cash to a stranger"], answer: 2, why: "Parole or probation may require your officer to approve where you live." },
+      { objective: "O1", q: "Public housing waiting lists can be long. What is smart?", options: ["Never apply", "Apply only once you are homeless", "Apply once and change your phone number", "Apply early and keep your contact details up to date"], answer: 3, why: "Getting on lists early and staying reachable keeps your place." },
+      { objective: "O2", q: "Which is a required denial for federal public housing?", options: ["Lifetime sex offender registration", "Any traffic ticket", "Being unemployed", "Having children"], answer: 0, why: "Federal rules require denial for anyone subject to lifetime sex offender registration." },
+      { objective: "O2", q: "For most other records, who decides on a public housing application?", options: ["The FBI", "The local Public Housing Agency, using its own policy", "Your neighbors", "The applicant"], answer: 1, why: "Outside the required denials, the housing agency decides under its own written policy." },
+      { objective: "O2", q: "May a public housing agency charge you for its criminal records check?", options: ["Yes, any amount", "Only on weekends", "No, it may not charge you", "Only in cash"], answer: 2, why: "The rule says the agency may not charge the applicant for the records check." },
+      { objective: "O2", q: "Is a criminal record a protected class under the federal Fair Housing Act?", options: ["Yes, always", "Only for vouchers", "Only in summer", "No; state and city laws may give more protection"], answer: 3, why: "The federal Fair Housing Act does not list criminal records as a protected class." },
+      { objective: "O2", q: "In California, a landlord wants to deny everyone with any record. This is:", options: ["Not allowed: blanket bans are not permitted", "Required by law", "A good policy", "Allowed only for apartments"], answer: 0, why: "California does not allow blanket bans on everyone with a criminal history." },
+      { objective: "O3", q: "Which belongs in a rental packet?", options: ["Your Social Security card number written on the cover", "Proof of income and reference letters", "Your bank password", "Nothing"], answer: 1, why: "Proof of income and references answer a landlord's main worries." },
+      { objective: "O3", q: "A rule of thumb many programs use for rent is:", options: ["All of your income", "Twice your income", "About a third of your income or less", "Rent does not matter"], answer: 2, why: "Keeping rent near a third of income or less leaves money for other needs." },
+      { objective: "O3", q: "What is a sign of a rental scam?", options: ["You see the place in person first", "You get a written lease", "The landlord gives a receipt", "They want payment by wire before you see the place"], answer: 3, why: "Wire or gift card payment before seeing the place is a common scam." },
+      { objective: "O4", q: "What does an American Job Center offer?", options: ["Free help with job searches, résumés and training", "Free cars", "Loans for vacations", "Housing deeds"], answer: 0, why: "American Job Centers are public offices that help with jobs and training." },
+      { objective: "O4", q: "Which question is good to ask at a job center?", options: ["Can you lie to employers for me?", "Which employers here hire people with records?", "Can I skip work?", "Can you pay my rent forever?"], answer: 1, why: "Job centers often know local second-chance employers." },
+      { objective: "O4", q: "A second-chance employer is:", options: ["An employer that hires only once", "A government jail", "A business open to hiring people with records", "A temp job that never pays"], answer: 2, why: "Second-chance employers are open to hiring people with records." },
+      { objective: "O5", q: "Which IRS form starts the WOTC process?", options: ["Form 1040", "Form W-2", "Form 1099", "Form 8850"], answer: 3, why: "Form 8850 is filled out on or before the day of the job offer." },
+      { objective: "O5", q: "Before telling an employer about WOTC, you should:", options: ["Check irs.gov to see whether it is in effect now", "Promise them a certain dollar amount", "Fill out their taxes", "Skip it"], answer: 0, why: "The credit has an end date and must be renewed by law, so check its current status." },
+      { objective: "O5", q: "How much does a Federal Bonding Program bond cost the employer?", options: ["$500", "Nothing; it is free", "Half your pay", "$5,000"], answer: 1, why: "The bond is free to the employer and the job seeker; $5,000 is the coverage limit." },
+      { objective: "O5", q: "Who arranges a federal bond in your state?", options: ["Your landlord", "The bank", "Your state bonding coordinator", "Your doctor"], answer: 2, why: "State bonding coordinators, listed on bonds4jobs.com, arrange the bonds." },
+      { objective: "O6", q: "The best way to answer a question about your record is:", options: ["Say it never happened", "Tell your whole life story", "Change the subject", "Briefly say what happened, what you have done since and why you are ready"], answer: 3, why: "A short, honest three-part answer builds trust and moves back to your skills." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      3,
+      5,
+      7,
+      9,
+      11,
+      12,
+      13,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Housing options",
+        objective: "O1",
+        notYet: "Fewer than two options, or missing contact details.",
+        meets: "Two housing options with contact details and what to bring.",
+        exceeds: "Also notes cost and rules, and that the address was checked with parole if needed."
+      },
+      {
+        name: "Rental packet checklist",
+        objective: "O3",
+        notYet: "No checklist.",
+        meets: "A checklist of papers you have and papers you still need.",
+        exceeds: "Includes a first draft of the short letter about what you have done since."
+      },
+      {
+        name: "Job help and leads",
+        objective: "O4",
+        notYet: "No job center or fewer than three leads.",
+        meets: "Nearest American Job Center and three second-chance employers or job leads.",
+        exceeds: "Includes the questions you will ask on your first visit."
+      },
+      {
+        name: "Employer pitch",
+        objective: "O5",
+        notYet: "No pitch, or it promises a set dollar amount.",
+        meets: "A two-sentence pitch about WOTC and the Federal Bonding Program.",
+        exceeds: "Also names the state bonding coordinator and notes WOTC was checked on irs.gov."
+      },
+      {
+        name: "Answer about your record",
+        objective: "O6",
+        notYet: "Not practiced, or long, blaming or untrue.",
+        meets: "Said out loud once: what happened, what you have done since, why you are ready.",
+        exceeds: "Short, calm and practiced more than once."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who move into stable or transitional housing within 90 days (follow-up survey)",
+      "Learners who visit an American Job Center or get a job within 90 days",
+      "Employers who use WOTC or a federal bond to hire a learner, as reported by partners"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone to call 211 and job centers, or a computer with internet",
+      "Paper and pen, or a folder, for the plan and rental packet",
+      "About 60 minutes in total, in short sessions: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Have your local 211 number, nearest American Job Center and state bonding coordinator ready before the session.",
+      "Practice the three-part record answer in pairs; it builds confidence fast.",
+      "Rules differ by state and city; send legal questions to legal aid or a reentry counselor.",
+      "Remind learners on parole or probation to check any new address with their officer first.",
+      "Score the plan with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

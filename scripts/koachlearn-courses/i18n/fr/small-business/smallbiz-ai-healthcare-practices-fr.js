@@ -20,11 +20,35 @@ module.exports = {
     "Dans ce cours, l'IA ne pose pas de diagnostic, ne soigne pas et ne donne pas de conseil médical. Chaque texte de santé destiné aux patients est relu par un clinicien diplômé. Ce cours n'est pas un conseil juridique ou de conformité ; consultez les recommandations du HHS (le ministère américain de la Santé) et votre conseiller en conformité. Hors des États-Unis, suivez les règles de protection des données de santé de votre pays. Chaque leçon dure environ cinq minutes, avec un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Construisez un kit IA pour votre cabinet : une liste de tâches triée en \"pas de PHI, IA grand public possible\" et \"PHI, seulement un outil approuvé avec BAA ou pas d'IA\" ; trois scripts d'accueil téléphonique ; des modèles de confirmation et de rappel de rendez-vous avec des cases à remplir ; une fiche patient en langage simple sur un sujet général, marquée \"à relire par un clinicien\" ; et une politique d'IA d'une page pour le personnel. Rien de tout cela ne contient de vraies informations de patient.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des patrons, des responsables de bureau et du personnel d'accueil de petits cabinets de santé : cliniques familiales, cabinets dentaires, cabinets de thérapie et de conseil, chiropracteurs, kinésithérapeutes, opticiens et agences de soins à domicile, dont beaucoup de cabinets issus de minorités qui servent leur communauté.",
+    startingPoint: "Ils gèrent chaque jour l'accueil, les rendez-vous et l'administration, et connaissent les bases de la confidentialité des patients. Beaucoup ont entendu parler des outils d'IA ou en ont essayé un, mais ne savent pas bien ce qui est permis par HIPAA.",
+    gap: "Les écrits de bureau prennent du temps que les petits cabinets n'ont pas, mais mettre des informations de patients dans le mauvais outil d'IA peut enfreindre les règles HIPAA et nuire aux patients. Les apprenants ont besoin d'une règle claire sur les tâches qui peuvent utiliser l'IA, et de scripts, modèles, fiches et d'une politique pour le personnel prêts à l'emploi qui laissent les informations des patients en dehors.",
+    constraints: [
+      "Aucune PHI dans un outil d'IA grand public ; seulement des outils approuvés par le cabinet avec un accord de sous-traitance (BAA)",
+      "L'IA ne pose jamais de diagnostic, ne soigne pas et ne donne pas de conseil médical ; un clinicien agréé relit tout texte de santé destiné aux patients",
+      "Ce n'est pas un conseil juridique ni de conformité : vérifiez les consignes du HHS et demandez au conseiller conformité du cabinet",
+      "Temps : l'accueil est très occupé, donc chaque leçon dure environ 5 minutes",
+      "Des mots simples pour le personnel et pour les documents destinés aux patients (niveau de lecture d'un élève d'environ 11 ans)"
+    ],
+    prerequisites: "Aucun. Les débutants avec les assistants d'IA peuvent d'abord suivre un cours d'introduction à l'IA."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir d'une liste de tâches de bureau", action: "classer chaque tâche en « pas de PHI, IA grand public possible » ou « PHI, seulement un outil approuvé avec BAA ou pas d'IA »", standard: "en plaçant chaque tâche avec des PHI dans la deuxième colonne" },
+    { id: "O2", condition: "À partir des appels courants à l'accueil", action: "rédiger des scripts téléphoniques qui orientent les appels pour les renouvellements, les symptômes et les urgences au bon endroit", standard: "avec chaque script d'urgence qui dit d'appeler le 911, approuvé par le responsable clinique" },
+    { id: "O3", condition: "En utilisant des cases à remplir au lieu des informations des patients", action: "créer des modèles de confirmation et de rappel qui ne mentionnent pas le motif de la visite", standard: "sans aucune vraie information de patient dans l'outil d'IA" },
+    { id: "O4", condition: "À partir d'un sujet général pour les patients", action: "rédiger une fiche en langage simple et la marquer pour relecture par un clinicien", standard: "au niveau de lecture d'un élève d'environ 11 ans, avec vos coordonnées et une note sur le 911" },
+    { id: "O5", condition: "Pour un écrit de bureau comme un règlement, un e-mail ou une offre d'emploi", action: "le rédiger avec un outil d'IA grand public et lister les parties à faire vérifier par la conformité ou les RH", standard: "sans utiliser aucune information de patient" },
+    { id: "O6", condition: "Pour votre propre cabinet", action: "rédiger une politique d'IA d'une page pour le personnel avec cinq à sept règles", standard: "dont pas de PHI sans BAA, les outils approuvés nommés, le signalement des erreurs et une révision chaque année" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : HIPAA d'abord, puis l'accueil",
       lessons: [
         {
+          objectives: ["O1"],
           title: "PHI, HIPAA et IA : la règle qui passe avant tout",
           minutes: 6,
           goal: "Décider si une tâche peut passer par un outil d'IA grand public ou exige un outil approuvé avec un BAA.",
@@ -42,9 +66,14 @@ module.exports = {
           ],
           sources: [HHS_CLOUD, HHS_BA, HHS_HIPAA],
           tryIt: "Listez dix tâches de votre cabinet. Triez-les en deux colonnes : \"Pas de PHI : IA grand public possible\" et \"PHI : outil approuvé avec BAA seulement ou pas d'IA\".",
-          youCanNow: "décider si une tâche de bureau peut passer par un outil d'IA grand public ou exige un outil approuvé avec un BAA."
+          youCanNow: "décider si une tâche de bureau peut passer par un outil d'IA grand public ou exige un outil approuvé avec un BAA.",
+          quickCheck: [
+            { objective: "O1", q: "Lequel de ces éléments est une PHI ?", options: ["Le numéro d'assurance d'un patient", "Les heures d'ouverture de votre cabinet", "Une offre d'emploi pour un poste d'accueil", "Une fiche générale sur le lavage des mains"], answer: 0, why: "Un numéro d'assurance est une information de santé qui peut identifier un patient." },
+            { objective: "O1", q: "Vous voulez que l'IA vous aide à écrire un script téléphonique sur le stationnement. Quel outil pouvez-vous utiliser ?", options: ["Seulement un outil avec un BAA", "Un outil d'IA grand public, car il n'a besoin d'aucune PHI", "Aucun outil d'IA", "Seulement le téléphone d'un patient"], answer: 1, why: "Les tâches qui n'ont besoin d'aucune information de patient peuvent utiliser un outil d'IA grand public." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Scripts d'accueil pour le téléphone et les messages",
           minutes: 5,
           goal: "Rédiger des scripts d'accueil clairs et aimables pour les appels courants.",
@@ -61,9 +90,14 @@ module.exports = {
             { title: "Orientez les questions de soins", bullets: ["Renouvellements et symptômes -> personnel soignant", "Urgences -> 911 (ou votre numéro local) ou les urgences", "Le responsable médical approuve les scripts"] }
           ],
           tryIt: "Demandez à l'IA trois scripts d'accueil : une question d'assurance, un changement de rendez-vous, et un appelant qui décrit une douleur à la poitrine (qui doit l'orienter vers le 911 ou le numéro d'urgence de votre pays). Marquez-les pour approbation par votre responsable médical.",
-          youCanNow: "rédiger des scripts d'accueil aimables et clairs qui orientent les questions de soins en toute sécurité."
+          youCanNow: "rédiger des scripts d'accueil aimables et clairs qui orientent les questions de soins en toute sécurité.",
+          quickCheck: [
+            { objective: "O2", q: "Où un script d'accueil doit-il envoyer une demande de renouvellement d'ordonnance ?", options: ["Vers l'outil d'IA", "Vers le service de facturation", "Vers le personnel soignant", "Seulement vers la pharmacie de l'appelant"], answer: 2, why: "Les questions sur les renouvellements et les symptômes vont au personnel soignant." },
+            { objective: "O2", q: "L'IA écrit, pour un appelant qui a du mal à respirer : « Nous vous rappellerons demain. » Que faites-vous ?", options: ["Vous l'utilisez ; c'est poli", "Vous le raccourcissez", "Vous le traduisez", "Vous le changez pour dire à l'appelant de raccrocher et d'appeler le 911 ou d'aller aux urgences les plus proches"], answer: 3, why: "Chaque script d'urgence dit à l'appelant d'appeler le 911 ou d'aller aux urgences les plus proches." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Modèles de rendez-vous et de rappel",
           minutes: 5,
           goal: "Créer des modèles de confirmation et de rappel de rendez-vous qui protègent la vie privée.",
@@ -80,17 +114,21 @@ module.exports = {
             { title: "Autres langues", bullets: ["L'IA rédige les traductions", "Une personne qualifiée ou qui parle couramment les vérifie"] }
           ],
           tryIt: "Demandez à l'IA un modèle de confirmation, un rappel la veille et un modèle de changement de rendez-vous avec des cases à remplir. Retirez tout ce qui révèle pourquoi le patient vient.",
-          youCanNow: "créer avec l'aide de l'IA des modèles de rendez-vous qui respectent la vie privée."
+          youCanNow: "créer avec l'aide de l'IA des modèles de rendez-vous qui respectent la vie privée.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce qui remplit les vraies informations du patient dans un rappel ?", options: ["Votre logiciel de gestion du cabinet ou de messagerie", "L'outil d'IA grand public", "L'assurance du patient", "Un calendrier imprimé"], answer: 0, why: "C'est votre logiciel de rendez-vous ou de messagerie qui remplit les vraies informations, pas l'outil d'IA." },
+            { objective: "O3", q: "Un modèle de rappel dit « votre rendez-vous de thérapie ». Que changez-vous ?", options: ["Rien", "Vous retirez le mot « thérapie » pour ne pas révéler d'information sensible", "Vous ajoutez le diagnostic", "Vous ajoutez le numéro personnel du thérapeute"], answer: 1, why: "On ne met pas le motif de la visite ni le type de soignant quand cela révélerait une information sensible." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : HIPAA d'abord, puis l'accueil",
         questions: [
-          { q: "Laquelle est une information de santé protégée (PHI) ?", options: ["L'itinéraire pour se garer au cabinet", "Le nom d'un patient avec son diagnostic", "Une fiche générale sur le lavage des mains", "Les horaires du cabinet"], answer: 1, why: "Une information de santé qui identifie un patient est une PHI." },
-          { q: "Selon le HHS, un service qui conserve des PHI pour votre cabinet a besoin :", options: ["Du mot de passe d'un patient", "De rien", "D'un compte sur les réseaux sociaux", "D'un accord de partenaire commercial"], answer: 3, why: "Les services qui traitent des PHI sont des partenaires commerciaux et ont besoin d'un BAA." },
-          { q: "Vous voulez que l'IA résume les notes de dossier d'un patient. Votre cabinet n'a pas de BAA avec l'outil. Que faites-vous ?", options: ["Ne pas utiliser cet outil pour cela", "Coller les notes", "Retirer seulement le nom de famille et coller", "Demander à un ami"], answer: 0, why: "Les PHI ne vont que dans des outils approuvés avec BAA." },
-          { q: "Un appelant décrit une douleur à la poitrine. Le script doit :", options: ["Demander un diagnostic à l'IA", "Lui donner rendez-vous la semaine prochaine", "Lui dire d'appeler le 911 ou d'aller aux urgences les plus proches", "Le mettre en attente"], answer: 2, why: "Les urgences vont au 911 (ou au numéro d'urgence de votre pays)." },
-          { q: "Qu'est-ce qu'un rappel par SMS doit omettre ?", options: ["L'heure", "La date", "Le motif de la visite", "Le numéro de téléphone du cabinet"], answer: 2, why: "Des rappels minimaux protègent la vie privée." }
+          { objective: "O1", q: "Laquelle est une information de santé protégée (PHI) ?", options: ["L'itinéraire pour se garer au cabinet", "Le nom d'un patient avec son diagnostic", "Une fiche générale sur le lavage des mains", "Les horaires du cabinet"], answer: 1, why: "Une information de santé qui identifie un patient est une PHI." },
+          { objective: "O1", q: "Selon le HHS, un service qui conserve des PHI pour votre cabinet a besoin :", options: ["Du mot de passe d'un patient", "De rien", "D'un compte sur les réseaux sociaux", "D'un accord de partenaire commercial"], answer: 3, why: "Les services qui traitent des PHI sont des partenaires commerciaux et ont besoin d'un BAA." },
+          { objective: "O1", q: "Vous voulez que l'IA résume les notes de dossier d'un patient. Votre cabinet n'a pas de BAA avec l'outil. Que faites-vous ?", options: ["Ne pas utiliser cet outil pour cela", "Coller les notes", "Retirer seulement le nom de famille et coller", "Demander à un ami"], answer: 0, why: "Les PHI ne vont que dans des outils approuvés avec BAA." },
+          { objective: "O2", q: "Un appelant décrit une douleur à la poitrine. Le script doit :", options: ["Demander un diagnostic à l'IA", "Lui donner rendez-vous la semaine prochaine", "Lui dire d'appeler le 911 ou d'aller aux urgences les plus proches", "Le mettre en attente"], answer: 2, why: "Les urgences vont au 911 (ou au numéro d'urgence de votre pays)." },
+          { objective: "O3", q: "Qu'est-ce qu'un rappel par SMS doit omettre ?", options: ["L'heure", "La date", "Le motif de la visite", "Le numéro de téléphone du cabinet"], answer: 2, why: "Des rappels minimaux protègent la vie privée." }
         ]
       }
     },
@@ -98,6 +136,7 @@ module.exports = {
       name: "Chapitre 2 : Documents patients, travail de bureau et règles du personnel",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Des fiches patients en langage simple, relues par un clinicien",
           minutes: 5,
           goal: "Rédiger une fiche patient générale en mots simples et l'envoyer en relecture à un clinicien.",
@@ -114,9 +153,14 @@ module.exports = {
             { title: "Relecture par un clinicien", bullets: ["Marquez les brouillons \"À relire par un clinicien\"", "Un clinicien diplômé approuve", "Ajoutez le contact et la note sur le 911"] }
           ],
           tryIt: "Demandez à l'IA une fiche d'une page sur un sujet général pour votre cabinet. Marquez-la \"À relire par un clinicien\" et listez deux faits que le clinicien devrait vérifier.",
-          youCanNow: "rédiger avec l'IA des fiches patients en langage simple et les faire approuver par un clinicien."
+          youCanNow: "rédiger avec l'IA des fiches patients en langage simple et les faire approuver par un clinicien.",
+          quickCheck: [
+            { objective: "O4", q: "Quel sujet convient pour une fiche générale rédigée avec l'IA ?", options: ["Les résultats d'examen de M. Lee", "Les changements de traitement d'un patient", "Ce qu'il faut apporter à une première visite", "Un diagnostic pour un appelant"], answer: 2, why: "On utilise seulement des sujets généraux, jamais les informations d'un patient précis." },
+            { objective: "O4", q: "Le projet de fiche de l'IA a l'air bien. Que faites-vous avant qu'un patient le voie ?", options: ["Vous l'imprimez tout de suite", "Vous le publiez sur le site web", "Vous demandez à l'IA s'il est correct", "Vous le marquez « À relire par un clinicien » et le faites approuver par un clinicien agréé"], answer: 3, why: "L'IA peut se tromper sur les faits de santé, donc un clinicien agréé vérifie chaque projet." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Règlements, e-mails et offres d'emploi",
           minutes: 4,
           goal: "Utiliser l'IA pour les documents de bureau qui n'ont besoin d'aucune information de patient.",
@@ -133,9 +177,14 @@ module.exports = {
             { title: "Vérifiez les sujets réglementés", bullets: ["Frais, emploi, facturation, droits des patients", "Relecture conformité, RH ou juridique"] }
           ],
           tryIt: "Demandez à l'IA de rédiger la règle sur les absences de votre cabinet ou une offre d'emploi pour un poste d'accueil. Notez tout ce qui demande une vérification de conformité ou RH.",
-          youCanNow: "utiliser l'IA pour des documents de bureau sans information de patient, avec les bonnes vérifications."
+          youCanNow: "utiliser l'IA pour des documents de bureau sans information de patient, avec les bonnes vérifications.",
+          quickCheck: [
+            { objective: "O5", q: "Lequel est un écrit de bureau ordinaire qui n'a besoin d'aucune PHI ?", options: ["Une liste de contrôle pour un nouvel employé", "Une note dans le dossier d'un patient", "Une lettre de résultats d'analyse pour un patient", "Une lettre d'orientation avec un diagnostic"], answer: 0, why: "Les règlements, e-mails, offres d'emploi et listes de contrôle n'ont besoin d'aucune information de patient." },
+            { objective: "O5", q: "L'IA rédige un règlement sur les rendez-vous manqués avec des frais. Que faites-vous avant de le publier ?", options: ["Vous le publiez tout de suite", "Vous le faites vérifier par un conseiller conformité, un conseiller RH ou un avocat", "Vous doublez les frais", "Vous retirez la date"], answer: 1, why: "Les frais et les droits des patients peuvent être réglementés, donc un conseiller les vérifie d'abord." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Rédiger la politique d'IA de votre cabinet",
           minutes: 5,
           goal: "Rédiger une politique d'IA d'une page pour le personnel et terminer votre kit IA.",
@@ -153,17 +202,21 @@ module.exports = {
           ],
           sources: [HHS_BA],
           tryIt: "Tâche finale : rédigez votre politique d'IA d'une page pour le personnel et rassemblez votre kit IA : liste de tâches triée, trois scripts, modèles de rappel, une fiche marquée pour relecture par un clinicien, et la politique. Vérifiez qu'aucune vraie information de patient n'apparaît nulle part.",
-          youCanNow: "encadrer un usage sûr de l'IA dans un cabinet de santé avec des règles claires et des outils utiles sans PHI."
+          youCanNow: "encadrer un usage sûr de l'IA dans un cabinet de santé avec des règles claires et des outils utiles sans PHI.",
+          quickCheck: [
+            { objective: "O6", q: "Combien de règles la leçon conseille-t-elle pour une première politique d'IA ?", options: ["Une", "Cinquante", "Cinq à sept", "Aucune ; il suffit de le dire au personnel à l'oral"], answer: 2, why: "Cinq à sept règles suffisent pour commencer." },
+            { objective: "O6", q: "Votre projet de politique d'IA est prêt. Quelles sont les prochaines étapes ?", options: ["Le ranger dans un tiroir", "Le publier en ligne pour les patients", "Laisser chaque membre du personnel le modifier", "Le faire approuver par le responsable de la confidentialité ou de la conformité, former le personnel et garder une copie signée"], answer: 3, why: "Le responsable l'approuve, le personnel est formé et vous gardez une copie signée." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Documents patients, travail de bureau et règles du personnel",
         questions: [
-          { q: "Qui approuve une fiche patient rédigée par l'IA ?", options: ["Un clinicien diplômé", "L'IA", "L'accueil seul", "Un patient"], answer: 0, why: "Les cliniciens vérifient les faits de santé." },
-          { q: "Quel sujet convient à une fiche générale rédigée par l'IA ?", options: ["Une note de dossier", "Les résultats d'analyse de M. Lee", "La liste de médicaments d'un patient", "Comment se préparer à une première visite"], answer: 3, why: "Les sujets généraux ne contiennent aucune PHI." },
-          { q: "Quelle tâche de bureau peut passer par un outil d'IA grand public ?", options: ["Résumer les notes de visite d'un patient", "Une offre d'emploi pour un assistant médical", "Écrire une lettre avec le diagnostic d'un patient", "Coder la demande de remboursement d'un patient précis"], answer: 1, why: "Elle ne contient aucune information de patient." },
-          { q: "Un employé a collé par erreur le nom et la maladie d'un patient dans un outil d'IA gratuit. Que doit dire la politique ?", options: ["Le signaler immédiatement au responsable de la confidentialité", "Le cacher", "Supprimer l'ordinateur", "Ne rien faire"], answer: 0, why: "Un signalement rapide permet au cabinet de réagir correctement." },
-          { q: "Laquelle est une bonne règle de politique d'IA ?", options: ["Les PHI peuvent aller partout", "N'importe quel outil convient", "L'IA ne donne jamais de diagnostic ni de conseil de traitement aux patients", "Personne ne relit le contenu de l'IA"], answer: 2, why: "Les décisions de soins restent aux cliniciens diplômés." }
+          { objective: "O4", q: "Qui approuve une fiche patient rédigée par l'IA ?", options: ["Un clinicien diplômé", "L'IA", "L'accueil seul", "Un patient"], answer: 0, why: "Les cliniciens vérifient les faits de santé." },
+          { objective: "O4", q: "Quel sujet convient à une fiche générale rédigée par l'IA ?", options: ["Une note de dossier", "Les résultats d'analyse de M. Lee", "La liste de médicaments d'un patient", "Comment se préparer à une première visite"], answer: 3, why: "Les sujets généraux ne contiennent aucune PHI." },
+          { objective: "O5", q: "Quelle tâche de bureau peut passer par un outil d'IA grand public ?", options: ["Résumer les notes de visite d'un patient", "Une offre d'emploi pour un assistant médical", "Écrire une lettre avec le diagnostic d'un patient", "Coder la demande de remboursement d'un patient précis"], answer: 1, why: "Elle ne contient aucune information de patient." },
+          { objective: "O6", q: "Un employé a collé par erreur le nom et la maladie d'un patient dans un outil d'IA gratuit. Que doit dire la politique ?", options: ["Le signaler immédiatement au responsable de la confidentialité", "Le cacher", "Supprimer l'ordinateur", "Ne rien faire"], answer: 0, why: "Un signalement rapide permet au cabinet de réagir correctement." },
+          { objective: "O6", q: "Laquelle est une bonne règle de politique d'IA ?", options: ["Les PHI peuvent aller partout", "N'importe quel outil convient", "L'IA ne donne jamais de diagnostic ni de conseil de traitement aux patients", "Personne ne relit le contenu de l'IA"], answer: 2, why: "Les décisions de soins restent aux cliniciens diplômés." }
         ]
       }
     }
@@ -171,26 +224,103 @@ module.exports = {
   quiz: {
     title: "Quiz final : L'IA pour les cabinets de santé",
     questions: [
-      { q: "PHI veut dire :", options: ["Assurance santé publique", "Informations de santé protégées", "Inspection privée du domicile", "Indice de santé primaire"], answer: 1, why: "Ce sont des informations de santé qui identifient un patient." },
-      { q: "Laquelle est une PHI ?", options: ["Une affiche générale sur la saison de la grippe", "Les horaires du cabinet", "L'itinéraire pour se garer", "Une date de naissance avec un type de rendez-vous"], answer: 3, why: "Des détails identifiants avec une information de santé sont des PHI." },
-      { q: "Un BAA, c'est :", options: ["Un formulaire patient", "Un code de facturation", "Une carte d'assurance", "Un contrat par lequel un fournisseur s'engage à protéger les PHI"], answer: 3, why: "Les accords de partenaire commercial encadrent le traitement des PHI." },
-      { q: "La plupart des outils de discussion d'IA gratuits et grand public :", options: ["Sont toujours approuvés HIPAA", "Ne signent pas de BAA avec les particuliers", "Sont gérés par le HHS", "Effacent tout instantanément"], answer: 1, why: "Ne supposez pas qu'un outil grand public est approuvé pour les PHI." },
-      { q: "Quand vous ne savez pas si une tâche peut utiliser l'IA, demandez à :", options: ["Un patient", "L'outil d'IA", "Votre responsable de la confidentialité ou de la conformité", "Un groupe sur les réseaux sociaux"], answer: 2, why: "C'est lui qui décide ce qui est approuvé." },
-      { q: "Où le personnel trouve-t-il les recommandations officielles sur HIPAA ?", options: ["hhs.gov", "Un blog au hasard", "Une application de discussion", "Un commentaire sous un article"], answer: 0, why: "Le HHS publie les recommandations HIPAA." },
-      { q: "Au téléphone, les questions de renouvellement et de symptômes vont :", options: ["Sur la messagerie pour toujours", "À l'IA", "Au personnel soignant", "À la facturation"], answer: 2, why: "Les questions médicales demandent du personnel soignant." },
-      { q: "Qui approuve les scripts d'accueil qui touchent aux soins ?", options: ["Le responsable médical", "Le dernier embauché", "L'IA", "Un fournisseur"], answer: 0, why: "L'approbation médicale garde les scripts sûrs." },
-      { q: "Le triage est fait par :", options: ["L'IA", "Le personnel soignant", "L'accueil seul", "Les amis des patients"], answer: 1, why: "Décider de l'urgence est un travail médical." },
-      { q: "Lequel est un bon modèle de rappel ?", options: ["Le numéro d'assurance du patient", "\"Bonjour Jane, nous confirmons votre suivi VIH\"", "Une note de dossier", "\"Bonjour [prénom], nous confirmons votre rendez-vous le [date] à [heure].\""], answer: 3, why: "Des cases à remplir et aucun motif de visite." },
-      { q: "Qui remplit les vrais détails des patients dans les rappels ?", options: ["Votre logiciel de rendez-vous ou de messagerie", "L'outil d'IA grand public", "Le téléphone d'un bénévole", "Les réseaux sociaux"], answer: 0, why: "Les vrais détails restent dans des systèmes approuvés." },
-      { q: "Les rappels traduits par l'IA doivent être vérifiés par :", options: ["Un patient", "Personne", "L'IA une deuxième fois", "Un employé qui parle couramment la langue ou un traducteur qualifié"], answer: 3, why: "Les traductions peuvent contenir des erreurs." },
-      { q: "Un bon niveau de lecture pour les fiches patients générales est environ :", options: ["Faculté de médecine", "Diplômé universitaire", "Fin d'école primaire", "Pas de mots du tout"], answer: 2, why: "Le langage simple aide plus de patients à comprendre." },
-      { q: "Chaque brouillon de fiche rédigé par l'IA est marqué :", options: ["\"Version finale\"", "\"À relire par un clinicien\"", "\"Secret\"", "\"Approuvé par l'IA\""], answer: 1, why: "Les cliniciens doivent approuver le contenu de santé." },
-      { q: "Les fiches patients doivent inclure :", options: ["Rien d'autre", "Les histoires d'autres patients avec leur nom", "Un diagnostic pour chaque lecteur", "Votre ligne de contact et une note sur le 911 pour les urgences"], answer: 3, why: "Les patients doivent savoir comment obtenir de l'aide." },
-      { q: "Quel document demande une vérification de conformité ou RH ?", options: ["Une affiche des horaires des fêtes", "Un mot de remerciement au personnel pour une fête", "Une règle sur les frais d'absence", "Un plan du parking"], answer: 2, why: "Les frais et les droits des patients peuvent être réglementés." },
-      { q: "Un e-mail au personnel sur un nouveau système téléphonique :", options: ["N'a besoin d'aucune PHI, donc l'IA grand public peut aider", "Doit contenir des noms de patients", "Exige un BAA", "Ne peut pas être écrit"], answer: 0, why: "Aucune information de patient n'est en jeu." },
-      { q: "Une politique d'IA doit lister :", options: ["Les noms des patients", "Les outils approuvés par leur nom", "Les mots de passe du personnel", "Rien de précis"], answer: 1, why: "Le personnel doit savoir quels outils sont autorisés." },
-      { q: "À quelle fréquence revoir la politique d'IA ?", options: ["Jamais", "Au moins chaque année", "Tous les dix ans", "Seulement après une amende"], answer: 1, why: "Les outils et les règles changent." },
-      { q: "Dans ce cours, l'IA sert à :", options: ["Le travail administratif et les brouillons, jamais au diagnostic", "Diagnostiquer les patients", "Prescrire", "Remplacer les cliniciens"], answer: 0, why: "Les décisions de soins restent aux cliniciens diplômés." }
+      { objective: "O1", q: "PHI veut dire :", options: ["Assurance santé publique", "Informations de santé protégées", "Inspection privée du domicile", "Indice de santé primaire"], answer: 1, why: "Ce sont des informations de santé qui identifient un patient." },
+      { objective: "O1", q: "Laquelle est une PHI ?", options: ["Une affiche générale sur la saison de la grippe", "Les horaires du cabinet", "L'itinéraire pour se garer", "Une date de naissance avec un type de rendez-vous"], answer: 3, why: "Des détails identifiants avec une information de santé sont des PHI." },
+      { objective: "O1", q: "Un BAA, c'est :", options: ["Un formulaire patient", "Un code de facturation", "Une carte d'assurance", "Un contrat par lequel un fournisseur s'engage à protéger les PHI"], answer: 3, why: "Les accords de partenaire commercial encadrent le traitement des PHI." },
+      { objective: "O1", q: "La plupart des outils de discussion d'IA gratuits et grand public :", options: ["Sont toujours approuvés HIPAA", "Ne signent pas de BAA avec les particuliers", "Sont gérés par le HHS", "Effacent tout instantanément"], answer: 1, why: "Ne supposez pas qu'un outil grand public est approuvé pour les PHI." },
+      { objective: "O1", q: "Quand vous ne savez pas si une tâche peut utiliser l'IA, demandez à :", options: ["Un patient", "L'outil d'IA", "Votre responsable de la confidentialité ou de la conformité", "Un groupe sur les réseaux sociaux"], answer: 2, why: "C'est lui qui décide ce qui est approuvé." },
+      { objective: "O1", q: "Où le personnel trouve-t-il les recommandations officielles sur HIPAA ?", options: ["hhs.gov", "Un blog au hasard", "Une application de discussion", "Un commentaire sous un article"], answer: 0, why: "Le HHS publie les recommandations HIPAA." },
+      { objective: "O2", q: "Au téléphone, les questions de renouvellement et de symptômes vont :", options: ["Sur la messagerie pour toujours", "À l'IA", "Au personnel soignant", "À la facturation"], answer: 2, why: "Les questions médicales demandent du personnel soignant." },
+      { objective: "O2", q: "Qui approuve les scripts d'accueil qui touchent aux soins ?", options: ["Le responsable médical", "Le dernier embauché", "L'IA", "Un fournisseur"], answer: 0, why: "L'approbation médicale garde les scripts sûrs." },
+      { objective: "O2", q: "Le triage est fait par :", options: ["L'IA", "Le personnel soignant", "L'accueil seul", "Les amis des patients"], answer: 1, why: "Décider de l'urgence est un travail médical." },
+      { objective: "O3", q: "Lequel est un bon modèle de rappel ?", options: ["Le numéro d'assurance du patient", "\"Bonjour Jane, nous confirmons votre suivi VIH\"", "Une note de dossier", "\"Bonjour [prénom], nous confirmons votre rendez-vous le [date] à [heure].\""], answer: 3, why: "Des cases à remplir et aucun motif de visite." },
+      { objective: "O3", q: "Qui remplit les vrais détails des patients dans les rappels ?", options: ["Votre logiciel de rendez-vous ou de messagerie", "L'outil d'IA grand public", "Le téléphone d'un bénévole", "Les réseaux sociaux"], answer: 0, why: "Les vrais détails restent dans des systèmes approuvés." },
+      { objective: "O3", q: "Les rappels traduits par l'IA doivent être vérifiés par :", options: ["Un patient", "Personne", "L'IA une deuxième fois", "Un employé qui parle couramment la langue ou un traducteur qualifié"], answer: 3, why: "Les traductions peuvent contenir des erreurs." },
+      { objective: "O4", q: "Un bon niveau de lecture pour les fiches patients générales est environ :", options: ["Faculté de médecine", "Diplômé universitaire", "Fin d'école primaire", "Pas de mots du tout"], answer: 2, why: "Le langage simple aide plus de patients à comprendre." },
+      { objective: "O4", q: "Chaque brouillon de fiche rédigé par l'IA est marqué :", options: ["\"Version finale\"", "\"À relire par un clinicien\"", "\"Secret\"", "\"Approuvé par l'IA\""], answer: 1, why: "Les cliniciens doivent approuver le contenu de santé." },
+      { objective: "O4", q: "Les fiches patients doivent inclure :", options: ["Rien d'autre", "Les histoires d'autres patients avec leur nom", "Un diagnostic pour chaque lecteur", "Votre ligne de contact et une note sur le 911 pour les urgences"], answer: 3, why: "Les patients doivent savoir comment obtenir de l'aide." },
+      { objective: "O5", q: "Quel document demande une vérification de conformité ou RH ?", options: ["Une affiche des horaires des fêtes", "Un mot de remerciement au personnel pour une fête", "Une règle sur les frais d'absence", "Un plan du parking"], answer: 2, why: "Les frais et les droits des patients peuvent être réglementés." },
+      { objective: "O5", q: "Un e-mail au personnel sur un nouveau système téléphonique :", options: ["N'a besoin d'aucune PHI, donc l'IA grand public peut aider", "Doit contenir des noms de patients", "Exige un BAA", "Ne peut pas être écrit"], answer: 0, why: "Aucune information de patient n'est en jeu." },
+      { objective: "O6", q: "Une politique d'IA doit lister :", options: ["Les noms des patients", "Les outils approuvés par leur nom", "Les mots de passe du personnel", "Rien de précis"], answer: 1, why: "Le personnel doit savoir quels outils sont autorisés." },
+      { objective: "O6", q: "À quelle fréquence revoir la politique d'IA ?", options: ["Jamais", "Au moins chaque année", "Tous les dix ans", "Seulement après une amende"], answer: 1, why: "Les outils et les règles changent." },
+      { objective: "O6", q: "Dans ce cours, l'IA sert à :", options: ["Le travail administratif et les brouillons, jamais au diagnostic", "Diagnostiquer les patients", "Prescrire", "Remplacer les cliniciens"], answer: 0, why: "Les décisions de soins restent aux cliniciens diplômés." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      1,
+      3,
+      7,
+      9,
+      13,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Liste de tâches triée",
+        objective: "O1",
+        notYet: "Une tâche qui demande des PHI est dans la colonne « IA grand public possible ».",
+        meets: "Dix tâches bien classées dans les deux colonnes.",
+        exceeds: "Indique quel outil approuvé avec BAA le cabinet utilise pour les tâches avec PHI, s'il y en a un."
+      },
+      {
+        name: "Scripts d'accueil sûrs",
+        objective: "O2",
+        notYet: "Un script donne un conseil médical ou n'oriente pas une urgence vers le 911.",
+        meets: "Trois scripts qui orientent les questions de soins vers le personnel soignant et les urgences vers le 911.",
+        exceeds: "Marqués pour approbation par le responsable clinique, avec une note sur qui les a approuvés."
+      },
+      {
+        name: "Modèles de rappel confidentiels",
+        objective: "O3",
+        notYet: "Un modèle contient de vraies informations de patient ou révèle le motif de la visite.",
+        meets: "Des modèles de confirmation et de rappel avec des cases à remplir et sans motif de visite.",
+        exceeds: "Contient aussi un modèle pour changer de rendez-vous et une version traduite vérifiée par une personne qui parle bien la langue."
+      },
+      {
+        name: "Fiche à relire",
+        objective: "O4",
+        notYet: "La fiche parle d'un patient précis ou n'est pas marquée pour relecture.",
+        meets: "Sujet général, mots simples, marquée « À relire par un clinicien » avec les coordonnées et une note sur le 911.",
+        exceeds: "Liste les faits que le clinicien doit vérifier."
+      },
+      {
+        name: "Politique d'IA pour le personnel",
+        objective: "O6",
+        notYet: "Il manque à la politique la règle « pas de PHI » ou la façon de signaler une erreur.",
+        meets: "Cinq à sept règles, dont pas de PHI sans BAA, les outils approuvés, le signalement et la révision annuelle.",
+        exceeds: "Approuvée par le responsable de la confidentialité ou de la conformité, avec un plan de formation du personnel."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Cabinets qui adoptent une politique d'IA écrite pour le personnel dans les 30 jours (enquête de suivi)",
+      "Cabinets qui ne signalent aucune PHI entrée dans des outils d'IA grand public après la formation",
+      "Apprenants qui commencent un autre cours Koach Learn pour les petites entreprises dans les 30 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur ou un téléphone avec internet",
+      "Un assistant d'IA grand public gratuit, utilisé seulement pour les tâches sans PHI",
+      "Les règlements actuels de votre cabinet et les types d'appels courants, ou des exemples",
+      "Environ 60 minutes au total : leçons, pratique, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "N'utilisez en classe que des informations inventées ou des exemples ; ne tapez jamais les informations d'un vrai patient dans un outil d'IA.",
+      "Invitez le responsable de la confidentialité ou de la conformité du cabinet à la séance sur la politique d'IA pour le personnel.",
+      "Faites relire par un clinicien agréé toutes les fiches et tous les scripts liés aux soins avant de les utiliser.",
+      "Rappelez que ce cours n'est pas un conseil juridique ni de conformité, et qu'il renvoie aux consignes du HHS et à leur conseiller.",
+      "Notez la tâche finale avec la grille, et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

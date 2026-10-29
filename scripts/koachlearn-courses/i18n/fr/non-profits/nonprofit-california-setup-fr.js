@@ -29,11 +29,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes. Lisez-la, regardez les diapositives, puis faites la tâche \"Essayez maintenant\". Chaque montant de ce cours a été vérifié sur la page officielle de l'administration le 27 octobre 2026, et le lien est donné pour que vous puissiez revérifier. Les frais changent, donc confirmez toujours sur la page officielle avant de payer. Ce cours est une formation, pas un conseil juridique ou fiscal : pour votre cas, parlez à un avocat spécialisé, à un comptable ou à un centre d'aide gratuit pour associations."
   ],
   finalTask: "Établissez un plan de création d'une page pour votre association (réelle ou d'entraînement) : un tableau avec chaque démarche dans l'ordre, l'administration, le nom du formulaire, les frais d'après la page officielle, la date à laquelle vous prévoyez de la faire, et les déclarations annuelles avec leurs dates limites. Ajoutez le coût total de création et le lien de chaque page officielle.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des personnes qui créent une association caritative, un ministère, un groupe communautaire ou un programme en Californie : fondateurs, pasteurs, membres de conseils et bénévoles qui veulent bien faire du premier coup.",
+    startingPoint: "Ils ont une mission et souvent déjà un groupe de personnes pour aider. La plupart n'ont jamais fait de démarche auprès du Secrétaire d'État, de l'IRS, du Franchise Tax Board ou du Procureur général, et ne connaissent ni l'ordre ni les coûts.",
+    gap: "Des fondateurs font les démarches dans le mauvais ordre, paient des sites web pour des services gratuits, ou oublient des déclarations annuelles et perdent leur exonération fiscale. Les apprenants ont besoin d'un plan daté avec chaque démarche, administration, formulaire, frais officiels et date limite annuelle, pour que l'association démarre bien et reste en règle.",
+    constraints: [
+      "Les frais et les formulaires changent ; chaque montant est vérifié sur la page officielle avant le dépôt",
+      "Ce n'est pas un conseil juridique ni fiscal : en cas de doute, les apprenants s'adressent à un avocat spécialisé, un centre d'aide aux associations ou un professionnel",
+      "Vie privée : les numéros de sécurité sociale ou ITIN vont seulement sur le site officiel de l'IRS, jamais dans les outils d'IA ni par e-mail",
+      "Les églises et les groupes religieux ont des règles particulières à vérifier",
+      "Des mots simples pour des fondateurs qui débutent ; environ 60 minutes au total"
+    ],
+    prerequisites: "Aucun."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir des étapes de création d'une association caritative en Californie", action: "lister dans l'ordre les principales démarches de création et l'administration qui gère chacune", standard: "avec chaque démarche dans le bon ordre" },
+    { id: "O2", condition: "À partir du but de votre association", action: "choisir le bon formulaire de statuts et prévoir le Statement of Information", standard: "avec le bon lieu de dépôt et les bonnes dates limites" },
+    { id: "O3", condition: "Une fois vos statuts déposés", action: "obtenir un EIN gratuit sur irs.gov et préparer la première réunion du conseil", standard: "en tapant les numéros privés seulement sur le site officiel de l'IRS et en listant chaque décision de la première réunion" },
+    { id: "O4", condition: "Avec la grille d'éligibilité de l'IRS", action: "choisir entre le formulaire 1023 et le formulaire 1023-EZ et dire où il se dépose", standard: "avec les frais relevés sur la page officielle" },
+    { id: "O5", condition: "Après l'approbation fédérale ou votre premier don", action: "prévoir l'exonération auprès du Franchise Tax Board et l'enregistrement au Registry of Charities du Procureur général", standard: "avec le bon formulaire et le délai de 30 jours du Registry" },
+    { id: "O6", condition: "À partir des frais et des dates limites vérifiés", action: "établir un budget de création et un calendrier des déclarations annuelles", standard: "avec chaque montant et chaque date limite vérifiés sur la page officielle" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Créer la société",
       lessons: [
         {
+          objectives: ["O1"],
           title: "La feuille de route : ce dont une association californienne a besoin",
           minutes: 5,
           goal: "Lister les principales démarches de création dans le bon ordre et l'administration qui gère chacune.",
@@ -52,9 +76,14 @@ module.exports = {
           ],
           sources: [SOS_ARTICLES, IRS_EIN, FTB, AG_INITIAL],
           tryIt: "Écrivez la mission de votre association en une ou deux phrases. Puis écrivez les huit étapes de création dans l'ordre et l'administration de chacune. Gardez cette page : elle deviendra votre plan de création final.",
-          youCanNow: "lister dans l'ordre les démarches de création d'une association californienne et nommer l'administration qui gère chacune."
+          youCanNow: "lister dans l'ordre les démarches de création d'une association californienne et nommer l'administration qui gère chacune.",
+          quickCheck: [
+            { objective: "O1", q: "Quelle administration gère l'exonération fiscale en Californie ?", options: ["Le Franchise Tax Board", "Le Secrétaire d'État", "Le Procureur général", "Le conseil municipal"], answer: 0, why: "L'exonération fiscale relève de l'IRS (au niveau fédéral) et du Franchise Tax Board (au niveau de l'État)." },
+            { objective: "O1", q: "Un fondateur veut demander un EIN avant de déposer les statuts. Que lui dites-vous ?", options: ["N'importe quel ordre convient", "Déposez d'abord les statuts auprès du Secrétaire d'État, comme l'IRS le demande aux sociétés", "Passez les statuts", "Enregistrez-vous d'abord auprès du Procureur général"], answer: 1, why: "L'IRS demande aux sociétés de s'enregistrer auprès de l'État avant de demander un EIN." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Déposer les statuts",
           minutes: 5,
           goal: "Choisir le bon formulaire de statuts et le déposer auprès du Secrétaire d'État.",
@@ -73,9 +102,14 @@ module.exports = {
           ],
           sources: [SOS_ARTICLES, SOS_SI, BIZFILE],
           tryIt: "Ouvrez la page des formulaires du Secrétaire d'État. Trouvez le formulaire de statuts qui convient à votre groupe et notez son nom et ses frais actuels. Puis trouvez les frais du SI-100 et ajoutez les deux à votre plan, avec une date limite pour le SI-100.",
-          youCanNow: "choisir le bon formulaire de statuts, trouver ses frais sur la page officielle et prévoir votre Statement of Information."
+          youCanNow: "choisir le bon formulaire de statuts, trouver ses frais sur la page officielle et prévoir votre Statement of Information.",
+          quickCheck: [
+            { objective: "O2", q: "Quel formulaire de statuts ne convient pas à la plupart des associations caritatives ?", options: ["ARTS-PB", "ARTS-RE", "ARTS-MU (intérêt mutuel)", "Aucun ne convient"], answer: 2, why: "L'intérêt mutuel concerne les groupes qui servent leurs propres membres et ne convient pas à la plupart des associations caritatives." },
+            { objective: "O2", q: "Vous voulez appeler votre association « Hope Kitchen ». Que faites-vous avant le dépôt ?", options: ["Vous déposez tout de suite", "Vous demandez à l'IA si le nom est libre", "Vous payez un site web pour le réserver", "Vous cherchez d'abord le nom pour vérifier qu'il est libre"], answer: 3, why: "Cherchez d'abord le nom pour vérifier qu'il est libre." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Obtenir l'EIN, le règlement intérieur et la première réunion du conseil",
           minutes: 5,
           goal: "Obtenir un EIN gratuit en toute sécurité et préparer la première réunion du conseil.",
@@ -93,17 +127,21 @@ module.exports = {
           ],
           sources: [IRS_EIN],
           tryIt: "Préparez l'ordre du jour de la première réunion avec cinq points : adopter le règlement intérieur, élire les dirigeants, approuver le compte bancaire, adopter la politique sur les conflits d'intérêts, et fixer la date de la prochaine réunion. Ajoutez \"Demander l'EIN sur irs.gov (gratuit)\" à votre plan, avec une date après le dépôt des statuts.",
-          youCanNow: "obtenir un EIN gratuitement et en sécurité, et tenir une première réunion du conseil avec les bonnes décisions à l'ordre du jour."
+          youCanNow: "obtenir un EIN gratuitement et en sécurité, et tenir une première réunion du conseil avec les bonnes décisions à l'ordre du jour.",
+          quickCheck: [
+            { objective: "O3", q: "À quoi sert un EIN ?", options: ["À un compte bancaire, à la paie et aux demandes d'exonération fiscale", "Seulement à acheter un bâtiment", "Seulement aux églises", "À rien ; c'est une décoration facultative"], answer: 0, why: "L'EIN est le numéro fiscal fédéral de l'association pour la banque, la paie et les demandes d'exonération." },
+            { objective: "O3", q: "Vous remplissez l'outil en ligne de l'IRS pour l'EIN et devez vous arrêter à mi-chemin. Que devez-vous savoir ?", options: ["Vous pouvez enregistrer et finir la semaine prochaine", "Il doit être rempli en une seule fois", "L'IA peut le finir pour vous", "Vous pouvez envoyer le reste à l'IRS par e-mail"], answer: 1, why: "L'outil en ligne de l'IRS doit être rempli en une seule fois." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Créer la société",
         questions: [
-          { q: "Quelle administration crée une société californienne à but non lucratif ?", options: ["L'IRS", "Le Secrétaire d'État de Californie", "Le Procureur général", "Le greffe du comté"], answer: 1, why: "Les statuts sont déposés auprès du Secrétaire d'État." },
-          { q: "Une épicerie solidaire ouverte à toute la communauté déposera le plus probablement quel formulaire de statuts ?", options: ["ARTS-MU (intérêt mutuel)", "ARTS-RE (religieux)", "ARTS-PB (intérêt public)", "Un formulaire de SARL commerciale"], answer: 2, why: "Les œuvres caritatives qui servent le public déposent en général des statuts d'intérêt public." },
-          { q: "Un site propose d'obtenir votre EIN pour 79 $. Que devez-vous faire ?", options: ["Payer, c'est plus rapide", "Faire la demande gratuitement sur irs.gov", "Demander au Procureur général de payer", "Vous passer d'EIN"], answer: 1, why: "L'IRS dit qu'un EIN ne coûte jamais rien ; faites la demande sur irs.gov." },
-          { q: "Quand le premier Statement of Information (SI-100) est-il dû ?", options: ["Dans les 90 jours suivant le dépôt des statuts", "Seulement à la fermeture", "Tous les dix ans", "Jamais pour les associations"], answer: 0, why: "Le Secrétaire d'État dit dans les 90 jours, puis tous les deux ans." },
-          { q: "Laquelle est une tâche de la première réunion du conseil ?", options: ["Déposer le 990-N", "Adopter le règlement intérieur et élire les dirigeants", "Payer les frais de l'IRS", "Renouveler auprès du Procureur général"], answer: 1, why: "La première réunion adopte le règlement, élit les dirigeants et approuve les bases comme le compte bancaire." }
+          { objective: "O1", q: "Quelle administration crée une société californienne à but non lucratif ?", options: ["L'IRS", "Le Secrétaire d'État de Californie", "Le Procureur général", "Le greffe du comté"], answer: 1, why: "Les statuts sont déposés auprès du Secrétaire d'État." },
+          { objective: "O2", q: "Une épicerie solidaire ouverte à toute la communauté déposera le plus probablement quel formulaire de statuts ?", options: ["ARTS-MU (intérêt mutuel)", "ARTS-RE (religieux)", "ARTS-PB (intérêt public)", "Un formulaire de SARL commerciale"], answer: 2, why: "Les œuvres caritatives qui servent le public déposent en général des statuts d'intérêt public." },
+          { objective: "O3", q: "Un site propose d'obtenir votre EIN pour 79 $. Que devez-vous faire ?", options: ["Payer, c'est plus rapide", "Faire la demande gratuitement sur irs.gov", "Demander au Procureur général de payer", "Vous passer d'EIN"], answer: 1, why: "L'IRS dit qu'un EIN ne coûte jamais rien ; faites la demande sur irs.gov." },
+          { objective: "O2", q: "Quand le premier Statement of Information (SI-100) est-il dû ?", options: ["Dans les 90 jours suivant le dépôt des statuts", "Seulement à la fermeture", "Tous les dix ans", "Jamais pour les associations"], answer: 0, why: "Le Secrétaire d'État dit dans les 90 jours, puis tous les deux ans." },
+          { objective: "O3", q: "Laquelle est une tâche de la première réunion du conseil ?", options: ["Déposer le 990-N", "Adopter le règlement intérieur et élire les dirigeants", "Payer les frais de l'IRS", "Renouveler auprès du Procureur général"], answer: 1, why: "La première réunion adopte le règlement, élit les dirigeants et approuve les bases comme le compte bancaire." }
         ]
       }
     },
@@ -111,6 +149,7 @@ module.exports = {
       name: "Chapitre 2 : Exonération fiscale, enregistrement et coûts",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Demander le statut fédéral 501(c)(3)",
           minutes: 6,
           goal: "Choisir entre le formulaire 1023 et le formulaire 1023-EZ et connaître les frais.",
@@ -129,9 +168,14 @@ module.exports = {
           ],
           sources: [IRS_FEE, IRS_1023, IRS_1023EZ, IRS_CHURCH],
           tryIt: "Ouvrez les instructions du formulaire 1023-EZ sur irs.gov et lisez la grille d'éligibilité. Décidez quel formulaire votre association déposerait, puis ajoutez à votre plan ce formulaire, les frais indiqués sur la page de l'IRS et une date cible.",
-          youCanNow: "choisir entre les formulaires 1023 et 1023-EZ, trouver les frais actuels et savoir où déposer."
+          youCanNow: "choisir entre les formulaires 1023 et 1023-EZ, trouver les frais actuels et savoir où déposer.",
+          quickCheck: [
+            { objective: "O4", q: "Quand paie-t-on les frais de l'IRS pour le formulaire 1023 ou 1023-EZ ?", options: ["Un an après l'approbation", "Par chèque au Secrétaire d'État", "Sur Pay.gov au moment du dépôt", "Jamais"], answer: 2, why: "Les deux formulaires se déposent en ligne sur Pay.gov, et les frais s'y paient au moment du dépôt." },
+            { objective: "O4", q: "L'IRS vous envoie votre lettre de détermination. Qu'en faites-vous ?", options: ["Vous la jetez au bout d'un an", "Vous donnez le seul exemplaire à un donateur", "Vous la collez dans l'IA", "Vous la gardez pour toujours, car les donateurs, les financeurs et l'État la demanderont"], answer: 3, why: "Gardez la lettre de détermination pour toujours ; beaucoup vous la demanderont." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "L'exonération californienne et le Registry of Charities",
           minutes: 5,
           goal: "Prévoir l'exonération auprès du Franchise Tax Board et l'enregistrement auprès du Procureur général.",
@@ -149,9 +193,14 @@ module.exports = {
           ],
           sources: [FTB, AG_INITIAL],
           tryIt: "Ajoutez deux lignes à votre plan : l'exonération du FTB (nom du formulaire, \"vérifier les frais sur ftb.ca.gov\", date cible après la lettre de l'IRS) et le CT-1 du Procureur général (50 $, dans les 30 jours suivant votre premier don). Faites la liste des quatre documents que vous téléverserez.",
-          youCanNow: "prévoir votre exonération fiscale californienne et votre enregistrement au Registry of Charities avec les bons formulaires, délais et documents."
+          youCanNow: "prévoir votre exonération fiscale californienne et votre enregistrement au Registry of Charities avec les bons formulaires, délais et documents.",
+          quickCheck: [
+            { objective: "O5", q: "Quel formulaire est la demande complète d'exonération en Californie ?", options: ["Le formulaire 3500", "Le formulaire CT-1", "Le formulaire SI-100", "Le formulaire RRF-1"], answer: 0, why: "Le formulaire 3500 est la demande californienne complète ; le 3500A est la version courte." },
+            { objective: "O5", q: "Votre ministère pense qu'il est peut-être dispensé de l'enregistrement au Registry. Que faites-vous ?", options: ["Vous vous en passez sans vérifier", "Vous lisez les pages du Registry ou lui posez la question avant de vous en passer", "Vous demandez à un ami", "Vous vous enregistrez auprès de l'IRS à la place"], answer: 1, why: "Vérifiez sur les pages du Registry ou posez-lui la question avant de vous passer de l'enregistrement." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Rester en règle et votre budget de création",
           minutes: 6,
           goal: "Établir un budget de création et un calendrier des déclarations annuelles.",
@@ -170,17 +219,21 @@ module.exports = {
           ],
           sources: [IRS_990N, AG_RENEW, SOS_SI, IRS_FEE, SOS_ARTICLES, AG_INITIAL, FTB],
           tryIt: "Tâche finale : terminez votre plan de création d'une page. Faites un tableau avec chaque démarche dans l'ordre, l'administration, le formulaire, les frais d'après la page officielle et votre date cible. Ajoutez les déclarations annuelles et leurs dates limites, le coût total de création et le lien officiel de chaque ligne.",
-          youCanNow: "établir un plan complet de création d'une association californienne avec les coûts et un calendrier annuel qui la garde en règle."
+          youCanNow: "établir un plan complet de création d'une association californienne avec les coûts et un calendrier annuel qui la garde en règle.",
+          quickCheck: [
+            { objective: "O6", q: "Quelle déclaration annuelle va au Procureur général ?", options: ["Le formulaire 990-N", "Le formulaire 1023", "Le formulaire RRF-1", "Le formulaire ARTS-PB"], answer: 2, why: "Chaque année, vous renouvelez auprès du Procureur général avec le formulaire RRF-1." },
+            { objective: "O6", q: "L'IA prépare le tableau de votre budget de création. Que faites-vous des frais qu'il contient ?", options: ["Vous leur faites confiance ; l'IA est à jour", "Vous les arrondissez au-dessus", "Vous les laissez vides", "Vous vérifiez chaque montant sur la page officielle"], answer: 3, why: "Utilisez l'IA pour préparer le tableau, mais vérifiez chaque montant sur la page officielle." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Exonération fiscale, enregistrement et coûts",
         questions: [
-          { q: "Quels étaient les frais de l'IRS pour les formulaires 1023 et 1023-EZ lors de la vérification ?", options: ["100 $ et 50 $", "600 $ et 275 $", "Gratuits tous les deux", "1 000 $ et 500 $"], answer: 1, why: "La page des frais de l'IRS indiquait 600 $ pour le 1023 et 275 $ pour le 1023-EZ." },
-          { q: "Votre association a déjà sa lettre de détermination de l'IRS. Quel formulaire californien est fait pour vous ?", options: ["Formulaire 3500A", "Formulaire CT-1", "Formulaire SI-100", "Formulaire 990-N"], answer: 0, why: "Le 3500A est le formulaire court du FTB pour les groupes qui ont déjà la lettre fédérale." },
-          { q: "Vous avez reçu votre premier don le 1er mars. Quand devez-vous vous enregistrer au Registry of Charities ?", options: ["Dans les 30 jours", "Dans les 2 ans", "Seulement après avoir collecté 50 000 $", "Jamais"], answer: 0, why: "Le Procureur général dit de s'enregistrer dans les 30 jours suivant la première réception de biens caritatifs." },
-          { q: "Que se passe-t-il si vous manquez la déclaration annuelle à l'IRS trois années de suite ?", options: ["Rien", "Une amende de 10 $", "La perte automatique de l'exonération d'impôt", "Votre EIN change"], answer: 2, why: "L'IRS retire automatiquement l'exonération après trois années consécutives sans déclaration." },
-          { q: "Une œuvre caritative avec 40 000 $ de revenu total renouvelle auprès du Procureur général. Quels étaient les frais du RRF-1 lors de la vérification ?", options: ["200 $", "100 $", "75 $", "25 $"], answer: 3, why: "Le barème du RRF-1 indiquait 25 $ pour un revenu total inférieur à 50 000 $." }
+          { objective: "O4", q: "Quels étaient les frais de l'IRS pour les formulaires 1023 et 1023-EZ lors de la vérification ?", options: ["100 $ et 50 $", "600 $ et 275 $", "Gratuits tous les deux", "1 000 $ et 500 $"], answer: 1, why: "La page des frais de l'IRS indiquait 600 $ pour le 1023 et 275 $ pour le 1023-EZ." },
+          { objective: "O5", q: "Votre association a déjà sa lettre de détermination de l'IRS. Quel formulaire californien est fait pour vous ?", options: ["Formulaire 3500A", "Formulaire CT-1", "Formulaire SI-100", "Formulaire 990-N"], answer: 0, why: "Le 3500A est le formulaire court du FTB pour les groupes qui ont déjà la lettre fédérale." },
+          { objective: "O5", q: "Vous avez reçu votre premier don le 1er mars. Quand devez-vous vous enregistrer au Registry of Charities ?", options: ["Dans les 30 jours", "Dans les 2 ans", "Seulement après avoir collecté 50 000 $", "Jamais"], answer: 0, why: "Le Procureur général dit de s'enregistrer dans les 30 jours suivant la première réception de biens caritatifs." },
+          { objective: "O6", q: "Que se passe-t-il si vous manquez la déclaration annuelle à l'IRS trois années de suite ?", options: ["Rien", "Une amende de 10 $", "La perte automatique de l'exonération d'impôt", "Votre EIN change"], answer: 2, why: "L'IRS retire automatiquement l'exonération après trois années consécutives sans déclaration." },
+          { objective: "O6", q: "Une œuvre caritative avec 40 000 $ de revenu total renouvelle auprès du Procureur général. Quels étaient les frais du RRF-1 lors de la vérification ?", options: ["200 $", "100 $", "75 $", "25 $"], answer: 3, why: "Le barème du RRF-1 indiquait 25 $ pour un revenu total inférieur à 50 000 $." }
         ]
       }
     }
@@ -188,26 +241,103 @@ module.exports = {
   quiz: {
     title: "Quiz final : Créer une association à but non lucratif en Californie, coûts compris",
     questions: [
-      { q: "Devenir une société à but non lucratif et devenir exonéré d'impôt sont :", options: ["La même étape", "Seulement des questions fédérales", "Nécessaires seulement pour les églises", "Des étapes distinctes auprès d'administrations différentes"], answer: 3, why: "L'État crée la société ; l'IRS et le FTB accordent l'exonération séparément." },
-      { q: "Qu'est-ce qui vient en premier ?", options: ["L'enregistrement auprès du Procureur général", "Le dépôt des statuts auprès du Secrétaire d'État", "Le dépôt du formulaire 3500A", "Le dépôt du RRF-1"], answer: 1, why: "La société doit exister avant les autres démarches." },
-      { q: "Quelle administration gère le Registry of Charities ?", options: ["L'IRS", "Le Franchise Tax Board", "Le Procureur général de Californie", "Le Secrétaire d'État"], answer: 2, why: "Le Registry of Charities fait partie du bureau du Procureur général." },
-      { q: "La plupart des œuvres caritatives californiennes déposent quel type de statuts ?", options: ["Intérêt mutuel", "Société par actions classique", "SARL", "Intérêt public"], answer: 3, why: "Les sociétés d'intérêt public servent le public, ce qui convient à la plupart des œuvres caritatives." },
-      { q: "Quels étaient les frais du Secrétaire d'État pour les statuts d'une association lors de la vérification ?", options: ["30 $", "300 $", "600 $", "Gratuit"], answer: 0, why: "La page des formulaires indiquait 30 $ pour ARTS-PB, ARTS-RE et ARTS-MU." },
-      { q: "Où peut-on déposer les statuts en ligne ?", options: ["Pay.gov", "irs.gov", "N'importe quel outil d'IA", "bizfileonline.sos.ca.gov"], answer: 3, why: "bizfile Online est le site de dépôt en ligne du Secrétaire d'État." },
-      { q: "À quelle fréquence dépose-t-on le Statement of Information (SI-100) après le premier ?", options: ["Chaque mois", "Chaque année", "Tous les deux ans", "Plus jamais"], answer: 2, why: "Le Secrétaire d'État dit tous les deux ans." },
-      { q: "Combien l'IRS fait-il payer un EIN ?", options: ["50 $", "25 $", "Cela dépend de votre État", "Rien"], answer: 3, why: "L'IRS dit qu'un EIN ne se paie jamais." },
-      { q: "Où taper le numéro de sécurité sociale de la personne responsable pour l'EIN ?", options: ["Uniquement sur le site officiel de l'IRS", "Dans un assistant d'IA pour le vérifier", "Dans un e-mail groupé au conseil", "Sur n'importe quel site qui propose de l'aide"], answer: 0, why: "Les numéros privés ne vont que sur le site officiel de l'administration." },
-      { q: "Quelle décision revient à la première réunion du conseil ?", options: ["Déposer le 990-N", "Adopter la politique sur les conflits d'intérêts", "Payer le RRF-1", "Obtenir la lettre de l'IRS"], answer: 1, why: "La première réunion adopte le règlement et les politiques et élit les dirigeants." },
-      { q: "Comment savoir si vous pouvez utiliser le formulaire 1023-EZ ?", options: ["En demandant à n'importe quel site", "En prenant le moins cher", "Le Procureur général décide", "En remplissant la grille d'éligibilité de l'IRS dans les instructions du 1023-EZ"], answer: 3, why: "La grille d'éligibilité de l'IRS décide qui peut utiliser le formulaire court." },
-      { q: "Où dépose-t-on les formulaires 1023 et 1023-EZ ?", options: ["Par fax à Sacramento", "Au bureau du comté", "En ligne sur Pay.gov", "Sur bizfile Online"], answer: 2, why: "L'IRS dit que les deux se remplissent et se paient sur Pay.gov." },
-      { q: "Que montre une lettre de détermination de l'IRS ?", options: ["Que le nom de votre société a été accepté", "Que votre organisation est exonérée d'impôt selon la loi fédérale", "Que vous avez payé les frais du Registry", "Votre numéro EIN"], answer: 1, why: "La lettre de détermination confirme l'exonération fiscale fédérale." },
-      { q: "Une église veut savoir si elle doit déposer le formulaire 1023. Où chercher d'abord ?", options: ["Dans la publication 1828 de l'IRS ou auprès d'un professionnel", "Dans une publication sur les réseaux sociaux", "Au service des permis de conduire", "Dans le formulaire SI-100"], answer: 0, why: "Les églises ont des règles spéciales de l'IRS expliquées dans la publication 1828." },
-      { q: "Après l'approbation fédérale, une association californienne est exonérée de l'impôt de l'État :", options: ["Automatiquement", "Seulement après l'approbation du FTB (formulaire 3500 ou 3500A)", "Seulement si c'est une église", "Jamais"], answer: 1, why: "L'exonération californienne est une demande distincte au Franchise Tax Board." },
-      { q: "Quels documents téléversez-vous pour le CT-1 du Procureur général ?", options: ["Statuts, règlement, lettre de l'IRS ou EIN, et votre 1023 s'il a été déposé", "Seulement une pièce d'identité avec photo", "Les noms et adresses des donateurs", "Le mot de passe de votre banque"], answer: 0, why: "Le Registry demande les documents fondateurs, le règlement, la lettre de l'IRS ou l'EIN et la demande d'exonération." },
-      { q: "Quels étaient les frais d'enregistrement initial au Registry lors de la vérification ?", options: ["25 $", "50 $", "275 $", "600 $"], answer: 1, why: "La page de l'enregistrement initial indiquait 50 $." },
-      { q: "Les recettes brutes d'une petite œuvre caritative sont normalement de 50 000 $ ou moins. Quelle déclaration annuelle à l'IRS peut-elle en général utiliser ?", options: ["Le formulaire 1023", "L'e-Postcard, formulaire 990-N", "Le formulaire CT-1", "Le formulaire ARTS-PB"], answer: 1, why: "L'IRS permet à la plupart des petits groupes sous ce montant de déposer le 990-N." },
-      { q: "Votre exercice se termine le 31 décembre. Quand le RRF-1 est-il normalement dû ?", options: ["Le 1er janvier", "Le 1er mars", "Le 15 mai", "Le 31 décembre"], answer: 2, why: "Il est dû 4 mois et 15 jours après la fin de l'exercice, soit le 15 mai." },
-      { q: "Avec les frais vérifiés, combien coûtent environ les frais administratifs de création avec le 1023-EZ, hors frais du FTB ?", options: ["Environ 375 $", "Environ 50 $", "Environ 1 500 $", "Rien"], answer: 0, why: "30 $ de statuts + 20 $ de SI-100 + 275 $ de 1023-EZ + 50 $ de CT-1 = 375 $, l'EIN étant gratuit." }
+      { objective: "O1", q: "Devenir une société à but non lucratif et devenir exonéré d'impôt sont :", options: ["La même étape", "Seulement des questions fédérales", "Nécessaires seulement pour les églises", "Des étapes distinctes auprès d'administrations différentes"], answer: 3, why: "L'État crée la société ; l'IRS et le FTB accordent l'exonération séparément." },
+      { objective: "O1", q: "Qu'est-ce qui vient en premier ?", options: ["L'enregistrement auprès du Procureur général", "Le dépôt des statuts auprès du Secrétaire d'État", "Le dépôt du formulaire 3500A", "Le dépôt du RRF-1"], answer: 1, why: "La société doit exister avant les autres démarches." },
+      { objective: "O1", q: "Quelle administration gère le Registry of Charities ?", options: ["L'IRS", "Le Franchise Tax Board", "Le Procureur général de Californie", "Le Secrétaire d'État"], answer: 2, why: "Le Registry of Charities fait partie du bureau du Procureur général." },
+      { objective: "O2", q: "La plupart des œuvres caritatives californiennes déposent quel type de statuts ?", options: ["Intérêt mutuel", "Société par actions classique", "SARL", "Intérêt public"], answer: 3, why: "Les sociétés d'intérêt public servent le public, ce qui convient à la plupart des œuvres caritatives." },
+      { objective: "O2", q: "Quels étaient les frais du Secrétaire d'État pour les statuts d'une association lors de la vérification ?", options: ["30 $", "300 $", "600 $", "Gratuit"], answer: 0, why: "La page des formulaires indiquait 30 $ pour ARTS-PB, ARTS-RE et ARTS-MU." },
+      { objective: "O2", q: "Où peut-on déposer les statuts en ligne ?", options: ["Pay.gov", "irs.gov", "N'importe quel outil d'IA", "bizfileonline.sos.ca.gov"], answer: 3, why: "bizfile Online est le site de dépôt en ligne du Secrétaire d'État." },
+      { objective: "O2", q: "À quelle fréquence dépose-t-on le Statement of Information (SI-100) après le premier ?", options: ["Chaque mois", "Chaque année", "Tous les deux ans", "Plus jamais"], answer: 2, why: "Le Secrétaire d'État dit tous les deux ans." },
+      { objective: "O3", q: "Combien l'IRS fait-il payer un EIN ?", options: ["50 $", "25 $", "Cela dépend de votre État", "Rien"], answer: 3, why: "L'IRS dit qu'un EIN ne se paie jamais." },
+      { objective: "O3", q: "Où taper le numéro de sécurité sociale de la personne responsable pour l'EIN ?", options: ["Uniquement sur le site officiel de l'IRS", "Dans un assistant d'IA pour le vérifier", "Dans un e-mail groupé au conseil", "Sur n'importe quel site qui propose de l'aide"], answer: 0, why: "Les numéros privés ne vont que sur le site officiel de l'administration." },
+      { objective: "O3", q: "Quelle décision revient à la première réunion du conseil ?", options: ["Déposer le 990-N", "Adopter la politique sur les conflits d'intérêts", "Payer le RRF-1", "Obtenir la lettre de l'IRS"], answer: 1, why: "La première réunion adopte le règlement et les politiques et élit les dirigeants." },
+      { objective: "O4", q: "Comment savoir si vous pouvez utiliser le formulaire 1023-EZ ?", options: ["En demandant à n'importe quel site", "En prenant le moins cher", "Le Procureur général décide", "En remplissant la grille d'éligibilité de l'IRS dans les instructions du 1023-EZ"], answer: 3, why: "La grille d'éligibilité de l'IRS décide qui peut utiliser le formulaire court." },
+      { objective: "O4", q: "Où dépose-t-on les formulaires 1023 et 1023-EZ ?", options: ["Par fax à Sacramento", "Au bureau du comté", "En ligne sur Pay.gov", "Sur bizfile Online"], answer: 2, why: "L'IRS dit que les deux se remplissent et se paient sur Pay.gov." },
+      { objective: "O4", q: "Que montre une lettre de détermination de l'IRS ?", options: ["Que le nom de votre société a été accepté", "Que votre organisation est exonérée d'impôt selon la loi fédérale", "Que vous avez payé les frais du Registry", "Votre numéro EIN"], answer: 1, why: "La lettre de détermination confirme l'exonération fiscale fédérale." },
+      { objective: "O4", q: "Une église veut savoir si elle doit déposer le formulaire 1023. Où chercher d'abord ?", options: ["Dans la publication 1828 de l'IRS ou auprès d'un professionnel", "Dans une publication sur les réseaux sociaux", "Au service des permis de conduire", "Dans le formulaire SI-100"], answer: 0, why: "Les églises ont des règles spéciales de l'IRS expliquées dans la publication 1828." },
+      { objective: "O5", q: "Après l'approbation fédérale, une association californienne est exonérée de l'impôt de l'État :", options: ["Automatiquement", "Seulement après l'approbation du FTB (formulaire 3500 ou 3500A)", "Seulement si c'est une église", "Jamais"], answer: 1, why: "L'exonération californienne est une demande distincte au Franchise Tax Board." },
+      { objective: "O5", q: "Quels documents téléversez-vous pour le CT-1 du Procureur général ?", options: ["Statuts, règlement, lettre de l'IRS ou EIN, et votre 1023 s'il a été déposé", "Seulement une pièce d'identité avec photo", "Les noms et adresses des donateurs", "Le mot de passe de votre banque"], answer: 0, why: "Le Registry demande les documents fondateurs, le règlement, la lettre de l'IRS ou l'EIN et la demande d'exonération." },
+      { objective: "O5", q: "Quels étaient les frais d'enregistrement initial au Registry lors de la vérification ?", options: ["25 $", "50 $", "275 $", "600 $"], answer: 1, why: "La page de l'enregistrement initial indiquait 50 $." },
+      { objective: "O6", q: "Les recettes brutes d'une petite œuvre caritative sont normalement de 50 000 $ ou moins. Quelle déclaration annuelle à l'IRS peut-elle en général utiliser ?", options: ["Le formulaire 1023", "L'e-Postcard, formulaire 990-N", "Le formulaire CT-1", "Le formulaire ARTS-PB"], answer: 1, why: "L'IRS permet à la plupart des petits groupes sous ce montant de déposer le 990-N." },
+      { objective: "O6", q: "Votre exercice se termine le 31 décembre. Quand le RRF-1 est-il normalement dû ?", options: ["Le 1er janvier", "Le 1er mars", "Le 15 mai", "Le 31 décembre"], answer: 2, why: "Il est dû 4 mois et 15 jours après la fin de l'exercice, soit le 15 mai." },
+      { objective: "O6", q: "Avec les frais vérifiés, combien coûtent environ les frais administratifs de création avec le 1023-EZ, hors frais du FTB ?", options: ["Environ 375 $", "Environ 50 $", "Environ 1 500 $", "Rien"], answer: 0, why: "30 $ de statuts + 20 $ de SI-100 + 275 $ de 1023-EZ + 50 $ de CT-1 = 375 $, l'EIN étant gratuit." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      1,
+      3,
+      7,
+      10,
+      14,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Démarches dans l'ordre",
+        objective: "O1",
+        notYet: "Une démarche manque ou n'est pas à sa place.",
+        meets: "Chaque démarche de création est listée dans le bon ordre avec son administration.",
+        exceeds: "Explique pourquoi l'ordre compte pour au moins deux étapes."
+      },
+      {
+        name: "Bons formulaires",
+        objective: "O2",
+        notYet: "Un mauvais formulaire est cité, comme des statuts d'intérêt mutuel pour une association caritative.",
+        meets: "Chaque démarche cite le bon formulaire : statuts, SI-100, 1023 ou 1023-EZ, 3500 ou 3500A, et CT-1.",
+        exceeds: "Explique le choix entre 1023 et 1023-EZ à l'aide de la grille d'éligibilité."
+      },
+      {
+        name: "Frais officiels et liens",
+        objective: "O6",
+        notYet: "Un montant est deviné ou n'a pas de lien.",
+        meets: "Chaque montant vient de la page officielle, avec un lien, et le total de création est calculé.",
+        exceeds: "Indique la date à laquelle chaque montant a été vérifié."
+      },
+      {
+        name: "Dates prévues",
+        objective: "O5",
+        notYet: "Pas de dates de dépôt prévues, ou les délais de 30 jours du Registry et de 90 jours du SI-100 ne sont pas respectés.",
+        meets: "Une date prévue pour chaque démarche, qui respecte chaque délai.",
+        exceeds: "Nomme le membre du conseil responsable de chaque démarche."
+      },
+      {
+        name: "Calendrier annuel",
+        objective: "O6",
+        notYet: "Des déclarations annuelles manquent.",
+        meets: "La déclaration annuelle à l'IRS, le RRF-1, le Statement of Information tous les deux ans et les déclarations au FTB, avec leurs dates limites.",
+        exceeds: "Les dates limites sont mises en rappels dans le calendrier du conseil."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Fondateurs qui déposent leurs statuts dans les 90 jours (enquête de suivi)",
+      "Organisations qui reçoivent une lettre de détermination de l'IRS et s'enregistrent au Registry of Charities",
+      "Organisations toujours en règle un an plus tard, avec leurs déclarations annuelles à temps"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur avec internet",
+      "Les liens vers les pages officielles : Secrétaire d'État, IRS, Pay.gov, Franchise Tax Board et Registry of Charities du Procureur général",
+      "Un tableur ou du papier pour le tableau du plan de création",
+      "Environ 60 minutes au total, plus le temps de vérifier les frais sur les pages officielles"
+    ],
+    facilitatorNotes: [
+      "Faites vérifier chaque montant sur la page officielle pendant la séance, car les frais changent.",
+      "Invitez un avocat spécialisé ou un bénévole d'un centre d'aide aux associations pour répondre aux questions sur la rédaction des statuts et les règles pour les églises.",
+      "Rappelez aux apprenants de ne jamais taper de numéro de sécurité sociale ni d'ITIN dans les outils d'IA ou un e-mail.",
+      "Les apprenants qui n'ont pas de vraie association peuvent faire un plan d'entraînement pour une association d'exemple.",
+      "Notez la tâche finale avec la grille, et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

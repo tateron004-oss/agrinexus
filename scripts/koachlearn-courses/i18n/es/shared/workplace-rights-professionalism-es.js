@@ -16,11 +16,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos. Lee la lección, mira las diapositivas y luego haz la tarea de \"Pruébalo ahora\". Hay una comprobación de conocimientos después de cada capítulo y un examen de 20 preguntas al final. Este curso explica las reglas federales con palabras sencillas; no es asesoría legal. Las leyes de tu estado y tu ciudad pueden darte más protección, y cada lección muestra dónde revisarlas."
   ],
   finalTask: "Haz un plan \"Listo para trabajar\" de una página para un trabajo real o de práctica: tu plan para llegar 10 minutos antes (ruta, transporte de respaldo, alarma), qué te vas a poner, un mensaje corto para enviar si vas tarde o estás enfermo, tu regla del teléfono para el turno, una rutina para revisar tu pago (registro de horas y revisión del recibo de pago) y el lugar oficial al que irías para reportar salarios no pagados, discriminación o acoso, y un peligro de seguridad, además de la oficina laboral de tu estado.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Cualquiera que empieza o vuelve a trabajar en Estados Unidos: jóvenes en su primer empleo, veteranos que pasan a lugares de trabajo civiles, personas que vuelven a casa después de la prisión y cualquiera que quiera sentirse más seguro de sí en el trabajo.",
+    startingPoint: "Están listos para trabajar y saben usar un teléfono, pero muchos no han tenido un empleo estable hace tiempo, no saben bien qué esperan los supervisores, nunca han comparado un recibo de pago con sus horas y no saben dónde reportar salarios no pagados, discriminación, acoso o problemas de seguridad.",
+    gap: "Las personas que empiezan a trabajar pierden empleos por llegar tarde, usar el teléfono o comunicarse mal, y pueden perder dinero o sufrir un trato injusto sin conocer sus derechos. Necesitan costumbres que las hagan confiables y saber cómo revisar su pago y reportar problemas al lugar oficial correcto.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y frases cortas",
+      "Reglas federales en palabras sencillas; no es asesoría legal, y las leyes del estado y la ciudad pueden dar más protección",
+      "Cada persona revisa las reglas de su estado en sitios oficiales (dol.gov, eeoc.gov, osha.gov y la oficina laboral del estado)",
+      "Dispositivos: un teléfono para rutas, mensajes y sitios web oficiales",
+      "Algunas personas tienen límites de libertad condicional, transporte o cuidado de niños que afectan su horario"
+    ],
+    prerequisites: "Ninguno."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Para un trabajo real o de práctica", action: "planear tu ruta, tu transporte de respaldo y tu mañana para llegar unos 10 minutos antes", standard: "con un mensaje listo para enviar si vas tarde o estás enfermo" },
+    { id: "O2", condition: "En un trabajo nuevo", action: "vestirte para el trabajo y escribirle a un supervisor mensajes claros y amables, incluso para reconocer un error", standard: "con cada mensaje corto y respetuoso" },
+    { id: "O3", condition: "Para tu próximo turno", action: "escribir una regla del teléfono que te mantenga seguro y concentrado en el trabajo", standard: "sin usar el teléfono mientras manejas o usas máquinas" },
+    { id: "O4", condition: "Con tu registro de horas y un recibo de pago", action: "calcular tu pago, incluidas las horas extra, y compararlo con el recibo de pago", standard: "planteando cualquier diferencia en nómina con tu registro de horas" },
+    { id: "O5", condition: "Con un caso de posible discriminación o acoso", action: "enumerar los pasos para documentarlo y reportarlo, dentro de la empresa y ante la EEOC", standard: "en el orden correcto y dentro del plazo para presentarlo" },
+    { id: "O6", condition: "Con un peligro de seguridad o una pregunta sobre las reglas del estado", action: "encontrar dónde reportar un problema de seguridad y la oficina laboral de tu estado", standard: "nombrando a OSHA y el sitio web de la oficina laboral de tu estado" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Ser profesional en el trabajo",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Llegar a tiempo y listo para trabajar",
           minutes: 5,
           goal: "Planear tu viaje y tu mañana para llegar temprano y listo.",
@@ -39,9 +63,14 @@ module.exports = {
             { title: "La noche anterior", bullets: ["Ropa, identificación, llaves y almuerzo listos", "Herramientas y equipo de seguridad empacados", "Descansa"] }
           ],
           tryIt: "Elige la dirección de un trabajo real o de práctica. Planea tu ruta para entrar a las 7 am, elige una forma de respaldo para llegar y escribe el mensaje exacto que le enviarías a tu supervisor si tu autobús se descompusiera.",
-          youCanNow: "planear para llegar temprano y listo, y avisarle a tu supervisor de la forma correcta si vas a llegar tarde o estás enfermo."
+          youCanNow: "planear para llegar temprano y listo, y avisarle a tu supervisor de la forma correcta si vas a llegar tarde o estás enfermo.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué es un plan de respaldo para llegar al trabajo?", options: ["Otra forma de llegar si tu transporte de siempre falla", "Salir después de que empieza tu turno", "Reportarte enfermo", "Pedir un turno más tarde"], answer: 0, why: "Un transporte de respaldo te mantiene a tiempo cuando algo sale mal." },
+            { objective: "O1", q: "Tu autobús se descompone y vas a llegar 20 minutos tarde. ¿Qué harías?", options: ["No decir nada y llegar tarde", "Volver a casa y faltar al turno", "Escribirle o llamar a tu supervisor de inmediato, de la forma que te pidió", "Esperar al día siguiente para explicar"], answer: 2, why: "Avisarle a tu supervisor de inmediato muestra que eres confiable." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "La ropa y la comunicación en el trabajo",
           minutes: 5,
           goal: "Vestirte para el trabajo y hablar y escribirle a un supervisor con claridad y respeto.",
@@ -60,9 +89,14 @@ module.exports = {
             { title: "Mensajes de trabajo", bullets: ["Saludo, lo que necesitas, tu nombre", "Al principio, sin jerga, mayúsculas ni emojis"] }
           ],
           tryIt: "Escribe un mensaje corto a un supervisor con una pregunta sobre el turno de mañana. Luego escribe un mensaje de dos oraciones reconociendo un error pequeño, como poner mercancía en el pasillo equivocado, y diciendo cómo lo arreglaste.",
-          youCanNow: "vestirte para el trabajo y comunicarte con un supervisor con claridad y respeto, incluso al reconocer un error."
+          youCanNow: "vestirte para el trabajo y comunicarte con un supervisor con claridad y respeto, incluso al reconocer un error.",
+          quickCheck: [
+            { objective: "O2", q: "¿Cuál es la mejor forma de comprobar que entendiste una instrucción larga?", options: ["Asentir con la cabeza y esperar que salga bien", "Repetirla con tus propias palabras", "Preguntarle después a un compañero", "Hacerlo a tu manera"], answer: 1, why: "Repetirla detecta los errores antes de que pasen." },
+            { objective: "O2", q: "Rompiste una caja de vasos mientras surtías. ¿Qué harías?", options: ["Esconder la caja", "Culpar a otro trabajador", "Esperar a ver si alguien se da cuenta", "Decirle a tu supervisor qué pasó y qué hiciste al respecto"], answer: 3, why: "Reconocer un error y decir cómo lo arreglaste genera confianza." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "El uso del teléfono en el trabajo",
           minutes: 4,
           goal: "Seguir una regla sencilla del teléfono que te mantenga seguro y concentrado en el trabajo.",
@@ -81,17 +115,21 @@ module.exports = {
             { title: "Cuidado con lo que publicas", bullets: ["Sin fotos de clientes ni de compañeros", "No publiques problemas del trabajo sin conocer las reglas"] }
           ],
           tryIt: "Escribe en una oración tu regla personal del teléfono para tu próximo turno. Luego escribe lo que le dirías a un supervisor si esperas una llamada importante de la escuela de tu hijo.",
-          youCanNow: "seguir una regla del teléfono que te mantiene seguro y concentrado, y manejar una llamada importante de la forma correcta."
+          youCanNow: "seguir una regla del teléfono que te mantiene seguro y concentrado, y manejar una llamada importante de la forma correcta.",
+          quickCheck: [
+            { objective: "O3", q: "¿Cuál es una buena regla personal del teléfono para la mayoría de los trabajos?", options: ["Teléfono en silencio y guardado mientras trabajas; revisarlo en los descansos", "Teléfono en la mano todo el tiempo", "Contestar cada llamada de inmediato", "Usar audífonos con música mientras atiendes clientes"], answer: 0, why: "En silencio y guardado durante el trabajo, y revisado en los descansos, te mantiene concentrado." },
+            { objective: "O3", q: "Estás manejando un montacargas y tu teléfono vibra. ¿Qué harías?", options: ["Revisarlo rápido", "Contestar en altavoz", "Ignorarlo hasta detenerte con seguridad y estar en un descanso", "Responder el mensaje mientras manejas despacio"], answer: 2, why: "Usar el teléfono mientras manejas o usas máquinas nunca es seguro." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Ser profesional en el trabajo",
         questions: [
-          { q: "Tu turno empieza a las 7:00. ¿A qué hora deberías planear llegar?", options: ["A las 7:00 en punto", "A las 7:10", "Como a las 6:50, listo para empezar a las 7:00", "Cuando pase el autobús"], answer: 2, why: "Llegar unos 10 minutos antes te permite estar listo en tu puesto a tiempo." },
-          { q: "Te despiertas enfermo. ¿Qué haces?", options: ["Le avisas a tu supervisor antes del turno, de la forma que te pidió", "No vas y no llamas", "Le mandas un mensaje a un compañero y esperas que le pase el aviso", "Llamas cuando ya terminó el turno"], answer: 0, why: "Avisarle a tu supervisor antes del turno es profesional; faltar sin avisar te puede costar el trabajo." },
-          { q: "Tu supervisor te da una instrucción larga. ¿Qué es lo mejor?", options: ["Decir que sí con la cabeza y adivinar después", "Pedirle a un compañero que lo haga", "Ignorarla", "Repetirla para confirmar que entendiste"], answer: 3, why: "Repetirla detecta los errores antes de que pasen." },
-          { q: "Pusiste mercancía en el estante equivocado. ¿Qué haces?", options: ["Esconderlo", "Decirle a tu supervisor qué pasó y cómo lo arreglaste", "Culpar a un compañero", "Renunciar"], answer: 1, why: "Reconocer rápido un error genera confianza." },
-          { q: "¿Cuál es el mejor hábito con el teléfono en la mayoría de los trabajos?", options: ["El teléfono con sonido y en la mano", "Contestar llamadas mientras manejas un montacargas", "En silencio y guardado mientras trabajas, revisarlo en los descansos", "Publicar fotos de los clientes"], answer: 2, why: "Así te mantienes concentrado y seguro, y cumple con la mayoría de las políticas de teléfonos." }
+          { objective: "O1", q: "Tu turno empieza a las 7:00. ¿A qué hora deberías planear llegar?", options: ["A las 7:00 en punto", "A las 7:10", "Como a las 6:50, listo para empezar a las 7:00", "Cuando pase el autobús"], answer: 2, why: "Llegar unos 10 minutos antes te permite estar listo en tu puesto a tiempo." },
+          { objective: "O1", q: "Te despiertas enfermo. ¿Qué haces?", options: ["Le avisas a tu supervisor antes del turno, de la forma que te pidió", "No vas y no llamas", "Le mandas un mensaje a un compañero y esperas que le pase el aviso", "Llamas cuando ya terminó el turno"], answer: 0, why: "Avisarle a tu supervisor antes del turno es profesional; faltar sin avisar te puede costar el trabajo." },
+          { objective: "O2", q: "Tu supervisor te da una instrucción larga. ¿Qué es lo mejor?", options: ["Decir que sí con la cabeza y adivinar después", "Pedirle a un compañero que lo haga", "Ignorarla", "Repetirla para confirmar que entendiste"], answer: 3, why: "Repetirla detecta los errores antes de que pasen." },
+          { objective: "O2", q: "Pusiste mercancía en el estante equivocado. ¿Qué haces?", options: ["Esconderlo", "Decirle a tu supervisor qué pasó y cómo lo arreglaste", "Culpar a un compañero", "Renunciar"], answer: 1, why: "Reconocer rápido un error genera confianza." },
+          { objective: "O3", q: "¿Cuál es el mejor hábito con el teléfono en la mayoría de los trabajos?", options: ["El teléfono con sonido y en la mano", "Contestar llamadas mientras manejas un montacargas", "En silencio y guardado mientras trabajas, revisarlo en los descansos", "Publicar fotos de los clientes"], answer: 2, why: "Así te mantienes concentrado y seguro, y cumple con la mayoría de las políticas de teléfonos." }
         ]
       }
     },
@@ -99,6 +137,7 @@ module.exports = {
       name: "Capítulo 2: Tus derechos en el trabajo en Estados Unidos",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Salario mínimo, horas extra y tu recibo de pago",
           minutes: 6,
           goal: "Comprobar que tu pago está bien comparando tus horas con tu recibo de pago.",
@@ -124,9 +163,14 @@ module.exports = {
             { name: "Departamento de Trabajo de EE. UU.: Hoja informativa 77A, represalias según la FLSA (en inglés)", url: "https://www.dol.gov/agencies/whd/fact-sheets/77a-flsa-prohibiting-retaliation" }
           ],
           tryIt: "Práctica: ganas $16 la hora y trabajaste 44 horas esta semana (no estás exento). Calcula el pago: 40 x $16, más 4 horas x $24. Luego busca el salario mínimo de tu estado en la página de estados de dol.gov y anótalo.",
-          youCanNow: "comparar tus horas y tu pago con tu recibo, notar si faltan horas extra y saber a dónde ir si tu pago está mal."
+          youCanNow: "comparar tus horas y tu pago con tu recibo, notar si faltan horas extra y saber a dónde ir si tu pago está mal.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué es el pago bruto en un recibo de pago?", options: ["Lo que te llevas a casa", "Tu pago antes de las deducciones", "Solo tus horas extra", "Tu reembolso de impuestos"], answer: 1, why: "El pago bruto es antes de las deducciones; el pago neto es lo que te llevas a casa." },
+            { objective: "O4", q: "Ganas $16 la hora y trabajaste 42 horas (no estás exento). ¿Cómo calcularías el pago?", options: ["42 x $16", "40 x $24 más 2 x $16", "42 x $24", "40 x $16 más 2 x $24"], answer: 3, why: "Las horas extra después de 40 se pagan a por lo menos 1.5 veces la tarifa, o sea $24 aquí." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "La discriminación y el acoso, y cómo reportarlos",
           minutes: 5,
           goal: "Reconocer la discriminación y el acoso en el trabajo y conocer los pasos para reportarlos.",
@@ -149,12 +193,17 @@ module.exports = {
             { name: "EEOC: Acoso (en inglés)", url: "https://www.eeoc.gov/harassment" }
           ],
           tryIt: "Lee este caso: un compañero hace chistes todos los días sobre la religión de un empleado nuevo, y el supervisor se ríe. Escribe en orden las tres primeras cosas que debería hacer el empleado nuevo, y a dónde podría ir si la empresa no hace nada.",
-          youCanNow: "reconocer la discriminación y el acoso, anotar lo que pasó y reportarlo dentro de la empresa o ante la EEOC."
+          youCanNow: "reconocer la discriminación y el acoso, anotar lo que pasó y reportarlo dentro de la empresa o ante la EEOC.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué es una represalia en el trabajo?", options: ["Castigar a alguien por reportar un problema o usar sus derechos", "Una evaluación normal de desempeño", "Un aumento de sueldo", "Un cambio de horario que tú pediste"], answer: 0, why: "La represalia es un castigo por reportar o por usar tus derechos, y es ilegal." },
+            { objective: "O5", q: "Un compañero de trabajo sigue haciendo bromas sobre tu discapacidad. ¿Qué harías primero?", options: ["Renunciar de inmediato", "Hacerle bromas también", "Ignorarlo durante un año", "Anotar lo que pasó, con fechas, y guardar los mensajes"], answer: 3, why: "Anotarlo y guardar los mensajes es el primer paso para reportarlo." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Un lugar de trabajo seguro y dónde revisar las reglas de tu estado",
           minutes: 5,
-          goal: "Conocer tu derecho a un trabajo seguro y encontrar la oficina laboral de tu estado.",
+          goal: "Explicar tu derecho a un trabajo seguro y encontrar dónde reportar un peligro y la oficina laboral de tu estado.",
           text: [
             "La Administración de Seguridad y Salud Ocupacional (OSHA) es la agencia federal de seguridad en el trabajo. Los empleadores deben dar un lugar de trabajo libre de peligros graves conocidos, seguir las reglas de seguridad, dar el equipo de seguridad requerido y capacitarte sobre los peligros de una forma que entiendas.",
             "Tienes derecho a reportar un peligro o una lesión, a pedirle a OSHA que inspeccione tu lugar de trabajo y a ver los registros de lesiones en el trabajo. Puedes presentar una queja de seguridad ante OSHA en línea, por teléfono al 1-800-321-OSHA (6742), por correo postal o en una oficina de OSHA, y puedes pedir que no le den tu nombre a tu empleador.",
@@ -176,17 +225,21 @@ module.exports = {
             { name: "Departamento de Trabajo de EE. UU.: Oficinas laborales estatales (en inglés)", url: "https://www.dol.gov/agencies/whd/state/contacts" }
           ],
           tryIt: "Tarea final: haz tu plan \"Listo para trabajar\" de una página. Incluye tu plan de llegada, la ropa, el mensaje si vas tarde o estás enfermo, la regla del teléfono, la rutina para revisar tu pago, y dónde reportarías salarios no pagados (dol.gov), discriminación o acoso (eeoc.gov) y un peligro de seguridad (osha.gov), además del sitio web de la oficina laboral de tu estado.",
-          youCanNow: "nombrar tu derecho a un lugar de trabajo seguro, reportar un peligro de la forma correcta y encontrar las reglas adicionales de tu estado."
+          youCanNow: "nombrar tu derecho a un lugar de trabajo seguro, reportar un peligro de la forma correcta y encontrar las reglas adicionales de tu estado.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué agencia atiende las quejas de seguridad en el trabajo?", options: ["La EEOC", "OSHA", "El IRS", "El correo"], answer: 1, why: "OSHA se encarga de la seguridad en el trabajo." },
+            { objective: "O6", q: "Quieres saber si tu estado da días de enfermedad pagados. ¿Qué harías?", options: ["Preguntarle a un amigo de otro estado", "Adivinar", "Revisar la oficina laboral de tu estado, que aparece en la lista del Departamento de Trabajo", "Preguntarle a una IA y confiar en su respuesta"], answer: 2, why: "La oficina laboral de tu estado tiene las reglas oficiales de tu estado." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Tus derechos en el trabajo en Estados Unidos",
         questions: [
-          { q: "El salario mínimo de tu estado es más alto que los $7.25 federales. ¿Cuál debe pagarte tu empleador?", options: ["Los $7.25 federales", "La tarifa estatal más alta", "La que el empleador quiera", "El promedio de las dos"], answer: 1, why: "Los empleadores deben cumplir las dos leyes, así que se aplica la tarifa más alta." },
-          { q: "Trabajas por hora, no estás exento y trabajaste 45 horas esta semana. ¿Qué deberías ver?", options: ["5 horas extra a por lo menos 1.5 veces tu tarifa", "Ninguna hora extra porque fue una sola semana", "Horas extra solo si trabajaste el domingo", "Un día libre en vez de pago"], answer: 0, why: "Las horas de más de 40 en una semana laboral se pagan por lo menos a tiempo y medio." },
-          { q: "¿Qué agencia aplica las leyes federales contra la discriminación en el trabajo?", options: ["OSHA", "El IRS (la agencia de impuestos)", "El DMV (la oficina de licencias de manejo)", "La EEOC"], answer: 3, why: "La Comisión para la Igualdad de Oportunidades en el Empleo atiende los cargos de discriminación." },
-          { q: "¿Qué debes hacer PRIMERO si te están acosando en el trabajo?", options: ["Publicarlo en internet", "Renunciar sin avisar", "Anotar lo que pasó y guardar los mensajes", "Esperar un año"], answer: 2, why: "Un registro escrito ayuda en cada paso siguiente, dentro o fuera de la empresa." },
-          { q: "Reportaste que una máquina tenía la protección rota y la semana siguiente te quitaron del horario. ¿Qué puedes hacer?", options: ["Nada", "Presentar una queja de denunciante ante OSHA dentro de 30 días", "Esperar seis meses y luego quejarte", "Solo publicarlo en internet"], answer: 1, why: "Castigarte por un reporte de seguridad es ilegal, y el plazo federal es corto." }
+          { objective: "O4", q: "El salario mínimo de tu estado es más alto que los $7.25 federales. ¿Cuál debe pagarte tu empleador?", options: ["Los $7.25 federales", "La tarifa estatal más alta", "La que el empleador quiera", "El promedio de las dos"], answer: 1, why: "Los empleadores deben cumplir las dos leyes, así que se aplica la tarifa más alta." },
+          { objective: "O4", q: "Trabajas por hora, no estás exento y trabajaste 45 horas esta semana. ¿Qué deberías ver?", options: ["5 horas extra a por lo menos 1.5 veces tu tarifa", "Ninguna hora extra porque fue una sola semana", "Horas extra solo si trabajaste el domingo", "Un día libre en vez de pago"], answer: 0, why: "Las horas de más de 40 en una semana laboral se pagan por lo menos a tiempo y medio." },
+          { objective: "O5", q: "¿Qué agencia aplica las leyes federales contra la discriminación en el trabajo?", options: ["OSHA", "El IRS (la agencia de impuestos)", "El DMV (la oficina de licencias de manejo)", "La EEOC"], answer: 3, why: "La Comisión para la Igualdad de Oportunidades en el Empleo atiende los cargos de discriminación." },
+          { objective: "O5", q: "¿Qué debes hacer PRIMERO si te están acosando en el trabajo?", options: ["Publicarlo en internet", "Renunciar sin avisar", "Anotar lo que pasó y guardar los mensajes", "Esperar un año"], answer: 2, why: "Un registro escrito ayuda en cada paso siguiente, dentro o fuera de la empresa." },
+          { objective: "O6", q: "Reportaste que una máquina tenía la protección rota y la semana siguiente te quitaron del horario. ¿Qué puedes hacer?", options: ["Nada", "Presentar una queja de denunciante ante OSHA dentro de 30 días", "Esperar seis meses y luego quejarte", "Solo publicarlo en internet"], answer: 1, why: "Castigarte por un reporte de seguridad es ilegal, y el plazo federal es corto." }
         ]
       }
     }
@@ -194,26 +247,112 @@ module.exports = {
   quiz: {
     title: "Examen final: Derechos laborales y profesionalismo",
     questions: [
-      { q: "En muchos trabajos, \"a tiempo\" significa:", options: ["Entrar por la puerta a la hora de entrada", "Estar en tu puesto y listo cuando empieza el turno", "Llegar dentro de los 15 minutos después de la hora de entrada", "Cuando llegue quien te trae"], answer: 1, why: "Debes estar listo para trabajar cuando empieza el turno, así que planea llegar antes." },
-      { q: "¿Qué es faltar sin avisar (\"no call, no show\")?", options: ["Faltar a un turno sin decirle a nadie", "Un día libre que pediste", "Una política de teléfonos", "Un día festivo pagado"], answer: 0, why: "Es una de las formas más rápidas de perder un trabajo." },
-      { q: "Un buen plan de respaldo para llegar al trabajo es:", options: ["Esperar que todo salga bien", "Salir más tarde", "Otro autobús o un amigo que te pueda llevar", "Avisar que faltas cada vez que el autobús se retrasa"], answer: 2, why: "Una ruta de respaldo te mantiene a tiempo cuando algo sale mal." },
-      { q: "No sabes qué ponerte el primer día. Tú:", options: ["Te pones lo que sea más cómodo", "Copias lo que ves en la televisión", "Te pones sandalias por si acaso", "Preguntas por el uniforme o el código de vestimenta"], answer: 3, why: "Preguntar evita errores, y algunos trabajos piden zapatos de seguridad." },
-      { q: "¿Cuál es el mejor mensaje de trabajo para un supervisor?", options: ["\"OYE A DÓNDE VOY\"", "\"Hola, Sra. Lee, ¿por qué entrada debo pasar mañana? Gracias, Sam\"", "Una fila de emojis", "Ningún mensaje; solo adivinar"], answer: 1, why: "Un saludo, lo que necesitas y tu nombre es claro y amable." },
-      { q: "Un compañero te lleva la contraria a gritos frente a los clientes. Tú:", options: ["Mantienes la calma y hablas en privado después", "Le gritas también", "Lo publicas en internet", "Te vas del trabajo"], answer: 0, why: "Hablar con calma y en privado resuelve los problemas sin empeorarlos." },
-      { q: "¿Cuándo NUNCA está bien usar tu teléfono en el trabajo?", options: ["En tu descanso", "En la sala de descanso", "Antes de tu turno", "Mientras manejas un montacargas o usas una máquina"], answer: 3, why: "Los teléfonos cerca de vehículos y máquinas causan lesiones graves." },
-      { q: "Esperas una llamada importante de la escuela de tu hijo. Tú:", options: ["Tienes el teléfono en la mano todo el turno", "Le avisas a tu supervisor al principio y le preguntas cómo manejarlo", "Te vas sin decir nada", "La ignoras"], answer: 1, why: "Avisarle antes a tu supervisor muestra respeto y evita problemas." },
-      { q: "¿Cuál es el salario mínimo federal según el Departamento de Trabajo?", options: ["$5.15 la hora", "$10.00 la hora", "$7.25 la hora", "$15.00 la hora"], answer: 2, why: "El mínimo federal es de $7.25; muchos estados y ciudades fijan más." },
-      { q: "¿Después de cuántas horas en una semana laboral empiezan las horas extra federales?", options: ["40", "35", "45", "50"], answer: 0, why: "Los trabajadores cubiertos y no exentos reciben horas extra por las horas de más de 40 en una semana laboral." },
-      { q: "Trabajaste 30 horas una semana y 50 la siguiente. Según la ley federal:", options: ["Se promedian, así que no hay horas extra", "Recibes 10 horas extra por la segunda semana", "Recibes 20 horas extra", "Las horas extra solo cuentan en días festivos"], answer: 1, why: "Cada semana laboral cuenta sola; las horas no se pueden promediar entre semanas." },
-      { q: "En un recibo de pago, el \"pago neto\" es:", options: ["El pago antes de impuestos", "La cantidad de impuestos", "Tu tarifa por hora", "Lo que te llevas a casa después de las deducciones"], answer: 3, why: "El pago neto es lo que queda después de impuestos y otras deducciones." },
-      { q: "Tu recibo de pago muestra 32 horas, pero tu registro dice 38. ¿Cuál es el mejor primer paso?", options: ["Preguntar con amabilidad en nómina y mostrar tu registro de horas", "No decir nada", "Renunciar", "Tomar cosas de la tienda para compensar"], answer: 0, why: "La mayoría de los errores se arreglan más rápido preguntando en nómina con tu registro." },
-      { q: "¿Cuál es una característica protegida por la ley federal contra la discriminación en el trabajo?", options: ["Tu equipo deportivo favorito", "Una discapacidad", "Tu talla de zapatos", "Tus gustos musicales"], answer: 1, why: "La discapacidad está protegida, junto con la raza, el color, la religión, el sexo, el origen nacional, la edad de 40 o más y la información genética." },
-      { q: "¿Cómo puedes empezar un cargo ante la EEOC?", options: ["Solo contratando a un abogado", "Solo por fax", "En línea por el Portal Público de la EEOC, en una oficina o llamando al 1-800-669-4000", "Publicándolo en redes sociales"], answer: 2, why: "Presentarlo es gratis y se puede empezar en línea, en persona o por teléfono." },
-      { q: "En la mayoría de los casos, ¿cuánto tiempo tienes para presentar un cargo ante la EEOC?", options: ["7 días", "Cinco años", "No hay plazo", "180 días, o 300 días si una agencia estatal o local aplica una ley parecida"], answer: 3, why: "Esos son los plazos normales de la EEOC; actúa rápido." },
-      { q: "Tu jefe te reduce las horas después de que reportaste acoso. Esto puede ser:", options: ["Normal", "Una represalia, que es ilegal", "Un ascenso", "Algo que exige la ley"], answer: 1, why: "Castigar a alguien por reportar es una represalia." },
-      { q: "¿Qué agencia atiende las quejas de seguridad en el trabajo?", options: ["OSHA", "La EEOC", "La oficina de correos", "La FCC (la agencia de comunicaciones)"], answer: 0, why: "La Administración de Seguridad y Salud Ocupacional se encarga de la seguridad." },
-      { q: "Cuando presentas una queja de seguridad ante OSHA, puedes:", options: ["Presentarla solo si tu jefe está de acuerdo", "Nunca quedar en el anonimato", "Pedir que no le den tu nombre a tu empleador", "Presentarla solo en inglés"], answer: 2, why: "OSHA permite a los trabajadores pedir que su nombre se mantenga en privado." },
-      { q: "¿Dónde puedes encontrar los derechos adicionales que da tu estado, como días de enfermedad pagados o reglas de recibos de pago?", options: ["Una publicación en redes sociales", "La oficina laboral de tu estado, que aparece en la lista del Departamento de Trabajo", "Lo que crea un compañero", "En ninguna parte; solo existen reglas federales"], answer: 1, why: "Las leyes estatales pueden dar más protección; la oficina laboral del estado es el lugar oficial para revisarlas." }
+      { objective: "O1", q: "En muchos trabajos, \"a tiempo\" significa:", options: ["Entrar por la puerta a la hora de entrada", "Estar en tu puesto y listo cuando empieza el turno", "Llegar dentro de los 15 minutos después de la hora de entrada", "Cuando llegue quien te trae"], answer: 1, why: "Debes estar listo para trabajar cuando empieza el turno, así que planea llegar antes." },
+      { objective: "O1", q: "¿Qué es faltar sin avisar (\"no call, no show\")?", options: ["Faltar a un turno sin decirle a nadie", "Un día libre que pediste", "Una política de teléfonos", "Un día festivo pagado"], answer: 0, why: "Es una de las formas más rápidas de perder un trabajo." },
+      { objective: "O1", q: "Un buen plan de respaldo para llegar al trabajo es:", options: ["Esperar que todo salga bien", "Salir más tarde", "Otro autobús o un amigo que te pueda llevar", "Avisar que faltas cada vez que el autobús se retrasa"], answer: 2, why: "Una ruta de respaldo te mantiene a tiempo cuando algo sale mal." },
+      { objective: "O2", q: "No sabes qué ponerte el primer día. Tú:", options: ["Te pones lo que sea más cómodo", "Copias lo que ves en la televisión", "Te pones sandalias por si acaso", "Preguntas por el uniforme o el código de vestimenta"], answer: 3, why: "Preguntar evita errores, y algunos trabajos piden zapatos de seguridad." },
+      { objective: "O2", q: "¿Cuál es el mejor mensaje de trabajo para un supervisor?", options: ["\"OYE A DÓNDE VOY\"", "\"Hola, Sra. Lee, ¿por qué entrada debo pasar mañana? Gracias, Sam\"", "Una fila de emojis", "Ningún mensaje; solo adivinar"], answer: 1, why: "Un saludo, lo que necesitas y tu nombre es claro y amable." },
+      { objective: "O2", q: "Un compañero te lleva la contraria a gritos frente a los clientes. Tú:", options: ["Mantienes la calma y hablas en privado después", "Le gritas también", "Lo publicas en internet", "Te vas del trabajo"], answer: 0, why: "Hablar con calma y en privado resuelve los problemas sin empeorarlos." },
+      { objective: "O3", q: "¿Cuándo NUNCA está bien usar tu teléfono en el trabajo?", options: ["En tu descanso", "En la sala de descanso", "Antes de tu turno", "Mientras manejas un montacargas o usas una máquina"], answer: 3, why: "Los teléfonos cerca de vehículos y máquinas causan lesiones graves." },
+      { objective: "O3", q: "Esperas una llamada importante de la escuela de tu hijo. Tú:", options: ["Tienes el teléfono en la mano todo el turno", "Le avisas a tu supervisor al principio y le preguntas cómo manejarlo", "Te vas sin decir nada", "La ignoras"], answer: 1, why: "Avisarle antes a tu supervisor muestra respeto y evita problemas." },
+      { objective: "O4", q: "¿Cuál es el salario mínimo federal según el Departamento de Trabajo?", options: ["$5.15 la hora", "$10.00 la hora", "$7.25 la hora", "$15.00 la hora"], answer: 2, why: "El mínimo federal es de $7.25; muchos estados y ciudades fijan más." },
+      { objective: "O4", q: "¿Después de cuántas horas en una semana laboral empiezan las horas extra federales?", options: ["40", "35", "45", "50"], answer: 0, why: "Los trabajadores cubiertos y no exentos reciben horas extra por las horas de más de 40 en una semana laboral." },
+      { objective: "O4", q: "Trabajaste 30 horas una semana y 50 la siguiente. Según la ley federal:", options: ["Se promedian, así que no hay horas extra", "Recibes 10 horas extra por la segunda semana", "Recibes 20 horas extra", "Las horas extra solo cuentan en días festivos"], answer: 1, why: "Cada semana laboral cuenta sola; las horas no se pueden promediar entre semanas." },
+      { objective: "O4", q: "En un recibo de pago, el \"pago neto\" es:", options: ["El pago antes de impuestos", "La cantidad de impuestos", "Tu tarifa por hora", "Lo que te llevas a casa después de las deducciones"], answer: 3, why: "El pago neto es lo que queda después de impuestos y otras deducciones." },
+      { objective: "O4", q: "Tu recibo de pago muestra 32 horas, pero tu registro dice 38. ¿Cuál es el mejor primer paso?", options: ["Preguntar con amabilidad en nómina y mostrar tu registro de horas", "No decir nada", "Renunciar", "Tomar cosas de la tienda para compensar"], answer: 0, why: "La mayoría de los errores se arreglan más rápido preguntando en nómina con tu registro." },
+      { objective: "O5", q: "¿Cuál es una característica protegida por la ley federal contra la discriminación en el trabajo?", options: ["Tu equipo deportivo favorito", "Una discapacidad", "Tu talla de zapatos", "Tus gustos musicales"], answer: 1, why: "La discapacidad está protegida, junto con la raza, el color, la religión, el sexo, el origen nacional, la edad de 40 o más y la información genética." },
+      { objective: "O5", q: "¿Cómo puedes empezar un cargo ante la EEOC?", options: ["Solo contratando a un abogado", "Solo por fax", "En línea por el Portal Público de la EEOC, en una oficina o llamando al 1-800-669-4000", "Publicándolo en redes sociales"], answer: 2, why: "Presentarlo es gratis y se puede empezar en línea, en persona o por teléfono." },
+      { objective: "O5", q: "En la mayoría de los casos, ¿cuánto tiempo tienes para presentar un cargo ante la EEOC?", options: ["7 días", "Cinco años", "No hay plazo", "180 días, o 300 días si una agencia estatal o local aplica una ley parecida"], answer: 3, why: "Esos son los plazos normales de la EEOC; actúa rápido." },
+      { objective: "O5", q: "Tu jefe te reduce las horas después de que reportaste acoso. Esto puede ser:", options: ["Normal", "Una represalia, que es ilegal", "Un ascenso", "Algo que exige la ley"], answer: 1, why: "Castigar a alguien por reportar es una represalia." },
+      { objective: "O6", q: "¿Qué agencia atiende las quejas de seguridad en el trabajo?", options: ["OSHA", "La EEOC", "La oficina de correos", "La FCC (la agencia de comunicaciones)"], answer: 0, why: "La Administración de Seguridad y Salud Ocupacional se encarga de la seguridad." },
+      { objective: "O6", q: "Cuando presentas una queja de seguridad ante OSHA, puedes:", options: ["Presentarla solo si tu jefe está de acuerdo", "Nunca quedar en el anonimato", "Pedir que no le den tu nombre a tu empleador", "Presentarla solo en inglés"], answer: 2, why: "OSHA permite a los trabajadores pedir que su nombre se mantenga en privado." },
+      { objective: "O6", q: "¿Dónde puedes encontrar los derechos adicionales que da tu estado, como días de enfermedad pagados o reglas de recibos de pago?", options: ["Una publicación en redes sociales", "La oficina laboral de tu estado, que aparece en la lista del Departamento de Trabajo", "Lo que crea un compañero", "En ninguna parte; solo existen reglas federales"], answer: 1, why: "Las leyes estatales pueden dar más protección; la oficina laboral del estado es el lugar oficial para revisarlas." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      1,
+      4,
+      6,
+      9,
+      12,
+      13,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Plan para llegar",
+        objective: "O1",
+        notYet: "No hay ruta, transporte de respaldo ni alarma, o no hay mensaje para cuando va tarde o está enfermo.",
+        meets: "Ruta, transporte de respaldo y alarma para llegar unos 10 minutos antes, más un mensaje listo para cuando va tarde o está enfermo.",
+        exceeds: "Los tiempos están revisados en una app de mapas y el mensaje dice a quién va dirigido."
+      },
+      {
+        name: "Ropa y mensajes",
+        objective: "O2",
+        notYet: "No planeó la ropa, o el mensaje es poco claro o grosero.",
+        meets: "La ropa encaja con el trabajo, y el mensaje es corto, claro y amable.",
+        exceeds: "Además incluye cómo preguntar por el código de vestimenta si tiene dudas."
+      },
+      {
+        name: "Regla del teléfono",
+        objective: "O3",
+        notYet: "No hay regla del teléfono, o permite usarlo mientras maneja o usa máquinas.",
+        meets: "Una regla de una frase que mantiene el teléfono guardado mientras trabaja.",
+        exceeds: "Además planea cómo manejar una llamada importante que espera."
+      },
+      {
+        name: "Rutina para revisar el pago",
+        objective: "O4",
+        notYet: "No lleva registro de horas ni revisa el recibo de pago.",
+        meets: "Lleva un registro de horas y lo compara con cada recibo de pago, incluidas las horas extra.",
+        exceeds: "Sabe qué decir en nómina si los números no coinciden."
+      },
+      {
+        name: "Dónde reportar",
+        objective: "O5",
+        notYet: "Falta uno de los lugares oficiales, o están equivocados.",
+        meets: "Nombra dol.gov para salarios, eeoc.gov para discriminación o acoso, y osha.gov para seguridad.",
+        exceeds: "Anota los plazos para presentar y los pasos para documentar primero un problema."
+      },
+      {
+        name: "Oficina laboral del estado",
+        objective: "O6",
+        notYet: "No anotó la oficina laboral del estado.",
+        meets: "Anota el sitio web de la oficina laboral de su estado.",
+        exceeds: "Anota un derecho adicional que da su estado, según el sitio oficial."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que empiezan o mantienen un empleo durante 90 días (encuesta de seguimiento)",
+      "Participantes que cuentan que comparan su recibo de pago con sus horas",
+      "Participantes que reportan un problema de salario, discriminación, acoso o seguridad al lugar correcto cuando hace falta",
+      "Participantes que empiezan otro curso de carrera de Koach Learn en 30 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono con una app de mapas e internet",
+      "Un recibo de pago de ejemplo o el propio (guardado en privado)",
+      "Papel y lápiz o una app de notas para el plan \"Listo para trabajar\"",
+      "Sitios oficiales: dol.gov, eeoc.gov, osha.gov y la oficina laboral del estado",
+      "Unos 60 minutos en total"
+    ],
+    facilitatorNotes: [
+      "Recuerda que este curso no es asesoría legal; ante un problema real, hay que contactar a la agencia o a una oficina de ayuda legal.",
+      "Usa recibos de pago de ejemplo para practicar; nunca pidas que compartan los datos de su propio pago.",
+      "Ayuda a encontrar en clase el salario mínimo y la oficina laboral de su estado en los sitios oficiales.",
+      "Con personas que vuelven a casa, planea alrededor de los reportes de libertad condicional, los límites de transporte y el cuidado de niños al hacer los planes para llegar.",
+      "Califica el plan \"Listo para trabajar\" con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

@@ -16,11 +16,35 @@ module.exports = {
     "Cada lección dura unos cinco minutos e incluye una tarea práctica. Hay una comprobación de conocimientos después de cada capítulo y un examen de 20 preguntas al final. Ningún ingreso está garantizado; este curso enseña a probar ideas con honestidad. No da consejos de inversión."
   ],
   finalTask: "Crea un plan para ganar dinero y una primera prueba: el modelo que elegiste y por qué, tu oferta con un precio según su valor, una primera versión del producto u oferta recurrente hecha con ayuda de la IA y revisada por ti, un plan de lanzamiento pequeño con una meta (por ejemplo, 5 ventas o 3 suscriptores en 30 días) y una lista de señales de alerta que usarás antes de pagar por cualquier programa para ganar dinero con IA.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Personas y dueños de pequeños negocios en EE. UU. que quieren ganar dinero con la IA, desde quienes tienen un negocio extra hasta dueños que agregan una nueva fuente de ingresos.",
+    startingPoint: "Usan asistentes de IA y tienen habilidades, un negocio o un público sobre el cual construir. Muchos han visto en internet promesas de ingresos fáciles con IA y no saben qué formas de ganar dinero son reales.",
+    gap: "Los esquemas de IA para hacerse rico rápido le cuestan dinero a la gente, y quienes prueban modelos reales muchas veces se reparten entre demasiados, cobran poco o lanzan sin probar. Necesitan elegir un modelo honesto, ponerle precio según el valor, hacer una primera oferta y probarla en pequeño, mientras detectan las estafas antes de pagar.",
+    constraints: [
+      "Palabras sencillas; no se garantiza ningún ingreso y el curso no da asesoría de inversión",
+      "Dispositivos: un teléfono o una computadora con un asistente de IA gratuito y una hoja de cálculo",
+      "Tiempo: unos cinco minutos por lección más hacer una primera oferta y una prueba de 30 días",
+      "Lo que se diga sobre ganancias debe poder probarse, el contenido patrocinado debe decirlo (FTC), y el material hecho solo por IA puede no estar protegido por derechos de autor",
+      "Las preguntas de impuestos van a fuentes oficiales o a un contador"
+    ],
+    prerequisites: "\"Introducción a la IA para emprendedores\", o el uso frecuente de un asistente de IA."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con los seis modelos para ganar con IA", action: "describir cada modelo y dar un ejemplo que encaje con tus habilidades o tu negocio", standard: "para los seis modelos" },
+    { id: "O2", condition: "Con tus habilidades, tus horas, tu red de contactos y tu público", action: "elegir un modelo para ganar dinero en el que te vas a enfocar durante 90 días", standard: "con una razón escrita de por qué encaja con lo que ya tienes" },
+    { id: "O3", condition: "Para el modelo que elegiste", action: "fijar un precio entre tu piso de costos y el valor para el cliente", standard: "comparando dos precios de la competencia y con las cuentas revisadas en una hoja de cálculo" },
+    { id: "O4", condition: "Con ayuda de la IA y tu propia experiencia", action: "crear una primera versión de un producto digital o un paquete de servicios para un problema y un comprador", standard: "con cada dato revisado y sin afirmaciones que no puedas probar" },
+    { id: "O5", condition: "Con tu primer producto o servicio", action: "diseñar una oferta recurrente o un combo y una prueba de lanzamiento de 30 días", standard: "con una meta clara, una forma de seguirla y cualquier patrocinio dicho claramente" },
+    { id: "O6", condition: "Antes de pagar por cualquier programa o asesoría de ingresos con IA", action: "revisarlo contra una lista escrita de señales de alerta", standard: "pidiendo el documento de divulgación y sabiendo dónde denunciar una estafa" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Elige cómo vas a ganar",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Seis formas en que los negocios ganan con IA",
           minutes: 5,
           goal: "Describir seis modelos reales para ganar con IA y un ejemplo de cada uno.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "No hay ingresos automáticos", bullets: ["Clientes reales, valor real, trabajo real", "La IA reduce el tiempo para hacer y entregar"] }
           ],
           tryIt: "Escribe los seis modelos con un ejemplo de cada uno que podría encajar con tus habilidades o tu negocio.",
-          youCanNow: "nombrar seis formas reales de ganar con IA y dar un ejemplo de cada una."
+          youCanNow: "nombrar seis formas reales de ganar con IA y dar un ejemplo de cada una.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué es un producto digital?", options: ["Algo que se hace una vez y se vende muchas veces en internet", "Un servicio que haces a mano para cada cliente", "Un préstamo bancario", "El contrato de renta de un local"], answer: 0, why: "Los productos digitales se hacen una vez y se pueden vender una y otra vez." },
+            { objective: "O1", q: "Tienes una panadería y usas la IA para ahorrarte dos horas de papeleo cada semana. ¿Qué modelo es este?", options: ["Una suscripción", "Ahorro de costos en un negocio que ya existe", "Un enlace de afiliado", "Un patrocinio"], answer: 1, why: "El dinero que se ahorra en un negocio cuenta como dinero ganado." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Elegir un modelo según tus fortalezas",
           minutes: 5,
           goal: "Elegir el modelo para ganar dinero que encaja con tus habilidades, tu público y tu tiempo.",
@@ -57,9 +86,14 @@ module.exports = {
             { title: "Elige UNO por 90 días", bullets: ["Hacer los seis no deja nada"] }
           ],
           tryIt: "Haz una lista de tus habilidades, horas, contactos y público, pídele a la IA que compare los seis modelos para ti y elige un modelo para los próximos 90 días.",
-          youCanNow: "elegir un modelo para ganar con IA que encaje con lo que ya tienes."
+          youCanNow: "elegir un modelo para ganar con IA que encaje con lo que ya tienes.",
+          quickCheck: [
+            { objective: "O2", q: "¿En cuántos modelos para ganar dinero debes enfocarte durante 90 días?", options: ["En los seis", "En tres", "En uno", "En ninguno"], answer: 2, why: "Intentar todo a la vez es una razón común por la que la gente no gana nada." },
+            { objective: "O2", q: "Escribes muy bien y tienes tiempo, pero no tienes público. ¿Qué eliges?", options: ["Patrocinios", "Un gran producto por suscripción", "Contenido de afiliados", "Un servicio o un servicio en paquete"], answer: 3, why: "Los servicios suelen dar dinero más rápido cuando tienes habilidades pero todavía no tienes público." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Poner precio según el valor",
           minutes: 5,
           goal: "Fijar un precio basado en el valor para el cliente, revisado contra tus costos.",
@@ -77,17 +111,21 @@ module.exports = {
           ],
           sources: [{ name: "IRS: Centro de impuestos para trabajadores por cuenta propia (en inglés)", url: "https://www.irs.gov/businesses/small-businesses-self-employed/self-employed-individuals-tax-center" }],
           tryIt: "Para el modelo que elegiste, escribe el valor para el cliente, tu piso, dos precios de la competencia y tu precio. Revisa los cálculos en una hoja de cálculo.",
-          youCanNow: "ponerle precio a una oferta con ayuda de IA según su valor y por encima de tus costos."
+          youCanNow: "ponerle precio a una oferta con ayuda de IA según su valor y por encima de tus costos.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué es tu precio piso?", options: ["Tus costos más la ganancia", "El precio más bajo que cobra la competencia", "Lo que sugiera la IA", "Cero"], answer: 0, why: "Por debajo del piso, cada venta pierde dinero." },
+            { objective: "O3", q: "La IA dice que tu tarea toma solo cinco minutos, así que deberías cobrar muy poco. ¿Qué haces?", options: ["Cobrar casi nada", "Poner el precio según el valor del resultado, arriba de tu piso", "Regalarla", "Copiar a la competencia más barata"], answer: 1, why: "Los clientes pagan por el resultado, no por lo que tardó la IA." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Elige cómo vas a ganar",
         questions: [
-          { q: "¿Cuál es un servicio en paquete?", options: ["Un trabajo por hora sin alcance definido", "\"10 descripciones de productos por un precio fijo\"", "Un pasatiempo gratis", "Una compra de acciones"], answer: 1, why: "Es un paquete fijo a un precio fijo." },
-          { q: "¿Qué afirmación sobre los ingresos con IA es verdadera?", options: ["Solo necesitas una instrucción", "La IA gana dinero mientras duermes sin ningún trabajo", "Todo negocio de IA gana rápido", "Ningún modelo es automático; cada uno necesita clientes y valor"], answer: 3, why: "Los ingresos reales necesitan valor real y trabajo." },
-          { q: "Tienes habilidades y tiempo pero no tienes público. ¿Qué modelo suele dar dinero más rápido?", options: ["Servicios o servicios en paquete", "Contenido patrocinado", "Suscripciones para un público", "Enlaces de afiliado"], answer: 0, why: "Los servicios se pueden vender sin tener público." },
-          { q: "¿Por qué elegir un solo modelo por 90 días?", options: ["La IA solo permite uno", "Lo exige la ley", "Intentar todos a la vez es una razón común por la que la gente no gana nada", "Para evitar clientes"], answer: 2, why: "Enfocarte da resultados." },
-          { q: "Tu precio debe estar:", options: ["Por encima de cualquier valor", "Por debajo de tus costos", "Entre tu piso de costos y el valor para el cliente", "En cero"], answer: 2, why: "Así cubre los costos y refleja el valor." }
+          { objective: "O1", q: "¿Cuál es un servicio en paquete?", options: ["Un trabajo por hora sin alcance definido", "\"10 descripciones de productos por un precio fijo\"", "Un pasatiempo gratis", "Una compra de acciones"], answer: 1, why: "Es un paquete fijo a un precio fijo." },
+          { objective: "O1", q: "¿Qué afirmación sobre los ingresos con IA es verdadera?", options: ["Solo necesitas una instrucción", "La IA gana dinero mientras duermes sin ningún trabajo", "Todo negocio de IA gana rápido", "Ningún modelo es automático; cada uno necesita clientes y valor"], answer: 3, why: "Los ingresos reales necesitan valor real y trabajo." },
+          { objective: "O2", q: "Tienes habilidades y tiempo pero no tienes público. ¿Qué modelo suele dar dinero más rápido?", options: ["Servicios o servicios en paquete", "Contenido patrocinado", "Suscripciones para un público", "Enlaces de afiliado"], answer: 0, why: "Los servicios se pueden vender sin tener público." },
+          { objective: "O2", q: "¿Por qué elegir un solo modelo por 90 días?", options: ["La IA solo permite uno", "Lo exige la ley", "Intentar todos a la vez es una razón común por la que la gente no gana nada", "Para evitar clientes"], answer: 2, why: "Enfocarte da resultados." },
+          { objective: "O3", q: "Tu precio debe estar:", options: ["Por encima de cualquier valor", "Por debajo de tus costos", "Entre tu piso de costos y el valor para el cliente", "En cero"], answer: 2, why: "Así cubre los costos y refleja el valor." }
         ]
       }
     },
@@ -95,6 +133,7 @@ module.exports = {
       name: "Capítulo 2: Crea, prueba y mantente seguro",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Crear un producto digital con IA",
           minutes: 6,
           goal: "Crear una primera versión de un producto digital con ayuda de la IA y tu propia experiencia.",
@@ -112,9 +151,14 @@ module.exports = {
           ],
           sources: [{ name: "Oficina de Derechos de Autor de EE. UU.: anuncio del informe Parte 2 sobre registrabilidad (en inglés)", url: "https://www.copyright.gov/newsnet/2025/1060.html" }, { name: "FTC: Conceptos básicos de publicidad y marketing (en inglés)", url: "https://www.ftc.gov/business-guidance/advertising-marketing/advertising-marketing-basics" }],
           tryIt: "Haz la primera versión de un pequeño producto digital (o el primer paquete de tu servicio) con ayuda de la IA y tu propia experiencia. Revisa cada dato.",
-          youCanNow: "crear un producto digital que une tu experiencia con la rapidez de la IA."
+          youCanNow: "crear un producto digital que une tu experiencia con la rapidez de la IA.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué hace que valga la pena comprar un producto digital?", options: ["Que sea muy largo", "Que lo haya hecho todo la IA", "Que resuelva un problema para un comprador usando experiencia real", "Que cubra todos los temas"], answer: 2, why: "Los productos enfocados y basados en experiencia real les dan valor a los compradores." },
+            { objective: "O4", q: "La IA agrega \"los compradores ganan $1,000 al mes\" a la página de tu producto. No tienes pruebas. ¿Qué haces?", options: ["Dejarlo", "Cambiarlo a $500", "Ponerlo en letra pequeña", "Quitarlo"], answer: 3, why: "Lo que se diga sobre ganancias debe poder probarse." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Ingresos recurrentes y un lanzamiento pequeño",
           minutes: 5,
           goal: "Diseñar una oferta recurrente o un combo y hacer una prueba de lanzamiento de 30 días.",
@@ -132,9 +176,14 @@ module.exports = {
           ],
           sources: [{ name: "FTC: Guías sobre recomendaciones, lo que la gente pregunta (en inglés)", url: "https://www.ftc.gov/business-guidance/resources/ftcs-endorsement-guides-what-people-are-asking" }],
           tryIt: "Diseña una oferta recurrente o un combo, escribe tu mensaje de lanzamiento y fija una meta de 30 días con la forma en que vas a llevar la cuenta.",
-          youCanNow: "diseñar ingresos recurrentes y lanzar una oferta con una prueba clara y medible."
+          youCanNow: "diseñar ingresos recurrentes y lanzar una oferta con una prueba clara y medible.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué son los ingresos recurrentes?", options: ["Ingresos que se repiten, como una suscripción mensual", "Una venta de una sola vez", "Una devolución de impuestos", "Un préstamo"], answer: 0, why: "Las ofertas recurrentes traen ingresos cada mes." },
+            { objective: "O5", q: "Una marca te paga por mencionar su herramienta de IA en tu boletín. ¿Qué haces?", options: ["Ocultar el pago", "Decirlo con claridad, por ejemplo con \"#ad\" al principio", "Mencionarlo solo al final y en letra pequeña", "No llevar registro"], answer: 1, why: "El contenido patrocinado debe decirlo con claridad." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Detectar estafas para ganar dinero con IA",
           minutes: 5,
           goal: "Usar una lista de señales de alerta antes de pagar por cualquier programa o asesoría de ingresos con IA.",
@@ -153,17 +202,21 @@ module.exports = {
           ],
           sources: [{ name: "Alerta de la FTC: cómo revisar una oportunidad de negocio o de asesoría antes de invertir (en inglés)", url: "https://www.consumer.ftc.gov/consumer-alerts/2023/08/vetting-business-or-coaching-opportunity-you-buy" }],
           tryIt: "Tarea final: escribe tu lista de señales de alerta y luego arma tu plan para ganar dinero: el modelo y por qué, la oferta con precio, el primer producto u oferta recurrente y la prueba de lanzamiento de 30 días.",
-          youCanNow: "ganar con IA mediante ofertas honestas y probadas, y evitar las estafas para ganar dinero con IA."
+          youCanNow: "ganar con IA mediante ofertas honestas y probadas, y evitar las estafas para ganar dinero con IA.",
+          quickCheck: [
+            { objective: "O6", q: "¿Cuál es una señal de alerta en un programa de ingresos con IA?", options: ["Una prueba gratis sin promesas", "Precios claros y una política de reembolsos", "Ganancias garantizadas y presión para pagar hoy", "Un contrato por escrito"], answer: 2, why: "Los ingresos garantizados y la presión para comprar ya son señales de alerta." },
+            { objective: "O6", q: "Un asesor quiere un pago grande por adelantado por una oportunidad de negocio de \"tienda con IA\". ¿Qué haces primero?", options: ["Pagar rápido antes de que suba el precio", "Pedir el dinero prestado", "Firmar sin leer", "Pedir el documento de divulgación de una página y revisar tu lista de señales de alerta"], answer: 3, why: "Pide el documento de divulgación y revisa las señales de alerta antes de pagar." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Crea, prueba y mantente seguro",
         questions: [
-          { q: "¿Qué hace que valga la pena comprar un producto digital?", options: ["Resuelve un problema para un comprador, usando tu experiencia real", "Lo hizo la IA sola", "Es muy largo", "Copia a un éxito de ventas"], answer: 0, why: "La experiencia más un problema claro crean valor." },
-          { q: "¿El material generado solo por IA está protegido por derechos de autor en Estados Unidos?", options: ["Solo si se vende", "Sí, siempre", "Solo las imágenes", "No, según la Oficina de Derechos de Autor"], answer: 3, why: "Los derechos de autor exigen un autor humano." },
-          { q: "¿Cuál es un ingreso recurrente?", options: ["Una venta de una sola vez", "Una suscripción mensual de plantillas", "Un regalo", "Un reembolso"], answer: 1, why: "Se repite cada mes." },
-          { q: "Un programa promete \"10,000 dólares garantizados al mes con nuestras tiendas con IA\". ¿Qué es esto?", options: ["Una señal de alerta", "Una inversión segura", "Un programa del gobierno", "Una oferta de trabajo normal"], answer: 0, why: "Los ingresos garantizados son una señal clásica de estafa." },
-          { q: "¿Qué documento deberías pedir antes de comprar una oportunidad de negocio?", options: ["Tu propio estado de cuenta del banco", "El archivo de su logotipo", "El documento de divulgación de una página", "Una foto de una celebridad"], answer: 2, why: "La FTC dice que pidas este documento obligatorio." }
+          { objective: "O4", q: "¿Qué hace que valga la pena comprar un producto digital?", options: ["Resuelve un problema para un comprador, usando tu experiencia real", "Lo hizo la IA sola", "Es muy largo", "Copia a un éxito de ventas"], answer: 0, why: "La experiencia más un problema claro crean valor." },
+          { objective: "O4", q: "¿El material generado solo por IA está protegido por derechos de autor en Estados Unidos?", options: ["Solo si se vende", "Sí, siempre", "Solo las imágenes", "No, según la Oficina de Derechos de Autor"], answer: 3, why: "Los derechos de autor exigen un autor humano." },
+          { objective: "O5", q: "¿Cuál es un ingreso recurrente?", options: ["Una venta de una sola vez", "Una suscripción mensual de plantillas", "Un regalo", "Un reembolso"], answer: 1, why: "Se repite cada mes." },
+          { objective: "O6", q: "Un programa promete \"10,000 dólares garantizados al mes con nuestras tiendas con IA\". ¿Qué es esto?", options: ["Una señal de alerta", "Una inversión segura", "Un programa del gobierno", "Una oferta de trabajo normal"], answer: 0, why: "Los ingresos garantizados son una señal clásica de estafa." },
+          { objective: "O6", q: "¿Qué documento deberías pedir antes de comprar una oportunidad de negocio?", options: ["Tu propio estado de cuenta del banco", "El archivo de su logotipo", "El documento de divulgación de una página", "Una foto de una celebridad"], answer: 2, why: "La FTC dice que pidas este documento obligatorio." }
         ]
       }
     }
@@ -171,26 +224,106 @@ module.exports = {
   quiz: {
     title: "Examen final: Estrategias para ganar dinero con IA",
     questions: [
-      { q: "Monetizar significa:", options: ["Gastar dinero", "Encontrar una forma de ganar dinero con algo", "Regalar algo", "Pedir dinero prestado"], answer: 1, why: "Esa es la definición." },
-      { q: "¿Cuál es un servicio con ayuda de IA?", options: ["Pagar anuncios", "Comprar criptomonedas", "Ver videos", "Escribir publicaciones para redes de clientes más rápido con IA"], answer: 3, why: "Haces trabajo para clientes con ayuda de la IA." },
-      { q: "Un producto digital es:", options: ["Un préstamo", "Un envío físico", "Una consulta de una sola vez", "Algo que se hace una vez y se vende muchas veces en línea"], answer: 3, why: "Las plantillas y las guías son ejemplos." },
-      { q: "Un enlace de afiliado:", options: ["Es un regalo gratis", "Te paga una comisión cuando alguien compra a través de él", "Es un formulario de impuestos", "Es una contraseña"], answer: 1, why: "Así funcionan los ingresos de afiliado." },
-      { q: "Los ahorros cuentan como forma de ganar dinero porque:", options: ["Evitan a los clientes", "Son gratis", "El dinero ahorrado en un negocio es dinero ganado", "La IA te paga"], answer: 2, why: "Costos más bajos suben la ganancia." },
-      { q: "La IA ayuda sobre todo:", options: ["Reduciendo el tiempo para hacer y entregar", "Garantizando ingresos", "Encontrando clientes de forma automática", "Quitando todo el trabajo"], answer: 0, why: "La IA acelera el trabajo; los clientes siguen necesitando valor." },
-      { q: "Si ya tienes un negocio, un buen comienzo es:", options: ["Empezar seis modelos nuevos", "Cerrarlo", "Los ahorros y un servicio adicional para tus clientes actuales", "Comprar un curso de ingresos con IA"], answer: 2, why: "Construye sobre lo que ya tienes." },
-      { q: "¿En cuántos modelos deberías enfocarte durante 90 días?", options: ["Uno", "Seis", "Ninguno", "En todos los posibles"], answer: 0, why: "Enfocarte da resultados." },
-      { q: "Los clientes pagan sobre todo por:", options: ["Tus minutos", "El resultado", "Tus herramientas", "Tu logotipo"], answer: 1, why: "Pon precio según el valor." },
-      { q: "Tu precio piso es:", options: ["El precio de un competidor", "El precio más alto", "Cero", "Los costos más la ganancia"], answer: 3, why: "Por debajo de él pierdes dinero." },
-      { q: "¿Quién fija y revisa tus precios finales?", options: ["Tú", "La IA", "Tu competidor", "Nadie"], answer: 0, why: "La IA puede sugerir; tú decides y revisas." },
-      { q: "Los ingresos por cuenta propia por lo general significan pagar:", options: ["Solo una cuota a la empresa de IA", "Ningún impuesto", "Solo impuesto sobre las ventas", "El impuesto sobre el trabajo por cuenta propia además del impuesto sobre la renta"], answer: 3, why: "Consulta el centro de impuestos para trabajadores por cuenta propia del IRS." },
-      { q: "Un buen producto digital se enfoca en:", options: ["Copiar un producto popular", "Todo para todos", "Un problema para un tipo de comprador", "Lo que sugiera la IA"], answer: 2, why: "El enfoque le da valor." },
-      { q: "Si tu producto dice \"gana 1,000 dólares al mes\", debes:", options: ["Agregar \"garantizado\"", "Poder demostrarlo", "Esconderlo en letra pequeña", "Nada"], answer: 1, why: "Las afirmaciones publicitarias deben ser verdaderas y estar respaldadas por evidencia." },
-      { q: "Un combo es:", options: ["Una prueba gratis", "Un solo artículo", "Un reembolso", "Varios productos o servicios que se venden juntos"], answer: 3, why: "Los combos suben el valor de cada venta." },
-      { q: "Si ganas dinero de un patrocinador, debes:", options: ["Mencionarlo una vez al año", "Esconderlo", "Avisarlo con claridad, como \"#publicidad\" al principio", "Decírselo solo a tus amigos"], answer: 2, why: "La guía de la FTC sobre recomendaciones exige un aviso claro." },
-      { q: "Una buena meta de lanzamiento de 30 días es:", options: ["5 ventas o 3 suscriptores", "Ninguna meta", "Un millón de usuarios", "Lo que pase"], answer: 0, why: "Las metas claras y pequeñas se pueden medir." },
-      { q: "En un caso de la FTC, una empresa prometía que la IA elegiría los mejores productos para tiendas en línea. La FTC dijo:", options: ["Que funcionaba perfecto", "Que sus promesas de ganancias no tenían base y la mayoría de los clientes no recuperó su dinero", "Que era un programa del gobierno", "Que todos se hicieron ricos"], answer: 1, why: "Esto viene de la alerta al consumidor de la FTC." },
-      { q: "¿Cuál es una señal de alerta?", options: ["Condiciones de reembolso claras", "Presión para comprar hoy con una cuota grande por adelantado", "Referencias a las que puedes llamar", "Un documento de divulgación por escrito"], answer: 1, why: "La presión y las cuotas grandes por adelantado son señales de estafa." },
-      { q: "¿Dónde puedes denunciar una posible estafa de oportunidad de negocio?", options: ["En ReportFraud.ftc.gov", "En el sitio web del estafador", "En un foro cualquiera", "En ningún lado"], answer: 0, why: "La FTC recibe las denuncias ahí." }
+      { objective: "O1", q: "Monetizar significa:", options: ["Gastar dinero", "Encontrar una forma de ganar dinero con algo", "Regalar algo", "Pedir dinero prestado"], answer: 1, why: "Esa es la definición." },
+      { objective: "O1", q: "¿Cuál es un servicio con ayuda de IA?", options: ["Pagar anuncios", "Comprar criptomonedas", "Ver videos", "Escribir publicaciones para redes de clientes más rápido con IA"], answer: 3, why: "Haces trabajo para clientes con ayuda de la IA." },
+      { objective: "O1", q: "Un producto digital es:", options: ["Un préstamo", "Un envío físico", "Una consulta de una sola vez", "Algo que se hace una vez y se vende muchas veces en línea"], answer: 3, why: "Las plantillas y las guías son ejemplos." },
+      { objective: "O1", q: "Un enlace de afiliado:", options: ["Es un regalo gratis", "Te paga una comisión cuando alguien compra a través de él", "Es un formulario de impuestos", "Es una contraseña"], answer: 1, why: "Así funcionan los ingresos de afiliado." },
+      { objective: "O1", q: "Los ahorros cuentan como forma de ganar dinero porque:", options: ["Evitan a los clientes", "Son gratis", "El dinero ahorrado en un negocio es dinero ganado", "La IA te paga"], answer: 2, why: "Costos más bajos suben la ganancia." },
+      { objective: "O1", q: "La IA ayuda sobre todo:", options: ["Reduciendo el tiempo para hacer y entregar", "Garantizando ingresos", "Encontrando clientes de forma automática", "Quitando todo el trabajo"], answer: 0, why: "La IA acelera el trabajo; los clientes siguen necesitando valor." },
+      { objective: "O2", q: "Si ya tienes un negocio, un buen comienzo es:", options: ["Empezar seis modelos nuevos", "Cerrarlo", "Los ahorros y un servicio adicional para tus clientes actuales", "Comprar un curso de ingresos con IA"], answer: 2, why: "Construye sobre lo que ya tienes." },
+      { objective: "O2", q: "¿En cuántos modelos deberías enfocarte durante 90 días?", options: ["Uno", "Seis", "Ninguno", "En todos los posibles"], answer: 0, why: "Enfocarte da resultados." },
+      { objective: "O3", q: "Los clientes pagan sobre todo por:", options: ["Tus minutos", "El resultado", "Tus herramientas", "Tu logotipo"], answer: 1, why: "Pon precio según el valor." },
+      { objective: "O3", q: "Tu precio piso es:", options: ["El precio de un competidor", "El precio más alto", "Cero", "Los costos más la ganancia"], answer: 3, why: "Por debajo de él pierdes dinero." },
+      { objective: "O3", q: "¿Quién fija y revisa tus precios finales?", options: ["Tú", "La IA", "Tu competidor", "Nadie"], answer: 0, why: "La IA puede sugerir; tú decides y revisas." },
+      { objective: "O3", q: "Los ingresos por cuenta propia por lo general significan pagar:", options: ["Solo una cuota a la empresa de IA", "Ningún impuesto", "Solo impuesto sobre las ventas", "El impuesto sobre el trabajo por cuenta propia además del impuesto sobre la renta"], answer: 3, why: "Consulta el centro de impuestos para trabajadores por cuenta propia del IRS." },
+      { objective: "O4", q: "Un buen producto digital se enfoca en:", options: ["Copiar un producto popular", "Todo para todos", "Un problema para un tipo de comprador", "Lo que sugiera la IA"], answer: 2, why: "El enfoque le da valor." },
+      { objective: "O4", q: "Si tu producto dice \"gana 1,000 dólares al mes\", debes:", options: ["Agregar \"garantizado\"", "Poder demostrarlo", "Esconderlo en letra pequeña", "Nada"], answer: 1, why: "Las afirmaciones publicitarias deben ser verdaderas y estar respaldadas por evidencia." },
+      { objective: "O5", q: "Un combo es:", options: ["Una prueba gratis", "Un solo artículo", "Un reembolso", "Varios productos o servicios que se venden juntos"], answer: 3, why: "Los combos suben el valor de cada venta." },
+      { objective: "O5", q: "Si ganas dinero de un patrocinador, debes:", options: ["Mencionarlo una vez al año", "Esconderlo", "Avisarlo con claridad, como \"#publicidad\" al principio", "Decírselo solo a tus amigos"], answer: 2, why: "La guía de la FTC sobre recomendaciones exige un aviso claro." },
+      { objective: "O5", q: "Una buena meta de lanzamiento de 30 días es:", options: ["5 ventas o 3 suscriptores", "Ninguna meta", "Un millón de usuarios", "Lo que pase"], answer: 0, why: "Las metas claras y pequeñas se pueden medir." },
+      { objective: "O6", q: "En un caso de la FTC, una empresa prometía que la IA elegiría los mejores productos para tiendas en línea. La FTC dijo:", options: ["Que funcionaba perfecto", "Que sus promesas de ganancias no tenían base y la mayoría de los clientes no recuperó su dinero", "Que era un programa del gobierno", "Que todos se hicieron ricos"], answer: 1, why: "Esto viene de la alerta al consumidor de la FTC." },
+      { objective: "O6", q: "¿Cuál es una señal de alerta?", options: ["Condiciones de reembolso claras", "Presión para comprar hoy con una cuota grande por adelantado", "Referencias a las que puedes llamar", "Un documento de divulgación por escrito"], answer: 1, why: "La presión y las cuotas grandes por adelantado son señales de estafa." },
+      { objective: "O6", q: "¿Dónde puedes denunciar una posible estafa de oportunidad de negocio?", options: ["En ReportFraud.ftc.gov", "En el sitio web del estafador", "En un foro cualquiera", "En ningún lado"], answer: 0, why: "La FTC recibe las denuncias ahí." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      2,
+      6,
+      7,
+      8,
+      9,
+      12,
+      14,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Modelo y razón",
+        objective: "O2",
+        notYet: "No eligió un modelo, o eligió varios a la vez.",
+        meets: "Un modelo con una razón escrita de por qué encaja con sus habilidades, su tiempo y su público.",
+        exceeds: "También dice qué modelos descartó y por qué."
+      },
+      {
+        name: "Precio según el valor",
+        objective: "O3",
+        notYet: "Precio por debajo del piso de costos, o sin cuentas.",
+        meets: "Precio entre el piso y el valor, con dos precios de la competencia y las cuentas revisadas.",
+        exceeds: "Explica el valor con las palabras del cliente."
+      },
+      {
+        name: "Primer producto u oferta",
+        objective: "O4",
+        notYet: "Contenido de la IA sin revisar, o afirmaciones que no se pueden probar.",
+        meets: "Una primera versión para un problema y un comprador, con los datos revisados y la experiencia propia del participante.",
+        exceeds: "Se le mostró al menos a un posible comprador para recibir comentarios."
+      },
+      {
+        name: "Prueba de lanzamiento",
+        objective: "O5",
+        notYet: "Sin meta o sin forma de seguirla.",
+        meets: "Una prueba de 30 días con una meta clara, un mensaje de lanzamiento y seguimiento.",
+        exceeds: "Incluye una oferta recurrente o un combo y dice claramente cualquier patrocinio."
+      },
+      {
+        name: "Lista de señales de alerta",
+        objective: "O6",
+        notYet: "No hay lista, o le faltan los ingresos garantizados o las tácticas de presión.",
+        meets: "Una lista que cubre las garantías, la presión, los pagos por adelantado y el documento de divulgación.",
+        exceeds: "Anota dónde denunciar una posible estafa."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Participantes que alcanzan la meta de su prueba de lanzamiento de 30 días (encuesta de seguimiento)",
+      "Participantes que reportan haber evitado un programa para ganar dinero con IA gracias a la lista de señales de alerta",
+      "Participantes que empiezan otro curso de Koach Learn para emprendedores en 30 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono o una computadora con un asistente de IA gratuito",
+      "Una hoja de cálculo para las cuentas de precios y el seguimiento del lanzamiento",
+      "Una lista de tus habilidades, tus horas, tu red de contactos y tu público",
+      "Unos 60 minutos para las lecciones y las comprobaciones, más una prueba de lanzamiento de 30 días"
+    ],
+    facilitatorNotes: [
+      "Di al principio que no se garantiza ningún ingreso y que el curso no da asesoría de inversión.",
+      "Pide a los participantes que compartan en parejas el modelo y el precio que eligieron para revisar si son realistas.",
+      "Revisen juntos ejemplos reales (públicos) de la FTC sobre esquemas para ganar dinero con IA y armen en grupo la lista de señales de alerta.",
+      "Envía las preguntas de impuestos a fuentes oficiales o a un contador.",
+      "Califica el plan para ganar dinero con la rúbrica, una fila en Todavía no a la vez."
     ]
   }
 };

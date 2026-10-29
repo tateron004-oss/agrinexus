@@ -15,11 +15,35 @@ module.exports = {
     "Each lesson is about five minutes with a \"Try it now\" task. A knowledge check closes each chapter, and a 20-question quiz closes the course."
   ],
   finalTask: "Brand one social media profile: write your brand statement, update your bio and profile photo, write three content pillars with two post ideas each, audit your last 30 posts and fix anything off-brand, and check your privacy and safety settings.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "High school, college and club athletes who know coaches, recruiters, brands and future employers look at their social media, and coaches who teach their teams about it.",
+    startingPoint: "Have one or more social media accounts and post regularly. Few have a written brand statement, a planned bio, content pillars, recent audits of old posts, or privacy settings they chose on purpose.",
+    gap: "Old posts, unclear profiles and open settings can cost athletes recruiting, sponsor and job opportunities and expose them to strangers and scams. A clear, safe brand helps them get noticed for the right reasons and stay protected.",
+    constraints: [
+      "Plain language at about a grade 7 reading level",
+      "A phone with the athlete's social media apps and a free AI assistant",
+      "About 60 minutes in total",
+      "Platform age rules; athletes under 18 involve a parent or guardian before sharing school or city",
+      "Team, school, league, NIL and FTC disclosure rules; settings menus change between apps"
+    ],
+    prerequisites: "None"
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given your sport, values and interests", action: "write a one-sentence brand statement", standard: "naming your sport and position, a value and one true thing beyond sport" },
+    { id: "O2", condition: "On one social media profile", action: "write a short bio and choose a profile photo that match your brand", standard: "with sport, position, one value and one link, a clear well-lit photo, and no private details" },
+    { id: "O3", condition: "Using your brand statement and an AI assistant", action: "choose three content pillars with two post ideas for each", standard: "with every pillar and idea fitting your brand statement" },
+    { id: "O4", condition: "On your own profile", action: "check your last 30 posts, comments, reposts and tags with the coach, sponsor and grandparent test", standard: "archiving, hiding, deleting or untagging everything that fails the test" },
+    { id: "O5", condition: "In each app's settings", action: "set who can message, comment and tag you, turn off location on posts and turn on two-step verification", standard: "with every setting checked and a plan to save proof, block, report and tell an adult if threatened" },
+    { id: "O6", condition: "Using your team's rules", action: "write your personal posting rules, including how you disclose brand deals and handle negative comments", standard: "with three \"I always\" rules, three \"I never\" rules and a disclosure and NIL check rule" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Defining your brand",
       lessons: [
         {
+          objectives: ["O1"],
           title: "What an athlete brand is",
           minutes: 4,
           goal: "Write a one-sentence brand statement.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Brand statement", bullets: ["\"I am a [sport/position] who [value]", "and [something true about you].\""] }
           ],
           tryIt: "Write your brand statement. Ask an AI assistant for three other ways to word it, then choose or mix the one that sounds most like you.",
-          youCanNow: "describe your athlete brand in one honest sentence."
+          youCanNow: "describe your athlete brand in one honest sentence.",
+          quickCheck: [
+            { objective: "O1", q: "Do you have a brand if you never planned one?", options: ["No, only pros have brands", "Only if you have 10,000 followers", "Yes, people form it from your posts, comments and actions", "Only if a company sponsors you"], answer: 2, why: "You already have a brand, whether you planned it or not." },
+            { objective: "O1", q: "AI suggests a brand statement calling you \"the best shooter in the state\", which is not true. What do you do?", options: ["Use it; it sounds strong", "Change it to honest words about you", "Post it and see who notices", "Ask AI to make it even bigger"], answer: 1, why: "Pick words that are honest." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Profile photo, name and bio",
           minutes: 5,
           goal: "Write a clear bio and choose a profile photo that match your brand.",
@@ -55,9 +84,14 @@ module.exports = {
             { title: "Keep out of your bio", bullets: ["Home address or phone", "Class schedule", "Minors: ask a parent about school or city"] }
           ],
           tryIt: "Ask an AI assistant for five bio options using your brand statement, under the platform's character limit. Pick one, edit it, and update your profile.",
-          youCanNow: "write a clear bio and choose a profile photo that match your brand."
+          youCanNow: "write a clear bio and choose a profile photo that match your brand.",
+          quickCheck: [
+            { objective: "O2", q: "What should people learn from your profile in a few seconds?", options: ["Who you are, what you play and why to follow you", "Your home address", "Your class schedule", "Every team you ever played for"], answer: 0, why: "Your profile is your front door and should make those three things clear." },
+            { objective: "O2", q: "You are 15 and want to add your city and school to your bio. What do you do?", options: ["Add them right away", "Add your address too", "Add your phone number instead", "Ask a parent or guardian first"], answer: 3, why: "Minors should ask a parent or guardian before listing school or city." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Choosing your content pillars",
           minutes: 5,
           goal: "Pick three content pillars and two post ideas for each.",
@@ -74,17 +108,21 @@ module.exports = {
             { title: "Use AI to brainstorm", bullets: ["Ask for ten ideas per pillar", "Keep the ones you'd really post"] }
           ],
           tryIt: "Write your three content pillars. Use an AI assistant to brainstorm ideas and keep two real post ideas for each pillar.",
-          youCanNow: "choose content pillars that match your brand and plan posts for them."
+          youCanNow: "choose content pillars that match your brand and plan posts for them.",
+          quickCheck: [
+            { objective: "O3", q: "Why use content pillars?", options: ["To post as often as possible", "To keep your feed focused so people know what to expect", "To hide your posts", "To get free products"], answer: 1, why: "Pillars keep your feed focused on a few main topics." },
+            { objective: "O3", q: "Your brand statement mentions faith and community service. Which pillar fits best?", options: ["Rival trash talk", "Random memes", "Off the field: faith and community service", "Other teams' highlights"], answer: 2, why: "Pick pillars that match your brand statement." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Defining your brand",
         questions: [
-          { q: "What is your athlete brand?", options: ["Your jersey number", "Your shoe sponsor", "The picture people have in mind when they hear your name", "Your follower count"], answer: 2, why: "Your brand is how people see you." },
-          { q: "Which is a brand statement?", options: ["\"I am a hard-working point guard who loves coaching kids and wants to study nursing.\"", "\"Follow me\"", "\"Best ever\"", "\"No comment\""], answer: 0, why: "It names your sport, values and something true about you." },
-          { q: "Which belongs in a strong bio?", options: ["Your home address", "Your class schedule", "Your phone number", "Sport, position and a link to highlights"], answer: 3, why: "A bio shows who you are without private details." },
-          { q: "What are content pillars?", options: ["Stadium columns", "The 3-4 main topics you post about", "Hashtags", "Followers"], answer: 1, why: "Pillars keep your feed focused." },
-          { q: "AI gives you ten post ideas. What do you do?", options: ["Post all ten today", "Keep the ones you would actually post", "Ignore them all", "Copy another athlete's posts"], answer: 1, why: "Only post what fits you and your brand." }
+          { objective: "O1", q: "What is your athlete brand?", options: ["Your jersey number", "Your shoe sponsor", "The picture people have in mind when they hear your name", "Your follower count"], answer: 2, why: "Your brand is how people see you." },
+          { objective: "O1", q: "Which is a brand statement?", options: ["\"I am a hard-working point guard who loves coaching kids and wants to study nursing.\"", "\"Follow me\"", "\"Best ever\"", "\"No comment\""], answer: 0, why: "It names your sport, values and something true about you." },
+          { objective: "O2", q: "Which belongs in a strong bio?", options: ["Your home address", "Your class schedule", "Your phone number", "Sport, position and a link to highlights"], answer: 3, why: "A bio shows who you are without private details." },
+          { objective: "O3", q: "What are content pillars?", options: ["Stadium columns", "The 3-4 main topics you post about", "Hashtags", "Followers"], answer: 1, why: "Pillars keep your feed focused." },
+          { objective: "O3", q: "AI gives you ten post ideas. What do you do?", options: ["Post all ten today", "Keep the ones you would actually post", "Ignore them all", "Copy another athlete's posts"], answer: 1, why: "Only post what fits you and your brand." }
         ]
       }
     },
@@ -92,6 +130,7 @@ module.exports = {
       name: "Chapter 2: Protecting your brand",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Auditing your old posts",
           minutes: 5,
           goal: "Review your past posts and fix anything that hurts your brand.",
@@ -108,9 +147,14 @@ module.exports = {
             { title: "From now on", bullets: ["Screenshots last forever", "No posting when angry"] }
           ],
           tryIt: "Audit your last 30 posts and tagged photos. Write how many you kept, archived and deleted.",
-          youCanNow: "audit your social media and remove posts that hurt your brand."
+          youCanNow: "audit your social media and remove posts that hurt your brand.",
+          quickCheck: [
+            { objective: "O4", q: "What should your audit include besides your own posts?", options: ["Comments, reposts and tagged photos", "Only your profile photo", "Your teammates' accounts", "Your private messages to family"], answer: 0, why: "The audit covers posts, comments, reposts and tags." },
+            { objective: "O4", q: "An old repost of a mean video fails the grandparent test. What do you do?", options: ["Leave it; it is old", "Repost it again", "Archive, hide or delete it", "Comment on it to explain"], answer: 2, why: "Archive, hide or delete what fails the test." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Privacy and safety settings",
           minutes: 5,
           goal: "Set your accounts so you control who sees and contacts you.",
@@ -127,9 +171,14 @@ module.exports = {
             { title: "Stay safe", bullets: ["No live location or routine", "Careful with stranger DMs", "Threats: save proof, block, report, tell an adult"] }
           ],
           tryIt: "Open the settings on one account. Limit who can message and tag you, turn off location on posts, and turn on two-step verification.",
-          youCanNow: "set your accounts so you control who sees and contacts you."
+          youCanNow: "set your accounts so you control who sees and contacts you.",
+          quickCheck: [
+            { objective: "O5", q: "What does two-step verification protect?", options: ["Your follower count", "Your login", "Your photos' quality", "Your location"], answer: 1, why: "Two-step verification adds a second check to protect your login." },
+            { objective: "O5", q: "A stranger who says they are a recruiter keeps messaging and asks for private photos. What do you do?", options: ["Reply politely", "Send a photo to keep them happy", "Ask them for proof first", "Do not reply; save proof, block, report and tell a trusted adult"], answer: 3, why: "Never reply to threats or requests for private photos; save proof and get help." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Staying on-brand: rules, brands and judgment",
           minutes: 5,
           goal: "Write your personal posting rules, including how to handle sponsored posts.",
@@ -150,17 +199,21 @@ module.exports = {
             { name: "NCAA: Name, Image and Likeness", url: "https://www.ncaa.org/student-athletes/name-image-likeness/" }
           ],
           tryIt: "Final task: write your posting rules, then finish branding one profile: brand statement, bio and photo, three pillars with two ideas each, a 30-post audit and safe settings.",
-          youCanNow: "keep your brand on track with clear posting rules and honest handling of brand deals."
+          youCanNow: "keep your brand on track with clear posting rules and honest handling of brand deals.",
+          quickCheck: [
+            { objective: "O6", q: "What does the FTC say about a free product you post about?", options: ["Disclose it clearly right in the post", "Only disclose cash deals", "Put it in your bio once", "No disclosure is needed for students"], answer: 0, why: "Any paid deal or free product must be clearly disclosed in the post." },
+            { objective: "O6", q: "Someone posts a rude comment after your team loses. What does your rule say?", options: ["Argue until they stop", "Post an angry reply", "Delete your account", "Do not argue; mute, hide or block"], answer: 3, why: "Your posting rules say how to handle negative comments without arguing." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Protecting your brand",
         questions: [
-          { q: "What is the audit test for an old post?", options: ["Did it get 100 likes?", "Is it funny?", "Is it old?", "Would a coach, sponsor or grandparent be okay seeing it?"], answer: 3, why: "If it fails that test, it may hurt your brand." },
-          { q: "Which setting protects your login?", options: ["Two-step verification", "A cool font", "More hashtags", "A public location"], answer: 0, why: "Two-step verification blocks people with only your password." },
-          { q: "Which should you never post?", options: ["A practice clip", "A thank-you to your coach", "Your live location", "A community service photo"], answer: 2, why: "Live location can put you at risk." },
-          { q: "Someone threatens you in a DM. What do you do?", options: ["Argue back", "Send what they ask", "Ignore it and tell no one", "Save proof, block, report and tell a trusted adult"], answer: 3, why: "Protect yourself and get help." },
-          { q: "A brand sends you free headphones to post about. What must you do?", options: ["Nothing", "Clearly disclose the free product in the post and check NIL rules", "Hide the brand name", "Delete the post later"], answer: 1, why: "The FTC requires clear disclosure, and NIL rules may apply." }
+          { objective: "O4", q: "What is the audit test for an old post?", options: ["Did it get 100 likes?", "Is it funny?", "Is it old?", "Would a coach, sponsor or grandparent be okay seeing it?"], answer: 3, why: "If it fails that test, it may hurt your brand." },
+          { objective: "O5", q: "Which setting protects your login?", options: ["Two-step verification", "A cool font", "More hashtags", "A public location"], answer: 0, why: "Two-step verification blocks people with only your password." },
+          { objective: "O5", q: "Which should you never post?", options: ["A practice clip", "A thank-you to your coach", "Your live location", "A community service photo"], answer: 2, why: "Live location can put you at risk." },
+          { objective: "O5", q: "Someone threatens you in a DM. What do you do?", options: ["Argue back", "Send what they ask", "Ignore it and tell no one", "Save proof, block, report and tell a trusted adult"], answer: 3, why: "Protect yourself and get help." },
+          { objective: "O6", q: "A brand sends you free headphones to post about. What must you do?", options: ["Nothing", "Clearly disclose the free product in the post and check NIL rules", "Hide the brand name", "Delete the post later"], answer: 1, why: "The FTC requires clear disclosure, and NIL rules may apply." }
         ]
       }
     }
@@ -168,26 +221,104 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Social Media Branding for Athletes",
     questions: [
-      { q: "Who forms your brand?", options: ["Only you", "Only your coach", "People who see your posts, comments and actions", "Nobody"], answer: 2, why: "Your brand lives in other people's minds." },
-      { q: "A brand is your sport plus:", options: ["Your values and what makes you you", "Your password", "Your rival", "Your shoe size"], answer: 0, why: "Values and personality make you stand out." },
-      { q: "A brand statement should be:", options: ["Honest", "Made up", "Copied", "Very long"], answer: 0, why: "A brand only works if it is true." },
-      { q: "Your profile is like:", options: ["Your locker", "A secret", "Your front door", "A scoreboard"], answer: 2, why: "It's the first thing people see." },
-      { q: "A good profile photo is:", options: ["Blurry", "Clear and well-lit", "A random meme", "Someone else"], answer: 1, why: "People should recognize you." },
-      { q: "Which is NOT good for a bio?", options: ["Your sport", "Your position", "A highlight link", "Your phone number"], answer: 3, why: "Phone numbers are private." },
-      { q: "If you are a minor, before listing your school or city you should:", options: ["Post it anyway", "Ask a stranger", "Ask a parent or guardian", "Add your address too"], answer: 2, why: "Parents help you decide what is safe to share." },
-      { q: "How many content pillars should you have?", options: ["20", "None", "1 post", "3-4"], answer: 3, why: "A few pillars keep your feed focused." },
-      { q: "Which is an off-the-field pillar post?", options: ["Volunteering at a youth clinic", "A game highlight", "A workout clip", "A stat graphic"], answer: 0, why: "It shows who you are beyond sport." },
-      { q: "How should you use AI for post ideas?", options: ["Post everything it says", "Brainstorm many, keep the ones that fit you", "Never use it", "Let it run your account"], answer: 1, why: "You choose what fits your brand." },
-      { q: "How many recent posts should your audit cover at least?", options: ["1", "0", "30", "Only today's"], answer: 2, why: "Scroll back far enough to see what others see." },
-      { q: "Archiving a post means:", options: ["Hiding it from your profile without deleting", "Posting it again", "Making it public", "Selling it"], answer: 0, why: "Archive hides without deleting." },
-      { q: "After a tough loss, a good rule is:", options: ["Post right away", "Call out the ref online", "Blame teammates", "No posting when angry"], answer: 3, why: "Angry posts often hurt your brand." },
-      { q: "Many athletes keep:", options: ["Ten public accounts", "A public athlete account and a private personal one", "No privacy at all", "Their password in their bio"], answer: 1, why: "It separates being seen from personal life." },
-      { q: "Turning off location on posts helps you:", options: ["Get more likes", "Stay safe", "Post faster", "Look older"], answer: 1, why: "Strangers can't track where you are." },
-      { q: "A stranger DMs as a recruiter asking for money. This is:", options: ["Normal", "Required", "A scholarship", "A warning sign"], answer: 3, why: "Fake recruiters ask for money." },
-      { q: "Where do you find your team's social media rules?", options: ["Ask your coach", "Guess", "A rival", "An ad"], answer: 0, why: "Teams and schools set their own rules." },
-      { q: "NIL stands for:", options: ["National Interest League", "No Internet Limits", "Name, image and likeness", "New Influencer Level"], answer: 2, why: "NIL is earning from your name, image and likeness." },
-      { q: "A high school athlete is offered an NIL deal. They should first:", options: ["Sign right away", "Hide it", "Ask a fan", "Check their state athletic association and school rules"], answer: 3, why: "High school NIL rules vary by state." },
-      { q: "How should you handle negative comments?", options: ["Argue in all caps", "Don't argue; mute, hide or block", "Post their address", "Quit social media forever"], answer: 1, why: "Arguing spreads negativity and hurts your brand." }
+      { objective: "O1", q: "Who forms your brand?", options: ["Only you", "Only your coach", "People who see your posts, comments and actions", "Nobody"], answer: 2, why: "Your brand lives in other people's minds." },
+      { objective: "O1", q: "A brand is your sport plus:", options: ["Your values and what makes you you", "Your password", "Your rival", "Your shoe size"], answer: 0, why: "Values and personality make you stand out." },
+      { objective: "O1", q: "A brand statement should be:", options: ["Honest", "Made up", "Copied", "Very long"], answer: 0, why: "A brand only works if it is true." },
+      { objective: "O2", q: "Your profile is like:", options: ["Your locker", "A secret", "Your front door", "A scoreboard"], answer: 2, why: "It's the first thing people see." },
+      { objective: "O2", q: "A good profile photo is:", options: ["Blurry", "Clear and well-lit", "A random meme", "Someone else"], answer: 1, why: "People should recognize you." },
+      { objective: "O2", q: "Which is NOT good for a bio?", options: ["Your sport", "Your position", "A highlight link", "Your phone number"], answer: 3, why: "Phone numbers are private." },
+      { objective: "O2", q: "If you are a minor, before listing your school or city you should:", options: ["Post it anyway", "Ask a stranger", "Ask a parent or guardian", "Add your address too"], answer: 2, why: "Parents help you decide what is safe to share." },
+      { objective: "O3", q: "How many content pillars should you have?", options: ["20", "None", "1 post", "3-4"], answer: 3, why: "A few pillars keep your feed focused." },
+      { objective: "O3", q: "Which is an off-the-field pillar post?", options: ["Volunteering at a youth clinic", "A game highlight", "A workout clip", "A stat graphic"], answer: 0, why: "It shows who you are beyond sport." },
+      { objective: "O3", q: "How should you use AI for post ideas?", options: ["Post everything it says", "Brainstorm many, keep the ones that fit you", "Never use it", "Let it run your account"], answer: 1, why: "You choose what fits your brand." },
+      { objective: "O4", q: "How many recent posts should your audit cover at least?", options: ["1", "0", "30", "Only today's"], answer: 2, why: "Scroll back far enough to see what others see." },
+      { objective: "O4", q: "Archiving a post means:", options: ["Hiding it from your profile without deleting", "Posting it again", "Making it public", "Selling it"], answer: 0, why: "Archive hides without deleting." },
+      { objective: "O4", q: "After a tough loss, a good rule is:", options: ["Post right away", "Call out the ref online", "Blame teammates", "No posting when angry"], answer: 3, why: "Angry posts often hurt your brand." },
+      { objective: "O5", q: "Many athletes keep:", options: ["Ten public accounts", "A public athlete account and a private personal one", "No privacy at all", "Their password in their bio"], answer: 1, why: "It separates being seen from personal life." },
+      { objective: "O5", q: "Turning off location on posts helps you:", options: ["Get more likes", "Stay safe", "Post faster", "Look older"], answer: 1, why: "Strangers can't track where you are." },
+      { objective: "O5", q: "A stranger DMs as a recruiter asking for money. This is:", options: ["Normal", "Required", "A scholarship", "A warning sign"], answer: 3, why: "Fake recruiters ask for money." },
+      { objective: "O6", q: "Where do you find your team's social media rules?", options: ["Ask your coach", "Guess", "A rival", "An ad"], answer: 0, why: "Teams and schools set their own rules." },
+      { objective: "O6", q: "NIL stands for:", options: ["National Interest League", "No Internet Limits", "Name, image and likeness", "New Influencer Level"], answer: 2, why: "NIL is earning from your name, image and likeness." },
+      { objective: "O6", q: "A high school athlete is offered an NIL deal. They should first:", options: ["Sign right away", "Hide it", "Ask a fan", "Check their state athletic association and school rules"], answer: 3, why: "High school NIL rules vary by state." },
+      { objective: "O6", q: "How should you handle negative comments?", options: ["Argue in all caps", "Don't argue; mute, hide or block", "Post their address", "Quit social media forever"], answer: 1, why: "Arguing spreads negativity and hurts your brand." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      1,
+      5,
+      7,
+      10,
+      13,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Brand statement",
+        objective: "O1",
+        notYet: "Missing, vague, or not honest.",
+        meets: "One honest sentence with sport and position, a value and one interest beyond sport.",
+        exceeds: "The bio, photo and pillars all clearly match the statement."
+      },
+      {
+        name: "Bio and photo",
+        objective: "O2",
+        notYet: "No link or call to action, an unclear photo, or private details showing.",
+        meets: "A short bio with sport, position, one value and one link, a clear photo, and no private details.",
+        exceeds: "The link goes to an up-to-date highlight video or recruiting profile."
+      },
+      {
+        name: "Content pillars",
+        objective: "O3",
+        notYet: "Fewer than three pillars, or ideas that do not fit the brand.",
+        meets: "Three pillars with two post ideas each that fit the brand statement.",
+        exceeds: "Ideas are scheduled across the next two weeks."
+      },
+      {
+        name: "Post audit",
+        objective: "O4",
+        notYet: "Fewer than 30 posts checked, or posts that fail the test are still visible.",
+        meets: "The last 30 posts, comments, reposts and tags checked, with failing items archived, hidden, deleted or untagged.",
+        exceeds: "The audit goes back further and a \"no posting when angry\" rule is written."
+      },
+      {
+        name: "Privacy and safety",
+        objective: "O5",
+        notYet: "Location still on posts, open messaging, or no two-step verification.",
+        meets: "Messaging, comments and tags limited, location off and two-step verification on.",
+        exceeds: "A separate private personal account is set up and the athlete can show how to block and report."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the final task and score Meets or Exceeds on every rubric row",
+      "Learners who report removing or hiding posts that could have cost them an opportunity",
+      "Learners who report a coach, recruiter, brand or employer contact through their cleaned-up profile (follow-up survey)",
+      "Learners who report blocking and reporting a fake recruiter, scam or threat instead of replying"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone with the athlete's social media app",
+      "A free AI assistant (ChatGPT, Microsoft Copilot or Google Gemini), optional",
+      "Your team's social media rules from your coach",
+      "Paper or a phone note for your brand statement and rules",
+      "About 60 minutes"
+    ],
+    facilitatorNotes: [
+      "Never ask athletes to show private messages or private accounts to the group; let them audit on their own.",
+      "For athletes under 18, involve parents or guardians in decisions about public profiles and listing school or city.",
+      "Share the team's social media rules and who to tell about threats, fake recruiters or requests for private photos.",
+      "Walk through privacy settings together on the apps the group uses, since menus change between apps and updates.",
+      "Invite the compliance office or state association contact to explain NIL rules before anyone accepts a deal."
     ]
   }
 };

@@ -14,11 +14,35 @@ module.exports = {
     "Each lesson takes about five minutes plus a hands-on task. There is a knowledge check after each chapter and a 20-question quiz at the end. AI model prices and tool plans change often: always check the provider's own pricing page."
   ],
   finalTask: "Produce an AI SaaS starter pack: a one-page product plan (niche, user, problem, the one core feature), a prototype of the core feature (a clickable mock-up, a no-code app, or a short working notebook), a pricing sheet that shows the AI usage cost per user per month and your price, and a launch checklist covering honest claims, privacy, terms, human review and how users can reach you.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Entrepreneurs who want to build a small AI software-as-a-service product for a niche they know, including people who do not code yet.",
+    startingPoint: "Use AI chat assistants well and know a field or industry. Most have not scoped a software product, used an AI API, estimated usage costs or prepared a launch with privacy and terms.",
+    gap: "Many AI products try to do too much, cost more in AI usage than they charge, leak API keys or users' data, or promise more than the AI can do. Learners need to scope one core feature, prove it works, price it to cover usage and launch honestly and safely.",
+    constraints: [
+      "Plain words; coding is optional, and no-code or mock-up prototypes count",
+      "Devices: a computer with a spreadsheet, a free AI assistant and optionally a free notebook or no-code tool",
+      "Time: about five minutes per lesson plus hands-on tasks",
+      "AI model prices and tool plans change often; check the provider's own pricing page",
+      "Only anonymized test inputs; privacy policy and terms reviewed by a lawyer; sales tax checked with the state or an accountant"
+    ],
+    prerequisites: "\"Building AI-Powered Products and Services\" is recommended, plus comfort with spreadsheets."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given a field you know", action: "choose one specific user and one repeated job for an AI SaaS product", standard: "written as a one-sentence idea and checked with at least one person in the niche" },
+    { id: "O2", condition: "Given your product idea", action: "write a one-line core flow, a not-yet list and three never rules for the first version", standard: "with the core feature fitting on a single screen" },
+    { id: "O3", condition: "Using the current price from your provider's pricing page", action: "explain how your app uses an AI model through an API and estimate the AI cost per user per month", standard: "with every formula checked and the API key kept private" },
+    { id: "O4", condition: "Given ten anonymized real inputs", action: "test your prompt, score the results and build a prototype of the core feature", standard: "improving the prompt until most results are good and showing it to at least one niche user" },
+    { id: "O5", condition: "Given value and cost per user", action: "create a pricing sheet with two plans, usage limits and the profit per user", standard: "so each plan covers AI usage and other costs with room for profit" },
+    { id: "O6", condition: "Before taking payment", action: "prepare a launch checklist for honest claims, data, provider terms, privacy policy and terms, and a contact route", standard: "with a lawyer review planned and a small first launch" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Define the product",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Choosing a narrow niche",
           minutes: 5,
           goal: "Pick a specific user and a specific repeated job for your AI SaaS product.",
@@ -35,9 +59,14 @@ module.exports = {
             { title: "Start from what you know", bullets: ["Ask AI for repeated jobs in your field", "Talk to three people before building"] }
           ],
           tryIt: "Use AI to list ten repeated jobs in a field you know, choose one user and one job, and write a one-sentence product idea. Ask at least one person in that niche if it would help.",
-          youCanNow: "choose a narrow, reachable niche for an AI SaaS product."
+          youCanNow: "choose a narrow, reachable niche for an AI SaaS product.",
+          quickCheck: [
+            { objective: "O1", q: "What makes a good niche for a small AI SaaS product?", options: ["Users who do the job often and already pay for software", "Everyone in the world", "A job people do once in their life", "A field you know nothing about"], answer: 0, why: "Frequent jobs and users who already pay make a product easier to sell." },
+            { objective: "O1", q: "Your idea is \"AI for all small businesses\". What do you do?", options: ["Keep it broad to reach more people", "Narrow it to one user and one repeated job", "Add more features", "Start coding right away"], answer: 1, why: "Small AI SaaS products win by doing one job for one user very well." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Scoping a minimum viable product",
           minutes: 5,
           goal: "Define the one core feature your first version must do well.",
@@ -54,9 +83,14 @@ module.exports = {
             { title: "AI must never", bullets: ["Invent prices or facts", "Give legal or medical advice", "Act without the user's click"] }
           ],
           tryIt: "Write your one-line core flow, your not-yet list and three never rules, and sketch the single screen.",
-          youCanNow: "scope an AI SaaS MVP around one core feature with clear limits."
+          youCanNow: "scope an AI SaaS MVP around one core feature with clear limits.",
+          quickCheck: [
+            { objective: "O2", q: "What goes on a not-yet list?", options: ["Your core feature", "Your price", "Features that wait until people are paying", "Your never rules"], answer: 2, why: "A not-yet list keeps the first version small." },
+            { objective: "O2", q: "You want to add team dashboards, chat and reports to version one. What do you do?", options: ["Build them all now", "Hire a big team", "Drop the core feature", "Keep one core feature and put the rest on the not-yet list"], answer: 3, why: "An MVP solves the core problem first." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "How AI APIs work and what they cost",
           minutes: 6,
           goal: "Explain how an app uses an AI model through an API and estimate the cost per user.",
@@ -74,17 +108,21 @@ module.exports = {
             { title: "Keep the API key secret", bullets: ["Never in a chat, web page or public file", "Anyone with it can spend your money"] }
           ],
           tryIt: "Build a small spreadsheet estimating your AI cost per user per month: requests, size and the current price from your chosen provider's pricing page. Check every formula.",
-          youCanNow: "explain how an AI SaaS app uses an API and estimate its usage cost per user."
+          youCanNow: "explain how an AI SaaS app uses an API and estimate its usage cost per user.",
+          quickCheck: [
+            { objective: "O3", q: "What does an API let your app do?", options: ["Send requests to an AI model and get answers", "Design a logo", "Collect payments", "Write your terms"], answer: 0, why: "The API connects your app to the AI model." },
+            { objective: "O3", q: "A helper asks you to paste your API key in a group chat. What do you do?", options: ["Paste it", "Keep it private and never paste it into a chat or file", "Put it on your website", "Post it in a public file"], answer: 1, why: "Anyone with your key can use the API and spend your money." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Define the product",
         questions: [
-          { q: "Which is the best niche for a small AI SaaS product?", options: ["An AI tool for everyone", "Turning contractors' job notes into customer quotes", "A general chat assistant", "All of business"], answer: 1, why: "Narrow user plus repeated job beats general tools." },
-          { q: "What is an MVP?", options: ["A finished product with every feature", "The most expensive version", "A sports award", "The smallest version that solves the core problem well enough to sell"], answer: 3, why: "MVP = minimum viable product." },
-          { q: "Which feature should wait until people are paying?", options: ["Team dashboards", "The core input-to-output flow", "The user check step", "The AI job itself"], answer: 0, why: "Only the core flow belongs in the MVP." },
-          { q: "AI providers often measure usage in:", options: ["Minutes of daylight", "Pages", "Tokens", "Customers"], answer: 2, why: "Tokens are small chunks of text used for pricing." },
-          { q: "Where should your API key NEVER go?", options: ["In a password manager", "In a secure settings area of your app", "Into a chat, web page or public file", "In your provider account"], answer: 2, why: "Anyone with the key can use it and spend your money." }
+          { objective: "O1", q: "Which is the best niche for a small AI SaaS product?", options: ["An AI tool for everyone", "Turning contractors' job notes into customer quotes", "A general chat assistant", "All of business"], answer: 1, why: "Narrow user plus repeated job beats general tools." },
+          { objective: "O2", q: "What is an MVP?", options: ["A finished product with every feature", "The most expensive version", "A sports award", "The smallest version that solves the core problem well enough to sell"], answer: 3, why: "MVP = minimum viable product." },
+          { objective: "O2", q: "Which feature should wait until people are paying?", options: ["Team dashboards", "The core input-to-output flow", "The user check step", "The AI job itself"], answer: 0, why: "Only the core flow belongs in the MVP." },
+          { objective: "O3", q: "AI providers often measure usage in:", options: ["Minutes of daylight", "Pages", "Tokens", "Customers"], answer: 2, why: "Tokens are small chunks of text used for pricing." },
+          { objective: "O3", q: "Where should your API key NEVER go?", options: ["In a password manager", "In a secure settings area of your app", "Into a chat, web page or public file", "In your provider account"], answer: 2, why: "Anyone with the key can use it and spend your money." }
         ]
       }
     },
@@ -92,6 +130,7 @@ module.exports = {
       name: "Chapter 2: Build, price and launch",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Prototyping the core feature",
           minutes: 6,
           goal: "Build a prototype of your core feature and test it with real inputs.",
@@ -108,9 +147,14 @@ module.exports = {
             { title: "Watch real users", bullets: ["Three people from your niche", "Where do they get stuck?", "Where did the AI need fixing?"] }
           ],
           tryIt: "Test your prompt on ten anonymized inputs and score the results. Then build the simplest prototype you can and show it to at least one person in your niche.",
-          youCanNow: "prove an AI feature works and build a prototype people can try."
+          youCanNow: "prove an AI feature works and build a prototype people can try.",
+          quickCheck: [
+            { objective: "O4", q: "What should you test before building any app?", options: ["The logo", "The price", "Whether the AI does the job well with your prompt", "Your website colors"], answer: 2, why: "If the AI cannot do the job, the app will not help." },
+            { objective: "O4", q: "A test user gets stuck on your prototype's input box. What do you do?", options: ["Ignore it", "Blame the user", "Add more features", "Note it and make that step clearer"], answer: 3, why: "Where users get stuck shows what to fix." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Pricing a subscription",
           minutes: 5,
           goal: "Set a monthly price that covers AI usage and other costs with room for profit.",
@@ -128,9 +172,14 @@ module.exports = {
           ],
           sources: [{ name: "IRS: Self-Employed Individuals Tax Center", url: "https://www.irs.gov/businesses/small-businesses-self-employed/self-employed-individuals-tax-center" }],
           tryIt: "Make a pricing sheet: value per user, cost per user (including AI usage), two plans with limits, and the profit per user on each plan. Check every formula.",
-          youCanNow: "price an AI subscription that covers usage costs and matches the value to users."
+          youCanNow: "price an AI subscription that covers usage costs and matches the value to users.",
+          quickCheck: [
+            { objective: "O5", q: "Where should subscription pricing start?", options: ["The value the product gives the user", "The lowest price you can find", "A random number", "What your friends think"], answer: 0, why: "Price from value, then check it covers costs." },
+            { objective: "O5", q: "A few heavy users cost you more in AI usage than they pay. What do you do?", options: ["Remove all limits", "Set usage limits on each plan", "Lower the price", "Stop tracking costs"], answer: 1, why: "Usage limits keep heavy users from wiping out profit." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Launching with trust and safety",
           minutes: 6,
           goal: "Prepare a launch checklist that keeps claims honest and users' data safe.",
@@ -149,17 +198,21 @@ module.exports = {
           ],
           sources: [{ name: "FTC: Advertising and Marketing Basics", url: "https://www.ftc.gov/business-guidance/advertising-marketing/advertising-marketing-basics" }, { name: "FTC: Protecting Personal Information, A Guide for Business", url: "https://www.ftc.gov/business-guidance/resources/protecting-personal-information-guide-business" }],
           tryIt: "Final task: write your launch checklist (honest claims, data list, provider terms, privacy policy and terms for a lawyer to review, contact route, small first launch) and put together your AI SaaS starter pack with your plan, prototype and pricing sheet.",
-          youCanNow: "plan, prototype, price and prepare an honest, safe launch of a small AI SaaS product."
+          youCanNow: "plan, prototype, price and prepare an honest, safe launch of a small AI SaaS product.",
+          quickCheck: [
+            { objective: "O6", q: "What should your marketing say about AI outputs?", options: ["They are always perfect", "They replace experts", "They are AI-generated and should be checked", "Nothing about AI"], answer: 2, why: "Honest claims tell users what the AI does and its limits." },
+            { objective: "O6", q: "You are ready to launch. Who do you launch to first?", options: ["Everyone at once with paid ads", "Nobody; keep testing forever", "Only people outside your niche", "A small group of niche users"], answer: 3, why: "A small first launch lets you fix problems safely." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Build, price and launch",
         questions: [
-          { q: "What should you test before building any app?", options: ["Whether the AI can do the job well using your prompt in a chat", "The logo", "The pricing page", "The domain name"], answer: 0, why: "If the AI cannot do the job, an app will not fix it." },
-          { q: "Which is a quick prototype level for a non-coder?", options: ["Nothing until launch", "A full custom data center", "Hiring 20 engineers", "A clickable mock-up of the screen"], answer: 3, why: "Mock-ups let users react without code." },
-          { q: "Why set usage limits on plans?", options: ["To annoy users", "Heavy users can cost much more in AI usage", "Because the law requires it", "To hide prices"], answer: 1, why: "Limits keep AI costs predictable." },
-          { q: "What should your marketing say about AI outputs?", options: ["They are AI-generated and should be checked", "They are 100% accurate", "They replace professionals", "Nothing at all"], answer: 0, why: "Honest limits build trust and avoid misleading claims." },
-          { q: "Before taking payment, you should have:", options: ["A celebrity endorsement", "A thousand features", "A privacy policy and terms of service reviewed by a lawyer", "No contact information"], answer: 2, why: "They set clear rules and protect you and users." }
+          { objective: "O4", q: "What should you test before building any app?", options: ["Whether the AI can do the job well using your prompt in a chat", "The logo", "The pricing page", "The domain name"], answer: 0, why: "If the AI cannot do the job, an app will not fix it." },
+          { objective: "O4", q: "Which is a quick prototype level for a non-coder?", options: ["Nothing until launch", "A full custom data center", "Hiring 20 engineers", "A clickable mock-up of the screen"], answer: 3, why: "Mock-ups let users react without code." },
+          { objective: "O5", q: "Why set usage limits on plans?", options: ["To annoy users", "Heavy users can cost much more in AI usage", "Because the law requires it", "To hide prices"], answer: 1, why: "Limits keep AI costs predictable." },
+          { objective: "O6", q: "What should your marketing say about AI outputs?", options: ["They are AI-generated and should be checked", "They are 100% accurate", "They replace professionals", "Nothing at all"], answer: 0, why: "Honest limits build trust and avoid misleading claims." },
+          { objective: "O6", q: "Before taking payment, you should have:", options: ["A celebrity endorsement", "A thousand features", "A privacy policy and terms of service reviewed by a lawyer", "No contact information"], answer: 2, why: "They set clear rules and protect you and users." }
         ]
       }
     }
@@ -167,26 +220,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Building AI SaaS Products",
     questions: [
-      { q: "SaaS stands for:", options: ["Sales and a store", "Software as a service", "Simple AI and search", "Secure access app service"], answer: 1, why: "It is online software paid for by subscription." },
-      { q: "Small AI SaaS products usually win by:", options: ["Copying a big chat assistant", "Doing everything for everyone", "Being the most expensive", "Doing one job for one type of user very well"], answer: 3, why: "Narrow focus beats general tools." },
-      { q: "A good niche has users who:", options: ["Have no budget", "Never do the job", "Cannot be reached", "Do the job often and already pay for software"], answer: 3, why: "Those users are likely to buy." },
-      { q: "Before building, you should talk to:", options: ["Nobody", "Three people in the niche", "Only investors", "Only AI"], answer: 1, why: "Real users confirm the problem." },
-      { q: "An MVP for AI SaaS is usually:", options: ["A full company", "Ten apps", "One screen: input, AI job, user check, output", "A logo"], answer: 2, why: "The smallest useful version." },
-      { q: "Writing what the AI must never do helps:", options: ["Shape your instruction prompt and screen", "Make the app slower", "Raise the price", "Nothing"], answer: 0, why: "Clear limits reduce harmful errors." },
-      { q: "An API lets your app:", options: ["Pay taxes", "Print documents", "Send requests to an AI model and get answers", "Hire staff"], answer: 2, why: "That is what an API does." },
-      { q: "Where should you check current AI model prices?", options: ["The provider's pricing page", "An old blog post", "A guess", "A competitor's app"], answer: 0, why: "Prices change often." },
-      { q: "Cost per user is estimated from:", options: ["Number of logos", "Requests per month x size x price", "Your rent only", "The user's age"], answer: 1, why: "Usage drives AI cost." },
-      { q: "If someone gets your API key they can:", options: ["Fix your bugs", "Nothing", "Only read your email", "Use the API and spend your money"], answer: 3, why: "Keys are billed to you." },
-      { q: "You test your prompt on ten inputs and 4 are good. What next?", options: ["Improve the prompt before building the app", "Build the app anyway", "Launch tomorrow", "Raise prices"], answer: 0, why: "Aim for most results being good first." },
-      { q: "Google Colab is:", options: ["A spreadsheet only", "A payment app", "A social network", "A free online notebook for running Python in a browser"], answer: 3, why: "It lets you test code without installing anything." },
-      { q: "When watching users try your prototype, note:", options: ["Their home address", "Their passwords", "Where they get stuck and where AI output needed fixing", "Nothing"], answer: 2, why: "This shows what to fix." },
-      { q: "Pricing should start from:", options: ["A random number", "The value the product gives the user", "Your competitor's logo", "The color of your site"], answer: 1, why: "Value sets what users will pay." },
-      { q: "Which is a SaaS cost per user?", options: ["A trophy", "The user's lunch", "Your vacation", "AI usage"], answer: 3, why: "AI usage grows with each user." },
-      { q: "For sales tax on software, you should:", options: ["Ask users", "Assume it never applies", "Check your state's revenue agency or ask an accountant", "Ignore it"], answer: 2, why: "Rules differ by state." },
-      { q: "The FTC's data principle \"scale down\" means:", options: ["Collect and keep only what you need", "Make your logo smaller", "Lower your price", "Hire fewer people"], answer: 0, why: "Less data means less risk." },
-      { q: "Why check your AI provider's data terms?", options: ["To change fonts", "To know what happens to user data sent through the API", "To get free credits", "It is not needed"], answer: 1, why: "You must tell users how their data is handled." },
-      { q: "Who should review your privacy policy and terms?", options: ["Only an AI chat", "A lawyer", "Your first user", "Nobody"], answer: 1, why: "Legal documents need professional review." },
-      { q: "A safe way to launch is:", options: ["To a small group of niche users first", "To everyone at once with no support", "Without a contact route", "Without testing"], answer: 0, why: "A small launch lets you fix problems early." }
+      { objective: "O1", q: "SaaS stands for:", options: ["Sales and a store", "Software as a service", "Simple AI and search", "Secure access app service"], answer: 1, why: "It is online software paid for by subscription." },
+      { objective: "O1", q: "Small AI SaaS products usually win by:", options: ["Copying a big chat assistant", "Doing everything for everyone", "Being the most expensive", "Doing one job for one type of user very well"], answer: 3, why: "Narrow focus beats general tools." },
+      { objective: "O1", q: "A good niche has users who:", options: ["Have no budget", "Never do the job", "Cannot be reached", "Do the job often and already pay for software"], answer: 3, why: "Those users are likely to buy." },
+      { objective: "O1", q: "Before building, you should talk to:", options: ["Nobody", "Three people in the niche", "Only investors", "Only AI"], answer: 1, why: "Real users confirm the problem." },
+      { objective: "O2", q: "An MVP for AI SaaS is usually:", options: ["A full company", "Ten apps", "One screen: input, AI job, user check, output", "A logo"], answer: 2, why: "The smallest useful version." },
+      { objective: "O2", q: "Writing what the AI must never do helps:", options: ["Shape your instruction prompt and screen", "Make the app slower", "Raise the price", "Nothing"], answer: 0, why: "Clear limits reduce harmful errors." },
+      { objective: "O3", q: "An API lets your app:", options: ["Pay taxes", "Print documents", "Send requests to an AI model and get answers", "Hire staff"], answer: 2, why: "That is what an API does." },
+      { objective: "O3", q: "Where should you check current AI model prices?", options: ["The provider's pricing page", "An old blog post", "A guess", "A competitor's app"], answer: 0, why: "Prices change often." },
+      { objective: "O3", q: "Cost per user is estimated from:", options: ["Number of logos", "Requests per month x size x price", "Your rent only", "The user's age"], answer: 1, why: "Usage drives AI cost." },
+      { objective: "O3", q: "If someone gets your API key they can:", options: ["Fix your bugs", "Nothing", "Only read your email", "Use the API and spend your money"], answer: 3, why: "Keys are billed to you." },
+      { objective: "O4", q: "You test your prompt on ten inputs and 4 are good. What next?", options: ["Improve the prompt before building the app", "Build the app anyway", "Launch tomorrow", "Raise prices"], answer: 0, why: "Aim for most results being good first." },
+      { objective: "O4", q: "Google Colab is:", options: ["A spreadsheet only", "A payment app", "A social network", "A free online notebook for running Python in a browser"], answer: 3, why: "It lets you test code without installing anything." },
+      { objective: "O4", q: "When watching users try your prototype, note:", options: ["Their home address", "Their passwords", "Where they get stuck and where AI output needed fixing", "Nothing"], answer: 2, why: "This shows what to fix." },
+      { objective: "O5", q: "Pricing should start from:", options: ["A random number", "The value the product gives the user", "Your competitor's logo", "The color of your site"], answer: 1, why: "Value sets what users will pay." },
+      { objective: "O5", q: "Which is a SaaS cost per user?", options: ["A trophy", "The user's lunch", "Your vacation", "AI usage"], answer: 3, why: "AI usage grows with each user." },
+      { objective: "O5", q: "For sales tax on software, you should:", options: ["Ask users", "Assume it never applies", "Check your state's revenue agency or ask an accountant", "Ignore it"], answer: 2, why: "Rules differ by state." },
+      { objective: "O6", q: "The FTC's data principle \"scale down\" means:", options: ["Collect and keep only what you need", "Make your logo smaller", "Lower your price", "Hire fewer people"], answer: 0, why: "Less data means less risk." },
+      { objective: "O6", q: "Why check your AI provider's data terms?", options: ["To change fonts", "To know what happens to user data sent through the API", "To get free credits", "It is not needed"], answer: 1, why: "You must tell users how their data is handled." },
+      { objective: "O6", q: "Who should review your privacy policy and terms?", options: ["Only an AI chat", "A lawyer", "Your first user", "Nobody"], answer: 1, why: "Legal documents need professional review." },
+      { objective: "O6", q: "A safe way to launch is:", options: ["To a small group of niche users first", "To everyone at once with no support", "Without a contact route", "Without testing"], answer: 0, why: "A small launch lets you fix problems early." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      4,
+      6,
+      8,
+      10,
+      12,
+      13,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Product plan",
+        objective: "O2",
+        notYet: "The niche, user, problem or core feature is vague or missing.",
+        meets: "One page with niche, user, problem, one core feature and never rules.",
+        exceeds: "Includes what a niche user said about the idea."
+      },
+      {
+        name: "Prototype",
+        objective: "O4",
+        notYet: "No prototype, or the prompt was not tested on real inputs.",
+        meets: "A mock-up, no-code app or notebook for the core feature, tested on ten anonymized inputs.",
+        exceeds: "Shown to a niche user, with changes made from what they did."
+      },
+      {
+        name: "AI cost estimate",
+        objective: "O3",
+        notYet: "No cost per user, or prices not from the provider's page.",
+        meets: "AI cost per user per month from requests, size and current price, formulas checked.",
+        exceeds: "Shows costs for a light and a heavy user."
+      },
+      {
+        name: "Pricing sheet",
+        objective: "O5",
+        notYet: "Price does not cover AI usage and other costs.",
+        meets: "Two plans with limits and profit per user on each, formulas checked.",
+        exceeds: "Links each plan's price to the value it gives users."
+      },
+      {
+        name: "Launch checklist",
+        objective: "O6",
+        notYet: "Missing honest claims, data, privacy and terms, or a contact route.",
+        meets: "Every checklist item, lawyer review planned and a small first launch.",
+        exceeds: "Lists exactly what user data is collected and what the provider does with it."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who show their prototype to at least three niche users within 30 days (follow-up survey)",
+      "Learners who launch to a small first group or sign a first paying user",
+      "Learners who start another Koach Learn entrepreneur course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer with a spreadsheet and a free AI assistant",
+      "Optional: a free notebook such as Google Colab, or a no-code or mock-up tool",
+      "Ten anonymized real inputs from the chosen niche",
+      "About 75 minutes for lessons and checks, plus time to build and test the prototype"
+    ],
+    facilitatorNotes: [
+      "Let non-coders build a clickable mock-up; a working app is not required.",
+      "Never show a real API key on screen; teach learners to keep keys out of chats and files.",
+      "Check current AI model prices on the provider's page before the pricing session.",
+      "Remind learners that privacy policies and terms need a lawyer, and sales tax questions an accountant.",
+      "Score the starter pack with the rubric, one Not yet row at a time."
     ]
   }
 };

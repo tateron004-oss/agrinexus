@@ -20,11 +20,35 @@ module.exports = {
     "Sigue siempre primero el manual del fabricante y tu manual de operaciones; este curso enseña las habilidades generales que están detrás de ellos. Las autoridades de aviación esperan que los operadores den mantenimiento a sus aeronaves y lleven registros, así que un buen mantenimiento es seguridad y también cumplimiento. Cada capítulo cierra con una comprobación de conocimientos y el curso cierra con un examen de 20 preguntas."
   ],
   finalTask: "Escribe un programa de mantenimiento para un dron agrícola (real o de ejemplo, como un multirrotor de mapeo que usa una cooperativa): una lista de partes con lo que hace cada una, un procedimiento de cuidado y carga de baterías, una lista de inspección antes y después del vuelo, un calendario de mantenimiento por horas de vuelo y por fechas, una tabla para resolver al menos cinco fallas comunes y una plantilla de registro de mantenimiento con dos anotaciones de ejemplo.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Pilotos de drones, técnicos, negocios de servicios con drones, personal de agronegocios y de fincas grandes, y jóvenes en Kenia, Nigeria y en toda África que quieren mantener los drones agrícolas volando con seguridad.",
+    startingPoint: "La mayoría ha visto o volado un dron agrícola y sabe cargar una batería y despegar con la app. Pocos pueden nombrar cada parte del sistema y lo que hace, seguir una lista escrita de inspección, planear el mantenimiento por horas de vuelo o llevar un registro de mantenimiento.",
+    gap: "Los drones son caros y se dañan fácilmente con el polvo, el calor y la lluvia, y las baterías de litio mal manejadas pueden incendiarse. Un dron que se estrella o se queda en tierra hace perder clientes y dinero, y las autoridades, los clientes y las aseguradoras esperan ver registros de mantenimiento. Conocer el sistema y llevar un programa de mantenimiento mantiene los drones seguros, trabajando y en regla.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas; cada término técnico se explica",
+      "Dispositivos: un teléfono o una computadora para el curso; un dron real ayuda, pero no es obligatorio",
+      "Seguridad: las baterías de litio pueden incendiarse; no se hacen reparaciones dentro de las baterías ni de la electrónica",
+      "Primero van el manual del fabricante y el manual de operaciones; el curso enseña las habilidades generales que hay detrás",
+      "Condiciones del campo: polvo, calor, lluvia y electricidad poco confiable en muchas zonas"
+    ],
+    prerequisites: "Se recomienda tomar antes \"Drones para el monitoreo agrícola 1: introducción, normas y seguridad\"."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Ante un sistema de dron agrícola", action: "nombrar cada parte principal de la aeronave y de la estación en tierra y explicar lo que hace", standard: "incluyendo el controlador de vuelo, los sensores, el enlace C2 y la carga útil" },
+    { id: "O2", condition: "Con un juego de baterías de dron", action: "describir cómo cargarlas, guardarlas, transportarlas y retirarlas con seguridad", standard: "siguiendo cada paso de seguridad y sin usar ninguna batería hinchada o dañada" },
+    { id: "O3", condition: "Ante una cámara, un sensor o un sistema de fumigación", action: "describir cómo montarlo, limpiarlo y revisarlo", standard: "con la carga útil bien sujeta, los lentes limpios y las piezas de fumigación revisadas por desgaste" },
+    { id: "O4", condition: "Antes y después de cada vuelo", action: "hacer una inspección antes y después del vuelo y anotar lo que encuentres", standard: "revisando cada punto de la lista" },
+    { id: "O5", condition: "Para un dron", action: "escribir un calendario de mantenimiento por horas de vuelo y por fechas, una rutina para actualizar el firmware y un registro de mantenimiento", standard: "con intervalos de lo que ocurra primero y cada campo del registro lleno" },
+    { id: "O6", condition: "Ante una falla o condiciones duras en el campo", action: "resolver la falla paso a paso y proteger el dron del polvo, el calor, la lluvia y los cortes de luz", standard: "dejando el dron en tierra cuando una falla de seguridad se repite" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Cómo funciona un sistema de dron agrícola",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Las partes de un sistema de dron",
           minutes: 6,
           goal: "Nombrar las partes principales de un sistema de dron y explicar lo que hace cada una.",
@@ -42,9 +66,14 @@ module.exports = {
           ],
           sources: [NCAA_P21],
           tryIt: "Toma un dron (o una foto clara o un diagrama de uno) y señala al menos ocho partes: estructura, motores, hélices, ubicación del controlador de vuelo, módulo GNSS, cámara o carga útil, batería y control remoto. Junto a cada una, escribe su función en una línea.",
-          youCanNow: "nombrar las partes de un sistema de dron y decir lo que hace cada una."
+          youCanNow: "nombrar las partes de un sistema de dron y decir lo que hace cada una.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué es el controlador de vuelo?", options: ["El control remoto del piloto", "El cerebro del dron, que lee los sensores y ajusta los motores", "El cargador de baterías", "El soporte de la cámara"], answer: 1, why: "El controlador de vuelo lee los sensores muchas veces por segundo y ajusta cada motor para mantener estable el dron." },
+            { objective: "O1", q: "Vas a despegar junto a un tanque de agua de metal y el dron se desvía de forma extraña. ¿Cuál es una causa probable?", options: ["Las hélices son demasiado nuevas", "La carga útil está demasiado limpia", "La batería está demasiado llena", "Datos malos de la brújula por el metal cercano"], answer: 3, why: "Una brújula cerca de metal da datos malos, y todo el dron puede comportarse de forma extraña." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Las baterías: la parte que más cuidado necesita",
           minutes: 6,
           goal: "Cargar, guardar, transportar y retirar las baterías del dron con seguridad.",
@@ -62,9 +91,14 @@ module.exports = {
             { title: "Registrar y retirar", bullets: ["Numera las baterías, registra los ciclos", "Retira las hinchadas o dañadas", "Deséchalas en un punto de recolección adecuado"] }
           ],
           tryIt: "Escribe un procedimiento de una página sobre baterías para un equipo de drones: numeración, carga, manejo en el campo con calor, almacenamiento, registro de ciclos y retiro. Añade una tabla de registro con columnas para número de batería, fecha, ciclos, estado y notas.",
-          youCanNow: "cargar, guardar, transportar y retirar con seguridad las baterías del dron y llevar un registro de baterías."
+          youCanNow: "cargar, guardar, transportar y retirar con seguridad las baterías del dron y llevar un registro de baterías.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué es la carga de almacenamiento?", options: ["Una carga parcial, ni llena ni vacía, para guardar la batería más de unos días", "Una carga completa", "Una batería totalmente vacía", "Una carga hecha dentro de un carro caliente"], answer: 0, why: "Las baterías que se guardan más de unos días se dejan con carga parcial en un lugar fresco y seco." },
+            { objective: "O2", q: "Acabas de aterrizar y quieres volar pronto otra vez. La batería está caliente. ¿Qué haces?", options: ["Cargarla de inmediato al sol", "Cargarla en el carro y alejarte", "Dejar que se enfríe antes de cargarla, y cargarla con vigilancia sobre una superficie que no se queme", "Meterla al congelador"], answer: 2, why: "Cargar una batería caliente o cargarla sin vigilancia aumenta el riesgo de incendio." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Cargas útiles: cámaras, sensores y sistemas de fumigación",
           minutes: 5,
           goal: "Manejar, montar y cuidar las principales cargas útiles de los drones agrícolas.",
@@ -81,17 +115,21 @@ module.exports = {
           ],
           sources: [FAO_ITU_DRONES],
           tryIt: "Elige una carga útil (cámara RGB, cámara multiespectral o sistema de fumigación). Escribe una lista de cuidados con al menos seis puntos para antes y después de cada uso.",
-          youCanNow: "montar, limpiar y revisar las principales cargas útiles de los drones agrícolas."
+          youCanNow: "montar, limpiar y revisar las principales cargas útiles de los drones agrícolas.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué es la carga útil de un dron agrícola?", options: ["La batería", "La estación en tierra", "Lo que lleva el dron para hacer el trabajo, como una cámara o un sistema de fumigación", "El enlace de radio"], answer: 2, why: "La carga útil es la cámara, el sensor o el sistema de fumigación o de esparcido que hace el trabajo." },
+            { objective: "O3", q: "Después de un trabajo de fumigación, ¿qué haces con el sistema de fumigación?", options: ["Enjuagarlo y limpiarlo como piden el fabricante y la etiqueta, y revisar las boquillas", "Dejar en el tanque la mezcla que sobró", "Lavar todo el dron con un chorro de agua", "Guardarlo mojado al sol"], answer: 0, why: "Los sistemas de fumigación se enjuagan y se limpian después de cada uso, y las boquillas se revisan por desgaste y obstrucciones." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Cómo funciona un sistema de dron agrícola",
         questions: [
-          { q: "¿Por qué a un dron se le llama sistema (UAS o RPAS)?", options: ["Suena mejor", "Incluye aeronave, estación en tierra, enlace de radio, baterías y carga útil", "Tiene muchas hélices", "Se fabrica en una fábrica"], answer: 1, why: "Todas las partes juntas hacen funcionar el dron." },
-          { q: "¿Qué detecta la IMU?", options: ["Inclinación, giros y movimiento", "La humedad del suelo", "Los precios de los cultivos", "El color de la batería"], answer: 0, why: "La IMU detecta el movimiento del dron para que el controlador de vuelo lo estabilice." },
-          { q: "Una batería está un poco hinchada después de un vuelo. Debes:", options: ["Cargarla rápido", "Aplastarla", "Volar con ella una vez más", "Dejar de usarla y retirarla con seguridad"], answer: 3, why: "La hinchazón es señal de daño y riesgo de incendio." },
-          { q: "¿Dónde se deben guardar las baterías del dron durante una pausa larga?", options: ["Llenas en un carro caliente", "Vacías al sol directo", "Con carga de almacenamiento en un recipiente fresco, seco y resistente al fuego", "En el fogón de la cocina"], answer: 2, why: "La carga de almacenamiento y un lugar fresco mantienen las baterías de litio seguras y sanas." },
-          { q: "¿Qué hace un gimbal?", options: ["Mantiene estable la cámara", "Carga la batería", "Fumiga plaguicida", "Mide la altura"], answer: 0, why: "Un gimbal estabiliza la cámara para tener imágenes nítidas." }
+          { objective: "O1", q: "¿Por qué a un dron se le llama sistema (UAS o RPAS)?", options: ["Suena mejor", "Incluye aeronave, estación en tierra, enlace de radio, baterías y carga útil", "Tiene muchas hélices", "Se fabrica en una fábrica"], answer: 1, why: "Todas las partes juntas hacen funcionar el dron." },
+          { objective: "O1", q: "¿Qué detecta la IMU?", options: ["Inclinación, giros y movimiento", "La humedad del suelo", "Los precios de los cultivos", "El color de la batería"], answer: 0, why: "La IMU detecta el movimiento del dron para que el controlador de vuelo lo estabilice." },
+          { objective: "O2", q: "Una batería está un poco hinchada después de un vuelo. Debes:", options: ["Cargarla rápido", "Aplastarla", "Volar con ella una vez más", "Dejar de usarla y retirarla con seguridad"], answer: 3, why: "La hinchazón es señal de daño y riesgo de incendio." },
+          { objective: "O2", q: "¿Dónde se deben guardar las baterías del dron durante una pausa larga?", options: ["Llenas en un carro caliente", "Vacías al sol directo", "Con carga de almacenamiento en un recipiente fresco, seco y resistente al fuego", "En el fogón de la cocina"], answer: 2, why: "La carga de almacenamiento y un lugar fresco mantienen las baterías de litio seguras y sanas." },
+          { objective: "O3", q: "¿Qué hace un gimbal?", options: ["Mantiene estable la cámara", "Carga la batería", "Fumiga plaguicida", "Mide la altura"], answer: 0, why: "Un gimbal estabiliza la cámara para tener imágenes nítidas." }
         ]
       }
     },
@@ -99,6 +137,7 @@ module.exports = {
       name: "Capítulo 2: Mantenimiento en el campo y en el taller",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Inspecciones antes y después de cada vuelo",
           minutes: 5,
           goal: "Hacer una inspección antes y después del vuelo y anotar lo que encuentres.",
@@ -115,9 +154,14 @@ module.exports = {
             { title: "Después del vuelo", bullets: ["Enfría; revisa el calor de los motores", "Daño, polvo o pasto en motores y rejillas", "Limpia en seco, registra tiempo, problemas, avisos"] }
           ],
           tryIt: "Escribe una lista de inspección antes del vuelo y otra después del vuelo, con al menos ocho puntos cada una, para un dron de mapeo. Si tienes un dron, úsalas una vez y registra los resultados.",
-          youCanNow: "inspeccionar un dron antes y después de cada vuelo y anotar lo que encuentres."
+          youCanNow: "inspeccionar un dron antes y después de cada vuelo y anotar lo que encuentres.",
+          quickCheck: [
+            { objective: "O4", q: "¿Para qué sirve la inspección antes del vuelo?", options: ["Solo para encontrar daños del vuelo anterior", "Para cargar la batería", "Para actualizar el firmware en el campo", "Para comprobar que el dron está en condiciones de volar ahora"], answer: 3, why: "La inspección antes del vuelo comprueba que el dron está en condiciones de volar antes de despegar." },
+            { objective: "O4", q: "Durante la revisión antes del vuelo, un motor raspa cuando lo giras. ¿Qué haces?", options: ["Volar con cuidado", "No volar; revisar si el motor tiene arena, pasto o daños", "Ponerle aceite a la hélice", "Hacer una misión más corta"], answer: 1, why: "Los motores deben girar libres; si raspan, hay un problema que se arregla antes de volar." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Mantenimiento programado, firmware y registros",
           minutes: 5,
           goal: "Fijar un calendario de mantenimiento por horas de vuelo y por fechas, y llevar registros de mantenimiento.",
@@ -136,9 +180,14 @@ module.exports = {
           ],
           sources: [KCAA_UAS, NCAA_P21],
           tryIt: "Haz una tabla de calendario de mantenimiento para un dron con al menos seis puntos (hélices, motores, gimbal, tren de aterrizaje, baterías, firmware), cada uno con un intervalo en horas y en meses, y empieza un registro de mantenimiento con una anotación de ejemplo.",
-          youCanNow: "planear el mantenimiento programado y las actualizaciones de firmware y llevar un registro de mantenimiento adecuado."
+          youCanNow: "planear el mantenimiento programado y las actualizaciones de firmware y llevar un registro de mantenimiento adecuado.",
+          quickCheck: [
+            { objective: "O5", q: "En un calendario de mantenimiento, ¿qué quiere decir \"lo que ocurra primero\"?", options: ["Hacer el trabajo solo cada tres meses", "Hacer el trabajo al llegar al límite de horas de vuelo o a la fecha, lo que se alcance primero", "Saltarse el trabajo si el dron vuela bien", "Hacer el trabajo solo después de un choque"], answer: 1, why: "Planear por horas de vuelo y por fechas, lo que ocurra primero, evita que las piezas se gasten." },
+            { objective: "O5", q: "Aparece una actualización de firmware mientras estás en la finca de un cliente. ¿Qué haces?", options: ["Instalarla de inmediato en el campo", "Actualizar solo el dron y no el control", "Apagar todas las actualizaciones para siempre", "Esperar, y actualizar en la base después de leer las notas de la versión, y probar con un vuelo corto"], answer: 3, why: "Las actualizaciones pueden cambiar el comportamiento, así que se hacen en la base, todas juntas, y se prueban antes del trabajo real." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Resolver fallas y condiciones del campo africano",
           minutes: 6,
           goal: "Diagnosticar fallas comunes paso a paso y proteger los drones del polvo, el calor, la lluvia y los cortes de luz.",
@@ -156,17 +205,21 @@ module.exports = {
             { title: "Electricidad y límites", bullets: ["Carga en vehículo o solar, baterías de repuesto", "Deja el dron en tierra si una falla de seguridad se repite"] }
           ],
           tryIt: "Tarea final: escribe el programa de mantenimiento de un dron: lista de partes con sus funciones, procedimiento de baterías, listas de inspección antes y después del vuelo, calendario por horas y fechas, una tabla para resolver al menos cinco fallas y una plantilla de registro de mantenimiento con dos anotaciones de ejemplo.",
-          youCanNow: "resolver fallas comunes de los drones, protegerlos en las condiciones del campo africano y llevar un programa completo de mantenimiento."
+          youCanNow: "resolver fallas comunes de los drones, protegerlos en las condiciones del campo africano y llevar un programa completo de mantenimiento.",
+          quickCheck: [
+            { objective: "O6", q: "¿Cuál es el primer paso para resolver una falla?", options: ["Leer el mensaje de advertencia y revisar primero las causas más sencillas", "Cambiar varias piezas a la vez", "Abrir la batería", "Volar más alto para probar"], answer: 0, why: "Lee el mensaje, revisa primero las causas sencillas, cambia una sola cosa y prueba." },
+            { objective: "O6", q: "Vas a volar todo el día en una finca caliente y polvosa, sin electricidad. ¿Qué planeas?", options: ["Una sola batería y despegar desde la arena", "Dejar las baterías al sol para que no se enfríen", "Una lona para despegar, sombra para las baterías, las horas más frescas y suficientes baterías cargadas o un cargador solar o del vehículo", "Volar sin dejar descansar el dron"], answer: 2, why: "Las lonas evitan el polvo, la sombra y las horas frescas protegen las baterías, y donde la electricidad no es confiable hay que planear la carga." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Mantenimiento en el campo y en el taller",
         questions: [
-          { q: "Una hélice tiene una pequeña muesca en el borde. Debes:", options: ["Volar con cuidado", "Ponerle cinta", "Cambiarla antes de volar", "Lijarla y volar"], answer: 2, why: "Las hélices dañadas causan vibración y pueden fallar en pleno vuelo." },
-          { q: "Después de un vuelo, un motor está mucho más caliente que los otros. Esto puede significar:", options: ["Que el motor está fallando o bloqueado", "Que el dron voló bien", "Que la cámara está sucia", "Que la batería es nueva"], answer: 0, why: "Un calor fuera de lo normal puede indicar un rodamiento malo, basura o un motor que falla." },
-          { q: "¿Cuándo debes instalar una actualización de firmware?", options: ["En medio del campo de un cliente", "Durante un vuelo", "Nunca", "En la base, después de leer las notas de la versión, y luego con un vuelo de prueba"], answer: 3, why: "Las actualizaciones pueden cambiar el comportamiento; prueba antes del trabajo real." },
-          { q: "La app muestra un error de brújula al despegar. Un buen primer paso es:", options: ["Despegar de todas formas", "Alejarte de metal, vehículos y cables eléctricos y recalibrar si te lo pide", "Quitar la brújula", "Volar en modo deportivo"], answer: 1, why: "El metal y las fuentes magnéticas alteran la brújula." },
-          { q: "¿Cómo proteges un dron del polvo en una finca seca?", options: ["Despegas desde una alfombra, limpias después de volar y lo guardas en un estuche cerrado", "Lo lavas con una manguera", "Vuelas más cerca del suelo", "Lo dejas destapado"], answer: 0, why: "El polvo daña motores y gimbals; las alfombras, la limpieza y los estuches ayudan." }
+          { objective: "O4", q: "Una hélice tiene una pequeña muesca en el borde. Debes:", options: ["Volar con cuidado", "Ponerle cinta", "Cambiarla antes de volar", "Lijarla y volar"], answer: 2, why: "Las hélices dañadas causan vibración y pueden fallar en pleno vuelo." },
+          { objective: "O4", q: "Después de un vuelo, un motor está mucho más caliente que los otros. Esto puede significar:", options: ["Que el motor está fallando o bloqueado", "Que el dron voló bien", "Que la cámara está sucia", "Que la batería es nueva"], answer: 0, why: "Un calor fuera de lo normal puede indicar un rodamiento malo, basura o un motor que falla." },
+          { objective: "O5", q: "¿Cuándo debes instalar una actualización de firmware?", options: ["En medio del campo de un cliente", "Durante un vuelo", "Nunca", "En la base, después de leer las notas de la versión, y luego con un vuelo de prueba"], answer: 3, why: "Las actualizaciones pueden cambiar el comportamiento; prueba antes del trabajo real." },
+          { objective: "O6", q: "La app muestra un error de brújula al despegar. Un buen primer paso es:", options: ["Despegar de todas formas", "Alejarte de metal, vehículos y cables eléctricos y recalibrar si te lo pide", "Quitar la brújula", "Volar en modo deportivo"], answer: 1, why: "El metal y las fuentes magnéticas alteran la brújula." },
+          { objective: "O6", q: "¿Cómo proteges un dron del polvo en una finca seca?", options: ["Despegas desde una alfombra, limpias después de volar y lo guardas en un estuche cerrado", "Lo lavas con una manguera", "Vuelas más cerca del suelo", "Lo dejas destapado"], answer: 0, why: "El polvo daña motores y gimbals; las alfombras, la limpieza y los estuches ayudan." }
         ]
       }
     }
@@ -174,26 +227,106 @@ module.exports = {
   quiz: {
     title: "Examen final: Drones agrícolas: tecnología UAS y mantenimiento",
     questions: [
-      { q: "El enlace C2 es:", options: ["Un tipo de batería", "La conexión de radio entre el control remoto y el dron", "Un tamaño de hélice", "Un lente de cámara"], answer: 1, why: "El enlace de mando y control lleva las órdenes y los datos." },
-      { q: "Los ESC controlan:", options: ["El zoom de la cámara", "El almacenamiento de las baterías", "Qué tan rápido gira cada motor", "Los satélites GPS"], answer: 2, why: "Los controladores electrónicos de velocidad manejan los motores." },
-      { q: "El controlador de vuelo es:", options: ["El cerebro a bordo del dron que lo mantiene estable", "La persona que vuela", "La caja del control remoto", "La plataforma de aterrizaje"], answer: 0, why: "Lee los sensores y ajusta los motores muchas veces por segundo." },
-      { q: "El GNSS le da al dron su:", options: ["Color", "Temperatura", "Nivel de batería", "Posición a partir de satélites"], answer: 3, why: "El GNSS, como el GPS, da la posición." },
-      { q: "El barómetro de un dron mide:", options: ["La dirección del viento", "La presión del aire, que se usa para la altura", "La salud del cultivo", "Los ciclos de la batería"], answer: 1, why: "La presión del aire cambia con la altura." },
-      { q: "¿Por qué pueden ser peligrosas las baterías LiPo?", options: ["Son pesadas", "Hacen ruido", "Pueden incendiarse si se dañan, se sobrecargan o se calientan demasiado", "Nunca se cargan"], answer: 2, why: "Mucha energía en poco espacio significa mucho riesgo si se maltratan." },
-      { q: "Las baterías se deben cargar:", options: ["Con el cargador correcto, con vigilancia, sobre una superficie que no se queme", "Durante la noche sobre una cama", "Dentro de un carro caliente", "Con cualquier cargador que entre"], answer: 0, why: "Estos pasos reducen el riesgo de incendio." },
-      { q: "Un ciclo de carga es:", options: ["Una pieza de bicicleta", "Un plan de vuelo", "Un patrón del clima", "Un uso completo de la capacidad de una batería"], answer: 3, why: "Registrar los ciclos muestra el envejecimiento de la batería." },
-      { q: "Una batería de dron dañada y retirada debe ir a:", options: ["El fogón para cocinar", "Un punto de recolección de residuos electrónicos o de baterías", "La basura común", "Un río"], answer: 1, why: "Las baterías de litio necesitan recolección y reciclaje seguros." },
-      { q: "El sensor de luz solar de un dron multiespectral:", options: ["Carga la batería", "Mide el viento", "Mide la luz que llega para corregir las lecturas", "Rocía agua"], answer: 2, why: "Ayuda a corregir los cambios de luz." },
-      { q: "Una carga útil suelta puede:", options: ["Desequilibrar el dron y afectar su control", "Mejorar las fotos", "Hacer más ligero el dron", "Cargar más rápido"], answer: 0, why: "El controlador de vuelo espera una carga firme y equilibrada." },
-      { q: "Las boquillas de fumigación se deben revisar por:", options: ["Su color", "Las calcomanías de la marca", "La música", "Desgaste y obstrucciones"], answer: 3, why: "Las boquillas gastadas u obstruidas aplican una cantidad equivocada." },
-      { q: "¿Un buen mantenimiento del sistema de fumigación reemplaza las aprobaciones para fumigar?", options: ["Sí", "No; igual se necesitan las aprobaciones de aviación y de plaguicidas", "Solo en fincas pequeñas", "Solo de noche"], answer: 1, why: "El mantenimiento y la aprobación legal son requisitos separados." },
-      { q: "La inspección después del vuelo se hace para:", options: ["Cargar el control", "Planear el próximo cliente", "Encontrar daños o desgaste del vuelo que acabas de hacer", "Editar fotos"], answer: 2, why: "Detecta problemas antes del siguiente vuelo." },
-      { q: "¿Cómo debes limpiar un dron después de un vuelo con polvo?", options: ["Con un cepillo suave o un paño seco", "Con agua a presión", "Con lija", "Con gasolina"], answer: 0, why: "El agua y los químicos pueden dañar la electrónica." },
-      { q: "El mantenimiento programado se planea por:", options: ["Solo el color", "Solo el clima", "Solo el cliente", "Horas de vuelo y fechas, lo que ocurra primero"], answer: 3, why: "Las piezas se desgastan con el uso y con el tiempo." },
-      { q: "Un registro de mantenimiento anota:", options: ["Solo el precio del dron", "Fecha, horas, trabajo hecho, piezas, firmware, quién lo hizo y el resultado", "Números de teléfono de agricultores", "Precios de los cultivos"], answer: 1, why: "Los registros completos apoyan la seguridad y el cumplimiento." },
-      { q: "El dron se bambolea en el vuelo. Revisa primero:", options: ["El mapa del cliente", "El pronóstico del clima del próximo mes", "Las hélices y los brazos por daños o piezas flojas", "La tarjeta de memoria"], answer: 2, why: "Las hélices dañadas y los brazos doblados causan vibración." },
-      { q: "Con mucho calor debes:", options: ["Poner las baterías a la sombra y volar en las horas más frescas", "Dejar las baterías al sol", "Volar sin parar ni descansar", "Cargar las baterías mientras están calientes"], answer: 0, why: "El calor acorta la vida de las baterías y castiga la electrónica." },
-      { q: "Una falla de seguridad sigue volviendo después de tus arreglos. Debes:", options: ["Seguir volando", "Ocultársela a los clientes", "Tapar la advertencia", "Dejar el dron en tierra y enviarlo a un técnico calificado"], answer: 3, why: "Las fallas de seguridad repetidas necesitan una reparación experta antes de volar." }
+      { objective: "O1", q: "El enlace C2 es:", options: ["Un tipo de batería", "La conexión de radio entre el control remoto y el dron", "Un tamaño de hélice", "Un lente de cámara"], answer: 1, why: "El enlace de mando y control lleva las órdenes y los datos." },
+      { objective: "O1", q: "Los ESC controlan:", options: ["El zoom de la cámara", "El almacenamiento de las baterías", "Qué tan rápido gira cada motor", "Los satélites GPS"], answer: 2, why: "Los controladores electrónicos de velocidad manejan los motores." },
+      { objective: "O1", q: "El controlador de vuelo es:", options: ["El cerebro a bordo del dron que lo mantiene estable", "La persona que vuela", "La caja del control remoto", "La plataforma de aterrizaje"], answer: 0, why: "Lee los sensores y ajusta los motores muchas veces por segundo." },
+      { objective: "O1", q: "El GNSS le da al dron su:", options: ["Color", "Temperatura", "Nivel de batería", "Posición a partir de satélites"], answer: 3, why: "El GNSS, como el GPS, da la posición." },
+      { objective: "O1", q: "El barómetro de un dron mide:", options: ["La dirección del viento", "La presión del aire, que se usa para la altura", "La salud del cultivo", "Los ciclos de la batería"], answer: 1, why: "La presión del aire cambia con la altura." },
+      { objective: "O2", q: "¿Por qué pueden ser peligrosas las baterías LiPo?", options: ["Son pesadas", "Hacen ruido", "Pueden incendiarse si se dañan, se sobrecargan o se calientan demasiado", "Nunca se cargan"], answer: 2, why: "Mucha energía en poco espacio significa mucho riesgo si se maltratan." },
+      { objective: "O2", q: "Las baterías se deben cargar:", options: ["Con el cargador correcto, con vigilancia, sobre una superficie que no se queme", "Durante la noche sobre una cama", "Dentro de un carro caliente", "Con cualquier cargador que entre"], answer: 0, why: "Estos pasos reducen el riesgo de incendio." },
+      { objective: "O2", q: "Un ciclo de carga es:", options: ["Una pieza de bicicleta", "Un plan de vuelo", "Un patrón del clima", "Un uso completo de la capacidad de una batería"], answer: 3, why: "Registrar los ciclos muestra el envejecimiento de la batería." },
+      { objective: "O2", q: "Una batería de dron dañada y retirada debe ir a:", options: ["El fogón para cocinar", "Un punto de recolección de residuos electrónicos o de baterías", "La basura común", "Un río"], answer: 1, why: "Las baterías de litio necesitan recolección y reciclaje seguros." },
+      { objective: "O3", q: "El sensor de luz solar de un dron multiespectral:", options: ["Carga la batería", "Mide el viento", "Mide la luz que llega para corregir las lecturas", "Rocía agua"], answer: 2, why: "Ayuda a corregir los cambios de luz." },
+      { objective: "O3", q: "Una carga útil suelta puede:", options: ["Desequilibrar el dron y afectar su control", "Mejorar las fotos", "Hacer más ligero el dron", "Cargar más rápido"], answer: 0, why: "El controlador de vuelo espera una carga firme y equilibrada." },
+      { objective: "O3", q: "Las boquillas de fumigación se deben revisar por:", options: ["Su color", "Las calcomanías de la marca", "La música", "Desgaste y obstrucciones"], answer: 3, why: "Las boquillas gastadas u obstruidas aplican una cantidad equivocada." },
+      { objective: "O3", q: "¿Un buen mantenimiento del sistema de fumigación reemplaza las aprobaciones para fumigar?", options: ["Sí", "No; igual se necesitan las aprobaciones de aviación y de plaguicidas", "Solo en fincas pequeñas", "Solo de noche"], answer: 1, why: "El mantenimiento y la aprobación legal son requisitos separados." },
+      { objective: "O4", q: "La inspección después del vuelo se hace para:", options: ["Cargar el control", "Planear el próximo cliente", "Encontrar daños o desgaste del vuelo que acabas de hacer", "Editar fotos"], answer: 2, why: "Detecta problemas antes del siguiente vuelo." },
+      { objective: "O4", q: "¿Cómo debes limpiar un dron después de un vuelo con polvo?", options: ["Con un cepillo suave o un paño seco", "Con agua a presión", "Con lija", "Con gasolina"], answer: 0, why: "El agua y los químicos pueden dañar la electrónica." },
+      { objective: "O5", q: "El mantenimiento programado se planea por:", options: ["Solo el color", "Solo el clima", "Solo el cliente", "Horas de vuelo y fechas, lo que ocurra primero"], answer: 3, why: "Las piezas se desgastan con el uso y con el tiempo." },
+      { objective: "O5", q: "Un registro de mantenimiento anota:", options: ["Solo el precio del dron", "Fecha, horas, trabajo hecho, piezas, firmware, quién lo hizo y el resultado", "Números de teléfono de agricultores", "Precios de los cultivos"], answer: 1, why: "Los registros completos apoyan la seguridad y el cumplimiento." },
+      { objective: "O6", q: "El dron se bambolea en el vuelo. Revisa primero:", options: ["El mapa del cliente", "El pronóstico del clima del próximo mes", "Las hélices y los brazos por daños o piezas flojas", "La tarjeta de memoria"], answer: 2, why: "Las hélices dañadas y los brazos doblados causan vibración." },
+      { objective: "O6", q: "Con mucho calor debes:", options: ["Poner las baterías a la sombra y volar en las horas más frescas", "Dejar las baterías al sol", "Volar sin parar ni descansar", "Cargar las baterías mientras están calientes"], answer: 0, why: "El calor acorta la vida de las baterías y castiga la electrónica." },
+      { objective: "O6", q: "Una falla de seguridad sigue volviendo después de tus arreglos. Debes:", options: ["Seguir volando", "Ocultársela a los clientes", "Tapar la advertencia", "Dejar el dron en tierra y enviarlo a un técnico calificado"], answer: 3, why: "Las fallas de seguridad repetidas necesitan una reparación experta antes de volar." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      2,
+      5,
+      6,
+      9,
+      12,
+      13,
+      15,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte del programa y revísala de nuevo.",
+    criteria: [
+      {
+        name: "Lista de partes",
+        objective: "O1",
+        notYet: "Faltan partes principales, o no explica lo que hacen.",
+        meets: "Cada parte principal de la aeronave y de la estación en tierra está en la lista con lo que hace.",
+        exceeds: "Anota qué partes se gastan y cuáles necesitan calibración."
+      },
+      {
+        name: "Cuidado de las baterías",
+        objective: "O2",
+        notYet: "Faltan pasos de carga, almacenamiento o retiro, o no son seguros.",
+        meets: "Pasos seguros de carga, enfriamiento, carga de almacenamiento, transporte y retiro, con conteo de ciclos.",
+        exceeds: "Incluye un plan contra incendios para la zona de carga."
+      },
+      {
+        name: "Listas de inspección",
+        objective: "O4",
+        notYet: "No hay lista, o faltan puntos clave como las hélices y el seguro de la batería.",
+        meets: "Las listas de antes y después del vuelo cubren la estructura, las hélices, los motores, la carga útil, la batería, los sensores y las notas del registro.",
+        exceeds: "Las revisiones de la carga útil corresponden al trabajo real del dron, como mapeo o fumigación."
+      },
+      {
+        name: "Calendario y registro",
+        objective: "O5",
+        notYet: "No hay intervalos, o faltan campos en el registro.",
+        meets: "Un calendario por horas de vuelo y por fechas, una rutina de firmware y una plantilla de registro con dos ejemplos llenos.",
+        exceeds: "Los intervalos salen del manual del fabricante y se anota la fuente."
+      },
+      {
+        name: "Tabla para resolver fallas",
+        objective: "O6",
+        notYet: "Menos de cinco fallas, o no hay pasos.",
+        meets: "Al menos cinco fallas comunes, cada una con revisiones iniciales sencillas y cuándo dejar el dron en tierra.",
+        exceeds: "Agrega pasos contra el polvo, el calor, la lluvia y los cortes de luz en las fincas donde trabaja."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que terminan el curso y obtienen Cumple o Supera en cada fila de la rúbrica del programa de mantenimiento",
+      "Participantes que dicen usar una lista escrita de inspección y un registro de mantenimiento 30 días después (encuesta de seguimiento)",
+      "Negocios de drones o cooperativas que reportan menos choques, incidentes con baterías o días con el dron en tierra después de la formación",
+      "Participantes que toman el siguiente curso de drones o una formación de técnico del fabricante"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono o una computadora para las lecciones; un dron agrícola real, o fotos claras de uno, para practicar",
+      "El manual del fabricante del dron, si lo hay",
+      "Un cuaderno o una hoja de cálculo para las listas, el calendario y el registro",
+      "Unos 60 minutos en total, en sesiones cortas, más tiempo para escribir el programa de mantenimiento"
+    ],
+    facilitatorNotes: [
+      "Hagan juntos la prueba inicial y luego rodeen un dron real (apagado y sin hélices) para nombrar cada parte.",
+      "Manejen las baterías solo sobre una superficie que no se queme, y nunca carguen, perforen ni abran una batería hinchada en clase.",
+      "Usa el manual del propio dron para los intervalos y los procedimientos; el curso solo da el método general.",
+      "No hagan funcionar sistemas de fumigación con plaguicida en clase; practiquen las inspecciones con agua limpia o sin líquido.",
+      "Califica el programa de mantenimiento con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

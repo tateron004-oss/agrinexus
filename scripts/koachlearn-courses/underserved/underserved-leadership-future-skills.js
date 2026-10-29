@@ -15,11 +15,34 @@ module.exports = {
     "Each lesson is about five minutes and ends with a \"Try it now\" task. A knowledge check ends each chapter, and a 20-question quiz ends the course."
   ],
   finalTask: "Plan a small community project you could really do, such as a book swap, a clothing drive or a park clean-up. Write one clear goal, list two problems that could come up and how you would solve them, and write a one-minute talk asking three people to help. Practice the talk out loud with an AI assistant, ask for feedback, and improve it once.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Adults and young adults in underserved communities who already lead without a title: parents, church and block club volunteers, shift leads, and people who want to start a community project.",
+    startingPoint: "Organize family, friends or coworkers in everyday ways, but may not see themselves as leaders. Many feel nervous speaking in front of a group and have not planned a project with goals, tasks and dates.",
+    gap: "Community projects stall without a clear goal, a plan for problems and people willing to help. Learners need simple leadership habits and the confidence to speak up, and a free AI assistant can be a patient practice partner.",
+    constraints: [
+      "Reading level: plain words and short sentences (about grade 6)",
+      "Devices: a smartphone or a library computer",
+      "Cost: free tools and free learning options only",
+      "Privacy: no private details about people when describing problems to an AI",
+      "Projects must be small and doable with the time and help learners have"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given a wish for your community or a skill you want to grow", action: "write a clear goal with what, how much and by when, and choose a first step", standard: "that you can really do with the time and help you have" },
+    { id: "O2", condition: "Given a real problem at home, work or in a group", action: "solve it with four steps: name it, list options, pick one and check how it went", standard: "weighing a good point and a risk for at least three options" },
+    { id: "O3", condition: "Given a goal you want people to help with", action: "write and practice a one-minute talk with a clear call to action", standard: "practiced out loud and improved once with AI feedback" },
+    { id: "O4", condition: "After working with a helper, coworker or family member", action: "give kind, useful feedback and ask for feedback yourself", standard: "with one thing that went well, one thing to try next time, and thanks" },
+    { id: "O5", condition: "Given a small community project", action: "break it into tasks with a person and a date for each and plan for two problems", standard: "with helpers picking tasks and a weekly check-in" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Leading yourself",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Setting a clear goal",
           minutes: 5,
           goal: "Turn a wish into a clear goal with a what, a how much, and a by-when.",
@@ -36,9 +59,14 @@ module.exports = {
             { title: "Use AI to sharpen it", bullets: ["\"Ask me questions first\"", "Make sure you can really do it"] }
           ],
           tryIt: "Write one wish for your community. Ask an AI assistant to ask you questions and help you turn it into a clear goal with what, how much and by when.",
-          youCanNow: "turn a wish into a clear, doable goal."
+          youCanNow: "turn a wish into a clear, doable goal.",
+          quickCheck: [
+            { objective: "O1", q: "What turns a wish into a clear goal?", options: ["Adding what, how much and by when", "Making it longer", "Adding more people's names", "Saying it louder"], answer: 0, why: "A clear goal says what you will do, how much and by when." },
+            { objective: "O1", q: "Your goal is to give away 1,000 books next week, alone. What do you do?", options: ["Keep it; big goals are best", "Make it something you can really do with your time and help", "Drop the idea", "Ask the AI to do it for you"], answer: 1, why: "A good goal is something you can really do with the time and help you have." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Solving problems step by step",
           minutes: 5,
           goal: "Use four simple steps to work through a real problem.",
@@ -55,9 +83,14 @@ module.exports = {
             { title: "You choose", bullets: ["You know your people best", "Look back: what would you change?"] }
           ],
           tryIt: "Pick a real problem from your home, job or group. Ask an AI assistant for three options with a good point and a risk for each. Choose one and write why.",
-          youCanNow: "work through a problem in four steps with AI as a thinking partner."
+          youCanNow: "work through a problem in four steps with AI as a thinking partner.",
+          quickCheck: [
+            { objective: "O2", q: "What is the last step in solving a problem step by step?", options: ["Name the problem", "List options", "Check how it went", "Blame someone"], answer: 2, why: "After trying an option, you look back to see if it worked and what to change." },
+            { objective: "O2", q: "Only two people signed up for your clothing drive. What do you ask the AI?", options: ["\"Fix it.\"", "\"Who are the lazy people?\"", "\"Cancel the drive.\"", "\"Give me three options, each with a good point and a risk.\""], answer: 3, why: "Asking for options with a good point and a risk helps you choose wisely." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Speaking up with confidence",
           minutes: 5,
           goal: "Plan and practice a short talk that asks people to act.",
@@ -74,17 +107,21 @@ module.exports = {
             { title: "Handling nerves", bullets: ["Breathe slowly", "Find friendly faces", "Speak a little slower"] }
           ],
           tryIt: "Write a one-minute talk about the goal from Lesson 1. Ask an AI assistant for two ways to make it stronger, then practice it out loud three times.",
-          youCanNow: "plan and practice a short talk with a clear call to action."
+          youCanNow: "plan and practice a short talk with a clear call to action.",
+          quickCheck: [
+            { objective: "O3", q: "What is the simple shape of a short talk?", options: ["Why it matters, what you want to do, and your ask", "A long story, a joke and a goodbye", "Only facts and numbers", "Your life story"], answer: 0, why: "This shape keeps a talk short and tells people what to do." },
+            { objective: "O3", q: "Your hands shake before your talk. What helps?", options: ["Skip the talk", "Breathe slowly and speak a little slower", "Talk as fast as you can", "Read without looking up"], answer: 1, why: "Slow breathing and slower speech help calm nerves." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Leading yourself",
         questions: [
-          { q: "Which is a clear goal?", options: ["\"Help people more\"", "\"Be a better neighbor\"", "\"Run a book swap on the first Saturday next month and give away 50 books\"", "\"Do good things\""], answer: 2, why: "It says what, how many and by when." },
-          { q: "What three parts does a clear goal have?", options: ["What, how much, and by when", "Who, why, and where", "A title, a logo, and a slogan", "A budget, a bank and a loan"], answer: 0, why: "Those parts make a goal clear and checkable." },
-          { q: "What is the first step in solving a problem?", options: ["Pick any option", "Blame someone", "Give up", "Name the problem in one sentence"], answer: 3, why: "You cannot solve a problem you have not named." },
-          { q: "The AI suggests three options. Who chooses?", options: ["The AI", "You, because you know your people and community", "Nobody", "The first person who answers"], answer: 1, why: "AI is a thinking partner; you decide." },
-          { q: "What is a call to action?", options: ["A phone call", "An emergency number", "The part of a talk that tells people what you want them to do", "A ringtone"], answer: 2, why: "It turns listeners into helpers." }
+          { objective: "O1", q: "Which is a clear goal?", options: ["\"Help people more\"", "\"Be a better neighbor\"", "\"Run a book swap on the first Saturday next month and give away 50 books\"", "\"Do good things\""], answer: 2, why: "It says what, how many and by when." },
+          { objective: "O1", q: "What three parts does a clear goal have?", options: ["What, how much, and by when", "Who, why, and where", "A title, a logo, and a slogan", "A budget, a bank and a loan"], answer: 0, why: "Those parts make a goal clear and checkable." },
+          { objective: "O2", q: "What is the first step in solving a problem?", options: ["Pick any option", "Blame someone", "Give up", "Name the problem in one sentence"], answer: 3, why: "You cannot solve a problem you have not named." },
+          { objective: "O2", q: "The AI suggests three options. Who chooses?", options: ["The AI", "You, because you know your people and community", "Nobody", "The first person who answers"], answer: 1, why: "AI is a thinking partner; you decide." },
+          { objective: "O3", q: "What is a call to action?", options: ["A phone call", "An emergency number", "The part of a talk that tells people what you want them to do", "A ringtone"], answer: 2, why: "It turns listeners into helpers." }
         ]
       }
     },
@@ -92,6 +129,7 @@ module.exports = {
       name: "Chapter 2: Leading others and growing",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Giving and asking for feedback",
           minutes: 5,
           goal: "Give kind, useful feedback and ask for it.",
@@ -108,9 +146,14 @@ module.exports = {
             { title: "Ask for it", bullets: ["\"What is one thing I could do better?\"", "Listen without arguing"] }
           ],
           tryIt: "Think of a helper, coworker or family member. Ask an AI assistant to help you word kind feedback with one thing that went well and one thing to try next time. Say it out loud.",
-          youCanNow: "give kind, useful feedback and ask for it."
+          youCanNow: "give kind, useful feedback and ask for it.",
+          quickCheck: [
+            { objective: "O4", q: "Which is the last part of the feedback shape in this course?", options: ["A warning", "A list of mistakes", "Thanks", "A grade"], answer: 2, why: "Kind feedback ends by thanking the person." },
+            { objective: "O4", q: "You want to get better at running meetings. What do you ask your group?", options: ["\"Was I perfect?\"", "Nothing; leaders do not ask", "\"Who complained?\"", "\"What is one thing I could do better at our next meeting?\""], answer: 3, why: "Good leaders ask for feedback often, with a clear question." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Leading a small project",
           minutes: 5,
           goal: "Break a project into tasks, give each a person and a date, and plan for problems.",
@@ -127,9 +170,14 @@ module.exports = {
             { title: "Lead the team", bullets: ["Let people pick tasks", "Check in weekly", "Thank people and celebrate"] }
           ],
           tryIt: "Use your goal from Lesson 1. Ask an AI assistant to break it into tasks with dates and list two problems that could come up, with a plan for each.",
-          youCanNow: "plan a small project with tasks, people, dates and backup plans."
+          youCanNow: "plan a small project with tasks, people, dates and backup plans.",
+          quickCheck: [
+            { objective: "O5", q: "What should every task in a project have?", options: ["A person and a date", "A budget of $100", "A long description", "An AI to do it"], answer: 0, why: "A person and a date make it clear who does what and by when." },
+            { objective: "O5", q: "A helper has not done their task by the date. What do you do first?", options: ["Remove them from the group", "Check in kindly and ask what help they need", "Do it yourself without telling them", "Post about it online"], answer: 1, why: "Leaders check in and support helpers to keep them involved." }
+          ]
         },
         {
+          objectives: ["O1"],
           title: "Planning your next skill",
           minutes: 5,
           goal: "Choose one future skill to learn and a first step to start it.",
@@ -146,17 +194,21 @@ module.exports = {
             { title: "Take a first step", bullets: ["Check free options: library, job center", "Pick one skill, one step this week"] }
           ],
           tryIt: "Final task: plan a small community project with one clear goal, two possible problems and how you would solve them, and a one-minute talk asking three people to help. Practice the talk with an AI assistant, get feedback, and improve it once.",
-          youCanNow: "lead a small project with confidence and keep growing your skills."
+          youCanNow: "lead a small project with confidence and keep growing your skills.",
+          quickCheck: [
+            { objective: "O1", q: "Which is a future skill that helps almost everyone?", options: ["Memorizing phone numbers", "Using a fax machine", "Communicating clearly", "Writing in cursive"], answer: 2, why: "Clear communication helps in almost every job and community role." },
+            { objective: "O1", q: "The AI suggests a free online class for your next skill. What do you do?", options: ["Sign up and pay right away", "Ignore it", "Share your bank number to enroll", "Check it yourself, for example with your library or job center"], answer: 3, why: "You check free options yourself before signing up." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Leading others and growing",
         questions: [
-          { q: "Which is kind, useful feedback?", options: ["\"That was bad.\"", "\"You set up fast. Next time, put the sign-in sheet by the door. Thank you.\"", "Saying nothing", "\"Everyone else did better.\""], answer: 1, why: "It names a strength, a next step, and says thanks." },
-          { q: "Someone gives you feedback. The best response is to:", options: ["Argue", "Ignore it", "Get upset", "Listen and thank them"], answer: 3, why: "Listening helps you grow." },
-          { q: "What is a task?", options: ["One small job that is part of a project", "A whole project", "A meeting", "A goal"], answer: 0, why: "Projects are made of tasks." },
-          { q: "How should you hand out project tasks?", options: ["Do them all yourself", "Give them to one person", "Let people pick tasks they like, each with a date", "Never assign them"], answer: 2, why: "Choice and clear dates keep helpers involved." },
-          { q: "The AI suggests a free class to learn a skill. Before signing up you:", options: ["Pay a fee first", "Check it yourself, for example with your library or job center", "Give your bank number", "Trust it fully"], answer: 1, why: "AI can list programs that changed; check them yourself." }
+          { objective: "O4", q: "Which is kind, useful feedback?", options: ["\"That was bad.\"", "\"You set up fast. Next time, put the sign-in sheet by the door. Thank you.\"", "Saying nothing", "\"Everyone else did better.\""], answer: 1, why: "It names a strength, a next step, and says thanks." },
+          { objective: "O4", q: "Someone gives you feedback. The best response is to:", options: ["Argue", "Ignore it", "Get upset", "Listen and thank them"], answer: 3, why: "Listening helps you grow." },
+          { objective: "O5", q: "What is a task?", options: ["One small job that is part of a project", "A whole project", "A meeting", "A goal"], answer: 0, why: "Projects are made of tasks." },
+          { objective: "O5", q: "How should you hand out project tasks?", options: ["Do them all yourself", "Give them to one person", "Let people pick tasks they like, each with a date", "Never assign them"], answer: 2, why: "Choice and clear dates keep helpers involved." },
+          { objective: "O1", q: "The AI suggests a free class to learn a skill. Before signing up you:", options: ["Pay a fee first", "Check it yourself, for example with your library or job center", "Give your bank number", "Trust it fully"], answer: 1, why: "AI can list programs that changed; check them yourself." }
         ]
       }
     }
@@ -164,26 +216,98 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Leadership, Confidence and Future Skills",
     questions: [
-      { q: "Who can be a leader?", options: ["Only managers", "Only people with titles", "Anyone who organizes and helps others", "Only elected officials"], answer: 2, why: "Leadership is what you do, not your title." },
-      { q: "\"Help kids read more\" is:", options: ["A wish, not yet a clear goal", "A clear goal", "A deadline", "A task"], answer: 0, why: "It has no how much or by when." },
-      { q: "A deadline is:", options: ["A goal", "A meeting", "A type of talk", "The date by which something must be done"], answer: 3, why: "Deadlines say by when." },
-      { q: "A good prompt to sharpen your goal is:", options: ["\"Write my goal for me without asking.\"", "\"Ask me questions first, then help me add what, how much and by when.\"", "\"Goal.\"", "\"Make it impossible.\""], answer: 1, why: "Questions help the AI understand your real situation." },
-      { q: "The four problem-solving steps are:", options: ["Name it, list options, pick one, check how it went", "Panic, blame, quit, forget", "Ask AI, copy it, send it, done", "Wait, wait, wait, hope"], answer: 0, why: "These steps keep you calm and clear." },
-      { q: "When asking AI for options, also ask for:", options: ["Your password", "A good point and a risk for each", "Only one option", "A guarantee"], answer: 1, why: "Seeing the risk helps you choose wisely." },
-      { q: "When describing a problem to AI, you leave out:", options: ["The problem", "The goal", "Private details about people", "The deadline"], answer: 2, why: "Keep private details about others out of AI." },
-      { q: "After trying a solution, you should:", options: ["Never think about it again", "Blame the AI", "Do the same thing every time", "Look back: did it work, and what would you change?"], answer: 3, why: "Looking back helps you improve." },
-      { q: "A short talk should have:", options: ["Why it matters, what you want to do, and your ask", "Only jokes", "Twenty minutes of facts", "No ask at all"], answer: 0, why: "That shape moves people to act." },
-      { q: "A one-minute talk is about:", options: ["10 words", "120 to 150 words", "1,000 words", "5 pages"], answer: 1, why: "People speak about 120 to 150 words in a minute." },
-      { q: "To calm nerves before speaking:", options: ["Talk very fast", "Look at the floor", "Breathe slowly and speak a little slower", "Skip practice"], answer: 2, why: "Slow breathing and pace help confidence." },
-      { q: "How can AI help with your talk?", options: ["It gives the talk for you", "It makes it longer", "It removes your ask", "It suggests ways to make it clearer and stronger"], answer: 3, why: "AI can give feedback on your draft." },
-      { q: "Feedback is:", options: ["Information that helps someone do better", "A punishment", "A type of food", "A complaint"], answer: 0, why: "Feedback is for growth." },
-      { q: "A good feedback shape is:", options: ["Only criticism", "One thing that went well, one thing to try next time, and thanks", "Silence", "A long list of mistakes"], answer: 1, why: "Balanced feedback is easier to hear." },
-      { q: "Good leaders ask for feedback:", options: ["Never", "Only once a year", "Often", "Only from the AI"], answer: 2, why: "Asking often helps leaders grow." },
-      { q: "A project is:", options: ["A one-word wish", "A single phone call", "A feeling", "A goal with a start and an end"], answer: 3, why: "Projects have a clear start and finish." },
-      { q: "When AI breaks your project into tasks, also ask it to:", options: ["List possible problems and how to handle them", "Do every task", "Pick your helpers", "Cancel it"], answer: 0, why: "Planning for problems makes the project stronger." },
-      { q: "What keeps helpers involved in a project?", options: ["Never thanking them", "Letting them pick tasks, checking in, and thanking them", "Doing it all yourself", "Changing dates without telling them"], answer: 1, why: "People stay when they feel valued." },
-      { q: "Which is a future skill that helps almost everyone?", options: ["Ignoring change", "Avoiding teamwork", "Using digital tools and AI safely", "Never learning"], answer: 2, why: "Digital and AI skills help across jobs." },
-      { q: "In the final task, after practicing your talk with AI, you:", options: ["Stop there", "Make it longer", "Send it to strangers", "Get feedback and improve it once"], answer: 3, why: "Improving after feedback finishes the skill." }
+      { objective: "O1", q: "Who can be a leader?", options: ["Only managers", "Only people with titles", "Anyone who organizes and helps others", "Only elected officials"], answer: 2, why: "Leadership is what you do, not your title." },
+      { objective: "O1", q: "\"Help kids read more\" is:", options: ["A wish, not yet a clear goal", "A clear goal", "A deadline", "A task"], answer: 0, why: "It has no how much or by when." },
+      { objective: "O1", q: "A deadline is:", options: ["A goal", "A meeting", "A type of talk", "The date by which something must be done"], answer: 3, why: "Deadlines say by when." },
+      { objective: "O1", q: "A good prompt to sharpen your goal is:", options: ["\"Write my goal for me without asking.\"", "\"Ask me questions first, then help me add what, how much and by when.\"", "\"Goal.\"", "\"Make it impossible.\""], answer: 1, why: "Questions help the AI understand your real situation." },
+      { objective: "O2", q: "The four problem-solving steps are:", options: ["Name it, list options, pick one, check how it went", "Panic, blame, quit, forget", "Ask AI, copy it, send it, done", "Wait, wait, wait, hope"], answer: 0, why: "These steps keep you calm and clear." },
+      { objective: "O2", q: "When asking AI for options, also ask for:", options: ["Your password", "A good point and a risk for each", "Only one option", "A guarantee"], answer: 1, why: "Seeing the risk helps you choose wisely." },
+      { objective: "O2", q: "When describing a problem to AI, you leave out:", options: ["The problem", "The goal", "Private details about people", "The deadline"], answer: 2, why: "Keep private details about others out of AI." },
+      { objective: "O2", q: "After trying a solution, you should:", options: ["Never think about it again", "Blame the AI", "Do the same thing every time", "Look back: did it work, and what would you change?"], answer: 3, why: "Looking back helps you improve." },
+      { objective: "O3", q: "A short talk should have:", options: ["Why it matters, what you want to do, and your ask", "Only jokes", "Twenty minutes of facts", "No ask at all"], answer: 0, why: "That shape moves people to act." },
+      { objective: "O3", q: "A one-minute talk is about:", options: ["10 words", "120 to 150 words", "1,000 words", "5 pages"], answer: 1, why: "People speak about 120 to 150 words in a minute." },
+      { objective: "O3", q: "To calm nerves before speaking:", options: ["Talk very fast", "Look at the floor", "Breathe slowly and speak a little slower", "Skip practice"], answer: 2, why: "Slow breathing and pace help confidence." },
+      { objective: "O3", q: "How can AI help with your talk?", options: ["It gives the talk for you", "It makes it longer", "It removes your ask", "It suggests ways to make it clearer and stronger"], answer: 3, why: "AI can give feedback on your draft." },
+      { objective: "O4", q: "Feedback is:", options: ["Information that helps someone do better", "A punishment", "A type of food", "A complaint"], answer: 0, why: "Feedback is for growth." },
+      { objective: "O4", q: "A good feedback shape is:", options: ["Only criticism", "One thing that went well, one thing to try next time, and thanks", "Silence", "A long list of mistakes"], answer: 1, why: "Balanced feedback is easier to hear." },
+      { objective: "O4", q: "Good leaders ask for feedback:", options: ["Never", "Only once a year", "Often", "Only from the AI"], answer: 2, why: "Asking often helps leaders grow." },
+      { objective: "O5", q: "A project is:", options: ["A one-word wish", "A single phone call", "A feeling", "A goal with a start and an end"], answer: 3, why: "Projects have a clear start and finish." },
+      { objective: "O5", q: "When AI breaks your project into tasks, also ask it to:", options: ["List possible problems and how to handle them", "Do every task", "Pick your helpers", "Cancel it"], answer: 0, why: "Planning for problems makes the project stronger." },
+      { objective: "O5", q: "What keeps helpers involved in a project?", options: ["Never thanking them", "Letting them pick tasks, checking in, and thanking them", "Doing it all yourself", "Changing dates without telling them"], answer: 1, why: "People stay when they feel valued." },
+      { objective: "O1", q: "Which is a future skill that helps almost everyone?", options: ["Ignoring change", "Avoiding teamwork", "Using digital tools and AI safely", "Never learning"], answer: 2, why: "Digital and AI skills help across jobs." },
+      { objective: "O3", q: "In the final task, after practicing your talk with AI, you:", options: ["Stop there", "Make it longer", "Send it to strangers", "Get feedback and improve it once"], answer: 3, why: "Improving after feedback finishes the skill." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      1,
+      4,
+      8,
+      10,
+      13,
+      16,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Clear goal",
+        objective: "O1",
+        notYet: "A wish without how much or by when.",
+        meets: "One goal with what, how much and by when that the learner can really do.",
+        exceeds: "Sharpened with the AI's questions and includes a first step."
+      },
+      {
+        name: "Problems and solutions",
+        objective: "O2",
+        notYet: "Fewer than two problems, or no plan for them.",
+        meets: "Two possible problems, each with a chosen solution.",
+        exceeds: "Each solution shows a good point and a risk that were weighed."
+      },
+      {
+        name: "One-minute talk",
+        objective: "O3",
+        notYet: "No talk, or no clear ask.",
+        meets: "About one minute with why it matters, what you will do, and a call to action asking three people to help.",
+        exceeds: "Practiced out loud and improved once using the AI's feedback."
+      },
+      {
+        name: "Project plan",
+        objective: "O5",
+        notYet: "No tasks or dates.",
+        meets: "Tasks with a person and a date for each.",
+        exceeds: "Includes weekly check-ins and how helpers will be thanked."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Learners who carry out their community project within 60 days (follow-up survey)",
+      "Learners who recruit at least three helpers for a project",
+      "Learners who start the next skill they chose, such as another Koach Learn course, within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A smartphone with internet, or a library computer",
+      "A free AI assistant: Microsoft Copilot, ChatGPT or Google Gemini",
+      "Paper and pen for the goal, project plan and talk",
+      "A quiet place to practice the talk out loud",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Start by asking learners how they already lead at home, work or church.",
+      "Have learners give their one-minute talks to a partner as well as the AI, and use the feedback shape.",
+      "Keep projects small; help learners scale a goal down if it is too big for their time and help.",
+      "Remind learners to leave private details about people out of AI prompts.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
     ]
   }
 };

@@ -23,11 +23,35 @@ module.exports = {
     "Les règles et les permis pour l'eau changent d'un pays à l'autre : renseignez-vous auprès de votre autorité de l'eau et de votre agent de vulgarisation avant de creuser un forage, de pomper dans une rivière ou de construire un grand bassin. Chaque leçon dure environ cinq minutes et se termine par une tâche sur votre propre ferme. Un contrôle des connaissances termine chaque chapitre et un quiz de 20 questions termine le cours."
   ],
   finalTask: "Écrivez un plan d'irrigation d'une page pour une petite parcelle (la vôtre, ou un exemple comme 200 mètres carrés de tomates près de Nakuru, ou 500 mètres carrés d'oignons et de piments près de Kano) : la culture et ses stades où elle a le plus soif, d'où viendra l'eau et combien vous pouvez en stocker, le goutte-à-goutte ou l'autre système que vous utiliserez, un calendrier d'arrosage par semaine avec la façon de vérifier le sol, comment vous éviterez l'engorgement et l'accumulation de sel, et la pompe que vous choisiriez et pourquoi.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des petits et moyens agriculteurs, des ouvriers agricoles et de jeunes agriculteurs au Kenya, au Nigeria, au Ghana et partout en Afrique qui veulent produire malgré les périodes sèches, faire une culture de saison sèche ou mieux utiliser leur eau sur de petites parcelles de légumes, de maïs ou de plants.",
+    startingPoint: "La plupart dépendent de la pluie et arrosent à la main avec des arrosoirs ou des seaux quand ils le peuvent. Peu vérifient l'humidité du sol à la profondeur des racines, connaissent les stades où leur culture a le plus soif, récupèrent l'eau des toits ou du ruissellement, utilisent un kit de goutte-à-goutte ou savent dimensionner une pompe.",
+    gap: "Les périodes sèches pendant la floraison et la fructification font perdre le plus de rendement, et une eau gaspillée, sale ou mal gérée entraîne maladies, engorgement et sol salé. Planifier l'eau d'une petite parcelle permet aux agriculteurs de récolter plus, de produire en saison sèche et de dépenser moins en eau et en carburant.",
+    constraints: [
+      "Niveau de lecture : des mots simples et des phrases courtes ; chaque terme lié à l'eau est expliqué",
+      "Appareils : un téléphone simple et un cahier ; une petite parcelle pour s'exercer",
+      "Argent : les méthodes bon marché d'abord ; les apprenants comparent eux-mêmes les prix des fournisseurs",
+      "Les règles et les permis pour l'eau varient selon les pays : renseignez-vous auprès de l'autorité de l'eau avant de forer, de construire une retenue ou de pomper",
+      "Sécurité : les bassins et les citernes sont couverts et clôturés ; pour l'eau de boisson, demandez au service de santé comment la traiter"
+    ],
+    prerequisites: "Aucun. « Santé et fertilité du sol » aide pour le paillage et le drainage."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Pour votre culture principale", action: "nommer les stades de croissance où elle a le plus soif et vérifier à la main l'humidité du sol à la profondeur des racines", standard: "en décidant correctement s'il faut arroser ou attendre" },
+    { id: "O2", condition: "Pour votre toit et votre terre", action: "estimer combien de pluie un toit peut récupérer et choisir une méthode au champ pour garder la pluie sur votre terre", standard: "en comptant environ 1 litre par mètre carré pour chaque millimètre de pluie, et en prévoyant moins" },
+    { id: "O3", condition: "Pour l'eau récupérée", action: "choisir un moyen de stockage et le garder propre, couvert et en règle", standard: "avec le stockage couvert ou clôturé et tout permis vérifié" },
+    { id: "O4", condition: "Pour une parcelle d'environ 100 à 500 mètres carrés", action: "installer et entretenir un kit de goutte-à-goutte par gravité", standard: "avec le fût à au moins 1 mètre de haut, un filtre propre et aucun goutteur bouché" },
+    { id: "O5", condition: "Au long d'une saison de culture", action: "faire un calendrier d'arrosage par semaine et repérer tôt l'engorgement et l'accumulation de sel", standard: "en vérifiant le sol avant chaque arrosage" },
+    { id: "O6", condition: "Quand l'eau doit être remontée ou déplacée", action: "comparer les pompes à pédales, à carburant et solaires et lister les questions à poser à un fournisseur", standard: "en donnant le besoin en eau par jour, la hauteur de pompage et la distance, et en ne pompant que ce dont la culture a besoin" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Trouver et garder l'eau",
       lessons: [
         {
+          objectives: ["O1"],
           title: "De combien d'eau votre culture a-t-elle besoin, et quand ?",
           minutes: 5,
           goal: "Nommer les stades où votre culture a le plus soif et vérifier l'humidité du sol à la main.",
@@ -45,9 +69,14 @@ module.exports = {
           ],
           sources: [FAO_WATERNEEDS],
           tryIt: "Pour une culture que vous faites, écrivez les semaines après le semis où elle arrive à ses stades où elle a le plus soif. Puis vérifiez aujourd'hui votre sol à la profondeur des racines avec un doigt, un bâton ou un petit trou, et écrivez : humide ou sec.",
-          youCanNow: "dire quand votre culture a le plus besoin d'eau et vérifier l'humidité du sol à la profondeur des racines."
+          youCanNow: "dire quand votre culture a le plus besoin d'eau et vérifier l'humidité du sol à la profondeur des racines.",
+          quickCheck: [
+            { objective: "O1", q: "Quand les haricots ont-ils le plus besoin d'eau ?", options: ["Juste après la récolte", "À la floraison et au remplissage des gousses", "Seulement au stade de graine", "Quand les gousses sont sèches"], answer: 1, why: "La sécheresse fait le plus de tort aux haricots à la floraison et au remplissage des gousses." },
+            { objective: "O1", q: "Vous creusez un petit trou près des racines. À cette profondeur, la terre s'effrite et paraît sèche. Que faites-vous ?", options: ["Attendre encore une semaine", "Arroser seulement les feuilles", "Mettre de l'engrais à la place", "Arroser la culture maintenant"], answer: 3, why: "Si la terre s'effrite et paraît sèche à la profondeur des racines, il est temps d'arroser." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Récupérer l'eau de pluie des toits et des champs",
           minutes: 5,
           goal: "Calculer combien de pluie votre toit peut récupérer et choisir une méthode au champ pour garder la pluie sur votre terre.",
@@ -65,9 +94,14 @@ module.exports = {
           ],
           sources: [FAO_HARVEST],
           tryIt: "Mesurez le toit de votre maison ou de votre magasin et trouvez la pluie annuelle. Calculez combien de litres il pourrait récupérer en un an. Utilisez la calculatrice de votre téléphone, ou demandez à un assistant d'IA sur téléphone de vérifier votre calcul.",
-          youCanNow: "estimer combien d'eau de pluie vous pouvez récupérer et choisir une méthode au champ pour garder la pluie sur votre terre."
+          youCanNow: "estimer combien d'eau de pluie vous pouvez récupérer et choisir une méthode au champ pour garder la pluie sur votre terre.",
+          quickCheck: [
+            { objective: "O2", q: "Laquelle est une méthode au champ qui garde la pluie sur votre terre ?", options: ["Les poquets de plantation ou les billons en courbe de niveau", "Brûler l'herbe", "Labourer dans le sens de la pente", "Laisser le sol nu"], answer: 0, why: "Les poquets de plantation, les cordons et les billons en courbe de niveau retiennent la pluie là où elle tombe." },
+            { objective: "O2", q: "Au prochain orage, l'eau dévale le chemin de votre ferme. Que pourriez-vous en faire ?", options: ["La laisser partir à la rivière", "Bloquer le chemin", "La conduire vers un bassin bâché ou une mare de ferme", "Creuser un trou au milieu du chemin"], answer: 2, why: "L'eau qui ruisselle des routes et des chemins peut être conduite vers un bassin bâché ou une mare pour plus tard." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Stocker l'eau sans danger",
           minutes: 4,
           goal: "Choisir un moyen de stockage de l'eau et le garder propre, couvert et en règle.",
@@ -85,17 +119,21 @@ module.exports = {
           ],
           sources: [WRA],
           tryIt: "Écrivez quel stockage convient à votre ferme et à votre budget, comment vous allez le couvrir et le clôturer, et le nom du service de votre pays que vous consulteriez avant de forer ou de pomper.",
-          youCanNow: "choisir un stockage d'eau, le garder sans danger et savoir quand il vous faut un permis."
+          youCanNow: "choisir un stockage d'eau, le garder sans danger et savoir quand il vous faut un permis.",
+          quickCheck: [
+            { objective: "O3", q: "Quel stockage perd le plus d'eau s'il n'est ni bâché ni couvert ?", options: ["Une citerne en plastique couverte", "Une citerne en ferrociment", "Une citerne enterrée", "Une mare de ferme ouverte et non bâchée"], answer: 3, why: "Les mares perdent de l'eau dans le sol si elles ne sont pas bâchées, et au soleil si elles ne sont pas ombragées ou couvertes." },
+            { objective: "O3", q: "Vous voulez boire une partie de l'eau de pluie stockée. Que faites-vous ?", options: ["La boire directement dans la mare", "Demander au service de santé comment la traiter", "Ajouter de l'engrais pour la nettoyer", "Utiliser l'eau du premier rinçage"], answer: 1, why: "L'eau de boisson demande plus de soin que l'eau pour les cultures ; demandez au service de santé comment la traiter." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Trouver et garder l'eau",
         questions: [
-          { q: "Quand le maïs souffre-t-il le plus de la sécheresse ?", options: ["À la sortie des panicules et des soies", "Juste après la récolte", "Avant le semis", "Quand les épis sont secs"], answer: 0, why: "Les stades de floraison sont les plus sensibles ; une période sèche à ce moment fait perdre le plus de récolte." },
-          { q: "Comment vérifier si une culture a besoin d'eau ?", options: ["Regarder seulement le dessus du sol", "Attendre que les feuilles meurent", "Vérifier l'humidité à la profondeur des racines avec un doigt, un bâton ou un petit trou", "Arroser toutes les heures"], answer: 2, why: "Les racines sont sous la surface, alors vérifiez là." },
-          { q: "Un toit fait 40 mètres carrés et reçoit 500 mm de pluie par an. Combien pourrait-il récupérer au maximum, environ ?", options: ["200 litres", "2 000 litres", "540 litres", "20 000 litres"], answer: 3, why: "40 x 500 = 20 000 litres ; la récolte réelle sera un peu plus faible." },
-          { q: "À quoi sert un tuyau de premier rinçage ?", options: ["À pomper l'eau vers le haut", "À jeter la première pluie du toit, la plus sale", "À chauffer l'eau", "À mesurer la pluie"], answer: 1, why: "Il empêche la poussière et les fientes d'entrer dans la citerne." },
-          { q: "Pourquoi couvrir une citerne ou un bassin ?", options: ["Pour empêcher la saleté et les animaux d'entrer et les moustiques de s'y reproduire", "Pour rendre l'eau plus chaude", "Pour la rendre plus lourde", "Les couvercles ne servent à rien"], answer: 0, why: "Couvrir garde l'eau propre et sans danger." }
+          { objective: "O1", q: "Quand le maïs souffre-t-il le plus de la sécheresse ?", options: ["À la sortie des panicules et des soies", "Juste après la récolte", "Avant le semis", "Quand les épis sont secs"], answer: 0, why: "Les stades de floraison sont les plus sensibles ; une période sèche à ce moment fait perdre le plus de récolte." },
+          { objective: "O1", q: "Comment vérifier si une culture a besoin d'eau ?", options: ["Regarder seulement le dessus du sol", "Attendre que les feuilles meurent", "Vérifier l'humidité à la profondeur des racines avec un doigt, un bâton ou un petit trou", "Arroser toutes les heures"], answer: 2, why: "Les racines sont sous la surface, alors vérifiez là." },
+          { objective: "O2", q: "Un toit fait 40 mètres carrés et reçoit 500 mm de pluie par an. Combien pourrait-il récupérer au maximum, environ ?", options: ["200 litres", "2 000 litres", "540 litres", "20 000 litres"], answer: 3, why: "40 x 500 = 20 000 litres ; la récolte réelle sera un peu plus faible." },
+          { objective: "O2", q: "À quoi sert un tuyau de premier rinçage ?", options: ["À pomper l'eau vers le haut", "À jeter la première pluie du toit, la plus sale", "À chauffer l'eau", "À mesurer la pluie"], answer: 1, why: "Il empêche la poussière et les fientes d'entrer dans la citerne." },
+          { objective: "O3", q: "Pourquoi couvrir une citerne ou un bassin ?", options: ["Pour empêcher la saleté et les animaux d'entrer et les moustiques de s'y reproduire", "Pour rendre l'eau plus chaude", "Pour la rendre plus lourde", "Les couvercles ne servent à rien"], answer: 0, why: "Couvrir garde l'eau propre et sans danger." }
         ]
       }
     },
@@ -103,6 +141,7 @@ module.exports = {
       name: "Chapitre 2 : Apporter l'eau à la culture",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Le goutte-à-goutte bon marché",
           minutes: 6,
           goal: "Installer et entretenir un kit de goutte-à-goutte à seau ou à fût pour une petite parcelle.",
@@ -120,9 +159,14 @@ module.exports = {
           ],
           sources: [FAO_DRIP],
           tryIt: "Dessinez un plan de goutte-à-goutte pour une petite parcelle : où se trouve le fût (au moins 1 m de haut), le filtre, le tuyau principal et chaque ligne. Puis demandez à deux fournisseurs ou vendeurs d'intrants le prix d'un kit de cette taille et notez les deux.",
-          youCanNow: "installer, faire marcher et entretenir un kit de goutte-à-goutte par gravité bon marché."
+          youCanNow: "installer, faire marcher et entretenir un kit de goutte-à-goutte par gravité bon marché.",
+          quickCheck: [
+            { objective: "O4", q: "Qu'est-ce qu'un goutteur sur une ligne de goutte-à-goutte ?", options: ["La citerne", "La pompe", "Un petit trou ou un goutteur qui laisse sortir l'eau à chaque plant", "Le filtre"], answer: 2, why: "Les goutteurs sont les petits trous qui font goutter l'eau au pied de chaque plant." },
+            { objective: "O4", q: "Votre eau vient d'une mare boueuse. Comment protégez-vous votre kit de goutte-à-goutte ?", options: ["Garder le filtre en place, le nettoyer souvent et purger le bout des lignes", "Enlever le filtre pour que l'eau coule plus vite", "Ne jamais vérifier les goutteurs", "Faire fonctionner le kit seulement à midi"], answer: 0, why: "Une eau propre, un filtre propre et une purge régulière évitent le bouchage, le principal problème du goutte-à-goutte." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Le calendrier d'arrosage : sans engorgement ni sel",
           minutes: 5,
           goal: "Faire un calendrier d'arrosage par semaine et repérer tôt l'engorgement et l'accumulation de sel.",
@@ -140,9 +184,14 @@ module.exports = {
           ],
           sources: [FAO_WATERNEEDS, FAO_SALINITY],
           tryIt: "Écrivez un calendrier d'arrosage d'une semaine pour une culture : les jours, le moment de la journée et la durée. À côté, écrivez les deux signes d'alerte de l'engorgement et les deux de l'accumulation de sel que vous chercherez à chaque arrosage.",
-          youCanNow: "planifier l'irrigation et repérer l'engorgement et l'accumulation de sel avant qu'ils détruisent une culture."
+          youCanNow: "planifier l'irrigation et repérer l'engorgement et l'accumulation de sel avant qu'ils détruisent une culture.",
+          quickCheck: [
+            { objective: "O5", q: "Que décide un calendrier d'arrosage ?", options: ["Quelle semence acheter", "Quand arroser et combien", "Où vendre", "Quelle pompe acheter"], answer: 1, why: "Un calendrier dit quand arroser et combien, et la vérification du sol a le dernier mot." },
+            { objective: "O5", q: "Vous arrosez avec l'eau d'un forage dans une zone sèche, et la croissance est moins bonne à chaque saison. Que faites-vous ?", options: ["Arroser deux fois plus", "Arrêter tout arrosage", "Mettre plus d'engrais", "Demander à votre agent de vulgarisation ou à un laboratoire d'analyser l'eau et le sol"], answer: 3, why: "L'eau de forage en zone sèche peut apporter du sel ; une analyse de l'eau et du sol montre ce qui ne va pas." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Choisir une pompe, y compris une pompe solaire",
           minutes: 5,
           goal: "Comparer les pompes à pédales, à carburant et solaires et lister les questions à poser à un fournisseur.",
@@ -161,17 +210,21 @@ module.exports = {
           ],
           sources: [FAO_SOLAR, WRA],
           tryIt: "Tâche finale : écrivez votre plan d'irrigation d'une page. Mettez-y les stades où votre culture a soif, votre source d'eau et votre stockage, votre goutte-à-goutte ou autre système, un calendrier par semaine, comment vous éviterez l'engorgement et le sel, et la pompe que vous choisiriez avec votre hauteur, votre distance et votre besoin en eau par jour.",
-          youCanNow: "choisir le bon type de pompe et monter un plan d'irrigation complet pour une petite parcelle."
+          youCanNow: "choisir le bon type de pompe et monter un plan d'irrigation complet pour une petite parcelle.",
+          quickCheck: [
+            { objective: "O6", q: "Quelle pompe utilise votre propre force et convient à une petite parcelle près d'une eau peu profonde ?", options: ["Une pompe à pédales ou à main", "Une grosse pompe diesel", "Un grand système solaire", "Aucune pompe"], answer: 0, why: "Les pompes à pédales et à main sont bon marché et conviennent aux petites parcelles près d'une eau peu profonde." },
+            { objective: "O6", q: "Votre nouvelle pompe solaire peut tourner toute la journée gratuitement, mais la rivière baisse. Que faites-vous ?", options: ["Pomper toute la journée puisque c'est gratuit", "Vendre l'eau en trop", "Pomper seulement ce dont la culture a besoin et partager l'eau équitablement avec les voisins", "Déplacer la pompe plus en amont"], answer: 2, why: "Un pompage gratuit peut prendre trop d'eau ; pompez seulement ce dont la culture a besoin et suivez les règles de l'autorité de l'eau." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Apporter l'eau à la culture",
         questions: [
-          { q: "Quel est le principal problème à éviter avec les kits de goutte-à-goutte ?", options: ["Trop de pression", "Les goutteurs bouchés", "Trop de plantes", "Les feuilles mouillées"], answer: 1, why: "La saleté bouche les goutteurs ; un filtre propre et le rinçage l'évitent." },
-          { q: "À quelle hauteur placer le fût d'un kit de goutte-à-goutte par gravité ?", options: ["Par terre", "Enterré sous les planches", "Au moins 1 mètre au-dessus des planches", "Ça n'a pas d'importance"], answer: 2, why: "La FAO dit de placer le fût au moins 1 mètre plus haut pour avoir assez de pression." },
-          { q: "Les plantes sont jaunes et fanées, le sol sent l'aigre et l'eau stagne. Quel est le problème ?", options: ["Pas assez d'eau", "Trop de soleil", "Du sel dans l'air", "L'engorgement"], answer: 3, why: "L'eau qui stagne et l'odeur aigre montrent que les racines n'ont pas d'air." },
-          { q: "Vous voyez une croûte blanche sur le sol et des bords de feuilles brûlés. Que faire ?", options: ["Demander une analyse de l'eau et du sol et améliorer le drainage", "Arroser beaucoup plus chaque jour", "Ajouter du sel", "Ne rien faire"], answer: 0, why: "Ce sont des signes d'accumulation de sel ; la FAO la relie à trop d'arrosage et à un mauvais drainage." },
-          { q: "Pourquoi la FAO met-elle en garde au sujet des pompes solaires ?", options: ["Elles ne marchent jamais", "Elles font trop de bruit", "Un pompage gratuit peut pousser à prendre trop d'eau", "Elles ont besoin d'essence"], answer: 2, why: "Avec presque aucun frais de fonctionnement, les agriculteurs risquent de trop pomper les rivières et les nappes." }
+          { objective: "O4", q: "Quel est le principal problème à éviter avec les kits de goutte-à-goutte ?", options: ["Trop de pression", "Les goutteurs bouchés", "Trop de plantes", "Les feuilles mouillées"], answer: 1, why: "La saleté bouche les goutteurs ; un filtre propre et le rinçage l'évitent." },
+          { objective: "O4", q: "À quelle hauteur placer le fût d'un kit de goutte-à-goutte par gravité ?", options: ["Par terre", "Enterré sous les planches", "Au moins 1 mètre au-dessus des planches", "Ça n'a pas d'importance"], answer: 2, why: "La FAO dit de placer le fût au moins 1 mètre plus haut pour avoir assez de pression." },
+          { objective: "O5", q: "Les plantes sont jaunes et fanées, le sol sent l'aigre et l'eau stagne. Quel est le problème ?", options: ["Pas assez d'eau", "Trop de soleil", "Du sel dans l'air", "L'engorgement"], answer: 3, why: "L'eau qui stagne et l'odeur aigre montrent que les racines n'ont pas d'air." },
+          { objective: "O5", q: "Vous voyez une croûte blanche sur le sol et des bords de feuilles brûlés. Que faire ?", options: ["Demander une analyse de l'eau et du sol et améliorer le drainage", "Arroser beaucoup plus chaque jour", "Ajouter du sel", "Ne rien faire"], answer: 0, why: "Ce sont des signes d'accumulation de sel ; la FAO la relie à trop d'arrosage et à un mauvais drainage." },
+          { objective: "O6", q: "Pourquoi la FAO met-elle en garde au sujet des pompes solaires ?", options: ["Elles ne marchent jamais", "Elles font trop de bruit", "Un pompage gratuit peut pousser à prendre trop d'eau", "Elles ont besoin d'essence"], answer: 2, why: "Avec presque aucun frais de fonctionnement, les agriculteurs risquent de trop pomper les rivières et les nappes." }
         ]
       }
     }
@@ -179,26 +232,113 @@ module.exports = {
   quiz: {
     title: "Quiz final : Irrigation et gestion de l'eau",
     questions: [
-      { q: "Selon la FAO, le besoin en eau d'une culture dépend :", options: ["Seulement du prix de l'eau", "Du climat, du type de culture et du stade de croissance", "De la couleur de la culture", "Du jour de la semaine"], answer: 1, why: "La FAO cite le climat, le type de culture et le stade de croissance." },
-      { q: "Quel temps fait consommer le plus d'eau aux cultures ?", options: ["Frais et nuageux", "Calme et brumeux", "Chaud, ensoleillé, sec et venteux", "Froid et humide"], answer: 2, why: "La chaleur, le soleil, l'air sec et le vent augmentent la consommation d'eau." },
-      { q: "La tomate est la plus sensible au manque d'eau :", options: ["À la floraison et à la nouaison", "À l'achat des semences", "Après la dernière récolte", "Quand le champ est nu"], answer: 0, why: "La floraison et la nouaison sont les stades où elle a le plus soif." },
-      { q: "La pluie efficace, c'est :", options: ["Toute la pluie qui tombe", "La pluie qui tombe la nuit", "La pluie annoncée à la radio", "La partie de la pluie que la culture peut vraiment utiliser"], answer: 3, why: "Une partie de la pluie ruisselle ou descend trop profond ; le reste est efficace." },
-      { q: "Environ combien d'eau donne 1 mm de pluie sur 1 mètre carré de toit ?", options: ["1 litre", "10 litres", "100 litres", "1 000 litres"], answer: 0, why: "1 mm sur 1 mètre carré donne environ 1 litre." },
-      { q: "Un zaï, c'est :", options: ["Un forage", "Un petit trou de plantation avec du fumier qui attrape la pluie aux racines", "Un type de pompe", "Une citerne"], answer: 1, why: "Le zaï concentre la pluie et les nutriments près de la plante." },
-      { q: "Pourquoi bâcher une mare de ferme ?", options: ["Pour rendre l'eau salée", "Pour attirer les animaux", "Pour empêcher l'eau de fuir dans le sol", "La bâche n'est jamais utile"], answer: 2, why: "Une mare non bâchée perd beaucoup d'eau dans le sol." },
-      { q: "Pourquoi faut-il clôturer les mares de ferme ?", options: ["Pour protéger les enfants et les animaux", "Pour les rendre plus profondes", "Pour arrêter la pluie", "Pour chauffer l'eau"], answer: 0, why: "Une mare ouverte présente un risque de noyade." },
-      { q: "Au Kenya, quel organisme délivre les permis d'utilisation de l'eau, par exemple pour les forages ?", options: ["Kenya Bureau of Standards", "Kenya Revenue Authority", "Kenya Power", "Water Resources Authority (WRA)"], answer: 3, why: "La WRA contrôle l'utilisation de l'eau et délivre les permis." },
-      { q: "Un grand avantage du goutte-à-goutte est que :", options: ["Il mouille les feuilles", "L'eau va aux racines avec moins de pertes", "Il n'a pas besoin d'eau", "Il fait pousser les mauvaises herbes plus vite"], answer: 1, why: "Le goutte-à-goutte apporte l'eau aux racines avec peu de pertes." },
-      { q: "Selon la FAO, les kits de goutte-à-goutte familiaux conviennent à des parcelles d'environ :", options: ["1 à 5 mètres carrés", "100 hectares", "Tout un comté", "100 à 500 mètres carrés"], answer: 3, why: "Le manuel de la FAO présente le goutte-à-goutte familial simplifié pour environ 100 à 500 mètres carrés." },
-      { q: "Une plante de votre ligne de goutte-à-goutte est sèche. La cause la plus probable est :", options: ["Un goutteur bouché", "Trop de soleil sur le fût", "La plante est trop verte", "Le filtre est trop propre"], answer: 0, why: "Une plante sèche veut souvent dire que son goutteur est bouché." },
-      { q: "Pourquoi mettre du paillis sur les lignes de goutte-à-goutte ?", options: ["Seulement pour les cacher du soleil", "Pour rendre l'eau plus chaude", "Pour boucher les goutteurs", "Pour réduire l'évaporation du sol"], answer: 3, why: "Le paillis empêche l'humidité du sol de s'évaporer." },
-      { q: "Le meilleur moment de la journée pour irriguer est en général :", options: ["Midi en plein soleil", "Tôt le matin ou en fin d'après-midi", "Seulement à minuit", "N'importe quand ; ça ne change rien"], answer: 1, why: "On perd moins d'eau au soleil aux heures fraîches de la journée." },
-      { q: "Il a bien plu cette nuit. Votre calendrier dit d'arroser aujourd'hui. Que faites-vous ?", options: ["J'arrose le double", "J'arrose quand même comme prévu", "Je vérifie le sol ; je n'arrose pas s'il est humide à la profondeur des racines", "Je draine le champ"], answer: 2, why: "C'est le sol qui a le dernier mot ; on n'arrose pas après une bonne pluie." },
-      { q: "Sur une argile lourde qui s'engorge facilement, une bonne pratique est :", options: ["Inonder le champ", "Ajouter plus d'eau", "Planter dans un creux", "Des planches surélevées ou des billons et des rigoles de drainage"], answer: 3, why: "Les planches surélevées et les rigoles laissent partir l'eau en trop." },
-      { q: "Selon la FAO, une cause fréquente d'accumulation de sel dans un sol irrigué est :", options: ["Le paillage", "La culture de légumineuses", "Trop d'arrosage et un mauvais drainage", "L'utilisation d'un filtre"], answer: 2, why: "Il entre plus de sel qu'il n'en part quand il y a trop d'eau et un mauvais drainage." },
-      { q: "Pour choisir la taille d'une pompe, le fournisseur doit connaître :", options: ["Votre couleur préférée", "Le besoin en eau par jour, la hauteur et la distance", "Seulement votre budget", "Le code de votre carte bancaire"], answer: 1, why: "Le besoin en eau, la hauteur et la distance décident de la bonne pompe." },
-      { q: "Par rapport à une motopompe à essence, une pompe solaire en général :", options: ["Coûte plus cher à l'achat mais très peu à faire marcher", "Coûte moins cher à l'achat et plus cher à faire marcher", "A besoin de gasoil", "Ne marche que la nuit"], answer: 0, why: "Les pompes solaires coûtent plus cher à l'achat mais utilisent le soleil gratuit." },
-      { q: "Un fournisseur propose une pompe solaire avec paiement à l'usage. Que faire d'abord ?", options: ["Signer tout de suite", "Lui donner votre code secret", "Lire par écrit le prix total, les conditions, la garantie et le service", "En acheter deux"], answer: 2, why: "Connaissez le coût total et l'aide que vous recevrez avant de signer." }
+      { objective: "O1", q: "Selon la FAO, le besoin en eau d'une culture dépend :", options: ["Seulement du prix de l'eau", "Du climat, du type de culture et du stade de croissance", "De la couleur de la culture", "Du jour de la semaine"], answer: 1, why: "La FAO cite le climat, le type de culture et le stade de croissance." },
+      { objective: "O1", q: "Quel temps fait consommer le plus d'eau aux cultures ?", options: ["Frais et nuageux", "Calme et brumeux", "Chaud, ensoleillé, sec et venteux", "Froid et humide"], answer: 2, why: "La chaleur, le soleil, l'air sec et le vent augmentent la consommation d'eau." },
+      { objective: "O1", q: "La tomate est la plus sensible au manque d'eau :", options: ["À la floraison et à la nouaison", "À l'achat des semences", "Après la dernière récolte", "Quand le champ est nu"], answer: 0, why: "La floraison et la nouaison sont les stades où elle a le plus soif." },
+      { objective: "O1", q: "La pluie efficace, c'est :", options: ["Toute la pluie qui tombe", "La pluie qui tombe la nuit", "La pluie annoncée à la radio", "La partie de la pluie que la culture peut vraiment utiliser"], answer: 3, why: "Une partie de la pluie ruisselle ou descend trop profond ; le reste est efficace." },
+      { objective: "O2", q: "Environ combien d'eau donne 1 mm de pluie sur 1 mètre carré de toit ?", options: ["1 litre", "10 litres", "100 litres", "1 000 litres"], answer: 0, why: "1 mm sur 1 mètre carré donne environ 1 litre." },
+      { objective: "O2", q: "Un zaï, c'est :", options: ["Un forage", "Un petit trou de plantation avec du fumier qui attrape la pluie aux racines", "Un type de pompe", "Une citerne"], answer: 1, why: "Le zaï concentre la pluie et les nutriments près de la plante." },
+      { objective: "O3", q: "Pourquoi bâcher une mare de ferme ?", options: ["Pour rendre l'eau salée", "Pour attirer les animaux", "Pour empêcher l'eau de fuir dans le sol", "La bâche n'est jamais utile"], answer: 2, why: "Une mare non bâchée perd beaucoup d'eau dans le sol." },
+      { objective: "O3", q: "Pourquoi faut-il clôturer les mares de ferme ?", options: ["Pour protéger les enfants et les animaux", "Pour les rendre plus profondes", "Pour arrêter la pluie", "Pour chauffer l'eau"], answer: 0, why: "Une mare ouverte présente un risque de noyade." },
+      { objective: "O3", q: "Au Kenya, quel organisme délivre les permis d'utilisation de l'eau, par exemple pour les forages ?", options: ["Kenya Bureau of Standards", "Kenya Revenue Authority", "Kenya Power", "Water Resources Authority (WRA)"], answer: 3, why: "La WRA contrôle l'utilisation de l'eau et délivre les permis." },
+      { objective: "O4", q: "Un grand avantage du goutte-à-goutte est que :", options: ["Il mouille les feuilles", "L'eau va aux racines avec moins de pertes", "Il n'a pas besoin d'eau", "Il fait pousser les mauvaises herbes plus vite"], answer: 1, why: "Le goutte-à-goutte apporte l'eau aux racines avec peu de pertes." },
+      { objective: "O4", q: "Selon la FAO, les kits de goutte-à-goutte familiaux conviennent à des parcelles d'environ :", options: ["1 à 5 mètres carrés", "100 hectares", "Tout un comté", "100 à 500 mètres carrés"], answer: 3, why: "Le manuel de la FAO présente le goutte-à-goutte familial simplifié pour environ 100 à 500 mètres carrés." },
+      { objective: "O4", q: "Une plante de votre ligne de goutte-à-goutte est sèche. La cause la plus probable est :", options: ["Un goutteur bouché", "Trop de soleil sur le fût", "La plante est trop verte", "Le filtre est trop propre"], answer: 0, why: "Une plante sèche veut souvent dire que son goutteur est bouché." },
+      { objective: "O4", q: "Pourquoi mettre du paillis sur les lignes de goutte-à-goutte ?", options: ["Seulement pour les cacher du soleil", "Pour rendre l'eau plus chaude", "Pour boucher les goutteurs", "Pour réduire l'évaporation du sol"], answer: 3, why: "Le paillis empêche l'humidité du sol de s'évaporer." },
+      { objective: "O5", q: "Le meilleur moment de la journée pour irriguer est en général :", options: ["Midi en plein soleil", "Tôt le matin ou en fin d'après-midi", "Seulement à minuit", "N'importe quand ; ça ne change rien"], answer: 1, why: "On perd moins d'eau au soleil aux heures fraîches de la journée." },
+      { objective: "O5", q: "Il a bien plu cette nuit. Votre calendrier dit d'arroser aujourd'hui. Que faites-vous ?", options: ["J'arrose le double", "J'arrose quand même comme prévu", "Je vérifie le sol ; je n'arrose pas s'il est humide à la profondeur des racines", "Je draine le champ"], answer: 2, why: "C'est le sol qui a le dernier mot ; on n'arrose pas après une bonne pluie." },
+      { objective: "O5", q: "Sur une argile lourde qui s'engorge facilement, une bonne pratique est :", options: ["Inonder le champ", "Ajouter plus d'eau", "Planter dans un creux", "Des planches surélevées ou des billons et des rigoles de drainage"], answer: 3, why: "Les planches surélevées et les rigoles laissent partir l'eau en trop." },
+      { objective: "O5", q: "Selon la FAO, une cause fréquente d'accumulation de sel dans un sol irrigué est :", options: ["Le paillage", "La culture de légumineuses", "Trop d'arrosage et un mauvais drainage", "L'utilisation d'un filtre"], answer: 2, why: "Il entre plus de sel qu'il n'en part quand il y a trop d'eau et un mauvais drainage." },
+      { objective: "O6", q: "Pour choisir la taille d'une pompe, le fournisseur doit connaître :", options: ["Votre couleur préférée", "Le besoin en eau par jour, la hauteur et la distance", "Seulement votre budget", "Le code de votre carte bancaire"], answer: 1, why: "Le besoin en eau, la hauteur et la distance décident de la bonne pompe." },
+      { objective: "O6", q: "Par rapport à une motopompe à essence, une pompe solaire en général :", options: ["Coûte plus cher à l'achat mais très peu à faire marcher", "Coûte moins cher à l'achat et plus cher à faire marcher", "A besoin de gasoil", "Ne marche que la nuit"], answer: 0, why: "Les pompes solaires coûtent plus cher à l'achat mais utilisent le soleil gratuit." },
+      { objective: "O6", q: "Un fournisseur propose une pompe solaire avec paiement à l'usage. Que faire d'abord ?", options: ["Signer tout de suite", "Lui donner votre code secret", "Lire par écrit le prix total, les conditions, la garantie et le service", "En acheter deux"], answer: 2, why: "Connaissez le coût total et l'aide que vous recevrez avant de signer." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      2,
+      4,
+      6,
+      8,
+      9,
+      11,
+      13,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie du plan et vérifiez-la de nouveau.",
+    criteria: [
+      {
+        name: "Culture et stades où elle a soif",
+        objective: "O1",
+        notYet: "Les stades où la culture a le plus soif manquent ou sont faux.",
+        meets: "Nomme la culture et les stades où elle a le plus soif, avec la façon de vérifier le sol.",
+        exceeds: "Note la date de semis pour placer les stades où elle a soif sur le calendrier."
+      },
+      {
+        name: "Source et stockage de l'eau",
+        objective: "O2",
+        notYet: "Pas de source d'eau, ou pas d'estimation de ce qui peut être stocké.",
+        meets: "La source d'eau, une estimation pour le toit ou le ruissellement, et un stockage couvert, avec tout permis vérifié.",
+        exceeds: "Inclut une méthode au champ, comme les poquets de plantation, pour garder la pluie sur la terre."
+      },
+      {
+        name: "Système d'irrigation",
+        objective: "O4",
+        notYet: "Pas de système, ou pas de plan contre le bouchage.",
+        meets: "Un goutte-à-goutte ou un autre système adapté à la parcelle, avec la hauteur du fût, le filtre et la purge.",
+        exceeds: "Inclut du paillis sur les lignes et une liste de pièces de rechange."
+      },
+      {
+        name: "Calendrier et vérification du sol",
+        objective: "O5",
+        notYet: "Pas de calendrier, ou arrosage à midi sans vérifier le sol.",
+        meets: "Un calendrier par semaine avec le moment de la journée, plus d'eau aux stades où la culture a soif, et une vérification du sol avant d'arroser.",
+        exceeds: "Dit quoi faire après une bonne pluie et pendant les semaines chaudes et venteuses."
+      },
+      {
+        name: "Engorgement et sel",
+        objective: "O5",
+        notYet: "Pas de plan contre l'engorgement ou le sel.",
+        meets: "Les signes à surveiller et des mesures comme les drains, les planches surélevées et ne pas trop arroser.",
+        exceeds: "Prévoit une analyse de l'eau et du sol en cas d'eau de forage dans une zone sèche."
+      },
+      {
+        name: "Choix de la pompe",
+        objective: "O6",
+        notYet: "Pas de choix de pompe, ou pas de raison.",
+        meets: "Un type de pompe avec sa raison, le besoin en eau par jour, la hauteur de pompage et la distance.",
+        exceeds: "Liste la garantie, les pièces de rechange et le service après-vente à demander par écrit."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent le cours et obtiennent « Atteint » ou « Dépasse » sur chaque ligne de la grille pour le plan d'irrigation",
+      "Les apprenants qui déclarent avoir installé un stockage d'eau de pluie ou un kit de goutte-à-goutte dans la saison qui suit (enquête de suivi)",
+      "Les apprenants qui déclarent avoir fait une culture de saison sèche ou perdu moins de rendement pendant une période sèche",
+      "Les apprenants qui commencent un autre cours agricole Koach Learn dans les 30 jours"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un cahier, un stylo et un téléphone simple avec une calculatrice",
+      "Une petite parcelle pour s'exercer à vérifier l'humidité du sol",
+      "Un kit de goutte-à-goutte bon marché ou un seau, si possible, pour une démonstration",
+      "Environ 60 minutes au total, en séances courtes, plus du temps pour écrire le plan d'irrigation"
+    ],
+    facilitatorNotes: [
+      "Dans un groupement d'agriculteurs ou un champ-école : faites le test de départ ensemble, puis vérifiez l'humidité du sol dans une vraie parcelle.",
+      "Calculez ensemble une estimation de récupération sur un vrai toit du site.",
+      "Installez en groupe un kit de goutte-à-goutte à seau ou à fût et entraînez-vous à nettoyer le filtre et à purger les lignes.",
+      "Rappelez aux apprenants de vérifier les permis d'eau auprès de leur autorité de l'eau, et de clôturer et couvrir les bassins et les citernes.",
+      "Évaluez le plan d'irrigation avec la grille et donnez un retour sur une ligne « Pas encore » à la fois."
     ]
   }
 };

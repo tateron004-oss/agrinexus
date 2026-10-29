@@ -16,11 +16,35 @@ module.exports = {
     "Au chapitre 1, vous apprendrez à vous protéger. Au chapitre 2, vous apprendrez à utiliser l'IA de façon responsable. Chaque leçon dure environ cinq minutes avec une tâche « Essayez maintenant ». Un contrôle des connaissances clôt chaque chapitre et un quiz de 20 questions clôt le cours."
   ],
   finalTask: "Remplissez une liste de contrôle personnelle de sécurité en ligne et d'usage responsable de l'IA : remplacez le mot de passe de votre e-mail principal par une phrase de passe solide, activez pour lui la connexion en deux étapes, vérifiez les mises à jour de votre téléphone et de vos applications, notez les trois endroits où signaler les arnaques, et écrivez une carte de cinq lignes avec vos règles personnelles sur l'IA : vie privée, vérification des réponses, honnêteté, équité et quand ne pas utiliser l'IA.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des adultes qui sortent de prison (réinsertion). Beaucoup étaient absents pendant que les smartphones, les comptes en ligne et les outils d'IA changeaient, et ils créent maintenant des comptes e-mail, d'emploi et d'aides sociales, souvent pour la première fois.",
+    startingPoint: "Ils savent appeler et envoyer des SMS avec un téléphone simple ; certains ont un nouveau compte e-mail et ont essayé un assistant d'IA. Beaucoup réutilisent des mots de passe simples, n'ont jamais utilisé la connexion en deux étapes et n'ont jamais vu d'arnaque par voix ou vidéo générée par IA.",
+    gap: "Les personnes qui reconstruisent leur vie sont souvent visées par des arnaques qui peuvent voler leurs aides, leur salaire ou leur identité, et un mauvais usage de l'IA à l'école ou au travail peut coûter un certificat ou un emploi. Les apprenants doivent sécuriser leurs comptes, repérer et signaler les arnaques, et utiliser l'IA de façon privée, prudente et honnête.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes (niveau fin d'école primaire)",
+      "Appareils : parfois seulement un téléphone simple ou un ordinateur de bibliothèque à temps limité",
+      "Temps : des leçons de 5 minutes qui s'insèrent entre les rendez-vous et le travail",
+      "Certaines conditions de libération conditionnelle ou de mise à l'épreuve limitent l'usage d'internet ; les apprenants respectent leurs propres conditions",
+      "Risque élevé d'arnaque et d'atteinte à la vie privée : aucun vrai mot de passe, numéro de dossier ou numéro privé partagé dans un exercice"
+    ],
+    prerequisites: "Aucun. « Découvrir l'IA et prendre confiance avec le numérique » est un premier cours utile pour les apprenants qui découvrent l'IA."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Pour votre compte e-mail principal", action: "créer une phrase de passe solide, activer la connexion en deux étapes et vérifier les mises à jour de votre téléphone et de vos applications", standard: "sans aide, avec les codes de secours gardés en privé" },
+    { id: "O2", condition: "À partir d'un message ou d'un appel, y compris avec une voix ou une vidéo d'IA", action: "repérer les signes d'alerte de l'hameçonnage et des arnaques par IA", standard: "en ayant au moins 4 réponses justes sur 5" },
+    { id: "O3", condition: "Quand vous tombez sur une arnaque ou que vos informations sont volées", action: "lister où la signaler et les premières étapes pour vous protéger", standard: "en nommant les trois endroits de signalement aux États-Unis" },
+    { id: "O4", condition: "Avant d'envoyer un prompt à un outil d'IA", action: "vérifier le prompt et retirer les informations privées", standard: "sans partager aucun mot de passe ni numéro d'identité, de dossier, de compte bancaire ou de carte" },
+    { id: "O5", condition: "À partir d'une réponse d'IA", action: "vérifier qu'elle ne contient ni faits faux ni biais injustes", standard: "avant de l'utiliser" },
+    { id: "O6", condition: "À l'école, au travail ou en ligne", action: "suivre les règles d'usage de l'IA, dire comment l'IA a aidé et choisir quand ne pas l'utiliser", standard: "dans une carte de cinq lignes avec vos règles personnelles sur l'IA" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Se protéger en ligne",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Mots de passe solides et connexion en deux étapes",
           minutes: 5,
           goal: "Créer une phrase de passe solide et activer la connexion en deux étapes pour votre e-mail.",
@@ -38,9 +62,14 @@ module.exports = {
           ],
           sources: [{ name: "CISA : sensibilisation à la cybersécurité et Secure Our World", url: "https://www.cisa.gov/secure-our-world" }],
           tryIt: "Remplacez le mot de passe de votre e-mail principal par une phrase de passe solide et activez la connexion en deux étapes. Si vous ne pouvez pas le faire maintenant, notez les étapes et faites-le aujourd'hui.",
-          youCanNow: "créer une phrase de passe solide et protéger votre e-mail avec la connexion en deux étapes."
+          youCanNow: "créer une phrase de passe solide et protéger votre e-mail avec la connexion en deux étapes.",
+          quickCheck: [
+            { objective: "O1", q: "Pourquoi protéger d'abord votre compte e-mail ?", options: ["Il contient le plus de photos", "C'est le plus difficile à utiliser", "Quelqu'un qui entre dans votre e-mail peut réinitialiser vos autres mots de passe", "Les comptes e-mail coûtent de l'argent"], answer: 2, why: "Votre e-mail est la clé de vos autres comptes, car les réinitialisations de mot de passe y arrivent." },
+            { objective: "O1", q: "Le mot de passe de votre site d'emploi est le même que celui de votre e-mail. Que faites-vous ?", options: ["Créer une phrase de passe solide différente pour chacun", "Le garder : un seul mot de passe, c'est plus simple", "L'écrire sur la coque de votre téléphone", "Le donner à un ami pour s'en souvenir"], answer: 0, why: "Utilisez un mot de passe différent pour chaque compte important." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Repérer l'hameçonnage et les arnaques par IA",
           minutes: 6,
           goal: "Reconnaître les messages d'hameçonnage, les faux appels et les deepfakes avant de cliquer ou de payer.",
@@ -58,12 +87,17 @@ module.exports = {
           ],
           sources: [{ name: "FTC : reconnaître et éviter l'hameçonnage", url: "https://consumer.ftc.gov/articles/how-recognize-and-avoid-phishing-scams" }],
           tryIt: "Parcourez vos e-mails et SMS à la recherche d'un message qui pourrait être de l'hameçonnage. Listez les signes d'alerte qu'il montre. Avec votre famille, convenez d'un mot de sécurité pour vérifier les appels d'urgence.",
-          youCanNow: "repérer l'hameçonnage, les deepfakes et les arnaques par voix clonée, et réagir en sécurité."
+          youCanNow: "repérer l'hameçonnage, les deepfakes et les arnaques par voix clonée, et réagir en sécurité.",
+          quickCheck: [
+            { objective: "O2", q: "Qu'est-ce que l'hameçonnage ?", options: ["Un message sûr de votre banque", "Un moyen de sauvegarder votre téléphone", "Un type de mot de passe", "Un faux message qui essaie de vous faire cliquer, partager des informations ou envoyer de l'argent"], answer: 3, why: "L'hameçonnage est un faux message qui essaie de vous piéger." },
+            { objective: "O2", q: "Un appel a exactement la voix de votre agent de probation et vous dit de payer des frais aujourd'hui par virement. Que faites-vous ?", options: ["Payer tout de suite pour ne pas avoir d'ennuis", "Raccrocher et appeler le bureau à un numéro que vous connaissez déjà", "Lui donner le code envoyé sur votre téléphone", "Rappeler le numéro qui vous a appelé"], answer: 1, why: "Les voix peuvent être copiées par l'IA ; l'urgence et les virements sont des signes d'alerte, donc appelez un numéro que vous connaissez." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Signaler les arnaques et se remettre d'une usurpation d'identité",
           minutes: 5,
-          goal: "Savoir où signaler les arnaques et quoi faire en premier si vos informations sont volées.",
+          goal: "Lister où signaler les arnaques et les premières étapes à suivre si vos informations sont volées.",
           text: [
             "Signaler aide à arrêter les escrocs et peut vous aider à vous en remettre. Aux États-Unis, la FTC dit de transférer les e-mails d'hameçonnage à reportphishing@apwg.org, de transférer les SMS d'arnaque au 7726 (SPAM), et de signaler la fraude sur ReportFraud.ftc.gov.",
             "Si vous avez donné un numéro de sécurité sociale, de carte de crédit ou de compte bancaire, la FTC dit d'aller sur IdentityTheft.gov pour les étapes selon ce qui a été perdu. Agissez vite : appelez votre banque, changez vos mots de passe, et envisagez une alerte à la fraude ou un gel du crédit.",
@@ -78,17 +112,21 @@ module.exports = {
           ],
           sources: [{ name: "FTC : reconnaître et éviter l'hameçonnage", url: "https://consumer.ftc.gov/articles/how-recognize-and-avoid-phishing-scams" }, { name: "IdentityTheft.gov", url: "https://www.identitytheft.gov/" }, { name: "ReportFraud.ftc.gov", url: "https://reportfraud.ftc.gov/" }],
           tryIt: "Notez sur une carte ou dans les notes de votre téléphone les trois endroits où signaler les arnaques aux États-Unis (ou leurs équivalents dans votre pays).",
-          youCanNow: "signaler les arnaques et faire les premières démarches après une usurpation d'identité."
+          youCanNow: "signaler les arnaques et faire les premières démarches après une usurpation d'identité.",
+          quickCheck: [
+            { objective: "O3", q: "Où la FTC dit-elle d'aller si votre numéro de sécurité sociale a été volé ?", options: ["IdentityTheft.gov", "N'importe quel site avec un numéro de téléphone", "Chez la personne qui l'a volé", "Dans un groupe sur les réseaux sociaux"], answer: 0, why: "La FTC oriente les gens vers IdentityTheft.gov pour suivre des étapes adaptées à ce qui a été perdu." },
+            { objective: "O3", q: "Vous avez donné le numéro de votre carte bancaire à un faux site. Que faites-vous d'abord ?", options: ["Attendre de voir s'il se passe quelque chose", "En parler en ligne", "Appeler tout de suite votre banque et changer vos mots de passe", "Donner aussi votre code secret au site"], answer: 2, why: "Agissez vite : appelez votre banque et changez vos mots de passe." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Se protéger en ligne",
         questions: [
-          { q: "Quel est le mot de passe le plus solide ?", options: ["motdepasse123", "votre date de naissance", "erable-riviere-tigre-lampe", "123456"], answer: 2, why: "Les longues phrases de passe faites de mots au hasard sont solides." },
-          { q: "Que fait la connexion en deux étapes (MFA) ?", options: ["Elle ajoute une deuxième vérification, comme un code sur le téléphone, après le mot de passe", "Elle raccourcit votre mot de passe", "Elle partage votre mot de passe avec vos amis", "Elle désactive votre compte"], answer: 0, why: "Une deuxième vérification bloque les attaquants qui n'ont que votre mot de passe." },
-          { q: "Vous recevez un appel avec la voix de votre petit-fils qui demande des cartes cadeaux tout de suite. Que faites-vous ?", options: ["Acheter vite les cartes cadeaux", "Lui lire votre numéro de compte", "Envoyer des cryptomonnaies", "Raccrocher et le rappeler sur un numéro que vous connaissez"], answer: 3, why: "Les voix peuvent être clonées par l'IA ; rappelez sur un numéro connu." },
-          { q: "Qu'est-ce qu'un deepfake ?", options: ["Une piscine profonde", "Une fausse vidéo, image ou voix faite avec l'IA", "Un mot de passe solide", "Un vrai reportage"], answer: 1, why: "Les deepfakes sont des faux faits par l'IA qui ont l'air vrais." },
-          { q: "Aux États-Unis, où la FTC dit-elle de transférer les SMS d'arnaque ?", options: ["Au 911", "Au 7726 (SPAM)", "À l'escroc", "À vos contacts"], answer: 1, why: "La FTC dit de transférer les SMS d'arnaque au 7726." }
+          { objective: "O1", q: "Quel est le mot de passe le plus solide ?", options: ["motdepasse123", "votre date de naissance", "erable-riviere-tigre-lampe", "123456"], answer: 2, why: "Les longues phrases de passe faites de mots au hasard sont solides." },
+          { objective: "O1", q: "Que fait la connexion en deux étapes (MFA) ?", options: ["Elle ajoute une deuxième vérification, comme un code sur le téléphone, après le mot de passe", "Elle raccourcit votre mot de passe", "Elle partage votre mot de passe avec vos amis", "Elle désactive votre compte"], answer: 0, why: "Une deuxième vérification bloque les attaquants qui n'ont que votre mot de passe." },
+          { objective: "O2", q: "Vous recevez un appel avec la voix de votre petit-fils qui demande des cartes cadeaux tout de suite. Que faites-vous ?", options: ["Acheter vite les cartes cadeaux", "Lui lire votre numéro de compte", "Envoyer des cryptomonnaies", "Raccrocher et le rappeler sur un numéro que vous connaissez"], answer: 3, why: "Les voix peuvent être clonées par l'IA ; rappelez sur un numéro connu." },
+          { objective: "O2", q: "Qu'est-ce qu'un deepfake ?", options: ["Une piscine profonde", "Une fausse vidéo, image ou voix faite avec l'IA", "Un mot de passe solide", "Un vrai reportage"], answer: 1, why: "Les deepfakes sont des faux faits par l'IA qui ont l'air vrais." },
+          { objective: "O3", q: "Aux États-Unis, où la FTC dit-elle de transférer les SMS d'arnaque ?", options: ["Au 911", "Au 7726 (SPAM)", "À l'escroc", "À vos contacts"], answer: 1, why: "La FTC dit de transférer les SMS d'arnaque au 7726." }
         ]
       }
     },
@@ -96,6 +134,7 @@ module.exports = {
       name: "Chapitre 2 : Utiliser l'IA de façon responsable",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Protéger sa vie privée quand on utilise l'IA",
           minutes: 5,
           goal: "Décider ce qu'on peut taper sans risque dans un outil d'IA et ce qu'on ne doit pas taper.",
@@ -112,9 +151,14 @@ module.exports = {
             { title: "Garder le contrôle", bullets: ["Utiliser des repères", "Vérifier les réglages de confidentialité", "Outils autorisés à l'école ou au travail"] }
           ],
           tryIt: "Ouvrez les réglages d'un assistant d'IA que vous utilisez et trouvez ses options de confidentialité ou de données. Puis réécrivez cette demande en toute sécurité : « Mon numéro de sécurité sociale est 123-45-6789, aide-moi à remplir ce formulaire. »",
-          youCanNow: "garder les informations privées hors des outils d'IA et utiliser leurs réglages de confidentialité."
+          youCanNow: "garder les informations privées hors des outils d'IA et utiliser leurs réglages de confidentialité.",
+          quickCheck: [
+            { objective: "O4", q: "Taper dans une conversation avec une IA ressemble le plus à quoi ?", options: ["Écrire dans un journal intime fermé à clé", "Parler dans un lieu public", "Parler à votre avocat", "Se parler tout bas à soi-même"], answer: 1, why: "Ce que vous tapez peut être conservé : traitez-le comme une conversation en public." },
+            { objective: "O4", q: "Vous voulez l'aide de l'IA pour un formulaire de logement qui demande votre numéro de dossier. Que tapez-vous ?", options: ["Votre vrai numéro de dossier", "Votre numéro de dossier et votre date de naissance", "Le numéro de dossier d'un ami", "Un repère comme « [mon numéro] »"], answer: 3, why: "Un repère vous permet d'obtenir de l'aide sans partager de numéros privés." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Vérifier les erreurs et les biais de l'IA",
           minutes: 5,
           goal: "Vérifier une réponse d'IA pour y trouver erreurs et biais injustes avant de l'utiliser.",
@@ -131,9 +175,14 @@ module.exports = {
             { title: "Tester et signaler", bullets: ["Changer un détail et comparer", "Ne pas utiliser les réponses injustes", "Utiliser le bouton de retour"] }
           ],
           tryIt: "Demandez à un assistant d'IA de « décrire un infirmier typique et un ingénieur typique ». Cherchez les stéréotypes. Puis demandez-lui une lettre de recommandation pour « Maria » puis pour « James », avec les mêmes détails, et comparez.",
-          youCanNow: "vérifier les réponses de l'IA pour y trouver des erreurs et les tester pour repérer des biais injustes."
+          youCanNow: "vérifier les réponses de l'IA pour y trouver des erreurs et les tester pour repérer des biais injustes.",
+          quickCheck: [
+            { objective: "O5", q: "Qu'est-ce qu'un biais de l'IA ?", options: ["Quand l'IA est lente", "Quand l'IA utilise des mots compliqués", "Quand l'IA traite des groupes de personnes de façon injuste ou utilise des stéréotypes", "Quand l'IA répond sous forme de liste"], answer: 2, why: "L'IA a appris à partir de textes écrits par des humains, donc elle peut répéter des stéréotypes injustes." },
+            { objective: "O5", q: "L'IA vous donne une règle sur le droit de vote après une condamnation. Que faites-vous avant de vous y fier ?", options: ["La vérifier auprès d'une source officielle ou de confiance", "Lui faire confiance parce qu'elle a l'air sûre d'elle", "La partager d'abord avec des amis", "Demander à l'IA si elle est sûre"], answer: 0, why: "L'IA peut inventer des règles ; vérifiez les faits importants auprès d'une source officielle." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Utiliser l'IA honnêtement à l'école, au travail et en ligne",
           minutes: 5,
           goal: "Suivre les règles d'usage de l'IA et dire honnêtement quand vous l'avez utilisée.",
@@ -150,17 +199,21 @@ module.exports = {
             { title: "Quand ne pas utiliser l'IA", bullets: ["Urgences : le 911 ou le numéro d'urgence local", "Grandes décisions de santé, de droit ou d'argent", "Vous êtes responsable de ce que vous publiez"] }
           ],
           tryIt: "Tâche finale : terminez votre liste de contrôle de sécurité (phrase de passe, connexion en deux étapes, mises à jour, endroits où signaler) et écrivez une carte de cinq lignes avec vos règles personnelles sur l'IA : vie privée, vérification des réponses, honnêteté, équité et quand ne pas utiliser l'IA.",
-          youCanNow: "protéger vos comptes, éviter et signaler les arnaques, et utiliser l'IA de façon sûre, honnête et juste."
+          youCanNow: "protéger vos comptes, éviter et signaler les arnaques, et utiliser l'IA de façon sûre, honnête et juste.",
+          quickCheck: [
+            { objective: "O6", q: "Qui est responsable d'un message que vous publiez et que l'IA a écrit ?", options: ["L'entreprise d'IA", "Personne", "Le site web", "Vous"], answer: 3, why: "Vous êtes responsable de ce que vous envoyez ou publiez, même si c'est l'IA qui l'a écrit." },
+            { objective: "O6", q: "Votre programme de formation n'autorise pas l'IA pour l'examen final. Quel est le choix honnête ?", options: ["Utiliser l'IA en cachette", "Respecter la règle et passer l'examen vous-même", "Demander à un ami d'utiliser l'IA pour vous", "Copier une réponse d'IA et changer quelques mots"], answer: 1, why: "Utiliser l'IA là où elle n'est pas autorisée, c'est tricher, et cela peut vous coûter le certificat." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Utiliser l'IA de façon responsable",
         questions: [
-          { q: "Que peut-on taper sans risque dans un assistant d'IA ?", options: ["Votre numéro de sécurité sociale", "Votre mot de passe bancaire", "Les antécédents médicaux de votre ami", "« Aide-moi à écrire un mot de remerciement à ma conseillère de suivi »"], answer: 3, why: "Les demandes générales sans détails privés sont sans risque." },
-          { q: "Qu'est-ce qu'une hallucination de l'IA ?", options: ["Quand l'IA affirme quelque chose de faux comme si c'était vrai", "Un rêve", "Un mot de passe solide", "Un type de virus"], answer: 0, why: "L'IA peut inventer des faits avec assurance." },
-          { q: "Comment tester un outil d'IA pour repérer un biais ?", options: ["Lui faire confiance", "Lui demander s'il est biaisé et le croire", "Poser la même question en changeant un détail et comparer", "Ne l'utiliser que la nuit"], answer: 2, why: "Changer un détail montre s'il traite les gens différemment." },
-          { q: "Votre enseignant n'autorise l'IA que pour trouver des idées. Qu'est-ce qui est honnête ?", options: ["Faire écrire toute la dissertation par l'IA et dire que c'est la vôtre", "Copier la dissertation IA d'un ami", "Ignorer la règle", "L'utiliser pour trouver des idées, puis rédiger vous-même"], answer: 3, why: "Suivez les règles sur la façon dont l'IA peut être utilisée." },
-          { q: "Quelqu'un fait un malaise grave. Que faites-vous ?", options: ["Demander à un chatbot d'IA", "Publier en ligne", "Appeler les secours (le 911 aux États-Unis)", "Attendre"], answer: 2, why: "Les urgences demandent les services de secours, pas l'IA." }
+          { objective: "O4", q: "Que peut-on taper sans risque dans un assistant d'IA ?", options: ["Votre numéro de sécurité sociale", "Votre mot de passe bancaire", "Les antécédents médicaux de votre ami", "« Aide-moi à écrire un mot de remerciement à ma conseillère de suivi »"], answer: 3, why: "Les demandes générales sans détails privés sont sans risque." },
+          { objective: "O5", q: "Qu'est-ce qu'une hallucination de l'IA ?", options: ["Quand l'IA affirme quelque chose de faux comme si c'était vrai", "Un rêve", "Un mot de passe solide", "Un type de virus"], answer: 0, why: "L'IA peut inventer des faits avec assurance." },
+          { objective: "O5", q: "Comment tester un outil d'IA pour repérer un biais ?", options: ["Lui faire confiance", "Lui demander s'il est biaisé et le croire", "Poser la même question en changeant un détail et comparer", "Ne l'utiliser que la nuit"], answer: 2, why: "Changer un détail montre s'il traite les gens différemment." },
+          { objective: "O6", q: "Votre enseignant n'autorise l'IA que pour trouver des idées. Qu'est-ce qui est honnête ?", options: ["Faire écrire toute la dissertation par l'IA et dire que c'est la vôtre", "Copier la dissertation IA d'un ami", "Ignorer la règle", "L'utiliser pour trouver des idées, puis rédiger vous-même"], answer: 3, why: "Suivez les règles sur la façon dont l'IA peut être utilisée." },
+          { objective: "O6", q: "Quelqu'un fait un malaise grave. Que faites-vous ?", options: ["Demander à un chatbot d'IA", "Publier en ligne", "Appeler les secours (le 911 aux États-Unis)", "Attendre"], answer: 2, why: "Les urgences demandent les services de secours, pas l'IA." }
         ]
       }
     }
@@ -168,26 +221,107 @@ module.exports = {
   quiz: {
     title: "Quiz final : Sécurité en ligne et usage responsable de l'IA",
     questions: [
-      { q: "Quel compte faut-il protéger en premier ?", options: ["Un compte de jeu", "Votre e-mail", "Un site de recettes", "Une appli météo"], answer: 1, why: "L'e-mail peut réinitialiser vos autres mots de passe." },
-      { q: "Une phrase de passe est :", options: ["Un mot de passe fait de plusieurs mots pris au hasard", "Votre nom et votre date de naissance", "Un petit nombre", "Un code de téléphone"], answer: 0, why: "Des mots au hasard font des mots de passe longs et solides." },
-      { q: "Faut-il utiliser le même mot de passe partout ?", options: ["Oui, c'est plus simple", "Seulement pour les banques", "Non, un différent pour chaque compte important", "Seulement pour l'e-mail"], answer: 2, why: "Un seul mot de passe volé ouvrirait tout." },
-      { q: "Un gestionnaire de mots de passe :", options: ["Garde vos mots de passe en sécurité", "Les partage en ligne", "Devine les mots de passe des autres", "Supprime vos comptes"], answer: 0, why: "Il retient pour vous des mots de passe solides." },
-      { q: "Quelle agence américaine recommande mots de passe solides, MFA et mises à jour dans sa campagne de sensibilisation ?", options: ["La NASA", "La Poste américaine", "Le service des parcs nationaux", "La CISA"], answer: 3, why: "La CISA mène la sensibilisation à la cybersécurité aux États-Unis." },
-      { q: "Un SMS inattendu dit que votre compte bancaire est bloqué et donne un lien. Vous devez :", options: ["Cliquer et saisir vos identifiants", "Ne pas cliquer ; contacter la banque par un numéro que vous connaissez", "Répondre avec votre numéro de carte", "Le transférer à vos amis"], answer: 1, why: "C'est un signe classique d'hameçonnage." },
-      { q: "Des escrocs qui demandent un paiement par carte cadeau, c'est :", options: ["Normal pour les administrations", "Un signe d'arnaque", "Un moyen sûr de payer ses factures", "Exigé par les banques"], answer: 1, why: "Les vraies administrations ne demandent pas de cartes cadeaux." },
-      { q: "Le clonage de voix, c'est :", options: ["Chanter dans une chorale", "Enregistrer votre propre messagerie", "Une mise à jour du téléphone", "Utiliser l'IA pour copier la voix de quelqu'un"], answer: 3, why: "Les escrocs peuvent copier une voix à partir de courts extraits." },
-      { q: "Un mot de sécurité familial vous aide à :", options: ["Vérifier qu'un appel d'urgence vient vraiment de la famille", "Déverrouiller votre téléphone", "Avoir des réductions", "Réinitialiser vos mots de passe"], answer: 0, why: "Une voix clonée ne connaîtra pas le mot de sécurité." },
-      { q: "Où signaler une fraude aux États-Unis ?", options: ["Dans une section de commentaires", "Sur le site de l'escroc", "Sur ReportFraud.ftc.gov", "Nulle part"], answer: 2, why: "La FTC recueille les signalements de fraude." },
-      { q: "Si votre numéro de sécurité sociale a été volé, la FTC vous oriente vers :", options: ["Un groupe sur les réseaux sociaux", "Un chatbot d'IA", "Rien", "IdentityTheft.gov"], answer: 3, why: "IdentityTheft.gov donne les étapes pour s'en remettre." },
-      { q: "Un gel du crédit :", options: ["Gèle votre compte bancaire pour toujours", "Refroidit votre ordinateur", "Empêche d'ouvrir un nouveau crédit à votre nom", "Efface votre historique de crédit"], answer: 2, why: "Il bloque l'ouverture de nouveaux comptes par des voleurs." },
-      { q: "Que faire si vous avez cliqué sur un mauvais lien ?", options: ["Rien", "Mettre à jour le logiciel de sécurité et lancer une analyse", "Cliquer sur d'autres liens", "Jeter le téléphone"], answer: 1, why: "Une analyse trouve et supprime les logiciels nuisibles." },
-      { q: "Taper dans un chat d'IA, c'est surtout comme :", options: ["Parler dans un lieu public", "Écrire dans un journal intime fermé à clé", "Penser en silence", "Parler à un avocat"], answer: 0, why: "Les discussions peuvent être conservées, alors soyez prudent." },
-      { q: "Au lieu de taper votre numéro de dossier dans l'IA, utilisez :", options: ["Le vrai numéro", "La moitié du numéro", "Un repère comme « [mon numéro] »", "Votre numéro de sécurité sociale"], answer: 2, why: "Les repères protègent les détails privés." },
-      { q: "Le biais de l'IA désigne :", options: ["Un traitement ou des suppositions injustes sur des groupes de personnes", "Une réponse rapide", "Une longue réponse", "Un type de mot de passe"], answer: 0, why: "L'IA peut répéter des stéréotypes injustes." },
-      { q: "Un outil d'IA note un candidat plus bas uniquement à cause de son nom. Vous devez :", options: ["L'utiliser quand même", "Changer le nom du candidat", "Le cacher", "Ne pas utiliser ce résultat et le signaler"], answer: 3, why: "Un résultat d'IA injuste ne doit pas être utilisé." },
-      { q: "Si l'IA a aidé votre travail et que c'est important, vous devez :", options: ["Le cacher", "Dire comment l'IA a aidé", "Prétendre l'avoir fait seul", "Accuser l'IA des erreurs"], answer: 1, why: "L'honnêteté sur l'usage de l'IA crée la confiance." },
-      { q: "Faire avec l'IA une fausse image humiliante d'un vrai camarade de classe, c'est :", options: ["Une blague sans danger", "Nuisible et illégal dans beaucoup de pays", "Exigé par l'école", "Bon pour la sécurité"], answer: 1, why: "Les faux de vraies personnes sans leur accord causent un vrai tort." },
-      { q: "Qui est responsable d'une publication écrite par l'IA que vous partagez ?", options: ["L'IA", "Personne", "Le fournisseur d'accès à internet", "Vous"], answer: 3, why: "Vous êtes responsable de ce que vous envoyez ou publiez." }
+      { objective: "O1", q: "Quel compte faut-il protéger en premier ?", options: ["Un compte de jeu", "Votre e-mail", "Un site de recettes", "Une appli météo"], answer: 1, why: "L'e-mail peut réinitialiser vos autres mots de passe." },
+      { objective: "O1", q: "Une phrase de passe est :", options: ["Un mot de passe fait de plusieurs mots pris au hasard", "Votre nom et votre date de naissance", "Un petit nombre", "Un code de téléphone"], answer: 0, why: "Des mots au hasard font des mots de passe longs et solides." },
+      { objective: "O1", q: "Faut-il utiliser le même mot de passe partout ?", options: ["Oui, c'est plus simple", "Seulement pour les banques", "Non, un différent pour chaque compte important", "Seulement pour l'e-mail"], answer: 2, why: "Un seul mot de passe volé ouvrirait tout." },
+      { objective: "O1", q: "Un gestionnaire de mots de passe :", options: ["Garde vos mots de passe en sécurité", "Les partage en ligne", "Devine les mots de passe des autres", "Supprime vos comptes"], answer: 0, why: "Il retient pour vous des mots de passe solides." },
+      { objective: "O1", q: "Quelle agence américaine recommande mots de passe solides, MFA et mises à jour dans sa campagne de sensibilisation ?", options: ["La NASA", "La Poste américaine", "Le service des parcs nationaux", "La CISA"], answer: 3, why: "La CISA mène la sensibilisation à la cybersécurité aux États-Unis." },
+      { objective: "O2", q: "Un SMS inattendu dit que votre compte bancaire est bloqué et donne un lien. Vous devez :", options: ["Cliquer et saisir vos identifiants", "Ne pas cliquer ; contacter la banque par un numéro que vous connaissez", "Répondre avec votre numéro de carte", "Le transférer à vos amis"], answer: 1, why: "C'est un signe classique d'hameçonnage." },
+      { objective: "O2", q: "Des escrocs qui demandent un paiement par carte cadeau, c'est :", options: ["Normal pour les administrations", "Un signe d'arnaque", "Un moyen sûr de payer ses factures", "Exigé par les banques"], answer: 1, why: "Les vraies administrations ne demandent pas de cartes cadeaux." },
+      { objective: "O2", q: "Le clonage de voix, c'est :", options: ["Chanter dans une chorale", "Enregistrer votre propre messagerie", "Une mise à jour du téléphone", "Utiliser l'IA pour copier la voix de quelqu'un"], answer: 3, why: "Les escrocs peuvent copier une voix à partir de courts extraits." },
+      { objective: "O2", q: "Un mot de sécurité familial vous aide à :", options: ["Vérifier qu'un appel d'urgence vient vraiment de la famille", "Déverrouiller votre téléphone", "Avoir des réductions", "Réinitialiser vos mots de passe"], answer: 0, why: "Une voix clonée ne connaîtra pas le mot de sécurité." },
+      { objective: "O3", q: "Où signaler une fraude aux États-Unis ?", options: ["Dans une section de commentaires", "Sur le site de l'escroc", "Sur ReportFraud.ftc.gov", "Nulle part"], answer: 2, why: "La FTC recueille les signalements de fraude." },
+      { objective: "O3", q: "Si votre numéro de sécurité sociale a été volé, la FTC vous oriente vers :", options: ["Un groupe sur les réseaux sociaux", "Un chatbot d'IA", "Rien", "IdentityTheft.gov"], answer: 3, why: "IdentityTheft.gov donne les étapes pour s'en remettre." },
+      { objective: "O3", q: "Un gel du crédit :", options: ["Gèle votre compte bancaire pour toujours", "Refroidit votre ordinateur", "Empêche d'ouvrir un nouveau crédit à votre nom", "Efface votre historique de crédit"], answer: 2, why: "Il bloque l'ouverture de nouveaux comptes par des voleurs." },
+      { objective: "O3", q: "Que faire si vous avez cliqué sur un mauvais lien ?", options: ["Rien", "Mettre à jour le logiciel de sécurité et lancer une analyse", "Cliquer sur d'autres liens", "Jeter le téléphone"], answer: 1, why: "Une analyse trouve et supprime les logiciels nuisibles." },
+      { objective: "O4", q: "Taper dans un chat d'IA, c'est surtout comme :", options: ["Parler dans un lieu public", "Écrire dans un journal intime fermé à clé", "Penser en silence", "Parler à un avocat"], answer: 0, why: "Les discussions peuvent être conservées, alors soyez prudent." },
+      { objective: "O4", q: "Au lieu de taper votre numéro de dossier dans l'IA, utilisez :", options: ["Le vrai numéro", "La moitié du numéro", "Un repère comme « [mon numéro] »", "Votre numéro de sécurité sociale"], answer: 2, why: "Les repères protègent les détails privés." },
+      { objective: "O5", q: "Le biais de l'IA désigne :", options: ["Un traitement ou des suppositions injustes sur des groupes de personnes", "Une réponse rapide", "Une longue réponse", "Un type de mot de passe"], answer: 0, why: "L'IA peut répéter des stéréotypes injustes." },
+      { objective: "O5", q: "Un outil d'IA note un candidat plus bas uniquement à cause de son nom. Vous devez :", options: ["L'utiliser quand même", "Changer le nom du candidat", "Le cacher", "Ne pas utiliser ce résultat et le signaler"], answer: 3, why: "Un résultat d'IA injuste ne doit pas être utilisé." },
+      { objective: "O6", q: "Si l'IA a aidé votre travail et que c'est important, vous devez :", options: ["Le cacher", "Dire comment l'IA a aidé", "Prétendre l'avoir fait seul", "Accuser l'IA des erreurs"], answer: 1, why: "L'honnêteté sur l'usage de l'IA crée la confiance." },
+      { objective: "O6", q: "Faire avec l'IA une fausse image humiliante d'un vrai camarade de classe, c'est :", options: ["Une blague sans danger", "Nuisible et illégal dans beaucoup de pays", "Exigé par l'école", "Bon pour la sécurité"], answer: 1, why: "Les faux de vraies personnes sans leur accord causent un vrai tort." },
+      { objective: "O6", q: "Qui est responsable d'une publication écrite par l'IA que vous partagez ?", options: ["L'IA", "Personne", "Le fournisseur d'accès à internet", "Vous"], answer: 3, why: "Vous êtes responsable de ce que vous envoyez ou publiez." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      1,
+      5,
+      6,
+      9,
+      10,
+      14,
+      15,
+      17,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "E-mail sécurisé",
+        objective: "O1",
+        notYet: "Le mot de passe de l'e-mail est court ou réutilisé, ou la connexion en deux étapes est désactivée.",
+        meets: "Le mot de passe de l'e-mail est une phrase de passe solide et la connexion en deux étapes est activée.",
+        exceeds: "Les codes de secours sont gardés en privé et les autres comptes importants ont leur propre mot de passe."
+      },
+      {
+        name: "Mises à jour vérifiées",
+        objective: "O1",
+        notYet: "Les mises à jour du téléphone et des applications n'ont pas été vérifiées.",
+        meets: "Le téléphone et les applications ont été vérifiés et mis à jour.",
+        exceeds: "Les mises à jour automatiques sont activées quand c'est proposé."
+      },
+      {
+        name: "Endroits de signalement",
+        objective: "O3",
+        notYet: "Moins de trois endroits de signalement notés.",
+        meets: "A noté 7726 pour les SMS, reportphishing@apwg.org pour les e-mails et ReportFraud.ftc.gov pour la fraude.",
+        exceeds: "A aussi noté IdentityTheft.gov et les premières étapes si des informations sont volées."
+      },
+      {
+        name: "Carte de règles personnelles sur l'IA",
+        objective: "O6",
+        notYet: "Moins de cinq lignes, ou il manque une ligne sur la vie privée ou l'honnêteté.",
+        meets: "Cinq lignes sur la vie privée, la vérification des réponses, l'honnêteté, l'équité et quand ne pas utiliser l'IA.",
+        exceeds: "Chaque ligne donne un vrai exemple tiré de la vie de l'apprenant."
+      },
+      {
+        name: "Vie privée dans les prompts",
+        objective: "O4",
+        notYet: "La carte de règles ou les prompts d'exercice contiennent des numéros privés.",
+        meets: "Aucun numéro privé nulle part, et des repères sont utilisés.",
+        exceeds: "L'apprenant a vérifié les réglages de confidentialité de son outil d'IA."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Apprenants qui disent, 30 jours plus tard, que la connexion en deux étapes est toujours activée sur leur e-mail (questionnaire de suivi)",
+      "Apprenants qui disent avoir repéré et évité une arnaque dans les 60 jours",
+      "Partenaires de réinsertion qui signalent moins de personnes accompagnées ayant perdu de l'argent ou des comptes à cause d'arnaques"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un smartphone avec internet, ou un ordinateur de bibliothèque ou du programme",
+      "L'accès aux réglages du compte e-mail de l'apprenant",
+      "Un téléphone qui peut recevoir des codes pour la connexion en deux étapes",
+      "Du papier et un stylo pour la liste de contrôle et la carte de règles personnelles sur l'IA",
+      "Environ 60 minutes en tout, en courtes séances : leçons, exercices, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Faites le test de départ ensemble, puis un chapitre par séance, avec les exercices « Essayez maintenant » faits en direct.",
+      "Ne demandez jamais aux apprenants de dire ou de montrer leurs mots de passe, numéros de dossier ou codes de secours ; ils font les changements en privé.",
+      "Montrez des exemples de messages d'arnaque sur un écran et faites nommer à voix haute les signes d'alerte par le groupe.",
+      "Rappelez aux apprenants en libération conditionnelle ou en mise à l'épreuve de respecter leurs conditions sur l'usage d'internet.",
+      "Notez la liste de contrôle finale avec la grille d'évaluation, et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

@@ -18,11 +18,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes. Lisez la leçon, regardez les diapositives, puis faites la tâche \"Essayez maintenant\" sur votre propre téléphone ou appareil. Il y a un court contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Écrivez votre plan écrans personnel et testez-le pendant sept jours : votre objectif de temps d'écran, vos deux applis principales à limiter (avec les limites réglées dans votre téléphone), vos changements de notifications, une heure d'arrêt des écrans avant de dormir et un endroit où garer votre téléphone la nuit, deux choses à faire au lieu de défiler, et un changement dans votre fil d'actualité. À la fin de la semaine, comparez votre temps d'écran et votre sommeil avec la semaine d'avant.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des jeunes, surtout des adolescents, qui utilisent chaque jour des téléphones, des jeux et les réseaux sociaux et veulent mieux maîtriser leur temps d'écran sans qu'on leur fasse la morale.",
+    startingPoint: "Ils utilisent leur téléphone avec aisance pour les applis, les jeux et les messages. La plupart sous-estiment leur temps d'écran, laissent presque toutes les notifications activées, défilent tard le soir et n'ont jamais fixé de limites aux applis ni changé exprès leur fil.",
+    gap: "Les applis sont conçues pour garder les gens dessus, ce qui peut empiéter sur le sommeil, les devoirs, le sport, le travail et l'humeur. Les jeunes ont besoin de voir leurs vrais chiffres, de repérer les hameçons, de changer leurs réglages et leurs habitudes et de tester un plan, pour que les écrans les aident au lieu de prendre le dessus.",
+    constraints: [
+      "Il faut son propre téléphone ou appareil pour les tâches pratiques ; les menus changent selon le téléphone",
+      "Pas de morale : les apprenants choisissent leurs propres objectifs",
+      "Santé mentale : les apprenants qui se sentent souvent mal sont orientés vers un adulte de confiance, un médecin ou une ligne d'écoute, et ne sont pas pris en charge dans le cours",
+      "Vie privée : les apprenants gardent leurs chiffres et leurs notes pour eux, sauf s'ils choisissent de les partager",
+      "Des leçons courtes et des mots simples"
+    ],
+    prerequisites: "Aucun."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Avec les réglages de votre propre téléphone", action: "trouver votre temps d'écran quotidien, vos applis principales et vos prises en main ou notifications, et les comparer à vos objectifs", standard: "en notant les trois chiffres" },
+    { id: "O2", condition: "Dans une appli que vous utilisez souvent", action: "repérer les hameçons de conception qui vous ramènent à l'appli et en désactiver ou en contourner un", standard: "en citant au moins trois hameçons" },
+    { id: "O3", condition: "Pour vos nuits", action: "fixer une heure d'arrêt des écrans, un endroit où garer votre téléphone loin de votre lit et un mode sommeil", standard: "avec les écrans rangés environ 30 minutes avant l'heure du coucher" },
+    { id: "O4", condition: "Avec les réglages de votre téléphone", action: "désactiver les notifications qui ne sont pas essentielles et fixer une limite quotidienne à votre appli principale", standard: "en désactivant les notifications d'au moins trois applis" },
+    { id: "O5", condition: "Sur votre principal réseau social", action: "changer votre fil en masquant ou en arrêtant de suivre les comptes qui vous font vous sentir moins bien, et en suivant ceux qui vous aident à grandir", standard: "en changeant au moins deux comptes dans chaque sens" },
+    { id: "O6", condition: "Avec ce que vous avez mis en place dans ce cours", action: "écrire un plan écrans personnel, le suivre pendant sept jours et comparer vos résultats avec vos chiffres de départ", standard: "avec toutes les parties du plan et une comparaison avant-après" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Connaître vos habitudes d'écran",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Vérifier votre vrai temps d'écran",
           minutes: 4,
           goal: "Trouver votre temps d'écran quotidien et vos applis les plus utilisées sur votre propre téléphone.",
@@ -39,9 +63,14 @@ module.exports = {
             { title: "Pas de chiffre parfait", bullets: ["Est-ce que cela colle à vos objectifs ?", "Sommeil, école ou travail, amis, sport, repos", "Un point de départ, pas une note"] }
           ],
           tryIt: "Ouvrez la page de temps d'écran de votre téléphone. Notez votre moyenne par jour, vos trois applis principales et vos prises en main ou notifications par jour. Puis écrivez un objectif que les écrans vous empêchent d'atteindre, s'il y en a un.",
-          youCanNow: "trouver votre vrai temps d'écran, vos applis principales et vos prises en main sur votre propre téléphone."
+          youCanNow: "trouver votre vrai temps d'écran, vos applis principales et vos prises en main sur votre propre téléphone.",
+          quickCheck: [
+            { objective: "O1", q: "Que montre le nombre de « prises en main » de votre téléphone ?", options: ["Le poids de votre téléphone", "Le nombre d'applis que vous avez", "À quelle fréquence votre téléphone vous ramène à lui", "Le niveau de votre batterie"], answer: 2, why: "Les prises en main et les notifications montrent à quelle fréquence votre téléphone vous ramène à lui." },
+            { objective: "O1", q: "Vous ne trouvez ni Temps d'écran ni Bien-être numérique sur votre téléphone. Que faites-vous ?", options: ["Vous cherchez « temps d'écran » dans les réglages", "Vous devinez le chiffre", "Vous abandonnez", "Vous téléchargez une appli au hasard depuis une publicité"], answer: 0, why: "Les noms changent selon le téléphone, alors cherchez « temps d'écran » dans les réglages." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Comment les applis vous font défiler sans fin",
           minutes: 5,
           goal: "Repérer les fonctions de conception qui vous ramènent à l'appli.",
@@ -58,9 +87,14 @@ module.exports = {
             { title: "Ajoutez vos propres points d'arrêt", bullets: ["Désactivez la lecture automatique", "Fixez des limites de temps", "Décidez d'abord ce que vous venez faire"] }
           ],
           tryIt: "Ouvrez votre appli la plus utilisée et listez tous les hameçons que vous trouvez. Désactivez-en un (par exemple la lecture automatique ou un type de notification) si l'appli le permet. Écrivez lequel vous avez changé.",
-          youCanNow: "repérer les fonctions que les applis utilisent pour vous faire défiler sans fin et ajouter vos propres points d'arrêt."
+          youCanNow: "repérer les fonctions que les applis utilisent pour vous faire défiler sans fin et ajouter vos propres points d'arrêt.",
+          quickCheck: [
+            { objective: "O2", q: "Qu'est-ce que la lecture automatique ?", options: ["Un mode de jeu", "La vidéo suivante qui démarre toute seule", "Un économiseur de batterie", "Un réglage de confidentialité"], answer: 1, why: "La lecture automatique lance la vidéo suivante sans que vous la choisissiez, ce qui rend l'arrêt difficile." },
+            { objective: "O2", q: "Vous ouvrez une appli pour répondre à un message et finissez par défiler pendant une heure. Quelle habitude aide la prochaine fois ?", options: ["Activer plus de notifications", "Ouvrir plus d'applis à la fois", "Garder une série de jours", "Décider ce que vous venez faire avant d'ouvrir l'appli"], answer: 3, why: "Décider ce que vous venez faire ajoute votre propre point d'arrêt." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Les écrans, le sommeil et votre humeur",
           minutes: 5,
           goal: "Fixer une heure d'arrêt des écrans et un endroit où garer votre téléphone la nuit.",
@@ -79,17 +113,21 @@ module.exports = {
           ],
           sources: [{ name: "CDC : À propos du sommeil (en anglais)", url: "https://www.cdc.gov/sleep/about/index.html" }, { name: "Ligne 988 de prévention du suicide et d'aide en cas de crise (États-Unis, en anglais)", url: "https://988lifeline.org/" }],
           tryIt: "Fixez votre heure d'arrêt des écrans et l'endroit où garer votre téléphone pour ce soir. Activez le mode sommeil ou Ne pas déranger. Demain, écrivez comment vous avez dormi et comment vous vous sentiez le matin.",
-          youCanNow: "protéger votre sommeil avec une heure d'arrêt des écrans, un endroit où garer votre téléphone et le mode Ne pas déranger."
+          youCanNow: "protéger votre sommeil avec une heure d'arrêt des écrans, un endroit où garer votre téléphone et le mode Ne pas déranger.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce qu'un endroit où garer votre téléphone ?", options: ["Une coque pour votre téléphone", "Un câble de chargement", "Un réglage d'appli", "Un endroit loin de votre lit où le téléphone reste la nuit"], answer: 3, why: "Garer le téléphone loin de votre lit rend le défilement tard le soir plus difficile." },
+            { objective: "O3", q: "Vous vous couchez à 22 h 30. Quand rangez-vous les écrans ?", options: ["À 22 h 30", "Vers 22 h", "Quand vous vous sentez fatigué", "Après une dernière vidéo"], answer: 1, why: "Ranger les écrans environ 30 minutes avant le coucher vous aide à dormir." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Connaître vos habitudes d'écran",
         questions: [
-          { q: "Où trouve-t-on en général le temps d'écran sur un iPhone ?", options: ["Dans l'appli Appareil photo", "Dans Réglages, puis Temps d'écran", "Dans la calculatrice", "Dans l'App Store"], answer: 1, why: "Les iPhone le mesurent dans Temps d'écran, dans les Réglages." },
-          { q: "Que vous apprend un nombre élevé de prises en main ?", options: ["Votre batterie est vieille", "Votre téléphone vous ramène à lui très souvent", "Votre téléphone est rapide", "Rien du tout"], answer: 1, why: "Les prises en main montrent à quelle fréquence vous revenez à votre téléphone." },
-          { q: "Pourquoi beaucoup d'applis utilisent-elles le défilement infini et la lecture automatique ?", options: ["Pour vous garder plus longtemps sur l'appli", "Pour économiser votre batterie", "Pour vous aider à dormir", "Parce que la loi l'exige"], answer: 0, why: "Plus de temps sur l'appli, c'est plus de publicités et plus d'argent pour l'appli." },
-          { q: "Combien d'heures de sommeil les CDC conseillent-ils aux ados de 13 à 17 ans ?", options: ["4 à 5", "5 à 6", "12 à 14", "8 à 10"], answer: 3, why: "Les CDC indiquent 8 à 10 heures pour les ados de 13 à 17 ans." },
-          { q: "Quelle habitude protège votre sommeil ?", options: ["Défiler au lit jusqu'à vous endormir", "Laisser les notifications avec le son fort", "Ranger les écrans environ 30 minutes avant de dormir", "Jouer jusqu'à 2 h du matin les soirs d'école"], answer: 2, why: "Les CDC conseillent de ranger les écrans avant de dormir." }
+          { objective: "O1", q: "Où trouve-t-on en général le temps d'écran sur un iPhone ?", options: ["Dans l'appli Appareil photo", "Dans Réglages, puis Temps d'écran", "Dans la calculatrice", "Dans l'App Store"], answer: 1, why: "Les iPhone le mesurent dans Temps d'écran, dans les Réglages." },
+          { objective: "O1", q: "Que vous apprend un nombre élevé de prises en main ?", options: ["Votre batterie est vieille", "Votre téléphone vous ramène à lui très souvent", "Votre téléphone est rapide", "Rien du tout"], answer: 1, why: "Les prises en main montrent à quelle fréquence vous revenez à votre téléphone." },
+          { objective: "O2", q: "Pourquoi beaucoup d'applis utilisent-elles le défilement infini et la lecture automatique ?", options: ["Pour vous garder plus longtemps sur l'appli", "Pour économiser votre batterie", "Pour vous aider à dormir", "Parce que la loi l'exige"], answer: 0, why: "Plus de temps sur l'appli, c'est plus de publicités et plus d'argent pour l'appli." },
+          { objective: "O3", q: "Combien d'heures de sommeil les CDC conseillent-ils aux ados de 13 à 17 ans ?", options: ["4 à 5", "5 à 6", "12 à 14", "8 à 10"], answer: 3, why: "Les CDC indiquent 8 à 10 heures pour les ados de 13 à 17 ans." },
+          { objective: "O3", q: "Quelle habitude protège votre sommeil ?", options: ["Défiler au lit jusqu'à vous endormir", "Laisser les notifications avec le son fort", "Ranger les écrans environ 30 minutes avant de dormir", "Jouer jusqu'à 2 h du matin les soirs d'école"], answer: 2, why: "Les CDC conseillent de ranger les écrans avant de dormir." }
         ]
       }
     },
@@ -97,6 +135,7 @@ module.exports = {
       name: "Chapitre 2 : Reprendre le contrôle",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Maîtriser les notifications et limiter les applis",
           minutes: 5,
           goal: "Désactiver les notifications qui ne sont pas essentielles et fixer une limite à une appli.",
@@ -114,9 +153,14 @@ module.exports = {
             { title: "Ajoutez un petit effort", bullets: ["Enlevez les applis tentantes de l'écran d'accueil", "Déconnectez-vous après usage"] }
           ],
           tryIt: "Passez en revue vos notifications et désactivez-les pour au moins trois applis qui n'ont pas besoin de vous interrompre. Puis fixez une limite de temps par jour sur votre appli principale de la leçon 1.",
-          youCanNow: "choisir quelles applis peuvent vous interrompre, fixer des limites d'applis et utiliser les modes concentration."
+          youCanNow: "choisir quelles applis peuvent vous interrompre, fixer des limites d'applis et utiliser les modes concentration.",
+          quickCheck: [
+            { objective: "O4", q: "Pourquoi les notifications peuvent-elles ralentir vos devoirs ?", options: ["Chacune vous interrompt, et il faut du temps pour retrouver votre concentration", "Elles prennent de la place en mémoire", "Elles rendent l'écran plus sombre", "Elles changent vos notes"], answer: 0, why: "Chaque notification est une interruption qui détourne votre attention." },
+            { objective: "O4", q: "Une appli de shopping vous envoie des alertes de soldes toute la journée. Que faites-vous ?", options: ["Vous les gardez ; vous pourriez rater une bonne affaire", "Vous regardez chacune tout de suite", "Vous désactivez les notifications de cette appli dans les réglages", "Vous désactivez plutôt vos appels et vos messages"], answer: 2, why: "Gardez les notifications des personnes et les alertes importantes ; désactivez celles du shopping et des jeux." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Un fil d'actualité plus sain et moins de comparaison",
           minutes: 5,
           goal: "Changer votre fil d'actualité pour qu'il vous laisse de meilleure humeur, pas l'inverse.",
@@ -133,9 +177,14 @@ module.exports = {
             { title: "Faites le point", bullets: ["Comment je me sens après 10 minutes ?", "Souvent moins bien ? Changez ce que vous suivez"] }
           ],
           tryIt: "Passez deux minutes sur votre appli principale et notez ce que chacune des dix premières publications vous fait ressentir (mieux, pareil, moins bien). Masquez ou arrêtez de suivre deux comptes \"moins bien\" et suivez-en deux qui vous aident à grandir.",
-          youCanNow: "façonner votre fil d'actualité pour qu'il soutienne votre humeur et vos objectifs au lieu de vous pousser à vous comparer."
+          youCanNow: "façonner votre fil d'actualité pour qu'il soutienne votre humeur et vos objectifs au lieu de vous pousser à vous comparer.",
+          quickCheck: [
+            { objective: "O5", q: "À partir de quoi l'algorithme de l'appli apprend-il ?", options: ["De ce que vous regardez et faites dans l'appli", "De vos notes à l'école", "De la météo", "De rien ; les fils sont au hasard"], answer: 0, why: "L'algorithme apprend de ce que vous regardez, alors regarder exprès façonne votre fil." },
+            { objective: "O5", q: "La plupart des jours, vous vous sentez moins bien après 10 minutes sur une appli. Qu'essayez-vous ?", options: ["Défiler plus longtemps pour aller mieux", "Suivre plus de comptes comme ceux qui vous contrarient", "Ignorer ce que vous ressentez", "Changer les comptes que vous suivez ou le temps que vous y passez"], answer: 3, why: "Si une appli vous laisse souvent de moins bonne humeur, changez votre fil ou votre temps dessus." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Créer et tester votre plan écrans",
           minutes: 6,
           goal: "Écrire un plan écrans et le tester pendant sept jours.",
@@ -152,17 +201,21 @@ module.exports = {
             { title: "Testez pendant sept jours", bullets: ["Comparez avec vos chiffres de la leçon 1", "Gardez ce qui marche, changez le reste", "Vous avez craqué ? Recommencez demain"] }
           ],
           tryIt: "Tâche finale : écrivez votre plan écrans avec toutes ses parties, réglez les limites dans votre téléphone et suivez-le pendant sept jours. Le septième jour, comparez votre temps d'écran, vos prises en main et votre sommeil avec vos chiffres de la leçon 1.",
-          youCanNow: "créer, suivre et ajuster un plan écrans personnel qui protège votre sommeil, votre concentration et votre humeur."
+          youCanNow: "créer, suivre et ajuster un plan écrans personnel qui protège votre sommeil, votre concentration et votre humeur.",
+          quickCheck: [
+            { objective: "O6", q: "Que comparez-vous à la fin de votre test de sept jours ?", options: ["Votre temps d'écran, vos prises en main et votre sommeil avec vos chiffres de la leçon 1", "Le temps d'écran de vos amis", "Le prix de votre téléphone", "Votre nombre d'abonnés"], answer: 0, why: "Comparer avec vos chiffres de départ montre ce qui a marché." },
+            { objective: "O6", q: "Vous vous ennuyez et attrapez votre téléphone. Que dit votre plan ?", options: ["Ouvrir votre appli principale", "Désactiver les limites d'applis", "Faire l'une de vos deux activités au lieu de défiler, comme marcher ou appeler quelqu'un", "Vous coucher plus tard"], answer: 2, why: "Votre plan liste deux choses à faire au lieu de défiler quand vous vous ennuyez." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Reprendre le contrôle",
         questions: [
-          { q: "Quelles notifications vaut-il en général la peine de garder ?", options: ["Les messages de la famille et les alertes de l'école ou du travail", "Celles de tous les jeux", "Les promotions des boutiques", "Tous les j'aime des réseaux sociaux"], answer: 0, why: "Gardez les alertes qui comptent ; coupez le reste." },
-          { q: "Que se passe-t-il quand vous atteignez une limite d'appli que vous avez fixée ?", options: ["Votre téléphone est bloqué pour toujours", "L'appli est supprimée", "Votre téléphone vous le rappelle et vous laisse le choix", "Votre compte est banni"], answer: 2, why: "La limite ajoute une pause pour que vous puissiez choisir." },
-          { q: "Pourquoi vous comparer aux publications des réseaux sociaux est-il injuste envers vous ?", options: ["Les publications sont toujours fausses", "Les téléphones sont trop petits", "Personne ne publie rien de vrai", "Les publications sont souvent une vitrine : les meilleurs moments, choisis et retouchés"], answer: 3, why: "Vous comparez votre quotidien aux meilleurs moments de quelqu'un d'autre." },
-          { q: "Un compte vous donne souvent une moins bonne image de vous. Que pouvez-vous faire ?", options: ["Le regarder davantage", "Le masquer ou arrêter de le suivre", "Lui envoyer votre mot de passe", "Supprimer votre téléphone"], answer: 1, why: "Masquer ou arrêter de suivre change ce que votre fil vous montre." },
-          { q: "Vous n'avez pas suivi votre plan écrans le troisième jour. Et maintenant ?", options: ["Abandonner pour de bon", "Supprimer toutes vos applis", "Recommencer le lendemain et ajuster si besoin", "Le cacher à tout le monde"], answer: 2, why: "Craquer est normal ; continuez et ajustez le plan." }
+          { objective: "O4", q: "Quelles notifications vaut-il en général la peine de garder ?", options: ["Les messages de la famille et les alertes de l'école ou du travail", "Celles de tous les jeux", "Les promotions des boutiques", "Tous les j'aime des réseaux sociaux"], answer: 0, why: "Gardez les alertes qui comptent ; coupez le reste." },
+          { objective: "O4", q: "Que se passe-t-il quand vous atteignez une limite d'appli que vous avez fixée ?", options: ["Votre téléphone est bloqué pour toujours", "L'appli est supprimée", "Votre téléphone vous le rappelle et vous laisse le choix", "Votre compte est banni"], answer: 2, why: "La limite ajoute une pause pour que vous puissiez choisir." },
+          { objective: "O5", q: "Pourquoi vous comparer aux publications des réseaux sociaux est-il injuste envers vous ?", options: ["Les publications sont toujours fausses", "Les téléphones sont trop petits", "Personne ne publie rien de vrai", "Les publications sont souvent une vitrine : les meilleurs moments, choisis et retouchés"], answer: 3, why: "Vous comparez votre quotidien aux meilleurs moments de quelqu'un d'autre." },
+          { objective: "O5", q: "Un compte vous donne souvent une moins bonne image de vous. Que pouvez-vous faire ?", options: ["Le regarder davantage", "Le masquer ou arrêter de le suivre", "Lui envoyer votre mot de passe", "Supprimer votre téléphone"], answer: 1, why: "Masquer ou arrêter de suivre change ce que votre fil vous montre." },
+          { objective: "O6", q: "Vous n'avez pas suivi votre plan écrans le troisième jour. Et maintenant ?", options: ["Abandonner pour de bon", "Supprimer toutes vos applis", "Recommencer le lendemain et ajuster si besoin", "Le cacher à tout le monde"], answer: 2, why: "Craquer est normal ; continuez et ajustez le plan." }
         ]
       }
     }
@@ -170,26 +223,106 @@ module.exports = {
   quiz: {
     title: "Quiz final : Bien-être numérique et temps d'écran sain",
     questions: [
-      { q: "Le bien-être numérique, c'est :", options: ["Ne jamais utiliser de téléphone", "Utiliser les écrans d'une façon qui soutient votre santé, vos objectifs et votre humeur", "Avoir le téléphone le plus récent", "Avoir le plus d'abonnés"], answer: 1, why: "Il s'agit que les écrans vous aident, pas qu'ils prennent le dessus." },
-      { q: "Sur beaucoup de téléphones Android, le temps d'écran se trouve dans les Paramètres, à la rubrique :", options: ["Bien-être numérique", "Appareil photo", "Fond d'écran", "Bluetooth"], answer: 0, why: "Beaucoup d'Android l'appellent Bien-être numérique ; le nom peut varier." },
-      { q: "Quels trois chiffres est-il le plus utile de vérifier d'abord ?", options: ["Batterie, stockage, luminosité", "Abonnés, j'aime, commentaires", "Moyenne par jour, applis principales, prises en main ou notifications", "Prix, âge et couleur du téléphone"], answer: 2, why: "Ils montrent combien et à quelle fréquence vous utilisez votre téléphone." },
-      { q: "Existe-t-il un chiffre de temps d'écran parfait pour tout le monde ?", options: ["Oui, exactement 1 heure", "Oui, exactement 3 heures", "Oui, zéro", "Non ; ce qui compte, c'est qu'il colle à vos objectifs"], answer: 3, why: "Votre temps d'écran doit coller à votre sommeil, à l'école, au travail et à votre vie." },
-      { q: "Le défilement infini est un hameçon parce que :", options: ["Il n'y a pas de moment naturel pour s'arrêter", "Il économise des données", "La loi l'exige", "Il rend l'écran plus lumineux"], answer: 0, why: "Sans fin, il est facile de continuer." },
-      { q: "Un \"algorithme\" dans une appli, c'est :", options: ["Un type de coque de téléphone", "Une personne qui lit vos messages", "Les règles informatiques qui choisissent ce qu'on vous montre ensuite", "Un niveau de jeu"], answer: 2, why: "Les algorithmes apprennent ce qui vous garde devant l'écran." },
-      { q: "Quel bon point d'arrêt pouvez-vous ajouter ?", options: ["Activer la lecture automatique", "Désactiver la lecture automatique", "Ajouter plus de notifications", "Supprimer toutes les limites"], answer: 1, why: "Désactiver la lecture automatique empêche la vidéo suivante de démarrer toute seule." },
-      { q: "Avant d'ouvrir une appli, une habitude utile est de :", options: ["Mettre le son au maximum", "Ouvrir cinq autres applis", "Vérifier toutes les notifications", "Décider ce que vous venez y faire"], answer: 3, why: "Un but clair rend plus facile de fermer l'appli." },
-      { q: "Combien d'heures de sommeil les CDC conseillent-ils aux adultes de 18 ans et plus ?", options: ["7 ou plus", "4", "5", "3 à 4"], answer: 0, why: "Les CDC disent que les adultes ont besoin de 7 heures ou plus." },
-      { q: "La nuit, l'endroit où garer votre téléphone doit être :", options: ["Sous votre oreiller", "Dans votre main", "Loin de votre lit", "Avec le son fort"], answer: 2, why: "La distance avec votre lit protège votre sommeil." },
-      { q: "Aux États-Unis, vous vous sentez souvent déprimé et n'arrivez pas à dormir. Où pouvez-vous demander de l'aide à toute heure ?", options: ["Dans un espace de commentaires", "En appelant ou en envoyant un SMS au 988", "En attendant sans rien dire à personne", "En demandant à une appli au hasard"], answer: 1, why: "Le 988 est gratuit et ouvert 24 h/24 aux États-Unis ; ailleurs, appelez la ligne d'écoute ou le numéro d'urgence de votre pays, et parlez aussi à un adulte de confiance ou à un médecin." },
-      { q: "Quelle notification vaut-il mieux désactiver ?", options: ["Votre transport est arrivé", "Un message de votre parent", "Une alerte de l'école", "Un jeu qui vous demande de revenir"], answer: 3, why: "Les alertes de jeux et de boutiques ont rarement besoin de vous interrompre." },
-      { q: "Qu'est-ce qu'un mode concentration ?", options: ["Un réglage qui coupe les distractions pendant que vous étudiez, travaillez ou vous reposez", "Un filtre d'appareil photo", "Une appli payante", "Un jeu"], answer: 0, why: "Les modes concentration coupent les alertes pendant un temps choisi." },
-      { q: "Enlever une appli tentante de l'écran d'accueil aide parce que :", options: ["Cela supprime votre compte", "L'ouvrir demande un petit effort de plus", "L'appli devient plus rapide", "Vous gagnez des points"], answer: 1, why: "Une petite étape en plus vous laisse le temps de choisir." },
-      { q: "Une \"vitrine des meilleurs moments\", c'est :", options: ["Un outil de pêche", "Un direct sans montage", "Votre rapport de temps d'écran", "Seulement les meilleurs moments, choisis et retouchés"], answer: 3, why: "Les réseaux sociaux montrent souvent seulement les meilleurs moments, retouchés." },
-      { q: "Que fait le fait de masquer un compte ?", options: ["Il le signale à la police", "Il supprime son compte", "Il cache ses publications sans arrêter de le suivre ni le prévenir", "Il lui envoie un message"], answer: 2, why: "Masquer cache ses publications discrètement." },
-      { q: "Une bonne question pour faire le point après avoir utilisé une appli, c'est :", options: ["Combien de j'aime j'ai eus ?", "Comment je me sens après 10 minutes sur cette appli ?", "Qui a le plus d'abonnés ?", "Qu'est-ce que je devrais acheter ?"], answer: 1, why: "Remarquer comment vous vous sentez vous aide à changer ce que vous utilisez." },
-      { q: "Qu'est-ce qui a sa place dans votre plan écrans ?", options: ["Vos mots de passe", "Une liste de gens avec qui vous disputer", "Activer toutes les notifications", "Deux choses à faire au lieu de défiler"], answer: 3, why: "Avoir d'autres activités prêtes rend plus facile de poser le téléphone." },
-      { q: "Combien de temps devez-vous tester votre plan écrans avant de le juger ?", options: ["Une minute", "Une heure", "Sept jours", "Ne jamais le tester"], answer: 2, why: "Une semaine vous donne de vrais chiffres à comparer." },
-      { q: "Qu'est-ce qui aide à tenir un plan écrans ?", options: ["En parler à un ami ou à sa famille, ou le faire ensemble", "Le garder secret", "Le rendre le plus strict possible", "Le changer toutes les heures"], answer: 0, why: "Le soutien des autres vous aide à continuer." }
+      { objective: "O1", q: "Le bien-être numérique, c'est :", options: ["Ne jamais utiliser de téléphone", "Utiliser les écrans d'une façon qui soutient votre santé, vos objectifs et votre humeur", "Avoir le téléphone le plus récent", "Avoir le plus d'abonnés"], answer: 1, why: "Il s'agit que les écrans vous aident, pas qu'ils prennent le dessus." },
+      { objective: "O1", q: "Sur beaucoup de téléphones Android, le temps d'écran se trouve dans les Paramètres, à la rubrique :", options: ["Bien-être numérique", "Appareil photo", "Fond d'écran", "Bluetooth"], answer: 0, why: "Beaucoup d'Android l'appellent Bien-être numérique ; le nom peut varier." },
+      { objective: "O1", q: "Quels trois chiffres est-il le plus utile de vérifier d'abord ?", options: ["Batterie, stockage, luminosité", "Abonnés, j'aime, commentaires", "Moyenne par jour, applis principales, prises en main ou notifications", "Prix, âge et couleur du téléphone"], answer: 2, why: "Ils montrent combien et à quelle fréquence vous utilisez votre téléphone." },
+      { objective: "O1", q: "Existe-t-il un chiffre de temps d'écran parfait pour tout le monde ?", options: ["Oui, exactement 1 heure", "Oui, exactement 3 heures", "Oui, zéro", "Non ; ce qui compte, c'est qu'il colle à vos objectifs"], answer: 3, why: "Votre temps d'écran doit coller à votre sommeil, à l'école, au travail et à votre vie." },
+      { objective: "O2", q: "Le défilement infini est un hameçon parce que :", options: ["Il n'y a pas de moment naturel pour s'arrêter", "Il économise des données", "La loi l'exige", "Il rend l'écran plus lumineux"], answer: 0, why: "Sans fin, il est facile de continuer." },
+      { objective: "O2", q: "Un \"algorithme\" dans une appli, c'est :", options: ["Un type de coque de téléphone", "Une personne qui lit vos messages", "Les règles informatiques qui choisissent ce qu'on vous montre ensuite", "Un niveau de jeu"], answer: 2, why: "Les algorithmes apprennent ce qui vous garde devant l'écran." },
+      { objective: "O2", q: "Quel bon point d'arrêt pouvez-vous ajouter ?", options: ["Activer la lecture automatique", "Désactiver la lecture automatique", "Ajouter plus de notifications", "Supprimer toutes les limites"], answer: 1, why: "Désactiver la lecture automatique empêche la vidéo suivante de démarrer toute seule." },
+      { objective: "O2", q: "Avant d'ouvrir une appli, une habitude utile est de :", options: ["Mettre le son au maximum", "Ouvrir cinq autres applis", "Vérifier toutes les notifications", "Décider ce que vous venez y faire"], answer: 3, why: "Un but clair rend plus facile de fermer l'appli." },
+      { objective: "O3", q: "Combien d'heures de sommeil les CDC conseillent-ils aux adultes de 18 ans et plus ?", options: ["7 ou plus", "4", "5", "3 à 4"], answer: 0, why: "Les CDC disent que les adultes ont besoin de 7 heures ou plus." },
+      { objective: "O3", q: "La nuit, l'endroit où garer votre téléphone doit être :", options: ["Sous votre oreiller", "Dans votre main", "Loin de votre lit", "Avec le son fort"], answer: 2, why: "La distance avec votre lit protège votre sommeil." },
+      { objective: "O3", q: "Aux États-Unis, vous vous sentez souvent déprimé et n'arrivez pas à dormir. Où pouvez-vous demander de l'aide à toute heure ?", options: ["Dans un espace de commentaires", "En appelant ou en envoyant un SMS au 988", "En attendant sans rien dire à personne", "En demandant à une appli au hasard"], answer: 1, why: "Le 988 est gratuit et ouvert 24 h/24 aux États-Unis ; ailleurs, appelez la ligne d'écoute ou le numéro d'urgence de votre pays, et parlez aussi à un adulte de confiance ou à un médecin." },
+      { objective: "O4", q: "Quelle notification vaut-il mieux désactiver ?", options: ["Votre transport est arrivé", "Un message de votre parent", "Une alerte de l'école", "Un jeu qui vous demande de revenir"], answer: 3, why: "Les alertes de jeux et de boutiques ont rarement besoin de vous interrompre." },
+      { objective: "O4", q: "Qu'est-ce qu'un mode concentration ?", options: ["Un réglage qui coupe les distractions pendant que vous étudiez, travaillez ou vous reposez", "Un filtre d'appareil photo", "Une appli payante", "Un jeu"], answer: 0, why: "Les modes concentration coupent les alertes pendant un temps choisi." },
+      { objective: "O4", q: "Enlever une appli tentante de l'écran d'accueil aide parce que :", options: ["Cela supprime votre compte", "L'ouvrir demande un petit effort de plus", "L'appli devient plus rapide", "Vous gagnez des points"], answer: 1, why: "Une petite étape en plus vous laisse le temps de choisir." },
+      { objective: "O5", q: "Une \"vitrine des meilleurs moments\", c'est :", options: ["Un outil de pêche", "Un direct sans montage", "Votre rapport de temps d'écran", "Seulement les meilleurs moments, choisis et retouchés"], answer: 3, why: "Les réseaux sociaux montrent souvent seulement les meilleurs moments, retouchés." },
+      { objective: "O5", q: "Que fait le fait de masquer un compte ?", options: ["Il le signale à la police", "Il supprime son compte", "Il cache ses publications sans arrêter de le suivre ni le prévenir", "Il lui envoie un message"], answer: 2, why: "Masquer cache ses publications discrètement." },
+      { objective: "O5", q: "Une bonne question pour faire le point après avoir utilisé une appli, c'est :", options: ["Combien de j'aime j'ai eus ?", "Comment je me sens après 10 minutes sur cette appli ?", "Qui a le plus d'abonnés ?", "Qu'est-ce que je devrais acheter ?"], answer: 1, why: "Remarquer comment vous vous sentez vous aide à changer ce que vous utilisez." },
+      { objective: "O6", q: "Qu'est-ce qui a sa place dans votre plan écrans ?", options: ["Vos mots de passe", "Une liste de gens avec qui vous disputer", "Activer toutes les notifications", "Deux choses à faire au lieu de défiler"], answer: 3, why: "Avoir d'autres activités prêtes rend plus facile de poser le téléphone." },
+      { objective: "O6", q: "Combien de temps devez-vous tester votre plan écrans avant de le juger ?", options: ["Une minute", "Une heure", "Sept jours", "Ne jamais le tester"], answer: 2, why: "Une semaine vous donne de vrais chiffres à comparer." },
+      { objective: "O6", q: "Qu'est-ce qui aide à tenir un plan écrans ?", options: ["En parler à un ami ou à sa famille, ou le faire ensemble", "Le garder secret", "Le rendre le plus strict possible", "Le changer toutes les heures"], answer: 0, why: "Le soutien des autres vous aide à continuer." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      2,
+      4,
+      6,
+      9,
+      10,
+      11,
+      14,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Objectif et limites d'applis",
+        objective: "O4",
+        notYet: "Pas d'objectif de temps d'écran, ou limites non réglées dans le téléphone.",
+        meets: "Un objectif de temps d'écran par jour et des limites réglées sur les deux applis principales.",
+        exceeds: "Utilise aussi un mode concentration pour l'école, le travail ou l'entraînement."
+      },
+      {
+        name: "Notifications",
+        objective: "O4",
+        notYet: "Aucun changement dans les notifications.",
+        meets: "Les notifications d'au moins trois applis non essentielles désactivées, en gardant les personnes et les alertes importantes.",
+        exceeds: "A aussi enlevé une appli tentante de l'écran d'accueil."
+      },
+      {
+        name: "Plan pour le sommeil",
+        objective: "O3",
+        notYet: "Pas d'heure d'arrêt des écrans ni d'endroit où garer le téléphone.",
+        meets: "Une heure d'arrêt des écrans environ 30 minutes avant le coucher et un endroit où garer le téléphone loin du lit.",
+        exceeds: "Le mode sommeil ou Ne pas déranger est activé chaque nuit du test."
+      },
+      {
+        name: "Fil et autres activités",
+        objective: "O5",
+        notYet: "Aucun changement dans le fil, ou rien à faire au lieu de défiler.",
+        meets: "Un changement dans le fil et deux choses à faire au lieu de défiler.",
+        exceeds: "Note comment le changement de fil a joué sur l'humeur."
+      },
+      {
+        name: "Test de sept jours",
+        objective: "O6",
+        notYet: "Le plan n'a pas été testé, ou les résultats n'ont pas été comparés.",
+        meets: "Suivi pendant sept jours, avec le temps d'écran, les prises en main et le sommeil comparés à la leçon 1.",
+        exceeds: "Dit ce qu'il faut garder et ce qu'il faut changer pour la semaine suivante."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Les apprenants dont le temps d'écran ou les prises en main baissent après le test de sept jours (déclaré par eux-mêmes)",
+      "Les apprenants qui disent dormir plus d'heures dans le suivi à 30 jours",
+      "Les apprenants qui utilisent encore leur plan écrans après 30 jours (sondage de suivi)"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Le téléphone ou l'appareil de l'apprenant",
+      "Du papier ou une appli de notes pour le plan écrans et les notes de chaque jour",
+      "Un petit réveil pas cher si le téléphone sert de réveil (facultatif)",
+      "Environ 60 minutes en tout, plus un test de sept jours"
+    ],
+    facilitatorNotes: [
+      "Gardez-le comme un choix, pas une leçon de morale : les apprenants fixent leurs propres objectifs et gardent leurs chiffres pour eux, sauf s'ils veulent les partager.",
+      "Aidez les apprenants qui ont des téléphones différents à trouver les bons réglages ; les menus changent selon l'appareil.",
+      "Donnez les ressources locales de santé mentale et d'aide en cas de crise, dont le 988 aux États-Unis, et dites aux apprenants à qui parler s'ils se sentent souvent mal.",
+      "Faites du test de sept jours un défi de groupe avec un point en fin de semaine.",
+      "Évaluez le plan écrans avec la grille et donnez un retour sur une ligne « Pas encore » à la fois."
     ]
   }
 };

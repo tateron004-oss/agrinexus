@@ -16,11 +16,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes et comprend une tâche « Essayez maintenant ». Une vérification des connaissances termine chaque chapitre, et un quiz de 20 questions termine le cours. C'est une formation générale ; pour les questions juridiques, fiscales et NIL (nom, image et ressemblance), consultez les sources officielles et parlez à votre service de conformité, à un parent ou un tuteur, et à un professionnel."
   ],
   finalTask: "Écrivez un plan d'affaires d'une page pour une idée venue de votre sport : le problème, votre solution, votre client, ce que cinq vraies personnes vous ont dit, comment vous atteindrez vos clients, un budget de démarrage construit dans un tableur, et une liste de règles à vérifier (NIL, recherche de marque, justificatifs et impôts) avec les personnes que vous avez consultées.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des athlètes et des entraîneurs de lycée, d'université et en début de carrière qui ont une idée d'entreprise, ou qui en veulent une : une activité d'entraînement, une idée d'application, un produit pour un problème vu dans le sport, ou un service pour les équipes locales.",
+    startingPoint: "Ils connaissent bien leur sport et voient ses problèmes de près, et utilisent un téléphone et parfois un tableur. Peu ont interrogé des clients, testé une idée à petit prix, écrit un plan d'affaires ou un budget, ou vérifié les règles NIL, de marques déposées, de licences et d'impôts.",
+    gap: "Les athlètes construisent ou achètent souvent avant de vérifier que quelqu'un veut leur idée, ou se lancent sans vérifier les règles, et perdent de l'argent ou leur admissibilité. Tester avec de vrais clients, un plan d'une page, un vrai budget et une liste de règles leur donne un départ sûr et peu coûteux.",
+    constraints: [
+      "Niveau de lecture : des mots simples et des phrases courtes",
+      "Un téléphone ou un ordinateur avec un assistant IA gratuit et Google Sheets",
+      "Environ 60 minutes de leçons, plus le temps de parler à cinq personnes",
+      "Les règles NIL, de marques déposées, de licence commerciale et d'impôts ; vérifiez auprès du service de conformité, de l'association de l'État ou des autorités locales",
+      "Pas un conseil financier ni fiscal ; les athlètes de moins de 18 ans ont besoin d'un parent ou d'un tuteur pour les comptes, les contrats et tout emprunt"
+    ],
+    prerequisites: "Aucun. « Plateformes de commerce en ligne et IA pour les athlètes » est une bonne étape suivante pour vendre en ligne."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir des problèmes que vous avez vus dans votre sport", action: "lister et noter les problèmes selon le nombre de personnes touchées, à quel point ils gênent et si les gens paient déjà, puis en choisir un", standard: "avec un problème choisi que vous avez vu dans la vraie vie" },
+    { id: "O2", condition: "À partir de cinq personnes qui ont le problème", action: "les interroger sur ce qu'elles ont fait par le passé et noter ce qu'elles disent", standard: "sans aucune question du type « Achèteriez-vous ? » et avec les tendances communes aux cinq notées" },
+    { id: "O3", condition: "Avec ce que les clients vous ont dit", action: "écrire une solution en une phrase et choisir le test le plus simple que vous pouvez mener en deux semaines", standard: "avec un chiffre qui montrera si le test a marché" },
+    { id: "O4", condition: "Avec vos notes et un assistant IA", action: "écrire un plan d'affaires d'une page avec le problème, la solution, le client, ce que les clients ont dit, comment les atteindre, l'argent et les prochaines étapes", standard: "avec les chiffres inventés retirés ou marqués comme des estimations, et l'avis d'un mentor" },
+    { id: "O5", condition: "Avec Google Sheets", action: "construire un budget de démarrage avec les coûts, les revenus prévus, les totaux et le bénéfice", standard: "avec de vrais prix de fournisseurs, des formules vérifiées et une relecture avec un adulte de confiance avant toute dépense" },
+    { id: "O6", condition: "Avant le lancement", action: "écrire une liste de règles à vérifier sur le NIL, les noms et logos, la licence commerciale, les justificatifs et les impôts", standard: "avec une recherche USPTO faite et le nom de la personne consultée pour chaque règle" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Trouver et tester une idée",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Trouver un problème qui vaut la peine d'être résolu",
           minutes: 5,
           goal: "Lister les problèmes que vous avez vus dans le sport et en choisir un qui vaut la peine d'être résolu.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "L'IA propose, vous choisissez", bullets: ["Demandez 15 problèmes", "Entourez ceux que vous avez vus"] }
           ],
           tryIt: "Listez cinq problèmes de votre sport, ajoutez-en avec l'IA, évaluez-les et choisissez celui sur lequel vous allez travailler.",
-          youCanNow: "trouver et choisir un vrai problème qui vaut la peine d'être résolu."
+          youCanNow: "trouver et choisir un vrai problème qui vaut la peine d'être résolu.",
+          quickCheck: [
+            { objective: "O1", q: "Lequel est le signe d'un problème qui vaut la peine d'être résolu ?", options: ["Vous êtes le seul à l'avoir", "Les gens paient déjà pour une mauvaise solution", "C'est amusant d'en parler", "Personne ne s'en plaint"], answer: 1, why: "Si les gens paient déjà pour une mauvaise solution, le problème compte pour eux." },
+            { objective: "O1", q: "L'IA liste 15 problèmes pour votre sport. Que faites-vous ?", options: ["Choisir le plus excitant", "Les traiter tous les 15", "Entourer ceux que vous avez vraiment vus", "Demander à l'IA de choisir pour vous"], answer: 2, why: "Gardez les problèmes que vous avez vus dans la vraie vie." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Parler à de vrais clients",
           minutes: 6,
           goal: "Interroger cinq clients potentiels sur le problème avant de construire quoi que ce soit.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Après cinq échanges", bullets: ["Notez leurs mots", "Cherchez des points communs", "Pas d'intérêt ? Vous avez économisé"] }
           ],
           tryIt: "Demandez à un assistant IA de vous aider à écrire cinq questions d'entretien sur ce que les gens ont fait. Interrogez au moins deux personnes cette semaine et notez ce qu'elles ont dit.",
-          youCanNow: "interroger des clients potentiels pour vérifier si un problème est réel."
+          youCanNow: "interroger des clients potentiels pour vérifier si un problème est réel.",
+          quickCheck: [
+            { objective: "O2", q: "Quel est votre but dans un entretien client ?", options: ["Apprendre", "Vendre", "Obtenir une promesse d'achat", "Montrer votre idée"], answer: 0, why: "Parlez pour en apprendre plus sur le problème, pas pour vendre." },
+            { objective: "O2", q: "Un parent dit : « J'achèterais ça un jour, c'est sûr. » Que demandez-vous ensuite ?", options: ["« Super, je vous inscris ? »", "« Combien paieriez-vous ? »", "« Vos amis l'achèteraient aussi ? »", "« Racontez-moi la dernière fois que ce problème est arrivé. »"], answer: 3, why: "Interrogez sur ce qui s'est passé, car les gens disent oui pour être gentils." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Définir votre solution et votre offre",
           minutes: 5,
           goal: "Écrire une solution en une phrase et la version la plus simple que vous pourriez tester.",
@@ -75,17 +109,21 @@ module.exports = {
             { title: "Définissez la réussite", bullets: ["Le plus petit test de deux semaines", "Un chiffre qui veut dire que ça a marché"] }
           ],
           tryIt: "Écrivez votre solution en une phrase. Utilisez l'IA pour trouver le plus petit test de deux semaines, et notez le chiffre qui voudrait dire que cela a marché.",
-          youCanNow: "décrire votre solution et concevoir un petit test peu coûteux."
+          youCanNow: "décrire votre solution et concevoir un petit test peu coûteux.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce qu'un produit minimum viable (MVP) ?", options: ["Votre version la plus chère", "Une application complète", "La version la plus simple qui permet de tester avec de vrais clients", "Un long plan d'affaires"], answer: 2, why: "Un MVP est le plus petit test que vous pouvez mener avec de vrais clients." },
+            { objective: "O3", q: "Vous voulez créer une académie d'entraînement. Quel est le meilleur premier test ?", options: ["Louer un bâtiment pour un an", "Organiser une séance avec un formulaire d'inscription", "Créer une application sur mesure", "Imprimer 500 t-shirts"], answer: 1, why: "Commencez par le test le plus simple que vous pouvez faire en deux semaines." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Trouver et tester une idée",
         questions: [
-          { q: "Les bonnes idées d'entreprise partent :", options: ["D'un joli logo", "D'un gros prêt", "D'un problème que les gens ont", "D'une application coûteuse"], answer: 2, why: "Résoudre de vrais problèmes, c'est ce pour quoi les gens paient." },
-          { q: "Quelle question d'entretien est la meilleure ?", options: ["« Racontez-moi la dernière fois que c'est arrivé. »", "« Achèteriez-vous mon idée ? »", "« Mon idée n'est-elle pas géniale ? »", "« Combien paieriez-vous un jour ? »"], answer: 0, why: "Ce que les gens ont fait est plus honnête que des prédictions." },
-          { q: "La plupart des personnes interrogées ne se soucient pas du problème. Cela veut dire :", options: ["Vous avez échoué", "Construisez quand même", "Interrogez-les jusqu'à ce qu'elles soient d'accord", "Vous avez économisé du temps et de l'argent ; ajustez ou choisissez un autre problème"], answer: 3, why: "Apprendre tôt est une victoire." },
-          { q: "Un MVP, c'est :", options: ["Le meilleur joueur du match", "La version la plus simple qui permet de tester avec de vrais clients", "Un grand lancement", "Une marque déposée"], answer: 1, why: "En affaires, MVP veut dire produit minimum viable." },
-          { q: "Quel est le meilleur premier test pour une idée de stage ?", options: ["Louer un stade pendant un mois", "Une séance un samedi avec un formulaire d'inscription", "Créer une application", "Imprimer 500 T-shirts"], answer: 1, why: "Les petits tests sont rapides et peu coûteux." }
+          { objective: "O1", q: "Les bonnes idées d'entreprise partent :", options: ["D'un joli logo", "D'un gros prêt", "D'un problème que les gens ont", "D'une application coûteuse"], answer: 2, why: "Résoudre de vrais problèmes, c'est ce pour quoi les gens paient." },
+          { objective: "O2", q: "Quelle question d'entretien est la meilleure ?", options: ["« Racontez-moi la dernière fois que c'est arrivé. »", "« Achèteriez-vous mon idée ? »", "« Mon idée n'est-elle pas géniale ? »", "« Combien paieriez-vous un jour ? »"], answer: 0, why: "Ce que les gens ont fait est plus honnête que des prédictions." },
+          { objective: "O2", q: "La plupart des personnes interrogées ne se soucient pas du problème. Cela veut dire :", options: ["Vous avez échoué", "Construisez quand même", "Interrogez-les jusqu'à ce qu'elles soient d'accord", "Vous avez économisé du temps et de l'argent ; ajustez ou choisissez un autre problème"], answer: 3, why: "Apprendre tôt est une victoire." },
+          { objective: "O3", q: "Un MVP, c'est :", options: ["Le meilleur joueur du match", "La version la plus simple qui permet de tester avec de vrais clients", "Un grand lancement", "Une marque déposée"], answer: 1, why: "En affaires, MVP veut dire produit minimum viable." },
+          { objective: "O3", q: "Quel est le meilleur premier test pour une idée de stage ?", options: ["Louer un stade pendant un mois", "Une séance un samedi avec un formulaire d'inscription", "Créer une application", "Imprimer 500 T-shirts"], answer: 1, why: "Les petits tests sont rapides et peu coûteux." }
         ]
       }
     },
@@ -93,6 +131,7 @@ module.exports = {
       name: "Chapitre 2 : Plan, budget et règles",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Un plan d'affaires d'une page avec l'IA",
           minutes: 5,
           goal: "Écrire un plan d'affaires d'une page avec l'aide de l'IA.",
@@ -109,9 +148,14 @@ module.exports = {
             { title: "Vous le vérifiez", bullets: ["Pas de chiffres inventés", "Montrez-le à un mentor"] }
           ],
           tryIt: "Utilisez l'IA pour transformer vos notes en plan d'une page. Signalez chaque supposition, puis demandez un avis à un mentor, un entraîneur ou un enseignant.",
-          youCanNow: "écrire un plan d'affaires d'une page avec l'IA et vérifier son exactitude."
+          youCanNow: "écrire un plan d'affaires d'une page avec l'IA et vérifier son exactitude.",
+          quickCheck: [
+            { objective: "O4", q: "Quelle rubrique a sa place dans votre plan d'une page ?", options: ["Ce que les clients m'ont dit", "Vos athlètes préférés", "Toute l'histoire de votre vie", "Votre programme d'entraînement"], answer: 0, why: "Le plan comprend ce que vos cinq entretiens ont montré." },
+            { objective: "O4", q: "Le plan de l'IA annonce 500 clients le premier mois, mais vous n'avez aucune preuve. Que faites-vous ?", options: ["Le garder pour impressionner", "Le doubler", "Le mettre tout en haut", "Le retirer ou le marquer comme une estimation"], answer: 3, why: "Ne gardez que ce qui est vrai ou clairement marqué comme une estimation." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Construire un budget de démarrage",
           minutes: 5,
           goal: "Construire un budget de démarrage simple dans un tableur.",
@@ -128,9 +172,14 @@ module.exports = {
             { title: "Soyez prudent", bullets: ["L'IA crée les formules ; vous vérifiez", "Pas d'emprunt sans un adulte de confiance"] }
           ],
           tryIt: "Construisez dans Google Sheets un budget de démarrage pour votre test de deux semaines avec de vrais prix. Demandez à l'IA d'écrire les formules du total et du bénéfice et vérifiez-les.",
-          youCanNow: "construire un budget de démarrage simple avec de vrais chiffres."
+          youCanNow: "construire un budget de démarrage simple avec de vrais chiffres.",
+          quickCheck: [
+            { objective: "O5", q: "Comment estimer les revenus prévus ?", options: ["Le prix multiplié par le nombre de clients prévus", "Les coûts moins le prix", "Les abonnés multipliés par les j'aime", "Deviner un chiffre rond"], answer: 0, why: "Les revenus prévus, c'est le prix multiplié par le nombre de clients prévus." },
+            { objective: "O5", q: "Votre budget montre que vous devez acheter du matériel. Que faites-vous avant de dépenser ?", options: ["Payer avec une carte de crédit", "Emprunter à un ami", "Revoir le budget avec un parent, un tuteur ou un conseiller de confiance", "Acheter tout de suite l'option la moins chère en ligne"], answer: 2, why: "Parlez à un adulte de confiance avant d'emprunter ou de dépenser pour un test." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Les règles que tout athlète-fondateur vérifie",
           minutes: 6,
           goal: "Écrire une liste de règles à vérifier pour votre entreprise.",
@@ -152,17 +201,21 @@ module.exports = {
             { name: "IRS : centre fiscal des travailleurs indépendants (en anglais)", url: "https://www.irs.gov/businesses/small-businesses-self-employed/self-employed-individuals-tax-center" }
           ],
           tryIt: "Tâche finale : terminez votre plan d'une page avec le budget, puis écrivez votre liste de règles avec la personne consultée sur le NIL, le résultat de votre recherche de marque, votre vérification de licence locale et votre feuille de justificatifs.",
-          youCanNow: "vérifier les règles clés avant de lancer une entreprise en tant qu'athlète."
+          youCanNow: "vérifier les règles clés avant de lancer une entreprise en tant qu'athlète.",
+          quickCheck: [
+            { objective: "O6", q: "Où vérifier si votre ville exige une licence commerciale ?", options: ["Sur les réseaux sociaux", "Sur le site web de vos autorités locales", "Auprès d'un chatbot d'IA", "Dans le groupe de discussion de votre entraîneur"], answer: 1, why: "Votre ville ou votre État peut exiger une licence ; vérifiez sur le site web de vos autorités locales." },
+            { objective: "O6", q: "Vous avez choisi un nom d'entreprise. Que vérifiez-vous avant de l'utiliser ?", options: ["S'il rime", "Si vos amis l'aiment", "S'il a une mascotte", "Les registres de marques de l'USPTO et les registres des noms d'entreprise de votre État"], answer: 3, why: "Cherchez dans les registres de marques et de noms d'entreprise de l'État avant de choisir un nom." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Plan, budget et règles",
         questions: [
-          { q: "L'IA ajoute « 1 million $ la première année » à votre plan sans aucune base. Vous :", options: ["Le gardez", "En faites 2 millions $", "Le montrez à des investisseurs", "Le retirez ou le signalez comme supposition"], answer: 3, why: "Ne gardez que des chiffres vrais ou des suppositions clairement signalées." },
-          { q: "Les revenus prévus sont égaux à :", options: ["Prix multiplié par le nombre de clients prévus", "Coûts multipliés par deux", "Abonnés multipliés par les mentions J'aime", "Une supposition"], answer: 0, why: "C'est l'estimation de base des revenus." },
-          { q: "Avant d'emprunter de l'argent pour un test d'entreprise, vous devez :", options: ["Utiliser vite une carte de crédit", "Demander à un inconnu en ligne", "Parler à un parent, un tuteur ou un conseiller de confiance", "Sauter le budget"], answer: 2, why: "La dette est risquée ; demandez conseil d'abord." },
-          { q: "Pourquoi chercher dans les registres de l'USPTO ?", options: ["Pour trouver des clients", "Pour trouver un entraîneur", "Pour payer des impôts", "Pour éviter d'utiliser un nom qui appartient à quelqu'un d'autre"], answer: 3, why: "Les recherches de marque évitent les conflits." },
-          { q: "Le seuil de l'IRS pour la déclaration des revenus nets d'indépendant est de :", options: ["40 000 $", "400 $", "4 $", "Il n'y en a pas"], answer: 1, why: "C'est indiqué sur la page du centre fiscal des travailleurs indépendants de l'IRS." }
+          { objective: "O4", q: "L'IA ajoute « 1 million $ la première année » à votre plan sans aucune base. Vous :", options: ["Le gardez", "En faites 2 millions $", "Le montrez à des investisseurs", "Le retirez ou le signalez comme supposition"], answer: 3, why: "Ne gardez que des chiffres vrais ou des suppositions clairement signalées." },
+          { objective: "O5", q: "Les revenus prévus sont égaux à :", options: ["Prix multiplié par le nombre de clients prévus", "Coûts multipliés par deux", "Abonnés multipliés par les mentions J'aime", "Une supposition"], answer: 0, why: "C'est l'estimation de base des revenus." },
+          { objective: "O5", q: "Avant d'emprunter de l'argent pour un test d'entreprise, vous devez :", options: ["Utiliser vite une carte de crédit", "Demander à un inconnu en ligne", "Parler à un parent, un tuteur ou un conseiller de confiance", "Sauter le budget"], answer: 2, why: "La dette est risquée ; demandez conseil d'abord." },
+          { objective: "O6", q: "Pourquoi chercher dans les registres de l'USPTO ?", options: ["Pour trouver des clients", "Pour trouver un entraîneur", "Pour payer des impôts", "Pour éviter d'utiliser un nom qui appartient à quelqu'un d'autre"], answer: 3, why: "Les recherches de marque évitent les conflits." },
+          { objective: "O6", q: "Le seuil de l'IRS pour la déclaration des revenus nets d'indépendant est de :", options: ["40 000 $", "400 $", "4 $", "Il n'y en a pas"], answer: 1, why: "C'est indiqué sur la page du centre fiscal des travailleurs indépendants de l'IRS." }
         ]
       }
     }
@@ -170,26 +223,104 @@ module.exports = {
   quiz: {
     title: "Quiz final : Entrepreneuriat et IA pour les athlètes",
     questions: [
-      { q: "Un entrepreneur :", options: ["Fait seulement du sport", "Investit seulement de l'argent", "Crée une entreprise pour résoudre un problème", "Travaille pour une équipe"], answer: 2, why: "Résoudre des problèmes est l'essentiel." },
-      { q: "Un point de douleur, c'est :", options: ["Un problème qui gêne assez les gens pour qu'ils veuillent le voir réglé", "Une blessure", "Un tableau d'affichage", "Une pénalité"], answer: 0, why: "Les points de douleur sont des occasions d'affaires." },
-      { q: "Pour évaluer un problème, demandez-vous :", options: ["Combien de personnes l'ont et à quel point il est pénible", "De quelle couleur il est", "Qui est célèbre", "Combien de mentions J'aime il obtient"], answer: 0, why: "La taille et la douleur montrent s'il vaut la peine d'être résolu." },
-      { q: "L'IA propose 15 problèmes. Vous :", options: ["Prenez le premier", "Utilisez les 15", "Entourez ceux que vous avez vus dans la vraie vie", "Les ignorez"], answer: 2, why: "L'expérience réelle vaut mieux que des suppositions." },
-      { q: "Les entretiens clients servent à :", options: ["Vendre avec insistance", "Apprendre", "Se disputer", "Gagner des abonnés"], answer: 1, why: "Apprenez avant de construire." },
-      { q: "Pourquoi éviter « Achèteriez-vous mon idée ? »", options: ["C'est impoli", "C'est illégal", "C'est trop court", "Les gens disent oui pour être gentils"], answer: 3, why: "Ce que les gens ont fait est plus honnête." },
-      { q: "Combien de personnes interroger au minimum ?", options: ["Une", "Aucune", "Cinq", "500"], answer: 2, why: "Cinq montrent les premières tendances." },
-      { q: "Valider veut dire :", options: ["Faire tamponner un ticket de parking", "Gagner un match", "Signer un contrat", "Vérifier qu'un problème et une solution sont réels"], answer: 3, why: "La validation fait gagner du temps et de l'argent." },
-      { q: "Quel est un MVP pour une idée de produits dérivés ?", options: ["10 T-shirts vendus à des personnes qui les ont demandés", "500 T-shirts en stock", "Une collection complète de vêtements", "Le bail d'un magasin"], answer: 0, why: "Commencez petit et testez." },
-      { q: "Un test a besoin :", options: ["D'aucun objectif", "D'un chiffre qui veut dire que cela a marché", "D'un énorme budget", "D'une célébrité"], answer: 1, why: "Un objectif clair vous dit si cela a marché." },
-      { q: "Un plan d'une page contient :", options: ["Seulement un logo", "Vos statistiques", "Problème, solution, client, argent, prochaines étapes", "Votre mot de passe"], answer: 2, why: "Ces rubriques expliquent comment cela fonctionne." },
-      { q: "Demandez à l'IA de signaler :", options: ["Tout ce qui est une supposition", "Rien", "Seulement les bonnes nouvelles", "Vos rivaux"], answer: 0, why: "Signaler les suppositions vous garde honnête." },
-      { q: "Un mentor, c'est :", options: ["Un concurrent", "Un client", "Un arbitre", "Une personne expérimentée qui donne des conseils"], answer: 3, why: "Les mentors vous aident à éviter les erreurs." },
-      { q: "Les prix de votre budget doivent venir :", options: ["De suppositions", "De vrais prix de fournisseurs", "De vieux souvenirs", "Seulement de l'IA"], answer: 1, why: "De vrais prix font de vrais budgets." },
-      { q: "Une dépense, c'est :", options: ["L'argent que vous gagnez", "L'argent que vous dépensez pour faire fonctionner l'entreprise", "Un trophée", "Un abonné"], answer: 1, why: "Les dépenses sont des coûts." },
-      { q: "Une entreprise qui utilise votre nom peut compter comme :", options: ["Du pay-for-play", "Une bourse", "Rien", "Une activité NIL"], answer: 3, why: "Elle utilise votre nom, votre image ou votre ressemblance." },
-      { q: "Pouvez-vous utiliser librement le logo de votre école sur vos produits ?", options: ["Non, il faut une permission", "Oui, toujours", "Seulement le week-end", "Seulement en ligne"], answer: 0, why: "Les écoles protègent leurs logos." },
-      { q: "Où vérifier si vous avez besoin d'une licence commerciale ?", options: ["Sur un blog de sport", "Auprès d'un rival", "Sur le site web de votre administration locale", "Nulle part"], answer: 2, why: "Les licences dépendent de règles locales." },
-      { q: "Pourquoi garder chaque reçu ?", options: ["Pour décorer", "Pour le jeter plus tard", "Ce n'est pas nécessaire", "Pour les justificatifs et les impôts"], answer: 3, why: "Les justificatifs aident pour les impôts et les décisions." },
-      { q: "Si vous avez moins de 18 ans et créez une entreprise :", options: ["Vous pouvez tout signer seul", "Un parent ou un tuteur vous aide pour les comptes et les contrats", "Cachez-le", "Utilisez un faux âge"], answer: 1, why: "Les mineurs ont généralement besoin de l'aide d'un adulte." }
+      { objective: "O1", q: "Un entrepreneur :", options: ["Fait seulement du sport", "Investit seulement de l'argent", "Crée une entreprise pour résoudre un problème", "Travaille pour une équipe"], answer: 2, why: "Résoudre des problèmes est l'essentiel." },
+      { objective: "O1", q: "Un point de douleur, c'est :", options: ["Un problème qui gêne assez les gens pour qu'ils veuillent le voir réglé", "Une blessure", "Un tableau d'affichage", "Une pénalité"], answer: 0, why: "Les points de douleur sont des occasions d'affaires." },
+      { objective: "O1", q: "Pour évaluer un problème, demandez-vous :", options: ["Combien de personnes l'ont et à quel point il est pénible", "De quelle couleur il est", "Qui est célèbre", "Combien de mentions J'aime il obtient"], answer: 0, why: "La taille et la douleur montrent s'il vaut la peine d'être résolu." },
+      { objective: "O1", q: "L'IA propose 15 problèmes. Vous :", options: ["Prenez le premier", "Utilisez les 15", "Entourez ceux que vous avez vus dans la vraie vie", "Les ignorez"], answer: 2, why: "L'expérience réelle vaut mieux que des suppositions." },
+      { objective: "O2", q: "Les entretiens clients servent à :", options: ["Vendre avec insistance", "Apprendre", "Se disputer", "Gagner des abonnés"], answer: 1, why: "Apprenez avant de construire." },
+      { objective: "O2", q: "Pourquoi éviter « Achèteriez-vous mon idée ? »", options: ["C'est impoli", "C'est illégal", "C'est trop court", "Les gens disent oui pour être gentils"], answer: 3, why: "Ce que les gens ont fait est plus honnête." },
+      { objective: "O2", q: "Combien de personnes interroger au minimum ?", options: ["Une", "Aucune", "Cinq", "500"], answer: 2, why: "Cinq montrent les premières tendances." },
+      { objective: "O2", q: "Valider veut dire :", options: ["Faire tamponner un ticket de parking", "Gagner un match", "Signer un contrat", "Vérifier qu'un problème et une solution sont réels"], answer: 3, why: "La validation fait gagner du temps et de l'argent." },
+      { objective: "O3", q: "Quel est un MVP pour une idée de produits dérivés ?", options: ["10 T-shirts vendus à des personnes qui les ont demandés", "500 T-shirts en stock", "Une collection complète de vêtements", "Le bail d'un magasin"], answer: 0, why: "Commencez petit et testez." },
+      { objective: "O3", q: "Un test a besoin :", options: ["D'aucun objectif", "D'un chiffre qui veut dire que cela a marché", "D'un énorme budget", "D'une célébrité"], answer: 1, why: "Un objectif clair vous dit si cela a marché." },
+      { objective: "O4", q: "Un plan d'une page contient :", options: ["Seulement un logo", "Vos statistiques", "Problème, solution, client, argent, prochaines étapes", "Votre mot de passe"], answer: 2, why: "Ces rubriques expliquent comment cela fonctionne." },
+      { objective: "O4", q: "Demandez à l'IA de signaler :", options: ["Tout ce qui est une supposition", "Rien", "Seulement les bonnes nouvelles", "Vos rivaux"], answer: 0, why: "Signaler les suppositions vous garde honnête." },
+      { objective: "O4", q: "Un mentor, c'est :", options: ["Un concurrent", "Un client", "Un arbitre", "Une personne expérimentée qui donne des conseils"], answer: 3, why: "Les mentors vous aident à éviter les erreurs." },
+      { objective: "O5", q: "Les prix de votre budget doivent venir :", options: ["De suppositions", "De vrais prix de fournisseurs", "De vieux souvenirs", "Seulement de l'IA"], answer: 1, why: "De vrais prix font de vrais budgets." },
+      { objective: "O5", q: "Une dépense, c'est :", options: ["L'argent que vous gagnez", "L'argent que vous dépensez pour faire fonctionner l'entreprise", "Un trophée", "Un abonné"], answer: 1, why: "Les dépenses sont des coûts." },
+      { objective: "O6", q: "Une entreprise qui utilise votre nom peut compter comme :", options: ["Du pay-for-play", "Une bourse", "Rien", "Une activité NIL"], answer: 3, why: "Elle utilise votre nom, votre image ou votre ressemblance." },
+      { objective: "O6", q: "Pouvez-vous utiliser librement le logo de votre école sur vos produits ?", options: ["Non, il faut une permission", "Oui, toujours", "Seulement le week-end", "Seulement en ligne"], answer: 0, why: "Les écoles protègent leurs logos." },
+      { objective: "O6", q: "Où vérifier si vous avez besoin d'une licence commerciale ?", options: ["Sur un blog de sport", "Auprès d'un rival", "Sur le site web de votre administration locale", "Nulle part"], answer: 2, why: "Les licences dépendent de règles locales." },
+      { objective: "O6", q: "Pourquoi garder chaque reçu ?", options: ["Pour décorer", "Pour le jeter plus tard", "Ce n'est pas nécessaire", "Pour les justificatifs et les impôts"], answer: 3, why: "Les justificatifs aident pour les impôts et les décisions." },
+      { objective: "O6", q: "Si vous avez moins de 18 ans et créez une entreprise :", options: ["Vous pouvez tout signer seul", "Un parent ou un tuteur vous aide pour les comptes et les contrats", "Cachez-le", "Utilisez un faux âge"], answer: 1, why: "Les mineurs ont généralement besoin de l'aide d'un adulte." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      1,
+      5,
+      8,
+      10,
+      13,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Problème et client",
+        objective: "O1",
+        notYet: "Le problème est vague, ou l'apprenant ne l'a pas vu lui-même.",
+        meets: "Un vrai problème, noté selon son ampleur et la gêne qu'il cause, avec un client clair.",
+        exceeds: "Montre ce que les clients paient déjà pour une mauvaise solution."
+      },
+      {
+        name: "Entretiens clients",
+        objective: "O2",
+        notYet: "Moins de cinq personnes, ou les notes portent sur leur intention d'acheter.",
+        meets: "Cinq entretiens sur ce que les gens ont fait, notés avec leurs mots, et les tendances relevées.",
+        exceeds: "Le plan a changé grâce à ce que les clients ont dit."
+      },
+      {
+        name: "Plan d'une page",
+        objective: "O4",
+        notYet: "Des rubriques manquent, ou des chiffres inventés ne sont pas marqués.",
+        meets: "Les sept rubriques sur une page, les estimations marquées, et l'avis d'un mentor reçu.",
+        exceeds: "Comprend le test de deux semaines et le chiffre qui montrera s'il a marché."
+      },
+      {
+        name: "Budget de démarrage",
+        objective: "O5",
+        notYet: "Des prix devinés, ou des formules non vérifiées.",
+        meets: "Chaque coût avec un vrai prix, les revenus prévus, les totaux et le bénéfice, vérifiés et relus avec un adulte de confiance.",
+        exceeds: "Montre combien de clients il faut pour couvrir les coûts de démarrage."
+      },
+      {
+        name: "Liste des règles",
+        objective: "O6",
+        notYet: "Il manque le NIL, les noms, la licence ou les impôts, ou personne n'est nommé.",
+        meets: "Le NIL, les noms et logos, la licence, les justificatifs et les impôts sont chacun listés avec la personne consultée par l'apprenant.",
+        exceeds: "Le résultat d'une recherche USPTO et un tableau des reçus et des paiements sont joints."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent le plan d'affaires avec « Atteint » ou « Dépasse » sur chaque ligne de la grille",
+      "Les apprenants qui mènent leur test de deux semaines dans les 30 jours et disent s'il a atteint son chiffre (questionnaire de suivi)",
+      "Les apprenants qui créent une entreprise, ou décident de ne pas le faire après les entretiens clients et économisent ainsi de l'argent",
+      "Les apprenants qui disent avoir vérifié les règles NIL, de marques déposées, de licence et d'impôts avant le lancement"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur avec Internet",
+      "Un assistant IA gratuit (ChatGPT, Microsoft Copilot ou Google Gemini)",
+      "Un compte Google gratuit pour Google Sheets",
+      "Un carnet ou des notes sur le téléphone pour les entretiens clients",
+      "Environ 60 minutes de leçons, plus le temps de cinq courts entretiens"
+    ],
+    facilitatorNotes: [
+      "Faites d'abord pratiquer les entretiens clients en binômes, pour que les apprenants interrogent sur ce que les gens ont fait et ne demandent pas « Achèteriez-vous ? ».",
+      "Trouvez des mentors, comme des commerçants locaux ou un centre d'aide aux petites entreprises, pour donner leur avis sur les plans.",
+      "Ne laissez pas les apprenants emprunter de l'argent ni signer de contrat dans le cadre du cours ; impliquez les parents ou tuteurs pour les moins de 18 ans.",
+      "Faites venir le service de conformité pour les questions NIL et orientez les questions d'impôts vers un professionnel des impôts.",
+      "Félicitez les idées rejetées par les clients : le découvrir tôt est un bon résultat."
     ]
   }
 };

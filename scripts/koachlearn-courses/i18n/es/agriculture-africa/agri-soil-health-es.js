@@ -24,11 +24,35 @@ module.exports = {
     "Los suelos cambian de un terreno a otro. Usa este curso junto con los resultados de tu análisis de suelo y los consejos de tu extensionista, tu instituto de investigación o tu agroveterinaria, y prueba las prácticas nuevas primero en una parcela pequeña. Cada lección dura unos cinco minutos y termina con una tarea en tu propia finca. Una comprobación de conocimientos cierra cada capítulo y un examen de 20 preguntas cierra el curso."
   ],
   finalTask: "Escribe un plan de suelo de una página para un terreno de tu finca (o para un terreno de ejemplo, como 1 acre de maíz y frijol en Kakamega, 2 acres de yuca en Oyo o 1 acre de tomate cerca de Kumasi): lo que encontraste al revisar el terreno, cuándo y dónde vas a hacer un análisis de suelo (o lo que dijo el análisis), cómo vas a agregar materia orgánica, tu rotación o asociación con leguminosas, cómo vas a mantener el suelo cubierto y frenar la erosión, y tu plan de fertilizante escrito como fuente, dosis, momento y lugar.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Pequeños agricultores y agricultores que están creciendo, trabajadores agrícolas y jóvenes agricultores en Kenia, Nigeria, Ghana y en toda África que quieren sacar más de la misma tierra, con cultivos como maíz, frijol, yuca y tomate.",
+    startingPoint: "La mayoría siembra cada temporada y usa algo de estiércol o fertilizante, muchas veces por costumbre o por consejo de un vecino. Pocos han hecho una revisión de su suelo en el campo, un análisis de suelo, composta, una rotación planeada, controles de erosión en curvas de nivel o han usado el fertilizante con las 4R.",
+    gap: "Un suelo cansado, ácido o erosionado desperdicia el dinero gastado en semilla y fertilizante y deja los cultivos débiles en las temporadas secas. Conocer su suelo y mejorarlo cada temporada ayuda a guardar más agua, alimentar mejor los cultivos y sacar más cosecha de cada costal de fertilizante.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y frases cortas; cada término de suelos se explica",
+      "Dispositivos: una pala, una cubeta y un teléfono básico; la mayor parte de la práctica se hace en el campo",
+      "Tiempo: lecciones de unos 5 minutos que caben entre las tareas de la finca",
+      "Los suelos cambian de un terreno a otro: las dosis salen de un análisis de suelo, del extensionista o de la investigación, y las prácticas nuevas se prueban primero en una parcela pequeña",
+      "Las tarifas, los lugares y los tiempos de espera de los laboratorios cambian: hay que llamar o revisar antes de ir"
+    ],
+    prerequisites: "Ninguno."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "En uno de tus propios terrenos", action: "hacer una revisión en el campo del color, la textura, las lombrices, las raíces, el agua y las señales de las plantas, y anotar lo que muestra", standard: "tratando las señales de las plantas como pistas que se confirman con un análisis de suelo" },
+    { id: "O2", condition: "Para un terreno", action: "tomar una muestra de suelo de la forma correcta y decir a dónde mandarla para analizarla", standard: "con muchas muestras pequeñas mezcladas en una muestra limpia por cada parte del terreno" },
+    { id: "O3", condition: "Con rastrojos, material verde y estiércol", action: "hacer una compostera y planear cómo agregar materia orgánica", standard: "sin quemar rastrojos y sin poner estiércol fresco en las plántulas" },
+    { id: "O4", condition: "Para un terreno", action: "planear una rotación de tres temporadas y una asociación con leguminosas", standard: "con una leguminosa en el plan y una distancia que deje que los dos cultivos reciban luz" },
+    { id: "O5", condition: "Para un terreno con pendiente o desnudo", action: "elegir cobertura y controles de erosión y ponerlos en curvas de nivel", standard: "con la curva de nivel marcada con ayuda del extensionista cuando haga falta" },
+    { id: "O6", condition: "Para un cultivo", action: "escribir un plan de fertilizante con la fuente, la dosis, el momento y el lugar correctos", standard: "con las dosis tomadas de un análisis de suelo o de la recomendación local" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Conocer y alimentar tu suelo",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Leer tu suelo con los ojos y las manos",
           minutes: 5,
           goal: "Hacer una revisión sencilla de tu suelo en el campo y anotar lo que te dice.",
@@ -46,9 +70,14 @@ module.exports = {
             { title: "Revisión en el campo", bullets: ["Cava en tres lugares", "Mira, huele, cuenta lombrices, siente la textura", "Observa el agua después de la lluvia; anótalo"] }
           ],
           tryIt: "Haz la revisión en uno de tus terrenos: cava en tres lugares, siente la textura, cuenta las lombrices y escribe una línea para cada lugar. Toma una foto con el teléfono de cada hoyo para comparar la próxima temporada.",
-          youCanNow: "revisar tu suelo en el campo y describir su textura, su vida, su drenaje y sus señales de alerta."
+          youCanNow: "revisar tu suelo en el campo y describir su textura, su vida, su drenaje y sus señales de alerta.",
+          quickCheck: [
+            { objective: "O1", q: "¿A qué pueden apuntar las hojas de abajo amarillas en el maíz?", options: ["A demasiada agua en las hojas", "A demasiado sol", "A un crecimiento sano", "A poco nitrógeno"], answer: 3, why: "Las hojas de abajo amarillas en el maíz pueden indicar poco nitrógeno; un análisis de suelo lo confirma." },
+            { objective: "O1", q: "Después de la lluvia, tu terreno forma una costra dura y el agua escurre. ¿Qué anotas en tu revisión?", options: ["Suelo sano; no hace falta cambiar nada", "Una señal de suelo pobre, que hay que confirmar con un análisis de suelo", "Demasiadas lombrices", "Un suelo franco perfecto"], answer: 1, why: "La costra y el escurrimiento son señales de un suelo pobre; un análisis de suelo te dice con seguridad lo que necesita." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Conseguir un análisis de suelo y tomar una buena muestra",
           minutes: 5,
           goal: "Tomar una muestra de suelo de la forma correcta y saber a dónde mandarla para analizarla.",
@@ -67,9 +96,14 @@ module.exports = {
           ],
           sources: [KALRO, KALRO_SAMPLING, CSIR_SRI],
           tryIt: "Busca el lugar más cercano que analice suelos: llama a tu extensionista o consulta la KALRO, el CSIR-SRI o el instituto de investigación de tu estado. Escribe su nombre, el precio y el tiempo de espera. Luego marca en un dibujo de tu terreno el camino en zigzag que vas a recorrer para tomar la muestra.",
-          youCanNow: "tomar una buena muestra de suelo mezclada y saber dónde mandarla a analizar."
+          youCanNow: "tomar una buena muestra de suelo mezclada y saber dónde mandarla a analizar.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué te dice el pH del suelo?", options: ["Qué tan ácido es el suelo", "Cuántas lombrices tiene", "Qué tan hondo llegan las raíces", "Cuánta lluvia cayó"], answer: 0, why: "El pH muestra qué tan ácido es el suelo; un suelo ácido encierra los nutrientes y puede necesitar cal." },
+            { objective: "O2", q: "Una parte de tu terreno está encharcada y el resto está seco y arenoso. ¿Cómo tomas la muestra?", options: ["Un puño de tierra del centro", "Mezclar las partes húmeda y seca en una sola muestra", "Mandar una muestra mezclada aparte por cada parte que se ve diferente", "Tomar la muestra solo cerca del montón de estiércol"], answer: 2, why: "Cada terreno, o cada parte que se ve diferente, lleva su propia muestra limpia y mezclada." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Aumentar la materia orgánica con composta y estiércol",
           minutes: 5,
           goal: "Hacer una compostera y usar el estiércol con seguridad para aumentar la materia orgánica del suelo.",
@@ -88,17 +122,21 @@ module.exports = {
           ],
           sources: [FAO_SOM],
           tryIt: "Empieza esta semana una compostera (montón o fosa) con lo que tengas: cañas, maleza, restos de cocina y estiércol. Escribe la fecha y las capas que usaste, y pon un recordatorio en el teléfono para voltearla en dos semanas.",
-          youCanNow: "hacer composta, usar el estiércol con seguridad y explicar cómo la materia orgánica ayuda a tu suelo."
+          youCanNow: "hacer composta, usar el estiércol con seguridad y explicar cómo la materia orgánica ayuda a tu suelo.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué va en una compostera?", options: ["Solo plástico y latas", "Solo estiércol fresco", "Capas de material seco, material verde y estiércol, con un poco de tierra entre ellas", "Solo ceniza de rastrojos quemados"], answer: 2, why: "La composta se arma en capas de material seco, material verde y estiércol, se mantiene húmeda y se voltea." },
+            { objective: "O3", q: "Después de unos tres meses, tu composta está oscura, se desmorona y huele a tierra. ¿Qué haces?", options: ["Usarla; ya está lista", "Quemarla", "Tirarla", "Dejarla dos años más"], answer: 0, why: "La composta está lista cuando está oscura, se desmorona y huele a tierra, después de unos dos a tres meses." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Conocer y alimentar tu suelo",
         questions: [
-          { q: "Mojas una bolita de tierra y se siente áspera y se deshace. ¿Qué tipo de suelo es lo más probable?", options: ["Arcilloso", "Arenoso", "Franco", "Turba"], answer: 1, why: "El suelo áspero que se deshace es arenoso; drena rápido y pierde nutrientes." },
-          { q: "El maíz joven tiene hojas moradas. ¿Cuál es el mejor siguiente paso?", options: ["Comprar cualquier fertilizante de inmediato", "Quemar el terreno", "Tomarlo como una pista y confirmar con un análisis de suelo", "Arrancar el cultivo"], answer: 2, why: "El color de la hoja es una pista, no una prueba; el análisis de suelo te lo dice con seguridad." },
-          { q: "¿Cómo debes tomar una muestra de suelo de un terreno?", options: ["Un puñado del mejor lugar", "Tierra del montón viejo de estiércol", "Tierra del camino, donde es fácil cavar", "De 10 a 20 muestras pequeñas en zigzag, mezcladas en una"], answer: 3, why: "Una muestra mezclada de muchos puntos representa todo el terreno; la KALRO dice que el muestreo es la mayor fuente de error." },
-          { q: "En Ghana, ¿qué instituto ofrece análisis de suelo en laboratorio?", options: ["El CSIR-Soil Research Institute, Kumasi", "La asociación nacional de fútbol", "La agencia meteorológica", "La oficina de correos"], answer: 0, why: "El CSIR-Soil Research Institute en Kwadaso, Kumasi, ofrece análisis de laboratorio." },
-          { q: "¿Qué debes hacer con las cañas de maíz después de la cosecha para mejorar la salud del suelo?", options: ["Quemarlas", "Dejarlas en el terreno o hacer composta con ellas", "Tirarlas al río", "Venderlas todas cada temporada"], answer: 1, why: "El rastrojo que se deja en el terreno o se composta agrega materia orgánica; quemarlo la gasta." }
+          { objective: "O1", q: "Mojas una bolita de tierra y se siente áspera y se deshace. ¿Qué tipo de suelo es lo más probable?", options: ["Arcilloso", "Arenoso", "Franco", "Turba"], answer: 1, why: "El suelo áspero que se deshace es arenoso; drena rápido y pierde nutrientes." },
+          { objective: "O1", q: "El maíz joven tiene hojas moradas. ¿Cuál es el mejor siguiente paso?", options: ["Comprar cualquier fertilizante de inmediato", "Quemar el terreno", "Tomarlo como una pista y confirmar con un análisis de suelo", "Arrancar el cultivo"], answer: 2, why: "El color de la hoja es una pista, no una prueba; el análisis de suelo te lo dice con seguridad." },
+          { objective: "O2", q: "¿Cómo debes tomar una muestra de suelo de un terreno?", options: ["Un puñado del mejor lugar", "Tierra del montón viejo de estiércol", "Tierra del camino, donde es fácil cavar", "De 10 a 20 muestras pequeñas en zigzag, mezcladas en una"], answer: 3, why: "Una muestra mezclada de muchos puntos representa todo el terreno; la KALRO dice que el muestreo es la mayor fuente de error." },
+          { objective: "O2", q: "En Ghana, ¿qué instituto ofrece análisis de suelo en laboratorio?", options: ["El CSIR-Soil Research Institute, Kumasi", "La asociación nacional de fútbol", "La agencia meteorológica", "La oficina de correos"], answer: 0, why: "El CSIR-Soil Research Institute en Kwadaso, Kumasi, ofrece análisis de laboratorio." },
+          { objective: "O3", q: "¿Qué debes hacer con las cañas de maíz después de la cosecha para mejorar la salud del suelo?", options: ["Quemarlas", "Dejarlas en el terreno o hacer composta con ellas", "Tirarlas al río", "Venderlas todas cada temporada"], answer: 1, why: "El rastrojo que se deja en el terreno o se composta agrega materia orgánica; quemarlo la gasta." }
         ]
       }
     },
@@ -106,6 +144,7 @@ module.exports = {
       name: "Capítulo 2: Mantener el suelo sano temporada tras temporada",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Rotación de cultivos y asociación con leguminosas",
           minutes: 5,
           goal: "Planear una rotación de tres temporadas y una asociación con leguminosas para un terreno.",
@@ -123,9 +162,14 @@ module.exports = {
           ],
           sources: [FAO_SOM],
           tryIt: "Dibuja una tabla sencilla: tus terrenos hacia abajo y las próximas tres temporadas arriba. Pon un cultivo en cada casilla para que cada terreno tenga una leguminosa una vez y ningún terreno repita cultivo. Arranca una planta de frijol o de cacahuate y busca los nódulos en las raíces.",
-          youCanNow: "planear una rotación de cultivos y una asociación con leguminosas que alimenten tu suelo."
+          youCanNow: "planear una rotación de cultivos y una asociación con leguminosas que alimenten tu suelo.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué son los nódulos en las raíces de las leguminosas?", options: ["Señales de enfermedad", "Bolitas donde unas bacterias toman nitrógeno del aire", "Huevos de insectos", "Piedras en el suelo"], answer: 1, why: "Las leguminosas trabajan con bacterias en los nódulos de sus raíces para tomar nitrógeno del aire." },
+            { objective: "O4", q: "Siembras maíz y frijol juntos, pero el frijol no recibe luz. ¿Qué cambias?", options: ["Dejar de sembrar frijol", "Quemar el maíz", "Echar más semilla", "Usar una distancia que deje que los dos cultivos reciban luz, y sembrar el frijol a tiempo"], answer: 3, why: "Las asociaciones necesitan una distancia que deje que los dos cultivos reciban luz, con la leguminosa sembrada a tiempo para establecerse." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Cobertura del suelo y control de la erosión",
           minutes: 5,
           goal: "Elegir y poner cobertura y controles sencillos de erosión en un terreno con pendiente.",
@@ -143,9 +187,14 @@ module.exports = {
           ],
           sources: [FAO_RUNOFF, FAO_MECH],
           tryIt: "Después de la próxima lluvia, recorre tu terreno y marca en un dibujo dónde corre el agua y dónde se lava el suelo. Elige un control (cobertura, camellones en curvas de nivel, franja de pasto o barrera de piedra) para el peor lugar y escribe cuándo lo vas a poner.",
-          youCanNow: "detectar la erosión en tu finca y elegir cobertura y controles en curvas de nivel para frenarla."
+          youCanNow: "detectar la erosión en tu finca y elegir cobertura y controles en curvas de nivel para frenarla.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué es una curva de nivel?", options: ["Una línea derecha hacia arriba de la pendiente", "Una cerca", "Un camino", "Una línea a la misma altura a lo ancho de una pendiente"], answer: 3, why: "Una curva de nivel es una línea a la misma altura a lo ancho de la pendiente; los bordos y las franjas de pasto la siguen." },
+            { objective: "O5", q: "Quieres hacer terrazas fanya juu en un terreno muy inclinado. ¿Qué haces primero?", options: ["Pedir a tu extensionista que te ayude a marcar la curva de nivel", "Cavar derecho hacia arriba y hacia abajo de la pendiente", "Empezar en cualquier lugar y ajustar después", "Quitar primero todo el pasto"], answer: 0, why: "Las líneas mal trazadas pueden empeorar la erosión, así que pide ayuda para marcar la curva de nivel." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Lo básico del fertilizante: fuente, dosis, momento y lugar correctos",
           minutes: 6,
           goal: "Escribir un plan de fertilizante para un cultivo usando las 4R.",
@@ -164,17 +213,21 @@ module.exports = {
           ],
           sources: [HANDBOOK_4R, KALRO],
           tryIt: "Tarea final: escribe tu plan de suelo de una página para un terreno. Incluye lo que encontraste al revisar el terreno, tu plan de análisis de suelo o sus resultados, cómo vas a agregar materia orgánica, tu rotación o asociación, cómo vas a frenar la erosión y una línea de fertilizante para cada nutriente: fuente, dosis, momento y lugar.",
-          youCanNow: "usar el fertilizante según las 4R y armar un plan de suelo completo de una temporada para tu terreno."
+          youCanNow: "usar el fertilizante según las 4R y armar un plan de suelo completo de una temporada para tu terreno.",
+          quickCheck: [
+            { objective: "O6", q: "En las 4R, ¿qué significa \"fuente correcta\"?", options: ["El costal más barato de la tienda", "El costal con la etiqueta más llamativa", "El producto que da lo que tu análisis de suelo dice que falta", "Cualquier fertilizante que usó un vecino"], answer: 2, why: "La fuente correcta da los nutrientes que tu análisis de suelo dice que faltan." },
+            { objective: "O6", q: "Un vendedor te ofrece fertilizante barato de un costal abierto y sin etiqueta. ¿Qué haces?", options: ["Comprarlo porque es barato", "Comprar mejor costales sellados y con etiqueta a un distribuidor de insumos registrado", "Mezclarlo con tu propio fertilizante", "Comprar el doble"], answer: 1, why: "Compra costales sellados a distribuidores de insumos registrados y revisa la etiqueta." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Mantener el suelo sano temporada tras temporada",
         questions: [
-          { q: "¿Por qué las leguminosas como el frijol ayudan al siguiente cultivo?", options: ["Matan todas las malezas", "Sus raíces trabajan con bacterias para agregar nitrógeno", "Hacen el suelo más ácido", "No necesitan lluvia"], answer: 1, why: "Los nódulos de la raíz fijan nitrógeno del aire; parte se queda en el suelo para el siguiente cultivo." },
-          { q: "¿Cuál plan es una buena rotación de cultivos?", options: ["Maíz, luego frijol, luego sorgo", "Maíz, luego maíz, luego maíz", "Tomate después de tomate cada temporada", "Dejar el terreno desnudo una temporada sí y otra no"], answer: 0, why: "Cambiar de cultivo e incluir una leguminosa corta el ciclo de las plagas y alimenta el suelo." },
-          { q: "En un terreno con pendiente, ¿cómo debes arar y sembrar?", options: ["Derecho hacia arriba y abajo de la pendiente", "En círculos", "A lo ancho de la pendiente, siguiendo la curva de nivel", "Solo en la parte de arriba"], answer: 2, why: "Trabajar en curvas de nivel frena la escorrentía y mantiene el suelo en su lugar." },
-          { q: "¿Qué quiere decir \"momento correcto\" para el abonado de cobertura con nitrógeno en el maíz?", options: ["Cuando te sobre dinero", "Antes de comprar la semilla", "Después de la cosecha", "Cuando el cultivo lo necesita, a la altura de la rodilla, con el suelo húmedo"], answer: 3, why: "El nitrógeno se aprovecha mejor cuando el cultivo en crecimiento lo necesita y el suelo está húmedo." },
-          { q: "¿Cuál es el lugar correcto para el fertilizante de siembra?", options: ["Encima de la semilla", "Cerca de las raíces, sin tocar la semilla y tapado", "Regado en el camino", "En la compostera"], answer: 1, why: "Ponerlo cerca de las raíces, tapado y sin tocar la semilla lo aprovecha mejor y evita quemar la semilla." }
+          { objective: "O4", q: "¿Por qué las leguminosas como el frijol ayudan al siguiente cultivo?", options: ["Matan todas las malezas", "Sus raíces trabajan con bacterias para agregar nitrógeno", "Hacen el suelo más ácido", "No necesitan lluvia"], answer: 1, why: "Los nódulos de la raíz fijan nitrógeno del aire; parte se queda en el suelo para el siguiente cultivo." },
+          { objective: "O4", q: "¿Cuál plan es una buena rotación de cultivos?", options: ["Maíz, luego frijol, luego sorgo", "Maíz, luego maíz, luego maíz", "Tomate después de tomate cada temporada", "Dejar el terreno desnudo una temporada sí y otra no"], answer: 0, why: "Cambiar de cultivo e incluir una leguminosa corta el ciclo de las plagas y alimenta el suelo." },
+          { objective: "O5", q: "En un terreno con pendiente, ¿cómo debes arar y sembrar?", options: ["Derecho hacia arriba y abajo de la pendiente", "En círculos", "A lo ancho de la pendiente, siguiendo la curva de nivel", "Solo en la parte de arriba"], answer: 2, why: "Trabajar en curvas de nivel frena la escorrentía y mantiene el suelo en su lugar." },
+          { objective: "O6", q: "¿Qué quiere decir \"momento correcto\" para el abonado de cobertura con nitrógeno en el maíz?", options: ["Cuando te sobre dinero", "Antes de comprar la semilla", "Después de la cosecha", "Cuando el cultivo lo necesita, a la altura de la rodilla, con el suelo húmedo"], answer: 3, why: "El nitrógeno se aprovecha mejor cuando el cultivo en crecimiento lo necesita y el suelo está húmedo." },
+          { objective: "O6", q: "¿Cuál es el lugar correcto para el fertilizante de siembra?", options: ["Encima de la semilla", "Cerca de las raíces, sin tocar la semilla y tapado", "Regado en el camino", "En la compostera"], answer: 1, why: "Ponerlo cerca de las raíces, tapado y sin tocar la semilla lo aprovecha mejor y evita quemar la semilla." }
         ]
       }
     }
@@ -182,26 +235,106 @@ module.exports = {
   quiz: {
     title: "Examen final: Salud y fertilidad del suelo",
     questions: [
-      { q: "¿Cuál es una señal de un suelo sano?", options: ["Pálido y duro, con costra", "Oscuro, se desmorona, con lombrices", "Siempre encharcado", "La lluvia se escurre de inmediato"], answer: 1, why: "Un suelo oscuro que se desmorona y tiene lombrices está sano." },
-      { q: "Un suelo pegajoso que se enrolla en una tira larga es sobre todo:", options: ["Arena", "Grava", "Arcilla", "Ceniza"], answer: 2, why: "El suelo pegajoso que forma una tira tiene mucha arcilla." },
-      { q: "Un terreno tiene mucha striga (hierba bruja). Esto muchas veces es señal de:", options: ["Un suelo cansado y poco fértil", "Demasiada composta", "Un suelo perfecto", "Demasiada sombra"], answer: 0, why: "La striga es común en suelos pobres y cansados." },
-      { q: "¿Qué te dice un análisis de suelo de laboratorio que tus ojos no ven?", options: ["El color del suelo", "Cuántas lombrices hay", "Por dónde corre el agua", "El pH y los niveles de nutrientes"], answer: 3, why: "Un análisis de suelo mide la acidez y los nutrientes." },
-      { q: "En Kenia, ¿qué instituto nacional tiene laboratorios de análisis de suelo?", options: ["La KALRO", "Kenya Power", "Kenya Airways", "El Kenya Wildlife Service"], answer: 0, why: "La KALRO, la Organización de Investigación Agrícola y Ganadera de Kenia, tiene laboratorios de suelo como el de Kabete." },
-      { q: "Al tomar una muestra de suelo, ¿qué lugar debes evitar?", options: ["El centro del terreno", "Un punto del zigzag", "La orilla de un surco de siembra", "Un montón viejo de estiércol o de ceniza"], answer: 3, why: "Los lugares raros dan una imagen falsa del terreno." },
-      { q: "¿En qué debes mezclar las muestras de suelo?", options: ["En un costal viejo de fertilizante", "En una cubeta limpia", "En un envase usado de químicos", "En tu bolsillo"], answer: 1, why: "Una cubeta limpia mantiene la muestra libre de fertilizante o químicos que arruinarían el resultado." },
-      { q: "Según la FAO, la materia orgánica del suelo es clave porque:", options: ["Hace el suelo más duro", "Quita todos los nutrientes", "Guarda agua y nutrientes como una esponja", "Impide que crezcan las raíces"], answer: 2, why: "La materia orgánica guarda agua y nutrientes y alimenta la vida del suelo." },
-      { q: "¿Qué tan húmeda debe estar una compostera?", options: ["Completamente seca", "Inundada de agua", "Húmeda como una esponja exprimida", "No importa"], answer: 2, why: "La composta necesita humedad sin estar empapada." },
-      { q: "¿Por qué debes dejar que el estiércol fresco se pudra antes de usarlo cerca de las plántulas?", options: ["El estiércol fresco y caliente puede quemar las plántulas", "El estiércol podrido pesa más", "El estiércol fresco no tiene nutrientes", "Es ley en todas partes"], answer: 0, why: "El estiércol fresco puede ser demasiado fuerte y caliente para las plantas jóvenes." },
-      { q: "¿Qué práctica gasta la materia orgánica del suelo?", options: ["Agregar composta", "Quemar el rastrojo", "Sembrar leguminosas", "Cubrir el suelo con rastrojo"], answer: 1, why: "Quemar destruye el rastrojo que habría alimentado el suelo." },
-      { q: "¿Cuál es una leguminosa?", options: ["El maíz", "El sorgo", "La yuca", "El caupí"], answer: 3, why: "El caupí es una leguminosa que puede agregar nitrógeno al suelo." },
-      { q: "Sembrar maíz y frijol juntos en el mismo terreno se llama:", options: ["Asociación de cultivos", "Encalado", "Terraceo", "Abonado de cobertura"], answer: 0, why: "Sembrar dos cultivos juntos es asociar cultivos." },
-      { q: "¿Por qué rotar cultivos en lugar de sembrar el mismo cada temporada?", options: ["Para usar más fertilizante", "Para que deshierbar sea más difícil", "Para cortar la acumulación de plagas y enfermedades y equilibrar los nutrientes", "Porque lo exige la ley"], answer: 2, why: "La rotación corta el ciclo de las plagas y evita que un solo cultivo saque siempre los mismos nutrientes." },
-      { q: "¿Qué hace la cobertura del suelo?", options: ["Hace el suelo más caliente y seco", "Mata las lombrices", "Reemplaza todo el fertilizante", "Suaviza la lluvia, mantiene el suelo húmedo y lo alimenta"], answer: 3, why: "La cobertura protege y alimenta el suelo." },
-      { q: "Una forma barata de frenar la erosión en una pendiente suave, que además puede alimentar al ganado, es:", options: ["Franjas de pasto en curvas de nivel", "Arar hacia arriba y abajo de la pendiente", "Quemar el terreno", "Quitar todas las plantas"], answer: 0, why: "La FAO describe las franjas de pasto como una opción barata en lugar de terrazas." },
-      { q: "¿Por qué pedir a un extensionista que ayude a marcar las curvas de nivel?", options: ["No hace ninguna falta", "Las curvas de nivel se tienen que pintar", "Las líneas mal trazadas pueden empeorar la erosión", "Los extensionistas son dueños de la tierra"], answer: 2, why: "Las líneas que no están realmente a nivel pueden encauzar el agua y aumentar la erosión." },
-      { q: "¿Cuál NO es una de las 4R del uso del fertilizante?", options: ["Fuente correcta", "Dosis correcta", "Lugar correcto", "Color correcto"], answer: 3, why: "Las 4R son fuente, dosis, momento y lugar." },
-      { q: "¿De dónde debe venir la dosis de fertilizante para tu cultivo?", options: ["De una adivinanza", "De tu análisis de suelo y la recomendación local", "De lo que usó tu vecino", "Del costal más grande de la tienda"], answer: 1, why: "Las dosis deben ir de acuerdo con tu suelo y la recomendación oficial." },
-      { q: "Le preguntas a un asistente de IA del teléfono sobre tu análisis de suelo. ¿Cuál es la forma correcta de usarlo?", options: ["Para que te explique el informe con palabras sencillas y luego confirmar las dosis con el laboratorio o la extensión", "Para elegir las dosis de fertilizante en lugar del laboratorio", "Para mandarle tus datos bancarios", "Para reemplazar el análisis de suelo"], answer: 0, why: "La IA puede explicar, pero las dosis vienen del laboratorio, del extensionista o de la recomendación oficial." }
+      { objective: "O1", q: "¿Cuál es una señal de un suelo sano?", options: ["Pálido y duro, con costra", "Oscuro, se desmorona, con lombrices", "Siempre encharcado", "La lluvia se escurre de inmediato"], answer: 1, why: "Un suelo oscuro que se desmorona y tiene lombrices está sano." },
+      { objective: "O1", q: "Un suelo pegajoso que se enrolla en una tira larga es sobre todo:", options: ["Arena", "Grava", "Arcilla", "Ceniza"], answer: 2, why: "El suelo pegajoso que forma una tira tiene mucha arcilla." },
+      { objective: "O1", q: "Un terreno tiene mucha striga (hierba bruja). Esto muchas veces es señal de:", options: ["Un suelo cansado y poco fértil", "Demasiada composta", "Un suelo perfecto", "Demasiada sombra"], answer: 0, why: "La striga es común en suelos pobres y cansados." },
+      { objective: "O2", q: "¿Qué te dice un análisis de suelo de laboratorio que tus ojos no ven?", options: ["El color del suelo", "Cuántas lombrices hay", "Por dónde corre el agua", "El pH y los niveles de nutrientes"], answer: 3, why: "Un análisis de suelo mide la acidez y los nutrientes." },
+      { objective: "O2", q: "En Kenia, ¿qué instituto nacional tiene laboratorios de análisis de suelo?", options: ["La KALRO", "Kenya Power", "Kenya Airways", "El Kenya Wildlife Service"], answer: 0, why: "La KALRO, la Organización de Investigación Agrícola y Ganadera de Kenia, tiene laboratorios de suelo como el de Kabete." },
+      { objective: "O2", q: "Al tomar una muestra de suelo, ¿qué lugar debes evitar?", options: ["El centro del terreno", "Un punto del zigzag", "La orilla de un surco de siembra", "Un montón viejo de estiércol o de ceniza"], answer: 3, why: "Los lugares raros dan una imagen falsa del terreno." },
+      { objective: "O2", q: "¿En qué debes mezclar las muestras de suelo?", options: ["En un costal viejo de fertilizante", "En una cubeta limpia", "En un envase usado de químicos", "En tu bolsillo"], answer: 1, why: "Una cubeta limpia mantiene la muestra libre de fertilizante o químicos que arruinarían el resultado." },
+      { objective: "O3", q: "Según la FAO, la materia orgánica del suelo es clave porque:", options: ["Hace el suelo más duro", "Quita todos los nutrientes", "Guarda agua y nutrientes como una esponja", "Impide que crezcan las raíces"], answer: 2, why: "La materia orgánica guarda agua y nutrientes y alimenta la vida del suelo." },
+      { objective: "O3", q: "¿Qué tan húmeda debe estar una compostera?", options: ["Completamente seca", "Inundada de agua", "Húmeda como una esponja exprimida", "No importa"], answer: 2, why: "La composta necesita humedad sin estar empapada." },
+      { objective: "O3", q: "¿Por qué debes dejar que el estiércol fresco se pudra antes de usarlo cerca de las plántulas?", options: ["El estiércol fresco y caliente puede quemar las plántulas", "El estiércol podrido pesa más", "El estiércol fresco no tiene nutrientes", "Es ley en todas partes"], answer: 0, why: "El estiércol fresco puede ser demasiado fuerte y caliente para las plantas jóvenes." },
+      { objective: "O3", q: "¿Qué práctica gasta la materia orgánica del suelo?", options: ["Agregar composta", "Quemar el rastrojo", "Sembrar leguminosas", "Cubrir el suelo con rastrojo"], answer: 1, why: "Quemar destruye el rastrojo que habría alimentado el suelo." },
+      { objective: "O4", q: "¿Cuál es una leguminosa?", options: ["El maíz", "El sorgo", "La yuca", "El caupí"], answer: 3, why: "El caupí es una leguminosa que puede agregar nitrógeno al suelo." },
+      { objective: "O4", q: "Sembrar maíz y frijol juntos en el mismo terreno se llama:", options: ["Asociación de cultivos", "Encalado", "Terraceo", "Abonado de cobertura"], answer: 0, why: "Sembrar dos cultivos juntos es asociar cultivos." },
+      { objective: "O4", q: "¿Por qué rotar cultivos en lugar de sembrar el mismo cada temporada?", options: ["Para usar más fertilizante", "Para que deshierbar sea más difícil", "Para cortar la acumulación de plagas y enfermedades y equilibrar los nutrientes", "Porque lo exige la ley"], answer: 2, why: "La rotación corta el ciclo de las plagas y evita que un solo cultivo saque siempre los mismos nutrientes." },
+      { objective: "O5", q: "¿Qué hace la cobertura del suelo?", options: ["Hace el suelo más caliente y seco", "Mata las lombrices", "Reemplaza todo el fertilizante", "Suaviza la lluvia, mantiene el suelo húmedo y lo alimenta"], answer: 3, why: "La cobertura protege y alimenta el suelo." },
+      { objective: "O5", q: "Una forma barata de frenar la erosión en una pendiente suave, que además puede alimentar al ganado, es:", options: ["Franjas de pasto en curvas de nivel", "Arar hacia arriba y abajo de la pendiente", "Quemar el terreno", "Quitar todas las plantas"], answer: 0, why: "La FAO describe las franjas de pasto como una opción barata en lugar de terrazas." },
+      { objective: "O5", q: "¿Por qué pedir a un extensionista que ayude a marcar las curvas de nivel?", options: ["No hace ninguna falta", "Las curvas de nivel se tienen que pintar", "Las líneas mal trazadas pueden empeorar la erosión", "Los extensionistas son dueños de la tierra"], answer: 2, why: "Las líneas que no están realmente a nivel pueden encauzar el agua y aumentar la erosión." },
+      { objective: "O6", q: "¿Cuál NO es una de las 4R del uso del fertilizante?", options: ["Fuente correcta", "Dosis correcta", "Lugar correcto", "Color correcto"], answer: 3, why: "Las 4R son fuente, dosis, momento y lugar." },
+      { objective: "O6", q: "¿De dónde debe venir la dosis de fertilizante para tu cultivo?", options: ["De una adivinanza", "De tu análisis de suelo y la recomendación local", "De lo que usó tu vecino", "Del costal más grande de la tienda"], answer: 1, why: "Las dosis deben ir de acuerdo con tu suelo y la recomendación oficial." },
+      { objective: "O6", q: "Le preguntas a un asistente de IA del teléfono sobre tu análisis de suelo. ¿Cuál es la forma correcta de usarlo?", options: ["Para que te explique el informe con palabras sencillas y luego confirmar las dosis con el laboratorio o la extensión", "Para elegir las dosis de fertilizante en lugar del laboratorio", "Para mandarle tus datos bancarios", "Para reemplazar el análisis de suelo"], answer: 0, why: "La IA puede explicar, pero las dosis vienen del laboratorio, del extensionista o de la recomendación oficial." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      1,
+      3,
+      5,
+      7,
+      10,
+      12,
+      14,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte del plan y revísala de nuevo.",
+    criteria: [
+      {
+        name: "Revisión en el campo y análisis de suelo",
+        objective: "O2",
+        notYet: "No hay revisión en el campo ni plan para un análisis de suelo.",
+        meets: "Anota los resultados de la revisión en el campo, con cuándo y dónde se hará un análisis de suelo, o lo que dijo.",
+        exceeds: "Usa los resultados del análisis de suelo para dar forma al resto del plan."
+      },
+      {
+        name: "Materia orgánica",
+        objective: "O3",
+        notYet: "No agrega materia orgánica, o quema los rastrojos.",
+        meets: "Un plan para dejar los rastrojos y agregar composta o estiércol podrido, con fechas.",
+        exceeds: "Incluye una compostera ya empezada en la finca."
+      },
+      {
+        name: "Rotación y leguminosas",
+        objective: "O4",
+        notYet: "El mismo cultivo cada temporada, sin leguminosa.",
+        meets: "Una rotación de tres temporadas o una asociación con leguminosas con una distancia sensata.",
+        exceeds: "Tiene rotación y asociación, con los rastrojos dejados en el terreno."
+      },
+      {
+        name: "Cobertura y erosión",
+        objective: "O5",
+        notYet: "Deja el suelo desnudo, o trabaja hacia arriba y hacia abajo de la pendiente.",
+        meets: "Cobertura del suelo, y controles de erosión en curvas de nivel donde el terreno tiene pendiente.",
+        exceeds: "Dice quién ayudará a marcar la curva de nivel y cómo se mantendrán los controles."
+      },
+      {
+        name: "Fertilizante con las 4R",
+        objective: "O6",
+        notYet: "Menciona fertilizante sin fuente de la dosis, sin momento ni lugar.",
+        meets: "Fuente, dosis, momento y lugar escritos para cada producto, con dosis de un análisis de suelo o de la recomendación local.",
+        exceeds: "Combina el fertilizante con materia orgánica y anota de dónde salió la dosis."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Participantes que terminan el curso y obtienen Cumple o Supera en cada fila de la rúbrica del plan de suelo",
+      "Participantes que dicen haber hecho un análisis de suelo, empezado una composta o sembrado una leguminosa dentro de una temporada (encuesta de seguimiento)",
+      "Cambio en la cosecha o en el gasto en fertilizante que reportan los participantes o su grupo después de una temporada",
+      "Participantes que empiezan otro curso de agricultura de Koach Learn en un plazo de 30 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Una pala, una cubeta limpia y un cuaderno",
+      "Un terreno para revisar, de preferencia el propio",
+      "Un teléfono básico para llamar a un laboratorio de suelos o a la oficina de extensión",
+      "Unos 60 minutos en total, en sesiones cortas, más tiempo en el campo y para escribir el plan de suelo"
+    ],
+    facilitatorNotes: [
+      "En un grupo de agricultores o una escuela de campo: hagan juntos la prueba inicial y luego la revisión en el campo y la prueba de textura en un terreno real.",
+      "Practiquen juntos cómo tomar una muestra de suelo mezclada, y busca antes de la sesión el laboratorio más cercano y su tarifa vigente.",
+      "Armen en grupo una compostera pequeña para mostrar las capas.",
+      "No des tú dosis de fertilizante; invita a un extensionista o usa la recomendación local.",
+      "Califica el plan de suelo con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

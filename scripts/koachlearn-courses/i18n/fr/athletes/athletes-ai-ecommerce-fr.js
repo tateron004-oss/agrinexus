@@ -16,11 +16,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes et comprend une tâche « Essayez maintenant ». Une vérification des connaissances termine chaque chapitre, et un quiz de 20 questions termine le cours. C'est une formation générale, pas un conseil juridique ou fiscal ; renseignez-vous auprès de votre service de conformité, d'un parent ou d'un tuteur si vous avez moins de 18 ans, et d'un professionnel de la fiscalité."
   ],
   finalTask: "Rédigez un plan de lancement d'une page pour un produit ou un service : ce que c'est et à qui il s'adresse, la plateforme choisie et ses frais actuels (pris sur sa page de tarifs), une fiche produit écrite avec l'IA et retouchée par vous, un prix calculé à partir des vrais coûts, et une liste de règles à vérifier (NIL, logos scolaires, marques déposées, impôts) avec les personnes que vous avez consultées.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des athlètes et des entraîneurs de lycée, d'université et en début de carrière qui veulent vendre quelque chose en ligne : des produits dérivés avec leur propre design, des cours particuliers, des plans d'entraînement, ou des stages et des ateliers.",
+    startingPoint: "Ils ont un public sur les réseaux sociaux et une compétence sur laquelle on les interroge, et ont parfois déjà acheté en ligne. Peu ont comparé les frais des boutiques, fixé un prix à partir des vrais coûts, écrit une fiche produit ou vérifié les règles NIL, de logos, de marques déposées et d'impôts.",
+    gap: "Les athlètes qui se lancent sans vérifier les règles peuvent perdre leur admissibilité ou avoir des problèmes de marque déposée, et fixer un prix sans compter les frais peut faire perdre de l'argent. Un plan simple, avec les règles vérifiées, une fiche honnête et un prix basé sur les coûts, leur permet de gagner de l'argent avec leurs compétences en sécurité.",
+    constraints: [
+      "Niveau de lecture : des mots simples et des phrases courtes",
+      "Un téléphone ou un ordinateur, un assistant IA gratuit et un tableur ; les frais des plateformes changent et doivent être lus sur chaque page de tarifs",
+      "Environ 60 minutes au total",
+      "Les règles NIL, de logos scolaires, de marques déposées des ligues et d'impôts ; vérifiez auprès du service de conformité ou de l'association de l'État",
+      "Les athlètes de moins de 18 ans ont besoin qu'un adulte détienne ou codétienne les comptes de boutique et de paiement ; ceci est une formation, pas un conseil juridique ni fiscal"
+    ],
+    prerequisites: "Aucun. « Stratégies de marketing numérique avec l'IA pour les sportifs » aide à faire la promotion du lancement."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir de ce que votre public vous demande", action: "choisir un premier produit physique, service ou produit numérique à vendre", standard: "avec le temps et l'argent qu'il demande notés par écrit" },
+    { id: "O2", condition: "Avec les pages de tarifs officielles de deux plateformes", action: "comparer leurs frais mensuels, par vente et de paiement, et en choisir une", standard: "avec les vrais frais actuels notés par écrit et les règles d'âge vérifiées" },
+    { id: "O3", condition: "Avant de vendre quoi que ce soit avec votre nom ou un logo", action: "vérifier les règles NIL, de logos, de marques déposées et d'impôts qui s'appliquent à vous", standard: "sans aucun logo d'école, d'équipe ou de ligue utilisé sans autorisation écrite, avec une recherche USPTO faite et le nom de la personne consultée" },
+    { id: "O4", condition: "À partir d'un brouillon de l'IA", action: "écrire une fiche produit honnête qui répond à quoi, pour qui, ce qu'on reçoit, le prix, quand et comment", standard: "en moins de 200 mots, avec chaque détail vrai, de vraies photos qui vous appartiennent et des règles de remboursement claires" },
+    { id: "O5", condition: "À partir de tous les coûts d'une vente", action: "calculer un prix qui couvre vos coûts et laisse un bénéfice", standard: "avec les calculs vérifiés dans un tableur et avec une calculatrice" },
+    { id: "O6", condition: "Quand votre offre est prête", action: "planifier un lancement discret et une routine de service client", standard: "avec les problèmes corrigés avant la grande annonce et les messages traités dans la journée" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Quoi vendre et où",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Choisir quoi vendre",
           minutes: 5,
           goal: "Choisir un produit ou un service adapté à vos compétences et à votre public.",
@@ -37,9 +61,14 @@ module.exports = {
             { title: "Temps et risque", bullets: ["Services : votre temps", "Produits dérivés : argent au départ ou impression à la demande", "Numérique : créé une fois, vendu de nombreuses fois"] }
           ],
           tryIt: "Listez trois choses que des gens vous ont demandées. Demandez à un assistant IA les avantages et les inconvénients de vendre chacune, puis choisissez-en une.",
-          youCanNow: "choisir un produit ou un service adapté à vos compétences et à votre public."
+          youCanNow: "choisir un produit ou un service adapté à vos compétences et à votre public.",
+          quickCheck: [
+            { objective: "O1", q: "Lequel est un produit physique ?", options: ["Un cours en vidéo", "Un cours particulier", "Un stage", "Un t-shirt avec votre propre design"], answer: 3, why: "Les produits physiques comprennent les t-shirts, les casquettes, les autocollants et les affiches." },
+            { objective: "O1", q: "Des parents vous demandent sans cesse des cours pour leurs enfants. Qu'essayez-vous d'abord ?", options: ["Vendre des cours particuliers", "Créer une affiche", "Lancer un cours en vidéo", "Vendre des casquettes"], answer: 0, why: "Commencez par quelque chose que votre public demande déjà." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Comparer les plateformes de boutique",
           minutes: 5,
           goal: "Comparer deux plateformes et en choisir une selon leurs frais et fonctions actuels.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Avant de vous inscrire", bullets: ["Lisez la page de tarifs actuelle", "Moins de 18 ans : un adulte devra peut-être posséder le compte"] }
           ],
           tryIt: "Choisissez deux plateformes. À partir de leurs pages de tarifs officielles, notez le coût mensuel et les frais de chacune dans un petit tableau, et choisissez le total le moins cher pour 20 ventes par mois.",
-          youCanNow: "comparer des plateformes de boutique selon leurs frais réels et actuels, et en choisir une."
+          youCanNow: "comparer des plateformes de boutique selon leurs frais réels et actuels, et en choisir une.",
+          quickCheck: [
+            { objective: "O2", q: "Que font Printful et Printify ?", options: ["Ils gèrent les inscriptions aux stages", "Ils s'occupent de l'impression et de l'expédition des commandes", "Ils remplissent vos déclarations d'impôts", "Ils dessinent votre logo gratuitement"], answer: 1, why: "Les services d'impression à la demande se connectent aux boutiques et s'occupent de l'impression et de l'expédition." },
+            { objective: "O2", q: "Un ami dit qu'une plateforme ne coûte rien. Que faites-vous ?", options: ["Le croire et vous inscrire", "Demander le prix à une IA", "Lire la page de tarifs actuelle de la plateforme et noter les frais", "Deviner les frais"], answer: 2, why: "Chaque plateforme fait payer d'une façon ou d'une autre, et les frais changent, alors lisez la page de tarifs actuelle." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Les règles d'abord : NIL, logos et marques déposées",
           minutes: 6,
           goal: "Vérifier les règles qui s'appliquent avant de vendre quoi que ce soit avec votre nom ou un logo.",
@@ -80,17 +114,21 @@ module.exports = {
             { name: "IRS : centre fiscal des travailleurs indépendants (en anglais)", url: "https://www.irs.gov/businesses/small-businesses-self-employed/self-employed-individuals-tax-center" }
           ],
           tryIt: "Écrivez une liste de règles à vérifier pour votre produit : NIL (qui vous avez consulté), logos (lesquels, et la permission), recherche de marque (faite ou non) et justificatifs (où vous les garderez).",
-          youCanNow: "vérifier les bases NIL, logos, marques déposées et impôts avant de vendre."
+          youCanNow: "vérifier les bases NIL, logos, marques déposées et impôts avant de vendre.",
+          quickCheck: [
+            { objective: "O3", q: "À qui appartiennent en général le logo, la mascotte et le nom d'une école ?", options: ["À l'école ou à la ligue", "Aux athlètes", "À toute personne qui les utilise", "Au journal local"], answer: 0, why: "Les écoles et les ligues possèdent et protègent en général ces éléments." },
+            { objective: "O3", q: "Vous avez choisi un nom de marque pour vos produits dérivés. Que faites-vous avant d'imprimer ?", options: ["Imprimer 500 t-shirts", "Demander aux fans de voter", "Copier un logo célèbre", "Chercher ce nom dans les registres de marques de l'USPTO"], answer: 3, why: "Chercher dans les registres de l'USPTO vous aide à ne pas copier la marque déposée de quelqu'un d'autre." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Quoi vendre et où",
         questions: [
-          { q: "Quel service un athlète pourrait-il vendre ?", options: ["Un T-shirt", "Un autocollant", "Des cours particuliers", "Une affiche"], answer: 2, why: "Les cours sont un service qui rémunère votre temps." },
-          { q: "Que fait l'impression à la demande ?", options: ["Elle imprime et expédie les articles seulement après une commande", "Elle imprime de l'argent", "Elle vous oblige à acheter 500 T-shirts d'abord", "Elle écrit votre fiche produit"], answer: 0, why: "Elle réduit l'argent nécessaire au départ." },
-          { q: "Où trouver les vrais frais d'une plateforme ?", options: ["En devinant", "Dans une vieille vidéo", "Dans la mémoire d'une IA", "Sur sa page de tarifs officielle actuelle"], answer: 3, why: "Les frais changent ; la page officielle est à jour." },
-          { q: "Vous voulez vendre des T-shirts avec le logo de votre école. De quoi avez-vous besoin d'abord ?", options: ["De rien", "D'une permission écrite de l'école", "D'une plus jolie police", "De plus d'abonnés"], answer: 1, why: "Les écoles possèdent et protègent généralement leurs logos." },
-          { q: "Pourquoi chercher dans les registres de l'USPTO avant de nommer votre marque ?", options: ["Pour obtenir des T-shirts gratuits", "Pour éviter de copier la marque déposée de quelqu'un d'autre", "Pour trouver des clients", "Ce n'est pas utile"], answer: 1, why: "Cela vous aide à éviter les problèmes de marque." }
+          { objective: "O1", q: "Quel service un athlète pourrait-il vendre ?", options: ["Un T-shirt", "Un autocollant", "Des cours particuliers", "Une affiche"], answer: 2, why: "Les cours sont un service qui rémunère votre temps." },
+          { objective: "O2", q: "Que fait l'impression à la demande ?", options: ["Elle imprime et expédie les articles seulement après une commande", "Elle imprime de l'argent", "Elle vous oblige à acheter 500 T-shirts d'abord", "Elle écrit votre fiche produit"], answer: 0, why: "Elle réduit l'argent nécessaire au départ." },
+          { objective: "O2", q: "Où trouver les vrais frais d'une plateforme ?", options: ["En devinant", "Dans une vieille vidéo", "Dans la mémoire d'une IA", "Sur sa page de tarifs officielle actuelle"], answer: 3, why: "Les frais changent ; la page officielle est à jour." },
+          { objective: "O3", q: "Vous voulez vendre des T-shirts avec le logo de votre école. De quoi avez-vous besoin d'abord ?", options: ["De rien", "D'une permission écrite de l'école", "D'une plus jolie police", "De plus d'abonnés"], answer: 1, why: "Les écoles possèdent et protègent généralement leurs logos." },
+          { objective: "O3", q: "Pourquoi chercher dans les registres de l'USPTO avant de nommer votre marque ?", options: ["Pour obtenir des T-shirts gratuits", "Pour éviter de copier la marque déposée de quelqu'un d'autre", "Pour trouver des clients", "Ce n'est pas utile"], answer: 1, why: "Cela vous aide à éviter les problèmes de marque." }
         ]
       }
     },
@@ -98,6 +136,7 @@ module.exports = {
       name: "Chapitre 2 : Construire et lancer votre offre",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Écrire une fiche produit avec l'IA",
           minutes: 5,
           goal: "Écrire une fiche produit claire et honnête avec l'aide de l'IA.",
@@ -114,9 +153,14 @@ module.exports = {
             { title: "À éviter", bullets: ["Résultats garantis", "Affirmations de santé", "Pas de règles de remboursement"] }
           ],
           tryIt: "Utilisez l'IA pour rédiger votre fiche produit, puis corrigez-la pour que chaque détail soit vrai et ajoutez une politique de remboursement.",
-          youCanNow: "écrire une fiche produit claire et honnête avec l'aide de l'IA."
+          youCanNow: "écrire une fiche produit claire et honnête avec l'aide de l'IA.",
+          quickCheck: [
+            { objective: "O4", q: "Quel détail a sa place sur la fiche produit d'un stage ?", options: ["Votre adresse", "Ce qu'il faut apporter", "Votre moyenne scolaire", "Les prix des autres entraîneurs"], answer: 1, why: "Les acheteurs ont besoin des dates, des âges, du lieu, de ce que les enfants apprennent, de ce qu'il faut apporter et des remboursements." },
+            { objective: "O4", q: "Le brouillon de l'IA dit que vos cours « garantissent une bourse ». Que faites-vous ?", options: ["Le garder pour vendre plus", "Le changer en « garantissent presque »", "Le retirer ; ne promettez pas de résultats", "Ajouter d'autres promesses"], answer: 2, why: "Ne promettez pas de résultats et ne faites pas d'affirmations que vous ne pouvez pas tenir." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Fixer le prix à partir des vrais coûts",
           minutes: 5,
           goal: "Fixer un prix qui couvre vos coûts et laisse un bénéfice.",
@@ -133,9 +177,14 @@ module.exports = {
             { title: "Tableur", bullets: ["Coûts, total, prix, bénéfice", "L'IA crée les formules ; vous vérifiez"] }
           ],
           tryIt: "Créez une feuille de prix pour une vente de votre produit. Demandez à l'IA d'écrire les formules du total et du bénéfice, puis vérifiez-les avec une calculatrice.",
-          youCanNow: "fixer un prix à partir des vrais coûts et connaître votre bénéfice par vente."
+          youCanNow: "fixer un prix à partir des vrais coûts et connaître votre bénéfice par vente.",
+          quickCheck: [
+            { objective: "O5", q: "Lequel est un coût pour un cours particulier ?", options: ["La location de l'installation", "Votre nombre d'abonnés", "Le trajet de l'acheteur", "Votre numéro de maillot"], answer: 0, why: "Les coûts d'un cours comprennent l'installation, le matériel, les trajets, votre temps et les frais." },
+            { objective: "O5", q: "Votre t-shirt coûte 14 à fabriquer, expédier et vendre. Des t-shirts semblables se vendent de 12 à 25 près de chez vous. Quel prix a du sens ?", options: ["10, pour être le moins cher", "14, comme le coût", "12, le prix le plus bas autour de vous", "Un prix au-dessus de 14 que votre public peut payer, comme 20"], answer: 3, why: "Fixez un prix au-dessus de votre coût total pour faire un bénéfice, dans ce que votre public peut payer." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Lancer et satisfaire vos clients",
           minutes: 5,
           goal: "Préparer un petit lancement et une routine simple de service client.",
@@ -152,17 +201,21 @@ module.exports = {
             { title: "Satisfaire vos clients", bullets: ["Répondez dans la journée", "À temps, selon votre politique de remboursement", "Modèles de réponses avec l'IA"] }
           ],
           tryIt: "Tâche finale : rédigez votre plan de lancement d'une page : offre et public, plateforme et frais actuels, fiche produit rédigée avec l'IA, prix calculé sur les vrais coûts, et liste de règles avec les personnes consultées.",
-          youCanNow: "lancer une petite offre en ligne et offrir un bon service client."
+          youCanNow: "lancer une petite offre en ligne et offrir un bon service client.",
+          quickCheck: [
+            { objective: "O6", q: "À qui s'adresse un lancement discret ?", options: ["À tout le monde sur internet", "À la famille, aux familles des coéquipiers et aux abonnés proches", "Seulement aux grandes marques", "À vos concurrents"], answer: 1, why: "Commencez petit et corrigez les problèmes avant la grande annonce." },
+            { objective: "O6", q: "Un client demande un remboursement qui correspond à votre politique de remboursement. Que faites-vous ?", options: ["Ignorer le message", "Discuter dans les commentaires", "Suivre votre politique, rembourser poliment et dire merci", "Le bloquer"], answer: 2, why: "Suivre votre politique de remboursement et répondre poliment fidélise les acheteurs." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Construire et lancer votre offre",
         questions: [
-          { q: "La fiche produit d'un stage doit inclure :", options: ["Seulement un logo", "Votre adresse personnelle", "Des bourses garanties", "Les dates, les âges, le lieu, ce que les enfants apprennent et la politique de remboursement"], answer: 3, why: "Elle répond à ce que les acheteurs doivent savoir." },
-          { q: "L'IA écrit « intégration garantie dans l'équipe première » sur votre fiche. Vous :", options: ["Le retirez", "Le gardez", "Le mettez en plus grand", "Ajoutez d'autres promesses"], answer: 0, why: "Ne promettez pas des résultats que vous ne pouvez pas garantir." },
-          { q: "Le bénéfice, c'est :", options: ["Seulement le prix", "Le nombre d'abonnés", "Le prix moins tous les coûts", "Le total des ventes sans les coûts"], answer: 2, why: "Le bénéfice est ce qui reste après les coûts." },
-          { q: "Pourquoi faire un lancement discret ?", options: ["Pour cacher votre boutique", "Pour augmenter les prix", "C'est exigé par la loi", "Pour repérer les problèmes avant une grande annonce"], answer: 3, why: "Les petits lancements révèlent les problèmes sans risque." },
-          { q: "En combien de temps répondre aux messages des clients ?", options: ["Dans le mois", "Dans la journée", "Jamais", "Seulement s'ils se plaignent deux fois"], answer: 1, why: "Des réponses rapides créent la confiance et fidélisent." }
+          { objective: "O4", q: "La fiche produit d'un stage doit inclure :", options: ["Seulement un logo", "Votre adresse personnelle", "Des bourses garanties", "Les dates, les âges, le lieu, ce que les enfants apprennent et la politique de remboursement"], answer: 3, why: "Elle répond à ce que les acheteurs doivent savoir." },
+          { objective: "O4", q: "L'IA écrit « intégration garantie dans l'équipe première » sur votre fiche. Vous :", options: ["Le retirez", "Le gardez", "Le mettez en plus grand", "Ajoutez d'autres promesses"], answer: 0, why: "Ne promettez pas des résultats que vous ne pouvez pas garantir." },
+          { objective: "O5", q: "Le bénéfice, c'est :", options: ["Seulement le prix", "Le nombre d'abonnés", "Le prix moins tous les coûts", "Le total des ventes sans les coûts"], answer: 2, why: "Le bénéfice est ce qui reste après les coûts." },
+          { objective: "O6", q: "Pourquoi faire un lancement discret ?", options: ["Pour cacher votre boutique", "Pour augmenter les prix", "C'est exigé par la loi", "Pour repérer les problèmes avant une grande annonce"], answer: 3, why: "Les petits lancements révèlent les problèmes sans risque." },
+          { objective: "O6", q: "En combien de temps répondre aux messages des clients ?", options: ["Dans le mois", "Dans la journée", "Jamais", "Seulement s'ils se plaignent deux fois"], answer: 1, why: "Des réponses rapides créent la confiance et fidélisent." }
         ]
       }
     }
@@ -170,26 +223,105 @@ module.exports = {
   quiz: {
     title: "Quiz final : Plateformes de commerce en ligne et IA pour les athlètes",
     questions: [
-      { q: "Le commerce en ligne, c'est :", options: ["Le sport électrique", "Seulement l'e-mail", "Acheter et vendre sur Internet", "Un bus d'équipe"], answer: 2, why: "C'est la vente en ligne." },
-      { q: "Lequel est un produit numérique ?", options: ["Un programme d'entraînement", "Une casquette", "Un stage", "Une affiche"], answer: 0, why: "Il se vend sous forme de fichier ou d'accès en ligne." },
-      { q: "Une bonne façon de choisir votre premier produit :", options: ["Ce sur quoi votre public vous interroge déjà", "Ce qui est à la mode", "L'idée la plus chère", "Quelque chose que vous ne connaissez pas"], answer: 0, why: "La demande rend les ventes plus faciles." },
-      { q: "Les services rémunèrent votre :", options: ["Expédition", "Impression", "Temps", "Autocollants"], answer: 2, why: "Les cours et les stages demandent votre temps." },
-      { q: "Lequel est un créateur de boutique ?", options: ["Un chronomètre", "Shopify", "Un tableau d'affichage", "Un maillot"], answer: 1, why: "Shopify est un créateur de boutique." },
-      { q: "Quels frais une plateforme peut-elle facturer ?", options: ["Des frais de maillot", "Des frais d'arbitre", "Des frais de temps mort", "Des frais de traitement des paiements"], answer: 3, why: "Les frais de paiement sont courants." },
-      { q: "Si vous avez moins de 18 ans, un compte de boutique peut exiger :", options: ["Rien", "Un faux âge", "Qu'un adulte le possède ou le copossède", "La pièce d'identité d'un coéquipier"], answer: 2, why: "Beaucoup de plateformes exigent un adulte." },
-      { q: "Vendre des produits dérivés avec votre nom peut compter comme :", options: ["Du pay-for-play", "Une bourse", "Rien", "Une activité NIL"], answer: 3, why: "Cela utilise votre nom, votre image ou votre ressemblance." },
-      { q: "À qui un athlète universitaire doit-il demander les règles NIL pour la vente ?", options: ["Au service de conformité", "À un fan au hasard", "À un rival", "À personne"], answer: 0, why: "Il connaît les règles actuelles de l'école et de la NCAA." },
-      { q: "Pouvez-vous mettre un logo de la NFL sur vos produits ?", options: ["Oui, toujours", "Non, pas sans licence", "Seulement en rouge", "Seulement en ligne"], answer: 1, why: "Les logos des ligues sont protégés." },
-      { q: "Une marque déposée, c'est :", options: ["Un type de chaussure", "Une boisson sportive", "Un nom, un logo ou un slogan protégé", "Un programme d'entraînement"], answer: 2, why: "Les marques déposées identifient les entreprises." },
-      { q: "L'IRS dit que vous devez faire une déclaration si vos revenus nets de travailleur indépendant sont de :", options: ["400 $ ou plus", "1 million $ ou plus", "Jamais", "Seulement si vous avez plus de 30 ans"], answer: 0, why: "C'est le seuil indiqué par l'IRS sur sa page des travailleurs indépendants." },
-      { q: "Une fiche produit doit répondre à :", options: ["Seulement le prix", "Votre moyenne scolaire", "Votre mot de passe", "Quoi, pour qui, ce qu'on reçoit, le prix, quand et comment"], answer: 3, why: "Les acheteurs ont besoin de ces réponses." },
-      { q: "Les photos de produit doivent être :", options: ["Copiées sur d'autres boutiques", "De vraies photos qui vous appartiennent", "Fausses", "D'autres athlètes"], answer: 1, why: "Utilisez des photos sur lesquelles vous avez des droits." },
-      { q: "Pourquoi avoir une politique de remboursement ?", options: ["Pour toujours garder tout l'argent", "Pour éviter les disputes plus tard", "C'est de la décoration", "Ce n'est pas nécessaire"], answer: 1, why: "Des règles claires vous protègent, vous et les acheteurs." },
-      { q: "Le prix doit être :", options: ["En dessous de votre coût", "Au hasard", "Toujours gratuit", "Au-dessus de votre coût total"], answer: 3, why: "Sinon, vous perdez de l'argent à chaque vente." },
-      { q: "L'IA crée votre formule de bénéfice. Vous devez :", options: ["Vérifier les calculs avec une calculatrice", "Lui faire entièrement confiance", "La supprimer", "Doubler votre prix"], answer: 0, why: "L'IA peut faire des erreurs de calcul." },
-      { q: "Un lancement discret s'adresse à :", options: ["Tout le monde d'un coup", "Seulement aux rivaux", "La famille, les abonnés proches et les gens que vous connaissez", "Personne"], answer: 2, why: "Un petit groupe vous aide à régler les problèmes." },
-      { q: "Où mettre le lien de votre boutique ?", options: ["Caché nulle part", "Sur la page d'un rival", "Dans des messages indésirables", "Dans votre biographie"], answer: 3, why: "Les liens en biographie sont faciles à trouver." },
-      { q: "L'IA peut aider le service client en :", options: ["Gardant l'argent des clients", "Rédigeant des modèles de réponses polies", "Ignorant les messages", "Changeant en secret les règles de remboursement"], answer: 1, why: "Les modèles rendent les réponses rapides et polies." }
+      { objective: "O1", q: "Le commerce en ligne, c'est :", options: ["Le sport électrique", "Seulement l'e-mail", "Acheter et vendre sur Internet", "Un bus d'équipe"], answer: 2, why: "C'est la vente en ligne." },
+      { objective: "O1", q: "Lequel est un produit numérique ?", options: ["Un programme d'entraînement", "Une casquette", "Un stage", "Une affiche"], answer: 0, why: "Il se vend sous forme de fichier ou d'accès en ligne." },
+      { objective: "O1", q: "Une bonne façon de choisir votre premier produit :", options: ["Ce sur quoi votre public vous interroge déjà", "Ce qui est à la mode", "L'idée la plus chère", "Quelque chose que vous ne connaissez pas"], answer: 0, why: "La demande rend les ventes plus faciles." },
+      { objective: "O1", q: "Les services rémunèrent votre :", options: ["Expédition", "Impression", "Temps", "Autocollants"], answer: 2, why: "Les cours et les stages demandent votre temps." },
+      { objective: "O2", q: "Lequel est un créateur de boutique ?", options: ["Un chronomètre", "Shopify", "Un tableau d'affichage", "Un maillot"], answer: 1, why: "Shopify est un créateur de boutique." },
+      { objective: "O2", q: "Quels frais une plateforme peut-elle facturer ?", options: ["Des frais de maillot", "Des frais d'arbitre", "Des frais de temps mort", "Des frais de traitement des paiements"], answer: 3, why: "Les frais de paiement sont courants." },
+      { objective: "O2", q: "Si vous avez moins de 18 ans, un compte de boutique peut exiger :", options: ["Rien", "Un faux âge", "Qu'un adulte le possède ou le copossède", "La pièce d'identité d'un coéquipier"], answer: 2, why: "Beaucoup de plateformes exigent un adulte." },
+      { objective: "O3", q: "Vendre des produits dérivés avec votre nom peut compter comme :", options: ["Du pay-for-play", "Une bourse", "Rien", "Une activité NIL"], answer: 3, why: "Cela utilise votre nom, votre image ou votre ressemblance." },
+      { objective: "O3", q: "À qui un athlète universitaire doit-il demander les règles NIL pour la vente ?", options: ["Au service de conformité", "À un fan au hasard", "À un rival", "À personne"], answer: 0, why: "Il connaît les règles actuelles de l'école et de la NCAA." },
+      { objective: "O3", q: "Pouvez-vous mettre un logo de la NFL sur vos produits ?", options: ["Oui, toujours", "Non, pas sans licence", "Seulement en rouge", "Seulement en ligne"], answer: 1, why: "Les logos des ligues sont protégés." },
+      { objective: "O3", q: "Une marque déposée, c'est :", options: ["Un type de chaussure", "Une boisson sportive", "Un nom, un logo ou un slogan protégé", "Un programme d'entraînement"], answer: 2, why: "Les marques déposées identifient les entreprises." },
+      { objective: "O3", q: "L'IRS dit que vous devez faire une déclaration si vos revenus nets de travailleur indépendant sont de :", options: ["400 $ ou plus", "1 million $ ou plus", "Jamais", "Seulement si vous avez plus de 30 ans"], answer: 0, why: "C'est le seuil indiqué par l'IRS sur sa page des travailleurs indépendants." },
+      { objective: "O4", q: "Une fiche produit doit répondre à :", options: ["Seulement le prix", "Votre moyenne scolaire", "Votre mot de passe", "Quoi, pour qui, ce qu'on reçoit, le prix, quand et comment"], answer: 3, why: "Les acheteurs ont besoin de ces réponses." },
+      { objective: "O4", q: "Les photos de produit doivent être :", options: ["Copiées sur d'autres boutiques", "De vraies photos qui vous appartiennent", "Fausses", "D'autres athlètes"], answer: 1, why: "Utilisez des photos sur lesquelles vous avez des droits." },
+      { objective: "O4", q: "Pourquoi avoir une politique de remboursement ?", options: ["Pour toujours garder tout l'argent", "Pour éviter les disputes plus tard", "C'est de la décoration", "Ce n'est pas nécessaire"], answer: 1, why: "Des règles claires vous protègent, vous et les acheteurs." },
+      { objective: "O5", q: "Le prix doit être :", options: ["En dessous de votre coût", "Au hasard", "Toujours gratuit", "Au-dessus de votre coût total"], answer: 3, why: "Sinon, vous perdez de l'argent à chaque vente." },
+      { objective: "O5", q: "L'IA crée votre formule de bénéfice. Vous devez :", options: ["Vérifier les calculs avec une calculatrice", "Lui faire entièrement confiance", "La supprimer", "Doubler votre prix"], answer: 0, why: "L'IA peut faire des erreurs de calcul." },
+      { objective: "O6", q: "Un lancement discret s'adresse à :", options: ["Tout le monde d'un coup", "Seulement aux rivaux", "La famille, les abonnés proches et les gens que vous connaissez", "Personne"], answer: 2, why: "Un petit groupe vous aide à régler les problèmes." },
+      { objective: "O6", q: "Où mettre le lien de votre boutique ?", options: ["Caché nulle part", "Sur la page d'un rival", "Dans des messages indésirables", "Dans votre biographie"], answer: 3, why: "Les liens en biographie sont faciles à trouver." },
+      { objective: "O6", q: "L'IA peut aider le service client en :", options: ["Gardant l'argent des clients", "Rédigeant des modèles de réponses polies", "Ignorant les messages", "Changeant en secret les règles de remboursement"], answer: 1, why: "Les modèles rendent les réponses rapides et polies." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      2,
+      5,
+      7,
+      9,
+      12,
+      15,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Offre et public",
+        objective: "O1",
+        notYet: "Le produit ou son public n'est pas clair.",
+        meets: "Un produit ou un service, à qui il s'adresse, et le temps et l'argent qu'il demande.",
+        exceeds: "Montre la preuve que le public l'a demandé, comme des commentaires ou des demandes de parents."
+      },
+      {
+        name: "Plateforme et frais",
+        objective: "O2",
+        notYet: "Aucun frais indiqué, ou des frais devinés au lieu d'être pris sur la page de tarifs.",
+        meets: "La plateforme choisie avec ses frais actuels mensuels, par vente et de paiement tirés de sa page de tarifs, et les règles d'âge vérifiées.",
+        exceeds: "Compare deux plateformes et montre le coût total pour le nombre de ventes prévu."
+      },
+      {
+        name: "Fiche produit",
+        objective: "O4",
+        notYet: "Il manque des détails importants, il y a des affirmations fausses, ou pas de règles de remboursement.",
+        meets: "Moins de 200 mots, répond à quoi, pour qui, ce qu'on reçoit, le prix, quand et comment, avec de vraies photos et des règles de remboursement claires.",
+        exceeds: "Comprend des détails de sécurité pour les offres destinées aux jeunes et des réponses aux questions courantes."
+      },
+      {
+        name: "Prix à partir des coûts",
+        objective: "O5",
+        notYet: "Le prix est sous le coût, ou des coûts manquent.",
+        meets: "Chaque coût d'une vente listé et additionné, et un prix au-dessus du coût, avec les calculs vérifiés.",
+        exceeds: "Montre le bénéfice par vente et le nombre de ventes qui couvre les coûts de départ."
+      },
+      {
+        name: "Liste des règles",
+        objective: "O3",
+        notYet: "Il manque le NIL, les logos, les marques déposées ou les impôts, ou personne n'est nommé.",
+        meets: "Le NIL, les logos scolaires, les marques déposées et les impôts sont chacun vérifiés, avec la personne consultée par l'athlète.",
+        exceeds: "Comprend une autorisation écrite pour le logo ou le résultat d'une recherche USPTO, et un registre des ventes et des coûts mis en place."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent le plan de lancement avec « Atteint » ou « Dépasse » sur chaque ligne de la grille",
+      "Les apprenants qui lancent leur produit ou leur service dans les 30 jours (questionnaire de suivi)",
+      "Les apprenants qui signalent leurs premières ventes ou réservations et un bénéfice après les coûts",
+      "Les apprenants qui disent avoir vérifié les règles NIL, de logos et d'impôts auprès de leur école, de l'association de leur État ou d'un professionnel avant de vendre"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur avec Internet",
+      "Un assistant IA gratuit (ChatGPT, Microsoft Copilot ou Google Gemini)",
+      "Un tableur gratuit (Google Sheets) et une calculatrice",
+      "Les pages de tarifs officielles de deux plateformes",
+      "La politique NIL de votre école ou les règles de l'association de votre État",
+      "Environ 60 minutes"
+    ],
+    facilitatorNotes: [
+      "Faites venir le service de conformité ou le directeur sportif pour expliquer les règles NIL et de logos avant que quiconque crée des produits dérivés.",
+      "Pour les athlètes de moins de 18 ans, impliquez un parent ou un tuteur dans le choix et la détention des comptes de boutique et de paiement.",
+      "Faites lire les frais sur les pages de tarifs en direct pendant la séance ; ne vous fiez pas aux chiffres de mémoire ou de l'IA.",
+      "Pour les stages et les cours avec des mineurs, parlez de sécurité, d'encadrement et d'autorisation d'utiliser les installations avant le lancement.",
+      "Orientez les apprenants vers un professionnel des impôts pour les questions de revenus ; ne donnez pas de conseil fiscal individuel."
     ]
   }
 };

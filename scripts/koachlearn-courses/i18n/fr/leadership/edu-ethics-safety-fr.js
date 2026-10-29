@@ -16,11 +16,35 @@ module.exports = {
     "Ce cours explique la loi avec des mots simples pour que vous sachiez quoi demander ; ce n'est pas un conseil juridique. Le conseiller juridique et le responsable de la protection des données de votre district ont le dernier mot, et les lois des États peuvent ajouter des exigences. Les lois citées (FERPA, COPPA, Title IX) sont américaines ; ailleurs, appliquez les lois de votre pays. Un contrôle des connaissances clôt chaque chapitre et un quiz de 20 questions clôt le cours. Il s'agit du cours 7 sur 8 de la série « L'IA pour les responsables scolaires et éducatifs »."
   ],
   finalTask: "Rédigez des lignes directrices de deux pages pour une IA responsable dans votre école ou votre district : cinq principes en mots simples, des règles de vie privée (FERPA, COPPA, outils approuvés seulement), des contrôles d'équité, ce que le personnel et les élèves peuvent et ne peuvent pas faire, les étapes d'évaluation des fournisseurs, et un plan de réponse aux incidents en six étapes. Testez-les ensuite : examinez un vrai outil d'IA avec vos étapes d'évaluation, et déroulez un incident réaliste (par exemple, une fausse image d'un élève créée par l'IA et partagée dans une discussion de groupe) avec votre plan.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des chefs d'établissement, des responsables de district, des équipes du numérique et de la protection des données, des conseillers et des enseignants référents dans des écoles et des districts des États-Unis qui fixent les règles d'usage de l'IA.",
+    startingPoint: "Ils connaissent les bases de l'IA, les bases de FERPA et COPPA, l'examen des outils et les règles d'usage de l'IA en classe vus dans les cours précédents. Leur école ou leur district n'a peut-être pas de lignes directrices écrites sur l'IA responsable ni de plan en cas d'incident.",
+    gap: "Sans lignes directrices écrites, les décisions sur l'IA se prennent au cas par cas, les risques d'iniquité ne sont pas vérifiés, et les écoles ne sont pas prêtes quand quelque chose tourne mal, comme une fuite de données ou un faux d'un élève créé par l'IA. Les responsables ont besoin de principes clairs, d'étapes pour évaluer les fournisseurs, de règles pour le personnel et les élèves, et d'un plan en cas d'incident.",
+    constraints: [
+      "Le cours explique la loi en mots simples et ne constitue pas un avis juridique ; le conseiller juridique et le délégué à la protection des données du district ont le dernier mot",
+      "Les lois des États peuvent ajouter des obligations, et les lois sur les images créées par l'IA changent vite",
+      "Aucune vraie donnée ni image d'élève pendant les exercices ; les mises en situation d'incident utilisent des cas inventés réalistes",
+      "Les images de mineurs ne sont jamais transférées ; le personnel suit les consignes du conseiller juridique et des forces de l'ordre",
+      "Temps : des leçons courtes, la rédaction et le test des lignes directrices demandant plus de temps"
+    ],
+    prerequisites: "Les cours 1 à 6 de L'IA pour les responsables scolaires et éducatifs sont recommandés, surtout les cours 1 et 2."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Pour un usage de l'IA dans votre école", action: "appliquer cinq principes d'IA responsable à cet usage", standard: "avec une phrase sur la façon dont il respecte ou non chaque principe" },
+    { id: "O2", condition: "Pour un outil d'IA qui note, signale ou s'adapte aux élèves", action: "repérer où il pourrait traiter injustement des groupes d'élèves", standard: "en rédigeant trois questions d'équité pour le fournisseur et une vérification sur vos propres résultats" },
+    { id: "O3", condition: "Quand le personnel utilise des outils d'IA", action: "appliquer FERPA, COPPA et des habitudes de sécurité de base", standard: "avec cinq habitudes en mots simples, chacune avec un exemple de ce qu'il ne faut pas faire" },
+    { id: "O4", condition: "Avant qu'un outil d'IA soit approuvé", action: "mener une évaluation du fournisseur à partir des documents publics de l'outil", standard: "en listant ce que le fournisseur doit confirmer dans un accord signé" },
+    { id: "O5", condition: "Avec l'avis d'enseignants, d'élèves et de familles", action: "rédiger des lignes directrices d'IA responsable avec des règles « peut / ne peut pas » pour le personnel et les élèves", standard: "avec au moins quatre points concrets pour chacun, vérifiés avec le conseiller juridique par rapport à la politique du district et à la loi de l'État" },
+    { id: "O6", condition: "Face à un incident d'IA réaliste comme un hypertrucage ou une fuite de données", action: "dérouler un plan de réponse aux incidents en six étapes", standard: "en commençant par mettre l'élève en sécurité et en finissant par la mise à jour des lignes directrices" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Les principes en pratique",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Cinq principes pour l'IA à l'école",
           minutes: 5,
           goal: "Énoncer cinq principes d'IA responsable et les appliquer à un exemple scolaire.",
@@ -37,9 +61,14 @@ module.exports = {
           ],
           sources: [{ name: "K-12 Dive : le ministère de l'Éducation publie ses priorités sur l'IA (juillet 2025)", url: "https://www.k12dive.com/news/education-department-issues-ai-priorities-but-what-if-the-agency-closes/754015/" }, { name: "NIST AI Risk Management Framework", url: "https://www.nist.gov/itl/ai-risk-management-framework" }],
           tryIt: "Prenez un usage de l'IA dans votre école (par exemple, un programme de lecture adaptatif). Écrivez une phrase sur la façon dont il respecte ou non chacun des cinq principes.",
-          youCanNow: "appliquer cinq principes d'IA responsable à un vrai usage scolaire."
+          youCanNow: "appliquer cinq principes d'IA responsable à un vrai usage scolaire.",
+          quickCheck: [
+            { objective: "O1", q: "Que veut dire le principe de transparence ?", options: ["Dire ouvertement quand et comment l'IA est utilisée", "Utiliser seulement des outils d'IA gratuits", "Laisser l'IA prendre des décisions en public", "Partager les données des élèves avec les familles"], answer: 0, why: "La transparence veut dire que les gens savent quand et comment l'IA est utilisée." },
+            { objective: "O1", q: "Un programme de lecture adaptatif choisit le prochain livre de chaque élève. Quelle question de principe poseriez-vous ?", options: ["Est-ce le programme le moins cher ?", "Est-ce le programme le plus récent ?", "Les enseignants peuvent-ils voir ses choix et les modifier ?", "A-t-il le plus de fonctions ?"], answer: 2, why: "La supervision humaine veut dire que les éducateurs décident et que l'IA informe." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Risques de biais et d'iniquité dans l'IA scolaire",
           minutes: 6,
           goal: "Repérer où les usages scolaires de l'IA pourraient traiter injustement des groupes d'élèves.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Contrôles d'équité", bullets: ["Interrogez les fournisseurs sur leurs tests de biais et d'accessibilité", "Examinez les résultats par groupe", "Jamais un score d'IA seul pour décider"] }
           ],
           tryIt: "Choisissez un outil d'IA qui note, signale ou s'adapte aux élèves dans votre école. Écrivez trois questions d'équité que vous poseriez au fournisseur et un contrôle que vous feriez sur vos propres résultats.",
-          youCanNow: "repérer les risques d'iniquité dans l'IA scolaire et mettre en place des contrôles concrets."
+          youCanNow: "repérer les risques d'iniquité dans l'IA scolaire et mettre en place des contrôles concrets.",
+          quickCheck: [
+            { objective: "O2", q: "Pourquoi les détecteurs d'écriture par IA peuvent-ils poser des problèmes d'équité ?", options: ["Ils sont trop chers", "Ils peuvent signaler plus souvent les écrits des élèves qui apprennent l'anglais", "Ils fonctionnent seulement sur téléphone", "Ils notent trop lentement"], answer: 1, why: "Les faux signalements inégaux tombent plus sur certains groupes d'élèves que sur d'autres." },
+            { objective: "O2", q: "Un outil adaptatif laisse un groupe d'élèves sur des exercices plus faciles pendant des mois. Que feriez-vous ?", options: ["Rien ; l'outil sait mieux", "Désactiver toute l'IA de l'école", "Envoyer ces élèves dans une autre école", "Vérifier vos propres résultats par groupe et demander au fournisseur comment l'outil décide"], answer: 3, why: "Vérifier les résultats par groupe montre si l'outil réduit les chances de certains élèves." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Vie privée et sécurité : FERPA, COPPA et bonnes habitudes",
           minutes: 6,
           goal: "Appliquer FERPA, COPPA et des habitudes de sécurité de base aux outils d'IA.",
@@ -76,17 +110,21 @@ module.exports = {
           ],
           sources: [{ name: "FERPA : protéger la vie privée des élèves", url: "https://studentprivacy.ed.gov/ferpa" }, { name: "FTC : se conformer à COPPA, questions fréquentes", url: "https://www.ftc.gov/business-guidance/resources/complying-coppa-frequently-asked-questions" }],
           tryIt: "Écrivez cinq habitudes de vie privée et de sécurité pour votre personnel, en mots simples, avec pour chacune un exemple de ce qu'il ne faut PAS faire.",
-          youCanNow: "appliquer FERPA, COPPA et des habitudes de sécurité quotidiennes à l'usage de l'IA par le personnel."
+          youCanNow: "appliquer FERPA, COPPA et des habitudes de sécurité quotidiennes à l'usage de l'IA par le personnel.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'ajoute la connexion en deux étapes ?", options: ["Une deuxième vérification, comme un code sur votre téléphone", "Un deuxième mot de passe tapé deux fois", "Un deuxième outil d'IA", "Un deuxième membre du personnel qui se connecte pour vous"], answer: 0, why: "Une deuxième vérification protège les comptes même si un mot de passe est volé." },
+            { objective: "O3", q: "Un enseignant veut envoyer toute une liste de classe à un outil d'IA pour une petite tâche. Que lui conseilleriez-vous ?", options: ["L'envoyer ; plus de données donnent de meilleurs résultats", "L'envoyer à deux outils pour comparer", "Partager seulement ce dont la tâche a besoin, dans un outil approuvé", "L'envoyer plutôt par e-mail au fournisseur"], answer: 2, why: "La minimisation des données veut dire partager seulement ce dont la tâche a besoin." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Les principes en pratique",
         questions: [
-          { q: "Quel principe dit que les éducateurs prennent les décisions sur les élèves et que l'IA ne fait qu'informer ?", options: ["Transparence", "Minimisation des données", "Supervision humaine", "Orientation par niveaux"], answer: 2, why: "La supervision humaine laisse les décisions aux éducateurs." },
-          { q: "Un outil d'alerte précoce donne un score de risque élevé à un élève. Le bon usage est de :", options: ["L'utiliser comme un élément parmi d'autres pour des éducateurs qui connaissent aussi l'élève", "Orienter l'élève automatiquement", "Rendre le score public", "Ignorer toutes les données"], answer: 0, why: "Aucun score d'IA ne doit décider seul." },
-          { q: "Pourquoi l'accès est-il une question d'équité pour les outils d'IA ?", options: ["Seuls les adultes utilisent l'IA", "Ce n'en est pas une", "L'accès ralentit les outils", "Les élèves sans appareil, sans internet ou sans outils accessibles prennent du retard"], answer: 3, why: "Un accès inégal creuse les écarts." },
-          { q: "La minimisation des données signifie :", options: ["Recueillir le plus possible", "Ne partager que ce dont la tâche a besoin", "Supprimer toutes les données", "Utiliser des polices plus petites"], answer: 1, why: "Moins de données, moins de risques." },
-          { q: "Selon COPPA, une école peut donner son accord à la place des parents quand les données sont recueillies :", options: ["Pour la publicité", "Jamais", "Pour n'importe quelle raison", "Pour l'usage et le bénéfice de l'école, sans autre but commercial"], answer: 3, why: "C'est la condition posée par la FTC." }
+          { objective: "O1", q: "Quel principe dit que les éducateurs prennent les décisions sur les élèves et que l'IA ne fait qu'informer ?", options: ["Transparence", "Minimisation des données", "Supervision humaine", "Orientation par niveaux"], answer: 2, why: "La supervision humaine laisse les décisions aux éducateurs." },
+          { objective: "O1", q: "Un outil d'alerte précoce donne un score de risque élevé à un élève. Le bon usage est de :", options: ["L'utiliser comme un élément parmi d'autres pour des éducateurs qui connaissent aussi l'élève", "Orienter l'élève automatiquement", "Rendre le score public", "Ignorer toutes les données"], answer: 0, why: "Aucun score d'IA ne doit décider seul." },
+          { objective: "O2", q: "Pourquoi l'accès est-il une question d'équité pour les outils d'IA ?", options: ["Seuls les adultes utilisent l'IA", "Ce n'en est pas une", "L'accès ralentit les outils", "Les élèves sans appareil, sans internet ou sans outils accessibles prennent du retard"], answer: 3, why: "Un accès inégal creuse les écarts." },
+          { objective: "O3", q: "La minimisation des données signifie :", options: ["Recueillir le plus possible", "Ne partager que ce dont la tâche a besoin", "Supprimer toutes les données", "Utiliser des polices plus petites"], answer: 1, why: "Moins de données, moins de risques." },
+          { objective: "O3", q: "Selon COPPA, une école peut donner son accord à la place des parents quand les données sont recueillies :", options: ["Pour la publicité", "Jamais", "Pour n'importe quelle raison", "Pour l'usage et le bénéfice de l'école, sans autre but commercial"], answer: 3, why: "C'est la condition posée par la FTC." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Chapitre 2 : Lignes directrices, fournisseurs et incidents",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Évaluer les fournisseurs et les accords",
           minutes: 5,
           goal: "Mener une évaluation du fournisseur avant qu'un outil d'IA soit approuvé.",
@@ -111,9 +150,14 @@ module.exports = {
           ],
           sources: [{ name: "Privacy and Education Technology : liste de contrôle Model Terms of Service", url: "https://studentprivacy.ed.gov/privacy-and-education-technology" }],
           tryIt: "Évaluez un outil d'IA que votre école utilise ou souhaite : répondez aux questions de vie privée et d'IA à partir de ses documents publics, et listez ce que le fournisseur devrait vous confirmer par écrit.",
-          youCanNow: "évaluer un fournisseur d'IA sur la vie privée, la qualité de l'IA et les conditions du contrat avant approbation."
+          youCanNow: "évaluer un fournisseur d'IA sur la vie privée, la qualité de l'IA et les conditions du contrat avant approbation.",
+          quickCheck: [
+            { objective: "O4", q: "Qu'est-ce qu'un accord sur la confidentialité des données ?", options: ["La page publicitaire d'un fournisseur", "Un contrat signé qui fixe comment un fournisseur utilise et protège les données des élèves", "Un formulaire que signent les élèves", "Une liste de sites approuvés"], answer: 1, why: "Un accord signé oblige le fournisseur à tenir ses engagements." },
+            { objective: "O4", q: "Le site d'un fournisseur dit qu'il n'entraîne jamais son IA sur les données des élèves. Que feriez-vous ?", options: ["Approuver l'outil sur cette base", "L'ignorer", "Demander aux élèves si c'est vrai", "Obtenir cet engagement dans l'accord signé"], answer: 3, why: "Les politiques d'un site peuvent changer ; un accord signé ne change pas tout seul." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Rédiger des lignes directrices pour une IA responsable",
           minutes: 6,
           goal: "Rédiger des lignes directrices claires pour l'usage de l'IA par le personnel et les élèves.",
@@ -130,9 +174,14 @@ module.exports = {
             { title: "Rédigez ensemble", bullets: ["Enseignants, élèves, familles", "Le conseiller juridique vérifie la politique et la loi", "Fixez une date de révision"] }
           ],
           tryIt: "Rédigez les sections « peut / ne peut pas » pour le personnel et les élèves dans vos lignes directrices, avec au moins quatre points chacune. Montrez-les à deux enseignants et notez leurs modifications.",
-          youCanNow: "rédiger des lignes directrices concrètes pour une IA responsable avec les personnes qui les suivront."
+          youCanNow: "rédiger des lignes directrices concrètes pour une IA responsable avec les personnes qui les suivront.",
+          quickCheck: [
+            { objective: "O5", q: "Qu'est-ce qui rend des lignes directrices utiles au personnel ?", options: ["Des exemples concrets « peut / ne peut pas »", "Un long langage juridique", "La liste de tous les outils d'IA du marché", "Aucun exemple, pour laisser le personnel décider"], answer: 0, why: "Des exemples concrets rendent les règles faciles à suivre." },
+            { objective: "O5", q: "Votre brouillon de lignes directrices est prêt. Que doit-il se passer avant son adoption ?", options: ["Le publier tout de suite", "Demander à un chatbot de l'approuver", "Recueillir l'avis des enseignants, des élèves et des familles et le vérifier avec le conseiller juridique par rapport à la politique et à la loi", "Le garder secret pour le personnel"], answer: 2, why: "Les lignes directrices ont besoin de l'avis des personnes concernées et d'une vérification juridique." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Quand quelque chose tourne mal : réponse aux incidents",
           minutes: 6,
           goal: "Prévoir les étapes face à un incident d'IA, y compris les fuites de données et les hypertrucages.",
@@ -149,17 +198,21 @@ module.exports = {
             { title: "Hypertrucages et harcèlement", bullets: ["Suivez les procédures harcèlement et Title IX", "Ne transférez jamais d'images de mineurs", "Impliquez le juriste ; les lois changent"] }
           ],
           tryIt: "Tâche finale : terminez vos lignes directrices de deux pages pour une IA responsable (principes, vie privée, équité, règles pour le personnel et les élèves, étapes d'évaluation des fournisseurs, plan d'incident en six étapes). Testez-les en examinant un vrai outil et en déroulant un incident réaliste, et notez les lacunes trouvées.",
-          youCanNow: "piloter une IA responsable dans votre école avec des lignes directrices claires, l'évaluation des fournisseurs et un plan d'incident."
+          youCanNow: "piloter une IA responsable dans votre école avec des lignes directrices claires, l'évaluation des fournisseurs et un plan d'incident.",
+          quickCheck: [
+            { objective: "O6", q: "Quelle est la dernière étape du plan en cas d'incident ?", options: ["Sécuriser", "Apprendre : corriger la cause et mettre à jour les lignes directrices", "Prévenir la presse", "Supprimer tous les dossiers"], answer: 1, why: "Tirer les leçons de chaque incident l'empêche de se reproduire." },
+            { objective: "O6", q: "Un membre du personnel reçoit une fausse image d'un élève créée par l'IA. Que doit-il en faire ?", options: ["La transférer aux collègues pour qu'ils soient au courant", "Publier un avertissement avec l'image", "La supprimer et ne rien dire", "Ne pas la transférer, et suivre les consignes du conseiller juridique et des forces de l'ordre pour conserver les preuves"], answer: 3, why: "Les images de mineurs ne sont jamais transférées ; les preuves sont traitées comme le conseillent le conseiller juridique et les forces de l'ordre." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Lignes directrices, fournisseurs et incidents",
         questions: [
-          { q: "Pourquoi obtenir les engagements du fournisseur dans un accord signé ?", options: ["Les accords sont facultatifs", "C'est plus rapide", "Les politiques publiées sur un site peuvent changer", "Les fournisseurs préfèrent"], answer: 2, why: "Des conditions signées engagent le fournisseur." },
-          { q: "Laquelle est une question propre à l'IA pour un fournisseur ?", options: ["Les enseignants peuvent-ils voir et modifier les résultats de l'IA ?", "De quelle couleur est le logo ?", "Combien d'employés a le fournisseur ?", "Où sont ses bureaux ?"], answer: 0, why: "La reprise de la main par l'humain est essentielle à la supervision." },
-          { q: "Qui doit aider à rédiger les lignes directrices ?", options: ["Seulement le fournisseur", "Enseignants, élèves et familles, avec vérification par le conseiller juridique", "Seulement le chef d'établissement, seul", "Un outil d'IA seul"], answer: 1, why: "Des lignes directrices que les gens aident à écrire sont des lignes directrices qu'ils suivent." },
-          { q: "Un élève signale une fausse image d'un camarade, créée par l'IA, dans une discussion de groupe. Quelle est la première étape ?", options: ["Sécuriser : arrêter le mal et soutenir l'élève", "La transférer au personnel pour la montrer", "L'ignorer", "Publier un avertissement avec l'image"], answer: 0, why: "La sécurité d'abord ; ne jamais diffuser l'image." },
-          { q: "Quelle est la dernière étape du plan d'incident ?", options: ["L'oublier", "Blâmer l'élève", "Supprimer les lignes directrices", "Apprendre : corriger la cause et mettre à jour les lignes directrices"], answer: 3, why: "Les incidents doivent améliorer le système." }
+          { objective: "O4", q: "Pourquoi obtenir les engagements du fournisseur dans un accord signé ?", options: ["Les accords sont facultatifs", "C'est plus rapide", "Les politiques publiées sur un site peuvent changer", "Les fournisseurs préfèrent"], answer: 2, why: "Des conditions signées engagent le fournisseur." },
+          { objective: "O4", q: "Laquelle est une question propre à l'IA pour un fournisseur ?", options: ["Les enseignants peuvent-ils voir et modifier les résultats de l'IA ?", "De quelle couleur est le logo ?", "Combien d'employés a le fournisseur ?", "Où sont ses bureaux ?"], answer: 0, why: "La reprise de la main par l'humain est essentielle à la supervision." },
+          { objective: "O5", q: "Qui doit aider à rédiger les lignes directrices ?", options: ["Seulement le fournisseur", "Enseignants, élèves et familles, avec vérification par le conseiller juridique", "Seulement le chef d'établissement, seul", "Un outil d'IA seul"], answer: 1, why: "Des lignes directrices que les gens aident à écrire sont des lignes directrices qu'ils suivent." },
+          { objective: "O6", q: "Un élève signale une fausse image d'un camarade, créée par l'IA, dans une discussion de groupe. Quelle est la première étape ?", options: ["Sécuriser : arrêter le mal et soutenir l'élève", "La transférer au personnel pour la montrer", "L'ignorer", "Publier un avertissement avec l'image"], answer: 0, why: "La sécurité d'abord ; ne jamais diffuser l'image." },
+          { objective: "O6", q: "Quelle est la dernière étape du plan d'incident ?", options: ["L'oublier", "Blâmer l'élève", "Supprimer les lignes directrices", "Apprendre : corriger la cause et mettre à jour les lignes directrices"], answer: 3, why: "Les incidents doivent améliorer le système." }
         ]
       }
     }
@@ -167,26 +220,107 @@ module.exports = {
   quiz: {
     title: "Quiz final : L'IA pour les responsables scolaires et éducatifs 7 : éthique, sécurité et IA responsable",
     questions: [
-      { q: "La supervision humaine signifie :", options: ["L'IA décide ; les éducateurs regardent", "Les éducateurs décident ; l'IA informe", "Personne ne décide", "Les parents décident de tout usage de l'IA"], answer: 1, why: "Les décisions sur les élèves restent humaines." },
-      { q: "La transparence signifie :", options: ["Cacher l'usage de l'IA", "Utiliser du plastique transparent", "Être ouvert sur le moment et la manière dont l'IA est utilisée", "Partager les données des élèves"], answer: 2, why: "Les gens doivent savoir quand l'IA intervient." },
-      { q: "La responsabilité signifie :", options: ["Personne n'est responsable", "L'IA est responsable", "Une personne nommée est responsable de chaque outil d'IA et de ses effets", "Les fournisseurs décident de tout"], answer: 2, why: "Quelqu'un doit répondre de chaque outil." },
-      { q: "La lettre fédérale de juillet 2025 sur l'IA demande une IA :", options: ["Menée par les éducateurs, éthique, accessible, transparente et conforme aux lois sur la vie privée", "Sans enseignants", "Non réglementée", "Réservée aux lycées"], answer: 0, why: "Ce sont les principes qu'elle énonce." },
-      { q: "Le NIST AI RMF est :", options: ["Un test pour élèves", "Une loi", "Un logiciel", "Un cadre facultatif de gestion des risques de l'IA"], answer: 3, why: "Le NIST le décrit comme facultatif." },
-      { q: "Les détecteurs d'écriture par l'IA posent des questions d'équité parce qu'ils :", options: ["Sont toujours justes", "Peuvent signaler plus souvent les textes d'élèves qui apprennent la langue", "Sont gratuits", "Ne signalent jamais personne"], answer: 1, why: "Les faux positifs peuvent toucher certains groupes plus que d'autres." },
-      { q: "L'orientation adaptative peut être un risque quand elle :", options: ["Est utilisée par les enseignants", "Met chaque élève au défi", "Est désactivée", "Maintient certains élèves sur un travail plus facile et réduit leurs possibilités"], answer: 3, why: "L'orientation par niveaux peut limiter les possibilités." },
-      { q: "Un score de risque produit par l'IA doit être utilisé :", options: ["Publiquement", "Comme décision finale", "Comme un élément parmi d'autres, jamais seul pour décider", "Sans jamais être examiné"], answer: 2, why: "Les éducateurs le pèsent avec ce qu'ils savent." },
-      { q: "Selon FERPA, un fournisseur ne peut agir comme « responsable scolaire » que s'il :", options: ["Rend un service scolaire sous contrôle direct, avec des limites sur le partage", "Est populaire", "Est gratuit", "A une page sur la vie privée"], answer: 0, why: "Ce sont les conditions de FERPA." },
-      { q: "COPPA protège les enfants :", options: ["De moins de 16 ans", "De moins de 13 ans", "De moins de 18 ans", "De plus de 13 ans"], answer: 1, why: "La FTC indique moins de 13 ans." },
-      { q: "La FTC a modifié sa règle COPPA le :", options: ["22 avril 2025", "1er janvier 1990", "27 octobre 2026", "4 juillet 2020"], answer: 0, why: "La FAQ de la FTC indique le 22 avril 2025." },
-      { q: "La connexion en deux étapes ajoute :", options: ["Rien", "Un second mot de passe sur papier", "Un second utilisateur", "Une seconde vérification, comme un code sur votre téléphone"], answer: 3, why: "Elle protège les comptes si un mot de passe fuit." },
-      { q: "La liste de contrôle Model Terms of Service vient :", options: ["D'un fournisseur", "Du Student Privacy Policy Office du ministère de l'Éducation des États-Unis", "D'un réseau social", "D'un site d'information"], answer: 1, why: "Elle figure sur studentprivacy.ed.gov." },
-      { q: "Un accord de protection des données est :", options: ["Un engagement d'élève", "Une bannière de site web", "Un contrat signé sur la façon dont un fournisseur utilise et protège les données des élèves", "Un mot de passe"], answer: 2, why: "Il engage le fournisseur par écrit." },
-      { q: "De bonnes lignes directrices comprennent :", options: ["Des publicités de fournisseurs", "Seulement des valeurs générales", "Des exemples concrets « peut / ne peut pas »", "Des noms d'élèves"], answer: 2, why: "Les exemples rendent les règles utilisables." },
-      { q: "Les lignes directrices doivent être vérifiées au regard :", options: ["De la politique du district et de la loi, avec le conseiller juridique", "Des réseaux sociaux", "Des blogs des fournisseurs", "De rien"], answer: 0, why: "Elles doivent respecter la loi et les politiques existantes." },
-      { q: "Un hypertrucage d'un élève créé par l'IA et partagé en ligne peut être :", options: ["Un projet scolaire", "Un amusement sans danger", "Toujours légal", "Du harcèlement et peut-être un délit"], answer: 3, why: "Traitez-le comme un tort grave." },
-      { q: "Pour conserver des preuves impliquant des images de mineurs, le personnel doit :", options: ["Les transférer aux collègues", "Suivre les consignes du conseiller juridique et des forces de l'ordre et ne jamais les transférer", "Les publier", "Les enregistrer sur des téléphones personnels"], answer: 1, why: "Copier de telles images peut en soi causer du tort ou enfreindre la loi." },
-      { q: "Informer les familles après un incident doit suivre :", options: ["Les commentaires sur les réseaux sociaux", "Ce qui est le plus simple", "Rien", "La loi et la politique du district"], answer: 3, why: "Les obligations d'information viennent de la loi et des politiques." },
-      { q: "Les lois sur les images créées par l'IA :", options: ["Sont les mêmes dans chaque État", "Sont fixées pour toujours", "Changent vite ; demandez au conseiller juridique ce qui s'applique", "Ne concernent pas les écoles"], answer: 2, why: "Les règles fédérales et des États évoluent." }
+      { objective: "O1", q: "La supervision humaine signifie :", options: ["L'IA décide ; les éducateurs regardent", "Les éducateurs décident ; l'IA informe", "Personne ne décide", "Les parents décident de tout usage de l'IA"], answer: 1, why: "Les décisions sur les élèves restent humaines." },
+      { objective: "O1", q: "La transparence signifie :", options: ["Cacher l'usage de l'IA", "Utiliser du plastique transparent", "Être ouvert sur le moment et la manière dont l'IA est utilisée", "Partager les données des élèves"], answer: 2, why: "Les gens doivent savoir quand l'IA intervient." },
+      { objective: "O1", q: "La responsabilité signifie :", options: ["Personne n'est responsable", "L'IA est responsable", "Une personne nommée est responsable de chaque outil d'IA et de ses effets", "Les fournisseurs décident de tout"], answer: 2, why: "Quelqu'un doit répondre de chaque outil." },
+      { objective: "O1", q: "La lettre fédérale de juillet 2025 sur l'IA demande une IA :", options: ["Menée par les éducateurs, éthique, accessible, transparente et conforme aux lois sur la vie privée", "Sans enseignants", "Non réglementée", "Réservée aux lycées"], answer: 0, why: "Ce sont les principes qu'elle énonce." },
+      { objective: "O1", q: "Le NIST AI RMF est :", options: ["Un test pour élèves", "Une loi", "Un logiciel", "Un cadre facultatif de gestion des risques de l'IA"], answer: 3, why: "Le NIST le décrit comme facultatif." },
+      { objective: "O2", q: "Les détecteurs d'écriture par l'IA posent des questions d'équité parce qu'ils :", options: ["Sont toujours justes", "Peuvent signaler plus souvent les textes d'élèves qui apprennent la langue", "Sont gratuits", "Ne signalent jamais personne"], answer: 1, why: "Les faux positifs peuvent toucher certains groupes plus que d'autres." },
+      { objective: "O2", q: "L'orientation adaptative peut être un risque quand elle :", options: ["Est utilisée par les enseignants", "Met chaque élève au défi", "Est désactivée", "Maintient certains élèves sur un travail plus facile et réduit leurs possibilités"], answer: 3, why: "L'orientation par niveaux peut limiter les possibilités." },
+      { objective: "O2", q: "Un score de risque produit par l'IA doit être utilisé :", options: ["Publiquement", "Comme décision finale", "Comme un élément parmi d'autres, jamais seul pour décider", "Sans jamais être examiné"], answer: 2, why: "Les éducateurs le pèsent avec ce qu'ils savent." },
+      { objective: "O3", q: "Selon FERPA, un fournisseur ne peut agir comme « responsable scolaire » que s'il :", options: ["Rend un service scolaire sous contrôle direct, avec des limites sur le partage", "Est populaire", "Est gratuit", "A une page sur la vie privée"], answer: 0, why: "Ce sont les conditions de FERPA." },
+      { objective: "O3", q: "COPPA protège les enfants :", options: ["De moins de 16 ans", "De moins de 13 ans", "De moins de 18 ans", "De plus de 13 ans"], answer: 1, why: "La FTC indique moins de 13 ans." },
+      { objective: "O3", q: "La FTC a modifié sa règle COPPA le :", options: ["22 avril 2025", "1er janvier 1990", "27 octobre 2026", "4 juillet 2020"], answer: 0, why: "La FAQ de la FTC indique le 22 avril 2025." },
+      { objective: "O3", q: "La connexion en deux étapes ajoute :", options: ["Rien", "Un second mot de passe sur papier", "Un second utilisateur", "Une seconde vérification, comme un code sur votre téléphone"], answer: 3, why: "Elle protège les comptes si un mot de passe fuit." },
+      { objective: "O4", q: "La liste de contrôle Model Terms of Service vient :", options: ["D'un fournisseur", "Du Student Privacy Policy Office du ministère de l'Éducation des États-Unis", "D'un réseau social", "D'un site d'information"], answer: 1, why: "Elle figure sur studentprivacy.ed.gov." },
+      { objective: "O4", q: "Un accord de protection des données est :", options: ["Un engagement d'élève", "Une bannière de site web", "Un contrat signé sur la façon dont un fournisseur utilise et protège les données des élèves", "Un mot de passe"], answer: 2, why: "Il engage le fournisseur par écrit." },
+      { objective: "O5", q: "De bonnes lignes directrices comprennent :", options: ["Des publicités de fournisseurs", "Seulement des valeurs générales", "Des exemples concrets « peut / ne peut pas »", "Des noms d'élèves"], answer: 2, why: "Les exemples rendent les règles utilisables." },
+      { objective: "O5", q: "Les lignes directrices doivent être vérifiées au regard :", options: ["De la politique du district et de la loi, avec le conseiller juridique", "Des réseaux sociaux", "Des blogs des fournisseurs", "De rien"], answer: 0, why: "Elles doivent respecter la loi et les politiques existantes." },
+      { objective: "O6", q: "Un hypertrucage d'un élève créé par l'IA et partagé en ligne peut être :", options: ["Un projet scolaire", "Un amusement sans danger", "Toujours légal", "Du harcèlement et peut-être un délit"], answer: 3, why: "Traitez-le comme un tort grave." },
+      { objective: "O6", q: "Pour conserver des preuves impliquant des images de mineurs, le personnel doit :", options: ["Les transférer aux collègues", "Suivre les consignes du conseiller juridique et des forces de l'ordre et ne jamais les transférer", "Les publier", "Les enregistrer sur des téléphones personnels"], answer: 1, why: "Copier de telles images peut en soi causer du tort ou enfreindre la loi." },
+      { objective: "O6", q: "Informer les familles après un incident doit suivre :", options: ["Les commentaires sur les réseaux sociaux", "Ce qui est le plus simple", "Rien", "La loi et la politique du district"], answer: 3, why: "Les obligations d'information viennent de la loi et des politiques." },
+      { objective: "O6", q: "Les lois sur les images créées par l'IA :", options: ["Sont les mêmes dans chaque État", "Sont fixées pour toujours", "Changent vite ; demandez au conseiller juridique ce qui s'applique", "Ne concernent pas les écoles"], answer: 2, why: "Les règles fédérales et des États évoluent." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      1,
+      5,
+      7,
+      8,
+      9,
+      12,
+      14,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Principes",
+        objective: "O1",
+        notYet: "Moins de cinq principes, ou ils ne sont pas en mots simples.",
+        meets: "Cinq principes en mots simples.",
+        exceeds: "Chaque principe a un court exemple scolaire."
+      },
+      {
+        name: "Vie privée et équité",
+        objective: "O3",
+        notYet: "Les règles de vie privée ou les vérifications d'équité manquent.",
+        meets: "Les règles de vie privée (FERPA, COPPA, outils approuvés seulement) et les vérifications d'équité sont incluses.",
+        exceeds: "Les vérifications d'équité disent comment l'école examinera ses propres résultats par groupe."
+      },
+      {
+        name: "Règles pour le personnel et les élèves",
+        objective: "O5",
+        notYet: "Pas de règles « peut / ne peut pas », ou elles sont vagues.",
+        meets: "Dit ce que le personnel et les élèves peuvent et ne peuvent pas faire.",
+        exceeds: "Des enseignants ont relu les règles et leurs changements ont été faits."
+      },
+      {
+        name: "Évaluation du fournisseur",
+        objective: "O4",
+        notYet: "Pas d'étapes pour les fournisseurs, ou aucun vrai outil n'a été évalué.",
+        meets: "Des étapes d'évaluation du fournisseur, testées sur un vrai outil d'IA.",
+        exceeds: "Liste ce que le fournisseur doit confirmer dans un accord signé."
+      },
+      {
+        name: "Plan en cas d'incident",
+        objective: "O6",
+        notYet: "Moins de six étapes, ou pas testé sur un incident.",
+        meets: "Un plan en six étapes, déroulé sur un incident réaliste.",
+        exceeds: "Note un manque trouvé pendant la mise en situation et comment les lignes directrices vont changer."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Responsables qui terminent le cours et réussissent l'exercice final (grille d'évaluation)",
+      "Écoles ou districts qui adoptent des lignes directrices écrites sur l'IA responsable dans les 90 jours (enquête de suivi)",
+      "Outils d'IA évalués avec les étapes fournisseur avant approbation (enquête de suivi)",
+      "Écoles qui ont exercé le plan en cas d'incident avec leur équipe de direction"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur avec internet",
+      "Les politiques actuelles de votre district sur le numérique, la vie privée et l'usage acceptable",
+      "La ressource Model Terms of Service de studentprivacy.ed.gov",
+      "Un cas d'incident inventé et réaliste pour la mise en situation",
+      "Environ 60 minutes pour les leçons et les contrôles, plus le temps de rédiger et de tester les lignes directrices"
+    ],
+    facilitatorNotes: [
+      "Faites le test de départ ensemble, puis appliquez les cinq principes à un outil que le groupe connaît.",
+      "Rappelez que le cours ne constitue pas un avis juridique ; invitez le conseiller juridique ou le délégué à la protection des données du district à la séance sur les lignes directrices.",
+      "Faites la mise en situation d'incident comme un exercice autour d'une table avec des rôles ; utilisez seulement des cas inventés.",
+      "Abordez le sujet des hypertrucages avec délicatesse ; prévoyez des conseillers disponibles, et ne montrez ni ne partagez jamais d'images de mineurs.",
+      "Notez l'exercice final avec la grille, et demandez à chaque équipe de nommer un manque trouvé pendant sa mise en situation."
     ]
   }
 };

@@ -21,11 +21,35 @@ module.exports = {
     "Este curso no es asesoría legal. Las leyes de vivienda justa, las reglas de publicidad y las de licencias se aplican a ti; consulta a HUD (el Departamento de Vivienda y Desarrollo Urbano de EE. UU.), al regulador de bienes raíces de tu estado (en California, el Departamento de Bienes Raíces) y a tu corredor. Cada lección dura unos cinco minutos, con una comprobación de conocimientos después de cada capítulo y un examen de 20 preguntas al final."
   ],
   finalTask: "Arma un kit de IA para agentes: una descripción de propiedad revisada línea por línea en cuanto a datos y lenguaje de vivienda justa, una plantilla de actualización semanal para vendedores, una plantilla de actualización de búsqueda para compradores, un plan de seguimiento de 30 días con cuatro mensajes, un resumen del mercado de una página hecho con números que sacaste tú, y una lista de control para casas abiertas. Ninguna información privada de clientes entra en la herramienta de IA.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Agentes de bienes raíces, corredores y asistentes, sobre todo agentes independientes y nuevos que están construyendo su negocio, incluidos muchos agentes de minorías que atienden a su propia comunidad y a personas que compran casa por primera vez.",
+    startingPoint: "Tienen licencia o trabajan bajo un corredor, y saben sacar propiedades y números del MLS. Muchos han probado la IA para una o dos publicaciones, pero no tienen un proceso fijo, y pocos han pensado en los riesgos de la IA con la vivienda justa y la privacidad.",
+    gap: "Escribir anuncios, informes y seguimientos toma horas, y un seguimiento irregular hace perder clientes. La IA ahorra ese tiempo, pero puede inventar datos, escribir frases que violan la ley de vivienda justa y exponer datos de clientes. Necesitan una forma segura y repetible de usarla que proteja su licencia y a sus clientes.",
+    constraints: [
+      "No es asesoría legal: las reglas de vivienda justa, de publicidad y de licencias vienen de HUD, del regulador del estado y del corredor",
+      "Se aplican las políticas de la agencia sobre herramientas de IA",
+      "Privacidad: nada de nombres de clientes con direcciones, datos financieros, términos de ofertas ni estrategia de negociación en herramientas de IA",
+      "Los números del mercado deben venir del MLS u otra fuente confiable, no de la IA",
+      "Tiempo: agentes con mucho trabajo, así que cada lección dura unos 5 minutos"
+    ],
+    prerequisites: "Ninguno. Quien no conoce los asistentes de IA puede tomar primero un curso de introducción a la IA."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Con datos comprobados de los registros, del vendedor y de tu propia visita", action: "escribir la descripción de un anuncio con ayuda de la IA y revisar cada dato línea por línea", standard: "quitando todo lo que no puedas comprobar" },
+    { id: "O2", condition: "Con un anuncio o una publicidad escrita con IA", action: "identificar y reescribir las frases que muestran una preferencia sobre personas en lugar de describir la propiedad", standard: "para que cada línea describa solo la propiedad y sus características" },
+    { id: "O3", condition: "Con un anuncio ya revisado", action: "crear una publicación para redes sociales y un correo de publicidad que cumplan las reglas de publicidad para agentes con licencia y de correo electrónico", standard: "con los datos de la licencia y de la agencia que se pidan, una dirección postal y una forma de darse de baja" },
+    { id: "O4", condition: "Con tus notas sueltas de la semana", action: "escribir un informe para un vendedor o un comprador con la IA usando espacios en blanco para los datos privados", standard: "sin información privada del cliente en la herramienta de IA" },
+    { id: "O5", condition: "Con un cliente interesado nuevo que aceptó recibir tus mensajes", action: "planear un seguimiento de 30 días con cuatro mensajes útiles y una próxima fecha registrada", standard: "con los enlaces de programas revisados en páginas oficiales" },
+    { id: "O6", condition: "Con números del mercado que sacaste de tu MLS", action: "crear un resumen del mercado en palabras sencillas y una lista de verificación para una casa abierta", standard: "sin números inventados y con la fuente y la fecha agregadas" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Anuncios de propiedades y vivienda justa",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Escribir descripciones de propiedades con tus datos",
           minutes: 5,
           goal: "Escribir una descripción de propiedad correcta y atractiva a partir de datos verificados.",
@@ -42,9 +66,14 @@ module.exports = {
             { title: "Revisa línea por línea", bullets: ["Fuente de los pies cuadrados, años de mejoras, distancias", "La IA puede inventar características", "Los datos falsos pueden traer quejas"] }
           ],
           tryIt: "Escoge una propiedad que conozcas (o una de ejemplo). Escribe diez datos verificados, pide a la IA una descripción de 120 palabras y revisa cada línea, borrando lo que no esté en tus datos.",
-          youCanNow: "escribir una descripción de propiedad con datos verificados y detectar los detalles inventados por la IA."
+          youCanNow: "escribir una descripción de propiedad con datos verificados y detectar los detalles inventados por la IA.",
+          quickCheck: [
+            { objective: "O1", q: "¿Qué sabe la IA de una casa cuando escribe un anuncio?", options: ["Solo lo que tú le dices", "Todo lo que hay en los registros del condado", "Lo que el vendedor le dijo a tu oficina", "Los datos actuales del MLS de la casa"], answer: 0, why: "La IA solo sabe lo que tú le das, así que solo le das datos comprobados." },
+            { objective: "O1", q: "El anuncio de la IA dice \"cubiertas de granito\", pero no las viste en tu visita. ¿Qué haces?", options: ["Lo dejas; a los compradores les gusta el granito", "Lo quitas a menos que puedas comprobarlo", "Le pones \"tal vez\" adelante", "Le preguntas a la IA si está segura"], answer: 1, why: "Revisas cada dato y quitas todo lo que no puedas comprobar." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Lenguaje de vivienda justa: lo que la IA no debe escribir",
           minutes: 6,
           goal: "Detectar y corregir lenguaje en los anuncios que muestra preferencia por una clase protegida.",
@@ -63,9 +92,14 @@ module.exports = {
           ],
           sources: [HUD_FHA, CFR_100_75],
           tryIt: "Pide a la IA una descripción de una casa de tamaño familiar. Marca cada frase que describe personas en vez de la propiedad y luego reescríbelas como características.",
-          youCanNow: "detectar y corregir problemas de vivienda justa en el lenguaje de los anuncios, incluido el texto escrito por la IA."
+          youCanNow: "detectar y corregir problemas de vivienda justa en el lenguaje de los anuncios, incluido el texto escrito por la IA.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué debe describir un anuncio?", options: ["El tipo de personas que deberían comprar", "La religión de los vecinos", "La propiedad y sus características", "Quién va a encajar en la calle"], answer: 2, why: "Describe la propiedad, no a las personas que quieres que vivan ahí." },
+            { objective: "O2", q: "La IA escribe \"ideal para una pareja\". ¿Qué haces?", options: ["Lo dejas; suena amable", "Agregas \"o para una persona sola\"", "Lo mueves al final", "Lo cambias por características de la propiedad, como \"dos recámaras, calle tranquila\""], answer: 3, why: "\"Ideal para una pareja\" es una frase riesgosa sobre personas; describe la propiedad en su lugar." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Promocionar tus propiedades y a ti mismo, según las reglas",
           minutes: 5,
           goal: "Crear publicaciones y correos para una propiedad que siguen las reglas de publicidad y de correo.",
@@ -83,17 +117,21 @@ module.exports = {
           ],
           sources: [DRE, CAN_SPAM],
           tryIt: "Convierte tu anuncio revisado en una publicación para redes sociales y un correo corto. Haz la revisión de vivienda justa y agrega los datos de licencia y correduría que piden tu estado y tu corredor.",
-          youCanNow: "promocionar una propiedad en varios canales siguiendo las reglas de vivienda justa, de licencias y de correo."
+          youCanNow: "promocionar una propiedad en varios canales siguiendo las reglas de vivienda justa, de licencias y de correo.",
+          quickCheck: [
+            { objective: "O3", q: "¿Qué regla de correo electrónico cubre los correos de publicidad en esta lección?", options: ["CAN-SPAM", "El Food Code", "HIPAA", "La regla de reseñas de la FTC"], answer: 0, why: "Los correos de publicidad deben cumplir CAN-SPAM, incluidas una dirección postal y una forma de darse de baja." },
+            { objective: "O3", q: "Conviertes tu anuncio en una publicación para redes sociales con la IA. ¿Qué más haces antes de publicar?", options: ["La publicas de inmediato; el anuncio ya estaba revisado", "Haces la revisión de vivienda justa y agregas los datos de la licencia y de la agencia que se pidan", "Quitas el precio", "Agregas una foto de archivo de otra casa"], answer: 1, why: "Cada pieza pasa por la misma revisión de vivienda justa y lleva los datos que piden tu estado y tu corredor." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Anuncios de propiedades y vivienda justa",
         questions: [
-          { q: "El anuncio de la IA dice \"vista al mar\", pero la casa no la tiene. ¿Qué haces?", options: ["Lo dejas; a los compradores les gusta", "Lo borras", "Agregas una foto del mar", "Le preguntas a la IA si es cierto"], answer: 1, why: "En un anuncio solo van datos verificados." },
-          { q: "¿Cuál es una clase protegida por la Ley federal de Vivienda Justa?", options: ["El color de pelo", "El equipo deportivo favorito", "La marca de carro", "La situación familiar"], answer: 3, why: "La situación familiar es una de las siete clases federales." },
-          { q: "¿Qué frase es un riesgo de vivienda justa?", options: ["\"Perfecta para jóvenes profesionales\"", "\"Tres recámaras\"", "\"Techo nuevo en 2023\"", "\"A 0.3 millas del tren ligero\""], answer: 0, why: "Muestra preferencia sobre quién debería vivir ahí." },
-          { q: "Las reglas de publicidad de vivienda justa pueden cubrir:", options: ["Solo espectaculares", "Solo palabras", "Palabras, fotos y dónde pones los anuncios", "Nada en internet"], answer: 2, why: "24 CFR 100.75 cubre palabras, imágenes y la elección de medios." },
-          { q: "¿Dónde revisas las reglas de publicidad para quienes tienen licencia en California?", options: ["Con un comprador", "En un chat de IA", "En el Departamento de Bienes Raíces y con tu corredor", "En un grupo de redes sociales"], answer: 2, why: "El DRE regula a quienes tienen licencia en California." }
+          { objective: "O1", q: "El anuncio de la IA dice \"vista al mar\", pero la casa no la tiene. ¿Qué haces?", options: ["Lo dejas; a los compradores les gusta", "Lo borras", "Agregas una foto del mar", "Le preguntas a la IA si es cierto"], answer: 1, why: "En un anuncio solo van datos verificados." },
+          { objective: "O2", q: "¿Cuál es una clase protegida por la Ley federal de Vivienda Justa?", options: ["El color de pelo", "El equipo deportivo favorito", "La marca de carro", "La situación familiar"], answer: 3, why: "La situación familiar es una de las siete clases federales." },
+          { objective: "O2", q: "¿Qué frase es un riesgo de vivienda justa?", options: ["\"Perfecta para jóvenes profesionales\"", "\"Tres recámaras\"", "\"Techo nuevo en 2023\"", "\"A 0.3 millas del tren ligero\""], answer: 0, why: "Muestra preferencia sobre quién debería vivir ahí." },
+          { objective: "O2", q: "Las reglas de publicidad de vivienda justa pueden cubrir:", options: ["Solo espectaculares", "Solo palabras", "Palabras, fotos y dónde pones los anuncios", "Nada en internet"], answer: 2, why: "24 CFR 100.75 cubre palabras, imágenes y la elección de medios." },
+          { objective: "O3", q: "¿Dónde revisas las reglas de publicidad para quienes tienen licencia en California?", options: ["Con un comprador", "En un chat de IA", "En el Departamento de Bienes Raíces y con tu corredor", "En un grupo de redes sociales"], answer: 2, why: "El DRE regula a quienes tienen licencia en California." }
         ]
       }
     },
@@ -101,6 +139,7 @@ module.exports = {
       name: "Capítulo 2: Clientes, interesados y datos del mercado",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Actualizaciones para clientes sin compartir información privada",
           minutes: 5,
           goal: "Convertir tus notas en actualizaciones claras para vendedores y compradores usando espacios en blanco.",
@@ -117,9 +156,14 @@ module.exports = {
             { title: "Nunca pongas en la IA", bullets: ["Nombres con direcciones, finanzas, Seguro Social", "Montos de preaprobación y condiciones de ofertas", "Estrategia de negociación"] }
           ],
           tryIt: "Escribe notas sueltas de la semana de un vendedor de ejemplo. Usa espacios en blanco, pide a la IA una actualización semanal con un siguiente paso y revisa que no tenga datos privados.",
-          youCanNow: "mandar actualizaciones claras a tus clientes hechas con la IA y mantener privada su información."
+          youCanNow: "mandar actualizaciones claras a tus clientes hechas con la IA y mantener privada su información.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué cubre un informe semanal para el vendedor?", options: ["El monto de preaprobación del comprador", "Tu plan de negociación", "Visitas, comentarios, vistas en línea y siguientes pasos", "Las ofertas de otros clientes"], answer: 2, why: "Un informe para el vendedor cubre visitas, comentarios, vistas y siguientes pasos." },
+            { objective: "O4", q: "Tus notas tienen el nombre completo del comprador y los términos de su oferta. ¿Qué haces antes de pegarlas en la IA?", options: ["Las pegas así", "Acortas las notas", "Primero las traduces", "Cambias los datos privados por espacios en blanco y después los llenas tú"], answer: 3, why: "Los datos privados de los clientes no entran en las herramientas de IA; los llenas tú." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Un plan de seguimiento para interesados",
           minutes: 5,
           goal: "Crear un plan de seguimiento de 30 días con cuatro mensajes para nuevos interesados.",
@@ -136,9 +180,14 @@ module.exports = {
             { title: "Lleva el control y respeta", bullets: ["Nombre, de dónde llegó, etapa, próxima fecha", "Contacta solo a quienes aceptaron"] }
           ],
           tryIt: "Pide a la IA un borrador de tu plan de seguimiento de 30 días con cuatro mensajes. Ajusta cada uno a tu estilo y arma una hoja de control de interesados con una columna de próximo seguimiento.",
-          youCanNow: "llevar un plan de seguimiento constante y útil para nuevos interesados."
+          youCanNow: "llevar un plan de seguimiento constante y útil para nuevos interesados.",
+          quickCheck: [
+            { objective: "O5", q: "En el plan de ejemplo, ¿cuál es el mensaje del día 14?", options: ["Un resumen del mercado de su zona", "Una petición de recomendación", "Un contrato para firmar", "Una tarjeta de cumpleaños"], answer: 0, why: "El plan es: día 1 agradecimiento, día 7 consejo, día 14 resumen del mercado, día 30 saludo para ver cómo va." },
+            { objective: "O5", q: "Conociste a alguien en una fiesta que nunca aceptó recibir tus mensajes. ¿Lo agregas a tu plan de mensajes de texto?", options: ["Sí, cualquier persona que conoces es un cliente interesado", "No, solo contactas a personas que aceptaron recibir tus mensajes", "Sí, si los mensajes son cortos", "Sí, pero solo los fines de semana"], answer: 1, why: "Solo mandas correos o mensajes a quien aceptó, y sigues las reglas de correo y de mensajes de texto." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Resúmenes del mercado y preparación de visitas",
           minutes: 5,
           goal: "Convertir los números del mercado que sacaste en un resumen claro para el cliente y preparar una casa abierta.",
@@ -155,17 +204,21 @@ module.exports = {
             { title: "Lista para la casa abierta", bullets: ["Antes: luces, volantes, hoja de registro", "Durante: seguridad y notas", "Después: seguimiento en menos de 24 horas"] }
           ],
           tryIt: "Tarea final: arma tu kit de IA para agentes: una descripción de propiedad revisada, plantillas de actualización para vendedores y compradores, el plan de seguimiento de 30 días, un resumen del mercado con números que sacaste tú y una lista de control para casas abiertas.",
-          youCanNow: "explicar con claridad los números del mercado y preparar visitas con ayuda de la IA, usando tus propios datos."
+          youCanNow: "explicar con claridad los números del mercado y preparar visitas con ayuda de la IA, usando tus propios datos.",
+          quickCheck: [
+            { objective: "O6", q: "¿Qué compara la relación entre precio de venta y precio de lista?", options: ["La renta con la hipoteca", "Los días en el mercado con las propiedades en venta", "En cuánto se vendieron las casas con el precio en que se anunciaron", "Los agentes con los compradores"], answer: 2, why: "Compara el precio de venta con el precio de lista." },
+            { objective: "O6", q: "El resumen del mercado de la IA incluye un número que tú no le diste. ¿Qué haces?", options: ["Lo dejas; la IA tiene datos en vivo", "Lo redondeas", "Lo mueves a una nota al pie", "Lo quitas y revisas cada número con tu fuente"], answer: 3, why: "La IA no tiene datos del mercado en vivo confiables, así que quitas los números inventados y agregas tu fuente y la fecha." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Clientes, interesados y datos del mercado",
         questions: [
-          { q: "¿Qué nunca debe ir en una herramienta de IA?", options: ["El monto de preaprobación y el nombre de un comprador", "\"6 visitas esta semana\"", "\"La cocina recibió buenos comentarios\"", "\"[nombre del vendedor]\""], answer: 0, why: "Los datos financieros de los clientes son privados." },
-          { q: "¿Qué es un buen seguimiento el día 7?", options: ["Nada", "Un insistente \"¡Firma ya!\"", "Su puntaje de crédito", "Un consejo útil para su situación"], answer: 3, why: "Los contactos útiles generan confianza." },
-          { q: "¿De dónde deben salir los números del mercado?", options: ["De la memoria de la IA", "De tu MLS u otra fuente confiable que consultaste", "De una suposición", "De un vecino"], answer: 1, why: "La IA no tiene datos del mercado al día confiables." },
-          { q: "La IA agrega \"los precios subieron 12% este año\", pero tú nunca le diste ese número. Tú:", options: ["Lo quitas", "Lo dejas", "Lo redondeas hacia arriba", "Lo publicas"], answer: 0, why: "No uses números que no diste ni revisaste." },
-          { q: "¿Qué es el precio mediano?", options: ["La renta promedio", "El precio más alto", "El precio de en medio: la mitad se vendió en más y la mitad en menos", "El precio de lista"], answer: 2, why: "La mediana es el valor de en medio." }
+          { objective: "O4", q: "¿Qué nunca debe ir en una herramienta de IA?", options: ["El monto de preaprobación y el nombre de un comprador", "\"6 visitas esta semana\"", "\"La cocina recibió buenos comentarios\"", "\"[nombre del vendedor]\""], answer: 0, why: "Los datos financieros de los clientes son privados." },
+          { objective: "O5", q: "¿Qué es un buen seguimiento el día 7?", options: ["Nada", "Un insistente \"¡Firma ya!\"", "Su puntaje de crédito", "Un consejo útil para su situación"], answer: 3, why: "Los contactos útiles generan confianza." },
+          { objective: "O6", q: "¿De dónde deben salir los números del mercado?", options: ["De la memoria de la IA", "De tu MLS u otra fuente confiable que consultaste", "De una suposición", "De un vecino"], answer: 1, why: "La IA no tiene datos del mercado al día confiables." },
+          { objective: "O6", q: "La IA agrega \"los precios subieron 12% este año\", pero tú nunca le diste ese número. Tú:", options: ["Lo quitas", "Lo dejas", "Lo redondeas hacia arriba", "Lo publicas"], answer: 0, why: "No uses números que no diste ni revisaste." },
+          { objective: "O6", q: "¿Qué es el precio mediano?", options: ["La renta promedio", "El precio más alto", "El precio de en medio: la mitad se vendió en más y la mitad en menos", "El precio de lista"], answer: 2, why: "La mediana es el valor de en medio." }
         ]
       }
     }
@@ -173,26 +226,103 @@ module.exports = {
   quiz: {
     title: "Examen final: IA para agentes de bienes raíces",
     questions: [
-      { q: "¿Qué debes darle a la IA para escribir un anuncio de propiedad?", options: ["El número de Seguro Social del vendedor", "Solo datos verificados", "Suposiciones", "El anuncio de un competidor"], answer: 1, why: "Entran datos, salen palabras correctas." },
-      { q: "MLS significa:", options: ["Mi sitio de anuncios", "Sistema principal de préstamos", "Ley del mercado", "Multiple Listing Service (servicio de listados múltiples)"], answer: 3, why: "Los agentes comparten propiedades en el MLS." },
-      { q: "¿Por qué revisar los pies cuadrados en un anuncio hecho con IA?", options: ["No hace falta", "Para que sea más largo", "Por diversión", "Los datos falsos pueden traer quejas y problemas legales"], answer: 3, why: "Los datos equivocados causan problemas." },
-      { q: "¿Cuántas clases protegidas tiene la Ley federal de Vivienda Justa?", options: ["Tres", "Siete", "Diez", "Dos"], answer: 1, why: "Raza, color, origen nacional, religión, sexo, situación familiar, discapacidad." },
-      { q: "¿Cuál es una característica de la propiedad y no una preferencia sobre personas?", options: ["\"No niños\"", "\"Ideal para una pareja\"", "\"Todo en un solo nivel\"", "\"Excelente para jóvenes profesionales\""], answer: 2, why: "Describe la casa." },
-      { q: "¿Por qué la IA puede escribir problemas de vivienda justa?", options: ["Puede copiar patrones con prejuicios de lo que aprendió", "Conoce perfectamente la ley de vivienda justa", "Nunca se equivoca", "Es abogada"], answer: 0, why: "Revisa siempre lo que escribe la IA." },
-      { q: "¿California protege a más grupos que la ley federal?", options: ["Solo los fines de semana", "No, nunca", "Sí; revisa las reglas de tu estado", "Solo para rentas"], answer: 2, why: "Muchos estados, como California, protegen a más grupos." },
-      { q: "Los anuncios de quienes tienen licencia muchas veces deben incluir:", options: ["Número de licencia y nombre de la correduría, según las reglas del estado y del corredor", "La dirección de tu casa", "Nombres de clientes", "Nada"], answer: 0, why: "Revisa las reglas de publicidad de tu estado." },
-      { q: "Un correo de publicidad a tu círculo de contactos debe incluir:", options: ["Las condiciones de las ofertas de los clientes", "Una dirección postal y una opción para darse de baja", "Un remitente falso", "Nada"], answer: 1, why: "La ley CAN-SPAM exige las dos cosas." },
-      { q: "¿Qué es tu círculo de contactos?", options: ["Un prestamista", "Un objeto redondo", "El MLS", "Personas que conoces y que podrían comprar, vender o recomendarte"], answer: 3, why: "Clientes anteriores, amigos y familia." },
-      { q: "Una actualización semanal para el vendedor incluye:", options: ["Visitas, comentarios, vistas y un siguiente paso", "Las finanzas de otros clientes", "Tu contraseña", "Nada"], answer: 0, why: "Eso mantiene informados a los vendedores." },
-      { q: "¿Cuál es un espacio en blanco?", options: ["Un número de Seguro Social", "El nombre completo y la dirección del vendedor", "Un número de cuenta bancaria", "[nombre del vendedor]"], answer: 3, why: "Los espacios en blanco dejan fuera los datos privados." },
-      { q: "La estrategia de negociación debe:", options: ["Publicarse en internet", "Pegarse en chats", "Quedarse fuera de las herramientas de IA", "Compartirse con todos los compradores"], answer: 2, why: "Es información confidencial del cliente." },
-      { q: "Un plan de seguimiento de 30 días tiene más o menos:", options: ["Cien llamadas", "Cuatro contactos útiles", "Ninguno", "Mensajes insistentes cada día"], answer: 1, why: "Lo constante y útil funciona mejor." },
-      { q: "¿A quién le mandas correos o mensajes de publicidad?", options: ["A desconocidos", "A cualquiera cuyo número encuentres", "A listas compradas", "A personas que aceptaron recibirlos"], answer: 3, why: "Primero va el permiso." },
-      { q: "Antes de compartir el enlace de un programa para quienes compran por primera vez, tú:", options: ["Adivinas las reglas", "Confías en el enlace de la IA", "Revisas su página oficial", "No revisas nada"], answer: 2, why: "Los detalles de los programas cambian." },
-      { q: "Los días en el mercado miden:", options: ["Cuánto tardan las casas en venderse", "Las horas de la casa abierta", "Los días de comisión", "Los días festivos"], answer: 0, why: "Muestra la velocidad del mercado." },
-      { q: "Cuando la IA explica los números del mercado, debes decirle:", options: ["Inventa más números", "No agregues números que no te di", "Adivina el futuro", "Usa cualquier sitio web"], answer: 1, why: "Así se reducen las estadísticas inventadas." },
-      { q: "¿Cuándo debes dar seguimiento después de una casa abierta?", options: ["El año que viene", "En menos de 24 horas", "Nunca", "Solo si te llaman"], answer: 1, why: "El seguimiento rápido gana clientes." },
-      { q: "Este curso:", options: ["No es asesoría legal; consulta a HUD, al regulador de tu estado y a tu corredor", "Es asesoría legal", "Es una licencia", "Es un contrato"], answer: 0, why: "Las fuentes oficiales y tu corredor tienen la última palabra." }
+      { objective: "O1", q: "¿Qué debes darle a la IA para escribir un anuncio de propiedad?", options: ["El número de Seguro Social del vendedor", "Solo datos verificados", "Suposiciones", "El anuncio de un competidor"], answer: 1, why: "Entran datos, salen palabras correctas." },
+      { objective: "O1", q: "MLS significa:", options: ["Mi sitio de anuncios", "Sistema principal de préstamos", "Ley del mercado", "Multiple Listing Service (servicio de listados múltiples)"], answer: 3, why: "Los agentes comparten propiedades en el MLS." },
+      { objective: "O1", q: "¿Por qué revisar los pies cuadrados en un anuncio hecho con IA?", options: ["No hace falta", "Para que sea más largo", "Por diversión", "Los datos falsos pueden traer quejas y problemas legales"], answer: 3, why: "Los datos equivocados causan problemas." },
+      { objective: "O2", q: "¿Cuántas clases protegidas tiene la Ley federal de Vivienda Justa?", options: ["Tres", "Siete", "Diez", "Dos"], answer: 1, why: "Raza, color, origen nacional, religión, sexo, situación familiar, discapacidad." },
+      { objective: "O2", q: "¿Cuál es una característica de la propiedad y no una preferencia sobre personas?", options: ["\"No niños\"", "\"Ideal para una pareja\"", "\"Todo en un solo nivel\"", "\"Excelente para jóvenes profesionales\""], answer: 2, why: "Describe la casa." },
+      { objective: "O2", q: "¿Por qué la IA puede escribir problemas de vivienda justa?", options: ["Puede copiar patrones con prejuicios de lo que aprendió", "Conoce perfectamente la ley de vivienda justa", "Nunca se equivoca", "Es abogada"], answer: 0, why: "Revisa siempre lo que escribe la IA." },
+      { objective: "O2", q: "¿California protege a más grupos que la ley federal?", options: ["Solo los fines de semana", "No, nunca", "Sí; revisa las reglas de tu estado", "Solo para rentas"], answer: 2, why: "Muchos estados, como California, protegen a más grupos." },
+      { objective: "O3", q: "Los anuncios de quienes tienen licencia muchas veces deben incluir:", options: ["Número de licencia y nombre de la correduría, según las reglas del estado y del corredor", "La dirección de tu casa", "Nombres de clientes", "Nada"], answer: 0, why: "Revisa las reglas de publicidad de tu estado." },
+      { objective: "O3", q: "Un correo de publicidad a tu círculo de contactos debe incluir:", options: ["Las condiciones de las ofertas de los clientes", "Una dirección postal y una opción para darse de baja", "Un remitente falso", "Nada"], answer: 1, why: "La ley CAN-SPAM exige las dos cosas." },
+      { objective: "O3", q: "¿Qué es tu círculo de contactos?", options: ["Un prestamista", "Un objeto redondo", "El MLS", "Personas que conoces y que podrían comprar, vender o recomendarte"], answer: 3, why: "Clientes anteriores, amigos y familia." },
+      { objective: "O4", q: "Una actualización semanal para el vendedor incluye:", options: ["Visitas, comentarios, vistas y un siguiente paso", "Las finanzas de otros clientes", "Tu contraseña", "Nada"], answer: 0, why: "Eso mantiene informados a los vendedores." },
+      { objective: "O4", q: "¿Cuál es un espacio en blanco?", options: ["Un número de Seguro Social", "El nombre completo y la dirección del vendedor", "Un número de cuenta bancaria", "[nombre del vendedor]"], answer: 3, why: "Los espacios en blanco dejan fuera los datos privados." },
+      { objective: "O4", q: "La estrategia de negociación debe:", options: ["Publicarse en internet", "Pegarse en chats", "Quedarse fuera de las herramientas de IA", "Compartirse con todos los compradores"], answer: 2, why: "Es información confidencial del cliente." },
+      { objective: "O5", q: "Un plan de seguimiento de 30 días tiene más o menos:", options: ["Cien llamadas", "Cuatro contactos útiles", "Ninguno", "Mensajes insistentes cada día"], answer: 1, why: "Lo constante y útil funciona mejor." },
+      { objective: "O5", q: "¿A quién le mandas correos o mensajes de publicidad?", options: ["A desconocidos", "A cualquiera cuyo número encuentres", "A listas compradas", "A personas que aceptaron recibirlos"], answer: 3, why: "Primero va el permiso." },
+      { objective: "O5", q: "Antes de compartir el enlace de un programa para quienes compran por primera vez, tú:", options: ["Adivinas las reglas", "Confías en el enlace de la IA", "Revisas su página oficial", "No revisas nada"], answer: 2, why: "Los detalles de los programas cambian." },
+      { objective: "O6", q: "Los días en el mercado miden:", options: ["Cuánto tardan las casas en venderse", "Las horas de la casa abierta", "Los días de comisión", "Los días festivos"], answer: 0, why: "Muestra la velocidad del mercado." },
+      { objective: "O6", q: "Cuando la IA explica los números del mercado, debes decirle:", options: ["Inventa más números", "No agregues números que no te di", "Adivina el futuro", "Usa cualquier sitio web"], answer: 1, why: "Así se reducen las estadísticas inventadas." },
+      { objective: "O6", q: "¿Cuándo debes dar seguimiento después de una casa abierta?", options: ["El año que viene", "En menos de 24 horas", "Nunca", "Solo si te llaman"], answer: 1, why: "El seguimiento rápido gana clientes." },
+      { objective: "O2", q: "Este curso:", options: ["No es asesoría legal; consulta a HUD, al regulador de tu estado y a tu corredor", "Es asesoría legal", "Es una licencia", "Es un contrato"], answer: 0, why: "Las fuentes oficiales y tu corredor tienen la última palabra." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      3,
+      5,
+      7,
+      11,
+      13,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte y vuelve a intentarlo.",
+    criteria: [
+      {
+        name: "Anuncio correcto",
+        objective: "O1",
+        notYet: "El anuncio tiene un dato que no se comprobó, como algo que la casa no tiene.",
+        meets: "Cada dato se revisa línea por línea con los registros, el vendedor o tu visita.",
+        exceeds: "Anota la fuente de los datos clave, como los metros o pies cuadrados."
+      },
+      {
+        name: "Lenguaje de vivienda justa",
+        objective: "O2",
+        notYet: "Una línea describe quién debería vivir ahí en lugar de la propiedad.",
+        meets: "Cada línea describe solo la propiedad y sus características.",
+        exceeds: "También revisa las fotos y dónde se pone el anuncio, y puede explicar cada corrección."
+      },
+      {
+        name: "Informes privados para clientes",
+        objective: "O4",
+        notYet: "Un nombre de cliente con dirección, un dato financiero o términos de oferta entraron en la herramienta de IA.",
+        meets: "Las plantillas de informes para vendedor y comprador usan espacios en blanco y tienen un siguiente paso claro.",
+        exceeds: "Los espacios en blanco se llenan solo en el correo o el CRM del propio agente."
+      },
+      {
+        name: "Plan de seguimiento de clientes",
+        objective: "O5",
+        notYet: "Menos de cuatro mensajes, o los mensajes son insistentes o no se revisaron.",
+        meets: "Cuatro mensajes útiles en 30 días, con espacios en blanco y una próxima fecha registrada.",
+        exceeds: "Los enlaces de programas se revisan en páginas oficiales y se anotan."
+      },
+      {
+        name: "Resumen del mercado y casa abierta",
+        objective: "O6",
+        notYet: "El resumen tiene un número que no salió de tu fuente.",
+        meets: "Resumen en palabras sencillas con tus propios números, la fuente y la fecha, más una lista de verificación para la casa abierta.",
+        exceeds: "La lista incluye los pasos de seguridad de la agencia y el seguimiento en 24 horas."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Estudiantes que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Agentes que dicen usar un plan fijo de seguimiento de clientes en 30 días (encuesta de seguimiento)",
+      "Agentes que dicen ahorrar tiempo cada semana en anuncios e informes para clientes",
+      "Estudiantes que empiezan otro curso de Koach Learn para pequeños negocios en 30 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un teléfono o una computadora con internet",
+      "Un asistente de IA gratis",
+      "Datos comprobados de un anuncio real o de ejemplo y números recientes de tu MLS",
+      "Unos 60 minutos en total: lecciones, práctica, comprobaciones y la tarea final"
+    ],
+    facilitatorNotes: [
+      "Recuerda a los estudiantes que este curso no es asesoría legal; las preguntas de vivienda justa, publicidad y licencias van a HUD, al regulador del estado y a su corredor.",
+      "Haz un ejercicio en grupo: lean en voz alta anuncios de ejemplo hechos con IA y encuentren juntos los riesgos de vivienda justa.",
+      "Usa anuncios de ejemplo y espacios en blanco en clase; nunca pegues datos privados de clientes reales en herramientas de IA.",
+      "Pide a los estudiantes que revisen la política de su agencia sobre herramientas de IA antes de usarlas con clientes.",
+      "Califica la tarea final con la rúbrica y da comentarios sobre una fila en Todavía no a la vez."
     ]
   }
 };

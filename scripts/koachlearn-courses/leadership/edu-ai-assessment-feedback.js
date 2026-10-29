@@ -15,11 +15,35 @@ module.exports = {
     "Practice only with made-up student work or work with every identifying detail removed, and use only tools your district has approved for student work. A knowledge check closes each chapter and a 20-question quiz closes the course. This is course 4 of 8 in AI for School and Educational Leaders."
   ],
   finalTask: "Build an assessment pack for one objective: five aligned questions with a key you have checked, a four-level rubric with three or four criteria and a student-friendly version, a three-question exit ticket, and a feedback comment bank of at least eight comments tied to the rubric. Try the feedback workflow on three made-up student responses, change at least one AI draft comment, and write the grades yourself.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Teachers, instructional coaches, assessment leads and principals in US schools who write assessments, give feedback or support teachers who do.",
+    startingPoint: "Can plan a lesson with AI and check it, and know the FERPA basics from earlier courses. Write assessments and feedback by hand, and may be unsure how to respond to suspected AI use by students.",
+    gap: "Assessment and feedback take a large share of teacher time, and AI can help, but grades are high-stakes. Educators need to build aligned assessments with AI, use a workflow where AI drafts and the teacher decides, protect student work and handle suspected AI use fairly.",
+    constraints: [
+      "Practice only with made-up student work or work with every identifying detail removed",
+      "Use only tools the district has approved for student work",
+      "Teachers decide every grade; AI never scores students on its own",
+      "AI-writing detector scores are never the only evidence of misuse",
+      "Time: short lessons fitted around a teaching day"
+    ],
+    prerequisites: "\"AI for School and Educational Leaders 3: AI for Lesson Planning\"."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given one objective", action: "generate aligned questions at three levels with AI and work every answer in the key", standard: "fixing or removing any item with an error or two possible answers" },
+    { id: "O2", condition: "For a task you assign", action: "create a four-level rubric and a student-friendly version with AI", standard: "with every cell specific enough that two teachers would score the same work the same way" },
+    { id: "O3", condition: "For one objective", action: "design a hinge question and a three-question exit ticket", standard: "deciding before the check what you will re-teach for each wrong answer" },
+    { id: "O4", condition: "Given student responses and your rubric", action: "use AI to draft glow-and-grow comments, then edit them and write the grades yourself", standard: "with at least one AI comment changed and every grade decided by you" },
+    { id: "O5", condition: "When AI tools touch student work or grades", action: "apply FERPA basics and explain to families how AI is used for feedback", standard: "using only approved tools with identifying details removed" },
+    { id: "O6", condition: "When you suspect AI misuse in student work", action: "respond with a fair process and a clear AI-use rule for each task", standard: "never using a detector score as the only evidence" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Building assessments with AI",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Writing aligned questions and checking the key",
           minutes: 5,
           goal: "Generate assessment questions that match an objective and verify the answers.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Check every item", bullets: ["Keys contain errors", "Two right answers? Confusing wording?", "Cut items off the objective"] }
           ],
           tryIt: "Ask AI for six questions on one objective at three levels with a key. Work every answer yourself and count any errors or unclear items.",
-          youCanNow: "write aligned assessment questions with AI and check the key."
+          youCanNow: "write aligned assessment questions with AI and check the key.",
+          quickCheck: [
+            { objective: "O1", q: "What is a distractor in a multiple-choice question?", options: ["A wrong option in the list", "A question that is too hard", "A noise in the classroom", "The right answer"], answer: 0, why: "Good distractors reflect real misconceptions, which shows how students think." },
+            { objective: "O1", q: "You work AI's answer key and one answer is wrong. What would you do?", options: ["Leave it; students will not notice", "Ask AI to regrade the class", "Fix the key and check the rest of the items closely", "Remove all the questions"], answer: 2, why: "Working every answer catches errors before students are scored." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Building a rubric students understand",
           minutes: 6,
           goal: "Create a four-level rubric and a student-friendly version with AI.",
@@ -55,9 +84,14 @@ module.exports = {
             { title: "Make it fair and clear", bullets: ["Student-friendly \"I\" version", "Would two teachers agree?"] }
           ],
           tryIt: "Build a four-level rubric with AI for a task you assign. Rewrite any vague cell, make the student-friendly version, and test it on one made-up response.",
-          youCanNow: "build a clear four-level rubric and a student-friendly version with AI."
+          youCanNow: "build a clear four-level rubric and a student-friendly version with AI.",
+          quickCheck: [
+            { objective: "O2", q: "What is an analytic rubric?", options: ["A rubric with one overall score", "A rubric that scores each criterion separately", "A rubric written by AI", "A checklist of materials"], answer: 1, why: "Analytic rubrics give separate levels for each criterion." },
+            { objective: "O2", q: "A rubric cell says \"good use of evidence\". What would you change?", options: ["Nothing, it is clear", "Remove the cell", "Add the word \"very\"", "Say exactly what students do, such as \"uses two pieces of evidence and explains each\""], answer: 3, why: "Specific cells make scoring fair and help students know what to do." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Quick formative checks",
           minutes: 5,
           goal: "Design exit tickets and in-lesson checks that show who needs what next.",
@@ -74,17 +108,21 @@ module.exports = {
             { title: "Plan the response", bullets: ["Who gets re-teaching?", "Who moves on?", "Unused checks are just paper"] }
           ],
           tryIt: "Ask AI for one hinge question and a three-question exit ticket for your objective. For each wrong hinge answer, write what you would re-teach.",
-          youCanNow: "design quick formative checks and plan what to do with the results."
+          youCanNow: "design quick formative checks and plan what to do with the results.",
+          quickCheck: [
+            { objective: "O3", q: "What is formative assessment?", options: ["The final exam", "A state test", "Low-stakes checking during learning to adjust teaching", "A grade for behavior"], answer: 2, why: "Formative checks tell you what to teach next." },
+            { objective: "O3", q: "Half the class picks the same wrong hinge answer. What do you do?", options: ["Re-teach the misconception that answer reveals", "Move on to the next lesson", "Give everyone a lower grade", "Ask AI to grade the hinge question"], answer: 0, why: "Each wrong hinge answer points to a misconception you can re-teach." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Building assessments with AI",
         questions: [
-          { q: "Why ask AI to explain why each wrong option is tempting?", options: ["It makes the test longer", "To trick students unfairly", "Distractors that reflect misconceptions show how students think", "It is required"], answer: 2, why: "Good distractors reveal misconceptions." },
-          { q: "An AI multiple-choice item has two answers that could be right. You should:", options: ["Fix or remove it", "Keep it", "Accept either", "Give everyone full marks"], answer: 0, why: "Every item needs one clearly right answer." },
-          { q: "Which rubric cell is best written?", options: ["\"Good evidence\"", "\"More evidence\"", "\"Nice work\"", "\"Uses two pieces of evidence and explains how each supports the claim\""], answer: 3, why: "It describes what is present in the work." },
-          { q: "What is a hinge question?", options: ["A question about doors", "A question whose wrong answers each reveal a misconception", "A final exam question", "A homework question"], answer: 1, why: "It shows what to re-teach mid-lesson." },
-          { q: "When should you decide what to do with exit-ticket results?", options: ["Only if most students fail", "Never", "At the end of the year", "Before giving the check"], answer: 3, why: "Planning the response makes the check useful." }
+          { objective: "O1", q: "Why ask AI to explain why each wrong option is tempting?", options: ["It makes the test longer", "To trick students unfairly", "Distractors that reflect misconceptions show how students think", "It is required"], answer: 2, why: "Good distractors reveal misconceptions." },
+          { objective: "O1", q: "An AI multiple-choice item has two answers that could be right. You should:", options: ["Fix or remove it", "Keep it", "Accept either", "Give everyone full marks"], answer: 0, why: "Every item needs one clearly right answer." },
+          { objective: "O2", q: "Which rubric cell is best written?", options: ["\"Good evidence\"", "\"More evidence\"", "\"Nice work\"", "\"Uses two pieces of evidence and explains how each supports the claim\""], answer: 3, why: "It describes what is present in the work." },
+          { objective: "O3", q: "What is a hinge question?", options: ["A question about doors", "A question whose wrong answers each reveal a misconception", "A final exam question", "A homework question"], answer: 1, why: "It shows what to re-teach mid-lesson." },
+          { objective: "O3", q: "When should you decide what to do with exit-ticket results?", options: ["Only if most students fail", "Never", "At the end of the year", "Before giving the check"], answer: 3, why: "Planning the response makes the check useful." }
         ]
       }
     },
@@ -92,6 +130,7 @@ module.exports = {
       name: "Chapter 2: Feedback the teacher owns",
       lessons: [
         {
+          objectives: ["O4"],
           title: "A feedback workflow: AI drafts, the teacher decides",
           minutes: 6,
           goal: "Use AI to draft feedback tied to a rubric, then edit and own it.",
@@ -108,9 +147,14 @@ module.exports = {
             { title: "You write the grade", bullets: ["AI scores can be inconsistent", "Can reward length over quality", "Edit so it sounds like you"] }
           ],
           tryIt: "Build a comment bank of eight glow-and-grow comments for your rubric. Write three made-up student responses, score them yourself, and pick and edit comments for each.",
-          youCanNow: "run a feedback workflow where AI helps draft and you decide."
+          youCanNow: "run a feedback workflow where AI helps draft and you decide.",
+          quickCheck: [
+            { objective: "O4", q: "What is a comment bank?", options: ["Feedback AI sends to students on its own", "Saved feedback comments you reuse and adjust", "A list of grades", "A bank account for school funds"], answer: 1, why: "A comment bank saves time while the teacher still chooses and edits each comment." },
+            { objective: "O4", q: "AI drafts a comment that does not fit a student's work. What would you do?", options: ["Send it anyway", "Let AI change the grade", "Skip feedback for that student", "Edit the comment so it fits the work, and keep your own grade"], answer: 3, why: "AI drafts and the teacher decides, so you own every comment and grade." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Protecting student work and grades",
           minutes: 5,
           goal: "Apply FERPA basics to student work, grades and AI tools.",
@@ -128,9 +172,14 @@ module.exports = {
           ],
           sources: [{ name: "FERPA: Protecting Student Privacy (US Department of Education)", url: "https://studentprivacy.ed.gov/ferpa" }],
           tryIt: "Write a three-sentence note for families explaining how your class or school uses AI to help with feedback, what is protected, and that teachers decide all grades.",
-          youCanNow: "protect student work and grades when AI is part of the feedback process."
+          youCanNow: "protect student work and grades when AI is part of the feedback process.",
+          quickCheck: [
+            { objective: "O5", q: "Under FERPA, what is student work kept by the school generally part of?", options: ["Education records", "Public records anyone can see", "The teacher's private notes", "The vendor's property"], answer: 0, why: "Student work kept by the school is generally part of protected education records." },
+            { objective: "O5", q: "A teacher wants AI help with feedback on real essays. What would you advise?", options: ["Paste the essays into any free chatbot", "Upload the grade book too, for context", "Use only a district-approved tool, with identifying details removed", "Ask students to paste their own essays into AI"], answer: 2, why: "Approved tools and removed identifiers protect student records." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Suspected AI use in student work: handling it fairly",
           minutes: 6,
           goal: "Respond to suspected AI use with clear rules and a fair process, not a detector score.",
@@ -147,17 +196,21 @@ module.exports = {
             { title: "If you suspect misuse", bullets: ["Talk with the student", "Ask them to explain or redo a part", "Follow your integrity policy"] }
           ],
           tryIt: "Final task: finish your assessment pack (five checked questions, rubric and student version, exit ticket, eight-comment bank), run the feedback workflow on three made-up responses with your own grades, and add a one-line AI-use rule for the task.",
-          youCanNow: "use AI across assessment and feedback while keeping grades fair, private and in the teacher's hands."
+          youCanNow: "use AI across assessment and feedback while keeping grades fair, private and in the teacher's hands.",
+          quickCheck: [
+            { objective: "O6", q: "What can AI-writing detectors do wrongly?", options: ["Nothing; they are always right", "Flag honest work as AI-written", "Grade essays", "Write essays"], answer: 1, why: "Detectors can wrongly flag honest work, so they are never the only evidence." },
+            { objective: "O6", q: "You suspect a student used AI against the task's rule. What is a fair first step?", options: ["Give a zero right away", "Report it to the whole class", "Run three more detectors", "Ask the student to explain their work or show drafts"], answer: 3, why: "A conversation and other evidence are fairer than a detector score." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Feedback the teacher owns",
         questions: [
-          { q: "In the feedback workflow, what does the teacher do first?", options: ["Paste the work into any AI tool", "Let AI grade it", "Read the work and choose the rubric level", "Send it to parents"], answer: 2, why: "Teacher judgment comes first." },
-          { q: "Who writes the grade?", options: ["The teacher", "The AI", "The student", "The vendor"], answer: 0, why: "Grades are teacher decisions." },
-          { q: "Under FERPA, student work kept by the school is generally:", options: ["Public information", "Part of education records", "Owned by the AI company", "Not covered"], answer: 1, why: "Records directly related to a student and kept by the school are education records." },
-          { q: "A detector says an essay is 90% AI-written. What should you do?", options: ["Talk with the student and look at other evidence", "Give a zero", "Report the family", "Ignore all policies"], answer: 0, why: "Detector scores alone are not proof." },
-          { q: "Which best prevents AI misuse?", options: ["Saying nothing", "Banning computers forever", "Using more detectors", "Saying the allowed AI use for each task and making thinking visible"], answer: 3, why: "Clear rules and visible thinking prevent problems." }
+          { objective: "O4", q: "In the feedback workflow, what does the teacher do first?", options: ["Paste the work into any AI tool", "Let AI grade it", "Read the work and choose the rubric level", "Send it to parents"], answer: 2, why: "Teacher judgment comes first." },
+          { objective: "O4", q: "Who writes the grade?", options: ["The teacher", "The AI", "The student", "The vendor"], answer: 0, why: "Grades are teacher decisions." },
+          { objective: "O5", q: "Under FERPA, student work kept by the school is generally:", options: ["Public information", "Part of education records", "Owned by the AI company", "Not covered"], answer: 1, why: "Records directly related to a student and kept by the school are education records." },
+          { objective: "O6", q: "A detector says an essay is 90% AI-written. What should you do?", options: ["Talk with the student and look at other evidence", "Give a zero", "Report the family", "Ignore all policies"], answer: 0, why: "Detector scores alone are not proof." },
+          { objective: "O6", q: "Which best prevents AI misuse?", options: ["Saying nothing", "Banning computers forever", "Using more detectors", "Saying the allowed AI use for each task and making thinking visible"], answer: 3, why: "Clear rules and visible thinking prevent problems." }
         ]
       }
     }
@@ -165,26 +218,106 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI for School and Educational Leaders 4: AI for Assessment and Feedback",
     questions: [
-      { q: "An aligned question:", options: ["Is the hardest one", "Measures the objective it is meant to measure", "Is the longest one", "Is chosen by AI alone"], answer: 1, why: "Alignment is the first test of a good item." },
-      { q: "A distractor is:", options: ["A phone", "A noisy student", "A wrong option in multiple choice", "A bonus question"], answer: 2, why: "Good distractors reveal misconceptions." },
-      { q: "After AI writes a key, you should:", options: ["Print it", "Trust it", "Work every answer yourself", "Give it to students"], answer: 2, why: "Keys contain errors." },
-      { q: "A mix of question levels means:", options: ["Recall, apply and explain", "Easy only", "Hard only", "True or false only"], answer: 0, why: "Different levels show different depths of learning." },
-      { q: "An analytic rubric:", options: ["Is written by students", "Gives one overall grade only", "Has no levels", "Scores each criterion separately"], answer: 3, why: "Each criterion gets its own level." },
-      { q: "A student-friendly rubric uses:", options: ["Legal language", "\"I\" statements", "Code", "Only numbers"], answer: 1, why: "Students should understand the goal." },
-      { q: "A rubric is fair when:", options: ["Everyone gets an A", "It is very long", "AI wrote it", "Two teachers would score the same work the same way"], answer: 3, why: "Consistency is fairness." },
-      { q: "Formative assessment is:", options: ["A report card", "The final exam", "Low-stakes checking during learning to adjust teaching", "A state test"], answer: 2, why: "It informs the next step." },
-      { q: "An exit ticket is given:", options: ["At the end of a lesson", "At the start of the year", "Only on Fridays", "Only to parents"], answer: 0, why: "It checks the day's learning." },
-      { q: "A check you never act on is:", options: ["The best kind", "Just more paper", "Required", "Summative"], answer: 1, why: "Formative checks matter when they change teaching." },
-      { q: "Glow and grow feedback gives:", options: ["One strength and one next step", "Only praise", "Only criticism", "A grade only"], answer: 0, why: "Students need both." },
-      { q: "A comment bank is:", options: ["A grading app", "A savings account", "A list of students", "Saved feedback comments you reuse and adjust"], answer: 3, why: "It saves time while keeping feedback specific." },
-      { q: "AI scores can be unfair because they may:", options: ["Always be perfect", "Reward length over quality", "Never read the work", "Use the rubric exactly"], answer: 1, why: "Length bias is a common problem." },
-      { q: "For real student work, use:", options: ["Social media", "Any free tool", "Only district-approved tools, with identifying details removed", "Personal email"], answer: 2, why: "Approved tools and removed details protect privacy." },
-      { q: "Which should never go into an unapproved AI tool?", options: ["A blank exit ticket", "A generic rubric", "A grade book", "A made-up response"], answer: 2, why: "Grade books hold identifying education records." },
-      { q: "Under FERPA, parents may:", options: ["Inspect and review their child's education records", "Grade the work", "Approve vendors", "Write the rubric"], answer: 0, why: "Inspection is a core FERPA right." },
-      { q: "A vendor can act as a school official when it:", options: ["Has many users", "Is free", "Asks nicely", "Performs a school service under the school's direct control, with limits on re-sharing"], answer: 3, why: "Those are the FERPA conditions." },
-      { q: "AI-writing detectors:", options: ["Are always correct", "Can wrongly flag honest work", "Are required by law", "Prove cheating"], answer: 1, why: "False positives happen." },
-      { q: "If you suspect AI misuse, a fair first step is:", options: ["Ignore your policy", "Give a zero", "Post about it", "Ask the student to explain their work or show drafts"], answer: 3, why: "Talking gathers real evidence." },
-      { q: "Each task should state:", options: ["That AI is always banned", "Nothing about AI", "What AI use is allowed", "The student's grade"], answer: 2, why: "Clear rules prevent misunderstandings." }
+      { objective: "O1", q: "An aligned question:", options: ["Is the hardest one", "Measures the objective it is meant to measure", "Is the longest one", "Is chosen by AI alone"], answer: 1, why: "Alignment is the first test of a good item." },
+      { objective: "O1", q: "A distractor is:", options: ["A phone", "A noisy student", "A wrong option in multiple choice", "A bonus question"], answer: 2, why: "Good distractors reveal misconceptions." },
+      { objective: "O1", q: "After AI writes a key, you should:", options: ["Print it", "Trust it", "Work every answer yourself", "Give it to students"], answer: 2, why: "Keys contain errors." },
+      { objective: "O1", q: "A mix of question levels means:", options: ["Recall, apply and explain", "Easy only", "Hard only", "True or false only"], answer: 0, why: "Different levels show different depths of learning." },
+      { objective: "O2", q: "An analytic rubric:", options: ["Is written by students", "Gives one overall grade only", "Has no levels", "Scores each criterion separately"], answer: 3, why: "Each criterion gets its own level." },
+      { objective: "O2", q: "A student-friendly rubric uses:", options: ["Legal language", "\"I\" statements", "Code", "Only numbers"], answer: 1, why: "Students should understand the goal." },
+      { objective: "O2", q: "A rubric is fair when:", options: ["Everyone gets an A", "It is very long", "AI wrote it", "Two teachers would score the same work the same way"], answer: 3, why: "Consistency is fairness." },
+      { objective: "O3", q: "Formative assessment is:", options: ["A report card", "The final exam", "Low-stakes checking during learning to adjust teaching", "A state test"], answer: 2, why: "It informs the next step." },
+      { objective: "O3", q: "An exit ticket is given:", options: ["At the end of a lesson", "At the start of the year", "Only on Fridays", "Only to parents"], answer: 0, why: "It checks the day's learning." },
+      { objective: "O3", q: "A check you never act on is:", options: ["The best kind", "Just more paper", "Required", "Summative"], answer: 1, why: "Formative checks matter when they change teaching." },
+      { objective: "O4", q: "Glow and grow feedback gives:", options: ["One strength and one next step", "Only praise", "Only criticism", "A grade only"], answer: 0, why: "Students need both." },
+      { objective: "O4", q: "A comment bank is:", options: ["A grading app", "A savings account", "A list of students", "Saved feedback comments you reuse and adjust"], answer: 3, why: "It saves time while keeping feedback specific." },
+      { objective: "O4", q: "AI scores can be unfair because they may:", options: ["Always be perfect", "Reward length over quality", "Never read the work", "Use the rubric exactly"], answer: 1, why: "Length bias is a common problem." },
+      { objective: "O5", q: "For real student work, use:", options: ["Social media", "Any free tool", "Only district-approved tools, with identifying details removed", "Personal email"], answer: 2, why: "Approved tools and removed details protect privacy." },
+      { objective: "O5", q: "Which should never go into an unapproved AI tool?", options: ["A blank exit ticket", "A generic rubric", "A grade book", "A made-up response"], answer: 2, why: "Grade books hold identifying education records." },
+      { objective: "O5", q: "Under FERPA, parents may:", options: ["Inspect and review their child's education records", "Grade the work", "Approve vendors", "Write the rubric"], answer: 0, why: "Inspection is a core FERPA right." },
+      { objective: "O5", q: "A vendor can act as a school official when it:", options: ["Has many users", "Is free", "Asks nicely", "Performs a school service under the school's direct control, with limits on re-sharing"], answer: 3, why: "Those are the FERPA conditions." },
+      { objective: "O6", q: "AI-writing detectors:", options: ["Are always correct", "Can wrongly flag honest work", "Are required by law", "Prove cheating"], answer: 1, why: "False positives happen." },
+      { objective: "O6", q: "If you suspect AI misuse, a fair first step is:", options: ["Ignore your policy", "Give a zero", "Post about it", "Ask the student to explain their work or show drafts"], answer: 3, why: "Talking gathers real evidence." },
+      { objective: "O6", q: "Each task should state:", options: ["That AI is always banned", "Nothing about AI", "What AI use is allowed", "The student's grade"], answer: 2, why: "Clear rules prevent misunderstandings." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      2,
+      4,
+      6,
+      7,
+      10,
+      12,
+      13,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Aligned questions",
+        objective: "O1",
+        notYet: "Fewer than five questions, or the key was not checked.",
+        meets: "Five questions aligned to the objective with a key you worked yourself.",
+        exceeds: "Questions mix recall, apply and explain, and distractors reflect real misconceptions."
+      },
+      {
+        name: "Rubric",
+        objective: "O2",
+        notYet: "Fewer than four levels, vague cells, or no student version.",
+        meets: "A four-level rubric with three or four criteria and a student-friendly version.",
+        exceeds: "Every cell describes what students do, and it was tested on a made-up response."
+      },
+      {
+        name: "Exit ticket",
+        objective: "O3",
+        notYet: "No exit ticket, or it does not match the objective.",
+        meets: "A three-question exit ticket for the objective.",
+        exceeds: "Says what you will do with each result before giving it."
+      },
+      {
+        name: "Feedback workflow",
+        objective: "O4",
+        notYet: "Fewer than eight comments, AI comments used unchanged, or AI wrote the grades.",
+        meets: "At least eight rubric-tied comments, three made-up responses, one AI comment changed and grades written by you.",
+        exceeds: "Each response gets one glow and one grow tied to a rubric level."
+      },
+      {
+        name: "Privacy and fair AI use",
+        objective: "O6",
+        notYet: "Real student details were used, or no AI-use rule for the task.",
+        meets: "Only made-up work was used, and the task has a one-line AI-use rule.",
+        exceeds: "Includes a short note for families on how AI helps with feedback and who decides grades."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Educators who finish the course and pass the final task (rubric)",
+      "Teachers who report using the assessment pack or comment bank with a class within 30 days (follow-up survey)",
+      "Teachers who report feedback time saved while still writing every grade themselves (follow-up survey)",
+      "Schools where every major task states its allowed AI use (follow-up survey)"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer with internet and an AI assistant approved by the district for this use",
+      "One objective and a task you assign",
+      "Three made-up student responses",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Take the pre-test together, then have teachers work AI answer keys in pairs and compare errors found.",
+      "Use only made-up student work; never paste real student work or grades into unapproved tools.",
+      "Have two teachers score the same made-up response with each rubric to test fairness.",
+      "Discuss a fair process for suspected AI use before any case comes up, and agree that detector scores are never the only evidence.",
+      "Score the final task with the rubric, and check that every grade was written by the teacher."
     ]
   }
 };

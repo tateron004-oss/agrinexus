@@ -16,11 +16,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes et se termine par une tâche \"Essayez maintenant\". Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin. Les règles, les formulaires et les délais de traitement du VA changent : vérifiez les détails sur va.gov ou auprès d'un représentant accrédité avant de déposer votre demande."
   ],
   finalTask: "Établissez votre plan d'action pour vos prestations du VA : (1) une liste de vos documents, en commençant par votre DD214 ; (2) chaque prestation que vous allez demander (indemnisation pour invalidité, soins de santé, formation) et comment vous allez la demander ; (3) si vous utilisez le GI Bill, quel programme, quelle école ou formation, et ce dont vous avez besoin ; (4) le nom et les coordonnées d'un représentant accrédité par le VA ou d'un VSO trouvé avec l'outil de recherche du VA ; (5) trois signaux d'alerte d'une personne qu'il ne faut pas payer pour déposer votre demande. Puis faites la première démarche pour une prestation.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des vétérans, des militaires qui se préparent à quitter le service et des membres de leur famille qui les aident. Beaucoup n'ont jamais demandé les prestations auxquelles ils ont droit, ou ont attendu des années parce que la démarche paraît compliquée.",
+    startingPoint: "Ils savent utiliser un téléphone ou un ordinateur et ont leur DD214, ou peuvent le demander. La plupart ne savent pas quels formulaires utiliser, comment protéger la date d'effet d'une demande, en quoi les programmes du GI Bill diffèrent, ni que l'aide accréditée est gratuite.",
+    gap: "Des vétérans perdent de l'argent et des soins parce qu'ils ne font pas de demande, ratent des délais ou paient des personnes qui ne devraient rien facturer pour déposer une demande. Les apprenants ont besoin d'un plan d'action clair : des documents prêts, la bonne façon de demander chaque prestation, un plan pour le GI Bill et un représentant gratuit accrédité par le VA.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes ; les termes du VA sont expliqués",
+      "Appareils : un téléphone ou un ordinateur ; les demandes sur papier sont aussi expliquées",
+      "Vie privée : aucun numéro de sécurité sociale, détail médical ou identifiant va.gov dans un chatbot d'IA ou avec une personne non accréditée",
+      "Les formulaires, les règles et les numéros de téléphone changent : les apprenants les confirment sur va.gov avant d'agir",
+      "Les décisions médicales et juridiques reviennent au VA ou à un représentant accrédité, pas au cours"
+    ],
+    prerequisites: "Aucun."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Avant de demander une prestation du VA", action: "rassembler les documents que demande le VA, à commencer par votre DD214, et lister les prestations que vous pourriez demander", standard: "en marquant les documents manquants et en gardant des copies en lieu sûr" },
+    { id: "O2", condition: "Pour les problèmes de santé que vous pensez liés à votre service", action: "choisir comment déposer une demande d'indemnisation pour invalidité et lister les preuves pour chaque problème", standard: "en utilisant une voie officielle et en protégeant votre date d'effet" },
+    { id: "O3", condition: "Avec une liste de contrôle d'exercice", action: "préparer les informations pour une demande de soins de santé du VA (10-10EZ) et choisir comment vous allez la déposer", standard: "avec votre parcours militaire, vos expositions, votre assurance et vos revenus marqués comme prêts ou encore à trouver" },
+    { id: "O4", condition: "À partir de votre objectif de carrière", action: "décrire les principaux programmes du GI Bill et deux types de formation qu'ils pourraient payer", standard: "en nommant une formation qui correspond à votre objectif" },
+    { id: "O5", condition: "Pour deux écoles ou programmes de formation", action: "les comparer dans le GI Bill Comparison Tool et préparer votre demande d'aide à la formation", standard: "avec deux informations sur chacun et votre demande vérifiée avant l'envoi" },
+    { id: "O6", condition: "Quand vous voulez de l'aide pour une demande", action: "trouver un représentant gratuit accrédité par le VA et repérer les signes d'une personne qu'il ne faut pas payer", standard: "en notant le nom et les coordonnées d'un représentant et trois signes d'alerte" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Demander les prestations du VA",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Se préparer : vos documents et votre liste de prestations",
           minutes: 5,
           goal: "Rassembler les documents que demande le VA et lister les prestations que vous pourriez demander.",
@@ -40,9 +64,14 @@ module.exports = {
           ],
           sources: [{ name: "VA : Comment déposer une demande d'invalidité auprès du VA", url: "https://www.va.gov/disability/how-to-file-claim/" }],
           tryIt: "Préparez un dossier (en papier ou un dossier sécurisé sur votre propre ordinateur) et mettez-y, ou notez ce qui manque : votre DD214, votre dossier médical, une liste de vos médecins et les informations sur vos personnes à charge. Notez les prestations que vous voulez étudier.",
-          youCanNow: "rassembler les documents que demande le VA et lister les prestations que vous pourriez demander."
+          youCanNow: "rassembler les documents que demande le VA et lister les prestations que vous pourriez demander.",
+          quickCheck: [
+            { objective: "O1", q: "Pourquoi garder des copies de votre DD214 en lieu sûr ?", options: ["Pour pouvoir le publier en ligne", "Pour qu'une IA puisse le lire", "Le VA l'utilise pour confirmer votre service, et vous en aurez encore besoin", "Il expire au bout d'un an"], answer: 2, why: "Votre DD214 confirme votre service pour de nombreuses prestations : gardez donc des copies en lieu sûr." },
+            { objective: "O1", q: "Vous voulez qu'un chatbot d'IA vous aide à comprendre vos prestations. Que laissez-vous de côté ?", options: ["Votre numéro de sécurité sociale et vos détails médicaux", "Le nom de la prestation", "Le mot « vétéran »", "Votre question"], answer: 0, why: "Les numéros privés et les détails médicaux ne vont jamais dans un chatbot d'IA." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Déposer une demande d'indemnisation pour invalidité",
           minutes: 6,
           goal: "Choisir comment déposer une demande d'invalidité et protéger votre date de départ.",
@@ -62,9 +91,14 @@ module.exports = {
           ],
           sources: [{ name: "VA : Comment déposer une demande d'invalidité auprès du VA", url: "https://www.va.gov/disability/how-to-file-claim/" }],
           tryIt: "Notez chaque problème de santé qui pourrait, selon vous, être lié à votre service. À côté de chacun, notez une preuve que vous avez ou que vous pourriez obtenir. Puis choisissez comment vous allez déposer votre demande et écrivez-le en haut de la page.",
-          youCanNow: "choisir comment déposer une demande d'invalidité, protéger votre date d'effet et rassembler des preuves pour chaque problème de santé."
+          youCanNow: "choisir comment déposer une demande d'invalidité, protéger votre date d'effet et rassembler des preuves pour chaque problème de santé.",
+          quickCheck: [
+            { objective: "O2", q: "Laquelle est une voie officielle pour déposer une demande d'indemnisation pour invalidité ?", options: ["Envoyer un SMS à un inconnu qui propose son aide", "Publier dans un groupe sur les réseaux sociaux", "Écrire à une entreprise qui prend un pourcentage", "En ligne sur va.gov"], answer: 3, why: "Déposer la demande en ligne sur va.gov est l'une des voies officielles du VA." },
+            { objective: "O2", q: "Vous avez noté un problème au genou lié au service. Qu'écrivez-vous à côté ?", options: ["Rien ; le VA trouvera tout", "Une preuve, comme le dossier médical militaire ou celui d'un médecin", "Une estimation de votre taux", "Votre mot de passe va.gov"], answer: 1, why: "Chaque problème de santé a besoin d'une preuve, comme le dossier médical militaire ou celui d'un médecin." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Demander les soins de santé du VA",
           minutes: 4,
           goal: "Demander les soins de santé du VA avec les bonnes informations prêtes.",
@@ -83,17 +117,21 @@ module.exports = {
           ],
           sources: [{ name: "VA : Comment demander les soins de santé du VA", url: "https://www.va.gov/health-care/how-to-apply/" }],
           tryIt: "Remplissez une liste d'entraînement pour le 10-10EZ : DD214 (vous l'avez ou non), historique d'exposition, cartes d'assurance, revenus du foyer de l'année dernière. Cochez ce que vous avez et ce qui vous manque encore, et choisissez comment vous allez faire la demande.",
-          youCanNow: "demander les soins de santé du VA avec les bonnes informations et connaître les façons de faire la demande."
+          youCanNow: "demander les soins de santé du VA avec les bonnes informations et connaître les façons de faire la demande.",
+          quickCheck: [
+            { objective: "O3", q: "À quoi sert le formulaire VA 10-10EZ ?", options: ["À déposer une demande d'indemnisation pour invalidité", "À demander les soins de santé du VA", "À demander le GI Bill", "À choisir un VSO"], answer: 1, why: "Le 10-10EZ est la demande de soins de santé du VA." },
+            { objective: "O3", q: "Vous remplissez votre liste pour les soins de santé. Qu'indiquez-vous sur votre service ?", options: ["Rien sur votre service", "Seulement votre grade", "Seulement votre base préférée", "Votre parcours militaire, y compris toute exposition à des produits toxiques ou dangereux"], answer: 3, why: "Le VA demande votre parcours militaire et vos expositions quand vous demandez les soins de santé." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Demander les prestations du VA",
         questions: [
-          { q: "Quel document le VA utilise-t-il pour confirmer votre service ?", options: ["Votre permis de conduire", "Une fiche de paie d'un emploi civil", "Votre DD214 ou vos autres papiers de fin de service", "Une carte de salle de sport"], answer: 2, why: "Le VA examine votre DD214 ou vos documents de fin de service." },
-          { q: "Vous avez commencé une demande d'invalidité en ligne, mais il vous faut du temps pour obtenir des dossiers. Combien de temps avez-vous pour terminer et garder votre date de départ ?", options: ["365 jours", "7 jours", "30 jours", "Il n'y a pas de date de départ"], answer: 0, why: "Le VA indique que la date où vous avez commencé compte si vous terminez dans les 365 jours." },
-          { q: "À quoi sert le VA Form 21-526EZ ?", options: ["À demander le GI Bill", "À demander les soins de santé du VA", "À changer d'adresse", "À demander l'indemnisation pour invalidité par courrier"], answer: 3, why: "C'est la demande d'indemnisation pour invalidité." },
-          { q: "Quel formulaire sert à demander les soins de santé du VA ?", options: ["DD214", "VA Form 10-10EZ", "VA Form 22-1990", "Un W-2"], answer: 1, why: "Le 10-10EZ est la demande de prestations de santé." },
-          { q: "Vous déposez une demande d'invalidité. Que devez-vous faire aussi ?", options: ["Aller à chaque examen du VA prévu pour vous", "Ignorer les lettres du VA", "Payer quelqu'un pour accélérer", "Déposer la même demande plusieurs fois"], answer: 0, why: "L'examen fait partie de la décision ; le manquer peut nuire à votre demande." }
+          { objective: "O1", q: "Quel document le VA utilise-t-il pour confirmer votre service ?", options: ["Votre permis de conduire", "Une fiche de paie d'un emploi civil", "Votre DD214 ou vos autres papiers de fin de service", "Une carte de salle de sport"], answer: 2, why: "Le VA examine votre DD214 ou vos documents de fin de service." },
+          { objective: "O2", q: "Vous avez commencé une demande d'invalidité en ligne, mais il vous faut du temps pour obtenir des dossiers. Combien de temps avez-vous pour terminer et garder votre date de départ ?", options: ["365 jours", "7 jours", "30 jours", "Il n'y a pas de date de départ"], answer: 0, why: "Le VA indique que la date où vous avez commencé compte si vous terminez dans les 365 jours." },
+          { objective: "O2", q: "À quoi sert le VA Form 21-526EZ ?", options: ["À demander le GI Bill", "À demander les soins de santé du VA", "À changer d'adresse", "À demander l'indemnisation pour invalidité par courrier"], answer: 3, why: "C'est la demande d'indemnisation pour invalidité." },
+          { objective: "O3", q: "Quel formulaire sert à demander les soins de santé du VA ?", options: ["DD214", "VA Form 10-10EZ", "VA Form 22-1990", "Un W-2"], answer: 1, why: "Le 10-10EZ est la demande de prestations de santé." },
+          { objective: "O2", q: "Vous déposez une demande d'invalidité. Que devez-vous faire aussi ?", options: ["Aller à chaque examen du VA prévu pour vous", "Ignorer les lettres du VA", "Payer quelqu'un pour accélérer", "Déposer la même demande plusieurs fois"], answer: 0, why: "L'examen fait partie de la décision ; le manquer peut nuire à votre demande." }
         ]
       }
     },
@@ -101,9 +139,10 @@ module.exports = {
       name: "Chapitre 2 : Le GI Bill et l'aide gratuite",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Comprendre le GI Bill",
           minutes: 5,
-          goal: "Citer les principaux programmes du GI Bill et ce qu'ils peuvent payer.",
+          goal: "Citer les principaux programmes du GI Bill et lister ce qu'ils peuvent payer.",
           text: [
             "Le GI Bill aide à payer les études et la formation. Le principal programme aujourd'hui est le Post-9/11 GI Bill (Chapter 33), pour les personnes qui ont servi en service actif après le 10 septembre 2001. Il peut aider à payer les études et couvrir des frais pendant que vous vous formez à un métier.",
             "Parmi les autres programmes : le Montgomery GI Bill Active Duty (Chapter 30) et le Montgomery GI Bill Selected Reserve (Chapter 1606), pour les membres de la Réserve et de la Garde nationale. Celui que vous pouvez utiliser dépend de votre service.",
@@ -119,9 +158,14 @@ module.exports = {
           ],
           sources: [{ name: "VA : À propos des prestations du GI Bill", url: "https://www.va.gov/education/about-gi-bill-benefits/" }],
           tryIt: "Notez le métier que vous voulez. Puis notez deux types de formation acceptés par le GI Bill qui pourraient vous y mener, par exemple un apprentissage d'électricien et un programme de certificat, ou un diplôme et un examen de licence.",
-          youCanNow: "citer les principaux programmes du GI Bill et associer une formation acceptée par le GI Bill à un objectif professionnel."
+          youCanNow: "citer les principaux programmes du GI Bill et associer une formation acceptée par le GI Bill à un objectif professionnel.",
+          quickCheck: [
+            { objective: "O4", q: "Comment appelle-t-on aussi le Post-9/11 GI Bill ?", options: ["Chapter 33", "Formulaire 10-10EZ", "VetCert", "Chapter 1"], answer: 0, why: "Le Post-9/11 GI Bill, c'est le Chapter 33." },
+            { objective: "O4", q: "Vous voulez devenir électricien sans diplôme en quatre ans. Qu'écrivez-vous dans votre plan ?", options: ["Le GI Bill ne paie que des diplômes", "Renoncer au GI Bill", "Un apprentissage ou une formation en entreprise que le GI Bill peut aider à payer", "Tout payer vous-même"], answer: 2, why: "Le GI Bill peut aider à payer l'apprentissage et la formation en entreprise, pas seulement les diplômes." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Demander le GI Bill et choisir une école",
           minutes: 5,
           goal: "Demander les aides à la formation et comparer les écoles avant de vous inscrire.",
@@ -144,9 +188,14 @@ module.exports = {
             { name: "VA : GI Bill Comparison Tool", url: "https://www.va.gov/education/gi-bill-comparison-tool/" }
           ],
           tryIt: "Choisissez deux écoles ou programmes de formation pour votre objectif professionnel. Recherchez chacun dans le GI Bill Comparison Tool sur va.gov, et notez deux informations sur chacun et une question que vous poseriez à son bureau des anciens combattants.",
-          youCanNow: "demander les aides du GI Bill, comparer les écoles avant de vous inscrire et utiliser votre Certificate of Eligibility."
+          youCanNow: "demander les aides du GI Bill, comparer les écoles avant de vous inscrire et utiliser votre Certificate of Eligibility.",
+          quickCheck: [
+            { objective: "O5", q: "À quoi sert le GI Bill Comparison Tool ?", options: ["À déposer une demande d'indemnisation pour invalidité", "À trouver un VSO", "À comparer les écoles et les formations avant de vous inscrire", "À modifier votre GI Bill après l'envoi"], answer: 2, why: "Le Comparison Tool montre des informations sur les écoles et les formations pour que vous les compariez." },
+            { objective: "O5", q: "Vous avez fini votre demande de GI Bill. Que faites-vous avant de l'envoyer ?", options: ["La vérifier soigneusement, car vous ne pourrez plus la modifier après l'envoi", "L'envoyer vite et corriger plus tard", "Demander à un inconnu de l'envoyer", "Laisser des cases vides"], answer: 0, why: "Vous ne pouvez plus modifier la demande après l'avoir envoyée : vérifiez-la d'abord." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Obtenir une aide gratuite et éviter ceux qui font payer le dépôt",
           minutes: 5,
           goal: "Trouver un représentant gratuit accrédité par le VA et repérer les personnes qu'il ne faut pas payer.",
@@ -169,17 +218,21 @@ module.exports = {
             { name: "VA : Trouver un représentant accrédité par le VA ou une VSO", url: "https://www.va.gov/get-help-from-accredited-representative/find-rep/" }
           ],
           tryIt: "Tâche finale : utilisez l'outil du VA \"Find a VA-accredited representative or VSO\" pour trouver un représentant gratuit près de chez vous, et notez son nom et comment le joindre. Puis terminez votre plan d'action pour vos prestations du VA avec votre liste de documents, les prestations que vous allez demander et comment, votre plan GI Bill si vous en avez un, et trois signaux d'alerte des requins des demandes. Faites la première démarche pour une prestation.",
-          youCanNow: "trouver une VSO gratuite et accréditée, repérer les personnes qu'il ne faut pas payer pour déposer une demande, et lancer votre plan d'action pour vos prestations du VA."
+          youCanNow: "trouver une VSO gratuite et accréditée, repérer les personnes qu'il ne faut pas payer pour déposer une demande, et lancer votre plan d'action pour vos prestations du VA.",
+          quickCheck: [
+            { objective: "O6", q: "Qui le VA accrédite-t-il pour aider avec les demandes ?", options: ["N'importe qui avec un site web", "Toute entreprise qui fait de la publicité auprès des vétérans", "Des amis qui ont déjà fait une demande", "Les représentants de VSO, les avocats et les agents de demandes"], answer: 3, why: "Le VA accrédite les représentants de VSO, les avocats et les agents de demandes." },
+            { objective: "O6", q: "Quelqu'un propose de déposer vite votre première demande si vous lui donnez votre identifiant va.gov. Que faites-vous ?", options: ["Le donner pour gagner du temps", "Refuser, et trouver un représentant accrédité gratuit avec l'outil de recherche du VA", "Donner seulement votre mot de passe", "Le payer d'abord"], answer: 1, why: "Ne partagez jamais votre identifiant ; une aide accréditée gratuite est disponible grâce à l'outil de recherche du VA." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Le GI Bill et l'aide gratuite",
         questions: [
-          { q: "À qui s'adresse le Post-9/11 GI Bill ?", options: ["À toute personne qui vit aux États-Unis", "Seulement aux officiers", "Seulement aux conjoints", "Aux personnes qui ont servi en service actif après le 10 septembre 2001"], answer: 3, why: "Le VA indique que le Post-9/11 GI Bill concerne le service actif après le 10 septembre 2001." },
-          { q: "Laquelle de ces choses le GI Bill peut-il aider à payer ?", options: ["Un prêt auto", "Un apprentissage ou un examen de licence", "Un loyer chez vos parents", "Votre facture de téléphone"], answer: 1, why: "Le VA cite l'apprentissage, la formation en entreprise et les examens de licence parmi les usages du GI Bill." },
-          { q: "Une fois votre GI Bill accepté, qui reçoit une copie de votre Certificate of Eligibility ?", options: ["Un recruteur", "Votre propriétaire", "Le responsable de la certification de votre école", "Personne"], answer: 2, why: "Le responsable de la certification de l'école s'en sert pour déclarer votre inscription au VA." },
-          { q: "Combien un représentant accrédité d'une VSO fait-il payer pour vous aider dans votre demande ?", options: ["Rien ; c'est toujours gratuit", "Une part de vos rappels de versements", "Des frais avant le dépôt", "Un mois de versements"], answer: 0, why: "Le VA indique que l'aide des représentants accrédités d'une VSO est toujours gratuite." },
-          { q: "Une entreprise propose de déposer votre première demande d'invalidité contre 20% de vos rappels de versements. Qu'est-ce que c'est ?", options: ["Des frais normaux du VA", "Un programme du VA", "Un signal d'alerte ; adressez-vous plutôt à une VSO accréditée et gratuite", "Une obligation légale"], answer: 2, why: "Les honoraires ne sont permis qu'après la décision du VA sur la demande initiale, avec une convention signée, et seulement pour des avocats ou agents accrédités." }
+          { objective: "O4", q: "À qui s'adresse le Post-9/11 GI Bill ?", options: ["À toute personne qui vit aux États-Unis", "Seulement aux officiers", "Seulement aux conjoints", "Aux personnes qui ont servi en service actif après le 10 septembre 2001"], answer: 3, why: "Le VA indique que le Post-9/11 GI Bill concerne le service actif après le 10 septembre 2001." },
+          { objective: "O4", q: "Laquelle de ces choses le GI Bill peut-il aider à payer ?", options: ["Un prêt auto", "Un apprentissage ou un examen de licence", "Un loyer chez vos parents", "Votre facture de téléphone"], answer: 1, why: "Le VA cite l'apprentissage, la formation en entreprise et les examens de licence parmi les usages du GI Bill." },
+          { objective: "O5", q: "Une fois votre GI Bill accepté, qui reçoit une copie de votre Certificate of Eligibility ?", options: ["Un recruteur", "Votre propriétaire", "Le responsable de la certification de votre école", "Personne"], answer: 2, why: "Le responsable de la certification de l'école s'en sert pour déclarer votre inscription au VA." },
+          { objective: "O6", q: "Combien un représentant accrédité d'une VSO fait-il payer pour vous aider dans votre demande ?", options: ["Rien ; c'est toujours gratuit", "Une part de vos rappels de versements", "Des frais avant le dépôt", "Un mois de versements"], answer: 0, why: "Le VA indique que l'aide des représentants accrédités d'une VSO est toujours gratuite." },
+          { objective: "O6", q: "Une entreprise propose de déposer votre première demande d'invalidité contre 20% de vos rappels de versements. Qu'est-ce que c'est ?", options: ["Des frais normaux du VA", "Un programme du VA", "Un signal d'alerte ; adressez-vous plutôt à une VSO accréditée et gratuite", "Une obligation légale"], answer: 2, why: "Les honoraires ne sont permis qu'après la décision du VA sur la demande initiale, avec une convention signée, et seulement pour des avocats ou agents accrédités." }
         ]
       }
     }
@@ -187,26 +240,106 @@ module.exports = {
   quiz: {
     title: "Quiz final : Les prestations du VA et le GI Bill",
     questions: [
-      { q: "Qu'est-ce que l'indemnisation pour invalidité ?", options: ["Une carte cadeau unique", "Des versements mensuels pour des problèmes de santé causés ou aggravés par le service", "Un prêt étudiant", "Une offre d'emploi"], answer: 1, why: "Elle indemnise les anciens combattants pour des problèmes de santé liés au service." },
-      { q: "Que devez-vous faire de votre DD214 ?", options: ["En garder des copies en lieu sûr", "Le jeter après votre départ de l'armée", "Le publier en ligne", "Donner l'original à quiconque le demande"], answer: 0, why: "Le VA s'en sert pour confirmer votre service : gardez-le en sécurité." },
-      { q: "Où devez-vous demander les prestations du VA en ligne ?", options: ["Sur n'importe quel site avec un drapeau", "Par un lien dans un SMS", "Sur le site officiel va.gov", "Sur une page de réseau social"], answer: 2, why: "N'utilisez que le site officiel du VA." },
-      { q: "Que ne devez-vous JAMAIS taper dans un chatbot d'IA ?", options: ["\"Explique-moi ce qu'est une date d'effet\"", "\"Aide-moi à lister des questions pour mon VSO\"", "\"Qu'est-ce que le GI Bill ?\"", "Votre numéro de sécurité sociale ou vos informations médicales"], answer: 3, why: "Gardez vos informations privées hors des outils d'IA." },
-      { q: "Laquelle n'est PAS une façon de déposer une demande d'invalidité ?", options: ["En ligne sur va.gov", "Par courrier avec le VA Form 21-526EZ", "En personne dans un bureau régional du VA", "En envoyant un SMS à un inconnu qui propose son aide"], answer: 3, why: "Déposez en ligne, par courrier, en personne ou avec un représentant accrédité." },
-      { q: "Vous comptez déposer sur papier, mais il vous faut du temps pour rassembler des preuves. Qu'est-ce qui peut protéger votre date d'effet ?", options: ["Une déclaration d'intention", "Attendre quelques années", "Ne rien déposer", "Appeler un requin des demandes"], answer: 0, why: "Une déclaration d'intention peut réserver une date d'effet possible." },
-      { q: "Quelle est une bonne preuve pour une demande d'invalidité ?", options: ["Une supposition sur ce que veut le VA", "Le dossier médical militaire et les dossiers des médecins", "Une publication sur un réseau social", "La décision sur la demande d'un ami"], answer: 1, why: "Les dossiers et les déclarations de témoins appuient votre demande." },
-      { q: "Le VA vous convoque à un examen pour votre demande. Vous devez :", options: ["Ne pas y aller", "Envoyer quelqu'un d'autre", "Y aller", "Demander à un requin des demandes d'y aller"], answer: 2, why: "L'examen fait partie de la décision." },
-      { q: "Quel formulaire sert pour les soins de santé du VA ?", options: ["VA Form 10-10EZ", "VA Form 22-1990", "VA Form 21-526EZ", "Un DD214"], answer: 0, why: "Le 10-10EZ est la demande de prestations de santé." },
-      { q: "Quand vous demandez les soins de santé du VA, que devez-vous indiquer sur votre service ?", options: ["Seulement votre grade", "Rien du tout", "Votre base préférée", "Votre parcours militaire, y compris toute exposition toxique ou dangereuse"], answer: 3, why: "Le VA demande le parcours militaire et les expositions." },
-      { q: "Quel numéro de téléphone le VA indique-t-il pour l'aide à la demande de soins ?", options: ["911", "988", "877-222-8387", "411"], answer: 2, why: "Le VA indique le 877-222-8387 pour la ligne des prestations de santé." },
-      { q: "Le Post-9/11 GI Bill s'appelle aussi :", options: ["Chapter 1606", "Chapter 33", "Form 10-10EZ", "Le DD214"], answer: 1, why: "Le Post-9/11 GI Bill est le Chapter 33." },
-      { q: "Une ancienne combattante veut devenir électricienne sans diplôme universitaire de quatre ans. Le GI Bill peut-il l'aider ?", options: ["Non, il ne paie que l'université en quatre ans", "Oui, il peut aider pour l'apprentissage et la formation en entreprise", "Seulement si elle part à l'étranger", "Seulement pour les officiers"], answer: 1, why: "Le VA cite l'apprentissage et la formation en entreprise parmi les usages du GI Bill." },
-      { q: "Le Yellow Ribbon Program peut :", options: ["Payer votre loyer", "Remplacer votre DD214", "Accélérer les demandes d'invalidité", "Aider à couvrir les frais de scolarité que le Post-9/11 GI Bill ne couvre pas, dans les écoles participantes"], answer: 3, why: "Le Yellow Ribbon aide pour les frais de scolarité au-delà de ce que couvre le GI Bill." },
-      { q: "Si vous demandez le GI Bill par courrier, quel formulaire utilisez-vous ?", options: ["VA Form 22-1990", "VA Form 10-10EZ", "VA Form 21-526EZ", "Un formulaire d'impôts"], answer: 0, why: "Le VA Form 22-1990 est la demande d'aides à la formation du VA." },
-      { q: "Avant de vous inscrire dans une école avec le GI Bill, vous devez :", options: ["Vous inscrire le jour même où le recruteur appelle", "Ne pas comparer", "La comparer avec le GI Bill Comparison Tool et demander les coûts et les débouchés", "Payer un acompte avant de lire quoi que ce soit"], answer: 2, why: "Comparer d'abord protège vos droits." },
-      { q: "Pouvez-vous modifier votre demande de GI Bill après l'avoir envoyée ?", options: ["Oui, à tout moment", "Oui, en appelant une école", "Seulement le week-end", "Non, alors vérifiez-la avant de l'envoyer"], answer: 3, why: "Le VA indique qu'on ne peut pas la modifier après l'envoi." },
-      { q: "Lesquels sont accrédités par le VA pour aider dans les demandes ?", options: ["Les représentants d'une VSO, les avocats et les agents de demandes", "N'importe quel site web", "Toute personne qui a servi", "Les vendeurs de voitures"], answer: 0, why: "L'Office of General Counsel du VA accrédite ces trois types." },
-      { q: "Quand un avocat ou un agent de demandes accrédité peut-il facturer des honoraires ?", options: ["Avant le dépôt de votre première demande", "Seulement après la décision du VA sur votre demande initiale, et avec une convention d'honoraires signée", "Quand il le veut", "Jamais, en aucun cas"], answer: 1, why: "Le VA indique que les honoraires ne viennent qu'après la décision initiale, avec une convention signée." },
-      { q: "Une personne qui vous aide pour votre demande vous demande vos identifiants va.gov. Vous devez :", options: ["Les partager pour qu'elle aille plus vite", "Les lui écrire sur un post-it", "Refuser ; ne partagez jamais vos identifiants", "Les remplacer par quelque chose de plus simple"], answer: 2, why: "Ne donnez jamais vos identifiants va.gov à personne." }
+      { objective: "O2", q: "Qu'est-ce que l'indemnisation pour invalidité ?", options: ["Une carte cadeau unique", "Des versements mensuels pour des problèmes de santé causés ou aggravés par le service", "Un prêt étudiant", "Une offre d'emploi"], answer: 1, why: "Elle indemnise les anciens combattants pour des problèmes de santé liés au service." },
+      { objective: "O1", q: "Que devez-vous faire de votre DD214 ?", options: ["En garder des copies en lieu sûr", "Le jeter après votre départ de l'armée", "Le publier en ligne", "Donner l'original à quiconque le demande"], answer: 0, why: "Le VA s'en sert pour confirmer votre service : gardez-le en sécurité." },
+      { objective: "O1", q: "Où devez-vous demander les prestations du VA en ligne ?", options: ["Sur n'importe quel site avec un drapeau", "Par un lien dans un SMS", "Sur le site officiel va.gov", "Sur une page de réseau social"], answer: 2, why: "N'utilisez que le site officiel du VA." },
+      { objective: "O1", q: "Que ne devez-vous JAMAIS taper dans un chatbot d'IA ?", options: ["\"Explique-moi ce qu'est une date d'effet\"", "\"Aide-moi à lister des questions pour mon VSO\"", "\"Qu'est-ce que le GI Bill ?\"", "Votre numéro de sécurité sociale ou vos informations médicales"], answer: 3, why: "Gardez vos informations privées hors des outils d'IA." },
+      { objective: "O2", q: "Laquelle n'est PAS une façon de déposer une demande d'invalidité ?", options: ["En ligne sur va.gov", "Par courrier avec le VA Form 21-526EZ", "En personne dans un bureau régional du VA", "En envoyant un SMS à un inconnu qui propose son aide"], answer: 3, why: "Déposez en ligne, par courrier, en personne ou avec un représentant accrédité." },
+      { objective: "O2", q: "Vous comptez déposer sur papier, mais il vous faut du temps pour rassembler des preuves. Qu'est-ce qui peut protéger votre date d'effet ?", options: ["Une déclaration d'intention", "Attendre quelques années", "Ne rien déposer", "Appeler un requin des demandes"], answer: 0, why: "Une déclaration d'intention peut réserver une date d'effet possible." },
+      { objective: "O2", q: "Quelle est une bonne preuve pour une demande d'invalidité ?", options: ["Une supposition sur ce que veut le VA", "Le dossier médical militaire et les dossiers des médecins", "Une publication sur un réseau social", "La décision sur la demande d'un ami"], answer: 1, why: "Les dossiers et les déclarations de témoins appuient votre demande." },
+      { objective: "O2", q: "Le VA vous convoque à un examen pour votre demande. Vous devez :", options: ["Ne pas y aller", "Envoyer quelqu'un d'autre", "Y aller", "Demander à un requin des demandes d'y aller"], answer: 2, why: "L'examen fait partie de la décision." },
+      { objective: "O3", q: "Quel formulaire sert pour les soins de santé du VA ?", options: ["VA Form 10-10EZ", "VA Form 22-1990", "VA Form 21-526EZ", "Un DD214"], answer: 0, why: "Le 10-10EZ est la demande de prestations de santé." },
+      { objective: "O3", q: "Quand vous demandez les soins de santé du VA, que devez-vous indiquer sur votre service ?", options: ["Seulement votre grade", "Rien du tout", "Votre base préférée", "Votre parcours militaire, y compris toute exposition toxique ou dangereuse"], answer: 3, why: "Le VA demande le parcours militaire et les expositions." },
+      { objective: "O3", q: "Quel numéro de téléphone le VA indique-t-il pour l'aide à la demande de soins ?", options: ["911", "988", "877-222-8387", "411"], answer: 2, why: "Le VA indique le 877-222-8387 pour la ligne des prestations de santé." },
+      { objective: "O4", q: "Le Post-9/11 GI Bill s'appelle aussi :", options: ["Chapter 1606", "Chapter 33", "Form 10-10EZ", "Le DD214"], answer: 1, why: "Le Post-9/11 GI Bill est le Chapter 33." },
+      { objective: "O4", q: "Une ancienne combattante veut devenir électricienne sans diplôme universitaire de quatre ans. Le GI Bill peut-il l'aider ?", options: ["Non, il ne paie que l'université en quatre ans", "Oui, il peut aider pour l'apprentissage et la formation en entreprise", "Seulement si elle part à l'étranger", "Seulement pour les officiers"], answer: 1, why: "Le VA cite l'apprentissage et la formation en entreprise parmi les usages du GI Bill." },
+      { objective: "O4", q: "Le Yellow Ribbon Program peut :", options: ["Payer votre loyer", "Remplacer votre DD214", "Accélérer les demandes d'invalidité", "Aider à couvrir les frais de scolarité que le Post-9/11 GI Bill ne couvre pas, dans les écoles participantes"], answer: 3, why: "Le Yellow Ribbon aide pour les frais de scolarité au-delà de ce que couvre le GI Bill." },
+      { objective: "O5", q: "Si vous demandez le GI Bill par courrier, quel formulaire utilisez-vous ?", options: ["VA Form 22-1990", "VA Form 10-10EZ", "VA Form 21-526EZ", "Un formulaire d'impôts"], answer: 0, why: "Le VA Form 22-1990 est la demande d'aides à la formation du VA." },
+      { objective: "O5", q: "Avant de vous inscrire dans une école avec le GI Bill, vous devez :", options: ["Vous inscrire le jour même où le recruteur appelle", "Ne pas comparer", "La comparer avec le GI Bill Comparison Tool et demander les coûts et les débouchés", "Payer un acompte avant de lire quoi que ce soit"], answer: 2, why: "Comparer d'abord protège vos droits." },
+      { objective: "O5", q: "Pouvez-vous modifier votre demande de GI Bill après l'avoir envoyée ?", options: ["Oui, à tout moment", "Oui, en appelant une école", "Seulement le week-end", "Non, alors vérifiez-la avant de l'envoyer"], answer: 3, why: "Le VA indique qu'on ne peut pas la modifier après l'envoi." },
+      { objective: "O6", q: "Lesquels sont accrédités par le VA pour aider dans les demandes ?", options: ["Les représentants d'une VSO, les avocats et les agents de demandes", "N'importe quel site web", "Toute personne qui a servi", "Les vendeurs de voitures"], answer: 0, why: "L'Office of General Counsel du VA accrédite ces trois types." },
+      { objective: "O6", q: "Quand un avocat ou un agent de demandes accrédité peut-il facturer des honoraires ?", options: ["Avant le dépôt de votre première demande", "Seulement après la décision du VA sur votre demande initiale, et avec une convention d'honoraires signée", "Quand il le veut", "Jamais, en aucun cas"], answer: 1, why: "Le VA indique que les honoraires ne viennent qu'après la décision initiale, avec une convention signée." },
+      { objective: "O6", q: "Une personne qui vous aide pour votre demande vous demande vos identifiants va.gov. Vous devez :", options: ["Les partager pour qu'elle aille plus vite", "Les lui écrire sur un post-it", "Refuser ; ne partagez jamais vos identifiants", "Les remplacer par quelque chose de plus simple"], answer: 2, why: "Ne donnez jamais vos identifiants va.gov à personne." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      1,
+      3,
+      5,
+      8,
+      9,
+      12,
+      15,
+      18,
+      19
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Liste des documents",
+        objective: "O1",
+        notYet: "Pas de liste, ou le DD214 n'y figure pas.",
+        meets: "Une liste qui commence par le DD214, avec les documents manquants marqués.",
+        exceeds: "Indique où chaque document est rangé et comment obtenir ceux qui manquent."
+      },
+      {
+        name: "Prestations et façon de les demander",
+        objective: "O2",
+        notYet: "Les prestations sont listées sans la façon de les demander.",
+        meets: "Chaque prestation (indemnisation pour invalidité, soins de santé, formation) avec une voie officielle pour la demander.",
+        exceeds: "Indique comment l'apprenant protégera sa date d'effet ou quel formulaire il utilisera."
+      },
+      {
+        name: "Plan pour le GI Bill",
+        objective: "O5",
+        notYet: "Aucun programme ni aucune école nommés, si l'apprenant va utiliser le GI Bill.",
+        meets: "Le programme, l'école ou la formation, et ce qu'il faut pour y accéder.",
+        exceeds: "Deux options comparées dans le GI Bill Comparison Tool."
+      },
+      {
+        name: "Aide accréditée gratuite",
+        objective: "O6",
+        notYet: "Aucun représentant, ou une entreprise payante non accréditée.",
+        meets: "Le nom et les coordonnées d'un représentant accrédité par le VA ou d'un VSO trouvé avec l'outil de recherche du VA.",
+        exceeds: "L'apprenant l'a contacté ou a pris rendez-vous."
+      },
+      {
+        name: "Signes d'un requin des demandes",
+        objective: "O6",
+        notYet: "Moins de trois signes d'alerte.",
+        meets: "Trois signes d'alerte d'une personne qu'il ne faut pas payer pour déposer une demande.",
+        exceeds: "L'apprenant explique quand un avocat ou un agent de demandes accrédité peut facturer."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent l'exercice final (grille d'évaluation)",
+      "Apprenants qui envoient au moins une demande au VA ou une intention de déposer (intent to file) dans les 30 jours (enquête de suivi)",
+      "Apprenants qui contactent un représentant accrédité gratuit ou un VSO dans les 30 jours",
+      "Apprenants qui s'inscrivent à une formation financée par le GI Bill dans les 6 mois"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur avec internet",
+      "Un dossier (papier, ou un dossier sécurisé sur l'ordinateur de l'apprenant) pour les documents",
+      "Le DD214 de l'apprenant ou ses autres papiers de fin de service, s'il les a",
+      "Le site gratuit va.gov, avec le GI Bill Comparison Tool et la recherche de représentants accrédités",
+      "Environ 60 minutes au total : leçons, exercices, contrôles et exercice final"
+    ],
+    facilitatorNotes: [
+      "Ne récupérez et ne regardez jamais les DD214, dossiers médicaux ou numéros de sécurité sociale des apprenants ; chacun garde son propre dossier.",
+      "Invitez un VSO accrédité par le VA à la dernière séance pour que les apprenants rencontrent une aide gratuite en personne.",
+      "Confirmez les formulaires, les numéros de téléphone et les règles sur va.gov pendant la séance, car ils peuvent changer.",
+      "Ne donnez pas d'avis sur les questions médicales ou juridiques ; orientez-les vers le VA ou un représentant accrédité.",
+      "Notez le plan d'action avec la grille, et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

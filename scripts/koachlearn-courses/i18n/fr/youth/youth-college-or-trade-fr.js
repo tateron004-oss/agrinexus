@@ -17,11 +17,35 @@ module.exports = {
     "Chaque leçon dure environ cinq minutes et se termine par une tâche à faire tout de suite. Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Écrivez un plan d'une page sur deux ans : votre parcours principal et une solution de secours, une comparaison d'au moins deux parcours avec les cinq mêmes questions (coût, durée, salaire pendant la formation, emplois probables, conditions d'entrée), comment vous allez payer, ce que vous ferez tous les six mois, et les personnes qui vous aideront.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des lycéens et de jeunes diplômés aux États-Unis qui décident quoi faire après le lycée, ainsi que les parents, conseillers et mentors qui les aident.",
+    startingPoint: "Ils connaissent certains de leurs centres d'intérêt et ont entendu parler de l'université, des métiers ou de l'armée par leurs amis et leur famille. Peu ont comparé les parcours avec les mêmes questions, regardé le prix net, rempli la FAFSA ou appris à repérer les arnaques à l'aide financière.",
+    gap: "Choisir un parcours sur des « on-dit » peut mener à des dettes pour un programme qui ne convient pas, à des dates limites d'aide manquées ou à de l'argent perdu dans des arnaques. Comparer les options avec les mêmes questions, comprendre l'aide financière et écrire un plan sur deux ans avec une solution de secours aide les jeunes à commencer un parcours qui leur convient et qu'ils peuvent payer.",
+    constraints: [
+      "Les règles d'argent, les dates d'aide et les programmes changent chaque année ; les apprenants vérifient sur studentaid.gov, apprenticeship.gov et les sites officiels des écoles",
+      "Pas de conseil financier : les apprenants discutent de leurs plans avec un conseiller, un parent ou un adulte de confiance",
+      "Vie privée et arnaques : ne jamais partager un FSA ID, des numéros de compte bancaire ou de carte, et ne jamais payer pour remplir la FAFSA",
+      "Appareils : un téléphone ou un ordinateur de l'école ou de la bibliothèque avec Internet",
+      "Des leçons courtes et des mots simples ; beaucoup d'apprenants seront les premiers de leur famille à faire ces choix"
+    ],
+    prerequisites: "Aucun. « L'IA et la découverte des métiers » est un bon premier cours."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Avant de comparer des écoles ou des emplois", action: "lister vos centres d'intérêt, vos points forts, votre façon d'apprendre et vos besoins d'argent, et choisir les parcours qui vous conviennent le mieux pour l'instant", standard: "en entourant deux ou trois des cinq parcours principaux" },
+    { id: "O2", condition: "Avec les sites web des écoles et les calculateurs de prix net", action: "comparer un community college et une université de quatre ans avec les cinq mêmes questions", standard: "avec chaque question répondue ou marquée « à demander »" },
+    { id: "O3", condition: "Avec apprenticeship.gov et des sources officielles", action: "comparer un apprentissage, l'armée ou un emploi avec formation avec les cinq mêmes questions", standard: "en demandant le taux de réussite, le taux d'emploi et l'accréditation avant de signer quoi que ce soit" },
+    { id: "O4", condition: "Avec studentaid.gov", action: "expliquer les quatre types d'aide financière et prévoir quand et avec qui vous remplirez la FAFSA", standard: "avec la date d'ouverture et les dates limites de cette année notées, et sans payer de frais" },
+    { id: "O5", condition: "À partir d'offres d'aide et d'offres de bourses", action: "classer chaque offre en argent gratuit, argent à gagner et prêts, calculer ce qui reste à payer, et repérer les signes d'arnaque", standard: "avec des montants justes et en nommant où signaler une arnaque" },
+    { id: "O6", condition: "Avec vos comparaisons et votre plan d'aide", action: "écrire un plan sur deux ans avec un parcours principal, une solution de secours, des étapes clés tous les six mois, la façon de payer et les personnes qui vous aideront", standard: "avec toutes les parties et une date pour le revoir" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Comparer vos parcours",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Se connaître avant de choisir",
           minutes: 5,
           goal: "Noter vos intérêts, vos points forts, votre façon d'apprendre et vos besoins d'argent pour juger chaque parcours.",
@@ -40,9 +64,14 @@ module.exports = {
             { title: "Utiliser l'IA pour trouver des idées", bullets: ["Demandez des métiers qui correspondent à vos réponses", "Voyez-le comme une première liste", "Vérifiez les faits avec un conseiller"] }
           ],
           tryIt: "Répondez sur papier aux quatre questions de cette leçon. Puis demandez à un assistant d'IA : Voici mes intérêts et mes points forts. Propose cinq métiers et la formation dont chacun a besoin. Entourez les deux ou trois parcours qui vous conviennent le mieux.",
-          youCanNow: "décrire vos intérêts, vos points forts, votre façon d'apprendre et vos besoins d'argent, et choisir les parcours qui valent la peine d'être comparés."
+          youCanNow: "décrire vos intérêts, vos points forts, votre façon d'apprendre et vos besoins d'argent, et choisir les parcours qui valent la peine d'être comparés.",
+          quickCheck: [
+            { objective: "O1", q: "Quels sont les cinq parcours principaux après le lycée dans ce cours ?", options: ["Seulement l'université et le travail", "L'université, une année de césure, les voyages, le sport et la musique", "Seulement des cours en ligne", "L'université de quatre ans, le community college, l'école de métiers ou l'apprentissage, l'armée, et le travail"], answer: 3, why: "Le cours compare ces cinq parcours, et beaucoup de gens les combinent au fil du temps." },
+            { objective: "O1", q: "Vous devez gagner de l'argent bientôt pour aider votre famille. Comment cela joue-t-il sur votre choix ?", options: ["Cela ne compte pas", "Regardez de près les parcours où vous gagnez de l'argent en apprenant, comme un apprentissage ou un emploi avec formation", "Seule une université de quatre ans est possible", "Attendez quelques années avant de décider"], answer: 1, why: "Vos besoins d'argent font partie de ce qui rend un parcours adapté à vous." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Community college et université de quatre ans",
           minutes: 5,
           goal: "Comparer un community college et une université de quatre ans avec les cinq mêmes questions.",
@@ -61,9 +90,14 @@ module.exports = {
             { title: "Commencer près de chez soi, puis se transférer", bullets: ["Fait économiser de l'argent à beaucoup d'élèves", "Vérifiez d'abord quelles écoles acceptent les crédits"] }
           ],
           tryIt: "Faites un tableau avec les cinq questions sur le côté et deux écoles en haut : un community college et une université de quatre ans. Remplissez ce que vous trouvez sur leurs sites et marquez ce qu'il vous reste à demander.",
-          youCanNow: "comparer un community college et une université de quatre ans avec les cinq mêmes questions, et repérer un chemin qui commence près de chez vous puis passe par un transfert."
+          youCanNow: "comparer un community college et une université de quatre ans avec les cinq mêmes questions, et repérer un chemin qui commence près de chez vous puis passe par un transfert.",
+          quickCheck: [
+            { objective: "O2", q: "Que montre un calculateur de prix net ?", options: ["Une estimation de ce que coûte une école après les subventions et les bourses", "Le score de l'équipe de football de l'école", "Vos résultats aux tests", "Le nombre d'étudiants qui vivent en résidence"], answer: 0, why: "Le prix net est ce que coûtent les études après les subventions et les bourses." },
+            { objective: "O2", q: "Vous comparez deux universités mais ne regardez que le prix affiché. Que vous manque-t-il ?", options: ["Rien ; seul le prix compte", "Les couleurs de l'école", "Les autres questions : la durée, gagner de l'argent en apprenant, les emplois et le salaire, et ce qu'il faut pour être admis", "Le nombre de bâtiments"], answer: 2, why: "Utilisez les cinq mêmes questions pour chaque option." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Métiers, apprentissage, armée et travail",
           minutes: 6,
           goal: "Comparer un apprentissage, l'armée et un emploi avec formation, avec les cinq mêmes questions.",
@@ -86,17 +120,21 @@ module.exports = {
             { name: "Apprenticeship.gov", url: "https://www.apprenticeship.gov/" }
           ],
           tryIt: "Trouvez sur apprenticeship.gov un apprentissage près de chez vous et un emploi qui offre une formation. Ajoutez-les au tableau de la leçon précédente et répondez aux cinq questions pour chacun.",
-          youCanNow: "comparer l'apprentissage, les écoles de métiers, l'armée et le travail avec les cinq mêmes questions que pour les études."
+          youCanNow: "comparer l'apprentissage, les écoles de métiers, l'armée et le travail avec les cinq mêmes questions que pour les études.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce qui différencie un Registered Apprenticeship d'une école de métiers ?", options: ["Vous êtes payé pendant que vous apprenez sur le terrain", "Il n'y a aucun cours", "Il coûte toujours plus cher", "Il n'enseigne que l'informatique"], answer: 0, why: "Dans un apprentissage, vous êtes payé pendant que vous apprenez auprès de travailleurs expérimentés." },
+            { objective: "O3", q: "Un recruteur de l'armée veut que vous signiez aujourd'hui. Que faites-vous ?", options: ["Vous signez pour ne pas perdre la place", "Vous demandez à un ami de signer pour vous", "Vous ne lisez pas le contrat", "Vous parlez à plus d'une branche, vérifiez le site officiel et lisez avant de signer"], answer: 3, why: "Lisez tout et comparez les branches avant de vous engager pour plusieurs années de service." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Comparer vos parcours",
         questions: [
-          { q: "Que devez-vous regarder en premier avant de comparer des écoles ou des emplois ?", options: ["Ce que font vos amis", "Vos intérêts, vos points forts, votre façon d'apprendre et vos besoins", "L'école qui a la meilleure équipe de sport", "Seulement l'option la moins chère"], answer: 1, why: "Le meilleur parcours vous correspond, alors commencez par vous connaître." },
-          { q: "Qu'est-ce qui est en général vrai sur le community college ?", options: ["Il coûte beaucoup plus cher qu'une université privée", "Il ne propose que des diplômes en quatre ans", "On ne peut jamais être transféré", "Il est près de chez vous et coûte en général moins cher"], answer: 3, why: "Les community colleges sont locaux et en général beaucoup moins chers." },
-          { q: "Vous voulez commencer au community college et être transféré plus tard. Que devez-vous vérifier d'abord ?", options: ["Quelles universités de quatre ans acceptent ses crédits", "Le menu de la cafétéria", "La taille du parking", "Rien ; tous les crédits sont toujours transférés"], answer: 0, why: "Vérifier d'abord les accords de transfert évite de perdre vos crédits." },
-          { q: "Qu'est-ce qu'un Registered Apprenticeship ?", options: ["Un stage non payé", "Un emploi payé où vous apprenez un métier qualifié avec une formation", "Un jeu vidéo", "Un diplôme en quatre ans"], answer: 1, why: "Les apprentis sont payés pendant qu'ils apprennent auprès de travailleurs expérimentés." },
-          { q: "Un vendeur d'une école de métiers dit que vous devez signer aujourd'hui. Que faites-vous ?", options: ["Signer tout de suite", "Lui donner votre carte bancaire", "Demander le taux de réussite, le taux d'emploi et l'accréditation, et prendre le temps de décider", "Emprunter le plus possible"], answer: 2, why: "La pression pour signer aujourd'hui est un signal d'alerte ; les bonnes écoles vous donnent des faits et du temps." }
+          { objective: "O1", q: "Que devez-vous regarder en premier avant de comparer des écoles ou des emplois ?", options: ["Ce que font vos amis", "Vos intérêts, vos points forts, votre façon d'apprendre et vos besoins", "L'école qui a la meilleure équipe de sport", "Seulement l'option la moins chère"], answer: 1, why: "Le meilleur parcours vous correspond, alors commencez par vous connaître." },
+          { objective: "O2", q: "Qu'est-ce qui est en général vrai sur le community college ?", options: ["Il coûte beaucoup plus cher qu'une université privée", "Il ne propose que des diplômes en quatre ans", "On ne peut jamais être transféré", "Il est près de chez vous et coûte en général moins cher"], answer: 3, why: "Les community colleges sont locaux et en général beaucoup moins chers." },
+          { objective: "O2", q: "Vous voulez commencer au community college et être transféré plus tard. Que devez-vous vérifier d'abord ?", options: ["Quelles universités de quatre ans acceptent ses crédits", "Le menu de la cafétéria", "La taille du parking", "Rien ; tous les crédits sont toujours transférés"], answer: 0, why: "Vérifier d'abord les accords de transfert évite de perdre vos crédits." },
+          { objective: "O3", q: "Qu'est-ce qu'un Registered Apprenticeship ?", options: ["Un stage non payé", "Un emploi payé où vous apprenez un métier qualifié avec une formation", "Un jeu vidéo", "Un diplôme en quatre ans"], answer: 1, why: "Les apprentis sont payés pendant qu'ils apprennent auprès de travailleurs expérimentés." },
+          { objective: "O3", q: "Un vendeur d'une école de métiers dit que vous devez signer aujourd'hui. Que faites-vous ?", options: ["Signer tout de suite", "Lui donner votre carte bancaire", "Demander le taux de réussite, le taux d'emploi et l'accréditation, et prendre le temps de décider", "Emprunter le plus possible"], answer: 2, why: "La pression pour signer aujourd'hui est un signal d'alerte ; les bonnes écoles vous donnent des faits et du temps." }
         ]
       }
     },
@@ -104,6 +142,7 @@ module.exports = {
       name: "Chapitre 2 : Payer et faire un plan",
       lessons: [
         {
+          objectives: ["O4"],
           title: "La FAFSA et l'aide financière",
           minutes: 6,
           goal: "Expliquer les types d'aide financière et vous préparer à remplir gratuitement la FAFSA sur studentaid.gov.",
@@ -126,9 +165,14 @@ module.exports = {
             { name: "FTC : Comment éviter les arnaques aux bourses et à l'aide financière", url: "https://consumer.ftc.gov/articles/how-avoid-scholarship-and-financial-aid-scams" }
           ],
           tryIt: "Allez sur studentaid.gov et trouvez la date d'ouverture de la FAFSA cette année. Puis trouvez la date limite d'aide financière d'une école et de votre État. Notez les deux dates, et notez qui vous aidera à remplir le formulaire.",
-          youCanNow: "expliquer les subventions, les bourses, le work-study et les prêts, et vous préparer à déposer la FAFSA gratuite en toute sécurité et à temps."
+          youCanNow: "expliquer les subventions, les bourses, le work-study et les prêts, et vous préparer à déposer la FAFSA gratuite en toute sécurité et à temps.",
+          quickCheck: [
+            { objective: "O4", q: "Quels types d'aide n'avez-vous pas à rembourser ?", options: ["Les prêts", "Les subventions et les bourses", "Les cartes de crédit", "Les prêts privés"], answer: 1, why: "Les subventions et les bourses sont de l'argent gratuit ; les prêts se remboursent avec des intérêts." },
+            { objective: "O4", q: "Un site web qui finit par .com propose de remplir votre FAFSA contre des frais. Que faites-vous ?", options: ["Vous payez ; cela fait gagner du temps", "Vous lui donnez votre FSA ID", "Vous la remplissez gratuitement sur studentaid.gov ou avec l'aide d'un conseiller", "Vous ne remplissez pas la FAFSA"], answer: 2, why: "La FAFSA est gratuite sur studentaid.gov ; ne payez jamais pour la remplir et ne partagez jamais votre FSA ID." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Éviter les pièges de la dette et les arnaques",
           minutes: 5,
           goal: "Comparer les offres d'aide et repérer les signes de pièges de la dette et d'arnaques.",
@@ -151,9 +195,14 @@ module.exports = {
             { name: "FTC : Comment éviter les arnaques aux bourses et à l'aide financière", url: "https://consumer.ftc.gov/articles/how-avoid-scholarship-and-financial-aid-scams" }
           ],
           tryIt: "Regardez cet exemple d'offre : subvention de $3,000, bourse de $2,000, work-study de $2,500, prêt de $5,500, pour une école qui coûte $14,000 par an. Écrivez combien est de l'argent gratuit, combien doit être gagné ou remboursé, et combien il reste encore à payer. (Gratuit : $5,000. Gagné : $2,500. Prêt : $5,500. Reste à payer : $1,000.)",
-          youCanNow: "lire une offre d'aide ligne par ligne, emprunter avec prudence, et repérer les arnaques à l'aide financière et les écoles qui mettent la pression."
+          youCanNow: "lire une offre d'aide ligne par ligne, emprunter avec prudence, et repérer les arnaques à l'aide financière et les écoles qui mettent la pression.",
+          quickCheck: [
+            { objective: "O5", q: "Pourquoi lire chaque ligne d'une offre d'aide ?", options: ["Certaines offres mélangent des prêts pour qu'ils ressemblent à de l'argent gratuit", "Les offres d'aide sont toujours entièrement des subventions", "Pour trouver la mascotte de l'école", "Les lignes ne comptent pas"], answer: 0, why: "Classer les subventions, les bourses, le work-study et les prêts montre ce que vous paierez vraiment." },
+            { objective: "O5", q: "Un e-mail dit que vous avez gagné une bourse à laquelle vous n'avez jamais postulé et demande votre numéro de compte bancaire. Qu'est-ce que c'est ?", options: ["Une vraie bourse", "Un signe d'arnaque ; ne donnez pas votre numéro de compte", "Un formulaire bancaire normal", "Une étape de la FAFSA"], answer: 1, why: "Les concours auxquels vous n'avez jamais participé et les demandes de numéro de compte sont des signes d'arnaque." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Faire votre plan sur deux ans",
           minutes: 6,
           goal: "Écrire un plan sur deux ans avec un parcours principal, une solution de secours, le financement et des étapes clés.",
@@ -172,17 +221,21 @@ module.exports = {
             { title: "Faites-le vivre", bullets: ["Relisez-le tous les quelques mois", "Changez-le quand la vie change"] }
           ],
           tryIt: "Tâche finale : écrivez votre plan d'une page sur deux ans avec un parcours principal et une solution de secours, votre comparaison en cinq questions d'au moins deux parcours, comment vous paierez, vos étapes clés tous les six mois et les personnes qui vous aideront. Montrez-le à un conseiller ou à un adulte de confiance.",
-          youCanNow: "écrire un plan sur deux ans avec un parcours principal, une solution de secours, des étapes clés, un moyen de payer et des personnes pour vous aider, et le mettre à jour quand la vie change."
+          youCanNow: "écrire un plan sur deux ans avec un parcours principal, une solution de secours, des étapes clés, un moyen de payer et des personnes pour vous aider, et le mettre à jour quand la vie change.",
+          quickCheck: [
+            { objective: "O6", q: "Qu'est-ce qu'une étape clé dans un plan sur deux ans ?", options: ["Un souhait au hasard", "Votre solution de secours", "Une liste de personnes", "Une étape claire avec une date, comme finir un cours d'ici juin"], answer: 3, why: "Les étapes clés découpent le plan en étapes de six mois que vous pouvez vérifier." },
+            { objective: "O6", q: "Votre parcours principal prend six mois de retard. À quoi vous aide un bon plan ?", options: ["À abandonner", "À attendre sans rien faire", "À passer à votre solution de secours et à continuer d'avancer", "À recommencer sans plan"], answer: 2, why: "Une solution de secours vous fait avancer si le parcours principal prend du retard." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Payer et faire un plan",
         questions: [
-          { q: "Quel type d'aide devez-vous rembourser ?", options: ["Une subvention", "Une bourse", "Le salaire du work-study", "Un prêt"], answer: 3, why: "Les prêts doivent être remboursés avec des intérêts ; les subventions et les bourses non." },
-          { q: "Combien coûte le dépôt de la FAFSA sur studentaid.gov ?", options: ["Rien ; c'est gratuit", "$25", "$100", "Cela dépend de votre école"], answer: 0, why: "La FAFSA est gratuite ; ne payez jamais personne pour la déposer." },
-          { q: "Une entreprise propose de remplir votre FAFSA si vous lui donnez votre FSA ID. Que faites-vous ?", options: ["Le lui donner", "Refuser et demander l'aide gratuite d'un conseiller d'orientation", "Le lui envoyer par SMS", "Le publier en ligne"], answer: 1, why: "Ne partagez jamais votre FSA ID ; les conseillers aident gratuitement." },
-          { q: "Lequel est un signe d'arnaque à la bourse ?", options: ["Une candidature gratuite", "Une question de rédaction", "Une bourse garantie si vous payez des frais", "Une date limite"], answer: 2, why: "Les vraies bourses ne font pas payer de frais et ne garantissent pas l'obtention." },
-          { q: "Pourquoi un plan sur deux ans a-t-il besoin d'une solution de secours ?", options: ["Pour continuer à avancer si le parcours principal prend du retard", "Parce que la loi l'exige", "Pour impressionner vos amis", "Il n'en a pas besoin"], answer: 0, why: "Une solution de secours vous permet de progresser quand les plans changent." }
+          { objective: "O4", q: "Quel type d'aide devez-vous rembourser ?", options: ["Une subvention", "Une bourse", "Le salaire du work-study", "Un prêt"], answer: 3, why: "Les prêts doivent être remboursés avec des intérêts ; les subventions et les bourses non." },
+          { objective: "O4", q: "Combien coûte le dépôt de la FAFSA sur studentaid.gov ?", options: ["Rien ; c'est gratuit", "$25", "$100", "Cela dépend de votre école"], answer: 0, why: "La FAFSA est gratuite ; ne payez jamais personne pour la déposer." },
+          { objective: "O4", q: "Une entreprise propose de remplir votre FAFSA si vous lui donnez votre FSA ID. Que faites-vous ?", options: ["Le lui donner", "Refuser et demander l'aide gratuite d'un conseiller d'orientation", "Le lui envoyer par SMS", "Le publier en ligne"], answer: 1, why: "Ne partagez jamais votre FSA ID ; les conseillers aident gratuitement." },
+          { objective: "O5", q: "Lequel est un signe d'arnaque à la bourse ?", options: ["Une candidature gratuite", "Une question de rédaction", "Une bourse garantie si vous payez des frais", "Une date limite"], answer: 2, why: "Les vraies bourses ne font pas payer de frais et ne garantissent pas l'obtention." },
+          { objective: "O6", q: "Pourquoi un plan sur deux ans a-t-il besoin d'une solution de secours ?", options: ["Pour continuer à avancer si le parcours principal prend du retard", "Parce que la loi l'exige", "Pour impressionner vos amis", "Il n'en a pas besoin"], answer: 0, why: "Une solution de secours vous permet de progresser quand les plans changent." }
         ]
       }
     }
@@ -190,26 +243,106 @@ module.exports = {
   quiz: {
     title: "Quiz final : Choisir les études, un métier ou le travail après le lycée",
     questions: [
-      { q: "Quel est le bon parcours pour tout le monde après le lycée ?", options: ["Une université de quatre ans", "Il n'y a pas un seul bon parcours ; cela dépend de vous", "L'armée", "Travailler tout de suite"], answer: 1, why: "Le meilleur parcours correspond à vos intérêts, vos points forts et vos besoins." },
-      { q: "Vous apprenez mieux en faisant des choses avec vos mains. Quel parcours pourrait bien vous convenir ?", options: ["Seulement des cours magistraux en ligne", "Rien ne convient", "Un apprentissage dans un métier", "Lire des manuels toute la journée"], answer: 2, why: "L'apprentissage enseigne des savoir-faire par le travail pratique." },
-      { q: "Comment utiliser un assistant d'IA pour choisir un parcours ?", options: ["Le laisser décider pour vous", "Croire chaque chiffre qu'il donne", "Ne jamais l'utiliser", "L'utiliser pour trouver des idées, puis vérifier les faits avec un conseiller et des sites officiels"], answer: 3, why: "L'IA peut proposer des idées, mais les faits doivent être vérifiés." },
-      { q: "Un associate degree prend en général environ :", options: ["Deux ans", "Six mois", "Huit ans", "Une semaine"], answer: 0, why: "Les associate degrees prennent en général environ deux ans." },
-      { q: "Qu'est-ce que le prix net ?", options: ["Le prix d'un ordinateur portable", "Ce que coûtent les études après les subventions et les bourses", "Le prix d'un seul cours", "Un impôt"], answer: 1, why: "Le prix net est le coût une fois l'aide gratuite retirée." },
-      { q: "Quels métiers demandent en général un bachelor's degree ?", options: ["Aucun", "Seulement le sport", "L'enseignement et l'ingénierie", "Seulement la vente"], answer: 2, why: "L'enseignement et l'ingénierie demandent en général un bachelor's degree." },
-      { q: "Laquelle est une des cinq questions à poser pour chaque parcours ?", options: ["Est-ce que mes amis y vont ?", "Le logo est-il joli ?", "Passe-t-il à la télé ?", "Combien de temps cela prendra-t-il ?"], answer: 3, why: "La durée est une des cinq questions de comparaison." },
-      { q: "Où pouvez-vous chercher des apprentissages ?", options: ["Dans l'Apprenticeship Job Finder d'apprenticeship.gov", "Dans une publication au hasard sur les réseaux sociaux", "Dans un SMS d'un inconnu", "Nulle part"], answer: 0, why: "Apprenticeship.gov a un outil officiel de recherche d'apprentissages." },
-      { q: "Avant de signer avec une école de métiers, demandez :", options: ["De quelle couleur est le bâtiment", "Combien d'élèves finissent et trouvent un emploi dans le domaine", "S'il y a une piscine", "Rien"], answer: 1, why: "Les taux de réussite et d'emploi montrent si l'école tient ses promesses." },
-      { q: "L'ASVAB est :", options: ["Un prêt étudiant", "Une école de métiers", "Un test qui aide à décider à quels postes de l'armée vous avez accès", "Un formulaire d'impôts"], answer: 2, why: "L'armée utilise l'ASVAB pour faire correspondre les gens aux postes." },
-      { q: "Si vous pensez à l'armée, une bonne étape est de :", options: ["Signer le premier papier que vous voyez", "Ne pas lire le contrat", "Ne parler qu'à un seul ami", "Parler à des recruteurs de plusieurs branches et lire avant de signer"], answer: 3, why: "Comparer les branches et lire attentivement vous protège." },
-      { q: "Aller directement travailler peut être un bon parcours quand l'employeur :", options: ["Offre une formation et aide à payer des cours", "Ne forme jamais personne", "Paie en cartes cadeaux", "N'a aucun poste d'avenir"], answer: 0, why: "La formation, les promotions et l'aide pour les cours font d'un emploi un vrai parcours." },
-      { q: "Quelle aide est un emploi à temps partiel qui aide à payer les études ?", options: ["Subvention", "Work-study", "Prêt", "Bourse"], answer: 1, why: "Le work-study vous paie pour un travail à temps partiel." },
-      { q: "Où remplit-on la FAFSA ?", options: ["fafsa-help.win", "Un site payant", "studentaid.gov", "L'application de votre banque"], answer: 2, why: "La FAFSA officielle et gratuite est sur studentaid.gov." },
-      { q: "Pourquoi déposer la FAFSA le plus tôt possible ?", options: ["Les formulaires en retard reçoivent plus d'argent", "Elle n'est ouverte qu'un jour", "Il n'y a aucune raison", "Certaines aides s'épuisent, et les États et universités ont des dates limites"], answer: 3, why: "Déposer tôt vous aide à obtenir des aides avant qu'elles ne s'épuisent." },
-      { q: "Quels prêts devez-vous en général utiliser en premier ?", options: ["Les prêts étudiants fédéraux", "Les prêts privés", "Les cartes de crédit", "Les prêts sur salaire (payday loans)"], answer: 0, why: "Les prêts fédéraux ont en général plus de protections que les prêts privés." },
-      { q: "Une offre d'aide indique un prêt de $5,500 avec des subventions. Le prêt, c'est :", options: ["De l'argent gratuit", "De l'argent que vous devez rembourser", "Une bourse", "Un cadeau"], answer: 1, why: "Les prêts doivent être remboursés, même quand ils sont listés à côté des subventions." },
-      { q: "Où signaler une arnaque à l'aide financière ?", options: ["À la cafétéria de l'école", "Dans un commentaire sur les réseaux sociaux", "Sur ReportFraud.ftc.gov", "Nulle part"], answer: 2, why: "La FTC reçoit les signalements d'arnaques sur ReportFraud.ftc.gov." },
-      { q: "Quelle est une bonne étape clé dans un plan sur deux ans ?", options: ["Devenir célèbre", "Se sentir mieux un jour", "Devenir riche", "Finir le premier cours du certificat d'ici juin"], answer: 3, why: "Une étape clé est une étape claire que l'on peut vérifier." },
-      { q: "À quelle fréquence devez-vous relire votre plan ?", options: ["Tous les quelques mois", "Jamais", "Une seule fois", "Seulement si vous échouez"], answer: 0, why: "Le relire régulièrement permet de le mettre à jour quand la vie change." }
+      { objective: "O1", q: "Quel est le bon parcours pour tout le monde après le lycée ?", options: ["Une université de quatre ans", "Il n'y a pas un seul bon parcours ; cela dépend de vous", "L'armée", "Travailler tout de suite"], answer: 1, why: "Le meilleur parcours correspond à vos intérêts, vos points forts et vos besoins." },
+      { objective: "O1", q: "Vous apprenez mieux en faisant des choses avec vos mains. Quel parcours pourrait bien vous convenir ?", options: ["Seulement des cours magistraux en ligne", "Rien ne convient", "Un apprentissage dans un métier", "Lire des manuels toute la journée"], answer: 2, why: "L'apprentissage enseigne des savoir-faire par le travail pratique." },
+      { objective: "O1", q: "Comment utiliser un assistant d'IA pour choisir un parcours ?", options: ["Le laisser décider pour vous", "Croire chaque chiffre qu'il donne", "Ne jamais l'utiliser", "L'utiliser pour trouver des idées, puis vérifier les faits avec un conseiller et des sites officiels"], answer: 3, why: "L'IA peut proposer des idées, mais les faits doivent être vérifiés." },
+      { objective: "O2", q: "Un associate degree prend en général environ :", options: ["Deux ans", "Six mois", "Huit ans", "Une semaine"], answer: 0, why: "Les associate degrees prennent en général environ deux ans." },
+      { objective: "O2", q: "Qu'est-ce que le prix net ?", options: ["Le prix d'un ordinateur portable", "Ce que coûtent les études après les subventions et les bourses", "Le prix d'un seul cours", "Un impôt"], answer: 1, why: "Le prix net est le coût une fois l'aide gratuite retirée." },
+      { objective: "O2", q: "Quels métiers demandent en général un bachelor's degree ?", options: ["Aucun", "Seulement le sport", "L'enseignement et l'ingénierie", "Seulement la vente"], answer: 2, why: "L'enseignement et l'ingénierie demandent en général un bachelor's degree." },
+      { objective: "O2", q: "Laquelle est une des cinq questions à poser pour chaque parcours ?", options: ["Est-ce que mes amis y vont ?", "Le logo est-il joli ?", "Passe-t-il à la télé ?", "Combien de temps cela prendra-t-il ?"], answer: 3, why: "La durée est une des cinq questions de comparaison." },
+      { objective: "O3", q: "Où pouvez-vous chercher des apprentissages ?", options: ["Dans l'Apprenticeship Job Finder d'apprenticeship.gov", "Dans une publication au hasard sur les réseaux sociaux", "Dans un SMS d'un inconnu", "Nulle part"], answer: 0, why: "Apprenticeship.gov a un outil officiel de recherche d'apprentissages." },
+      { objective: "O3", q: "Avant de signer avec une école de métiers, demandez :", options: ["De quelle couleur est le bâtiment", "Combien d'élèves finissent et trouvent un emploi dans le domaine", "S'il y a une piscine", "Rien"], answer: 1, why: "Les taux de réussite et d'emploi montrent si l'école tient ses promesses." },
+      { objective: "O3", q: "L'ASVAB est :", options: ["Un prêt étudiant", "Une école de métiers", "Un test qui aide à décider à quels postes de l'armée vous avez accès", "Un formulaire d'impôts"], answer: 2, why: "L'armée utilise l'ASVAB pour faire correspondre les gens aux postes." },
+      { objective: "O3", q: "Si vous pensez à l'armée, une bonne étape est de :", options: ["Signer le premier papier que vous voyez", "Ne pas lire le contrat", "Ne parler qu'à un seul ami", "Parler à des recruteurs de plusieurs branches et lire avant de signer"], answer: 3, why: "Comparer les branches et lire attentivement vous protège." },
+      { objective: "O3", q: "Aller directement travailler peut être un bon parcours quand l'employeur :", options: ["Offre une formation et aide à payer des cours", "Ne forme jamais personne", "Paie en cartes cadeaux", "N'a aucun poste d'avenir"], answer: 0, why: "La formation, les promotions et l'aide pour les cours font d'un emploi un vrai parcours." },
+      { objective: "O4", q: "Quelle aide est un emploi à temps partiel qui aide à payer les études ?", options: ["Subvention", "Work-study", "Prêt", "Bourse"], answer: 1, why: "Le work-study vous paie pour un travail à temps partiel." },
+      { objective: "O4", q: "Où remplit-on la FAFSA ?", options: ["fafsa-help.win", "Un site payant", "studentaid.gov", "L'application de votre banque"], answer: 2, why: "La FAFSA officielle et gratuite est sur studentaid.gov." },
+      { objective: "O4", q: "Pourquoi déposer la FAFSA le plus tôt possible ?", options: ["Les formulaires en retard reçoivent plus d'argent", "Elle n'est ouverte qu'un jour", "Il n'y a aucune raison", "Certaines aides s'épuisent, et les États et universités ont des dates limites"], answer: 3, why: "Déposer tôt vous aide à obtenir des aides avant qu'elles ne s'épuisent." },
+      { objective: "O5", q: "Quels prêts devez-vous en général utiliser en premier ?", options: ["Les prêts étudiants fédéraux", "Les prêts privés", "Les cartes de crédit", "Les prêts sur salaire (payday loans)"], answer: 0, why: "Les prêts fédéraux ont en général plus de protections que les prêts privés." },
+      { objective: "O5", q: "Une offre d'aide indique un prêt de $5,500 avec des subventions. Le prêt, c'est :", options: ["De l'argent gratuit", "De l'argent que vous devez rembourser", "Une bourse", "Un cadeau"], answer: 1, why: "Les prêts doivent être remboursés, même quand ils sont listés à côté des subventions." },
+      { objective: "O5", q: "Où signaler une arnaque à l'aide financière ?", options: ["À la cafétéria de l'école", "Dans un commentaire sur les réseaux sociaux", "Sur ReportFraud.ftc.gov", "Nulle part"], answer: 2, why: "La FTC reçoit les signalements d'arnaques sur ReportFraud.ftc.gov." },
+      { objective: "O6", q: "Quelle est une bonne étape clé dans un plan sur deux ans ?", options: ["Devenir célèbre", "Se sentir mieux un jour", "Devenir riche", "Finir le premier cours du certificat d'ici juin"], answer: 3, why: "Une étape clé est une étape claire que l'on peut vérifier." },
+      { objective: "O6", q: "À quelle fréquence devez-vous relire votre plan ?", options: ["Tous les quelques mois", "Jamais", "Une seule fois", "Seulement si vous échouez"], answer: 0, why: "Le relire régulièrement permet de le mettre à jour quand la vie change." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      1,
+      4,
+      6,
+      7,
+      9,
+      12,
+      13,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Parcours principal et solution de secours",
+        objective: "O1",
+        notYet: "Un seul parcours, ou le parcours n'a pas de lien avec les centres d'intérêt et les besoins de l'apprenant.",
+        meets: "Un parcours principal et une solution de secours qui correspondent aux centres d'intérêt, aux points forts et aux besoins d'argent de l'apprenant.",
+        exceeds: "Explique pourquoi la solution de secours le rapproche quand même de son objectif."
+      },
+      {
+        name: "Comparaison avec les cinq questions",
+        objective: "O2",
+        notYet: "Moins de deux parcours comparés, ou des questions sautées.",
+        meets: "Au moins deux parcours comparés sur le coût, la durée, le salaire pendant la formation, les emplois probables et ce qu'il faut pour être admis.",
+        exceeds: "Utilise le prix net ou le salaire d'apprenti tiré de sources officielles et note d'où vient chaque réponse."
+      },
+      {
+        name: "Comment payer",
+        objective: "O4",
+        notYet: "Pas de plan d'argent, ou il repose sur des prêts inconnus.",
+        meets: "Dit comment chaque étape sera payée, avec la date de la FAFSA et les dates limites si une aide est nécessaire.",
+        exceeds: "Montre les subventions et les bourses d'abord, les prêts en dernier, et le montant qui reste à payer."
+      },
+      {
+        name: "À l'abri des arnaques",
+        objective: "O5",
+        notYet: "Prévoit de payer pour de l'aide avec la FAFSA ou pour une bourse garantie.",
+        meets: "Pas d'aide payante pour la FAFSA, pas de FSA ID partagé, et aucune offre avec des signes d'arnaque.",
+        exceeds: "Nomme où signaler une arnaque et à qui demander une aide gratuite."
+      },
+      {
+        name: "Étapes clés et personnes qui aident",
+        objective: "O6",
+        notYet: "Pas d'étapes de six mois, ou aucune personne nommée pour aider.",
+        meets: "Quatre étapes de six mois avec des étapes clés, les personnes qui aideront et une date pour revoir le plan.",
+        exceeds: "A été montré à un conseiller ou à un adulte de confiance, avec ses remarques notées."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Les apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
+      "Les apprenants qui remplissent la FAFSA à temps ou postulent à un apprentissage ou à un programme pendant l'année scolaire",
+      "Les apprenants inscrits à l'université, dans un programme de métier, en apprentissage, dans l'armée ou dans un emploi avec formation six mois après le cours",
+      "Les apprenants qui disent, dans le sondage de suivi, avoir évité une arnaque aux bourses ou à l'aide financière"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un téléphone ou un ordinateur de l'école ou de la bibliothèque avec Internet",
+      "Les sites officiels : studentaid.gov, apprenticeship.gov et les calculateurs de prix net des écoles",
+      "Du papier ou un document pour le tableau de comparaison et le plan sur deux ans",
+      "Environ 60 minutes en tout : leçons, pratique, contrôles et tâche finale"
+    ],
+    facilitatorNotes: [
+      "Travaillez avec le conseiller scolaire et invitez-le à relire les plans des apprenants.",
+      "Demandez aux apprenants de chercher en classe la date d'ouverture et les dates limites de la FAFSA de cette année, car elles changent chaque année.",
+      "Ne demandez jamais aux apprenants de partager en groupe les revenus de leur famille, leur FSA ID ou leurs coordonnées bancaires ; entraînez-vous avec l'exemple d'offre d'aide du cours.",
+      "Invitez des intervenants d'un community college, d'un programme d'apprentissage et d'un employeur local, pour que tous les parcours soient présentés de façon équitable.",
+      "Évaluez le plan sur deux ans avec la grille et donnez un retour sur une ligne « Pas encore » à la fois."
     ]
   }
 };

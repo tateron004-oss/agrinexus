@@ -17,11 +17,35 @@ module.exports = {
     "Vous planifierez un projet réel ou fictif, de la charte à la clôture. Chaque leçon dure environ cinq minutes avec une tâche « Essayez maintenant ». Un contrôle des connaissances clôt chaque chapitre et un quiz de 20 questions clôt le cours."
   ],
   finalTask: "Planifiez avec l'aide de l'IA un projet réel ou fictif de quatre à douze semaines (par exemple un forum de l'emploi de quartier, un déménagement de bureau ou le lancement d'un site web) : une charte d'une page, une structure de découpage du travail, un calendrier avec au moins quatre jalons, une matrice RACI, un registre de cinq risques, un point d'avancement hebdomadaire et un modèle de retour d'expérience. Marquez chaque endroit où vous avez corrigé l'IA.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des anciens militaires qui passent à des postes de projet dans le civil, des participants à des programmes d'insertion qui visent un emploi de coordinateur ou d'assistant de projet, et toute personne qui mène un projet au travail ou dans sa communauté.",
+    startingPoint: "Beaucoup ont dirigé des missions, de la logistique ou des équipes et savent organiser des personnes et des tâches. La plupart n'ont pas utilisé les documents de projet civils comme une charte, une matrice RACI ou un registre des risques, ni utilisé l'IA pour les rédiger.",
+    gap: "Les employeurs civils attendent du personnel de projet des documents de planification standard et des points d'avancement clairs. Les apprenants doivent planifier un projet de la charte à la clôture avec des brouillons de l'IA qu'ils vérifient eux-mêmes, pour montrer leurs compétences de projet en entretien et au travail.",
+    constraints: [
+      "Temps : des leçons d'environ cinq minutes avec de courts exercices pratiques",
+      "Appareils : un ordinateur ou un téléphone avec un assistant d'IA gratuit et un tableur",
+      "Aucune information confidentielle de l'employeur ou de l'armée dans les demandes à l'IA",
+      "Les estimations et les chiffres de l'IA doivent être vérifiés ; les règles et les frais de certification viennent de pmi.org",
+      "Des mots civils simples ; les termes militaires sont traduits, pas supposés connus"
+    ],
+    prerequisites: "Aucun. Les apprenants qui découvrent les outils d'IA peuvent suivre d'abord « Découvrir l'IA et prendre confiance avec le numérique »."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "À partir des faits clés d'un projet réel ou fictif", action: "rédiger une charte d'une page qui indique l'objectif, le périmètre, le commanditaire, le budget, l'échéance et les critères de réussite", standard: "avec chaque erreur de l'IA corrigée et l'accord du commanditaire noté" },
+    { id: "O2", condition: "À partir de votre charte", action: "créer une structure de découpage du travail (WBS) et un calendrier avec durées, dépendances et jalons", standard: "avec au moins quatre jalons et les estimations de durée de l'IA vérifiées" },
+    { id: "O3", condition: "À partir des tâches principales du projet", action: "construire une matrice RACI qui montre qui est Responsable, Approbateur, Consulté et Informé", standard: "avec exactement un Approbateur par tâche et un travail bien réparti" },
+    { id: "O4", condition: "À partir de la liste de risques proposée par l'IA", action: "évaluer les cinq risques les plus réels et choisir une réponse et un responsable pour chacun", standard: "en utilisant correctement éviter, réduire, transférer ou accepter" },
+    { id: "O5", condition: "Pour une semaine du projet", action: "rédiger un point d'avancement d'une demi-page avec un statut rouge, orange ou vert honnête et les décisions à prendre", standard: "avec chaque date et chaque chiffre vérifiés" },
+    { id: "O6", condition: "À la fin d'un projet", action: "mener un retour d'expérience sans reproches et clôturer le projet par rapport à la charte", standard: "en répondant aux quatre questions du bilan et en rangeant les fichiers" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Planifier le projet",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Rédiger une charte de projet avec l'IA",
           minutes: 5,
           goal: "Rédiger une charte d'une page qui définit l'objectif, le périmètre et la réussite du projet.",
@@ -38,9 +62,14 @@ module.exports = {
             { title: "Corriger et faire approuver", bullets: ["Retirer les faits inventés", "Accord du commanditaire avant de commencer"] }
           ],
           tryIt: "Choisissez un projet réel ou fictif. Écrivez ses faits clés, faites rédiger une charte d'une page par l'IA, et marquez tout ce que vous avez corrigé.",
-          youCanNow: "rédiger une charte de projet d'une page avec l'aide de l'IA."
+          youCanNow: "rédiger une charte de projet d'une page avec l'aide de l'IA.",
+          quickCheck: [
+            { objective: "O1", q: "Que veut dire le périmètre dans une charte de projet ?", options: ["Combien coûte le projet", "Ce que le projet fera et ne fera pas", "Qui sont les membres de l'équipe", "La date de fin du projet"], answer: 1, why: "Le périmètre fixe les limites du projet : ce qui est dedans et ce qui est dehors." },
+            { objective: "O1", q: "Le brouillon de charte de l'IA indique un budget que vous ne lui avez jamais donné. Que faites-vous ?", options: ["Le garder parce qu'il semble juste", "Supprimer la ligne du budget de tous les documents", "Le remplacer par le vrai budget du commanditaire et marquer la correction", "Demander à l'équipe de voter un budget"], answer: 2, why: "L'IA comble les trous avec des suppositions ; le vrai budget vient du commanditaire." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Découper le travail et le planifier",
           minutes: 6,
           goal: "Transformer la charte en structure de découpage du travail et en calendrier avec jalons.",
@@ -57,9 +86,14 @@ module.exports = {
             { title: "Calendrier et jalons", bullets: ["Partir de l'échéance à rebours", "Marquer les points de contrôle clés", "Les estimations de l'IA sont optimistes"] }
           ],
           tryIt: "Utilisez l'IA pour créer une WBS de votre projet, puis construisez dans un tableur un calendrier simple avec durées, dépendances et au moins quatre jalons.",
-          youCanNow: "découper un projet en tâches et les planifier avec des jalons."
+          youCanNow: "découper un projet en tâches et les planifier avec des jalons.",
+          quickCheck: [
+            { objective: "O2", q: "Qu'est-ce qu'un jalon ?", options: ["Un point clé qui montre qu'une grande partie est terminée", "La tâche la plus longue du calendrier", "Une réunion avec le commanditaire", "Un risque qui s'est produit"], answer: 0, why: "Un jalon marque un résultat clé, comme « lieu réservé »." },
+            { objective: "O2", q: "Votre WBS contient une tâche « Organiser l'événement » qui prendra six semaines. Que faites-vous ?", options: ["La laisser en une seule tâche", "La retirer du plan", "La confier au commanditaire", "La découper en tâches plus petites qu'une personne peut faire en quelques jours"], answer: 3, why: "Les tâches d'une WBS doivent être assez petites pour qu'une personne les fasse en quelques jours." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Attribuer les rôles avec une matrice RACI",
           minutes: 5,
           goal: "Construire une matrice RACI pour que chacun sache qui fait, qui décide et qui est informé.",
@@ -76,17 +110,21 @@ module.exports = {
             { title: "S'en servir", bullets: ["La partager avec l'équipe et le commanditaire", "La montrer quand des questions se posent"] }
           ],
           tryIt: "Faites rédiger par l'IA une matrice RACI pour les tâches principales de votre projet. Corrigez-la pour que chaque tâche ait exactement un A et que le travail soit équilibré.",
-          youCanNow: "construire et vérifier une matrice RACI qui clarifie les rôles."
+          youCanNow: "construire et vérifier une matrice RACI qui clarifie les rôles.",
+          quickCheck: [
+            { objective: "O3", q: "Dans une matrice RACI, que veut dire « C » ?", options: ["Clôturé", "Consulté : donne son avis avant les décisions", "Chargé de tout : fait tout le travail", "Classé sans suite"], answer: 1, why: "Les personnes consultées donnent leur avis avant le travail ou la décision." },
+            { objective: "O3", q: "Deux personnes sont marquées Approbateur pour la même tâche. Que faites-vous ?", options: ["Choisir une seule personne comme Approbateur", "Garder les deux pour que le travail se fasse", "Les marquer toutes les deux Informé", "Supprimer la tâche"], answer: 0, why: "Chaque tâche a besoin d'exactement un Approbateur qui rend des comptes sur le résultat." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Planifier le projet",
         questions: [
-          { q: "Que définit une charte de projet ?", options: ["Seulement la commande de repas de l'équipe", "La déclaration d'impôts de l'entreprise", "Le but, le périmètre, le commanditaire, le budget, l'échéance et la réussite du projet", "Chaque tâche en détail"], answer: 2, why: "La charte pose les fondations du projet." },
-          { q: "L'IA ajoute à votre charte un objectif de « 100 employeurs », mais vous avez dit 30. Que faites-vous ?", options: ["Corriger avec votre vrai objectif", "Le garder", "Faire la moyenne", "Supprimer la charte"], answer: 0, why: "Chaque fait de la charte doit venir de vous." },
-          { q: "Une dépendance est :", options: ["Un membre de l'équipe", "Une ligne du budget", "Un jalon", "Une tâche qui ne peut pas commencer avant qu'une autre soit finie"], answer: 3, why: "Les dépendances fixent l'ordre du travail." },
-          { q: "Combien de personnes doivent être Approbateur (A) pour une tâche dans une matrice RACI ?", options: ["Tout le monde", "Exactement une", "Aucune", "Au moins cinq"], answer: 1, why: "Un seul responsable du résultat évite la confusion." },
-          { q: "L'IA estime que réserver un lieu prend une heure. D'après ce cours, vous devez :", options: ["L'accepter", "La comparer à votre expérience ; les estimations de l'IA sont optimistes", "La mettre à zéro", "Sauter la planification"], answer: 1, why: "Utilisez votre propre jugement sur les durées." }
+          { objective: "O1", q: "Que définit une charte de projet ?", options: ["Seulement la commande de repas de l'équipe", "La déclaration d'impôts de l'entreprise", "Le but, le périmètre, le commanditaire, le budget, l'échéance et la réussite du projet", "Chaque tâche en détail"], answer: 2, why: "La charte pose les fondations du projet." },
+          { objective: "O1", q: "L'IA ajoute à votre charte un objectif de « 100 employeurs », mais vous avez dit 30. Que faites-vous ?", options: ["Corriger avec votre vrai objectif", "Le garder", "Faire la moyenne", "Supprimer la charte"], answer: 0, why: "Chaque fait de la charte doit venir de vous." },
+          { objective: "O2", q: "Une dépendance est :", options: ["Un membre de l'équipe", "Une ligne du budget", "Un jalon", "Une tâche qui ne peut pas commencer avant qu'une autre soit finie"], answer: 3, why: "Les dépendances fixent l'ordre du travail." },
+          { objective: "O3", q: "Combien de personnes doivent être Approbateur (A) pour une tâche dans une matrice RACI ?", options: ["Tout le monde", "Exactement une", "Aucune", "Au moins cinq"], answer: 1, why: "Un seul responsable du résultat évite la confusion." },
+          { objective: "O2", q: "L'IA estime que réserver un lieu prend une heure. D'après ce cours, vous devez :", options: ["L'accepter", "La comparer à votre expérience ; les estimations de l'IA sont optimistes", "La mettre à zéro", "Sauter la planification"], answer: 1, why: "Utilisez votre propre jugement sur les durées." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Chapitre 2 : Mener et clôturer le projet",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Tenir un registre des risques",
           minutes: 5,
           goal: "Identifier, évaluer et prévoir des réponses aux risques du projet avec l'aide de l'IA.",
@@ -110,9 +149,14 @@ module.exports = {
             { title: "Rester réaliste", bullets: ["Retirer les risques qui ne s'appliquent pas", "Ajouter ce que l'IA a oublié", "Revoir chaque semaine"] }
           ],
           tryIt: "Faites lister par l'IA des risques pour votre projet. Gardez les cinq plus réels, notez-les, choisissez des réponses et attribuez des responsables.",
-          youCanNow: "construire et tenir à jour un registre des risques avec l'aide de l'IA."
+          youCanNow: "construire et tenir à jour un registre des risques avec l'aide de l'IA.",
+          quickCheck: [
+            { objective: "O4", q: "Quelle réponse au risque consiste à rendre un risque moins probable ou moins grave ?", options: ["Éviter", "Transférer", "Réduire", "Accepter"], answer: 2, why: "Réduire diminue la probabilité ou les dégâts d'un risque." },
+            { objective: "O4", q: "L'IA liste 25 risques possibles pour votre forum de l'emploi. Que faites-vous ?", options: ["Mettre les 25 dans le registre", "Les ignorer tous", "Prendre celui que l'IA cite en premier", "Garder les cinq plus réels, les évaluer et leur donner un responsable"], answer: 3, why: "Un registre utile se concentre sur les risques les plus réels, chacun avec une réponse et un responsable." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Rédiger des points d'avancement que les gens lisent",
           minutes: 5,
           goal: "Rédiger un court point d'avancement hebdomadaire avec un statut clair rouge, orange ou vert.",
@@ -129,9 +173,14 @@ module.exports = {
             { title: "Les mauvaises nouvelles tôt", bullets: ["Donnent au commanditaire le temps d'aider", "Cacher les problèmes fait perdre la confiance"] }
           ],
           tryIt: "Rédigez avec l'aide de l'IA un point d'avancement hebdomadaire pour votre projet (semaine 3, réelle ou imaginée). Incluez une couleur de statut honnête et au moins une décision attendue.",
-          youCanNow: "rédiger avec l'aide de l'IA un point d'avancement hebdomadaire clair et honnête."
+          youCanNow: "rédiger avec l'aide de l'IA un point d'avancement hebdomadaire clair et honnête.",
+          quickCheck: [
+            { objective: "O5", q: "Que veut dire en général un statut orange ?", options: ["Le projet est terminé", "Il y a un problème qui peut toucher le plan s'il n'est pas réglé", "Tout est dans les temps", "Le projet est annulé"], answer: 1, why: "L'orange est un avertissement : le projet est à risque mais peut encore être rattrapé." },
+            { objective: "O5", q: "Vous avez besoin que le commanditaire approuve de l'argent en plus cette semaine. Que faites-vous dans le point d'avancement ?", options: ["Ne pas en parler pour garder le point au vert", "Le mettre en page trois", "En parler seulement de vive voix le mois prochain", "L'indiquer clairement dans les décisions à prendre"], answer: 3, why: "Les décisions à prendre doivent être faciles à voir pour que le commanditaire puisse agir." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Clôturer le projet et tirer les leçons",
           minutes: 5,
           goal: "Clôturer proprement un projet et mener un retour d'expérience.",
@@ -149,17 +198,21 @@ module.exports = {
           ],
           sources: [{ name: "Project Management Institute : certifications", url: "https://www.pmi.org/certifications" }],
           tryIt: "Tâche finale : terminez votre plan de projet avec la charte, la WBS, le calendrier avec jalons, la matrice RACI, le registre des risques et un point d'avancement, puis rédigez un modèle de retour d'expérience avec les quatre questions. Marquez chaque endroit où vous avez corrigé l'IA.",
-          youCanNow: "planifier, mener et clôturer un projet en laissant l'IA rédiger les documents pendant que vous prenez les décisions."
+          youCanNow: "planifier, mener et clôturer un projet en laissant l'IA rédiger les documents pendant que vous prenez les décisions.",
+          quickCheck: [
+            { objective: "O6", q: "À quoi sert un retour d'expérience ?", options: ["À trouver un coupable", "À améliorer la façon de faire pour le prochain projet", "À finir le projet sans paperasse", "À distribuer des récompenses"], answer: 1, why: "Le retour d'expérience se fait sans reproches et porte sur ce qu'il faut changer la prochaine fois." },
+            { objective: "O6", q: "Le projet est fini. Que faites-vous avant de le déclarer clôturé ?", options: ["Supprimer les fichiers du projet", "Commencer tout de suite le projet suivant", "Comparer les résultats à la charte et ranger les fichiers", "Envoyer seulement un SMS de remerciement"], answer: 2, why: "La clôture compare les résultats à la charte et conserve les documents." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Mener et clôturer le projet",
         questions: [
-          { q: "Quelle est la différence entre un risque et un problème ?", options: ["Il n'y a aucune différence", "Les problèmes sont toujours bons", "Les risques ne concernent que l'argent", "Un risque pourrait arriver ; un problème se produit maintenant"], answer: 3, why: "Les risques sont possibles ; les problèmes sont actuels." },
-          { q: "Souscrire une assurance contre une perte possible est quelle réponse au risque ?", options: ["Transférer", "Éviter", "Accepter", "Ignorer"], answer: 0, why: "L'assurance transfère l'impact à quelqu'un d'autre." },
-          { q: "Votre projet risque de manquer un jalon. Quel statut votre point doit-il afficher ?", options: ["Vert, pour ne pas inquiéter", "Aucun statut", "Orange ou rouge, honnêtement", "Violet"], answer: 2, why: "Une mauvaise nouvelle annoncée tôt permet au commanditaire d'aider." },
-          { q: "Un retour d'expérience doit être :", options: ["Une recherche de quelqu'un à licencier", "Sauté", "Seulement sur ce qui a mal tourné", "Sans reproches et centré sur la méthode"], answer: 3, why: "Un retour sans reproches obtient des avis honnêtes." },
-          { q: "Où vérifier les conditions et tarifs actuels des certifications PMI ?", options: ["Sur un forum au hasard", "Dans une supposition de l'IA", "Sur pmi.org", "Sur un prospectus"], answer: 2, why: "Les conditions officielles changent ; vérifiez à la source." }
+          { objective: "O4", q: "Quelle est la différence entre un risque et un problème ?", options: ["Il n'y a aucune différence", "Les problèmes sont toujours bons", "Les risques ne concernent que l'argent", "Un risque pourrait arriver ; un problème se produit maintenant"], answer: 3, why: "Les risques sont possibles ; les problèmes sont actuels." },
+          { objective: "O4", q: "Souscrire une assurance contre une perte possible est quelle réponse au risque ?", options: ["Transférer", "Éviter", "Accepter", "Ignorer"], answer: 0, why: "L'assurance transfère l'impact à quelqu'un d'autre." },
+          { objective: "O5", q: "Votre projet risque de manquer un jalon. Quel statut votre point doit-il afficher ?", options: ["Vert, pour ne pas inquiéter", "Aucun statut", "Orange ou rouge, honnêtement", "Violet"], answer: 2, why: "Une mauvaise nouvelle annoncée tôt permet au commanditaire d'aider." },
+          { objective: "O6", q: "Un retour d'expérience doit être :", options: ["Une recherche de quelqu'un à licencier", "Sauté", "Seulement sur ce qui a mal tourné", "Sans reproches et centré sur la méthode"], answer: 3, why: "Un retour sans reproches obtient des avis honnêtes." },
+          { objective: "O6", q: "Où vérifier les conditions et tarifs actuels des certifications PMI ?", options: ["Sur un forum au hasard", "Dans une supposition de l'IA", "Sur pmi.org", "Sur un prospectus"], answer: 2, why: "Les conditions officielles changent ; vérifiez à la source." }
         ]
       }
     }
@@ -167,26 +220,111 @@ module.exports = {
   quiz: {
     title: "Quiz final : Gestion de projet avec l'IA",
     questions: [
-      { q: "Le rôle principal d'un chef de projet est de :", options: ["Faire seul chaque tâche", "Planifier le travail, mobiliser les personnes et tenir tout le monde informé", "Seulement approuver les budgets", "Écrire du code"], answer: 1, why: "Les chefs de projet planifient, coordonnent et communiquent." },
-      { q: "Dans ce cours, le rôle de l'IA est de :", options: ["Rédiger les documents pendant que vous décidez", "Prendre toutes les décisions", "Remplacer le commanditaire", "Approuver le budget"], answer: 0, why: "L'IA rédige ; le chef de projet décide." },
-      { q: "Une charte ressemble le plus à quel document militaire ?", options: ["Un formulaire de permission", "Une liste de contrôle de l'uniforme", "Un ordre de mission", "Une fiche de solde"], answer: 2, why: "Les deux donnent le but, l'état final et les contraintes." },
-      { q: "« La restauration au-delà du café » notée hors périmètre veut dire :", options: ["Le projet ne la fournira pas", "C'est l'objectif principal", "C'est un risque", "C'est un jalon"], answer: 0, why: "Le travail hors périmètre ne fait pas partie du projet." },
-      { q: "Qui doit approuver la charte avant le début du travail ?", options: ["Personne", "Seulement l'IA", "Un employé au hasard", "Le commanditaire"], answer: 3, why: "L'accord du commanditaire évite les litiges plus tard." },
-      { q: "Une WBS découpe le projet en :", options: ["Seulement des lignes de budget", "Tâches plus petites qu'une personne peut faire en quelques jours", "Photos d'équipe", "Pièces du bureau"], answer: 1, why: "Les petites tâches sont plus faciles à planifier et à suivre." },
-      { q: "On ne peut pas imprimer les prospectus avant que le lieu soit confirmé. C'est :", options: ["Un jalon", "Une dépendance", "Un commanditaire", "Une réponse au risque"], answer: 1, why: "Une tâche dépend de la fin d'une autre." },
-      { q: "« 20 employeurs confirmés » est un bon exemple :", options: ["De durée de tâche", "De rôle RACI", "De couleur de statut", "De jalon"], answer: 3, why: "Les jalons sont des points de contrôle clés." },
-      { q: "Le mieux est souvent de construire un calendrier :", options: ["À rebours depuis l'échéance", "Au hasard", "En commençant seulement par la dernière tâche", "Sans dates"], answer: 0, why: "Partir de l'échéance montre ce qui doit commencer et quand." },
-      { q: "Dans RACI, « R » veut dire :", options: ["Retraité", "Relecteur seulement", "Responsable : réalise le travail", "Refusé"], answer: 2, why: "R est la personne qui fait le travail." },
-      { q: "Dans RACI, « I » veut dire :", options: ["Initiateur", "Inspecteur", "Ignoré", "Informé : tenu au courant"], answer: 3, why: "Les personnes informées reçoivent les mises à jour." },
-      { q: "Une matrice RACI montre une personne avec un R sur 15 tâches. Vous devez :", options: ["Lui ajouter encore des R", "Supprimer la matrice", "Rééquilibrer le travail", "L'ignorer"], answer: 2, why: "Les personnes surchargées ralentissent le projet." },
-      { q: "Un registre des risques contient :", options: ["Seulement le budget", "Risque, probabilité, impact, réponse et responsable", "Les anniversaires de l'équipe", "Les avis des clients"], answer: 1, why: "Ces colonnes rendent les risques gérables." },
-      { q: "Changer le plan pour qu'un risque ne puisse pas arriver est quelle réponse ?", options: ["Éviter", "Transférer", "Accepter", "Signaler"], answer: 0, why: "Éviter supprime le risque." },
-      { q: "À quelle fréquence revoir le registre des risques ?", options: ["Jamais", "Une fois à la fin", "Chaque semaine", "Tous les dix ans"], answer: 2, why: "Les risques changent à mesure que le projet avance." },
-      { q: "Un point d'avancement doit faire environ :", options: ["Une demi-page", "Cinquante pages", "Un mot", "Le plus long possible"], answer: 0, why: "Les points courts sont lus." },
-      { q: "Le statut vert veut dire :", options: ["En retard", "Annulé", "Inconnu", "Dans les temps"], answer: 3, why: "Le vert signale que le projet est dans les temps." },
-      { q: "Avant d'envoyer un point d'avancement écrit par l'IA, vous devez :", options: ["Ajouter plus de couleurs", "Vérifier chaque date et chaque chiffre", "Retirer la partie décisions", "L'envoyer sans le lire"], answer: 1, why: "L'IA peut se tromper sur les détails." },
-      { q: "Un retour d'expérience demande :", options: ["Qui blâmer", "Ce qu'on avait prévu, ce qui s'est passé, pourquoi, et quoi changer", "Comment cacher les erreurs", "Rien"], answer: 1, why: "Il reprend le modèle du débriefing après action." },
-      { q: "Une vraie clôture comprend :", options: ["Partir sans rien dire", "Supprimer tous les documents", "Lancer un nouveau projet sans bilan", "Comparer les résultats à la charte et ranger les fichiers"], answer: 3, why: "Bien clôturer préserve la valeur et les leçons." }
+      { objective: "O1", q: "Le rôle principal d'un chef de projet est de :", options: ["Faire seul chaque tâche", "Planifier le travail, mobiliser les personnes et tenir tout le monde informé", "Seulement approuver les budgets", "Écrire du code"], answer: 1, why: "Les chefs de projet planifient, coordonnent et communiquent." },
+      { objective: "O1", q: "Dans ce cours, le rôle de l'IA est de :", options: ["Rédiger les documents pendant que vous décidez", "Prendre toutes les décisions", "Remplacer le commanditaire", "Approuver le budget"], answer: 0, why: "L'IA rédige ; le chef de projet décide." },
+      { objective: "O1", q: "Une charte ressemble le plus à quel document militaire ?", options: ["Un formulaire de permission", "Une liste de contrôle de l'uniforme", "Un ordre de mission", "Une fiche de solde"], answer: 2, why: "Les deux donnent le but, l'état final et les contraintes." },
+      { objective: "O1", q: "« La restauration au-delà du café » notée hors périmètre veut dire :", options: ["Le projet ne la fournira pas", "C'est l'objectif principal", "C'est un risque", "C'est un jalon"], answer: 0, why: "Le travail hors périmètre ne fait pas partie du projet." },
+      { objective: "O1", q: "Qui doit approuver la charte avant le début du travail ?", options: ["Personne", "Seulement l'IA", "Un employé au hasard", "Le commanditaire"], answer: 3, why: "L'accord du commanditaire évite les litiges plus tard." },
+      { objective: "O2", q: "Une WBS découpe le projet en :", options: ["Seulement des lignes de budget", "Tâches plus petites qu'une personne peut faire en quelques jours", "Photos d'équipe", "Pièces du bureau"], answer: 1, why: "Les petites tâches sont plus faciles à planifier et à suivre." },
+      { objective: "O2", q: "On ne peut pas imprimer les prospectus avant que le lieu soit confirmé. C'est :", options: ["Un jalon", "Une dépendance", "Un commanditaire", "Une réponse au risque"], answer: 1, why: "Une tâche dépend de la fin d'une autre." },
+      { objective: "O2", q: "« 20 employeurs confirmés » est un bon exemple :", options: ["De durée de tâche", "De rôle RACI", "De couleur de statut", "De jalon"], answer: 3, why: "Les jalons sont des points de contrôle clés." },
+      { objective: "O2", q: "Le mieux est souvent de construire un calendrier :", options: ["À rebours depuis l'échéance", "Au hasard", "En commençant seulement par la dernière tâche", "Sans dates"], answer: 0, why: "Partir de l'échéance montre ce qui doit commencer et quand." },
+      { objective: "O3", q: "Dans RACI, « R » veut dire :", options: ["Retraité", "Relecteur seulement", "Responsable : réalise le travail", "Refusé"], answer: 2, why: "R est la personne qui fait le travail." },
+      { objective: "O3", q: "Dans RACI, « I » veut dire :", options: ["Initiateur", "Inspecteur", "Ignoré", "Informé : tenu au courant"], answer: 3, why: "Les personnes informées reçoivent les mises à jour." },
+      { objective: "O3", q: "Une matrice RACI montre une personne avec un R sur 15 tâches. Vous devez :", options: ["Lui ajouter encore des R", "Supprimer la matrice", "Rééquilibrer le travail", "L'ignorer"], answer: 2, why: "Les personnes surchargées ralentissent le projet." },
+      { objective: "O4", q: "Un registre des risques contient :", options: ["Seulement le budget", "Risque, probabilité, impact, réponse et responsable", "Les anniversaires de l'équipe", "Les avis des clients"], answer: 1, why: "Ces colonnes rendent les risques gérables." },
+      { objective: "O4", q: "Changer le plan pour qu'un risque ne puisse pas arriver est quelle réponse ?", options: ["Éviter", "Transférer", "Accepter", "Signaler"], answer: 0, why: "Éviter supprime le risque." },
+      { objective: "O4", q: "À quelle fréquence revoir le registre des risques ?", options: ["Jamais", "Une fois à la fin", "Chaque semaine", "Tous les dix ans"], answer: 2, why: "Les risques changent à mesure que le projet avance." },
+      { objective: "O5", q: "Un point d'avancement doit faire environ :", options: ["Une demi-page", "Cinquante pages", "Un mot", "Le plus long possible"], answer: 0, why: "Les points courts sont lus." },
+      { objective: "O5", q: "Le statut vert veut dire :", options: ["En retard", "Annulé", "Inconnu", "Dans les temps"], answer: 3, why: "Le vert signale que le projet est dans les temps." },
+      { objective: "O5", q: "Avant d'envoyer un point d'avancement écrit par l'IA, vous devez :", options: ["Ajouter plus de couleurs", "Vérifier chaque date et chaque chiffre", "Retirer la partie décisions", "L'envoyer sans le lire"], answer: 1, why: "L'IA peut se tromper sur les détails." },
+      { objective: "O6", q: "Un retour d'expérience demande :", options: ["Qui blâmer", "Ce qu'on avait prévu, ce qui s'est passé, pourquoi, et quoi changer", "Comment cacher les erreurs", "Rien"], answer: 1, why: "Il reprend le modèle du débriefing après action." },
+      { objective: "O6", q: "Une vraie clôture comprend :", options: ["Partir sans rien dire", "Supprimer tous les documents", "Lancer un nouveau projet sans bilan", "Comparer les résultats à la charte et ranger les fichiers"], answer: 3, why: "Bien clôturer préserve la valeur et les leçons." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      2,
+      5,
+      7,
+      9,
+      11,
+      12,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Charte",
+        objective: "O1",
+        notYet: "Il manque l'objectif, le périmètre, le commanditaire, l'échéance ou les critères de réussite, ou des suppositions de l'IA sont restées.",
+        meets: "Une page avec toutes les parties, et chaque correction de l'IA marquée.",
+        exceeds: "Indique aussi ce qui est hors du périmètre et comment la réussite sera mesurée."
+      },
+      {
+        name: "WBS et calendrier",
+        objective: "O2",
+        notYet: "Les tâches sont trop grosses, ou il y a moins de quatre jalons.",
+        meets: "Des petites tâches, des dépendances et au moins quatre jalons, avec les estimations de l'IA vérifiées.",
+        exceeds: "Le calendrier est construit à rebours depuis l'échéance avec une marge de temps."
+      },
+      {
+        name: "Matrice RACI",
+        objective: "O3",
+        notYet: "Une tâche n'a pas d'Approbateur, ou en a plusieurs.",
+        meets: "Exactement un A par tâche et un travail réparti équitablement.",
+        exceeds: "Indique qui doit être consulté avant les décisions clés."
+      },
+      {
+        name: "Registre des risques",
+        objective: "O4",
+        notYet: "Moins de cinq risques, ou sans réponse ni responsable.",
+        meets: "Cinq risques réels évalués, chacun avec une réponse et un responsable.",
+        exceeds: "Montre quand chaque risque sera revu et ce qui déclencherait une action."
+      },
+      {
+        name: "Point d'avancement",
+        objective: "O5",
+        notYet: "La couleur du statut n'est pas honnête, ou les dates et les chiffres ne sont pas vérifiés.",
+        meets: "Une demi-page avec une couleur honnête, l'avancement, les étapes suivantes et les décisions à prendre.",
+        exceeds: "Un commanditaire pressé pourrait agir en moins d'une minute."
+      },
+      {
+        name: "Clôture et retour d'expérience",
+        objective: "O6",
+        notYet: "Pas de modèle de retour d'expérience, ou il accuse des personnes.",
+        meets: "Un modèle sans reproches avec les quatre questions du bilan.",
+        exceeds: "Prévoit aussi comment les résultats seront comparés à la charte et où les fichiers seront rangés."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui utilisent le plan pour mener un vrai projet au travail ou dans leur communauté (questionnaire de suivi)",
+      "Apprenants qui postulent à un emploi de coordinateur ou d'assistant de projet dans les 90 jours",
+      "Apprenants qui commencent un parcours de certification en gestion de projet ou un autre cours Koach Learn dans les 30 jours",
+      "Apprenants qui réussissent la tâche finale selon la grille"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur ou un téléphone avec Internet",
+      "Un assistant d'IA gratuit comme ChatGPT, Microsoft Copilot ou Google Gemini",
+      "Un tableur gratuit comme Google Sheets ou Microsoft Excel",
+      "Environ 60 minutes au total, plus le temps de finir le plan de projet"
+    ],
+    facilitatorNotes: [
+      "Demandez à chaque apprenant de choisir tôt un projet réel ou communautaire, pour que chaque tâche s'appuie sur le même plan.",
+      "Aidez les anciens militaires à traduire leur expérience (ordres de mission, logistique) en mots de projet civils.",
+      "Rappelez aux apprenants de ne jamais mettre d'information confidentielle de l'employeur ou de l'armée dans les outils d'IA.",
+      "Vérifiez que les apprenants marquent où ils ont corrigé l'IA ; c'est la compétence principale que les employeurs veulent voir.",
+      "Notez le plan final avec la grille et donnez un retour sur une seule ligne « Pas encore » à la fois."
     ]
   }
 };

@@ -17,11 +17,35 @@ module.exports = {
     "Cada lección toma unos cinco minutos: lee, mira las diapositivas y luego haz la tarea \"Pruébalo ahora\". Una comprobación de conocimientos cierra cada capítulo y un examen de 20 preguntas cierra el curso."
   ],
   finalTask: "Elige una oferta de empleo civil real. Usa un asistente de IA para escribir un currículum de una página adaptado a ella (al menos cinco puntos con palabras civiles y números) y una respuesta de 60 segundos a \"háblame de ti\". Revisa que cada afirmación sea cierta y que no tenga números de Seguro Social, del DD-214 ni otros números privados, y practica la respuesta en voz alta dos veces.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Veteranos y militares en transición que se postulan a empleos civiles, desde quienes terminan su primer periodo de servicio hasta los retirados.",
+    startingPoint: "Tienen experiencia real, disciplina y liderazgo, y saben usar una computadora o un teléfono inteligente. La mayoría no ha escrito un currículum civil adaptado a una oferta ni ha practicado una entrevista civil, y pocos han usado un asistente de IA para ayudarse.",
+    gap: "Los gerentes de contratación civiles y los programas que escanean currículums buscan las mismas palabras de la oferta y resultados claros, y las estafas de empleo apuntan a personas en transición. Necesitan usar la IA para adaptar a una oferta real un currículum y una respuesta de entrevista que sean ciertos y sin datos privados, y saber dónde conseguir ayuda oficial gratuita.",
+    constraints: [
+      "Nivel de lectura: palabras sencillas y frases cortas",
+      "Dispositivos: una computadora es lo más fácil para el currículum; un teléfono inteligente sirve para practicar",
+      "Privacidad: ningún número de Seguro Social, del DD-214 ni otro número privado en ninguna instrucción a la IA ni en el currículum",
+      "Honestidad: cada afirmación y cada número del currículum deben ser ciertos",
+      "Tiempo: lecciones de unos 5 minutos que caben entre las citas de transición y el trabajo"
+    ],
+    prerequisites: "Ninguno. \"Introducción a la IA y la fuerza laboral del futuro\" ayuda a convertir primero las funciones en puntos de currículum civil."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Según la etapa de tu transición", action: "identificar fuentes oficiales gratuitas de ayuda para el empleo y elegir una para contactar", standard: "con una forma de contacto o una cita anotada" },
+    { id: "O2", condition: "Con una oferta de empleo real", action: "hacer una lista de sus requisitos obligatorios, lo deseable y las palabras clave con ayuda de la IA, y relacionarlos con tus habilidades", standard: "con al menos 10 palabras clave de la oferta" },
+    { id: "O3", condition: "Con tu lista de palabras clave", action: "escribir un currículum civil de una página adaptado a la oferta con ayuda de la IA", standard: "con al menos cinco puntos en palabras civiles y con números, cada afirmación cierta y ningún número privado" },
+    { id: "O4", condition: "Para el mismo empleo", action: "escribir una carta de presentación corta y un resumen de perfil en línea con ayuda de la IA", standard: "editados para que suenen como tú" },
+    { id: "O5", condition: "Con una IA que hace de gerente de contratación", action: "practicar en voz alta una respuesta de 60 segundos a \"háblame de ti\" y respuestas STAR", standard: "al menos dos veces, anotando una fortaleza y una mejora" },
+    { id: "O6", condition: "Cuando busques empleo", action: "buscar en fuentes oficiales de empleo e identificar las señales de alerta de una estafa de empleo", standard: "sin pagar nada y sin compartir números privados antes de una oferta real" }
+  ],
   chapters: [
     {
       name: "Capítulo 1: Armar tu currículum civil",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Ayuda oficial gratuita para la transición y el empleo",
           minutes: 5,
           goal: "Nombrar tres fuentes oficiales gratuitas de ayuda para el empleo y elegir una para contactar.",
@@ -43,9 +67,14 @@ module.exports = {
             { name: "VA: Personalized Career Planning and Guidance (orientación profesional)", url: "https://www.va.gov/careers-employment/education-and-career-counseling/" }
           ],
           tryIt: "Elige la fuente oficial de esta lección que te queda ahora. Busca su página o su oficina más cercana y anota cómo contactarla. Agenda o planea una cita.",
-          youCanNow: "nombrar fuentes oficiales gratuitas de ayuda para el empleo y elegir la correcta para contactar."
+          youCanNow: "nombrar fuentes oficiales gratuitas de ayuda para el empleo y elegir la correcta para contactar.",
+          quickCheck: [
+            { objective: "O1", q: "¿Cuál de estas es una fuente oficial gratuita de ayuda para el empleo para militares en transición?", options: ["Un sitio de currículums de pago que viste en un anuncio", "Un desconocido en redes sociales", "TAP en la oficina de transición de tu instalación", "Un mensaje de texto que ofrece empleos garantizados"], answer: 2, why: "TAP es el programa oficial y gratuito de transición para militares." },
+            { objective: "O1", q: "Usaste la IA para escribir el borrador de tu currículum. ¿Qué más haces?", options: ["Pedirle a un orientador de TAP, de un American Job Center o del VA que lo revise", "Enviarlo a todos los empleos sin leerlo", "No ir con orientadores porque la IA basta", "Publicarlo con tu número de teléfono"], answer: 0, why: "La IA te ayuda a escribir, pero un orientador conoce los empleos locales y los beneficios y puede detectar errores." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Leer una oferta de empleo como un gerente de contratación",
           minutes: 5,
           goal: "Sacar los requisitos clave y las palabras clave de una oferta de empleo con ayuda de la IA.",
@@ -62,9 +91,14 @@ module.exports = {
             { title: "Luego decide", bullets: ["Revisa tú la lista", "¿Cumples la mayoría de lo obligatorio? Postúlate"] }
           ],
           tryIt: "Encuentra una oferta de empleo real que te interese. Pídele a un asistente de IA una lista de sus requisitos obligatorios, lo deseable y las 10 palabras clave principales, y cuáles de tus habilidades coinciden.",
-          youCanNow: "sacar los requisitos y las palabras clave de una oferta de empleo y relacionarlos con tu experiencia."
+          youCanNow: "sacar los requisitos y las palabras clave de una oferta de empleo y relacionarlos con tu experiencia.",
+          quickCheck: [
+            { objective: "O2", q: "¿Qué es algo deseable en una oferta de empleo?", options: ["Un requisito que debes cumplir para postularte", "El sueldo", "La dirección de la empresa", "Una habilidad que ayuda pero no es obligatoria"], answer: 3, why: "Lo deseable es un extra; igual puedes postularte si cumples la mayoría de los requisitos obligatorios." },
+            { objective: "O2", q: "Pegas una oferta de empleo en una IA. ¿Qué le pides?", options: ["\"¿Este empleo es bueno?\"", "\"Haz una lista de los requisitos obligatorios, lo deseable y las 10 palabras clave principales, y dime cuáles de mis habilidades coinciden.\"", "\"Postúlate por mí.\"", "\"Escribe mi número de Seguro Social ahí.\""], answer: 1, why: "Una petición clara saca los requisitos y las palabras clave que necesitas para adaptar tu currículum." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Escribir un currículum civil adaptado",
           minutes: 6,
           goal: "Usar la IA para escribir el borrador de un currículum de una página adaptado a una oferta, con palabras civiles y números.",
@@ -81,17 +115,21 @@ module.exports = {
             { title: "Que sea cierto y seguro", bullets: ["Nada de Seguro Social, datos del DD-214 ni fecha de nacimiento completa", "Nunca dejes que la IA agregue lo que no hiciste", "Pide a un orientador que lo revise"] }
           ],
           tryIt: "Usa tu lista de palabras clave de la lección 2. Pídele a un asistente de IA el borrador de un currículum de una página para esa oferta. Cambia cualquier línea que no sea exactamente cierta.",
-          youCanNow: "escribir un currículum civil de una página adaptado a una oferta de empleo específica con ayuda de la IA."
+          youCanNow: "escribir un currículum civil de una página adaptado a una oferta de empleo específica con ayuda de la IA.",
+          quickCheck: [
+            { objective: "O3", q: "¿Por qué un currículum adaptado usa las mismas palabras de la oferta?", options: ["Para que el programa que escanea y el gerente de contratación vean que coincides", "Para que sea más largo", "Para que use términos militares", "Para no tener que escribir carta de presentación"], answer: 0, why: "Los sistemas de seguimiento de candidatos y los gerentes de contratación buscan las palabras clave de la oferta." },
+            { objective: "O3", q: "El borrador de la IA dice que obtuviste una certificación que no tienes. ¿Qué haces?", options: ["Dejarla; nadie revisa", "Decir que la vas a obtener pronto", "Quitarla para que cada afirmación sea cierta", "Agregar dos certificaciones más"], answer: 2, why: "Cada afirmación de tu currículum debe ser cierta." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 1: Armar tu currículum civil",
         questions: [
-          { q: "Dejas el servicio el próximo mes y quieres ayuda personal para buscar empleo. Una buena primera parada es:", options: ["La oficina de transición de tu instalación y TAP", "Un sitio de empleo cualquiera", "Un influencer de redes sociales", "Un servicio que cobra por postularte"], answer: 0, why: "TAP y el Departamento de Trabajo ofrecen talleres y ayuda personal." },
-          { q: "¿Qué es un sistema de seguimiento de candidatos?", options: ["Un GPS para entrevistas de trabajo", "Un programa que revisa los currículums buscando palabras que coincidan", "Un beneficio del VA", "Una base de datos militar"], answer: 1, why: "Muchos empleadores lo usan para ordenar currículums." },
-          { q: "¿Por qué usar en tu currículum las mismas palabras de la oferta de empleo?", options: ["Para copiar al empleador", "Para hacerlo más largo", "Para que el programa de revisión y los gerentes de contratación vean que coincides", "Lo exige la ley"], answer: 2, why: "Las palabras clave que coinciden muestran que encajas en el empleo." },
-          { q: "¿Qué punto de currículum funciona mejor para un empleo civil de logística?", options: ["\"NCOIC del taller S4\"", "\"Hice cosas de suministros\"", "\"Hooah\"", "\"Manejé $2 millones en equipo con cero pérdidas en 3 inventarios\""], answer: 3, why: "Palabras civiles, números y un resultado." },
-          { q: "¿Qué debes dejar FUERA de un currículum civil?", options: ["Tu número de Seguro Social", "Tus habilidades", "Un resumen corto", "Tus certificaciones"], answer: 0, why: "Los números privados no van en un currículum." }
+          { objective: "O1", q: "Dejas el servicio el próximo mes y quieres ayuda personal para buscar empleo. Una buena primera parada es:", options: ["La oficina de transición de tu instalación y TAP", "Un sitio de empleo cualquiera", "Un influencer de redes sociales", "Un servicio que cobra por postularte"], answer: 0, why: "TAP y el Departamento de Trabajo ofrecen talleres y ayuda personal." },
+          { objective: "O2", q: "¿Qué es un sistema de seguimiento de candidatos?", options: ["Un GPS para entrevistas de trabajo", "Un programa que revisa los currículums buscando palabras que coincidan", "Un beneficio del VA", "Una base de datos militar"], answer: 1, why: "Muchos empleadores lo usan para ordenar currículums." },
+          { objective: "O2", q: "¿Por qué usar en tu currículum las mismas palabras de la oferta de empleo?", options: ["Para copiar al empleador", "Para hacerlo más largo", "Para que el programa de revisión y los gerentes de contratación vean que coincides", "Lo exige la ley"], answer: 2, why: "Las palabras clave que coinciden muestran que encajas en el empleo." },
+          { objective: "O3", q: "¿Qué punto de currículum funciona mejor para un empleo civil de logística?", options: ["\"NCOIC del taller S4\"", "\"Hice cosas de suministros\"", "\"Hooah\"", "\"Manejé $2 millones en equipo con cero pérdidas en 3 inventarios\""], answer: 3, why: "Palabras civiles, números y un resultado." },
+          { objective: "O3", q: "¿Qué debes dejar FUERA de un currículum civil?", options: ["Tu número de Seguro Social", "Tus habilidades", "Un resumen corto", "Tus certificaciones"], answer: 0, why: "Los números privados no van en un currículum." }
         ]
       }
     },
@@ -99,6 +137,7 @@ module.exports = {
       name: "Capítulo 2: Postularte y hacer entrevistas",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Escribir una carta de presentación y un resumen de perfil cortos",
           minutes: 5,
           goal: "Usar la IA para escribir una carta de presentación corta y un resumen de perfil en línea con tu propia voz.",
@@ -115,9 +154,14 @@ module.exports = {
             { title: "Resumen de perfil", bullets: ["De dos a cuatro oraciones", "Quién eres y qué trabajo buscas", "Pídele tres versiones a la IA"] }
           ],
           tryIt: "Pídele a un asistente de IA una carta de presentación de tres párrafos para el empleo de la lección 2. Cambia al menos tres frases para que suene como tú.",
-          youCanNow: "escribir una carta de presentación corta y un resumen de perfil con ayuda de la IA, con tu propia voz."
+          youCanNow: "escribir una carta de presentación corta y un resumen de perfil con ayuda de la IA, con tu propia voz.",
+          quickCheck: [
+            { objective: "O4", q: "¿Qué tan larga es una buena carta de presentación?", options: ["Una oración", "Tres párrafos cortos", "Tres páginas completas", "Tan larga como tu currículum"], answer: 1, why: "Tres párrafos cortos cubren por qué este empleo, en qué coincides más y un cierre amable." },
+            { objective: "O4", q: "La carta de presentación de la IA usa palabras que tú nunca dirías. ¿Qué haces?", options: ["Enviarla tal como está", "Pedir una versión más larga", "Copiar la carta de un amigo", "Cambiar al menos tres frases para que suene como tú"], answer: 3, why: "Tu carta debe sonar como tú, para que la entrevista coincida con la carta." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Practicar entrevistas con IA",
           minutes: 6,
           goal: "Practicar una presentación de 60 segundos y dos respuestas STAR con un entrevistador de IA.",
@@ -134,9 +178,14 @@ module.exports = {
             { title: "La IA como entrevistador", bullets: ["Una pregunta a la vez", "Una fortaleza y una mejora después de cada una", "Practica en voz alta"] }
           ],
           tryIt: "Pídele a un asistente de IA que haga de gerente de contratación para el empleo que elegiste. Responde tres preguntas en voz alta, incluida \"Háblame de ti\", y anota los comentarios.",
-          youCanNow: "dar una presentación de 60 segundos y responder preguntas de comportamiento usando STAR."
+          youCanNow: "dar una presentación de 60 segundos y responder preguntas de comportamiento usando STAR.",
+          quickCheck: [
+            { objective: "O5", q: "¿Qué significa la A de una respuesta STAR?", options: ["Aprendizaje", "Actitud", "Acción", "Ascenso"], answer: 2, why: "STAR es situación, tarea, acción y resultado; la acción es lo que hiciste tú." },
+            { objective: "O5", q: "Quieres practicar con un entrevistador de IA. ¿Qué petición usas?", options: ["\"Hazme una pregunta a la vez y dame una fortaleza y una mejora.\"", "\"Dame todas las respuestas para memorizarlas.\"", "\"Hazme 30 preguntas a la vez.\"", "\"Dime que soy perfecto.\""], answer: 0, why: "Una pregunta a la vez con comentarios te deja practicar y mejorar cada respuesta." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Buscar de forma inteligente y detectar estafas de empleo",
           minutes: 5,
           goal: "Buscar en fuentes oficiales de empleo y detectar las señales de alerta de una estafa de empleo.",
@@ -157,17 +206,21 @@ module.exports = {
             { name: "Oficina de Administración de Personal: FedsHireVets", url: "https://www.opm.gov/fedshirevets/" }
           ],
           tryIt: "Tarea final: termina tu currículum de una página adaptado a la oferta que elegiste y tu respuesta de 60 segundos a \"háblame de ti\". Revisa que cada afirmación sea cierta y que no haya números privados, y luego di la respuesta en voz alta dos veces.",
-          youCanNow: "buscar en fuentes oficiales de empleo, evitar estafas de empleo y postularte con un currículum adaptado y una presentación practicada."
+          youCanNow: "buscar en fuentes oficiales de empleo, evitar estafas de empleo y postularte con un currículum adaptado y una presentación practicada.",
+          quickCheck: [
+            { objective: "O6", q: "¿Dónde se publican los empleos federales de EE. UU.?", options: ["Solo en redes sociales", "En mensajes de texto de desconocidos", "En sitios de currículums de pago", "En USAJOBS"], answer: 3, why: "USAJOBS es el sitio oficial de los empleos federales." },
+            { objective: "O6", q: "Un reclutador te pide tu número de Seguro Social antes de cualquier entrevista. ¿Qué haces?", options: ["Enviarlo para no perder el empleo", "No enviarlo; darlo solo para el papeleo real después de una oferta real", "Enviar la mitad", "Enviar tu DD-214 en su lugar"], answer: 1, why: "Pedir números privados antes de una entrevista o una oferta es una señal de alerta de estafa." }
+          ]
         }
       ],
       check: {
         title: "Comprobación de conocimientos 2: Postularte y hacer entrevistas",
         questions: [
-          { q: "Una buena carta de presentación es:", options: ["De cinco páginas", "Tres párrafos cortos: por qué este empleo, tus mejores coincidencias, un cierre amable", "Una copia de tu currículum", "Llena de siglas militares"], answer: 1, why: "Corta, enfocada y ajustada al empleo." },
-          { q: "Una respuesta a \"háblame de ti\" debe durar unos:", options: ["10 minutos", "Todo tu historial de servicio", "60 segundos: quién eres, experiencia relevante, por qué este empleo", "Tu historia familiar"], answer: 2, why: "Corta y enfocada en el empleo." },
-          { q: "¿Qué significa la R de STAR?", options: ["Rango", "Razón", "Reporte", "Resultado"], answer: 3, why: "Termina con el resultado, de preferencia con un número." },
-          { q: "Una \"empresa\" te ofrece un empleo sin entrevista y te pide pagar por la formación. Esto es:", options: ["Una señal de alerta de estafa de empleo", "Una oferta de empleo normal", "Un beneficio para veteranos", "La preferencia para veteranos"], answer: 0, why: "Sin entrevista y con pago por adelantado son señales clásicas de estafa de empleo." },
-          { q: "¿Qué sitio explica la contratación federal para veteranos, incluida la preferencia para veteranos?", options: ["Un anuncio emergente", "FedsHireVets de la OPM", "Un enlace en un mensaje de texto", "Cualquier chatbot de IA"], answer: 1, why: "FedsHireVets es el recurso de la OPM para veteranos que buscan carreras federales." }
+          { objective: "O4", q: "Una buena carta de presentación es:", options: ["De cinco páginas", "Tres párrafos cortos: por qué este empleo, tus mejores coincidencias, un cierre amable", "Una copia de tu currículum", "Llena de siglas militares"], answer: 1, why: "Corta, enfocada y ajustada al empleo." },
+          { objective: "O5", q: "Una respuesta a \"háblame de ti\" debe durar unos:", options: ["10 minutos", "Todo tu historial de servicio", "60 segundos: quién eres, experiencia relevante, por qué este empleo", "Tu historia familiar"], answer: 2, why: "Corta y enfocada en el empleo." },
+          { objective: "O5", q: "¿Qué significa la R de STAR?", options: ["Rango", "Razón", "Reporte", "Resultado"], answer: 3, why: "Termina con el resultado, de preferencia con un número." },
+          { objective: "O6", q: "Una \"empresa\" te ofrece un empleo sin entrevista y te pide pagar por la formación. Esto es:", options: ["Una señal de alerta de estafa de empleo", "Una oferta de empleo normal", "Un beneficio para veteranos", "La preferencia para veteranos"], answer: 0, why: "Sin entrevista y con pago por adelantado son señales clásicas de estafa de empleo." },
+          { objective: "O6", q: "¿Qué sitio explica la contratación federal para veteranos, incluida la preferencia para veteranos?", options: ["Un anuncio emergente", "FedsHireVets de la OPM", "Un enlace en un mensaje de texto", "Cualquier chatbot de IA"], answer: 1, why: "FedsHireVets es el recurso de la OPM para veteranos que buscan carreras federales." }
         ]
       }
     }
@@ -175,26 +228,99 @@ module.exports = {
   quiz: {
     title: "Examen final: IA para la transición de carrera y el empleo",
     questions: [
-      { q: "TAP significa:", options: ["Transition Assistance Program (Programa de Asistencia para la Transición)", "Formación y pago", "Programa total del Ejército", "Plan de aprendices de tecnología"], answer: 0, why: "TAP ayuda a los militares a pasar a la vida civil." },
-      { q: "¿Qué agencias forman parte de TAP?", options: ["Solo empresas privadas", "Varias, entre ellas el Departamento de Trabajo, el Departamento de Defensa y el VA", "Solo el Ejército", "Solo el VA"], answer: 1, why: "TAP es un esfuerzo entre varias agencias." },
-      { q: "¿Dónde tienen los veteranos prioridad de servicio para ayuda con la búsqueda de empleo y la formación?", options: ["En una agencia de autos", "En un grupo de redes sociales", "En los American Job Centers", "En un sitio que cobra por postularte"], answer: 2, why: "El Departamento de Trabajo da prioridad de servicio a los veteranos ahí." },
-      { q: "¿Qué programa del VA da orientación profesional gratuita, incluida ayuda con el currículum, a los veteranos que califican?", options: ["Préstamos para vivienda del VA", "TRICARE", "La GI Bill Comparison Tool", "Personalized Career Planning and Guidance"], answer: 3, why: "El VA lo presenta como orientación profesional y educativa gratuita." },
-      { q: "¿Por qué usar la IA y también a un orientador?", options: ["La IA te ayuda a escribir; un orientador conoce los empleos locales y los beneficios", "La IA siempre se equivoca", "Los orientadores escriben todo por ti", "Solo necesitas uno"], answer: 0, why: "Cada uno hace algo que el otro no puede." },
-      { q: "Un \"requisito obligatorio\" en una oferta de empleo es:", options: ["Un extra agradable", "Algo que necesitas para que te consideren", "El sueldo", "La dirección de la oficina"], answer: 1, why: "Los requisitos obligatorios son lo esencial." },
-      { q: "Cuando pegas una oferta de empleo en la IA, NO debes pegar también:", options: ["El nombre del puesto", "Los requisitos", "Tu número de Seguro Social", "Las palabras clave"], answer: 2, why: "Los números privados nunca van en la IA." },
-      { q: "Cumples la mayoría de los requisitos obligatorios pero no todo lo deseable. Deberías:", options: ["Nunca postularte", "Mentir sobre lo demás", "Esperar cinco años", "Postularte"], answer: 3, why: "Mucha gente se postula sin cumplir todo lo deseable." },
-      { q: "Adaptar un currículum significa:", options: ["Cambiarlo para que encaje con un empleo específico", "Hacerlo más largo", "Agregar todos los empleos que has tenido", "Imprimirlo a color"], answer: 0, why: "Adaptarlo hace que tu currículum coincida con la oferta." },
-      { q: "¿Cuál es un mejor puesto civil para un jefe de suministros?", options: ["NCOIC S4", "Supervisor de cadena de suministro", "Gunny", "Jefe de cosas"], answer: 1, why: "Los puestos civiles ayudan a los gerentes de contratación a entender tu rol." },
-      { q: "El borrador de currículum de la IA dice que dirigiste a 50 personas; dirigiste a 10. Tú:", options: ["Dejas 50, suena mejor", "Lo cambias a 100", "Lo cambias al número real, 10", "Quitas todos los números"], answer: 2, why: "Cada afirmación debe ser cierta." },
-      { q: "¿Quién debe revisar tu currículum antes de que lo envíes?", options: ["Un desconocido en internet", "Nadie", "Solo la IA", "Un orientador de TAP, de un American Job Center o del VA"], answer: 3, why: "Un orientador capacitado detecta problemas que la IA no ve." },
-      { q: "Un resumen de perfil es:", options: ["De dos a cuatro oraciones sobre quién eres y qué trabajo buscas", "Tu historial de servicio completo", "La dirección de tu casa", "Una lista de contraseñas"], answer: 0, why: "Es una presentación corta al inicio de un perfil en línea." },
-      { q: "Después de que la IA escribe tu carta de presentación, deberías:", options: ["Enviarla sin leerla", "Editarla para que suene como tú", "Agregar jerga militar", "Hacerla de cinco páginas"], answer: 1, why: "Tu carta debe sonar como tú." },
-      { q: "STAR significa:", options: ["Habilidades, formación, premios, rango", "Empezar, intentar, responder, repetir", "Situación, tarea, acción, resultado", "Hablar, pensar, actuar, descansar"], answer: 2, why: "STAR es una forma de contar una historia corta de trabajo." },
-      { q: "Cuando la IA hace de entrevistador, una buena petición es:", options: ["\"Hazme todas las preguntas a la vez\"", "\"Responde por mí\"", "\"Dime que soy perfecto\"", "\"Hazme una pregunta a la vez y dame una fortaleza y una mejora\""], answer: 3, why: "Una a la vez y con comentarios desarrolla una habilidad real." },
-      { q: "Practicar las respuestas de entrevista en voz alta ayuda porque:", options: ["Hablar es distinto de leer; hace las respuestas naturales", "Es obligatorio", "La IA no puede leer texto", "Es más rápido que escribir"], answer: 0, why: "Decirlo en voz alta te prepara para la entrevista real." },
-      { q: "¿Dónde se publican los empleos federales?", options: ["Solo en redes sociales", "En USAJOBS", "En mensajes de texto", "Solo en las bases"], answer: 1, why: "USAJOBS es el sitio de empleos del gobierno federal." },
-      { q: "Un reclutador te manda un cheque para depositar y te pide que devuelvas una parte. Esto es:", options: ["Un bono de contratación", "Un beneficio del VA", "Una señal de alerta de estafa de empleo", "Un proceso de ingreso normal"], answer: 2, why: "El cheque para devolver dinero es una estafa común." },
-      { q: "¿Cuándo está bien darle tu número de Seguro Social a un empleador?", options: ["En el primer chat de texto", "Para conseguir una entrevista", "Antes de cualquier oferta", "Para el papeleo real después de una oferta real, por el proceso oficial"], answer: 3, why: "Los empleadores reales solo lo necesitan para el papeleo de contratación después de una oferta." }
+      { objective: "O1", q: "TAP significa:", options: ["Transition Assistance Program (Programa de Asistencia para la Transición)", "Formación y pago", "Programa total del Ejército", "Plan de aprendices de tecnología"], answer: 0, why: "TAP ayuda a los militares a pasar a la vida civil." },
+      { objective: "O1", q: "¿Qué agencias forman parte de TAP?", options: ["Solo empresas privadas", "Varias, entre ellas el Departamento de Trabajo, el Departamento de Defensa y el VA", "Solo el Ejército", "Solo el VA"], answer: 1, why: "TAP es un esfuerzo entre varias agencias." },
+      { objective: "O1", q: "¿Dónde tienen los veteranos prioridad de servicio para ayuda con la búsqueda de empleo y la formación?", options: ["En una agencia de autos", "En un grupo de redes sociales", "En los American Job Centers", "En un sitio que cobra por postularte"], answer: 2, why: "El Departamento de Trabajo da prioridad de servicio a los veteranos ahí." },
+      { objective: "O1", q: "¿Qué programa del VA da orientación profesional gratuita, incluida ayuda con el currículum, a los veteranos que califican?", options: ["Préstamos para vivienda del VA", "TRICARE", "La GI Bill Comparison Tool", "Personalized Career Planning and Guidance"], answer: 3, why: "El VA lo presenta como orientación profesional y educativa gratuita." },
+      { objective: "O1", q: "¿Por qué usar la IA y también a un orientador?", options: ["La IA te ayuda a escribir; un orientador conoce los empleos locales y los beneficios", "La IA siempre se equivoca", "Los orientadores escriben todo por ti", "Solo necesitas uno"], answer: 0, why: "Cada uno hace algo que el otro no puede." },
+      { objective: "O2", q: "Un \"requisito obligatorio\" en una oferta de empleo es:", options: ["Un extra agradable", "Algo que necesitas para que te consideren", "El sueldo", "La dirección de la oficina"], answer: 1, why: "Los requisitos obligatorios son lo esencial." },
+      { objective: "O3", q: "Cuando pegas una oferta de empleo en la IA, NO debes pegar también:", options: ["El nombre del puesto", "Los requisitos", "Tu número de Seguro Social", "Las palabras clave"], answer: 2, why: "Los números privados nunca van en la IA." },
+      { objective: "O2", q: "Cumples la mayoría de los requisitos obligatorios pero no todo lo deseable. Deberías:", options: ["Nunca postularte", "Mentir sobre lo demás", "Esperar cinco años", "Postularte"], answer: 3, why: "Mucha gente se postula sin cumplir todo lo deseable." },
+      { objective: "O3", q: "Adaptar un currículum significa:", options: ["Cambiarlo para que encaje con un empleo específico", "Hacerlo más largo", "Agregar todos los empleos que has tenido", "Imprimirlo a color"], answer: 0, why: "Adaptarlo hace que tu currículum coincida con la oferta." },
+      { objective: "O3", q: "¿Cuál es un mejor puesto civil para un jefe de suministros?", options: ["NCOIC S4", "Supervisor de cadena de suministro", "Gunny", "Jefe de cosas"], answer: 1, why: "Los puestos civiles ayudan a los gerentes de contratación a entender tu rol." },
+      { objective: "O3", q: "El borrador de currículum de la IA dice que dirigiste a 50 personas; dirigiste a 10. Tú:", options: ["Dejas 50, suena mejor", "Lo cambias a 100", "Lo cambias al número real, 10", "Quitas todos los números"], answer: 2, why: "Cada afirmación debe ser cierta." },
+      { objective: "O3", q: "¿Quién debe revisar tu currículum antes de que lo envíes?", options: ["Un desconocido en internet", "Nadie", "Solo la IA", "Un orientador de TAP, de un American Job Center o del VA"], answer: 3, why: "Un orientador capacitado detecta problemas que la IA no ve." },
+      { objective: "O4", q: "Un resumen de perfil es:", options: ["De dos a cuatro oraciones sobre quién eres y qué trabajo buscas", "Tu historial de servicio completo", "La dirección de tu casa", "Una lista de contraseñas"], answer: 0, why: "Es una presentación corta al inicio de un perfil en línea." },
+      { objective: "O4", q: "Después de que la IA escribe tu carta de presentación, deberías:", options: ["Enviarla sin leerla", "Editarla para que suene como tú", "Agregar jerga militar", "Hacerla de cinco páginas"], answer: 1, why: "Tu carta debe sonar como tú." },
+      { objective: "O5", q: "STAR significa:", options: ["Habilidades, formación, premios, rango", "Empezar, intentar, responder, repetir", "Situación, tarea, acción, resultado", "Hablar, pensar, actuar, descansar"], answer: 2, why: "STAR es una forma de contar una historia corta de trabajo." },
+      { objective: "O5", q: "Cuando la IA hace de entrevistador, una buena petición es:", options: ["\"Hazme todas las preguntas a la vez\"", "\"Responde por mí\"", "\"Dime que soy perfecto\"", "\"Hazme una pregunta a la vez y dame una fortaleza y una mejora\""], answer: 3, why: "Una a la vez y con comentarios desarrolla una habilidad real." },
+      { objective: "O5", q: "Practicar las respuestas de entrevista en voz alta ayuda porque:", options: ["Hablar es distinto de leer; hace las respuestas naturales", "Es obligatorio", "La IA no puede leer texto", "Es más rápido que escribir"], answer: 0, why: "Decirlo en voz alta te prepara para la entrevista real." },
+      { objective: "O6", q: "¿Dónde se publican los empleos federales?", options: ["Solo en redes sociales", "En USAJOBS", "En mensajes de texto", "Solo en las bases"], answer: 1, why: "USAJOBS es el sitio de empleos del gobierno federal." },
+      { objective: "O6", q: "Un reclutador te manda un cheque para depositar y te pide que devuelvas una parte. Esto es:", options: ["Un bono de contratación", "Un beneficio del VA", "Una señal de alerta de estafa de empleo", "Un proceso de ingreso normal"], answer: 2, why: "El cheque para devolver dinero es una estafa común." },
+      { objective: "O6", q: "¿Cuándo está bien darle tu número de Seguro Social a un empleador?", options: ["En el primer chat de texto", "Para conseguir una entrevista", "Antes de cualquier oferta", "Para el papeleo real después de una oferta real, por el proceso oficial"], answer: 3, why: "Los empleadores reales solo lo necesitan para el papeleo de contratación después de una oferta." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Prueba inicial: ¿qué sabes ya?",
+    from: [
+      0,
+      5,
+      7,
+      8,
+      10,
+      12,
+      14,
+      17,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Cumple o Supera en cada fila. Si una fila está en Todavía no, corrige esa parte e inténtalo de nuevo.",
+    criteria: [
+      {
+        name: "Adaptado a la oferta",
+        objective: "O2",
+        notYet: "El currículum podría ser para cualquier empleo; aparecen pocas palabras clave de la oferta.",
+        meets: "El currículum usa las palabras clave de la oferta y muestra los requisitos obligatorios que cumple.",
+        exceeds: "Puede señalar dónde se muestra cada requisito obligatorio."
+      },
+      {
+        name: "Puntos civiles con números",
+        objective: "O3",
+        notYet: "Menos de cinco puntos, o puntos con jerga militar y sin números.",
+        meets: "Al menos cinco puntos en palabras civiles, con números o resultados, en una página.",
+        exceeds: "Cada punto muestra lo que se hizo, de qué tamaño era y el resultado."
+      },
+      {
+        name: "Cierto y sin datos privados",
+        objective: "O6",
+        notYet: "Una afirmación no es cierta, o aparece un número de Seguro Social, del DD-214 u otro número privado.",
+        meets: "Cada afirmación es cierta y no aparece ningún número privado.",
+        exceeds: "Lo revisó un orientador o un lector de confianza."
+      },
+      {
+        name: "Respuesta de 60 segundos",
+        objective: "O5",
+        notYet: "La respuesta dura mucho más de 60 segundos o no trata de este empleo.",
+        meets: "Unos 60 segundos: quién eres, tu experiencia relevante y por qué este empleo, dicho en voz alta dos veces.",
+        exceeds: "Usó los comentarios de la IA para mejorar una parte entre los dos intentos."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Personas que terminan el curso y aprueban la tarea final (rúbrica)",
+      "Personas que se postulan al menos a un empleo con su currículum adaptado dentro de 30 días (encuesta de seguimiento)",
+      "Personas que consiguen una entrevista o una oferta de empleo dentro de 90 días",
+      "Personas que se comunican con TAP, un American Job Center o la orientación profesional del VA dentro de 30 días"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Una computadora con internet (un teléfono inteligente sirve para practicar la entrevista)",
+      "Un asistente de IA gratuito: ChatGPT, Microsoft Copilot o Google Gemini",
+      "Una oferta de empleo civil real que la persona quiera",
+      "Un procesador de textos como Google Docs o Microsoft Word para el currículum",
+      "Unos 60 minutos en total: lecciones, práctica, comprobaciones y la tarea final"
+    ],
+    facilitatorNotes: [
+      "Pide que cada persona traiga una oferta de empleo real a la primera sesión.",
+      "Recuerda que los números de Seguro Social, del DD-214 y otros números privados nunca van en una instrucción a la IA ni en un currículum.",
+      "Después de practicar con la IA, hagan la práctica de entrevista en parejas: uno pregunta, el otro responde en voz alta, y luego cambian.",
+      "Califica el currículum y la respuesta finales con la rúbrica y da comentarios sobre una fila en Todavía no a la vez.",
+      "Conecta a las personas con TAP, un American Job Center o la orientación profesional del VA para una revisión después del curso."
     ]
   }
 };

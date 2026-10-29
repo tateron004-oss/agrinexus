@@ -16,11 +16,35 @@ module.exports = {
     "Ce cours vous apprend à planifier et tester une idée ; ce n'est pas un conseil juridique, fiscal ou en investissement. Vérifiez les règles auprès de sources officielles et de professionnels locaux qualifiés. Chaque leçon dure environ cinq minutes, avec un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Écrivez un modèle économique d'une page pour une idée d'entreprise dans une économie émergente nommée : le client, le problème, votre solution et le lien avec vos compétences militaires, comment vous atteindrez les clients, comment vous gagnerez de l'argent, vos principaux coûts et vos trois plus grands risques. Ajoutez un plan de recherche qui nomme les sources officielles que vous vérifierez (le Country Commercial Guide du pays et son office d'enregistrement des entreprises) et un programme d'aide officiel et gratuit que vous contacterez.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Des vétérans qui envisagent de créer une entreprise dans une économie en forte croissance (Afrique, Asie du Sud et du Sud-Est, Amérique latine) ou de vendre à des clients de ces régions depuis les États-Unis. Beaucoup connaissent ces régions grâce à leurs déploiements.",
+    startingPoint: "Ils apportent une expérience en logistique, sécurité, formation et relations entre cultures, et savent utiliser un ordinateur ou un smartphone. La plupart n'ont pas écrit de modèle économique ni étudié un marché étranger et ses règles.",
+    gap: "Les idées d'entreprise fondées sur des suppositions peuvent faire perdre vite des économies, et les marchés étrangers ont leurs propres règles, risques et lois contre la corruption. Les apprenants doivent transformer une compétence militaire en idée d'entreprise claire, écrire un modèle d'une page et prévoir de vérifier le marché et les règles sur des sources officielles avant de dépenser de l'argent.",
+    constraints: [
+      "Niveau de lecture : mots simples et phrases courtes ; aucune connaissance en gestion d'entreprise supposée",
+      "Appareils : un ordinateur ou un smartphone avec internet et un assistant d'IA gratuit",
+      "Les faits qui changent (étapes d'enregistrement, impôts, licences, monnaie) sont vérifiés sur des sources officielles comme les Country Commercial Guides de trade.gov et l'office d'enregistrement des entreprises du pays",
+      "Limites légales : aucun pot-de-vin, sous aucune forme (FCPA américaine) ; les questions de contrats, d'impôts et d'enregistrement vont à un avocat ou un comptable local qualifié",
+      "Temps : des leçons d'environ 5 minutes ; ce cours prépare une entreprise, il ne la crée pas"
+    ],
+    prerequisites: "Aucun. Les apprenants qui découvrent les assistants d'IA peuvent d'abord suivre « Introduction à l'IA et au monde du travail de demain »."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Pour une économie émergente que vous choisissez", action: "expliquer ce qu'est une économie émergente et citer deux opportunités et deux défis dans ce pays", standard: "en marquant chaque fait à vérifier" },
+    { id: "O2", condition: "À partir de vos compétences militaires", action: "écrire en une phrase une idée d'entreprise qui relie une compétence à un vrai problème local", standard: "en nommant le service, le client, le lieu et la façon dont il paie" },
+    { id: "O3", condition: "Pour votre idée d'entreprise", action: "préparer une étude de marché avec l'IA et vérifier les faits clés dans le Country Commercial Guide officiel et auprès de l'office d'enregistrement des entreprises", standard: "en répondant à au moins deux questions de recherche grâce à des sources officielles" },
+    { id: "O4", condition: "À partir de votre idée en une phrase", action: "écrire avec l'aide de l'IA un modèle économique d'une page", standard: "avec les sept parties et chaque supposition marquée « à tester »" },
+    { id: "O5", condition: "Pour votre modèle économique", action: "lister vos coûts de démarrage et vos trois principaux risques, avec une façon de réduire chacun", standard: "avec des prix tirés de vrais devis et aucun plan qui dépend d'un pot-de-vin" },
+    { id: "O6", condition: "Avant de dépenser de l'argent réel", action: "prévoir un petit pilote peu coûteux de votre idée et choisir un programme d'aide officiel à contacter", standard: "en nommant le programme et une date pour le contacter" }
+  ],
   chapters: [
     {
       name: "Chapitre 1 : Trouver l'opportunité",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Ce qu'est une économie émergente",
           minutes: 5,
           goal: "Expliquer ce qu'est une économie émergente et citer deux opportunités et deux difficultés.",
@@ -36,9 +60,14 @@ module.exports = {
             { title: "Difficultés", bullets: ["Règles qui changent, démarches plus lentes", "Variations de la monnaie", "Risque de corruption : partenaires et faits comptent"] }
           ],
           tryIt: "Choisissez une économie émergente que vous connaissez ou qui vous intéresse. Demandez à un assistant d'IA : \"Avec des mots simples, cite trois besoins en croissance et trois difficultés pour les entreprises au [pays].\" Marquez chaque fait que vous devrez vérifier.",
-          youCanNow: "expliquer ce qu'est une économie émergente et citer ses opportunités et ses difficultés."
+          youCanNow: "expliquer ce qu'est une économie émergente et citer ses opportunités et ses difficultés.",
+          quickCheck: [
+            { objective: "O1", q: "Qu'est-ce qui fait d'un pays une économie émergente ?", options: ["Il n'a pas encore d'entreprises", "Son économie grandit et change vite", "Il ne vend que du pétrole", "Il a les mêmes règles que les États-Unis"], answer: 1, why: "Les économies émergentes grandissent et changent vite, ce qui apporte à la fois des opportunités et des défis." },
+            { objective: "O1", q: "Une IA cite trois défis pour faire des affaires dans le pays que vous avez choisi. Que faites-vous ?", options: ["Les traiter comme des faits prouvés", "Supprimer la réponse", "Choisir tout de suite un autre pays", "Marquer chaque fait que vous devrez vérifier sur une source officielle"], answer: 3, why: "Les réponses de l'IA sur d'autres pays peuvent être fausses ou dépassées : vous marquez donc les faits à vérifier." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Transformer des compétences militaires en idée d'entreprise",
           minutes: 5,
           goal: "Relier une de vos compétences militaires à un vrai problème local et écrire une idée d'entreprise en une phrase.",
@@ -55,9 +84,14 @@ module.exports = {
             { title: "Écrivez-la en une phrase", bullets: ["Service", "Client", "Lieu", "Moyen de paiement"] }
           ],
           tryIt: "Demandez à un assistant d'IA dix idées d'entreprise qui utilisent vos compétences militaires dans le pays choisi. Choisissez-en une et écrivez-la en une phrase : service, client, lieu, moyen de paiement.",
-          youCanNow: "transformer une compétence militaire en idée d'entreprise d'une phrase qui règle un problème local."
+          youCanNow: "transformer une compétence militaire en idée d'entreprise d'une phrase qui règle un problème local.",
+          quickCheck: [
+            { objective: "O2", q: "Qu'est-ce qui rend une idée d'entreprise solide ?", options: ["Elle résout un vrai problème que les gens paieront pour régler", "Elle copie la plus grande entreprise", "Elle n'a pas besoin de clients", "Elle vous paraît passionnante"], answer: 0, why: "Une entreprise dure quand elle règle un vrai problème pour lequel les clients paieront." },
+            { objective: "O2", q: "L'IA vous donne dix idées d'entreprise. Que faites-vous ?", options: ["Les lancer toutes les dix", "Laisser l'IA en choisir une", "En choisir une qui utilise vos compétences et l'écrire en une phrase", "Choisir celle qui a les plus gros chiffres"], answer: 2, why: "Vous choisissez l'idée qui correspond à vos compétences et l'écrivez clairement : service, client, lieu, façon de payer." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Étudier le marché avec l'IA et les guides officiels",
           minutes: 6,
           goal: "Utiliser l'IA pour préparer une étude de marché et vérifier les faits clés dans le Country Commercial Guide officiel.",
@@ -81,17 +115,21 @@ module.exports = {
             { name: "Nigeria : Corporate Affairs Commission", url: "https://www.cac.gov.ng/" }
           ],
           tryIt: "Demandez à un assistant d'IA les dix questions auxquelles vous devez répondre avant de lancer votre idée. Puis ouvrez le Country Commercial Guide de votre pays sur trade.gov et répondez à deux d'entre elles grâce à lui.",
-          youCanNow: "préparer une étude de marché avec l'IA et vérifier les faits clés dans les guides et registres officiels."
+          youCanNow: "préparer une étude de marché avec l'IA et vérifier les faits clés dans les guides et registres officiels.",
+          quickCheck: [
+            { objective: "O3", q: "Qu'est-ce qu'un Country Commercial Guide ?", options: ["Un guide de voyage pour touristes", "Un guide écrit par une IA", "Une liste d'hôtels", "Un guide officiel pour faire des affaires dans un pays, publié par l'International Trade Administration"], answer: 3, why: "Les Country Commercial Guides sont des guides officiels sur les marchés, préparés par le personnel des ambassades des États-Unis et publiés par l'ITA." },
+            { objective: "O3", q: "L'IA vous donne les étapes pour enregistrer une entreprise au Kenya. Que faites-vous ?", options: ["Les suivre telles quelles", "Les vérifier auprès du Business Registration Service du Kenya", "Demander à un ami en ligne", "Sauter l'enregistrement"], answer: 1, why: "Les étapes d'enregistrement viennent de l'office d'enregistrement officiel du pays." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 1 : Trouver l'opportunité",
         questions: [
-          { q: "Une économie émergente est surtout :", options: ["Un pays dont l'économie grandit et change vite", "Un pays sans entreprises", "N'importe quel pays insulaire", "Un pays sans téléphones"], answer: 0, why: "Les économies émergentes grandissent et changent rapidement." },
-          { q: "Qu'est-ce que l'argent mobile ?", options: ["De l'argent liquide gardé dans une voiture", "Envoyer, recevoir et garder de l'argent sur un téléphone", "Un type de carte de crédit", "Un programme du gouvernement américain"], answer: 1, why: "Des services comme M-Pesa permettent de payer par téléphone, souvent sans compte bancaire." },
-          { q: "Un ancien sous-officier logisticien cherche une idée d'entreprise. Le meilleur point de départ est :", options: ["Ce qui est à la mode en ligne", "L'idée avec le prix le plus élevé", "Une compétence qu'il a, reliée à un vrai problème local", "Copier l'idée d'un ami"], answer: 2, why: "Les bonnes idées règlent de vrais problèmes que les gens paieront pour régler." },
-          { q: "Qui prépare les Country Commercial Guides ?", options: ["Une entreprise d'IA", "Un groupe sur un réseau social", "Les journaux locaux", "Le personnel des ambassades américaines, publiés par l'International Trade Administration"], answer: 3, why: "L'International Trade Administration les publie, préparés par le personnel des ambassades américaines." },
-          { q: "Où vérifier les étapes pour enregistrer une société au Nigeria ?", options: ["À la Corporate Affairs Commission (CAC)", "Dans une publicité", "Seulement avec un chatbot d'IA", "Sur le site d'un État américain"], answer: 0, why: "La CAC est le registre officiel des sociétés du Nigeria." }
+          { objective: "O1", q: "Une économie émergente est surtout :", options: ["Un pays dont l'économie grandit et change vite", "Un pays sans entreprises", "N'importe quel pays insulaire", "Un pays sans téléphones"], answer: 0, why: "Les économies émergentes grandissent et changent rapidement." },
+          { objective: "O1", q: "Qu'est-ce que l'argent mobile ?", options: ["De l'argent liquide gardé dans une voiture", "Envoyer, recevoir et garder de l'argent sur un téléphone", "Un type de carte de crédit", "Un programme du gouvernement américain"], answer: 1, why: "Des services comme M-Pesa permettent de payer par téléphone, souvent sans compte bancaire." },
+          { objective: "O2", q: "Un ancien sous-officier logisticien cherche une idée d'entreprise. Le meilleur point de départ est :", options: ["Ce qui est à la mode en ligne", "L'idée avec le prix le plus élevé", "Une compétence qu'il a, reliée à un vrai problème local", "Copier l'idée d'un ami"], answer: 2, why: "Les bonnes idées règlent de vrais problèmes que les gens paieront pour régler." },
+          { objective: "O3", q: "Qui prépare les Country Commercial Guides ?", options: ["Une entreprise d'IA", "Un groupe sur un réseau social", "Les journaux locaux", "Le personnel des ambassades américaines, publiés par l'International Trade Administration"], answer: 3, why: "L'International Trade Administration les publie, préparés par le personnel des ambassades américaines." },
+          { objective: "O3", q: "Où vérifier les étapes pour enregistrer une société au Nigeria ?", options: ["À la Corporate Affairs Commission (CAC)", "Dans une publicité", "Seulement avec un chatbot d'IA", "Sur le site d'un État américain"], answer: 0, why: "La CAC est le registre officiel des sociétés du Nigeria." }
         ]
       }
     },
@@ -99,6 +137,7 @@ module.exports = {
       name: "Chapitre 2 : Planifier l'entreprise",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Écrire un modèle économique d'une page",
           minutes: 6,
           goal: "Écrire un modèle économique d'une page avec l'aide de l'IA.",
@@ -115,9 +154,14 @@ module.exports = {
             { title: "Puis mettez-le à l'épreuve", bullets: ["Un vrai client l'a-t-il dit ?", "Remplacez les suppositions par des faits", "Marquez le reste \"à tester\""] }
           ],
           tryIt: "Demandez à un assistant d'IA de transformer votre idée en une phrase en modèle économique d'une page avec les sept titres. Marquez chaque ligne qui est une supposition \"à tester\".",
-          youCanNow: "écrire un modèle économique d'une page et séparer les faits des suppositions."
+          youCanNow: "écrire un modèle économique d'une page et séparer les faits des suppositions.",
+          quickCheck: [
+            { objective: "O4", q: "Dans un modèle économique, que sont les revenus ?", options: ["L'argent dépensé pour le matériel", "Toutes vos économies", "L'argent qui vient des clients", "Le nombre d'employés"], answer: 2, why: "Les revenus, c'est l'argent qui entre grâce aux clients." },
+            { objective: "O4", q: "Votre modèle dit que les clients paieront 20 $ par mois, mais personne ne vous l'a dit. Que faites-vous ?", options: ["Le marquer « à tester » et demander à de vrais clients", "Le monter à 40 $", "Le laisser comme un fait", "Supprimer la partie sur les revenus"], answer: 0, why: "Les suppositions restent marquées « à tester » jusqu'à ce que de vrais clients les confirment." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Prévoir l'argent, les risques et le droit",
           minutes: 5,
           goal: "Lister vos coûts de démarrage, vos trois plus grands risques et comment réduire chacun.",
@@ -135,9 +179,14 @@ module.exports = {
           ],
           sources: [{ name: "Ministère de la Justice des États-Unis : Foreign Corrupt Practices Act", url: "https://www.justice.gov/criminal/criminal-fraud/foreign-corrupt-practices-act" }],
           tryIt: "Demandez à un assistant d'IA une liste des coûts de démarrage pour votre idée. Puis écrivez vos trois plus grands risques et une façon de réduire chacun.",
-          youCanNow: "prévoir vos coûts de démarrage, citer vos principaux risques avec des solutions, et connaître les limites légales à ne pas franchir."
+          youCanNow: "prévoir vos coûts de démarrage, citer vos principaux risques avec des solutions, et connaître les limites légales à ne pas franchir.",
+          quickCheck: [
+            { objective: "O5", q: "Lequel est un coût de démarrage ?", options: ["L'argent que les clients vous paient", "Les frais d'enregistrement et le matériel", "Le numéro de téléphone d'un client", "La phrase de votre idée d'entreprise"], answer: 1, why: "Les coûts de démarrage comprennent le matériel, l'enregistrement, le personnel et plusieurs mois de frais de fonctionnement." },
+            { objective: "O5", q: "Un employé de bureau dit qu'un petit paiement en espèces accélérera votre licence. Que faites-vous ?", options: ["Le payer discrètement", "Le payer par l'intermédiaire d'un ami", "Promettre de payer plus tard", "Refuser, car la corruption est illégale, y compris selon la FCPA américaine"], answer: 3, why: "Payer un agent public étranger pour obtenir un avantage commercial est un crime selon le Foreign Corrupt Practices Act américain." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Tester l'idée et obtenir une aide officielle",
           minutes: 5,
           goal: "Préparer un petit test peu coûteux de votre idée et choisir un programme d'aide officiel à contacter.",
@@ -159,17 +208,21 @@ module.exports = {
             { name: "International Trade Administration : solutions pour l'export", url: "https://www.trade.gov/export-solutions" }
           ],
           tryIt: "Tâche finale : terminez votre modèle économique d'une page avec le client, le problème, la solution et le lien avec vos compétences militaires, les canaux, les revenus, les coûts et vos trois plus grands risques. Ajoutez un plan de recherche qui nomme le Country Commercial Guide, le registre des entreprises du pays et un programme d'aide officiel que vous contacterez.",
-          youCanNow: "préparer un petit test de votre idée d'entreprise et obtenir une aide officielle gratuite pour la construire."
+          youCanNow: "préparer un petit test de votre idée d'entreprise et obtenir une aide officielle gratuite pour la construire.",
+          quickCheck: [
+            { objective: "O6", q: "Qu'est-ce qu'un pilote ?", options: ["Un petit test court de votre idée", "Un lancement complet dans toutes les villes", "Un prêt pour entreprise", "Un type de licence"], answer: 0, why: "Un pilote teste votre idée à peu de frais avant que vous dépensiez de l'argent réel." },
+            { objective: "O6", q: "Vous avez fini votre modèle d'une page. Quelle aide officielle ajoutez-vous à votre plan ?", options: ["Un séminaire payant vu dans une publicité en ligne", "Aucune aide, il suffit de se lancer", "Boots to Business ou un autre programme officiel gratuit", "Un inconnu qui promet des profits rapides"], answer: 2, why: "Des programmes officiels gratuits comme Boots to Business de la SBA apprennent aux vétérans à créer une entreprise." }
+          ]
         }
       ],
       check: {
         title: "Contrôle des connaissances 2 : Planifier l'entreprise",
         questions: [
-          { q: "Qu'est-ce qui fait partie d'un modèle économique d'une page ?", options: ["Votre couleur préférée", "Le client, le problème et comment vous gagnez de l'argent", "La liste de vos décorations militaires", "Votre mot de passe bancaire"], answer: 1, why: "Le modèle répond à qui, quel problème, quelle solution et comment vous gagnez de l'argent." },
-          { q: "Le modèle de l'IA dit que les clients \"paieront volontiers\". Aucun client ne vous l'a dit. Vous :", options: ["Le gardez comme un fait", "Supprimez tout le modèle", "Le marquez \"à tester\" et demandez à de vrais clients", "Doublez le prix"], answer: 2, why: "Les suppositions doivent être testées avec de vrais clients." },
-          { q: "D'où doivent venir vos prix de démarrage ?", options: ["Des suppositions de l'IA", "De la supposition d'un ami", "Des actualités de l'an dernier", "De vrais devis de fournisseurs locaux"], answer: 3, why: "Les prix devinés par l'IA peuvent être très faux ; obtenez de vrais prix locaux." },
-          { q: "Un agent public laisse entendre qu'un paiement accélérerait votre licence. Vous :", options: ["Refusez ; la corruption est illégale, y compris selon la FCPA américaine", "Payez une petite somme", "Payez par un ami", "Demandez à l'IA comment le cacher"], answer: 0, why: "La FCPA fait un crime, pour les personnes américaines, de payer des agents publics étrangers pour obtenir des marchés." },
-          { q: "Quel programme gratuit de la SBA apprend l'entrepreneuriat aux militaires en transition ?", options: ["VET TEC 2.0", "Boots to Business", "TRICARE", "Le Military Crosswalk"], answer: 1, why: "Boots to Business est la formation à l'entrepreneuriat de la SBA dans le TAP." }
+          { objective: "O4", q: "Qu'est-ce qui fait partie d'un modèle économique d'une page ?", options: ["Votre couleur préférée", "Le client, le problème et comment vous gagnez de l'argent", "La liste de vos décorations militaires", "Votre mot de passe bancaire"], answer: 1, why: "Le modèle répond à qui, quel problème, quelle solution et comment vous gagnez de l'argent." },
+          { objective: "O4", q: "Le modèle de l'IA dit que les clients \"paieront volontiers\". Aucun client ne vous l'a dit. Vous :", options: ["Le gardez comme un fait", "Supprimez tout le modèle", "Le marquez \"à tester\" et demandez à de vrais clients", "Doublez le prix"], answer: 2, why: "Les suppositions doivent être testées avec de vrais clients." },
+          { objective: "O5", q: "D'où doivent venir vos prix de démarrage ?", options: ["Des suppositions de l'IA", "De la supposition d'un ami", "Des actualités de l'an dernier", "De vrais devis de fournisseurs locaux"], answer: 3, why: "Les prix devinés par l'IA peuvent être très faux ; obtenez de vrais prix locaux." },
+          { objective: "O5", q: "Un agent public laisse entendre qu'un paiement accélérerait votre licence. Vous :", options: ["Refusez ; la corruption est illégale, y compris selon la FCPA américaine", "Payez une petite somme", "Payez par un ami", "Demandez à l'IA comment le cacher"], answer: 0, why: "La FCPA fait un crime, pour les personnes américaines, de payer des agents publics étrangers pour obtenir des marchés." },
+          { objective: "O6", q: "Quel programme gratuit de la SBA apprend l'entrepreneuriat aux militaires en transition ?", options: ["VET TEC 2.0", "Boots to Business", "TRICARE", "Le Military Crosswalk"], answer: 1, why: "Boots to Business est la formation à l'entrepreneuriat de la SBA dans le TAP." }
         ]
       }
     }
@@ -177,26 +230,107 @@ module.exports = {
   quiz: {
     title: "Quiz final : Entreprendre dans les économies émergentes",
     questions: [
-      { q: "Laquelle est une opportunité courante dans les économies émergentes ?", options: ["Des populations qui diminuent", "L'essor rapide du téléphone et de l'argent mobile", "Aucun besoin de services", "Des règles fixes qui ne changent jamais"], answer: 1, why: "L'essor du téléphone et de l'argent mobile ouvre de nouvelles façons d'atteindre les clients." },
-      { q: "Laquelle est une difficulté courante dans les économies émergentes ?", options: ["Trop peu de clients partout", "Aucun téléphone", "Les variations de la monnaie et les règles qui changent", "Aucun jeune"], answer: 2, why: "Les variations de la monnaie et les règles qui changent sont des risques courants." },
-      { q: "M-Pesa au Kenya est un exemple de :", options: ["Braquage de banque", "Registre de l'État", "Unité militaire", "Argent mobile"], answer: 3, why: "M-Pesa permet de payer et de garder de l'argent par téléphone." },
-      { q: "Une bonne idée d'entreprise :", options: ["Règle un vrai problème que les gens paieront pour régler", "Copie ce qui est à la mode", "N'a pas de clients", "N'a pas besoin d'être testée"], answer: 0, why: "Les clients paient pour régler de vrais problèmes." },
-      { q: "Quelle compétence militaire convient souvent aux marchés émergents ?", options: ["Aucune", "La logistique, l'approvisionnement et le stockage", "Seulement marcher au pas", "Seulement la paperasse"], answer: 1, why: "Déplacer et stocker des marchandises est un manque fréquent." },
-      { q: "Une idée d'entreprise en une phrase doit contenir :", options: ["Votre grade", "Votre numéro de sécurité sociale", "Le service, le client, le lieu et le moyen de paiement", "Seulement le prix"], answer: 2, why: "Ces quatre éléments rendent l'idée claire." },
-      { q: "Quand l'IA vous propose des idées d'entreprise, qui choisit ?", options: ["L'IA", "Un inconnu en ligne", "La première idée de la liste", "Vous"], answer: 3, why: "L'IA propose ; vous décidez selon vos compétences et le marché." },
-      { q: "À quoi sert l'IA dans une étude de marché ?", options: ["Préparer des questions et des premiers jets, puis vérifier les faits sur des sources officielles", "Donner les réponses juridiques finales", "Donner les prix locaux exacts", "Enregistrer votre société"], answer: 0, why: "L'IA rédige ; les sources officielles et les vrais clients confirment." },
-      { q: "Les Country Commercial Guides sont publiés par :", options: ["Un blog privé", "L'International Trade Administration", "La VA", "Une entreprise d'IA"], answer: 1, why: "Ils viennent de l'International Trade Administration du ministère du Commerce des États-Unis." },
-      { q: "Le service officiel du Kenya pour enregistrer une entreprise est :", options: ["La VA", "La SBA", "Le Business Registration Service", "La Corporate Affairs Commission"], answer: 2, why: "Le Business Registration Service du Kenya s'occupe de l'enregistrement des sociétés." },
-      { q: "Avant de dépenser de l'argent, vous devez parler à :", options: ["Personne", "Seulement votre famille", "Seulement l'IA", "Au moins cinq clients possibles"], answer: 3, why: "De vrais clients vous disent si le problème et le prix sont réels." },
-      { q: "Les revenus, c'est :", options: ["L'argent qui vient des clients", "L'argent dépensé pour le loyer", "Un type de prêt", "Un formulaire d'impôts"], answer: 0, why: "Les revenus sont l'argent des ventes." },
-      { q: "Un \"canal\" dans un modèle économique, c'est :", options: ["Une chaîne de télé", "La façon dont vous atteignez les clients et leur vendez", "Une rivière", "Un compte bancaire"], answer: 1, why: "Les canaux sont la façon dont les clients vous trouvent et vous achètent." },
-      { q: "Les lignes de votre modèle qu'aucun client n'a confirmées doivent être :", options: ["Supprimées", "Exagérées", "Marquées \"à tester\"", "Considérées comme des faits"], answer: 2, why: "Les suppositions non prouvées doivent être testées." },
-      { q: "Les coûts de démarrage comprennent :", options: ["Seulement la première vente", "Seulement votre facture de téléphone", "Rien ; créer une entreprise est gratuit", "Le matériel, l'enregistrement, le personnel et des mois de frais"], answer: 3, why: "Il faut de l'argent pour tenir jusqu'à ce que les ventes couvrent les coûts." },
-      { q: "Une façon de réduire le risque de change est de :", options: ["Revoir souvent vos prix", "Ignorer les taux de change", "Garder tous les prix fixes pour toujours", "Payer en cartes cadeaux"], answer: 0, why: "Revoir régulièrement les prix aide à suivre les variations de la monnaie." },
-      { q: "La loi américaine Foreign Corrupt Practices Act fait un crime de :", options: ["Créer une entreprise à l'étranger", "Payer un agent public étranger pour obtenir ou garder un marché", "Utiliser l'argent mobile", "Embaucher du personnel local"], answer: 1, why: "La FCPA interdit de corrompre des agents publics étrangers pour obtenir des marchés." },
-      { q: "Pour les questions de contrats, d'impôts et d'enregistrement, vous devez faire appel à :", options: ["Seulement l'IA", "Un sondage sur un réseau social", "Un avocat ou un comptable local qualifié", "Des suppositions"], answer: 2, why: "Les règles juridiques et fiscales demandent un professionnel qualifié." },
-      { q: "Un projet pilote, c'est :", options: ["Partir à l'étranger avec vos économies", "Un prêt", "Un formulaire de l'État", "Un petit test court de votre idée"], answer: 3, why: "Un pilote teste l'idée avant de s'engager complètement." },
-      { q: "Boots to Business Reboot ouvre la formation de la SBA :", options: ["Aux vétérans de toutes les époques", "Seulement aux officiers en activité", "Seulement aux citoyens étrangers", "À personne"], answer: 0, why: "La SBA dit que Reboot ouvre Boots to Business aux vétérans de toutes les époques." }
+      { objective: "O1", q: "Laquelle est une opportunité courante dans les économies émergentes ?", options: ["Des populations qui diminuent", "L'essor rapide du téléphone et de l'argent mobile", "Aucun besoin de services", "Des règles fixes qui ne changent jamais"], answer: 1, why: "L'essor du téléphone et de l'argent mobile ouvre de nouvelles façons d'atteindre les clients." },
+      { objective: "O1", q: "Laquelle est une difficulté courante dans les économies émergentes ?", options: ["Trop peu de clients partout", "Aucun téléphone", "Les variations de la monnaie et les règles qui changent", "Aucun jeune"], answer: 2, why: "Les variations de la monnaie et les règles qui changent sont des risques courants." },
+      { objective: "O1", q: "M-Pesa au Kenya est un exemple de :", options: ["Braquage de banque", "Registre de l'État", "Unité militaire", "Argent mobile"], answer: 3, why: "M-Pesa permet de payer et de garder de l'argent par téléphone." },
+      { objective: "O2", q: "Une bonne idée d'entreprise :", options: ["Règle un vrai problème que les gens paieront pour régler", "Copie ce qui est à la mode", "N'a pas de clients", "N'a pas besoin d'être testée"], answer: 0, why: "Les clients paient pour régler de vrais problèmes." },
+      { objective: "O2", q: "Quelle compétence militaire convient souvent aux marchés émergents ?", options: ["Aucune", "La logistique, l'approvisionnement et le stockage", "Seulement marcher au pas", "Seulement la paperasse"], answer: 1, why: "Déplacer et stocker des marchandises est un manque fréquent." },
+      { objective: "O2", q: "Une idée d'entreprise en une phrase doit contenir :", options: ["Votre grade", "Votre numéro de sécurité sociale", "Le service, le client, le lieu et le moyen de paiement", "Seulement le prix"], answer: 2, why: "Ces quatre éléments rendent l'idée claire." },
+      { objective: "O2", q: "Quand l'IA vous propose des idées d'entreprise, qui choisit ?", options: ["L'IA", "Un inconnu en ligne", "La première idée de la liste", "Vous"], answer: 3, why: "L'IA propose ; vous décidez selon vos compétences et le marché." },
+      { objective: "O3", q: "À quoi sert l'IA dans une étude de marché ?", options: ["Préparer des questions et des premiers jets, puis vérifier les faits sur des sources officielles", "Donner les réponses juridiques finales", "Donner les prix locaux exacts", "Enregistrer votre société"], answer: 0, why: "L'IA rédige ; les sources officielles et les vrais clients confirment." },
+      { objective: "O3", q: "Les Country Commercial Guides sont publiés par :", options: ["Un blog privé", "L'International Trade Administration", "La VA", "Une entreprise d'IA"], answer: 1, why: "Ils viennent de l'International Trade Administration du ministère du Commerce des États-Unis." },
+      { objective: "O3", q: "Le service officiel du Kenya pour enregistrer une entreprise est :", options: ["La VA", "La SBA", "Le Business Registration Service", "La Corporate Affairs Commission"], answer: 2, why: "Le Business Registration Service du Kenya s'occupe de l'enregistrement des sociétés." },
+      { objective: "O3", q: "Avant de dépenser de l'argent, vous devez parler à :", options: ["Personne", "Seulement votre famille", "Seulement l'IA", "Au moins cinq clients possibles"], answer: 3, why: "De vrais clients vous disent si le problème et le prix sont réels." },
+      { objective: "O4", q: "Les revenus, c'est :", options: ["L'argent qui vient des clients", "L'argent dépensé pour le loyer", "Un type de prêt", "Un formulaire d'impôts"], answer: 0, why: "Les revenus sont l'argent des ventes." },
+      { objective: "O4", q: "Un \"canal\" dans un modèle économique, c'est :", options: ["Une chaîne de télé", "La façon dont vous atteignez les clients et leur vendez", "Une rivière", "Un compte bancaire"], answer: 1, why: "Les canaux sont la façon dont les clients vous trouvent et vous achètent." },
+      { objective: "O4", q: "Les lignes de votre modèle qu'aucun client n'a confirmées doivent être :", options: ["Supprimées", "Exagérées", "Marquées \"à tester\"", "Considérées comme des faits"], answer: 2, why: "Les suppositions non prouvées doivent être testées." },
+      { objective: "O5", q: "Les coûts de démarrage comprennent :", options: ["Seulement la première vente", "Seulement votre facture de téléphone", "Rien ; créer une entreprise est gratuit", "Le matériel, l'enregistrement, le personnel et des mois de frais"], answer: 3, why: "Il faut de l'argent pour tenir jusqu'à ce que les ventes couvrent les coûts." },
+      { objective: "O5", q: "Une façon de réduire le risque de change est de :", options: ["Revoir souvent vos prix", "Ignorer les taux de change", "Garder tous les prix fixes pour toujours", "Payer en cartes cadeaux"], answer: 0, why: "Revoir régulièrement les prix aide à suivre les variations de la monnaie." },
+      { objective: "O5", q: "La loi américaine Foreign Corrupt Practices Act fait un crime de :", options: ["Créer une entreprise à l'étranger", "Payer un agent public étranger pour obtenir ou garder un marché", "Utiliser l'argent mobile", "Embaucher du personnel local"], answer: 1, why: "La FCPA interdit de corrompre des agents publics étrangers pour obtenir des marchés." },
+      { objective: "O5", q: "Pour les questions de contrats, d'impôts et d'enregistrement, vous devez faire appel à :", options: ["Seulement l'IA", "Un sondage sur un réseau social", "Un avocat ou un comptable local qualifié", "Des suppositions"], answer: 2, why: "Les règles juridiques et fiscales demandent un professionnel qualifié." },
+      { objective: "O6", q: "Un projet pilote, c'est :", options: ["Partir à l'étranger avec vos économies", "Un prêt", "Un formulaire de l'État", "Un petit test court de votre idée"], answer: 3, why: "Un pilote teste l'idée avant de s'engager complètement." },
+      { objective: "O6", q: "Boots to Business Reboot ouvre la formation de la SBA :", options: ["Aux vétérans de toutes les époques", "Seulement aux officiers en activité", "Seulement aux citoyens étrangers", "À personne"], answer: 0, why: "La SBA dit que Reboot ouvre Boots to Business aux vétérans de toutes les époques." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Test de départ : que savez-vous déjà ?",
+    from: [
+      0,
+      1,
+      3,
+      5,
+      7,
+      8,
+      11,
+      13,
+      16,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "« Atteint » ou « Dépasse » sur chaque ligne. Si une ligne est « Pas encore », corrigez cette partie et réessayez.",
+    criteria: [
+      {
+        name: "Client, problème et lien",
+        objective: "O2",
+        notYet: "Le client ou le problème est vague, ou la compétence militaire n'est pas reliée.",
+        meets: "Un client nommé, un vrai problème, une solution et le lien avec une compétence militaire.",
+        exceeds: "L'apprenant peut dire comment il sait que le problème est réel."
+      },
+      {
+        name: "Modèle économique complet",
+        objective: "O4",
+        notYet: "Les canaux, les revenus ou les coûts manquent.",
+        meets: "Les sept parties sur une page, avec les suppositions marquées « à tester ».",
+        exceeds: "Chaque ligne « à tester » a une façon de la tester."
+      },
+      {
+        name: "Risques",
+        objective: "O5",
+        notYet: "Moins de trois risques, ou aucune façon de les réduire.",
+        meets: "Les trois principaux risques, chacun avec une façon de le réduire, et aucun plan qui dépend d'un pot-de-vin.",
+        exceeds: "Les risques incluent la monnaie et les règles, avec un professionnel nommé à consulter."
+      },
+      {
+        name: "Plan de recherche",
+        objective: "O3",
+        notYet: "Aucune source officielle nommée.",
+        meets: "Nomme le Country Commercial Guide et l'office d'enregistrement des entreprises du pays.",
+        exceeds: "Montre deux questions de recherche déjà résolues grâce à ces sources."
+      },
+      {
+        name: "Aide officielle",
+        objective: "O6",
+        notYet: "Aucun programme d'aide nommé.",
+        meets: "Un programme d'aide officiel et gratuit que l'apprenant va contacter.",
+        exceeds: "Comprend une date pour le contacter et un petit pilote à faire d'abord."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Apprenants qui terminent le cours et réussissent l'exercice final (grille d'évaluation)",
+      "Apprenants qui parlent à au moins cinq clients possibles dans les 30 jours (enquête de suivi)",
+      "Apprenants qui s'inscrivent à Boots to Business ou à un autre programme officiel dans les 90 jours",
+      "Apprenants qui font un petit pilote ou enregistrent une entreprise dans les 6 mois"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "Un ordinateur ou un smartphone avec internet",
+      "Un assistant d'IA gratuit : ChatGPT, Microsoft Copilot ou Google Gemini",
+      "Les Country Commercial Guides gratuits de trade.gov et le site de l'office d'enregistrement des entreprises du pays choisi",
+      "Du papier ou un document pour le modèle économique d'une page",
+      "Environ 60 minutes au total : leçons, exercices, contrôles et exercice final"
+    ],
+    facilitatorNotes: [
+      "Laissez les apprenants choisir des pays qu'ils connaissent ; regroupez ceux qui ont choisi la même région pour qu'ils partagent leurs sources.",
+      "Exigez que chaque fait sur l'enregistrement, les impôts ou les licences vienne d'une source officielle, pas de l'IA.",
+      "Dites clairement qu'un pot-de-vin ne fait jamais partie d'un plan, et que les questions de contrats et d'impôts vont à un avocat ou un comptable local qualifié.",
+      "Notez le modèle économique final avec la grille, et donnez un retour sur une seule ligne « Pas encore » à la fois.",
+      "Orientez les apprenants vers Boots to Business de la SBA et les Veterans Business Outreach Centers pour la suite."
     ]
   }
 };

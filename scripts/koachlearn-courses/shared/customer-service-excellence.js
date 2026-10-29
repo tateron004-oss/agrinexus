@@ -19,11 +19,35 @@ module.exports = {
     "You will practise greeting, listening, solving problems, calming upset customers with the LAST method (Listen, Apologize, Solve, Thank), serving by phone, chat and email, and following up. Each lesson takes about five minutes and ends with a practice. There is a knowledge check after each chapter and a 20-question quiz at the end."
   ],
   finalTask: "Role-play an upset customer with a friend (for example a wrong food order, a late delivery or a billing mistake). Greet them, use LAST (Listen, Apologize, Solve, Thank), agree a fix, and then write the short follow-up email or message you would send the next day.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "First-time workers, young people, people returning to work after prison and small business owners who serve their own customers in stores, restaurants, call centres and offices.",
+    startingPoint: "Talk with people every day and have been customers themselves. Many have not been trained to greet, find a customer's real need, own a problem, calm an upset customer or write a service email.",
+    gap: "Great customer service is one of the most wanted job skills and helps people get hired, keep a job and move up, and helps small businesses keep customers. Learners need a simple, repeatable way to serve customers in person, by phone, chat and email, and to follow up.",
+    constraints: [
+      "Reading level: plain words and short sentences",
+      "Practice is by role-play with a friend or family member",
+      "Safety: threats are handled by a manager or security, never alone",
+      "Privacy: no real card numbers or customer details in practice or AI tools",
+      "Time: about five-minute lessons with short practices"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "When a customer arrives or calls", action: "greet them warmly within seconds, in person or on the phone", standard: "with your name or the business name and an offer to help" },
+    { id: "O2", condition: "Given a vague customer request", action: "ask open and closed questions and repeat back the customer's real need", standard: "until the customer confirms you have it right" },
+    { id: "O3", condition: "Given a customer problem you did not cause", action: "take ownership and offer a clear solution, choices or the right person to help", standard: "with a next step and a time you will keep" },
+    { id: "O4", condition: "With an upset customer", action: "calm the customer using LAST: Listen, Apologize, Solve, Thank", standard: "using all four steps and getting help if there are threats" },
+    { id: "O5", condition: "By phone, chat or email", action: "write or give a clear, friendly reply with the answer first and the next step", standard: "with every fact checked and no private details shared" },
+    { id: "O6", condition: "After a problem is fixed", action: "write a follow-up message that checks the fix and invites the customer back", standard: "sent when you promised" }
+  ],
   chapters: [
     {
       name: "Chapter 1: The basics of great service",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Greeting customers and first impressions",
           minutes: 4,
           goal: "Greet a customer warmly within seconds, in person or on the phone.",
@@ -41,9 +65,14 @@ module.exports = {
             { title: "Look ready", bullets: ["Phone away", "Tidy space", "Use the customer's name"] }
           ],
           tryIt: "Write three greetings: one for a store or restaurant, one for an office front desk and one for answering the phone at a business. Say each one out loud with a smile until it sounds natural.",
-          youCanNow: "greet customers warmly in person and on the phone."
+          youCanNow: "greet customers warmly in person and on the phone.",
+          quickCheck: [
+            { objective: "O1", q: "Why does a warm greeting matter?", options: ["Customers judge the business in the first few seconds", "It makes the line move slower", "It is only needed for regular customers", "It replaces solving the problem"], answer: 0, why: "First impressions shape how customers feel about the whole visit." },
+            { objective: "O1", q: "The phone rings while you are tidying a shelf. What would you say when you answer?", options: ["\"Yeah?\"", "\"Hold on.\"", "\"Thanks for calling, this is Sam. How can I help?\"", "Nothing until they speak"], answer: 2, why: "A good greeting names the business or you and offers help." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Listening to find the real need",
           minutes: 5,
           goal: "Ask questions and repeat back to understand what a customer really needs.",
@@ -60,9 +89,14 @@ module.exports = {
             { title: "Repeat it back", bullets: ["\"So you need... Is that right?\"", "Restaurants: read the order back", "Catches mistakes early"] }
           ],
           tryIt: "Ask a friend or family member to pretend to be a customer with a vague request (\"I need something for my kitchen\"). Use two open questions and one closed question, then repeat back their real need.",
-          youCanNow: "use questions and repeating back to find out what a customer really needs."
+          youCanNow: "use questions and repeating back to find out what a customer really needs.",
+          quickCheck: [
+            { objective: "O2", q: "What is a closed question?", options: ["A question that invites a long story", "A question with a short answer, like yes, no or a date", "A question you ask after closing time", "A question the customer cannot answer"], answer: 1, why: "Closed questions confirm details quickly." },
+            { objective: "O2", q: "A customer says, \"I need a gift for my dad.\" What would you ask first?", options: ["\"How much money do you have?\"", "\"Do you want the most expensive one?\"", "\"Can you come back later?\"", "\"What does your dad enjoy doing?\""], answer: 3, why: "An open question helps you find the real need." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Solving the problem",
           minutes: 5,
           goal: "Take ownership of a customer's problem and offer a clear solution or next step.",
@@ -80,17 +114,21 @@ module.exports = {
             { title: "Promises", bullets: ["Only promise what you can deliver", "\"I'll call you by 3 pm\" and do it"] }
           ],
           tryIt: "Pick a common problem in a job you have or want (a wrong size, a cold meal, a missed appointment, a billing question). Write what you would say to own it, two options you could offer, and who you would pass it to if needed.",
-          youCanNow: "take ownership of a customer's problem and offer clear options or a next step."
+          youCanNow: "take ownership of a customer's problem and offer clear options or a next step.",
+          quickCheck: [
+            { objective: "O3", q: "What does taking ownership of a problem mean?", options: ["Blaming another department", "Saying it is not your job", "Treating the problem as yours to help solve", "Paying for the problem yourself"], answer: 2, why: "Ownership means you help the customer even if you did not cause the problem." },
+            { objective: "O3", q: "A customer needs an answer you do not know. What would you say?", options: ["\"I'll find out and call you by 3 pm.\"", "\"I don't know.\"", "\"Look it up online.\"", "\"Someone might call you sometime.\""], answer: 0, why: "A clear promise with a time builds trust." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: The basics of great service",
         questions: [
-          { q: "You are helping one customer and another walks up. What do you do?", options: ["Ignore them until you finish", "Nod and say \"I'll be right with you\"", "Tell them to come back later", "Leave the first customer"], answer: 1, why: "A quick nod and word stops the next customer feeling ignored." },
-          { q: "Which is a good phone greeting?", options: ["\"Yeah?\"", "\"What do you want?\"", "\"Hello?\" and wait", "\"Thanks for calling Main Street Pharmacy, this is Dana. How can I help?\""], answer: 3, why: "It gives the business name, your name and offers help." },
-          { q: "Why repeat back a restaurant order?", options: ["To catch mistakes before the food is made", "To slow the customer down", "Because it is fun", "To show off your memory"], answer: 0, why: "Repeating back catches mistakes early." },
-          { q: "Which is an open question?", options: ["\"Is it the blue one?\"", "\"Did you buy it here?\"", "\"What will you be using it for?\"", "\"Is that all?\""], answer: 2, why: "It needs more than yes or no." },
-          { q: "A customer's problem is not caused by you. What should you say?", options: ["\"That's not my department.\"", "\"Let me help you with that.\"", "\"Not my fault.\"", "Nothing"], answer: 1, why: "Owning the problem builds trust." }
+          { objective: "O1", q: "You are helping one customer and another walks up. What do you do?", options: ["Ignore them until you finish", "Nod and say \"I'll be right with you\"", "Tell them to come back later", "Leave the first customer"], answer: 1, why: "A quick nod and word stops the next customer feeling ignored." },
+          { objective: "O1", q: "Which is a good phone greeting?", options: ["\"Yeah?\"", "\"What do you want?\"", "\"Hello?\" and wait", "\"Thanks for calling Main Street Pharmacy, this is Dana. How can I help?\""], answer: 3, why: "It gives the business name, your name and offers help." },
+          { objective: "O2", q: "Why repeat back a restaurant order?", options: ["To catch mistakes before the food is made", "To slow the customer down", "Because it is fun", "To show off your memory"], answer: 0, why: "Repeating back catches mistakes early." },
+          { objective: "O2", q: "Which is an open question?", options: ["\"Is it the blue one?\"", "\"Did you buy it here?\"", "\"What will you be using it for?\"", "\"Is that all?\""], answer: 2, why: "It needs more than yes or no." },
+          { objective: "O3", q: "A customer's problem is not caused by you. What should you say?", options: ["\"That's not my department.\"", "\"Let me help you with that.\"", "\"Not my fault.\"", "Nothing"], answer: 1, why: "Owning the problem builds trust." }
         ]
       }
     },
@@ -98,6 +136,7 @@ module.exports = {
       name: "Chapter 2: Hard moments and every channel",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Upset customers and the LAST method",
           minutes: 6,
           goal: "Calm an upset customer using LAST: Listen, Apologize, Solve, Thank.",
@@ -115,9 +154,14 @@ module.exports = {
             { title: "Stay safe", bullets: ["Low, slow voice; don't argue", "Threats or abuse: get a manager or security"] }
           ],
           tryIt: "Write a LAST script for one of these: a cold meal, a package that never arrived, or an overcharge. Write one sentence for each letter, then say the whole script out loud.",
-          youCanNow: "calm an upset customer with Listen, Apologize, Solve, Thank."
+          youCanNow: "calm an upset customer with Listen, Apologize, Solve, Thank.",
+          quickCheck: [
+            { objective: "O4", q: "What does the S in LAST mean?", options: ["Smile", "Solve", "Stop", "Say sorry again"], answer: 1, why: "LAST is Listen, Apologize, Solve and Thank." },
+            { objective: "O4", q: "A customer is upset that their package never arrived. What would you do first?", options: ["Offer a refund before they finish", "Tell them it is the delivery company's fault", "Transfer them right away", "Listen fully and repeat back what happened"], answer: 3, why: "LAST starts with listening so the customer feels heard." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Phone, chat and email service",
           minutes: 5,
           goal: "Give clear, friendly service by phone, chat and email.",
@@ -135,9 +179,14 @@ module.exports = {
             { title: "Every channel", bullets: ["AI can help draft; you check the facts", "Follow ID checks", "No card numbers or passwords by chat or email"] }
           ],
           tryIt: "A customer emails: \"I ordered a blue jacket and got a red one. What now?\" Write a short reply with a subject line, greeting, apology, solution, next step and your name.",
-          youCanNow: "serve customers well by phone, chat and email while protecting their privacy."
+          youCanNow: "serve customers well by phone, chat and email while protecting their privacy.",
+          quickCheck: [
+            { objective: "O5", q: "What should come first in the body of a customer service email?", options: ["The answer to their question", "A long story about your company", "Your job title", "A list of rules"], answer: 0, why: "Customers want the answer first, then the next step." },
+            { objective: "O5", q: "You use an AI assistant to draft a chat reply. What would you do before sending?", options: ["Send it right away", "Add the customer's card number", "Check every fact and remove private details", "Copy it to all customers"], answer: 2, why: "AI drafts must be checked and kept free of private details." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "Following up and building loyalty",
           minutes: 5,
           goal: "Follow up after a problem and turn a customer into a returning one.",
@@ -155,17 +204,21 @@ module.exports = {
             { title: "Build loyalty", bullets: ["Remember regulars", "Thank long-time customers", "Complaints are free advice"] }
           ],
           tryIt: "Final task: role-play an upset customer with a friend using greeting and LAST, agree a fix, then write the follow-up message you would send the next day.",
-          youCanNow: "follow up after a problem and build customer loyalty."
+          youCanNow: "follow up after a problem and build customer loyalty.",
+          quickCheck: [
+            { objective: "O6", q: "Why can a problem fixed well make a customer more loyal?", options: ["They get free things forever", "They see the business cares and keeps its promises", "They forget the problem happened", "They have no other choice"], answer: 1, why: "Handling a problem well shows the business can be trusted." },
+            { objective: "O6", q: "You replaced a customer's wrong order yesterday. What would you do today?", options: ["Nothing; it is done", "Send a coupon with no message", "Ask them to post a review right away", "Send a short message checking everything is right now"], answer: 3, why: "A follow-up checks the fix and shows you care." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Hard moments and every channel",
         questions: [
-          { q: "What does LAST stand for?", options: ["Look, Ask, Sell, Talk", "Leave, Argue, Stop, Try", "Listen, Apologize, Solve, Thank", "Learn, Answer, Smile, Tell"], answer: 2, why: "LAST is Listen, Apologize, Solve, Thank." },
-          { q: "An upset diner says the food is cold. What is the first step?", options: ["Explain the kitchen was busy", "Listen and reflect back what they said", "Offer a coupon before they finish", "Walk away"], answer: 1, why: "Listening comes first in LAST." },
-          { q: "Before putting a caller on hold, you should:", options: ["Just press hold", "Hang up and call back", "Transfer them anywhere", "Ask \"May I put you on a short hold while I check?\""], answer: 3, why: "Asking first is polite and keeps trust." },
-          { q: "A chat customer offers their full card number. What do you do?", options: ["Tell them not to share it by chat and follow your company's secure steps", "Copy it into your notes", "Paste it into an AI tool", "Read it back to them"], answer: 0, why: "Card numbers should never be shared by chat or email." },
-          { q: "You promised a customer an update by Friday but have no news yet. What do you do?", options: ["Wait until you have news", "Contact them Friday with a \"still working on it\" update", "Ignore it", "Ask a coworker to pretend it is fixed"], answer: 1, why: "Keeping the promise on time builds trust even without news." }
+          { objective: "O4", q: "What does LAST stand for?", options: ["Look, Ask, Sell, Talk", "Leave, Argue, Stop, Try", "Listen, Apologize, Solve, Thank", "Learn, Answer, Smile, Tell"], answer: 2, why: "LAST is Listen, Apologize, Solve, Thank." },
+          { objective: "O4", q: "An upset diner says the food is cold. What is the first step?", options: ["Explain the kitchen was busy", "Listen and reflect back what they said", "Offer a coupon before they finish", "Walk away"], answer: 1, why: "Listening comes first in LAST." },
+          { objective: "O5", q: "Before putting a caller on hold, you should:", options: ["Just press hold", "Hang up and call back", "Transfer them anywhere", "Ask \"May I put you on a short hold while I check?\""], answer: 3, why: "Asking first is polite and keeps trust." },
+          { objective: "O5", q: "A chat customer offers their full card number. What do you do?", options: ["Tell them not to share it by chat and follow your company's secure steps", "Copy it into your notes", "Paste it into an AI tool", "Read it back to them"], answer: 0, why: "Card numbers should never be shared by chat or email." },
+          { objective: "O6", q: "You promised a customer an update by Friday but have no news yet. What do you do?", options: ["Wait until you have news", "Contact them Friday with a \"still working on it\" update", "Ignore it", "Ask a coworker to pretend it is fixed"], answer: 1, why: "Keeping the promise on time builds trust even without news." }
         ]
       }
     }
@@ -173,26 +226,103 @@ module.exports = {
   quiz: {
     title: "Final Quiz: Customer Service Excellence",
     questions: [
-      { q: "Why does the greeting matter so much?", options: ["Customers judge the business in the first seconds", "It is the law", "It takes the longest", "It replaces solving problems"], answer: 0, why: "First impressions shape how customers feel." },
-      { q: "Which is a good greeting at an office front desk?", options: ["Keep typing and say nothing", "\"Good morning, who are you here to see?\"", "\"What?\"", "\"We're busy.\""], answer: 1, why: "It is friendly and moves to their need." },
-      { q: "Which shows you are ready to serve?", options: ["Scrolling your phone", "Eating at the counter", "Phone away and a tidy space", "Leaning on the wall"], answer: 2, why: "Looking ready makes a good first impression." },
-      { q: "A shopper asks for \"a charger\". What is the best next step?", options: ["Hand them any charger", "Say you don't have one", "Point at the aisle", "Ask what phone it is for"], answer: 3, why: "A question finds the real need." },
-      { q: "\"So you need two large pizzas delivered by 6. Is that right?\" is an example of:", options: ["Repeating back", "Upselling", "Escalating", "A closed greeting"], answer: 0, why: "It confirms the order before acting." },
-      { q: "A closed question is useful to:", options: ["Start a long story", "Confirm a detail, like a date", "Calm an angry customer", "Greet someone"], answer: 1, why: "Closed questions confirm facts quickly." },
-      { q: "Which phrase shows ownership?", options: ["\"That's not my job.\"", "\"Call someone else.\"", "\"Let me help you with that.\"", "\"Try the website.\""], answer: 2, why: "Owning the problem reassures the customer." },
-      { q: "Why offer choices like \"replace it or refund it\"?", options: ["To confuse them", "It gives the customer some control", "To delay the fix", "It is always required"], answer: 1, why: "Choices help customers feel respected." },
-      { q: "When you pass a customer to a manager, you should:", options: ["Make them explain it all again", "Say nothing", "Leave without explaining", "Explain why, introduce them and share the details"], answer: 3, why: "A warm handoff saves the customer from repeating." },
-      { q: "Which promise is best when you are not sure of an answer?", options: ["\"I'll find out and call you by 3 pm.\"", "\"It'll definitely be fine.\"", "\"It's free, don't worry.\"", "\"Nobody knows.\""], answer: 0, why: "Promise only what you can deliver, with a time." },
-      { q: "In LAST, the A means:", options: ["Argue", "Apologize", "Ask for ID", "Agree with everything"], answer: 1, why: "A sincere apology helps calm the customer." },
-      { q: "Can you apologize without blaming anyone?", options: ["No, you must name who caused it", "Only managers can apologize", "Yes: \"I'm sorry that happened to you.\"", "Apologizing is never allowed"], answer: 2, why: "A sincere apology is about the customer's experience." },
-      { q: "An upset customer starts making threats. What should you do?", options: ["Argue back", "Ignore it and keep serving", "Threaten them", "Get a manager or security and follow safety rules"], answer: 3, why: "Your safety comes first." },
-      { q: "In LAST, the T means:", options: ["Thank them for telling you", "Tell them they are wrong", "Transfer the call", "Take a break"], answer: 0, why: "Thanking them ends on a positive note." },
-      { q: "Why smile on the phone?", options: ["The customer can see you", "It changes the tone of your voice", "It is a company rule everywhere", "It makes calls shorter"], answer: 1, why: "A smile makes your voice sound warmer." },
-      { q: "Which belongs in a good customer email?", options: ["No subject line", "A long story before the answer", "A clear subject, their name, the answer first and the next step", "All capital letters"], answer: 2, why: "Clear structure makes emails easy to act on." },
-      { q: "Using an AI assistant to draft a reply, you should:", options: ["Paste in the customer's card number", "Send it without reading", "Let it promise refunds", "Check every fact and leave out private details"], answer: 3, why: "You stay responsible for facts and privacy." },
-      { q: "Why keep notes on each customer problem?", options: ["So anyone on the team can help next time", "To gossip", "To slow things down", "Notes are not useful"], answer: 0, why: "Notes keep service consistent." },
-      { q: "A problem fixed well can make a customer:", options: ["Never return", "More loyal than before", "Angrier", "Forget your business"], answer: 1, why: "Good recovery builds trust and loyalty." },
-      { q: "For a small business owner, complaints are best seen as:", options: ["Attacks to ignore", "Reasons to argue", "Free advice on what to fix", "Something to delete"], answer: 2, why: "Complaints show what to improve." }
+      { objective: "O1", q: "Why does the greeting matter so much?", options: ["Customers judge the business in the first seconds", "It is the law", "It takes the longest", "It replaces solving problems"], answer: 0, why: "First impressions shape how customers feel." },
+      { objective: "O1", q: "Which is a good greeting at an office front desk?", options: ["Keep typing and say nothing", "\"Good morning, who are you here to see?\"", "\"What?\"", "\"We're busy.\""], answer: 1, why: "It is friendly and moves to their need." },
+      { objective: "O1", q: "Which shows you are ready to serve?", options: ["Scrolling your phone", "Eating at the counter", "Phone away and a tidy space", "Leaning on the wall"], answer: 2, why: "Looking ready makes a good first impression." },
+      { objective: "O2", q: "A shopper asks for \"a charger\". What is the best next step?", options: ["Hand them any charger", "Say you don't have one", "Point at the aisle", "Ask what phone it is for"], answer: 3, why: "A question finds the real need." },
+      { objective: "O2", q: "\"So you need two large pizzas delivered by 6. Is that right?\" is an example of:", options: ["Repeating back", "Upselling", "Escalating", "A closed greeting"], answer: 0, why: "It confirms the order before acting." },
+      { objective: "O2", q: "A closed question is useful to:", options: ["Start a long story", "Confirm a detail, like a date", "Calm an angry customer", "Greet someone"], answer: 1, why: "Closed questions confirm facts quickly." },
+      { objective: "O3", q: "Which phrase shows ownership?", options: ["\"That's not my job.\"", "\"Call someone else.\"", "\"Let me help you with that.\"", "\"Try the website.\""], answer: 2, why: "Owning the problem reassures the customer." },
+      { objective: "O3", q: "Why offer choices like \"replace it or refund it\"?", options: ["To confuse them", "It gives the customer some control", "To delay the fix", "It is always required"], answer: 1, why: "Choices help customers feel respected." },
+      { objective: "O3", q: "When you pass a customer to a manager, you should:", options: ["Make them explain it all again", "Say nothing", "Leave without explaining", "Explain why, introduce them and share the details"], answer: 3, why: "A warm handoff saves the customer from repeating." },
+      { objective: "O3", q: "Which promise is best when you are not sure of an answer?", options: ["\"I'll find out and call you by 3 pm.\"", "\"It'll definitely be fine.\"", "\"It's free, don't worry.\"", "\"Nobody knows.\""], answer: 0, why: "Promise only what you can deliver, with a time." },
+      { objective: "O4", q: "In LAST, the A means:", options: ["Argue", "Apologize", "Ask for ID", "Agree with everything"], answer: 1, why: "A sincere apology helps calm the customer." },
+      { objective: "O4", q: "Can you apologize without blaming anyone?", options: ["No, you must name who caused it", "Only managers can apologize", "Yes: \"I'm sorry that happened to you.\"", "Apologizing is never allowed"], answer: 2, why: "A sincere apology is about the customer's experience." },
+      { objective: "O4", q: "An upset customer starts making threats. What should you do?", options: ["Argue back", "Ignore it and keep serving", "Threaten them", "Get a manager or security and follow safety rules"], answer: 3, why: "Your safety comes first." },
+      { objective: "O4", q: "In LAST, the T means:", options: ["Thank them for telling you", "Tell them they are wrong", "Transfer the call", "Take a break"], answer: 0, why: "Thanking them ends on a positive note." },
+      { objective: "O5", q: "Why smile on the phone?", options: ["The customer can see you", "It changes the tone of your voice", "It is a company rule everywhere", "It makes calls shorter"], answer: 1, why: "A smile makes your voice sound warmer." },
+      { objective: "O5", q: "Which belongs in a good customer email?", options: ["No subject line", "A long story before the answer", "A clear subject, their name, the answer first and the next step", "All capital letters"], answer: 2, why: "Clear structure makes emails easy to act on." },
+      { objective: "O5", q: "Using an AI assistant to draft a reply, you should:", options: ["Paste in the customer's card number", "Send it without reading", "Let it promise refunds", "Check every fact and leave out private details"], answer: 3, why: "You stay responsible for facts and privacy." },
+      { objective: "O6", q: "Why keep notes on each customer problem?", options: ["So anyone on the team can help next time", "To gossip", "To slow things down", "Notes are not useful"], answer: 0, why: "Notes keep service consistent." },
+      { objective: "O6", q: "A problem fixed well can make a customer:", options: ["Never return", "More loyal than before", "Angrier", "Forget your business"], answer: 1, why: "Good recovery builds trust and loyalty." },
+      { objective: "O6", q: "For a small business owner, complaints are best seen as:", options: ["Attacks to ignore", "Reasons to argue", "Free advice on what to fix", "Something to delete"], answer: 2, why: "Complaints show what to improve." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      1,
+      3,
+      5,
+      7,
+      10,
+      12,
+      15,
+      18
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Greeting",
+        objective: "O1",
+        notYet: "No greeting, or a cold or rushed one.",
+        meets: "A warm greeting within seconds with a name and an offer to help.",
+        exceeds: "Greeting fits the setting and sounds natural."
+      },
+      {
+        name: "Listen and Apologize",
+        objective: "O4",
+        notYet: "Interrupted, argued or blamed.",
+        meets: "Listened fully, repeated back the problem and apologized without blaming.",
+        exceeds: "Named the customer's feeling and stayed calm the whole time."
+      },
+      {
+        name: "Solve",
+        objective: "O3",
+        notYet: "No clear fix or next step.",
+        meets: "Owned the problem and agreed a clear fix or next step.",
+        exceeds: "Offered choices and gave a time for any promise."
+      },
+      {
+        name: "Thank",
+        objective: "O4",
+        notYet: "Ended without thanking the customer.",
+        meets: "Thanked the customer for raising the problem.",
+        exceeds: "Closed by checking if anything else was needed."
+      },
+      {
+        name: "Follow-up message",
+        objective: "O6",
+        notYet: "No follow-up, or it has no clear purpose.",
+        meets: "A short next-day message that checks the fix and invites them back.",
+        exceeds: "Personal, specific and free of errors."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who get or keep a customer-facing job within 90 days (follow-up survey)",
+      "Small business owners who report fewer complaints or more returning customers",
+      "Learners who report using LAST with a real customer within 30 days",
+      "Learners who start another Koach Learn career course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A partner for role-play (friend, family member or classmate)",
+      "Paper and pen or a phone for scripts and the follow-up message",
+      "About 60 minutes in total"
+    ],
+    facilitatorNotes: [
+      "Run role-plays in pairs and switch roles so everyone plays the upset customer once.",
+      "Use examples from local jobs learners want: stores, restaurants, call centres and front desks.",
+      "Teach that threats are handled by a manager or security; learners never handle them alone.",
+      "Use made-up orders and accounts only; no real card numbers in practice.",
+      "Score the final role-play with the rubric and give feedback on one Not yet row at a time."
     ]
   }
 };

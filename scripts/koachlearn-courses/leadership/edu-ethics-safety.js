@@ -16,11 +16,35 @@ module.exports = {
     "This course explains the law in plain words so you know what to ask; it is not legal advice. Your district's counsel and privacy officer have the final word, and state laws may add requirements. A knowledge check closes each chapter and a 20-question quiz closes the course. This is course 7 of 8 in AI for School and Educational Leaders."
   ],
   finalTask: "Write two-page responsible-AI guidelines for your school or district: five principles in plain words, privacy rules (FERPA, COPPA, approved tools only), equity checks, what staff and students may and may not do, the vendor review steps, and a six-step incident response plan. Then test them: review one real AI tool with your vendor steps, and walk through one realistic incident (for example, an AI-generated fake image of a student shared in a group chat) using your plan.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Principals, district leaders, technology and privacy staff, counselors and teacher leaders in US schools and districts who set rules for AI use.",
+    startingPoint: "Know AI basics, FERPA and COPPA basics, tool vetting and classroom AI rules from earlier courses. Their school or district may have no written responsible-AI guidelines or incident plan.",
+    gap: "Without written guidelines, AI decisions are made case by case, equity risks go unchecked, and schools are unprepared when something goes wrong, such as a data leak or an AI-generated fake of a student. Leaders need clear principles, vendor review steps, staff and student rules and an incident plan.",
+    constraints: [
+      "The course explains the law in plain words and is not legal advice; district counsel and the privacy officer have the final word",
+      "State laws may add requirements, and laws on AI-generated images are changing quickly",
+      "No real student data or images in practice; incident walk-throughs use realistic made-up cases",
+      "Images of minors are never forwarded; staff follow counsel and law-enforcement guidance",
+      "Time: short lessons, with the guidelines taking longer to write and test"
+    ],
+    prerequisites: "Courses 1 to 6 of AI for School and Educational Leaders are recommended, especially course 1 and course 2."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given an AI use in your school", action: "apply five responsible-AI principles to it", standard: "with one sentence on how it meets or fails each principle" },
+    { id: "O2", condition: "Given an AI tool that scores, flags or adapts to students", action: "identify where it could treat groups of students unfairly", standard: "writing three equity questions for the vendor and one check on your own results" },
+    { id: "O3", condition: "When staff use AI tools", action: "apply FERPA, COPPA and basic security habits", standard: "with five plain-language habits, each with an example of what not to do" },
+    { id: "O4", condition: "Before an AI tool is approved", action: "run a vendor review from the tool's public documents", standard: "listing what the vendor must confirm in a signed agreement" },
+    { id: "O5", condition: "With input from teachers, students and families", action: "draft responsible-AI guidelines with may and may-not rules for staff and students", standard: "with at least four concrete items each, checked against district policy and state law with counsel" },
+    { id: "O6", condition: "Given a realistic AI incident such as a deepfake or data leak", action: "walk through a six-step incident response plan", standard: "starting with making the student safe and ending with updating the guidelines" }
+  ],
   chapters: [
     {
       name: "Chapter 1: Principles in practice",
       lessons: [
         {
+          objectives: ["O1"],
           title: "Five principles for AI in schools",
           minutes: 5,
           goal: "State five responsible-AI principles and apply them to a school example.",
@@ -37,9 +61,14 @@ module.exports = {
           ],
           sources: [{ name: "K-12 Dive: Education Department issues AI priorities (July 2025)", url: "https://www.k12dive.com/news/education-department-issues-ai-priorities-but-what-if-the-agency-closes/754015/" }, { name: "NIST AI Risk Management Framework", url: "https://www.nist.gov/itl/ai-risk-management-framework" }],
           tryIt: "Take one AI use in your school (for example, an adaptive reading program). Write one sentence on how it meets or fails each of the five principles.",
-          youCanNow: "apply five responsible-AI principles to a real school use."
+          youCanNow: "apply five responsible-AI principles to a real school use.",
+          quickCheck: [
+            { objective: "O1", q: "What does the transparency principle mean?", options: ["Being open about when and how AI is used", "Using only free AI tools", "Letting AI make decisions in public", "Sharing student data with families"], answer: 0, why: "Transparency means people know when and how AI is used." },
+            { objective: "O1", q: "An adaptive reading program chooses each student's next book. Which principle question would you ask?", options: ["Is it the cheapest program?", "Is it the newest program?", "Can teachers see its choices and change them?", "Does it have the most features?"], answer: 2, why: "Human oversight means educators decide and AI informs." }
+          ]
         },
         {
+          objectives: ["O2"],
           title: "Bias and equity risks in school AI",
           minutes: 6,
           goal: "Spot where school AI uses could treat groups of students unfairly.",
@@ -56,9 +85,14 @@ module.exports = {
             { title: "Equity checks", bullets: ["Ask vendors about bias and accessibility testing", "Review results by group", "No AI score alone for decisions"] }
           ],
           tryIt: "Choose one AI tool that scores, flags or adapts to students in your school. Write three equity questions you would ask the vendor and one check you would run on your own results.",
-          youCanNow: "spot equity risks in school AI and put practical checks in place."
+          youCanNow: "spot equity risks in school AI and put practical checks in place.",
+          quickCheck: [
+            { objective: "O2", q: "Why can AI-writing detectors raise equity concerns?", options: ["They are too expensive", "They may flag English learners' writing more often", "They work only on phones", "They grade too slowly"], answer: 1, why: "Unequal false flags fall on some groups of students more than others." },
+            { objective: "O2", q: "An adaptive tool keeps one group of students on easier work for months. What would you do?", options: ["Nothing; the tool knows best", "Turn off all AI in the school", "Move those students to another school", "Check your own results by group and ask the vendor how the tool decides"], answer: 3, why: "Checking results by group shows whether the tool narrows opportunity for some students." }
+          ]
         },
         {
+          objectives: ["O3"],
           title: "Privacy and security: FERPA, COPPA and good habits",
           minutes: 6,
           goal: "Apply FERPA and COPPA and basic security habits to AI tools.",
@@ -76,17 +110,21 @@ module.exports = {
           ],
           sources: [{ name: "FERPA: Protecting Student Privacy", url: "https://studentprivacy.ed.gov/ferpa" }, { name: "FTC: Complying with COPPA, Frequently Asked Questions", url: "https://www.ftc.gov/business-guidance/resources/complying-coppa-frequently-asked-questions" }],
           tryIt: "Write five privacy and security habits for your staff in plain words, with one example of what NOT to do for each.",
-          youCanNow: "apply FERPA, COPPA and everyday security habits to staff use of AI."
+          youCanNow: "apply FERPA, COPPA and everyday security habits to staff use of AI.",
+          quickCheck: [
+            { objective: "O3", q: "What does two-step sign-in add?", options: ["A second check, such as a code on your phone", "A second password typed twice", "A second AI tool", "A second staff member to sign in for you"], answer: 0, why: "A second check protects accounts even if a password is stolen." },
+            { objective: "O3", q: "A teacher wants to upload a whole class list to an AI tool for one small task. What would you advise?", options: ["Upload it; more data gives better results", "Upload it to two tools to compare", "Share only what the task needs, in an approved tool", "Email it to the vendor instead"], answer: 2, why: "Data minimization means sharing only what the task needs." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 1: Principles in practice",
         questions: [
-          { q: "Which principle says educators make decisions about students and AI only informs?", options: ["Transparency", "Data minimization", "Human oversight", "Tracking"], answer: 2, why: "Human oversight keeps decisions with educators." },
-          { q: "An early-warning tool gives a student a high risk score. The right use is:", options: ["Use it as one input for educators who also know the student", "Place the student automatically", "Share the score publicly", "Ignore all data"], answer: 0, why: "No AI score alone should decide." },
-          { q: "Why is access an equity issue for AI tools?", options: ["Only adults use AI", "It is not", "Access makes tools slower", "Students without devices, internet or accessible tools fall behind"], answer: 3, why: "Unequal access widens gaps." },
-          { q: "Data minimization means:", options: ["Collecting as much as possible", "Sharing only what the task needs", "Deleting all data", "Using smaller fonts"], answer: 1, why: "Less data means less risk." },
-          { q: "Under COPPA, a school may consent for parents when data is collected:", options: ["For advertising", "Never", "For any reason", "For the school's use and benefit, with no other commercial purpose"], answer: 3, why: "That is the FTC's condition." }
+          { objective: "O1", q: "Which principle says educators make decisions about students and AI only informs?", options: ["Transparency", "Data minimization", "Human oversight", "Tracking"], answer: 2, why: "Human oversight keeps decisions with educators." },
+          { objective: "O1", q: "An early-warning tool gives a student a high risk score. The right use is:", options: ["Use it as one input for educators who also know the student", "Place the student automatically", "Share the score publicly", "Ignore all data"], answer: 0, why: "No AI score alone should decide." },
+          { objective: "O2", q: "Why is access an equity issue for AI tools?", options: ["Only adults use AI", "It is not", "Access makes tools slower", "Students without devices, internet or accessible tools fall behind"], answer: 3, why: "Unequal access widens gaps." },
+          { objective: "O3", q: "Data minimization means:", options: ["Collecting as much as possible", "Sharing only what the task needs", "Deleting all data", "Using smaller fonts"], answer: 1, why: "Less data means less risk." },
+          { objective: "O3", q: "Under COPPA, a school may consent for parents when data is collected:", options: ["For advertising", "Never", "For any reason", "For the school's use and benefit, with no other commercial purpose"], answer: 3, why: "That is the FTC's condition." }
         ]
       }
     },
@@ -94,6 +132,7 @@ module.exports = {
       name: "Chapter 2: Guidelines, vendors and incidents",
       lessons: [
         {
+          objectives: ["O4"],
           title: "Vetting vendors and agreements",
           minutes: 5,
           goal: "Run a vendor review before an AI tool is approved.",
@@ -111,9 +150,14 @@ module.exports = {
           ],
           sources: [{ name: "Privacy and Education Technology: Model Terms of Service checklist", url: "https://studentprivacy.ed.gov/privacy-and-education-technology" }],
           tryIt: "Run a vendor review on one AI tool your school uses or wants: answer the privacy and AI questions from its public documents, and list what you would need the vendor to confirm in writing.",
-          youCanNow: "review an AI vendor on privacy, AI quality and contract terms before approval."
+          youCanNow: "review an AI vendor on privacy, AI quality and contract terms before approval.",
+          quickCheck: [
+            { objective: "O4", q: "What is a data privacy agreement?", options: ["A vendor's marketing page", "A signed contract on how a vendor uses and protects student data", "A form students sign", "A list of approved websites"], answer: 1, why: "A signed agreement holds the vendor to its commitments." },
+            { objective: "O4", q: "A vendor's website says it never trains AI on student data. What would you do?", options: ["Approve the tool on that basis", "Ignore it", "Ask students if it is true", "Get that commitment in the signed agreement"], answer: 3, why: "Website policies can change; a signed agreement does not change on its own." }
+          ]
         },
         {
+          objectives: ["O5"],
           title: "Writing responsible-AI guidelines",
           minutes: 6,
           goal: "Draft clear guidelines for staff and student AI use.",
@@ -130,9 +174,14 @@ module.exports = {
             { title: "Write it together", bullets: ["Teachers, students, families", "Counsel checks policy and state law", "Set a review date"] }
           ],
           tryIt: "Draft the staff and student \"may / may not\" sections of your guidelines with at least four items each. Share them with two teachers and note their changes.",
-          youCanNow: "write practical responsible-AI guidelines with the people who will follow them."
+          youCanNow: "write practical responsible-AI guidelines with the people who will follow them.",
+          quickCheck: [
+            { objective: "O5", q: "What makes guidelines useful to staff?", options: ["Concrete may and may-not examples", "Long legal language", "A list of every AI tool on the market", "No examples, so staff can decide"], answer: 0, why: "Concrete examples make rules easy to follow." },
+            { objective: "O5", q: "Your draft guidelines are ready. What should happen before they are adopted?", options: ["Post them right away", "Ask an AI chatbot to approve them", "Get teacher, student and family input and check them against policy and law with counsel", "Keep them secret from staff"], answer: 2, why: "Guidelines need input from the people affected and a legal check." }
+          ]
         },
         {
+          objectives: ["O6"],
           title: "When something goes wrong: incident response",
           minutes: 6,
           goal: "Plan the steps for an AI incident, including data leaks and deepfakes.",
@@ -149,17 +198,21 @@ module.exports = {
             { title: "Deepfakes and harassment", bullets: ["Follow bullying, harassment, Title IX procedures", "Never forward images of minors", "Involve counsel; laws are changing"] }
           ],
           tryIt: "Final task: finish your two-page responsible-AI guidelines (principles, privacy, equity, staff and student rules, vendor steps, six-step incident plan). Test them by reviewing one real tool and walking through one realistic incident, noting any gap you found.",
-          youCanNow: "lead responsible AI in your school with clear guidelines, vendor review and an incident plan."
+          youCanNow: "lead responsible AI in your school with clear guidelines, vendor review and an incident plan.",
+          quickCheck: [
+            { objective: "O6", q: "What is the last step of the incident plan?", options: ["Make safe", "Learn: fix the cause and update the guidelines", "Notify the press", "Delete all records"], answer: 1, why: "Learning from each incident keeps it from happening again." },
+            { objective: "O6", q: "A staff member receives an AI fake image of a student. What should they do with it?", options: ["Forward it to colleagues so they know", "Post a warning with the image", "Delete it and say nothing", "Not forward it, and follow counsel and law-enforcement guidance on preserving evidence"], answer: 3, why: "Images of minors are never forwarded; evidence is handled as counsel and law enforcement advise." }
+          ]
         }
       ],
       check: {
         title: "Knowledge Check 2: Guidelines, vendors and incidents",
         questions: [
-          { q: "Why get vendor commitments in a signed agreement?", options: ["Agreements are optional", "It is faster", "Website policies can change", "Vendors prefer it"], answer: 2, why: "Signed terms bind the vendor." },
-          { q: "Which is an AI-specific vendor question?", options: ["Can teachers see and override the AI's outputs?", "What color is the logo?", "How many staff does the vendor have?", "Where is their office?"], answer: 0, why: "Human override is key to oversight." },
-          { q: "Who should help write the guidelines?", options: ["Only the vendor", "Teachers, students and families, checked by counsel", "Only the principal, alone", "An AI tool alone"], answer: 1, why: "Guidelines people help write are guidelines people follow." },
-          { q: "A student reports an AI fake image of a classmate in a group chat. What is the first step?", options: ["Make safe: stop the harm and support the student", "Forward it to staff to show them", "Ignore it", "Post a warning with the image"], answer: 0, why: "Safety first; never spread the image." },
-          { q: "What is the last step of the incident plan?", options: ["Forget about it", "Blame the student", "Delete the guidelines", "Learn: fix the cause and update the guidelines"], answer: 3, why: "Incidents should improve the system." }
+          { objective: "O4", q: "Why get vendor commitments in a signed agreement?", options: ["Agreements are optional", "It is faster", "Website policies can change", "Vendors prefer it"], answer: 2, why: "Signed terms bind the vendor." },
+          { objective: "O4", q: "Which is an AI-specific vendor question?", options: ["Can teachers see and override the AI's outputs?", "What color is the logo?", "How many staff does the vendor have?", "Where is their office?"], answer: 0, why: "Human override is key to oversight." },
+          { objective: "O5", q: "Who should help write the guidelines?", options: ["Only the vendor", "Teachers, students and families, checked by counsel", "Only the principal, alone", "An AI tool alone"], answer: 1, why: "Guidelines people help write are guidelines people follow." },
+          { objective: "O6", q: "A student reports an AI fake image of a classmate in a group chat. What is the first step?", options: ["Make safe: stop the harm and support the student", "Forward it to staff to show them", "Ignore it", "Post a warning with the image"], answer: 0, why: "Safety first; never spread the image." },
+          { objective: "O6", q: "What is the last step of the incident plan?", options: ["Forget about it", "Blame the student", "Delete the guidelines", "Learn: fix the cause and update the guidelines"], answer: 3, why: "Incidents should improve the system." }
         ]
       }
     }
@@ -167,26 +220,107 @@ module.exports = {
   quiz: {
     title: "Final Quiz: AI for School and Educational Leaders 7: Ethics, Safety and Responsible AI",
     questions: [
-      { q: "Human oversight means:", options: ["AI decides; educators watch", "Educators decide; AI informs", "No one decides", "Parents decide all AI use"], answer: 1, why: "Decisions about students stay human." },
-      { q: "Transparency means:", options: ["Hiding AI use", "Using clear plastic", "Being open about when and how AI is used", "Sharing student data"], answer: 2, why: "People should know when AI is involved." },
-      { q: "Accountability means:", options: ["No one is responsible", "The AI is responsible", "A named person owns each AI tool and its effects", "Vendors decide everything"], answer: 2, why: "Someone must answer for each tool." },
-      { q: "The July 2025 federal AI letter calls for AI that is:", options: ["Educator-led, ethical, accessible, transparent and privacy-compliant", "Teacher-free", "Unregulated", "Only for high schools"], answer: 0, why: "Those are its stated principles." },
-      { q: "The NIST AI RMF is:", options: ["A student test", "A law", "A software product", "A voluntary framework for managing AI risk"], answer: 3, why: "NIST describes it as voluntary." },
-      { q: "AI-writing detectors raise equity concerns because they:", options: ["Are always fair", "May flag English learners' writing more often", "Are free", "Never flag anyone"], answer: 1, why: "False positives can fall unevenly." },
-      { q: "Adaptive tracking can be a risk when it:", options: ["Is used by teachers", "Challenges every student", "Is turned off", "Keeps some students on easier work and narrows opportunity"], answer: 3, why: "Tracking can limit opportunity." },
-      { q: "An AI risk score should be used:", options: ["Publicly", "As the final decision", "As one input, never alone for decisions", "Never reviewed"], answer: 2, why: "Educators weigh it with what they know." },
-      { q: "Under FERPA, a vendor may act as a school official only if it:", options: ["Performs a school service under direct control, with limits on re-sharing", "Is popular", "Is free", "Has a privacy page"], answer: 0, why: "Those are the FERPA conditions." },
-      { q: "COPPA protects children:", options: ["Under 16", "Under 13", "Under 18", "Over 13"], answer: 1, why: "The FTC says under 13." },
-      { q: "The FTC amended its COPPA Rule on:", options: ["April 22, 2025", "January 1, 1990", "October 27, 2026", "July 4, 2020"], answer: 0, why: "The FTC FAQ gives April 22, 2025." },
-      { q: "Two-step sign-in adds:", options: ["Nothing", "A second password on paper", "A second user", "A second check, like a code on your phone"], answer: 3, why: "It protects accounts if a password leaks." },
-      { q: "The Model Terms of Service checklist comes from:", options: ["A vendor", "The Department of Education's Student Privacy Policy Office", "A social network", "A news site"], answer: 1, why: "It is listed on studentprivacy.ed.gov." },
-      { q: "A data privacy agreement is:", options: ["A student pledge", "A website banner", "A signed contract on how a vendor uses and protects student data", "A password"], answer: 2, why: "It binds the vendor in writing." },
-      { q: "Good guidelines include:", options: ["Vendor ads", "Only general values", "Concrete may / may not examples", "Student names"], answer: 2, why: "Examples make rules usable." },
-      { q: "Guidelines should be checked against:", options: ["District policy and state law, with counsel", "Social media", "Vendor blogs", "Nothing"], answer: 0, why: "They must fit existing law and policy." },
-      { q: "An AI deepfake of a student shared online may be:", options: ["A school project", "Harmless fun", "Always legal", "Harassment and possibly a crime"], answer: 3, why: "Treat it as serious harm." },
-      { q: "When preserving evidence involving images of minors, staff should:", options: ["Forward them to colleagues", "Follow counsel and law-enforcement guidance and never forward them", "Post them", "Save them to personal phones"], answer: 1, why: "Copying such images can itself cause harm or break the law." },
-      { q: "Notifying families after an incident should follow:", options: ["Social media comments", "Whatever is easiest", "Nothing", "Law and district policy"], answer: 3, why: "Notification duties come from law and policy." },
-      { q: "Laws on AI-generated images are:", options: ["The same in every state", "Fixed forever", "Changing quickly; ask counsel what applies", "Not relevant to schools"], answer: 2, why: "Federal and state rules are evolving." }
+      { objective: "O1", q: "Human oversight means:", options: ["AI decides; educators watch", "Educators decide; AI informs", "No one decides", "Parents decide all AI use"], answer: 1, why: "Decisions about students stay human." },
+      { objective: "O1", q: "Transparency means:", options: ["Hiding AI use", "Using clear plastic", "Being open about when and how AI is used", "Sharing student data"], answer: 2, why: "People should know when AI is involved." },
+      { objective: "O1", q: "Accountability means:", options: ["No one is responsible", "The AI is responsible", "A named person owns each AI tool and its effects", "Vendors decide everything"], answer: 2, why: "Someone must answer for each tool." },
+      { objective: "O1", q: "The July 2025 federal AI letter calls for AI that is:", options: ["Educator-led, ethical, accessible, transparent and privacy-compliant", "Teacher-free", "Unregulated", "Only for high schools"], answer: 0, why: "Those are its stated principles." },
+      { objective: "O1", q: "The NIST AI RMF is:", options: ["A student test", "A law", "A software product", "A voluntary framework for managing AI risk"], answer: 3, why: "NIST describes it as voluntary." },
+      { objective: "O2", q: "AI-writing detectors raise equity concerns because they:", options: ["Are always fair", "May flag English learners' writing more often", "Are free", "Never flag anyone"], answer: 1, why: "False positives can fall unevenly." },
+      { objective: "O2", q: "Adaptive tracking can be a risk when it:", options: ["Is used by teachers", "Challenges every student", "Is turned off", "Keeps some students on easier work and narrows opportunity"], answer: 3, why: "Tracking can limit opportunity." },
+      { objective: "O2", q: "An AI risk score should be used:", options: ["Publicly", "As the final decision", "As one input, never alone for decisions", "Never reviewed"], answer: 2, why: "Educators weigh it with what they know." },
+      { objective: "O3", q: "Under FERPA, a vendor may act as a school official only if it:", options: ["Performs a school service under direct control, with limits on re-sharing", "Is popular", "Is free", "Has a privacy page"], answer: 0, why: "Those are the FERPA conditions." },
+      { objective: "O3", q: "COPPA protects children:", options: ["Under 16", "Under 13", "Under 18", "Over 13"], answer: 1, why: "The FTC says under 13." },
+      { objective: "O3", q: "The FTC amended its COPPA Rule on:", options: ["April 22, 2025", "January 1, 1990", "October 27, 2026", "July 4, 2020"], answer: 0, why: "The FTC FAQ gives April 22, 2025." },
+      { objective: "O3", q: "Two-step sign-in adds:", options: ["Nothing", "A second password on paper", "A second user", "A second check, like a code on your phone"], answer: 3, why: "It protects accounts if a password leaks." },
+      { objective: "O4", q: "The Model Terms of Service checklist comes from:", options: ["A vendor", "The Department of Education's Student Privacy Policy Office", "A social network", "A news site"], answer: 1, why: "It is listed on studentprivacy.ed.gov." },
+      { objective: "O4", q: "A data privacy agreement is:", options: ["A student pledge", "A website banner", "A signed contract on how a vendor uses and protects student data", "A password"], answer: 2, why: "It binds the vendor in writing." },
+      { objective: "O5", q: "Good guidelines include:", options: ["Vendor ads", "Only general values", "Concrete may / may not examples", "Student names"], answer: 2, why: "Examples make rules usable." },
+      { objective: "O5", q: "Guidelines should be checked against:", options: ["District policy and state law, with counsel", "Social media", "Vendor blogs", "Nothing"], answer: 0, why: "They must fit existing law and policy." },
+      { objective: "O6", q: "An AI deepfake of a student shared online may be:", options: ["A school project", "Harmless fun", "Always legal", "Harassment and possibly a crime"], answer: 3, why: "Treat it as serious harm." },
+      { objective: "O6", q: "When preserving evidence involving images of minors, staff should:", options: ["Forward them to colleagues", "Follow counsel and law-enforcement guidance and never forward them", "Post them", "Save them to personal phones"], answer: 1, why: "Copying such images can itself cause harm or break the law." },
+      { objective: "O6", q: "Notifying families after an incident should follow:", options: ["Social media comments", "Whatever is easiest", "Nothing", "Law and district policy"], answer: 3, why: "Notification duties come from law and policy." },
+      { objective: "O6", q: "Laws on AI-generated images are:", options: ["The same in every state", "Fixed forever", "Changing quickly; ask counsel what applies", "Not relevant to schools"], answer: 2, why: "Federal and state rules are evolving." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      5,
+      7,
+      8,
+      9,
+      12,
+      14,
+      16,
+      17
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Principles",
+        objective: "O1",
+        notYet: "Fewer than five principles, or they are not in plain words.",
+        meets: "Five principles in plain words.",
+        exceeds: "Each principle has a short school example."
+      },
+      {
+        name: "Privacy and equity",
+        objective: "O3",
+        notYet: "Privacy rules or equity checks are missing.",
+        meets: "Privacy rules (FERPA, COPPA, approved tools only) and equity checks are included.",
+        exceeds: "Equity checks say how the school will look at its own results by group."
+      },
+      {
+        name: "Staff and student rules",
+        objective: "O5",
+        notYet: "No may and may-not rules, or they are vague.",
+        meets: "Says what staff and students may and may not do.",
+        exceeds: "Teachers reviewed the rules and their changes were made."
+      },
+      {
+        name: "Vendor review",
+        objective: "O4",
+        notYet: "No vendor steps, or no real tool was reviewed.",
+        meets: "Vendor review steps, tested on one real AI tool.",
+        exceeds: "Lists what the vendor must confirm in a signed agreement."
+      },
+      {
+        name: "Incident plan",
+        objective: "O6",
+        notYet: "Fewer than six steps, or not tested on an incident.",
+        meets: "A six-step incident plan, walked through on one realistic incident.",
+        exceeds: "Notes a gap found in the walk-through and how the guidelines will change."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Leaders who finish the course and pass the final task (rubric)",
+      "Schools or districts that adopt written responsible-AI guidelines within 90 days (follow-up survey)",
+      "AI tools reviewed with the vendor steps before approval (follow-up survey)",
+      "Schools that have practiced the incident plan with their leadership team"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer with internet",
+      "Your district's current technology, privacy and acceptable-use policies",
+      "The Model Terms of Service resource from studentprivacy.ed.gov",
+      "A realistic made-up incident case for the walk-through",
+      "About 60 minutes for the lessons and checks, plus time to write and test the guidelines"
+    ],
+    facilitatorNotes: [
+      "Take the pre-test together, then apply the five principles to one tool the group knows.",
+      "Remind leaders that the course is not legal advice; invite district counsel or the privacy officer to the guidelines session.",
+      "Run the incident walk-through as a tabletop exercise with roles; use made-up cases only.",
+      "Handle the deepfake topic with care; make counselors available, and never show or share images of minors.",
+      "Score the final task with the rubric, and ask each team to name one gap their walk-through found."
     ]
   }
 };
