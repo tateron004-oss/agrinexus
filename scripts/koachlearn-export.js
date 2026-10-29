@@ -601,4 +601,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { COURSES, exportCourse, exportWritten, validateCourse, wrap, lessonHtml };
+module.exports = { COURSES, exportCourse, exportWritten, validateCourse, parityProblems, englishOf, loadCourse, wrap, lessonHtml };
