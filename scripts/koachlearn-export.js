@@ -166,7 +166,7 @@ const LABELS = {
   fr: { lesson: "Leçon", of: "sur", goal: "Objectif :", tryIt: "Essayez maintenant", youCanNow: "Vous savez maintenant", byTheEnd: "À la fin, vous saurez", minutes: m => `environ ${m} minutes`, steps: "Étape par étape :", words: "Mots à connaître :", sources: "Sources officielles :", finalTask: "Tâche finale :", byEndCourse: "À la fin de ce cours, vous saurez", skills: "Compétences :", intro: "Vidéo d'introduction",
     objectives: "Ce que vous saurez faire :", youWill: "vous saurez", buildsToward: "Cette leçon vous prépare à :", quickCheck: n => `Contrôle rapide : Leçon ${n}`, rubric: "Comment votre tâche finale est évaluée :", criterion: "Ce que nous regardons", notYet: "Pas encore", meets: "Atteint", exceeds: "Dépasse", mastery: "Pour réussir :" },
   ar: { lesson: "الدرس", of: "من", goal: "الهدف:", tryIt: "جرّب الآن", youCanNow: "يمكنك الآن", byTheEnd: "في النهاية ستتمكن من", minutes: m => `حوالي ${m} دقائق`, steps: "خطوة بخطوة:", words: "كلمات مهمة:", sources: "مصادر رسمية:", finalTask: "المهمة النهائية:", byEndCourse: "في نهاية هذه الدورة ستتمكن من", skills: "المهارات:", intro: "فيديو تعريفي",
-    objectives: "ما ستتمكن من فعله:", youWill: "ستتمكن من", buildsToward: "هذا الدرس يعدّك لـ:", quickCheck: n => `تحقق سريع: الدرس ${n}`, rubric: "كيف تُقيَّم مهمتك النهائية:", criterion: "ما ننظر إليه", notYet: "ليس بعد", meets: "يحقق", exceeds: "يتجاوز", mastery: "للنجاح:" }
+    comma: "، ", objectives: "ما ستتمكن من فعله:", youWill: "ستتمكن من", buildsToward: "هذا الدرس يعدّك لـ:", quickCheck: n => `تحقق سريع: الدرس ${n}`, rubric: "كيف تُقيَّم مهمتك النهائية:", criterion: "ما ننظر إليه", notYet: "ليس بعد", meets: "يحقق", exceeds: "يتجاوز", mastery: "للنجاح:" }
 };
 const RTL = new Set(["ar"]);
 const RLM = "‏";
@@ -194,6 +194,24 @@ function parityProblems(c, en) {
     ch.check.questions.forEach((q, qi) => need(((t.check.questions || [])[qi] || {}).answer === q.answer, `chapter ${ci + 1} check question ${qi + 1}: answer must stay ${q.answer}`));
   });
   ((en.quiz && en.quiz.questions) || []).forEach((q, qi) => need((((c.quiz && c.quiz.questions) || [])[qi] || {}).answer === q.answer, `quiz question ${qi + 1}: answer must stay ${q.answer}`));
+  // ADDIE parts: the same objectives, the same tags on lessons and questions, the same quick-check answers, pre-test and rubric rows
+  if (en.objectives) {
+    const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+    need(same((c.objectives || []).map(o => o.id), en.objectives.map(o => o.id)), `objectives: the same ids as the English (${en.objectives.map(o => o.id).join(", ")})`);
+    need(c.analysis && c.implementation && c.evaluation, "analysis, implementation and evaluation: translate them too");
+    en.chapters.forEach((ch, ci) => {
+      const t = (c.chapters || [])[ci] || { lessons: [], check: { questions: [] } };
+      ch.lessons.forEach((l, li) => {
+        const tl = t.lessons[li] || {};
+        need(same(tl.objectives, l.objectives), `chapter ${ci + 1} lesson ${li + 1}: objectives must stay ${JSON.stringify(l.objectives)}`);
+        (l.quickCheck || []).forEach((q, qi) => { const tq = (tl.quickCheck || [])[qi] || {}; need(tq.answer === q.answer && tq.objective === q.objective, `chapter ${ci + 1} lesson ${li + 1} quick check ${qi + 1}: answer ${q.answer} and objective ${q.objective} like the English`); });
+      });
+      ch.check.questions.forEach((q, qi) => need(((t.check.questions || [])[qi] || {}).objective === q.objective, `chapter ${ci + 1} check question ${qi + 1}: objective must stay ${q.objective}`));
+    });
+    en.quiz.questions.forEach((q, qi) => need((((c.quiz && c.quiz.questions) || [])[qi] || {}).objective === q.objective, `quiz question ${qi + 1}: objective must stay ${q.objective}`));
+    need(same(c.pretest && c.pretest.from, en.pretest.from), `pretest.from must stay ${JSON.stringify(en.pretest.from)}`);
+    need(same(((c.rubric && c.rubric.criteria) || []).map(k => k.objective), en.rubric.criteria.map(k => k.objective)), "rubric: the same rows, with the same objectives, as the English");
+  }
   return problems;
 }
 
@@ -310,12 +328,42 @@ const SURVEY = {
     scale: ["Strongly disagree", "Disagree", "Not sure", "Agree", "Strongly agree"],
     rate: ["The lessons were easy to follow.", "The videos and slides helped me learn.", "The \"Try it now\" tasks helped me practise.", "The quick checks and quizzes helped me see what I had learned.", "I can use what I learned in my own life or work.", "I would recommend this course to a friend."],
     open: ["What was the most useful part of this course?", "What should we change to make it better?"]
+  },
+  es: {
+    title: "Encuesta del curso",
+    scale: ["Totalmente en desacuerdo", "En desacuerdo", "No estoy seguro", "De acuerdo", "Totalmente de acuerdo"],
+    rate: ["Las lecciones fueron fáciles de seguir.", "Los videos y las diapositivas me ayudaron a aprender.", "Las tareas \"Pruébalo ahora\" me ayudaron a practicar.", "Las comprobaciones rápidas y los exámenes me ayudaron a ver lo que aprendí.", "Puedo usar lo que aprendí en mi vida o en mi trabajo.", "Recomendaría este curso a un amigo."],
+    open: ["¿Qué fue lo más útil de este curso?", "¿Qué deberíamos cambiar para mejorarlo?"]
+  },
+  fr: {
+    title: "Questionnaire du cours",
+    scale: ["Pas du tout d'accord", "Pas d'accord", "Je ne sais pas", "D'accord", "Tout à fait d'accord"],
+    rate: ["Les leçons étaient faciles à suivre.", "Les vidéos et les diapositives m'ont aidé à apprendre.", "Les activités « Essayez maintenant » m'ont aidé à m'exercer.", "Les contrôles rapides et les quiz m'ont aidé à voir ce que j'ai appris.", "Je peux utiliser ce que j'ai appris dans ma vie ou mon travail.", "Je recommanderais ce cours à un ami."],
+    open: ["Quelle partie de ce cours vous a été la plus utile ?", "Que devrions-nous changer pour l'améliorer ?"]
+  },
+  ar: {
+    title: "استبيان الدورة",
+    scale: ["لا أوافق بشدة", "لا أوافق", "لست متأكدًا", "أوافق", "أوافق بشدة"],
+    rate: ["كان من السهل متابعة الدروس.", "ساعدتني الفيديوهات والشرائح على التعلم.", "ساعدتني مهام \"جرّب الآن\" على التدرب.", "ساعدتني اختبارات التحقق السريع والاختبارات على معرفة ما تعلمته.", "أستطيع استخدام ما تعلمته في حياتي أو عملي.", "سأوصي صديقًا بهذه الدورة."],
+    open: ["ما أكثر جزء مفيد في هذه الدورة؟", "ما الذي يجب أن نغيره لتحسينها؟"]
   }
 };
 const FOLLOW_UP = {
   en: {
     title: "30 days later: are you using it?",
-    questions: ["In the last 30 days, have you used this course to {skill}? (Yes / No)", "How often? (Not yet / Once / A few times / Every week)", "Tell us one time you used it, and what happened.", "If you have not used it yet, what got in the way?", "What would help you use it more?"]
+    questions: ["This course taught you to {skill}. In the last 30 days, have you used it? (Yes / No)", "How often? (Not yet / Once / A few times / Every week)", "Tell us one time you used it, and what happened.", "If you have not used it yet, what got in the way?", "What would help you use it more?"]
+  },
+  es: {
+    title: "30 días después: ¿lo estás usando?",
+    questions: ["Este curso te enseñó a {skill}. En los últimos 30 días, ¿lo usaste? (Sí / No)", "¿Con qué frecuencia? (Todavía no / Una vez / Algunas veces / Cada semana)", "Cuéntanos una vez que lo usaste y qué pasó.", "Si todavía no lo has usado, ¿qué te lo impidió?", "¿Qué te ayudaría a usarlo más?"]
+  },
+  fr: {
+    title: "30 jours plus tard : l'utilisez-vous ?",
+    questions: ["Ce cours vous a appris à {skill}. Au cours des 30 derniers jours, l'avez-vous utilisé ? (Oui / Non)", "À quelle fréquence ? (Pas encore / Une fois / Quelques fois / Chaque semaine)", "Racontez-nous une fois où vous l'avez utilisé, et ce qui s'est passé.", "Si vous ne l'avez pas encore utilisé, qu'est-ce qui vous en a empêché ?", "Qu'est-ce qui vous aiderait à l'utiliser davantage ?"]
+  },
+  ar: {
+    title: "بعد 30 يومًا: هل تستخدم ما تعلمته؟",
+    questions: ["علّمتك هذه الدورة {skill}. خلال آخر 30 يومًا، هل استخدمت ذلك؟ (نعم / لا)", "كم مرة؟ (ليس بعد / مرة واحدة / بضع مرات / كل أسبوع)", "أخبرنا عن مرة استخدمته فيها، وماذا حدث.", "إذا لم تستخدمه بعد، فما الذي منعك؟", "ما الذي سيساعدك على استخدامه أكثر؟"]
   }
 };
 
@@ -358,7 +406,7 @@ function stillsVideo(dir, base, scenes) {
 }
 
 // an objective as one sentence a learner reads: condition, action, standard
-const objectiveText = (o, L) => `${o.condition}, ${L.youWill} ${o.action}, ${o.standard}`.replace(/\.*$/, ".");
+const objectiveText = (o, L) => { const sep = L.comma || ", "; return `${o.condition}${sep}${L.youWill} ${o.action}${sep}${o.standard}`.replace(/\.*$/, "."); };
 
 function rubricHtml(r, L) {
   const head = `<tr><th>${L.criterion}</th><th>${L.notYet}</th><th>${L.meets}</th><th>${L.exceeds}</th></tr>`;
