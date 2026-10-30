@@ -91,6 +91,68 @@ const SHARED = {
   "esl-workplace-english": { name: "English for the Workplace (ESL)" }
 };
 
+// wave 3 (30 October 2026): the rest of workforce development for youth and adults, in the US and abroad (WAVE3-COURSES-BRIEF.md)
+Object.assign(SHARED, {
+  "early-childhood-cda-prep": { name: "Early Childhood Education and CDA Credential Preparation" },
+  "teacher-aide-paraprofessional": { name: "Teacher's Aide and Paraprofessional Preparation" },
+  "carpentry-basics": { name: "Carpentry Basics" },
+  "plumbing-basics": { name: "Plumbing Basics" },
+  "construction-core-nccer": { name: "Construction Core Skills (NCCER Core Preparation)" },
+  "manufacturing-technician": { name: "Manufacturing Technician Basics" },
+  "cnc-machining-basics": { name: "CNC Machining Basics" },
+  "quality-six-sigma-yellow-belt": { name: "Quality Basics (Six Sigma Yellow Belt Preparation)" },
+  "hospitality-front-desk": { name: "Hotel and Hospitality Careers: Front Desk and Guest Service" },
+  "retail-sales-cashier": { name: "Retail Sales and Cashier Skills" },
+  "restaurant-careers": { name: "Restaurant Careers: Server, Cook and Kitchen Basics" },
+  "security-officer-prep": { name: "Security Officer (Guard Card) Preparation" },
+  "first-aid-cpr-awareness": { name: "First Aid and CPR Awareness" },
+  "youth-first-job": { name: "Your First Job: Work Permits, Paychecks and What Bosses Expect" },
+  "apprenticeships-job-programs": { name: "Finding Apprenticeships and Job Training Programs" },
+  "usajobs-government-jobs": { name: "Applying for Government Jobs (USAJOBS)" },
+  "typing-keyboarding": { name: "Typing and Keyboarding Skills" },
+  "capm-project-management": { name: "Project Management Basics (CAPM Preparation)" },
+  "real-estate-license-prep": { name: "Real Estate License Exam Preparation" },
+  "insurance-license-prep": { name: "Insurance Agent License Exam Preparation" },
+  "quickbooks-bookkeeping": { name: "QuickBooks Bookkeeping" },
+  "canva-graphic-design": { name: "Graphic Design with Canva" },
+  "video-editing-basics": { name: "Video Editing Basics" },
+  "international-cv-writing": { name: "Writing a CV for Jobs Around the World" },
+  "call-center-bpo-careers": { name: "Call Center and Outsourcing (BPO) Careers" },
+  "data-annotation-online-work": { name: "AI Data Annotation and Online Micro-Jobs" },
+  "tvet-choosing-a-program": { name: "Choosing a Vocational Training (TVET) Program" },
+  "safe-labor-migration": { name: "Migrating for Work Safely" }
+});
+const WAVE3 = {
+  "early-childhood-cda-prep": ["Workforce Development", "Youth", "Undeserved Community", "Re-Entry"],
+  "teacher-aide-paraprofessional": ["Workforce Development", "Undeserved Community", "Leadership Development"],
+  "carpentry-basics": ["Workforce Development", "Re-Entry", "Youth", "Veterans (military)"],
+  "plumbing-basics": ["Workforce Development", "Re-Entry", "Youth", "Veterans (military)"],
+  "construction-core-nccer": ["Workforce Development", "Re-Entry", "Youth", "Veterans (military)"],
+  "manufacturing-technician": ["Workforce Development", "Re-Entry", "Veterans (military)", "Youth"],
+  "cnc-machining-basics": ["Workforce Development", "Veterans (military)", "Youth"],
+  "quality-six-sigma-yellow-belt": ["Workforce Development", "Small Business", "Veterans (military)"],
+  "hospitality-front-desk": ["Workforce Development", "Re-Entry", "Youth", "Undeserved Community"],
+  "retail-sales-cashier": ["Workforce Development", "Youth", "Re-Entry"],
+  "restaurant-careers": ["Workforce Development", "Youth", "Re-Entry"],
+  "security-officer-prep": ["Workforce Development", "Re-Entry", "Veterans (military)"],
+  "first-aid-cpr-awareness": ["Workforce Development", "Youth", "Seniors and Technology", "Undeserved Community", "Non Profits"],
+  "youth-first-job": ["Youth", "Workforce Development"],
+  "apprenticeships-job-programs": ["Workforce Development", "Youth", "Re-Entry", "Veterans (military)", "Undeserved Community"],
+  "usajobs-government-jobs": ["Workforce Development", "Veterans (military)", "Re-Entry"],
+  "typing-keyboarding": ["Workforce Development", "Youth", "Seniors and Technology", "Undeserved Community"],
+  "capm-project-management": ["Workforce Development", "Veterans (military)", "Leadership Development", "Small Business"],
+  "real-estate-license-prep": ["Workforce Development", "Small Business", "Entrepreneurs"],
+  "insurance-license-prep": ["Workforce Development", "Entrepreneurs"],
+  "quickbooks-bookkeeping": ["Workforce Development", "Small Business", "Entrepreneurs", "Non Profits"],
+  "canva-graphic-design": ["Workforce Development", "Youth", "Small Business", "Non Profits", "Entrepreneurs"],
+  "video-editing-basics": ["Workforce Development", "Youth", "Athletes", "Entrepreneurs"],
+  "international-cv-writing": ["Workforce Development", "Africa: Life and Work", "Undeserved Community"],
+  "call-center-bpo-careers": ["Workforce Development", "Africa: Life and Work", "Undeserved Community"],
+  "data-annotation-online-work": ["Workforce Development", "Africa: Life and Work", "Youth", "Undeserved Community"],
+  "tvet-choosing-a-program": ["Africa: Life and Work", "Workforce Development", "Youth"],
+  "safe-labor-migration": ["Africa: Life and Work", "Workforce Development", "Undeserved Community"]
+};
+
 // wave 1 placements: which categories each wave 1 course also goes in (added to each category's shared list below)
 const WAVE1 = {
   "it-support-fundamentals": ["Workforce Development", "Youth", "Veterans (military)", "Undeserved Community", "Re-Entry"],
@@ -438,6 +500,11 @@ CATEGORIES["Africa: Life and Work"] = {
   },
   shared: []
 };
+
+for (const [id, cats] of Object.entries(WAVE3)) for (const cat of cats) {
+  if (!CATEGORIES[cat]) throw new Error(`catalog: wave 3 course ${id} names unknown category ${cat}`);
+  CATEGORIES[cat].shared.push(id);
+}
 
 // every course to write, once: { id, name, folder, bonus, categories: [names it goes in] }
 function allCourses() {
