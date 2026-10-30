@@ -34,7 +34,7 @@ module.exports = {
       "Tiempo: lecciones de 4 a 6 minutos",
       "El examen cambia a finales de 2026: los participantes deben revisar comptia.org para ver la versión, las fechas y el precio"
     ],
-    prerequisites: "Sentirse cómodo con una computadora y con la seguridad básica de cuentas. Es bueno tomar antes \"Introducción a la ciberseguridad\" y \"Fundamentos de soporte de TI (preparación para CompTIA A+)\"."
+    prerequisites: "Sentirse cómodo con una computadora y con la seguridad básica de cuentas. Es bueno tomar antes \"Introducción a la ciberseguridad\" y \"Fundamentos de soporte técnico de TI (preparación para CompTIA A+)\"."
   },
   // ---- ADDIE: Diseño ----
   objectives: [

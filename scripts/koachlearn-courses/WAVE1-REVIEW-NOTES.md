@@ -19,3 +19,4 @@
 - afr-mobile-money-safety, afr-savings-groups-microfinance, afr-online-freelancing: Safaricom codes 456/100/333 from news sources (check safaricom.co.ke); Upwork/Fiverr pages blocked so no fees stated.
 - afr-tailoring-fashion-business, afr-clean-water-hygiene, afr-malaria-prevention: health reviewer to read ORS wording (water L6) and IPTp / seasonal chemoprevention / vaccine wording (malaria L4); net-care advice unsourced; APIX unreachable.
 - afr-afcfta-cross-border-trade, afr-phone-repair-business, afr-solar-home-systems: no small-trader scheme limits (COMESA/EAC/ECOWAS pages missing); battery-fire steps and solar install practice are general (not cited); sizing example marked example.
+- TRANSLATION CONSISTENCY: translators cite other courses by their own renderings (prerequisites, cross-links). Final pass: replace each quoted course title in translations with that course's actual translated name.

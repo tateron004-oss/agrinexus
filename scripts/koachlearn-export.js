@@ -36,6 +36,12 @@ const COURSES = {
 const W = 1280, H = 720;
 const NAVY = "0x0f172a", RED = "0xe11d48", GREY = "0xcbd5e1";
 const BOLD = "/Windows/Fonts/arialbd.ttf", PLAIN = "/Windows/Fonts/arial.ttf";
+// Arial has no Ethiopic letters, so Amharic courses are drawn in Ebrima (also a Windows font)
+const FONTS_BY_LANG = { am: { [BOLD]: "/Windows/Fonts/ebrimabd.ttf", [PLAIN]: "/Windows/Fonts/ebrima.ttf" } };
+// Yoruba and Igbo stack tone marks on dotted vowels (ẹ̀ ọ́), which Arial places badly; Segoe UI places them well
+FONTS_BY_LANG.yo = FONTS_BY_LANG.ig = { [BOLD]: "/Windows/Fonts/segoeuib.ttf", [PLAIN]: "/Windows/Fonts/segoeui.ttf" };
+let fontSwap = null;
+const fontOf = f => (fontSwap && fontSwap[f]) || f;
 
 const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const pad = n => String(n).padStart(2, "0");
@@ -62,7 +68,7 @@ function card(dir, name, blocks, seconds, { still = false } = {}) {
     fs.writeFileSync(path.join(dir, file), lines.join("\n"));
     const lineHeight = Math.round(block.size * 1.3);
     const place = block.align === "left" ? "text_align=L:x=110" : block.align === "right" ? "text_align=R:x=w-text_w-110" : "text_align=C:x=(w-text_w)/2";
-    filters.push(`drawtext=fontfile='${block.font || BOLD}':textfile='${file}':expansion=none:fontsize=${block.size}:fontcolor=${block.color || "white"}:line_spacing=${lineHeight - block.size}:${place}:y=${y}`);
+    filters.push(`drawtext=fontfile='${fontOf(block.font || BOLD)}':textfile='${file}':expansion=none:fontsize=${block.size}:fontcolor=${block.color || "white"}:line_spacing=${lineHeight - block.size}:${place}:y=${y}`);
     y += lines.length * lineHeight + (block.gap == null ? 40 : block.gap);
   });
   const vf = filters.join(",");
@@ -166,7 +172,19 @@ const LABELS = {
   fr: { lesson: "Leçon", of: "sur", goal: "Objectif :", tryIt: "Essayez maintenant", youCanNow: "Vous savez maintenant", byTheEnd: "À la fin, vous saurez", minutes: m => `environ ${m} minutes`, steps: "Étape par étape :", words: "Mots à connaître :", sources: "Sources officielles :", finalTask: "Tâche finale :", byEndCourse: "À la fin de ce cours, vous saurez", skills: "Compétences :", intro: "Vidéo d'introduction",
     objectives: "Ce que vous saurez faire :", youWill: "vous saurez", buildsToward: "Cette leçon vous prépare à :", quickCheck: n => `Contrôle rapide : Leçon ${n}`, rubric: "Comment votre tâche finale est évaluée :", criterion: "Ce que nous regardons", notYet: "Pas encore", meets: "Atteint", exceeds: "Dépasse", mastery: "Pour réussir :" },
   ar: { lesson: "الدرس", of: "من", goal: "الهدف:", tryIt: "جرّب الآن", youCanNow: "يمكنك الآن", byTheEnd: "في النهاية ستتمكن من", minutes: m => `حوالي ${m} دقائق`, steps: "خطوة بخطوة:", words: "كلمات مهمة:", sources: "مصادر رسمية:", finalTask: "المهمة النهائية:", byEndCourse: "في نهاية هذه الدورة ستتمكن من", skills: "المهارات:", intro: "فيديو تعريفي",
-    comma: "، ", objectives: "ما ستتمكن من فعله:", youWill: "ستتمكن من", buildsToward: "هذا الدرس يعدّك لـ:", quickCheck: n => `تحقق سريع: الدرس ${n}`, rubric: "كيف تُقيَّم مهمتك النهائية:", criterion: "ما ننظر إليه", notYet: "ليس بعد", meets: "يحقق", exceeds: "يتجاوز", mastery: "للنجاح:" }
+    comma: "، ", objectives: "ما ستتمكن من فعله:", youWill: "ستتمكن من", buildsToward: "هذا الدرس يعدّك لـ:", quickCheck: n => `تحقق سريع: الدرس ${n}`, rubric: "كيف تُقيَّم مهمتك النهائية:", criterion: "ما ننظر إليه", notYet: "ليس بعد", meets: "يحقق", exceeds: "يتجاوز", mastery: "للنجاح:" },
+  sw: { lesson: "Somo", of: "kati ya", goal: "Lengo:", tryIt: "Jaribu sasa", youCanNow: "Sasa unaweza", byTheEnd: "Mwishoni utaweza", minutes: m => `takriban dakika ${m}`, steps: "Hatua kwa hatua:", words: "Maneno ya kujua:", sources: "Vyanzo rasmi:", finalTask: "Kazi ya mwisho:", byEndCourse: "Mwishoni mwa kozi hii utaweza", skills: "Ujuzi:", intro: "Video ya utangulizi",
+    objectives: "Utakachoweza kufanya:", youWill: "utaweza", buildsToward: "Somo hili linakuandaa kwa:", quickCheck: n => `Jaribio fupi: Somo ${n}`, rubric: "Jinsi kazi yako ya mwisho inavyokaguliwa:", criterion: "Tunachoangalia", notYet: "Bado", meets: "Inafikia", exceeds: "Inazidi", mastery: "Ili kufaulu:" },
+  ha: { lesson: "Darasi", of: "cikin", goal: "Manufa:", tryIt: "Gwada yanzu", youCanNow: "Yanzu za ku iya", byTheEnd: "A ƙarshe za ku iya", minutes: m => `kusan minti ${m}`, steps: "Mataki-mataki:", words: "Kalmomin da za ku sani:", sources: "Majiyoyi na hukuma:", finalTask: "Aiki na ƙarshe:", byEndCourse: "A ƙarshen wannan kwas za ku iya", skills: "Ƙwarewa:", intro: "Bidiyon gabatarwa",
+    objectives: "Abin da za ku iya yi:", youWill: "za ku iya", buildsToward: "Wannan darasi yana shirya ku don:", quickCheck: n => `Gwaji mai sauri: Darasi ${n}`, rubric: "Yadda ake duba aikinku na ƙarshe:", criterion: "Abin da muke dubawa", notYet: "Har yanzu bai kai ba", meets: "Ya cika", exceeds: "Ya wuce", mastery: "Don cin nasara:" },
+  am: { lesson: "ትምህርት", of: "ከ", goal: "ግብ:", tryIt: "አሁን ይሞክሩ", youCanNow: "አሁን", byTheEnd: "በመጨረሻ", minutes: m => `${m} ደቂቃ ገደማ`, steps: "ደረጃ በደረጃ:", words: "ሊያውቋቸው የሚገቡ ቃላት:", sources: "ኦፊሴላዊ ምንጮች:", finalTask: "የመጨረሻ ተግባር:", byEndCourse: "በዚህ ኮርስ መጨረሻ", skills: "ክህሎቶች:", intro: "የመግቢያ ቪዲዮ",
+    comma: "፣ ", stop: "።", after: " ይችላሉ።", objectives: "ማድረግ የሚችሉት:", youWill: "", buildsToward: "ይህ ትምህርት የሚያዘጋጅዎት ለ:", quickCheck: n => `ፈጣን ፍተሻ: ትምህርት ${n}`, rubric: "የመጨረሻ ተግባርዎ እንዴት እንደሚገመገም:", criterion: "የምንመለከተው", notYet: "ገና ነው", meets: "ያሟላል", exceeds: "ይበልጣል", mastery: "ለማለፍ:" },
+  yo: { lesson: "Ẹ̀kọ́", of: "nínú", goal: "Àfojúsùn:", tryIt: "Gbìyànjú báyìí", youCanNow: "Báyìí o lè", byTheEnd: "Ní ìparí, o máa lè", minutes: m => `bí ìṣẹ́jú ${m}`, steps: "Ìgbésẹ̀ kọ̀ọ̀kan:", words: "Àwọn ọ̀rọ̀ tó yẹ kí o mọ̀:", sources: "Àwọn orísun tó ṣeé gbẹ́kẹ̀lé:", finalTask: "Iṣẹ́ ìkẹyìn:", byEndCourse: "Ní ìparí ẹ̀kọ́ yìí, o máa lè", skills: "Àwọn ọgbọ́n:", intro: "Fídíò ìfihàn",
+    objectives: "Ohun tí o máa lè ṣe:", youWill: "o máa lè", buildsToward: "Ẹ̀kọ́ yìí ń múra rẹ sílẹ̀ fún:", quickCheck: n => `Ìdánwò kíákíá: Ẹ̀kọ́ ${n}`, rubric: "Bí a ṣe ń ṣàyẹ̀wò iṣẹ́ ìkẹyìn rẹ:", criterion: "Ohun tí a ń wò", notYet: "Kò tíì tó", meets: "Ó tó", exceeds: "Ó ju bẹ́ẹ̀ lọ", mastery: "Láti yege:" },
+  ig: { lesson: "Ihe ọmụmụ", of: "n'ime", goal: "Ebumnuche:", tryIt: "Nwaa ugbu a", youCanNow: "Ugbu a ị nwere ike", byTheEnd: "Na njedebe, ị ga-enwe ike", minutes: m => `ihe dị ka nkeji ${m}`, steps: "Nzọụkwụ n'otu n'otu:", words: "Okwu ị kwesịrị ịmara:", sources: "Ebe ozi a pụrụ ịtụkwasị obi:", finalTask: "Ọrụ ikpeazụ:", byEndCourse: "Na njedebe nke ọmụmụ a, ị ga-enwe ike", skills: "Nkà:", intro: "Vidiyo mmeghe",
+    objectives: "Ihe ị ga-enwe ike ime:", youWill: "ị ga-enwe ike", buildsToward: "Ihe ọmụmụ a na-akwado gị maka:", quickCheck: n => `Nnwale ngwa ngwa: Ihe ọmụmụ ${n}`, rubric: "Otu e si enyocha ọrụ ikpeazụ gị:", criterion: "Ihe anyị na-ele anya", notYet: "Ọ bụbeghị", meets: "O ruru", exceeds: "O karịrị", mastery: "Iji gafee:" },
+  pt: { lesson: "Lição", of: "de", goal: "Objetivo:", tryIt: "Experimente agora", youCanNow: "Agora você consegue", byTheEnd: "No final, você poderá", minutes: m => `cerca de ${m} minutos`, steps: "Passo a passo:", words: "Palavras para saber:", sources: "Fontes oficiais:", finalTask: "Tarefa final:", byEndCourse: "Ao final deste curso, você poderá", skills: "Habilidades:", intro: "Vídeo de introdução",
+    objectives: "O que você poderá fazer:", youWill: "você poderá", buildsToward: "Esta lição prepara você para:", quickCheck: n => `Verificação rápida: Lição ${n}`, rubric: "Como sua tarefa final é avaliada:", criterion: "O que observamos", notYet: "Ainda não", meets: "Atende", exceeds: "Supera", mastery: "Para ser aprovado:" }
 };
 const RTL = new Set(["ar"]);
 const RLM = "‏";
@@ -346,6 +364,42 @@ const SURVEY = {
     scale: ["لا أوافق بشدة", "لا أوافق", "لست متأكدًا", "أوافق", "أوافق بشدة"],
     rate: ["كان من السهل متابعة الدروس.", "ساعدتني الفيديوهات والشرائح على التعلم.", "ساعدتني مهام \"جرّب الآن\" على التدرب.", "ساعدتني اختبارات التحقق السريع والاختبارات على معرفة ما تعلمته.", "أستطيع استخدام ما تعلمته في حياتي أو عملي.", "سأوصي صديقًا بهذه الدورة."],
     open: ["ما أكثر جزء مفيد في هذه الدورة؟", "ما الذي يجب أن نغيره لتحسينها؟"]
+  },
+  sw: {
+    title: "Dodoso la kozi",
+    scale: ["Sikubaliani kabisa", "Sikubaliani", "Sina uhakika", "Nakubali", "Nakubali kabisa"],
+    rate: ["Masomo yalikuwa rahisi kufuata.", "Video na slaidi zilinisaidia kujifunza.", "Kazi za \"Jaribu sasa\" zilinisaidia kufanya mazoezi.", "Majaribio mafupi na mitihani vilinisaidia kuona nilichojifunza.", "Ninaweza kutumia nilichojifunza katika maisha au kazi yangu.", "Ningempendekezea rafiki kozi hii."],
+    open: ["Ni sehemu gani ya kozi hii iliyokuwa na manufaa zaidi?", "Tubadilishe nini ili kuiboresha?"]
+  },
+  ha: {
+    title: "Tambayoyin ra'ayi kan kwas",
+    scale: ["Ban yarda ba ko kaɗan", "Ban yarda ba", "Ban tabbata ba", "Na yarda", "Na yarda sosai"],
+    rate: ["Darussan sun yi sauƙin bi.", "Bidiyoyi da hotunan nunin sun taimake ni na koya.", "Ayyukan \"Gwada yanzu\" sun taimake ni na yi atisaye.", "Gwaje-gwaje masu sauri da jarabawa sun taimake ni na ga abin da na koya.", "Zan iya amfani da abin da na koya a rayuwata ko aikina.", "Zan ba aboki shawarar wannan kwas."],
+    open: ["Wane ɓangare na wannan kwas ya fi amfani?", "Me ya kamata mu canza don mu inganta shi?"]
+  },
+  am: {
+    title: "የኮርሱ መጠይቅ",
+    scale: ["በፍጹም አልስማማም", "አልስማማም", "እርግጠኛ አይደለሁም", "እስማማለሁ", "በጣም እስማማለሁ"],
+    rate: ["ትምህርቶቹ ለመከታተል ቀላል ነበሩ።", "ቪዲዮዎቹና ስላይዶቹ እንድማር ረድተውኛል።", "የ\"አሁን ይሞክሩ\" ተግባራት እንድለማመድ ረድተውኛል።", "ፈጣን ፍተሻዎቹና ፈተናዎቹ የተማርኩትን እንዳይ ረድተውኛል።", "የተማርኩትን በሕይወቴ ወይም በሥራዬ መጠቀም እችላለሁ።", "ይህን ኮርስ ለጓደኛዬ እመክራለሁ።"],
+    open: ["የዚህ ኮርስ በጣም ጠቃሚው ክፍል ምን ነበር?", "የተሻለ ለማድረግ ምን እንቀይር?"]
+  },
+  yo: {
+    title: "Ìwádìí nípa ẹ̀kọ́ náà",
+    scale: ["Mi ò fara mọ́ rárá", "Mi ò fara mọ́", "Kò dá mi lójú", "Mo fara mọ́", "Mo fara mọ́ gidigidi"],
+    rate: ["Àwọn ẹ̀kọ́ náà rọrùn láti tẹ̀lé.", "Àwọn fídíò àti àwọn àwòrán ìfihàn ràn mí lọ́wọ́ láti kọ́.", "Àwọn iṣẹ́ \"Gbìyànjú báyìí\" ràn mí lọ́wọ́ láti ṣe àṣà.", "Àwọn ìdánwò kíákíá àti àwọn ìdánwò ràn mí lọ́wọ́ láti rí ohun tí mo ti kọ́.", "Mo lè lo ohun tí mo kọ́ nínú ìgbésí ayé tàbí iṣẹ́ mi.", "Mo máa gba ọ̀rẹ́ mi níyànjú láti ṣe ẹ̀kọ́ yìí."],
+    open: ["Apá wo nínú ẹ̀kọ́ yìí ló wúlò jù?", "Kí ni ká yí padà kí ó lè dára sí i?"]
+  },
+  ig: {
+    title: "Ajụjụ banyere ọmụmụ a",
+    scale: ["Ekwenyeghị m ma ọlị", "Ekwenyeghị m", "Amaghị m nke ọma", "Ekwenyere m", "Ekwenyesiri m ike"],
+    rate: ["Ihe ọmụmụ ndị ahụ dị mfe ịgbaso.", "Vidiyo na slaịdị nyeere m aka ịmụta.", "Ọrụ \"Nwaa ugbu a\" nyeere m aka ime omume.", "Nnwale ngwa ngwa na ule nyeere m aka ịhụ ihe m mụtara.", "Enwere m ike iji ihe m mụtara na ndụ m ma ọ bụ n'ọrụ m.", "Aga m atụ aro ọmụmụ a nye enyi m."],
+    open: ["Kedu akụkụ ọmụmụ a bara uru karịa?", "Gịnị ka anyị kwesịrị ịgbanwe iji mee ka ọ ka mma?"]
+  },
+  pt: {
+    title: "Questionário do curso",
+    scale: ["Discordo totalmente", "Discordo", "Não tenho certeza", "Concordo", "Concordo totalmente"],
+    rate: ["As lições foram fáceis de acompanhar.", "Os vídeos e os slides me ajudaram a aprender.", "As tarefas \"Experimente agora\" me ajudaram a praticar.", "As verificações rápidas e os questionários me ajudaram a ver o que aprendi.", "Consigo usar o que aprendi na minha vida ou no meu trabalho.", "Eu recomendaria este curso a um amigo."],
+    open: ["Qual foi a parte mais útil deste curso?", "O que devemos mudar para melhorá-lo?"]
   }
 };
 const FOLLOW_UP = {
@@ -364,6 +418,30 @@ const FOLLOW_UP = {
   ar: {
     title: "بعد 30 يومًا: هل تستخدم ما تعلمته؟",
     questions: ["علّمتك هذه الدورة {skill}. خلال آخر 30 يومًا، هل استخدمت ذلك؟ (نعم / لا)", "كم مرة؟ (ليس بعد / مرة واحدة / بضع مرات / كل أسبوع)", "أخبرنا عن مرة استخدمته فيها، وماذا حدث.", "إذا لم تستخدمه بعد، فما الذي منعك؟", "ما الذي سيساعدك على استخدامه أكثر؟"]
+  },
+  sw: {
+    title: "Siku 30 baadaye: unatumia ulichojifunza?",
+    questions: ["Kozi hii ilikufundisha {skill}. Katika siku 30 zilizopita, umetumia ujuzi huu? (Ndiyo / Hapana)", "Mara ngapi? (Bado / Mara moja / Mara chache / Kila wiki)", "Tueleze wakati mmoja ulipoutumia, na kilichotokea.", "Kama bado hujautumia, ni nini kilikuzuia?", "Nini kingekusaidia kuutumia zaidi?"]
+  },
+  ha: {
+    title: "Bayan kwana 30: kuna amfani da abin da kuka koya?",
+    questions: ["Wannan kwas ya koya muku {skill}. A cikin kwana 30 da suka wuce, kun yi amfani da shi? (I / A'a)", "Sau nawa? (Har yanzu ba / Sau ɗaya / Sau kaɗan / Kowane mako)", "Ku faɗa mana lokaci ɗaya da kuka yi amfani da shi, da abin da ya faru.", "Idan har yanzu ba ku yi amfani da shi ba, me ya hana ku?", "Me zai taimaka muku ku ƙara amfani da shi?"]
+  },
+  am: {
+    title: "ከ30 ቀናት በኋላ፦ የተማሩትን እየተጠቀሙበት ነው?",
+    questions: ["ይህ ኮርስ {skill} አስተምሮዎታል። ባለፉት 30 ቀናት ተጠቅመውበታል? (አዎ / አይ)", "ምን ያህል ጊዜ? (ገና / አንድ ጊዜ / ጥቂት ጊዜ / በየሳምንቱ)", "የተጠቀሙበትን አንድ ጊዜና የሆነውን ይንገሩን።", "እስካሁን ካልተጠቀሙበት፣ ምን አገደዎት?", "የበለጠ እንዲጠቀሙበት ምን ይረዳዎታል?"]
+  },
+  yo: {
+    title: "Lẹ́yìn ọgbọ̀n ọjọ́: ṣé o ń lò ó?",
+    questions: ["Ẹ̀kọ́ yìí kọ́ ọ láti {skill}. Láàárín ọgbọ̀n ọjọ́ tó kọjá, ṣé o ti lò ó? (Bẹ́ẹ̀ ni / Rárá)", "Ìgbà mélòó? (Kò tíì / Ẹ̀ẹ̀kan / Ìgbà díẹ̀ / Ọ̀sẹ̀ kọ̀ọ̀kan)", "Sọ fún wa nípa ìgbà kan tí o lò ó, àti ohun tó ṣẹlẹ̀.", "Tí o kò bá tíì lò ó, kí ló dí ọ lọ́wọ́?", "Kí ló máa ràn ọ́ lọ́wọ́ láti lò ó sí i?"]
+  },
+  ig: {
+    title: "Mgbe ụbọchị 30 gachara: ị na-eji ya?",
+    questions: ["Ọmụmụ a kụziri gị {skill}. N'ime ụbọchị 30 gara aga, ị jirila ya? (Ee / Mba)", "Ugboro ole? (Ọ bụbeghị / Otu ugboro / Ugboro ole na ole / Kwa izu)", "Gwa anyị otu oge i jiri ya, na ihe mere.", "Ọ bụrụ na i jibeghị ya, gịnị gbochiri gị?", "Gịnị ga-enyere gị aka iji ya karịa?"]
+  },
+  pt: {
+    title: "30 dias depois: você está usando?",
+    questions: ["Este curso ensinou você a {skill}. Nos últimos 30 dias, você usou isso? (Sim / Não)", "Com que frequência? (Ainda não / Uma vez / Algumas vezes / Toda semana)", "Conte uma vez em que você usou, e o que aconteceu.", "Se ainda não usou, o que atrapalhou?", "O que ajudaria você a usar mais?"]
   }
 };
 
@@ -384,7 +462,7 @@ function lessonVideo(dir, base, kicker, lesson, L = LABELS.en, rtl = false) {
     [{ text: kicker, size: 28, font: PLAIN, color: GREY, width: 70, gap: 60 }, { text: lesson.title, size: 64, width: 30, maxLines: 3, gap: 50 }, { text: `${L.goal} ${lesson.goal}`, size: 36, font: PLAIN, color: RED, width: 56, maxLines: 3 }],
     ...lesson.slides.map(s => slideBlocks(kicker, s.title, s.bullets, rtl)),
     slideBlocks(kicker, L.tryIt, [lesson.tryIt], rtl),
-    slideBlocks(kicker, L.youCanNow, [lesson.youCanNow], rtl)
+    slideBlocks(kicker, L.youCanNow, [lesson.youCanNow + (L.after || "")], rtl)
   ];
   return stillsVideo(dir, base, scenes);
 }
@@ -406,7 +484,8 @@ function stillsVideo(dir, base, scenes) {
 }
 
 // an objective as one sentence a learner reads: condition, action, standard
-const objectiveText = (o, L) => { const sep = L.comma || ", "; return `${o.condition}${sep}${L.youWill} ${o.action}${sep}${o.standard}`.replace(/\.*$/, "."); };
+// "condition, you will action, standard." A language that puts the verb last (Amharic) has no youWill; it adds "can" after the action (L.after).
+const objectiveText = (o, L) => { const sep = L.comma || ", "; const act = L.youWill ? `${L.youWill} ${o.action}` : `${o.action}${(L.after || "").replace(/[።.]$/, "")}`; return `${o.condition}${sep}${act}${sep}${o.standard}`.replace(/[.።]*$/, L.stop || "."); };
 
 function rubricHtml(r, L) {
   const head = `<tr><th>${L.criterion}</th><th>${L.notYet}</th><th>${L.meets}</th><th>${L.exceeds}</th></tr>`;
@@ -420,7 +499,7 @@ function writtenLessonHtml(lesson, n, total, L = LABELS.en, objectives = null) {
   if (lesson.steps && lesson.steps.length) parts.push(`<p><strong>${L.steps}</strong></p><ol>${lesson.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>`);
   if (lesson.words && lesson.words.length) parts.push(`<p><strong>${L.words}</strong></p><ul>${lesson.words.map(([t, m]) => `<li><strong>${esc(t)}:</strong> ${esc(m)}</li>`).join("")}</ul>`);
   if (lesson.sources && lesson.sources.length) parts.push(`<p><strong>${L.sources}</strong></p><ul>${lesson.sources.map(s => `<li><a href="${esc(s.url)}">${esc(s.name)}</a></li>`).join("")}</ul>`);
-  parts.push(`<p><strong>${L.tryIt}:</strong> ${esc(lesson.tryIt)}</p>`, `<p><strong>${L.youCanNow}</strong> ${esc(lesson.youCanNow)}</p>`);
+  parts.push(`<p><strong>${L.tryIt}:</strong> ${esc(lesson.tryIt)}</p>`, `<p><strong>${L.youCanNow}</strong> ${esc(lesson.youCanNow + (L.after || ""))}</p>`);
   return parts.join("\n");
 }
 
@@ -439,6 +518,7 @@ function exportWritten(file, outRoot) {
   if (c.translationOf) problems.push(...parityProblems(c, loadCourse(englishOf(file, c))));
   if (problems.length) throw new Error(`${path.basename(file)}:\n  ${problems.join("\n  ")}`);
   const L = LABELS[c.lang || "en"], rtl = RTL.has(c.lang);
+  fontSwap = FONTS_BY_LANG[c.lang] || null;
   const dir = path.join(outRoot, slug(c.category), c.id);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
@@ -446,7 +526,7 @@ function exportWritten(file, outRoot) {
   const introCard = [
     { text: c.category.toUpperCase(), size: 30, color: RED, width: 50, gap: 40 },
     { text: c.name, size: 60, width: 32, maxLines: 3, gap: 44 },
-    { text: `${L.byTheEnd} ${c.outcome}`, size: 34, font: PLAIN, width: 58, maxLines: 6 }
+    { text: `${L.byTheEnd} ${c.outcome}${L.after || ""}`, size: 34, font: PLAIN, width: 58, maxLines: 6 }
   ];
   if (c.objectives) {
     // ADDIE: tell learners up front what they will be able to do (the objectives' actions, three to a slide)
@@ -479,7 +559,7 @@ function exportWritten(file, outRoot) {
     return { name: ch.name, lessons, check: ch.check };
   });
   fs.writeFileSync(path.join(dir, "quiz.json"), JSON.stringify(c.quiz, null, 2));
-  let about = c.about.map(p => `<p>${esc(p)}</p>`).join("\n") + `\n<p><strong>${L.byEndCourse}</strong> ${esc(c.outcome)}</p>`;
+  let about = c.about.map(p => `<p>${esc(p)}</p>`).join("\n") + `\n<p><strong>${L.byEndCourse}</strong> ${esc(c.outcome + (L.after || ""))}</p>`;
   if (c.objectives) about += `\n<p><strong>${L.objectives}</strong></p><ul>${c.objectives.map(o => `<li>${esc(objectiveText(o, L))}</li>`).join("")}</ul>`;
   about += `\n<p><strong>${L.finalTask}</strong> ${esc(c.finalTask)}</p>`;
   if (c.rubric) about += "\n" + rubricHtml(c.rubric, L);

@@ -44,7 +44,7 @@ function stage(dir) {
 
 if (require.main === module) {
   const arg = k => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
-  const langs = arg("--lang") ? [arg("--lang")] : ["en", "es", "fr", "ar"];
+  const langs = arg("--lang") ? [arg("--lang")] : ["en", "es", "fr", "ar", "sw", "ha", "am", "yo", "ig", "pt"];
   const only = arg("--category");
   const doneFile = path.join(UP, "done.json");
   const done = new Set(fs.existsSync(doneFile) ? JSON.parse(fs.readFileSync(doneFile, "utf8")) : []);

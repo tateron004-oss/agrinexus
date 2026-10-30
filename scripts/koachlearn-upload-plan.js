@@ -12,7 +12,13 @@ const WORDS = {
   en: { start: "Start Here: Pre-Test", review: n => `Chapter ${n} Review` },
   es: { start: "Empieza aquí: prueba inicial", review: n => `Repaso del capítulo ${n}` },
   fr: { start: "Pour commencer : test de départ", review: n => `Révision du chapitre ${n}` },
-  ar: { start: "ابدأ هنا: الاختبار القبلي", review: n => `مراجعة الفصل ${n}` }
+  ar: { start: "ابدأ هنا: الاختبار القبلي", review: n => `مراجعة الفصل ${n}` },
+  sw: { start: "Anza hapa: jaribio la awali", review: n => `Marudio ya sura ya ${n}` },
+  ha: { start: "Fara a nan: gwajin farko", review: n => `Bitar babi na ${n}` },
+  am: { start: "እዚህ ይጀምሩ: የቅድመ ትምህርት ፈተና", review: n => `የምዕራፍ ${n} ክለሳ` },
+  yo: { start: "Bẹ̀rẹ̀ níbí: ìdánwò ìbẹ̀rẹ̀", review: n => `Àtúnyẹ̀wò orí ${n}` },
+  ig: { start: "Malite ebe a: nnwale mbido", review: n => `Ntụleghachi isi ${n}` },
+  pt: { start: "Comece aqui: teste inicial", review: n => `Revisão do capítulo ${n}` }
 };
 
 const strip = s => s.replace(/^[^:：]*[:：]\s*/, ""); // "Chapter 1: Getting started" -> "Getting started"
