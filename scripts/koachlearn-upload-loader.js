@@ -1,6 +1,7 @@
-// Pasted once into each Koach Learn dashboard tab. Adds the hidden file box that batch bundles are attached to, and a loop that runs each newly attached
-// bundle (koachlearn-upload-stage.js) when the tab is free: unpack the files, load the uploader the bundle carries, run its queue, keep the results.
-// So a tab can be handed its next bundle while it is still busy with the current one.
+// Pasted once into each Koach Learn dashboard tab. Adds the hidden file box that batch bundles are attached to, and a loop that runs the bundles
+// (koachlearn-upload-stage.js) one after another: unpack the files, load the uploader the bundle carries, run its queue, keep the results.
+// Every bundle attached to the box is read at once and put in line (window.klPending), so a tab can be handed several bundles while it is busy.
+// Pasting it again into a tab that runs the earlier one-bundle loader takes over from it: the bundle running now finishes first.
 (() => {
   let inp = document.getElementById("kl-files");
   if (!inp) {
@@ -10,24 +11,44 @@
     document.body.appendChild(inp);
   }
   window.klAllResults = window.klAllResults || [];
-  window.klLoad = async f => {
-    const buf = await f.arrayBuffer();
+  window.klPending = window.klPending || [];
+  // a bundle that already ran (or is running) is never put in line again
+  window.klSeen = window.klSeen || new Set(window.klAllResults.map(r => r.batch).concat(window.klBatch ? [window.klBatch] : []));
+  const take = f => {
+    if (!f || window.klSeen.has(f.name)) return;
+    window.klSeen.add(f.name);
+    const item = { name: f.name, buf: null };
+    window.klPending.push(item);
+    f.arrayBuffer().then(b => { item.buf = b; }, e => { item.err = e.message; });
+  };
+  const run = async item => {
+    const buf = item.buf;
     const n = new DataView(buf).getUint32(0, true);
     const h = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, n)));
     window.klFiles = {};
     for (const x of h.files) window.klFiles[x.name] = new File([buf.slice(4 + n + x.offset, 4 + n + x.offset + x.size)], x.name.replace(/^.*__/, ""), { type: x.type });
     new Function(h.uploader)();
-    window.klBatch = f.name;
+    window.klBatch = item.name;
     const r = await window.klRunQueue(h.items);
-    window.klAllResults.push(...r.map(x => ({ batch: f.name, key: x.key, state: x.state, course: x.course })));
+    window.klAllResults.push(...r.map(x => ({ batch: item.name, key: x.key, state: x.state, course: x.course })));
   };
-  if (!window.klAutoOn) {
-    window.klAutoOn = true;
+  // the earlier loader calls window.klLoad for a newly attached bundle; now that only puts it in line
+  window.klLoad = async f => take(f);
+  if (!window.klLineOn) {
+    window.klLineOn = true;
+    // a page that holds a lock is one Chrome is less ready to freeze or discard while it sits in the background
+    try { navigator.locks.request(`kl-keep-${Math.random()}`, () => new Promise(() => {})); } catch (_) {}
+    inp.addEventListener("change", () => take(inp.files[0]));
     (async () => {
       for (;;) {
-        const f = inp.files[0];
-        if (f && f.name !== window.klBatch && window.klQueueState !== "running") { try { await window.klLoad(f); } catch (e) { window.klAutoErr = e.message; window.klBatch = f.name; } }
-        await new Promise(r => setTimeout(r, 5000));
+        take(inp.files[0]);
+        const next = window.klPending[0];
+        if (next && (next.buf || next.err) && window.klQueueState !== "running") {
+          window.klPending.shift();
+          if (next.err) window.klAutoErr = `${next.name}: ${next.err}`;
+          else try { await run(next); } catch (e) { window.klAutoErr = `${next.name}: ${e.message}`; window.klBatch = next.name; }
+        }
+        await new Promise(r => setTimeout(r, 3000));
       }
     })();
   }

@@ -18,7 +18,7 @@
   // closed, telling it the animation has ended lets it go at once (an open dialog is never touched)
   const dialog = () => [...document.querySelectorAll('[role="dialog"]')].find(d => d.getAttribute("data-state") !== "closed");
   const finishClosing = () => document.querySelectorAll('[data-state="closed"]').forEach(el => { el.dispatchEvent(new AnimationEvent("animationend", { bubbles: true })); });
-  const closed = what => until(() => { finishClosing(); return !dialog(); }, what, 120000);
+  const closed = (what, ms = 120000) => until(() => { finishClosing(); return !dialog(); }, what, ms);
   // the editor cannot hold tables, so a table becomes one list item per row
   const tables = html => { const doc = new DOMParser().parseFromString(`<div id="r">${html}</div>`, "text/html"); doc.querySelectorAll("table").forEach(t => { const rows = [...t.querySelectorAll("tr")]; const head = [...rows[0].children].map(c => c.textContent.trim()); const ul = doc.createElement("ul"); rows.slice(1).forEach(r => { const cells = [...r.children]; const li = doc.createElement("li"); li.innerHTML = `<strong>${cells[0].textContent.trim()}</strong>` + cells.slice(1).map((c, i) => `<br><em>${head[i + 1]}:</em> ${c.innerHTML.trim()}`).join(""); ul.appendChild(li); }); t.replaceWith(ul); }); return doc.getElementById("r").innerHTML; };
   const header = name => [...main().querySelectorAll("button[aria-controls]")].find(b => b.textContent.replace(/^\s*\d+\.\s*/, "").trim() === name.trim());
@@ -53,7 +53,7 @@
     document.querySelector(".ProseMirror").editor.commands.setContent(tables(plan.descriptionHtml), true);
     await sleep(500);
     btn(main(), "Add Course").click();
-    await until(() => /added successfully/i.test(document.body.innerText), "course to save", 180000);
+    await until(() => /added successfully/i.test(document.body.innerText), "course to save", 600000);
     log(`course added: ${plan.name}`);
   }
 
@@ -81,7 +81,7 @@
         setVal(d.querySelector('input[type="text"]'), ch.video.title);
         d.querySelector(".ProseMirror").editor.commands.setContent(tables(ch.video.html), true);
         setFile(d.querySelector('input[type="file"]'), files[ch.video.file]);
-        await sleep(300); btn(d, "Upload Video").click(); await closed("video upload");
+        await sleep(300); btn(d, "Upload Video").click(); await closed("video upload", 600000); // a slow connection can take minutes for one video
         r = await region(header(ch.name));
         await until(() => { const rr = document.getElementById(header(ch.name).getAttribute("aria-controls")); return rr && videos(rr) > 0; }, `video "${ch.video.title}" to appear`);
         log(`video: ${ch.video.title}`);
