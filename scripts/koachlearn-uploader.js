@@ -75,7 +75,8 @@
       let r = await region(header(ch.name));
       // a video row shows its title only after it loads, but its video icon is there at once
       const videos = el => el.querySelectorAll("svg.lucide-video").length;
-      if (ch.video && videos(r) === 0) {
+      // window.klSkipVideos: while the site refuses new videos, still finish chapters, knowledge checks, questions and the quiz
+      if (ch.video && videos(r) === 0 && !window.klSkipVideos) {
         [...r.querySelectorAll("button")].find(b => /Add Video/.test(b.textContent)).click();
         const d = await until(dialog, "video dialog"); await sleep(300);
         setVal(d.querySelector('input[type="text"]'), ch.video.title);
@@ -146,6 +147,7 @@
     try {
       for (const f of plan.files) if (!files[f]) throw new Error(`file not loaded: ${f}`);
       let id = await courseId(cat, plan.name);
+      if (!id && window.klSkipVideos) throw new Error("not on the site yet (a new course needs its intro video)");
       if (!id) {
         await addCourse(plan, files, cat);
         for (let i = 0; i < 5 && !id; i++) { await sleep(2000); id = await courseId(cat, plan.name); }
