@@ -62,7 +62,62 @@ const SHARED = {
   "skilled-trades-careers": { name: "Starting a Career in the Skilled Trades" },
   "bookkeeping-basics": { name: "Bookkeeping Basics" },
   "negotiation-skills": { name: "Negotiation Skills" },
-  "excel-spreadsheets": { name: "Excel and Spreadsheets for Work" }
+  "excel-spreadsheets": { name: "Excel and Spreadsheets for Work" },
+  // wave 1 (30 October 2026): job certifications that lead to work, and adult basic education (WAVE1-COURSES-BRIEF.md)
+  "it-support-fundamentals": { name: "IT Support Fundamentals (CompTIA A+ Preparation)" },
+  "cybersecurity-analyst-entry": { name: "Entry-Level Cybersecurity (CompTIA Security+ Preparation)" },
+  "data-analytics-excel-sql": { name: "Data Analytics with Spreadsheets and SQL" },
+  "data-dashboards": { name: "Building Data Dashboards (Power BI and Data Studio)" },
+  "medical-billing-coding": { name: "Medical Billing and Coding Basics" },
+  "pharmacy-technician-prep": { name: "Pharmacy Technician Preparation" },
+  "nursing-assistant-cna-prep": { name: "Certified Nursing Assistant (CNA) Preparation" },
+  "home-health-aide": { name: "Home Health Aide Skills" },
+  "community-health-worker": { name: "Community Health Worker Foundations" },
+  "phlebotomy-prep": { name: "Phlebotomy Technician Preparation" },
+  "cdl-prep": { name: "Commercial Driver's License (CDL) Preparation" },
+  "forklift-operator": { name: "Forklift Operator Basics" },
+  "hvac-basics": { name: "HVAC Technician Basics" },
+  "electrical-basics": { name: "Electrical Trade Basics" },
+  "solar-installer-basics": { name: "Solar Panel Installer Basics" },
+  "ev-technician-basics": { name: "Electric Vehicle (EV) Technician Basics" },
+  "welding-basics": { name: "Welding Basics" },
+  "warehouse-logistics": { name: "Warehouse and Logistics Careers" },
+  "ged-math": { name: "GED Test Preparation: Math" },
+  "ged-reasoning-language-arts": { name: "GED Test Preparation: Reasoning Through Language Arts" },
+  "ged-science": { name: "GED Test Preparation: Science" },
+  "ged-social-studies": { name: "GED Test Preparation: Social Studies" },
+  "everyday-math": { name: "Everyday Math for Work and Life" },
+  "esl-everyday-english": { name: "English for Everyday Life (ESL)" },
+  "esl-workplace-english": { name: "English for the Workplace (ESL)" }
+};
+
+// wave 1 placements: which categories each wave 1 course also goes in (added to each category's shared list below)
+const WAVE1 = {
+  "it-support-fundamentals": ["Workforce Development", "Youth", "Veterans (military)", "Undeserved Community", "Re-Entry"],
+  "cybersecurity-analyst-entry": ["Workforce Development", "Youth", "Veterans (military)", "Undeserved Community"],
+  "data-analytics-excel-sql": ["Workforce Development", "Youth", "Veterans (military)", "Undeserved Community"],
+  "data-dashboards": ["Workforce Development", "Small Business", "Veterans (military)"],
+  "medical-billing-coding": ["Workforce Development", "Re-Entry", "Undeserved Community", "Veterans (military)"],
+  "pharmacy-technician-prep": ["Workforce Development", "Undeserved Community"],
+  "nursing-assistant-cna-prep": ["Workforce Development", "Undeserved Community", "Youth"],
+  "home-health-aide": ["Workforce Development", "Undeserved Community", "Re-Entry"],
+  "community-health-worker": ["Workforce Development", "Undeserved Community", "Non Profits"],
+  "phlebotomy-prep": ["Workforce Development", "Undeserved Community"],
+  "cdl-prep": ["Workforce Development", "Re-Entry", "Veterans (military)"],
+  "forklift-operator": ["Workforce Development", "Re-Entry"],
+  "hvac-basics": ["Workforce Development", "Re-Entry", "Veterans (military)", "Youth"],
+  "electrical-basics": ["Workforce Development", "Re-Entry", "Veterans (military)", "Youth"],
+  "solar-installer-basics": ["Workforce Development", "Re-Entry", "Veterans (military)", "Youth"],
+  "ev-technician-basics": ["Workforce Development", "Veterans (military)", "Youth"],
+  "welding-basics": ["Workforce Development", "Re-Entry", "Youth"],
+  "warehouse-logistics": ["Workforce Development", "Re-Entry", "Veterans (military)"],
+  "ged-math": ["Workforce Development", "Re-Entry", "Undeserved Community", "Youth"],
+  "ged-reasoning-language-arts": ["Workforce Development", "Re-Entry", "Undeserved Community", "Youth"],
+  "ged-science": ["Workforce Development", "Re-Entry", "Undeserved Community", "Youth"],
+  "ged-social-studies": ["Workforce Development", "Re-Entry", "Undeserved Community", "Youth"],
+  "everyday-math": ["Workforce Development", "Re-Entry", "Undeserved Community"],
+  "esl-everyday-english": ["Workforce Development", "Re-Entry", "Undeserved Community", "Seniors and Technology"],
+  "esl-workplace-english": ["Workforce Development", "Re-Entry", "Undeserved Community"]
 };
 
 // per category: its own courses (written in that category's folder) and the shared ones it also gets
@@ -354,6 +409,34 @@ const CATEGORIES = {
     },
     shared: ["mental-health-stress", "communication-conflict", "emotional-intelligence", "time-management-goals", "critical-thinking-misinformation", "public-speaking", "negotiation-skills"]
   }
+};
+
+for (const [id, cats] of Object.entries(WAVE1)) for (const cat of cats) {
+  if (!CATEGORIES[cat]) throw new Error(`catalog: wave 1 course ${id} names unknown category ${cat}`);
+  CATEGORIES[cat].shared.push(id);
+}
+
+// wave 2 (30 October 2026): everyday life and income across Africa, beyond farming (AFRICA-LIFE-BRIEF.md). A new dashboard category.
+CATEGORIES["Africa: Life and Work"] = {
+  folder: "africa-life",
+  own: {
+    "afr-mobile-money-safety": "Using Mobile Money Safely (M-Pesa, MTN MoMo, Orange Money, Wave)",
+    "afr-savings-groups-microfinance": "Savings Groups and Microfinance (Chamas, VSLAs, Tontines, Esusu)",
+    "afr-online-freelancing": "Online Freelancing and Remote Work from Africa",
+    "afr-selling-online": "Selling Online in Africa (WhatsApp Business, Marketplaces and Social Media)",
+    "afr-register-small-business": "Registering and Running a Small Business in Africa",
+    "afr-women-entrepreneurs": "Women Entrepreneurs: Starting and Growing a Business",
+    "afr-afcfta-cross-border-trade": "Selling Across Borders: Small Traders and the AfCFTA",
+    "afr-phone-repair-business": "Starting a Phone Repair Business",
+    "afr-solar-home-systems": "Solar Home Systems: Installing, Selling and Off-Grid Energy Businesses",
+    "afr-tailoring-fashion-business": "Running a Tailoring and Fashion Business",
+    "afr-clean-water-hygiene": "Clean Water, Sanitation and Hygiene at Home",
+    "afr-malaria-prevention": "Preventing Malaria in Your Family",
+    "afr-mother-child-health": "Mother and Child Health: Pregnancy, Birth and the First Years",
+    "afr-nutrition-local-foods": "Good Nutrition on a Budget with Local Foods",
+    "afr-clean-cooking": "Clean Cooking: Safer Stoves and Smoke-Free Kitchens"
+  },
+  shared: []
 };
 
 // every course to write, once: { id, name, folder, bonus, categories: [names it goes in] }

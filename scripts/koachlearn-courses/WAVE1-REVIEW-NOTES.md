@@ -1,0 +1,13 @@
+# Wave 1 review notes (from the writers' reports)
+- esl-everyday-english, esl-workplace-english: translators must keep quoted English phrases (in text and `words`) in English. 911.gov and lep.gov could not be confirmed, so no interpreter-rights claims.
+- solar-installer-basics: rubric O1 "Exceeds" mentions net metering, which no lesson teaches. FIX before translation.
+- ev-technician-basics: three service-practice claims are general knowledge framed as "follow the manufacturer"; NEC articles only in general terms.
+- ged-*: essay rubric is ours (not official); no content percentages claimed; GED Ready described as optional purchase.
+- medical-billing-coding: practice codes (J02.9, I10, E11.9, 99213, 87880, 36415, E0100) and 1500 box numbers from memory, labelled practice; a coder should glance.
+- pharmacy-technician-prep: made-up drugs only; a pharmacist should check sig abbreviations and tech vs pharmacist duties. DEA and Joint Commission pages blocked (general knowledge).
+- phlebotomy-prep: venipuncture steps, order of draw and tourniquet timing should be checked by a phlebotomy instructor. HHS HIPAA page blocked.
+- nursing-assistant-cna-prep, home-health-aide, community-health-worker: no training hours (eCFR blocked); hedged 'many states' lines on abuse reporting and the CNA written/skills test; a nurse educator should glance.
+- it-support-fundamentals, cybersecurity-analyst-entry, data-analytics-excel-sql: Security+ V7/V8 dates to re-check after 17 Nov 2026; menu paths and event IDs 4624/4625 from knowledge; SQL setup text inside a paragraph may read awkwardly on video.
+- data-dashboards: renamed to 'Power BI and Data Studio' (Google renamed Looker Studio); Power BI/Data Studio menu names unchecked. ged-math: two rubric rows span two lessons but carry one objective tag.
+- hvac-basics, electrical-basics, welding-basics: standard trade facts unsourced (wire colours, 12,000 BTU/ton, cylinders upright); welding shade-12 example to check; CareerOneStop link unverified.
+- cdl-prep, forklift-operator, warehouse-logistics: federal rules read via Cornell LII (FMCSA/eCFR blocked); 18-20 intrastate line general; military waiver 383.77 not read.
