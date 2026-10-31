@@ -50,7 +50,7 @@ module.exports = {
           goal: "Andika hati ya mradi ya ukurasa mmoja inayoeleza lengo, wigo na mafanikio ya mradi.",
           text: [
             "Hati ya mradi (project charter) ni cheti cha kuzaliwa cha mradi. Inasema kwa nini mradi upo, utatoa nini, kipi kiko ndani na kipi kiko nje ya wigo, mdhamini ni nani, bajeti na tarehe ya mwisho kwa makadirio, na utajuaje kwamba umefanikiwa. Ni kama amri ya misheni: kusudi, hali ya mwisho inayotakiwa, na mipaka.",
-            "Ipe AI mambo halisi na uiache iandike rasimu: \"Write a one-page project charter. Project: veterans' job fair at the community center on March 15. Goal: 30 employers, 200 attendees. Budget: $3,000. Sponsor: the center's director. Out of scope: catering beyond coffee.\" Unaweza pia kuandika agizo hili kwa Kiswahili.",
+            "Ipe AI mambo halisi na uiache iandike rasimu: \"Andika hati ya mradi ya ukurasa mmoja. Mradi: maonyesho ya ajira ya wanajeshi wastaafu katika kituo cha jamii tarehe 15 Machi. Lengo: waajiri 30, wahudhuriaji 200. Bajeti: $3,000. Mdhamini: mkurugenzi wa kituo. Nje ya wigo: chakula zaidi ya kahawa.\"",
             "Kisha irekebishe. AI inaweza kubuni namba, wadau au malengo. Kila jambo lazima liwe lako. Hakikisha mdhamini anakubali hati ya mradi kabla kazi haijaanza; hii inazuia mabishano baadaye kuhusu mradi ulitakiwa kufanya nini."
           ],
           steps: ["Andika kusudi, lengo, tarehe ya mwisho, bajeti na mdhamini.", "Orodhesha kipi kiko ndani na kipi kiko nje ya wigo.", "Iombe AI iandike rasimu ya hati ya mradi ya ukurasa mmoja.", "Rekebisha chochote ambacho AI ilibuni.", "Pata kukubali kwa mdhamini."],
