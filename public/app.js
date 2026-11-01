@@ -27956,8 +27956,14 @@ async function kyroReturnToOrb(options = {}) {
   kyroNoteActivity();
   // "I'm done" / "back to the orb" ends a typed lesson too (a quiet-spell return or closing a screen leaves it, so "next" still carries on)
   if (options.reason === "home" || options.reason === "done") kyroTypedLessonOpen = false;
-  // closing a tutor card, "I'm done" or "go back to the orb" ends a tutoring session too (a quiet-spell return leaves it, so the learner can carry on)
-  if (options.reason === "home" || options.reason === "done" || options.reason === "close") kyroTutorEnd();
+  // closing the lesson itself, "I'm done" or "go back to the orb" ends a tutoring session too (a quiet-spell return leaves it, so the learner can carry on). Closing a picture or a video seen DURING the lesson
+  // (the lesson's card is not the one on the screen) brings the lesson back where it was, drawn again after the return to the orb below.
+  let resumeTutor = false;
+  if (options.reason === "home" || options.reason === "done" || options.reason === "close") {
+    const lessonOnScreen = Boolean(document.querySelector("[data-kyro-tutor-box]"));
+    if (kyroTutorOpen() && kyroTutorLast && !lessonOnScreen && (options.reason === "close" || options.source === "gallery-screen")) resumeTutor = true;
+    else kyroTutorEnd();
+  }
   try {
     if (nexusConversationWorkflowTransitionState) { nexusConversationWorkflowTransitionState.activeWorkflow = null; nexusConversationWorkflowTransitionState.lastProposal = null; }
   } catch { /* the workflow bookkeeping is optional */ }
@@ -27971,6 +27977,7 @@ async function kyroReturnToOrb(options = {}) {
   nexusPresenceState = { ...nexusPresenceState, state: NEXUS_PRESENCE_STATES.IDLE, status: "Ask Nexus what you need.", lastUserInput: "", lastResponse: "", nextQuestion: "", activeMission: "", updatedAt: new Date().toISOString() };
   await handleNexusOsMissionLifecycleAction("return-home");
   try { nexusGenesisVoiceDebugLog("kyro-return-to-orb", { reason: options.reason || "", source: options.source || "" }); } catch { /* logging only */ }
+  if (resumeTutor) setTimeout(() => { kyroResumeTutor(); }, 400);
   return true;
 }
 // "Make the text bigger", "turn on high contrast", "stop the animations", "screen reader mode on": the four display options were buttons only (public/kyro-accessibility-commands.js).
@@ -52356,12 +52363,32 @@ const KYRO_PACK_QUESTION = /\bwhat\s+(?:should|do|can|must)\s+(?:i|we)\s+pack\b/
 const KYRO_TUTOR_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:teach|tutor|coach)\s+(?:me|us)\b|help\s+(?:me|us)\s+(?:to\s+)?(?:learn|study|understand|practi[sc]e|revise|prepare\s+for|get\s+better\s+at)\b|(?:i\s+)?(?:want|need|would\s+like|'d\s+like)\s+(?:you\s+)?to\s+(?:learn|study|understand|practi[sc]e|revise|teach|tutor|coach)\b|let'?s\s+(?:learn|study)\b|help\s+(?:me|us)\s+(?:with|do|finish|complete|understand)\s+(?:my\s+|our\s+|the\s+|this\s+|some\s+)?(?:[\w'-]+\s+){0,3}?(?:homework|assignment|school\s?work|revision|studies|essay|worksheet)\b|(?:quiz|test)\s+(?:me|us)\b|(?:be|become)\s+my\s+(?:tutor|teacher)\b|i\s+(?:need|want)\s+a\s+(?:tutor|teacher)\b|(?:start|begin|open)\s+(?:a\s+)?tutor(?:ing)?\b|nifundishe\b|nifundisheni\b|nifunze\b|nisaidie\s+kujifunza\b|(?:ni)?nataka\s+kujifunza\b|nisaidie\s+(?:na|kwa)\s+(?:kazi\s+ya\s+nyumbani|zoezi|masomo)\b|nipime\b|(?:kuwa|uwe)\s+mwalimu\s+wangu\b)`, "i");
 const KYRO_TUTOR_NOT = /\b(?:letters?|alphabet|abc|to read|reading|counting|to count|adding|subtract\w*|take away|maths?|mathematics|numbers?|arithmetic|herufi|hesabu|kusoma|kuhesabu)\b(?![\s\S]*\bhomework\b)|\b(?:apply(?:ing)?\s+for|file\s+(?:my|a|an|the)|renew|open(?:ing)?\s+(?:a|an)\s+(?:bank\s+)?account|get(?:ting)?\s+(?:a|an|my)\s+(?:id|license|licence|passport|visa|card|permit)|start(?:ing)?\s+(?:a|my)\s+business|find(?:ing)?\s+(?:a\s+)?job|(?:use|using|about|with)\s+(?:kyro|nexus|this\s+app|the\s+app))\b/i;
 // In a session, a sentence that is a request of its own is not the learner's answer.
-const KYRO_TUTOR_OTHER = /^(?:open|show(?: me)? (?:my|the|all|some|a|an|pictures?|videos?|images?|photos?|maps?)|play|pause|resume|call|text|send|remind me|set (?:a|an|my)|add (?:a|an|my)|delete|cancel my|find (?:a|an|the|me)|search(?: for)?|look up|navigate|directions? to|take me to|go to|close|(?:create|make|draft|prepare|generate|build)\s+(?:me\s+)?(?:an?|the|my|some)|what(?:'s| is| are) (?:the )?(?:weather|time|date)|weather|my (?:lists|notes|reminders|documents)|fungua|onyesha|cheza|piga|tuma|nikumbushe|tafuta|hali ya hewa)\b/i;
+const KYRO_TUTOR_OTHER = /^(?:open|show(?: me)? (?:my\b|all\b|some\b|(?:(?:a|an|the)\s+)?(?:pictures?|videos?|images?|photos?|maps?|weather|documents?|lists?|notes?|reminders?|calendar)\b)|play|pause|resume|call|text|send|remind me|set (?:a|an|my)|add (?:a|an|my)|delete|cancel my|find (?:a|an|the|me)|search(?: for)?|look up|navigate|directions? to|take me to|go to|close|(?:create|make|draft|prepare|generate|build)\s+(?:me\s+)?(?:an?|the|my|some)|what(?:'s| is| are) (?:the )?(?:weather|time|date)|weather|my (?:lists|notes|reminders|documents)|fungua|onyesha|cheza|piga|tuma|nikumbushe|tafuta|hali ya hewa)\b/i;
+// In a lesson, "show me a picture" / "show me a video" (no subject said) means pictures or videos of the lesson's own subject, and when that screen is closed the lesson comes back where it was.
+const KYRO_TUTOR_DEMO = /^(?:(?:can|could)\s+(?:you|i)\s+)?(?:(?:please\s+)?show(?:\s+me)?|let\s+me\s+(?:see|watch)|i\s+(?:want|would\s+like|'d\s+like)\s+to\s+(?:see|watch)|(?:can|could)\s+i\s+(?:see|watch)|watch)\s+(?:(?:a|an|the|some)\s+)?(picture|pictures|image|images|photo|photos|diagram|diagrams|drawing|video|videos|clip|clips|demo|demonstration)(?:\s+(?:of|about|for)\s+(?:it|this|that|the\s+lesson|the\s+topic))?\s*[.?!]*$/i;
+let kyroTutorSubject = ""; // the subject of the open lesson, as the server last said it
+let kyroTutorLast = null; // the last lesson turn drawn: { response, tutor }, drawn again when a picture or video seen during the lesson is closed
 let kyroTutorUntil = 0; // set when a tutoring turn comes back, cleared when the learner stops or closes the screen (the server keeps the session and forgets it after 45 quiet minutes)
 function kyroTutorOpen() { return kyroTutorUntil > Date.now(); }
+// "Show me a picture" in a lesson with a subject: the same request with the subject said (null when it is not that sentence, or the lesson has no subject yet)
+function kyroTutorDemoCommand(said) {
+  if (!kyroTutorOpen() || !kyroTutorSubject) return null;
+  const match = KYRO_TUTOR_DEMO.exec(String(said || "").trim());
+  if (!match) return null;
+  return /^(?:video|videos|clip|clips|demo|demonstration)$/i.test(match[1]) ? `Show me videos about ${kyroTutorSubject}` : `Show me pictures of ${kyroTutorSubject}`;
+}
+// A picture or video seen during a lesson was closed: the lesson's last turn is drawn again, with its answer box.
+function kyroResumeTutor() {
+  try {
+    if (!kyroTutorOpen() || !kyroTutorLast) return false;
+    const shown = kyroShowResultScreen("typed", "Continue the lesson", { ok: true, status: "completed", response: kyroTutorLast.response, requiresConfirmation: true, tutor: kyroTutorLast.tutor });
+    if (shown) kyroAddTutorBox(kyroTutorLast.tutor);
+    return shown;
+  } catch { return false; }
+}
 function kyroTutorEnd() {
   if (!kyroTutorOpen()) return;
-  kyroTutorUntil = 0;
+  kyroTutorUntil = 0; kyroTutorSubject = ""; kyroTutorLast = null;
   try { void kyroSilentTurn("Stop tutoring").catch(() => {}); } catch { /* the server forgets the session after 45 quiet minutes anyway */ }
 }
 const KYRO_LIST_NOT = /^(?:how|why|should i|can i)\b|\b(?:walk|teach|guide|show)\s+(?:me\s+)?(?:how|through)\b|\b(?:what|which) (?:is|are) (?:a|the)\b/i;
@@ -52708,6 +52735,13 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   }
   // A tutoring session is open, or this asks for one: said aloud it goes the typed way, so the next step is drawn on a card and read out (see KYRO_TUTOR_REQUEST). While a session is open every sentence that is not a request of its own is the
   // learner's answer or question, and "stop" ends it on the server.
+  // "Show me a picture" / "show me a video" in a lesson: pictures or videos of the lesson's own subject (said or typed)
+  const tutorDemo = kyroTutorDemoCommand(said);
+  if (tutorDemo) {
+    if (!options.typed) kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand(tutorDemo, { source: "typed", kyroDirect: true });
+    return true;
+  }
   if (!options.typed) {
     const startsTutor = KYRO_TUTOR_REQUEST.test(said) && !KYRO_TUTOR_NOT.test(said);
     const inSession = kyroTutorOpen() && !KYRO_TUTOR_OTHER.test(said) && !(KYRO_TUTOR_REQUEST.test(said) && KYRO_TUTOR_NOT.test(said));
@@ -54202,7 +54236,11 @@ function kyroShowTypedResult(result, text, message) {
     if (!window.KyroResultScreen || !result || typeof result !== "object") return false;
     // a tutoring turn (nexus/tutor/tutor.js): the page notes that a session is open, so what is said next goes the typed way to the same session
     const tutor = result.plan && result.plan.tutor ? result.plan.tutor : null;
-    if (tutor) kyroTutorUntil = tutor.active === true ? Date.now() + 45 * 60 * 1000 : 0;
+    if (tutor) {
+      kyroTutorUntil = tutor.active === true ? Date.now() + 45 * 60 * 1000 : 0;
+      kyroTutorSubject = tutor.active === true ? String(tutor.subject || "") : "";
+      if (tutor.active !== true) kyroTutorLast = null;
+    }
     if (kyroExplicitOpenCard(text)) return false;
     const drawn = result.render;
     let answer = null; let wantsButtons = false;
@@ -54256,7 +54294,10 @@ function kyroShowTypedResult(result, text, message) {
     } else return false;
     const shown = kyroShowResultScreen("typed", text, { ok: true, status: "completed", ...answer });
     if (shown && wantsButtons) kyroAddConfirmButtons();
-    if (shown && tutor && tutor.active === true) kyroAddTutorBox();
+    if (shown && tutor && tutor.active === true) {
+      kyroTutorLast = { response: String(message || ""), tutor: { active: true, subject: String(tutor.subject || "") } };
+      kyroAddTutorBox(tutor);
+    }
     if (shown && typeof kyroAddResumeButtons === "function" && /^show my r[e\u00e9]sum[e\u00e9]s?$/i.test(String(text || "").trim())) void kyroAddResumeButtons();
     // a list of notes, reminders, documents or checklists has a form under it to write in
     const writable = shown ? kyroWritableListKind(text) : "";
@@ -54265,7 +54306,7 @@ function kyroShowTypedResult(result, text, message) {
   } catch { return false; }
 }
 // Under a tutoring turn: a box to type the answer in (Enter sends it), a Send button, and a Stop tutoring button. Typing and saying it are the same turn.
-function kyroAddTutorBox() {
+function kyroAddTutorBox(tutor = null) {
   try {
     const screen = document.querySelector("[data-kyro-result]");
     if (!screen || screen.querySelector("[data-kyro-tutor-box]")) return false;
@@ -54276,7 +54317,19 @@ function kyroAddTutorBox() {
     const row = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap" });
     const send = kyroMake("button", { type: "submit", style: KYRO_BUTTON_STYLE }, sw ? "Tuma" : "Send");
     const stop = kyroMake("button", { type: "button", "data-kyro-tutor-stop": "true", style: KYRO_BUTTON_STYLE.replace("#06a77d", "#475569") }, sw ? "Maliza somo" : "Stop tutoring");
-    row.append(send, stop); form.append(box, row); screen.append(form);
+    row.append(send, stop);
+    // with a subject, two more buttons: the same as saying "show me a picture" or "show me a video" (the lesson comes back when the picture or video is closed)
+    const subject = String((tutor && tutor.subject) || "").trim();
+    if (subject) {
+      const demo = (label, command) => {
+        const button = kyroMake("button", { type: "button", "data-kyro-tutor-demo": "true", style: KYRO_BUTTON_STYLE.replace("#06a77d", "#1e5f8a") }, label);
+        button.addEventListener("click", () => { void handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed", kyroDirect: true }); });
+        row.append(button);
+      };
+      demo(sw ? "Onyesha picha" : "Show a picture", `Show me pictures of ${subject}`);
+      demo(sw ? "Onyesha video" : "Show a video", `Show me videos about ${subject}`);
+    }
+    form.append(box, row); screen.append(form);
     form.addEventListener("submit", event => {
       event.preventDefault();
       const answer = box.value.trim();

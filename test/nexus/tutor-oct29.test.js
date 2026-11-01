@@ -34,10 +34,10 @@ test("practice lessons, official-process guides, plain questions and questions a
 });
 
 test("a session ends on a plain stop; a request of its own is not an answer; an answer is neither", () => {
-  for (const say of ["stop", "Stop tutoring.", "That's enough", "I'm done, thanks", "thanks, bye", "end the lesson", "acha somo", "tosha"]) assert.equal(tutor.isStop(say), true, say);
-  for (const say of ["7", "no", "stop the music", "I don't want to stop", "a noun", "what is a numerator?"]) assert.equal(tutor.isStop(say), false, say);
-  for (const say of ["open my documents", "play some music", "what is the weather", "remind me to call Amina", "show me my notes", "show me pictures of maize", "make me a flyer for my bake sale", "create a document called Harvest", "look up the price of maize", "Teach me letters", "fungua nyaraka zangu"]) assert.equal(tutor.isOtherCommand(say), true, say);
-  for (const say of ["7", "yes", "125/80", "a noun", "what is a numerator?", "why is that wrong?", "write me an essay", "show me how to do it", "I don't understand", "make it simpler"]) assert.equal(tutor.isOtherCommand(say), false, say);
+  for (const say of ["stop", "Stop tutoring.", "That's enough", "I'm done, thanks", "thanks, bye", "end the lesson", "acha somo", "tosha", "Acha, Solmo.", "Maliza somo.", "acha"]) assert.equal(tutor.isStop(say), true, say);
+  for (const say of ["7", "no", "stop the music", "I don't want to stop", "a noun", "what is a numerator?", "Acha niseme jibu", "Acha nifikirie", "Maliza kazi yangu ya nyumbani leo"]) assert.equal(tutor.isStop(say), false, say);
+  for (const say of ["open my documents", "play some music", "what is the weather", "remind me to call Amina", "show me my notes", "show me pictures of maize", "show me a picture", "show me a video", "make me a flyer for my bake sale", "create a document called Harvest", "look up the price of maize", "Teach me letters", "fungua nyaraka zangu"]) assert.equal(tutor.isOtherCommand(say), true, say);
+  for (const say of ["7", "yes", "125/80", "a noun", "what is a numerator?", "why is that wrong?", "write me an essay", "show me how to do it", "show me an example", "show me what you mean", "I don't understand", "make it simpler"]) assert.equal(tutor.isOtherCommand(say), false, say);
 });
 
 test("a session belongs to one person, keeps the last eight exchanges, and is forgotten after 45 quiet minutes", () => {
@@ -237,12 +237,13 @@ test("in a session the page treats a request of its own as its own, and anything
 
 test("the page sends a spoken tutoring sentence the typed way, ends the session on a close, and draws each turn on a card that stays with an answer box", () => {
   assert.match(app, /const startsTutor = KYRO_TUTOR_REQUEST\.test\(said\) && !KYRO_TUTOR_NOT\.test\(said\);\s+const inSession = kyroTutorOpen\(\) && !KYRO_TUTOR_OTHER\.test\(said\) && !\(KYRO_TUTOR_REQUEST\.test\(said\) && KYRO_TUTOR_NOT\.test\(said\)\);\s+if \(startsTutor \|\| inSession\) \{\s+kyroTakeOverTurn\(\);\s+void handleNexusUnifiedBrainRuntimeCommand\(said, \{ source: "typed", kyroDirect: true \}\);\s+return true;/);
-  assert.match(app, /if \(options\.reason === "home" \|\| options\.reason === "done" \|\| options\.reason === "close"\) kyroTutorEnd\(\);/);
-  assert.match(app, /const tutor = result\.plan && result\.plan\.tutor \? result\.plan\.tutor : null;\s+if \(tutor\) kyroTutorUntil = tutor\.active === true \? Date\.now\(\) \+ 45 \* 60 \* 1000 : 0;/);
+  assert.match(app, /if \(options\.reason === "home" \|\| options\.reason === "done" \|\| options\.reason === "close"\) \{\s+const lessonOnScreen = Boolean\(document\.querySelector\("\[data-kyro-tutor-box\]"\)\);\s+if \(kyroTutorOpen\(\) && kyroTutorLast && !lessonOnScreen && \(options\.reason === "close" \|\| options\.source === "gallery-screen"\)\) resumeTutor = true;\s+else kyroTutorEnd\(\);/);
+  assert.match(app, /if \(resumeTutor\) setTimeout\(\(\) => \{ kyroResumeTutor\(\); \}, 400\);\s+return true;/);
+  assert.match(app, /const tutor = result\.plan && result\.plan\.tutor \? result\.plan\.tutor : null;\s+if \(tutor\) \{\s+kyroTutorUntil = tutor\.active === true \? Date\.now\(\) \+ 45 \* 60 \* 1000 : 0;\s+kyroTutorSubject = tutor\.active === true \? String\(tutor\.subject \|\| ""\) : "";/);
   assert.match(app, /\} else if \(tutor && result\.state === "completed" && String\(message \|\| ""\)\.trim\(\)\.length >= 12\) \{[^}]*answer = \{ response: message, requiresConfirmation: tutor\.active === true, tutor: \{ active: tutor\.active === true, subject: String\(tutor\.subject \|\| ""\) \} \};/);
-  assert.match(app, /if \(shown && tutor && tutor\.active === true\) kyroAddTutorBox\(\);/);
+  assert.match(app, /if \(shown && tutor && tutor\.active === true\) \{\s+kyroTutorLast = \{ response: String\(message \|\| ""\), tutor: \{ active: true, subject: String\(tutor\.subject \|\| ""\) \} \};\s+kyroAddTutorBox\(tutor\);/);
   assert.match(app, /&& !\(typeof kyroGuidedReply === "function" && kyroGuidedReply\(command\)\) && !kyroTutorOpen\(\)\) return false;/);
-  assert.match(app, /function kyroAddTutorBox\(\) \{[\s\S]*?"Type your answer here, or say it"[\s\S]*?"Stop tutoring"[\s\S]*?"Acha somo"/);
+  assert.match(app, /function kyroAddTutorBox\(tutor = null\) \{[\s\S]*?"Type your answer here, or say it"[\s\S]*?"Stop tutoring"[\s\S]*?"Acha somo"/);
   assert.ok(app.indexOf("const startsTutor") < app.indexOf("const namedDocument = kyroNamedDocument(said);"), "the tutor claim comes before the document claims");
 });
 
@@ -282,4 +283,34 @@ test("a tutor card is drawn in the lesson type size, and other long answers are 
   const plain = new JSDOM("<!doctype html><html><head></head><body></body></html>");
   KyroResultScreen.show(plain.window.document, KyroResultScreen.buildModel({ ok: true, status: "completed", response: "It will rain tomorrow in Kisumu. Take an umbrella." }, { command: "weather", lang: "en" }), {}, "en");
   assert.equal(plain.window.document.querySelector("[data-kyro-result] p.kyro-result-lesson"), null);
+});
+
+// ---- pictures and videos in a lesson ----
+const demoStart = app.indexOf('// In a lesson, "show me a picture"');
+const demoEnd = app.indexOf("// A picture or video seen during a lesson was closed");
+assert.ok(demoStart > 0 && demoEnd > demoStart, "the demo helpers are in app.js");
+const demoContext = {};
+vm.runInNewContext(`${app.slice(demoStart, demoEnd)}
+this.open = (subject) => { kyroTutorUntil = Date.now() + 60000; kyroTutorSubject = subject; };
+this.close = () => { kyroTutorUntil = 0; kyroTutorSubject = ""; };
+this.demo = said => kyroTutorDemoCommand(said);`, demoContext);
+
+test("in a lesson with a subject, 'show me a picture' or 'a video' means pictures or videos of that subject; anything else is left alone", () => {
+  demoContext.open("fractions");
+  for (const [say, want] of [["Show me a picture.", "Show me pictures of fractions"], ["show me a diagram", "Show me pictures of fractions"], ["Can you show me a picture?", "Show me pictures of fractions"], ["Let me see a picture of it", "Show me pictures of fractions"],
+    ["Show me a video", "Show me videos about fractions"], ["Can I watch a video?", "Show me videos about fractions"], ["Show me a demo", "Show me videos about fractions"], ["watch a video", "Show me videos about fractions"], ["Show me pictures", "Show me pictures of fractions"]]) {
+    assert.equal(demoContext.demo(say), want, say);
+  }
+  for (const say of ["Show me pictures of maize", "Show me an example", "Show me how to do it", "Show me my notes", "I want to see my documents", "a quarter"]) assert.equal(demoContext.demo(say), null, say);
+  demoContext.open("");
+  assert.equal(demoContext.demo("Show me a picture"), null, "a lesson with no subject yet has nothing to show pictures of");
+  demoContext.close();
+  assert.equal(demoContext.demo("Show me a picture"), null, "no lesson, no change");
+});
+
+test("the page sends the picture or video request, brings the lesson back when it is closed, and adds Show a picture / Show a video buttons when the lesson has a subject", () => {
+  assert.match(app, /const tutorDemo = kyroTutorDemoCommand\(said\);\s+if \(tutorDemo\) \{\s+if \(!options\.typed\) kyroTakeOverTurn\(\);\s+void handleNexusUnifiedBrainRuntimeCommand\(tutorDemo, \{ source: "typed", kyroDirect: true \}\);\s+return true;\s+\}\s+if \(!options\.typed\) \{\s+const startsTutor/);
+  assert.match(app, /function kyroResumeTutor\(\) \{[\s\S]*?kyroShowResultScreen\("typed", "Continue the lesson", \{ ok: true, status: "completed", response: kyroTutorLast\.response, requiresConfirmation: true, tutor: kyroTutorLast\.tutor \}\);\s+if \(shown\) kyroAddTutorBox\(kyroTutorLast\.tutor\);/);
+  assert.match(app, /demo\(sw \? "Onyesha picha" : "Show a picture", `Show me pictures of \$\{subject\}`\);\s+demo\(sw \? "Onyesha video" : "Show a video", `Show me videos about \$\{subject\}`\);/);
+  assert.match(app, /kyroTutorUntil = 0; kyroTutorSubject = ""; kyroTutorLast = null;/);
 });

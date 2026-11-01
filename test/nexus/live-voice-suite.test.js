@@ -112,7 +112,9 @@ test("the page script is valid JavaScript and installs one rig with the run func
 });
 
 test("the command line, the summary and the printed result", () => {
-  assert.deepEqual(parseArgs(["--url", "http://x.test/", "--writes", "--only", "a,b", "--no-sound"]), { url: "http://x.test", writes: true, risky: false, sound: false, show: false, only: "a,b", area: "", out: "" });
+  assert.deepEqual(parseArgs(["--url", "http://x.test/", "--writes", "--only", "a,b", "--no-sound"]), { url: "http://x.test", writes: true, risky: false, sound: false, show: false, only: "a,b", area: "", out: "", shots: "" });
+  // --shots DIR: a picture of the screen each time the voice session's card changes
+  assert.equal(parseArgs(["--shots", "C:/tmp/shots"]).shots, "C:/tmp/shots");
   assert.throws(() => parseArgs(["--nope"]), /Unknown option/);
   const results = [{ id: "a", status: "pass", ms: 1500, failures: [], warnings: ["w"] }, { id: "b", status: "fail", ms: 2000, failures: ["no button"], warnings: [] }, { id: "c", status: "error", ms: 10, failures: ["boom"], warnings: [] }];
   assert.deepEqual(summarise(results), { total: 3, passed: 1, failed: 1, errors: 1, warnings: 1 });

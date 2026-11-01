@@ -18,7 +18,7 @@ const DEFAULT_URL = "https://nexus-genesis-certified.onrender.com";
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 function parseArgs(argv = []) {
-  const options = { url: DEFAULT_URL, writes: false, risky: false, sound: true, show: false, only: "", area: "", out: "" };
+  const options = { url: DEFAULT_URL, writes: false, risky: false, sound: true, show: false, only: "", area: "", out: "", shots: "" };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]; const next = () => argv[++i];
     if (arg === "--url") options.url = String(next() || "").replace(/\/+$/, "");
@@ -29,6 +29,7 @@ function parseArgs(argv = []) {
     else if (arg === "--only") options.only = String(next() || "");
     else if (arg === "--area") options.area = String(next() || "");
     else if (arg === "--out") options.out = String(next() || "");
+    else if (arg === "--shots") options.shots = String(next() || "");
     else if (arg === "--help" || arg === "-h") options.help = true;
     else throw new Error(`Unknown option ${arg}`);
   }
@@ -91,8 +92,23 @@ async function main(argv) {
     if (!(await client.evaluate("__kyroRig.startVoice()", 150000))) { console.error("The live voice session could not be started."); return 2; }
     await client.evaluate(`__kyroRig.runCases(${JSON.stringify(cases)})`);
     let printed = 0;
+    // --shots DIR: a picture of the screen each time the card the voice session drew changes, so what a person would see can be looked at (the words alone do not show how it looks)
+    let lastCard = ""; let shotCount = 0;
+    if (options.shots) fs.mkdirSync(options.shots, { recursive: true });
     for (;;) {
-      await sleep(4000);
+      await sleep(options.shots ? 1500 : 4000);
+      if (options.shots) {
+        try {
+          const card = await client.evaluate("[...document.querySelectorAll('[data-kyro-result]')].map(n => n.getAttribute('data-kyro-result') + ': ' + n.innerText.replace(/\\s+/g, ' ').slice(0, 160)).join(' || ')");
+          if (card && card !== lastCard) {
+            lastCard = card; shotCount += 1;
+            const picture = await client.send("Page.captureScreenshot", { format: "png" });
+            const file = path.join(options.shots, `${String(shotCount).padStart(3, "0")}.png`);
+            fs.writeFileSync(file, Buffer.from(picture.data, "base64"));
+            console.log(`        [screen ${shotCount}] ${file}: ${card.slice(0, 140)}`);
+          } else if (!card) lastCard = "";
+        } catch { /* a picture is a convenience: the run goes on without it */ }
+      }
       const progress = await client.evaluate("({ results: __kyroRig.results, running: __kyroRig.running, finished: __kyroRig.finished, crash: __kyroRig.crash || '' })");
       for (; printed < progress.results.length; printed += 1) console.log(formatResult(progress.results[printed]));
       results = progress.results;
