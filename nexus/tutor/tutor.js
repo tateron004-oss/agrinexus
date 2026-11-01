@@ -68,10 +68,13 @@ function tutorRequest(text) {
 
 // The end of a session, said plainly ("stop", "that's enough", "I'm done", "end the lesson", "acha somo", "tosha").
 const STOP = /^(?:(?:ok(?:ay)?|thanks?|thank you)[,. ]+)?(?:stop(?: (?:the )?(?:tutor(?:ing)?|lesson|session|quiz|learning))?|end (?:the )?(?:tutor(?:ing)?|lesson|session|quiz)|exit(?: (?:tutor(?:ing)?(?: mode)?|the lesson))?|quit|that'?s (?:enough|all)(?: for (?:now|today))?|i'?m (?:done|finished)|(?:we are|we'?re) (?:done|finished)|no more|enough|finish|not now|bye|goodbye|that will be all|acha(?: somo)?|maliza(?: somo)?|tosha|inatosha|basi|ghairi|sitisha)(?:[,. ]+(?:thanks?|thank you|please|tafadhali|asante))?[.!]*$/i;
-const isStop = text => STOP.test(clean(text));
+// Speech recognition garbles the Kiswahili stop words said to it ("Acha somo" came back as "Acha, Solmo."), so a SHORT sentence that begins with one of them ends the session too, unless it goes on "ni..." (a first-person word such as "Acha niseme").
+const STOP_SW_SHORT = /^(?:acha|maliza|tosha|sitisha|ghairi)(?![\p{L}])[\s,.!]*(?!ni\p{L})(?:[\p{L}']+[\s,.!]*){0,2}$/iu;
+const isStop = text => STOP.test(clean(text)) || STOP_SW_SHORT.test(clean(text));
 
 // A sentence in a session that is a request of its own (not an answer, a question about the lesson or a reply), so the session leaves it to the usual routes and carries on afterwards.
-const OTHER = /^(?:open|show(?: me)? (?:my|the|all|some|a|an|pictures?|videos?|images?|photos?|maps?)|play|pause|resume|call|text|send|remind me|set (?:a|an|my)|add (?:a|an|my)|delete|cancel my|find (?:a|an|the|me)|search(?: for)?|look up|navigate|directions? to|take me to|go to|close|(?:create|make|draft|prepare|generate|build)\s+(?:me\s+)?(?:an?|the|my|some)|what(?:'s| is| are) (?:the )?(?:weather|time|date)|weather|my (?:lists|notes|reminders|documents)|fungua|onyesha|cheza|piga|tuma|nikumbushe|tafuta|hali ya hewa)\b/i;
+// ("show me an example" and "show me how" are the lesson's own turns; "show me a picture" or "a video" is a request of its own, which the page answers with pictures or videos of the lesson's subject)
+const OTHER = /^(?:open|show(?: me)? (?:my\b|all\b|some\b|(?:(?:a|an|the)\s+)?(?:pictures?|videos?|images?|photos?|maps?|weather|documents?|lists?|notes?|reminders?|calendar)\b)|play|pause|resume|call|text|send|remind me|set (?:a|an|my)|add (?:a|an|my)|delete|cancel my|find (?:a|an|the|me)|search(?: for)?|look up|navigate|directions? to|take me to|go to|close|(?:create|make|draft|prepare|generate|build)\s+(?:me\s+)?(?:an?|the|my|some)|what(?:'s| is| are) (?:the )?(?:weather|time|date)|weather|my (?:lists|notes|reminders|documents)|fungua|onyesha|cheza|piga|tuma|nikumbushe|tafuta|hali ya hewa)\b/i;
 // (asking for a practice lesson in the middle of a session is also a request of its own: "teach me letters" is not an answer)
 const isOtherCommand = text => OTHER.test(clean(text)) || Boolean(lessons.lessonRequest(clean(text)));
 
