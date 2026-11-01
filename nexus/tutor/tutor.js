@@ -41,7 +41,8 @@ const TUTOR_NOUN_SW = /^\s*(?:tafadhali\s+)?(?:(?:kuwa|uwe)\s+mwalimu\s+wangu|na
 
 // What a person learns from the checked guides and walkthroughs (official processes), or about Kyro itself, is not tutoring.
 const OFFICIAL_PROCESS = /\b(?:apply(?:ing)?\s+for|file\s+(?:my|a|an|the)|register(?:ing)?\s+(?:to|for|a|my)|renew(?:ing)?|open(?:ing)?\s+(?:a|an)\s+(?:bank\s+)?account|get(?:ting)?\s+(?:a|an|my)\s+(?:id|license|licence|passport|visa|card|permit|benefits?)|start(?:ing)?\s+(?:a|my)\s+business|find(?:ing)?\s+(?:a\s+)?job|vote|voting|report(?:ing)?\s+(?:a|my)|claim(?:ing)?\s+(?:my|a)|sign(?:ing)?\s+up\s+for|enrol(?:l|ling)?)\b/i;
-const ABOUT_KYRO = /\b(?:kyro|nexus|agrinexus|this\s+app|the\s+app|your\s+app)\b/i;
+const CONTINUE_SUBJECT = /^(?:more|again|that|this|it|the next(?: one| part| step)?|next|something else|something new|differently|slowly|slower|simpler|better|easier|zaidi|tena|kwa polepole)(?:\s+(?:please|slowly|simply|tafadhali))?$/i;
+const ABOUT_KYRO =/\b(?:kyro|nexus|agrinexus|this\s+app|the\s+app|your\s+app)\b/i;
 
 function subjectFrom(raw) {
   return clean(raw).replace(/^(?:about|in|on|for|to|ya|wa|za|kuhusu|the\s+subject\s+of)\s+/i, "").replace(/\s+(?:please|for\s+me|with\s+me)\s*$/i, "").replace(/[.?!]+$/g, "").trim().slice(0, 80);
@@ -62,6 +63,8 @@ function tutorRequest(text) {
   for (const [pattern, lang] of [[START, "en"], [START_SW, "sw"]]) {
     if ((match = pattern.exec(said))) {
       const subject = subjectFrom(match[1]);
+      // "teach me more", "teach me again", "teach me that slowly": the lesson goes on, it is not a new subject called "more"
+      if (CONTINUE_SUBJECT.test(subject)) return { kind: "continue", subject: "", lang };
       if (OFFICIAL_PROCESS.test(subject) || ABOUT_KYRO.test(subject) || (lang === "sw" && PRACTICE_SUBJECT.test(subject))) return null;
       return { kind: "learn", subject, lang };
     }
@@ -78,8 +81,10 @@ const isStop = text => STOP.test(clean(text)) || STOP_SW_SHORT.test(clean(text))
 // A sentence in a session that is a request of its own (not an answer, a question about the lesson or a reply), so the session leaves it to the usual routes and carries on afterwards.
 // ("show me an example" and "show me how" are the lesson's own turns; "show me a picture" or "a video" is a request of its own, which the page answers with pictures or videos of the lesson's subject)
 const OTHER = /^(?:open|show(?: me)? (?:my\b|all\b|some\b|(?:(?:a|an|the)\s+)?(?:pictures?|videos?|images?|photos?|maps?|weather|documents?|lists?|notes?|reminders?|calendar)\b)|play|pause|resume|call|text|send|remind me|set (?:a|an|my)|add (?:a|an|my)|delete|cancel my|find (?:a|an|the|me)|search(?: for)?|look up|navigate|directions? to|take me to|go to|close|(?:create|make|draft|prepare|generate|build)\s+(?:me\s+)?(?:an?|the|my|some)|what(?:'s| is| are) (?:the )?(?:weather|time|date)|weather|my (?:lists|notes|reminders|documents)|fungua|onyesha|cheza|piga|tuma|nikumbushe|tafuta|hali ya hewa)\b/i;
+// A "teach me ..." sentence that tutorRequest declined (a guide on an official process, a question about Kyro, a practice lesson) is a request for that guide or lesson, not an answer to the tutor.
+const declinedRequest = text => { const said = clean(text); return Boolean((START.test(said) || START_SW.test(said)) && !tutorRequest(said)); };
 // (asking for a practice lesson in the middle of a session is also a request of its own: "teach me letters" is not an answer)
-const isOtherCommand = text => OTHER.test(clean(text)) || Boolean(lessons.lessonRequest(clean(text)));
+const isOtherCommand = text => OTHER.test(clean(text)) || Boolean(lessons.lessonRequest(clean(text))) || declinedRequest(text);
 
 // ---- the session: per person, forgotten after 45 quiet minutes, never shared between people ----
 function createTutorSessions({ now = Date.now, ttlMs = SESSION_MS } = {}) {
