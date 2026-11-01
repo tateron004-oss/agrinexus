@@ -314,3 +314,16 @@ test("the page sends the picture or video request, brings the lesson back when i
   assert.match(app, /demo\(sw \? "Onyesha picha" : "Show a picture", `Show me pictures of \$\{subject\}`\);\s+demo\(sw \? "Onyesha video" : "Show a video", `Show me videos about \$\{subject\}`\);/);
   assert.match(app, /kyroTutorUntil = 0; kyroTutorSubject = ""; kyroTutorLast = null;/);
 });
+
+// ---- Kiswahili as speech recognition writes it ----
+test("a Kiswahili request as speech recognition writes it is still a tutoring request, and a garbled practice-lesson request is still left to the practice lessons", () => {
+  // (heard on the live site by the voice rig: "Mi fondishe scienci", "Nataka kujifonza sehemu", "Mi fondishe sehemol")
+  for (const [say, subject] of [["Mi fondishe scienci.", "scienci"], ["Nataka kujifonza sehemu.", "sehemu"], ["Ni fundishe sehemu", "sehemu"], ["Naomba kujifunza jiografia", "jiografia"], ["Nifundishe sayansi.", "sayansi"]]) {
+    assert.deepEqual({ ...tutor.tutorRequest(say) }, { kind: "learn", subject, lang: "sw" }, say);
+    assert.equal(context.starts(say), true, say);
+  }
+  for (const say of ["Mi fondishe herufi", "Nataka kujifunza kusoma", "Nifundishe hesabu", "Mi fondishe hesabu"]) {
+    assert.equal(tutor.tutorRequest(say), null, say);
+    assert.equal(context.starts(say), false, say);
+  }
+});

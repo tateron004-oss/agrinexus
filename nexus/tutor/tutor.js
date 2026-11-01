@@ -31,7 +31,10 @@ const HOMEWORK = new RegExp(`${LEAD}help\\s+(?:me|us)\\s+(?:with|do|finish|compl
 const QUIZ = new RegExp(`${LEAD}(?:quiz|test)\\s+(?:me|us)\\b(?:\\s+(?:on|about|in)\\s+(.*?))?\\s*[.?!]*$`, "i");
 const TUTOR_NOUN = new RegExp(`${LEAD}(?:(?:please\\s+)?be\\s+my\\s+(?:tutor|teacher)|become\\s+my\\s+(?:tutor|teacher)|i\\s+(?:need|want)\\s+a\\s+(?:tutor|teacher)|(?:start|begin|open)\\s+(?:a\\s+)?tutor(?:ing)?(?:\\s+(?:session|mode))?|tutor(?:ing)?\\s+mode|tutoring)\\s*[.?!]*$`, "i");
 // Kiswahili: "nifundishe sehemu", "nataka kujifunza Kiingereza", "nisaidie na kazi ya nyumbani", "nipime kuhusu jiografia", "kuwa mwalimu wangu"
-const START_SW = /^\s*(?:tafadhali\s+)?(?:nifundishe|nifundisheni|nifunze|nisaidie\s+kujifunza|nataka\s+kujifunza|ninataka\s+kujifunza|naomba\s+kujifunza)\b\s*(.*)$/i;
+// (also as speech recognition writes them: "Mi fondishe sayansi", "Ni fundishe sehemu", "Nataka kujifonza sehemu")
+const START_SW = /^\s*(?:tafadhali\s+)?(?:(?:ni|mi)\s*f[uo]nd[iy]sh[ei](?:ni)?|nif[uo]nze|nisaidie\s+kuji?f[uo]nz[ae]|(?:ni)?nataka\s+kuji?f[uo]nz[ae]|naomba\s+kuji?f[uo]nz[ae])\b\s*(.*)$/i;
+// what the practice lessons teach, when a garbled "nifundishe" kept them from being recognised as theirs
+const PRACTICE_SUBJECT = /\b(?:herufi|alfabeti|hesabu|kuhesabu|kusoma|kuandika|namba|nambari)\b/i;
 const HOMEWORK_SW = /^\s*(?:tafadhali\s+)?nisaidie\s+(?:na|kwa)\s+(?:kazi\s+ya\s+nyumbani|zoezi|masomo)\b\s*(.*)$/i;
 const QUIZ_SW = /^\s*(?:tafadhali\s+)?(?:nipime|nijaribu|niulize\s+maswali)\b\s*(?:kuhusu|katika|juu\s+ya)?\s*(.*)$/i;
 const TUTOR_NOUN_SW = /^\s*(?:tafadhali\s+)?(?:(?:kuwa|uwe)\s+mwalimu\s+wangu|nahitaji\s+mwalimu|nataka\s+mwalimu)\s*[.?!]*$/i;
@@ -59,7 +62,7 @@ function tutorRequest(text) {
   for (const [pattern, lang] of [[START, "en"], [START_SW, "sw"]]) {
     if ((match = pattern.exec(said))) {
       const subject = subjectFrom(match[1]);
-      if (OFFICIAL_PROCESS.test(subject) || ABOUT_KYRO.test(subject)) return null;
+      if (OFFICIAL_PROCESS.test(subject) || ABOUT_KYRO.test(subject) || (lang === "sw" && PRACTICE_SUBJECT.test(subject))) return null;
       return { kind: "learn", subject, lang };
     }
   }
