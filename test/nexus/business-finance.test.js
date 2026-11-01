@@ -89,7 +89,8 @@ test("adding a bill: describes it, waits for the yes, asks for what is missing, 
   const workspace = await ready();
   assert.match(await workspace.say("Add a bill from the landlord for 800 dollars"), /When is the \$800\.00 bill from landlord due\?/);
   const prompt = await workspace.say("the 1st");
-  assert.match(prompt, /I can add a \$800\.00 bill from landlord due \w+ \d+ \w+, to "Hope Garden"\. Should I go ahead\?/);
+  // ("the 1st" is spoken as "today" on the 1st of a month)
+  assert.match(prompt, /I can add a \$800\.00 bill from landlord due (?:today|\w+ \d+ \w+), to "Hope Garden"\. Should I go ahead\?/);
   assert.deepEqual((await workspace.editable()).bills, [], "nothing saved before the yes");
   assert.match(await workspace.say("yes"), /Added a \$800\.00 bill from landlord/);
   const bills = (await workspace.editable()).bills;

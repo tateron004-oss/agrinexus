@@ -27956,6 +27956,8 @@ async function kyroReturnToOrb(options = {}) {
   kyroNoteActivity();
   // "I'm done" / "back to the orb" ends a typed lesson too (a quiet-spell return or closing a screen leaves it, so "next" still carries on)
   if (options.reason === "home" || options.reason === "done") kyroTypedLessonOpen = false;
+  // closing a tutor card, "I'm done" or "go back to the orb" ends a tutoring session too (a quiet-spell return leaves it, so the learner can carry on)
+  if (options.reason === "home" || options.reason === "done" || options.reason === "close") kyroTutorEnd();
   try {
     if (nexusConversationWorkflowTransitionState) { nexusConversationWorkflowTransitionState.activeWorkflow = null; nexusConversationWorkflowTransitionState.lastProposal = null; }
   } catch { /* the workflow bookkeeping is optional */ }
@@ -52348,6 +52350,20 @@ const KYRO_DOCUMENT_NOT = /\b(?:resume|résumé|cv|checklist|to-?do|reminder|lis
 const KYRO_LIST_REQUEST = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:(?:create|make|start|build|put together|write)\\s+(?:me\\s+)?(?:a|an|my|the|some)?\\s*(?:[a-z'-]+\\s+){0,3}?(?:list|checklist)\\b|(?:show|open|read|bring up|pull up)\\s+(?:me\\s+)?(?:all\\s+)?(?:of\\s+)?my\\s+(?:lists|checklists)\\b|(?:what|which)\\s+(?:should|do|can|must)\\s+(?:i|we)\\s+(?:pack|bring|take)\\b)`, "i");
 // The answer to "what should I pack for Kenya?" is written by the model (nexus/brain/planner.js, PACK_QUESTION); it is the one model-written answer the page also puts on a card, so the list is seen as well as heard.
 const KYRO_PACK_QUESTION = /\bwhat\s+(?:should|do|can|must)\s+(?:i|we)\s+pack\b/i;
+// Tutor mode ("Teach me fractions", "Help me with my science homework", "Quiz me on world capitals", "Be my tutor", "Nifundishe sehemu", "Nisaidie na kazi ya nyumbani"): said aloud, the page takes it to the same route as typing it, so the
+// lesson is drawn as a card and read out, and the voice model does not reword it into an answer of its own with nothing on the screen (nexus/tutor/tutor.js is the other half). The practice lessons (letters, reading, counting,
+// adding), the guides on official processes ("teach me how to apply for ...") and questions about Kyro itself are left to their own routes.
+const KYRO_TUTOR_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:teach|tutor|coach)\s+(?:me|us)\b|help\s+(?:me|us)\s+(?:to\s+)?(?:learn|study|understand|practi[sc]e|revise|prepare\s+for|get\s+better\s+at)\b|(?:i\s+)?(?:want|need|would\s+like|'d\s+like)\s+(?:you\s+)?to\s+(?:learn|study|understand|practi[sc]e|revise|teach|tutor|coach)\b|let'?s\s+(?:learn|study)\b|help\s+(?:me|us)\s+(?:with|do|finish|complete|understand)\s+(?:my\s+|our\s+|the\s+|this\s+|some\s+)?(?:[\w'-]+\s+){0,3}?(?:homework|assignment|school\s?work|revision|studies|essay|worksheet)\b|(?:quiz|test)\s+(?:me|us)\b|(?:be|become)\s+my\s+(?:tutor|teacher)\b|i\s+(?:need|want)\s+a\s+(?:tutor|teacher)\b|(?:start|begin|open)\s+(?:a\s+)?tutor(?:ing)?\b|nifundishe\b|nifundisheni\b|nifunze\b|nisaidie\s+kujifunza\b|(?:ni)?nataka\s+kujifunza\b|nisaidie\s+(?:na|kwa)\s+(?:kazi\s+ya\s+nyumbani|zoezi|masomo)\b|nipime\b|(?:kuwa|uwe)\s+mwalimu\s+wangu\b)`, "i");
+const KYRO_TUTOR_NOT = /\b(?:letters?|alphabet|abc|to read|reading|counting|to count|adding|subtract\w*|take away|maths?|mathematics|numbers?|arithmetic|herufi|hesabu|kusoma|kuhesabu)\b(?![\s\S]*\bhomework\b)|\b(?:apply(?:ing)?\s+for|file\s+(?:my|a|an|the)|renew|open(?:ing)?\s+(?:a|an)\s+(?:bank\s+)?account|get(?:ting)?\s+(?:a|an|my)\s+(?:id|license|licence|passport|visa|card|permit)|start(?:ing)?\s+(?:a|my)\s+business|find(?:ing)?\s+(?:a\s+)?job|(?:use|using|about|with)\s+(?:kyro|nexus|this\s+app|the\s+app))\b/i;
+// In a session, a sentence that is a request of its own is not the learner's answer.
+const KYRO_TUTOR_OTHER = /^(?:open|show(?: me)? (?:my|the|all|some|a|an|pictures?|videos?|images?|photos?|maps?)|play|pause|resume|call|text|send|remind me|set (?:a|an|my)|add (?:a|an|my)|delete|cancel my|find (?:a|an|the|me)|search(?: for)?|look up|navigate|directions? to|take me to|go to|close|(?:create|make|draft|prepare|generate|build)\s+(?:me\s+)?(?:an?|the|my|some)|what(?:'s| is| are) (?:the )?(?:weather|time|date)|weather|my (?:lists|notes|reminders|documents)|fungua|onyesha|cheza|piga|tuma|nikumbushe|tafuta|hali ya hewa)\b/i;
+let kyroTutorUntil = 0; // set when a tutoring turn comes back, cleared when the learner stops or closes the screen (the server keeps the session and forgets it after 45 quiet minutes)
+function kyroTutorOpen() { return kyroTutorUntil > Date.now(); }
+function kyroTutorEnd() {
+  if (!kyroTutorOpen()) return;
+  kyroTutorUntil = 0;
+  try { void kyroSilentTurn("Stop tutoring").catch(() => {}); } catch { /* the server forgets the session after 45 quiet minutes anyway */ }
+}
 const KYRO_LIST_NOT = /^(?:how|why|should i|can i)\b|\b(?:walk|teach|guide|show)\s+(?:me\s+)?(?:how|through)\b|\b(?:what|which) (?:is|are) (?:a|the)\b/i;
 // A spoken note or reminder ("Write down milk, eggs and flour", "Make a note that I paid the rent", "Remind me to buy bread tomorrow"): the voice model answered these aloud and the page showed nothing (found by the sweep of 34 spoken requests on 27 October 2026).
 // The typed route saves it the same way and shows "Noted: ..." or "I will remind you ..." on a card. "Remind me what ..." is a question about what was said, not a reminder.
@@ -52688,6 +52704,17 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
           return true;
         }
       }
+    }
+  }
+  // A tutoring session is open, or this asks for one: said aloud it goes the typed way, so the next step is drawn on a card and read out (see KYRO_TUTOR_REQUEST). While a session is open every sentence that is not a request of its own is the
+  // learner's answer or question, and "stop" ends it on the server.
+  if (!options.typed) {
+    const startsTutor = KYRO_TUTOR_REQUEST.test(said) && !KYRO_TUTOR_NOT.test(said);
+    const inSession = kyroTutorOpen() && !KYRO_TUTOR_OTHER.test(said) && !(KYRO_TUTOR_REQUEST.test(said) && KYRO_TUTOR_NOT.test(said));
+    if (startsTutor || inSession) {
+      kyroTakeOverTurn();
+      void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+      return true;
     }
   }
   // "Open the Sales Plan document", "read my latest document": that one document opens, with its words and the Download button (it used to list all of them and say "it's open").
@@ -53940,7 +53967,7 @@ function kyroShowResultScreen(toolName, command, result) {
     if ((KYRO_FORM_FLOW.test(String(command || "")) && result.genesisAction) || kyroExplicitOpenCard(command)) return false;
     // a greeting, a thank-you or a "yes" is spoken back, not drawn across the whole screen
     // (but not the reply "no" or "ok" to a checklist, lesson or course question: its answer, the next lesson, is the screen)
-    if (KYRO_SMALL_TALK.test(String(command || "").trim()) && !(typeof kyroGuidedReply === "function" && kyroGuidedReply(command))) return false;
+    if (KYRO_SMALL_TALK.test(String(command || "").trim()) && !(typeof kyroGuidedReply === "function" && kyroGuidedReply(command)) && !kyroTutorOpen()) return false;
     const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
     if (result && typeof result.response === "string") result = { ...result, response: kyroPlainText(result.response) };
     const model = window.KyroResultScreen.buildModel(result, { command, lang });
@@ -54173,6 +54200,9 @@ function kyroShowTypedResult(result, text, message) {
     // a walkthrough ("walk me through getting a seller's permit"): one step at a time, with its official page; the opening line and the first step are read out (see kyroWalkthroughOpening)
     if (result && result.plan && result.plan.walkthrough && typeof kyroOpenWalkthrough === "function" && kyroOpenWalkthrough(result.plan.walkthrough, message)) return true;
     if (!window.KyroResultScreen || !result || typeof result !== "object") return false;
+    // a tutoring turn (nexus/tutor/tutor.js): the page notes that a session is open, so what is said next goes the typed way to the same session
+    const tutor = result.plan && result.plan.tutor ? result.plan.tutor : null;
+    if (tutor) kyroTutorUntil = tutor.active === true ? Date.now() + 45 * 60 * 1000 : 0;
     if (kyroExplicitOpenCard(text)) return false;
     const drawn = result.render;
     let answer = null; let wantsButtons = false;
@@ -54207,6 +54237,9 @@ function kyroShowTypedResult(result, text, message) {
       if (drawn.presentation?.kind !== "location-list" || !cards.length || KYRO_FORM_FLOW.test(String(text || ""))) return false;
       const pharmacy = cards.some(card => /pharmac/i.test(String(card?.category || ""))) || result.application === "pharmacy";
       answer = { response: message, [pharmacy ? "pharmacyLocations" : "mobileClinics"]: cards, locationNote: drawn.data?.locationNote };
+    } else if (tutor && result.state === "completed" && String(message || "").trim().length >= 12) {
+      // a tutoring turn is on the screen and stays there until the learner answers or closes it, with a box under it to type the answer in
+      answer = { response: message, requiresConfirmation: tutor.active === true, tutor: { active: tutor.active === true, subject: String(tutor.subject || "") } };
     } else if (result.state === "completed" && result.application === "conversation" && result.outcome?.modelAnswered === true && KYRO_PACK_QUESTION.test(String(text || "")) && String(message || "").trim().length >= 24) {
       answer = { response: message };
     } else if (result.state === "completed" && result.application === "conversation" && result.outcome?.modelAnswered === false && String(message || "").trim().length >= 24) {
@@ -54223,11 +54256,37 @@ function kyroShowTypedResult(result, text, message) {
     } else return false;
     const shown = kyroShowResultScreen("typed", text, { ok: true, status: "completed", ...answer });
     if (shown && wantsButtons) kyroAddConfirmButtons();
+    if (shown && tutor && tutor.active === true) kyroAddTutorBox();
     if (shown && typeof kyroAddResumeButtons === "function" && /^show my r[e\u00e9]sum[e\u00e9]s?$/i.test(String(text || "").trim())) void kyroAddResumeButtons();
     // a list of notes, reminders, documents or checklists has a form under it to write in
     const writable = shown ? kyroWritableListKind(text) : "";
     if (writable) kyroAddComposer(writable);
     return shown;
+  } catch { return false; }
+}
+// Under a tutoring turn: a box to type the answer in (Enter sends it), a Send button, and a Stop tutoring button. Typing and saying it are the same turn.
+function kyroAddTutorBox() {
+  try {
+    const screen = document.querySelector("[data-kyro-result]");
+    if (!screen || screen.querySelector("[data-kyro-tutor-box]")) return false;
+    const sw = (() => { try { return languageCode() === "sw"; } catch { return false; } })();
+    screen.setAttribute("data-kyro-keep", "true");
+    const form = kyroMake("form", { "data-kyro-tutor-box": "true", style: "display:flex;flex-direction:column;gap:10px;width:100%;max-width:34em;position:relative;z-index:1" });
+    const box = kyroMake("textarea", { name: "answer", rows: "2", "aria-label": sw ? "Jibu lako" : "Your answer", placeholder: sw ? "Andika jibu lako hapa, au sema jibu lako" : "Type your answer here, or say it", style: KYRO_FIELD_STYLE });
+    const row = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap" });
+    const send = kyroMake("button", { type: "submit", style: KYRO_BUTTON_STYLE }, sw ? "Tuma" : "Send");
+    const stop = kyroMake("button", { type: "button", "data-kyro-tutor-stop": "true", style: KYRO_BUTTON_STYLE.replace("#06a77d", "#475569") }, sw ? "Maliza somo" : "Stop tutoring");
+    row.append(send, stop); form.append(box, row); screen.append(form);
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      const answer = box.value.trim();
+      if (!answer) return;
+      box.value = "";
+      void handleNexusUnifiedBrainRuntimeCommand(answer, { source: "typed", kyroDirect: true });
+    });
+    box.addEventListener("keydown", event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); } });
+    stop.addEventListener("click", () => { void handleNexusUnifiedBrainRuntimeCommand(sw ? "Acha somo" : "Stop tutoring", { source: "typed", kyroDirect: true }); });
+    return true;
   } catch { return false; }
 }
 // A Yes and a No under a question that waits for one: tapping is the same as saying it (submitNexusPendingBehaviorConfirmation).

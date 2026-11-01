@@ -82,7 +82,10 @@ test("volunteer hours: described, saved only after the yes, the person found by 
   assert.match(await workspace.confirm("Joy volunteered 2 hours at the pantry"), /Logged 2 volunteer hours for Joy Wanjiru on pantry/);
   const summary = await workspace.say("How many volunteer hours do we have?");
   assert.match(summary, /6 hours from 1 volunteer over 3 entries\. Most hours: Joy Wanjiru 6/);
-  assert.match(await workspace.say("How many volunteer hours do we have last month?"), /No volunteer hours are logged .* last month/);
+  // (the hour logged for "yesterday" is last month's when today is the 1st: on that day it is counted, and nothing else is)
+  const lastMonth = await workspace.say("How many volunteer hours do we have last month?");
+  if (day(-1).slice(0, 7) !== day(0).slice(0, 7)) assert.match(lastMonth, /last month: 1 hours from 1 volunteer over 1 entry/);
+  else assert.match(lastMonth, /No volunteer hours are logged .* last month/);
 });
 
 test("skills and availability go on the volunteer's contact; a name that is not on the list is not invented", async () => {
