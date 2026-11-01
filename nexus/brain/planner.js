@@ -67,6 +67,8 @@ const { feedRequest, grantsAnswer, rulesAnswer } = require("../knowledge/live-fe
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 const { handoutRequest, handoutTemplate } = require("../knowledge/handout-templates.js");
 const { scheduleRequest, scheduleTemplate } = require("../knowledge/schedule-templates.js");
+const tutorMode = require("../tutor/tutor.js");
+const sharedTutorSessions = tutorMode.createTutorSessions();
 // how a starter document is named when it is spoken back (the title in lower case, except where that reads wrongly)
 // "What should I pack for Kenya?", "Kyro, what do I pack for a week in Tokyo": only "pack" (not "bring" or "take", which can be about medicine or anything else).
 const PACK_QUESTION = /^\s*(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:(?:can|could|would|will) you\s+)?(?:tell me\s+)?what\s+(?:should|do|can|must)\s+(?:i|we)\s+pack\b/i;
@@ -90,9 +92,48 @@ const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, tutorSessions = sharedTutorSessions, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, tutorSessions, maxRepairAttempts });
+  }
+
+  // Tutor mode (see tutor/tutor.js): "Teach me fractions", "Help me with my homework", "Quiz me on world capitals", "Be my tutor". A session is kept for each person; while one is open, what they say next is their answer or their next
+  // question, taught one small step at a time by the AI model inside the tutor's rules, until they say stop or 45 quiet minutes pass. `starting: false` (early, after the safety readers) only carries on or ends a session that is open, so a
+  // short answer such as "7" or "yes" is not taken by the health readings or the reminders; `starting: true` (late, after the checked guides) is what opens one, so "teach me about the GI Bill" still gets its guide.
+  async tutorTurn({ command, context }, { starting }) {
+    if (context?.deterministicOnly === true || typeof this.model?.respond !== "function") return null;
+    const tenantId = command?.tenantId; const userId = command?.actorId;
+    const said = String(command?.spokenText || command?.text || "").trim();
+    if (!tenantId || !userId || !said || said.length > 600) return null;
+    let session = this.tutorSessions.get(tenantId, userId);
+    let first = false;
+    const plan = (response, extra = {}) => Object.freeze({ goal: said, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false, planningAttempts: 0, ...extra });
+    if (session && !starting) {
+      if (tutorMode.isStop(said)) {
+        this.tutorSessions.end(tenantId, userId);
+        return plan(tutorMode.endLine(session), { tutor: Object.freeze({ active: false, subject: session.subject, kind: session.kind, turn: session.count }) });
+      }
+      const restart = tutorMode.tutorRequest(said);
+      if (restart) { session = this.tutorSessions.start(tenantId, userId, restart); first = true; }
+      else if (tutorMode.isOtherCommand(said)) return null;
+    } else if (!session && starting) {
+      const request = tutorMode.tutorRequest(said);
+      if (!request) return null;
+      session = this.tutorSessions.start(tenantId, userId, request);
+      first = true;
+    } else return null;
+    if (!session) return null;
+    const profile = createInteractionProfile({ locale: command.locale, userPreferences: context?.userPreferences || {}, channel: command.channel });
+    const answer = await this.model.respond({ goal: tutorMode.tutorGoal({ session, said, first }), locale: command.locale, tenantId, maxOutputTokens: 450, interactionProfile: profile,
+      conversationHistory: session.turns.map(turn => ({ role: turn.role, content: turn.content })), memories: [], capabilities: [] }).catch(() => null);
+    if (typeof answer !== "string" || !answer.trim()) {
+      // the first turn failed: there is no session to keep, and the usual route may still answer; a later turn keeps the session and asks to be said again
+      if (first) { this.tutorSessions.end(tenantId, userId); return null; }
+      return plan(tutorMode.failedLine(session.lang), { tutor: Object.freeze({ active: true, subject: session.subject, kind: session.kind, turn: session.count }) });
+    }
+    this.tutorSessions.record(session, said, answer.trim());
+    const opening = first && ["en", "sw"].includes(session.lang) ? `${tutorMode.introLine(session.lang)}\n\n` : "";
+    return plan(`${opening}${answer.trim()}`, { modelAnswered: true, tutor: Object.freeze({ active: true, subject: session.subject, kind: session.kind, turn: session.count }) });
   }
 
   // A planned document whose body is only an instruction to write it (see echoesInstruction) is written out by one more model call; if that fails, the plan is kept as it was.
@@ -406,6 +447,9 @@ class OpenEndedPlanner {
     // command route and the spoken tool route already did; the typed route left it to the AI model, which was the only route where the number depended on the model getting it right.
     const emergencyNumber = safetyTexts.map(said => emergencyNumberAnswer(said, { country: context?.country })).find(Boolean);
     if (emergencyNumber) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: emergencyNumber, sourceRequired: false, planningAttempts: 0 });
+    // A tutoring session that is open takes what the person says next (their answer, their question, or "stop"), before the readers that would take a short answer such as "7" for a reading or "yes" for a confirmation.
+    const tutoring = await this.tutorTurn({ command, context }, { starting: false });
+    if (tutoring) return tutoring;
     // "Show my blood pressure readings", "delete my last reading", "that was wrong, it was 133/78", "delete all my health records", "who can see my health information": readings saved through the planner live in the
     // record store, so they are shown, deleted and corrected here, by the same conversation the older routes use for the readings kept there (see health/store-readings.js). It asks before every change and says plainly
     // when the store cannot be read. The spoken path (deterministicOnly) leaves this to its own route, which sees both kinds of reading together.
@@ -873,6 +917,9 @@ class OpenEndedPlanner {
     }
     // "What should I pack for Kenya?": a short packing list, answered directly in one model call and shown as a card. The general planner took two or three calls (about 20 seconds) and on some tries saved a document for a question
     // or answered aloud with nothing on the screen (found by running the sweep of spoken requests against the live site on 27 October 2026). The card is drawn by the page (kyroShowResultScreen).
+    // "Teach me fractions", "Help me with my homework", "Quiz me on world capitals", "Be my tutor": a tutoring session opens here, after the checked guides and the practice lessons have had their say.
+    const tutorStarted = await this.tutorTurn({ command, context }, { starting: true });
+    if (tutorStarted) return tutorStarted;
     if (PACK_QUESTION.test(String(command.text || "")) && typeof this.model.respond === "function") {
       const answer = await this.model.respond({ goal: `${command.spokenText || command.text}\n\nAnswer with a short packing list: one item per line, each line starting with "- ", at most 15 lines, then one last line suggesting they check the weather and any rules for where they are going. If they did not say where or for how long, make it a general list.`,
         locale, tenantId: command.tenantId, maxOutputTokens: 500,
