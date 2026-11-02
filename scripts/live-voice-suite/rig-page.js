@@ -214,6 +214,13 @@ function installKyroVoiceRig(makeEvaluator) {
   rig.cleanup = async lastState => {
     // a form still open is ended the way a person ends it (its own voice command), so the session's normal answering is restored
     if (lastState && lastState.intake) { try { await rig.say("Cancel."); await sleep(7000); } catch { /* cleared below */ } }
+    // a tutoring lesson still open (a case that failed before its own stop) is ended the way a person ends it, so the next case does not start inside it
+    try {
+      if (typeof kyroTutorOpen === "function" && kyroTutorOpen()) {
+        await rig.say("Stop tutoring."); await sleep(6000);
+        if (kyroTutorOpen()) { kyroTutorEnd(); await sleep(1500); }
+      }
+    } catch { /* cleared below */ }
     rig.clear();
   };
   rig.runSteps = async (startMark, steps, defaultTimeout) => {
