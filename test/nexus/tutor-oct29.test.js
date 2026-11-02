@@ -314,3 +314,46 @@ test("the page sends the picture or video request, brings the lesson back when i
   assert.match(app, /demo\(sw \? "Onyesha picha" : "Show a picture", `Show me pictures of \$\{subject\}`\);\s+demo\(sw \? "Onyesha video" : "Show a video", `Show me videos about \$\{subject\}`\);/);
   assert.match(app, /kyroTutorUntil = 0; kyroTutorSubject = ""; kyroTutorLast = null;/);
 });
+
+// ---- Kiswahili as speech recognition writes it ----
+test("a Kiswahili request as speech recognition writes it is still a tutoring request, and a garbled practice-lesson request is still left to the practice lessons", () => {
+  // (heard on the live site by the voice rig: "Mi fondishe scienci", "Nataka kujifonza sehemu", "Mi fondishe sehemol")
+  for (const [say, subject] of [["Mi fondishe scienci.", "scienci"], ["Nataka kujifonza sehemu.", "sehemu"], ["Ni fundishe sehemu", "sehemu"], ["Naomba kujifunza jiografia", "jiografia"], ["Nifundishe sayansi.", "sayansi"]]) {
+    assert.deepEqual({ ...tutor.tutorRequest(say) }, { kind: "learn", subject, lang: "sw" }, say);
+    assert.equal(context.starts(say), true, say);
+  }
+  for (const say of ["Mi fondishe herufi", "Nataka kujifunza kusoma", "Nifundishe hesabu", "Mi fondishe hesabu"]) {
+    assert.equal(tutor.tutorRequest(say), null, say);
+    assert.equal(context.starts(say), false, say);
+  }
+});
+
+// ---- found by the voice run of 1 November 2026: "teach me ..." inside a lesson ----
+test("'teach me more' and 'teach me again' carry on with the lesson (they are not a new subject called 'more'); outside a lesson they start nothing", async () => {
+  for (const say of ["Teach me more", "Teach me again", "Teach me that slowly", "teach me the next one", "Teach me something else", "Nifundishe zaidi"]) assert.equal(tutor.tutorRequest(say).kind, "continue", say);
+  const planned = []; const responded = [];
+  const sessions = tutor.createTutorSessions();
+  const instance = planner({ planned, responded, sessions, answers: ["Fractions step one. Question?", "More about halves. Question?", "Again: halves. Question?"] });
+  await assert.rejects(ask(instance, "Teach me more"), /MODEL_REACHED|plan_invalid|safe executable/);
+  assert.equal(sessions.get("t1", "u1"), null, "no lesson is started by 'teach me more'");
+  await ask(instance, "Teach me fractions.");
+  const more = await ask(instance, "Teach me more");
+  assert.deepEqual({ ...more.tutor }, { active: true, subject: "fractions", kind: "learn", turn: 2 });
+  assert.doesNotMatch(more.response, /I am an AI tutor/);
+  assert.equal(responded[responded.length - 1].conversationHistory.length, 2, "it carried on with the history so far");
+  const again = await ask(instance, "teach me again");
+  assert.equal(again.tutor.subject, "fractions");
+  assert.equal(again.tutor.turn, 3);
+});
+
+test("in a lesson, a 'teach me how to apply for a passport', 'teach me how to use Kyro' or 'teach me letters' is a request for that guide or lesson: it passes through and the lesson stays open", async () => {
+  for (const say of ["Teach me how to apply for a passport", "Teach me how to use Kyro", "Teach me letters", "Mi fondishe herufi"]) assert.equal(tutor.isOtherCommand(say), true, say);
+  for (const say of ["Teach me fractions", "I want to learn Spanish", "why is that wrong?"]) assert.equal(tutor.isOtherCommand(say), false, say);
+  const responded = [];
+  const sessions = tutor.createTutorSessions();
+  const instance = planner({ responded, sessions });
+  await ask(instance, "Teach me fractions.");
+  await assert.rejects(ask(instance, "Teach me how to apply for a passport"), /MODEL_REACHED/);
+  assert.equal(responded.length, 1, "it was not taught as an answer");
+  assert.ok(sessions.get("t1", "u1"), "the lesson is still open");
+});

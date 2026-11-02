@@ -114,11 +114,12 @@ class OpenEndedPlanner {
         return plan(tutorMode.endLine(session), { tutor: Object.freeze({ active: false, subject: session.subject, kind: session.kind, turn: session.count }) });
       }
       const restart = tutorMode.tutorRequest(said);
-      if (restart) { session = this.tutorSessions.start(tenantId, userId, restart); first = true; }
-      else if (tutorMode.isOtherCommand(said)) return null;
+      // ("teach me more" goes on with the lesson; any other request names a new subject and starts over)
+      if (restart && restart.kind !== "continue") { session = this.tutorSessions.start(tenantId, userId, restart); first = true; }
+      else if (!restart && tutorMode.isOtherCommand(said)) return null;
     } else if (!session && starting) {
       const request = tutorMode.tutorRequest(said);
-      if (!request) return null;
+      if (!request || request.kind === "continue") return null;
       session = this.tutorSessions.start(tenantId, userId, request);
       first = true;
     } else return null;
