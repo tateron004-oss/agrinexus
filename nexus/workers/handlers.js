@@ -80,6 +80,18 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
           outcomes.push({ notificationId: notification.notification_id, delivered: false, code: "delivery_provider_unavailable" });
           continue;
         }
+        // Found from the owner's 4 November 2026 test report ("i cancelled the reminder and it sent the reminder anyway"): up to 25 rows are claimed ('delivering') at once and sent one after another,
+        // and a reminder cancelled after the claim and before ITS turn was sent regardless. The row is checked again right before the send: one that is no longer this worker's (cancelled) is not sent.
+        // (A repository without stillHeld, such as a test stand-in, is sent as before.)
+        if (typeof runtime.notifications.stillHeld === "function") {
+          let held = true;
+          try { held = await runtime.notifications.stillHeld(notification.notification_id, workerId); } catch { held = true; }
+          if (!held) {
+            logger?.info?.("notifications.skipped_no_longer_wanted", { notificationId: notification.notification_id, channel: notification.channel });
+            outcomes.push({ notificationId: notification.notification_id, delivered: false, code: "no_longer_wanted" });
+            continue;
+          }
+        }
         let receipt;
         try {
           receipt = await provider(notification);

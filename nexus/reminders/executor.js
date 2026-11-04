@@ -2,6 +2,7 @@
 
 const { resolveReminderTime, describeMoment, extractAssistantReminderTask } = require("./time-phrase.js");
 const { reminderContent } = require("./private-reminder.js");
+const { copiesOf } = require("./duplicates.js");
 
 function createReminderScheduleExecutor({ notifications }) {
   if (!notifications?.enqueue) throw new Error("A notification repository is required.");
@@ -25,7 +26,14 @@ function createReminderScheduleExecutor({ notifications }) {
       resolvedTime = timing.readback;
     }
     const task = extractAssistantReminderTask(String(input?.reminder || input?.title || rawText).trim());
-    const notification = await notifications.enqueue({
+    // The same reminder is not made twice. A spoken "remind me to drink water in 2 minutes" can reach this creator AND the older command route (the voice model's own tool call arrives as well as the page's), and
+    // the older route already looks for a copy; this one never did, so one spoken reminder could be two rows and cancelling one left the other to fire (4 November 2026 test report). A copy of the same words within
+    // 90 seconds that is already there (queued, or being sent right now) is the reminder.
+    let existing = null;
+    if (typeof notifications.listReminders === "function") {
+      try { existing = copiesOf(await notifications.listReminders({ tenantId: context.tenantId, userId: context.userId, limit: 200, includeInFlight: true }), { content: { reminderText: task }, scheduled_at: scheduledAt })[0] || null; } catch { existing = null; }
+    }
+    const notification = existing || await notifications.enqueue({
       tenantId: context.tenantId,
       userId: context.userId,
       taskId,
@@ -40,7 +48,8 @@ function createReminderScheduleExecutor({ notifications }) {
       reminderId: notification.notification_id,
       notificationId: notification.notification_id,
       persisted: true,
-      reminder: task
+      reminder: task,
+      ...(existing ? { duplicate: true } : {})
     };
   };
 }

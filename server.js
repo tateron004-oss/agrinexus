@@ -243,6 +243,7 @@ const COMMUNICATIONS_TESTS_PER_HOUR = 6;
 const { HEALTH_BRIDGE_KEYS, profileWithOwnHealthRecordsOnly, scopeHealthDb, collectOwnedHealthBridgeRecords, eraseOwnedHealthBridgeRecords } = require("./server/providers/healthRecordScope.js");
 const { parseAssistantReminderTime, resolveReminderTime, extractAssistantReminderTask, describeMoment: describeReminderMoment } = require("./nexus/reminders/time-phrase.js");
 const floorReminders = require("./nexus/reminders/floor-reminders.js");
+const { areAllCopies: areAllReminderCopies } = require("./nexus/reminders/duplicates.js");
 const { classifyRepeatRequest, repeatTurnAnyLanguage, unreachableStore: unreachableRepeatStore } = require("./nexus/reminders/repeat-turn.js");
 const { resolveReminderTimeZone, resolveReminderTimeZoneDetail, isValidTimeZone, DEFAULT_TIME_ZONE: DEFAULT_REMINDER_TIME_ZONE } = require("./nexus/reminders/time-zone.js");
 const {
@@ -22114,7 +22115,7 @@ async function nexusOpenAiNativeCancelPushReminder(user, title, language = "en")
       taskId: turn.taskId, commandId: turn.commandId, correlationId: turn.correlationId, workspace: turn.render.workspace,
       rendered: true, visible: false, audible: true, evidence: { cancelled: true, reminderId: data.reminderId }, user: authoritativeUser
     }).catch(() => null);
-    return { ok: true, reminder: data.reminder || title, reminderId: data.reminderId || "" };
+    return { ok: true, reminder: data.reminder || title, reminderId: data.reminderId || "", copies: Number(data.copies) || 1, inFlight: data.inFlight === true };
   } catch {
     return null;
   }
@@ -22415,6 +22416,10 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   const saidInput = sanitizePilotText(spokenInput.clean.slice(-3000), 3000);
   // Only plain conversation is cleaned: the other tools (drafts, documents, lists...) take the words of a message or a document from the sentence, exactly as said.
   const command = sanitizePilotText(toolName === "nexus_general_conversation" ? spokenInput.text : (args.query || context.command || args.command || ""), 700);
+  // "Remind me on 15 October at 10 am about the clinic" is a REMINDER, not a calendar event: the tool-calling model sometimes picks nexus_calendar for a reminder that names a date, and the person was told "the calendar is not
+  // switched on for this account yet" and got no reminder (4 November 2026 test report, everyday-09). A "remind me" sentence that does not name a calendar, meeting, appointment or event goes to the reminders, as the
+  // server's own tool chooser (nexusOpenAiNativeToolChoiceHint) already sends it. (typeof guard: several tests evaluate this function's source alone)
+  if (toolName === "nexus_calendar" && typeof floorReminders !== "undefined" && floorReminders.isSetRequest(command) && !/\b(calendar|meeting|appointment|event)\b/i.test(command)) toolName = "nexus_automation_reminder";
   const capability = args.capability || nexusOpenAiNativeToolChoiceHint(command);
   const common = {
     ok: true,
@@ -23290,7 +23295,10 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // title -- not just a read leak but a genuine cross-user mutation.
       const ownedPilotReminders = (db.nexusPilotReminders || []).filter(reminder => nexusPilotRecordOwned(reminder, user));
       const { candidates: matches } = nexusReminderCancelCandidates(command, ownedPilotReminders, pushCards);
-      const match = matches.length === 1 ? matches[0] : null;
+      // The same reminder set more than once (the same words, as a push reminder and/or a local note) is ONE reminder: it is cancelled with every copy. "I found 2 reminders matching that ... tell me the exact title" cannot be
+      // answered when both have the same title, so a copy was left to fire after the person had asked to cancel (4 November 2026 test report). Different reminders that merely share words are still asked about.
+      const sameReminderCopies = matches.length > 1 && matches.every(item => nexusReminderMatchKey(item.title) === nexusReminderMatchKey(matches[0].title));
+      const match = matches.length === 1 || sameReminderCopies ? (matches.find(item => item.kind === "push") || matches[0]) : null;
       if (!(args.confirmed === true || args.confirmation === true)) {
         return nexusOpenAiNativeBlockedToolResult(db, common, {
           status: "confirmation-required",
@@ -23300,7 +23308,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
           didNot: ["Nexus did not delete any reminder."]
         });
       }
-      if (matches.length > 1) {
+      if (matches.length > 1 && !sameReminderCopies) {
         return { ...common, capability: "automation-reminder", status: "reminder-ambiguous", response: `I found ${matches.length} reminders matching that: ${matches.slice(0, 5).map(r => `"${r.title}"`).join(", ")}. Tell me the exact title of the one to cancel.`, localOnly: true };
       }
       if (!match) {
@@ -23309,9 +23317,13 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       if (match.kind === "push") {
         const cancelled = await nexusOpenAiNativeCancelPushReminder(user, match.title, language);
         if (!cancelled?.ok) return { ...common, capability: "automation-reminder", status: "reminder-cancel-blocked", response: `I could not cancel the reminder "${match.title}" right now. Please try again.` };
-        return { ...common, capability: "automation-reminder", status: "reminder-canceled", response: `I canceled the reminder "${match.title}".`, executionAttempted: true, executionVerified: true, pushNotification: true };
+        // a local note with the same words goes too (it is the same reminder), and a reminder the worker had already claimed may still arrive once: said plainly
+        const copyIds = new Set(matches.filter(item => item.kind === "local").map(item => item.id));
+        if (copyIds.size) db.nexusPilotReminders = db.nexusPilotReminders.filter(reminder => !copyIds.has(reminder.id));
+        return { ...common, capability: "automation-reminder", status: "reminder-canceled", response: `I canceled the reminder "${match.title}".${cancelled.copies > 1 ? ` It had been set ${cancelled.copies} times, so I canceled all ${cancelled.copies}.` : ""}${cancelled.inFlight ? " It was already being sent when I stopped it, so it may still arrive once." : ""}`, executionAttempted: true, executionVerified: true, pushNotification: true };
       }
-      db.nexusPilotReminders = db.nexusPilotReminders.filter(reminder => reminder.id !== match.id);
+      if (sameReminderCopies) { const copyIds = new Set(matches.map(item => item.id)); db.nexusPilotReminders = db.nexusPilotReminders.filter(reminder => !copyIds.has(reminder.id)); }
+      else db.nexusPilotReminders = db.nexusPilotReminders.filter(reminder => reminder.id !== match.id);
       return { ...common, capability: "automation-reminder", status: "reminder-canceled", response: `I canceled the reminder "${match.title}".`, localOnly: true };
     }
     // Found live: this tool's own description promises "recurring
@@ -33330,7 +33342,8 @@ async function upcomingReminders(db, user, api, zone) {
   const unmoved = legacy.filter(item => !item.notificationId).map(item => ({ ...item, source: "legacy", original: item }));
   if (!api) return { items: unmoved, complete: false };
   let rows;
-  try { rows = await api.list(); } catch { return { items: unmoved, complete: false, api: null }; }
+  // (a reminder the worker is sending right now is in the list too, so it can be cancelled and the person can be told honestly that it may still arrive)
+  try { rows = await api.list({ includeInFlight: true }); } catch { return { items: unmoved, complete: false, api: null }; }
   const mirrors = new Map(legacy.filter(item => item.notificationId).map(item => [item.notificationId, item]));
   const delivery = rows.map(row => { const mirror = mirrors.get(row.id) || null; return { id: row.id, source: "delivery", reminderNumber: mirror?.reminderNumber || "", task: row.task, scheduledAt: row.scheduledAt, createdAt: row.createdAt || mirror?.createdAt || "",
     status: "scheduled", createdBy: email, section: mirror?.section || "agent", whenLabel: row.whenLabel, timeZone: row.timeZone, mirror }; });
@@ -33341,10 +33354,27 @@ function cancelMirror(item) {
   const target = item.source === "legacy" ? item.original : item.mirror;
   if (target) { target.status = "canceled"; target.canceledAt = new Date().toISOString(); }
 }
+// Cancels the reminder AND every copy of it (item.duplicates: the same words within 90 seconds, said more than once): a copy left behind is a reminder that fires after the person was told it was canceled.
+// -> { ok, inFlight, cancelledCount, total }: inFlight when a copy had already been claimed by the worker and may already be on its way.
 async function cancelReminderItem(api, item) {
-  if (item.source === "delivery") { if (!(await api.cancel(item.id))) return false; }
-  cancelMirror(item);
-  return true;
+  const targets = [item, ...(Array.isArray(item.duplicates) ? item.duplicates : [])];
+  let cancelledCount = 0; let inFlight = false;
+  for (const target of targets) {
+    if (target.source === "delivery") {
+      const result = typeof api.cancelDetailed === "function" ? await api.cancelDetailed(target.id) : { ok: await api.cancel(target.id), inFlight: false };
+      if (!result.ok) continue;
+      if (result.inFlight) inFlight = true;
+    }
+    cancelMirror(target);
+    cancelledCount += 1;
+  }
+  return { ok: cancelledCount > 0, inFlight, cancelledCount, total: targets.length };
+}
+// The words the person is told after a cancel: one reminder, several copies of it, or some copies, and plainly when one may still arrive.
+function cancelReminderReply(M, lang, item, outcome) {
+  const base = outcome.cancelledCount < outcome.total ? M.canceledSomeCopies[lang](item, outcome.cancelledCount, outcome.total)
+    : outcome.cancelledCount > 1 ? M.canceledCopies[lang](item, outcome.cancelledCount) : M.canceled[lang](item);
+  return `${base}${outcome.inFlight ? M.canceledInFlightNote[lang] : ""}`;
 }
 
 // The answer to a question just asked about a reminder ("At 6 in the morning or in the evening?", "Cancel all 5?"). Anything that is not an answer is dropped and handled as the new request it is.
@@ -33362,12 +33392,12 @@ async function resolvePendingReminder(db, user, text, options = {}) {
       const api = await deliveryStoreFor(user);
       const { items } = await upcomingReminders(db, user, api, options.timeZone);
       const wanted = new Set(pending.ids || []);
-      let count = 0;
-      for (const item of items) if (wanted.has(item.id)) { try { if (await cancelReminderItem(api, item)) count += 1; } catch { /* left as it was */ } }
+      let count = 0; let anyInFlight = false;
+      for (const item of items) if (wanted.has(item.id)) { try { const outcome = await cancelReminderItem(api, item); if (outcome.ok) count += 1; if (outcome.inFlight) anyInFlight = true; } catch { /* left as it was */ } }
       let repeating = 0;
       if (pending.repeating) { const turn = await repeatStoreTurn(user, "stop all my repeating reminders", options.timeZone); const done = /stopped (\d+)/.exec(turn.reply || ""); repeating = done ? Number(done[1]) : 0; }
       db.profile.agentMemory.lastStatus = "assistant-reminders-canceled-all";
-      return reminderReply("assistant.reminders_canceled_all", M.canceledAll[lang](count + repeating), { extra: { canceledCount: count + repeating } });
+      return reminderReply("assistant.reminders_canceled_all", `${M.canceledAll[lang](count + repeating)}${anyInFlight ? M.canceledInFlightNote[lang] : ""}`, { extra: { canceledCount: count + repeating } });
     }
     delete table[email];
     if (floorReminders.NO.test(String(text).trim())) return reminderReply("assistant.reminders_kept", M.keptAll[lang]);
@@ -33543,7 +33573,8 @@ async function assistantReminderCommandResponse(db, user, text, lower, options =
       if (!items.length) return !view.complete ? unreachable() : reminderReply("assistant.no_reminder_to_cancel", "I do not see an active reminder to cancel. Nothing was changed.", { status: "needs-input" });
       const mine = items.filter(entry => entry.createdBy === email);
       const matches = stopReminding.subject ? mine.filter(entry => reminderMatchesSubject({ task: entry.task, sourceCommand: (entry.mirror || entry.original)?.sourceCommand }, stopReminding.subject)) : mine;
-      if (matches.length !== 1) {
+      // (the same reminder set more than once is one reminder: it is canceled with every copy, not asked about)
+      if (matches.length !== 1 && !areAllReminderCopies(matches)) {
         const shown = (matches.length ? matches : mine).slice(0, 5);
         const listed = lines(shown, lang).join(". ");
         const example = shown[0].reminderNumber ? `cancel ${shown[0].reminderNumber}` : `cancel my reminder to ${shown[0].task}`;
@@ -33552,23 +33583,25 @@ async function assistantReminderCommandResponse(db, user, text, lower, options =
           : `I could not find a reminder about ${stopReminding.subject}. Your reminders are: ${listed}. Tell me which one to cancel, for example "${example}". Nothing was canceled.`, { status: "needs-input", extra: { reminders: shown } });
       }
       item = matches[0];
+      if (matches.length > 1) item = { ...item, duplicates: matches.slice(1) };
     } else {
       const found = floorReminders.findReminder(items, email, cancel);
       if (found.none) return !view.complete && !items.length ? unreachable() : reminderReply("assistant.no_reminder_to_cancel", cancel.subject || cancel.id ? M.notFound[lang] : M.nothingToCancel[lang], { status: "needs-input" });
       if (found.ambiguous || (found.count > 1 && !cancel.subject && !cancel.id)) {
         const choices = found.ambiguous || items;
-        return reminderReply("assistant.reminder_cancel_ambiguous", M.whichOne[lang](choices.length, lines(choices, lang), "cancel"), { status: "needs-input" });
-      }
-      item = found.match;
+        // The same reminder set more than once (the same words within 90 seconds) is one reminder: it is canceled with every copy, not asked about ("which one?" left a copy to fire after "canceled").
+        if (areAllReminderCopies(choices)) item = { ...choices[0], duplicates: choices.slice(1) };
+        else return reminderReply("assistant.reminder_cancel_ambiguous", M.whichOne[lang](choices.length, lines(choices, lang), "cancel"), { status: "needs-input" });
+      } else item = found.match;
     }
-    let done = false;
-    try { done = await cancelReminderItem(api, item); } catch { done = false; }
-    if (!done) return reminderReply("assistant.reminder_cancel_failed", M.cancelFailed[lang], { status: "needs-review" });
+    let outcome = { ok: false };
+    try { outcome = await cancelReminderItem(api, item); } catch { outcome = { ok: false }; }
+    if (!outcome.ok) return reminderReply("assistant.reminder_cancel_failed", M.cancelFailed[lang], { status: "needs-review" });
     db.profile.agentMemory.lastStatus = "assistant-reminder-canceled";
     db.profile.agentMemory.lastSummary = `Canceled ${item.reminderNumber || "a reminder"}: ${item.task}.`;
     db.profile.agentMemory.updatedAt = new Date().toISOString();
     logIntegration(db, { providerId: "openai", module: "Agent AI", action: "assistant.reminder_canceled", detail: `${item.reminderNumber || item.id} canceled.`, metadata: { reminderId: item.id }, dispatch: false });
-    return reminderReply("assistant.reminder_canceled", M.canceled[lang](item), { section: item.section || "agent", extra: { reminder: item } });
+    return reminderReply("assistant.reminder_canceled", cancelReminderReply(M, lang, item, outcome), { section: item.section || "agent", extra: { reminder: item } });
   }
   if (floorReminders.isSetRequest(text)) {
     const task = extractAssistantReminderTask(text);

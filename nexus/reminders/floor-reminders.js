@@ -102,6 +102,20 @@ const MESSAGES = Object.freeze({
     en: reminder => `Canceled${reminder.reminderNumber ? ` ${reminder.reminderNumber}` : ""}: ${reminder.task}.`,
     sw: reminder => `Nimefuta kikumbusho${reminder.reminderNumber ? ` ${reminder.reminderNumber}` : ""}: ${reminder.task}.`
   },
+  // The same reminder set more than once is one reminder: all the copies are canceled, and the person is told so. A copy the worker had already claimed may already be on its way: said plainly, never "canceled" with nothing more.
+  // (The Kiswahili is a first draft: a fluent speaker must review it.)
+  canceledCopies: {
+    en: (reminder, count) => `Canceled${reminder.reminderNumber ? ` ${reminder.reminderNumber}` : ""}: ${reminder.task}. It had been set ${count} times, so I canceled all ${count}.`,
+    sw: (reminder, count) => `Nimefuta kikumbusho${reminder.reminderNumber ? ` ${reminder.reminderNumber}` : ""}: ${reminder.task}. Kilikuwa kimewekwa mara ${count}, kwa hiyo nimefuta vyote ${count}.`
+  },
+  canceledInFlightNote: {
+    en: " It was already being sent when I stopped it, so it may still arrive once.",
+    sw: " Kilikuwa tayari kinatumwa nilipokisimamisha, kwa hiyo kinaweza kufika mara moja."
+  },
+  canceledSomeCopies: {
+    en: (reminder, done, total) => `I canceled ${done} of the ${total} copies of "${reminder.task}". The rest had just been sent, so they may still arrive.`,
+    sw: (reminder, done, total) => `Nimefuta ${done} kati ya nakala ${total} za "${reminder.task}". Zilizobaki zilikuwa zimetumwa tu, kwa hiyo zinaweza kufika.`
+  },
   notSaved: {
     en: "I could not save that reminder just now, so it was NOT saved and nothing will be sent. Please try again in a moment.",
     sw: "Sikuweza kuhifadhi kikumbusho hicho sasa hivi, kwa hiyo HAKIJAHIFADHIWA na hakuna kitakachotumwa. Tafadhali jaribu tena baadaye kidogo."
