@@ -52969,11 +52969,15 @@ const KYRO_COMPOSER_TEXT = Object.freeze({
   en: { saving: "Saving...", saved: "Saved.", failed: "That did not save. Please try again.", missing: "Write something first.",
     noteLabel: "Write a note", noteButton: "Save note", whatLabel: "What should I remind you about?", dayLabel: "Day", timeLabel: "Time", reminderButton: "Set reminder",
     titleLabel: "Title", bodyLabel: "What it says", documentButton: "Save document", checklistName: "New checklist name", checklistItems: "Items, separated by commas", checklistButton: "Create checklist",
-    addItem: "Add an item", add: "Add", remove: "Remove", checklists: "Your checklists", today: "Today", tomorrow: "Tomorrow", close: "Close" },
+    addItem: "Add an item", add: "Add", remove: "Remove", checklists: "Your checklists", today: "Today", tomorrow: "Tomorrow", close: "Close",
+    deleteList: "Delete list", confirmDelete: "Delete this whole list?", yesDelete: "Yes, delete", no: "No", deleted: "Deleted.", hideOlder: "Hide older lists", deleteOlder: "Delete the older lists",
+    showOlder: n => `Show ${n} older ${n === 1 ? "list" : "lists"}`, confirmDeleteOlder: n => `Delete the ${n} older ${n === 1 ? "list" : "lists"}? Your newest five stay.` },
   sw: { saving: "Inahifadhi...", saved: "Imehifadhiwa.", failed: "Haikuhifadhiwa. Tafadhali jaribu tena.", missing: "Andika kitu kwanza.",
     noteLabel: "Andika kumbuka", noteButton: "Hifadhi kumbuka", whatLabel: "Nikukumbushe nini?", dayLabel: "Siku", timeLabel: "Saa", reminderButton: "Weka ukumbusho",
     titleLabel: "Kichwa", bodyLabel: "Inasema nini", documentButton: "Hifadhi waraka", checklistName: "Jina la orodha mpya", checklistItems: "Vitu, vitenganishwe kwa koma", checklistButton: "Tengeneza orodha",
-    addItem: "Ongeza kitu", add: "Ongeza", remove: "Ondoa", checklists: "Orodha zako", today: "Leo", tomorrow: "Kesho", close: "Funga" }
+    addItem: "Ongeza kitu", add: "Ongeza", remove: "Ondoa", checklists: "Orodha zako", today: "Leo", tomorrow: "Kesho", close: "Funga",
+    deleteList: "Futa orodha", confirmDelete: "Futa orodha hii yote?", yesDelete: "Ndiyo, futa", no: "Hapana", deleted: "Imefutwa.", hideOlder: "Ficha orodha za zamani", deleteOlder: "Futa orodha za zamani",
+    showOlder: n => `Onyesha orodha ${n} za zamani`, confirmDeleteOlder: n => `Futa orodha ${n} za zamani? Tano mpya zaidi zinabaki.` }
 });
 function kyroUiText() {
   try { return KYRO_COMPOSER_TEXT[languageCode() === "sw" ? "sw" : "en"]; } catch { return KYRO_COMPOSER_TEXT.en; }
@@ -53070,13 +53074,45 @@ function kyroShowChecklistScreen(lists, savedLine) {
     screen.append(close, kyroMake("h2", { style: "margin:8px 0 0;font-size:1.4rem;color:#94a3b8;letter-spacing:.02em;text-transform:uppercase" }, t.checklists));
     const status = kyroMake("p", { "data-kyro-composer-status": "true", role: "status", style: "margin:0;color:#94a3b8;min-height:1.4em" }, savedLine || "");
     screen.append(status);
-    const act = async command => {
+    const act = async (command, doneLine) => {
       status.textContent = t.saving;
-      try { await kyroSilentTurn(command); await kyroRefreshList("checklists", t.saved); } catch { status.textContent = t.failed; }
+      try { await kyroSilentTurn(command); await kyroRefreshList("checklists", doneLine || t.saved); } catch { status.textContent = t.failed; }
     };
-    for (const list of Array.isArray(lists) ? lists : []) {
-      if (!list || !list.listId) continue;
-      const card = kyroMake("div", { "data-kyro-checklist": list.listId, style: "width:100%;max-width:34em;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.07)" });
+    // Only the newest five lists are open (the store gives them newest-changed first); the rest are behind "Show N older lists", so a person with dozens of lists (every checklist a test or a walkthrough made) sees a screen that can be read
+    // (found on 4 November 2026: all of them were drawn, one under another, with no way to delete one). A whole list is deleted only after "Delete this whole list?" is answered Yes.
+    const SHOWN = 5;
+    const valid = (Array.isArray(lists) ? lists : []).filter(list => list && list.listId);
+    const olderCount = Math.max(0, valid.length - SHOWN);
+    const olderCards = [];
+    const confirmRow = (message, yesLabel, onYes) => {
+      const row = kyroMake("div", { role: "alertdialog", "aria-label": message, style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px" });
+      const yes = kyroMake("button", { type: "button", "data-kyro-confirm-yes": "true", style: "padding:10px 14px;border:0;border-radius:10px;background:#7f1d1d;color:#fff;font:inherit;cursor:pointer" }, yesLabel);
+      const no = kyroMake("button", { type: "button", style: "padding:10px 14px;border:0;border-radius:10px;background:rgba(255,255,255,.14);color:#f1f5f9;font:inherit;cursor:pointer" }, t.no);
+      yes.addEventListener("click", () => { row.remove(); onYes(); });
+      no.addEventListener("click", () => row.remove());
+      row.append(kyroMake("span", { style: "color:#fca5a5" }, message), yes, no);
+      return row;
+    };
+    for (const [position, list] of valid.entries()) {
+      if (position === SHOWN) {
+        const toggleRow = kyroMake("div", { "data-kyro-older-lists": "true", style: "width:100%;max-width:34em;display:flex;gap:8px;flex-wrap:wrap;align-items:center" });
+        const toggle = kyroMake("button", { type: "button", "aria-expanded": "false", "data-kyro-older-toggle": "true", style: KYRO_BUTTON_STYLE }, t.showOlder(olderCount));
+        toggle.addEventListener("click", () => {
+          const open = toggle.getAttribute("aria-expanded") === "true";
+          olderCards.forEach(card => { card.style.display = open ? "none" : ""; });
+          toggle.setAttribute("aria-expanded", String(!open));
+          toggle.textContent = open ? t.showOlder(olderCount) : t.hideOlder;
+        });
+        const deleteOlder = kyroMake("button", { type: "button", "data-kyro-older-delete": "true", style: "padding:12px 18px;border:0;border-radius:12px;background:rgba(127,29,29,.55);color:#fecaca;font:inherit;font-size:1.05rem;cursor:pointer" }, t.deleteOlder);
+        deleteOlder.addEventListener("click", () => {
+          if (toggleRow.querySelector("[role=alertdialog]")) return;
+          toggleRow.append(confirmRow(t.confirmDeleteOlder(olderCount), t.yesDelete, () => { void act("Delete old checklists keeping the newest " + SHOWN, t.deleted); }));
+        });
+        toggleRow.append(toggle, deleteOlder);
+        screen.append(toggleRow);
+      }
+      const card = kyroMake("div", { "data-kyro-checklist": list.listId, style: "width:100%;max-width:34em;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.07)" + (position >= SHOWN ? ";display:none" : "") });
+      if (position >= SHOWN) olderCards.push(card);
       card.append(kyroMake("h3", { style: "margin:0 0 8px;font-size:1.3rem" }, String(list.title || "Checklist")));
       const items = Array.isArray(list.items) ? list.items : [];
       items.forEach((item, index) => {
@@ -53093,7 +53129,13 @@ function kyroShowChecklistScreen(lists, savedLine) {
       const box = kyroMake("input", { type: "text", name: "item", "aria-label": t.addItem, placeholder: t.addItem, style: KYRO_FIELD_STYLE });
       add.append(box, kyroMake("button", { type: "submit", style: KYRO_BUTTON_STYLE }, t.add));
       add.addEventListener("submit", event => { event.preventDefault(); const said = box.value.trim(); if (!said) { status.textContent = t.missing; return; } void act("Add to checklist " + list.listId + ": " + said.replace(/\s+/g, " ")); });
-      card.append(add); screen.append(card);
+      card.append(add);
+      const del = kyroMake("button", { type: "button", "data-kyro-list-delete": list.listId, style: "margin-top:12px;padding:8px 14px;border:0;border-radius:10px;background:rgba(127,29,29,.5);color:#fecaca;font:inherit;cursor:pointer" }, t.deleteList);
+      del.addEventListener("click", () => {
+        if (card.querySelector("[role=alertdialog]")) return;
+        card.append(confirmRow(t.confirmDelete, t.yesDelete, () => { void act("Delete checklist " + list.listId, t.deleted); }));
+      });
+      card.append(del); screen.append(card);
     }
     document.body.append(screen);
     kyroAddComposer("checklists");
@@ -54287,7 +54329,9 @@ function kyroShowTypedResult(result, text, message) {
         const body = drawn.data || {};
         const single = body.list || (Array.isArray(body.items) ? { listId: body.listId, title: body.title, items: body.items } : null);
         const lists = (Array.isArray(body.lists) ? body.lists : single ? [single] : []).filter(list => list && list.listId);
-        if (lists.length && kyroShowChecklistScreen(lists, "")) {
+        // a list (or several) was just deleted: the lists that are left are shown, with "Deleted.", even when none is left
+        const deletedLine = body.deleted === true ? kyroUiText().deleted : "";
+        if ((lists.length || body.deleted === true) && kyroShowChecklistScreen(lists, deletedLine)) {
           if (!Array.isArray(body.lists)) void kyroRefreshList("checklists", "").catch(() => {}); // a list just made or changed: all of them, as they are now
           return true;
         }

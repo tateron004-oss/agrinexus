@@ -150,6 +150,15 @@ function readListRequest(text) {
   // clearing: finished items, or everything (asked about first)
   if ((m = new RegExp(`^(?:please )?(?:clear|remove|delete|futa|ondoa) (?:all )?(?:my |the )?(?:completed|done|finished|ticked|zilizokamilika)(?: items| tasks| to-?dos)?(?: from)?(?: my)?(?: ${KIND}(?: list)?s?)?$`, "i").exec(lower)))
     return { action: "todo-clear-done", list: parseListRef(`${(/(shop|groc|market|manunuzi)/i.exec(lower) || [])[0] || "to-do"} list`)?.list || "todo", sw };
+  // "delete all my lists", "clear my lists", "remove my old lists", "wipe my lists": every list of shopping and to-dos, asked about first (found on 4 November 2026: these went to the AI model, which asked "which reminder to remove?")
+  if (/^(?:(?:yes|yeah|yep|ndiyo|ndio|ok|okay|sawa)[, ]+)?(?:please )?(?:delete|remove|erase|clear|wipe|empty|get rid of|scrap|futa|safisha|ondoa)\s+(?:all\s+(?:of\s+)?)?(?:(?:my|the|our)\s+)?(?:old\s+|previous\s+|saved\s+|earlier\s+)?(?:lists|orodha(?: zangu| zote)?)$/i.test(lower))
+    return { action: "lists-clear-all", confirmed: /^(?:yes|yeah|yep|ndiyo|ndio|ok|okay|sawa)[, ]/i.test(lower), sw };
+  // "delete my shopping list", "remove the to-do list", "get rid of my packing list", "erase my shopping list": the same as clearing it (asked about first)
+  if ((m = new RegExp(`^(?:(?:yes|yeah|yep|ndiyo|ndio|ok|okay|sawa)[, ]+)?(?:please )?(?:delete|remove|erase|get rid of|scrap|throw away|dump)\\s+(?:all\\s+(?:of\\s+)?)?${lref}$`, "i").exec(lower))) {
+    const where = parseListRef(m[1]);
+    const confirmed = /^(?:yes|yeah|yep|ndiyo|ndio|ok|okay|sawa)[, ]/i.test(lower);
+    if (where) return { action: "todo-clear-all", list: where.list, confirmed, sw };
+  }
   if ((m = new RegExp(`^(?:(?:yes|yeah|yep|ndiyo|ndio|ok|okay|sawa)[, ]+)?(?:please )?(?:clear|empty|wipe|erase|reset|delete everything (?:on|from|in)|remove everything (?:on|from|in)|clear everything (?:on|from|in)|clear out|futa|safisha|ondoa vyote (?:kwenye|katika)|futa vyote (?:kwenye|katika)) ?(?:all )?(?:of )?${lref}$`, "i").exec(lower))) {
     const where = parseListRef(m[1]);
     const confirmed = /^(?:yes|yeah|yep|ndiyo|ndio|ok|okay|sawa)[, ]/i.test(lower);
@@ -166,7 +175,7 @@ function confirmsClear(text, history) {
   const asked = /"((?:yes|ndiyo), (?:clear|futa)[^"]+)"/i.exec(String(last?.content || ""));
   if (!asked) return null;
   const again = readListRequest(asked[1]);
-  return again?.action === "todo-clear-all" ? { ...again, confirmed: true } : null;
+  return again?.action === "todo-clear-all" || again?.action === "lists-clear-all" ? { ...again, confirmed: true } : null;
 }
 
 module.exports = Object.freeze({ readListRequest, confirmsClear, splitListItems, parseListRef, nounOf, MAX_LIST_ITEMS_AT_ONCE });
