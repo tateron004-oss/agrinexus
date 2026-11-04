@@ -127,8 +127,9 @@
       gotIt: "Got it.", sorryRetry: "I didn't quite get that. {q}", orSkip: " Or say 'skip'.", moreDefault: "Anything else? Or say that's all.",
       confirmTail: "Shall I make it now? Say yes, or tell me which part to change.", updated: "Updated.", notSure: "I'm not sure which part you mean. {summary} Say yes, or name the part to change.",
       whichPart: "Which part should I change?", startOver: "Okay, let's start over. {q}", needThis: "I need this one to continue. {q}", removed: "Okay, removed that. {q}",
-      firstQuestion: "This is the first question. {q}", redo: "Let's redo that. {q}", talk: "Okay, I stopped. Your answers are saved. Tell me what is wrong, or say continue to go on, or cancel to stop.",
-      hold: "Okay, I will wait. Say continue when you are ready, or say cancel to stop.", keepGoing: "Let's keep going. {q}", oneMoment: "One moment.", failed: "That didn't work. Let's try again.",
+      firstQuestion: "This is the first question. {q}", redo: "Let's redo that. {q}", talk: "Okay, I stopped. Your answers are saved. Tell me what is wrong, or say continue to go on, or cancel to stop. Say stop again to end it.",
+      hold: "Okay, I will wait. Say continue when you are ready, or say cancel to stop. Say stop again to end it.", keepGoing: "Let's keep going. {q}",
+      needThisLeave: "I need this one to continue, so I cannot skip it. {q} Or say cancel to stop.", startAgain: "You can start it again any time.", oneMoment: "One moment.", failed: "That didn't work. Let's try again.",
       failedYes: "That didn't work. Say yes to try again.", done: "All done.", here: "Here is what I have.", noAnswers: "I don't have any answers yet.",
       yesFollow: "Okay. {q}", yesMore: "Okay, tell me. {q}"
     },
@@ -136,8 +137,9 @@
       gotIt: "Sawa.", sorryRetry: "Samahani, sikuelewa vizuri. {q}", orSkip: " Au sema 'ruka'.", moreDefault: "Kuna kingine? Au sema ndio hayo tu.",
       confirmTail: "Nikitengeneze sasa? Sema ndiyo, au niambie sehemu ya kubadilisha.", updated: "Nimebadilisha.", notSure: "Sijui unamaanisha sehemu gani. {summary} Sema ndiyo, au taja sehemu ya kubadilisha.",
       whichPart: "Nibadilishe sehemu gani?", startOver: "Sawa, tuanze upya. {q}", needThis: "Ninahitaji jibu la swali hili ili kuendelea. {q}", removed: "Sawa, nimeondoa hicho. {q}",
-      firstQuestion: "Hili ndilo swali la kwanza. {q}", redo: "Tuirudie hiyo. {q}", talk: "Sawa, nimesimama. Majibu yako yamehifadhiwa. Niambie kuna tatizo gani, au sema endelea kuendelea, au ghairi kuacha.",
-      hold: "Sawa, nitasubiri. Sema endelea ukiwa tayari, au sema ghairi kuacha.", keepGoing: "Tuendelee. {q}", oneMoment: "Subiri kidogo.", failed: "Haikufaulu. Tujaribu tena.",
+      firstQuestion: "Hili ndilo swali la kwanza. {q}", redo: "Tuirudie hiyo. {q}", talk: "Sawa, nimesimama. Majibu yako yamehifadhiwa. Niambie kuna tatizo gani, au sema endelea kuendelea, au ghairi kuacha. Sema acha tena kumaliza.",
+      hold: "Sawa, nitasubiri. Sema endelea ukiwa tayari, au sema ghairi kuacha. Sema acha tena kumaliza.", keepGoing: "Tuendelee. {q}",
+      needThisLeave: "Ninahitaji jibu la swali hili ili kuendelea, kwa hiyo siwezi kulirukia. {q} Au sema ghairi kuacha.", startAgain: "Unaweza kuanza tena wakati wowote.", oneMoment: "Subiri kidogo.", failed: "Haikufaulu. Tujaribu tena.",
       failedYes: "Haikufaulu. Sema ndiyo kujaribu tena.", done: "Imekamilika.", here: "Hivi ndivyo nilivyoandika.", noAnswers: "Bado sina majibu yoyote.",
       yesFollow: "Sawa. {q}", yesMore: "Sawa, niambie. {q}"
     }
@@ -179,6 +181,18 @@
       if (DIRECTED_AT_KYRO.test(stripped)) return "pause-talk";
     }
     return null;
+  }
+
+  // A person who is stuck must ALWAYS be able to get out by voice (4 November 2026: "it keeps asking me to continue and won't stop asking resume questions", "it wouldn't stop when I said stop, I had to click the exit
+  // button"). A first "stop" still only PAUSES (answers are kept, see PAUSE_PATTERN), but once the intake is paused, or a second "stop" / "skip" on a question that cannot be skipped comes straight after, any of these
+  // words ends it. Only ever tested against a WHOLE short utterance, so "bus stop attendant" or "no experience" are still answers.
+  const EXIT_WORDS = /^(?:ok(?:ay)?[, ]+)?(?:please[, ]+)?(?:enough|that'?s enough|stop(?: (?:it|this|that|please|asking|now|asking me))?|skip(?: it| this)?|pass|no|nope|nothing|not now|leave it|end it|exit|i'?m done|i am done|that'?s all|that is all|done|finished|no more|acha|ruka|hapana|la|tosha|inatosha|basi|nimemaliza|maliza|sitisha|ghairi)(?: (?:please|tafadhali|now|tena))?$/i;
+  // (not "none" / "no experience" / "I don't know": those are answers to a question, not a wish to leave)
+  function isExitRequest(text) {
+    const norm = normalizeText(text).replace(WAKE_PREFIX, "");
+    if (!norm || wordCount(norm) > MAX_NATURAL_CONTROL_WORDS) return false;
+    const control = classifyControl(text);
+    return control === "cancel" || control === "pause" || control === "pause-talk" || EXIT_WORDS.test(norm) || DONE_COLLECTING.test(norm) || SW_DONE_COLLECTING.test(norm);
   }
 
   // --- default per-field-kind normalizers ----------------------------------------------------
@@ -358,6 +372,8 @@
     let updatedAt = startedAt;
     let pauseReason = null;
     let pausedFromPhase = null;
+    // How many times in a row the person has asked to stop (a pause) or tried to skip a question that cannot be skipped, without answering anything in between. The second one ends the intake instead of looping.
+    let leaveStrikes = 0;
 
     function touch() { updatedAt = now(); }
 
@@ -601,6 +617,12 @@
       return decision("cancelled", "");
     }
 
+    // The person asked to get out, twice or in a way that cannot mean anything else: the intake ENDS, nothing is saved, and they are told how to start again (the caller says "Okay, I stopped. Nothing was saved." first).
+    function leaveNow() {
+      phase = "cancelled";
+      return decision("cancelled", textOf(definition, "restartLine") || say("startAgain"));
+    }
+
     function doRepeat() {
       if (phase === "confirming") {
         return decision("confirm", confirmLine(""));
@@ -684,13 +706,19 @@
       // recorded as literal answer text (more), instead of actually cancelling or being routed to
       // normal command handling.
       const control = classifyControl(trimmed, { inConfirm: phase === "confirming" });
+      // Asking to stop (a pause), or trying to skip a question that cannot be skipped, counts as a strike; anything else the person says (an answer, repeat, back, a restart) clears them.
+      const cannotSkip = control === "skip" && phase === "asking" && Boolean(currentField() && currentField().required);
+      if (control !== "pause" && control !== "pause-talk" && !cannotSkip && control !== "switch") leaveStrikes = 0;
       if (control === "switch") {
         enterPaused("switch");
         return { consumed: false, action: "paused", say: "", language: lang, field: currentField(), values: { ...values }, snapshot: snap() };
       }
       if (control === "cancel") return doCancel();
       if (control === "restart") return doRestart();
+      // The second "stop" in a row (or "stop" after being told how to leave) ends it; so does a second try at skipping a question that needs an answer.
+      if ((control === "pause" || control === "pause-talk" || cannotSkip) && leaveStrikes >= 1) return leaveNow();
       if (control === "pause-talk") {
+        leaveStrikes += 1;
         enterPaused("talk");
         return decision("paused", textOf(definition, "talkLine") || MSG[lang].talk);
       }
@@ -698,8 +726,14 @@
       // good, and tell the person how to carry on or cancel. Consumed (not passed on as a new
       // command), unlike a wake-word switch.
       if (control === "pause") {
+        leaveStrikes += 1;
         enterPaused("hold");
         return decision("paused", textOf(definition, "pausedLine") || MSG[lang].hold);
+      }
+      // "Skip" on a question that needs an answer (the name): said once, and why it cannot be skipped and how to leave, not just the same question again.
+      if (cannotSkip) {
+        leaveStrikes += 1;
+        return reaskCurrent(say("needThisLeave", { q: questionOf(currentField()) }));
       }
 
       if (phase === "confirming") return handleConfirmAnswer(trimmed);
@@ -741,6 +775,17 @@
       cancel: () => { touch(); return doCancel(); },
       confirm: () => { touch(); return handleConfirmAnswer("yes"); },
       pause: (reason) => { touch(); enterPaused(reason); return decision("paused", ""); },
+      // What the caller asks when something is said while the intake is paused: null (carry on as before), or the decision that ENDS it. "Cancel" always ends it; after a pause the person asked for ("stop", "hold on",
+      // or "you keep asking me"), a second way of saying they want out ("stop" again, "skip", "no", "enough", "I'm done", "that's all", "acha") ends it too. A pause that handed the turn to another request ("switch",
+      // a safety reply) is left alone: the next word may be about that request.
+      leaveWhilePaused: (text) => {
+        touch();
+        if (phase !== "paused") return null;
+        const control = classifyControl(text);
+        const askedPause = pauseReason === "hold" || pauseReason === "talk";
+        if (control === "cancel" || (askedPause && isExitRequest(text))) return leaveNow();
+        return null;
+      },
       resume: () => {
         touch();
         if (phase !== "paused") return decision("ask", "");
@@ -775,5 +820,5 @@
     });
   }
 
-  return Object.freeze({ create, classifyControl, isDoneCollecting, detectLanguage, normalizers: NORMALIZERS, normalizeText });
+  return Object.freeze({ create, classifyControl, isDoneCollecting, isExitRequest, detectLanguage, normalizers: NORMALIZERS, normalizeText });
 });
