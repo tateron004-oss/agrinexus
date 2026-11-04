@@ -51566,10 +51566,11 @@ async function applyKyroIntakeDecision(decision) {
     // Each cleanup step stands alone: one failing must not skip the others.
     const step = work => { try { work(); } catch (error) { nexusGenesisVoiceDebugLog("kyro-voice-intake-cancel-cleanup-error", { message: error?.message || "unknown" }); } };
     step(() => renderKyroVoiceIntakePanel(null));
-    step(() => { if (decision.say) speakKyroIntakeLine(decision.say, { step: decision.snapshot?.index, language: decision.language }); });
+    step(() => { if (decision.say && decision.emergency) speakKyroIntakeLine(decision.say, { step: decision.snapshot?.index, language: decision.language }); });
     step(() => injectKyroRealtimeContext(`The ${active?.definition?.title || "form"} was cancelled; nothing was saved.`));
-    // (an interview that stopped itself because it heard an emergency says what to do and nothing else: no "nothing was saved" after it)
-    step(() => { if (!decision.emergency) speakKyroIntakeLine(kyroIntakeText("cancelled", decision.language), { language: decision.language }); });
+    // (an interview that stopped itself because it heard an emergency says what to do and nothing else: no "nothing was saved" after it. Any other end says "Okay, I stopped. Nothing was saved." and, when the engine
+    // has one, how to start again: "Say 'build my resume' to start again.")
+    step(() => { if (!decision.emergency) speakKyroIntakeLine([kyroIntakeText("cancelled", decision.language), decision.say].filter(Boolean).join(" "), { language: decision.language }); });
     step(() => active?.onCancel?.());
     return;
   }
@@ -51858,9 +51859,12 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       applyKyroIntakeDecision(kyroActiveVoiceIntake.engine.resume());
       return true;
     }
-    // "Cancel" is the way out of a paused intake (a pause keeps every answer until then).
-    if (KyroVoiceIntake.classifyControl(trimmed) === "cancel") {
-      applyKyroIntakeDecision(kyroActiveVoiceIntake.engine.cancel());
+    // "Cancel" is the way out of a paused intake (a pause keeps every answer until then), and so is a second way of saying so after the person's own "stop" ("stop" again, "skip", "no", "enough", "I'm done",
+    // "that's all", "acha"): a person who is stuck must always be able to get out by voice, not only by the button (4 November 2026). The engine decides; the turn is consumed and the model is not left to answer it.
+    const leaving = kyroActiveVoiceIntake.engine.leaveWhilePaused(trimmed);
+    if (leaving) {
+      try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch {}
+      applyKyroIntakeDecision(leaving);
       return true;
     }
     return false;
