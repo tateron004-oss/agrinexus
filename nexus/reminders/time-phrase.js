@@ -141,7 +141,11 @@ function parseTimeInner(text = "", options = {}) {
     const base = describeMoment(instant, momentOptions); const baseSw = describeMoment(instant, { ...momentOptions, language: "sw" });
     const lead = extra.durationLabel ? `${extra.durationLabel}, ` : "";
     const leadSw = extra.durationLabelSw ? `${extra.durationLabelSw}, ` : "";
-    return { status: "ok", scheduledAt: instant.toISOString(), whenLabel, readback: `${lead}${base}`, readbackSw: `${leadSw}${baseSw}`, timeZone: zone, language, spans, ...extra };
+    // A date with no year ("15 October") whose day this year has already gone by is set for next year, and SAID so: the reminder is nearly a year away, and nothing should be left for the person to discover when it does not arrive.
+    // (The Kiswahili is a first draft: a fluent speaker must review it.)
+    const rolled = extra.rolledToNextYear ? " (that date has already passed this year)" : "";
+    const rolledSw = extra.rolledToNextYear ? " (tarehe hiyo imeshapita mwaka huu)" : "";
+    return { status: "ok", scheduledAt: instant.toISOString(), whenLabel, readback: `${lead}${base}${rolled}`, readbackSw: `${leadSw}${baseSw}${rolledSw}`, timeZone: zone, language, spans, ...extra };
   };
   const ask = (info, guess) => ({ status: info.kind === "none" ? "none" : "ask", ask: info, scheduledAt: guess.scheduledAt, whenLabel: guess.whenLabel, readback: "", readbackSw: "", timeZone: zone, language, spans, guess });
   const tomorrowGuess = () => ({ scheduledAt: addMs(24 * 60 * 60 * 1000).toISOString(), whenLabel: "tomorrow" });
@@ -210,7 +214,9 @@ function parseTimeInner(text = "", options = {}) {
       const used = dayClock();
       const scheduled = zonedTimeToUtc(year, month, day, used.hour, used.minute, 0, zone);
       // Said back to the person as they said it: "on 15 october at 10am", not an ISO date.
-      if (scheduled.getTime() > nowInstant.getTime()) return answer(scheduled, `on ${lower.match(DATE_PHRASE)[0].replace(/^on\s+/, "")}${clockLabel(used)}`, { defaultedTime: usedDefaultClock() });
+      // This year's day has gone by and no year was said: it was rolled to next year (extractDay), which is told to the person.
+      const rolledToNextYear = year > now.year && !/\b\d{4}\b/.test(lower) && zonedTimeToUtc(now.year, month, day, used.hour, used.minute, 0, zone).getTime() <= nowInstant.getTime();
+      if (scheduled.getTime() > nowInstant.getTime()) return answer(scheduled, `on ${lower.match(DATE_PHRASE)[0].replace(/^on\s+/, "")}${clockLabel(used)}`, { defaultedTime: usedDefaultClock(), ...(rolledToNextYear ? { rolledToNextYear: true } : {}) });
     }
   }
 

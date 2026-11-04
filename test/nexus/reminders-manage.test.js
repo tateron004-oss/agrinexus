@@ -94,9 +94,11 @@ test("the repository only touches the owner's still-queued reminders", async () 
   await repository.cancelReminder({ tenantId: "t", userId: "u", notificationId: "ntf_9" });
   for (const call of calls) {
     assert.match(call.sql, /tenant_id=\$\d+ and user_id=\$\d+/);
-    assert.match(call.sql, /state='queued'/);
+    // Still-queued only for listing (a reminder being sent right now is listed only when asked for, with includeInFlight); a cancel may also stop one the worker has claimed but not yet sent.
+    assert.match(call.sql, /state='queued'|state in \('queued','delivering'\)/);
     assert.match(call.sql, /content->>'reminderText'/);
   }
+  assert.equal(calls[0].params[3], false, "a reminder being sent is not listed unless asked for");
   assert.deepEqual(calls[1].params, ["ntf_9", "t", "u"]);
   await assert.rejects(() => repository.cancelReminder({ tenantId: "t", userId: "", notificationId: "n" }));
 });
