@@ -64,9 +64,11 @@ test("a flyer from a person with no business workspace is a saved document made 
   assert.equal(news.steps[0].input.title, "Church Newsletter"); assert.equal(news.steps[0].input.format, "pdf");
   await assert.rejects(ask(planner({ workspaces: 0, seen }), "Create marketing material for my shop."), /MODEL_REACHED/);
   assert.match(seen[0].feedback.join(" "), /no business workspace[\s\S]*documents\.create/);
+  // (a person who HAS a workspace gets the same document: the workspace's own kit only said "Open Business services to review and download them", with nothing drawn; see workspace-owner-documents-nov4.test.js)
   const owner = await ask(planner({ workspaces: 1 }), "Make me a flyer for my bake sale on Saturday.");
-  assert.equal(owner.application, "business");
+  assert.equal(owner.application, "documents");
   assert.equal(owner.steps.length, 1);
+  assert.equal(owner.steps[0].toolId, "documents.create");
   const other = await ask(planner({ workspaces: 0 }), "Add a customer named Grace");
   assert.match(other.response, /no business or nonprofit workspace/);
 });

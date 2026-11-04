@@ -1010,7 +1010,11 @@ class OpenEndedPlanner {
     const completeBusiness = completeBusinessPlan(command.text, catalog);
     // "Make me a flyer for my bake sale on Saturday" from a person with no business workspace: the workspace's own flyer, newsletter and email drafts need one, but a flyer is a document anyone can ask for, so it goes on to be written as one (found by the sweep on 27 October 2026: it said to start a workspace first).
     const marketingWithoutWorkspace = completeBusiness && businessVoiceDispatch.classify(command.text) === "generateMarketing" && Boolean(await this.noBusinessWorkspaceAnswer(command.text, context));
-    if (completeBusiness && !marketingWithoutWorkspace) {
+    // The same asked by a person who HAS a workspace (found by the owner's test report of 4 November 2026: "nothing opened or was made available to download", "only as a text file", "could not build a PDF"): the workspace's marketing kit asks "Should I go
+    // ahead?", then only says "Open Business services to review and download them", and what it makes there is Markdown and HTML, never a Word or PDF file and never a document on the screen. A flyer, newsletter, poster, brochure, handout, invitation or promotional email
+    // is a document anyone can ask for, so it is made as one for the owner too (the fixed layout below, in the file type asked for). The kit is still reached by "generate marketing materials".
+    const handoutForOwner = Boolean(completeBusiness) && !marketingWithoutWorkspace && businessVoiceDispatch.classify(command.text) === "generateMarketing" && Boolean(handoutRequest(command.text));
+    if (completeBusiness && !marketingWithoutWorkspace && !handoutForOwner) {
       // Found by the phrase sweep: a person with no business workspace was asked "Should I go ahead?" and only after the yes told there is none. Say it first, with no model and before any confirmation.
       const noWorkspace = await this.noBusinessWorkspaceAnswer(command.text, context);
       if (noWorkspace) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: noWorkspace, sourceRequired: false, planningAttempts: 0 });
