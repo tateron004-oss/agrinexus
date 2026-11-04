@@ -50680,7 +50680,8 @@ function kyroPageJustOpened(command) {
 async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
   // a card left open by an earlier request does not stay in front of this one (a workspace this request opens comes after)
-  if (!(typeof kyroPageJustOpened === "function" && kyroPageJustOpened(command))) kyroDismissStaleWorkspace(command);
+  // (but not for a lesson sentence: the lesson card the page has just drawn for these same words is the answer, and clearing it here made the lesson vanish)
+  if (!(typeof kyroPageJustOpened === "function" && kyroPageJustOpened(command)) && !kyroTutorOwns(command)) kyroDismissStaleWorkspace(command);
   // The sign-in has ended: nothing can be opened or saved, and the model must say so rather than "it is on the screen".
   if (typeof kyroSignInEnded !== "undefined" && kyroSignInEnded) return { ok: false, status: "signin_ended", response: `The person's sign-in has ended, so nothing can be opened, listed or saved until they sign in again. Tell them exactly this in one short sentence: ${KYRO_SIGNIN_ENDED_LINE}`, executionVerified: false, blockedReason: "signin_ended" };
   kyroToolCalledAt = Date.now(); // (what the model has acted on: see kyroRecoverRefusal)
@@ -50711,6 +50712,14 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     await kyroReturnToOrb({ reason: window.KyroDismissCommands.parse(command).kind, source: "openai-realtime-tool" });
     return { ok: true, status: "completed", response: "Okay.", executionVerified: false, blockedReason: null, clientAction: { type: "return-to-orb" } };
   }
+  // A sentence tutoring owns (a lesson request, an answer or question in an open lesson, "stop"): the lesson answers it, and the older learning tool is NEVER asked, whatever happens to the lesson's own route: that tool opens the old Learning
+  // screen ("I opened Learning and prepared a plain-language lesson", with its sample irrigation course) or says "I couldn't do that one just now" (found in the owner's test report of 4 November 2026).
+  if (kyroTutorOwns(command)) {
+    // The page has just sent these words to the lesson itself (the model's tool call is the same sentence a moment later): not a second turn
+    if (Date.now() - kyroTutorSentAt < 8000) return { ok: true, status: "completed", response: "Kyro is already doing it and said so. Say nothing more.", executionVerified: false, blockedReason: null };
+    const lessonTurn = await kyroAnswerLikeTyped(command);
+    return lessonTurn || kyroToolFailureResult("offline", { correlationId: `lesson-${Date.now().toString(36)}` });
+  }
   // "Pause the music", "next song", "louder": the player is on this page, so the page does it (the music tool would go and play a song called "pause").
   const mediaAsk = window.KyroMediaCommands?.parse?.(command);
   if (mediaAsk && (mediaAsk.type === "control" || mediaAsk.type === "play")) {
@@ -50732,8 +50741,10 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     }
   }
   // "Find a picture of ..." / "show me videos about ...": drawn on the screen by the typed path (see kyroShowVisualRequest), not answered by a tool that has no pictures.
-  const visualKind = kyroVisualRequestKind(command);
-  if (visualKind) return kyroShowVisualRequest(command, visualKind);
+  // (in a lesson with a subject, "show me a picture" with no subject means pictures of the lesson's subject)
+  const lessonPicture = kyroTutorDemoCommand(command);
+  const visualKind = kyroVisualRequestKind(lessonPicture || command);
+  if (visualKind) return kyroShowVisualRequest(lessonPicture || command, visualKind);
   // "yes" or "no" the page already took from what it heard (see routeKyroVoiceIntakeTranscript): the model's own tool call for the same word does not answer it a second time
   if (/^(?:yes|yeah|yep|yup|sure|ok|okay|go ahead|do it|no|nope|cancel|do not|don't)\b/i.test(command) && Date.now() - kyroConfirmedAt < 8000) {
     return { ok: true, status: "completed", response: "Kyro already did that and said so. Say nothing more.", executionVerified: false, blockedReason: null };
@@ -52389,7 +52400,19 @@ function kyroResumeTutor() {
 function kyroTutorEnd() {
   if (!kyroTutorOpen()) return;
   kyroTutorUntil = 0; kyroTutorSubject = ""; kyroTutorLast = null;
-  try { void kyroSilentTurn("Stop tutoring").catch(() => {}); } catch { /* the server forgets the session after 45 quiet minutes anyway */ }
+  // (sent again once if it did not get through: a lesson the server still holds open is also ended by the next turn, which says no lesson is open, see tutorLessonOpen)
+  try { void kyroSilentTurn("Stop tutoring").catch(() => new Promise(resolve => setTimeout(resolve, 1500)).then(() => kyroSilentTurn("Stop tutoring")).catch(() => {})); } catch { /* the server forgets the session after 45 quiet minutes anyway */ }
+}
+// A sentence tutor mode owns: it asks for a lesson, or it is said in an open lesson and is not a request of its own. The older routes (the voice model's learning tool, the workspace opener that reads a sentence's words) must never take such a
+// sentence: the old Learning screen with its sample irrigation course, and "I couldn't do that one just now", came from them (found in the owner's test report of 4 November 2026).
+let kyroTutorSentAt = 0; // when the page last sent a lesson sentence to the lesson, so the voice model's own tool call for the same words is not a second turn
+function kyroTutorOwns(text) {
+  const said = String(text || "").trim();
+  if (!said) return false;
+  const requestsLesson = KYRO_TUTOR_REQUEST.test(said);
+  if (requestsLesson && !KYRO_TUTOR_NOT.test(said)) return true;
+  if (!kyroTutorOpen() || requestsLesson) return false;
+  return !KYRO_TUTOR_OTHER.test(said);
 }
 const KYRO_LIST_NOT = /^(?:how|why|should i|can i)\b|\b(?:walk|teach|guide|show)\s+(?:me\s+)?(?:how|through)\b|\b(?:what|which) (?:is|are) (?:a|the)\b/i;
 // A spoken note or reminder ("Write down milk, eggs and flour", "Make a note that I paid the rent", "Remind me to buy bread tomorrow"): the voice model answered these aloud and the page showed nothing (found by the sweep of 34 spoken requests on 27 October 2026).
@@ -52742,14 +52765,11 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
     void handleNexusUnifiedBrainRuntimeCommand(tutorDemo, { source: "typed", kyroDirect: true });
     return true;
   }
-  if (!options.typed) {
-    const startsTutor = KYRO_TUTOR_REQUEST.test(said) && !KYRO_TUTOR_NOT.test(said);
-    const inSession = kyroTutorOpen() && !KYRO_TUTOR_OTHER.test(said) && !(KYRO_TUTOR_REQUEST.test(said) && KYRO_TUTOR_NOT.test(said));
-    if (startsTutor || inSession) {
-      kyroTakeOverTurn();
-      void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
-      return true;
-    }
+  if (!options.typed && kyroTutorOwns(said)) {
+    kyroTakeOverTurn();
+    kyroTutorSentAt = Date.now();
+    void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
   }
   // "Open the Sales Plan document", "read my latest document": that one document opens, with its words and the Download button (it used to list all of them and say "it's open").
   const namedDocument = kyroNamedDocument(said);
@@ -52936,7 +52956,7 @@ function kyroWritableListKind(text) {
 async function kyroSilentTurn(text) {
   const result = await requestWithTimeout("/api/nexus/runtime/behavior/turn", {
     method: "POST",
-    body: { text, channel: "typed", locale: languageCode(), conversationId: nexusAuthoritativeConversationId(), timeZone: kyroDeviceTimeZone() }
+    body: { text, channel: "typed", locale: languageCode(), conversationId: nexusAuthoritativeConversationId(), timeZone: kyroDeviceTimeZone(), tutorLessonOpen: kyroTutorOpen() }
   }, 60000);
   if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true) throw new Error("Kyro did not understand that.");
   return result;
@@ -54240,6 +54260,8 @@ function kyroShowTypedResult(result, text, message) {
       kyroTutorUntil = tutor.active === true ? Date.now() + 45 * 60 * 1000 : 0;
       kyroTutorSubject = tutor.active === true ? String(tutor.subject || "") : "";
       if (tutor.active !== true) kyroTutorLast = null;
+      // an older workspace window (the Learning screen with its sample irrigation course, the AI tutor window) that opened before or behind the lesson is taken down: nothing is left stuck behind the lesson or after "stop"
+      try { if (document.querySelector("#nexus-workspace")) closeNexusFunctionWindow({ command: "" }); } catch { /* the lesson card is drawn over it anyway */ }
     }
     if (kyroExplicitOpenCard(text)) return false;
     const drawn = result.render;
@@ -54388,6 +54410,8 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   if (!command) return null;
   // "close the weather card" mentions the weather, but it asks for nothing to be opened.
   if (window.KyroDismissCommands?.parse?.(command)) return null;
+  // A sentence tutoring owns ("teach me about irrigation", a lesson answer that mentions a crop or a doctor) is a lesson turn: it opens no Agriculture, Health, Learning or other workspace from its words.
+  if (kyroTutorOwns(command)) return null;
   const explicitOpen = /\b(open|show|display|start|begin|launch|find|search|play|plan|reset|record|create|take me to|remind me|help (?:me )?(?:with|find|sell|record|enter|create))\b/.test(lower);
   const routeRequest = /\b(route|directions?|navigate|navigation)\b/.test(lower) || (explicitOpen && /\bmaps?\b/.test(lower));
   const workforceRequest = explicitOpen && (
@@ -61743,6 +61767,8 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
         locale: languageCode(),
         conversationId: nexusAuthoritativeConversationId(),
         taskId: localStorage.getItem(NEXUS_AUTHORITATIVE_TASK_KEY) || undefined,
+        // Whether a tutoring lesson is on the screen: a lesson the server holds open that the screen has closed (or never got) is ended there, not taught from (see tutorTurn in nexus/brain/planner.js).
+        tutorLessonOpen: kyroTutorOpen(),
         // Where the person is, so times like "7am" mean their own morning.
         timeZone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; } })()
       }
@@ -63522,6 +63548,13 @@ async function handleVoiceCommand(rawCommand, options = {}) {
 async function runBackendAgentCommand(command, locationContext = null, options = {}) {
   const turnToken = options.turnToken || null;
   if (ignoreStaleNexusTurn(turnToken, "backend answer")) return null;
+  // This is the door to the OLDER server route (the one that answers "teach me ..." by opening the Learning window with its sample irrigation course, and "One half" with "I couldn't do that one just now"). It is reached when the voice
+  // connection is not confirmed, and by the older readers. A sentence tutoring owns goes to the lesson instead, however it got here (found in the owner's test report of 4 November 2026).
+  if (kyroTutorOwns(command)) {
+    kyroTutorSentAt = Date.now();
+    await handleNexusUnifiedBrainRuntimeCommand(String(command || ""), { source: "typed", kyroDirect: true });
+    return null;
+  }
   abortActiveAgentCommand();
   const controller = new AbortController();
   activeAgentCommandController = controller;

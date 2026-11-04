@@ -108,6 +108,9 @@ class OpenEndedPlanner {
     let session = this.tutorSessions.get(tenantId, userId);
     let first = false;
     const plan = (response, extra = {}) => Object.freeze({ goal: said, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false, planningAttempts: 0, ...extra });
+    // The app says no lesson is on its screen (the card was closed, the page was reloaded, or the "stop" never arrived): the lesson is over, and what is said now is NOT a lesson answer. Without this a lesson the server still held
+    // open took every later sentence that was not an obvious command ("Does a church have to file a Form 990?" was taught as a lesson turn), for up to 45 minutes: found in the owner's test report of 4 November 2026.
+    if (session && !starting && context?.tutorLessonOpen === false && !tutorMode.isStop(said)) { this.tutorSessions.end(tenantId, userId); return null; }
     if (session && !starting) {
       if (tutorMode.isStop(said)) {
         this.tutorSessions.end(tenantId, userId);
