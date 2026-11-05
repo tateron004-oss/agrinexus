@@ -46,7 +46,7 @@ function makeEvaluator() {
       else check(asRegex(expect.intake).test(state.intake || ""), `the form's words did not match ${asRegex(expect.intake)}: "${String(state.intake || "none").slice(0, 100)}"`);
     }
     if (expect.typedBox !== undefined) check(Boolean(state.typedBox) === Boolean(expect.typedBox), `expected the typed box ${expect.typedBox ? "to be showing" : "not to be showing"}`);
-    if (expect.said !== undefined) check(said.some(line => asRegex(expect.said).test(line)), `nothing said aloud matched ${asRegex(expect.said)} (said: ${said.join(" / ").slice(0, 160) || "nothing"})`);
+    if (expect.said !== undefined) check(said.some(line => asRegex(expect.said).test(line)), `nothing said aloud matched ${asRegex(expect.said)} (said: ${said.join(" / ").slice(0, 900) || "nothing"})`);
     if (expect.notSaid !== undefined) check(!said.some(line => asRegex(expect.notSaid).test(line)), `something said aloud matched what must not be said ${asRegex(expect.notSaid)}`);
     if (expect.model) check(said.length > 0, "nothing was said aloud at all");
     if (expect.tool !== undefined) check((state.tools || []).some(tool => asRegex(expect.tool).test(tool)), `the model called no tool matching ${asRegex(expect.tool)} (called: ${(state.tools || []).join(", ") || "none"})`);

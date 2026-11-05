@@ -61,6 +61,20 @@ async function waitForPage(client, timeoutMs = 45000) {
   throw new Error("The page did not finish loading.");
 }
 
+// True once the page holds a real session (the page's own state request is answered, not refused with 401). Pressed again once after 25 seconds when nothing came.
+async function waitForGuestSession(client, { seconds = 60, retryAfter = 25 } = {}) {
+  const press = "(() => { const b = [...document.querySelectorAll('button')].find(x => /start as user/i.test(x.innerText) && x.getBoundingClientRect().width > 0); if (b) b.click(); return !!b; })()";
+  let pressedAgain = false;
+  for (let waited = 0; waited < seconds; waited += 2) {
+    await sleep(2000);
+    let status = 0;
+    try { status = await client.evaluate("fetch('/api/state', { credentials: 'same-origin' }).then(r => r.status).catch(() => 0)"); } catch { status = 0; }
+    if (status === 200) { await sleep(1500); return true; }
+    if (!pressedAgain && waited >= retryAfter) { pressedAgain = true; try { await client.evaluate(press); } catch { /* the loop goes on */ } }
+  }
+  return false;
+}
+
 async function main(argv) {
   const options = parseArgs(argv);
   if (options.help) { console.log(fs.readFileSync(__filename, "utf8").split("\n").slice(2, 10).map(line => line.replace(/^\/\/ ?/, "")).join("\n")); return 0; }
@@ -86,7 +100,9 @@ async function main(argv) {
       await client.evaluate("(() => { const f = [...document.querySelectorAll('input')].find(x => /your name|type your name/i.test(x.placeholder || x.getAttribute('aria-label') || '') && x.getBoundingClientRect().width > 0); if (f) { f.focus(); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(f, 'Voice Checker'); f.dispatchEvent(new Event('input', { bubbles: true })); } return !!f; })()");
       const started =await client.evaluate("(() => { const b = [...document.querySelectorAll('button')].find(x => /start as user/i.test(x.innerText) && x.getBoundingClientRect().width > 0); if (b) b.click(); return !!b; })()");
       if (!started) { console.error("There is no 'Start as User' button to start a guest session with."); return 2; }
-      await sleep(6000); await waitForPage(client);
+      // (found by the 5 November 2026 runs: a fixed 6 seconds was not always enough on the live host, and the first case then began with no session and failed with "Sign in required" (about 2 runs in 8). The session is now waited for, and the button pressed once more if it never came.)
+      if (!(await waitForGuestSession(client))) { console.error("The guest session did not start (no sign-in after 60 seconds, and the button pressed twice)."); return 2; }
+      await waitForPage(client);
     }
     await client.evaluate(buildInstallScript());
     if (!(await client.evaluate("__kyroRig.startVoice()", 150000))) { console.error("The live voice session could not be started."); return 2; }

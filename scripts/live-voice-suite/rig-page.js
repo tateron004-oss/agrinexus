@@ -232,6 +232,8 @@ function installKyroVoiceRig(makeEvaluator) {
       else if (step.choose) { if (!(await rig.chooseFile(step.choose))) { failures.push("no file chooser on the screen"); break; } mark = rig.mark(); }
       else if (step.say) { await rig.settle(20000); mark = (await rig.say(step.say)).index; }
       else if (step.wait) await sleep(step.wait);
+      // the signal goes or comes back, as the browser says it (navigator.onLine and the offline / online events): { offline: true } then { offline: false }. runCase puts the real value back at the end.
+      else if (step.offline !== undefined) { rig.offlineSet = true; try { Object.defineProperty(navigator, "onLine", { configurable: true, get: () => !step.offline }); } catch { /* the event below is still sent */ } window.dispatchEvent(new Event(step.offline ? "offline" : "online")); await sleep(1200); }
       // sets something up behind the scenes with the page's own signed-in session (for example a second résumé, so a list of résumés has something to list): { post: { path, body } }
       else if (step.post) {
         let ok = false;
@@ -256,6 +258,7 @@ function installKyroVoiceRig(makeEvaluator) {
       const first = await rig.until(mark, entry.expect || {}, timeout);
       let failures = [...(first.outcome ? first.outcome.failures : ["no state"])]; let warnings = [...(first.outcome ? first.outcome.warnings : [])]; let last = first.state;
       if (!failures.length && entry.then) { const rest = await rig.runSteps(mark, entry.then, timeout); failures = rest.failures; warnings = warnings.concat(rest.warnings); last = rest.state || last; }
+      if (rig.offlineSet) { rig.offlineSet = false; try { delete navigator.onLine; window.dispatchEvent(new Event("online")); } catch { /* the real value was never replaced */ } }
       await rig.cleanup(last);
       return { id: entry.id, area: entry.area, say: entry.say || entry.typed, status: failures.length ? "fail" : "pass", failures, warnings, ms: Date.now() - started, heard: (first.state && first.state.heard) || [], detail: failures.length ? rig.detail(last || first.state) : undefined };
     } catch (error) {

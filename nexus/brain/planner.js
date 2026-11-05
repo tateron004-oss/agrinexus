@@ -507,6 +507,10 @@ class OpenEndedPlanner {
       // A toolkit that asks a long, step-by-step question (the digital health check, a checklist, a lesson) says so, and the page then shows and speaks it whole instead of cutting it to one sentence.
       let longForm = false;
       const work = await turn({ text: command.text, store: toolkit.store, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone, roles: context?.roles || [], memory: this.memory, notifications: toolkit.notifications, nameOf: toolkit.nameOf, country: context?.country || "", onLongForm: () => { longForm = true; } });
+      // "What follow-ups do I have" from a person with a business workspace: the older buyer book says "none open" when the follow-up days were set on the workspace's own people ("follow up with Amina on Friday" is
+      // set there), so that empty answer is not the end: the workspace answers (found in the owner's test report of 4 November 2026, business-08).
+      if (toolkit === this.farmWork && typeof work === "string" && /^You have no follow-ups open\.$/.test(work.trim()) && businessVoiceDispatch.classify(command.text) === "listFollowUps"
+        && typeof this.businessWorkspaces?.count === "function" && (await this.businessWorkspaces.count(context).catch(() => null)) > 0) continue;
       const goal = String(command.text || "").trim();
       // Spoken (no tool steps possible): say the report itself, a screenful at a time, and say where the file can be made.
       if (work?.report && context?.deterministicOnly === true) {

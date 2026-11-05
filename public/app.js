@@ -38431,7 +38431,9 @@ function renderUserWorkspace() {
     )
   );
   // "I want to type" or the keyboard button: the typed box shows even when voice works, until the person says "use voice" (see kyroSetTypedMode).
-  const typedModeOn = !microphoneFallbackRequired && trueExperienceMode !== "mission" && nexusTypedModeRequested === true;
+  // With no signal voice cannot work at all, so the typed box shows AT ONCE, with the words for that (the owner's test of 4 November 2026: "I can't open and create the note... it finally opened after three failed attempts"); it goes when the signal returns.
+  const kyroOffline = typeof navigator !== "undefined" && navigator.onLine === false;
+  const typedModeOn = !microphoneFallbackRequired && trueExperienceMode !== "mission" && (nexusTypedModeRequested === true || kyroOffline);
   kyroUpdateTypeButton(!(microphoneFallbackRequired || typedModeOn) && trueExperienceMode !== "mission");
   document.body.classList.add("nexus-os-visual-boundary");
   document.body.classList.toggle("nexus-low-bandwidth-mode", nexusLowBandwidthMode);
@@ -38456,7 +38458,7 @@ function renderUserWorkspace() {
           </section>
         ` : typedModeOn ? `
           <section class="nexus-true-conversation" data-kyro-typed-mode="true" aria-label="${escapeHtml(kyroTypeText("label"))}">
-            <p class="nexus-companion-recovery-hint" role="status">${escapeHtml(kyroTypeText("hint"))}</p>
+            <p class="nexus-companion-recovery-hint" role="status">${escapeHtml(kyroTypeText(kyroOffline ? "offlineHint" : "hint"))}</p>
             ${renderNexusTrueCommandComposer({ compact: true })}
             <button type="button" class="kyro-use-voice" data-kyro-use-voice="true" style="margin:10px auto 0;display:block;padding:10px 20px;border:0;border-radius:999px;background:#334155;color:#f1f5f9;font:inherit;font-weight:600;cursor:pointer">${escapeHtml(kyroTypeText("useVoice"))}</button>
           </section>
@@ -50688,6 +50690,17 @@ function kyroPageJustOpened(command) {
 }
 async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
+  // The page answers many sentences itself when it hears them (a walkthrough's "next", "I want to upload a Word document", "open the offline notes", "give me directions to...", a lesson's answer, "I want to type"). The voice model's own tool call
+  // for the same words can come FIRST, and then it used to clear the screen (a walkthrough's card was taken down, so "next" was not understood and the steps stopped), open the long workspace instead of the one-button upload screen, or make a job
+  // for a worker called Me: the owner's tests of 4 November 2026. The page's own answer is given here first, whichever the page hears first, and the words heard a moment later find it done (kyroLastSpokenOpen).
+  if (command && typeof kyroPageJustOpened === "function" && typeof kyroHandleSpokenOpen === "function" && !kyroPageJustOpened(command)) {
+    let pageTookIt = false;
+    try { pageTookIt = kyroHandleSpokenOpen(command, {}) === true; } catch { pageTookIt = false; }
+    if (pageTookIt) {
+      kyroPageSpeaksUntil = Date.now() + 30000;
+      return { ok: true, status: "completed", response: "Kyro already did that and said so. Say nothing more.", executionVerified: false, blockedReason: null };
+    }
+  }
   // a card left open by an earlier request does not stay in front of this one (a workspace this request opens comes after)
   // (but not for a lesson sentence: the lesson card the page has just drawn for these same words is the answer, and clearing it here made the lesson vanish)
   if (!(typeof kyroPageJustOpened === "function" && kyroPageJustOpened(command)) && !kyroTutorOwns(command)) kyroDismissStaleWorkspace(command);
@@ -50701,6 +50714,25 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   // The page has just opened this map itself (a place, a country, or the plain map): the model's own map tool, which asks for a start and a destination, is not asked as well.
   if (toolName === "nexus_maps_route" && kyroPageJustOpened(command) && (kyroOpenMapRequest(kyroWithoutPoliteTail(command)) || kyroMapPlace(command))) {
     return { ok: true, status: "completed", response: "Kyro already opened the map and said so. Say nothing more.", executionVerified: false, blockedReason: null };
+  }
+  // "Give me directions to the clinic", "take me to the airport": the phone's GPS guidance owns these (see kyroSpokenNavigation) whichever the page hears first, the words or the voice model's own tool call. When the tool call came first
+  // (and for ANY tool the model chose) the words used to go on to the map tool (a map with no list of steps) or the governed route (a job for a worker called "Me" and "add a me section": the owner's test of 4 November 2026), and the page's own
+  // answer, with the steps, never came or came second. Now the page answers them here, once, and the transcript then finds it done.
+  if (typeof kyroSpokenNavigation === "function" && kyroSpokenNavigation(kyroWithoutPoliteTail(command))) {
+    const navKey = kyroNavigationKey(kyroWithoutPoliteTail(command));
+    if (kyroLastNavigationSaid.key === navKey && Date.now() - kyroLastNavigationSaid.at < 20000) {
+      return { ok: true, status: "completed", response: "Kyro is already guiding the person and said so. Say nothing more.", executionVerified: false, blockedReason: null };
+    }
+    kyroLastNavigationSaid = { key: navKey, at: Date.now(), by: "tool" };
+    kyroVoiceCapture = []; // (what the page says is handed to the model to say: the page stays silent during a live voice, as with the player above)
+    let navigationHandled = false;
+    try { navigationHandled = await handleKyroNavigationCommand(command, { source: "voice" }); } catch { navigationHandled = false; }
+    const navigationSaid = (kyroVoiceCapture || []).map(line => kyroPlainText(line).replace(/\s+/g, " ").trim()).filter(Boolean).join(" ").slice(0, 400);
+    kyroVoiceCapture = null;
+    if (navigationHandled) {
+      return { ok: true, status: "completed", executionVerified: false, blockedReason: null, clientAction: { type: "navigation" },
+        response: navigationSaid ? `${navigationSaid} Tell the person exactly this in one short sentence. The route and its steps are on the screen.` : "Kyro is guiding the person and said so. Say nothing more." };
+    }
   }
   // A Kyro voice intake (e.g. the résumé interview) already owns this turn -- don't let the
   // model's own tool call (which would otherwise open a workforce workspace for "résumé"-shaped
@@ -51241,8 +51273,18 @@ let kyroLastPageLine = { text: "", at: 0 };
 // "I cannot look up addresses myself, but the official finders do it by ZIP code" matched, and when the next question began the page "recovered" by answering the PREVIOUS question again (found by the full voice run's timeline).
 let kyroRecentPageLines = [];
 const kyroLineLead = value => String(value || "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+// The words read aloud: the whole answer, up to 1600 letters, and when it is longer it stops at the end of a sentence, never in the middle of a word. (They were cut at 500 letters, so a long answer such as Kyro's tips for a person coming home
+// stopped in the middle of "Kyro never ..." with the screen still full of words: the owner heard "Kyro is stopping while answering a lot", 4 November 2026; found by the live voice test of 5 November.)
+const KYRO_SPOKEN_LINE_MAX = 1600;
+function kyroLineForSpeech(text) {
+  const whole = String(text || "").replace(/\s+/g, " ").trim();
+  if (whole.length <= KYRO_SPOKEN_LINE_MAX) return whole;
+  const cut = whole.slice(0, KYRO_SPOKEN_LINE_MAX);
+  const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("? "), cut.lastIndexOf("! "), cut.lastIndexOf(".” "));
+  return end > KYRO_SPOKEN_LINE_MAX * 0.5 ? cut.slice(0, end + 1) : cut.replace(/\s+\S*$/, "");
+}
 function kyroSpeakPageLine(text) {
-  const line = String(text || "").replace(/\s+/g, " ").trim().slice(0, 500);
+  const line = kyroLineForSpeech(text);
   if (!line || !realtimeVoiceActive()) return false;
   if (line === kyroLastPageLine.text && Date.now() - kyroLastPageLine.at < 6000) return true; // (the same words arriving twice are said once)
   kyroLastPageLine = { text: line, at: Date.now() };
@@ -51842,10 +51884,12 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // "Take me to Sacramento", "navigate to Nairobi", "start navigation to the airport", "where am I", "stop navigation": the phone's own GPS guidance (public/kyro-navigation.js), which starts from where the person is.
     // Said aloud these went to the voice model's map tool, which asks for a start and a destination ("I'm missing your starting point") because it cannot know where the person is (found by the owner's own testing).
     if (trimmed && typeof kyroSpokenNavigation === "function" && kyroSpokenNavigation(trimmed)) {
-      if (!heardAgain) {
+      // (the voice model's own tool call for these words may have come first and already taken them: see callNexusOpenAiRealtimeTool; they are not guided twice)
+      const toolTookIt = kyroLastNavigationSaid.by === "tool" && kyroLastNavigationSaid.key === kyroNavigationKey(trimmed) && Date.now() - kyroLastNavigationSaid.at < 20000;
+      if (!heardAgain && !toolTookIt) {
         try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
         kyroPageSpeaksUntil = Date.now() + 40000;
-        kyroLastNavigationSaid = { key: kyroNavigationKey(trimmed), at: Date.now() };
+        kyroLastNavigationSaid = { key: kyroNavigationKey(trimmed), at: Date.now(), by: "page" };
         void handleKyroNavigationCommand(trimmed, { source: "voice" });
       }
       return true;
@@ -52388,6 +52432,10 @@ const KYRO_TUTOR_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:teach|tu
 const KYRO_TUTOR_NOT = /\b(?:letters?|alphabet|abc|to read|reading|counting|to count|adding|subtract\w*|take away|maths?|mathematics|numbers?|arithmetic|herufi|hesabu|kusoma|kuhesabu)\b(?![\s\S]*\bhomework\b)|\b(?:apply(?:ing)?\s+for|file\s+(?:my|a|an|the)|renew|open(?:ing)?\s+(?:a|an)\s+(?:bank\s+)?account|get(?:ting)?\s+(?:a|an|my)\s+(?:id|license|licence|passport|visa|card|permit)|start(?:ing)?\s+(?:a|my)\s+business|find(?:ing)?\s+(?:a\s+)?job|(?:use|using|about|with)\s+(?:kyro|nexus|this\s+app|the\s+app))\b/i;
 // In a session, a sentence that is a request of its own is not the learner's answer.
 const KYRO_TUTOR_OTHER = /^(?:open|show(?: me)? (?:my\b|all\b|some\b|(?:(?:a|an|the)\s+)?(?:pictures?|videos?|images?|photos?|maps?|weather|documents?|lists?|notes?|reminders?|calendar)\b)|play|pause|resume|call|text|send|remind me|set (?:a|an|my)|add (?:a|an|my)|delete|cancel my|find (?:a|an|the|me)|search(?: for)?|look up|navigate|directions? to|take me to|go to|close|(?:create|make|draft|prepare|generate|build)\s+(?:me\s+)?(?:an?|the|my|some)|what(?:'s| is| are) (?:the )?(?:weather|time|date)|weather|my (?:lists|notes|reminders|documents)|fungua|onyesha|cheza|piga|tuma|nikumbushe|tafuta|hali ya hewa)\b/i;
+// A person who has fallen or is hurt and says so: "I fell and can't get up", "I slipped and hurt my back", "I've had a fall", "call an ambulance", "alert my circle". Said aloud these used to depend on what the voice model chose to do:
+// it sometimes only spoke (the circle was never alerted) and sometimes opened an old health window that showed a Virtual Care Encounter form (the owner's test report of 4 November 2026, health-06). The page now sends them the typed way, to the
+// governed route that alerts the trusted circle or says plainly that there is no circle and to call the local emergency number. It leans toward catching: a false trigger costs one calm reply.
+const KYRO_EMERGENCY_SAID = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:i(?:['’]ve)?\s+(?:have\s+|just\s+)*(?:fell|fallen|slipped|tripped)\b[^.?!]{0,60}\b(?:can['’]?t|cannot|unable|hurt|injured|broke|broken|bleeding|pain|dizzy)\b|i\s+(?:can['’]?t|cannot)\s+get\s+up\b|i(?:['’]ve|\s+have|\s+had)\s+(?:just\s+)?(?:had\s+)?a\s+fall\b|i\s+had\s+a\s+fall\b|(?:please\s+)?(?:call|get|send|need|phone)\s+(?:me\s+)?(?:an?\s+|the\s+|for\s+an?\s+)?ambulance\b|i\s+need\s+an?\s+ambulance\b|alert\s+my\s+(?:trusted\s+)?(?:circle|family|emergency\s+contacts?)\b)`, "i");
 // Typing instead of talking: "I want to type", "let me type", "use the keyboard" (or the small Type button) shows the typed box even when voice works, and "use voice" (or the Use voice button) goes back.
 // The choice is kept in the browser, so it is still on after a reload. (Before this the typed box showed only when voice could not run, and nobody could tell how to get it.)
 const KYRO_TYPE_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:i\s+)?(?:want|would\s+like|'d\s+like|need|prefer)\s+to\s+(?:type|use\s+(?:the\s+)?keyboard)\b|let\s+me\s+type\b|(?:can|could)\s+i\s+type\b|type\s+instead\b|(?:switch|change|go)\s+(?:over\s+)?to\s+(?:typing|the\s+keyboard)\b|(?:turn\s+on\s+|use\s+)?typing\s+mode\b|use\s+(?:the\s+)?keyboard\b|i\s+(?:can'?t|cannot)\s+(?:talk|speak)\b|nataka\s+kuandika\b|niruhusu\s+niandike\b|nitaandika\b)`, "i");
@@ -52395,9 +52443,11 @@ const KYRO_VOICE_BACK = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:use|go\s+ba
 let nexusTypedModeRequested = (() => { try { return window.localStorage.getItem("kyroTypedMode") === "1"; } catch { return false; } })();
 const KYRO_TYPE_TEXT = Object.freeze({
   en: { label: "Type your request", hint: "Type your request below. Say \"use voice\" or tap the button to talk again.", useVoice: "Use voice", button: "Type", buttonLabel: "Type instead of talking",
-    on: "Okay. Type in the box. Say \"use voice\" any time to talk again.", off: "Okay, I am listening." },
+    on: "Okay. Type in the box. Say \"use voice\" any time to talk again.", off: "Okay, I am listening.",
+    offlineHint: "There is no signal. Type a plain note such as \"sold 5 bags of maize for 4000\". I will keep it on this phone and add it to your records when the signal comes back." },
   sw: { label: "Andika ombi lako", hint: "Andika ombi lako hapa chini. Sema \"tumia sauti\" au bonyeza kitufe kuongea tena.", useVoice: "Tumia sauti", button: "Andika", buttonLabel: "Andika badala ya kuongea",
-    on: "Sawa. Andika kwenye kisanduku. Sema \"tumia sauti\" wakati wowote kuongea tena.", off: "Sawa, ninakusikiliza." }
+    on: "Sawa. Andika kwenye kisanduku. Sema \"tumia sauti\" wakati wowote kuongea tena.", off: "Sawa, ninakusikiliza.",
+    offlineHint: "Hakuna mtandao. Andika kumbukumbu rahisi kama \"nimeuza mifuko 5 ya mahindi kwa 4000\". Nitaihifadhi kwenye simu hii na kuiongeza kwenye rekodi zako mtandao ukirudi." }
 });
 function kyroTypeText(key) {
   let lang = "en"; try { lang = languageCode() === "sw" ? "sw" : "en"; } catch { lang = "en"; }
@@ -52839,6 +52889,12 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
   const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
+  // an emergency comes before everything else, in a lesson too
+  if (!options.typed && KYRO_EMERGENCY_SAID.test(said)) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
+  }
   // "The next part", "part 3", "read on": the next part of the Word or Excel file just read out
   const filePart = typeof kyroFileReadingMore === "function" ? kyroFileReadingMore(said) : 0;
   if (filePart) { kyroTakeOverTurn(); void kyroContinueFileReading(filePart, lang); return true; }
@@ -61726,6 +61782,8 @@ async function replayKyroOfflineNotes() {
   } catch { /* try again next time the phone is online */ } finally { kyroOfflineReplayRunning = false; }
 }
 window.addEventListener("online", () => { setTimeout(replayKyroOfflineNotes, 1500); });
+// The typed box shows the moment the signal goes (voice cannot work without it) and goes when it returns: the screen is drawn again for each (see kyroOffline in renderUserWorkspace).
+for (const kyroSignalEvent of ["offline", "online"]) window.addEventListener(kyroSignalEvent, () => { try { if (typeof renderUserWorkspace === "function") renderUserWorkspace(); } catch { /* the next draw shows it */ } });
 setTimeout(replayKyroOfflineNotes, 10000);
 
 // Emergency location (public/kyro-emergency.js): the phone only reads its location after the server says an alert went to someone chosen to receive it.

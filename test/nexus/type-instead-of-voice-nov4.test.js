@@ -27,8 +27,8 @@ test("and ask to go back to voice, only as a whole sentence", () => {
 
 test("the typed box is shown when it is asked for, with a Use voice button, and the small Type button is shown while it is not", () => {
   // the template: the box shows for the microphone fallback OR for typed mode, and typed mode has its own section, hint and Use voice button
-  assert.match(app, /const typedModeOn = !microphoneFallbackRequired && trueExperienceMode !== "mission" && nexusTypedModeRequested === true;\s+kyroUpdateTypeButton\(!\(microphoneFallbackRequired \|\| typedModeOn\) && trueExperienceMode !== "mission"\);/);
-  assert.match(app, /` : typedModeOn \? `\s+<section class="nexus-true-conversation" data-kyro-typed-mode="true"[^>]*>\s+<p class="nexus-companion-recovery-hint" role="status">\$\{escapeHtml\(kyroTypeText\("hint"\)\)\}<\/p>\s+\$\{renderNexusTrueCommandComposer\(\{ compact: true \}\)\}\s+<button type="button" class="kyro-use-voice" data-kyro-use-voice="true"/);
+  assert.match(app, /const kyroOffline = typeof navigator !== "undefined" && navigator\.onLine === false;\s+const typedModeOn = !microphoneFallbackRequired && trueExperienceMode !== "mission" && \(nexusTypedModeRequested === true \|\| kyroOffline\);\s+kyroUpdateTypeButton\(!\(microphoneFallbackRequired \|\| typedModeOn\) && trueExperienceMode !== "mission"\);/);
+  assert.match(app, /` : typedModeOn \? `\s+<section class="nexus-true-conversation" data-kyro-typed-mode="true"[^>]*>\s+<p class="nexus-companion-recovery-hint" role="status">\$\{escapeHtml\(kyroTypeText\(kyroOffline \? "offlineHint" : "hint"\)\)\}<\/p>\s+\$\{renderNexusTrueCommandComposer\(\{ compact: true \}\)\}\s+<button type="button" class="kyro-use-voice" data-kyro-use-voice="true"/);
   // the microphone-fallback attribute and section are unchanged
   assert.match(app, /data-nexus-microphone-fallback-active="\$\{microphoneFallbackRequired \? "true" : "false"\}"/);
   assert.match(app, /Voice is unavailable right now\. Type your request below while the microphone retry remains available\./);
