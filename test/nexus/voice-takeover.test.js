@@ -36,7 +36,7 @@ function speaker({ active = true, sent = true } = {}) {
   const sandbox = { realtimeVoiceActive: () => active, languageCode: () => "en", sendKyroRealtimeEvent: event => { events.push(event); return sent; },
     realtimeVoiceSession: { sdkController: { interrupt: () => interrupts.push(1) } }, Date, String, Number };
   vm.createContext(sandbox);
-  vm.runInContext(`let kyroPageSpeaksUntil = 0; let kyroLastPageLine = { text: "", at: 0 };\n${sliceFn("function kyroSpeakPageLine(")}\nthis.api = { kyroSpeakPageLine, reset: () => { kyroLastPageLine = { text: "", at: 0 }; } };`, sandbox);
+  vm.runInContext(`let kyroPageSpeaksUntil = 0; let kyroLastPageLine = { text: "", at: 0 };\nconst KYRO_SPOKEN_LINE_MAX = 1600;\n${sliceFn("function kyroLineForSpeech(")}\n${sliceFn("function kyroSpeakPageLine(")}\nthis.api = { kyroSpeakPageLine, reset: () => { kyroLastPageLine = { text: "", at: 0 }; } };`, sandbox);
   return { api: sandbox.api, events, interrupts };
 }
 
@@ -51,7 +51,8 @@ test("the page's own words are said by the live voice: the model is cut off, the
   assert.equal(api.kyroSpeakPageLine("Your saved documents, newest first: 1, Field Notes; 2, Business plan."), true, "the same words arriving twice");
   assert.equal(events.length, 1, "are said once");
   assert.equal(api.kyroSpeakPageLine("   "), false);
-  api.kyroSpeakPageLine("x".repeat(900)); assert.equal(events.at(-1).response.input[0].content[0].text, "x".repeat(500), "at most 500 characters");
+  api.kyroSpeakPageLine("x".repeat(2000)); assert.equal(events.at(-1).response.input[0].content[0].text, "x".repeat(1600), "at most 1600 characters (it was 500: a long answer stopped in the middle of a word)");
+  api.reset(); api.kyroSpeakPageLine("A sentence of ordinary length. ".repeat(80)); assert.ok(events.at(-1).response.input[0].content[0].text.endsWith("length."), "a longer answer stops at the end of a sentence");
   assert.equal(speaker({ active: false }).api.kyroSpeakPageLine("Hello"), false, "no live voice: nothing is sent (the page speaks the older way)");
   assert.equal(speaker({ sent: false }).api.kyroSpeakPageLine("Hello"), false, "a failed send is reported");
 });

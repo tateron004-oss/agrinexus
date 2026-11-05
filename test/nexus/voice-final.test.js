@@ -119,7 +119,7 @@ test("a line the page speaks over the live voice is out of band and the model is
   const sandbox = { realtimeVoiceActive: () => true, languageCode: () => "en", sendKyroRealtimeEvent: event => { events.push(event); return true; }, injectKyroRealtimeContext: text => notes.push(text),
     realtimeVoiceSession: { sdkController: { interrupt() {} } }, Date, String, Number };
   vm.createContext(sandbox);
-  vm.runInContext(`let kyroLastPageLine = { text: "", at: 0 };\n${sliceFn("function kyroSpeakPageLine(")}\nthis.say = kyroSpeakPageLine;`, sandbox);
+  vm.runInContext(`let kyroLastPageLine = { text: "", at: 0 };\nconst KYRO_SPOKEN_LINE_MAX = 1600;\n${sliceFn("function kyroLineForSpeech(")}\n${sliceFn("function kyroSpeakPageLine(")}\nthis.say = kyroSpeakPageLine;`, sandbox);
   assert.equal(sandbox.say("Your reminders: milk at nine."), true);
   assert.equal(events[0].response.conversation, "none");
   assert.equal(notes.length, 1); assert.match(notes[0], /Kyro's screen just told the person: Your reminders: milk at nine\./);
@@ -205,7 +205,7 @@ test("the model's tool call does not clear the screen the page has just opened f
   assert.equal(sandbox.just("Open Health"), true); assert.equal(sandbox.just("Open health, please."), true); assert.equal(sandbox.just("Open the weather"), false, "other words: an earlier request's screen is still cleared");
   sandbox.kyroLastSpokenOpen = { key: "open health", at: Date.now() - 9000 }; assert.equal(sandbox.just("Open Health"), false, "long ago");
   sandbox.kyroLastSpokenOpen = { key: "", at: 0 }; assert.equal(sandbox.just(""), false);
-  const handler = app.slice(app.indexOf("async function callNexusOpenAiRealtimeTool("), app.indexOf("async function callNexusOpenAiRealtimeTool(") + 600);
+  const handler = app.slice(app.indexOf("async function callNexusOpenAiRealtimeTool("), app.indexOf("async function callNexusOpenAiRealtimeTool(") + 2400);
   // (and not for a lesson sentence either: the lesson card the page has just drawn for those words is the answer; kyroTutorOwns is the tutor mode's own fence)
   assert.match(handler, /if \(!\(typeof kyroPageJustOpened === "function" && kyroPageJustOpened\(command\)\) && !kyroTutorOwns\(command\)\) kyroDismissStaleWorkspace\(command\);/);
 });

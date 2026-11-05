@@ -824,3 +824,14 @@ test("board searches still work in the words a farmer would use", async () => {
   assert.match(await buyer.say("Find buyers for beans"), /Listing 2/);
   assert.match(await seller.say("Who is buying beans"), /Listing 2/);
 });
+
+// The owner's test of 4 November 2026: "Give me directions to the clinic" made "Task 1: the clinic — Me Directions" and "I don't have me in your workers yet; say add worker me". A job goes to a person by name; a sentence that begins with a pronoun is a request to Kyro.
+test("'give me directions to the clinic' and the like are never a job for a worker called Me, and a real assignment still is", async () => {
+  const who = farmer();
+  for (const text of ["Give me directions to the clinic", "Give me directions to the nearest pharmacy", "Tell me how to get to the clinic", "Ask me something to do", "Give them directions to the market", "Assign me to weed North Plot"]) {
+    const reply = await who.say(text);
+    assert.ok(reply === null || !/Task \d|in your workers yet|Me Directions|add worker/i.test(JSON.stringify(reply)), `${text} -> ${JSON.stringify(reply)}`);
+  }
+  assert.equal((await who.store.list({ tenantId: "t1", userId: "u1", collection: "task" })).length, 0, "no job was made from any of them");
+  assert.match(await who.say("Assign Juma to weed North Plot by Friday"), /Task 1: weed North Plot — Juma, due Friday/, "a person's name still gets the job");
+});
