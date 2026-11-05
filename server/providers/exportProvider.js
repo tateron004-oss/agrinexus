@@ -158,7 +158,7 @@ async function exportDocument(body = {}, env = process.env) {
   const content = clean(body.content || body.text || body.command);
   const format = clean(body.format || "txt").toLowerCase();
   if (!content) return blockedResponse(provider, action, "Export content is required.");
-  if (!["json", "txt", "md", "pdf", "docx", "html"].includes(format)) return blockedResponse(provider, action, "Only json, txt, md, pdf, docx, and html exports are currently enabled.");
+  if (!["json", "txt", "md", "pdf", "docx", "html"].includes(format)) return blockedResponse(provider, action, "Only json, txt, md, pdf, and docx exports are currently enabled.");
   // a web page is only made for a designed document (a flyer, newsletter, email, ...): it is how a designed email is copied into an email program
   if (format === "html" && !designKind(body.design)) return blockedResponse(provider, action, "A web page can only be made from a designed flyer, newsletter, invitation, brochure or email.");
   try {

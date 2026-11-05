@@ -166,7 +166,7 @@ function layoutImages(images) {
 }
 // the boxes a picture is fitted into (pixels for Word, points for the PDF: a Word pixel is 0.75 of a point), as [width, height]
 const BOXES = Object.freeze({
-  word: { lead: { flyer: [700, 290], poster: [700, 320], newsletter: [700, 200], brochure: [700, 200], schedule: [700, 180], email: [700, 200], invitation: [330, 230] }, inline: [380, 210], logo: [200, 80] },
+  word: { lead: { flyer: [700, 290], poster: [700, 320], newsletter: [700, 175], brochure: [700, 175], schedule: [700, 180], email: [700, 200], invitation: [330, 230] }, inline: [330, 185], logo: [200, 70] },
   pdf: { lead: { flyer: [520, 215], poster: [520, 150], newsletter: [520, 150], brochure: [520, 150], schedule: [520, 135], email: [520, 150], invitation: [250, 170] }, inline: [285, 160], logo: [150, 60] }
 });
 

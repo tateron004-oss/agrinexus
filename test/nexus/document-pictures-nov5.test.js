@@ -384,3 +384,66 @@ test("'add a picture of ... to the flyer', 'put my logo on it' and the card's bu
   assert.equal(input(await ask(planner({ documents: { ...documents, list: async () => [{ document_id: "doc_a5b5c5", title: "Email", metadata: { design: "email" } }, ...rows] } }), "Add my logo to the email")).documentId, "doc_a5b5c5");
   assert.equal(wording.designFor("email"), "email");
 });
+
+// ---------- the routes the card uses ----------
+test("the card's routes: the list of pictures and each picture's bytes are the document OWNER's only, are never cached or sniffed, and the summary says the design; a web page downloads as text/html", async () => {
+  const { createServerRuntimeAdapter } = require("../../nexus/compat/server-runtime-adapter.js");
+  const png = logo(120, 80); const jpg = sunrise(200, 120);
+  const stored = [
+    { role: "logo", source: "upload", title: "logo", mime: "image/png", credit: "", caption: "", dataBase64: png.toString("base64") },
+    { role: "", source: "search", title: "Sunrise", mime: "image/jpeg", credit: "Picture: Wikimedia Commons", caption: "", dataBase64: jpg.toString("base64") },
+    { role: "", source: "search", title: "Odd", mime: "text/html", credit: "", caption: "", dataBase64: Buffer.from("<script>alert(1)</script>").toString("base64") }
+  ];
+  const asked = [];
+  const runtime = { engine: { tasks: {} }, documents: {
+    getPictures: async args => { asked.push(args); return args.ownerId === "user-1" && args.documentId === "doc_a1b2c3" ? stored : []; },
+    get: async ({ documentId }) => ({ document_id: documentId, title: "Email", document_type: "html", version: 2, metadata: { design: "email" }, object_key: "local:55555555-5555-5555-5555-555555555555.html" }),
+    getFileContent: async () => Buffer.from("<!doctype html><p>hi</p>").toString("base64"), getSource: async () => ({ sourceText: "Subject: hi" }) } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_EXPORT_DIR: os.tmpdir() }, resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1" }), readJson: async () => ({}), createRuntimeFn: () => runtime });
+  const call = async urlPath => {
+    const capture = { status: 0, body: null, headers: null, raw: null };
+    const res = { writeHead(status, headers) { capture.status = status; capture.headers = headers; }, end(bytes) { capture.raw = bytes; } };
+    await adapter.handle({ method: "GET", headers: {} }, res, new URL(`http://local${urlPath}`), (_res, status, body) => { capture.status = status; capture.body = body; });
+    return capture;
+  };
+  const list = await call("/api/nexus/runtime/documents/doc_a1b2c3/pictures");
+  assert.equal(list.status, 200); assert.deepEqual(list.body.pictures.map(item => [item.n, item.role, item.source, item.credit]), [[0, "logo", "upload", ""], [1, "", "search", "Picture: Wikimedia Commons"], [2, "", "search", ""]]);
+  assert.ok(!JSON.stringify(list.body).includes("dataBase64"), "the list never carries the bytes");
+  assert.deepEqual(asked[0], { tenantId: "tenant-1", ownerId: "user-1", documentId: "doc_a1b2c3" }, "asked for this owner's pictures only");
+  const first = await call("/api/nexus/runtime/documents/doc_a1b2c3/pictures/0");
+  assert.equal(first.status, 200); assert.ok(Buffer.from(first.raw).equals(png)); assert.equal(first.headers["content-type"], "image/png");
+  assert.equal(first.headers["cache-control"], "private, no-store"); assert.equal(first.headers["x-content-type-options"], "nosniff"); assert.match(first.headers["content-security-policy"], /default-src 'none'/);
+  assert.equal((await call("/api/nexus/runtime/documents/doc_a1b2c3/pictures/1")).headers["content-type"], "image/jpeg");
+  assert.equal((await call("/api/nexus/runtime/documents/doc_a1b2c3/pictures/2")).status, 404, "a stored entry that is not a PNG or JPEG is never served");
+  assert.equal((await call("/api/nexus/runtime/documents/doc_a1b2c3/pictures/9")).status, 404);
+  const other = await call("/api/nexus/runtime/documents/doc_zzzzzz/pictures"); assert.deepEqual(other.body.pictures, [], "someone else's document has no pictures here");
+  // the document itself: its design, and a web page is sent as text/html
+  const document = await call("/api/nexus/runtime/documents/doc_a1b2c3");
+  assert.equal(document.status, 200); assert.equal(document.body.document.design, "email"); assert.equal(document.body.document.documentType, "html"); assert.match(document.body.contentType, /^text\/html/);
+});
+
+// ---------- the page ----------
+test("the page: 'add a picture ...' said aloud goes the typed route (not 'add a photo to my profile or list'); the document card shows the previews, notes, Add a picture / Add my logo, the file types, and says what could not be done", () => {
+  const vm = require("node:vm");
+  const app = fs.readFileSync(path.join(__dirname, "../../public/app.js"), "utf8");
+  const lines = app.split("\n");
+  const sandbox = {};
+  vm.runInNewContext(`${lines.filter(line => ["KYRO_OPEN_LEAD", "KYRO_ADD_PICTURE", "KYRO_ADD_PICTURE_NOT"].some(name => line.startsWith(`const ${name} = `))).join("\n")}
+this.add = said => KYRO_ADD_PICTURE.test(said) && !KYRO_ADD_PICTURE_NOT.test(said);`, sandbox);
+  for (const say of ["Add a picture of fresh bread to the flyer", "Put my logo on it", "add the photo I uploaded to the newsletter", "Kyro, add a picture of a broom", "Could you include a picture of the church building"]) assert.equal(sandbox.add(say), true, say);
+  for (const say of ["Add a photo to my profile", "Add milk to my shopping list", "Add a picture of my cow to its health record", "Add a reminder for Saturday", "Add a photo to my contact Grace"]) assert.equal(sandbox.add(say), false, say);
+  assert.ok(app.indexOf("KYRO_NOTE_REQUEST.test(said) || KYRO_REMINDER_REQUEST.test(said)") < app.indexOf("KYRO_ADD_PICTURE.test(said) && !KYRO_ADD_PICTURE_NOT.test(said)"), "after the list, note and reminder claims");
+  assert.match(app, /if \(!options\.typed && KYRO_ADD_PICTURE\.test\(said\) && !KYRO_ADD_PICTURE_NOT\.test\(said\)\) \{\s+kyroTakeOverTurn\(\);\s+void handleNexusUnifiedBrainRuntimeCommand\(said, \{ source: "typed", kyroDirect: true \}\);/);
+  // the card
+  assert.match(app, /addTools\(\{ design: drawn\?\.data\?\.design, format: drawn\?\.data\?\.format, data: drawn\?\.data\?\.data \|\| \{\} \}\);/);
+  assert.match(app, /async function kyroDocumentPictureTools\(screen, id, status, info = \{\}\)/);
+  assert.match(app, /"\/api\/nexus\/runtime\/documents\/" \+ encodeURIComponent\(id\) \+ "\/pictures\/" \+ item\.n/);
+  assert.match(app, /kyroSilentTurn\("Add picture " \+ uploaded\.fileId \+ " to document " \+ id \+ \(asLogo \? " as logo" : ""\)\)/);
+  assert.match(app, /kyroSilentTurn\("Export document " \+ id \+ " as " \+ format\)/);
+  assert.match(app, /accept: "image\/png,image\/jpeg"/);
+  assert.match(app, /Pictures found on the web belong to their owners\. Their credit is printed in the file\./);
+  assert.match(app, /Kyro does not send it for you\./);
+  assert.match(app, /\{ pdf: "pdf", docx: "docx", html: "html", markdown: "md", md: "md" \}/);
+  // what could not be done is said aloud as well as shown
+  assert.match(app, /pictureNotesSaid \? `\$\{message\} \$\{pictureNotesSaid\}`\.trim\(\) : message/);
+});

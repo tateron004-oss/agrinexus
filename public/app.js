@@ -53040,17 +53040,17 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
     void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
     return true;
   }
-  if (!options.typed && KYRO_ADD_PICTURE.test(said) && !KYRO_ADD_PICTURE_NOT.test(said)) {
-    kyroTakeOverTurn();
-    void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
-    return true;
-  }
   if (!options.typed && KYRO_LIST_REQUEST.test(said) && !KYRO_LIST_NOT.test(said)) {
     kyroTakeOverTurn();
     void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
     return true;
   }
   if (!options.typed && (KYRO_NOTE_REQUEST.test(said) || KYRO_REMINDER_REQUEST.test(said)) && !KYRO_NOTE_NOT.test(said)) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
+  }
+  if (!options.typed && KYRO_ADD_PICTURE.test(said) && !KYRO_ADD_PICTURE_NOT.test(said)) {
     kyroTakeOverTurn();
     void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
     return true;
@@ -54095,7 +54095,7 @@ async function kyroDocumentPictureTools(screen, id, status, info = {}) {
   let asLogo = false; let found = false;
   const showNotes = list => {
     notes.textContent = "";
-    for (const text of list) if (String(text || "").trim()) notes.append(kyroMake("p", { style: "margin:0" }, kyroT(String(text))));
+    for (const text of list) if (String(text || "").trim() && !/^Pictures found on the web belong/.test(String(text))) notes.append(kyroMake("p", { style: "margin:0" }, kyroT(String(text))));
     if (found) notes.append(kyroMake("p", { "data-kyro-picture-owner-note": "true", style: "margin:0" }, kyroT("Pictures found on the web belong to their owners. Their credit is printed in the file. Be sure you may use them. Your own pictures need no such check.")));
   };
   const drawPictures = list => {
@@ -61682,11 +61682,6 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
   }
   // (what is read out and shown never carries the internal name or the server's status line: see kyroPlainRenderMessage)
   message = kyroPlainRenderMessage(result, message);
-  // a picture that could not be had (no logo uploaded yet, nothing found) is SAID, so a flyer is never taken to have a picture it does not have; the card shows the same words and the Add a picture buttons
-  try {
-    const pictureNotes = result.render?.presentation?.kind === "document" ? result.render?.data?.data?.pictureNotes : null;
-    if (Array.isArray(pictureNotes)) { const said = pictureNotes.filter(note => !/^Pictures found on the web belong/.test(String(note))).join(" ").trim(); if (said) message = `${message} ${said}`.trim(); }
-  } catch { /* the card says it too */ }
   nexusAgenticBrainLastResult = {
     ok: result.completed === true,
     status: result.state,
@@ -61735,7 +61730,13 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
       else if (kind && kind !== "map" && kind !== "media-player") renderNexusAuthoritativeData(drawn);
     }
   } catch { /* the result is still held by the server and its receipt; only the drawing is missing */ }
-  setVoiceResponse(message, true, {
+  // a picture that could not be had (no logo uploaded yet, nothing found) is SAID with the answer, so a flyer is never taken to have a picture it does not have; the card shows the same words and the Add a picture buttons
+  let pictureNotesSaid = "";
+  try {
+    const pictureNotes = result.render?.presentation?.kind === "document" ? result.render?.data?.data?.pictureNotes : null;
+    if (Array.isArray(pictureNotes)) pictureNotesSaid = pictureNotes.filter(note => !/^Pictures found on the web belong/.test(String(note))).join(" ").trim();
+  } catch { /* the card says it too */ }
+  setVoiceResponse(pictureNotesSaid ? `${message} ${pictureNotesSaid}`.trim() : message, true, {
     allowHandoff: false,
     command: text,
     source: "nexus-authoritative-behavior-spine",
