@@ -14,6 +14,7 @@
 // anonymous file with no durable link back to who made it.
 const exportProvider = require("../../server/providers/exportProvider.js");
 const crypto = require("node:crypto");
+const { designKind } = require("../../server/providers/design-render.js");
 
 // Found live: the deterministic fast-path matcher (completeDocumentPlan)
 // already caps its own content at 4000 chars, but that's just an echo of
@@ -59,6 +60,12 @@ function normalizeDocumentFormat(rawFormat) {
   if (VALID_DOCUMENT_FORMATS.includes(format)) return format;
   return DOCUMENT_FORMAT_ALIASES[format] || "txt";
 }
+// the design kept in a saved document's metadata (a jsonb object, or its text if a driver returns it unparsed)
+function existingDesign(row) {
+  let metadata = row?.metadata;
+  if (typeof metadata === "string") { try { metadata = JSON.parse(metadata); } catch { metadata = null; } }
+  return metadata && typeof metadata === "object" ? metadata.design : "";
+}
 function createDocumentsCreateExecutor({ env = process.env, documents = null } = {}) {
   return async function execute({ input = {}, context, taskId }) {
     const rawContent = String(input.content || input.text || input.command || "");
@@ -77,11 +84,15 @@ function createDocumentsCreateExecutor({ env = process.env, documents = null } =
       if (documents?.get && context) existing = await documents.get({ tenantId: context.tenantId, ownerId: context.userId, documentId: String(input.documentId) });
       if (!existing) throw Object.assign(new Error("I could not find that document, so nothing was changed."), { code: "document_not_found" });
     }
+    // The design (flyer, newsletter, ...) a document was made with is kept in its metadata, so editing it ("Save changes") or exporting it again keeps the designed Word/PDF layout; the text stays the only thing that is edited.
+    // A saved document keeps its own design; a new one takes the design its caller named. Only the known kinds count.
+    const design = designKind(existing ? existingDesign(existing) : input.design);
     const body = {
       confirmed: true,
       title: existing ? existing.title : (input.title || "Nexus document"),
       content: truncated ? rawContent.slice(0, MAX_DOCUMENT_CONTENT_LENGTH) : rawContent,
-      format: normalizeDocumentFormat(existing ? existing.document_type : input.format)
+      format: normalizeDocumentFormat(existing ? existing.document_type : input.format),
+      ...(design ? { design } : {})
     };
     const result = await exportProvider.exportDocument(body, env);
     if (truncated && result.body?.data) result.body = { ...result.body, data: { ...result.body.data, truncated: true, originalLength: rawContent.length, savedLength: body.content.length } };
@@ -93,7 +104,7 @@ function createDocumentsCreateExecutor({ env = process.env, documents = null } =
         const document = existing ? { document_id: existing.document_id } : await documents.create({ tenantId: context.tenantId, ownerId: context.userId,
           taskId, title: body.title, documentType: body.format,
           // fingerprint: an optional short label a caller can use to recognise "this exact thing was already saved" (see nexus/resume/executor.js).
-          metadata: { exportId: data.exportId, filename: data.filename, bytes: data.bytes, ...(typeof input.fingerprint === "string" && input.fingerprint ? { fingerprint: input.fingerprint.slice(0, 80) } : {}) } });
+          metadata: { exportId: data.exportId, filename: data.filename, bytes: data.bytes, ...(design ? { design } : {}), ...(typeof input.fingerprint === "string" && input.fingerprint ? { fingerprint: input.fingerprint.slice(0, 80) } : {}) } });
         const version = await documents.addVersion({ documentId: document.document_id, tenantId: context.tenantId,
           content: { exportId: data.exportId, filename: data.filename, downloadPath: data.downloadPath, sourceText: body.content, ...(bytes.length <= MAX_STORED_FILE_BYTES ? { contentBase64: bytes.toString("base64") } : {}) },
           objectKey: `local:${data.filename}`, checksum, createdBy: context.userId });

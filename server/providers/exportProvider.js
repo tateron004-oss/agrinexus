@@ -10,6 +10,7 @@ const {
   blockedResponse,
   failedResponse
 } = require("./providerUtils");
+const { designKind, renderDesignDocx, renderDesignPdf } = require("./design-render");
 
 function status(env = process.env) {
   return {
@@ -165,7 +166,18 @@ async function exportDocument(body = {}, env = process.env) {
     const filename = `${id}.${format}`;
     const filePath = path.join(root, filename);
     let payload;
-    if (format === "pdf") {
+    // A document made as a flyer, newsletter, poster, invitation, brochure or schedule is given its designed Word/PDF layout (server/providers/design-render.js); every other document, and any failure of the design, is the plain layout.
+    const design = designKind(body.design);
+    let designed = "";
+    if (design && (format === "pdf" || format === "docx")) {
+      try {
+        payload = format === "pdf" ? await renderDesignPdf(design, title, content) : await renderDesignDocx(design, title, content);
+        designed = design;
+      } catch { payload = undefined; }
+    }
+    if (payload !== undefined) {
+      // the designed file is ready
+    } else if (format === "pdf") {
       payload = await renderPdfBuffer(title, content);
     } else if (format === "docx") {
       payload = await renderDocxBuffer(title, content);
@@ -180,7 +192,7 @@ async function exportDocument(body = {}, env = process.env) {
       action,
       status: "completed",
       message: `Document export created as a real ${format.toUpperCase()} file in the configured Nexus export store.`,
-      data: { exportId: id, filename, format, bytes: Buffer.byteLength(payload), downloadPath: `/exports/${filename}`, localPath: filePath }
+      data: { exportId: id, filename, format, bytes: Buffer.byteLength(payload), downloadPath: `/exports/${filename}`, localPath: filePath, ...(designed ? { design: designed } : {}) }
     });
   } catch (error) {
     return failedResponse(provider, action, error);
