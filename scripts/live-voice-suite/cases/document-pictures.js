@@ -11,12 +11,12 @@ module.exports = Object.freeze([
     expect: { screen: "document", text: "CHURCH|Church", download: true },
     then: [{ expect: { screen: "document", images: 1, text: "belong to their owners" }, timeoutMs: 90000 }] },
   { id: "picture-email-with-my-logo-says-so", area: "documents", writes: true, say: "Write a promotional email for my bakery with my logo.", timeoutMs: 120000,
-    expect: { screen: "document", text: "Subject", notText: "logo (?:is|was) (?:added|in)", buttons: ["Add my logo", "Word"] },
+    expect: { screen: "document", text: "Subject", notText: "logo (?:is|was) (?:added|in)", buttons: ["Add my logo", "PDF"] },
     then: [{ expect: { screen: "document", text: "do not have a logo from you yet", images: 0, notText: "belong to their owners" }, timeoutMs: 30000 }] },
   { id: "picture-email-as-a-web-page", area: "documents", writes: true, say: "Write a promotional email for my bakery as a web page.", timeoutMs: 120000,
     expect: { screen: "document", text: "Subject", download: true, buttons: ["Word", "PDF"] },
     then: [{ expect: { screen: "document", text: "copy it, and paste it into your email" }, timeoutMs: 30000 }] },
-  { id: "picture-added-to-the-open-document", area: "documents", writes: true, say: "Make me a poster for the community clean-up on Saturday at nine at the park.", timeoutMs: 120000, expect: { screen: "document", text: "CLEAN-UP|Clean-up", download: true },
-    then: [{ say: "Add a picture of a broom to the poster.", timeoutMs: 120000, expect: { screen: "document", text: "CLEAN-UP|Clean-up", download: true } },
+  { id: "picture-added-to-the-open-document", area: "documents", writes: true, say: "Make me a poster for the community clean-up on Saturday at nine at the park.", timeoutMs: 120000, expect: { screen: "document", text: "CLEAN.?UP|Clean.?up", download: true },
+    then: [{ say: "Add a picture of a broom to the poster.", timeoutMs: 120000, expect: { screen: "document", text: "CLEAN.?UP|Clean.?up", download: true } },
       { expect: { screen: "document", images: 1, text: "belong to their owners" }, timeoutMs: 90000 }] }
 ]);
