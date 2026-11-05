@@ -106,6 +106,16 @@ async function searchCommons(query, { fetchFn = globalThis.fetch } = {}) {
   }).filter(Boolean);
 }
 
+// Openverse gives the licence as a short code ("by", "by-sa", "cc0"): the credit printed in a document must read as a licence ("CC BY"), not as a stray word (found live on 5 November 2026: "Picture: flickr, striatic, by").
+function readableLicense(value) {
+  const code = String(value || "").trim();
+  if (!code) return "";
+  if (/^cc0$/i.test(code)) return "CC0";
+  if (/^pdm$/i.test(code)) return "Public domain";
+  if (/^by(?:-(?:nc|nd|sa))*$/i.test(code)) return `CC ${code.toUpperCase()}`;
+  return code;
+}
+
 async function searchPictureCandidates(query, { fetchFn = globalThis.fetch, openImages } = {}) {
   const text = cleanQuery(query);
   if (!text) return [];
@@ -113,7 +123,7 @@ async function searchPictureCandidates(query, { fetchFn = globalThis.fetch, open
   try { out.push(...await searchCommons(text, { fetchFn })); } catch { /* the next source is tried */ }
   try {
     const search = openImages || require("../nexus-open-image-fallback.js").searchOpenImages;
-    for (const item of await search(text, { fetchFn })) out.push({ title: clean(item.title, 160), imageUrl: item.imageUrl, sourceUrl: item.sourceUrl, creator: clean(item.creator, 120), license: clean(item.license, 80), sourceName: clean(item.sourceName, 60) || "Openverse" });
+    for (const item of await search(text, { fetchFn })) out.push({ title: clean(item.title, 160), imageUrl: item.imageUrl, sourceUrl: item.sourceUrl, creator: clean(item.creator, 120), license: clean(readableLicense(item.license), 80), sourceName: clean(item.sourceName, 60) || "Openverse" });
   } catch { /* what was found so far is used */ }
   return out;
 }
@@ -178,4 +188,4 @@ async function findPicture(query, { candidates, fetchOptions = {}, searchOptions
   return null;
 }
 
-module.exports = Object.freeze({ MAX_BYTES, TIMEOUT_MS, fetchPublicImage, searchPictureCandidates, findPicture, cleanQuery, creditLine, rankCandidates, queryWords });
+module.exports = Object.freeze({ MAX_BYTES, TIMEOUT_MS, fetchPublicImage, searchPictureCandidates, findPicture, cleanQuery, creditLine, rankCandidates, queryWords, readableLicense });
