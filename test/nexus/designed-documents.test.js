@@ -68,6 +68,9 @@ test("the invitation is centred, large and framed with a double page border; the
   assert.match(inviteXml, /<w:pgBorders[^>]*>[\s\S]*w:val="double"/);
   assert.match(inviteXml, /<w:jc w:val="center"\/>/);
   assert.match(inviteXml, /w:ascii="Georgia"/);
+  // its margins are wider (room for the frame): a box as wide as the other layouts stuck out past the frame when the file was opened in Word (5 Nov 2026), so no table is wider than the text area (12240 - 2 x 1296)
+  const widths = [...inviteXml.matchAll(/<w:tblW[^>]*w:w="(\d+)"/g)].map(match => Number(match[1]));
+  assert.ok(widths.length > 0 && widths.every(width => width <= 12240 - 2 * 1296), `table widths ${widths.join(",")}`);
   const news = handoutTemplate({ kind: "newsletter", subject: "Grace Church" });
   const newsXml = (await parts(await design.renderDesignDocx("newsletter", news.title, news.content))).xml;
   assert.match(newsXml, /<w:pBdr><w:bottom w:val="single"/, "a coloured rule under each section heading");
