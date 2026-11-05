@@ -9,7 +9,7 @@ const stop = { say: "Stop tutoring.", timeoutMs: 60000, expect: { screen: "text"
 module.exports = Object.freeze([
   // (the practice lesson is ended the way a person ends it, "stop": an open practice lesson takes the short replies of whatever is said next, so it must not be left open for the cases after it)
   { id: "tutor-letters-stay-practice-lesson", area: "tutor", say: "Teach me letters.", timeoutMs: 90000, expect: { screen: ["text", "list"], text: "letter|herufi", notText: "AI tutor" },
-    then: [{ say: "Stop.", timeoutMs: 45000, expect: { said: "(?:have|[’'‘]ve) stopped|tumesimama" } }] },
+    then: [{ say: "Stop.", timeoutMs: 45000, expect: { said: "stopped|have stopped|tumesimama" } }] },
   { id: "tutor-learn-then-answer-then-stop", area: "tutor", say: "Teach me fractions.", timeoutMs: 120000, expect: { screen: "text", text: "AI tutor[\\s\\S]*fraction|fraction[\\s\\S]*AI tutor", notText: "could not do that|I can.t help" },
     then: [{ say: "I know that a half is one of two equal parts.", timeoutMs: 120000, expect: { screen: "text", text: "\\w{4,}", notText: "AI tutor|could not reach" } },
       { say: "A quarter is one of four equal parts.", timeoutMs: 120000, expect: { screen: "text", text: "\\w{4,}", notText: "AI tutor|could not reach" } }, stop] },

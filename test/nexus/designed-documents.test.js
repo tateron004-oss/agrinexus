@@ -285,3 +285,11 @@ test("a newsletter with news given is worded the same way and designed", async (
   const text = squash((await pdfText(await design.renderDesignPdf("newsletter", input(plan).title, input(plan).content))).text);
   assert.ok(text.includes("the roof repair") && text.includes("the youth camp"));
 });
+
+test("the 'What' line says what is happening, not the kind of paper: 'poster for the community clean-up' becomes 'community clean-up' (found live on 5 November 2026)", () => {
+  const said = "Make me a poster for the community clean-up on Saturday at nine at the park";
+  assert.equal(wording.validateWording({ headline: "Community Clean-up", what: "poster for the community clean-up" }, said).what, "community clean-up");
+  assert.equal(wording.validateWording({ headline: "Community Clean-up", what: "a poster" }, said).what, "", "only the kind word: nothing to say");
+  assert.equal(wording.validateWording({ headline: "Bake Sale", what: "bake sale" }, "Make me a flyer for my bake sale on Saturday").what, "bake sale");
+  assert.equal(wording.validateWording({ headline: "Dinner", what: "invitation only dinner" }, "Make an invitation only dinner on Friday").what, "invitation only dinner", "the word inside a real description is left alone");
+});

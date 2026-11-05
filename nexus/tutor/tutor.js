@@ -193,6 +193,8 @@ function chooseMedia(shown, session, { said = "", turn = 1 } = {}) {
   const askedForVideo = /\b(?:video|videos|clip|clips|watch|film)\b/i.test(clean(said));
   const lastVideoTurn = Number.isFinite(session.videoTurn) ? session.videoTurn : -VIDEO_EVERY_TURNS;
   if (video && !((turn > 1 || askedForVideo) && turn - lastVideoTurn >= VIDEO_EVERY_TURNS)) video = "";
+  // measured live on 5 November 2026: with the model choosing alone a video came in about 1 lesson step in 13. A lesson with a subject gets one on its third step, and every third step after, when the model asked for none.
+  if (!video && session.kind !== "homework" && session.subject && turn >= 3 && turn - lastVideoTurn >= VIDEO_EVERY_TURNS) video = sanitiseSearch(`${session.subject} explained`);
   // the same picture twice in a row is not shown again
   const samePicture = picture && picture.toLowerCase() === String(session.lastPicture || "").toLowerCase();
   const media = {};
