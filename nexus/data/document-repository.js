@@ -57,6 +57,17 @@ class DocumentRepository {
     return (result.rows || result)[0]?.content_base64 || null;
   }
 
+  // The pictures kept with the latest version of a designed document (each with its bytes in base64), for the document's owner only: [] when it has none. They are what lets "Save changes" and "export it as a PDF" keep the pictures.
+  async getPictures({ tenantId, ownerId, documentId }) {
+    const result = await this.db.query(`select v.content->'pictures' as pictures
+      from nexus_documents d
+      join lateral (select content from nexus_document_versions where document_id=d.document_id order by version desc limit 1) v on true
+      where d.tenant_id=$1 and d.owner_id=$2 and d.document_id=$3 and d.deleted_at is null`, [tenantId, ownerId, documentId]);
+    const value = (result.rows || result)[0]?.pictures;
+    if (typeof value === "string") { try { return JSON.parse(value); } catch { return []; } }
+    return Array.isArray(value) ? value : [];
+  }
+
   // The text a document was made from (kept with its latest version), so it can be exported again as another file type. null for an older document saved before the text was kept.
   async getSource({ tenantId, ownerId, documentId }) {
     const result = await this.db.query(`select d.title, v.content->>'sourceText' as source_text

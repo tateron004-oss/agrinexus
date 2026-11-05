@@ -10,14 +10,14 @@ const {
   blockedResponse,
   failedResponse
 } = require("./providerUtils");
-const { designKind, renderDesignDocx, renderDesignPdf } = require("./design-render");
+const { designKind, renderDesignDocx, renderDesignPdf, renderDesignHtml } = require("./design-render");
 
 function status(env = process.env) {
   return {
     provider: "nexus-local-export",
     enabled: envEnabled("NEXUS_DOCUMENT_EXPORT_ENABLED", env, true),
     storageDirConfigured: Boolean(clean(env.NEXUS_EXPORT_DIR)),
-    formats: ["json", "txt", "md", "pdf", "docx"]
+    formats: ["json", "txt", "md", "pdf", "docx", "html"]
   };
 }
 
@@ -158,7 +158,9 @@ async function exportDocument(body = {}, env = process.env) {
   const content = clean(body.content || body.text || body.command);
   const format = clean(body.format || "txt").toLowerCase();
   if (!content) return blockedResponse(provider, action, "Export content is required.");
-  if (!["json", "txt", "md", "pdf", "docx"].includes(format)) return blockedResponse(provider, action, "Only json, txt, md, pdf, and docx exports are currently enabled.");
+  if (!["json", "txt", "md", "pdf", "docx", "html"].includes(format)) return blockedResponse(provider, action, "Only json, txt, md, pdf, and docx exports are currently enabled.");
+  // a web page is only made for a designed document (a flyer, newsletter, email, ...): it is how a designed email is copied into an email program
+  if (format === "html" && !designKind(body.design)) return blockedResponse(provider, action, "A web page can only be made from a designed flyer, newsletter, invitation, brochure or email.");
   try {
     const root = path.resolve(clean(env.NEXUS_EXPORT_DIR || path.join(process.cwd(), "output", "nexus-exports")));
     fs.mkdirSync(root, { recursive: true });
@@ -169,12 +171,20 @@ async function exportDocument(body = {}, env = process.env) {
     // A document made as a flyer, newsletter, poster, invitation, brochure or schedule is given its designed Word/PDF layout (server/providers/design-render.js); every other document, and any failure of the design, is the plain layout.
     const design = designKind(body.design);
     let designed = "";
-    if (design && (format === "pdf" || format === "docx")) {
+    // body.images: the pictures (bytes and size, see nexus/documents/pictures.js) that go in it. If a design with pictures cannot be drawn, it is drawn without them rather than not at all, and the result says so.
+    const images = Array.isArray(body.images) ? body.images : [];
+    let picturesDropped = false;
+    if (design && (format === "pdf" || format === "docx" || format === "html")) {
+      const draw = (kindOfFile, withImages) => kindOfFile === "pdf" ? renderDesignPdf(design, title, content, { images: withImages }) : kindOfFile === "html" ? renderDesignHtml(design, title, content, { images: withImages }) : renderDesignDocx(design, title, content, { images: withImages });
       try {
-        payload = format === "pdf" ? await renderDesignPdf(design, title, content) : await renderDesignDocx(design, title, content);
+        payload = await draw(format, images);
         designed = design;
-      } catch { payload = undefined; }
+      } catch {
+        payload = undefined;
+        if (images.length) { try { payload = await draw(format, []); designed = design; picturesDropped = true; } catch { payload = undefined; } }
+      }
     }
+    if (payload === undefined && format === "html") return failedResponse(provider, action, new Error("The web page could not be made."));
     if (payload !== undefined) {
       // the designed file is ready
     } else if (format === "pdf") {
@@ -192,7 +202,7 @@ async function exportDocument(body = {}, env = process.env) {
       action,
       status: "completed",
       message: `Document export created as a real ${format.toUpperCase()} file in the configured Nexus export store.`,
-      data: { exportId: id, filename, format, bytes: Buffer.byteLength(payload), downloadPath: `/exports/${filename}`, localPath: filePath, ...(designed ? { design: designed } : {}) }
+      data: { exportId: id, filename, format, bytes: Buffer.byteLength(payload), downloadPath: `/exports/${filename}`, localPath: filePath, ...(designed ? { design: designed } : {}), ...(designed && images.length ? { pictureCount: picturesDropped ? 0 : images.length } : {}), ...(picturesDropped ? { picturesDropped: true } : {}) }
     });
   } catch (error) {
     return failedResponse(provider, action, error);

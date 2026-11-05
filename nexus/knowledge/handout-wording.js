@@ -5,7 +5,7 @@
 // Nothing is invented: every word the model returns must be a word the person said (or a short, fixed list of joining words), every number must be one the person said, and anything that fails is dropped back to a [bracket].
 // If the model fails, or returns nothing usable, the fixed layout is used as it was. With no details beyond a subject and a day there is no model call at all.
 //
-// designFor(kind) -> "flyer"|"poster"|"newsletter"|"invitation"|"brochure"
+// designFor(kind) -> "flyer"|"poster"|"newsletter"|"invitation"|"brochure"|"email"
 // handoutTail(text) -> what was said after the kind word ("for my bake sale on Saturday at ten at the church hall")
 // needsWording(handout) -> true when the person gave more than a subject and a day
 // wordingInstructions(kind) / wordingGoal(handout, text) -> the model call
@@ -14,7 +14,7 @@
 
 const { handoutTemplate } = require("./handout-templates.js");
 
-const DESIGN_FOR = Object.freeze({ flyer: "flyer", poster: "poster", newsletter: "newsletter", brochure: "brochure", handout: "brochure", invitation: "invitation", email: "flyer" });
+const DESIGN_FOR = Object.freeze({ flyer: "flyer", poster: "poster", newsletter: "newsletter", brochure: "brochure", handout: "brochure", invitation: "invitation", email: "email" });
 function designFor(kind) { return DESIGN_FOR[kind] || ""; }
 
 const KIND_WORD = /\b(?:flyer|poster|newsletter|brochure|handout|invitation|(?:promotional|promo|marketing|sales|advertising)\s+e-?mail)\b/i;

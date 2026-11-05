@@ -215,7 +215,7 @@ test("a flyer with only a subject and a day is the fixed layout with its design 
   assert.equal(calls.length, 0);
   assert.deepEqual({ title: input(plan).title, design: input(plan).design, format: input(plan).format }, { title: "Bake Sale Flyer", design: "flyer", format: "docx" });
   assert.match(input(plan).content, /^BAKE SALE\n\nWhen: Saturday\nWhere: \[the place\]/);
-  const cases = { "Make me a poster for the clinic day.": "poster", "Create a newsletter for the church.": "newsletter", "Write an invitation to my daughter's party.": "invitation", "Draft a brochure for my shop.": "brochure", "Draft a handout for the class.": "brochure", "Write a marketing email for my bake sale on Saturday.": "flyer" };
+  const cases = { "Make me a poster for the clinic day.": "poster", "Create a newsletter for the church.": "newsletter", "Write an invitation to my daughter's party.": "invitation", "Draft a brochure for my shop.": "brochure", "Draft a handout for the class.": "brochure", "Write a marketing email for my bake sale on Saturday.": "email" };
   for (const [say, kind] of Object.entries(cases)) assert.equal(input(await ask(planner({}), say)).design, kind, say);
   assert.equal(calls.length, 0);
 });
@@ -276,7 +276,7 @@ test("a model call is only made when the person gave details beyond a subject an
   for (const say of ["Make me a flyer.", "Make me a flyer for my bake sale on Saturday.", "Create a newsletter for the church.", "Make a poster for the clinic day.", "Make me a flyer for my bake sale on Saturday as a PDF."]) assert.equal(needs(say), false, say);
   for (const say of ["Make me a flyer for my bake sale on Saturday at ten at the church hall.", "Make a poster for the clinic day, free for everyone, at the town hall.", "Write an invitation to my daughter's party on Saturday at 3."]) assert.equal(needs(say), true, say);
   assert.equal(wording.designFor("handout"), "brochure");
-  assert.equal(wording.designFor("email"), "flyer");
+  assert.equal(wording.designFor("email"), "email"); // (a promotional email has its own design, with the pictures inline and a web page version)
 });
 
 test("a newsletter with news given is worded the same way and designed", async () => {

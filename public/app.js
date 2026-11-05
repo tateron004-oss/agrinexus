@@ -52419,7 +52419,10 @@ const KYRO_OPEN_LEAD = "^(?:please\\s+)?(?:(?:hey\\s+)?(?:kyro|nexus)[,.]?\\s+)?
 const KYRO_OPEN_DOCS = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:(?:my|the|all|some)\\s+)?(?:saved\\s+)?(?:documents?|docs?|files?|papers|business plans?|letters|reports)[.?!]*$`, "i");
 const KYRO_OPEN_MEDIA = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:(?:my|the|some|any)\\s+)?(images?|pictures?|photos?|videos?|clips?)[.?!]*$`, "i");
 const KYRO_DOCUMENT_REQUEST = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:create|make|write|draft|prepare|generate|build|put together|compose|type up)\\s+(?:me\\s+)?(?:a|an|my|the|some)?\\s*(?:[a-z'-]+\\s+){0,3}?(?:document|letter|report|proposal|contract|agreement|roadmap|invoice|business plan|marketing plan|farm plan|financial plan|funding plan|action plan|agenda|e-?mail|(?:thank[- ]?you |thank-you |apology )note|bio|biography|speech|toast|meal plan|menu|schedule|timetable|table|outline|announcement|notice|statement|job description|lesson plan|workout plan|study plan|flyer|newsletter|poster|brochure|handout|invitation)\\b`, "i");
-const KYRO_DOCUMENT_NOT = /\b(?:resume|résumé|cv|checklist|to-?do|reminder|list)\b|(?<!thank you |thank-you |thank |apology )\bnote\b|\bsend\b|\bas a pdf\b|^(?:how|what|why|should i|can i)\b/i;
+// "Add a picture of fresh bread to the flyer", "put my logo on it", "add the photo I uploaded": the pictures go into the latest designed document (flyer, poster, newsletter, brochure, invitation, promotional email), said aloud or typed (nexus/documents/pictures.js is the other half).
+const KYRO_ADD_PICTURE = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:add|put|place|include|insert|attach)\\s+(?:in\\s+)?(?:(?:a|an|the|some|my|our|one)\\s+)?(?:(?:nice|good|great|real)\\s+)?(?:(?:company|business|church|farm|shop)\\s+)?(?:picture|photo|image|logo)\\b`, "i");
+const KYRO_ADD_PICTURE_NOT = /\b(?:profile|contact|record|health|patient|crop|animal|cow|goat|chicken|field|list|checklist|calendar|note|reminder|cart|message|text|email to)\b/i;
+const KYRO_DOCUMENT_NOT =/\b(?:resume|résumé|cv|checklist|to-?do|reminder|list)\b|(?<!thank you |thank-you |thank |apology )\bnote\b|\bsend\b|\bas a pdf\b|^(?:how|what|why|should i|can i)\b/i;
 // A spoken request to make a list ("make a shopping list with milk, eggs and bread", "make me a packing list for a week in Tokyo"), to see the lists, or "what should I pack": taken by the page and answered on the screen by the typed route, which makes the list and shows it
 // (or asks what goes on it), shows the lists, or answers as a card. The voice model used to reword these into a tool call of its own, and the person was shown nothing or the wrong thing (found by the sweep of 34 spoken requests on 27 October 2026).
 const KYRO_LIST_REQUEST = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:(?:create|make|start|build|put together|write)\\s+(?:me\\s+)?(?:a|an|my|the|some)?\\s*(?:[a-z'-]+\\s+){0,3}?(?:list|checklist)\\b|(?:show|open|read|bring up|pull up)\\s+(?:me\\s+)?(?:all\\s+)?(?:of\\s+)?my\\s+(?:lists|checklists)\\b|(?:what|which)\\s+(?:should|do|can|must)\\s+(?:i|we)\\s+(?:pack|bring|take)\\b)`, "i");
@@ -53099,6 +53102,11 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
     return true;
   }
   if (!options.typed && (KYRO_NOTE_REQUEST.test(said) || KYRO_REMINDER_REQUEST.test(said)) && !KYRO_NOTE_NOT.test(said)) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
+  }
+  if (!options.typed && KYRO_ADD_PICTURE.test(said) && !KYRO_ADD_PICTURE_NOT.test(said)) {
     kyroTakeOverTurn();
     void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
     return true;
@@ -54107,12 +54115,18 @@ function kyroShowDocumentScreen(drawn) {
     });
     if (readonly) screen.append(readonly);
     screen.append(editor, save, download, status);
+    // a flyer, poster, newsletter, brochure, invitation or promotional email: its pictures, the Add a picture buttons and the other file types (Word, PDF, web page)
+    let toolsAdded = false;
+    const addTools = info => { if (toolsAdded || !info || !info.design) return; toolsAdded = true; try { kyroDocumentPictureTools(screen, id, status, info); } catch { /* the document is shown without them */ } };
+    addTools({ design: drawn?.data?.design, format: drawn?.data?.format, data: drawn?.data?.data || {} });
     document.body.append(screen);
     void (async () => {
       try {
         const response = await fetch("/api/nexus/runtime/documents/" + encodeURIComponent(id), { credentials: "same-origin" });
         if (!response.ok) return;
-        const source = String((await response.json())?.sourceText || "").trim();
+        const body = await response.json();
+        addTools({ design: body?.document?.design, format: body?.document?.documentType, data: {} });
+        const source = String(body?.sourceText || "").trim();
         if (!source) return;
         editor.value = source; editor.hidden = false; save.hidden = false;
         if (readonly) readonly.hidden = true;
@@ -54121,6 +54135,94 @@ function kyroShowDocumentScreen(drawn) {
     try { kyroNoteActivity(); } catch { /* nothing to note */ }
     return true;
   } catch { return false; }
+}
+// PICTURES in a designed document (a flyer, poster, newsletter, brochure, invitation or promotional email), on its card:
+//   - the pictures that are in it (small previews, each with its credit), and a plain note that pictures found on the web belong to their owners
+//   - Add a picture / Add my logo: the person's own file goes up through the ordinary upload (/api/nexus/upload) and the document is saved again with it ("Add picture <file> to document <id>")
+//   - the same document as Word, PDF or a web page (a web page is how a promotional email is copied into an email)
+// Whatever could not be done is said in plain words: a picture that is not in the file is never shown as if it were.
+async function kyroDocumentPictureTools(screen, id, status, info = {}) {
+  const design = String(info.design || "");
+  const box = kyroMake("div", { "data-kyro-doc-tools": id, style: "width:100%;max-width:40em;display:flex;flex-direction:column;gap:12px;margin-top:6px" });
+  const strip = kyroMake("div", { "data-kyro-doc-picture-strip": id, style: "display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start" });
+  const notes = kyroMake("div", { "data-kyro-doc-picture-notes": id, role: "status", style: "display:flex;flex-direction:column;gap:6px;color:#cbd5e1;font-size:.95rem" });
+  const row = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap" });
+  const files = kyroMake("input", { type: "file", accept: "image/png,image/jpeg", "data-kyro-doc-picture-file": id, "aria-label": kyroT("Choose a picture"), style: "position:absolute;left:-9999px;width:1px;height:1px;opacity:0" });
+  let asLogo = false; let found = false;
+  const showNotes = list => {
+    notes.textContent = "";
+    for (const text of list) if (String(text || "").trim() && !/^Pictures found on the web belong/.test(String(text))) notes.append(kyroMake("p", { style: "margin:0" }, kyroT(String(text))));
+    if (found) notes.append(kyroMake("p", { "data-kyro-picture-owner-note": "true", style: "margin:0" }, kyroT("Pictures found on the web belong to their owners. Their credit is printed in the file. Be sure you may use them. Your own pictures need no such check.")));
+  };
+  const drawPictures = list => {
+    strip.textContent = "";
+    found = list.some(item => item.source === "search");
+    for (const item of list) {
+      const figure = kyroMake("figure", { style: "margin:0;display:flex;flex-direction:column;gap:4px;max-width:180px" });
+      figure.append(kyroMake("img", { src: "/api/nexus/runtime/documents/" + encodeURIComponent(id) + "/pictures/" + item.n, alt: String(item.title || kyroT("Picture")), loading: "lazy", style: "display:block;height:96px;width:auto;max-width:100%;border-radius:10px;background:#0f172a" }));
+      if (item.credit) figure.append(kyroMake("figcaption", { style: "font-size:.8rem;color:#94a3b8;overflow-wrap:anywhere" }, String(item.credit)));
+      strip.append(figure);
+    }
+  };
+  const load = async (extraNotes = []) => {
+    let list = [];
+    try {
+      const response = await fetch("/api/nexus/runtime/documents/" + encodeURIComponent(id) + "/pictures", { credentials: "same-origin" });
+      if (response.ok) { const body = await response.json(); list = Array.isArray(body?.pictures) ? body.pictures : []; }
+    } catch { list = []; }
+    drawPictures(list);
+    showNotes(extraNotes.length || list.length ? extraNotes : [kyroT("No picture is in it yet. Say \"add a picture of\" and what you want, or add one of your own.")]);
+  };
+  const addButton = (label, logo) => {
+    const button = kyroMake("button", { type: "button", "data-kyro-doc-add-picture": logo ? "logo" : "picture", style: KYRO_BUTTON_STYLE.replace("#06a77d", "#1e5f8a") }, kyroT(label));
+    button.addEventListener("click", () => { asLogo = logo; files.value = ""; files.click(); });
+    row.append(button);
+  };
+  addButton("Add a picture", false);
+  addButton("Add my logo", true);
+  files.addEventListener("change", async () => {
+    const file = files.files && files.files[0];
+    if (!file) return;
+    if (!/^image\/(?:png|jpeg)$/i.test(String(file.type || ""))) { showNotes([kyroT("Please choose a PNG or JPG picture. A picture in another format can be saved as a PNG or JPG first.")]); return; }
+    if (file.size > 6 * 1024 * 1024) { showNotes([kyroT("That picture is larger than 6 MB. Please choose a smaller one.")]); return; }
+    status.textContent = kyroT("Adding the picture...");
+    try {
+      const form = new FormData();
+      form.append("file", file, file.name || "picture");
+      const upload = await kyroFetchWithTimeout("/api/nexus/upload", { method: "POST", credentials: "same-origin", body: form }, 40000);
+      const uploaded = await upload.json().catch(() => ({}));
+      if (!upload.ok || !uploaded.ok || !uploaded.fileId) { status.textContent = ""; showNotes([String(uploaded.error || kyroT("I could not receive that picture. Please try again."))]); return; }
+      const result = await kyroSilentTurn("Add picture " + uploaded.fileId + " to document " + id + (asLogo ? " as logo" : ""));
+      const saved = result?.render?.data;
+      if (!saved || String(saved.documentId || "") !== id) { status.textContent = ""; showNotes([String(result?.response || kyroT("I could not add that picture."))]); return; }
+      status.textContent = kyroT("Saved.") + (saved.savedVersion ? " (" + kyroT("version") + " " + saved.savedVersion + ")" : "");
+      await load(Array.isArray(saved.data?.pictureNotes) ? saved.data.pictureNotes : []);
+    } catch { status.textContent = ""; showNotes([kyroT("I could not add that picture. Please try again.")]); }
+  });
+  // the other file types: a new saved document with the same words and pictures, downloaded at once
+  const formats = [["docx", "Word"], ["pdf", "PDF"], ["html", "Web page"]].filter(([format]) => format !== String(info.format || "").toLowerCase());
+  const other = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center" });
+  other.append(kyroMake("span", { style: "color:#94a3b8;font-size:.95rem" }, kyroT("Get it as:")));
+  for (const [format, label] of formats) {
+    const button = kyroMake("button", { type: "button", "data-kyro-doc-export": format, style: KYRO_BUTTON_STYLE.replace("#06a77d", "#475569") }, kyroT(label));
+    button.addEventListener("click", async () => {
+      button.disabled = true; status.textContent = kyroT("Preparing...");
+      try {
+        const result = await kyroSilentTurn("Export document " + id + " as " + format);
+        const made = result?.render?.data;
+        if (!made || !made.documentId) throw new Error("not made");
+        await downloadNexusAuthoritativeDocument(String(made.documentId), status);
+        status.textContent = kyroT("Saved.");
+      } catch { status.textContent = kyroT("That did not work. Please try again."); }
+      button.disabled = false;
+    });
+    other.append(button);
+  }
+  box.append(strip, notes, row, other, files);
+  if (design === "email") box.append(kyroMake("p", { "data-kyro-email-note": "true", style: "margin:0;color:#94a3b8;font-size:.9rem" }, kyroT("To use it in an email: choose Web page, open the file, select everything, copy it, and paste it into your email. Some email programs hide pictures inside a message, so the Word and PDF files are there too. Kyro does not send it for you.")));
+  screen.append(box);
+  const first = Array.isArray(info.data?.pictureNotes) ? info.data.pictureNotes : [];
+  await load(first);
 }
 // A saved document from the list of them: its words and a box to change them in.
 async function kyroOpenDocumentById(id, title) {
@@ -60823,7 +60925,7 @@ async function downloadNexusAuthoritativeDocument(documentId, statusEl) {
     if (!response.ok || !body.contentBase64) throw new Error(body.error || `Download failed (${response.status})`);
     const bytes = Uint8Array.from(atob(body.contentBase64), char => char.charCodeAt(0));
     const blob = new Blob([bytes], { type: body.contentType || "application/octet-stream" });
-    const extension = { pdf: "pdf", docx: "docx", markdown: "md", md: "md" }[String(body.document?.documentType || "").toLowerCase()] || "txt";
+    const extension = { pdf: "pdf", docx: "docx", html: "html", markdown: "md", md: "md" }[String(body.document?.documentType || "").toLowerCase()] || "txt";
     const filename = `${(body.document?.title || "document").replace(/[^a-z0-9 _-]/gi, "").trim() || "document"}.${extension}`;
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -61684,7 +61786,13 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
       else if (kind && kind !== "map" && kind !== "media-player") renderNexusAuthoritativeData(drawn);
     }
   } catch { /* the result is still held by the server and its receipt; only the drawing is missing */ }
-  setVoiceResponse(message, true, {
+  // a picture that could not be had (no logo uploaded yet, nothing found) is SAID with the answer, so a flyer is never taken to have a picture it does not have; the card shows the same words and the Add a picture buttons
+  let pictureNotesSaid = "";
+  try {
+    const pictureNotes = result.render?.presentation?.kind === "document" ? result.render?.data?.data?.pictureNotes : null;
+    if (Array.isArray(pictureNotes)) pictureNotesSaid = pictureNotes.filter(note => !/^Pictures found on the web belong/.test(String(note))).join(" ").trim();
+  } catch { /* the card says it too */ }
+  setVoiceResponse(pictureNotesSaid ? `${message} ${pictureNotesSaid}`.trim() : message, true, {
     allowHandoff: false,
     command: text,
     source: "nexus-authoritative-behavior-spine",
