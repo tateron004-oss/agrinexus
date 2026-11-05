@@ -104,7 +104,7 @@ async function pictureFromUpload(spec, { env, context, deps }) {
 async function pictureFromSearch(spec, { deps }) {
   const finder = deps.findPicture || require("../../server/providers/picture-fetch.js").findPicture;
   const found = await finder(spec.query, deps.fetchOptions ? { fetchOptions: deps.fetchOptions, searchOptions: deps.searchOptions || {} } : {}).catch(() => null);
-  if (!found) return { note: `I could not find a picture of ${spec.query} that I can use. You can upload your own with the Add a picture button.` };
+  if (!found) return { note: `I could not find a good picture of ${spec.query}. You can add your own with Add a picture.` };
   return { picture: { role: spec.role || "", source: "search", title: found.title || spec.query, alt: found.title || `Picture of ${spec.query}`, caption: String(spec.caption || ""), credit: found.credit, mime: found.mime, ext: found.ext, width: found.width, height: found.height, buffer: found.buffer,
     ref: { query: spec.query, imageUrl: found.imageUrl, sourceUrl: found.sourceUrl, creator: found.creator, license: found.license } } };
 }

@@ -110,18 +110,18 @@ test("a redirect is followed at most three times and every step is checked again
 test("finding a picture: the first candidate that downloads, is a real picture both file types can hold and is big enough; its credit says where it came from", async () => {
   const good = sunrise(640, 360); const tiny = logo(60, 40);
   const candidates = [
-    { title: "Broken", imageUrl: "https://a.example-pictures.org/broken.jpg", sourceUrl: "https://a.example-pictures.org/wiki/Broken", sourceName: "Wikimedia Commons" },
-    { title: "Too small", imageUrl: "https://a.example-pictures.org/tiny.png", sourceUrl: "https://a.example-pictures.org/wiki/Tiny", sourceName: "Wikimedia Commons" },
-    { title: "Sunrise over fields", imageUrl: "https://a.example-pictures.org/sun.jpg", sourceUrl: "https://a.example-pictures.org/wiki/Sunrise", creator: "A. Photographer", license: "CC BY-SA 4.0", sourceName: "Wikimedia Commons" },
-    { title: "Never reached", imageUrl: "https://a.example-pictures.org/other.jpg", sourceName: "Openverse" }
+    { title: "Fresh bread broken file", imageUrl: "https://a.example-pictures.org/broken.jpg", sourceUrl: "https://a.example-pictures.org/wiki/Broken", sourceName: "Wikimedia Commons" },
+    { title: "Fresh bread too small", imageUrl: "https://a.example-pictures.org/tiny.png", sourceUrl: "https://a.example-pictures.org/wiki/Tiny", sourceName: "Wikimedia Commons" },
+    { title: "Fresh bread loaves", imageUrl: "https://a.example-pictures.org/sun.jpg", sourceUrl: "https://a.example-pictures.org/wiki/Sunrise", creator: "A. Photographer", license: "CC BY-SA 4.0", sourceName: "Wikimedia Commons" },
+    { title: "Fresh bread never reached", imageUrl: "https://a.example-pictures.org/other.jpg", sourceName: "Openverse" }
   ];
   const byPath = { "/broken.jpg": { chunks: [Buffer.from("not a picture")] }, "/tiny.png": { chunks: [tiny] }, "/sun.jpg": { chunks: [good] }, "/other.jpg": { chunks: [good] } };
   const seen = [];
   const found = await pictureFetch.findPicture("fresh bread", { candidates, fetchOptions: { lookup: publicLookup, requester: (options, cb) => fakeRequester(byPath[options.path], seen)(options, cb) } });
-  assert.equal(found.title, "Sunrise over fields"); assert.equal(found.mime, "image/jpeg"); assert.equal(found.credit, "Picture: Wikimedia Commons, A. Photographer, CC BY-SA 4.0");
+  assert.equal(found.title, "Fresh bread loaves"); assert.equal(found.mime, "image/jpeg"); assert.equal(found.credit, "Picture: Wikimedia Commons, A. Photographer, CC BY-SA 4.0");
   assert.equal(found.sourceUrl, "https://a.example-pictures.org/wiki/Sunrise");
   assert.deepEqual(seen.map(options => options.path), ["/broken.jpg", "/tiny.png", "/sun.jpg"], "it stops at the first good one");
-  assert.equal(await pictureFetch.findPicture("nothing", { candidates: [candidates[0]], fetchOptions: { lookup: publicLookup, requester: fakeRequester(byPath["/broken.jpg"]) } }), null);
+  assert.equal(await pictureFetch.findPicture("fresh bread", { candidates: [candidates[0]], fetchOptions: { lookup: publicLookup, requester: fakeRequester(byPath["/broken.jpg"]) } }), null);
   assert.equal(pictureFetch.cleanQuery("a picture of my fresh bread"), "fresh bread");
 });
 
@@ -190,7 +190,7 @@ test("a picture found on the web is kept with its credit, the card is told that 
   const finder = async query => (/nothing/.test(query) ? null : { ...sun, imageUrl: "https://a.example-pictures.org/sun.jpg", sourceUrl: "https://a.example-pictures.org/wiki/Sunrise", creator: "A. Photographer", license: "CC BY-SA 4.0" });
   const result = await pictures.resolvePictures({ specs: [{ source: "search", query: "fresh bread" }, { source: "search", query: "nothing at all" }], env: {}, context: ctx, deps: { findPicture: finder } });
   assert.equal(result.pictures.length, 1); assert.equal(result.pictures[0].credit, sun.credit); assert.equal(result.pictures[0].source, "search");
-  assert.match(result.notes.join(" | "), /could not find a picture of nothing at all that I can use\. You can upload your own with the Add a picture button/);
+  assert.match(result.notes.join(" | "), /could not find a good picture of nothing at all\. You can add your own with Add a picture\./);
   assert.match(result.notes.join(" | "), /Pictures found on the web belong to their owners/);
   const many = await pictures.resolvePictures({ specs: [1, 2, 3, 4].map(n => ({ source: "search", query: `bread ${n}` })), env: {}, context: ctx, deps: { findPicture: finder } });
   assert.equal(many.pictures.length, 3); assert.match(many.notes.join(" "), /at most three pictures/);
@@ -441,6 +441,15 @@ this.add = said => KYRO_ADD_PICTURE.test(said) && !KYRO_ADD_PICTURE_NOT.test(sai
   assert.match(app, /kyroSilentTurn\("Add picture " \+ uploaded\.fileId \+ " to document " \+ id \+ \(asLogo \? " as logo" : ""\)\)/);
   assert.match(app, /kyroSilentTurn\("Export document " \+ id \+ " as " \+ format\)/);
   assert.match(app, /accept: "image\/png,image\/jpeg"/);
+  // the previews (5 November 2026: a dark night photo, still arriving, on the near-black card looked like an empty box): a light framed box, "Loading the picture...", no lazy loading, and a plain sentence when it cannot be shown
+  const tools = app.slice(app.indexOf("async function kyroDocumentPictureTools"), app.indexOf("// A saved document from the list of them"));
+  assert.match(tools, /background:#e2e8f0;border:1px solid #94a3b8/);
+  assert.match(tools, /Loading the picture\.\.\./);
+  assert.match(tools, /Picture could not be shown here, it is in the file\./);
+  assert.match(tools, /picture\.addEventListener\("error", failed\)/);
+  assert.doesNotMatch(tools, /loading: "lazy"/, "the previews are not lazy: they sit right on the card");
+  assert.match(tools, /you get with Download\. The buttons under it make the same document, with its/);
+  assert.match(tools, /\{ docx: "Word file", pdf: "PDF", html: "web page file" \}/);
   assert.match(app, /Pictures found on the web belong to their owners\. Their credit is printed in the file\./);
   assert.match(app, /Kyro does not send it for you\./);
   assert.match(app, /\{ pdf: "pdf", docx: "docx", html: "html", markdown: "md", md: "md" \}/);
