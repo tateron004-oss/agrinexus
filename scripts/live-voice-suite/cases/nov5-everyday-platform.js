@@ -13,7 +13,7 @@ module.exports = Object.freeze([
     expect: { screen: ["text", "list"], text: "Kyro's own tips", notText: "I cannot find|not sure what you", said: "gift cards|a code" } },
   { id: "n5-library-computer-read-to-the-end", area: "nov5", say: "I just got out of prison. How do I use a library computer safely?", timeoutMs: 60000,
     expect: { screen: ["text", "list"], text: "library computer is shared", notText: "I cannot find|not sure what you", said: "sign out|do not let" } },
-  { id: "n5-hacked-email-read-to-the-end", area: "nov5", say: "My email got hacked, what do I do?", timeoutMs: 60000,
+  { id: "n5-hacked-email-read-to-the-end", area: "nov5", say: "My email got hacked, what do I do?", heard: "hacked", timeoutMs: 60000,
     expect: { screen: ["text", "list"], text: "First, clean your device", notText: "I cannot find|not sure what you" } },
   { id: "n5-two-step-then-walk-me-through-it", area: "nov5", say: "How do I turn on two-step sign-in?", timeoutMs: 60000,
     expect: { screen: ["text", "list"], text: "two-step|second proof", notText: "I cannot find|not sure what you" },

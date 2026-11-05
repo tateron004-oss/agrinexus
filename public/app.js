@@ -51880,7 +51880,11 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       return true;
     }
     // "Open documents", "open images", "create a business plan": answered on the page
-    if (kyroHandleSpokenOpen(trimmed, {})) { kyroPageSpeaksUntil = Date.now() + 30000; return true; }
+    // (the window in which the page says its own answer is opened BEFORE the sentence is tried: an answer given at once, like the next step of a walkthrough, was drawn but never read out, because the window opened only afterwards; found on 5 November 2026)
+    const previousPageSpeaksUntil = kyroPageSpeaksUntil;
+    kyroPageSpeaksUntil = Date.now() + 30000;
+    if (kyroHandleSpokenOpen(trimmed, {})) return true;
+    kyroPageSpeaksUntil = previousPageSpeaksUntil;
     // "Take me to Sacramento", "navigate to Nairobi", "start navigation to the airport", "where am I", "stop navigation": the phone's own GPS guidance (public/kyro-navigation.js), which starts from where the person is.
     // Said aloud these went to the voice model's map tool, which asks for a start and a destination ("I'm missing your starting point") because it cannot know where the person is (found by the owner's own testing).
     if (trimmed && typeof kyroSpokenNavigation === "function" && kyroSpokenNavigation(trimmed)) {
