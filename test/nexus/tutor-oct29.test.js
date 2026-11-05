@@ -338,7 +338,7 @@ test("'teach me more' and 'teach me again' carry on with the lesson (they are no
   assert.equal(sessions.get("t1", "u1"), null, "no lesson is started by 'teach me more'");
   await ask(instance, "Teach me fractions.");
   const more = await ask(instance, "Teach me more");
-  assert.deepEqual({ ...more.tutor }, { active: true, subject: "fractions", kind: "learn", turn: 2, step: 2 });
+  assert.deepEqual({ ...more.tutor, media: { ...more.tutor.media } }, { active: true, subject: "fractions", kind: "learn", turn: 2, step: 2, media: { picture: "fractions diagram" } }); // (from the second step a lesson with a subject gets its own diagram when the model asked for none)
   assert.doesNotMatch(more.response, /I am an AI tutor/);
   assert.equal(responded[responded.length - 1].conversationHistory.length, 2, "it carried on with the history so far");
   const again = await ask(instance, "teach me again");

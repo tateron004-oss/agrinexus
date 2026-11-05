@@ -9,7 +9,7 @@ const stop = { say: "Stop tutoring.", timeoutMs: 60000, expect: { screen: "text"
 module.exports = Object.freeze([
   // (the practice lesson is ended the way a person ends it, "stop": an open practice lesson takes the short replies of whatever is said next, so it must not be left open for the cases after it)
   { id: "tutor-letters-stay-practice-lesson", area: "tutor", say: "Teach me letters.", timeoutMs: 90000, expect: { screen: ["text", "list"], text: "letter|herufi", notText: "AI tutor" },
-    then: [{ say: "Stop.", timeoutMs: 45000, expect: { said: "have stopped|tumesimama" } }] },
+    then: [{ say: "Stop.", timeoutMs: 45000, expect: { said: "(?:have|[’'‘]ve) stopped|tumesimama" } }] },
   { id: "tutor-learn-then-answer-then-stop", area: "tutor", say: "Teach me fractions.", timeoutMs: 120000, expect: { screen: "text", text: "AI tutor[\\s\\S]*fraction|fraction[\\s\\S]*AI tutor", notText: "could not do that|I can.t help" },
     then: [{ say: "I know that a half is one of two equal parts.", timeoutMs: 120000, expect: { screen: "text", text: "\\w{4,}", notText: "AI tutor|could not reach" } },
       { say: "A quarter is one of four equal parts.", timeoutMs: 120000, expect: { screen: "text", text: "\\w{4,}", notText: "AI tutor|could not reach" } }, stop] },
@@ -21,8 +21,9 @@ module.exports = Object.freeze([
   // (4 November 2026: the lesson shows its own pictures and videos. The AI model ends a step with a private line naming what to look up, and the page fetches it with the ordinary picture and video search and puts it INSIDE the lesson card,
   //  above the answer box. The learner is never told it is a source. The model decides whether a step needs a picture, so these two are best-effort: the first turn of "Teach me fractions" is steered to a diagram, a video is allowed
   //  from the second step on and at most every third step, and the model may well choose not to ask for one. A failure here means look at the screen with --shots before calling it a bug.)
-  { id: "tutor-lesson-shows-a-picture-in-the-card", area: "tutor", say: "Teach me fractions.", timeoutMs: 150000, expect: { screen: "text", text: "AI tutor[\\s\\S]*fraction|fraction[\\s\\S]*AI tutor", images: 1, notText: "could not do that|I can.t help|SHOW:" },
-    then: [stop] },
+  { id: "tutor-lesson-shows-a-picture-in-the-card", area: "tutor", say: "Teach me fractions.", timeoutMs: 150000, expect: { screen: "text", text: "AI tutor[\\s\\S]*fraction|fraction[\\s\\S]*AI tutor", notText: "could not do that|I can.t help|SHOW:" },
+    // (the pictures are fetched after the card is drawn, so they are waited for, not looked for at the moment the card appears. The first step is often only a question about what they know, so the picture is looked for from the second step: a lesson with a subject gets its own diagram from the second step on)
+    then: [{ say: "I am in third grade and I know a half is one of two equal parts.", timeoutMs: 150000, expect: { screen: "text", text: "\\w{4,}", notText: "could not do that|SHOW:" } }, { expect: { screen: "text", images: 1, notText: "SHOW:" }, timeoutMs: 75000 }, stop] },
   { id: "tutor-later-step-may-show-a-video-best-effort", area: "tutor", say: "Teach me fractions.", timeoutMs: 150000, expect: { screen: "text", text: "AI tutor", notText: "could not do that|I can.t help|SHOW:" },
     then: [{ say: "I know that a half is one of two equal parts.", timeoutMs: 150000, expect: { screen: "text", text: "\\w{4,}", frames: 1, notText: "AI tutor|could not reach|SHOW:" } }, stop] },
   { id: "tutor-homework-then-stop", area: "tutor", say: "Help me with my science homework.", timeoutMs: 120000, expect: { screen: "text", text: "AI tutor", notText: "could not do that|I can.t help" }, then: [stop] },

@@ -104,7 +104,8 @@ test("a person who asks for a video on the first turn gets it; a quiz never gets
 test("the tutor rules ask for the SHOW line, in the exact form the parser reads, and say it is never mentioned to the learner", () => {
   const goal = tutor.tutorGoal({ session: { kind: "learn", subject: "fractions", lang: "en" }, said: "Teach me fractions.", first: true });
   assert.match(goal, /SHOW: picture=<2 to 6 words to search for a simple labelled diagram or photo that helps THIS step, or none>; video=<2 to 6 words to search for a short teaching video, or none>/);
-  assert.match(goal, /on most turns write SHOW: picture=none; video=none/);
+  assert.match(goal, /whenever this step is about something that can be drawn or photographed[^.]*add a picture/);
+  assert.match(goal, /Write SHOW: picture=none; video=none only when the step is just a question/);
   assert.match(goal, /Never mention this line to the learner/);
   const parsed = tutor.splitShowLine("Step.\nSHOW: picture=a b c; video=d e f");
   assert.deepEqual({ ...parsed }, { text: "Step.", picture: "a b c", video: "d e f" });
@@ -157,4 +158,18 @@ test("the lesson that comes back after a picture or video is closed uses the med
   assert.match(app, /if \(shown\) kyroAddTutorBox\(kyroTutorLast\.tutor, kyroTutorLast\.items \|\| null\);/);
   assert.match(app, /demo\(sw \? "Onyesha picha" : "Show a picture", `Show me pictures of \$\{subject\}`\);\s+demo\(sw \? "Onyesha video" : "Show a video", `Show me videos about \$\{subject\}`\);/);
   assert.match(app, /const tutorDemo = kyroTutorDemoCommand\(said\);/);
+});
+
+test("a lesson with a subject is never three steps without a picture: the subject's own diagram is added from the second step when the model asked for none, and not in a quiz or for homework", () => {
+  const session = { kind: "learn", subject: "fractions", lang: "en" };
+  const none = { picture: "none", video: "none" };
+  assert.equal(tutor.chooseMedia(none, session, { said: "I am in third grade", turn: 1 }), null, "the first step is the model's own choice");
+  assert.deepEqual({ ...tutor.chooseMedia(none, session, { said: "ok", turn: 2 }) }, { picture: "fractions diagram" });
+  assert.equal(tutor.chooseMedia(none, session, { said: "ok", turn: 3 }), null);
+  assert.equal(tutor.chooseMedia(none, session, { said: "ok", turn: 4 }), null);
+  assert.deepEqual({ ...tutor.chooseMedia(none, session, { said: "ok", turn: 5 }) }, { picture: "fractions examples" }, "again after three steps, a different picture");
+  assert.deepEqual({ ...tutor.chooseMedia({ picture: "pie fraction parts", video: "none" }, { kind: "learn", subject: "fractions" }, { said: "ok", turn: 2 }) }, { picture: "pie fraction parts" }, "what the model asked for wins");
+  assert.equal(tutor.chooseMedia(none, { kind: "quiz", subject: "fractions" }, { said: "ok", turn: 2 }), null);
+  assert.equal(tutor.chooseMedia(none, { kind: "homework", subject: "fractions" }, { said: "ok", turn: 2 }), null);
+  assert.equal(tutor.chooseMedia(none, { kind: "tutor", subject: "", lang: "en" }, { said: "ok", turn: 2 }), null, "no subject yet, nothing to draw");
 });

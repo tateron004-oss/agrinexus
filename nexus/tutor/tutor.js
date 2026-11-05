@@ -149,7 +149,7 @@ const RULES = [
   "Never ask for their full name, address, school, phone number or any private detail.",
   "Keep each reply under about 90 words.",
   // The picture and video that go with a step (see splitShowLine): the model only SUGGESTS what to search for; the page fetches them with its ordinary picture and video search, and the learner is never told they are a source.
-  "AFTER your reply, on its own last line, you may add exactly: SHOW: picture=<2 to 6 words to search for a simple labelled diagram or photo that helps THIS step, or none>; video=<2 to 6 words to search for a short teaching video, or none>. Add it only when a picture or video genuinely helps this step; on most turns write SHOW: picture=none; video=none. Never mention this line to the learner."
+  "AFTER your reply, on its own last line, you may add exactly: SHOW: picture=<2 to 6 words to search for a simple labelled diagram or photo that helps THIS step, or none>; video=<2 to 6 words to search for a short teaching video, or none>. Learners understand better when they can SEE it: whenever this step is about something that can be drawn or photographed (a shape, a part, a place, a process, a tool, an animal, a map, a worked example), add a picture. Add a video when watching it done or happening would teach more than a picture (an experiment, a process, a skill, a pronunciation). Write SHOW: picture=none; video=none only when the step is just a question to check what they know or has nothing to look at. Never mention this line to the learner."
 ].join(" ");
 
 // ---- the pictures and videos that go with a lesson step ----
@@ -185,7 +185,10 @@ function sanitiseSearch(raw) {
 // What goes with THIS turn: { picture?, video? } or null. `turn` is the number of the step just taught (1 for the first). Updates the session's own counters.
 function chooseMedia(shown, session, { said = "", turn = 1 } = {}) {
   if (!shown || !session || session.kind === "quiz") return null;
-  const picture = sanitiseSearch(shown.picture);
+  let picture = sanitiseSearch(shown.picture);
+  // A lesson with a subject should not go three steps without a picture just because the model did not ask for one (the first step is the model's own choice: it is often only a question about what they know)
+  const sinceLastPicture = Number.isFinite(session.pictureTurn) ? turn - session.pictureTurn : Infinity;
+  if (!picture && session.kind !== "homework" && session.subject && turn >= 2 && sinceLastPicture >= 3) picture = sanitiseSearch(`${session.subject} ${/ diagram$/i.test(String(session.lastPicture || "")) ? "examples" : "diagram"}`);
   let video = sanitiseSearch(shown.video);
   const askedForVideo = /\b(?:video|videos|clip|clips|watch|film)\b/i.test(clean(said));
   const lastVideoTurn = Number.isFinite(session.videoTurn) ? session.videoTurn : -VIDEO_EVERY_TURNS;
@@ -193,7 +196,7 @@ function chooseMedia(shown, session, { said = "", turn = 1 } = {}) {
   // the same picture twice in a row is not shown again
   const samePicture = picture && picture.toLowerCase() === String(session.lastPicture || "").toLowerCase();
   const media = {};
-  if (picture && !samePicture) { media.picture = picture; session.lastPicture = picture; }
+  if (picture && !samePicture) { media.picture = picture; session.lastPicture = picture; session.pictureTurn = turn; }
   if (video) { media.video = video; session.videoTurn = turn; }
   return Object.keys(media).length ? media : null;
 }
