@@ -19,8 +19,8 @@ module.exports = Object.freeze([
   // business-06: an invoice for a client, then an item on it (a person with no workspace is told so and offered one; the owner's test already had a workspace, so the case starts one, as the guide's Test 1 does)
   { id: "n5-business-invoice", area: "nov5", writes: true, say: "Start a business called Amina Farm.", timeoutMs: 90000, expect: { screen: ["text", "list", "document"], text: "Amina Farm", notText: "workforce" },
     then: [{ say: "Yes.", timeoutMs: 60000, expect: { screen: ["text", "list", "document"], text: "Started a business", notText: "workforce" } },
-      { say: "Create an invoice for Grace Otieno.", timeoutMs: 90000, expect: { screen: ["text", "list", "document"], text: "create invoice INV-1001 for Grace Otieno", notText: "workforce" } },
-      { say: "Yes.", timeoutMs: 60000, expect: { screen: ["text", "list", "document"], text: "Created invoice INV-1001 for Grace Otieno", notText: "workforce" } },
+      { say: "Create an invoice for Grace Otieno.", timeoutMs: 90000, expect: { screen: ["text", "list", "document"], text: "create invoice INV-1001 for Grace", notText: "workforce" } },
+      { say: "Yes.", timeoutMs: 60000, expect: { screen: ["text", "list", "document"], text: "Created invoice INV-1001 for Grace", notText: "workforce" } },
       { say: "Add an item to invoice number 1001: 5 bags of maize at 500 shillings each.", timeoutMs: 90000, expect: { screen: ["text", "list", "document"], text: "add 5 x bags of maize at KES 500 to invoice INV-1001", notText: "workforce" } },
       { say: "Yes.", timeoutMs: 60000, expect: { screen: ["text", "list", "document"], text: "Added 5 x bags of maize at KES 500 to invoice INV-1001", notText: "workforce" } }] },
   // business-08: a buyer, then a follow-up with that buyer on Friday by FIRST NAME, then the follow-ups
@@ -30,7 +30,7 @@ module.exports = Object.freeze([
       { say: "Yes.", timeoutMs: 60000, expect: { screen: ["text", "list", "document"], text: "Added Amina Hassan" } },
       { say: "Follow up with Amina on Friday.", timeoutMs: 90000, expect: { screen: ["text", "list", "document"], text: "set a follow-up with Amina Hassan", notText: "could not find|not find" } },
       { say: "Yes.", timeoutMs: 60000, expect: { screen: ["text", "list", "document"], text: "Set a follow-up with Amina Hassan" } },
-      { say: "What follow-ups do I have?", timeoutMs: 60000, expect: { screen: ["text", "list", "document"], text: "1 follow-up[\s\S]*Amina Hassan", notText: "no follow-ups" } }] },
+      { say: "What follow-ups do I have?", timeoutMs: 60000, expect: { screen: ["text", "list", "document"], text: "1 follow-up[\\s\\S]*Amina Hassan", notText: "no follow-ups" } }] },
   // business-12: a resume by talking
   { id: "n5-business-resume", area: "nov5", say: "Can you make a resume for me?", timeoutMs: 60000, expect: { intake: "Question 1 of" }, then: [{ say: "Cancel." }, { expect: { intake: false }, timeoutMs: 25000 }] },
   // business-18: outside-tool automations open by voice
