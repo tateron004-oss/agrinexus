@@ -68,6 +68,9 @@ test("the invitation is centred, large and framed with a double page border; the
   assert.match(inviteXml, /<w:pgBorders[^>]*>[\s\S]*w:val="double"/);
   assert.match(inviteXml, /<w:jc w:val="center"\/>/);
   assert.match(inviteXml, /w:ascii="Georgia"/);
+  // its margins are wider (room for the frame): a box as wide as the other layouts stuck out past the frame when the file was opened in Word (5 Nov 2026), so no table is wider than the text area (12240 - 2 x 1296)
+  const widths = [...inviteXml.matchAll(/<w:tblW[^>]*w:w="(\d+)"/g)].map(match => Number(match[1]));
+  assert.ok(widths.length > 0 && widths.every(width => width <= 12240 - 2 * 1296), `table widths ${widths.join(",")}`);
   const news = handoutTemplate({ kind: "newsletter", subject: "Grace Church" });
   const newsXml = (await parts(await design.renderDesignDocx("newsletter", news.title, news.content))).xml;
   assert.match(newsXml, /<w:pBdr><w:bottom w:val="single"/, "a coloured rule under each section heading");
@@ -284,4 +287,12 @@ test("a newsletter with news given is worded the same way and designed", async (
   assert.match(input(plan).content, /News\n- the roof repair\n- the youth camp/);
   const text = squash((await pdfText(await design.renderDesignPdf("newsletter", input(plan).title, input(plan).content))).text);
   assert.ok(text.includes("the roof repair") && text.includes("the youth camp"));
+});
+
+test("the 'What' line says what is happening, not the kind of paper: 'poster for the community clean-up' becomes 'community clean-up' (found live on 5 November 2026)", () => {
+  const said = "Make me a poster for the community clean-up on Saturday at nine at the park";
+  assert.equal(wording.validateWording({ headline: "Community Clean-up", what: "poster for the community clean-up" }, said).what, "community clean-up");
+  assert.equal(wording.validateWording({ headline: "Community Clean-up", what: "a poster" }, said).what, "", "only the kind word: nothing to say");
+  assert.equal(wording.validateWording({ headline: "Bake Sale", what: "bake sale" }, "Make me a flyer for my bake sale on Saturday").what, "bake sale");
+  assert.equal(wording.validateWording({ headline: "Dinner", what: "invitation only dinner" }, "Make an invitation only dinner on Friday").what, "invitation only dinner", "the word inside a real description is left alone");
 });

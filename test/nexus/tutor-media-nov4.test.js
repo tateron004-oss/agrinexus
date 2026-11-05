@@ -165,7 +165,7 @@ test("a lesson with a subject is never three steps without a picture: the subjec
   const none = { picture: "none", video: "none" };
   assert.equal(tutor.chooseMedia(none, session, { said: "I am in third grade", turn: 1 }), null, "the first step is the model's own choice");
   assert.deepEqual({ ...tutor.chooseMedia(none, session, { said: "ok", turn: 2 }) }, { picture: "fractions diagram" });
-  assert.equal(tutor.chooseMedia(none, session, { said: "ok", turn: 3 }), null);
+  assert.deepEqual({ ...tutor.chooseMedia(none, session, { said: "ok", turn: 3 }) }, { video: "fractions explained" }, "a video on the third step, when the model asked for none");
   assert.equal(tutor.chooseMedia(none, session, { said: "ok", turn: 4 }), null);
   assert.deepEqual({ ...tutor.chooseMedia(none, session, { said: "ok", turn: 5 }) }, { picture: "fractions examples" }, "again after three steps, a different picture");
   assert.deepEqual({ ...tutor.chooseMedia({ picture: "pie fraction parts", video: "none" }, { kind: "learn", subject: "fractions" }, { said: "ok", turn: 2 }) }, { picture: "pie fraction parts" }, "what the model asked for wins");

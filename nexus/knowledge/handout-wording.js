@@ -62,6 +62,12 @@ function checked(value, said, max) {
   return text;
 }
 
+// "What: poster for the community clean-up" (found live on 5 November 2026): the line says what is happening, not what kind of paper this is, so a leading "poster for the" is taken off ("community clean-up"). A line that is only the kind word is dropped.
+function withoutKindWord(value) {
+  const text = String(value || "").trim();
+  return text.replace(/^(?:an?\s+|the\s+|my\s+|our\s+)?(?:flyer|poster|newsletter|brochure|invitation|handout|email)s?(?:\s+(?:for|about|to|of|announcing)\b\s*(?:an?\s+|the\s+|my\s+|our\s+)?|\s*$)/i, "").trim();
+}
+
 function validateWording(reply, text) {
   let parsed = reply;
   if (typeof reply === "string") {
@@ -71,7 +77,7 @@ function validateWording(reply, text) {
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
   const facts = { headline: checked(parsed.headline, text, MAX.headline), subhead: checked(parsed.subhead, text, MAX.subhead), when: checked(parsed.when, text, MAX.when), where: checked(parsed.where, text, MAX.where),
-    what: checked(parsed.what, text, MAX.what), cost: checked(parsed.cost, text, MAX.cost), contact: checked(parsed.contact, text, MAX.contact),
+    what: withoutKindWord(checked(parsed.what, text, MAX.what)), cost: checked(parsed.cost, text, MAX.cost), contact: checked(parsed.contact, text, MAX.contact),
     points: (Array.isArray(parsed.points) ? parsed.points : []).slice(0, 5).map(point => checked(point, text, MAX.point)).filter(Boolean) };
   const useful = facts.headline || facts.when || facts.where || facts.what || facts.cost || facts.contact || facts.points.length;
   return useful ? facts : null;
