@@ -65,6 +65,25 @@ test("TYPED: the same words go to the business tools (read, and change with its 
   assert.equal(add.steps[0].toolId, "business.manage"); assert.equal(add.application, "business");
 });
 
+// Found in the owner's test report of 4 November 2026 (business-08): "Add a buyer called Amina Hassan", "Follow up with Amina on Friday" -> "could not find person for followup", and "What follow-ups do I have" only knew the older buyer book.
+test("SPOKEN: a buyer added to the workspace can be followed up by first name, and the follow-ups are listed from the workspace (the buyer book's 'none open' is not the end)", async () => {
+  const workspace = makeWorkspace(); await workspace.create();
+  const p = planner({ count: async () => 1, read: workspace.read });
+  assert.match((await ask(p, "Add a buyer called Amina Hassan", true)).response, /I can add Amina Hassan as a (?:buyer|customer) to "Hope Garden"\. Should I go ahead\?/);
+  assert.match((await ask(p, "yes", true)).response, /Added Amina Hassan/);
+  const none = await ask(p, "What follow-ups do I have", true);
+  assert.match(none.response, /No follow-ups are set in "Hope Garden"/); assert.doesNotMatch(none.response, /You have no follow-ups open/);
+  const prompt = await ask(p, "Follow up with Amina on Friday", true);
+  assert.match(prompt.response, /I can set a follow-up with Amina Hassan for .* in "Hope Garden"\. Should I go ahead\?/);
+  assert.doesNotMatch(prompt.response, /could not find/);
+  assert.match((await ask(p, "yes", true)).response, /Set a follow-up with Amina Hassan for/);
+  const listed = await ask(p, "What follow-ups do I have", true);
+  assert.match(listed.response, /1 follow-up in "Hope Garden": Amina Hassan, /);
+  // a person with no workspace still gets the buyer book's own answer
+  const book = planner({ count: async () => 0, read: async () => { throw new Error("must not be read"); } });
+  assert.match((await ask(book, "What follow-ups do I have", true)).response, /You have no follow-ups open\./);
+});
+
 test("a person with no workspace, or whose workspace cannot be counted, goes to the farm and shop books exactly as before", async () => {
   const none = planner({ count: async () => 0, read: async () => { throw new Error("must not be read"); } });
   assert.match((await ask(none, "Who owes me money?", true)).response, /Nobody owes you anything that I know of/);

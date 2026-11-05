@@ -26,6 +26,8 @@ function classifyCrm(command = "") {
   // "Remind me to follow up with Grace tomorrow" is a reminder (the reminder tools set it), not a follow-up date on Grace's row.
   if (/^\s*(?:please\s+)?(?:hey\s+)?(?:kyro\s+)?remind\b/i.test(text)) return null;
   if (/\b(?:set|add|schedule|put|make)\b[^.?!]{0,20}\bfollow[- ]?ups?\b/i.test(text) || /\bfollow[- ]?up\s+with\s+\S.*\b(?:on|by|next|this|tomorrow|in)\b/i.test(text)) return "setFollowUp";
+  // "What follow-ups do I have", "show my follow-ups", "who should I follow up with": the follow-up days set on the workspace's people (the older buyer book answers first and says so when it has none: see the planner)
+  if (/^\s*(?:please\s+)?(?:(?:what|which)\s+follow[- ]?ups?\s+(?:do\s+i|have\s+i|are)\b|(?:show|list|read|check)\s+(?:me\s+)?(?:my\s+|all\s+(?:my\s+)?)?follow[- ]?ups?\b|who\s+(?:should|do)\s+i\s+(?:follow\s+up|check\s+in|call\s+back)\b)/i.test(text)) return "listFollowUps";
   if (WRITE_WORDS.test(text)) return null;
   const asks = new RegExp(`\\b(?:${READ_WORDS})\\b`, "i").test(text);
   if (!asks) return null;
@@ -86,6 +88,11 @@ function readCrm(intent, { command, editable, workspace, today, formatMoney }) {
     const names = rows.map(row => `${row.name}${row.followUpDate && /^\d{4}-\d{2}-\d{2}$/.test(row.followUpDate) ? ` (follow up ${describeDay(row.followUpDate, today)})` : ""}`);
     return `${name} has ${plural(rows.length, label)}: ${say(names)}.`;
   }
+  if (intent === "listFollowUps") {
+    const dated = (editable.leads || []).filter(row => /^\d{4}-\d{2}-\d{2}$/.test(String(row.followUpDate || ""))).sort((x, y) => String(x.followUpDate).localeCompare(String(y.followUpDate)));
+    if (!dated.length) return `No follow-ups are set in ${name}. Say, for example, follow up with Grace on Friday.`;
+    return `${plural(dated.length, "follow-up")} in ${name}: ${sayItems(dated.map(row => `${row.name}, ${row.followUpDate < today ? "overdue, " : ""}${describeDay(row.followUpDate, today)}`), 8)}.`;
+  }
   if (intent === "listInvoices") {
     const invoices = editable.invoices || [];
     const items = editable.invoiceItems || [];
@@ -144,12 +151,32 @@ function findInvoice(invoices, command) {
   return { none: true };
 }
 
+// Who does the person mean? The whole saved name ("Amina Hassan") wins; otherwise a first or last name said on its own ("follow up with Amina on Friday") when it is exactly one person's.
+// Found on 4 November 2026: a customer was saved as "Amina Hassan", then "follow up with Amina on Friday" was answered "I could not find that person" because only the whole saved name was matched.
+// -> { lead, matched } (matched is the words in the command that named them) | { ambiguous: [lead, ...] } | null
+function matchLead(leads, command) {
+  const text = String(command || "");
+  const lower = text.toLowerCase();
+  const whole = leads.filter(lead => lead.name && lower.includes(String(lead.name).toLowerCase()));
+  if (whole.length) { whole.sort((a, b) => String(b.name).length - String(a.name).length); return { lead: whole[0], matched: whole[0].name }; }
+  const words = new Set((lower.match(/[\p{L}'’-]{3,}/gu) || []).filter(word => !NAME_STOP_WORDS.has(word)));
+  const byWord = new Map();
+  for (const lead of leads) {
+    for (const part of String(lead.name || "").toLowerCase().split(/\s+/).filter(part => part.length >= 3 && !NAME_STOP_WORDS.has(part))) {
+      if (words.has(part)) byWord.set(part, [...(byWord.get(part) || []), lead]);
+    }
+  }
+  const named = [...byWord.entries()];
+  if (!named.length) return null;
+  const distinct = [...new Set(named.flatMap(([, list]) => list))];
+  if (distinct.length === 1) { const word = named.sort((a, b) => b[0].length - a[0].length)[0][0]; return { lead: distinct[0], matched: (text.match(new RegExp(`[\\p{L}'’-]*${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\p{L}'’-]*`, "iu")) || [word])[0] }; }
+  return { ambiguous: distinct };
+}
+// words that are never a person's name even when a saved name happens to contain them ("Friday Market", "Mama Grace's shop")
+const NAME_STOP_WORDS = new Set(["follow", "with", "the", "and", "for", "set", "add", "schedule", "put", "make", "friday", "monday", "tuesday", "wednesday", "thursday", "saturday", "sunday", "tomorrow", "next", "this", "week", "month", "mama", "baba", "mr", "mrs", "ms", "dr"]);
 function findLead(leads, command) {
-  const lower = String(command || "").toLowerCase();
-  const hits = leads.filter(lead => lead.name && lower.includes(String(lead.name).toLowerCase()));
-  if (!hits.length) return null;
-  hits.sort((a, b) => String(b.name).length - String(a.name).length);
-  return hits[0];
+  const found = matchLead(leads, command);
+  return found && found.lead ? found.lead : null;
 }
 
 // The change, ready to apply: { response } to ask or refuse, or { prompt, apply, done } where apply(editable) returns the new editable and `done` is what is said afterwards.
@@ -173,9 +200,11 @@ function planCrmWrite(intent, { command, editable, workspace, today, formatMoney
   }
   if (intent === "setFollowUp") {
     const leads = editable.leads || [];
-    const lead = findLead(leads, command);
+    const match = matchLead(leads, command);
+    if (match && match.ambiguous) return { response: `Which one: ${say(match.ambiguous.map(item => item.name), 6)}? Say the whole name.`, missingInformation: ["name"] };
+    const lead = match && match.lead;
     if (!lead) return { response: leads.length ? `I could not find that person in ${name}. Your list has ${say(leads.map(item => item.name), 6)}. Say the name exactly as it is saved.` : `${name} has no customers or leads yet. Add one first, for example: add a customer named Grace Otieno.`, missingInformation: ["name"] };
-    const withoutName = String(command || "").replace(new RegExp(lead.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), " ");
+    const withoutName = String(command || "").replace(new RegExp(String(match.matched || lead.name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), " ");
     const found = extractDay(withoutName, today);
     if (!found) return { response: `Which day should I set the follow-up with ${lead.name} for? For example: tomorrow, Friday, or 15 October.`, missingInformation: ["date"] };
     if (found.day < today) return { response: `That day has already passed. Which day should I set the follow-up with ${lead.name} for?`, missingInformation: ["date"] };
@@ -189,7 +218,7 @@ function planCrmWrite(intent, { command, editable, workspace, today, formatMoney
   return null;
 }
 
-const CRM_READ_INTENTS = Object.freeze(["listLeads", "listInvoices", "listGrants", "listAppointments", "listTasks"]);
+const CRM_READ_INTENTS = Object.freeze(["listLeads", "listFollowUps", "listInvoices", "listGrants", "listAppointments", "listTasks"]);
 const CRM_WRITE_INTENTS = Object.freeze(["markInvoicePaid", "setFollowUp"]);
 
-module.exports = Object.freeze({ classifyCrm, readCrm, planCrmWrite, findInvoice, findLead, leadTypeWanted, invoiceTotals, CRM_READ_INTENTS, CRM_WRITE_INTENTS });
+module.exports = Object.freeze({ classifyCrm, readCrm, planCrmWrite, findInvoice, findLead, matchLead, leadTypeWanted, invoiceTotals, CRM_READ_INTENTS, CRM_WRITE_INTENTS });
