@@ -128,16 +128,20 @@ class OpenEndedPlanner {
     } else return null;
     if (!session) return null;
     const profile = createInteractionProfile({ locale: command.locale, userPreferences: context?.userPreferences || {}, channel: command.channel });
-    const answer = await this.model.respond({ goal: tutorMode.tutorGoal({ session, said, first }), locale: command.locale, tenantId, maxOutputTokens: 450, interactionProfile: profile,
+    const answer = await this.model.respond({ goal: tutorMode.tutorGoal({ session, said, first }), locale: command.locale, tenantId, maxOutputTokens: 520, interactionProfile: profile,
       conversationHistory: session.turns.map(turn => ({ role: turn.role, content: turn.content })), memories: [], capabilities: [] }).catch(() => null);
-    if (typeof answer !== "string" || !answer.trim()) {
+    // The model ends a step with "SHOW: picture=...; video=..." (what to search for to go with it): that line is taken off here, so it is never recorded, shown or spoken, and only the cleaned, capped searches go on (see tutor.js).
+    const shown = typeof answer === "string" ? tutorMode.splitShowLine(answer) : null;
+    const reply = shown ? shown.text : "";
+    if (!reply) {
       // the first turn failed: there is no session to keep, and the usual route may still answer; a later turn keeps the session and asks to be said again
       if (first) { this.tutorSessions.end(tenantId, userId); return null; }
-      return plan(tutorMode.failedLine(session.lang), { tutor: Object.freeze({ active: true, subject: session.subject, kind: session.kind, turn: session.count }) });
+      return plan(tutorMode.failedLine(session.lang), { tutor: Object.freeze({ active: true, subject: session.subject, kind: session.kind, turn: session.count, step: session.count }) });
     }
-    this.tutorSessions.record(session, said, answer.trim());
+    this.tutorSessions.record(session, said, reply);
+    const media = tutorMode.chooseMedia(shown, session, { said, turn: session.count });
     const opening = first && ["en", "sw"].includes(session.lang) ? `${tutorMode.introLine(session.lang)}\n\n` : "";
-    return plan(`${opening}${answer.trim()}`, { modelAnswered: true, tutor: Object.freeze({ active: true, subject: session.subject, kind: session.kind, turn: session.count }) });
+    return plan(`${opening}${reply}`, { modelAnswered: true, tutor: Object.freeze({ active: true, subject: session.subject, kind: session.kind, turn: session.count, step: session.count, ...(media ? { media: Object.freeze(media) } : {}) }) });
   }
 
   // A planned document whose body is only an instruction to write it (see echoesInstruction) is written out by one more model call; if that fails, the plan is kept as it was.

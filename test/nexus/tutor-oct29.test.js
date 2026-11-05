@@ -85,7 +85,7 @@ test("a first request opens a session with the AI-tutor line and the teaching ru
   assert.equal(plan.application, "conversation");
   assert.deepEqual([...plan.steps], []);
   assert.equal(plan.modelAnswered, true);
-  assert.deepEqual({ ...plan.tutor }, { active: true, subject: "fractions", kind: "learn", turn: 1 });
+  assert.deepEqual({ ...plan.tutor }, { active: true, subject: "fractions", kind: "learn", turn: 1, step: 1 });
   assert.match(plan.response, /^I am an AI tutor, so I can make mistakes\. Check anything important in your book or with a teacher\./);
   assert.match(plan.response, /Let us start\. What do you already know about fractions\?$/);
   const goal = responded[0].goal;
@@ -126,7 +126,7 @@ test("a request of its own passes through and the session stays open; a new subj
   await assert.rejects(ask(instance, "Teach me letters"), /MODEL_REACHED/);
   assert.ok(sessions.get("t1", "u1"));
   const spanish = await ask(instance, "I want to learn Spanish");
-  assert.deepEqual({ ...spanish.tutor }, { active: true, subject: "Spanish", kind: "learn", turn: 1 });
+  assert.deepEqual({ ...spanish.tutor }, { active: true, subject: "Spanish", kind: "learn", turn: 1, step: 1 });
   assert.match(spanish.response, /^I am an AI tutor/);
   assert.equal(responded[responded.length - 1].conversationHistory.length, 0, "a new subject has a fresh history");
   const stop = await ask(instance, "Stop tutoring.");
@@ -177,7 +177,7 @@ test("if the AI cannot answer, a first turn leaves no session and falls through;
   await ask(later, "Teach me fractions.");
   const failed = await ask(later, "I know a little");
   assert.equal(failed.response, "I could not reach my teaching help just now. Please say that again.");
-  assert.deepEqual({ ...failed.tutor }, { active: true, subject: "fractions", kind: "learn", turn: 1 });
+  assert.deepEqual({ ...failed.tutor }, { active: true, subject: "fractions", kind: "learn", turn: 1, step: 1 });
   assert.ok(sessions.get("t1", "u1"));
   const retried = await ask(later, "I know a little");
   assert.equal(retried.tutor.turn, 2);
@@ -241,9 +241,9 @@ test("the page sends a spoken tutoring sentence the typed way, ends the session 
   assert.match(app, /if \(resumeTutor\) setTimeout\(\(\) => \{ kyroResumeTutor\(\); \}, 400\);\s+return true;/);
   assert.match(app, /const tutor = result\.plan && result\.plan\.tutor \? result\.plan\.tutor : null;\s+if \(tutor\) \{\s+kyroTutorUntil = tutor\.active === true \? Date\.now\(\) \+ 45 \* 60 \* 1000 : 0;\s+kyroTutorSubject = tutor\.active === true \? String\(tutor\.subject \|\| ""\) : "";/);
   assert.match(app, /\} else if \(tutor && result\.state === "completed" && String\(message \|\| ""\)\.trim\(\)\.length >= 12\) \{[^}]*answer = \{ response: message, requiresConfirmation: tutor\.active === true, tutor: \{ active: tutor\.active === true, subject: String\(tutor\.subject \|\| ""\) \} \};/);
-  assert.match(app, /if \(shown && tutor && tutor\.active === true\) \{\s+kyroTutorLast = \{ response: String\(message \|\| ""\), tutor: \{ active: true, subject: String\(tutor\.subject \|\| ""\) \} \};\s+kyroAddTutorBox\(tutor\);/);
+  assert.match(app, /if \(shown && tutor && tutor\.active === true\) \{\s+kyroTutorLast = \{ response: String\(message \|\| ""\), tutor: \{ active: true, subject: String\(tutor\.subject \|\| ""\), step: Number\(tutor\.step\) \|\| 0, media: tutor\.media \|\| null \}, items: null \};\s+kyroAddTutorBox\(tutor\);/);
   assert.match(app, /&& !\(typeof kyroGuidedReply === "function" && kyroGuidedReply\(command\)\) && !kyroTutorOpen\(\)\) return false;/);
-  assert.match(app, /function kyroAddTutorBox\(tutor = null\) \{[\s\S]*?"Type your answer here, or say it"[\s\S]*?"Stop tutoring"[\s\S]*?"Acha somo"/);
+  assert.match(app, /function kyroAddTutorBox\(tutor = null, cachedMedia = null\) \{[\s\S]*?"Type your answer here, or say it"[\s\S]*?"Stop tutoring"[\s\S]*?"Acha somo"/);
   assert.ok(app.indexOf("if (!options.typed && kyroTutorOwns(said))") < app.indexOf("const namedDocument = kyroNamedDocument(said);"), "the tutor claim comes before the document claims");
 });
 
@@ -310,7 +310,7 @@ test("in a lesson with a subject, 'show me a picture' or 'a video' means picture
 
 test("the page sends the picture or video request, brings the lesson back when it is closed, and adds Show a picture / Show a video buttons when the lesson has a subject", () => {
   assert.match(app, /const tutorDemo = kyroTutorDemoCommand\(said\);\s+if \(tutorDemo\) \{\s+if \(!options\.typed\) kyroTakeOverTurn\(\);\s+void handleNexusUnifiedBrainRuntimeCommand\(tutorDemo, \{ source: "typed", kyroDirect: true \}\);\s+return true;\s+\}\s+if \(!options\.typed && kyroTutorOwns\(said\)\) \{/);
-  assert.match(app, /function kyroResumeTutor\(\) \{[\s\S]*?kyroShowResultScreen\("typed", "Continue the lesson", \{ ok: true, status: "completed", response: kyroTutorLast\.response, requiresConfirmation: true, tutor: kyroTutorLast\.tutor \}\);\s+if \(shown\) kyroAddTutorBox\(kyroTutorLast\.tutor\);/);
+  assert.match(app, /function kyroResumeTutor\(\) \{[\s\S]*?kyroShowResultScreen\("typed", "Continue the lesson", \{ ok: true, status: "completed", response: kyroTutorLast\.response, requiresConfirmation: true, tutor: kyroTutorLast\.tutor \}\);\s+if \(shown\) kyroAddTutorBox\(kyroTutorLast\.tutor, kyroTutorLast\.items \|\| null\);/);
   assert.match(app, /demo\(sw \? "Onyesha picha" : "Show a picture", `Show me pictures of \$\{subject\}`\);\s+demo\(sw \? "Onyesha video" : "Show a video", `Show me videos about \$\{subject\}`\);/);
   assert.match(app, /kyroTutorUntil = 0; kyroTutorSubject = ""; kyroTutorLast = null;/);
 });
@@ -338,7 +338,7 @@ test("'teach me more' and 'teach me again' carry on with the lesson (they are no
   assert.equal(sessions.get("t1", "u1"), null, "no lesson is started by 'teach me more'");
   await ask(instance, "Teach me fractions.");
   const more = await ask(instance, "Teach me more");
-  assert.deepEqual({ ...more.tutor }, { active: true, subject: "fractions", kind: "learn", turn: 2 });
+  assert.deepEqual({ ...more.tutor }, { active: true, subject: "fractions", kind: "learn", turn: 2, step: 2 });
   assert.doesNotMatch(more.response, /I am an AI tutor/);
   assert.equal(responded[responded.length - 1].conversationHistory.length, 2, "it carried on with the history so far");
   const again = await ask(instance, "teach me again");

@@ -18,6 +18,13 @@ module.exports = Object.freeze([
     then: [{ say: "Show me a picture.", timeoutMs: 90000, expect: { screen: "gallery", images: 1 } }, { say: "Close it.", timeoutMs: 60000, expect: { screen: "text", text: "TUTOR: FRACTIONS" } }, stop] },
   { id: "tutor-video-then-lesson-returns", area: "tutor", say: "Teach me fractions.", timeoutMs: 120000, expect: { screen: "text", text: "AI tutor", notText: "could not do that|I can.t help" },
     then: [{ say: "Show me a video.", timeoutMs: 90000, expect: { screen: "gallery", frames: 1 } }, { say: "Close it.", timeoutMs: 60000, expect: { screen: "text", text: "TUTOR: FRACTIONS" } }, stop] },
+  // (4 November 2026: the lesson shows its own pictures and videos. The AI model ends a step with a private line naming what to look up, and the page fetches it with the ordinary picture and video search and puts it INSIDE the lesson card,
+  //  above the answer box. The learner is never told it is a source. The model decides whether a step needs a picture, so these two are best-effort: the first turn of "Teach me fractions" is steered to a diagram, a video is allowed
+  //  from the second step on and at most every third step, and the model may well choose not to ask for one. A failure here means look at the screen with --shots before calling it a bug.)
+  { id: "tutor-lesson-shows-a-picture-in-the-card", area: "tutor", say: "Teach me fractions.", timeoutMs: 150000, expect: { screen: "text", text: "AI tutor[\\s\\S]*fraction|fraction[\\s\\S]*AI tutor", images: 1, notText: "could not do that|I can.t help|SHOW:" },
+    then: [stop] },
+  { id: "tutor-later-step-may-show-a-video-best-effort", area: "tutor", say: "Teach me fractions.", timeoutMs: 150000, expect: { screen: "text", text: "AI tutor", notText: "could not do that|I can.t help|SHOW:" },
+    then: [{ say: "I know that a half is one of two equal parts.", timeoutMs: 150000, expect: { screen: "text", text: "\\w{4,}", frames: 1, notText: "AI tutor|could not reach|SHOW:" } }, stop] },
   { id: "tutor-homework-then-stop", area: "tutor", say: "Help me with my science homework.", timeoutMs: 120000, expect: { screen: "text", text: "AI tutor", notText: "could not do that|I can.t help" }, then: [stop] },
   { id: "tutor-quiz-then-stop", area: "tutor", say: "Quiz me on world capitals.", timeoutMs: 120000, expect: { screen: "text", text: "AI tutor[\\s\\S]*\\?|capital", notText: "could not do that|I can.t help" }, then: [stop] },
   // (Kiswahili said to the rig's English voice: speech recognition garbles it differently from one run to the next ("Nifundishe sehemu" came back as "Mi fondishe sehemol", "Nifundishe sayansi" as "Mi fundiše sajan"), so this is one phrasing it has heard every time)

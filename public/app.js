@@ -52449,9 +52449,88 @@ function kyroResumeTutor() {
   try {
     if (!kyroTutorOpen() || !kyroTutorLast) return false;
     const shown = kyroShowResultScreen("typed", "Continue the lesson", { ok: true, status: "completed", response: kyroTutorLast.response, requiresConfirmation: true, tutor: kyroTutorLast.tutor });
-    if (shown) kyroAddTutorBox(kyroTutorLast.tutor);
+    if (shown) kyroAddTutorBox(kyroTutorLast.tutor, kyroTutorLast.items || null);
     return shown;
   } catch { return false; }
+}
+// ---- the pictures and videos that go with a lesson step ----
+// The server (nexus/tutor/tutor.js) sends tutor.media = { picture, video }: what to search for. The lesson text is on the screen at once; these are fetched with the ordinary picture and video search, one after the other, and drawn INSIDE the
+// lesson card when they arrive. They are never presented to the learner as a source, and a failed search leaves the lesson exactly as it was.
+function kyroTutorSafeUrl(value) {
+  const url = String(value || "").trim();
+  return /^https:\/\/[^\s"'<>]+$/i.test(url) ? url : "";
+}
+// The pictures (up to 3) or the one video of a search result: [{ title, url }] or [{ title, embedUrl, videoUrl, thumbnailUrl, mimeType }]. Only https addresses are used.
+function kyroTutorMediaItems(result, kind) {
+  const data = (result && result.render && result.render.data) || {};
+  const list = kind === "video" ? data.videos : data.images;
+  const out = [];
+  for (const item of Array.isArray(list) ? list : []) {
+    if (!item || typeof item !== "object") continue;
+    if (kind === "video") {
+      const embedUrl = kyroTutorSafeUrl(item.embedUrl); const videoUrl = kyroTutorSafeUrl(item.videoUrl);
+      if (embedUrl || videoUrl) out.push({ title: String(item.title || "").slice(0, 120), embedUrl, videoUrl, thumbnailUrl: kyroTutorSafeUrl(item.thumbnailUrl), mimeType: String(item.mimeType || "video/webm").slice(0, 40) });
+    } else {
+      const url = kyroTutorSafeUrl(item.url);
+      if (url) out.push({ title: String(item.title || "").slice(0, 120), url });
+    }
+    if (out.length >= (kind === "video" ? 1 : 3)) break;
+  }
+  return out;
+}
+function kyroDrawTutorMedia(holder, items, tutor) {
+  try {
+    if (!holder || !holder.isConnected) return false;
+    const pictures = (items && items.pictures) || []; const videos = (items && items.videos) || [];
+    if (!pictures.length && !videos.length) return false;
+    holder.textContent = "";
+    holder.style.display = "flex";
+    if (pictures.length) {
+      const row = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap" });
+      for (const picture of pictures) {
+        const button = kyroMake("button", { type: "button", "data-kyro-tutor-picture": "true", "aria-label": picture.title || "Picture", style: "padding:0;border:0;background:none;cursor:pointer;border-radius:12px;overflow:hidden;max-width:100%" });
+        button.append(kyroMake("img", { src: picture.url, alt: picture.title || "Picture", loading: "lazy", referrerpolicy: "no-referrer", style: "display:block;height:110px;width:auto;max-width:100%;border-radius:12px;background:#0f172a" }));
+        // a tap opens the picture on the full screen (the same as saying "show me a picture"); closing it brings the lesson back
+        button.addEventListener("click", () => { if (tutor && tutor.media && tutor.media.picture) void handleNexusUnifiedBrainRuntimeCommand(`Show me pictures of ${tutor.media.picture}`, { source: "typed", kyroDirect: true }); });
+        row.append(button);
+      }
+      holder.append(row);
+    }
+    for (const video of videos) {
+      let player;
+      if (video.embedUrl) {
+        player = kyroMake("iframe", { src: video.embedUrl, title: video.title || "Video", loading: "lazy", allowfullscreen: "true", allow: "encrypted-media; picture-in-picture; fullscreen", style: "width:100%;max-width:28em;aspect-ratio:16/9;border:0;border-radius:12px;background:#0f172a" });
+      } else {
+        player = kyroMake("video", { controls: "true", preload: "none", style: "width:100%;max-width:28em;border-radius:12px;background:#0f172a" });
+        if (video.thumbnailUrl) player.setAttribute("poster", video.thumbnailUrl);
+        player.append(kyroMake("source", { src: video.videoUrl, type: video.mimeType }));
+      }
+      holder.append(player);
+      if (video.title) holder.append(kyroMake("p", { style: "margin:0;font-size:.9rem;color:#94a3b8;overflow-wrap:anywhere" }, video.title));
+    }
+    return true;
+  } catch { return false; }
+}
+async function kyroLoadTutorMedia(holder, tutor) {
+  try {
+    const media = tutor && tutor.media;
+    if (!holder || !media) return;
+    const step = tutor.step;
+    const items = { pictures: [], videos: [] };
+    // the learner may already have answered (a newer step) or closed the card: then what arrives is dropped
+    const stillHere = () => holder.isConnected && kyroTutorOpen() && Boolean(kyroTutorLast && kyroTutorLast.tutor && kyroTutorLast.tutor.step === step);
+    if (media.picture) {
+      try { items.pictures = kyroTutorMediaItems(await kyroSilentTurn(`Show me pictures of ${media.picture}`), "picture"); } catch { items.pictures = []; }
+      if (!stillHere()) return;
+      kyroDrawTutorMedia(holder, items, tutor);
+    }
+    if (media.video) {
+      try { items.videos = kyroTutorMediaItems(await kyroSilentTurn(`Show me videos about ${media.video}`), "video"); } catch { items.videos = []; }
+      if (!stillHere()) return;
+      kyroDrawTutorMedia(holder, items, tutor);
+    }
+    if (stillHere()) kyroTutorLast.items = items; // (kept so the lesson comes back with them after a picture or video is closed, without searching again)
+  } catch { /* the lesson is on the screen without them */ }
 }
 function kyroTutorEnd() {
   if (!kyroTutorOpen()) return;
@@ -54420,7 +54499,7 @@ function kyroShowTypedResult(result, text, message) {
     const shown = kyroShowResultScreen("typed", text, { ok: true, status: "completed", ...answer });
     if (shown && wantsButtons) kyroAddConfirmButtons();
     if (shown && tutor && tutor.active === true) {
-      kyroTutorLast = { response: String(message || ""), tutor: { active: true, subject: String(tutor.subject || "") } };
+      kyroTutorLast = { response: String(message || ""), tutor: { active: true, subject: String(tutor.subject || ""), step: Number(tutor.step) || 0, media: tutor.media || null }, items: null };
       kyroAddTutorBox(tutor);
     }
     if (shown && typeof kyroAddResumeButtons === "function" && /^show my r[e\u00e9]sum[e\u00e9]s?$/i.test(String(text || "").trim())) void kyroAddResumeButtons();
@@ -54431,12 +54510,23 @@ function kyroShowTypedResult(result, text, message) {
   } catch { return false; }
 }
 // Under a tutoring turn: a box to type the answer in (Enter sends it), a Send button, and a Stop tutoring button. Typing and saying it are the same turn.
-function kyroAddTutorBox(tutor = null) {
+function kyroAddTutorBox(tutor = null, cachedMedia = null) {
   try {
     const screen = document.querySelector("[data-kyro-result]");
     if (!screen || screen.querySelector("[data-kyro-tutor-box]")) return false;
     const sw = (() => { try { return languageCode() === "sw"; } catch { return false; } })();
     screen.setAttribute("data-kyro-keep", "true");
+    // "Step 3" under the heading: where the lesson is
+    const stepNumber = Number(tutor && tutor.step) || 0;
+    if (stepNumber >= 1 && !screen.querySelector("[data-kyro-tutor-step]")) {
+      const stepNode = kyroMake("p", { "data-kyro-tutor-step": "true", style: "margin:0;color:#94a3b8;font-size:.9rem" }, sw ? `Hatua ya ${stepNumber}` : `Step ${stepNumber}`);
+      const heading = screen.querySelector("h2");
+      if (heading) heading.after(stepNode); else screen.prepend(stepNode);
+    }
+    // a picture and/or a video that goes with this step (not in low-bandwidth mode): the holder sits above the answer box and is filled when the search comes back
+    const holder = tutor && tutor.media && !nexusLowBandwidthMode
+      ? kyroMake("div", { "data-kyro-tutor-media": "true", style: "display:none;flex-direction:column;gap:10px;width:100%;max-width:34em;position:relative;z-index:1" })
+      : null;
     const form = kyroMake("form", { "data-kyro-tutor-box": "true", style: "display:flex;flex-direction:column;gap:10px;width:100%;max-width:34em;position:relative;z-index:1" });
     const box = kyroMake("textarea", { name: "answer", rows: "2", "aria-label": sw ? "Jibu lako" : "Your answer", placeholder: sw ? "Andika jibu lako hapa, au sema jibu lako" : "Type your answer here, or say it", style: KYRO_FIELD_STYLE });
     const row = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap" });
@@ -54455,6 +54545,11 @@ function kyroAddTutorBox(tutor = null) {
       demo(sw ? "Onyesha video" : "Show a video", `Show me videos about ${subject}`);
     }
     form.append(box, row); screen.append(form);
+    if (holder) {
+      screen.insertBefore(holder, form);
+      if (cachedMedia) kyroDrawTutorMedia(holder, cachedMedia, tutor);
+      else void kyroLoadTutorMedia(holder, tutor);
+    }
     form.addEventListener("submit", event => {
       event.preventDefault();
       const answer = box.value.trim();
