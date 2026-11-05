@@ -38430,6 +38430,8 @@ function renderUserWorkspace() {
         : nexusOsVoiceRuntimeState?.mode || "").toLowerCase()
     )
   );
+  // "I want to type" or the keyboard button: the typed box shows even when voice works, until the person says "use voice" (see kyroSetTypedMode).
+  const typedModeOn = !microphoneFallbackRequired && trueExperienceMode !== "mission" && nexusTypedModeRequested === true;
   document.body.classList.add("nexus-os-visual-boundary");
   document.body.classList.toggle("nexus-low-bandwidth-mode", nexusLowBandwidthMode);
   // Static QA compatibility notes for the safer service descriptions preserved by app-behavior-audit:
@@ -38450,6 +38452,12 @@ function renderUserWorkspace() {
           <section class="nexus-true-conversation" data-nexus-microphone-fallback="true" aria-label="${escapeHtml(translateText("Typed Nexus fallback"))}">
             <p class="nexus-companion-recovery-hint" role="status">${escapeHtml(translateText("Voice is unavailable right now. Type your request below while the microphone retry remains available."))}</p>
             ${renderNexusTrueCommandComposer({ compact: true })}
+          </section>
+        ` : typedModeOn ? `
+          <section class="nexus-true-conversation" data-kyro-typed-mode="true" aria-label="${escapeHtml(kyroTypeText("label"))}">
+            <p class="nexus-companion-recovery-hint" role="status">${escapeHtml(kyroTypeText("hint"))}</p>
+            ${renderNexusTrueCommandComposer({ compact: true })}
+            <button type="button" class="kyro-use-voice" data-kyro-use-voice="true" style="margin:10px auto 0;display:block;padding:10px 20px;border:0;border-radius:999px;background:#334155;color:#f1f5f9;font:inherit;font-weight:600;cursor:pointer">${escapeHtml(kyroTypeText("useVoice"))}</button>
           </section>
         ` : ""}
         ${showMission ? renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace) : ""}
