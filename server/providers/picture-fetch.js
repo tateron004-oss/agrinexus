@@ -100,7 +100,9 @@ async function searchCommons(query, { fetchFn = globalThis.fetch } = {}) {
     // a small PNG or JPEG copy of the picture (the thumbnail is at most 1100 px wide), never the original that may be tens of megabytes
     if (!/^image\/(?:png|jpe?g)$/i.test(String(info.mime || ""))) return null;
     const imageUrl = info.thumburl || info.url || "";
-    return imageUrl ? { title: clean(String(page.title || "").replace(/^File:/i, "").replace(/\.[a-z]{3,4}$/i, ""), 160), imageUrl, sourceUrl: info.descriptionurl || "", creator: clean(meta.Artist?.value, 120), license: clean(meta.LicenseShortName?.value || meta.UsageTerms?.value, 80), sourceName: "Wikimedia Commons" } : null;
+    // the words the picture is described with (its description and its categories) are kept: they are what a picture is checked against (see rankCandidates)
+    return imageUrl ? { title: clean(String(page.title || "").replace(/^File:/i, "").replace(/\.[a-z]{3,4}$/i, ""), 160), imageUrl, sourceUrl: info.descriptionurl || "", creator: clean(meta.Artist?.value, 120), license: clean(meta.LicenseShortName?.value || meta.UsageTerms?.value, 80), sourceName: "Wikimedia Commons",
+      description: clean(meta.ImageDescription?.value, 300), categories: clean(String(meta.Categories?.value || "").replace(/\|/g, " . "), 400) } : null;
   }).filter(Boolean);
 }
 
@@ -116,6 +118,43 @@ async function searchPictureCandidates(query, { fetchFn = globalThis.fetch, open
   return out;
 }
 
+// ---------- does the picture match what was asked for? ----------
+// Found live on 5 November 2026: "a picture of a broom" put a Wikimedia picture of a BROMINE chemistry sample on a clean-up poster (the search matches word beginnings and near words), and "the church building" returned a night view of a ruin.
+// So a candidate must really be about the words asked for: every significant word of the request (after folding a plural to its singular) must appear as a WHOLE WORD in the picture's title, description or categories. "broom" is not "bromine" and
+// "church" is not "Churchill". The candidates are put in order: all the words in the TITLE first, then the title's share of the words, then the order the source gave them. Nothing that does not match is ever used: no picture is better than a wrong one.
+const STOP_WORDS = new Set(["a", "an", "the", "of", "for", "and", "or", "in", "on", "at", "to", "with", "from", "by", "my", "our", "your", "some", "any", "very", "good", "nice", "great", "real", "new", "old", "big", "small", "picture", "pictures", "photo", "photos", "image", "images", "photograph", "photographs"]);
+// words that only say what KIND of thing it is: they help rank a picture but are not required when another word of the request is ("the church building": it is about a church)
+const KIND_WORDS = new Set(["building", "buildings", "exterior", "outside", "inside", "interior", "view", "views", "scene", "scenes", "sample", "samples", "type", "types", "kind"]);
+function foldWord(raw) {
+  const word = String(raw || "").toLowerCase().replace(/['’]s$/, "");
+  if (word.length > 4 && word.endsWith("ies")) return `${word.slice(0, -3)}y`;
+  if (word.length > 4 && /(?:ss|x|z|ch|sh)es$/.test(word)) return word.slice(0, -2);
+  if (word.length > 3 && word.endsWith("s") && !word.endsWith("ss") && !word.endsWith("us") && !word.endsWith("is")) return word.slice(0, -1);
+  return word;
+}
+const wordsOf = text => (String(text || "").toLowerCase().match(/[\p{L}\p{N}]+(?:['’][\p{L}]+)?/gu) || []).map(foldWord).filter(Boolean);
+function queryWords(query) {
+  const all = [...new Set(wordsOf(cleanQuery(query)).filter(word => word.length >= 2 && !STOP_WORDS.has(word)))];
+  const needed = all.filter(word => !KIND_WORDS.has(word));
+  return { all, needed: needed.length ? needed : all };
+}
+function rankCandidates(query, candidates) {
+  const { all, needed } = queryWords(query);
+  if (!needed.length) return [];
+  const scored = [];
+  (Array.isArray(candidates) ? candidates : []).forEach((item, order) => {
+    if (!item || !item.imageUrl) return;
+    const inTitle = new Set(wordsOf(item.title)); const inText = new Set([...inTitle, ...wordsOf(item.description), ...wordsOf(item.categories)]);
+    if (!needed.every(word => inText.has(word))) return; // a whole word, every one of them
+    // a category that is just the thing asked for ("Brooms", "Church buildings") says the picture IS one; "Robert Broom" or "Broom Lane" are a person and a road with the same word in their names
+    const exactCategory = String(item.categories || "").split(" . ").some(category => { const words = new Set(wordsOf(category)); return words.size > 0 && needed.every(word => words.has(word)) && [...words].every(word => all.includes(word) || KIND_WORDS.has(word)); });
+    // a night view or a silhouette prints as a dark smudge on a flyer: it is used only when nothing better matches (unless it is what was asked for)
+    const dark = ["night", "dark", "evening", "dusk", "silhouette"].some(word => inTitle.has(word) && !all.includes(word)) ? 1 : 0;
+    scored.push({ item, order, points: (exactCategory ? 2 : 0) + (needed.every(word => inTitle.has(word)) ? 1 : 0) - dark, titleShare: all.filter(word => inTitle.has(word)).length });
+  });
+  return scored.sort((a, b) => b.points - a.points || b.titleShare - a.titleShare || a.order - b.order).map(entry => entry.item);
+}
+
 const creditLine = item => {
   const parts = [clean(item.sourceName, 60), clean(item.creator, 100), clean(item.license, 60)].filter(Boolean);
   return `Picture: ${parts.length ? parts.join(", ") : "from the web"}`.slice(0, 200);
@@ -123,7 +162,8 @@ const creditLine = item => {
 
 // The first candidate that downloads, is a real PNG/JPEG within the limits, and can be held by both the Word and the PDF file. null when none does (the document is then made without it, and the person is told).
 async function findPicture(query, { candidates, fetchOptions = {}, searchOptions = {}, limit = 6 } = {}) {
-  const found = candidates || await searchPictureCandidates(query, searchOptions);
+  // only pictures that are really about the words asked for are ever tried (the source's own order is kept among equals, Wikimedia Commons before Openverse, so the next source is used when the first has nothing that matches)
+  const found = rankCandidates(query, candidates || await searchPictureCandidates(query, searchOptions));
   let tried = 0;
   for (const item of found) {
     if (tried >= limit) break;
@@ -138,4 +178,4 @@ async function findPicture(query, { candidates, fetchOptions = {}, searchOptions
   return null;
 }
 
-module.exports = Object.freeze({ MAX_BYTES, TIMEOUT_MS, fetchPublicImage, searchPictureCandidates, findPicture, cleanQuery, creditLine });
+module.exports = Object.freeze({ MAX_BYTES, TIMEOUT_MS, fetchPublicImage, searchPictureCandidates, findPicture, cleanQuery, creditLine, rankCandidates, queryWords });

@@ -54149,6 +54149,7 @@ async function kyroDocumentPictureTools(screen, id, status, info = {}) {
   const design = String(info.design || "");
   const box = kyroMake("div", { "data-kyro-doc-tools": id, style: "width:100%;max-width:40em;display:flex;flex-direction:column;gap:12px;margin-top:6px" });
   const strip = kyroMake("div", { "data-kyro-doc-picture-strip": id, style: "display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start" });
+  const where = kyroMake("p", { "data-kyro-picture-where": id, style: "margin:0;color:#94a3b8;font-size:.9rem" });
   const notes = kyroMake("div", { "data-kyro-doc-picture-notes": id, role: "status", style: "display:flex;flex-direction:column;gap:6px;color:#cbd5e1;font-size:.95rem" });
   const row = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap" });
   const files = kyroMake("input", { type: "file", accept: "image/png,image/jpeg", "data-kyro-doc-picture-file": id, "aria-label": kyroT("Choose a picture"), style: "position:absolute;left:-9999px;width:1px;height:1px;opacity:0" });
@@ -54162,10 +54163,26 @@ async function kyroDocumentPictureTools(screen, id, status, info = {}) {
     strip.textContent = "";
     found = list.some(item => item.source === "search");
     for (const item of list) {
-      const figure = kyroMake("figure", { style: "margin:0;display:flex;flex-direction:column;gap:4px;max-width:180px" });
-      figure.append(kyroMake("img", { src: "/api/nexus/runtime/documents/" + encodeURIComponent(id) + "/pictures/" + item.n, alt: String(item.title || kyroT("Picture")), loading: "lazy", style: "display:block;height:96px;width:auto;max-width:100%;border-radius:10px;background:#0f172a" }));
+      const figure = kyroMake("figure", { "data-kyro-doc-picture": String(item.n), style: "margin:0;display:flex;flex-direction:column;gap:4px;max-width:200px" });
+      // A light, framed box (a night photo or a transparent PNG on the dark card looked like an empty dark box on 5 November 2026, and the picture takes a moment to arrive): the box says "Loading the picture..." until it is there,
+      // and says plainly that it cannot be shown here (it is in the file) if it does not load. No lazy loading: the previews are right on the card.
+      const frame = kyroMake("div", { style: "position:relative;min-width:120px;min-height:96px;border-radius:10px;overflow:hidden;background:#e2e8f0;border:1px solid #94a3b8;display:flex;align-items:center;justify-content:center" });
+      const picture = kyroMake("img", { src: "/api/nexus/runtime/documents/" + encodeURIComponent(id) + "/pictures/" + item.n, alt: String(item.title || kyroT("Picture")), style: "display:block;height:96px;width:auto;max-width:100%;background:#e2e8f0" });
+      const state = kyroMake("span", { "data-kyro-picture-state": "loading", role: "status", style: "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px;font-size:.8rem;line-height:1.25;color:#1e293b" }, kyroT("Loading the picture..."));
+      const failed = () => { picture.style.display = "none"; state.setAttribute("data-kyro-picture-state", "failed"); state.style.position = "static"; state.style.padding = "14px 10px"; state.textContent = kyroT("Picture could not be shown here, it is in the file."); if (!state.isConnected) frame.append(state); };
+      picture.addEventListener("load", () => { if (picture.naturalWidth > 0) { picture.style.display = "block"; state.remove(); } else failed(); });
+      picture.addEventListener("error", failed);
+      frame.append(picture, state);
+      figure.append(frame);
       if (item.credit) figure.append(kyroMake("figcaption", { style: "font-size:.8rem;color:#94a3b8;overflow-wrap:anywhere" }, String(item.credit)));
       strip.append(figure);
+      setTimeout(() => { if (picture.complete) { if (picture.naturalWidth > 0) state.remove(); else failed(); } }, 0); // (already there from the cache)
+    }
+    // which download holds them: the file the Download button gives (the other buttons make the same document, with its pictures, as another kind of file)
+    where.textContent = "";
+    if (list.length) {
+      const kind = { docx: "Word file", pdf: "PDF", html: "web page file" }[String(info.format || "").toLowerCase()] || "file";
+      where.textContent = kyroT((list.length === 1 ? "The picture shown here is" : "The pictures shown here are") + " in the " + kind + " you get with Download. The buttons under it make the same document, with its " + (list.length === 1 ? "picture" : "pictures") + ", as another kind of file.");
     }
   };
   const load = async (extraNotes = []) => {
@@ -54222,7 +54239,7 @@ async function kyroDocumentPictureTools(screen, id, status, info = {}) {
     });
     other.append(button);
   }
-  box.append(strip, notes, row, other, files);
+  box.append(strip, where, notes, row, other, files);
   if (design === "email") box.append(kyroMake("p", { "data-kyro-email-note": "true", style: "margin:0;color:#94a3b8;font-size:.9rem" }, kyroT("To use it in an email: choose Web page, open the file, select everything, copy it, and paste it into your email. Some email programs hide pictures inside a message, so the Word and PDF files are there too. Kyro does not send it for you.")));
   screen.append(box);
   const first = Array.isArray(info.data?.pictureNotes) ? info.data.pictureNotes : [];
