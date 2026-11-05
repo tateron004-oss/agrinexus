@@ -69,6 +69,7 @@ const { handoutRequest, handoutTemplate } = require("../knowledge/handout-templa
 const handoutWording = require("../knowledge/handout-wording.js");
 const { designFor, needsWording } = handoutWording;
 const { designKind } = require("../../server/providers/design-render.js");
+const documentPictures = require("../documents/pictures.js");
 const { scheduleRequest, scheduleTemplate } = require("../knowledge/schedule-templates.js");
 const tutorMode = require("../tutor/tutor.js");
 const sharedTutorSessions = tutorMode.createTutorSessions();
@@ -164,9 +165,9 @@ class OpenEndedPlanner {
   }
 
   // A flyer, newsletter, invitation... whose details the person gave in their request, with those facts (and only those) put in the right places by one tool-less model call; null (so the fixed layout is used) when the call fails or returns nothing usable.
-  async wordedHandout(handout, command, profile) {
+  async wordedHandout(handout, command, profile, saidWithoutPictures = "") {
     if (typeof this.model?.respond !== "function") return null;
-    const said = String(command.spokenText || command.text || "");
+    const said = String(saidWithoutPictures || command.spokenText || command.text || "");
     const reply = await this.model.respond({ goal: handoutWording.wordingGoal(handout, said), instructions: handoutWording.wordingInstructions(handout.kind), maxOutputTokens: 400,
       interactionProfile: profile, tenantId: command.tenantId, conversationHistory: [], memories: [], capabilities: [] }).catch(() => null);
     const facts = handoutWording.validateWording(reply, said);
@@ -1030,7 +1031,10 @@ class OpenEndedPlanner {
     // The same asked by a person who HAS a workspace (found by the owner's test report of 4 November 2026: "nothing opened or was made available to download", "only as a text file", "could not build a PDF"): the workspace's marketing kit asks "Should I go
     // ahead?", then only says "Open Business services to review and download them", and what it makes there is Markdown and HTML, never a Word or PDF file and never a document on the screen. A flyer, newsletter, poster, brochure, handout, invitation or promotional email
     // is a document anyone can ask for, so it is made as one for the owner too (the fixed layout below, in the file type asked for). The kit is still reached by "generate marketing materials".
-    const handoutForOwner = Boolean(completeBusiness) && !marketingWithoutWorkspace && businessVoiceDispatch.classify(command.text) === "generateMarketing" && Boolean(handoutRequest(command.text));
+    // "... with a picture of fresh bread", "... with my logo", "... using the photo I uploaded": the picture words are taken out of the sentence (so they are not read as part of the subject) and kept as what pictures to put in
+    // (nexus/documents/pictures.js); the pictures are found, checked and added when the document is made.
+    const pictureAsk = documentPictures.extractPictureRequest(command.text);
+    const handoutForOwner = Boolean(completeBusiness) && !marketingWithoutWorkspace && businessVoiceDispatch.classify(command.text) === "generateMarketing" && Boolean(handoutRequest(pictureAsk.text));
     if (completeBusiness && !marketingWithoutWorkspace && !handoutForOwner) {
       // Found by the phrase sweep: a person with no business workspace was asked "Should I go ahead?" and only after the yes told there is none. Say it first, with no model and before any confirmation.
       const noWorkspace = await this.noBusinessWorkspaceAnswer(command.text, context);
@@ -1056,15 +1060,18 @@ class OpenEndedPlanner {
     }
     // "Make me a flyer for my bake sale on Saturday", "Create a newsletter for the church", "Write an invitation to my daughter's party": a short layout with the person's own words in it and a [bracket] for every detail they did not give, made
     // directly with no model call (the model, asked to write a flyer for a person with no business workspace, saved a description of a flyer as the flyer). A person with a workspace asking for a flyer or newsletter already went to the workspace's own drafts above.
-    const handout = handoutRequest(command.text);
+    const handout = handoutRequest(pictureAsk.text);
     if (handout && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) {
       // With details beyond a subject and a day ("... on Saturday at ten at the church hall") one model call sorts only the person's own facts into the layout; with none, or if it fails, it is the fixed layout (see knowledge/handout-wording.js).
-      const worded = needsWording(handout) && context?.deterministicOnly !== true ? await this.wordedHandout(handout, command, interactionProfile) : null;
+      const worded = needsWording(handout) && context?.deterministicOnly !== true ? await this.wordedHandout(handout, command, interactionProfile, pictureAsk.specs.length ? pictureAsk.text : "") : null;
       const made = worded || handoutTemplate(handout);
-      // `design` makes the Word and PDF files a designed flyer, poster, newsletter, invitation or brochure (server/providers/design-render.js) from this same text; the text stays what is edited.
+      // `design` makes the Word and PDF files a designed flyer, poster, newsletter, invitation, brochure or email (server/providers/design-render.js) from this same text; the text stays what is edited. `pictures` are the pictures asked for (see above).
       return Object.freeze({ goal: String(command.text || "").trim(), application: "documents", riskTier: "low", clarification: null, planningAttempts: 1,
-        steps: [{ clientStepId: "handout-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: requestedDocumentFormat(command.text) || "docx", design: designFor(handout.kind), reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
+        steps: [{ clientStepId: "handout-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: requestedDocumentFormat(command.text) || "docx", design: designFor(handout.kind), ...(pictureAsk.specs.length ? { pictures: pictureAsk.specs } : {}), reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
     }
+    // "Add a picture of fresh bread to the flyer", "put my logo on it", "add the photo I uploaded": the pictures are put in the latest designed document (and "Add picture <file> to document <id>" from the card's Add a picture button).
+    const addedPicture = await addPictureToDocumentPlan(this.documents, command.text, catalog, { tenantId: command.tenantId, ownerId: command.actorId });
+    if (addedPicture) return Object.freeze({ ...addedPicture, planningAttempts: 1 });
     // "Make me a weekly meal plan", "Make a study schedule for my exam", "Make me a schedule for my work week": one line per day with a [bracket] for everything the person did not say, made directly with no model call
     // (the model gave a document on one try and a question on the next, and its question was the same blanks, asked aloud).
     const schedule = scheduleRequest(command.text);
@@ -1849,7 +1856,7 @@ function resumePlan(text, catalog, byKind = {}) {
 // "save this as a PDF" produced a real .txt file because this fast path never looked.
 const DOCUMENT_FORMAT_WORDS = Object.freeze({
   pdf: "pdf", docx: "docx", "word document": "docx", word: "docx", markdown: "md", md: "md",
-  txt: "txt", "text file": "txt", "plain text": "txt", json: "json"
+  txt: "txt", "text file": "txt", "plain text": "txt", json: "json", html: "html", "web page": "html", webpage: "html"
 });
 // The AI model, planning "Make me a weekly meal plan" or "Write a short bio for my website", sometimes fills the document with its own instruction to itself ("Create a simple weekly meal plan for breakfast, lunch, and dinner for 7 days.
 // Keep it practical...") instead of the document (found on the live site on 27 October 2026: the saved Weekly Meal Plan and Website Bio held that sentence). A body that is one short instruction to write something, which the person did not
@@ -1873,7 +1880,7 @@ function echoesInstruction(content, said) {
 }
 
 function requestedDocumentFormat(goal) {
-  const match = /\bas\s+(?:an?\s+)?(pdf|docx|word document|word|markdown|md|text file|plain text|txt|json)\b/i.exec(goal);
+  const match = /\bas\s+(?:an?\s+)?(pdf|docx|word document|word|markdown|md|text file|plain text|txt|json|html|web page|webpage)\b/i.exec(goal);
   return match ? DOCUMENT_FORMAT_WORDS[match[1].toLowerCase()] : null;
 }
 
@@ -1911,7 +1918,7 @@ function completeSaveConversationPlan(text, catalog, conversationHistory = []) {
 
 // "Export it as a PDF." / "Convert that to Word." / "Save the document as a text file." Only a bare "it / that / this / the document" counts, so "export this chat as a PDF" (the conversation matcher above)
 // and "export my report as a PDF" (a different request) are not taken.
-const EXPORT_LATEST_DOCUMENT = /^\s*(?:please\s+|can you\s+|could you\s+)?(?:export|convert|save|download|turn|make|give me|send me)\s+(?:(?:it|that|this|the (?:last |latest )?document|my (?:last |latest )?document)\s+)?(?:as|to|into|in)\s+(?:an?\s+)?(pdf|word document|word|docx|markdown|md|text file|plain text|txt)\b[\s.!?]*$/i;
+const EXPORT_LATEST_DOCUMENT = /^\s*(?:please\s+|can you\s+|could you\s+)?(?:export|convert|save|download|turn|make|give me|send me)\s+(?:(?:it|that|this|the (?:last |latest )?document|my (?:last |latest )?document)\s+)?(?:as|to|into|in)\s+(?:an?\s+)?(pdf|word document|word|docx|markdown|md|text file|plain text|txt|html|web page|webpage)\b[\s.!?]*$/i;
 function exportLatestDocumentFormat(text) {
   const goal = String(text || "").trim();
   if (SAVE_CONVERSATION_TARGET.test(goal)) return null;
@@ -1974,7 +1981,55 @@ async function exportLatestDocumentPlan(documents, { text, format, tenantId, own
   if (!source?.sourceText) return say(`I cannot convert "${latest.title}" because it was saved before I kept its text. Create it again with "Create a document called ${latest.title} that says ...", and then I can export it.`);
   return { goal, application: "documents", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "export-document", title: `Export "${latest.title}" as ${format}`, toolId: "documents.create",
-      input: { title: latest.title, content: source.sourceText, format, ...(savedDesign(latest) ? { design: savedDesign(latest) } : {}), reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
+      input: { title: latest.title, content: source.sourceText, format, ...(savedDesign(latest) ? { design: savedDesign(latest), picturesFromDocumentId: latest.document_id } : {}), reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
+}
+
+// What the document card's buttons say: "Export document doc_a1b2c3 as pdf" (the same designed document, with its pictures, as another kind of file) and "Add picture <file id> to document doc_a1b2c3" (a picture the person uploaded with the Add a picture button).
+const DOCUMENT_EXPORT_BY_ID = /^\s*export document (doc_[a-z0-9_-]{4,60}) as (pdf|docx|html)\s*$/i;
+const DOCUMENT_ADD_UPLOAD = /^\s*add picture ([a-z0-9][a-z0-9._-]{7,100}) to document (doc_[a-z0-9_-]{4,60})(?:\s+as\s+(logo))?\s*$/i;
+async function documentByIdPlan(documents, text, catalog, { tenantId, ownerId }) {
+  const goal = String(text || "").trim();
+  const exportMatch = DOCUMENT_EXPORT_BY_ID.exec(goal); const addMatch = exportMatch ? null : DOCUMENT_ADD_UPLOAD.exec(goal);
+  if (!exportMatch && !addMatch) return null;
+  const say = response => ({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
+  if (!documents?.get || !catalog?.tools?.some(tool => tool.toolId === "documents.create") || !catalog.applications?.some(app => app.applicationId === "documents")) return null;
+  const documentId = (exportMatch || addMatch)[exportMatch ? 1 : 2];
+  let row = null;
+  try { row = await documents.get({ tenantId, ownerId, documentId }); } catch { return null; }
+  if (!row) return say("I could not find that document, so nothing was changed.");
+  const source = typeof documents.getSource === "function" ? await documents.getSource({ tenantId, ownerId, documentId }).catch(() => null) : null;
+  if (!source?.sourceText) return say(`I cannot change "${row.title}" because it was saved before I kept its text.`);
+  const design = savedDesign(row);
+  if (exportMatch) {
+    const format = exportMatch[2].toLowerCase();
+    if (format === "html" && !design) return say("A web page can only be made from a designed flyer, newsletter, invitation, brochure or email.");
+    return { goal, application: "documents", riskTier: "low", clarification: null, steps: [{ clientStepId: "export-document", title: `Export "${row.title}" as ${format}`, toolId: "documents.create",
+      input: { title: row.title, content: source.sourceText, format, ...(design ? { design, picturesFromDocumentId: documentId } : {}), reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
+  }
+  if (!design) return say("I can add pictures to a flyer, poster, newsletter, brochure, invitation or promotional email. This document is not one of those.");
+  return { goal, application: "documents", riskTier: "low", clarification: null, steps: [{ clientStepId: "add-picture", title: `Add a picture to "${row.title}"`, toolId: "documents.create",
+    input: { documentId, content: source.sourceText, pictures: [{ source: "upload", fileId: addMatch[1], ...(addMatch[3] ? { role: "logo" } : {}) }], reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
+}
+
+// "Add a picture of fresh bread to the flyer", "put my logo on it", "add the photo I uploaded": the pictures go into the latest saved document, which must be a designed one (flyer, poster, newsletter, brochure, invitation, promotional email).
+async function addPictureToDocumentPlan(documents, text, catalog, { tenantId, ownerId }) {
+  const goal = String(text || "").trim();
+  const byId = await documentByIdPlan(documents, goal, catalog, { tenantId, ownerId });
+  if (byId) return byId;
+  const request = documentPictures.addPictureRequest(goal);
+  if (!request || !documents?.list) return null;
+  if (!catalog?.tools?.some(tool => tool.toolId === "documents.create") || !catalog.applications?.some(app => app.applicationId === "documents")) return null;
+  const say = response => ({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
+  let rows = [];
+  try { rows = await documents.list({ tenantId, ownerId, limit: 8 }); } catch { return null; }
+  const wantsKind = /^(?:flyer|poster|newsletter|brochure|invitation|e-?mail)$/.test(request.target) ? request.target.replace(/^e-?mail$/, "email") : "";
+  const designed = (Array.isArray(rows) ? rows : []).filter(row => savedDesign(row));
+  const latest = (wantsKind ? designed.find(row => savedDesign(row) === wantsKind) : designed[0]) || null;
+  if (!latest) return say(wantsKind ? `I do not have a saved ${wantsKind} to add a picture to. Say, for example, "make me a ${wantsKind} for my bake sale", and I will make one.` : 'I do not have a saved flyer, poster, newsletter, brochure, invitation or email to add a picture to. Say, for example, "make me a flyer for my bake sale with a picture of fresh bread".');
+  const source = typeof documents.getSource === "function" ? await documents.getSource({ tenantId, ownerId, documentId: latest.document_id }).catch(() => null) : null;
+  if (!source?.sourceText) return say(`I cannot change "${latest.title}" because it was saved before I kept its text.`);
+  return { goal, application: "documents", riskTier: "low", clarification: null, steps: [{ clientStepId: "add-picture", title: `Add a picture to "${latest.title}"`, toolId: "documents.create",
+    input: { documentId: latest.document_id, content: source.sourceText, pictures: request.specs, reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
 }
 
 // the design (flyer, newsletter, ...) a saved document was made with, kept in its metadata: "export it as a PDF" gives the designed PDF

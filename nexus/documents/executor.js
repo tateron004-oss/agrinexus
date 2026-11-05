@@ -15,6 +15,7 @@
 const exportProvider = require("../../server/providers/exportProvider.js");
 const crypto = require("node:crypto");
 const { designKind } = require("../../server/providers/design-render.js");
+const picturesLib = require("./pictures.js");
 
 // Found live: the deterministic fast-path matcher (completeDocumentPlan)
 // already caps its own content at 4000 chars, but that's just an echo of
@@ -36,6 +37,7 @@ const MAX_DOCUMENT_CONTENT_LENGTH = 50000;
 // erasure cannot see the web server's disk. So a copy of the file's bytes is also kept in the document's version record in the database, which survives
 // updates and is wiped by the same erasure that wipes the record. Only files up to this size are kept there; a bigger one stays on disk only.
 const MAX_STORED_FILE_BYTES = 3 * 1024 * 1024;
+const MAX_STORED_FILE_BYTES_WITH_PICTURES = 9 * 1024 * 1024; // a designed document with pictures in it (the pictures together are at most 6 MB, see pictures.js)
 // Found live (production outage, capability-testing the orb): the planning
 // model's tool-call schema has no enum constraint on documents.create's
 // format field -- it's free text, so the model plausibly writes "document",
@@ -52,9 +54,9 @@ const MAX_STORED_FILE_BYTES = 3 * 1024 * 1024;
 // of hard-failing the whole capability on a word choice.
 const DOCUMENT_FORMAT_ALIASES = Object.freeze({
   document: "txt", doc: "txt", text: "txt", plain: "txt", report: "txt", letter: "txt", summary: "txt", note: "txt",
-  markdown: "md", word: "docx"
+  markdown: "md", word: "docx", "web page": "html", webpage: "html", "web-page": "html"
 });
-const VALID_DOCUMENT_FORMATS = Object.freeze(["json", "txt", "md", "pdf", "docx"]);
+const VALID_DOCUMENT_FORMATS = Object.freeze(["json", "txt", "md", "pdf", "docx", "html"]);
 function normalizeDocumentFormat(rawFormat) {
   const format = String(rawFormat || "txt").toLowerCase().trim();
   if (VALID_DOCUMENT_FORMATS.includes(format)) return format;
@@ -66,7 +68,8 @@ function existingDesign(row) {
   if (typeof metadata === "string") { try { metadata = JSON.parse(metadata); } catch { metadata = null; } }
   return metadata && typeof metadata === "object" ? metadata.design : "";
 }
-function createDocumentsCreateExecutor({ env = process.env, documents = null } = {}) {
+// pictureDeps: injected in tests (the uploads store, the picture finder, the file reader)
+function createDocumentsCreateExecutor({ env = process.env, documents = null, pictureDeps = {} } = {}) {
   return async function execute({ input = {}, context, taskId }) {
     const rawContent = String(input.content || input.text || input.command || "");
     // Found live: this truncated over-length content with no signal anywhere in the result -- for most
@@ -87,14 +90,38 @@ function createDocumentsCreateExecutor({ env = process.env, documents = null } =
     // The design (flyer, newsletter, ...) a document was made with is kept in its metadata, so editing it ("Save changes") or exporting it again keeps the designed Word/PDF layout; the text stays the only thing that is edited.
     // A saved document keeps its own design; a new one takes the design its caller named. Only the known kinds count.
     const design = designKind(existing ? existingDesign(existing) : input.design);
+    // PICTURES (a designed document only). The pictures a saved document already has are kept whenever it is saved or exported again ("Save changes", "export it as a PDF": input.picturesFromDocumentId names the one to take them from);
+    // new ones asked for now (input.pictures: [{ source: "upload", hint|fileId } | { source: "search", query }]) are found, checked and added. A picture that cannot be had never stops the document: it is made without it and the notes say why.
+    let pictures = []; let pictureNotes = []; let needsPicture = false;
+    if (design) {
+      const keptFrom = existing ? existing.document_id : String(input.picturesFromDocumentId || "");
+      let kept = [];
+      if (keptFrom && typeof documents?.getPictures === "function" && context) {
+        try { kept = picturesLib.fromStored(await documents.getPictures({ tenantId: context.tenantId, ownerId: context.userId, documentId: keptFrom })); } catch { kept = []; }
+      }
+      const specs = Array.isArray(input.pictures) ? input.pictures.filter(spec => spec && typeof spec === "object").slice(0, 4) : [];
+      if (kept.length || specs.length) {
+        const resolved = await picturesLib.resolvePictures({ specs, kept, env, context, deps: pictureDeps });
+        pictures = resolved.pictures; pictureNotes = resolved.notes; needsPicture = resolved.missingUpload;
+      }
+    }
     const body = {
       confirmed: true,
       title: existing ? existing.title : (input.title || "Nexus document"),
       content: truncated ? rawContent.slice(0, MAX_DOCUMENT_CONTENT_LENGTH) : rawContent,
-      format: normalizeDocumentFormat(existing ? existing.document_type : input.format),
-      ...(design ? { design } : {})
+      // (a web page is only made for a designed document; any other document asked for as a web page is a Word file)
+      format: (format => (format === "html" && !design ? "docx" : format))(normalizeDocumentFormat(existing ? existing.document_type : input.format)),
+      ...(design ? { design } : {}),
+      ...(pictures.length ? { images: pictures } : {})
     };
     const result = await exportProvider.exportDocument(body, env);
+    // what the card and the voice tell the person about the pictures: how many are in, where each came from, and anything that could not be done (never a claim that a picture is there when it is not)
+    if (design && result.body?.data) {
+      const inFile = Number(result.body.data.pictureCount) || 0;
+      const notes = result.body.data.picturesDropped ? [...pictureNotes, "I could not fit the pictures into the file, so it was made without them."] : pictureNotes;
+      result.body = { ...result.body, data: { ...result.body.data, pictureCount: inFile, ...(inFile ? { pictureSummary: pictures.slice(0, inFile).map((picture, index) => ({ n: index, role: picture.role || "", source: picture.source, title: picture.title || "", credit: picture.credit || "" })) } : {}),
+        ...(notes.length ? { pictureNotes: notes } : {}), ...(needsPicture ? { needsPicture: true } : {}), canAddPicture: true } };
+    }
     if (truncated && result.body?.data) result.body = { ...result.body, data: { ...result.body.data, truncated: true, originalLength: rawContent.length, savedLength: body.content.length } };
     const data = result.body?.data || {};
     if (documents && context && data.exportId && data.localPath) {
@@ -104,9 +131,12 @@ function createDocumentsCreateExecutor({ env = process.env, documents = null } =
         const document = existing ? { document_id: existing.document_id } : await documents.create({ tenantId: context.tenantId, ownerId: context.userId,
           taskId, title: body.title, documentType: body.format,
           // fingerprint: an optional short label a caller can use to recognise "this exact thing was already saved" (see nexus/resume/executor.js).
-          metadata: { exportId: data.exportId, filename: data.filename, bytes: data.bytes, ...(design ? { design } : {}), ...(typeof input.fingerprint === "string" && input.fingerprint ? { fingerprint: input.fingerprint.slice(0, 80) } : {}) } });
+          metadata: { exportId: data.exportId, filename: data.filename, bytes: data.bytes, ...(design ? { design } : {}), ...(Number(data.pictureCount) > 0 ? { pictures: picturesLib.summariseForMetadata(pictures) } : {}), ...(typeof input.fingerprint === "string" && input.fingerprint ? { fingerprint: input.fingerprint.slice(0, 80) } : {}) } });
         const version = await documents.addVersion({ documentId: document.document_id, tenantId: context.tenantId,
-          content: { exportId: data.exportId, filename: data.filename, downloadPath: data.downloadPath, sourceText: body.content, ...(bytes.length <= MAX_STORED_FILE_BYTES ? { contentBase64: bytes.toString("base64") } : {}) },
+          content: { exportId: data.exportId, filename: data.filename, downloadPath: data.downloadPath, sourceText: body.content,
+            // the pictures are kept with the version (their bytes), so the document can be saved or exported again with them; a file with pictures in it may be a little bigger and is still kept
+            ...(Number(data.pictureCount) > 0 ? { pictures: picturesLib.toStored(pictures) } : {}),
+            ...(bytes.length <= (Number(data.pictureCount) > 0 ? MAX_STORED_FILE_BYTES_WITH_PICTURES : MAX_STORED_FILE_BYTES) ? { contentBase64: bytes.toString("base64") } : {}) },
           objectKey: `local:${data.filename}`, checksum, createdBy: context.userId });
         // The "documents" capability's completion contract
         // (nexus/apps/capability-completion-contracts.js) requires

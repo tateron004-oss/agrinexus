@@ -23,8 +23,9 @@ const spokenSweep = require("./spoken-sweep.js");
 const tutorCases = require("./tutor.js");
 const typingCases = require("./typing.js");
 const nov4Fixes = require("./nov4-fixes.js");
+const documentPictures = require("./document-pictures.js");
 
-const ALL = Object.freeze([...documentsAndLists, ...businessAndApps, ...mediaSearchHealthForms, ...resourcesForPeople, ...minorityAndStartupBusiness, ...spanishBusiness, ...automations, ...californiaBusiness, ...athletes, ...money, ...moneyAfrica, ...athleteDocuments, ...moneyDocuments, ...walkthroughs, ...walkthroughsGuides, ...safety, ...specialEd, ...reentry, ...trips, ...spokenDocuments, ...spokenSweep, ...tutorCases, ...typingCases, ...nov4Fixes]);
+const ALL = Object.freeze([...documentsAndLists, ...businessAndApps, ...mediaSearchHealthForms, ...resourcesForPeople, ...minorityAndStartupBusiness, ...spanishBusiness, ...automations, ...californiaBusiness, ...athletes, ...money, ...moneyAfrica, ...athleteDocuments, ...moneyDocuments, ...walkthroughs, ...walkthroughsGuides, ...safety, ...specialEd, ...reentry, ...trips, ...spokenDocuments, ...spokenSweep, ...tutorCases, ...typingCases, ...nov4Fixes, ...documentPictures]);
 
 // Which cases run: by default the ones that change nothing on the account; --writes adds the ones that save something, --risky the emergency words,
 // --only a,b (ids) or --area documents,lists (areas) narrows it, and --no-sound leaves out the ones that need sound to start.
