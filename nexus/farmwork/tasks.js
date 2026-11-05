@@ -101,7 +101,8 @@ async function handle(ctx) {
     for (const job of jobs) { const split = splitDue(job, ctx.today); const result = await create(split.title, m[1], split.due || ctx.today); if (result.refused) return result.refused; made.push(result.record); unknown = !result.known; }
     return `Gave ${made[0].data.assignee || clean(m[1])} ${plural(made.length, "job")} for today: ${made.map(task => `${task.number}. ${task.data.title}`).join("; ")}.${unknown ? ` I don't have ${first(m[1])} in your workers yet; say "add worker ${first(m[1])}" to keep their details.` : ""}`;
   }
-  if ((m = /^(?:please )?(?:assign|give|tell|ask) (.+?) (?:to|the job of|to go and) (.+)$/i.exec(t)) && !/^(?:(?:my )?(?:list|farm)|me|us|you|him|her|them|it|everyone|someone|anyone|myself)$/i.test(clean(m[1])) && clean(m[1]).split(" ").length <= 3) {
+  // A job goes to a person by NAME. "Give me directions to the clinic", "tell me how to get to the pharmacy" and "show me ..." begin with a pronoun: that is a request to Kyro (the owner's test of 4 November 2026 made a job for a worker called "Me" and asked to add a "me" section), never a job for anyone.
+  if ((m = /^(?:please )?(?:assign|give|tell|ask) (.+?) (?:to|the job of|to go and) (.+)$/i.exec(t)) && !/^(?:(?:my )?(?:list|farm)|me|us|you|him|her|them|it|everyone|someone|anyone|myself)$/i.test(clean(m[1])) && !/^(?:me|us|you|him|her|them|it|myself|yourself|everyone|someone|anyone|nobody|somebody)\b/i.test(clean(m[1])) && clean(m[1]).split(" ").length <= 3) {
     const split = splitDue(m[2], ctx.today);
     if (!split.title || split.title.length < 3) return null;
     const result = await create(split.title.replace(/^(?:to )/i, ""), m[1], split.due);
