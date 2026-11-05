@@ -52388,6 +52388,10 @@ const KYRO_TUTOR_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:teach|tu
 const KYRO_TUTOR_NOT = /\b(?:letters?|alphabet|abc|to read|reading|counting|to count|adding|subtract\w*|take away|maths?|mathematics|numbers?|arithmetic|herufi|hesabu|kusoma|kuhesabu)\b(?![\s\S]*\bhomework\b)|\b(?:apply(?:ing)?\s+for|file\s+(?:my|a|an|the)|renew|open(?:ing)?\s+(?:a|an)\s+(?:bank\s+)?account|get(?:ting)?\s+(?:a|an|my)\s+(?:id|license|licence|passport|visa|card|permit)|start(?:ing)?\s+(?:a|my)\s+business|find(?:ing)?\s+(?:a\s+)?job|(?:use|using|about|with)\s+(?:kyro|nexus|this\s+app|the\s+app))\b/i;
 // In a session, a sentence that is a request of its own is not the learner's answer.
 const KYRO_TUTOR_OTHER = /^(?:open|show(?: me)? (?:my\b|all\b|some\b|(?:(?:a|an|the)\s+)?(?:pictures?|videos?|images?|photos?|maps?|weather|documents?|lists?|notes?|reminders?|calendar)\b)|play|pause|resume|call|text|send|remind me|set (?:a|an|my)|add (?:a|an|my)|delete|cancel my|find (?:a|an|the|me)|search(?: for)?|look up|navigate|directions? to|take me to|go to|close|(?:create|make|draft|prepare|generate|build)\s+(?:me\s+)?(?:an?|the|my|some)|what(?:'s| is| are) (?:the )?(?:weather|time|date)|weather|my (?:lists|notes|reminders|documents)|fungua|onyesha|cheza|piga|tuma|nikumbushe|tafuta|hali ya hewa)\b/i;
+// A person who has fallen or is hurt and says so: "I fell and can't get up", "I slipped and hurt my back", "I've had a fall", "call an ambulance", "alert my circle". Said aloud these used to depend on what the voice model chose to do:
+// it sometimes only spoke (the circle was never alerted) and sometimes opened an old health window that showed a Virtual Care Encounter form (the owner's test report of 4 November 2026, health-06). The page now sends them the typed way, to the
+// governed route that alerts the trusted circle or says plainly that there is no circle and to call the local emergency number. It leans toward catching: a false trigger costs one calm reply.
+const KYRO_EMERGENCY_SAID = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:i(?:['’]ve)?\s+(?:have\s+|just\s+)*(?:fell|fallen|slipped|tripped)\b[^.?!]{0,60}\b(?:can['’]?t|cannot|unable|hurt|injured|broke|broken|bleeding|pain|dizzy)\b|i\s+(?:can['’]?t|cannot)\s+get\s+up\b|i(?:['’]ve|\s+have|\s+had)\s+(?:just\s+)?(?:had\s+)?a\s+fall\b|i\s+had\s+a\s+fall\b|(?:please\s+)?(?:call|get|send|need|phone)\s+(?:me\s+)?(?:an?\s+|the\s+|for\s+an?\s+)?ambulance\b|i\s+need\s+an?\s+ambulance\b|alert\s+my\s+(?:trusted\s+)?(?:circle|family|emergency\s+contacts?)\b)`, "i");
 // Typing instead of talking: "I want to type", "let me type", "use the keyboard" (or the small Type button) shows the typed box even when voice works, and "use voice" (or the Use voice button) goes back.
 // The choice is kept in the browser, so it is still on after a reload. (Before this the typed box showed only when voice could not run, and nobody could tell how to get it.)
 const KYRO_TYPE_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:i\s+)?(?:want|would\s+like|'d\s+like|need|prefer)\s+to\s+(?:type|use\s+(?:the\s+)?keyboard)\b|let\s+me\s+type\b|(?:can|could)\s+i\s+type\b|type\s+instead\b|(?:switch|change|go)\s+(?:over\s+)?to\s+(?:typing|the\s+keyboard)\b|(?:turn\s+on\s+|use\s+)?typing\s+mode\b|use\s+(?:the\s+)?keyboard\b|i\s+(?:can'?t|cannot)\s+(?:talk|speak)\b|nataka\s+kuandika\b|niruhusu\s+niandike\b|nitaandika\b)`, "i");
@@ -52839,6 +52843,12 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
   const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
+  // an emergency comes before everything else, in a lesson too
+  if (!options.typed && KYRO_EMERGENCY_SAID.test(said)) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
+  }
   // "The next part", "part 3", "read on": the next part of the Word or Excel file just read out
   const filePart = typeof kyroFileReadingMore === "function" ? kyroFileReadingMore(said) : 0;
   if (filePart) { kyroTakeOverTurn(); void kyroContinueFileReading(filePart, lang); return true; }
