@@ -52427,7 +52427,11 @@ function kyroSetTypedMode(on, options = {}) {
   try { renderUserWorkspace(); } catch { /* the next render shows it */ }
   kyroUpdateTypeButton(!nexusTypedModeRequested);
   if (nexusTypedModeRequested) setTimeout(() => { try { document.querySelector("#nexusCommandCenterInput")?.focus(); } catch { /* the box is there to click */ } }, 250);
-  if (options.say !== false) { try { setVoiceResponse(kyroTypeText(nexusTypedModeRequested ? "on" : "off"), true, { allowHandoff: false, source: "kyro-open" }); } catch { /* the box says it too */ } }
+  if (options.say !== false) {
+    const line = kyroTypeText(nexusTypedModeRequested ? "on" : "off");
+    try { setVoiceResponse(line, true, { allowHandoff: false, source: "kyro-open" }); } catch { /* the box says it too */ }
+    try { kyroSpeakPageLine(line); } catch { /* the box says it too */ } // (said in the page's own words even when the turn was not marked as taken over; the same words twice within 6 seconds are said once)
+  }
   return true;
 }
 try { document.addEventListener("click", event => { const target = event && event.target; if (target && target.closest && target.closest("[data-kyro-use-voice]")) kyroSetTypedMode(false, { say: false }); }); } catch { /* no document yet */ }
