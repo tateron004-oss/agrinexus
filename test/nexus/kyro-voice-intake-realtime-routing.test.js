@@ -223,7 +223,7 @@ test("callNexusOpenAiRealtimeTool short-circuits with no network call when a Kyr
   assert.ok(start > 0 && end > start, "could not locate callNexusOpenAiRealtimeTool in app.js");
   let fetchCalls = 0;
   const sandbox = {
-    kyroDismissStaleWorkspace: () => {}, kyroActiveVoiceIntake: { engine: {} }, routeKyroVoiceIntakeTranscript: () => { throw new Error("an interview already under way is not started again"); }, kyroVoiceIntakeOwnsTurn: () => true, kyroIntakeBusyLine: () => "Kyro is already asking the person their résumé questions one at a time. Say nothing now.",
+    kyroDismissStaleWorkspace: () => {}, kyroTutorOwns: () => false, kyroTutorDemoCommand: () => null, kyroTutorSentAt: 0, kyroActiveVoiceIntake: { engine: {} }, routeKyroVoiceIntakeTranscript: () => { throw new Error("an interview already under way is not started again"); }, kyroVoiceIntakeOwnsTurn: () => true, kyroIntakeBusyLine: () => "Kyro is already asking the person their résumé questions one at a time. Say nothing now.",
     fetch: async () => { fetchCalls += 1; return { ok: true, json: async () => ({}) }; },
     nexusGenesisVoiceDebugLog: () => {}
   };
@@ -242,7 +242,7 @@ test("callNexusOpenAiRealtimeTool starts the interview itself when it comes firs
   const run = async started => {
     const routed = []; let fetchCalls = 0;
     const sandbox = {
-      KYRO_GOVERNED_VOICE_TOOLS: new Set(), nexusPendingBehaviorConfirmation: null, kyroDismissStaleWorkspace: () => {}, kyroActiveVoiceIntake: null, kyroVoiceIntakeOwnsTurn: () => true, kyroIntakeBusyLine: () => "Kyro is already asking the person about what they want to sell, one question at a time. Say nothing now.",
+      KYRO_GOVERNED_VOICE_TOOLS: new Set(), nexusPendingBehaviorConfirmation: null, kyroDismissStaleWorkspace: () => {}, kyroTutorOwns: () => false, kyroTutorDemoCommand: () => null, kyroTutorSentAt: 0, kyroActiveVoiceIntake: null, kyroVoiceIntakeOwnsTurn: () => true, kyroIntakeBusyLine: () => "Kyro is already asking the person about what they want to sell, one question at a time. Say nothing now.",
       routeKyroVoiceIntakeTranscript: arg => { routed.push(arg); return started; }, kyroMediaCommand: async () => false, kyroVisualRequestKind: () => null, kyroShowResultScreen: () => false,
       kyroDeviceTimeZone: () => "UTC", languageCode: () => "en", nexusGenesisVoiceDebugLog: () => {}, window: { setTimeout, KyroMediaCommands: { parse: () => null } },
       kyroFetchWithTimeout: async () => { fetchCalls += 1; throw new Error("stop here: the server was asked"); }, kyroToolFailureResult: () => ({ ok: false, status: "failed", response: "stopped" })
@@ -298,4 +298,35 @@ test("the intake panel's own words follow the language too", () => {
   assert.equal(sandbox.t("question", "en", { n: 2, total: 8 }), "Question 2 of 8");
   assert.equal(sandbox.t("repeat", "sw"), "Rudia");
   assert.equal(sandbox.t("review", "fr"), "Review your answers", "a language with no words falls back to English");
+});
+
+// 4 November 2026 (owner's test report, everyday-13): "it wouldn't stop asking questions when I said stop, I had to click the exit button". A first "stop" pauses; a second way of saying so ends it by voice.
+test("saying 'stop' twice ends the résumé by voice: the first pauses, the second ends it, says nothing was saved and how to start again", () => {
+  const { sandbox, events, calls } = loadGlue();
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Can you make a resume for me?", utteranceId: "u1", source: "realtime-transport" });
+  assert.equal(sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Stop", utteranceId: "u2", source: "realtime-transport" }), true);
+  assert.equal(sandbox.getActiveIntake().engine.phase, "paused");
+  assert.ok(events.some(event => event.type === "response.create" && /Say stop again to end it/.test(event.response.instructions)), "the pause says how to end it");
+  events.length = 0;
+  const interruptsBefore = calls.interrupts;
+  const consumed = sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Stop", utteranceId: "u3", source: "realtime-transport" });
+  assert.equal(consumed, true, "the second stop is the intake's, not left to the model to answer");
+  assert.equal(calls.interrupts, interruptsBefore + 1, "whatever the model had begun to say is cut off");
+  assert.equal(sandbox.getActiveIntake(), null, "the intake must be gone");
+  const spoken = events.filter(event => event.type === "response.create").map(event => event.response.instructions).join(" ");
+  assert.match(spoken, /Nothing was saved/);
+  assert.match(spoken, /build my resume to start again/);
+});
+
+test("'skip' said twice on the name (which cannot be skipped) ends the résumé by voice, and the first time says why", () => {
+  const { sandbox, events } = loadGlue();
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Can you make a resume for me?", utteranceId: "u1", source: "realtime-transport" });
+  events.length = 0;
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Skip", utteranceId: "u2", source: "realtime-transport" });
+  assert.ok(events.some(event => event.type === "response.create" && /cannot skip it/.test(event.response.instructions) && /cancel/.test(event.response.instructions)));
+  assert.ok(sandbox.getActiveIntake(), "still asking after the first skip");
+  events.length = 0;
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Skip", utteranceId: "u3", source: "realtime-transport" });
+  assert.equal(sandbox.getActiveIntake(), null);
+  assert.ok(events.some(event => event.type === "response.create" && /Nothing was saved/.test(event.response.instructions)));
 });

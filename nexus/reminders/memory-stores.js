@@ -17,12 +17,13 @@ function createMemoryNotifications() {
       const row = { notification_id: `ntf_mem_${counter}`, tenant_id: item.tenantId, user_id: item.userId, channel: item.channel, content: item.content || {}, scheduled_at: item.scheduledAt || new Date(), created_at: new Date(Date.now() + counter), state: "queued", idempotency_key: item.idempotencyKey };
       rows.push(row); return row;
     },
-    async listReminders({ tenantId, userId, limit = 50 }) {
-      return rows.filter(row => own(row, tenantId, userId) && row.state === "queued" && row.content?.reminderText).sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at) || a.created_at - b.created_at).slice(0, limit);
+    // (the same rules as nexus/notifications/repository.js: includeInFlight also lists a reminder the worker is sending right now; a queued OR in-flight reminder can be cancelled, and previous_state says which it was)
+    async listReminders({ tenantId, userId, limit = 50, includeInFlight = false }) {
+      return rows.filter(row => own(row, tenantId, userId) && (row.state === "queued" || (includeInFlight === true && row.state === "delivering")) && row.content?.reminderText).sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at) || a.created_at - b.created_at).slice(0, limit);
     },
     async cancelReminder({ tenantId, userId, notificationId }) {
-      const row = rows.find(item => item.notification_id === notificationId && own(item, tenantId, userId) && item.state === "queued" && item.content?.reminderText);
-      if (!row) return null; row.state = "cancelled"; return row;
+      const row = rows.find(item => item.notification_id === notificationId && own(item, tenantId, userId) && (item.state === "queued" || item.state === "delivering") && item.content?.reminderText);
+      if (!row) return null; const previous_state = row.state; row.state = "cancelled"; return { ...row, previous_state };
     },
     async existsByKey({ tenantId, idempotencyKey }) { return rows.some(row => row.tenant_id === tenantId && row.idempotency_key === idempotencyKey); }
   };

@@ -108,6 +108,9 @@ class OpenEndedPlanner {
     let session = this.tutorSessions.get(tenantId, userId);
     let first = false;
     const plan = (response, extra = {}) => Object.freeze({ goal: said, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false, planningAttempts: 0, ...extra });
+    // The app says no lesson is on its screen (the card was closed, the page was reloaded, or the "stop" never arrived): the lesson is over, and what is said now is NOT a lesson answer. Without this a lesson the server still held
+    // open took every later sentence that was not an obvious command ("Does a church have to file a Form 990?" was taught as a lesson turn), for up to 45 minutes: found in the owner's test report of 4 November 2026.
+    if (session && !starting && context?.tutorLessonOpen === false && !tutorMode.isStop(said)) { this.tutorSessions.end(tenantId, userId); return null; }
     if (session && !starting) {
       if (tutorMode.isStop(said)) {
         this.tutorSessions.end(tenantId, userId);
@@ -1007,7 +1010,11 @@ class OpenEndedPlanner {
     const completeBusiness = completeBusinessPlan(command.text, catalog);
     // "Make me a flyer for my bake sale on Saturday" from a person with no business workspace: the workspace's own flyer, newsletter and email drafts need one, but a flyer is a document anyone can ask for, so it goes on to be written as one (found by the sweep on 27 October 2026: it said to start a workspace first).
     const marketingWithoutWorkspace = completeBusiness && businessVoiceDispatch.classify(command.text) === "generateMarketing" && Boolean(await this.noBusinessWorkspaceAnswer(command.text, context));
-    if (completeBusiness && !marketingWithoutWorkspace) {
+    // The same asked by a person who HAS a workspace (found by the owner's test report of 4 November 2026: "nothing opened or was made available to download", "only as a text file", "could not build a PDF"): the workspace's marketing kit asks "Should I go
+    // ahead?", then only says "Open Business services to review and download them", and what it makes there is Markdown and HTML, never a Word or PDF file and never a document on the screen. A flyer, newsletter, poster, brochure, handout, invitation or promotional email
+    // is a document anyone can ask for, so it is made as one for the owner too (the fixed layout below, in the file type asked for). The kit is still reached by "generate marketing materials".
+    const handoutForOwner = Boolean(completeBusiness) && !marketingWithoutWorkspace && businessVoiceDispatch.classify(command.text) === "generateMarketing" && Boolean(handoutRequest(command.text));
+    if (completeBusiness && !marketingWithoutWorkspace && !handoutForOwner) {
       // Found by the phrase sweep: a person with no business workspace was asked "Should I go ahead?" and only after the yes told there is none. Say it first, with no model and before any confirmation.
       const noWorkspace = await this.noBusinessWorkspaceAnswer(command.text, context);
       if (noWorkspace) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: noWorkspace, sourceRequired: false, planningAttempts: 0 });
@@ -1064,6 +1071,9 @@ class OpenEndedPlanner {
     if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
     const listUpdate = listUpdatePlan(command.text, catalog);
     if (listUpdate) return Object.freeze({ ...listUpdate, planningAttempts: 1 });
+    // "Delete my Tokyo packing list", "delete all my old checklists": whole checklists, asked about first (the shopping and to-do lists and the notes were read earlier, by personal/items.js)
+    const listDelete = checklistDeletePlan(command.text, catalog, conversationHistory);
+    if (listDelete) return Object.freeze({ ...listDelete, planningAttempts: 1 });
     // "Save the steps for getting a seller's permit in California as a checklist" (the offer after the answer): the walkthrough's steps as a real checklist, made the way any checklist is made
     const walkChecklist = walkthroughChecklistPlan(command.text, catalog);
     if (walkChecklist) return Object.freeze({ ...walkChecklist, planningAttempts: 1 });
@@ -2005,12 +2015,17 @@ const LIST_ID = "(rec_[a-z0-9_-]{4,60})";
 const LIST_ADD_ITEM = new RegExp(`^\\s*add to checklist ${LIST_ID}\\s*:\\s*(.+?)\\s*$`, "i");
 const LIST_TOGGLE_ITEM = new RegExp(`^\\s*mark item (\\d{1,3}) (?:done|not done|done or not done) on checklist ${LIST_ID}\\s*$`, "i");
 const LIST_REMOVE_ITEM = new RegExp(`^\\s*remove item (\\d{1,3}) from checklist ${LIST_ID}\\s*$`, "i");
+// "Delete checklist rec_a1b2c3" (the checklist screen's own Delete list button, after it asked "Delete this list?") and "Delete old checklists keeping the newest 5" (its "Delete the older lists" button)
+const LIST_DELETE_ID = new RegExp(`^\\s*delete checklist ${LIST_ID}\\s*$`, "i");
+const LIST_DELETE_OLD = /^\s*delete old checklists keeping the newest (\d{1,3})\s*$/i;
 function listUpdatePlan(text, catalog) {
   const goal = String(text || "").trim();
   if (!goal || !catalog?.tools?.some(tool => tool.toolId === "lists.update") || !catalog.applications?.some(app => app.applicationId === "lists")) return null;
   let input = null; let title = "";
   let match = LIST_ADD_ITEM.exec(goal);
-  if (match) {
+  if ((match = LIST_DELETE_ID.exec(goal))) { input = { listId: match[1], deleteList: true }; title = "Delete a checklist"; }
+  else if ((match = LIST_DELETE_OLD.exec(goal))) { input = { keepNewest: Number(match[1]) }; title = "Delete the older checklists"; }
+  else if ((match = LIST_ADD_ITEM.exec(goal))) {
     const items = match[2].split(/\s*[,;]\s*|\s+and\s+/i).map(item => item.trim()).filter(Boolean).slice(0, 20);
     if (!items.length) return null;
     input = { listId: match[1], addItems: items }; title = "Add to a checklist";
@@ -2022,6 +2037,41 @@ function listUpdatePlan(text, catalog) {
   if (!input) return null;
   return { goal, application: "lists", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "update-list", title, toolId: "lists.update", input, dependsOn: [], fallbackToolIds: [] }] };
+}
+
+// Deleting whole checklists by voice (found on 4 November 2026: they could not be deleted at all, and every list a test made piled up on the checklist screen). Always asked about first, with the exact words to say:
+// "Delete my old checklists" -> all but the five newest; "delete all my checklists" -> every one; "delete the Tokyo packing list" / "delete the checklist called Tokyo packing" -> that one. "Yes, delete ..." (or a plain "yes" right after) does it.
+// (the shopping list, the to-do list and the notes are read before this, by personal/items.js; a name such as "shopping" is left alone here)
+const DELETE_LISTS_VERB = "(?:delete|remove|erase|clear|wipe|empty|get rid of|scrap|throw away)";
+function checklistDeletePlan(text, catalog, history = []) {
+  const goal = String(text || "").trim();
+  if (!goal || goal.length > 200 || !catalog?.tools?.some(tool => tool.toolId === "lists.update") || !catalog.applications?.some(app => app.applicationId === "lists")) return null;
+  const lower = goal.toLowerCase().replace(/[.!?]+$/g, "");
+  let confirmed = /^(?:yes|yeah|yep|ok|okay)[, ]+\S/.test(lower);
+  let body = lower.replace(/^(?:(?:yes|yeah|yep|ok|okay)[, ]+)?(?:please\s+)?/, "").trim();
+  // a plain "yes" right after Kyro asked: the words it asked to be said are the request
+  if (/^(?:yes|yeah|yep|ok|okay|go ahead|do it|please do)[.!, ]*(?:please)?$/.test(lower)) {
+    const last = [...(Array.isArray(history) ? history : [])].reverse().find(turn => turn && /assistant|kyro|nexus/i.test(String(turn.role || "")));
+    const asked = /Say "yes, (delete [^"]+)"/i.exec(String(last?.content || ""));
+    if (!asked) return null;
+    body = asked[1].toLowerCase(); confirmed = true;
+  }
+  const make = (input, title) => ({ goal, application: "lists", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "delete-lists", title, toolId: "lists.update", input, dependsOn: [], fallbackToolIds: [] }] });
+  const ask = (what, phrase) => ({ goal, application: "lists", riskTier: "low", steps: [], clarification: `${what} Say "yes, ${phrase}" to go ahead.` });
+  let m;
+  if (new RegExp(`^${DELETE_LISTS_VERB}\\s+(?:all\\s+(?:of\\s+)?)?(?:(?:my|the)\\s+)?(?:old|previous|earlier|older|extra|finished|saved)\\s+(?:check ?lists?|lists)$`).test(body)) {
+    return confirmed ? make({ keepNewest: 5 }, "Delete the older checklists") : ask("That would delete all but your five newest checklists.", "delete my old checklists");
+  }
+  if (new RegExp(`^${DELETE_LISTS_VERB}\\s+(?:all\\s+(?:of\\s+)?)?(?:(?:my|the)\\s+)?(?:check ?lists|lists)$`).test(body)) {
+    return confirmed ? make({ keepNewest: 0 }, "Delete every checklist") : ask("That would delete every checklist you have.", "delete all my checklists");
+  }
+  if ((m = new RegExp(`^${DELETE_LISTS_VERB}\\s+(?:the\\s+|my\\s+)?(?:check ?list|list)\\s+(?:called|named|titled)\\s+(.+)$`).exec(body)) || (m = new RegExp(`^${DELETE_LISTS_VERB}\\s+(?:the\\s+|my\\s+)?(.+?)\\s+(?:check ?list|list)$`).exec(body))) {
+    const name = m[1].replace(/\s+/g, " ").trim();
+    if (!name || name.split(" ").length > 6 || /^(?:shopping|grocery|groceries|market|to-?do|todo|tasks?|old|previous|all|every|my|the|that|this|it|a|an)$/.test(name) || /\b(?:reminders?|calendar|notes?|contacts?|documents?|invoices?|emails?)\b/.test(name)) return null;
+    return confirmed ? make({ deleteTitle: name }, `Delete the checklist called ${name}`) : ask(`That would delete the checklist called ${name}.`, `delete the checklist called ${name}`);
+  }
+  return null;
 }
 
 // "Walk me through forming a church", "step by step, how do I get ready for a doctor's visit": a guide's topic with a walkthrough (see knowledge/guide-walkthroughs.js) asked for one step at a time. The person does each step; Kyro never files,

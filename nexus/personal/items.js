@@ -20,7 +20,7 @@ const MAX_NAMED_LISTS = 12;
 // ---- reading what was said ----
 
 // { action, ...details } or null. `today` is the person's local day, used to read days in calendar requests.
-function readRequest(text, today) {
+function readRequest(text, today, depth = 0) {
   // The one front door (speech/normalise.js) has usually cleaned this already; it is cheap and idempotent, so a caller that did not is covered too.
   // ("Put tomatoes on my shopping list as well": the closing "as well", "too" or "also" is not part of any item or name)
   const t = normaliseSpoken(text).text.replace(/[’]/g, "'").replace(/\s+(?:as well|too|also)(?=[.!?]*$)/i, "");
@@ -29,11 +29,13 @@ function readRequest(text, today) {
   let m;
 
   // calendar
+  if (depth === 0) { const several = readSeveralEvents(t, today); if (several) return several; }
   if ((m = /^(?:please )?(?:add|put|schedule|book|set up|create|pencil in|weka|ongeza|andika)\s+(.+?)\s+(?:to|on|in|onto|into|kwenye|katika|kwa|ktk)\s+(?:my\s+|yangu\s+)?(?:calendar|schedule|diary|kalenda)\b(?:\s+yangu)?\s*(.*)$/i.exec(t)) || (m = /^(?:please )?(?:add to|put on|schedule on) my (?:calendar|schedule|diary)[:,]?\s+()(.+)$/i.exec(t)))
     return eventDetails(m[1], m[2], today);
   // Spoken without "my calendar": "schedule a meeting with the cooperative on Monday at 10". Only an event noun
   // (meeting, appointment, ...) plus a day/time word counts, so "put milk on Monday" is never read as an event.
-  if ((m = /^(?:please )?(?:schedule|book|set up|arrange|put in|put|add|plan)\s+((?:a |an |the |my )?(?:meeting|appointment|visit|interview|training|session|class|delivery|market day)\b.*?)\s+((?:on|at|for|next|this|tomorrow|today)\b.*)$/i.exec(t)))
+  // (up to two words may come before the event noun: "a vet visit tomorrow at 10", "a team meeting on Friday")
+  if ((m = /^(?:please )?(?:schedule|book|set up|arrange|put in|put|add|plan)\s+((?:a |an |the |my )?(?:[a-z'-]+ ){0,2}?(?:meeting|appointment|visit|interview|training|session|class|delivery|market day)\b.*?)\s+((?:on|at|for|next|this|tomorrow|today)\b.*)$/i.exec(t)))
     return eventDetails(m[1], m[2], today);
   if ((m = /^(?:please )?(?:cancel|remove|delete|take off|take)\s+(.+?)\s+(?:from|off|on) my (?:calendar|schedule|diary)$/i.exec(t))) return { action: "event-remove", query: clean(m[1]) };
   if (/^(?:what(?:'s| is| are)|what do i have|what have i got|show|read|list|tell me|do i have anything on)\b.*\bmy (?:calendar|schedule|diary|events|appointments)\b/i.test(lower) ||
@@ -59,9 +61,41 @@ function readRequest(text, today) {
       // "What notes do I have?", "do I have any notes", "what notes have I saved": found by the live voice audit, where the first was sent to the checklists and answered "I couldn't get your notes"
       || /^(?:what|which) notes (?:do i have|have i (?:saved|made|written|taken|kept|got)|are (?:saved|there)|did i (?:save|make|take|write))(?: saved)?$/.test(lower) || /^do i have any notes(?: saved)?$/.test(lower)) return { action: "note-list" };
   if ((m = /^(?:what did i (?:note|jot|write|put|save|say)(?: it)?(?: down)?|what notes do i have|find my notes?|what(?:'s| is| are) my notes?) (?:about|on|for|regarding)\s+(.+)$/i.exec(lower))) return { action: "note-find", query: clean(m[1]) };
-  if ((m = /^(?:delete|remove|forget|erase) my notes? (?:about|on|for|regarding)\s+(.+)$/i.exec(lower))) return { action: "note-remove", query: clean(m[1]) };
+  // Deleting notes (found on 4 November 2026: every way of saying it except "delete my note about ..." went to the AI model, which asked "which reminder to remove?"):
+  // "delete my note about the cow", "delete the note about the pump", "remove note about the gate", "delete the cow note", "delete my last note"
+  const DELETE_NOTE = "(?:delete|remove|forget|erase|get rid of|scrap|take away|clear)";
+  if ((m = new RegExp(`^(?:please )?${DELETE_NOTE}\\s+(?:(?:my|the|that|this|a)\\s+)?(?:old\\s+)?notes?\\s+(?:about|on|for|regarding|that (?:says?|said|mentions?|reads?)|saying|with|called)\\s+(.+)$`, "i").exec(lower))) return { action: "note-remove", query: clean(m[1]) };
+  if (new RegExp(`^(?:please )?${DELETE_NOTE}\\s+(?:(?:my|the|that|this)\\s+)?(?:last|latest|newest|most recent|previous)\\s+note$`, "i").test(lower)) return { action: "note-remove", newest: true, query: "" };
+  if ((m = new RegExp(`^(?:please )?${DELETE_NOTE}\\s+(?:(?:my|the|that|this)\\s+)?([\\p{L}][\\p{L}' -]{0,40}?)\\s+note$`, "iu").exec(lower)) && !/\b(?:all|every|old|my|saved|calendar|reminder|reminders|contact|first|second|third)\b/i.test(m[1])) return { action: "note-remove", query: clean(m[1]) };
+  // every note, asked about first: "delete all my notes", "clear my notes", "remove my notes", "wipe my old notes"
+  if (new RegExp(`^(?:(?:yes|yeah|yep|ok|okay)[, ]+)?(?:please )?${DELETE_NOTE.replace("clear", "clear|wipe|empty")}\\s+(?:all\\s+(?:of\\s+)?)?(?:(?:my|the)\\s+)?(?:old\\s+|saved\\s+|previous\\s+)?notes$`, "i").test(lower))
+    return { action: "note-clear-all", confirmed: /^(?:yes|yeah|yep|ok|okay)[, ]/i.test(lower) };
 
   return null;
+}
+
+// Two events said in one breath ("put a meeting with the cooperative on Monday at 10 am add vet visit to my calendar tomorrow at 10 am", or "add a meeting on Monday at 10 am and a vet visit tomorrow at 10 am"; speech recognition
+// often runs two requests together) are two events, each with its own day and time. They used to become ONE event whose title held both and whose day was the second one's (found on 4 November 2026).
+// Only when every piece is a complete event on its own: otherwise it is read as before.
+const EVENT_VERB = "(?:add|put|schedule|book|set up|pencil in|arrange|plan)";
+function readSeveralEvents(t, today) {
+  if (t.length < 28) return null;
+  let parts = t.split(new RegExp(`\\s+(?:(?:and|then|also)\\s+)?(?=(?:please\\s+)?${EVENT_VERB}\\s+(?:a|an|the|my|some)?\\s*\\S)`, "i")).map(clean).filter(Boolean);
+  if (parts.length < 2) {
+    const head = new RegExp(`^(?:please\\s+)?(${EVENT_VERB})\\s+(.+)$`, "i").exec(t);
+    if (head) {
+      const pieces = head[2].split(/\s+and\s+(?=(?:a|an|the|my)\s)/i).map(clean).filter(Boolean);
+      if (pieces.length >= 2) parts = pieces.map(piece => `${head[1]} ${piece}`);
+    }
+  }
+  if (parts.length < 2 || parts.length > 5) return null;
+  const events = [];
+  for (const part of parts) {
+    const one = readRequest(part, today, 1);
+    if (!one || one.action !== "event-add" || one.missing) return null;
+    events.push(one);
+  }
+  return { action: "event-add-many", events };
 }
 
 function eventDetails(head, tail, today) {
@@ -117,13 +151,21 @@ const byWhen = (a, b) => `${a.day} ${a.time || "00:00"}`.localeCompare(`${b.day}
 
 // ---- acting on it ----
 
+// "yes" said right after Kyro asked whether to delete every note
+const YES_PLAIN = /^(?:yes|yeah|yep|yup|sure|ok|okay|go ahead|do it|please do)[.!, ]*(?:please)?[.!]*$/i;
+function confirmsNotes(text, history) {
+  if (!YES_PLAIN.test(clean(text))) return null;
+  const last = [...(Array.isArray(history) ? history : [])].reverse().find(turn => turn && /assistant|kyro|nexus/i.test(String(turn.role || "")));
+  return /Say "yes, delete all my notes"/i.test(String(last?.content || "")) ? { action: "note-clear-all", confirmed: true } : null;
+}
+
 // Returns the words to answer with, or null when this is not for personal items. `memory` needs the personal item methods. `history` (optional) is the
 // conversation so far, so a plain "yes" can answer Kyro's own "shall I clear the whole list?".
 async function personalTurn({ text, memory, tenantId, userId, now = new Date(), timeZone, history = [] }) {
   if (!memory?.addPersonalItem || !memory?.listPersonalItems) return null;
   const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
   const today = localDay(now, zone);
-  const request = confirmsClear(text, history) || readRequest(text, today);
+  const request = confirmsClear(text, history) || confirmsNotes(text, history) || readRequest(text, today);
   if (!request) return null;
   const sw = request.sw === true;
   const scope = { tenantId, userId };
@@ -238,7 +280,8 @@ async function personalTurn({ text, memory, tenantId, userId, now = new Date(), 
         } else found = findItem(candidates, request.query);
         if (found?.ambiguous) return sw ? `Ipi: ${sayListSw(found.ambiguous.map(row => row.content.text), 5)}?` : `Which one: ${sayList(found.ambiguous.map(row => row.content.text), 5)}?`;
         if (!found) {
-          if (request.bare) return null;
+          // "remove milk" with nothing called that on any list: said so when the person has lists at all, instead of leaving it to the AI model (which asked "which reminder to remove?")
+          if (request.bare) return all.length ? (sw ? `Sijapata ${request.query} kwenye orodha zako.` : `I couldn't find ${request.query} on your lists.`) : null;
           if (request.action === "todo-done" && !request.sure) return null;
           return sw ? `Sijapata ${request.query} kwenye orodha zako.` : `I couldn't find ${request.query} on your lists.`;
         }
@@ -272,10 +315,14 @@ async function personalTurn({ text, memory, tenantId, userId, now = new Date(), 
         let target = request.list;
         if (!target) {
           const used = listsInUse(all);
+          // no shopping or to-do list at all: "delete the list" may be about a checklist, which its own reader asks about
+          if (!used.length) return null;
           if (used.length !== 1) return sw ? 'Niambie ni orodha ipi, kwa mfano "futa orodha yangu ya manunuzi".' : 'Which list should I clear? Say "clear my shopping list" or "clear my to-do list".';
           target = used[0];
         }
         const rows = all.filter(row => row.content.list === target);
+        // a list with a name of its own that is not here ("delete my Tokyo packing list") may be a checklist: left to the checklist reader
+        if (!rows.length && !["shopping", "todo"].includes(target)) return null;
         if (!rows.length) return sw ? `${nounOf(target, true)} yako tayari haina kitu.` : `Your ${nounOf(target)} is already empty.`;
         if (!request.confirmed) {
           const mine = target === "shopping" ? "orodha yangu ya manunuzi" : target === "todo" ? "orodha yangu ya kazi" : `orodha yangu ya ${target}`;
@@ -284,6 +331,26 @@ async function personalTurn({ text, memory, tenantId, userId, now = new Date(), 
         }
         for (const row of rows) await memory.removePersonalItem({ ...scope, memoryId: row.memory_id });
         return sw ? `Nimeondoa vitu ${rows.length} kwenye ${yourNoun(target)}.` : `Cleared your ${nounOf(target)}: removed ${rows.length} ${rows.length === 1 ? "item" : "items"}.`;
+      }
+      case "lists-clear-all": {
+        const all = await list("todo");
+        const used = listsInUse(all);
+        // no shopping or to-do list: any checklists are asked about by their own reader
+        if (!used.length) return null;
+        const counts = used.map(name => ({ name, n: all.filter(row => row.content.list === name).length }));
+        if (!request.confirmed) {
+          return sw ? `Hii itaondoa orodha zako zote: ${counts.map(c => `${nounOf(c.name, true)} (vitu ${c.n})`).join("; ")}. Sema "yes, clear all my lists" ili kuendelea.`
+            : `That would clear all your lists: ${naturalList(counts.map(c => `your ${nounOf(c.name)} (${c.n} ${c.n === 1 ? "item" : "items"})`))}. Say "yes, clear all my lists" to go ahead.`;
+        }
+        for (const row of all) await memory.removePersonalItem({ ...scope, memoryId: row.memory_id });
+        return sw ? `Nimeondoa orodha zako zote: vitu ${all.length}.` : `Cleared all your lists: removed ${all.length} ${all.length === 1 ? "item" : "items"}.`;
+      }
+      case "note-clear-all": {
+        const notes = await list("note");
+        if (!notes.length) return "You have no notes to delete.";
+        if (!request.confirmed) return `That would delete ${notes.length === 1 ? "your only note" : `all ${notes.length} of your notes`}. Say "yes, delete all my notes" to go ahead.`;
+        for (const row of notes) await memory.removePersonalItem({ ...scope, memoryId: row.memory_id });
+        return `Deleted all ${notes.length} ${notes.length === 1 ? "note" : "notes"}.`;
       }
       case "note-add": {
         if (!request.text) return null;
@@ -295,7 +362,9 @@ async function personalTurn({ text, memory, tenantId, userId, now = new Date(), 
         return notes.length ? `Your notes, newest first: ${sayList(notes, 8)}.` : 'You have no notes. Say "note that the pump needs a new seal".';
       }
       case "note-find": case "note-remove": {
-        const found = findItem(await list("note"), request.query);
+        const notes = await list("note");
+        // "delete my last note": the newest (the list is newest first)
+        const found = request.newest ? (notes.length ? { item: notes[0] } : null) : findItem(notes, request.query);
         if (found?.ambiguous) return `${found.ambiguous.length} notes match. ${request.action === "note-find" ? sayList(found.ambiguous.map(row => row.content.text), 5) : "Say more of the note so I delete the right one."}`;
         if (!found) return `I have no note about ${request.query}.`;
         if (request.action === "note-find") return `${found.item.content.text}.`;
@@ -312,6 +381,24 @@ async function personalTurn({ text, memory, tenantId, userId, now = new Date(), 
         if (result?.duplicate) return `${eventLine(result.duplicate, today)} is already on your calendar.`;
         if (!result) return full;
         return `Added to your calendar: ${eventLine(event, today)}. I will mention it in your morning brief that day.`;
+      }
+      case "event-add-many": {
+        const added = []; const already = []; const passed = [];
+        for (const one of request.events) {
+          if (one.day < today) { passed.push(`${one.title} (${describeDay(one.day, today)})`); continue; }
+          const event = { kind: "event", text: one.title.slice(0, MAX_TEXT), day: one.day, time: one.time };
+          const isDuplicate = existing => existing.day === event.day && existing.time === event.time && words(existing.text).join(" ") === words(event.text).join(" ");
+          const result = await add(event, isDuplicate);
+          if (result?.duplicate) { already.push(eventLine(result.duplicate, today)); continue; }
+          if (!result) return added.length ? `I added ${added.length} of them to your calendar, but then it was full. ${full}` : full;
+          added.push(eventLine(event, today));
+        }
+        const lines = [];
+        if (added.length) lines.push(`Added ${added.length === 1 ? "to your calendar" : `${added.length} events to your calendar`}: ${added.join("; ")}.`);
+        if (already.length) lines.push(`${already.join("; ")} ${already.length === 1 ? "is" : "are"} already on your calendar.`);
+        if (passed.length) lines.push(`I did not add ${passed.join("; ")}: that day has already passed.`);
+        if (added.length) lines.push("I will mention each one in your morning brief that day.");
+        return lines.join(" ");
       }
       case "event-list": {
         const events = (await list("event")).map(row => row.content).filter(event => event.day >= request.range.from && event.day <= request.range.to).sort(byWhen);

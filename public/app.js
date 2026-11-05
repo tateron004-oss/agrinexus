@@ -50680,7 +50680,8 @@ function kyroPageJustOpened(command) {
 async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
   // a card left open by an earlier request does not stay in front of this one (a workspace this request opens comes after)
-  if (!(typeof kyroPageJustOpened === "function" && kyroPageJustOpened(command))) kyroDismissStaleWorkspace(command);
+  // (but not for a lesson sentence: the lesson card the page has just drawn for these same words is the answer, and clearing it here made the lesson vanish)
+  if (!(typeof kyroPageJustOpened === "function" && kyroPageJustOpened(command)) && !kyroTutorOwns(command)) kyroDismissStaleWorkspace(command);
   // The sign-in has ended: nothing can be opened or saved, and the model must say so rather than "it is on the screen".
   if (typeof kyroSignInEnded !== "undefined" && kyroSignInEnded) return { ok: false, status: "signin_ended", response: `The person's sign-in has ended, so nothing can be opened, listed or saved until they sign in again. Tell them exactly this in one short sentence: ${KYRO_SIGNIN_ENDED_LINE}`, executionVerified: false, blockedReason: "signin_ended" };
   kyroToolCalledAt = Date.now(); // (what the model has acted on: see kyroRecoverRefusal)
@@ -50711,6 +50712,14 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     await kyroReturnToOrb({ reason: window.KyroDismissCommands.parse(command).kind, source: "openai-realtime-tool" });
     return { ok: true, status: "completed", response: "Okay.", executionVerified: false, blockedReason: null, clientAction: { type: "return-to-orb" } };
   }
+  // A sentence tutoring owns (a lesson request, an answer or question in an open lesson, "stop"): the lesson answers it, and the older learning tool is NEVER asked, whatever happens to the lesson's own route: that tool opens the old Learning
+  // screen ("I opened Learning and prepared a plain-language lesson", with its sample irrigation course) or says "I couldn't do that one just now" (found in the owner's test report of 4 November 2026).
+  if (kyroTutorOwns(command)) {
+    // The page has just sent these words to the lesson itself (the model's tool call is the same sentence a moment later): not a second turn
+    if (Date.now() - kyroTutorSentAt < 8000) return { ok: true, status: "completed", response: "Kyro is already doing it and said so. Say nothing more.", executionVerified: false, blockedReason: null };
+    const lessonTurn = await kyroAnswerLikeTyped(command);
+    return lessonTurn || kyroToolFailureResult("offline", { correlationId: `lesson-${Date.now().toString(36)}` });
+  }
   // "Pause the music", "next song", "louder": the player is on this page, so the page does it (the music tool would go and play a song called "pause").
   const mediaAsk = window.KyroMediaCommands?.parse?.(command);
   if (mediaAsk && (mediaAsk.type === "control" || mediaAsk.type === "play")) {
@@ -50732,8 +50741,10 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     }
   }
   // "Find a picture of ..." / "show me videos about ...": drawn on the screen by the typed path (see kyroShowVisualRequest), not answered by a tool that has no pictures.
-  const visualKind = kyroVisualRequestKind(command);
-  if (visualKind) return kyroShowVisualRequest(command, visualKind);
+  // (in a lesson with a subject, "show me a picture" with no subject means pictures of the lesson's subject)
+  const lessonPicture = kyroTutorDemoCommand(command);
+  const visualKind = kyroVisualRequestKind(lessonPicture || command);
+  if (visualKind) return kyroShowVisualRequest(lessonPicture || command, visualKind);
   // "yes" or "no" the page already took from what it heard (see routeKyroVoiceIntakeTranscript): the model's own tool call for the same word does not answer it a second time
   if (/^(?:yes|yeah|yep|yup|sure|ok|okay|go ahead|do it|no|nope|cancel|do not|don't)\b/i.test(command) && Date.now() - kyroConfirmedAt < 8000) {
     return { ok: true, status: "completed", response: "Kyro already did that and said so. Say nothing more.", executionVerified: false, blockedReason: null };
@@ -51566,10 +51577,11 @@ async function applyKyroIntakeDecision(decision) {
     // Each cleanup step stands alone: one failing must not skip the others.
     const step = work => { try { work(); } catch (error) { nexusGenesisVoiceDebugLog("kyro-voice-intake-cancel-cleanup-error", { message: error?.message || "unknown" }); } };
     step(() => renderKyroVoiceIntakePanel(null));
-    step(() => { if (decision.say) speakKyroIntakeLine(decision.say, { step: decision.snapshot?.index, language: decision.language }); });
+    step(() => { if (decision.say && decision.emergency) speakKyroIntakeLine(decision.say, { step: decision.snapshot?.index, language: decision.language }); });
     step(() => injectKyroRealtimeContext(`The ${active?.definition?.title || "form"} was cancelled; nothing was saved.`));
-    // (an interview that stopped itself because it heard an emergency says what to do and nothing else: no "nothing was saved" after it)
-    step(() => { if (!decision.emergency) speakKyroIntakeLine(kyroIntakeText("cancelled", decision.language), { language: decision.language }); });
+    // (an interview that stopped itself because it heard an emergency says what to do and nothing else: no "nothing was saved" after it. Any other end says "Okay, I stopped. Nothing was saved." and, when the engine
+    // has one, how to start again: "Say 'build my resume' to start again.")
+    step(() => { if (!decision.emergency) speakKyroIntakeLine([kyroIntakeText("cancelled", decision.language), decision.say].filter(Boolean).join(" "), { language: decision.language }); });
     step(() => active?.onCancel?.());
     return;
   }
@@ -51858,9 +51870,12 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       applyKyroIntakeDecision(kyroActiveVoiceIntake.engine.resume());
       return true;
     }
-    // "Cancel" is the way out of a paused intake (a pause keeps every answer until then).
-    if (KyroVoiceIntake.classifyControl(trimmed) === "cancel") {
-      applyKyroIntakeDecision(kyroActiveVoiceIntake.engine.cancel());
+    // "Cancel" is the way out of a paused intake (a pause keeps every answer until then), and so is a second way of saying so after the person's own "stop" ("stop" again, "skip", "no", "enough", "I'm done",
+    // "that's all", "acha"): a person who is stuck must always be able to get out by voice, not only by the button (4 November 2026). The engine decides; the turn is consumed and the model is not left to answer it.
+    const leaving = kyroActiveVoiceIntake.engine.leaveWhilePaused(trimmed);
+    if (leaving) {
+      try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch {}
+      applyKyroIntakeDecision(leaving);
       return true;
     }
     return false;
@@ -52389,7 +52404,19 @@ function kyroResumeTutor() {
 function kyroTutorEnd() {
   if (!kyroTutorOpen()) return;
   kyroTutorUntil = 0; kyroTutorSubject = ""; kyroTutorLast = null;
-  try { void kyroSilentTurn("Stop tutoring").catch(() => {}); } catch { /* the server forgets the session after 45 quiet minutes anyway */ }
+  // (sent again once if it did not get through: a lesson the server still holds open is also ended by the next turn, which says no lesson is open, see tutorLessonOpen)
+  try { void kyroSilentTurn("Stop tutoring").catch(() => new Promise(resolve => setTimeout(resolve, 1500)).then(() => kyroSilentTurn("Stop tutoring")).catch(() => {})); } catch { /* the server forgets the session after 45 quiet minutes anyway */ }
+}
+// A sentence tutor mode owns: it asks for a lesson, or it is said in an open lesson and is not a request of its own. The older routes (the voice model's learning tool, the workspace opener that reads a sentence's words) must never take such a
+// sentence: the old Learning screen with its sample irrigation course, and "I couldn't do that one just now", came from them (found in the owner's test report of 4 November 2026).
+let kyroTutorSentAt = 0; // when the page last sent a lesson sentence to the lesson, so the voice model's own tool call for the same words is not a second turn
+function kyroTutorOwns(text) {
+  const said = String(text || "").trim();
+  if (!said) return false;
+  const requestsLesson = KYRO_TUTOR_REQUEST.test(said);
+  if (requestsLesson && !KYRO_TUTOR_NOT.test(said)) return true;
+  if (!kyroTutorOpen() || requestsLesson) return false;
+  return !KYRO_TUTOR_OTHER.test(said);
 }
 const KYRO_LIST_NOT = /^(?:how|why|should i|can i)\b|\b(?:walk|teach|guide|show)\s+(?:me\s+)?(?:how|through)\b|\b(?:what|which) (?:is|are) (?:a|the)\b/i;
 // A spoken note or reminder ("Write down milk, eggs and flour", "Make a note that I paid the rent", "Remind me to buy bread tomorrow"): the voice model answered these aloud and the page showed nothing (found by the sweep of 34 spoken requests on 27 October 2026).
@@ -52742,14 +52769,11 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
     void handleNexusUnifiedBrainRuntimeCommand(tutorDemo, { source: "typed", kyroDirect: true });
     return true;
   }
-  if (!options.typed) {
-    const startsTutor = KYRO_TUTOR_REQUEST.test(said) && !KYRO_TUTOR_NOT.test(said);
-    const inSession = kyroTutorOpen() && !KYRO_TUTOR_OTHER.test(said) && !(KYRO_TUTOR_REQUEST.test(said) && KYRO_TUTOR_NOT.test(said));
-    if (startsTutor || inSession) {
-      kyroTakeOverTurn();
-      void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
-      return true;
-    }
+  if (!options.typed && kyroTutorOwns(said)) {
+    kyroTakeOverTurn();
+    kyroTutorSentAt = Date.now();
+    void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
   }
   // "Open the Sales Plan document", "read my latest document": that one document opens, with its words and the Download button (it used to list all of them and say "it's open").
   const namedDocument = kyroNamedDocument(said);
@@ -52936,7 +52960,7 @@ function kyroWritableListKind(text) {
 async function kyroSilentTurn(text) {
   const result = await requestWithTimeout("/api/nexus/runtime/behavior/turn", {
     method: "POST",
-    body: { text, channel: "typed", locale: languageCode(), conversationId: nexusAuthoritativeConversationId(), timeZone: kyroDeviceTimeZone() }
+    body: { text, channel: "typed", locale: languageCode(), conversationId: nexusAuthoritativeConversationId(), timeZone: kyroDeviceTimeZone(), tutorLessonOpen: kyroTutorOpen() }
   }, 60000);
   if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true) throw new Error("Kyro did not understand that.");
   return result;
@@ -52945,11 +52969,15 @@ const KYRO_COMPOSER_TEXT = Object.freeze({
   en: { saving: "Saving...", saved: "Saved.", failed: "That did not save. Please try again.", missing: "Write something first.",
     noteLabel: "Write a note", noteButton: "Save note", whatLabel: "What should I remind you about?", dayLabel: "Day", timeLabel: "Time", reminderButton: "Set reminder",
     titleLabel: "Title", bodyLabel: "What it says", documentButton: "Save document", checklistName: "New checklist name", checklistItems: "Items, separated by commas", checklistButton: "Create checklist",
-    addItem: "Add an item", add: "Add", remove: "Remove", checklists: "Your checklists", today: "Today", tomorrow: "Tomorrow", close: "Close" },
+    addItem: "Add an item", add: "Add", remove: "Remove", checklists: "Your checklists", today: "Today", tomorrow: "Tomorrow", close: "Close",
+    deleteList: "Delete list", confirmDelete: "Delete this whole list?", yesDelete: "Yes, delete", no: "No", deleted: "Deleted.", hideOlder: "Hide older lists", deleteOlder: "Delete the older lists",
+    showOlder: n => `Show ${n} older ${n === 1 ? "list" : "lists"}`, confirmDeleteOlder: n => `Delete the ${n} older ${n === 1 ? "list" : "lists"}? Your newest five stay.` },
   sw: { saving: "Inahifadhi...", saved: "Imehifadhiwa.", failed: "Haikuhifadhiwa. Tafadhali jaribu tena.", missing: "Andika kitu kwanza.",
     noteLabel: "Andika kumbuka", noteButton: "Hifadhi kumbuka", whatLabel: "Nikukumbushe nini?", dayLabel: "Siku", timeLabel: "Saa", reminderButton: "Weka ukumbusho",
     titleLabel: "Kichwa", bodyLabel: "Inasema nini", documentButton: "Hifadhi waraka", checklistName: "Jina la orodha mpya", checklistItems: "Vitu, vitenganishwe kwa koma", checklistButton: "Tengeneza orodha",
-    addItem: "Ongeza kitu", add: "Ongeza", remove: "Ondoa", checklists: "Orodha zako", today: "Leo", tomorrow: "Kesho", close: "Funga" }
+    addItem: "Ongeza kitu", add: "Ongeza", remove: "Ondoa", checklists: "Orodha zako", today: "Leo", tomorrow: "Kesho", close: "Funga",
+    deleteList: "Futa orodha", confirmDelete: "Futa orodha hii yote?", yesDelete: "Ndiyo, futa", no: "Hapana", deleted: "Imefutwa.", hideOlder: "Ficha orodha za zamani", deleteOlder: "Futa orodha za zamani",
+    showOlder: n => `Onyesha orodha ${n} za zamani`, confirmDeleteOlder: n => `Futa orodha ${n} za zamani? Tano mpya zaidi zinabaki.` }
 });
 function kyroUiText() {
   try { return KYRO_COMPOSER_TEXT[languageCode() === "sw" ? "sw" : "en"]; } catch { return KYRO_COMPOSER_TEXT.en; }
@@ -53046,13 +53074,45 @@ function kyroShowChecklistScreen(lists, savedLine) {
     screen.append(close, kyroMake("h2", { style: "margin:8px 0 0;font-size:1.4rem;color:#94a3b8;letter-spacing:.02em;text-transform:uppercase" }, t.checklists));
     const status = kyroMake("p", { "data-kyro-composer-status": "true", role: "status", style: "margin:0;color:#94a3b8;min-height:1.4em" }, savedLine || "");
     screen.append(status);
-    const act = async command => {
+    const act = async (command, doneLine) => {
       status.textContent = t.saving;
-      try { await kyroSilentTurn(command); await kyroRefreshList("checklists", t.saved); } catch { status.textContent = t.failed; }
+      try { await kyroSilentTurn(command); await kyroRefreshList("checklists", doneLine || t.saved); } catch { status.textContent = t.failed; }
     };
-    for (const list of Array.isArray(lists) ? lists : []) {
-      if (!list || !list.listId) continue;
-      const card = kyroMake("div", { "data-kyro-checklist": list.listId, style: "width:100%;max-width:34em;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.07)" });
+    // Only the newest five lists are open (the store gives them newest-changed first); the rest are behind "Show N older lists", so a person with dozens of lists (every checklist a test or a walkthrough made) sees a screen that can be read
+    // (found on 4 November 2026: all of them were drawn, one under another, with no way to delete one). A whole list is deleted only after "Delete this whole list?" is answered Yes.
+    const SHOWN = 5;
+    const valid = (Array.isArray(lists) ? lists : []).filter(list => list && list.listId);
+    const olderCount = Math.max(0, valid.length - SHOWN);
+    const olderCards = [];
+    const confirmRow = (message, yesLabel, onYes) => {
+      const row = kyroMake("div", { role: "alertdialog", "aria-label": message, style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px" });
+      const yes = kyroMake("button", { type: "button", "data-kyro-confirm-yes": "true", style: "padding:10px 14px;border:0;border-radius:10px;background:#7f1d1d;color:#fff;font:inherit;cursor:pointer" }, yesLabel);
+      const no = kyroMake("button", { type: "button", style: "padding:10px 14px;border:0;border-radius:10px;background:rgba(255,255,255,.14);color:#f1f5f9;font:inherit;cursor:pointer" }, t.no);
+      yes.addEventListener("click", () => { row.remove(); onYes(); });
+      no.addEventListener("click", () => row.remove());
+      row.append(kyroMake("span", { style: "color:#fca5a5" }, message), yes, no);
+      return row;
+    };
+    for (const [position, list] of valid.entries()) {
+      if (position === SHOWN) {
+        const toggleRow = kyroMake("div", { "data-kyro-older-lists": "true", style: "width:100%;max-width:34em;display:flex;gap:8px;flex-wrap:wrap;align-items:center" });
+        const toggle = kyroMake("button", { type: "button", "aria-expanded": "false", "data-kyro-older-toggle": "true", style: KYRO_BUTTON_STYLE }, t.showOlder(olderCount));
+        toggle.addEventListener("click", () => {
+          const open = toggle.getAttribute("aria-expanded") === "true";
+          olderCards.forEach(card => { card.style.display = open ? "none" : ""; });
+          toggle.setAttribute("aria-expanded", String(!open));
+          toggle.textContent = open ? t.showOlder(olderCount) : t.hideOlder;
+        });
+        const deleteOlder = kyroMake("button", { type: "button", "data-kyro-older-delete": "true", style: "padding:12px 18px;border:0;border-radius:12px;background:rgba(127,29,29,.55);color:#fecaca;font:inherit;font-size:1.05rem;cursor:pointer" }, t.deleteOlder);
+        deleteOlder.addEventListener("click", () => {
+          if (toggleRow.querySelector("[role=alertdialog]")) return;
+          toggleRow.append(confirmRow(t.confirmDeleteOlder(olderCount), t.yesDelete, () => { void act("Delete old checklists keeping the newest " + SHOWN, t.deleted); }));
+        });
+        toggleRow.append(toggle, deleteOlder);
+        screen.append(toggleRow);
+      }
+      const card = kyroMake("div", { "data-kyro-checklist": list.listId, style: "width:100%;max-width:34em;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.07)" + (position >= SHOWN ? ";display:none" : "") });
+      if (position >= SHOWN) olderCards.push(card);
       card.append(kyroMake("h3", { style: "margin:0 0 8px;font-size:1.3rem" }, String(list.title || "Checklist")));
       const items = Array.isArray(list.items) ? list.items : [];
       items.forEach((item, index) => {
@@ -53069,7 +53129,13 @@ function kyroShowChecklistScreen(lists, savedLine) {
       const box = kyroMake("input", { type: "text", name: "item", "aria-label": t.addItem, placeholder: t.addItem, style: KYRO_FIELD_STYLE });
       add.append(box, kyroMake("button", { type: "submit", style: KYRO_BUTTON_STYLE }, t.add));
       add.addEventListener("submit", event => { event.preventDefault(); const said = box.value.trim(); if (!said) { status.textContent = t.missing; return; } void act("Add to checklist " + list.listId + ": " + said.replace(/\s+/g, " ")); });
-      card.append(add); screen.append(card);
+      card.append(add);
+      const del = kyroMake("button", { type: "button", "data-kyro-list-delete": list.listId, style: "margin-top:12px;padding:8px 14px;border:0;border-radius:10px;background:rgba(127,29,29,.5);color:#fecaca;font:inherit;cursor:pointer" }, t.deleteList);
+      del.addEventListener("click", () => {
+        if (card.querySelector("[role=alertdialog]")) return;
+        card.append(confirmRow(t.confirmDelete, t.yesDelete, () => { void act("Delete checklist " + list.listId, t.deleted); }));
+      });
+      card.append(del); screen.append(card);
     }
     document.body.append(screen);
     kyroAddComposer("checklists");
@@ -54240,6 +54306,8 @@ function kyroShowTypedResult(result, text, message) {
       kyroTutorUntil = tutor.active === true ? Date.now() + 45 * 60 * 1000 : 0;
       kyroTutorSubject = tutor.active === true ? String(tutor.subject || "") : "";
       if (tutor.active !== true) kyroTutorLast = null;
+      // an older workspace window (the Learning screen with its sample irrigation course, the AI tutor window) that opened before or behind the lesson is taken down: nothing is left stuck behind the lesson or after "stop"
+      try { if (document.querySelector("#nexus-workspace")) closeNexusFunctionWindow({ command: "" }); } catch { /* the lesson card is drawn over it anyway */ }
     }
     if (kyroExplicitOpenCard(text)) return false;
     const drawn = result.render;
@@ -54261,7 +54329,9 @@ function kyroShowTypedResult(result, text, message) {
         const body = drawn.data || {};
         const single = body.list || (Array.isArray(body.items) ? { listId: body.listId, title: body.title, items: body.items } : null);
         const lists = (Array.isArray(body.lists) ? body.lists : single ? [single] : []).filter(list => list && list.listId);
-        if (lists.length && kyroShowChecklistScreen(lists, "")) {
+        // a list (or several) was just deleted: the lists that are left are shown, with "Deleted.", even when none is left
+        const deletedLine = body.deleted === true ? kyroUiText().deleted : "";
+        if ((lists.length || body.deleted === true) && kyroShowChecklistScreen(lists, deletedLine)) {
           if (!Array.isArray(body.lists)) void kyroRefreshList("checklists", "").catch(() => {}); // a list just made or changed: all of them, as they are now
           return true;
         }
@@ -54388,6 +54458,8 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   if (!command) return null;
   // "close the weather card" mentions the weather, but it asks for nothing to be opened.
   if (window.KyroDismissCommands?.parse?.(command)) return null;
+  // A sentence tutoring owns ("teach me about irrigation", a lesson answer that mentions a crop or a doctor) is a lesson turn: it opens no Agriculture, Health, Learning or other workspace from its words.
+  if (kyroTutorOwns(command)) return null;
   const explicitOpen = /\b(open|show|display|start|begin|launch|find|search|play|plan|reset|record|create|take me to|remind me|help (?:me )?(?:with|find|sell|record|enter|create))\b/.test(lower);
   const routeRequest = /\b(route|directions?|navigate|navigation)\b/.test(lower) || (explicitOpen && /\bmaps?\b/.test(lower));
   const workforceRequest = explicitOpen && (
@@ -61743,6 +61815,8 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
         locale: languageCode(),
         conversationId: nexusAuthoritativeConversationId(),
         taskId: localStorage.getItem(NEXUS_AUTHORITATIVE_TASK_KEY) || undefined,
+        // Whether a tutoring lesson is on the screen: a lesson the server holds open that the screen has closed (or never got) is ended there, not taught from (see tutorTurn in nexus/brain/planner.js).
+        tutorLessonOpen: kyroTutorOpen(),
         // Where the person is, so times like "7am" mean their own morning.
         timeZone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; } })()
       }
@@ -63522,6 +63596,13 @@ async function handleVoiceCommand(rawCommand, options = {}) {
 async function runBackendAgentCommand(command, locationContext = null, options = {}) {
   const turnToken = options.turnToken || null;
   if (ignoreStaleNexusTurn(turnToken, "backend answer")) return null;
+  // This is the door to the OLDER server route (the one that answers "teach me ..." by opening the Learning window with its sample irrigation course, and "One half" with "I couldn't do that one just now"). It is reached when the voice
+  // connection is not confirmed, and by the older readers. A sentence tutoring owns goes to the lesson instead, however it got here (found in the owner's test report of 4 November 2026).
+  if (kyroTutorOwns(command)) {
+    kyroTutorSentAt = Date.now();
+    await handleNexusUnifiedBrainRuntimeCommand(String(command || ""), { source: "typed", kyroDirect: true });
+    return null;
+  }
   abortActiveAgentCommand();
   const controller = new AbortController();
   activeAgentCommandController = controller;

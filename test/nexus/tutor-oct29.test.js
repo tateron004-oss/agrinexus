@@ -236,7 +236,7 @@ test("in a session the page treats a request of its own as its own, and anything
 });
 
 test("the page sends a spoken tutoring sentence the typed way, ends the session on a close, and draws each turn on a card that stays with an answer box", () => {
-  assert.match(app, /const startsTutor = KYRO_TUTOR_REQUEST\.test\(said\) && !KYRO_TUTOR_NOT\.test\(said\);\s+const inSession = kyroTutorOpen\(\) && !KYRO_TUTOR_OTHER\.test\(said\) && !\(KYRO_TUTOR_REQUEST\.test\(said\) && KYRO_TUTOR_NOT\.test\(said\)\);\s+if \(startsTutor \|\| inSession\) \{\s+kyroTakeOverTurn\(\);\s+void handleNexusUnifiedBrainRuntimeCommand\(said, \{ source: "typed", kyroDirect: true \}\);\s+return true;/);
+  assert.match(app, /if \(!options\.typed && kyroTutorOwns\(said\)\) \{\s+kyroTakeOverTurn\(\);\s+kyroTutorSentAt = Date\.now\(\);\s+void handleNexusUnifiedBrainRuntimeCommand\(said, \{ source: "typed", kyroDirect: true \}\);\s+return true;/);
   assert.match(app, /if \(options\.reason === "home" \|\| options\.reason === "done" \|\| options\.reason === "close"\) \{\s+const lessonOnScreen = Boolean\(document\.querySelector\("\[data-kyro-tutor-box\]"\)\);\s+if \(kyroTutorOpen\(\) && kyroTutorLast && !lessonOnScreen && \(options\.reason === "close" \|\| options\.source === "gallery-screen"\)\) resumeTutor = true;\s+else kyroTutorEnd\(\);/);
   assert.match(app, /if \(resumeTutor\) setTimeout\(\(\) => \{ kyroResumeTutor\(\); \}, 400\);\s+return true;/);
   assert.match(app, /const tutor = result\.plan && result\.plan\.tutor \? result\.plan\.tutor : null;\s+if \(tutor\) \{\s+kyroTutorUntil = tutor\.active === true \? Date\.now\(\) \+ 45 \* 60 \* 1000 : 0;\s+kyroTutorSubject = tutor\.active === true \? String\(tutor\.subject \|\| ""\) : "";/);
@@ -244,7 +244,7 @@ test("the page sends a spoken tutoring sentence the typed way, ends the session 
   assert.match(app, /if \(shown && tutor && tutor\.active === true\) \{\s+kyroTutorLast = \{ response: String\(message \|\| ""\), tutor: \{ active: true, subject: String\(tutor\.subject \|\| ""\) \} \};\s+kyroAddTutorBox\(tutor\);/);
   assert.match(app, /&& !\(typeof kyroGuidedReply === "function" && kyroGuidedReply\(command\)\) && !kyroTutorOpen\(\)\) return false;/);
   assert.match(app, /function kyroAddTutorBox\(tutor = null\) \{[\s\S]*?"Type your answer here, or say it"[\s\S]*?"Stop tutoring"[\s\S]*?"Acha somo"/);
-  assert.ok(app.indexOf("const startsTutor") < app.indexOf("const namedDocument = kyroNamedDocument(said);"), "the tutor claim comes before the document claims");
+  assert.ok(app.indexOf("if (!options.typed && kyroTutorOwns(said))") < app.indexOf("const namedDocument = kyroNamedDocument(said);"), "the tutor claim comes before the document claims");
 });
 
 // ---- the card ----
@@ -309,7 +309,7 @@ test("in a lesson with a subject, 'show me a picture' or 'a video' means picture
 });
 
 test("the page sends the picture or video request, brings the lesson back when it is closed, and adds Show a picture / Show a video buttons when the lesson has a subject", () => {
-  assert.match(app, /const tutorDemo = kyroTutorDemoCommand\(said\);\s+if \(tutorDemo\) \{\s+if \(!options\.typed\) kyroTakeOverTurn\(\);\s+void handleNexusUnifiedBrainRuntimeCommand\(tutorDemo, \{ source: "typed", kyroDirect: true \}\);\s+return true;\s+\}\s+if \(!options\.typed\) \{\s+const startsTutor/);
+  assert.match(app, /const tutorDemo = kyroTutorDemoCommand\(said\);\s+if \(tutorDemo\) \{\s+if \(!options\.typed\) kyroTakeOverTurn\(\);\s+void handleNexusUnifiedBrainRuntimeCommand\(tutorDemo, \{ source: "typed", kyroDirect: true \}\);\s+return true;\s+\}\s+if \(!options\.typed && kyroTutorOwns\(said\)\) \{/);
   assert.match(app, /function kyroResumeTutor\(\) \{[\s\S]*?kyroShowResultScreen\("typed", "Continue the lesson", \{ ok: true, status: "completed", response: kyroTutorLast\.response, requiresConfirmation: true, tutor: kyroTutorLast\.tutor \}\);\s+if \(shown\) kyroAddTutorBox\(kyroTutorLast\.tutor\);/);
   assert.match(app, /demo\(sw \? "Onyesha picha" : "Show a picture", `Show me pictures of \$\{subject\}`\);\s+demo\(sw \? "Onyesha video" : "Show a video", `Show me videos about \$\{subject\}`\);/);
   assert.match(app, /kyroTutorUntil = 0; kyroTutorSubject = ""; kyroTutorLast = null;/);

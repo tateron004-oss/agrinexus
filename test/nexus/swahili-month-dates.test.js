@@ -144,9 +144,10 @@ test("the date is read back as the day it is, in Kiswahili, in the person's zone
   assert.equal(resolve("tarehe 15 Oktoba saa tatu asubuhi").readbackSw, "Alhamisi, tarehe 15 Oktoba saa tatu asubuhi");
   assert.equal(resolve("Jumatatu ijayo saa tatu asubuhi").readbackSw, "Jumatatu, tarehe 12 Oktoba saa tatu asubuhi");
   assert.equal(resolve("mwisho wa mwezi saa mbili asubuhi").readbackSw, "Jumamosi, tarehe 31 Oktoba saa mbili asubuhi");
-  assert.equal(resolve("tarehe 15 Machi saa kumi jioni").readbackSw, "Jumatatu, tarehe 15 Machi 2027 saa kumi jioni");
+  // (a date with no year whose day this year has already gone by is set for next year AND SAID so, in both languages: see finish() in nexus/reminders/time-phrase.js; the Kiswahili note is a first draft for a fluent reader)
+  assert.equal(resolve("tarehe 15 Machi saa kumi jioni").readbackSw, "Jumatatu, tarehe 15 Machi 2027 saa kumi jioni (tarehe hiyo imeshapita mwaka huu)");
   assert.equal(resolve("tarehe 15 Oktoba saa tatu asubuhi").readback, "at 9:00 am on Thursday, 15 October");
-  assert.equal(resolve("tarehe 15 Machi saa kumi jioni").readback, "at 4:00 pm on Monday, 15 March 2027");
+  assert.equal(resolve("tarehe 15 Machi saa kumi jioni").readback, "at 4:00 pm on Monday, 15 March 2027 (that date has already passed this year)");
   // another person's zone: 11 pm in Lagos is 1 am the next day in Nairobi, and the readback is the same person's own
   const lagos = resolveReminderTime("tarehe 15 Oktoba saa tano usiku", { now: NOW, timeZone: "Africa/Lagos" });
   assert.equal(lagos.readbackSw, "Alhamisi, tarehe 15 Oktoba saa tano usiku");

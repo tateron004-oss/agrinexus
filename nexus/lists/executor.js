@@ -82,11 +82,48 @@ function verifyListsReadOutcome({ result }) {
   return { verified: Boolean(singleLookup || listLookup), method: "real_record_lookup", reason: (singleLookup || listLookup) ? null : "list_lookup_incomplete" };
 }
 
+// "delete the Tokyo packing list": the one list whose title is exactly those words, else the one list that has all of them; none or several is said, nothing is guessed.
+const titleWords = value => String(value || "").toLowerCase().replace(/[^\p{L}\p{N}' ]/gu, " ").split(/\s+/).filter(word => word && !["the", "my", "a", "an", "list", "checklist"].includes(word));
+function findListByTitle(rows, wanted) {
+  const want = titleWords(wanted);
+  if (!want.length) return { reason: "list_not_found" };
+  const exact = rows.filter(row => titleWords(row.data?.title).join(" ") === want.join(" "));
+  if (exact.length === 1) return { row: exact[0] };
+  const all = exact.length ? exact : rows.filter(row => { const have = titleWords(row.data?.title); return want.every(word => have.includes(word)); });
+  if (all.length === 1) return { row: all[0] };
+  return all.length ? { reason: "list_ambiguous", matches: all.slice(0, 5).map(row => row.data?.title || "Untitled list") } : { reason: "list_not_found" };
+}
+
 function createListsUpdateExecutor({ records }) {
   if (!records?.list || !records?.update) throw new Error("A record repository is required.");
   return async function execute({ input = {}, context }) {
+    const everyList = () => records.list({ tenantId: context.tenantId, ownerId: context.userId, workspaceId: WORKSPACE_ID, recordType: RECORD_TYPE, limit: 200 });
+    // Deleting whole lists (found on 4 November 2026: lists could be made, read and changed item by item but never deleted, so every test list piled up on the checklist screen). A list is removed the way the record store removes any record
+    // (its words are emptied and it is marked deleted); only this person's own lists are ever looked at. `keepNewest: 5` deletes all but the five most recently changed (the store lists newest first); `deleteList` with a listId or `deleteTitle` deletes one.
+    if (input.deleteList === true || input.deleteTitle || input.keepNewest !== undefined) {
+      if (typeof records.remove !== "function") return { updated: false, listId: input.listId || "", reason: "delete_unavailable" };
+      const rows = await everyList();
+      let doomed;
+      if (input.keepNewest !== undefined) {
+        const keep = Math.max(0, Math.min(Math.floor(Number(input.keepNewest)), 200));
+        if (!Number.isFinite(keep)) return { updated: false, listId: "", reason: "keep_count_invalid" };
+        doomed = rows.slice(keep);
+      } else if (input.listId) {
+        const row = rows.find(item => item.record_id === input.listId);
+        if (!row) return { updated: false, listId: input.listId, reason: "list_not_found" };
+        doomed = [row];
+      } else {
+        const found = findListByTitle(rows, input.deleteTitle);
+        if (!found.row) return { updated: false, listId: "", reason: found.reason, ...(found.matches ? { matches: found.matches } : {}) };
+        doomed = [found.row];
+      }
+      const titles = []; const gone = new Set();
+      for (const row of doomed) if (await records.remove({ tenantId: context.tenantId, recordId: row.record_id, actorId: context.userId })) { titles.push(row.data?.title || "Untitled list"); gone.add(row.record_id); }
+      const remaining = rows.filter(row => !gone.has(row.record_id));
+      return { updated: true, deleted: true, deletedCount: titles.length, deletedTitles: titles.slice(0, 5), listId: doomed.length === 1 ? doomed[0].record_id : "", lists: remaining.map(formatList), found: remaining.length > 0 };
+    }
     if (!input.listId) throw new Error("listId is required to update a list.");
-    const rows = await records.list({ tenantId: context.tenantId, ownerId: context.userId, workspaceId: WORKSPACE_ID, recordType: RECORD_TYPE, limit: 200 });
+    const rows = await everyList();
     const existing = rows.find(item => item.record_id === input.listId);
     if (!existing) return { updated: false, listId: input.listId, reason: "list_not_found" };
     let items = (existing.data?.items || []).slice();
@@ -108,7 +145,8 @@ function createListsUpdateExecutor({ records }) {
 }
 
 function verifyListsUpdateOutcome({ result }) {
-  const verified = result?.updated === true ? Boolean(result.list) : result?.updated === false && typeof result?.reason === "string";
+  const deletion = result?.deleted === true && Number.isFinite(Number(result.deletedCount)) && Array.isArray(result.lists);
+  const verified = result?.updated === true ? Boolean(result.list || deletion) : result?.updated === false && typeof result?.reason === "string";
   return { verified: Boolean(verified), method: "real_record_write", reason: verified ? null : "list_update_incomplete" };
 }
 

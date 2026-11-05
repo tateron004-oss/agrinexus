@@ -579,7 +579,9 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       } else if (url.pathname === "/api/nexus/runtime/behavior/turn" && req.method === "POST") {
         if (!active.behavior) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy fallback was used.", code: "behavior_spine_unavailable" }); return true; }
         // The device's own time zone, when the app sends one and it is a real IANA zone, so "7am" means 7am where the person is.
-        const turnContext = validIanaZone(body.timeZone) ? Object.freeze({ ...context, timeZone: body.timeZone }) : context;
+        const zonedContext = validIanaZone(body.timeZone) ? Object.freeze({ ...context, timeZone: body.timeZone }) : context;
+        // Whether the app has a tutoring lesson on the screen (true or false when it says; nothing when it does not): the planner ends a lesson the app says is closed instead of treating what is said next as a lesson answer (nexus/brain/planner.js tutorTurn).
+        const turnContext = typeof body.tutorLessonOpen === "boolean" ? Object.freeze({ ...zonedContext, tutorLessonOpen: body.tutorLessonOpen }) : zonedContext;
         let result;
         try {
           result = await active.behavior.turn({ input: { correlationId: request.context.requestId,
