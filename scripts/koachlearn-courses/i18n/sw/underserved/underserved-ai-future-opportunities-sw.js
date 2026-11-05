@@ -28,7 +28,7 @@ module.exports = {
       "AI inaweza kukosea kuhusu mshahara, leseni na mafunzo: wanafunzi wanakagua bls.gov/ooh na tovuti rasmi za jimbo",
       "Hatari ya faragha na ulaghai: hakuna namba ya Social Security, namba za benki wala nywila katika AI au tovuti za kazi"
     ],
-    prerequisites: "Hakuna. Wanafunzi wapya kwa wasaidizi wa AI wanaweza kuanza na kozi \"Introduction to AI and Digital Empowerment\"."
+    prerequisites: "Hakuna. Wanafunzi wapya kwa wasaidizi wa AI wanaweza kuanza na kozi \"Utangulizi wa AI na Uwezeshaji wa Kidijitali\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

@@ -29,7 +29,7 @@ module.exports = {
       "Òfin PMI, owó àti ìlapa ìdánwò ń yí padà: àwọn akẹ́kọ̀ọ́ ń fìdí wọn múlẹ̀ lórí pmi.org, kì í ṣe láti inú ẹ̀kọ́ yìí",
       "Ẹ̀kọ́ yìí ń múni múra sílẹ̀; kò fúnni ní CAPM, kò sì fi ara rẹ̀ ka sí wákàtí ẹ̀kọ́ tí PMI ń béèrè"
     ],
-    prerequisites: "Kò sí. Àwọn tí kò mọ spreadsheet lè kọ́kọ́ ṣe \"Excel and Spreadsheets\"; \"Agile Project Management\" jẹ́ ẹ̀kọ́ tó dára láti ṣe tẹ̀lé e."
+    prerequisites: "Kò sí. Àwọn tí kò mọ spreadsheet lè kọ́kọ́ ṣe \"Excel and Spreadsheets\"; \"Ìṣàkóso Iṣẹ́ Àkànṣe ní Ọ̀nà Agile\" jẹ́ ẹ̀kọ́ tó dára láti ṣe tẹ̀lé e."
   },
   // ---- ADDIE: Design ----
   objectives: [

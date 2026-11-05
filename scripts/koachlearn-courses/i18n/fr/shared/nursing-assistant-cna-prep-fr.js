@@ -29,7 +29,7 @@ module.exports = {
       "Aucune pratique clinique sur de vraies personnes à la maison ; les gestes pratiques s'apprennent dans une formation encadrée",
       "Dans certains États, une ancienne condamnation peut gêner l'inscription au registre ; chaque apprenant vérifie les règles de son État"
     ],
-    prerequisites: "Aucun. « Comprendre sa santé et ses soins » est un bon premier cours."
+    prerequisites: "Aucun. « Littératie en santé : comprendre vos soins » est un bon premier cours."
   },
   // ---- ADDIE : Conception ----
   objectives: [

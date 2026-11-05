@@ -29,7 +29,7 @@ module.exports = {
       "Vifaa: kompyuta yenye kivinjari cha wavuti; hakuna cha kusakinisha",
       "Faragha: bot haziombi wala kuhifadhi kamwe nywila, namba za simu, anwani au namba za vitambulisho"
     ],
-    prerequisites: "Hakuna. Kozi \"Intro to Coding with AI\" (Utangulizi wa kuandika code kwa AI) inasaidia lakini si lazima."
+    prerequisites: "Hakuna. Kozi \"Utangulizi wa Kuandika Programu kwa Msaada wa AI\" inasaidia lakini si lazima."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

@@ -31,7 +31,7 @@ module.exports = {
       "Dokokin albashi da na aikin matasa sun bambanta daga jiha zuwa jiha; masu koyo su duba ofishin ƙwadago na jiharsu",
       "Wasu masu koyo suna da tarihin laifi; kwas ɗin yana nuna masu ɗaukar aiki da ke ba da dama ta adalci kuma ba ya alƙawarin kowane aiki"
     ],
-    prerequisites: "Babu. Masu koyon da za su sarrafa abinci su kuma ɗauki kwas ɗin \"Food Handler and ServSafe Exam Preparation\" (Shirin jarabawar mai sarrafa abinci da ServSafe)."
+    prerequisites: "Babu. Masu koyon da za su sarrafa abinci su kuma ɗauki kwas ɗin \"Mai Sarrafa Abinci da Shirin Jarabawar ServSafe\"."
   },
   // ---- ADDIE: Design ----
   objectives: [

@@ -18,7 +18,7 @@ module.exports = {
   about: [
     "Ẹ̀kọ́ yìí wà fún àwọn àgbàlagbà tí wọ́n fẹ́ ní ìgboyà nínú nọ́mbà padà: àwọn tó ń wá iṣẹ́, àwọn tó ń padà sílé láti ẹ̀wọ̀n, àwọn aṣíkiri, àwọn òbí àti ẹnikẹ́ni tó ń padà sí ẹ̀kọ́. O kò nílò láti rántí ìṣirò ilé-ìwé. A máa bẹ̀rẹ̀ láti ìbẹ̀rẹ̀, pẹ̀lú nǹkan gidi bí àmì iye owó ọjà, téèpù ìwọ̀n àti ìwé owó-iṣẹ́.",
     "O máa kọ́ ìdá, decimal àti ìdá-ọgọ́rùn-ún; ṣírò ẹ̀dínwó, owó-orí ọjà, owó ìmoore àti àfikún owó-iṣẹ́; fi iye owó ẹyọ kan wé ara wọn ní ilé ìtajà; wọn nǹkan kí o sì yí ẹyọ ìwọ̀n padà fún iṣẹ́ kan; ṣàyẹ̀wò gbogbo ìlà ìwé owó-iṣẹ́; kí o sì ṣe ètò ìnáwó oṣooṣù.",
-    "Àwọn ọgbọ́n kan náà yìí ni ọ̀pọ̀ ìdánwò iṣẹ́ àti ìdánwò GED Math (ìdánwò ìṣirò fún ìwé-ẹ̀rí ilé-ìwé gíga ní US) fi ń bẹ̀rẹ̀. Tí o bá parí, \"GED Test Preparation: Math\" jẹ́ ìgbésẹ̀ tó dára tó kàn. Ẹ̀kọ́ yìí kò fúnni ní ìwé-ẹ̀rí; ó ń kọ́ ọgbọ́n náà.",
+    "Àwọn ọgbọ́n kan náà yìí ni ọ̀pọ̀ ìdánwò iṣẹ́ àti ìdánwò GED Math (ìdánwò ìṣirò fún ìwé-ẹ̀rí ilé-ìwé gíga ní US) fi ń bẹ̀rẹ̀. Tí o bá parí, \"Ìmúrasílẹ̀ fún Ìdánwò GED: Ìṣirò\" jẹ́ ìgbésẹ̀ tó dára tó kàn. Ẹ̀kọ́ yìí kò fúnni ní ìwé-ẹ̀rí; ó ń kọ́ ọgbọ́n náà.",
     "Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún, pẹ̀lú àpẹẹrẹ tí a ti ṣírò àti iṣẹ́ \"Gbìyànjú rẹ̀ báyìí\" lórí ìwé tàbí ẹ̀rọ ìṣirò fóònù. Ìbéèrè kíákíá 2 wà lẹ́yìn ẹ̀kọ́ kọ̀ọ̀kan, ìdánwò ìmọ̀ wà ní ìparí orí kọ̀ọ̀kan, ìdánwò ìbéèrè 20 sì parí ẹ̀kọ́ náà. Gbogbo àpẹẹrẹ owó àti owó-iṣẹ́ jẹ́ àṣeṣe fún ìdánrawò."
   ],
   finalTask: "Ṣe \"Ìwé Ìṣirò Iṣẹ́ àti Owó\" tìrẹ lójú ìwé kan: (1) ṣàyẹ̀wò ìwé owó-iṣẹ́ àṣeṣe (tàbí tìrẹ, pẹ̀lú àwọn nọ́mbà àdáni tí o ti bò) ní ìlà-ìlà: wákàtí lọ́nà iye owó wákàtí, owó àfikún àkókò, àyọkúrò àti owó tí o ń mú lọ sílé; (2) yí owó-iṣẹ́ náà padà sí owó oṣooṣù kí o sì ṣe ètò ìnáwó oṣooṣù tó ní ìlà ìfipamọ́, níbi tí ìnáwó kò ti ju owó tó ń wọlé lọ; (3) fi iye owó ẹyọ kan ti nǹkan 3 tí o máa ń rà wé ara wọn, kí o sì kọ ìwọ̀n wo ló dára jù láti rà. Pa á mọ́ kí o sì máa ṣe àtúnṣe rẹ̀ lóṣooṣù.",
@@ -275,7 +275,7 @@ module.exports = {
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n parí ẹ̀kọ́ náà tí wọ́n sì parí Ìwé Ìṣirò Iṣẹ́ àti Owó gẹ́gẹ́ bí rubric",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé wọ́n rí àṣìṣe lórí ìwé owó-iṣẹ́ tàbí fi owó pamọ́ pẹ̀lú iye owó ẹyọ kan láàárín ọjọ́ 30 (ìwádìí àtẹ̀lé)",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n ń kọ ètò ìnáwó sílẹ̀ fún ó kéré tán oṣù 2",
-      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀síwájú sí \"GED Test Preparation: Math\" tàbí yege ìdánwò ìṣirò iṣẹ́ kan láàárín oṣù 6"
+      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀síwájú sí \"Ìmúrasílẹ̀ fún Ìdánwò GED: Ìṣirò\" tàbí yege ìdánwò ìṣirò iṣẹ́ kan láàárín oṣù 6"
     ]
   },
   // ---- ADDIE: Implementation ----
@@ -293,7 +293,7 @@ module.exports = {
       "Kọ́ wọn láti ṣàyẹ̀wò ìdáhùn lọ́nà méjì (fojú díwọ̀n, lẹ́yìn náà ṣírò) kí wọ́n lè gbẹ́kẹ̀ lé iṣẹ́ ara wọn.",
       "Nígbà tí àwọn akẹ́kọ̀ọ́ bá mú ìwé owó-iṣẹ́ gidi wá, jẹ́ kí wọ́n kọ́kọ́ bo nọ́mbà Social Security àti nọ́mbà báńkì. Ìbéèrè nípa owó-orí àti àfikún àkókò tó kọjá ìpìlẹ̀ lọ sọ́dọ̀ payroll, ọ́fíìsì iṣẹ́ ìpínlẹ̀ tàbí DOL Wage and Hour Division.",
       "Má ṣe dá ètò ìnáwó ẹnikẹ́ni lẹ́jọ́; èrò náà ni ètò tó dọ́gba, kì í ṣe èyí tí kò ní àbùkù.",
-      "Tọ́ àwọn akẹ́kọ̀ọ́ tó fẹ́ ìwé-ẹ̀rí sọ́nà sí \"GED Test Preparation: Math\"."
+      "Tọ́ àwọn akẹ́kọ̀ọ́ tó fẹ́ ìwé-ẹ̀rí sọ́nà sí \"Ìmúrasílẹ̀ fún Ìdánwò GED: Ìṣirò\"."
     ]
   }
 };

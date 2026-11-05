@@ -29,7 +29,7 @@ module.exports = {
       "Òfin orílẹ̀-èdè yàtọ̀ síra: ẹ̀kọ́ náà ń kọ́ àwọn ìlànà tí ó wọ́pọ̀ àti bí a ṣe ń ṣàyẹ̀wò ìtọ́ni agbanisíṣẹ́ tàbí ti orílẹ̀-èdè náà",
       "Ààbò: má ṣe fi nọ́mbà ìdánimọ̀, ìwé ìrìnnà tàbí báńkì sínú CV tàbí fáìlì àṣeṣe láéláé; kò sí ìmọ̀ràn físà tàbí òfin"
     ],
-    prerequisites: "Títẹ̀ ọ̀rọ̀ ìpìlẹ̀ lórí fóònù tàbí kọ̀mpútà. Àwọn tí kọ̀mpútà jẹ́ tuntun fún lè kọ́kọ́ ṣe \"Basic Computer Skills\"; àwọn akẹ́kọ̀ọ́ ní US tí wọ́n fẹ́ résumé US ojú-ewé kan àti àṣeṣe ìfọ̀rọ̀wánilẹ́nuwò tún lè ṣe \"Resumes, LinkedIn and Job Interviews\"."
+    prerequisites: "Títẹ̀ ọ̀rọ̀ ìpìlẹ̀ lórí fóònù tàbí kọ̀mpútà. Àwọn tí kọ̀mpútà jẹ́ tuntun fún lè kọ́kọ́ ṣe \"Ìmọ̀ Ìpìlẹ̀ Kọ̀mpútà\"; àwọn akẹ́kọ̀ọ́ ní US tí wọ́n fẹ́ résumé US ojú-ewé kan àti àṣeṣe ìfọ̀rọ̀wánilẹ́nuwò tún lè ṣe \"Résumé, LinkedIn àti Ìfọ̀rọ̀wánilẹ́nuwò Iṣẹ́\"."
   },
   // ---- ADDIE: Design ----
   objectives: [

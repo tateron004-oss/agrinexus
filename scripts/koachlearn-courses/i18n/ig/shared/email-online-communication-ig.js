@@ -29,7 +29,7 @@ module.exports = {
       "Ego: email n'efu (Gmail, Outlook.com ma ọ bụ Yahoo Mail) na app oku vidiyo n'efu",
       "Nzuzo: ndị na-amụ ihe anaghị etinye nọmba Social Security, nọmba ụlọ akụ ma ọ bụ okwuntughe n'email ma ọ bụ n'ozi chat mgbe ọ bụla"
     ],
-    prerequisites: "Ọ dịghị. \"Ihe Ndabere Ịntanetị\" (Internet Basics) na-enyere ndị na-ejibeghị web browser aka."
+    prerequisites: "Ọ dịghị. \"Mmalite Ịntanetị\" na-enyere ndị na-ejibeghị web browser aka."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

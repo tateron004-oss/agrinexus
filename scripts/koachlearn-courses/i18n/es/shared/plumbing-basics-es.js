@@ -31,7 +31,7 @@ module.exports = {
       "Tiempo: lecciones de 5 a 6 minutos que caben entre el trabajo, la escuela y las citas",
       "Las licencias cambian según el estado y la ciudad: cada participante revisa las reglas en la página oficial del lugar donde vive"
     ],
-    prerequisites: "Ninguno. \"Comenzar una carrera en los oficios calificados\" es un buen primer paso para elegir un oficio; este curso profundiza en la plomería."
+    prerequisites: "Ninguno. \"Empezar una carrera en los oficios calificados\" es un buen primer paso para elegir un oficio; este curso profundiza en la plomería."
   },
   // ---- ADDIE: Diseño (objetivos: condición, acción observable, criterio) ----
   objectives: [

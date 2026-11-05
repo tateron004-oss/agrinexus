@@ -299,7 +299,7 @@ module.exports = {
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n parí àpò ìbẹ̀rẹ̀ iṣẹ́ tí wọ́n sì dé ìpele tàbí kọjá rẹ̀ ní gbogbo ìlà rubric",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n ṣe ó kéré tán ìfọ̀rọ̀wánilẹ́nuwò ìmọ̀ kan láàárín ọjọ́ 30 (ìwádìí àtẹ̀lé)",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n béèrè fún tàbí rí ìkọ́ṣẹ́, iṣẹ́ tàbí iṣẹ́ àṣesìnlú nípa lílo CV wọn",
-      "Àwọn akẹ́kọ̀ọ́ tí wọ́n gba ẹ̀kọ́ míì, bíi AI Entrepreneurship for Athletes"
+      "Àwọn akẹ́kọ̀ọ́ tí wọ́n gba ẹ̀kọ́ míì, bíi Iṣẹ́ Oníṣòwò pẹ̀lú AI fún Àwọn Eléré Ìdárayá"
     ]
   },
   // ---- ADDIE: Implementation ----

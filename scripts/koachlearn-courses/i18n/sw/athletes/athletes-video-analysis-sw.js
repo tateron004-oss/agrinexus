@@ -291,7 +291,7 @@ module.exports = {
       "Wanafunzi wanaomaliza kazi ya mwisho na kupata Anafikia au Anazidi katika kila mstari wa rubriki",
       "Wanafunzi wanaoripoti kurekodi tena na kuweka lebo tena kwa swali lile lile ndani ya siku 30 (utafiti wa kufuatilia)",
       "Makocha wanaoripoti kwamba zoezi au lengo la mazoezi lilibadilika kwa sababu ya ushahidi wa video wa mwanamichezo",
-      "Wanafunzi wanaochukua kozi nyingine ya Athletes (Wanamichezo), kama AI for Team Sports"
+      "Wanafunzi wanaochukua kozi nyingine ya Athletes (Wanamichezo), kama \"AI kwa Michezo ya Timu\""
     ]
   },
   // ---- ADDIE: Utekelezaji ----

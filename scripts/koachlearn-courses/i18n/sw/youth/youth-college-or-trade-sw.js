@@ -29,7 +29,7 @@ module.exports = {
       "Vifaa: simu, au kompyuta ya shule au maktaba yenye intaneti",
       "Masomo mafupi na maneno rahisi; wanafunzi wengi watakuwa wa kwanza katika familia yao kufanya maamuzi haya"
     ],
-    prerequisites: "Hakuna. Kozi \"AI na Kuchunguza Kazi\" ni kozi nzuri ya kuanza nayo."
+    prerequisites: "Hakuna. Kozi \"AI na Kuchunguza Taaluma\" ni kozi nzuri ya kuanza nayo."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

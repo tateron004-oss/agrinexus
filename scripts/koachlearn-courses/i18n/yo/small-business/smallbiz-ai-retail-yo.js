@@ -30,7 +30,7 @@ module.exports = {
       "Òfin: òfin FTC lórí òtítọ́ nínú ìpolówó fún ohun tí a sọ nípa ọjà, iye owó lórí àmì sì gbọ́dọ̀ bá ti ẹ̀rọ ìgbowó mu",
       "Ìsọfúnni àdáni àti ààbò: kò sí ọ̀rọ̀ aṣínà olùpèsè tàbí ìsọfúnni oníbàárà nínú AI; àpapọ̀ ọjà nìkan"
     ],
-    prerequisites: "\"Àwọn Irinṣẹ́ AI Pàtàkì fún Iṣẹ́ Kékeré\" wúlò fún àwọn akẹ́kọ̀ọ́ tí wọ́n jẹ́ tuntun sí spreadsheet."
+    prerequisites: "\"Àwọn Irinṣẹ́ AI Pàtàkì fún Iṣẹ́ Òwò Kékeré\" wúlò fún àwọn akẹ́kọ̀ọ́ tí wọ́n jẹ́ tuntun sí spreadsheet."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

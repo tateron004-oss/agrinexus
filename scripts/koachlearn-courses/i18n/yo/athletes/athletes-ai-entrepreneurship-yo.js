@@ -28,7 +28,7 @@ module.exports = {
       "Òfin NIL, àmì-ìṣòwò, ìwé-àṣẹ iṣẹ́ òwò àti owó-orí; ṣàyẹ̀wò pẹ̀lú ọ́fíìsì ìbámu-òfin, ẹgbẹ́ eré ìpínlẹ̀ tàbí ìjọba ìbílẹ̀",
       "Kì í ṣe ìmọ̀ràn owó tàbí owó-orí; àwọn eléré ìdárayá tí kò tíì pé ọmọ ọdún 18 nílò òbí tàbí alágbàtọ́ fún àkáǹtì, àdéhùn àti yíyá owó èyíkéyìí"
     ],
-    prerequisites: "Kò sí. \"AI E-commerce Platforms for Athletes\" jẹ́ ìgbésẹ̀ tó dára tó kàn fún títa ọjà lórí íńtánẹ́ẹ̀tì."
+    prerequisites: "Kò sí. \"Àwọn Pẹpẹ Ìtajà Orí Ayélujára pẹ̀lú AI fún Àwọn Eléré Ìdárayá\" jẹ́ ìgbésẹ̀ tó dára tó kàn fún títa ọjà lórí íńtánẹ́ẹ̀tì."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

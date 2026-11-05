@@ -28,7 +28,7 @@ module.exports = {
       "Los requisitos de licencias, cuotas y credenciales cambian y son distintos en cada estado: cada participante los revisa en las páginas oficiales",
       "Tiempo: lecciones de 4 a 6 minutos que quepan entre el trabajo y las citas"
     ],
-    prerequisites: "Ninguno. \"Empezar una carrera en los oficios calificados\" y \"Fundamentos de seguridad en el trabajo (OSHA)\" ayudan, pero no son obligatorios."
+    prerequisites: "Ninguno. \"Empezar una carrera en los oficios calificados\" y \"Seguridad básica en el trabajo (OSHA)\" ayudan, pero no son obligatorios."
   },
   // ---- ADDIE: Diseño (objetivos: condición, acción observable, criterio) ----
   objectives: [

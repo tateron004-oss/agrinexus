@@ -32,7 +32,7 @@ module.exports = {
       "Règles : les règles de la FTC sur la vérité dans la publicité, la règle de la FTC sur les avis et la loi CAN-SPAM pour les e-mails marketing",
       "Vie privée et droits : une autorisation avant de publier la photo d'un client, et les noms des clients gardés hors de l'IA"
     ],
-    prerequisites: "Le cours « Introduction à l'IA pour les petites entreprises » est utile, mais pas obligatoire."
+    prerequisites: "Le cours « Découvrir l'IA pour les petites entreprises » est utile, mais pas obligatoire."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

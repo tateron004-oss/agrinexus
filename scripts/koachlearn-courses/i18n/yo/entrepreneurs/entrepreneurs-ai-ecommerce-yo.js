@@ -28,7 +28,7 @@ module.exports = {
       "Òfin: òfin ìfiránṣẹ́ ọjà ti FTC, òfin àgbéyẹ̀wò ti FTC àti CAN-SPAM kan àwọn olùtajà ní US",
       "Ìpamọ́: má ṣe fi àdírẹ́sì, káàdì tàbí ìsọfúnni ọjà tí oníbàárà rà sínú irinṣẹ́ AI láé"
     ],
-    prerequisites: "Kò sí. Àwọn tí AI jẹ́ tuntun fún lè kọ́kọ́ ṣe ẹ̀kọ́ \"Introduction to AI and Digital Confidence\" (Ìfihàn sí AI àti Ìgboyà nínú Ẹ̀rọ Ayélujára)."
+    prerequisites: "Kò sí. Àwọn tí AI jẹ́ tuntun fún lè kọ́kọ́ ṣe ẹ̀kọ́ \"Ìfihàn sí AI àti Ìgboyà lórí Ẹ̀rọ Ayélujára\"."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

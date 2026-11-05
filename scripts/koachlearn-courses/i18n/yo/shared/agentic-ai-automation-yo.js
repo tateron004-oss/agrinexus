@@ -28,7 +28,7 @@ module.exports = {
       "Kò sí àṣírí gidi, ọ̀rọ̀ aṣínà tàbí dátà àdáni nínú ìdánwò; ìdánwò prompt injection ń lo ìtọ́ni èké tí kò lè pani lára",
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú márùn-ún tàbí bẹ́ẹ̀, pẹ̀lú àkókò láti kọ ètò náà"
     ],
-    prerequisites: "Kí o mọ bí a ṣe ń lo olùrànlọ́wọ́ AI dáadáa. \"Introduction to AI and Digital Confidence\" jẹ́ ẹ̀kọ́ àkọ́kọ́ tó dára fún ẹnikẹ́ni tí AI ṣì jẹ́ tuntun fún."
+    prerequisites: "Kí o mọ bí a ṣe ń lo olùrànlọ́wọ́ AI dáadáa. \"Ìfihàn sí AI àti Ìgboyà lórí Ẹ̀rọ Ayélujára\" jẹ́ ẹ̀kọ́ àkọ́kọ́ tó dára fún ẹnikẹ́ni tí AI ṣì jẹ́ tuntun fún."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

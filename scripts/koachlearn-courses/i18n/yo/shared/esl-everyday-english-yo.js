@@ -269,7 +269,7 @@ module.exports = {
     results: [
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n parí ẹ̀kọ́ náà tí wọ́n sì yege iṣẹ́ ìkẹyìn (rubric)",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé àwọn fúnra wọn pe fóònù, ṣe ìpàdé tàbí béèrè nǹkan ní ṣọ́ọ̀bù ní Gẹ̀ẹ́sì láàárín ọjọ́ 30 (ìwádìí lẹ́yìn ẹ̀kọ́)",
-      "Àwọn akẹ́kọ̀ọ́ tí wọ́n bẹ̀rẹ̀ \"English for the Workplace (ESL)\" tàbí kíláàsì Gẹ̀ẹ́sì fún àgbàlagbà láàárín ọjọ́ 30",
+      "Àwọn akẹ́kọ̀ọ́ tí wọ́n bẹ̀rẹ̀ \"Gẹ̀ẹ́sì fún Ibi Iṣẹ́ (ESL)\" tàbí kíláàsì Gẹ̀ẹ́sì fún àgbàlagbà láàárín ọjọ́ 30",
       "Àwọn ètò alábàáṣiṣẹ́pọ̀ ròyìn pé ìpàdé tí a pàdánù nítorí àìlóye èdè ti dín kù"
     ]
   },

@@ -28,7 +28,7 @@ module.exports = {
       "Gbogbo òtítọ́ láti orísun ìjọba tàbí ti amòye; ìmọ̀ gbogbogbò nìkan, ìmọ̀ràn ara ẹni sì wà fún àwọn akọ́ṣẹ́mọṣẹ́",
       "Òfin ìkéde FTC àti òfin NIL ilé-ìwé àti ti ìpínlẹ̀; àwọn eléré ìdárayá tí kò tíì pé ọmọ ọdún 18 gbọ́dọ̀ kó òbí tàbí alágbàtọ́ wọ inú rẹ̀"
     ],
-    prerequisites: "Kò sí. Ẹ̀kọ́ \"Content Creation for Athletes\" (Ṣíṣe àkóónú fún àwọn eléré ìdárayá) ń ṣèrànwọ́ fún ṣíṣe àwọn àtẹ̀jáde."
+    prerequisites: "Kò sí. Ẹ̀kọ́ \"Ṣíṣe Fídíò àti Àkóónú fún Eléré Ìdárayá\" ń ṣèrànwọ́ fún ṣíṣe àwọn àtẹ̀jáde."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

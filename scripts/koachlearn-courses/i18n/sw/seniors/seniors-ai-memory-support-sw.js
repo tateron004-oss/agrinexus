@@ -29,7 +29,7 @@ module.exports = {
       "Afya: kozi inasaidia kumbukumbu ya kila siku; mabadiliko yanayotia wasiwasi ni kwa daktari",
       "Faragha: hakuna nywila, namba za benki wala za Social Security katika maelezo, picha au prompt za AI"
     ],
-    prerequisites: "Hakuna. Kozi ya \"AI kwa Maisha ya Kila Siku\" ni mwenzi mzuri wa kozi hii."
+    prerequisites: "Hakuna. Kozi ya \"AI katika Maisha ya Kila Siku\" ni mwenzi mzuri wa kozi hii."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

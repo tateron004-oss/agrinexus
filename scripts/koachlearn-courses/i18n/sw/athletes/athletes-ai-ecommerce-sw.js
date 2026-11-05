@@ -28,7 +28,7 @@ module.exports = {
       "Sheria za NIL, nembo za shule, alama za biashara za ligi na kodi; uliza ofisi ya compliance au chama cha michezo cha jimbo",
       "Wanamichezo chini ya miaka 18 wanahitaji mtu mzima kumiliki au kumiliki pamoja akaunti za duka na malipo; haya ni mafunzo, si ushauri wa kisheria wala wa kodi"
     ],
-    prerequisites: "Hakuna. Kozi \"Mikakati ya Masoko ya Kidijitali yenye AI kwa Wanamichezo\" inasaidia kutangaza unapoanza kuuza."
+    prerequisites: "Hakuna. Kozi \"Mikakati ya Masoko ya Kidijitali kwa AI kwa Wanamichezo\" inasaidia kutangaza unapoanza kuuza."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

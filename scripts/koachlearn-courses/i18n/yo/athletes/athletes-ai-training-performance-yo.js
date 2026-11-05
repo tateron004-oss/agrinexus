@@ -28,7 +28,7 @@ module.exports = {
       "Ẹ̀kọ́ gbogbogbò nìkan: olùkọ́ni àti olùtọ́jú eléré ìdárayá ni wọ́n ń ṣètò ìdánrawò, ìwọ̀n iṣẹ́ àti ìpadàbọ̀ lẹ́yìn ìpalára",
       "Ìsọfúnni ìlera àti àkọsílẹ̀ máa ń jẹ́ àṣírí, a kì í sì í fi wọ́n sínú olùrànlọ́wọ́ AI láéláé"
     ],
-    prerequisites: "Kò sí. \"AI Tools for Athletes\" máa ràn ọ́ lọ́wọ́ tí o kò bá tíì lo Google Sheets rí."
+    prerequisites: "Kò sí. \"Àwọn Irinṣẹ́ AI fún Àwọn Eléré Ìdárayá\" máa ràn ọ́ lọ́wọ́ tí o kò bá tíì lo Google Sheets rí."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

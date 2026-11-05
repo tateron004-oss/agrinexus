@@ -29,7 +29,7 @@ module.exports = {
       "Iwu gbasara ịkpọtụrụ ndị na-enye onyinye na ịpụ (opt-out), na iwu nzuzo nzukọ ahụ, na-arụ ọrụ",
       "Oge: ihe dị ka nkeji 60 n'ozuzu, na nkuzi nkeji 5"
     ],
-    prerequisites: "Iji spreadsheet n'ụzọ bụ isi. \"Introduction to AI for Nonprofits\" ga-enyere aka."
+    prerequisites: "Iji spreadsheet n'ụzọ bụ isi. \"Mmalite AI maka Otu Na-adịghị Achọ Uru\" ga-enyere aka."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

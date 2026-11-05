@@ -37,7 +37,7 @@ module.exports = {
       "Les tests d'embauche, les salaires, les horaires et le droit du travail varient selon le pays et l'entreprise ; les apprenants vérifient auprès de l'employeur et du ministère du Travail de leur pays",
       "Risque élevé d'arnaque : aucun vrai numéro d'identité, mot de passe ou coordonnée bancaire dans les exercices"
     ],
-    prerequisites: "Aucun. \"Excellence du service client\" et \"L'IA pour les métiers du service client\" sont de bons cours à suivre ensuite ou en parallèle ; les apprenants en anglais langue étrangère peuvent suivre en même temps \"L'anglais au travail (ESL)\"."
+    prerequisites: "Aucun. \"L'excellence du service client\" et \"L'IA pour les métiers du service client\" sont de bons cours à suivre ensuite ou en parallèle ; les apprenants en anglais langue étrangère peuvent suivre en même temps \"L'anglais au travail (ESL)\"."
   },
   // ---- ADDIE : Conception ----
   objectives: [

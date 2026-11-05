@@ -28,7 +28,7 @@ module.exports = {
       "Sera za rasilimali watu (HR), za kisheria na za shirika zinahusu maamuzi kuhusu watu na ujumbe nyeti",
       "Muda: masomo mafupi yenye kazi moja inayotumia kazi halisi"
     ],
-    prerequisites: "\"Uongozi katika Zama za AI Tendaji 1: Kuielewa AI\", au uelewa wa msingi wa AI."
+    prerequisites: "\"Uongozi katika Zama za AI Wakala 1: Kuielewa AI\", au uelewa wa msingi wa AI."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

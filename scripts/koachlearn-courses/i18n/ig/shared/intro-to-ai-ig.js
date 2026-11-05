@@ -301,7 +301,7 @@ module.exports = {
       "Ndị na-amụ ihe mechara ihe ọmụmụ a ma nweta Ruru eru ma ọ bụ Karịrị n'ahịrị rubric ọ bụla nke ọrụ ikpeazụ",
       "Ndị na-amụ ihe kwuru na ha jiri ngwa enyemaka AI n'efu rụọ ezi ọrụ n'ime ụbọchị 30 mgbe ihe ọmụmụ ahụ gachara (nnyocha nsochi)",
       "Ndị na-amụ ihe kwuru na ha lelere azịza AI n'isi iyi gọọmentị, ma ọ bụ hụ ma zere oku ma ọ bụ ozi aghụghọ",
-      "Ndị na-amụ ihe gara n'ihu were ihe ọmụmụ ọzọ, dị ka Digital Literacy Basics ma ọ bụ Intro to Cybersecurity"
+      "Ndị na-amụ ihe gara n'ihu were ihe ọmụmụ ọzọ, dị ka \"Ihe Mbụ n'Ịmụta Ihe Dijitalụ\" ma ọ bụ Intro to Cybersecurity"
     ]
   },
   // ---- ADDIE: Mmejupụta ----

@@ -309,7 +309,7 @@ module.exports = {
     results: [
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n parí ẹ̀kọ́ náà tí wọ́n sì dé ìpele tàbí kọjá rẹ̀ ní gbogbo ìlà rubric ètò títo èrò",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé wọ́n ṣe tàbí yí ètò AI míì padà láàárín ọjọ́ 30 lẹ́yìn ẹ̀kọ́ náà (ìwádìí ìtẹ̀lé)",
-      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀ síwájú sí ẹ̀kọ́ míì, bí Introduction to Machine Learning tàbí Data Science for Beginners",
+      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀ síwájú sí ẹ̀kọ́ míì, bí “Ìfihàn sí Machine Learning (Ẹ̀kọ́ Ẹ̀rọ)” tàbí Data Science for Beginners",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n fi ètò títo èrò hàn nínú àkójọ iṣẹ́ (portfolio), kíláàsì, ẹgbẹ́ tàbí ìbéèrè iṣẹ́"
     ]
   },

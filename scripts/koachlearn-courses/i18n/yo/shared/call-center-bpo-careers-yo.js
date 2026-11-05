@@ -37,7 +37,7 @@ module.exports = {
       "Ìdánwò ìgbaniṣíṣẹ́, owó-oṣù, àkókò iṣẹ́ àti òfin iṣẹ́ yàtọ̀ láti orílẹ̀-èdè sí orílẹ̀-èdè àti láti ilé-iṣẹ́ sí ilé-iṣẹ́; àwọn akẹ́kọ̀ọ́ ń ṣàyẹ̀wò agbanisíṣẹ́ àti iléeṣẹ́ ìjọba tó ń bójú tó iṣẹ́ ní orílẹ̀-èdè wọn",
       "Ewu jìbìtì ga: kò sí nọ́mbà ìdánimọ̀ gidi, ọ̀rọ̀ aṣínà tàbí ìsọfúnni báńkì nínú iṣẹ́ àṣeṣe kankan"
     ],
-    prerequisites: "Kò sí. \"Customer Service Excellence\" àti \"AI for Customer Service Careers\" jẹ́ ẹ̀kọ́ tó dára láti ṣe tẹ̀lé e tàbí pẹ̀lú rẹ̀; àwọn tí ń kọ́ Gẹ̀ẹ́sì lè ṣe \"English for the Workplace (ESL)\" pẹ̀lú rẹ̀."
+    prerequisites: "Kò sí. \"Iṣẹ́ Ìsìn Oníbàárà Tó Dára Jù\" àti \"AI fún Iṣẹ́ Ìtọ́jú Oníbàárà\" jẹ́ ẹ̀kọ́ tó dára láti ṣe tẹ̀lé e tàbí pẹ̀lú rẹ̀; àwọn tí ń kọ́ Gẹ̀ẹ́sì lè ṣe \"Gẹ̀ẹ́sì fún Ibi Iṣẹ́ (ESL)\" pẹ̀lú rẹ̀."
   },
   // ---- ADDIE: Design ----
   objectives: [

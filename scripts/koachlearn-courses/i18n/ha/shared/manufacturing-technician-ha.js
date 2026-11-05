@@ -40,7 +40,7 @@ module.exports = {
       "Na'urori: waya ko kwamfutar laburare don shafukan hukuma; rula ko tef na aunawa da takarda a gida",
       "Sharuɗɗa, kuɗi da ranakun jarabawar CPT 4.0 suna canjawa: masu koyo su duba msscusa.org ko wurin jarabawa"
     ],
-    prerequisites: "Lissafin cikakkun lambobi na yau da kullum. \"Everyday Math\" (Lissafin Yau da Kullum) da \"Workplace Safety Basics (OSHA)\" (Tushen Tsaro a Wurin Aiki) kwasa-kwasai ne da ke taimakawa."
+    prerequisites: "Lissafin cikakkun lambobi na yau da kullum. \"Everyday Math\" (Lissafin Yau da Kullum) da \"Tushen Tsaro a Wurin Aiki (OSHA)\" kwasa-kwasai ne da ke taimakawa."
   },
   // ---- ADDIE: Design ----
   objectives: [

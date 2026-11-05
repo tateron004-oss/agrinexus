@@ -28,7 +28,7 @@ module.exports = {
       "Coût : les apprenants ont parfois peu d'argent ; ne jamais payer de frais à une personne ou à un agent avant d'avoir vérifié l'établissement",
       "Temps : leçons de 4 à 6 minutes ; environ 60 à 75 minutes au total"
     ],
-    prerequisites: "Aucun. Les apprenants qui hésitent encore sur un métier peuvent aussi suivre « Skilled Trades Careers » ; ceux qui découvrent Internet peuvent d'abord suivre « Internet Basics »."
+    prerequisites: "Aucun. Les apprenants qui hésitent encore sur un métier peuvent aussi suivre « Skilled Trades Careers » ; ceux qui découvrent Internet peuvent d'abord suivre « Les bases d'internet »."
   },
   // ---- ADDIE: Design ----
   objectives: [

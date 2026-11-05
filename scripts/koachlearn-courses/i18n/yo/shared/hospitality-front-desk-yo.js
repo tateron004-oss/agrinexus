@@ -30,7 +30,7 @@ module.exports = {
       "Ìpamọ́: àṣeṣe ń lo orúkọ àlejò, nọ́mbà káàdì àti nọ́mbà yàrá àtọwọ́dá nìkan",
       "Òfin ìgbanisíṣẹ́ yàtọ̀ síra: òdiwọ̀n ọjọ́ orí fún ọ̀dọ́ àti àyẹ̀wò ìtàn ẹni (background check) yàtọ̀ láti ìpínlẹ̀ dé ìpínlẹ̀ àti láti agbanisíṣẹ́ dé agbanisíṣẹ́"
     ],
-    prerequisites: "Kò sí. \"Customer Service Excellence\" jẹ́ ẹ̀kọ́ alábàárìn tó dára fún ọgbọ́n ìtọ́jú oníbàárà ní gbogbogbòò."
+    prerequisites: "Kò sí. \"Iṣẹ́ Ìsìn Oníbàárà Tó Dára Jù\" jẹ́ ẹ̀kọ́ alábàárìn tó dára fún ọgbọ́n ìtọ́jú oníbàárà ní gbogbogbòò."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

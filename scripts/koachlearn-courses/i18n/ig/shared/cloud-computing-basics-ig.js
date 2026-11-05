@@ -14,7 +14,7 @@ module.exports = {
   about: [
     "Oge ọ bụla ị na-ekiri vidiyo n'ịntanetị, chekwaa foto na Google Photos ma ọ bụ iCloud, ma ọ bụ soro onye klas gị rụọ ọrụ na Google Doc, ị na-eji cloud computing. Azụmahịa na-eji ya arụ weebụsaịtị, app na AI, a na-achọkwa nka cloud n'ọtụtụ ọrụ.",
     "Ihe ọmụmụ a na-akọwa ihe cloud bụ n'okwu dị mfe, ụdị ọrụ cloud bụ isi na ụlọ ọrụ ndị kachasị ibu na-enye ya. Mgbe ahụ, ị ga-eji ọrụ nchekwa cloud n'efu chekwaa, hazie ma kesaa faịlụ n'enweghị nsogbu, otu ndị otu n'ụlọ akwụkwọ na n'ọrụ si eme ya.",
-    "Nkuzi ọ bụla na-ewe ihe dị ka nkeji ise. Gụọ nkuzi ahụ, lee slaịdị, wee mee ọrụ \"Nwalee ya ugbu a\". E nwere obere nnwale ihe ọmụma mgbe isi ọ bụla gwụrụ, na ule nwere ajụjụ 20 na njedebe. Ọ bụrụ na ị chọrọ ịga n'ihu, ihe ọmụmụ Microsoft Azure Fundamentals na-ewuli elu n'ihe ọmụmụ a."
+    "Nkuzi ọ bụla na-ewe ihe dị ka nkeji ise. Gụọ nkuzi ahụ, lee slaịdị, wee mee ọrụ \"Nwalee ya ugbu a\". E nwere obere nnwale ihe ọmụma mgbe isi ọ bụla gwụrụ, na ule nwere ajụjụ 20 na njedebe. Ọ bụrụ na ị chọrọ ịga n'ihu, ihe ọmụmụ \"Ntọala Microsoft Azure\" na-ewuli elu n'ihe ọmụmụ a."
   ],
   finalTask: "Na Google Drive ma ọ bụ Microsoft OneDrive: mepụta folda a na-akpọ \"Career Documents\", tinye ma ọ bụ mepụta faịlụ abụọ n'ime ya (dịka ọmụmaatụ résumé na ndepụta ndị ga-agba akaebe maka gị), kesaa otu faịlụ na enyi ma ọ bụ onye ezinụlọ ka ọ naanị lee ya (view-only), lelee ndị nwere ike imeghe ya, wee wepụ ikike ha. Hụ na two-step verification gbanyere na akaụntụ ahụ. N'ikpeazụ, dee ahịrịokwu atọ na-akọwa cloud, ma kpọọ aha otu ọmụmaatụ SaaS, otu PaaS na otu IaaS.",
   // ---- ADDIE: Nnyocha ----
@@ -256,7 +256,7 @@ module.exports = {
       "Ndị na-amụ ihe mechara ihe ọmụmụ a ma gafee ọrụ ikpeazụ (rubric)",
       "Ndị na-amụ ihe kwuru na two-step verification gbanyere n'akaụntụ ha bụ isi ụbọchị 30 ka e mesịrị (nnyocha nsochi)",
       "Ndị na-amụ ihe jiri nchekwa cloud maka akwụkwọ ụlọ akwụkwọ, ọrụ ma ọ bụ mmemme n'ime ụbọchị 30",
-      "Ndị na-amụ ihe malitere ihe ọmụmụ Microsoft Azure Fundamentals ma ọ bụ ihe ọmụmụ teknụzụ ọzọ n'ime ụbọchị 30"
+      "Ndị na-amụ ihe malitere ihe ọmụmụ \"Ntọala Microsoft Azure\" ma ọ bụ ihe ọmụmụ teknụzụ ọzọ n'ime ụbọchị 30"
     ]
   },
   // ---- ADDIE: Mmejupụta ----

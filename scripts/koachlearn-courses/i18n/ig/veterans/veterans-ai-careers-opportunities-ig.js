@@ -29,7 +29,7 @@ module.exports = {
       "Ụgwọ, ndị ruru eru na iwu mmemme na-agbanwe, ya mere ndị na-amụ ihe na-elele bls.gov/ooh, va.gov na dol.gov kama ịtụkwasị obi na nọmba AI",
       "Nzuzo: enweghị nọmba Social Security, nọmba faịlụ VA ma ọ bụ nọmba ọrụ agha n'ime prompt AI ọ bụla"
     ],
-    prerequisites: "Ọ dịghị. Ndị na-ejibeghị ngwa enyemaka AI nwere ike ibu ụzọ were \"Introduction to AI and the Future Workforce\" (Mmalite AI na Ndị Ọrụ n'Ọdịnihu)."
+    prerequisites: "Ọ dịghị. Ndị na-ejibeghị ngwa enyemaka AI nwere ike ibu ụzọ were \"Mmalite AI na Ọrụ n'Ọdịnihu\"."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

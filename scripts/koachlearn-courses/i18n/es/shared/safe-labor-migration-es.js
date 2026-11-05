@@ -29,7 +29,7 @@ module.exports = {
       "Seguridad: ningún número real de pasaporte, identificación o cuenta bancaria en ninguna práctica; a quien esté en peligro se le indica llamar primero a los servicios de emergencia locales",
       "Algunos participantes ya pueden estar en una situación difícil en el extranjero; el curso da vías de ayuda sin culpar a nadie"
     ],
-    prerequisites: "Ninguno. Quien sea nuevo en internet puede tomar primero \"Conceptos básicos de internet\"."
+    prerequisites: "Ninguno. Quien sea nuevo en internet puede tomar primero \"Fundamentos de internet\"."
   },
   // ---- ADDIE: Diseño (objetivos: condición, acción observable, criterio) ----
   objectives: [

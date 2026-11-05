@@ -34,7 +34,7 @@ module.exports = {
       "Ìtọ́jú ẹranko àti ìpamọ́ àṣírí: má ṣe dẹ́rù ba ẹranko tàbí lé wọn; má ṣe ya fídíò ènìyàn tàbí ilé láìgbàṣẹ",
       "Iye ìlò àti iye èso wá láti ìrírí àdúgbò tàbí òṣìṣẹ́ ìtọ́sọ́nà àgbẹ̀, kì í ṣe láti inú ẹ̀kọ́ yìí"
     ],
-    prerequisites: "\"Drone fún Àbójútó Oko 3: Ìlera Ohun Ọ̀gbìn, Kòkòrò àti Ṣíṣe Ìsọfúnni\"."
+    prerequisites: "\"Drone fún Àbójútó Oko 3: Ìlera Irè Oko, Kòkòrò àti Ṣíṣe Iṣẹ́ Dátà\"."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

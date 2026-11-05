@@ -29,7 +29,7 @@ module.exports = {
       "Kò sí àṣeṣe ìtọ́jú lára ènìyàn gidi nílé; iṣẹ́ ọwọ́ ni a ń kọ́ nínú ètò tí olùkọ́ ń bójú tó",
       "Ẹ̀ṣẹ̀ ìgbà kan rí lè ní ipa lórí kíkọ orúkọ sínú registry ní àwọn ìpínlẹ̀ kan; akẹ́kọ̀ọ́ ń ṣàyẹ̀wò òfin ìpínlẹ̀ tirẹ̀"
     ],
-    prerequisites: "Kò sí. \"Health Literacy: Understanding Your Health Care\" (Mímọ̀ nípa ìlera àti ìtọ́jú rẹ) jẹ́ ẹ̀kọ́ àkọ́kọ́ tó wúlò."
+    prerequisites: "Kò sí. \"Ìmọ̀ Ìlera: Lílóye Ìtọ́jú Ìlera Rẹ\" jẹ́ ẹ̀kọ́ àkọ́kọ́ tó wúlò."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

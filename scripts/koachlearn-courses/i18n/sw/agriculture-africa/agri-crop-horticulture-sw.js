@@ -36,7 +36,7 @@ module.exports = {
       "Udongo, aina za mbegu, viwango na bidhaa zilizosajiliwa hutofautiana kwa eneo: wanafunzi wanapata viwango na bidhaa kutoka kipimo cha udongo, ugani au lebo",
       "Usalama wa viuatilifu: hakuna mazoezi ya kunyunyizia darasani; wanafunzi wanafuata lebo na sheria za nchi yao"
     ],
-    prerequisites: "Hakuna. Kozi \"Afya na Rutuba ya Udongo\" inaingia ndani zaidi kuhusu udongo, na \"Udhibiti Jumuishi wa Wadudu na Udhibiti wa Wadudu kwa Njia ya Asili\" inaingia ndani zaidi kuhusu wadudu."
+    prerequisites: "Hakuna. Kozi \"Afya na Rutuba ya Udongo\" inaingia ndani zaidi kuhusu udongo, na \"Udhibiti Jumuishi wa Wadudu na Udhibiti wa Wadudu kwa Njia za Asili\" inaingia ndani zaidi kuhusu wadudu."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

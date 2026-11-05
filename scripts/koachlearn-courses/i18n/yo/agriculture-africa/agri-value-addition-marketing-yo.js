@@ -20,13 +20,13 @@ module.exports = {
   about: [
     "Irè oko tútù sábà máa ń tà ní owó pọ́ọ́kú ní àsìkò ìkórè, nígbà tí gbogbo ènìyàn ń ta ohun kan náà. Tí o bá sọ ọ́ di ọjà bí màngòrò gbígbẹ, ìyẹ̀fun ẹ̀gẹ́, ẹ̀pà lílọ̀ (groundnut paste) tàbí yogọ́ọ̀tì, ó lè mú owó púpọ̀ sí i wá, kí ó pẹ́ sí i, kí ó sì dé ọ̀dọ̀ àwọn olùrà tuntun. Ẹ̀kọ́ yìí wà fún àwọn àgbẹ̀ kékeré, ẹgbẹ́ obìnrin àti ẹgbẹ́ ọ̀dọ́, àwọn ọ̀dọ́ oníṣòwò àgbẹ̀ àti àwọn òṣìṣẹ́ ìdálẹ́kọ̀ọ́ àgbẹ̀ ní Kenya, Nàìjíríà, Ghana, àwọn orílẹ̀-èdè Ìwọ̀-oòrùn Áfíríkà tí ń sọ Faransé àti káàkiri Áfíríkà.",
     "O máa yan ọjà kan tí ó bá oko rẹ àti olùrà gidi kan mu, ṣírò iye owó ìdìpọ̀ kan àti iye tí o máa tà á, ṣètò ọ̀nà ṣíṣe ọjà pẹ̀lú ìmọ́tótó, ya àmì ọjà, wá àjọ orílẹ̀-èdè tí ó gbọ́dọ̀ fọwọ́ sí i, ṣètò bí ó ṣe máa wà láìléwu lójú ọ̀nà dé ọ̀dọ̀ olùrà, kí o sì múra ọ̀rọ̀ ìpolówó sílẹ̀ láti tà á tààrà.",
-    "Ó tẹ̀lé àwọn ẹ̀kọ́ Post-Harvest Handling and Storage (ìtọ́jú lẹ́yìn ìkórè) àti Farmer Cooperatives and Getting to Market (ẹgbẹ́ àjùmọ̀ṣe àgbẹ̀ àti dídé ọjà), nítorí náà kò tún ìpamọ́, gbígbẹ tàbí títà gẹ́gẹ́ bí ẹgbẹ́ kọ́ni mọ́. Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún, ó sì parí pẹ̀lú iṣẹ́ \"Gbìyànjú rẹ̀ báyìí\" fún oko rẹ. Gbogbo iye owó inú ẹ̀kọ́ yìí jẹ́ àpẹẹrẹ, kì í ṣe iye gidi."
+    "Ó tẹ̀lé àwọn ẹ̀kọ́ \"Ìtọ́jú àti Ìpamọ́ Irè Lẹ́yìn Ìkórè\" àti \"Ẹgbẹ́ Alájọṣe Àgbẹ̀ àti Bí A Ṣe Ń Dé Ọjà\", nítorí náà kò tún ìpamọ́, gbígbẹ tàbí títà gẹ́gẹ́ bí ẹgbẹ́ kọ́ni mọ́. Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún, ó sì parí pẹ̀lú iṣẹ́ \"Gbìyànjú rẹ̀ báyìí\" fún oko rẹ. Gbogbo iye owó inú ẹ̀kọ́ yìí jẹ́ àpẹẹrẹ, kì í ṣe iye gidi."
   ],
   finalTask: "Kọ ètò ọjà ojú-ewé kan fún ọjà àfikún iye kan láti oko rẹ: ọjà náà àti olùrà rẹ̀, ìwé ìṣírò iye owó pẹ̀lú iye owó àti iye títà ìdìpọ̀ kan, àkọsílẹ̀ ìmọ́tótó fún ṣíṣe é, àkọ́pẹrẹ àmì ọjà pẹ̀lú àjọ orílẹ̀-èdè tí o gbọ́dọ̀ bá sọ̀rọ̀, bí o ṣe máa pa á mọ́ láìléwu lójú ọ̀nà, àti ọ̀rọ̀ ìpolówó kúkúrú sí olùrà tààrà kan.",
   // ---- ADDIE: Analysis ----
   analysis: {
     learners: "Àwọn àgbẹ̀ kékeré àti àwọn tí oko wọn ń dàgbà, àwọn òṣìṣẹ́ oko, ẹgbẹ́ obìnrin àti ẹgbẹ́ ọ̀dọ́, àwọn ọ̀dọ́ oníṣòwò àgbẹ̀ àti àwọn òṣìṣẹ́ ìdálẹ́kọ̀ọ́ àgbẹ̀ ní Kenya, Nàìjíríà, Ghana, Ìwọ̀-oòrùn Áfíríkà tí ń sọ Faransé àti káàkiri Áfíríkà. Ọ̀pọ̀ ti ń ta irè oko tútù ní ẹnu oko tàbí ní ọjà àdúgbò, wọ́n sì fẹ́ iye tó dára jù.",
-    startingPoint: "Wọ́n lè gbin irè oko kí wọ́n sì kórè rẹ̀ tàbí kí wọ́n fún wàrà, wọ́n sì lè pa á mọ́ kí wọ́n sì sá a gbẹ dáadáa (wo Post-Harvest Handling and Storage). Àwọn kan ti ń ṣe ọjà díẹ̀díẹ̀ fún ẹbí tàbí aládùúgbò, láìṣírò iye owó, láìsí àmì ọjà tàbí ìforúkọsílẹ̀.",
+    startingPoint: "Wọ́n lè gbin irè oko kí wọ́n sì kórè rẹ̀ tàbí kí wọ́n fún wàrà, wọ́n sì lè pa á mọ́ kí wọ́n sì sá a gbẹ dáadáa (wo \"Ìtọ́jú àti Ìpamọ́ Irè Lẹ́yìn Ìkórè\"). Àwọn kan ti ń ṣe ọjà díẹ̀díẹ̀ fún ẹbí tàbí aládùúgbò, láìṣírò iye owó, láìsí àmì ọjà tàbí ìforúkọsílẹ̀.",
     gap: "Ọ̀pọ̀ ọjà oko ni a ń fi àfojúdá dá iye wọn, a ń ṣe wọ́n láìsí ìlànà ìmọ́tótó, a ń tà wọ́n láìsí àmì ọjà tó yẹ, a sì ń fi wọ́n lé àwọn alárinà lọ́wọ́ tí wọ́n ń sanwó pẹ́ tàbí tí wọ́n ń san díẹ̀. Àwọn àgbẹ̀ nílò láti yan ọjà tí olùrà fẹ́ ní tòótọ́, ṣírò iye owó rẹ̀, ṣe é láìléwu, lẹ àmì sí i, mọ ìfọwọ́sí orílẹ̀-èdè tí ó nílò, kí wọ́n sì tà á tààrà, kí àfikún iye lè mú owó wá dípò kí ó sọ owó nù.",
     constraints: [
       "Ìpele kíkàwé: ọ̀rọ̀ tó rọrùn àti gbólóhùn kúkúrú; ọ̀pọ̀ akẹ́kọ̀ọ́ ń lo Gẹ̀ẹ́sì gẹ́gẹ́ bí èdè kejì",
@@ -35,7 +35,7 @@ module.exports = {
       "Òfin: òfin ìforúkọsílẹ̀ àti àmì oúnjẹ yàtọ̀ láti orílẹ̀-èdè kan sí òmíràn, wọ́n sì ń yí padà; akẹ́kọ̀ọ́ ń bá àjọ orílẹ̀-èdè wọn ṣàyẹ̀wò",
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú 4 sí 6 tí ó bá àkókò iṣẹ́ oko mu"
     ],
-    prerequisites: "Ó wúlò: Post-Harvest Handling and Storage, àti Farmer Cooperatives and Getting to Market. Ìṣírò ìpìlẹ̀: àròpọ̀, ìsọdipúpọ̀ àti pínpín."
+    prerequisites: "Ó wúlò: \"Ìtọ́jú àti Ìpamọ́ Irè Lẹ́yìn Ìkórè\", àti \"Ẹgbẹ́ Alájọṣe Àgbẹ̀ àti Bí A Ṣe Ń Dé Ọjà\". Ìṣírò ìpìlẹ̀: àròpọ̀, ìsọdipúpọ̀ àti pínpín."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [
@@ -105,7 +105,7 @@ module.exports = {
           text: [
             "Olùrà kò ní padà wá, àjọ ìjọba sì lè dá títà rẹ dúró, tí ọjà rẹ bá mú ẹnikẹ́ni ṣàìsàn. Àwọn Ìlànà Gbogbogbò fún Ìmọ́tótó Oúnjẹ ti Codex Alimentarius àgbáyé bo gbogbo ọ̀nà, láti oko títí dé ọ̀dọ̀ ẹni tí ó jẹ oúnjẹ náà. Àjọ oúnjẹ orílẹ̀-èdè rẹ ń lo èrò bí ìwọ̀nyí nígbà tí ó bá ń ṣàyẹ̀wò rẹ.",
             "Àwọn ìpìlẹ̀: omi tí ó mọ́, tí kò léwu; fífọ ọwọ́ pẹ̀lú ọṣẹ kí o tó bẹ̀rẹ̀ iṣẹ́ àti lẹ́yìn ilé ìgbọ̀nsẹ̀; kò sí iṣẹ́ nígbà tí o bá ń ṣàìsàn; bíbo irun àti ojú ọgbẹ́; ojú ibi iṣẹ́, irinṣẹ́ àti àwọn àpótí tí ó mọ́; yíya ohun èlò àkọ́kọ́ sọ́tọ̀ kúrò lára ọjà tí a ti parí; dídá ẹranko, kòkòrò àti eku dúró kí wọ́n má wọlé; àti ibi tí ó mọ́, tí ó gbẹ láti pa àwọn ìdìpọ̀ mọ́ sí.",
-            "Bẹ̀rẹ̀ pẹ̀lú ohun èlò àkọ́kọ́ tí ó mọ́. Má ṣe lo ẹ̀pà tàbí ọkà tí ó ti hu ẹ̀fun (mould) láéláé, nítorí ó lè ní májèlé aflatoxin (wo Post-Harvest Handling and Storage). Wàrà fún yogọ́ọ̀tì gbọ́dọ̀ jẹ́ gbígbóná, kí a sì tọ́jú rẹ̀ ní ọ̀nà tí a ti dán wò láti ọ̀dọ̀ òṣìṣẹ́ ìdálẹ́kọ̀ọ́ ẹran ọ̀sìn wàrà tàbí àjọ ìlànà, kí a sì pa á mọ́ ní òtútù. Kọ àwọn ìgbésẹ̀ rẹ sílẹ̀ kí gbogbo ìpele lè jẹ́ ṣíṣe ní ọ̀nà kan náà, kí o sì fún ìpele kọ̀ọ̀kan ní nọ́mbà àti ọjọ́."
+            "Bẹ̀rẹ̀ pẹ̀lú ohun èlò àkọ́kọ́ tí ó mọ́. Má ṣe lo ẹ̀pà tàbí ọkà tí ó ti hu ẹ̀fun (mould) láéláé, nítorí ó lè ní májèlé aflatoxin (wo \"Ìtọ́jú àti Ìpamọ́ Irè Lẹ́yìn Ìkórè\"). Wàrà fún yogọ́ọ̀tì gbọ́dọ̀ jẹ́ gbígbóná, kí a sì tọ́jú rẹ̀ ní ọ̀nà tí a ti dán wò láti ọ̀dọ̀ òṣìṣẹ́ ìdálẹ́kọ̀ọ́ ẹran ọ̀sìn wàrà tàbí àjọ ìlànà, kí a sì pa á mọ́ ní òtútù. Kọ àwọn ìgbésẹ̀ rẹ sílẹ̀ kí gbogbo ìpele lè jẹ́ ṣíṣe ní ọ̀nà kan náà, kí o sì fún ìpele kọ̀ọ̀kan ní nọ́mbà àti ọjọ́."
           ],
           steps: ["Kọ àwọn ìgbésẹ̀ ṣíṣe ọjà rẹ sílẹ̀ láti ohun èlò àkọ́kọ́ títí dé ìdìpọ̀ tí a dì pa.", "Fún ìgbésẹ̀ kọ̀ọ̀kan, kọ ohun tí ó lè mú un léwu (ìdọ̀tí, kòkòrò àrùn, ẹ̀fun, kòkòrò).", "Kọ òfin ìmọ́tótó tí ó dá a dúró.", "Fún ìpele kọ̀ọ̀kan ní nọ́mbà àti ọjọ́, kí o sì kọ ẹni tí ó ṣe é sílẹ̀."],
           words: [["Ààbò oúnjẹ (food safety)", "pípa oúnjẹ mọ́ láìsí kòkòrò àrùn, májèlé àti ìdọ̀tí tí ó lè mú ènìyàn ṣàìsàn."], ["Ìbàjẹ́ (contamination)", "nígbà tí ìdọ̀tí, kòkòrò àrùn tàbí kẹ́míkà bá wọ inú oúnjẹ."], ["Nọ́mbà ìpele (batch number)", "kóòdù lórí ìdìpọ̀ kọ̀ọ̀kan tí ó sọ ìgbà àti bí a ṣe ṣe é, kí o lè tọpa ìṣòro kan."]],

@@ -28,7 +28,7 @@ module.exports = {
       "Òfin NIL ti NCAA, NAIA, ẹgbẹ́ ìpínlẹ̀ àti ilé-ẹ̀kọ́ yàtọ̀ síra, wọ́n sì ń yí padà; ṣàyẹ̀wò pẹ̀lú compliance office tàbí athletic director",
       "Eléré tí kò tíì pé ọmọ ọdún 18 máa fi òbí tàbí alágbàtọ́ sí i; ẹ̀kọ́ ni èyí, kì í ṣe ìmọ̀ràn òfin tàbí ti owó-orí"
     ],
-    prerequisites: "Kò sí. Ẹ̀kọ́ \"Social Media Branding for Athletes\" jẹ́ ìgbésẹ̀ àkọ́kọ́ tó wúlò."
+    prerequisites: "Kò sí. Ẹ̀kọ́ \"Àmì Ìdánimọ̀ (Brand) Eléré-ìdárayá lórí Social Media\" jẹ́ ìgbésẹ̀ àkọ́kọ́ tó wúlò."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

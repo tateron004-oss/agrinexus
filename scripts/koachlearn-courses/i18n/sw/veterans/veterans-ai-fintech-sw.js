@@ -29,7 +29,7 @@ module.exports = {
       "Hakuna ushauri wa uwekezaji: crypto na robo-advisors zinaelezwa pamoja na hatari zake, na maamuzi yanapelekwa kwa mtaalamu aliyehitimu na huru",
       "Sheria na viwango vya bima hubadilika, kwa hiyo wanafunzi wanakagua fdic.gov, CFPB na FTC moja kwa moja"
     ],
-    prerequisites: "Hakuna. Kozi \"AI for Financial and Personal Success\" ni kozi nzuri ya kwanza kuhusu bajeti na ulaghai."
+    prerequisites: "Hakuna. Kozi \"AI kwa Mafanikio ya Kifedha na Maisha Binafsi\" ni kozi nzuri ya kwanza kuhusu bajeti na ulaghai."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

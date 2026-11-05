@@ -30,7 +30,7 @@ module.exports = {
       "Ààbò: kò sí àṣeṣe irinṣẹ́ iná, àkàbà tàbí gbígbé ẹrù nìkan; a ń kọ́ àwọn wọ̀nyí pẹ̀lú olùkọ́",
       "Ẹ̀kọ́ yìí ń múni múra sílẹ̀ nìkan; àwọn ètò tí NCCER fọwọ́ sí ló ń fúnni ní ìwé ẹ̀rí, àwọn ohun tí wọ́n ń béèrè sì lè yí padà"
     ],
-    prerequisites: "Ìṣirò nọ́mbà odidi àti kíka ìtọ́sọ́nà kúkúrú. \"Ìṣirò Ojoojúmọ́\" àti \"Ìpìlẹ̀ Ààbò Ibi Iṣẹ́ (OSHA)\" wúlò, ṣùgbọ́n kò pọn dandan."
+    prerequisites: "Ìṣirò nọ́mbà odidi àti kíka ìtọ́sọ́nà kúkúrú. \"Ìṣirò Ojoojúmọ́\" àti \"Ìpìlẹ̀ Ààbò Níbi Iṣẹ́ (OSHA)\" wúlò, ṣùgbọ́n kò pọn dandan."
   },
   // ---- ADDIE: Design ----
   objectives: [

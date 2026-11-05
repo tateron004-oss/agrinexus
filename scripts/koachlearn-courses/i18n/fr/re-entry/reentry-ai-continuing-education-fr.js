@@ -28,7 +28,7 @@ module.exports = {
       "Règles des écoles : l'IA aide à étudier, elle ne sert pas à faire les devoirs",
       "Vie privée : ne jamais taper de numéros privés, de données fiscales ou de détails de dossier dans l'IA ; les formulaires d'aide se remplissent seulement sur studentaid.gov"
     ],
-    prerequisites: "Le cours « Introduction à l'IA et confiance numérique » est utile, mais pas obligatoire."
+    prerequisites: "Le cours « Découvrir l'IA et prendre confiance avec le numérique » est utile, mais pas obligatoire."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

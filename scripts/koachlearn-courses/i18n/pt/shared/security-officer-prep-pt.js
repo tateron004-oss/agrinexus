@@ -42,7 +42,7 @@ module.exports = {
       "Verificação de antecedentes: aos alunos com registo criminal diz-se que respondam com honestidade e vejam as regras do seu estado ou um programa de apoio jurídico para a reintegração",
       "Aparelhos: um telefone ou um computador da biblioteca para as páginas do estado; papel para as listas e o relatório"
     ],
-    prerequisites: "Nenhum. Os cursos \"Customer Service Excellence\" e \"Résumés, LinkedIn and Interviews\" são bons complementos."
+    prerequisites: "Nenhum. Os cursos \"Excelência no Atendimento ao Cliente\" e \"Résumés, LinkedIn and Interviews\" são bons complementos."
   },
   // ---- ADDIE: Desenho (objetivos: condição, ação observável, critério) ----
   objectives: [

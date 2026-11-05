@@ -30,7 +30,7 @@ module.exports = {
       "Règles : la loi CAN-SPAM pour les e-mails marketing, et des règles fédérales distinctes pour les SMS marketing",
       "Vie privée : les listes de clients restent protégées et hors des outils d'IA"
     ],
-    prerequisites: "Le cours « Introduction à l'IA pour les petites entreprises » est utile, mais pas obligatoire."
+    prerequisites: "Le cours « Découvrir l'IA pour les petites entreprises » est utile, mais pas obligatoire."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

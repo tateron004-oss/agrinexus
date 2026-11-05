@@ -259,7 +259,7 @@ module.exports = {
       "Ndị na-amụ ihe mechara ihe ọmụmụ a ma nweta Ruru eru ma ọ bụ Karịrị n'ahịrị ọ bụla nke rubric ọrụ ikpeazụ",
       "Ndị na-amụ ihe kwuru na ha na-eji ekwentị ma ọ bụ tablet ha n'onwe ha maka oku, ozi ederede na foto mgbe ụbọchị 30 gachara (nnyocha nsochi)",
       "Ndị na-amụ ihe kwuru na ha wụnyere app bara uru, dị ka app ụlọ ọgwụ, ụlọ akụ ma ọ bụ oku vidiyo, n'enweghị nsogbu site n'ezi ụlọ ahịa",
-      "Ndị na-amụ ihe gara n'ihe ọmụmụ ọzọ, dị ka Ihe ndabere ịntanetị ma ọ bụ Email na nkwurịta okwu n'ịntanetị"
+      "Ndị na-amụ ihe gara n'ihe ọmụmụ ọzọ, dị ka Mmalite Ịntanetị ma ọ bụ Email na Mkparịta Ụka n'Ịntanetị"
     ]
   },
   // ---- ADDIE: Mmejupụta ----

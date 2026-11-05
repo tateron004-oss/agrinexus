@@ -44,7 +44,7 @@ module.exports = {
       "Èlé, owó iṣẹ́ àti ètò máa ń yí padà, wọ́n sì yàtọ̀ láti orílẹ̀-èdè kan sí òmíràn: a kò fúnni ní èlé tàbí ọjọ́ ìparí kankan; akẹ́kọ̀ọ́ máa ṣàyẹ̀wò ìfilọ̀ ti ìsinsìnyí àti àjọ alábòójútó",
       "Kò sí ìmọ̀ràn yíyá owó tàbí ìdókòwò; má ṣe tẹ PIN, ọ̀rọ̀ aṣínà tàbí ìsọfúnni báńkì sínú app tàbí irinṣẹ́ AI fún àṣeṣe láéláé"
     ],
-    prerequisites: "Kò sí. \"Agribusiness and Farm Management\" (àkọsílẹ̀, ìṣàn owó, iye owó gbèsè) àti \"Farm Accounting and Investment Management\" (iye owó lórí ẹyọ kan, ìgbà tí owó máa padà) ń ṣèrànwọ́ fún ìṣirò."
+    prerequisites: "Kò sí. \"Agribusiness and Farm Management\" (àkọsílẹ̀, ìṣàn owó, iye owó gbèsè) àti \"Ìṣirò Owó Oko àti Ìṣàkóso Ìdókòwò\" (iye owó lórí ẹyọ kan, ìgbà tí owó máa padà) ń ṣèrànwọ́ fún ìṣirò."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

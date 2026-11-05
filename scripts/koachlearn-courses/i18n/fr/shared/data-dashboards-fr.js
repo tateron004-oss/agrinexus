@@ -29,7 +29,7 @@ module.exports = {
   // ---- ADDIE : Analyse ----
   analysis: {
     learners: "Adultes aux profils variés : personnes en recherche d'emploi qui visent des postes en données, reporting ou opérations, anciens militaires qui passent à la vie civile, patrons de petites entreprises, jeunes adultes et personnes sortant de prison qui reconstruisent leurs compétences professionnelles. Beaucoup ont déjà utilisé un tableur ; peu ont créé un tableau de bord.",
-    startingPoint: "Savent saisir des données dans un tableur, calculer un total avec SUM (SOMME) et faire un graphique simple (ou ont suivi « Excel et tableurs pour le travail »). N'ont jamais utilisé Power BI ni Looker Studio. Certains ne savent pas quel graphique choisir ni pourquoi les chiffres d'un rapport peuvent être faux.",
+    startingPoint: "Savent saisir des données dans un tableur, calculer un total avec SUM (SOMME) et faire un graphique simple (ou ont suivi « Excel et les tableurs au travail »). N'ont jamais utilisé Power BI ni Looker Studio. Certains ne savent pas quel graphique choisir ni pourquoi les chiffres d'un rapport peuvent être faux.",
     gap: "Les employeurs cherchent des personnes capables de transformer des données brutes en une page claire, fiable, qui répond à une question de l'entreprise. Les apprenants doivent savoir planifier, nettoyer, créer, vérifier et partager un tableau de bord, et en présenter un en entretien. C'est aussi la compétence de reporting évaluée par le PL-300 et CompTIA Data+.",
     constraints: [
       "Niveau de lecture : mots simples et phrases courtes ; chaque mot lié aux données est expliqué",
@@ -38,7 +38,7 @@ module.exports = {
       "Temps : leçons de 5 à 6 minutes, faciles à caser entre le travail et la recherche d'emploi",
       "Confidentialité : les données d'entraînement sont inventées ; on ne charge jamais de vraies données de clients, de patients ou d'employés pour s'entraîner"
     ],
-    prerequisites: "Usage de base d'un tableur : saisir des données, SUM (SOMME), trier et faire un graphique simple. Si c'est nouveau pour vous, suivez d'abord « Excel et tableurs pour le travail »."
+    prerequisites: "Usage de base d'un tableur : saisir des données, SUM (SOMME), trier et faire un graphique simple. Si c'est nouveau pour vous, suivez d'abord « Excel et les tableurs au travail »."
   },
   // ---- ADDIE : Conception ----
   objectives: [

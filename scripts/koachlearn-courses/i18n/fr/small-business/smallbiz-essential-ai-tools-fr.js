@@ -28,7 +28,7 @@ module.exports = {
       "Les prix, les noms des offres et les fonctions changent ; consultez le site officiel de chaque outil pour son offre gratuite actuelle",
       "Vie privée : aucun numéro de carte, mot de passe ou nom de client dans les outils d'IA"
     ],
-    prerequisites: "Le cours « Introduction à l'IA pour les petites entreprises » est utile, mais pas obligatoire."
+    prerequisites: "Le cours « Découvrir l'IA pour les petites entreprises » est utile, mais pas obligatoire."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

@@ -29,7 +29,7 @@ module.exports = {
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú 4 sí 6; iṣẹ́ ìkẹyìn gba nǹkan bí ìṣẹ́jú 60 sí 90",
       "Ẹ̀tọ́: àwòrán tí akẹ́kọ̀ọ́ ní tàbí tí ó ní ìwé àṣẹ (license) láti lò nìkan; kò sí logo tàbí fọ́tò tí a dà kọ láti ọ̀dọ̀ ilé-iṣẹ́ míì"
     ],
-    prerequisites: "Lílo kọ̀mpútà tàbí fóònù ní ìpìlẹ̀ àti àdírẹ́sì ímeèlì láti ṣí àkáǹtì Canva ọ̀fẹ́. Àwọn tí kò mọ kọ̀mpútà dáadáa lè kọ́kọ́ ṣe \"Ìmọ̀ Kọ̀mpútà Ìpìlẹ̀\"."
+    prerequisites: "Lílo kọ̀mpútà tàbí fóònù ní ìpìlẹ̀ àti àdírẹ́sì ímeèlì láti ṣí àkáǹtì Canva ọ̀fẹ́. Àwọn tí kò mọ kọ̀mpútà dáadáa lè kọ́kọ́ ṣe \"Ìmọ̀ Ìpìlẹ̀ Kọ̀mpútà\"."
   },
   // ---- ADDIE: Design ----
   objectives: [

@@ -37,7 +37,7 @@ module.exports = {
       "Las pruebas de contratación, el sueldo, los turnos y las leyes laborales cambian según el país y la empresa; los participantes comprueban al empleador y consultan el ministerio de trabajo de su país",
       "Alto riesgo de estafas: ningún número de identificación real, contraseña ni dato bancario en ninguna tarea de práctica"
     ],
-    prerequisites: "Ninguno. \"Excelencia en el servicio al cliente\" e \"IA para carreras en servicio al cliente\" son buenos cursos para tomar después o al mismo tiempo; quienes aprenden inglés pueden tomar a la vez \"Inglés para el trabajo (ESL)\"."
+    prerequisites: "Ninguno. \"Excelencia en el servicio al cliente\" e \"IA para carreras de atención al cliente\" son buenos cursos para tomar después o al mismo tiempo; quienes aprenden inglés pueden tomar a la vez \"Inglés para el trabajo (ESL)\"."
   },
   // ---- ADDIE: Diseño (objetivos: condición, acción observable, criterio) ----
   objectives: [

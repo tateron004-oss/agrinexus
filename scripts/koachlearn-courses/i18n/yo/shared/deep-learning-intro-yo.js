@@ -15,7 +15,7 @@ module.exports = {
   outcome: "kọ́ neural network kékeré kan, kọ́ ọ ní ẹ̀kọ́, kí o sì dán an wò nínú Google Colab pẹ̀lú Keras, tí ó ń ka nọ́mbà tí a fi ọwọ́ kọ, sọ bí ó ṣe péye tó lórí àwòrán tuntun, gbìyànjú àyípadà kan láti mú un dára sí i, kí o sì ṣàlàyé ohun tí model náà lè ṣe àti èyí tí kò lè ṣe.",
   about: [
     "Deep learning ló ń ṣiṣẹ́ lẹ́yìn ṣíṣí fóònù pẹ̀lú ojú, olùrànlọ́wọ́ ohùn, àwọn app ìtúmọ̀ èdè, irinṣẹ́ àwòrán ìṣègùn àti kámẹ́rà tí ń ṣàyẹ̀wò ẹ̀yà ẹ̀rọ ní ilé-iṣẹ́. Ẹ̀kọ́ yìí ṣàlàyé bí ó ṣe ń ṣiṣẹ́ ní ọ̀rọ̀ tó rọrùn, lẹ́yìn náà o máa kọ́ neural network tí ó ń ṣiṣẹ́ fúnra rẹ.",
-    "Ó bá àwọn ọmọ ogun tẹ́lẹ̀ (veterans) tí wọ́n ń lọ sí iṣẹ́ ẹ̀rọ ìgbàlódé mu, àwọn tí wọ́n mọ Python díẹ̀, àti ẹnikẹ́ni tí ó ti parí \"Introduction to Machine Learning\". Orí 1 ń kọ́ àwọn èrò náà pẹ̀lú àṣeṣe lórí ìwé àti gègé. Orí 2 ń lọ sí Google Colab, ojú-òpó wẹ́ẹ̀bù ọ̀fẹ́ tí ó ń ṣe Python, níbi tí o ti máa kọ́ network ní ẹ̀kọ́ pẹ̀lú Keras, library deep learning ọ̀fẹ́. A fún ọ ní gbogbo ìlà kóòdù, a sì ṣàlàyé rẹ̀.",
+    "Ó bá àwọn ọmọ ogun tẹ́lẹ̀ (veterans) tí wọ́n ń lọ sí iṣẹ́ ẹ̀rọ ìgbàlódé mu, àwọn tí wọ́n mọ Python díẹ̀, àti ẹnikẹ́ni tí ó ti parí \"Ìfihàn sí Machine Learning (Ẹ̀kọ́ Ẹ̀rọ)\". Orí 1 ń kọ́ àwọn èrò náà pẹ̀lú àṣeṣe lórí ìwé àti gègé. Orí 2 ń lọ sí Google Colab, ojú-òpó wẹ́ẹ̀bù ọ̀fẹ́ tí ó ń ṣe Python, níbi tí o ti máa kọ́ network ní ẹ̀kọ́ pẹ̀lú Keras, library deep learning ọ̀fẹ́. A fún ọ ní gbogbo ìlà kóòdù, a sì ṣàlàyé rẹ̀.",
     "Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún, ó sì parí pẹ̀lú iṣẹ́ \"Gbìyànjú rẹ̀ báyìí\". Ìdánwò ìmọ̀ wà lẹ́yìn orí kọ̀ọ̀kan, ìdánwò ìbéèrè 20 sì parí ẹ̀kọ́ náà."
   ],
   finalTask: "Nínú Google Colab, gbé àwọn nọ́mbà ọwọ́-kọ MNIST wọlé, ṣe ìwọ̀n wọn, kọ́ neural network Keras kí o sì kọ́ ọ ní ẹ̀kọ́, sọ bí ó ṣe péye tó lórí àwọn àwòrán ìdánwò, sọ àsọtẹ́lẹ̀ fún àwòrán ìdánwò márùn-ún kí o sì fi wé àwọn label tòótọ́, lẹ́yìn náà ṣe àyípadà kan (neuron púpọ̀ sí i tàbí epoch púpọ̀ sí i), tún un kọ́, kí o sì kọ gbólóhùn méjì nípa bóyá ó ràn án lọ́wọ́ àti ààlà kan tí model náà ní.",
@@ -31,7 +31,7 @@ module.exports = {
       "Àkókò: nǹkan bí ìṣẹ́jú 5 sí 6 fún ẹ̀kọ́ kan pẹ̀lú àṣeṣe àti àkókò kíkọ́ model, nǹkan bí ìṣẹ́jú 60 sí 75 lápapọ̀",
       "Ìṣirò: ìsọdipúpọ̀ àti àròpọ̀ nọ́mbà kékeré pẹ̀lú ọwọ́; a kò nílò calculus"
     ],
-    prerequisites: "Introduction to Programming with Python; Introduction to Machine Learning máa ṣèrànwọ́."
+    prerequisites: "\"Ìfihàn sí Kíkọ Ètò Kọ̀mpútà pẹ̀lú Python\"; \"Ìfihàn sí Machine Learning (Ẹ̀kọ́ Ẹ̀rọ)\" máa ṣèrànwọ́."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

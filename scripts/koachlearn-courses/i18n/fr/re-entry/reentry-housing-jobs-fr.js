@@ -29,7 +29,7 @@ module.exports = {
       "Les règles varient selon l'État et la ville, et elles changent ; les questions juridiques vont à l'aide juridique ou à un conseiller en réinsertion",
       "Les conditions de libération conditionnelle ou de mise à l'épreuve peuvent limiter le lieu de vie ; vie privée : aucun numéro d'affaire dans les outils d'IA"
     ],
-    prerequisites: "Aucun. Le cours « Les outils d'IA au quotidien » aide les apprenants qui veulent utiliser les cartes et les rappels pour aller à leurs rendez-vous."
+    prerequisites: "Aucun. Le cours « Les outils d'IA du quotidien » aide les apprenants qui veulent utiliser les cartes et les rappels pour aller à leurs rendez-vous."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

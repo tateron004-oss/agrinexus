@@ -307,7 +307,7 @@ module.exports = {
     results: [
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n parí ẹ̀kọ́ náà tí wọ́n sì dé ìpele tàbí kọjá rẹ̀ ní gbogbo ìlà rubric ìtúpalẹ̀ dátà tips",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé wọ́n túpalẹ̀ dátà tiwọn, bíi fún ẹgbẹ́ eré, ẹgbẹ́ àjọ, kíláàsì tàbí iṣẹ́, láàárín ọjọ́ 30 lẹ́yìn ẹ̀kọ́ náà (ìwádìí ìtẹ̀lé)",
-      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀ síwájú sí ẹ̀kọ́ míì, bí Introduction to Machine Learning",
+      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀ síwájú sí ẹ̀kọ́ míì, bí \"Ìfihàn sí Machine Learning (Ẹ̀kọ́ Ẹ̀rọ)\"",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n fi notebook náà kún àkójọ iṣẹ́ wọn (portfolio) tàbí lò ó nínú ìbéèrè fún iṣẹ́ tàbí ètò dátà"
     ]
   },

@@ -29,7 +29,7 @@ module.exports = {
       "Temps : leçons de 5 à 6 minutes qui s'adaptent au travail et aux rendez-vous",
       "Les licences changent selon l'État et la ville : chaque apprenant consulte la page officielle de son lieu de vie"
     ],
-    prerequisites: "Calcul avec des nombres entiers et fractions simples. Le cours « Commencer une carrière dans les métiers qualifiés » aide à choisir un métier ; ce cours approfondit le métier d'électricien."
+    prerequisites: "Calcul avec des nombres entiers et fractions simples. Le cours « Commencer une carrière dans les métiers techniques » aide à choisir un métier ; ce cours approfondit le métier d'électricien."
   },
   // ---- ADDIE : Conception (objectifs : condition, action observable, critère) ----
   objectives: [

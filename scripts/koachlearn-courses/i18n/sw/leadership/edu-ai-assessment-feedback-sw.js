@@ -28,7 +28,7 @@ module.exports = {
       "Alama za vigunduzi vya uandishi wa AI si ushahidi pekee wa matumizi mabaya kamwe",
       "Muda: masomo mafupi yanayoingia katika siku ya kufundisha"
     ],
-    prerequisites: "\"AI kwa Viongozi wa Shule na Elimu 3: AI kwa Kupanga Masomo\"."
+    prerequisites: "\"AI kwa Viongozi wa Shule na Elimu 3: AI katika Kupanga Masomo\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

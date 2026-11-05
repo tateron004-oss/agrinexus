@@ -20,13 +20,13 @@ module.exports = {
   about: [
     "Los productos frescos suelen venderse baratos en la cosecha, cuando todos venden lo mismo. Convertirlos en un producto como mango seco, harina de yuca, pasta de maní o yogur puede dar más dinero, durar más y llegar a nuevos compradores. Este curso es para pequeños agricultores, grupos de mujeres y de jóvenes, jóvenes agroemprendedores y extensionistas de Kenia, Nigeria, Ghana, África occidental francófona y toda África.",
     "Vas a elegir un producto que encaje con tu finca y con un comprador real, calcular cuánto cuesta un paquete y cuánto cobrar, organizar un procesamiento higiénico, diseñar una etiqueta, averiguar qué organismo nacional debe aprobarlo, planear cómo mantenerlo seguro hasta el comprador y preparar una presentación para vender directo.",
-    "Se basa en los cursos Manejo y almacenamiento poscosecha y Cooperativas agrícolas y acceso al mercado, así que no repite el almacenamiento, el secado ni la venta en grupo. Cada lección dura unos cinco minutos y termina con una tarea de \"Pruébalo ahora\" para tu propia finca. Todas las cifras de dinero son ejemplos, no precios reales."
+    "Se basa en los cursos \"Manejo y almacenamiento después de la cosecha\" y Cooperativas agrícolas y acceso al mercado, así que no repite el almacenamiento, el secado ni la venta en grupo. Cada lección dura unos cinco minutos y termina con una tarea de \"Pruébalo ahora\" para tu propia finca. Todas las cifras de dinero son ejemplos, no precios reales."
   ],
   finalTask: "Haz un plan de producto de una página para un producto con valor agregado de tu finca: el producto y el comprador, una hoja de costos con el costo y el precio por paquete, una lista de higiene para prepararlo, un borrador de etiqueta con el organismo nacional que debes consultar, cómo lo mantendrás seguro en el camino y una presentación corta para un comprador directo.",
   // ---- ADDIE: Análisis ----
   analysis: {
     learners: "Pequeños y medianos agricultores, trabajadores agrícolas, grupos de mujeres y de jóvenes, jóvenes agroemprendedores y extensionistas de Kenia, Nigeria, Ghana, África occidental francófona y toda África. Muchos ya venden productos frescos en la puerta de la finca o en el mercado local y quieren un mejor precio.",
-    startingPoint: "Saben cultivar y cosechar o producir leche, y saben almacenar y secar bien (ver Manejo y almacenamiento poscosecha). Algunos ya preparan pequeñas cantidades de un producto para la familia o los vecinos, sin cálculo de costos, sin etiquetas y sin registro.",
+    startingPoint: "Saben cultivar y cosechar o producir leche, y saben almacenar y secar bien (ver \"Manejo y almacenamiento después de la cosecha\"). Algunos ya preparan pequeñas cantidades de un producto para la familia o los vecinos, sin cálculo de costos, sin etiquetas y sin registro.",
     gap: "Muchos productos de la finca se venden a un precio puesto al azar, se preparan sin una rutina de higiene, se venden sin una etiqueta adecuada y se entregan a intermediarios que pagan tarde o poco. Los agricultores necesitan elegir un producto que un comprador de verdad quiera, calcular su costo, prepararlo de forma segura, etiquetarlo, averiguar qué aprobación nacional necesita y venderlo directo, para que el valor agregado deje ganancia en lugar de pérdida.",
     constraints: [
       "Nivel de lectura: palabras sencillas y oraciones cortas; muchos participantes hablan el idioma del curso como segunda lengua",
@@ -35,7 +35,7 @@ module.exports = {
       "Reglas: las normas de registro y etiquetado de alimentos cambian de un país a otro y con el tiempo; los participantes consultan a su organismo nacional",
       "Tiempo: lecciones de 4 a 6 minutos que quepan entre las tareas de la finca"
     ],
-    prerequisites: "Útil: Manejo y almacenamiento poscosecha, y Cooperativas agrícolas y acceso al mercado. Saber sumar, multiplicar y dividir."
+    prerequisites: "Útil: \"Manejo y almacenamiento después de la cosecha\", y Cooperativas agrícolas y acceso al mercado. Saber sumar, multiplicar y dividir."
   },
   // ---- ADDIE: Diseño (objetivos: condición, acción observable, criterio) ----
   objectives: [
@@ -105,7 +105,7 @@ module.exports = {
           text: [
             "Un comprador no volverá, y una autoridad puede detener tus ventas, si un producto enferma a alguien. Los Principios Generales de Higiene de los Alimentos del Codex Alimentarius, que son internacionales, cubren toda la cadena, desde la finca hasta la persona que come el alimento. Tu organismo nacional de alimentos usa ideas como estas cuando te inspecciona.",
             "Lo básico: agua limpia y segura; manos lavadas con jabón antes de trabajar y después de ir al baño; no trabajar si estás enfermo; cabello cubierto y heridas cubiertas; superficies, herramientas y recipientes limpios; la materia prima separada del producto terminado; animales, insectos y ratas fuera; y un lugar limpio y seco para guardar los paquetes.",
-            "Empieza con materia prima limpia. Nunca proceses maní o granos con moho, que pueden llevar aflatoxina (ver Manejo y almacenamiento poscosecha). La leche para yogur debe calentarse y manejarse con un método probado que te dé tu extensionista lechero o tu organismo de normas, y mantenerse fría. Escribe tus pasos para que cada tanda se haga igual, y dale a cada tanda un número y una fecha."
+            "Empieza con materia prima limpia. Nunca proceses maní o granos con moho, que pueden llevar aflatoxina (ver \"Manejo y almacenamiento después de la cosecha\"). La leche para yogur debe calentarse y manejarse con un método probado que te dé tu extensionista lechero o tu organismo de normas, y mantenerse fría. Escribe tus pasos para que cada tanda se haga igual, y dale a cada tanda un número y una fecha."
           ],
           steps: ["Escribe los pasos para hacer tu producto, desde la materia prima hasta el paquete sellado.", "Para cada paso, escribe qué podría hacerlo inseguro (suciedad, gérmenes, moho, insectos).", "Escribe la regla de higiene que lo evita.", "Dale a cada tanda un número y una fecha, y anota quién la hizo."],
           words: [["Inocuidad de los alimentos", "mantener los alimentos libres de gérmenes, venenos y suciedad que pueden enfermar a la gente."], ["Contaminación", "cuando entran suciedad, gérmenes o químicos en los alimentos."], ["Número de lote", "un código en cada paquete que dice cuándo y cómo se hizo, para poder rastrear un problema."]],

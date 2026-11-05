@@ -30,7 +30,7 @@ module.exports = {
       "Tsaro: babu atisayen kayan aikin wuta, tsani ko ɗaukar kaya shi kaɗai; ana koyon su gaban malami",
       "Kwas ɗin yana shiryawa ne kawai; takardun shaidar NCCER suna fitowa daga shirye-shiryen da aka amince da su, kuma buƙatu na iya canjawa"
     ],
-    prerequisites: "Lissafin lambobi cikakku da karanta gajerun umarni. Kwas ɗin \"Everyday Math\" (Lissafin yau da kullum) da \"Workplace Safety Basics (OSHA)\" (Tushen tsaro a wurin aiki) suna taimakawa, amma ba dole ba ne."
+    prerequisites: "Lissafin lambobi cikakku da karanta gajerun umarni. Kwas ɗin \"Everyday Math\" (Lissafin yau da kullum) da \"Tushen Tsaro a Wurin Aiki (OSHA)\" suna taimakawa, amma ba dole ba ne."
   },
   // ---- ADDIE: Design ----
   objectives: [

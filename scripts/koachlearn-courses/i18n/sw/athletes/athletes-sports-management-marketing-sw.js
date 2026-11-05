@@ -28,7 +28,7 @@ module.exports = {
       "Idhini ya shule, ligi au klabu kwa tarehe, wadhamini, nembo na picha; fomu za ruhusa za wazazi kwa picha za watoto",
       "Pesa za udhamini zinapita tu kupitia utaratibu rasmi wa shule au klabu"
     ],
-    prerequisites: "Hakuna. Kozi ya \"AI Tools for Athletes\" inasaidia kama hujawahi kutumia Canva."
+    prerequisites: "Hakuna. Kozi ya \"Zana za AI kwa Wanamichezo\" inasaidia kama hujawahi kutumia Canva."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

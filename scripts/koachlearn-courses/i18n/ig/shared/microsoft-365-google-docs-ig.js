@@ -29,7 +29,7 @@ module.exports = {
       "Oge: nkuzi nkeji 4 ruo 6, ihe dị ka nkeji 60 n'ozuzu",
       "Nzuzo: a naghị ekesa faịlụ nwere adreesị, nọmba ID ma ọ bụ ozi ahụike site na \"Anyone with the link\" mgbe ọ bụla"
     ],
-    prerequisites: "Ọ dịghị, mana Nka Kọmputa Mbụ ma ọ bụ Mmalite Ịntanetị na-enyere ndị ka ji ụzarị na browser eme ihe ọhụrụ aka."
+    prerequisites: "Ọ dịghị, mana Nka Mbụ nke Kọmputa ma ọ bụ Mmalite Ịntanetị na-enyere ndị ka ji ụzarị na browser eme ihe ọhụrụ aka."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [
@@ -261,7 +261,7 @@ module.exports = {
       "Ndị na-amụ ihe mechara ihe ọmụmụ a ma nweta Ruru eru ma ọ bụ Karịrị n'ahịrị rubric ọ bụla nke ọrụ ikpeazụ",
       "Ndị na-amụ ihe kwuru na ha mere ezi akwụkwọ, mmefu ego ma ọ bụ ndepụta aha n'ime ụbọchị 30 mgbe ihe ọmụmụ ahụ gachara (nnyocha nsochi)",
       "Ndị na-amụ ihe zipuru PDF maka arịrịọ ọrụ, ụlọ akwụkwọ ma ọ bụ fọm ọfịs n'enweghị enyemaka",
-      "Ndị na-amụ ihe gara n'ihe ọmụmụ ọzọ, dị ka Email na Nkwukọrịta n'Ịntanetị ma ọ bụ ihe ọmụmụ gbasara ịchọ ọrụ"
+      "Ndị na-amụ ihe gara n'ihe ọmụmụ ọzọ, dị ka Email na Mkparịta Ụka n'Ịntanetị ma ọ bụ ihe ọmụmụ gbasara ịchọ ọrụ"
     ]
   },
   // ---- ADDIE: Mmejupụta ----

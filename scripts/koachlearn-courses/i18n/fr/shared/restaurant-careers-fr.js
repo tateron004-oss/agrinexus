@@ -30,7 +30,7 @@ module.exports = {
       "Les règles de salaire et de travail des mineurs changent selon l'État ; chaque apprenant vérifie auprès du bureau du travail de son État",
       "Certains apprenants ont un casier judiciaire ; le cours indique des employeurs qui donnent une seconde chance et ne promet aucun emploi"
     ],
-    prerequisites: "Aucun. Les apprenants qui manipuleront des aliments doivent aussi suivre \"Manipulateur d'aliments et préparation à l'examen ServSafe\"."
+    prerequisites: "Aucun. Les apprenants qui manipuleront des aliments doivent aussi suivre \"Manipulateur d'aliments : préparation à l'examen ServSafe\"."
   },
   // ---- ADDIE : Conception ----
   objectives: [

@@ -36,7 +36,7 @@ module.exports = {
       "Ààbò: kò sí ìlànà àpòpọ̀ ajílẹ̀, kò sí orúkọ oògùn kòkòrò tàbí ìwọ̀n rẹ̀; àwọn akẹ́kọ̀ọ́ ń bá onímọ̀ ọ̀gbìn ṣiṣẹ́, wọ́n sì ń tẹ̀lé àkọlé ọjà (label) àti àjọ ìjọba tí ó ń ṣàkóso rẹ̀",
       "Ìnáwó: kò sí ìmọ̀ràn ìdókòwò; àwọn akẹ́kọ̀ọ́ ń ka àdéhùn látòkè délẹ̀, wọ́n sì ń béèrè lọ́wọ́ olùdámọ̀ràn tí wọ́n gbẹ́kẹ̀ lé kí wọ́n tó sanwó"
     ],
-    prerequisites: "Kò sí. \"Ìbomirin Oko àti Ìṣàkóso Omi\" (omi ẹ̀kán àti ẹ̀rọ fífa omi) àti \"Ìṣàkóso Kòkòrò Àjẹnirun Lápapọ̀ (IPM) àti Ìṣàkóso Kòkòrò Láìlo Kẹ́míkà\" wúlò láti ṣe pẹ̀lú ẹ̀kọ́ yìí."
+    prerequisites: "Kò sí. \"Ìbomirin Oko àti Ìṣàkóso Omi\" (omi ẹ̀kán àti ẹ̀rọ fífa omi) àti \"Ìṣàkóso Àjọpọ̀ fún Kòkòrò àti Ìṣàkóso Kòkòrò Láìlo Kẹ́míkà\" (IPM) wúlò láti ṣe pẹ̀lú ẹ̀kọ́ yìí."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

@@ -40,7 +40,7 @@ module.exports = {
       "Ngwá: ekwentị ma ọ bụ kọmputa ọbá akwụkwọ maka peeji gọọmentị; rula ma ọ bụ teepu nha na akwụkwọ n'ụlọ",
       "Ihe a chọrọ, ụgwọ na ụbọchị ule CPT 4.0 na-agbanwe: ndị na-amụ ihe na-elele msscusa.org ma ọ bụ ebe ule"
     ],
-    prerequisites: "Mgbakọ ọnụọgụ zuru ezu dị mfe. \"Everyday Math\" na \"Workplace Safety Basics (OSHA)\" bụ ihe ọmụmụ ndị ọzọ na-enyere aka."
+    prerequisites: "Mgbakọ ọnụọgụ zuru ezu dị mfe. \"Everyday Math\" na \"Ihe Ndabere nke Nchekwa n'Ebe Ọrụ (OSHA)\" bụ ihe ọmụmụ ndị ọzọ na-enyere aka."
   },
   // ---- ADDIE: Nhazi ----
   objectives: [

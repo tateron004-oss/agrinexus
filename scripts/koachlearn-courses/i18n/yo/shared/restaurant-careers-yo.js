@@ -30,7 +30,7 @@ module.exports = {
       "Òfin owó àti òfin iṣẹ́ ọ̀dọ́ yàtọ̀ láti ìpínlẹ̀ dé ìpínlẹ̀; àwọn akẹ́kọ̀ọ́ ń ṣàyẹ̀wò ọ́fíìsì iṣẹ́ ìpínlẹ̀ wọn",
       "Àwọn akẹ́kọ̀ọ́ kan ní àkọsílẹ̀ ẹ̀ṣẹ̀; ẹ̀kọ́ náà ń tọ́ka sí àwọn agbanisíṣẹ́ tí ń fúnni ní àǹfààní tó tọ́ (fair-chance), kò sì ṣèlérí iṣẹ́ kankan"
     ],
-    prerequisites: "Kò sí. Àwọn akẹ́kọ̀ọ́ tí yóò máa fọwọ́ kan oúnjẹ yẹ kí wọ́n tún ṣe \"Ìmúrasílẹ̀ fún Káàdì Olùmú-oúnjẹ àti Ìdánwò ServSafe\"."
+    prerequisites: "Kò sí. Àwọn akẹ́kọ̀ọ́ tí yóò máa fọwọ́ kan oúnjẹ yẹ kí wọ́n tún ṣe \"Olùtọ́jú Oúnjẹ àti Ìmúrasílẹ̀ fún Ìdánwò ServSafe\"."
   },
   // ---- ADDIE: Design ----
   objectives: [

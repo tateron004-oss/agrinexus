@@ -32,7 +32,7 @@ module.exports = {
       "Ipò oko: afẹ́fẹ́, ooru, ìkùukùu tó ń kọjá, àti àìsí nẹ́tíwọ̀ọ̀kì fóònù ní ọ̀pọ̀ oko",
       "Àkókò: ẹ̀kọ́ kúkúrú, pẹ̀lú àkókò láti kọ ètò fífò"
     ],
-    prerequisites: "\"Drone fún Ìmójútó Oko 1: Ìfihàn, Òfin àti Ààbò\"."
+    prerequisites: "\"Drone fún Àbójútó Oko 1: Ìfihàn, Òfin àti Ààbò\"."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

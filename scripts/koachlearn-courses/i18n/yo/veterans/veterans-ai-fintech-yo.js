@@ -28,7 +28,7 @@ module.exports = {
       "Kò sí ìmọ̀ràn ìdókòwò: a ń ṣàlàyé crypto àti robo-advisor pẹ̀lú ewu wọn, ìpinnu sì wà fún ọ̀jọ̀gbọ́n tó kúnjú ìwọ̀n tí kò ní ìfẹ́ ara rẹ̀ nínú rẹ̀",
       "Òfin àti òdiwọ̀n ìdánilójú ààbò máa ń yí padà, nítorí náà àwọn akẹ́kọ̀ọ́ ń ṣàyẹ̀wò fdic.gov, CFPB àti FTC fúnra wọn"
     ],
-    prerequisites: "Kò sí. \"AI fún Àṣeyọrí Owó àti Ìgbésí Ayé\" jẹ́ ẹ̀kọ́ àkọ́kọ́ tó wúlò lórí ètò ìnáwó àti jìbìtì."
+    prerequisites: "Kò sí. \"AI fún Àṣeyọrí nínú Owó àti Ìgbésí Ayé\" jẹ́ ẹ̀kọ́ àkọ́kọ́ tó wúlò lórí ètò ìnáwó àti jìbìtì."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

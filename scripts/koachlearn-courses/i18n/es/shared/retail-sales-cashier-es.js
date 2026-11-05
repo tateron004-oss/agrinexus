@@ -30,7 +30,7 @@ module.exports = {
       "Las reglas de ventas con límite de edad cambian según el estado; en algunos estados los adolescentes no pueden vender alcohol ni tabaco",
       "Seguridad: no perseguir a quien roba en la tienda y no resistirse a un asalto; seguir las reglas de la tienda y llamar al 911"
     ],
-    prerequisites: "Ninguno. Quien quiera más práctica con porcentajes y dinero puede tomar \"Matemáticas cotidianas para el trabajo y la vida\"; \"Excelencia en el servicio al cliente\" profundiza en el servicio."
+    prerequisites: "Ninguno. Quien quiera más práctica con porcentajes y dinero puede tomar \"Matemáticas diarias para el trabajo y la vida\"; \"Excelencia en el servicio al cliente\" profundiza en el servicio."
   },
   // ---- ADDIE: Diseño ----
   objectives: [

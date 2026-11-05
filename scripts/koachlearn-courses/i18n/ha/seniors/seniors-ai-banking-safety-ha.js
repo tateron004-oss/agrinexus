@@ -29,7 +29,7 @@ module.exports = {
       "Sirri: ba a raba ainihin kalmomin sirri, lambobin asusu ko code a aji",
       "Bayanan ofisoshin Amurka da layukan taimako suna iya canjawa; masu koyo suna duba shafukan hukuma"
     ],
-    prerequisites: "Kwas ɗin \"AI Safety and Scam Awareness for Seniors\" (Tsaron AI da Sanin Zamba ga Manya) yana da amfani a fara da shi, amma ba dole ba ne."
+    prerequisites: "Kwas ɗin \"Tsaron AI da Gane Zamba ga Tsofaffi\" yana da amfani a fara da shi, amma ba dole ba ne."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

@@ -29,7 +29,7 @@ module.exports = {
       "Sécurité : aucun exercice seul avec des outils électriques, des échelles ou du levage ; cela s'apprend avec un formateur",
       "Le cours prépare seulement ; les certifications NCCER viennent de programmes agréés, et les exigences peuvent changer"
     ],
-    prerequisites: "Calcul avec des nombres entiers et lecture de consignes courtes. Les cours « Mathématiques du quotidien » et « Bases de la sécurité au travail (OSHA) » sont utiles mais pas obligatoires."
+    prerequisites: "Calcul avec des nombres entiers et lecture de consignes courtes. Les cours « Mathématiques du quotidien » et « Les bases de la sécurité au travail (OSHA) » sont utiles mais pas obligatoires."
   },
   // ---- ADDIE : Conception ----
   objectives: [

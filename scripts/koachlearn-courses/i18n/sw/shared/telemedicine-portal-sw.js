@@ -28,7 +28,7 @@ module.exports = {
       "Si ushauri wa kitabibu: maswali ya afya yanaenda kwa daktari, muuguzi au mfamasia wa mwanafunzi mwenyewe; dharura zinaenda 911",
       "Faragha: wanafunzi hawaandiki kamwe jina lao, tarehe ya kuzaliwa au namba za rekodi kwenye zana ya AI, na hawatumi taarifa za afya kwa barua pepe ya kawaida au SMS"
     ],
-    prerequisites: "Hakuna. Kozi \"Barua Pepe na Mawasiliano Mtandaoni\" inawasaidia wanafunzi ambao bado hawana akaunti ya barua pepe."
+    prerequisites: "Hakuna. Kozi \"Barua Pepe na Mawasiliano ya Mtandaoni\" inawasaidia wanafunzi ambao bado hawana akaunti ya barua pepe."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

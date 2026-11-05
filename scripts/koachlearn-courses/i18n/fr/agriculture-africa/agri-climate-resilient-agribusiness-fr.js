@@ -42,7 +42,7 @@ module.exports = {
       "Argent : tous les montants sont des exemples ; aucun prix, taux d'intérêt ou subvention n'est donné comme un fait",
       "Sécurité financière : aucun conseil d'investissement ; les apprenants ne partagent jamais de code PIN, de pièce d'identité ni de numéro de compte dans les exercices"
     ],
-    prerequisites: "Des registres simples et la marge brute aident (\"Agrobusiness et gestion de l'exploitation\"). Il est conseillé de suivre d'abord \"Agriculture intelligente face au climat\" (prévisions et calendrier des risques climatiques)."
+    prerequisites: "Des registres simples et la marge brute aident (\"Agrobusiness et gestion de l'exploitation agricole\"). Il est conseillé de suivre d'abord \"Agriculture intelligente face au climat\" (prévisions et calendrier des risques climatiques)."
   },
   // ---- ADDIE : Conception (objectifs : condition, action observable, critère) ----
   objectives: [

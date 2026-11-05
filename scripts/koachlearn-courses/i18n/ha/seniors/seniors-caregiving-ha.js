@@ -29,7 +29,7 @@ module.exports = {
       "Lafiya: canja magani sai ta likita ko mai sayar da magani kaɗai; ana buƙatar izinin wanda ake kula da shi kafin a raba bayanan lafiyarsa",
       "Sirri da walwala: babu cikakkun lambobin Medicare, Social Security ko na banki a AI ko imel; taimakon gaggawa ta 988"
     ],
-    prerequisites: "Babu. Kwas ɗin \"Medicare Basics\" (Muhimman Abubuwan Medicare) zai taimaka a tare da wannan."
+    prerequisites: "Babu. Kwas ɗin \"Tushen Ilimin Medicare\" zai taimaka a tare da wannan."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

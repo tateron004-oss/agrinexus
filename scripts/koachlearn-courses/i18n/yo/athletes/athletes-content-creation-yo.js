@@ -28,7 +28,7 @@ module.exports = {
       "Ìyọ̀ǹda láti yà àwọn ẹlẹgbẹ́, olùkọ́ni àti àwọn míì; òfin yíya fídíò ti ẹgbẹ́",
       "Orin tí a ní ìwé àṣẹ fún nìkan; òfin ìfihàn FTC àti òfin NIL fún ìbáṣepọ̀ èyíkéyìí pẹ̀lú brand"
     ],
-    prerequisites: "Kò sí. Ẹ̀kọ́ \"Social Media Branding for Athletes\" ń ràn ọ́ lọ́wọ́ láti kọ́kọ́ yan àwọn òpó àkóónú (content pillars) rẹ."
+    prerequisites: "Kò sí. Ẹ̀kọ́ \"Àmì Ìdánimọ̀ (Brand) Eléré-ìdárayá lórí Social Media\" ń ràn ọ́ lọ́wọ́ láti kọ́kọ́ yan àwọn òpó àkóónú (content pillars) rẹ."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

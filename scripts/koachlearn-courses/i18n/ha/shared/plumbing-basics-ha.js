@@ -32,7 +32,7 @@ module.exports = {
       "Lokaci: darussa na minti 5 zuwa 6 da suka dace da aiki, makaranta da ganawa",
       "Lasisi ya bambanta bisa jiha da birni: masu koyo suna duba ƙa'idojin a shafin hukuma na inda suke zaune"
     ],
-    prerequisites: "Babu. Kwas ɗin \"Starting a Career in the Skilled Trades\" (Fara Aiki a Sana'o'in Hannu) mataki ne mai kyau na farko don zaɓar sana'a; wannan kwas ɗin yana zurfafa a kan aikin famfo."
+    prerequisites: "Babu. Kwas ɗin \"Fara Sana'a a Ayyukan Hannu na Ƙwarewa\" mataki ne mai kyau na farko don zaɓar sana'a; wannan kwas ɗin yana zurfafa a kan aikin famfo."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

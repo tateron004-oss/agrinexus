@@ -36,7 +36,7 @@ module.exports = {
       "Kanuni za usafiri wa anga: marubani wanahitaji leseni na shirika linaweza kuhitaji cheti cha mwendeshaji",
       "Gharama na ada zinatofautiana kwa nchi na hubadilika: wanafunzi wanatumia bei halisi za mahali walipo"
     ],
-    prerequisites: "\"Droni kwa Ufuatiliaji wa Kilimo 4: Usahihi, Tabianchi na Ufuatiliaji wa Mifugo\", au uzoefu sawa na huo wa ramani za droni."
+    prerequisites: "\"Droni kwa Ufuatiliaji wa Kilimo 4: Kilimo cha Usahihi, Tabianchi na Mifugo\", au uzoefu sawa na huo wa ramani za droni."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

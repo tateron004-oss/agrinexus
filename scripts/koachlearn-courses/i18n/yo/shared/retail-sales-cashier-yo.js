@@ -30,7 +30,7 @@ module.exports = {
       "Òfin títa ọjà tí ó ní òdiwọ̀n ọjọ́ orí yàtọ̀ láti ìpínlẹ̀ dé ìpínlẹ̀; ní àwọn ìpínlẹ̀ kan, ọ̀dọ́ lè máà gbà láàyè láti ta ọtí tàbí tábà",
       "Ààbò: má ṣe lé olè ọjà, má sì ṣe takò ìdigunjalè; tẹ̀lé òfin ilé ìtajà kí o sì pe 911"
     ],
-    prerequisites: "Kò sí. Àwọn akẹ́kọ̀ọ́ tí wọ́n fẹ́ ìdánrawò sí i nínú ìdá-ọgọ́rùn-ún (percent) àti owó lè ṣe \"Ìṣirò Ojoojúmọ́ fún Iṣẹ́ àti Ayé\"; \"Ìtayọ nínú Iṣẹ́ Oníbàárà\" lọ jìn sí i nípa iṣẹ́ oníbàárà."
+    prerequisites: "Kò sí. Àwọn akẹ́kọ̀ọ́ tí wọ́n fẹ́ ìdánrawò sí i nínú ìdá-ọgọ́rùn-ún (percent) àti owó lè ṣe \"Ìṣirò Ojoojúmọ́ fún Iṣẹ́ àti Ìgbésí Ayé\"; \"Iṣẹ́ Ìsìn Oníbàárà Tó Dára Jù\" lọ jìn sí i nípa iṣẹ́ oníbàárà."
   },
   // ---- ADDIE: Design ----
   objectives: [
@@ -222,7 +222,7 @@ module.exports = {
           text: [
             "Gbogbo ilé ìtajà ní òfin ìdápadà ọjà (return policy): ọjọ́ mélòó, bóyá wọ́n nílò receipt, àti bí owó ṣe ń padà (sí káàdì, gẹ́gẹ́ bí owó cash tàbí gẹ́gẹ́ bí store credit). Kọ́ tìrẹ nígbà ìkọ́ṣẹ́. Tẹ̀lé e lọ́nà kan náà fún gbogbo ènìyàn, kí o sì pe mánéjà nígbà tí ìdápadà kan bá kọjá òfin náà.",
             "Ìṣòro iye owó wọ́pọ̀: àmì ṣẹ́ẹ̀fù sọ pé $4.99, ẹ̀rọ ìsanwó sì sọ pé $5.49. Fi ara balẹ̀, ṣe price check, kí o sì tẹ̀lé òfin ilé ìtajà rẹ. Má ṣe jiyàn, má sì ṣe yí iye owó padà fúnra rẹ.",
-            "Pẹ̀lú oníbàárà tí inú ń bí, lo ìgbésẹ̀ mẹ́rin: fetí sílẹ̀ láìjá ọ̀rọ̀ gbà lẹ́nu rẹ̀, tọrọ àforíjì fún wàhálà náà, tún ohun tí o lè tún ṣe tàbí mú mánéjà wá, kí o sì dúpẹ́ lọ́wọ́ rẹ̀. Ẹ̀kọ́ \"Ìtayọ nínú Iṣẹ́ Oníbàárà\" lọ jìn sí i.",
+            "Pẹ̀lú oníbàárà tí inú ń bí, lo ìgbésẹ̀ mẹ́rin: fetí sílẹ̀ láìjá ọ̀rọ̀ gbà lẹ́nu rẹ̀, tọrọ àforíjì fún wàhálà náà, tún ohun tí o lè tún ṣe tàbí mú mánéjà wá, kí o sì dúpẹ́ lọ́wọ́ rẹ̀. Ẹ̀kọ́ \"Iṣẹ́ Ìsìn Oníbàárà Tó Dára Jù\" lọ jìn sí i.",
             "Ààbò rẹ ló ṣe pàtàkì jù. Má ṣe lé tàbí di olè ọjà mú; sọ fún mánéjà tàbí ẹ̀ṣọ́ ààbò. Tí oníbàárà bá halẹ̀ mọ́ ọ, tàbí nígbà ìdigunjalè, má ṣe jiyàn tàbí jà: tẹ̀lé ìkọ́ṣẹ́ ààbò ilé ìtajà rẹ, fún wọn ní ohun tí wọ́n béèrè, kí o sì pe 911 nígbà tí ó bá láàbò. OSHA (àjọ ìjọba US tí ń bójútó ààbò níbi iṣẹ́) ka bíbójútó owó pẹ̀lú àwọn ará ìlú àti iṣẹ́ alẹ́ sí ohun tí ń mú ewu ìwà ipá níbi iṣẹ́ pọ̀ sí i."
           ],
           steps: [

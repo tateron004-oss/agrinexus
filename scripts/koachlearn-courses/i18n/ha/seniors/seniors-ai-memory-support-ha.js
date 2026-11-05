@@ -30,7 +30,7 @@ module.exports = {
       "Lafiya: kwas ɗin yana taimakon tunawar yau da kullum; canje-canje masu damuwa suna zuwa wurin likita",
       "Sirri: babu kalmomin sirri (password), lambobin banki ko na Social Security a bayanai, hotuna ko prompt na AI"
     ],
-    prerequisites: "Babu. Kwas ɗin \"AI for Daily Life\" (AI a Rayuwar Yau da Kullum) abokin kwas ne mai amfani."
+    prerequisites: "Babu. Kwas ɗin \"AI don Rayuwar Yau da Kullum\" abokin kwas ne mai amfani."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

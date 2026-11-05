@@ -31,7 +31,7 @@ module.exports = {
       "Dokokin sayar da kaya mai iyakar shekaru sun bambanta bisa jiha; a wasu jihohi ba a yarda matasa su sayar da barasa ko taba ba",
       "Tsaro: ba a bin ɓarawon shago kuma ba a yin turjiya a fashi; ku bi ƙa'idar shago kuma ku kira 911"
     ],
-    prerequisites: "Babu. Masu son ƙarin atisaye kan kashi (percent) da kuɗi za su iya ɗaukar kwas ɗin \"Everyday Math for Work and Life\"; kwas ɗin \"Customer Service Excellence\" yana zurfafa kan hidimar abokan ciniki."
+    prerequisites: "Babu. Masu son ƙarin atisaye kan kashi (percent) da kuɗi za su iya ɗaukar kwas ɗin \"Lissafin Yau da Kullum don Aiki da Rayuwa\"; kwas ɗin \"Ƙwarewa a Hidimar Abokan Ciniki\" yana zurfafa kan hidimar abokan ciniki."
   },
   // ---- ADDIE: Design ----
   objectives: [
@@ -223,7 +223,7 @@ module.exports = {
           text: [
             "Kowane shago yana da ƙa'idar dawo da kaya: kwana nawa, ko ana buƙatar rasit, da yadda kuɗin ke komawa (zuwa kati, a tsabar kuɗi ko a matsayin kuɗin shago). Ku koyi naku a horo. Ku bi ta haka ga kowa, kuma ku nemi manaja idan dawo da kaya ya wuce ƙa'idar.",
             "Matsalolin farashi suna yawan faruwa: alamar farashi a shiryayye ta ce $4.99 kuma na'ura ta ce $5.49. Ku natsu, ku yi price check, ku bi ƙa'idar shagonku. Kada ku yi gardama, kuma kada ku canza farashi da kanku.",
-            "Ga mai saye mai fushi, ku yi amfani da matakai huɗu: ku saurara ba tare da katse shi ba, ku ce ku yi haƙuri da matsalar, ku gyara abin da za ku iya ko ku kawo manaja, sannan ku gode masa. Kwas ɗin \"Customer Service Excellence\" yana zurfafa kan wannan.",
+            "Ga mai saye mai fushi, ku yi amfani da matakai huɗu: ku saurara ba tare da katse shi ba, ku ce ku yi haƙuri da matsalar, ku gyara abin da za ku iya ko ku kawo manaja, sannan ku gode masa. Kwas ɗin \"Ƙwarewa a Hidimar Abokan Ciniki\" yana zurfafa kan wannan.",
             "Tsaronku ne farko. Kada ku bi ko ku kama ɓarawon shago; ku gaya wa manaja ko jami'an tsaro. Idan mai saye ya yi muku barazana, ko a lokacin fashi, kada ku yi gardama ko faɗa: ku bi horon tsaron shagonku, ku ba da abin da aka nema, ku kira 911 idan ya zama lafiya. OSHA (hukumar tsaron wurin aiki ta Amurka) ta lissafa riƙe kuɗi a gaban jama'a da aikin dare a matsayin abubuwan da ke ƙara haɗarin tashin hankali a wurin aiki."
           ],
           steps: [

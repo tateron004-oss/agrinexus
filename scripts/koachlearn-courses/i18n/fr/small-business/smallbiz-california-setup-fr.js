@@ -43,7 +43,7 @@ module.exports = {
       "Les frais et les règles changent, et les frais varient selon la ville et le comté ; les apprenants consultent chaque page officielle avant de payer",
       "Pas de conseil juridique ou fiscal ; vie privée : un numéro de sécurité sociale va seulement sur le formulaire officiel de l'IRS"
     ],
-    prerequisites: "Aucun. Le cours « Introduction à l'IA pour les petites entreprises » aide si les apprenants veulent utiliser l'IA pour organiser leur plan."
+    prerequisites: "Aucun. Le cours « Découvrir l'IA pour les petites entreprises » aide si les apprenants veulent utiliser l'IA pour organiser leur plan."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

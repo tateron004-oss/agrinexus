@@ -29,7 +29,7 @@ module.exports = {
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú 5 sí 6 tí ó bá àkókò iṣẹ́ àti ìpàdé mu",
       "Òfin yàtọ̀ láti ìpínlẹ̀ sí ìpínlẹ̀ àti ìlú sí ìlú: akẹ́kọ̀ọ́ ń ṣàyẹ̀wò ìwé-àṣẹ lórí ojú-òpó ìjọba ti ibi tí wọ́n ń gbé"
     ],
-    prerequisites: "Kò sí. \"Bíbẹ̀rẹ̀ Iṣẹ́ nínú Iṣẹ́ Ọwọ́ Ọlọ́gbọ́n\" (Starting a Career in the Skilled Trades) jẹ́ ìgbésẹ̀ àkọ́kọ́ tó dára fún yíyan iṣẹ́ ọwọ́; ẹ̀kọ́ yìí lọ jinlẹ̀ sí i nínú HVAC."
+    prerequisites: "Kò sí. \"Bíbẹ̀rẹ̀ Iṣẹ́ Ọwọ́ Onímọ̀ (Skilled Trades)\" jẹ́ ìgbésẹ̀ àkọ́kọ́ tó dára fún yíyan iṣẹ́ ọwọ́; ẹ̀kọ́ yìí lọ jinlẹ̀ sí i nínú HVAC."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

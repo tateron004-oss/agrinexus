@@ -28,7 +28,7 @@ module.exports = {
       "Hakuna taarifa binafsi kwenye ukurasa; wanamichezo walio chini ya miaka 18 wanaweka mzazi au kocha kama mtu wa kuwasiliana naye",
       "Ruhusa ya picha na kanuni za nembo za shule; matokeo ya utafutaji yanaweza kuchukua muda kuonekana"
     ],
-    prerequisites: "Hakuna. Kozi \"Social Media Branding for Athletes\" inakusaidia kuandika kauli ya chapa yako kwanza."
+    prerequisites: "Hakuna. Kozi \"Kujenga Chapa ya Mwanamichezo kwenye Mitandao ya Kijamii\" inakusaidia kuandika kauli ya chapa yako kwanza."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

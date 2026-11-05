@@ -32,7 +32,7 @@ module.exports = {
       "Mwongozo wa mtengenezaji na mwongozo wa uendeshaji vinatangulia; kozi inafundisha ujuzi wa jumla ulio nyuma yake",
       "Hali za shambani: vumbi, joto, mvua na umeme usioaminika katika maeneo mengi"
     ],
-    prerequisites: "Inapendekezwa kuanza na kozi \"Droni kwa Ufuatiliaji wa Kilimo 1: Utangulizi, Kanuni na Usalama\"."
+    prerequisites: "Inapendekezwa kuanza na kozi \"Droni kwa Ufuatiliaji wa Kilimo 1: Utangulizi, Sheria na Usalama\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

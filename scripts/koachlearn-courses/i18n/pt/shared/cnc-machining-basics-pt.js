@@ -32,7 +32,7 @@ module.exports = {
       "Tempo: lições de 5 a 6 minutos, que cabem entre a escola, o trabalho e as consultas",
       "O G-code muda de um comando de máquina para outro: os alunos seguem o manual da máquina em que treinam"
     ],
-    prerequisites: "Nenhum. O curso \"Matemática do Dia a Dia\" ajuda com os decimais; \"Começar uma Carreira nos Ofícios Especializados\" ajuda a escolher um ofício, e este curso vai mais fundo na maquinagem."
+    prerequisites: "Nenhum. O curso \"Matemática do Dia a Dia\" ajuda com os decimais; \"Começar uma Carreira num Ofício Técnico\" ajuda a escolher um ofício, e este curso vai mais fundo na maquinagem."
   },
   // ---- ADDIE: Desenho (objetivos: condição, ação observável, critério) ----
   objectives: [

@@ -28,7 +28,7 @@ module.exports = {
       "Les prix et les fonctions des outils changent ; les propriétaires consultent la page de tarifs de chaque outil",
       "Vie privée et sécurité : les décisions sur l'argent, le juridique, l'embauche et la sécurité restent aux personnes ; les données des clients sont protégées"
     ],
-    prerequisites: "« Introduction à l'IA pour les petites entreprises » ou « Les outils d'IA essentiels pour les petites entreprises » d'abord."
+    prerequisites: "« Découvrir l'IA pour les petites entreprises » ou « Les outils d'IA essentiels pour les petites entreprises » d'abord."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

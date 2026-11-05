@@ -28,7 +28,7 @@ module.exports = {
       "Règles : la règle de la FTC sur la vente à distance, les règles de la FTC sur les avis et la loi CAN-SPAM s'appliquent aux vendeurs américains",
       "Vie privée : ne jamais coller l'adresse, la carte ou les détails de commande d'un client dans un outil d'IA"
     ],
-    prerequisites: "Aucun. Les personnes qui découvrent les outils d'IA peuvent d'abord suivre « Introduction à l'IA et confiance numérique »."
+    prerequisites: "Aucun. Les personnes qui découvrent les outils d'IA peuvent d'abord suivre « Découvrir l'IA et prendre confiance avec le numérique »."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

@@ -28,7 +28,7 @@ module.exports = {
       "Règles du lieu de travail : chaque employeur fixe ses propres règles sur l'IA et la vie privée",
       "Vie privée : aucune donnée privée de client, d'entreprise ou personnelle dans un outil d'IA"
     ],
-    prerequisites: "Le cours « Introduction à l'IA et confiance numérique » est utile, mais pas obligatoire."
+    prerequisites: "Le cours « Découvrir l'IA et prendre confiance avec le numérique » est utile, mais pas obligatoire."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

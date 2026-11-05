@@ -30,7 +30,7 @@ module.exports = {
       "Nchekwa: enweghị omume ngwaọrụ ọkụ, ubube ma ọ bụ ibuli ibu naanị gị; a na-amụta ha n'ihu onye nkuzi",
       "Ihe ọmụmụ a na-akwado naanị; asambodo NCCER si na mmemme a kwadoro, ihe a chọrọ nwekwara ike ịgbanwe"
     ],
-    prerequisites: "Mgbakọ nọmba zuru oke na ịgụ ntuziaka dị mkpụmkpụ. \"Everyday Math\" na \"Workplace Safety Basics (OSHA)\" na-enye aka mana ọ bụghị iwu."
+    prerequisites: "Mgbakọ nọmba zuru oke na ịgụ ntuziaka dị mkpụmkpụ. \"Everyday Math\" na \"Ihe Ndabere nke Nchekwa n'Ebe Ọrụ (OSHA)\" na-enye aka mana ọ bụghị iwu."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

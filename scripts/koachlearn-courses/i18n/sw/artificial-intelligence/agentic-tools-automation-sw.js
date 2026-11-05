@@ -28,7 +28,7 @@ module.exports = {
       "Vitendo vya kuandika vinabaki katika hali ya dry run hadi mtu atoe idhini",
       "Seva za MCP zinazoaminika tu, zenye ufikiaji mdogo kabisa unaohitajika"
     ],
-    prerequisites: "Kozi ya 3 ya \"Kubuni, Kujenga na Kuzindua Wakala wa AI Wanaojiendesha\" (\"Kujenga Wakala wa AI\")."
+    prerequisites: "Kozi ya 3 ya \"Kubuni, Kujenga na Kuzindua Wakala wa AI Wanaojiendesha\" (\"Kujenga Mawakala wa AI\")."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

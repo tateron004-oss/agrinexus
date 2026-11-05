@@ -31,7 +31,7 @@ module.exports = {
       "Tempo: lições de 5 a 6 minutos, que cabem entre o trabalho e as consultas",
       "Jovens com menos de 18 anos: as regras federais sobre trabalho infantil limitam o trabalho com serras elétricas e máquinas de madeira; as regras de licenças e dos programas variam de estado para estado"
     ],
-    prerequisites: "Contas com números inteiros. O curso \"Começar uma Carreira nas Profissões Técnicas\" ajuda a escolher uma profissão; \"Noções Básicas de Segurança no Trabalho (OSHA)\" cobre a segurança geral no estaleiro. Este curso aprofunda a carpintaria."
+    prerequisites: "Contas com números inteiros. O curso \"Começar uma Carreira num Ofício Técnico\" ajuda a escolher uma profissão; \"Noções Básicas de Segurança no Trabalho (OSHA)\" cobre a segurança geral no estaleiro. Este curso aprofunda a carpintaria."
   },
   // ---- ADDIE: Desenho (objetivos: condição, ação observável, critério) ----
   objectives: [

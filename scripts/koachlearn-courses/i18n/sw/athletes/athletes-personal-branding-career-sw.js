@@ -299,7 +299,7 @@ module.exports = {
       "Wanafunzi wanaomaliza seti ya kuanzia kazi na kupata Anafikia au Anazidi katika kila mstari wa rubriki",
       "Wanafunzi wanaofanya angalau mahojiano moja ya kupata taarifa ndani ya siku 30 (utafiti wa kufuatilia)",
       "Wanafunzi wanaoomba au kupata mafunzo kazini, kazi au nafasi ya kujitolea kwa kutumia wasifu (CV) wao",
-      "Wanafunzi wanaochukua kozi inayofuata, kama AI Entrepreneurship for Athletes (Ujasiriamali wa AI kwa Wanamichezo)"
+      "Wanafunzi wanaochukua kozi inayofuata, kama \"Ujasiriamali kwa AI kwa Wanamichezo\""
     ]
   },
   // ---- ADDIE: Utekelezaji ----

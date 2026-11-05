@@ -28,7 +28,7 @@ module.exports = {
       "Kọ́kọ́rọ́ API máa ń wà nínú ètò àṣírí (secret), kì í ṣe nínú notebook láéláé",
       "Àkókò: ẹ̀kọ́ kúkúrú tí ọ̀kọ̀ọ̀kan ní iṣẹ́ àṣeṣe kan"
     ],
-    prerequisites: "Ẹ̀kọ́ 1 àti 2 nínú Design, Build, and Deploy Autonomous AI Agents (\"Understanding LLMs and Prompt Engineering\")."
+    prerequisites: "Ẹ̀kọ́ 1 àti 2 nínú Design, Build, and Deploy Autonomous AI Agents (\"Òye LLM àti Ọgbọ́n Kíkọ Prompt\")."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

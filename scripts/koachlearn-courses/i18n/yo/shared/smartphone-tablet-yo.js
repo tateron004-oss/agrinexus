@@ -295,7 +295,7 @@ module.exports = {
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n parí ẹ̀kọ́ náà, tí wọ́n sì dé ìpele tàbí kọjá rẹ̀ ní gbogbo ìlà rubric iṣẹ́ ìkẹyìn",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé àwọn ń lo fóònù tàbí tablet fúnra wọn fún ìpè, ọ̀rọ̀ ìránṣẹ́ àti àwòrán lẹ́yìn ọjọ́ 30 (ìwádìí àtẹ̀lé)",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé àwọn gba app tí ó wúlò sílẹ̀ láìléwu láti ilé ìtajà gidi, bí app ilé ìtajà oògùn, báńkì tàbí ìpè fídíò",
-      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀síwájú sí ẹ̀kọ́ míì, bí Internet Basics tàbí Email and Online Communication"
+      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀síwájú sí ẹ̀kọ́ míì, bí \"Ìpìlẹ̀ Íńtánẹ́ẹ̀tì\" tàbí \"Í-meèlì àti Ìbánisọ̀rọ̀ lórí Ayélujára\""
     ]
   },
   // ---- ADDIE: Implementation ----

@@ -32,7 +32,7 @@ module.exports = {
       "Lokaci: darussa na minti 5 zuwa 6 da suka dace da makaranta, aiki da alƙawura",
       "G-code ya bambanta tsakanin na'urorin sarrafa inji (controls): masu koyo suna bin littafin jagora (manual) na injin da suke koyo a kai"
     ],
-    prerequisites: "Babu. \"Everyday Math\" (Lissafin Yau da Kullum) yana taimakawa da lambobi masu digo; \"Starting a Career in the Skilled Trades\" (Fara Sana'ar Hannu) yana taimaka wa masu koyo su zaɓi sana'a, kuma wannan kwas ɗin yana zurfafa cikin machining."
+    prerequisites: "Babu. \"Everyday Math\" (Lissafin Yau da Kullum) yana taimakawa da lambobi masu digo; \"Fara Sana'a a Ayyukan Hannu na Ƙwarewa\" yana taimaka wa masu koyo su zaɓi sana'a, kuma wannan kwas ɗin yana zurfafa cikin machining."
   },
   // ---- ADDIE: Design ----
   objectives: [

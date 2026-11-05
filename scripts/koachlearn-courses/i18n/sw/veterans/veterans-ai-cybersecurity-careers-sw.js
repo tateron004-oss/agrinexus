@@ -28,7 +28,7 @@ module.exports = {
       "Kibali cha usalama (clearance) kinaandikwa tu kwa namna ofisi ya usalama inavyoruhusu",
       "Kiasi cha mafao na orodha za programu hubadilika, kwa hiyo wanafunzi wanakagua va.gov na NICCS wenyewe"
     ],
-    prerequisites: "Hakuna. Kozi \"Introduction to AI and the Future Workforce\" (Utangulizi wa AI na Nguvu Kazi ya Baadaye) inawasaidia wanafunzi wapya kwa wasaidizi wa AI."
+    prerequisites: "Hakuna. Kozi \"Utangulizi wa AI na Kazi za Baadaye\" inawasaidia wanafunzi wapya kwa wasaidizi wa AI."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

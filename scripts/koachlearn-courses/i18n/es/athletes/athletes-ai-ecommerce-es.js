@@ -28,7 +28,7 @@ module.exports = {
       "Las reglas de NIL, de logotipos de la escuela, de marcas registradas de la liga y de impuestos; consulta con la oficina de cumplimiento o la asociación deportiva del estado",
       "Los deportistas menores de 18 años necesitan que un adulto sea dueño o codueño de las cuentas de la tienda y de pagos; esto es educación, no consejo legal ni de impuestos"
     ],
-    prerequisites: "Ninguno. \"Estrategias de marketing digital con IA para deportistas\" ayuda a promocionar el lanzamiento."
+    prerequisites: "Ninguno. El curso \"Estrategias de marketing digital con IA para deportistas\" ayuda a promocionar el lanzamiento."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

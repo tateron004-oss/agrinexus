@@ -23,7 +23,7 @@ module.exports = {
   about: [
     "Àwọn ilé ìkẹ́rùsí (warehouse) àti ibùdó ìpínkiri (distribution center) ló ń gbé àwọn ọjà tí a ń rà lójoojúmọ́, wọ́n sì ń gba òṣìṣẹ́ ní gbogbo ọdún. Ẹ̀kọ́ yìí wà fún àwọn tí ń wá iṣẹ́, àwọn tí ń padà sílé láti ẹ̀wọ̀n, àwọn ológun àtijọ́ àti ẹnikẹ́ni tí ó fẹ́ iṣẹ́ àkọ́kọ́ tí ó dúró ṣinṣin nínú logistics, tí ó sì ní àyè láti dàgbà.",
     "O máa kọ́ àwọn iṣẹ́ inú ilé ìkẹ́rùsí, bí ọjà ṣe ń lọ láti ọkọ̀ akẹ́rù sí ṣẹ́ẹ̀fù sí oníbàárà, bí o ṣe lè ka kóòdù ibi, bí o ṣe lè gba ẹrù tí ó dé wọlé kí o sì ka ọjà dáadáa, bí o ṣe lè kó pallet tí kò léwu, àti bí o ṣe lè wà láìléwu nígbà tí o ń ṣiṣẹ́ kíákíá.",
-    "Ẹ̀kọ́ yìí ń múra rẹ sílẹ̀. Kò fún ọ ní ìwé-ẹ̀rí. Tí o bá fẹ́ ọ̀kan, Manufacturing Skill Standards Council (MSSC) ń fúnni ní Certified Logistics Associate (CLA) àti Certified Logistics Technician (CLT). Wíwa forklift nílò ìdálẹ́kọ̀ọ́ láti ọ̀dọ̀ agbanisíṣẹ́; wo ẹ̀kọ́ wa \"Forklift Operator Basics\".",
+    "Ẹ̀kọ́ yìí ń múra rẹ sílẹ̀. Kò fún ọ ní ìwé-ẹ̀rí. Tí o bá fẹ́ ọ̀kan, Manufacturing Skill Standards Council (MSSC) ń fúnni ní Certified Logistics Associate (CLA) àti Certified Logistics Technician (CLT). Wíwa forklift nílò ìdálẹ́kọ̀ọ́ láti ọ̀dọ̀ agbanisíṣẹ́; wo ẹ̀kọ́ wa \"Ìpìlẹ̀ Iṣẹ́ Awakọ̀ Forklift\".",
     "Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún, ó sì parí pẹ̀lú iṣẹ́ \"Gbìyànjú rẹ̀ báyìí\" tí o lè ṣe pẹ̀lú ìwé àti gègé. Ìdánwò ìmọ̀ wà lẹ́yìn orí kọ̀ọ̀kan, ìdánwò ìbéèrè 20 sì wà ní ìparí."
   ],
   finalTask: "Ṣe àpò ìbẹ̀rẹ̀ iṣẹ́ ilé ìkẹ́rùsí: ìròyìn gbígba ẹrù fún ẹrù àṣeṣe kan (iye tí o kà tí o fi wé packing list, pẹ̀lú gbogbo àìtó, àṣejù àti ìbàjẹ́ tí o kọ sílẹ̀), pick list tí o tò ní ọ̀nà ìrìn pẹ̀lú kóòdù ibi, àwòrán ètò ẹrù pallet tí kò léwu pẹ̀lú ìwọ̀n àti ìpele, àti ètò ojú-ìwé kan láti rí iṣẹ́ pẹ̀lú agbanisíṣẹ́ tàbí ètò mẹ́ta, ìwé-ẹ̀rí tí o máa lépa, àti ìlà résumé méjì tí ó jẹ́ òtítọ́.",
@@ -39,7 +39,7 @@ module.exports = {
       "Kò sí lílo forklift tàbí ẹ̀rọ alágbára kankan nínú ẹ̀kọ́ yìí",
       "Ẹ̀rọ: fóònù tàbí kọ̀mpútà ilé-ìkàwé fún ojú-òpó ìjọba àti wíwá iṣẹ́"
     ],
-    prerequisites: "Kò sí. \"Workplace Safety Basics (OSHA)\" àti \"Forklift Operator Basics\" jẹ́ ẹ̀kọ́ tó dára láti ṣe tẹ̀lé."
+    prerequisites: "Kò sí. \"Ìpìlẹ̀ Ààbò Níbi Iṣẹ́ (OSHA)\" àti \"Ìpìlẹ̀ Iṣẹ́ Awakọ̀ Forklift\" jẹ́ ẹ̀kọ́ tó dára láti ṣe tẹ̀lé."
   },
   // ---- ADDIE: Design ----
   objectives: [

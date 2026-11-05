@@ -37,7 +37,7 @@ module.exports = {
       "Thamani za viungo zinatofautiana: wanafunzi wanazikagua na wasambazaji, maabara au afisa ugani",
       "Kanuni za afya ya wanyama: hakuna vipimo vya dawa, viongezeo au chakula chenye dawa; fuata daktari wa mifugo na lebo"
     ],
-    prerequisites: "Utunzaji wa msingi wa wanyama na hesabu rahisi. Inapendekezwa kuanza na kozi \"Afya na Usimamizi wa Mifugo\"."
+    prerequisites: "Utunzaji wa msingi wa wanyama na hesabu rahisi. Inapendekezwa kuanza na kozi \"Afya na Utunzaji wa Mifugo\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

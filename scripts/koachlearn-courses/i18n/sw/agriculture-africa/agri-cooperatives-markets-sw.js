@@ -34,7 +34,7 @@ module.exports = {
       "Pesa na faragha: watu wawili wanaidhinisha malipo; usiwape kamwe zana za AI au wanaopiga simu PIN au taarifa za benki",
       "Si ushauri wa kisheria: mikataba mikubwa inakaguliwa na ofisi ya ushirika, afisa ugani au wakili"
     ],
-    prerequisites: "Hakuna. Kozi \"Kushughulikia na Kuhifadhi Mazao Baada ya Mavuno\" inasaidia katika kupanga madaraja na ubora."
+    prerequisites: "Hakuna. Kozi \"Utunzaji na Uhifadhi wa Mazao Baada ya Mavuno\" inasaidia katika kupanga madaraja na ubora."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

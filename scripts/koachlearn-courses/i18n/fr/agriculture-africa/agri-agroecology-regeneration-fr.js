@@ -23,7 +23,7 @@ module.exports = {
   about: [
     "Ce cours s'adresse aux petits exploitants et aux agriculteurs commerciaux en croissance, aux jeunes agripreneurs, aux ouvriers agricoles et aux agents de vulgarisation au Kenya, au Nigeria, au Ghana, au Niger, au Sénégal et partout en Afrique dont la terre est fatiguée : les rendements baissent, le sol est dur ou part avec l'eau, le striga s'étend et l'engrais coûte plus cher chaque année.",
     "Le chapitre 1 présente les principes de l'agroécologie et les moyens de faire revivre une terre dégradée : plantes de couverture et engrais verts, arbres fertilitaires, et régénération naturelle assistée (RNA), qui a aidé les agriculteurs du Niger à faire revenir les arbres sur des millions d'hectares. Le chapitre 2 relie cultures et élevage, met la biodiversité à votre service, réduit le coût de l'engrais importé et vous montre comment mesurer les progrès saison après saison.",
-    "Le cours \"Santé et fertilité des sols\" traite de l'analyse de sol, du compost, de la rotation et du paillage ; ce cours part de là et ne le répète pas. La régénération prend plusieurs saisons : commencez sur un seul champ et comparez. Les montants sont des exemples inventés. Chaque leçon dure environ cinq minutes et se termine par une tâche sur votre propre terre."
+    "Le cours \"Santé et fertilité du sol\" traite de l'analyse de sol, du compost, de la rotation et du paillage ; ce cours part de là et ne le répète pas. La régénération prend plusieurs saisons : commencez sur un seul champ et comparez. Les montants sont des exemples inventés. Chaque leçon dure environ cinq minutes et se termine par une tâche sur votre propre terre."
   ],
   finalTask: "Écrivez un plan de régénération sur trois saisons pour un champ dégradé de votre exploitation (ou un exemple : 1 acre de terre à maïs fatiguée à Kakamega, 2 hectares de sorgho et d'arachide à Zinder, au Niger, ou 1 hectare de manioc dans l'État d'Oyo) : l'état actuel du champ ; les plantes de couverture, engrais verts ou arbres que vous utiliserez et quand ; comment les cultures et les animaux se nourriront les uns les autres ; combien de sacs d'engrais acheté vous voulez remplacer et l'argent économisé ; et les quatre mesures ou plus que vous noterez à chaque saison, avec un croquis du champ.",
   // ---- ADDIE : Analyse ----
@@ -38,7 +38,7 @@ module.exports = {
       "Argent : les montants sont des exemples ; aucun prix ni subvention n'est donné comme un fait",
       "Droits fonciers : les règles sur les arbres et le pâturage varient selon la communauté et le pays ; les apprenants vérifient les règles et les conventions locales"
     ],
-    prerequisites: "Il est conseillé de suivre d'abord \"Santé et fertilité des sols\" (analyse, compost, rotation, paillage)."
+    prerequisites: "Il est conseillé de suivre d'abord \"Santé et fertilité du sol\" (analyse, compost, rotation, paillage)."
   },
   // ---- ADDIE : Conception (objectifs : condition, action observable, critère) ----
   objectives: [
@@ -209,7 +209,7 @@ module.exports = {
           text: [
             "La régénération est lente. Les rendements ne bondiront peut-être pas dès la première saison : il vous faut donc d'autres signes pour voir si le sol revient. Mesurez aux mêmes endroits, le même mois, à chaque saison, et notez-le.",
             "Mesures simples : la couverture du sol (quelle part du sol est couverte par des plantes ou du paillis ; estimez à l'œil ou comptez dans un carré) ; les vers de terre (sortez un bloc de la taille d'une bêche et comptez-les) ; l'infiltration (enfoncez dans le sol une boîte de conserve ouverte aux deux bouts, versez de l'eau et mesurez le temps qu'elle met à s'infiltrer) ; l'odeur et la structure du sol (se défait-il en petites mottes grumeleuses ou en grosses mottes dures ?) ; une photo du sol prise au même endroit ; le rendement d'une parcelle marquée ; et les sacs d'engrais et l'argent dépensés.",
-            "Tous les quelques années, une analyse de sol en laboratoire peut montrer la matière organique et les éléments nutritifs (voir \"Santé et fertilité des sols\" pour l'échantillonnage). Si vous le pouvez, comparez votre champ restauré avec un champ resté sans changement.",
+            "Tous les quelques années, une analyse de sol en laboratoire peut montrer la matière organique et les éléments nutritifs (voir \"Santé et fertilité du sol\" pour l'échantillonnage). Si vous le pouvez, comparez votre champ restauré avec un champ resté sans changement.",
             "Le téléphone aide : prenez les photos au même endroit, gardez vos chiffres dans une application de notes ou un tableur, et demandez à un assistant d'IA de les mettre dans un tableau ou un graphique simple. Les chiffres viennent de votre champ."
           ],
           steps: ["Marquez trois endroits dans le champ avec des piquets ou des pierres.", "Choisissez au moins quatre mesures : couverture, vers, infiltration, structure, photo, rendement, coût.", "Notez-les le même mois à chaque saison.", "Comparez avec la saison dernière et avec un champ inchangé.", "Revoyez votre plan : gardez ce qui marche, changez ce qui ne marche pas."],

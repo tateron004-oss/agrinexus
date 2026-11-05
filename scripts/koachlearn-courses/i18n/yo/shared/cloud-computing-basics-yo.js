@@ -13,7 +13,7 @@ module.exports = {
   about: [
     "Nígbàkúùgbà tí o bá ń wo fídíò lórí ayélujára, tí o fi fọ́tò pamọ́ sí Google Photos tàbí iCloud, tàbí tí o ń ṣiṣẹ́ lórí Google Doc pẹ̀lú ọmọ kíláàsì rẹ, cloud computing ni ò ń lò. Àwọn ilé-iṣẹ́ ń lo ó fún ojú-òpó wẹ́ẹ̀bù, app àti AI, wọ́n sì ń wá ìmọ̀ cloud nínú ọ̀pọ̀ iṣẹ́.",
     "Ẹ̀kọ́ yìí ṣàlàyé ohun tí cloud jẹ́ ní ọ̀rọ̀ tó rọrùn, àwọn oríṣi iṣẹ́ cloud pàtàkì, àti àwọn ilé-iṣẹ́ ńlá tó ń pèsè rẹ̀. Lẹ́yìn náà, o máa lo ibi ìpamọ́ cloud ọ̀fẹ́ láti fi fáìlì pamọ́, tò wọ́n, kí o sì pín wọn láìléwu, bí àwọn ẹgbẹ́ ní ilé-ìwé àti ibi iṣẹ́ ṣe ń ṣe.",
-    "Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún. Ka ẹ̀kọ́ náà, wo àwọn slide, lẹ́yìn náà ṣe iṣẹ́ \"Gbìyànjú rẹ̀ báyìí\". Ìdánwò ìmọ̀ kúkúrú wà lẹ́yìn orí kọ̀ọ̀kan, ìdánwò ìbéèrè 20 sì wà ní ìparí. Tí o bá fẹ́ lọ síwájú, ẹ̀kọ́ Microsoft Azure Fundamentals ń kọ́ni ju èyí lọ."
+    "Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún. Ka ẹ̀kọ́ náà, wo àwọn slide, lẹ́yìn náà ṣe iṣẹ́ \"Gbìyànjú rẹ̀ báyìí\". Ìdánwò ìmọ̀ kúkúrú wà lẹ́yìn orí kọ̀ọ̀kan, ìdánwò ìbéèrè 20 sì wà ní ìparí. Tí o bá fẹ́ lọ síwájú, ẹ̀kọ́ \"Ìpìlẹ̀ Microsoft Azure\" ń kọ́ni ju èyí lọ."
   ],
   finalTask: "Nínú Google Drive tàbí Microsoft OneDrive: ṣe fódà kan tí a pè ní \"Ìwé Iṣẹ́ Mi\", gbé fáìlì méjì sínú rẹ̀ tàbí ṣe wọ́n níbẹ̀ (fún àpẹẹrẹ résumé àti àkójọ àwọn tó lè jẹ́rìí sí ọ), pín fáìlì kan pẹ̀lú ọ̀rẹ́ tàbí ẹbí gẹ́gẹ́ bí \"wíwò nìkan\" (view-only), wo àwọn tó ní ààyè sí i, lẹ́yìn náà mú ààyè wọn kúrò. Rí i dájú pé ìdánilójú-ìgbésẹ̀-méjì wà ní títan fún àkọọ́lẹ̀ náà. Ní ìparí, kọ gbólóhùn mẹ́ta tó ṣàlàyé cloud, kí o sì dárúkọ àpẹẹrẹ SaaS kan, PaaS kan àti IaaS kan.",
   // ---- ADDIE: Analysis ----
@@ -298,7 +298,7 @@ module.exports = {
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n parí ẹ̀kọ́ náà tí wọ́n sì yege nínú iṣẹ́ ìkẹyìn (rubric)",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé ìdánilójú-ìgbésẹ̀-méjì wà ní títan fún àkọọ́lẹ̀ pàtàkì wọn lẹ́yìn ọjọ́ 30 (ìwádìí àtẹ̀lé)",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n lo ibi ìpamọ́ cloud fún ìwé ilé-ìwé, iṣẹ́ tàbí ètò láàárín ọjọ́ 30",
-      "Àwọn akẹ́kọ̀ọ́ tí wọ́n bẹ̀rẹ̀ ẹ̀kọ́ Microsoft Azure Fundamentals tàbí ẹ̀kọ́ ìmọ̀ ẹ̀rọ mìíràn láàárín ọjọ́ 30"
+      "Àwọn akẹ́kọ̀ọ́ tí wọ́n bẹ̀rẹ̀ ẹ̀kọ́ \"Ìpìlẹ̀ Microsoft Azure\" tàbí ẹ̀kọ́ ìmọ̀ ẹ̀rọ mìíràn láàárín ọjọ́ 30"
     ]
   },
   // ---- ADDIE: Implementation ----

@@ -34,7 +34,7 @@ module.exports = {
       "Ramani ya droni haichukui kamwe nafasi ya macho ya mkulima wala uchunguzi wa mtaalamu; hakuna ushauri wa dawa za kuua wadudu kutoka kwenye ramani",
       "Data na ramani za wakulima zinashirikiwa tu kwa ruhusa yao"
     ],
-    prerequisites: "\"Droni kwa Ufuatiliaji wa Kilimo 2: Uendeshaji wa Safari, Upigaji Picha na Vihisio\", au seti ya picha za droni zinazopishana za kufanyia kazi."
+    prerequisites: "\"Droni kwa Ufuatiliaji wa Kilimo 2: Kurusha Droni, Kupiga Picha na Vihisio\", au seti ya picha za droni zinazopishana za kufanyia kazi."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

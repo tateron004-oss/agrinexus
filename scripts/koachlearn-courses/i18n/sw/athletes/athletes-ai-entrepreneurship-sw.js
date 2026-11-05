@@ -28,7 +28,7 @@ module.exports = {
       "Sheria za NIL, alama za biashara, leseni ya biashara na kodi; kagua na ofisi ya utii wa kanuni, chama cha michezo cha jimbo au serikali ya mtaa",
       "Si ushauri wa fedha wala wa kodi; wanamichezo walio chini ya miaka 18 wanahitaji mzazi au mlezi kwa akaunti, mikataba na mkopo wowote"
     ],
-    prerequisites: "Hakuna. \"AI E-commerce Platforms for Athletes\" ni hatua nzuri inayofuata kwa kuuza mtandaoni."
+    prerequisites: "Hakuna. \"Majukwaa ya Biashara Mtandaoni yenye AI kwa Wanamichezo\" ni hatua nzuri inayofuata kwa kuuza mtandaoni."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

@@ -30,7 +30,7 @@ module.exports = {
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú 4 sí 6 tí ó bá àkókò iṣẹ́ mu",
       "Òfin ibi iṣẹ́ (òfin pípè láti sọ pé o kò ní wá, òfin ààbò) yàtọ̀ láti agbanisíṣẹ́ kan sí òmíràn: akẹ́kọ̀ọ́ ń tẹ̀lé ìwé òfin àti ìdánilẹ́kọ̀ọ́ agbanisíṣẹ́ tirẹ̀"
     ],
-    prerequisites: "Lè ka gbólóhùn Gẹ̀ẹ́sì kúkúrú tó rọrùn. \"English for Everyday Life (ESL)\" jẹ́ ẹ̀kọ́ àkọ́kọ́ tó dára fún àwọn akẹ́kọ̀ọ́ tí wọ́n ṣẹ̀ṣẹ̀ ń bẹ̀rẹ̀."
+    prerequisites: "Lè ka gbólóhùn Gẹ̀ẹ́sì kúkúrú tó rọrùn. \"Gẹ̀ẹ́sì fún Ìgbésí Ayé Ojoojúmọ́ (ESL)\" jẹ́ ẹ̀kọ́ àkọ́kọ́ tó dára fún àwọn akẹ́kọ̀ọ́ tí wọ́n ṣẹ̀ṣẹ̀ ń bẹ̀rẹ̀."
   },
   // ---- ADDIE: Design ----
   objectives: [
@@ -285,7 +285,7 @@ module.exports = {
       "Àwọn ẹ̀dà tí a túmọ̀ ń pa àwọn gbólóhùn Gẹ̀ẹ́sì mọ́ ní Gẹ̀ẹ́sì; ṣàlàyé wọn ní èdè àwọn akẹ́kọ̀ọ́, ṣùgbọ́n ẹ dánra wò wọ́n ní Gẹ̀ẹ́sì.",
       "Mú ẹ̀kọ́ ààbò bá iṣẹ́ tí àwọn akẹ́kọ̀ọ́ ń wá mu; mú àmì gidi tàbí fọ́tò wá láti àwọn ibi iṣẹ́ àdúgbò tí o bá lè ṣe é.",
       "Òfin pípè láti sọ pé o kò ní wá, òfin ìsinmi àti òfin ààbò yàtọ̀ láti agbanisíṣẹ́ kan sí òmíràn: rán àwọn akẹ́kọ̀ọ́ létí láti tẹ̀lé ìwé òfin àti ìdánilẹ́kọ̀ọ́ agbanisíṣẹ́ tiwọn. Ẹ̀kọ́ yìí ń kọ́ni ní èdè, kì í ṣe òfin agbanisíṣẹ́.",
-      "Lo orúkọ àti kúlẹ̀kúlẹ̀ àròsọ nínú ìròyìn àti ọ̀rọ̀ ìránṣẹ́ ìdánrawò. So ẹ̀kọ́ yìí pọ̀ mọ́ ìrànlọ́wọ́ wíwá iṣẹ́ (wo \"Resumes, LinkedIn and Job Interviews\")."
+      "Lo orúkọ àti kúlẹ̀kúlẹ̀ àròsọ nínú ìròyìn àti ọ̀rọ̀ ìránṣẹ́ ìdánrawò. So ẹ̀kọ́ yìí pọ̀ mọ́ ìrànlọ́wọ́ wíwá iṣẹ́ (wo \"Résumé, LinkedIn àti Ìfọ̀rọ̀wánilẹ́nuwò Iṣẹ́\")."
     ]
   }
 };

@@ -42,7 +42,7 @@ module.exports = {
       "Dinero: todas las cifras son ejemplos; no se dan precios, tasas de interés ni subsidios como hechos",
       "Seguridad financiera: ningún consejo de inversión; los participantes nunca comparten PIN, documentos de identidad ni números de cuenta en las tareas de práctica"
     ],
-    prerequisites: "Ayudan los registros sencillos de la finca y el margen bruto (\"Agronegocio y gestión de la finca\"). Se recomienda tomar primero \"Agricultura climáticamente inteligente\" (pronósticos y calendario de riesgos climáticos)."
+    prerequisites: "Ayudan los registros sencillos de la finca y el margen bruto (\"Agronegocios y administración de la finca\"). Se recomienda tomar primero \"Agricultura climáticamente inteligente\" (pronósticos y calendario de riesgos climáticos)."
   },
   // ---- ADDIE: Diseño (objetivos: condición, acción observable, criterio) ----
   objectives: [

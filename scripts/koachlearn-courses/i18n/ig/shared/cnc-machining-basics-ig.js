@@ -32,7 +32,7 @@ module.exports = {
       "Oge: nkuzi nkeji 5 ruo 6 nke dabara n'akụkụ ụlọ akwụkwọ, ọrụ na oge nzukọ",
       "G-code dị iche site n'otu igwe ruo n'ọzọ: ndị na-amụ ihe na-agbaso akwụkwọ ntụziaka (manual) nke igwe ha na-amụ ihe na ya"
     ],
-    prerequisites: "Ọ dịghị. \"Everyday Math\" na-enyere aka na ntụpọ; \"Starting a Career in the Skilled Trades\" na-enyere ndị na-amụ ihe aka ịhọrọ ọrụ aka, ihe ọmụmụ a na-abanyekwa omimi n'ọrụ igwe."
+    prerequisites: "Ọ dịghị. \"Everyday Math\" na-enyere aka na ntụpọ; \"Ịmalite Ọrụ n'Ọrụ Aka Nka (Skilled Trades)\" na-enyere ndị na-amụ ihe aka ịhọrọ ọrụ aka, ihe ọmụmụ a na-abanyekwa omimi n'ọrụ igwe."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ụkpụrụ) ----
   objectives: [

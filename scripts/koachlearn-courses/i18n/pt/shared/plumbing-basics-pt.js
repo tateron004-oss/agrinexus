@@ -33,7 +33,7 @@ module.exports = {
       "Tempo: lições de 5 a 6 minutos, que cabem entre o trabalho, a escola e as consultas",
       "As licenças mudam de estado para estado e de cidade para cidade: os alunos verificam as regras na página oficial do lugar onde vivem"
     ],
-    prerequisites: "Nenhum. O curso \"Começar uma Carreira nas Profissões Técnicas\" é um bom primeiro passo para escolher uma profissão; este curso aprofunda a canalização."
+    prerequisites: "Nenhum. O curso \"Começar uma Carreira num Ofício Técnico\" é um bom primeiro passo para escolher um ofício; este curso aprofunda a canalização."
   },
   // ---- ADDIE: Desenho (objetivos: condição, ação observável, critério) ----
   objectives: [

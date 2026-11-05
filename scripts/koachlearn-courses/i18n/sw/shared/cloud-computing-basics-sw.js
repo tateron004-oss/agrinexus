@@ -13,7 +13,7 @@ module.exports = {
   about: [
     "Kila unapotazama video mtandaoni, unapohifadhi picha kwenye Google Photos au iCloud, au unapofanya kazi kwenye Google Doc pamoja na mwanafunzi mwenzako, unatumia kompyuta ya wingu. Biashara zinaendesha tovuti, apps na AI juu yake, na ujuzi wa wingu unahitajika katika kazi nyingi.",
     "Kozi hii inaeleza wingu ni nini kwa maneno rahisi, aina kuu za huduma za wingu na kampuni kubwa zinazozitoa. Kisha utatumia huduma ya bure ya kuhifadhi kwenye wingu kuhifadhi, kupanga na kushiriki faili kwa usalama, kama timu za shuleni na kazini zinavyofanya.",
-    "Kila somo linachukua kama dakika tano. Soma somo, tazama slaidi, kisha fanya kazi ya \"Jaribu sasa\". Kuna jaribio fupi la maarifa baada ya kila sura na mtihani wa maswali 20 mwishoni. Ukitaka kuendelea zaidi, kozi ya Microsoft Azure Fundamentals inajengwa juu ya hii."
+    "Kila somo linachukua kama dakika tano. Soma somo, tazama slaidi, kisha fanya kazi ya \"Jaribu sasa\". Kuna jaribio fupi la maarifa baada ya kila sura na mtihani wa maswali 20 mwishoni. Ukitaka kuendelea zaidi, kozi ya \"Misingi ya Microsoft Azure\" inajengwa juu ya hii."
   ],
   finalTask: "Katika Google Drive au Microsoft OneDrive: tengeneza folda iitwayo \"Nyaraka za Kazi\", pakia au tengeneza faili mbili ndani yake (kwa mfano CV na orodha ya wadhamini), shiriki faili moja na rafiki au mwanafamilia kwa ruhusa ya kutazama tu, angalia nani ana ruhusa, kisha ondoa ruhusa yake. Hakikisha uthibitishaji wa hatua mbili umewashwa kwenye akaunti. Mwisho, andika sentensi tatu zinazoeleza wingu, na taja mfano mmoja wa SaaS, mmoja wa PaaS na mmoja wa IaaS.",
   // ---- ADDIE: Uchambuzi ----
@@ -298,7 +298,7 @@ module.exports = {
       "Wanafunzi wanaomaliza kozi na kufaulu kazi ya mwisho (kwa rubriki)",
       "Wanafunzi wanaoripoti kwamba uthibitishaji wa hatua mbili umewashwa kwenye akaunti yao kuu siku 30 baadaye (utafiti wa kufuatilia)",
       "Wanafunzi wanaotumia hifadhi ya wingu kwa nyaraka za shule, kazi au programu ndani ya siku 30",
-      "Wanafunzi wanaoanza kozi ya Microsoft Azure Fundamentals au kozi nyingine ya teknolojia ndani ya siku 30"
+      "Wanafunzi wanaoanza kozi ya \"Misingi ya Microsoft Azure\" au kozi nyingine ya teknolojia ndani ya siku 30"
     ]
   },
   // ---- ADDIE: Utekelezaji ----

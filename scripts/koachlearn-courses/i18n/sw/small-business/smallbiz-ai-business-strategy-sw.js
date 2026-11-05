@@ -28,7 +28,7 @@ module.exports = {
       "Bei na huduma za zana hubadilika; wamiliki wanakagua ukurasa wa bei wa kila zana",
       "Faragha na usalama: watu ndio wanaofanya maamuzi ya pesa, sheria, kuajiri na usalama; data ya wateja inalindwa"
     ],
-    prerequisites: "Kwanza \"Introduction to AI for Small Business\" au \"Essential AI Tools for Small Businesses\"."
+    prerequisites: "Kwanza \"Utangulizi wa AI kwa Biashara Ndogo\" au \"Zana Muhimu za AI kwa Biashara Ndogo\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

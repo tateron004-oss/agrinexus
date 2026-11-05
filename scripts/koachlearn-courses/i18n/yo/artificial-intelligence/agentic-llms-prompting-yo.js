@@ -13,7 +13,7 @@ module.exports = {
   about: [
     "Èyí ni ẹ̀kọ́ kejì nínú Design, Build, and Deploy Autonomous AI Agents. Ẹ̀rọ tó wà nínú gbogbo agent ni large language model (LLM), bí o sì ṣe ń fún un ní ìtọ́ni ló ń pinnu bóyá agent náà máa ṣe dáadáa. Ẹ̀kọ́ yìí kọ́ ọ bí LLM ṣe ń ṣiṣẹ́ ní ọ̀rọ̀ tó rọrùn, àti bí o ṣe lè fún un ní ìtọ́ni tó dára.",
     "Orí 1 sọ nípa bí model náà ṣe ń ṣiṣẹ́ àti bí o ṣe lè kọ prompt tó lágbára nínú chatbot ọ̀fẹ́. Orí 2 lọ sí Python nínú Google Colab, notebook ọ̀fẹ́ nínú browser rẹ, níbi tí o ti máa pe model láti inú kóòdù, béèrè fún JSON, kí o sì ṣàyẹ̀wò prompt rẹ bí onímọ̀ ẹ̀rọ.",
-    "Kóòdù máa hàn bí ìlà kúkúrú nínú ọ̀rọ̀ ẹ̀kọ́. O lè dà wọ́n kọ sínú Colab. Tí o kò bá tíì kọ kóòdù rí, máa tẹ̀lé e; ẹ̀kọ́ \"Introduction to Programming with Python\" jẹ́ alábàárìn tó dára. Ìdánwò ìmọ̀ kan wà ní ìparí orí kọ̀ọ̀kan, ìdánwò ìbéèrè 20 sì wà ní ìparí ẹ̀kọ́."
+    "Kóòdù máa hàn bí ìlà kúkúrú nínú ọ̀rọ̀ ẹ̀kọ́. O lè dà wọ́n kọ sínú Colab. Tí o kò bá tíì kọ kóòdù rí, máa tẹ̀lé e; ẹ̀kọ́ \"Ìfihàn sí Kíkọ Ètò Kọ̀mpútà pẹ̀lú Python\" jẹ́ alábàárìn tó dára. Ìdánwò ìmọ̀ kan wà ní ìparí orí kọ̀ọ̀kan, ìdánwò ìbéèrè 20 sì wà ní ìparí ẹ̀kọ́."
   ],
   finalTask: "Kọ system prompt fún iṣẹ́ kan nínú agent rẹ láti ẹ̀kọ́ 1 (fún àpẹẹrẹ, \"pín ọ̀rọ̀ tó wọlé sí: ìbéèrè, ẹ̀sùn, ọjà tí a fẹ́ rà, òmíràn\"). Ó gbọ́dọ̀ ní ipa, iṣẹ́ náà, òfin mẹ́ta, bí JSON ìdáhùn ṣe máa rí gẹ́lẹ́, àti àpẹẹrẹ kan. Ṣiṣẹ́ rẹ̀ láti inú notebook Colab lórí ohun ìdánwò márùn-ún, pẹ̀lú ọ̀kan tó ní ẹ̀tàn, kọ ọ́ sílẹ̀ bóyá ìdáhùn kọ̀ọ̀kan jẹ́ JSON tó tọ́ tí ó sì pé, kí o sì yí prompt náà padà lẹ́ẹ̀kan láti tún àṣìṣe kan ṣe.",
   // ---- ADDIE: Analysis ----
@@ -28,7 +28,7 @@ module.exports = {
       "API key gbọ́dọ̀ wà ní àṣírí, kí ó má sì sí nínú notebook tàbí àwòrán ojú-iboju (screenshot)",
       "Àkókò: ẹ̀kọ́ kúkúrú pẹ̀lú iṣẹ́ àṣeṣe kan nínú ọ̀kọ̀ọ̀kan"
     ],
-    prerequisites: "Ẹ̀kọ́ àkọ́kọ́ nínú Design, Build, and Deploy Autonomous AI Agents. \"Introduction to Programming with Python\" jẹ́ alábàárìn tó wúlò."
+    prerequisites: "Ẹ̀kọ́ àkọ́kọ́ nínú Design, Build, and Deploy Autonomous AI Agents. \"Ìfihàn sí Kíkọ Ètò Kọ̀mpútà pẹ̀lú Python\" jẹ́ alábàárìn tó wúlò."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

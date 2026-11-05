@@ -29,7 +29,7 @@ module.exports = {
       "Kò sí ìmọ̀ràn nípa òògùn tàbí iye òògùn; kò sí àṣeṣe ọlọ́wọ́ lórí oníbàárà gidi nínú ilé",
       "Àwọn akẹ́kọ̀ọ́ kan ní àkọsílẹ̀ ẹ̀ṣẹ̀; òfin àyẹ̀wò ìtàn ẹni yàtọ̀ láti ìpínlẹ̀ sí ìpínlẹ̀ àti láti àjọ sí àjọ"
     ],
-    prerequisites: "Kò sí. \"Caregiving: Caring for a Loved One\" àti \"Health Literacy\" wúlò, ṣùgbọ́n wọn kò pọn dandan."
+    prerequisites: "Kò sí. \"Ìtọ́jú: Bí a ṣe ń tọ́jú Ẹni tí a Fẹ́ràn\" àti \"Health Literacy\" wúlò, ṣùgbọ́n wọn kò pọn dandan."
   },
   // ---- ADDIE: Design ----
   objectives: [

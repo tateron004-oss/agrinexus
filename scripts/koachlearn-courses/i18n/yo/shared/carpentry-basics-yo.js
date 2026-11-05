@@ -29,7 +29,7 @@ module.exports = {
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú 5 sí 6 tí ó bá àkókò iṣẹ́ àti ìpàdé mu",
       "Ọ̀dọ́ tí kò tíì pé ọmọ ọdún 18: òfin iṣẹ́ ọmọdé ti ìjọba àpapọ̀ (federal) ń dín iṣẹ́ ayùn oníná àti ẹ̀rọ igi kù; òfin ìwé àṣẹ àti ti ètò yàtọ̀ láti ìpínlẹ̀ sí ìpínlẹ̀"
     ],
-    prerequisites: "Ìṣirò nọ́mbà odidi. \"Bíbẹ̀rẹ̀ Iṣẹ́ Ọwọ́ (Skilled Trades)\" ń ran àwọn akẹ́kọ̀ọ́ lọ́wọ́ láti yan iṣẹ́ ọwọ́; \"Ìpìlẹ̀ Ààbò Ibi Iṣẹ́ (OSHA)\" ń kọ́ni ní ààbò gbogbogbò ní ibi iṣẹ́ ìkọ́lé. Ẹ̀kọ́ yìí lọ jinlẹ̀ sí i nínú iṣẹ́ gbẹ́nàgbẹ́nà."
+    prerequisites: "Ìṣirò nọ́mbà odidi. \"Bíbẹ̀rẹ̀ Iṣẹ́ Ọwọ́ Onímọ̀ (Skilled Trades)\" ń ran àwọn akẹ́kọ̀ọ́ lọ́wọ́ láti yan iṣẹ́ ọwọ́; \"Ìpìlẹ̀ Ààbò Níbi Iṣẹ́ (OSHA)\" ń kọ́ni ní ààbò gbogbogbò ní ibi iṣẹ́ ìkọ́lé. Ẹ̀kọ́ yìí lọ jinlẹ̀ sí i nínú iṣẹ́ gbẹ́nàgbẹ́nà."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

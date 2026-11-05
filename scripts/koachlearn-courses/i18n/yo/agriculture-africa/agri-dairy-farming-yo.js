@@ -20,7 +20,7 @@ module.exports = {
   outcome: "ṣe iṣẹ́ wàrà kékeré tó ń mú wàrà mímọ́ jáde tí olùrà máa gbà: yan màlúù tàbí ewúrẹ́ rẹ kí o sì kọ́ ilé fún wọn, fún wàrà wọn pẹ̀lú ètò ìmọ́tótó, rí mastitis ní kùtùkùtù pẹ̀lú California Mastitis Test, mú wàrà tutù kí o sì ta wàrà tó yege nínú àyẹ̀wò dídára, tọ́ ọmọ màlúù tó ní ìlera, kí o sì ṣírò iye tí lítà kọ̀ọ̀kan ń ná ọ.",
   about: [
     "Ẹ̀kọ́ yìí wà fún àwọn àgbẹ̀ kékeré àti àwọn tó ń dàgbà sí i tó ń sin ẹran ìfúnwàrà, àwọn òṣìṣẹ́ oko, àwọn ọ̀dọ́ oníṣòwò àgbẹ̀ àti àwọn òṣìṣẹ́ ìtọ́sọ́nà àgbẹ̀ ní Kenya, Nàìjíríà, Ghana, Burkina Faso àti káàkiri Áfíríkà, tí wọ́n ń sin màlúù ìfúnwàrà tàbí ewúrẹ́ ìfúnwàrà, tàbí tí wọ́n fẹ́ bẹ̀rẹ̀. Wàrà tó mọ́ ń tà ní owó tó ga jù, wọn kì í sábà kọ̀ ọ́, ó sì ń dáàbò bo ìlera ìdílé; wàrà tó dọ̀tí àti mastitis tí a kò rí ń jẹ èrè rẹ ní ìkọ̀kọ̀.",
-    "Orí 1 ṣètò iṣẹ́ wàrà náà: yíyan ẹran, ilé zero-grazing àti oúnjẹ fún wàrà, àti ètò fífún wàrà tó mọ́. Orí 2 dáàbò bo wàrà náà ó sì tà á: mastitis àti California Mastitis Test, mímú wàrà tutù àti títà á fún ẹgbẹ́ alájọṣe tàbí ilé-iṣẹ́ tó ń ṣe wàrà, àti títọ́ ọmọ màlúù, àkọsílẹ̀ àti iye owó lítà kan. A kọ́ni nípa oúnjẹ ẹran ní kíkún nínú ẹ̀kọ́ \"Oúnjẹ Ẹran Ọ̀sìn àti Ṣíṣe Oúnjẹ pẹ̀lú Ohun Èlò Agbègbè\" (Livestock Nutrition and Feed Formulation with Local Ingredients); níbí, o máa kọ́ bí oúnjẹ ṣe so mọ́ wàrà àti ìnáwó.",
+    "Orí 1 ṣètò iṣẹ́ wàrà náà: yíyan ẹran, ilé zero-grazing àti oúnjẹ fún wàrà, àti ètò fífún wàrà tó mọ́. Orí 2 dáàbò bo wàrà náà ó sì tà á: mastitis àti California Mastitis Test, mímú wàrà tutù àti títà á fún ẹgbẹ́ alájọṣe tàbí ilé-iṣẹ́ tó ń ṣe wàrà, àti títọ́ ọmọ màlúù, àkọsílẹ̀ àti iye owó lítà kan. A kọ́ni nípa oúnjẹ ẹran ní kíkún nínú ẹ̀kọ́ \"Oúnjẹ Ẹran Ọ̀sìn àti Pípò Oúnjẹ pẹ̀lú Èròjà Ìbílẹ̀\" (Livestock Nutrition and Feed Formulation with Local Ingredients); níbí, o máa kọ́ bí oúnjẹ ṣe so mọ́ wàrà àti ìnáwó.",
     "Ẹ̀kọ́ yìí kò sọ iye oògùn, àjẹsára tàbí homonu tí a máa fún ẹran, kò sì sọ iye ọjọ́ àkókò ìdádúró. Máa tẹ̀lé dókítà ẹranko rẹ tàbí òṣìṣẹ́ ìlera ẹranko àti ohun tí wọ́n kọ sára oògùn nígbà gbogbo. Àpẹẹrẹ lásán ni iye owó tí a lò; lo iye owó tìrẹ. Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún, ó sì parí pẹ̀lú iṣẹ́ kan tí o máa ṣe lórí oko rẹ. Ìdánwò ìmọ̀ wà ní ìparí orí kọ̀ọ̀kan, ìdánwò ìbéèrè 20 sì wà ní ìparí ẹ̀kọ́ náà."
   ],
   finalTask: "Ṣe ojú-ewé méjì fún oko wàrà rẹ (tìrẹ, tàbí àpẹẹrẹ bí màlúù 3 ní Kiambu tàbí ewúrẹ́ ìfúnwàrà 10 nítòsí Kumasi). Ojú-ewé 1, ètò ìmọ́tótó fífún wàrà tí o máa lẹ̀ mọ́ ibi fífún wàrà: àwọn ìgbésẹ̀ láti mímúra ẹni tó ń fún wàrà àti àwọn ohun èlò sílẹ̀ títí dé mímú wàrà tutù, àwọn àmì mastitis tí o máa wá, ìgbà tí o máa ṣe CMT, àti ohun tí o máa ṣe sí wàrà ẹran tó ń ṣàìsàn tàbí èyí tí a ń tọ́jú. Ojú-ewé 2, ìwé ìṣirò iye owó lítà kan fún oṣù kan: gbogbo ìnáwó (oúnjẹ àti koríko ẹran, owó òṣìṣẹ́, dókítà ẹranko àti ìbísí, àwọn mìíràn), iye lítà tí o rí, iye owó lítà kan, iye tí olùrà rẹ ń san, àti ìyípadà kan tí o máa ṣe láti dín iye owó lítà kan kù.",
@@ -37,7 +37,7 @@ module.exports = {
       "Ìlera ẹranko: kò sí iye oògùn, àjẹsára tàbí homonu, kò sì sí iye ọjọ́ ìdádúró; tẹ̀lé dókítà ẹranko àti ohun tí a kọ sára oògùn",
       "Àpẹẹrẹ ni iye owó; iye owó, ìwé àṣẹ àti òfin olùrà yàtọ̀ láti orílẹ̀-èdè sí orílẹ̀-èdè àti láti olùrà sí olùrà"
     ],
-    prerequisites: "Kò sí. \"Ìlera àti Ìtọ́jú Ẹran Ọ̀sìn\" (àyẹ̀wò ìlera ojoojúmọ́) àti \"Oúnjẹ Ẹran Ọ̀sìn àti Ṣíṣe Oúnjẹ pẹ̀lú Ohun Èlò Agbègbè\" (ìpín oúnjẹ) wúlò láti kà pẹ̀lú rẹ̀."
+    prerequisites: "Kò sí. \"Ìlera àti Ìtọ́jú Ẹran Ọ̀sìn\" (àyẹ̀wò ìlera ojoojúmọ́) àti \"Oúnjẹ Ẹran Ọ̀sìn àti Pípò Oúnjẹ pẹ̀lú Èròjà Ìbílẹ̀\" (ìpín oúnjẹ) wúlò láti kà pẹ̀lú rẹ̀."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [
@@ -85,7 +85,7 @@ module.exports = {
           text: [
             "Nínú zero-grazing, àwọn ẹran ń dúró nínú ilé wọn, ìwọ ni o sì ń gbé oúnjẹ wá bá wọn, bí koríko Napier tí a gé, koríko ẹran mìíràn àti pòròpórò oko. Ó ń dín ilẹ̀ tí o nílò kù, ó sì ń jẹ́ kí o ṣàkóso oúnjẹ, ṣùgbọ́n ó nílò iṣẹ́ ojoojúmọ́ àti ìmọ́tótó dáadáa.",
             "Ilé tó dára ní: òrùlé fún ibòji àti òjò; ibùdúró fún màlúù kọ̀ọ̀kan pẹ̀lú ibùsùn tó gbẹ tó sì rọ̀ kí ó lè dùbúlẹ̀; ilẹ̀ tó tẹ̀ díẹ̀ kí ìtọ̀ àti omi lè ṣàn lọ; ọpọ́n oúnjẹ àti ọpọ́n omi tó rọrùn láti fọ̀; ibi mímọ́ tó dá wà fún fífún wàrà; ilé ọmọ màlúù; kòtò ìgbẹ́ tó jìnnà sí ibi fífún wàrà; àti ilé ìkẹ́rùsí fún oúnjẹ. Fún ewúrẹ́, ilẹ̀ onípákó tí a gbé sókè ń jẹ́ kí wọ́n gbẹ. Kó ìgbẹ́ kúrò lójoojúmọ́, nítorí ibùsùn tó dọ̀tí jẹ́ ọ̀kan pàtàkì nínú ohun tó ń fa mastitis.",
-            "Oúnjẹ àti omi ni a fi ń ṣe wàrà. Màlúù tó ń fún wàrà nílò omi mímọ́ púpọ̀ jálẹ̀ ọjọ́, koríko tó dára (roughage), àti agbára, protein àti mineral àfikún tó dọ́gba; wàrà máa ń dín kù kíákíá tí omi tàbí oúnjẹ bá tán. A kọ́ni bí a ṣe ń ṣe ìpín oúnjẹ láti inú oúnjẹ agbègbè nínú \"Oúnjẹ Ẹran Ọ̀sìn àti Ṣíṣe Oúnjẹ pẹ̀lú Ohun Èlò Agbègbè\". Níbí, rántí nǹkan méjì: kọ iye owó oúnjẹ kọ̀ọ̀kan sílẹ̀, nítorí oúnjẹ ni ìnáwó rẹ tó pọ̀ jù lọ nígbà púpọ̀, kí o sì máa yí oúnjẹ padà díẹ̀díẹ̀."
+            "Oúnjẹ àti omi ni a fi ń ṣe wàrà. Màlúù tó ń fún wàrà nílò omi mímọ́ púpọ̀ jálẹ̀ ọjọ́, koríko tó dára (roughage), àti agbára, protein àti mineral àfikún tó dọ́gba; wàrà máa ń dín kù kíákíá tí omi tàbí oúnjẹ bá tán. A kọ́ni bí a ṣe ń ṣe ìpín oúnjẹ láti inú oúnjẹ agbègbè nínú \"Oúnjẹ Ẹran Ọ̀sìn àti Pípò Oúnjẹ pẹ̀lú Èròjà Ìbílẹ̀\". Níbí, rántí nǹkan méjì: kọ iye owó oúnjẹ kọ̀ọ̀kan sílẹ̀, nítorí oúnjẹ ni ìnáwó rẹ tó pọ̀ jù lọ nígbà púpọ̀, kí o sì máa yí oúnjẹ padà díẹ̀díẹ̀."
           ],
           steps: ["Sàmì sí ibi tí o máa kọ́ ilé olórùlé sí, lórí ilẹ̀ tí omi kì í dúró sí.", "Fún ẹran kọ̀ọ̀kan ní ibùdúró pẹ̀lú ibùsùn tó gbẹ àti ilẹ̀ tó tẹ̀ díẹ̀.", "Gbé ọpọ́n oúnjẹ àti ọpọ́n omi sí ibi tó rọrùn láti kún àti láti fọ̀.", "Fi ibi mímọ́ fún fífún wàrà, ilé ọmọ màlúù àti ilé ìkẹ́rùsí oúnjẹ kún un.", "Gbé kòtò ìgbẹ́ jìnnà sí ibi fífún wàrà àti omi.", "Kó ìgbẹ́ kúrò lójoojúmọ́; kọ oúnjẹ tí o rà àti iye owó rẹ̀ sílẹ̀."],
           words: [["Zero-grazing", "sísin ẹran nínú ilé wọn àti gbígbé gbogbo oúnjẹ wọn wá bá wọn dípò kí wọ́n máa jẹ̀ kiri."], ["Ibùsùn ẹran (bedding)", "ohun tó gbẹ tó sì rọ̀ lórí ilẹ̀ níbi tí ẹran ń dùbúlẹ̀, bí èérún igi, koríko gbígbẹ tàbí iyanrìn."], ["Roughage", "oúnjẹ ẹran tó pọ̀ tó sì ní okun, bí koríko, koríko ẹran, koríko gbígbẹ (hay) àti pòròpórò oko."]],
@@ -297,7 +297,7 @@ module.exports = {
       "Má ṣe sọ iye oògùn, àjẹsára tàbí homonu, tàbí iye ọjọ́ ìdádúró láéláé; rán akẹ́kọ̀ọ́ lọ sọ́dọ̀ dókítà ẹranko wọn àti ohun tí a kọ sára oògùn.",
       "Sọ fún àwọn akẹ́kọ̀ọ́ pé kí wọ́n mú ìwé ìsanwó oúnjẹ oṣù tó kọjá àti ìwé ìgbàwàrà wá fún iṣẹ́ iye owó lítà kan; lo nọ́mbà àpẹẹrẹ fún àwọn tí kò ní àkọsílẹ̀.",
       "Fi rubric ṣe àmì fún iṣẹ́ ìkẹyìn, kí o sì fúnni ní èsì lórí ìlà \"Kò tíì dé\" kan lẹ́ẹ̀kan.",
-      "So ẹ̀kọ́ yìí pọ̀ mọ́ \"Oúnjẹ Ẹran Ọ̀sìn àti Ṣíṣe Oúnjẹ pẹ̀lú Ohun Èlò Agbègbè\" fún àwọn akẹ́kọ̀ọ́ tí iye owó lítà kan wọn ga nítorí oúnjẹ."
+      "So ẹ̀kọ́ yìí pọ̀ mọ́ \"Oúnjẹ Ẹran Ọ̀sìn àti Pípò Oúnjẹ pẹ̀lú Èròjà Ìbílẹ̀\" fún àwọn akẹ́kọ̀ọ́ tí iye owó lítà kan wọn ga nítorí oúnjẹ."
     ]
   }
 };

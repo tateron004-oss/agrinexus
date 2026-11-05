@@ -29,7 +29,7 @@ module.exports = {
       "Masharti, ada na muhtasari wa mtihani wa PMI hubadilika: wanafunzi wanayathibitisha kwenye pmi.org, si kutoka kozi hii",
       "Kozi inaandaa; haitoi CAPM na haihesabiwi moja kwa moja katika saa za mafunzo za PMI"
     ],
-    prerequisites: "Hakuna. Wanafunzi wapya kwa spreadsheet wanaweza kuanza na \"Excel na Spreadsheet\"; \"Usimamizi wa Miradi wa Agile\" ni kozi nzuri ya kufuata."
+    prerequisites: "Hakuna. Wanafunzi wapya kwa spreadsheet wanaweza kuanza na \"Excel na Spreadsheet\"; \"Usimamizi wa Miradi kwa Njia ya Agile\" ni kozi nzuri ya kufuata."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

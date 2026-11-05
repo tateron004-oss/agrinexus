@@ -270,7 +270,7 @@ module.exports = {
     results: [
       "Wanafunzi wanaomaliza kozi na kufaulu kazi ya mwisho (kwa rubriki)",
       "Wanafunzi wanaoripoti kupiga simu, kupanga miadi au kuomba kitu dukani kwa Kiingereza wao wenyewe ndani ya siku 30 (utafiti wa kufuatilia)",
-      "Wanafunzi wanaoanza kozi \"English for the Workplace (ESL)\" (Kiingereza Kazini) au darasa la Kiingereza la watu wazima ndani ya siku 30",
+      "Wanafunzi wanaoanza kozi \"Kiingereza cha Kazini (ESL)\" au darasa la Kiingereza la watu wazima ndani ya siku 30",
       "Programu washirika zinaripoti miadi michache inayokosekana kwa sababu ya kutoelewana kwa lugha"
     ]
   },

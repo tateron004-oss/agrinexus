@@ -38,7 +38,7 @@ module.exports = {
       "Owó: irinṣẹ́ tí kò wọ́n ni a kọ́kọ́ lò; gbogbo iye owó jẹ́ àpẹẹrẹ; a kò gbé ọjà kankan lárugẹ",
       "Oògùn kòkòrò àti ajílẹ̀: ọjà tí a forúkọ rẹ̀ sílẹ̀ nìkan, tí a lò gẹ́gẹ́ bí ìwé ara rẹ̀ (label) ṣe sọ"
     ],
-    prerequisites: "Kí o mọ bí a ṣe ń lo smartphone dáadáa. Ó dára kí o kọ́kọ́ ṣe \"Soil Health and Fertility\" àti \"Agricultural Data and Technology\"."
+    prerequisites: "Kí o mọ bí a ṣe ń lo smartphone dáadáa. Ó dára kí o kọ́kọ́ ṣe \"Ìlera Ilẹ̀ àti Ọ̀rá Ilẹ̀\" àti \"Ìsọfúnni àti Ẹ̀rọ Ìgbàlódé fún Iṣẹ́ Àgbẹ̀\"."
   },
   // ---- ADDIE: Design (objectives) ----
   objectives: [
@@ -179,7 +179,7 @@ module.exports = {
           text: [
             "Irinṣẹ́ ìpéye kan wúlò nìkan tí èrè rẹ̀ bá ju owó rẹ̀ lọ. Lo ìṣirò ìnáwó apá kan tó rọrùn: kí ni owó àfikún tí màá rí tàbí tí màá fi pamọ́ (èso púpọ̀ sí i, ajílẹ̀ tàbí irúgbìn tí kò ṣòfò mọ́), kí sì ni owó àfikún tí ó máa ná mi (àyẹ̀wò, sensọ̀, app, àkókò rẹ, owó òṣìṣẹ́)? Àpẹẹrẹ lásán: tí pínpín sí agbègbè bá fi àpò ajílẹ̀ 2 pamọ́ lórí agbègbè aláìlágbára tí kò mówó wá rí (2 x GHS 400 = GHS 800 tí a fi pamọ́), tí àyẹ̀wò lab sì ná GHS 300, ó ń mówó wá.",
             "Lórí oko kékeré, bẹ̀rẹ̀ pẹ̀lú ohun tí ó jẹ́ ọ̀fẹ́ tàbí tí kò wọ́n: ojú rẹ, àkọsílẹ̀ rẹ, GPS fóònù àti máàpù sátẹ́láìtì ọ̀fẹ́. Lẹ́yìn náà, ná owó lórí àyẹ̀wò lab fún agbègbè kọ̀ọ̀kan. Ra sensọ̀ ọwọ́ nìkan tí o bá máa lò ó lọ́pọ̀ ìgbà tí o sì lè fi wé ti lab. Ẹgbẹ́ lè pín owó náà: ẹgbẹ́ alájùmọ̀ṣepọ̀ (cooperative) kan ní Côte d'Ivoire tàbí ẹgbẹ́ àgbẹ̀ kan ní Nigeria lè ra mítà kan tàbí san owó àyẹ̀wò lab papọ̀.",
-            "Drone ń fúnni ní àwòrán tí ó ṣe kedere dé sẹ̀ńtímítà díẹ̀ dípò mítà 10, ó ń fò lábẹ́ ìkùukùu, ó sì lè fò ní ọjọ́ tí o nílò rẹ̀. Ó ń ràn lọ́wọ́ lórí ọ̀gbìn olówó gíga, oko tí ó tóbi, tàbí fún ẹgbẹ́ tí ó ń ra iṣẹ́ papọ̀. Ó wọ́n jù púpọ̀, fífò ó sì nílò ìwé àṣẹ láti ọ̀dọ̀ àjọ tó ń ṣàkóso ìrìnàjò òfurufú (civil aviation authority). Tí o bá rò pé o nílò ọ̀kan, ṣe àwọn ẹ̀kọ́ \"Drones for Agricultural Monitoring\" àti \"Agricultural Drones: Data Analytics and Precision Agriculture\"; ẹ̀kọ́ yìí kò tún wọn ṣe."
+            "Drone ń fúnni ní àwòrán tí ó ṣe kedere dé sẹ̀ńtímítà díẹ̀ dípò mítà 10, ó ń fò lábẹ́ ìkùukùu, ó sì lè fò ní ọjọ́ tí o nílò rẹ̀. Ó ń ràn lọ́wọ́ lórí ọ̀gbìn olówó gíga, oko tí ó tóbi, tàbí fún ẹgbẹ́ tí ó ń ra iṣẹ́ papọ̀. Ó wọ́n jù púpọ̀, fífò ó sì nílò ìwé àṣẹ láti ọ̀dọ̀ àjọ tó ń ṣàkóso ìrìnàjò òfurufú (civil aviation authority). Tí o bá rò pé o nílò ọ̀kan, ṣe àwọn ẹ̀kọ́ \"Drones for Agricultural Monitoring\" àti \"Drone fún Iṣẹ́ Àgbẹ̀: Ìtúpalẹ̀ Dátà àti Iṣẹ́ Àgbẹ̀ Ìpéye\"; ẹ̀kọ́ yìí kò tún wọn ṣe."
           ],
           steps: ["Kọ ohun tí irinṣẹ́ tàbí ọ̀nà iṣẹ́ náà ń ná: owó, àkókò, òṣìṣẹ́.", "Kọ owó àfikún tàbí owó tí o retí láti fi pamọ́, pẹ̀lú nọ́mbà àpẹẹrẹ.", "Fi wé ara wọn: èrè yọ owó tí a ná kúrò.", "Bẹ̀rẹ̀ pẹ̀lú irinṣẹ́ ọ̀fẹ́; lẹ́yìn náà àyẹ̀wò lab fún agbègbè kọ̀ọ̀kan; lẹ́yìn náà sensọ̀ tàbí iṣẹ́ drone nìkan tí ó bá ń mówó wá.", "Ronú nípa pínpín owó pẹ̀lú ẹgbẹ́ kan."],
           words: [["Ìṣirò ìnáwó apá kan (partial budget)", "ìṣirò tó rọrùn ti owó àfikún àti èrè àfikún tí ìyípadà kan ṣoṣo mú wá nìkan."], ["Iṣẹ́ drone", "iṣẹ́ òwò tí ó ń fi drone fò lórí oko rẹ fún owó kan."], ["Èrè padà (return)", "ohun tí o rí padà fún ohun tí o ná."]],

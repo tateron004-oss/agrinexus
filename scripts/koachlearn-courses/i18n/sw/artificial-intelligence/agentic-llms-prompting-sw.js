@@ -13,7 +13,7 @@ module.exports = {
   about: [
     "Hii ni kozi ya 2 ya programu ya Design, Build, and Deploy Autonomous AI Agents (kubuni, kujenga na kuzindua mawakala wa AI wanaojiendesha). Modeli iliyo ndani ya kila wakala ni modeli kubwa ya lugha (LLM), na jinsi unavyoipa maelekezo ndiyo inayoamua kama wakala atafanya kazi vizuri. Kozi hii inakufundisha kwa maneno rahisi jinsi LLM zinavyofanya kazi na jinsi ya kuzipa maelekezo mazuri.",
     "Sura ya 1 inahusu jinsi modeli inavyofanya kazi na jinsi ya kuandika prompt imara kwenye chatbot ya bure. Sura ya 2 inahamia Python katika Google Colab, daftari la bure kwenye kivinjari chako, ambapo unaita modeli kutoka kwa msimbo, unaomba JSON na unajaribu prompt yako kama mhandisi.",
-    "Msimbo unaonekana kama mistari mifupi katika maandishi ya somo. Unaweza kuinakili kwenye Colab. Kama hujawahi kuandika msimbo, fuata tu; kozi ya \"Introduction to Programming with Python\" ni rafiki mzuri wa kozi hii. Jaribio la maarifa linafunga kila sura na mtihani wa maswali 20 unafunga kozi."
+    "Msimbo unaonekana kama mistari mifupi katika maandishi ya somo. Unaweza kuinakili kwenye Colab. Kama hujawahi kuandika msimbo, fuata tu; kozi ya \"Utangulizi wa Kuandika Programu kwa Python\" ni rafiki mzuri wa kozi hii. Jaribio la maarifa linafunga kila sura na mtihani wa maswali 20 unafunga kozi."
   ],
   finalTask: "Andika system prompt kwa kazi moja ya wakala wako kutoka kozi ya 1 (kwa mfano, \"panga ujumbe unaoingia katika: swali, lalamiko, oda, nyingine\"). Lazima itaje jukumu, kazi, kanuni tatu, muundo kamili wa jibu la JSON na mfano mmoja. Iendeshe kutoka daftari la Colab kwa majaribio matano, likiwemo moja la hila, andika kama kila jibu lilikuwa JSON halali na sahihi, na ubadilishe prompt mara moja kurekebisha kosa.",
   // ---- ADDIE: Uchambuzi ----
@@ -28,7 +28,7 @@ module.exports = {
       "Funguo za API lazima zibaki siri, nje ya madaftari na picha za skrini",
       "Muda: masomo mafupi yenye kazi moja ya mazoezi kila moja"
     ],
-    prerequisites: "Kozi ya kwanza ya Design, Build, and Deploy Autonomous AI Agents. Kozi ya \"Introduction to Programming with Python\" inasaidia kama rafiki wa kozi hii."
+    prerequisites: "Kozi ya kwanza ya Design, Build, and Deploy Autonomous AI Agents. Kozi ya \"Utangulizi wa Kuandika Programu kwa Python\" inasaidia kama rafiki wa kozi hii."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

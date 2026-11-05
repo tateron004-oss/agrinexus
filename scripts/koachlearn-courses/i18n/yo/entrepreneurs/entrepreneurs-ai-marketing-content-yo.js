@@ -28,7 +28,7 @@ module.exports = {
       "Ìpolówó gbọ́dọ̀ jẹ́ òtítọ́, a gbọ́dọ̀ sọ gbangba nípa ìgbélárugẹ tí a sanwó fún, a ti fòfin de àyẹ̀wò èké, ímeèlì sì gbọ́dọ̀ tẹ̀lé CAN-SPAM",
       "Ìtàn àti fọ́tò oníbàárà ni a ń lò pẹ̀lú àṣẹ wọn nìkan"
     ],
-    prerequisites: "\"Ìfihàn sí AI fún Àwọn Oníṣòwò\". \"Àwọn Irinṣẹ́ AI Tí Gbogbo Oníṣòwò Yẹ Kí Ó Mọ̀\" máa ràn ọ́ lọ́wọ́ pẹ̀lú Canva."
+    prerequisites: "\"Ìfihàn sí AI fún Àwọn Oníṣòwò\". \"Àwọn Irinṣẹ́ AI Tí Gbogbo Oníṣòwò Gbọ́dọ̀ Mọ̀\" máa ràn ọ́ lọ́wọ́ pẹ̀lú Canva."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

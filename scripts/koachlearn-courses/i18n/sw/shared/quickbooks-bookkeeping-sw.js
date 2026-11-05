@@ -19,7 +19,7 @@ module.exports = {
     "Karibu kila biashara ndogo, kanisa na shirika lisilo la faida linahitaji mtu wa kutunza hesabu zake, na mengi yanatumia QuickBooks. Kutunza hesabu kunaweza kuwa kazi ya muda wote, kazi ya muda mfupi unayofanya nyumbani, au biashara ya pembeni inayohudumia wateja kadhaa. Kozi hii ni kwa wanaotafuta kazi, wafanyakazi wa ofisi wanaotaka nafasi bora, wamiliki wa biashara ndogo na wanaojitolea katika mashirika yasiyo ya faida.",
     "Utafanya mazoezi ya kazi halisi: orodha ya akaunti, ankara na malipo ya wateja, bili na matumizi, bank feed, ulinganisho wa benki, ripoti ya faida na hasara na mizania, na orodha ya kukagua ya mwisho wa mwezi. Unafanya mazoezi katika test drive ya QuickBooks Online ya Intuit, kampuni ya mfano unayoweza kufungua kwenye kivinjari ambapo hakuna unachofanya kinachohifadhiwa, au kwenye karatasi kama huna kompyuta.",
     "Kozi hii inakuandaa kwa kazi ya kutunza hesabu na kwa vyeti vya Intuit kama QuickBooks Certified User na Intuit Certified Bookkeeping Professional, ambavyo mitihani yake inasimamiwa na Certiport. Haitoi cheti chochote; unakipata kwa kufaulu mtihani rasmi. Angalia kurasa rasmi kwa maelezo na ada za sasa.",
-    "Kama tayari ulisoma \"Misingi ya Kutunza Hesabu\", hii ni hatua inayofuata. Kila somo linachukua kama dakika tano, lina kazi ya \"Jaribu sasa\" na jaribio fupi la maswali mawili. Kuna jaribio la maarifa baada ya kila sura, mtihani wa maswali 20 mwishoni, na kazi ya mwisho unayoweza kumwonyesha mwajiri au mteja."
+    "Kama tayari ulisoma \"Misingi ya Utunzaji wa Hesabu\", hii ni hatua inayofuata. Kila somo linachukua kama dakika tano, lina kazi ya \"Jaribu sasa\" na jaribio fupi la maswali mawili. Kuna jaribio la maarifa baada ya kila sura, mtihani wa maswali 20 mwishoni, na kazi ya mwisho unayoweza kumwonyesha mwajiri au mteja."
   ],
   finalTask: "Tengeneza kifurushi chako cha mwisho wa mwezi cha QuickBooks kwa biashara ya mfano (kampuni ya usafi, gari la chakula au shirika dogo lisilo la faida): (1) orodha ya akaunti yenye angalau akaunti 12, kila moja ikiwa imewekwa alama ya mapato, matumizi, mali, dhima au mtaji; (2) kumbukumbu ya angalau miamala 10 uliyoingiza katika test drive ya QuickBooks Online au kwenye karatasi (angalau ankara 3, malipo 2 ya wateja na bili au matumizi 4), kila mmoja na tarehe yake, mteja au muuzaji, akaunti na kiasi; (3) ulinganisho wa benki wa mwezi unaoishia na tofauti ya sifuri, au maelezo yaliyoandikwa ya kile ambacho bado hakilingani na kwa nini; (4) muhtasari wa aya moja wa faida na hasara ya mwezi; na (5) mpango wa siku 60 wa cheti wenye tarehe: cheti kipi cha Intuit utajiandaa kwacho, lini utaangalia ukurasa wake rasmi, na lini utafanya mitihani ya mazoezi.",
   // ---- ADDIE: Uchambuzi ----
@@ -35,7 +35,7 @@ module.exports = {
       "Faragha: mazoezi yanatumia kampuni ya mfano au namba za kubuni, kamwe si taarifa halisi za kuingia benki wala namba za akaunti",
       "Sheria za kodi zinabadilika na zinatofautiana kwa mahali: masomo yanaelekeza kwa irs.gov au mtaalamu wa kodi na hayatoi ushauri wa kodi"
     ],
-    prerequisites: "Hakuna, lakini \"Misingi ya Kutunza Hesabu\" au \"Excel na Spreadsheets\" inawasaidia wanafunzi ambao hawajawahi kufuatilia pesa zinazoingia na kutoka."
+    prerequisites: "Hakuna, lakini \"Misingi ya Utunzaji wa Hesabu\" au \"Excel na Spreadsheets\" inawasaidia wanafunzi ambao hawajawahi kufuatilia pesa zinazoingia na kutoka."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

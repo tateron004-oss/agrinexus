@@ -39,7 +39,7 @@ module.exports = {
       "Règles : les licences d'exportation, les limites de résidus et les règles de certification changent et varient selon le pays et le marché ; les apprenants vérifient auprès de sources officielles",
       "Sécurité : uniquement des pesticides homologués, utilisés comme l'indique l'étiquette, avec un équipement de protection ; aucune dose chiffrée dans le cours"
     ],
-    prerequisites: "Utile : Coopératives agricoles et accès au marché, et Registres agricoles et bases de la gestion (Agrobusiness et gestion d'exploitation). Savoir lire et additionner."
+    prerequisites: "Utile : Coopératives agricoles et accès au marché, et Registres agricoles et bases de la gestion (Agrobusiness et gestion de l'exploitation agricole). Savoir lire et additionner."
   },
   // ---- ADDIE : Conception (objectifs : condition, action observable, critère) ----
   objectives: [

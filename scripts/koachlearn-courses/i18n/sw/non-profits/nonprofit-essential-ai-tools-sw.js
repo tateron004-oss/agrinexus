@@ -28,7 +28,7 @@ module.exports = {
       "Kurekodi mikutano kunahitaji kila mtu akubali; picha za watoto zinahitaji ruhusa ya maandishi kutoka kwa mzazi au mlezi",
       "Muda: kama dakika 60 kwa jumla, katika masomo ya dakika 5"
     ],
-    prerequisites: "Kozi \"Utangulizi wa AI kwa Mashirika Yasiyo ya Faida\", au uzoefu fulani wa kutumia msaidizi wa AI."
+    prerequisites: "Kozi \"Utangulizi wa AI kwa Mashirika Yasiyo ya Kiserikali\", au uzoefu fulani wa kutumia msaidizi wa AI."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

@@ -28,7 +28,7 @@ module.exports = {
       "Zana za AI zinabadilika, kwa hiyo maswali ya somo yaliyoandaliwa yanajaribiwa muda mfupi kabla ya kufundisha",
       "Muda: masomo mafupi yanayoingia katika siku ya shule, pamoja na somo la dakika 30 kwa wanafunzi"
     ],
-    prerequisites: "Inapendekezwa kozi \"AI kwa Viongozi wa Shule na Elimu 2: Zana za AI kwa Waelimishaji\"."
+    prerequisites: "Inapendekezwa kozi \"AI kwa Viongozi wa Shule na Elimu 2: Zana za AI kwa Walimu\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

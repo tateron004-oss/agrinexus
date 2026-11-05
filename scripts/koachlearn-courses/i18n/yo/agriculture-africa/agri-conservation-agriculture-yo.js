@@ -22,7 +22,7 @@ module.exports = {
   about: [
     "Ẹ̀kọ́ yìí wà fún àwọn àgbẹ̀ kékeré àti àwọn àgbẹ̀ oníṣòwò tó ń dàgbà, àwọn òṣìṣẹ́ oko, àwọn ọ̀dọ́ oníṣòwò àgbẹ̀ àti àwọn òṣìṣẹ́ ìdálẹ́kọ̀ọ́ àgbẹ̀ (extension officer) ní àwọn apá gbígbẹ ní Kenya, Nàìjíríà, Ghana, Burkina Faso, Senegal àti káàkiri Áfíríkà, níbi tí òjò kì í pẹ́, tí ọ̀dá sì wọ́pọ̀, tí títúlẹ̀ sì ń fi ilẹ̀ sílẹ̀ ní ìhòòhò, ní líle àti ní gbígbẹ.",
     "Orí 1 ń ṣàlàyé àwọn ìlànà mẹ́ta iṣẹ́ àgbẹ̀ ìpamọ́ ilẹ̀ bí FAO ṣe ṣàlàyé wọn, ó sì ń fi bí a ṣe ń pèsè ilẹ̀ láìtúlẹ̀ hàn: kòtò ọ̀gbìn, kòtò zai, ripping àti gbígbin tààrà. Orí 2 dá lórí bíbo ilẹ̀ pẹ̀lú ìbora (mulch), pípa èpò láìtúlẹ̀, irinṣẹ́ àti àkókò fún àsìkò kan, ohun tí o lè retí ní ọdún ọ̀dá, àti bí o ṣe lè la àwọn àsìkò àkọ́kọ́ kọjá.",
-    "Omi bíbomirin oko àti kíkó omi òjò wà nínú \"Irrigation and Water Management\", ajílẹ̀ kómpóòsì àti ìbora ilẹ̀ ìpìlẹ̀ sì wà nínú \"Soil Health and Fertility\"; ẹ̀kọ́ yìí kò tún wọn sọ. Bẹ̀rẹ̀ lórí oko kan, kí o sì fi ilẹ̀ kan tí a túlẹ̀ sílẹ̀ lẹ́gbẹ̀ẹ́ rẹ̀ láti fi wéra. Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún, ó sì parí pẹ̀lú iṣẹ́ kan lórí ilẹ̀ rẹ."
+    "Omi bíbomirin oko àti kíkó omi òjò wà nínú \"Ìbomirin Oko àti Ìṣàkóso Omi\", ajílẹ̀ kómpóòsì àti ìbora ilẹ̀ ìpìlẹ̀ sì wà nínú \"Ìlera Ilẹ̀ àti Ọ̀rá Ilẹ̀\"; ẹ̀kọ́ yìí kò tún wọn sọ. Bẹ̀rẹ̀ lórí oko kan, kí o sì fi ilẹ̀ kan tí a túlẹ̀ sílẹ̀ lẹ́gbẹ̀ẹ́ rẹ̀ láti fi wéra. Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún, ó sì parí pẹ̀lú iṣẹ́ kan lórí ilẹ̀ rẹ."
   ],
   finalTask: "Kọ ètò iṣẹ́ àgbẹ̀ ìpamọ́ ilẹ̀ fún àsìkò kan lórí oko kan (tàbí àpẹẹrẹ: éékà 1 àgbàdo àti ẹ̀wà (cowpea) ní Machakos, hẹ́kítà 2 ọkà bàbà ní àríwá Ghana, tàbí hẹ́kítà 1 jéró àti ẹ̀pà ní Central Plateau ní Burkina Faso): àwòrán oko náà; bí o ṣe máa pèsè rẹ̀ láìtúlẹ̀ (kòtò ọ̀gbìn, kòtò zai, ripping tàbí gbígbin tààrà) àti ìdí rẹ̀; bí o ṣe máa bo ó kéré tán ìdá 30 nínú ọgọ́rùn-ún ilẹ̀ náà; irè oko àti bí o ṣe máa yí wọn padà tàbí gbìn wọ́n pọ̀; ètò èpò rẹ; kàlẹ́ńdà oṣù dé oṣù fún iṣẹ́, irinṣẹ́ àti owó; àti bí o ṣe máa fi wé ilẹ̀ tí a túlẹ̀.",
   // ---- ADDIE: Analysis ----
@@ -37,7 +37,7 @@ module.exports = {
       "Ààbò oògùn: oògùn apa èpò nìkan tí a forúkọ rẹ̀ sílẹ̀ ní orílẹ̀-èdè, tí a lò bí àmì ọjà (label) ti sọ, pẹ̀lú aṣọ àti ohun ààbò",
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú 4 sí 6; èsì máa ń dàgbà lórí ọ̀pọ̀ àsìkò"
     ],
-    prerequisites: "Kò sí. \"Soil Health and Fertility\" àti \"Climate-Smart Agriculture\" wúlò gẹ́gẹ́ bí ìmọ̀ ìpìlẹ̀."
+    prerequisites: "Kò sí. \"Ìlera Ilẹ̀ àti Ọ̀rá Ilẹ̀\" àti \"Iṣẹ́ Àgbẹ̀ Tó Bá Ojú-ọjọ́ Mu\" wúlò gẹ́gẹ́ bí ìmọ̀ ìpìlẹ̀."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

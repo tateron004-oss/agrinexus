@@ -307,7 +307,7 @@ module.exports = {
     results: [
       "Wanafunzi wanaomaliza kozi na kupata Anafikia au Anazidi katika kila mstari wa rubric ya uchambuzi wa tips",
       "Wanafunzi wanaoripoti kuchambua data yao wenyewe, kama ya timu, klabu, darasa au kazi, ndani ya siku 30 baada ya kozi (utafiti wa ufuatiliaji)",
-      "Wanafunzi wanaoendelea na kozi inayofuata, kama Introduction to Machine Learning",
+      "Wanafunzi wanaoendelea na kozi inayofuata, kama \"Utangulizi wa Machine Learning (Kujifunza kwa Mashine)\"",
       "Wanafunzi wanaoongeza notebook kwenye mkusanyiko wa kazi zao (portfolio) au kuitumia katika maombi ya kazi au programu ya data"
     ]
   },

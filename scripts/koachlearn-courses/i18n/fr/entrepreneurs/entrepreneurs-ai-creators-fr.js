@@ -28,7 +28,7 @@ module.exports = {
       "Règles : les règles d'étiquetage de l'IA des plateformes, les règles de la FTC sur les recommandations et le droit d'auteur s'appliquent et peuvent changer",
       "Vie privée et droits : ne jamais copier la voix ou le visage d'une autre personne, et ne pas mettre de données privées dans les outils d'IA"
     ],
-    prerequisites: "Aucun. Les personnes qui découvrent les outils d'IA peuvent d'abord suivre « Introduction à l'IA et confiance numérique »."
+    prerequisites: "Aucun. Les personnes qui découvrent les outils d'IA peuvent d'abord suivre « Découvrir l'IA et prendre confiance avec le numérique »."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

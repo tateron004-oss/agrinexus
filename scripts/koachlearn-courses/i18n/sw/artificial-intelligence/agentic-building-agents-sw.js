@@ -28,7 +28,7 @@ module.exports = {
       "Funguo za API zinabaki katika mpangilio wa siri, kamwe si ndani ya notebook",
       "Muda: masomo mafupi yenye kazi moja ya mazoezi kila moja"
     ],
-    prerequisites: "Kozi ya 1 na ya 2 za Design, Build, and Deploy Autonomous AI Agents (\"Understanding LLMs and Prompt Engineering\")."
+    prerequisites: "Kozi ya 1 na ya 2 za Design, Build, and Deploy Autonomous AI Agents (\"Kuelewa LLM na Uhandisi wa Prompt\")."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

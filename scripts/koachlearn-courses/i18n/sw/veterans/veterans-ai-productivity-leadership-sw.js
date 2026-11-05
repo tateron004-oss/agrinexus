@@ -28,7 +28,7 @@ module.exports = {
       "Muda: masomo ya kama dakika 5 yanayoingia ndani ya siku ya kazi",
       "Mazoezi yanatumia timu halisi au ya mazoezi ya watu watatu hadi sita"
     ],
-    prerequisites: "Hakuna. Wanafunzi wapya kwa wasaidizi wa AI wanaweza kuanza na kozi \"Utangulizi wa AI na Mustakabali wa Wafanyakazi\"."
+    prerequisites: "Hakuna. Wanafunzi wapya kwa wasaidizi wa AI wanaweza kuanza na kozi \"Utangulizi wa AI na Kazi za Baadaye\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

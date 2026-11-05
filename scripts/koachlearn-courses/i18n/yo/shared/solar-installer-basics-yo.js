@@ -28,7 +28,7 @@ module.exports = {
       "Ohun tí a ń béèrè fún ìwé-àṣẹ, owó àti ìwé-ẹ̀rí ń yí padà, ó sì yàtọ̀ láti ìpínlẹ̀ dé ìpínlẹ̀: àwọn akẹ́kọ̀ọ́ ń ṣàyẹ̀wò ojú-ìwé ìjọba",
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú 4 sí 6 tí ó bá àkókò iṣẹ́ àti ìpàdé mu"
     ],
-    prerequisites: "Kò sí. \"Skilled Trades Careers\" àti \"Workplace Safety Basics (OSHA)\" wúlò, ṣùgbọ́n kò pọn dandan."
+    prerequisites: "Kò sí. \"Skilled Trades Careers\" àti \"Ìpìlẹ̀ Ààbò Níbi Iṣẹ́ (OSHA)\" wúlò, ṣùgbọ́n kò pọn dandan."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

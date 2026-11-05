@@ -21,7 +21,7 @@ module.exports = {
     "Les analystes de données transforment des lignes de chiffres en réponses utiles : quel magasin vend le plus, quel programme aide le plus de personnes, où va l'argent. Presque tous les employeurs en ont besoin, des commerces et hôpitaux aux mairies et aux associations.",
     "Vous allez utiliser deux outils que les analystes utilisent chaque jour : un tableur (Google Sheets, gratuit, ou Excel) et SQL, le langage qui sert à poser des questions à une base de données. Vous pratiquerez SQL gratuitement dans votre navigateur. Toutes les données d'exercice sont inventées et petites, pour que vous puissiez vérifier chaque réponse à la main.",
     "Si vous voulez une certification, CompTIA Data+ en est une pour les analystes de données débutants (CompTIA est un organisme qui certifie des compétences en informatique). Ce cours vous aide à vous préparer et développe des compétences qu'elle couvre, mais il ne délivre ni Data+ ni aucun certificat ; consultez la page officielle pour l'examen, le prix et les modalités actuels.",
-    "Il vaut mieux connaître d'abord les bases du tableur (cours \"Excel et tableurs au travail\"). Chaque leçon dure environ cinq minutes et se termine par une activité \"Essayez maintenant\" et deux questions rapides. Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
+    "Il vaut mieux connaître d'abord les bases du tableur (cours \"Excel et les tableurs au travail\"). Chaque leçon dure environ cinq minutes et se termine par une activité \"Essayez maintenant\" et deux questions rapides. Il y a un contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin."
   ],
   finalTask: "Réalisez un projet d'analyse d'une page pour votre portfolio : (1) une question claire sur les données de ventes d'exercice (ou sur un petit jeu de données public de votre choix) ; (2) les données nettoyées dans Google Sheets ou Excel, avec une colonne Revenue (chiffre d'affaires) et un tableau croisé dynamique qui répond à la question ; (3) au moins deux requêtes SQL que vous avez exécutées, l'une avec WHERE et ORDER BY, l'autre avec GROUP BY, avec leurs résultats ; (4) trois constats en phrases simples avec des chiffres, une limite des données et une prochaine étape proposée ; et (5) une ligne de CV qui décrit le projet.",
   // ---- ADDIE : Analyse ----
@@ -36,7 +36,7 @@ module.exports = {
       "Les données d'exercice sont inventées ; ne jamais mettre de vraies données de clients, de patients ou d'employeur dans un outil en ligne",
       "Durée : leçons de 4 à 6 minutes ; le projet demande une ou deux heures de plus"
     ],
-    prerequisites: "Les bases du tableur. Le cours \"Excel et tableurs au travail\" les couvre."
+    prerequisites: "Les bases du tableur. Le cours \"Excel et les tableurs au travail\" les couvre."
   },
   // ---- ADDIE : Conception (objectifs : condition, action observable, critère) ----
   objectives: [

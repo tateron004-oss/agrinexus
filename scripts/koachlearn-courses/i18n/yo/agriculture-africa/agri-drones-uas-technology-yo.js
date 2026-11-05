@@ -32,7 +32,7 @@ module.exports = {
       "Ìwé ìtọ́sọ́nà olùṣe àti ìwé ìtọ́sọ́nà iṣẹ́ ló ṣáájú; ẹ̀kọ́ náà ń kọ́ni ní ọgbọ́n gbogbogbò tí ó wà lẹ́yìn wọn",
       "Ipò oko: eruku, ooru, òjò àti iná mànàmáná tí kò dúró ní ọ̀pọ̀ agbègbè"
     ],
-    prerequisites: "A dámọ̀ràn pé kí o kọ́kọ́ ṣe \"Drones for Agricultural Monitoring 1: Introduction, Regulations and Safety\"."
+    prerequisites: "A dámọ̀ràn pé kí o kọ́kọ́ ṣe \"Drone fún Àbójútó Oko 1: Ìfihàn, Òfin àti Ààbò\"."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

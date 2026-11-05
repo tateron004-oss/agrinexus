@@ -28,7 +28,7 @@ module.exports = {
       "Ukweli: namba, kanuni na sera kutoka AI zinakaguliwa kwa data halisi, chanzo rasmi au meneja",
       "Muda: masomo ya kama dakika 5; kukusanya ukweli kuhusu tatizo halisi kunaweza kuchukua wiki moja"
     ],
-    prerequisites: "Hakuna. Kozi \"Essential AI Tools for the Workplace\" (zana muhimu za AI kazini) inasaidia wanafunzi ambao ni wapya kwa wasaidizi wa AI."
+    prerequisites: "Hakuna. Kozi \"Zana Muhimu za AI Kazini\" inasaidia wanafunzi ambao ni wapya kwa wasaidizi wa AI."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

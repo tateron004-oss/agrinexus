@@ -24,7 +24,7 @@ module.exports = {
   about: [
     "Kozi hii ni kwa wakulima, vijana wajasiriamali wa kilimo, wafanyakazi wa shambani na maafisa ugani nchini Kenya, Nigeria, Ghana, Senegal, Côte d'Ivoire na kote Afrika wanaotaka kuanza au kukuza biashara ya kuku wa nyama, kuku wa mayai au kuku wa kienyeji walioboreshwa.",
     "Sura ya 1 inaandaa kundi: kuchagua aina ya kuku, banda, nafasi na kulea vifaranga, na chakula na maji. Sura ya 2 inaliendesha kwa faida: ratiba ya chanjo pamoja na daktari wa mifugo na usalama wa kibiolojia wa kundi, kushughulikia mayai na kumbukumbu, na uchumi wa kundi: gharama kwa kila kuku au kwa kila trei, vifo na bei ya kurudisha gharama.",
-    "Kozi hii inajenga juu ya kozi \"Afya na Usimamizi wa Mifugo\", inayofundisha ukaguzi wa afya wa kila siku na misingi ya ugonjwa wa Newcastle (mdondo). Haitoi vipimo vya chanjo wala dawa: fuata daktari wa mifugo na lebo kila wakati. Bei zote ni mifano ya kubuni; tumia bei zako. Kila somo linachukua kama dakika tano na linaisha na kazi. Jaribio la maarifa linafunga kila sura na mtihani wa maswali 20 unafunga kozi."
+    "Kozi hii inajenga juu ya kozi \"Afya na Utunzaji wa Mifugo\", inayofundisha ukaguzi wa afya wa kila siku na misingi ya ugonjwa wa Newcastle (mdondo). Haitoi vipimo vya chanjo wala dawa: fuata daktari wa mifugo na lebo kila wakati. Bei zote ni mifano ya kubuni; tumia bei zako. Kila somo linachukua kama dakika tano na linaisha na kazi. Jaribio la maarifa linafunga kila sura na mtihani wa maswali 20 unafunga kozi."
   ],
   finalTask: "Andika mpango wenye gharama kwa kundi moja kwenye shamba lako (au mfano kama kuku wa nyama 500 karibu na Thika, kuku wa mayai 300 karibu na Ibadan, kuku 200 wa Kenbro au Kuroiler karibu na Tamale, au kuku wa nyama 1,000 karibu na Thies): aina ya kuku na sababu; ukubwa wa banda na idadi ya kuku linaloweza kuwabeba; mpangilio wako wa kulea vifaranga; vyakula kwa kila hatua na kiasi unachotarajia kununua; ratiba ya chanjo uliyokubaliana na daktari wa mifugo na sheria zako za usalama wa kibiolojia; kumbukumbu utakazoweka; na karatasi ya gharama yenye kila gharama, vifo unavyotarajia, gharama kwa kila kuku anayeuzwa au kwa kila trei ya mayai, na bei yako ya kurudisha gharama.",
   // ---- ADDIE: Uchambuzi ----
@@ -39,7 +39,7 @@ module.exports = {
       "Kanuni za afya ya wanyama: hakuna vipimo vya chanjo wala dawa, na hakuna muda wa kusubiri kwa namba; fuata daktari wa mifugo na lebo",
       "Mafua ya ndege ni ugonjwa unaopaswa kuripotiwa: dalili zake zinaripotiwa kwa daktari wa mifugo au mamlaka ya mifugo mara moja"
     ],
-    prerequisites: "Utunzaji wa msingi wa wanyama na hesabu rahisi. Inapendekezwa kuanza na \"Afya na Usimamizi wa Mifugo\"; \"Lishe ya Mifugo na Utengenezaji wa Chakula\" inasaidia kwa gharama za chakula."
+    prerequisites: "Utunzaji wa msingi wa wanyama na hesabu rahisi. Inapendekezwa kuanza na \"Afya na Utunzaji wa Mifugo\"; \"Lishe ya Mifugo na Utengenezaji wa Chakula\" inasaidia kwa gharama za chakula."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

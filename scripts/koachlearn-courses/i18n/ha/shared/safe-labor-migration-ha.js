@@ -30,7 +30,7 @@ module.exports = {
       "Tsaro: babu ainihin lambar fasfo, katin shaida ko ta banki a kowane atisaye; ana gaya wa masu koyo da ke cikin haɗari su fara kiran lambar gaggawa ta wurin",
       "Wasu masu koyo wataƙila suna cikin wahala a ƙasar waje tuni; kwas ɗin yana ba da hanyoyin taimako ba tare da zargi ba"
     ],
-    prerequisites: "Babu. Masu koyo da ba su saba da intanet ba za su iya fara ɗaukar kwas ɗin \"Internet Basics\" (Tushen Intanet)."
+    prerequisites: "Babu. Masu koyo da ba su saba da intanet ba za su iya fara ɗaukar kwas ɗin \"Tushen Amfani da Intanet\"."
   },
   // ---- ADDIE: Design ----
   objectives: [

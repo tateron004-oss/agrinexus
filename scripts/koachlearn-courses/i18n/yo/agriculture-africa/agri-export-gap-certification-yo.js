@@ -24,7 +24,7 @@ module.exports = {
   about: [
     "Súpamákẹ́ẹ̀tì, ilé-iṣẹ́ aṣèlọ́jà (processor) àti olùrà òkèèrè lè ra ọjà tó pọ̀ ju ọjà àdúgbò lọ, wọ́n sì máa ń san owó tó jù fún dídára tí kì í yí padà. Ṣùgbọ́n wọ́n ń béèrè nǹkan tí ọ̀pọ̀ oko kékeré kò tíì ń ṣe: iye ọjà tí kì í yẹ̀, ìpele kan náà ní gbogbo ìgbà, àkọsílẹ̀ tí ó ń tọpa gbogbo àpótí, ààbò oúnjẹ, àti nígbà míì ìwé-ẹ̀rí bí GLOBALG.A.P. Ẹ̀kọ́ yìí wà fún àwọn àgbẹ̀ oníṣòwò tí ń dàgbà, ẹgbẹ́ àgbẹ̀, àwọn ọ̀dọ́ oníṣòwò àgbẹ̀ àti àwọn òṣìṣẹ́ ìmọ̀ràn àgbẹ̀ ní Kẹ́ńyà, Nàìjíríà, Gánà, Senegal àti káàkiri Áfíríkà.",
     "O máa kọ́ ohun tí àwọn olùrà ńlá ń fẹ́, Ìlànà Iṣẹ́ Àgbẹ̀ Rere tí ó wà lẹ́yìn rẹ̀, bí o ṣe lè tọ́jú àkọsílẹ̀ tí ó ń tọpa ọjà padà sí ẹ̀ka oko, ohun tí ìwé-ẹ̀rí ń ná àti ohun tí ó ń mú wá, ìdí tí wọ́n fi ń kọ ọjà òkèèrè nítorí àṣẹ́kù oògùn apakòkòrò, àwọn àjọ ìjọba tí ó ń bójú tó ọjà òkèèrè, àti bí o ṣe lè pàdé olùrà, ṣe àdéhùn ìpèsè, kí o sì ṣe ìdájọ́ ètò àgbẹ̀ alábàáṣiṣẹ́ (outgrower scheme).",
-    "Ó ń kọ́ lé ẹ̀kọ́ \"Farmer Cooperatives and Getting to Market\" (ẹgbẹ́ alájọṣe àgbẹ̀ àti dídé ọjà), tí ó sọ nípa títà ní ẹgbẹ́ àti kíka àdéhùn. Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún, ó sì parí pẹ̀lú iṣẹ́ \"Gbìyànjú rẹ̀ báyìí\". Òfin, owó ìsanwó àti ìwọ̀n máa ń yí padà, nítorí náà ẹ̀kọ́ kọ̀ọ̀kan sọ ibi tí o ti lè ṣàyẹ̀wò. Àpẹẹrẹ lásán ni àwọn iye owó."
+    "Ó ń kọ́ lé ẹ̀kọ́ \"Ẹgbẹ́ Alájọṣe Àgbẹ̀ àti Bí A Ṣe Ń Dé Ọjà\", tí ó sọ nípa títà ní ẹgbẹ́ àti kíka àdéhùn. Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún, ó sì parí pẹ̀lú iṣẹ́ \"Gbìyànjú rẹ̀ báyìí\". Òfin, owó ìsanwó àti ìwọ̀n máa ń yí padà, nítorí náà ẹ̀kọ́ kọ̀ọ̀kan sọ ibi tí o ti lè ṣàyẹ̀wò. Àpẹẹrẹ lásán ni àwọn iye owó."
   ],
   finalTask: "Ṣe àkọsílẹ̀ ìmúrasílẹ̀ fún olùrà fún oko tàbí ẹgbẹ́ rẹ fún irè kan àti irú olùrà kan (súpamákẹ́ẹ̀tì, ilé-iṣẹ́ aṣèlọ́jà tàbí olùkójà lọ sí òkèèrè), sàmì sí ohun tí o ti ṣe àti ohun tí o gbọ́dọ̀ tún ṣe, lẹ́yìn náà kọ ìfilọ̀ ìpèsè ojú-ewé kan sí olùrà náà: irè àti ìpele, iye àti àkókò ìfijíṣẹ́, bí o ṣe ń pa ọjà mọ́ láìléwu tí ó sì ṣeé tọpa, ìwé-ẹ̀rí èyíkéyìí, ìpìlẹ̀ iye owó, àti àwọn òfin tí o fẹ́ nínú àdéhùn.",
   // ---- ADDIE: Analysis ----
@@ -39,7 +39,7 @@ module.exports = {
       "Òfin: ìwé-àṣẹ ọjà òkèèrè, ìwọ̀n àṣẹ́kù oògùn àti òfin ìwé-ẹ̀rí ń yí padà, wọ́n sì yàtọ̀ láti orílẹ̀-èdè kan sí òmíràn àti láti ọjà kan sí òmíràn; àwọn akẹ́kọ̀ọ́ ń ṣàyẹ̀wò orísun ìjọba",
       "Ààbò: oògùn apakòkòrò tí a forúkọ sílẹ̀ nìkan, tí a lò bí àmì-ìtọ́sọ́nà (label) ṣe sọ, pẹ̀lú aṣọ ààbò; kò sí nọ́mbà ìwọ̀n oògùn nínú ẹ̀kọ́ yìí"
     ],
-    prerequisites: "Ó máa ṣèrànwọ́: \"Farmer Cooperatives and Getting to Market\", àti \"Farm Records and Business Basics\" (Iṣẹ́ Àgbẹ̀ Bí Òwò àti Ìṣàkóso Oko). Kíkàwé àti ìṣirò ìpìlẹ̀."
+    prerequisites: "Ó máa ṣèrànwọ́: \"Ẹgbẹ́ Alájọṣe Àgbẹ̀ àti Bí A Ṣe Ń Dé Ọjà\", àti \"Farm Records and Business Basics\" (Iṣẹ́ Àgbẹ̀ Bí Òwò àti Ìṣàkóso Oko). Kíkàwé àti ìṣirò ìpìlẹ̀."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

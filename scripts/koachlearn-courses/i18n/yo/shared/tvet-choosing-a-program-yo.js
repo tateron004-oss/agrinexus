@@ -28,7 +28,7 @@ module.exports = {
       "Owó: àwọn akẹ́kọ̀ọ́ lè ní owó díẹ̀; má ṣe san owó fún ẹnìkan tàbí aṣojú kí o tó ṣàyẹ̀wò ilé-ẹ̀kọ́ náà",
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú 4 sí 6; nǹkan bí ìṣẹ́jú 60 sí 75 lápapọ̀"
     ],
-    prerequisites: "Kò sí. Àwọn akẹ́kọ̀ọ́ tí wọ́n ṣì ń pinnu iṣẹ́ ọwọ́ lè ṣe \"Skilled Trades Careers\" pẹ̀lú; àwọn tí íńtánẹ́ẹ̀tì jẹ́ tuntun fún lè kọ́kọ́ ṣe \"Internet Basics\"."
+    prerequisites: "Kò sí. Àwọn akẹ́kọ̀ọ́ tí wọ́n ṣì ń pinnu iṣẹ́ ọwọ́ lè ṣe \"Skilled Trades Careers\" pẹ̀lú; àwọn tí íńtánẹ́ẹ̀tì jẹ́ tuntun fún lè kọ́kọ́ ṣe \"Ìpìlẹ̀ Íńtánẹ́ẹ̀tì\"."
   },
   // ---- ADDIE: Design ----
   objectives: [

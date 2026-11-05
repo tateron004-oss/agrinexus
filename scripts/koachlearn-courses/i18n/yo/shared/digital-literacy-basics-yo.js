@@ -28,7 +28,7 @@ module.exports = {
       "Owó: àwọn ọ̀nà ọ̀fẹ́ nìkan, bí Wi-Fi ilé-ìkàwé àti àwọn app síkáànù ọ̀fẹ́ lórí fóònù",
       "Ìpamọ́ àti òfin: àṣeṣe máa ń lo ìwé àṣeṣe, kì í ṣe ID gidi láéláé; àwọn akẹ́kọ̀ọ́ tí ó wà lábẹ́ parole tàbí probation ń tẹ̀lé òfin íńtánẹ́ẹ̀tì èyíkéyìí tí wọ́n ní"
     ],
-    prerequisites: "Kò sí. \"Ọgbọ́n Kọ̀mpútà Ìpìlẹ̀\" tàbí \"Smartphone àti Tablet\" máa ran àwọn akẹ́kọ̀ọ́ tí wọ́n jẹ́ tuntun sí ẹ̀rọ lọ́wọ́."
+    prerequisites: "Kò sí. \"Ìmọ̀ Ìpìlẹ̀ Kọ̀mpútà\" tàbí \"Smartphone àti Tablet\" máa ran àwọn akẹ́kọ̀ọ́ tí wọ́n jẹ́ tuntun sí ẹ̀rọ lọ́wọ́."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [
@@ -257,7 +257,7 @@ module.exports = {
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n parí ẹ̀kọ́ náà tí wọ́n sì dé ìpele tàbí kọjá rẹ̀ ní gbogbo ìlà rubric iṣẹ́ ìkẹyìn",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé àwọn parí fọ́ọ̀mù ìbéèrè gidi kan lórí ayélujára, bí fún iṣẹ́, ID tàbí àǹfààní ìjọba, láàárín ọjọ́ 30 lẹ́yìn ẹ̀kọ́ náà (ìwádìí àtẹ̀lé)",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé àwọn yẹra fún ojú-òpó èké, jìbìtì tàbí àkọsílẹ̀ èké nítorí pé àwọn ṣàyẹ̀wò rẹ̀",
-      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀síwájú sí ẹ̀kọ́ míì, bí Ímeèlì àti Ìbánisọ̀rọ̀ lórí Ayélujára tàbí ẹ̀kọ́ wíwá iṣẹ́"
+      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀síwájú sí ẹ̀kọ́ míì, bí \"Í-meèlì àti Ìbánisọ̀rọ̀ lórí Ayélujára\" tàbí ẹ̀kọ́ wíwá iṣẹ́"
     ]
   },
   // ---- ADDIE: Implementation ----

@@ -28,7 +28,7 @@ module.exports = {
       "Bei za modeli za AI na mipango ya zana hubadilika mara kwa mara; kagua ukurasa wa bei wa mtoa huduma mwenyewe",
       "Data ya majaribio isiyo na majina tu; sera ya faragha na masharti yakaguliwe na wakili; kodi ya mauzo ikaguliwe na jimbo au mhasibu"
     ],
-    prerequisites: "Inapendekezwa kozi \"Building AI-Powered Products and Services\" (Kujenga bidhaa na huduma zinazotumia AI), pamoja na kuzoea spreadsheet."
+    prerequisites: "Inapendekezwa kozi \"Kujenga Bidhaa na Huduma Zinazotumia AI\", pamoja na kuzoea spreadsheet."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

@@ -28,7 +28,7 @@ module.exports = {
       "Sheria za kuwasiliana na wafadhili na za kujiondoa (opt-out), pamoja na sera ya faragha ya shirika, zinafuatwa",
       "Muda: kama dakika 60 kwa jumla, katika masomo ya dakika 5"
     ],
-    prerequisites: "Matumizi ya msingi ya jedwali. Kozi \"Introduction to AI for Nonprofits\" (Utangulizi wa AI kwa Mashirika Yasiyo ya Faida) inasaidia."
+    prerequisites: "Matumizi ya msingi ya jedwali. Kozi \"Utangulizi wa AI kwa Mashirika Yasiyo ya Kiserikali\" inasaidia."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

@@ -34,7 +34,7 @@ module.exports = {
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú 4 sí 6 tí ó bá àkókò iṣẹ́ àti ìpàdé mu",
       "Òfin ìdánwò, owó àti ẹ̀dà ń yí padà: àwọn akẹ́kọ̀ọ́ ń ṣàyẹ̀wò comptia.org kí wọ́n tó forúkọ sílẹ̀"
     ],
-    prerequisites: "Kí o mọ kọ̀mpútà, mouse àti keyboard lò dáadáa. Tí èyí bá jẹ́ tuntun fún ọ, kọ́kọ́ ṣe \"Àwọn Ọgbọ́n Kọ̀mpútà Ìpìlẹ̀\". \"Ìfihàn sí Ààbò Ayélujára (Cybersecurity)\" jẹ́ ẹ̀kọ́ tí ó lè ràn ọ́ lọ́wọ́ pẹ̀lú rẹ̀."
+    prerequisites: "Kí o mọ kọ̀mpútà, mouse àti keyboard lò dáadáa. Tí èyí bá jẹ́ tuntun fún ọ, kọ́kọ́ ṣe \"Ìmọ̀ Ìpìlẹ̀ Kọ̀mpútà\". \"Ìfihàn sí Ààbò Ẹ̀rọ Ayélujára (Cybersecurity)\" jẹ́ ẹ̀kọ́ tí ó lè ràn ọ́ lọ́wọ́ pẹ̀lú rẹ̀."
   },
   // ---- ADDIE: Design ----
   objectives: [

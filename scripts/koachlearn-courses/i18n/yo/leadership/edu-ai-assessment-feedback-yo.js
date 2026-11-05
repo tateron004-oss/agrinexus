@@ -28,7 +28,7 @@ module.exports = {
       "Máàkì ẹ̀rọ ìwárí kíkọ AI (detector) kì í jẹ́ ẹ̀rí kan ṣoṣo fún lílo AI lọ́nà tí kò tọ́ láéláé",
       "Àkókò: ẹ̀kọ́ kúkúrú tí ó bá ọjọ́ ìkọ́ni mu"
     ],
-    prerequisites: "\"AI fún Àwọn Aṣáájú Ilé-ẹ̀kọ́ àti Ètò Ẹ̀kọ́ 3: AI fún Ṣíṣètò Ẹ̀kọ́\"."
+    prerequisites: "\"AI fún Àwọn Olórí Ilé-ẹ̀kọ́ àti Aṣáájú Ẹ̀kọ́ 3: AI fún Ìṣètò Ẹ̀kọ́\"."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

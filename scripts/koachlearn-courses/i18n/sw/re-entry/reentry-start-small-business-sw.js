@@ -28,7 +28,7 @@ module.exports = {
       "Sheria zinatofautiana kati ya jimbo, kaunti na jiji na zinabadilika; kozi inaelekeza kwenye tovuti rasmi na si ushauri wa kisheria wala wa kodi",
       "Faragha: usiandike kamwe namba ya Social Security, maelezo ya kesi au maelezo ya benki kwa AI"
     ],
-    prerequisites: "Kozi \"Kusimamia Fedha na Maisha kwa AI\" inasaidia lakini si lazima."
+    prerequisites: "Kozi \"Kusimamia Fedha na Maisha kwa Msaada wa AI\" inasaidia lakini si lazima."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

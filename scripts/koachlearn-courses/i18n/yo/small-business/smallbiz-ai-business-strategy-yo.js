@@ -28,7 +28,7 @@ module.exports = {
       "Iye owó àti ohun tí irinṣẹ́ ń ṣe ń yí padà; àwọn tó ni iṣẹ́ òwò ń ṣàyẹ̀wò ojú-ìwé iye owó irinṣẹ́ kọ̀ọ̀kan fúnra rẹ̀",
       "Ìsọfúnni àdáni àti ààbò: ènìyàn ló ń ṣe ìpinnu nípa owó, òfin, gbígba òṣìṣẹ́ àti ààbò; a ń dáàbò bo ìsọfúnni àwọn oníbàárà"
     ],
-    prerequisites: "Kọ́kọ́ ṣe \"Introduction to AI for Small Business\" tàbí \"Essential AI Tools for Small Businesses\"."
+    prerequisites: "Kọ́kọ́ ṣe \"Ìfihàn sí AI fún Iṣẹ́ Òwò Kékeré\" tàbí \"Àwọn Irinṣẹ́ AI Pàtàkì fún Iṣẹ́ Òwò Kékeré\"."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

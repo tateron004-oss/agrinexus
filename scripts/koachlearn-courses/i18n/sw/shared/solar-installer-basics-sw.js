@@ -28,7 +28,7 @@ module.exports = {
       "Masharti ya leseni, ada na vyeti hubadilika na hutofautiana kwa kila jimbo: wanafunzi wanakagua kurasa rasmi",
       "Muda: masomo ya dakika 4 hadi 6 yanayoingia kati ya kazi na miadi"
     ],
-    prerequisites: "Hakuna. Kozi \"Skilled Trades Careers\" na \"Workplace Safety Basics (OSHA)\" zinasaidia lakini si lazima."
+    prerequisites: "Hakuna. Kozi \"Skilled Trades Careers\" na \"Misingi ya Usalama Kazini (OSHA)\" zinasaidia lakini si lazima."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

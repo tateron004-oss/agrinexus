@@ -18,7 +18,7 @@ module.exports = {
     "Wachambuzi wa data hugeuza safu za namba kuwa majibu ambayo watu wanaweza kuyatumia: duka gani linauza zaidi, mpango gani unasaidia watu wengi zaidi, pesa zinakwenda wapi. Karibu kila aina ya mwajiri anahitaji hili, kuanzia maduka na hospitali hadi ofisi za jiji na mashirika yasiyo ya faida.",
     "Utatumia zana mbili ambazo wachambuzi hutumia kila siku: spreadsheet (Google Sheets, ya bure, au Excel) na SQL, lugha ya kuuliza maswali kwa hifadhidata (database). Utafanya mazoezi ya SQL bure kwenye kivinjari chako. Data yote ya mazoezi ni ya kubuni na ni ndogo, kwa hiyo unaweza kukagua kila jibu kwa mkono.",
     "Ukitaka cheti, CompTIA Data+ ni kimoja kwa wachambuzi wa data wanaoanza. Kozi hii inakusaidia kujiandaa na inajenga ujuzi unaohusika, lakini haitoi Data+ wala cheti chochote; angalia ukurasa rasmi kwa mtihani wa sasa, bei na njia za kufanya mtihani.",
-    "Inasaidia kujua spreadsheet za msingi kwanza (\"Excel na Spreadsheet kwa Kazi\"). Kila somo linachukua kama dakika tano, linaisha na kazi ya \"Jaribu sasa\" na maswali mawili mafupi, na kuna jaribio la maarifa baada ya kila sura na mtihani wa maswali 20 mwishoni."
+    "Inasaidia kujua spreadsheet za msingi kwanza (\"Excel na Lahajedwali kwa Kazi\"). Kila somo linachukua kama dakika tano, linaisha na kazi ya \"Jaribu sasa\" na maswali mawili mafupi, na kuna jaribio la maarifa baada ya kila sura na mtihani wa maswali 20 mwishoni."
   ],
   finalTask: "Tengeneza mradi wa uchambuzi wa ukurasa mmoja kwa ajili ya portfolio yako: (1) swali lililo wazi kuhusu data ya mauzo ya mazoezi (au data ndogo ya umma utakayochagua); (2) data iliyosafishwa katika Google Sheets au Excel, yenye safu ya Revenue (mapato) na pivot table inayolijibu; (3) angalau query mbili za SQL ulizoendesha, moja yenye WHERE na ORDER BY na nyingine yenye GROUP BY, pamoja na matokeo yake; (4) matokeo matatu kwa sentensi rahisi zenye namba, kikomo kimoja cha data, na hatua moja inayofuata unayopendekeza; na (5) mstari mmoja wa CV unaoeleza mradi.",
   // ---- ADDIE: Uchambuzi ----
@@ -33,7 +33,7 @@ module.exports = {
       "Data ya mazoezi ni ya kubuni; usiweke kamwe data halisi ya wateja, wagonjwa au mwajiri katika zana za mtandaoni",
       "Muda: masomo ya dakika 4 hadi 6; mradi unachukua saa moja au mbili zaidi"
     ],
-    prerequisites: "Ujuzi wa msingi wa spreadsheet. Kozi \"Excel na Spreadsheet kwa Kazi\" inaufundisha."
+    prerequisites: "Ujuzi wa msingi wa spreadsheet. Kozi \"Excel na Lahajedwali kwa Kazi\" inaufundisha."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

@@ -28,7 +28,7 @@ module.exports = {
       "Mishahara, masharti ya kustahili na kanuni za programu hubadilika, kwa hiyo wanafunzi hukagua bls.gov/ooh, va.gov na dol.gov badala ya kuamini namba za AI",
       "Faragha: hakuna namba ya Social Security, ya faili ya VA wala ya utumishi katika prompt yoyote ya AI"
     ],
-    prerequisites: "Hakuna. Wanafunzi wapya kwa wasaidizi wa AI wanaweza kuanza na kozi \"Introduction to AI and the Future Workforce\"."
+    prerequisites: "Hakuna. Wanafunzi wapya kwa wasaidizi wa AI wanaweza kuanza na kozi \"Utangulizi wa AI na Kazi za Baadaye\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

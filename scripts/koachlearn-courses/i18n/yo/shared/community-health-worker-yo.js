@@ -29,7 +29,7 @@ module.exports = {
       "Kò sí ìmọ̀ràn ìtọ́jú tàbí ti oògùn; ìbéèrè ìlera ń lọ sọ́dọ̀ àwọn oníṣègùn",
       "Àdánwò ń lo ènìyàn àròsọ; kò sí orúkọ gidi tàbí ọ̀rọ̀ àṣírí"
     ],
-    prerequisites: "Kò sí. \"Health Literacy: Understanding Your Health Care\" (Òye Ìlera) jẹ́ ẹ̀kọ́ alábàárìn tó wúlò."
+    prerequisites: "Kò sí. \"Ìmọ̀ Ìlera: Lílóye Ìtọ́jú Ìlera Rẹ\" jẹ́ ẹ̀kọ́ alábàárìn tó wúlò."
   },
   // ---- ADDIE: Design ----
   objectives: [

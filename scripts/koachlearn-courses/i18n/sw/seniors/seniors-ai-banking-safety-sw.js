@@ -28,7 +28,7 @@ module.exports = {
       "Faragha: hakuna nywila halisi, namba za akaunti wala misimbo vinavyoshirikiwa darasani",
       "Taarifa za ofisi za serikali ya Marekani na namba za msaada zinaweza kubadilika; wanafunzi wanakagua tovuti rasmi"
     ],
-    prerequisites: "Kozi \"Usalama wa AI na Kujua Ulaghai kwa Wazee\" inasaidia kwanza, lakini si lazima."
+    prerequisites: "Kozi \"Usalama wa AI na Kutambua Ulaghai kwa Wazee\" inasaidia kwanza, lakini si lazima."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

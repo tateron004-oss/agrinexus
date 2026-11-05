@@ -38,7 +38,7 @@ module.exports = {
       "Gwaje-gwajen ɗaukar aiki, albashi, lokutan aiki da dokokin ƙwadago sun bambanta da ƙasa da kamfani; masu koyo suna duba mai ɗaukar aikin da ma'aikatar ƙwadago ta ƙasarsu",
       "Haɗarin zamba yana da yawa: babu lambar katin shaida ta gaske, kalmar sirri ko bayanan banki a kowane aikin atisaye"
     ],
-    prerequisites: "Babu. Kwasa-kwasan \"Customer Service Excellence\" (Ƙwarewa a Hidimar Abokan Ciniki) da \"AI for Customer Service Careers\" (AI a Sana'o'in Hidimar Abokan Ciniki) suna da kyau a gaba ko tare da wannan; masu koyon Turanci suna iya ɗaukar \"English for the Workplace (ESL)\" (Turanci na Wurin Aiki) tare da shi."
+    prerequisites: "Babu. Kwasa-kwasan \"Customer Service Excellence\" (Ƙwarewa a Hidimar Abokan Ciniki) da \"AI a Ayyukan Hidimar Abokan Ciniki\" suna da kyau a gaba ko tare da wannan; masu koyon Turanci suna iya ɗaukar \"Turanci don Wurin Aiki (ESL)\" tare da shi."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

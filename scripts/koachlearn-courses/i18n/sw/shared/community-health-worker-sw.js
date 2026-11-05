@@ -29,7 +29,7 @@ module.exports = {
       "Hakuna ushauri wa matibabu wala wa dawa; maswali ya afya yanaenda kwa wataalamu wa afya",
       "Mazoezi yanatumia watu wa kubuni; hakuna majina halisi wala taarifa binafsi"
     ],
-    prerequisites: "Hakuna. Kozi \"Health Literacy: Understanding Your Health Care\" (Kuelewa huduma zako za afya) ni msaidizi mzuri."
+    prerequisites: "Hakuna. Kozi \"Elimu ya Afya: Kuelewa Huduma Yako ya Afya\" ni msaidizi mzuri."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

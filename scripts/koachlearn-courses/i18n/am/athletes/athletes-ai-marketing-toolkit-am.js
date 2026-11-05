@@ -28,7 +28,7 @@ module.exports = {
       "የፎቶዎች፣ የአርማዎችና የሙዚቃ መብቶች፤ የFTC የግልጽነት ደንብና የትምህርት ቤት ወይም የግዛት NIL ደንቦች",
       "በልጥፎች ውስጥ የግል መረጃ ወይም ያሉበት ቦታ በቀጥታ አይገለጽም፤ የእውነተኛ ሰዎችን አሳሳች የAI ምስሎች አይሠሩም"
     ],
-    prerequisites: "የለም። \"Social Media Branding for Athletes\" ወይም \"Content Creation for Athletes\" ጥሩ የመጀመሪያ እርምጃ ነው።"
+    prerequisites: "የለም። \"ለአትሌቶች የማህበራዊ ሚዲያ መለያ (ብራንድ) ግንባታ\" ወይም \"ለአትሌቶች የይዘት ዝግጅት (Content Creation)\" ጥሩ የመጀመሪያ እርምጃ ነው።"
   },
   // ---- ADDIE: ንድፍ (ዓላማዎች፦ ሁኔታ፣ የሚታይ ተግባር፣ መለኪያ) ----
   objectives: [

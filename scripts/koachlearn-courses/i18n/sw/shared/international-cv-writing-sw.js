@@ -29,7 +29,7 @@ module.exports = {
       "Kanuni zinatofautiana kwa nchi: kozi inafundisha mifumo ya kawaida na jinsi ya kukagua maelekezo ya mwajiri au ya nchi yenyewe",
       "Usalama: usiweke kamwe namba za kitambulisho, pasipoti au benki katika CV au faili la mazoezi; hakuna ushauri wa viza wala wa kisheria"
     ],
-    prerequisites: "Kuandika kwa msingi kwenye simu au kompyuta. Wanafunzi wapya kwa kompyuta wanaweza kuanza na kozi \"Ujuzi wa Msingi wa Kompyuta\"; wanafunzi wa Marekani wanaotaka resume ya Kimarekani ya ukurasa mmoja na mazoezi ya usaili wanaweza pia kuchukua kozi \"Resume, LinkedIn na Usaili wa Kazi\"."
+    prerequisites: "Kuandika kwa msingi kwenye simu au kompyuta. Wanafunzi wapya kwa kompyuta wanaweza kuanza na kozi \"Ujuzi wa Msingi wa Kompyuta\"; wanafunzi wa Marekani wanaotaka resume ya Kimarekani ya ukurasa mmoja na mazoezi ya usaili wanaweza pia kuchukua kozi \"CV (Wasifu wa Kazi), LinkedIn na Usaili wa Kazi\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

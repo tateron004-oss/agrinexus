@@ -29,7 +29,7 @@ module.exports = {
       "Pas de conseil juridique : les lois varient selon l'État et changent ; les apprenants se font aider par un avocat, l'aide juridique ou le centre d'aide du tribunal avant de déposer quoi que ce soit",
       "Vie privée : les détails des affaires restent hors des outils d'IA et des ordinateurs partagés"
     ],
-    prerequisites: "Aucun. Le cours « Introduction à l'IA et confiance numérique » aide les apprenants qui débutent dans la recherche de sites officiels."
+    prerequisites: "Aucun. Le cours « Découvrir l'IA et prendre confiance avec le numérique » aide les apprenants qui débutent dans la recherche de sites officiels."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

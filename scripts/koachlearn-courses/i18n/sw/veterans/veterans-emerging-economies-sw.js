@@ -28,7 +28,7 @@ module.exports = {
       "Mipaka ya kisheria: hakuna rushwa ya aina yoyote (sheria ya Marekani ya FCPA); maswali ya mikataba, kodi na usajili yanaenda kwa wakili au mhasibu wa ndani mwenye sifa",
       "Muda: masomo ya kama dakika 5; kozi hii inapanga biashara, haianzishi biashara"
     ],
-    prerequisites: "Hakuna. Wanafunzi ambao ni wapya kwa wasaidizi wa AI wanaweza kuanza na kozi \"Introduction to AI and the Future Workforce\"."
+    prerequisites: "Hakuna. Wanafunzi ambao ni wapya kwa wasaidizi wa AI wanaweza kuanza na kozi \"Utangulizi wa AI na Kazi za Baadaye\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

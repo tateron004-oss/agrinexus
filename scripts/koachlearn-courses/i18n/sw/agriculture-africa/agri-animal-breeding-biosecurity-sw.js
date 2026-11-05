@@ -27,7 +27,7 @@ module.exports = {
   about: [
     "Kozi hii ni kwa wafugaji wadogo na wanaokua, wafanyakazi wa shamba, vijana wajasiriamali wa kilimo na maafisa ugani nchini Kenya, Nigeria, Ghana, Senegal, Cameroon na kote Afrika wanaofuga ng'ombe wa maziwa, mbuzi, nguruwe au kuku na wanataka kuongeza mifugo bila kuleta magonjwa.",
     "Sura ya 1 inahusu kuzalisha vizuri: kuchagua aina sahihi, kugundua joto na kuweka kumbukumbu za uzalishaji, na kutumia uhimilishaji bandia (AI) kupitia fundi aliyefunzwa huku ukiepuka kuzaliana kwa ndugu. Sura ya 2 inahusu kuzuia magonjwa: mpango wa usalama wa kibiolojia wenye maeneo, dimbwi la kuosha buti na kanuni za wageni, karantini kwa wanyama wapya na kutupa mizoga kwa usalama, na magonjwa mawili ambayo kila mfugaji wa nguruwe na kuku lazima ayajue: Homa ya Nguruwe ya Afrika na mafua ya ndege.",
-    "Kozi hii inajengwa juu ya kozi \"Afya na Usimamizi wa Mifugo\", inayohusu ukaguzi wa afya wa kila siku, chanjo pamoja na daktari wa mifugo na ugonjwa wa Newcastle (kideri). Haitoi vipimo vya dawa, chanjo wala homoni: fuata daktari wako wa mifugo na maelekezo ya kifurushi kila wakati. Kila somo linachukua kama dakika tano na linaishia na kazi kwenye shamba lako. Jaribio la maarifa linafunga kila sura na mtihani wa maswali 20 unafunga kozi."
+    "Kozi hii inajengwa juu ya kozi \"Afya na Utunzaji wa Mifugo\", inayohusu ukaguzi wa afya wa kila siku, chanjo pamoja na daktari wa mifugo na ugonjwa wa Newcastle (kideri). Haitoi vipimo vya dawa, chanjo wala homoni: fuata daktari wako wa mifugo na maelekezo ya kifurushi kila wakati. Kila somo linachukua kama dakika tano na linaishia na kazi kwenye shamba lako. Jaribio la maarifa linafunga kila sura na mtihani wa maswali 20 unafunga kozi."
   ],
   finalTask: "Andika mpango wa usalama wa kibiolojia wa ukurasa mmoja kwa kitengo chako (shamba lako, au mfano kama nguruwe 20 karibu na Abeokuta, kuku 500 wa mayai karibu na Kumasi, ng'ombe 4 wa maziwa Nyeri au kuku 300 wa nyama karibu na Thies): mchoro wenye eneo safi, eneo la kati na eneo chafu pamoja na mlango mmoja wa kuingia; kanuni zako za dimbwi la kuosha buti na kunawa mikono; kanuni zako za wageni na magari pamoja na daftari la wageni; jinsi utakavyowaweka karantini wanyama wapya; jinsi utakavyotupa wanyama waliokufa; dalili za hatari za Homa ya Nguruwe ya Afrika au mafua ya ndege na utakachofanya katika saa ya kwanza, pamoja na jina na namba ya simu ya daktari wako wa mifugo au ofisi ya mifugo.",
   // ---- ADDIE: Uchambuzi ----
@@ -42,7 +42,7 @@ module.exports = {
       "Kanuni za afya ya wanyama: hakuna vipimo vya dawa, chanjo wala homoni, na hakuna vipindi vya kusubiri baada ya dawa; fuata daktari wa mifugo na maelekezo ya kifurushi",
       "ASF na mafua ya ndege ni magonjwa yanayopaswa kuripotiwa kisheria: tukio linaloshukiwa linaripotiwa mara moja kwa daktari wa mifugo au mamlaka ya mifugo, na kanuni za kitaifa zinatofautiana kwa nchi"
     ],
-    prerequisites: "Utunzaji wa msingi wa wanyama. Inashauriwa kuanza na kozi \"Afya na Usimamizi wa Mifugo\" (Agriculture (Africa))."
+    prerequisites: "Utunzaji wa msingi wa wanyama. Inashauriwa kuanza na kozi \"Afya na Utunzaji wa Mifugo\" (Agriculture (Africa))."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

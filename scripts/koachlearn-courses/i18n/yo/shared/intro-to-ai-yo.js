@@ -300,7 +300,7 @@ module.exports = {
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n parí ẹ̀kọ́ náà, tí wọ́n sì dé ìpele tàbí kọjá rẹ̀ ní gbogbo ìlà rubric fún iṣẹ́ ìkẹyìn",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé àwọn lo olùrànlọ́wọ́ AI ọ̀fẹ́ fún iṣẹ́ gidi láàárín ọjọ́ 30 lẹ́yìn ẹ̀kọ́ náà (ìwádìí àtẹ̀lé)",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé àwọn ṣàyẹ̀wò ìdáhùn AI lórí orísun ìjọba, tàbí pé àwọn rí ìpè tàbí ọ̀rọ̀ jìbìtì kan tí àwọn sì yẹra fún un",
-      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀síwájú láti ṣe ẹ̀kọ́ míì, bí Digital Literacy Basics tàbí Intro to Cybersecurity"
+      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀síwájú láti ṣe ẹ̀kọ́ míì, bí \"Ìpìlẹ̀ Ìmọ̀ Ẹ̀rọ Ayélujára\" tàbí Intro to Cybersecurity"
     ]
   },
   // ---- ADDIE: Implementation ----

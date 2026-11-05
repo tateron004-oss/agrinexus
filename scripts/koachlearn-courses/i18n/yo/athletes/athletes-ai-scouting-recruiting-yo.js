@@ -28,7 +28,7 @@ module.exports = {
       "Òfin ẹ̀tọ́ láti ṣeré àti òfin ìkànsí recruiting yàtọ̀ síra láti àjọ sí àjọ, eré sí eré àti division sí division, wọ́n sì máa ń yí padà; ṣàyẹ̀wò ncaa.org, ojú-ìwé NAIA àti olùdámọ̀ràn ilé-ẹ̀kọ́",
       "Ọ̀pọ̀ àwọn eléré tuntun jẹ́ ọmọdé: kò sí àdírẹ́sì ilé tàbí ìsọfúnni àdáni nínú profaili tàbí irinṣẹ́ AI"
     ],
-    prerequisites: "Kò sí. Ẹ̀kọ́ \"Video Analysis and Game Intelligence\" (Ìtúpalẹ̀ fídíò àti ọgbọ́n eré) àti \"SEO and Building Your Website with AI\" (SEO àti kíkọ́ ojú-ìwé ayélujára rẹ pẹ̀lú AI) wúlò láti kà pẹ̀lú rẹ̀."
+    prerequisites: "Kò sí. Ẹ̀kọ́ \"Ìtúpalẹ̀ Fídíò àti Ọgbọ́n Eré\" àti \"SEO àti Kíkọ́ Ojú-òpó Wẹ́ẹ̀bù Rẹ pẹ̀lú AI\" wúlò láti kà pẹ̀lú rẹ̀."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

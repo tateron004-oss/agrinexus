@@ -28,7 +28,7 @@ module.exports = {
       "Òfin ilé-ìwé, líìgì àti club nípa ìsọfúnni akẹ́kọ̀ọ́, app tí a fọwọ́ sí, pàṣípààrọ̀ fídíò àti kíkàn sí àwọn ọmọdé",
       "Kò sí orúkọ kíkún, ìsọfúnni ìlera, ẹ̀kọ́ tàbí ìsọfúnni ìkànsí nínú ìwé ìṣirò tàbí irinṣẹ́ AI"
     ],
-    prerequisites: "Kò sí. Ẹ̀kọ́ \"Video Analysis and Game Intelligence\" ń ṣèrànwọ́ fún sísàmì sí fídíò."
+    prerequisites: "Kò sí. Ẹ̀kọ́ \"Ìtúpalẹ̀ Fídíò àti Ọgbọ́n Eré\" ń ṣèrànwọ́ fún sísàmì sí fídíò."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

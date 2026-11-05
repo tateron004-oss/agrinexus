@@ -31,7 +31,7 @@ module.exports = {
       "Nzuzo: omume na-eji naanị ndị ọbịa, nọmba kaadị na nọmba ụlọ e mepụtara emepụta",
       "Iwu iwe mmadụ n'ọrụ dị iche: oke afọ maka ndị ntorobịa na nlele akụkọ ndụ (background check) dị iche n'otu steeti na n'otu onye were ọrụ"
     ],
-    prerequisites: "Ọ dịghị. \"Customer Service Excellence\" bụ ezigbo ihe ọmụmụ ọzọ e nwere ike iso ya maka nka ije ozi ndị ahịa n'ozuzu."
+    prerequisites: "Ọ dịghị. \"Ọrụ Ndị Ahịa Kacha Mma\" bụ ezigbo ihe ọmụmụ ọzọ e nwere ike iso ya maka nka ije ozi ndị ahịa n'ozuzu."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

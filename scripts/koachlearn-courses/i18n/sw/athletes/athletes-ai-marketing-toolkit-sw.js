@@ -28,7 +28,7 @@ module.exports = {
       "Haki za picha, nembo na muziki; ufichuzi wa FTC na sheria za NIL za shule au jimbo",
       "Hakuna taarifa za faragha wala mahali ulipo sasa katika machapisho; hakuna picha za AI za watu halisi zinazopotosha"
     ],
-    prerequisites: "Hakuna. Kozi za \"Social Media Branding for Athletes\" au \"Content Creation for Athletes\" ni hatua nzuri ya kwanza."
+    prerequisites: "Hakuna. Kozi za \"Kujenga Chapa ya Mwanamichezo kwenye Mitandao ya Kijamii\" au \"Kutengeneza Maudhui kwa Wanamichezo\" ni hatua nzuri ya kwanza."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

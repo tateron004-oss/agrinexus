@@ -28,7 +28,7 @@ module.exports = {
       "Pas de conseil financier ou juridique : les questions sur les dettes, les amendes et les pensions alimentaires vont au bureau concerné, à l'aide juridique ou à un conseiller en crédit à but non lucratif",
       "Vie privée : seulement des montants approximatifs ; jamais de vrais numéros de compte, de numéros de sécurité sociale ou de détails de dossier dans l'IA"
     ],
-    prerequisites: "Le cours « Introduction à l'IA et confiance numérique » est utile, mais pas obligatoire."
+    prerequisites: "Le cours « Découvrir l'IA et prendre confiance avec le numérique » est utile, mais pas obligatoire."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

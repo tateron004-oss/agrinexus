@@ -29,7 +29,7 @@ module.exports = {
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú 4 sí 6 àti nǹkan bí wákàtí kan ti àtúnṣe fúnra ẹni fún iṣẹ́ ìkẹyìn",
       "Òfin: àṣẹ láti ọ̀dọ̀ àwọn tí ó wà lójú kámẹ́rà (àti òbí fún ẹnikẹ́ni tí kò tíì pé ọmọ ọdún 18) àti orin tí akẹ́kọ̀ọ́ ní àṣẹ láti lò"
     ],
-    prerequisites: "Kí ó lè ya fídíò lórí fóònù kí ó sì gbé fáìlì lọ sí kọ̀mpútà tàbí láti app kan sí òmíràn. Àwọn akẹ́kọ̀ọ́ tí fóònù tàbí kọ̀mpútà ṣì jẹ́ tuntun fún lè kọ́kọ́ ṣe \"Ọgbọ́n Kọ̀mpútà Ìpìlẹ̀\" tàbí \"Lílo Smartphone àti Tablet\"."
+    prerequisites: "Kí ó lè ya fídíò lórí fóònù kí ó sì gbé fáìlì lọ sí kọ̀mpútà tàbí láti app kan sí òmíràn. Àwọn akẹ́kọ̀ọ́ tí fóònù tàbí kọ̀mpútà ṣì jẹ́ tuntun fún lè kọ́kọ́ ṣe \"Ìmọ̀ Ìpìlẹ̀ Kọ̀mpútà\" tàbí \"Lílo Smartphone àti Tablet\"."
   },
   // ---- ADDIE: Design ----
   objectives: [

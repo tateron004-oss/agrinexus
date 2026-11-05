@@ -23,7 +23,7 @@ module.exports = {
   about: [
     "Ẹ̀kọ́ yìí wà fún àwọn àgbẹ̀ kékeré àti àwọn àgbẹ̀ oníṣòwò tó ń dàgbà, àwọn ọ̀dọ́ oníṣòwò àgbẹ̀, àwọn òṣìṣẹ́ oko àti àwọn òṣìṣẹ́ ìdálẹ́kọ̀ọ́ àgbẹ̀ (extension officer) ní Kenya, Nàìjíríà, Ghana, Niger, Senegal àti káàkiri Áfíríkà tí ilẹ̀ wọn ti rẹ̀: ìkórè ń dín kù, ilẹ̀ ti le tàbí omi ń gbé e lọ, èpò striga ń tàn kálẹ̀, owó ajílẹ̀ sì ń gòkè lọ́dọọdún.",
     "Orí 1 ń kọ́ni ní àwọn èròǹgbà agroecology àti bí a ṣe lè mú ilẹ̀ tó ti bàjẹ́ padà: irè ìbòlẹ̀ àti ajílẹ̀ ewéko, igi ajílẹ̀, àti mímú igi padà dàgbà láti ọwọ́ àgbẹ̀ (FMNR), èyí tí ó ti ran àwọn àgbẹ̀ ní Niger lọ́wọ́ láti mú igi padà dàgbà lórí mílíọ̀nù hẹ́kítà ilẹ̀. Orí 2 ń so irè oko àti ẹran ọ̀sìn pọ̀, ó ń lo onírúurú ẹ̀dá fún àǹfààní rẹ, ó ń dín owó ajílẹ̀ tí a ń kó wọlé láti òkèèrè kù, ó sì ń fi bí o ṣe lè wọn ìtẹ̀síwájú láti àsìkò dé àsìkò hàn ọ́.",
-    "Ẹ̀kọ́ \"Ìlera Ilẹ̀ àti Ọ̀rá Rẹ̀\" (Soil Health and Fertility) ń kọ́ni ní àyẹ̀wò ilẹ̀, compost, yíyí irè oko padà àti ìbòlẹ̀ (mulch); ẹ̀kọ́ yìí ń kọ́ lé e lórí, kò sì tún un sọ. Mímú ilẹ̀ padà bọ̀ sípò ń gba àsìkò mélòó kan, nítorí náà bẹ̀rẹ̀ lórí oko kan, kí o sì fi wé àwọn yòókù. Àpẹẹrẹ lásán ni àwọn iye owó inú ẹ̀kọ́ yìí. Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún, ó sì parí pẹ̀lú iṣẹ́ kan lórí ilẹ̀ tìrẹ."
+    "Ẹ̀kọ́ \"Ìlera Ilẹ̀ àti Ọ̀rá Ilẹ̀\" (Soil Health and Fertility) ń kọ́ni ní àyẹ̀wò ilẹ̀, compost, yíyí irè oko padà àti ìbòlẹ̀ (mulch); ẹ̀kọ́ yìí ń kọ́ lé e lórí, kò sì tún un sọ. Mímú ilẹ̀ padà bọ̀ sípò ń gba àsìkò mélòó kan, nítorí náà bẹ̀rẹ̀ lórí oko kan, kí o sì fi wé àwọn yòókù. Àpẹẹrẹ lásán ni àwọn iye owó inú ẹ̀kọ́ yìí. Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún, ó sì parí pẹ̀lú iṣẹ́ kan lórí ilẹ̀ tìrẹ."
   ],
   finalTask: "Kọ ètò àsìkò mẹ́ta láti mú oko kan tí ilẹ̀ rẹ̀ ti bàjẹ́ padà bọ̀ sípò lórí oko rẹ (tàbí àpẹẹrẹ kan: éékà 1 ilẹ̀ àgbàdo tó ti rẹ̀ ní Kakamega, hẹ́kítà 2 ọkà bàbà àti ẹ̀pà ní Zinder, Niger, tàbí hẹ́kítà 1 ẹ̀gẹ́ ní Ìpínlẹ̀ Ọ̀yọ́): bí oko náà ṣe rí báyìí; irè ìbòlẹ̀, ajílẹ̀ ewéko tàbí igi wo ni o máa lò àti ìgbà wo; bí irè oko àti ẹran ṣe máa bọ́ ara wọn; iye àpò ajílẹ̀ tí a rà tí o fẹ́ rọ́pò àti owó tí o máa fi pamọ́; àti òdiwọ̀n mẹ́rin tàbí jù bẹ́ẹ̀ lọ tí o máa kọ sílẹ̀ ní àsìkò kọ̀ọ̀kan, pẹ̀lú àwòrán oko náà.",
   // ---- ADDIE: Analysis ----
@@ -38,7 +38,7 @@ module.exports = {
       "Owó: àpẹẹrẹ ni àwọn iye owó; a kò fún ni ní iye owó tàbí ìrànlọ́wọ́ ìjọba (subsidy) gẹ́gẹ́ bí òtítọ́",
       "Ẹ̀tọ́ ilẹ̀: òfin igi àti ìjẹko yàtọ̀ láti àdúgbò kan sí òmíràn àti láti orílẹ̀-èdè kan sí òmíràn; akẹ́kọ̀ọ́ ń ṣàyẹ̀wò òfin àdúgbò àti òfin ìjọba ìbílẹ̀ (by-law)"
     ],
-    prerequisites: "A gbà ọ́ níyànjú láti kọ́kọ́ ṣe ẹ̀kọ́ \"Ìlera Ilẹ̀ àti Ọ̀rá Rẹ̀\" (Soil Health and Fertility: àyẹ̀wò ilẹ̀, compost, yíyí irè oko padà, ìbòlẹ̀)."
+    prerequisites: "A gbà ọ́ níyànjú láti kọ́kọ́ ṣe ẹ̀kọ́ \"Ìlera Ilẹ̀ àti Ọ̀rá Ilẹ̀\" (Soil Health and Fertility: àyẹ̀wò ilẹ̀, compost, yíyí irè oko padà, ìbòlẹ̀)."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [
@@ -209,7 +209,7 @@ module.exports = {
           text: [
             "Mímú ilẹ̀ padà bọ̀ sípò kì í yára. Ìkórè lè má gòkè lójijì ní àsìkò àkọ́kọ́, nítorí náà o nílò àwọn àmì mìíràn láti rí bóyá ilẹ̀ ń padà bọ̀. Wọn àwọn ibi kan náà, ní oṣù kan náà, ní gbogbo àsìkò, kí o sì kọ ọ́ sílẹ̀.",
             "Àwọn òdiwọ̀n tó rọrùn: ìbòlẹ̀ (iye ilẹ̀ tí ewéko tàbí ìbòlẹ̀ bò; fojú díwọ̀n rẹ̀ tàbí kà á nínú onígun mẹ́rin kan); ekòló (wa erùpẹ̀ tó tóbi tó ṣọ́bìrì kan, kí o sì kà wọ́n); bí omi ṣe ń wọ ilẹ̀ (infiltration: ti agolo tí a gé ìsàlẹ̀ àti òkè rẹ̀ kúrò bọ inú ilẹ̀, da omi sínú rẹ̀, kí o sì ka àkókò tí ó gbà láti wọlé); òórùn ilẹ̀ àti bí ó ṣe ń fọ́ (ṣé ó ń fọ́ sí wẹ́wẹ́ tàbí sí ògúlùtu ńlá tó le?); fọ́tò ilẹ̀ láti ibi kan náà; ìkórè láti ilẹ̀ kan tí a sàmì sí; àti àpò ajílẹ̀ àti owó tí o ná.",
-            "Ní ọdún mélòó kan lẹ́ẹ̀kan, àyẹ̀wò ilẹ̀ ní ilé ìwádìí lè fi èròjà ohun alààyè àti èròjà ajílẹ̀ hàn (wo ẹ̀kọ́ \"Ìlera Ilẹ̀ àti Ọ̀rá Rẹ̀\" fún bí a ṣe ń mú àpẹẹrẹ ilẹ̀). Tí ó bá ṣeé ṣe, fi oko tí o ń mú padà bọ̀ sípò wé oko kan tí o kò yí padà.",
+            "Ní ọdún mélòó kan lẹ́ẹ̀kan, àyẹ̀wò ilẹ̀ ní ilé ìwádìí lè fi èròjà ohun alààyè àti èròjà ajílẹ̀ hàn (wo ẹ̀kọ́ \"Ìlera Ilẹ̀ àti Ọ̀rá Ilẹ̀\" fún bí a ṣe ń mú àpẹẹrẹ ilẹ̀). Tí ó bá ṣeé ṣe, fi oko tí o ń mú padà bọ̀ sípò wé oko kan tí o kò yí padà.",
             "Fóònù ń ṣèrànwọ́: ya fọ́tò láti ibi kan náà, tọ́jú àwọn nọ́ńbà rẹ sínú ìwé àkọsílẹ̀ fóònù tàbí spreadsheet, kí o sì ní kí olùrànlọ́wọ́ AI sọ wọ́n di tábìlì tàbí àwòrán àtẹ ìsọfúnni tó rọrùn. Oko rẹ ni àwọn nọ́ńbà náà ti wá."
           ],
           steps: ["Sàmì sí ibi mẹ́ta lórí oko pẹ̀lú igi tàbí òkúta.", "Yan ó kéré tán òdiwọ̀n mẹ́rin: ìbòlẹ̀, ekòló, omi wíwọlé, fífọ́ ilẹ̀, fọ́tò, ìkórè, owó.", "Kọ wọ́n sílẹ̀ ní oṣù kan náà ní àsìkò kọ̀ọ̀kan.", "Fi wé ti àsìkò tó kọjá àti oko tí a kò yí padà.", "Tún ètò rẹ wò: pa èyí tó ṣiṣẹ́ mọ́, yí èyí tí kò ṣiṣẹ́ padà."],

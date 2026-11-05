@@ -40,7 +40,7 @@ module.exports = {
       "Ẹ̀rọ: fóònù tàbí kọ̀mpútà ilé-ìkàwé fún àwọn ojú-ewé OSHA; ìwé fún àwọn àkọsílẹ̀ àyẹ̀wò",
       "Òfin OSHA ti ìjọba àpapọ̀ ni a kọ́ níbí; àwọn ìpínlẹ̀ kan ní ètò OSHA tiwọn tí òfin rẹ̀ le tó bẹ́ẹ̀ tàbí jù bẹ́ẹ̀ lọ"
     ],
-    prerequisites: "Kò sí. \"Ìpìlẹ̀ Ààbò Ibi Iṣẹ́ (OSHA)\" jẹ́ ẹ̀kọ́ ẹlẹgbẹ́ tí ó wúlò."
+    prerequisites: "Kò sí. \"Ìpìlẹ̀ Ààbò Níbi Iṣẹ́ (OSHA)\" jẹ́ ẹ̀kọ́ ẹlẹgbẹ́ tí ó wúlò."
   },
   // ---- ADDIE: Design ----
   objectives: [

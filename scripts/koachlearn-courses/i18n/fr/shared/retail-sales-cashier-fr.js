@@ -30,7 +30,7 @@ module.exports = {
       "Les règles des ventes soumises à un âge minimum changent selon l'État ; dans certains États, les adolescents n'ont pas le droit de vendre de l'alcool ou du tabac",
       "Sécurité : ne pas poursuivre les voleurs à l'étalage et ne pas résister lors d'un vol à main armée ; suivre les règles du magasin et appeler le 911"
     ],
-    prerequisites: "Aucun. Les apprenants qui veulent s'entraîner davantage aux pourcentages et à l'argent peuvent suivre « Les maths du quotidien pour le travail et la vie » ; « L'excellence du service client » approfondit le service."
+    prerequisites: "Aucun. Les apprenants qui veulent s'entraîner davantage aux pourcentages et à l'argent peuvent suivre « Les maths de tous les jours, au travail et dans la vie » ; « L'excellence du service client » approfondit le service."
   },
   // ---- ADDIE : Conception ----
   objectives: [

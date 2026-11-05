@@ -31,7 +31,7 @@ module.exports = {
       "Òfin: òfin FTC nípa review fòfin de review èké tàbí review rere tí a sanwó fún; ẹ̀sùn ìpalára máa ń lọ sọ́dọ̀ amọ̀ṣẹ́dunjú tàbí ilé-iṣẹ́ ìdánilójú (insurer)",
       "Ìsọfúnni àdáni: kò sí orúkọ oníbàárà, ìsọfúnni káàdì tàbí ọ̀nà ìkànsí wọn nínú irinṣẹ́ AI"
     ],
-    prerequisites: "\"Ìfihàn sí AI fún Iṣẹ́ Kékeré\" máa ràn ọ́ lọ́wọ́, ṣùgbọ́n kò pọn dandan."
+    prerequisites: "\"Ìfihàn sí AI fún Iṣẹ́ Òwò Kékeré\" máa ràn ọ́ lọ́wọ́, ṣùgbọ́n kò pọn dandan."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

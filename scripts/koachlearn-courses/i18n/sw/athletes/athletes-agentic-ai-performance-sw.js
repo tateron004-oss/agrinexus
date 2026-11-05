@@ -28,7 +28,7 @@ module.exports = {
       "Katika mazoezi, data ya mfano tu au data ya wanamichezo isiyo na majina; fuata sheria za data za timu na shule",
       "Mawakala hawafanyi kamwe maamuzi ya afya, majeraha, uteuzi au ustahiki"
     ],
-    prerequisites: "Kozi ya utangulizi ya AI, au matumizi ya kawaida ya msaidizi wa mazungumzo wa AI. Kozi \"AI Coaching Assistants\" ni hatua nzuri ya kwanza."
+    prerequisites: "Kozi ya utangulizi ya AI, au matumizi ya kawaida ya msaidizi wa mazungumzo wa AI. Kozi \"Wasaidizi wa AI kwa Makocha\" ni hatua nzuri ya kwanza."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

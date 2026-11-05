@@ -31,7 +31,7 @@ module.exports = {
       "Oge: ihe dị ka nkeji 5 ruo 6 kwa nkuzi gbakwunyere omume, ihe dị ka nkeji 60 ruo 75 n'ozuzu",
       "Mgbakọ: naanị ịgbakọ, ịtụnyere na ọnụọgụ ntụpọ (decimal) dị mfe"
     ],
-    prerequisites: "Ọ dịghị. \"Nka Kọmputa Ndị Bụ Isi\" na-enyere ndị na-amalite ide ihe na iji browser aka."
+    prerequisites: "Ọ dịghị. \"Nka Mbụ nke Kọmputa\" na-enyere ndị na-amalite ide ihe na iji browser aka."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

@@ -29,7 +29,7 @@ module.exports = {
       "Hakuna mazoezi ya kitabibu kwa watu halisi nyumbani; ujuzi wa kwa mikono unajifunzwa katika programu yenye usimamizi",
       "Hatia ya zamani inaweza kuathiri kuorodheshwa kwenye rejista katika baadhi ya majimbo; wanafunzi wanakagua sheria za jimbo lao"
     ],
-    prerequisites: "Hakuna. Kozi \"Health Literacy: Understanding Your Health Care\" (kuelewa huduma zako za afya) ni kozi nzuri ya kuanza nayo."
+    prerequisites: "Hakuna. Kozi \"Elimu ya Afya: Kuelewa Huduma Yako ya Afya\" ni kozi nzuri ya kuanza nayo."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

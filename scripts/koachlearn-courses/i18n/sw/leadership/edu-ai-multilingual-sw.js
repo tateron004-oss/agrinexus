@@ -28,7 +28,7 @@ module.exports = {
       "Wanafunzi hawaombwi kutafsiri mambo muhimu kwa familia zao wenyewe",
       "Muda: masomo mafupi yanayoingia katika siku ya kufundisha"
     ],
-    prerequisites: "Hakuna. Kozi \"AI kwa Viongozi wa Shule na Elimu 2: Zana za AI kwa Waelimishaji\" ni mwanzo mzuri."
+    prerequisites: "Hakuna. Kozi \"AI kwa Viongozi wa Shule na Elimu 2: Zana za AI kwa Walimu\" ni mwanzo mzuri."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

@@ -19,7 +19,7 @@ module.exports = {
   about: [
     "Ce cours s'adresse aux adultes qui veulent reprendre confiance avec les chiffres : personnes qui cherchent un emploi, personnes qui sortent de prison, immigrés, parents et toute personne qui reprend des études. Vous n'avez pas besoin de vous souvenir des maths de l'école. Nous partons du début, avec des choses réelles comme une étiquette de solde, un mètre ruban et une fiche de paie.",
     "Vous allez vous entraîner avec les fractions, les nombres décimaux et les pourcentages ; calculer des réductions, la taxe de vente, des pourboires et des augmentations ; comparer des prix unitaires au magasin ; mesurer et convertir pour une tâche de travail ; vérifier chaque ligne d'une fiche de paie ; et faire un budget mensuel.",
-    "Ce sont les compétences par lesquelles commencent beaucoup de tests d'embauche et le test de mathématiques du GED (l'examen américain équivalent au diplôme de fin d'études secondaires). Après ce cours, « Préparation au test GED : mathématiques » est une bonne suite. Ce cours ne donne ni certificat ni diplôme ; il construit les compétences.",
+    "Ce sont les compétences par lesquelles commencent beaucoup de tests d'embauche et le test de mathématiques du GED (l'examen américain équivalent au diplôme de fin d'études secondaires). Après ce cours, « Préparation à l'examen GED : Mathématiques » est une bonne suite. Ce cours ne donne ni certificat ni diplôme ; il construit les compétences.",
     "Chaque leçon dure environ cinq minutes, avec des exemples résolus et une tâche « À vous de jouer » sur papier ou avec la calculatrice du téléphone. Un mini-contrôle de 2 questions suit chaque leçon, un contrôle des connaissances termine chaque chapitre et un quiz de 20 questions termine le cours. Tous les exemples de salaire et d'argent sont inventés pour s'entraîner. Les montants sont en dollars américains et s'écrivent avec un point décimal, comme aux États-Unis."
   ],
   finalTask: "Faites votre propre « Fiche de calcul travail et argent » sur une seule page : (1) vérifiez ligne par ligne une fiche de paie d'exercice (ou la vôtre, avec les numéros privés cachés) : heures multipliées par le taux, heures supplémentaires, retenues et salaire net ; (2) transformez ce salaire en revenu mensuel et faites un budget mensuel avec une ligne d'épargne, où les dépenses ne dépassent pas les revenus ; (3) comparez les prix unitaires de 3 produits que vous achetez souvent et écrivez quel format est le meilleur achat. Gardez-la et mettez-la à jour chaque mois.",
@@ -276,7 +276,7 @@ module.exports = {
       "Apprenants qui terminent le cours et remplissent la Fiche de calcul travail et argent selon la grille",
       "Apprenants qui disent avoir repéré une erreur sur une fiche de paie ou économisé de l'argent grâce aux prix unitaires dans les 30 jours (enquête de suivi)",
       "Apprenants qui tiennent un budget écrit pendant au moins 2 mois",
-      "Apprenants qui continuent avec « Préparation au test GED : mathématiques » ou réussissent le test de maths d'un employeur dans les 6 mois"
+      "Apprenants qui continuent avec « Préparation à l'examen GED : Mathématiques » ou réussissent le test de maths d'un employeur dans les 6 mois"
     ]
   },
   // ---- ADDIE : Mise en œuvre ----
@@ -294,7 +294,7 @@ module.exports = {
       "Apprenez à vérifier les réponses de deux façons (estimer, puis calculer) pour que les apprenants fassent confiance à leur propre travail.",
       "Quand les apprenants apportent de vraies fiches de paie, demandez-leur d'abord de cacher le numéro de Social Security et les numéros bancaires. Les questions d'impôts et d'heures supplémentaires qui vont au-delà des bases sont à poser au service de paie, au bureau du travail de l'État ou à la Wage and Hour Division du DOL.",
       "Ne jugez le budget de personne ; le but est un plan équilibré, pas un plan parfait.",
-      "Orientez les apprenants qui veulent un diplôme vers « Préparation au test GED : mathématiques »."
+      "Orientez les apprenants qui veulent un diplôme vers « Préparation à l'examen GED : Mathématiques »."
     ]
   }
 };

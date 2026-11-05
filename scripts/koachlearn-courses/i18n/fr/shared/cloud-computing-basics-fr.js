@@ -14,7 +14,7 @@ module.exports = {
   about: [
     "Chaque fois que vous regardez une vidéo en streaming, enregistrez une photo dans Google Photos ou iCloud, ou travaillez sur un document Google avec un camarade, vous utilisez l'informatique en nuage, aussi appelée le cloud. Les entreprises y font tourner des sites, des applications et de l'IA, et les compétences cloud sont recherchées dans beaucoup de métiers.",
     "Ce cours explique avec des mots simples ce qu'est le cloud, les grands types de services cloud et qui sont les grands fournisseurs. Ensuite, vous utiliserez un service de stockage en ligne gratuit pour enregistrer, organiser et partager des fichiers en sécurité, comme le font les équipes à l'école et au travail.",
-    "Chaque leçon dure environ cinq minutes. Lisez la leçon, regardez les diapositives, puis faites l'exercice « Essayez maintenant ». Il y a un court contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin. Si vous voulez aller plus loin, le cours sur les fondamentaux de Microsoft Azure prolonge celui-ci."
+    "Chaque leçon dure environ cinq minutes. Lisez la leçon, regardez les diapositives, puis faites l'exercice « Essayez maintenant ». Il y a un court contrôle des connaissances après chaque chapitre et un quiz de 20 questions à la fin. Si vous voulez aller plus loin, le cours « Les fondamentaux de Microsoft Azure » prolonge celui-ci."
   ],
   finalTask: "Dans Google Drive ou Microsoft OneDrive : créez un dossier appelé « Documents de carrière », envoyez ou créez deux fichiers dedans (par exemple un CV et une liste de références), partagez un fichier avec un ami ou un proche en lecture seule, vérifiez qui y a accès, puis retirez son accès. Assurez-vous que la validation en deux étapes est activée sur le compte. Enfin, écrivez trois phrases qui expliquent le cloud, et donnez un exemple de SaaS, un de PaaS et un d'IaaS.",
   // ---- ADDIE: Analysis ----
@@ -299,7 +299,7 @@ module.exports = {
       "Apprenants qui terminent le cours et réussissent la tâche finale (grille d'évaluation)",
       "Apprenants qui disent, 30 jours plus tard, que la validation en deux étapes est activée sur leur compte principal (questionnaire de suivi)",
       "Apprenants qui utilisent le stockage en ligne pour des documents d'école, d'emploi ou de programme dans les 30 jours",
-      "Apprenants qui commencent le cours sur les fondamentaux de Microsoft Azure ou un autre cours numérique dans les 30 jours"
+      "Apprenants qui commencent le cours « Les fondamentaux de Microsoft Azure » ou un autre cours numérique dans les 30 jours"
     ]
   },
   // ---- ADDIE: Implementation ----

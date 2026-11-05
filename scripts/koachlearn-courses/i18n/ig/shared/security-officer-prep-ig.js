@@ -41,7 +41,7 @@ module.exports = {
       "Nlele ndekọ mpụ: a na-agwa ndị nwere ndekọ ka ha zaa eziokwu ma lelee iwu steeti ha ma ọ bụ mmemme enyemaka iwu maka ndị na-alọta",
       "Ngwaọrụ: ekwentị ma ọ bụ kọmputa ọba akwụkwọ maka peeji steeti; akwụkwọ maka ndepụta na akụkọ"
     ],
-    prerequisites: "Ọ dịghị. \"Customer Service Excellence\" na \"Résumés, LinkedIn and Interviews\" ga-enye aka dị ka ihe ọmụmụ ndị ọzọ."
+    prerequisites: "Ọ dịghị. \"Ọrụ Ndị Ahịa Kacha Mma\" na \"Résumés, LinkedIn and Interviews\" ga-enye aka dị ka ihe ọmụmụ ndị ọzọ."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

@@ -30,7 +30,7 @@ module.exports = {
       "Kanuni za mauzo yenye kikomo cha umri zinatofautiana kwa kila jimbo; katika baadhi ya majimbo vijana huenda wasiruhusiwe kuuza pombe au tumbaku",
       "Usalama: usimkimbize mwizi wa dukani na usipinge wizi wa kutumia nguvu; fuata sera ya duka na piga 911"
     ],
-    prerequisites: "Hakuna. Wanafunzi wanaotaka mazoezi zaidi ya asilimia na pesa wanaweza kuchukua kozi \"Hesabu za Kila Siku kwa Kazi na Maisha\"; kozi \"Ubora wa Huduma kwa Wateja\" inaenda ndani zaidi kuhusu huduma."
+    prerequisites: "Hakuna. Wanafunzi wanaotaka mazoezi zaidi ya asilimia na pesa wanaweza kuchukua kozi \"Hesabu za Kila Siku kwa Kazi na Maisha\"; kozi \"Ubora katika Huduma kwa Wateja\" inaenda ndani zaidi kuhusu huduma."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [
@@ -222,7 +222,7 @@ module.exports = {
           text: [
             "Kila duka lina sera ya marejesho: siku ngapi, kama risiti inahitajika, na jinsi pesa inavyorudishwa (kwenye kadi, kama pesa taslimu au kama salio la duka). Jifunze ya duka lako katika mafunzo. Ifuate kwa njia ileile kwa kila mtu, na umwombe meneja marejesho yanapokuwa nje ya sera.",
             "Matatizo ya bei ni ya kawaida: lebo ya rafu inasema $4.99 na rejista inasema $5.49. Baki mtulivu, fanya ukaguzi wa bei, na ufuate kanuni ya duka lako. Usibishane, na usibadilishe bei peke yako.",
-            "Kwa mteja aliyekasirika, tumia hatua nne: sikiliza bila kumkatiza, omba radhi kwa usumbufu, rekebisha unachoweza au mlete meneja, na umshukuru. Kozi \"Ubora wa Huduma kwa Wateja\" inaenda ndani zaidi.",
+            "Kwa mteja aliyekasirika, tumia hatua nne: sikiliza bila kumkatiza, omba radhi kwa usumbufu, rekebisha unachoweza au mlete meneja, na umshukuru. Kozi \"Ubora katika Huduma kwa Wateja\" inaenda ndani zaidi.",
             "Usalama wako unakuja kwanza. Usimkimbize wala kumshika mwizi wa dukani; mwambie meneja au mlinzi. Mteja akikutishia, au wakati wa wizi wa kutumia nguvu, usibishane wala kupigana: fuata mafunzo ya usalama ya duka lako, toa kinachoombwa, na upige 911 (namba ya dharura ya Marekani) ikiwa salama. OSHA (ofisi ya usalama kazini ya Marekani) inataja kushughulikia pesa mbele ya umma na kazi ya usiku sana kama hatari za vurugu kazini."
           ],
           steps: [

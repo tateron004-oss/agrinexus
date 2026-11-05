@@ -28,7 +28,7 @@ module.exports = {
       "Kila kitanzi kina kikomo cha mizunguko na kinamkabidhi mtu kazi isiyotatuliwa",
       "Muda: masomo mafupi yenye kazi moja ya mazoezi kila moja"
     ],
-    prerequisites: "Kozi ya 3 na ya 4 za Design, Build, and Deploy Autonomous AI Agents (\"Building AI Agents\" na \"AI Agent Tool Use and Automation\")."
+    prerequisites: "Kozi ya 3 na ya 4 za Design, Build, and Deploy Autonomous AI Agents (\"Kujenga Mawakala wa AI\" na \"Wakala wa AI: Kutumia Zana na Uendeshaji wa Kiotomatiki\")."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

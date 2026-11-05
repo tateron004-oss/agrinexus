@@ -306,7 +306,7 @@ module.exports = {
     results: [
       "Ndị na-amụ ihe mechara ihe ọmụmụ a ma nweta Ruru eru ma ọ bụ Karịrị n'ahịrị rubric ọ bụla nke ọrụ ikpeazụ",
       "Ndị na-amụ ihe kwuru na ha jiri kọmputa n'onwe ha, dị ka n'ọba akwụkwọ ma ọ bụ n'ebe enyemaka ọrụ, n'ime ụbọchị 30 mgbe ihe ọmụmụ a gwụchara (nnyocha nsochi)",
-      "Ndị na-amụ ihe gara n'ihe ọmụmụ ọzọ, dị ka Internet Basics ma ọ bụ Microsoft 365 na Google Docs",
+      "Ndị na-amụ ihe gara n'ihe ọmụmụ ọzọ, dị ka Mmalite Ịntanetị ma ọ bụ Microsoft 365 na Google Docs",
       "Ndị na-amụ ihe kwuru na ha mezuru ezi ọrụ na kọmputa, dị ka akwụkwọ ozi ma ọ bụ arịrịọ ọrụ"
     ]
   },

@@ -29,7 +29,7 @@ module.exports = {
       "Oke iwu: enweghị ịnye aka azụ ọ bụla (iwu US a na-akpọ FCPA); ajụjụ gbasara nkwekọrịta, ụtụ isi na ndebanye aha na-aga n'aka ọka iwu ma ọ bụ onye na-agụ akaụntụ ruru eru n'obodo ahụ",
       "Oge: nkuzi ihe dị ka nkeji 5; ihe ọmụmụ a na-ahazi azụmahịa, ọ naghị amalite ya"
     ],
-    prerequisites: "Ọ dịghị. Ndị ejibeghị ngwa enyemaka AI nwere ike ibu ụzọ were \"Introduction to AI and the Future Workforce\"."
+    prerequisites: "Ọ dịghị. Ndị ejibeghị ngwa enyemaka AI nwere ike ibu ụzọ were \"Mmalite AI na Ọrụ n'Ọdịnihu\"."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

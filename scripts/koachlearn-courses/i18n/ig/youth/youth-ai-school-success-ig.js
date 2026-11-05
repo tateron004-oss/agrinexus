@@ -29,7 +29,7 @@ module.exports = {
       "Nzuzo: etinyela ozi nzuzo ọ bụla n'ime ngwa AI",
       "Oge dị warara: nkuzi nkeji 5 na okwu dị mfe"
     ],
-    prerequisites: "Ọ dịghị. \"Gịnị bụ AI? (maka ndị na-eto eto)\" na-enyere ndị na-ejibeghị ngwa enyemaka AI mgbe ọ bụla aka."
+    prerequisites: "Ọ dịghị. \"Gịnị bụ AI? (maka ndị ntorobịa)\" na-enyere ndị na-ejibeghị ngwa enyemaka AI mgbe ọ bụla aka."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

@@ -38,7 +38,7 @@ module.exports = {
       "Dispositivos: un teléfono o una computadora de la biblioteca para las páginas oficiales; una regla o cinta métrica y papel en casa",
       "Los requisitos, las tarifas y las fechas de examen del CPT 4.0 cambian: los participantes revisan msscusa.org o un centro de examen"
     ],
-    prerequisites: "Cuentas básicas con números enteros. \"Matemáticas diarias\" y \"Fundamentos de seguridad en el trabajo (OSHA)\" son cursos complementarios útiles."
+    prerequisites: "Cuentas básicas con números enteros. \"Matemáticas diarias\" y \"Seguridad básica en el trabajo (OSHA)\" son cursos complementarios útiles."
   },
   // ---- ADDIE: Diseño ----
   objectives: [

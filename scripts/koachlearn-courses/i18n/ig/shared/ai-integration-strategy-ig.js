@@ -29,7 +29,7 @@ module.exports = {
       "Nzuzo: e chebere ozi ahụike na arụmọrụ ndị egwuregwu, ozi ụmụaka, nkwekọrịta na ndekọ ndị na-enye onyinye",
       "Enweghị ndụmọdụ iwu: nkwekọrịta, nkwado (endorsement) na iwu data na-aga n'aka ọka iwu ruru eru"
     ],
-    prerequisites: "Ọ dịghị. \"AI in Business: Strategies and Applications\" bụ ihe ọmụmụ mbụ bara uru."
+    prerequisites: "Ọ dịghị. \"AI n'Azụmahịa: Atụmatụ na Ojiji\" bụ ihe ọmụmụ mbụ bara uru."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

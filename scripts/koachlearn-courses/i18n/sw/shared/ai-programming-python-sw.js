@@ -309,7 +309,7 @@ module.exports = {
     results: [
       "Wanafunzi wanaomaliza kozi na kupata Anafikia au Anazidi katika kila mstari wa rubric ya kipanga maoni",
       "Wanafunzi wanaoripoti kujenga au kubadilisha programu nyingine ya AI ndani ya siku 30 baada ya kozi (utafiti wa ufuatiliaji)",
-      "Wanafunzi wanaoendelea na kozi inayofuata, kama Introduction to Machine Learning au Data Science for Beginners",
+      "Wanafunzi wanaoendelea na kozi inayofuata, kama Utangulizi wa Machine Learning (Kujifunza kwa Mashine) au Data Science for Beginners",
       "Wanafunzi wanaoonyesha kipanga maoni katika portfolio, darasa, klabu au maombi ya kazi"
     ]
   },

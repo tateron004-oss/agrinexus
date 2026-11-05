@@ -28,7 +28,7 @@ module.exports = {
       "Majarida ya barua pepe yanahitaji njia wazi ya kujiondoa (unsubscribe)",
       "Vifaa: simu au kompyuta yenye zana za bure"
     ],
-    prerequisites: "Kozi \"Utangulizi wa AI kwa Mashirika Yasiyo ya Faida\", au uzoefu fulani wa kutumia msaidizi wa AI."
+    prerequisites: "Kozi \"Utangulizi wa AI kwa Mashirika Yasiyo ya Kiserikali\", au uzoefu fulani wa kutumia msaidizi wa AI."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

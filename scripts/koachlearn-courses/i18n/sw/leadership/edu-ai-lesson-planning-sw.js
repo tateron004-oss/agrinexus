@@ -28,7 +28,7 @@ module.exports = {
       "Vifaa: kompyuta yenye intaneti na msaidizi wa AI",
       "Muda: masomo mafupi yanayoingia katika siku ya kufundisha"
     ],
-    prerequisites: "\"AI kwa Viongozi wa Shule na Elimu 2: Zana za AI kwa Waelimishaji\"."
+    prerequisites: "\"AI kwa Viongozi wa Shule na Elimu 2: Zana za AI kwa Walimu\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

@@ -38,7 +38,7 @@ module.exports = {
       "Pesa: zana za gharama ndogo kwanza; takwimu zote ni mifano; hakuna bidhaa inayopendekezwa",
       "Viuatilifu na mbolea: bidhaa zilizosajiliwa tu, zikitumiwa kama lebo inavyosema"
     ],
-    prerequisites: "Kuweza kutumia simu janja bila shida. \"Afya na Rutuba ya Udongo\" na \"Data na Teknolojia ya Kilimo\" zinasaidia kuzichukua kwanza."
+    prerequisites: "Kuweza kutumia simu janja bila shida. \"Afya na Rutuba ya Udongo\" na \"Data na Teknolojia katika Kilimo\" zinasaidia kuzichukua kwanza."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

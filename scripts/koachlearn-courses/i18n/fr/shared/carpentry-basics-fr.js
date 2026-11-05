@@ -29,7 +29,7 @@ module.exports = {
       "Temps : des leçons de 5 à 6 minutes qui s'intègrent entre le travail et les rendez-vous",
       "Jeunes de moins de 18 ans : les règles fédérales sur le travail des enfants limitent le travail avec des scies électriques et des machines à bois ; les permis et les règles des programmes varient selon l'État"
     ],
-    prerequisites: "Calcul avec des nombres entiers. « Commencer une carrière dans les métiers qualifiés » aide à choisir un métier ; « Les bases de la sécurité au travail (OSHA) » couvre la sécurité générale sur le chantier. Ce cours va plus loin en charpente-menuiserie."
+    prerequisites: "Calcul avec des nombres entiers. « Commencer une carrière dans les métiers techniques » aide à choisir un métier ; « Les bases de la sécurité au travail (OSHA) » couvre la sécurité générale sur le chantier. Ce cours va plus loin en charpente-menuiserie."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

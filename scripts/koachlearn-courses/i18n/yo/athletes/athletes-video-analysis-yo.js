@@ -28,7 +28,7 @@ module.exports = {
       "Àwọn òfin ẹgbẹ́, ilé-ẹ̀kọ́ àti líìgì nípa yíya fídíò; fídíò eré àwọn ọmọdé ń fi àwọn ọmọ ẹlòmíì hàn",
       "Orúkọ àwọn eléré míì àti ìsọfúnni àdáni wọn kò gbọ́dọ̀ wọ inú àwọn irinṣẹ́ AI"
     ],
-    prerequisites: "Kò sí. Ẹ̀kọ́ \"AI Tools for Athletes\" (Àwọn irinṣẹ́ AI fún eléré ìdárayá) máa ràn ọ́ lọ́wọ́ tí o kò bá tíì lo Google Sheets rí."
+    prerequisites: "Kò sí. Ẹ̀kọ́ \"Àwọn Irinṣẹ́ AI fún Àwọn Eléré Ìdárayá\" máa ràn ọ́ lọ́wọ́ tí o kò bá tíì lo Google Sheets rí."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [
@@ -291,7 +291,7 @@ module.exports = {
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n parí iṣẹ́ ìkẹyìn tí wọ́n sì dé ìpele tàbí kọjá rẹ̀ ní gbogbo ìlà rubric",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé àwọn tún ya fídíò tí wọ́n sì tún fi àmì sí i pẹ̀lú ìbéèrè kan náà láàárín ọjọ́ 30 (ìwádìí àtẹ̀lé)",
       "Àwọn kóòṣì tí wọ́n sọ pé ìdánrawò kan tàbí ohun tí wọ́n ń dánrawò yí padà nítorí ẹ̀rí fídíò eléré kan",
-      "Àwọn akẹ́kọ̀ọ́ tí wọ́n bẹ̀rẹ̀ ẹ̀kọ́ Athletes míì, bíi AI for Team Sports"
+      "Àwọn akẹ́kọ̀ọ́ tí wọ́n bẹ̀rẹ̀ ẹ̀kọ́ Athletes míì, bíi AI fún Eré Ìdárayá Ẹgbẹ́"
     ]
   },
   // ---- ADDIE: Implementation ----

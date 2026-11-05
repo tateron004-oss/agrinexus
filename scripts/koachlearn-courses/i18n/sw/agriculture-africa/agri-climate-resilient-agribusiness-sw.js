@@ -27,7 +27,7 @@ module.exports = {
   about: [
     "Kozi hii ni kwa wakulima wadogo na wakulima wa kibiashara wanaokua, vijana wajasiriamali wa kilimo, viongozi wa vikundi vya wakulima na maafisa ugani nchini Kenya, Nigeria, Ghana, Senegal, Côte d'Ivoire na kote Afrika ambao tayari wanaona mabadiliko ya tabianchi mashambani mwao na wanataka kuyashughulikia kama tatizo la biashara lenye mpango wa biashara.",
     "Sura ya 1 inaweka hatari za tabianchi katika pesa: unapima hatari kwa biashara yako ya shamba, unachagua na kukokotoa gharama ya uwekezaji wa kukabiliana kama mbegu zinazostahimili ukame, kuhifadhi maji, kivuli na miradi mipya, na unajifunza aina za fedha za tabianchi na mikopo ya kijani na jinsi ya kuzikagua. Sura ya 2 inahusu njia zinazopunguza uzalishaji wa gesi na gharama kwa wakati mmoja, mipango ya mikopo ya kaboni na jinsi ya kuepuka ulaghai na mikataba isiyo ya haki, na kuongeza yote haya katika mpango wako wa biashara.",
-    "Kozi \"Kilimo Kinachostahimili Tabianchi\" inahusu utabiri wa msimu na kalenda ya hatari za tabianchi; isome kwanza ukiweza. Namba zote za pesa hapa ni mifano ya kubuni: tumia bei zako za eneo lako. Kozi hii inaeleza jinsi fedha na mikataba zinavyofanya kazi; haikuambii uwekeze katika nini. Soma kila mkataba wote na zungumza na mshauri unayemwamini kabla ya kusaini. Kila somo linachukua kama dakika tano na linaisha na kazi kwa shamba lako mwenyewe."
+    "Kozi \"Kilimo Kinachozingatia Tabianchi\" inahusu utabiri wa msimu na kalenda ya hatari za tabianchi; isome kwanza ukiweza. Namba zote za pesa hapa ni mifano ya kubuni: tumia bei zako za eneo lako. Kozi hii inaeleza jinsi fedha na mikataba zinavyofanya kazi; haikuambii uwekeze katika nini. Soma kila mkataba wote na zungumza na mshauri unayemwamini kabla ya kusaini. Kila somo linachukua kama dakika tano na linaisha na kazi kwa shamba lako mwenyewe."
   ],
   finalTask: "Andika mpango wa ukurasa mmoja wa kustahimili tabianchi kwa biashara yako ya shamba (au shamba la mfano kama ekari 3 za mahindi na maharagwe pamoja na mbuzi 6 wa maziwa huko Makueni, hekta 4 za kakao katika Mkoa wa Magharibi wa Ghana, au hekta 2 za mpunga na karanga karibu na Kaolack, Senegal): hatari zako tatu kuu za tabianchi pamoja na makadirio ya gharama ya kila moja; uwekezaji wa kukabiliana miwili au mitatu pamoja na gharama yake, faida ya kila mwaka na muda wa kurudisha pesa; jinsi utakavyolipa (akiba, kikundi, mkopo, ruzuku) pamoja na maswali utakayomuuliza mkopeshaji; angalau njia mbili zinazopunguza gharama na uzalishaji wa gesi; kanuni zako za kupima ofa yoyote ya mikopo ya kaboni; na tarehe utakayoupitia mpango upya.",
   // ---- ADDIE: Uchambuzi ----
@@ -42,7 +42,7 @@ module.exports = {
       "Pesa: namba zote ni mifano; hakuna bei, riba wala ruzuku inayotolewa kama ukweli",
       "Usalama wa fedha: hakuna ushauri wa uwekezaji; wanafunzi hawatoi kamwe PIN, vitambulisho au namba za akaunti katika kazi za mazoezi"
     ],
-    prerequisites: "Kumbukumbu rahisi za shamba na faida ghafi zinasaidia (\"Biashara ya Kilimo na Usimamizi wa Shamba\"). Inapendekezwa kusoma kwanza \"Kilimo Kinachostahimili Tabianchi\" (utabiri na kalenda ya hatari za tabianchi)."
+    prerequisites: "Kumbukumbu rahisi za shamba na faida ghafi zinasaidia (\"Biashara ya Kilimo na Usimamizi wa Shamba\"). Inapendekezwa kusoma kwanza \"Kilimo Kinachozingatia Tabianchi\" (utabiri na kalenda ya hatari za tabianchi)."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

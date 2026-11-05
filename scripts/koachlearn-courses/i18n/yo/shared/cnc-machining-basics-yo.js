@@ -30,7 +30,7 @@ module.exports = {
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú 5 sí 6 tó bá àkókò ilé-ìwé, iṣẹ́ àti ìpàdé mu",
       "G-code yàtọ̀ láti ẹ̀rọ kan sí òmíràn: àwọn akẹ́kọ̀ọ́ ń tẹ̀lé ìwé ìtọ́ni (manual) ẹ̀rọ tí wọ́n ń kọ́ lé lórí"
     ],
-    prerequisites: "Kò sí. \"Ìṣirò Ojoojúmọ́\" ń ràn lọ́wọ́ pẹ̀lú decimal; \"Bíbẹ̀rẹ̀ Iṣẹ́ nínú Àwọn Iṣẹ́ Ọwọ́\" ń ran àwọn akẹ́kọ̀ọ́ lọ́wọ́ láti yan iṣẹ́ ọwọ́, ẹ̀kọ́ yìí sì ń lọ jinlẹ̀ sí i nínú machining."
+    prerequisites: "Kò sí. \"Ìṣirò Ojoojúmọ́\" ń ràn lọ́wọ́ pẹ̀lú decimal; \"Bíbẹ̀rẹ̀ Iṣẹ́ Ọwọ́ Onímọ̀ (Skilled Trades)\" ń ran àwọn akẹ́kọ̀ọ́ lọ́wọ́ láti yan iṣẹ́ ọwọ́, ẹ̀kọ́ yìí sì ń lọ jinlẹ̀ sí i nínú machining."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

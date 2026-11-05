@@ -29,7 +29,7 @@ module.exports = {
       "Temps : leçons de 5 à 6 minutes, faciles à caser entre le travail et les rendez-vous",
       "Les règles changent selon l'État et la ville : chaque apprenant vérifie les licences sur la page officielle de son lieu de résidence"
     ],
-    prerequisites: "Aucun. « Débuter une carrière dans les métiers qualifiés » aide à choisir un métier ; ce cours approfondit le soudage."
+    prerequisites: "Aucun. « Commencer une carrière dans les métiers techniques » aide à choisir un métier ; ce cours approfondit le soudage."
   },
   // ---- ADDIE : Conception (objectifs : condition, action observable, critère) ----
   objectives: [

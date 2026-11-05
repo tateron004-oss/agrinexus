@@ -268,7 +268,7 @@ module.exports = {
     results: [
       "Ndị na-amụ ihe mechara ihe ọmụmụ a ma nweta Ruru eru ma ọ bụ Karịrị n'ahịrị rubric ọ bụla nke nyocha tips",
       "Ndị na-amụ ihe kwuru na ha nyochara data nke ha, dị ka maka otu egwuregwu, klọb, klas ma ọ bụ ọrụ, n'ime ụbọchị 30 mgbe ihe ọmụmụ ahụ gasịrị (nnyocha nsochi)",
-      "Ndị na-amụ ihe gara n'ihe ọmụmụ ọzọ, dị ka Introduction to Machine Learning",
+      "Ndị na-amụ ihe gara n'ihe ọmụmụ ọzọ, dị ka \"Mmalite Machine Learning\"",
       "Ndị na-amụ ihe tinyere notebook ahụ na portfolio ha ma ọ bụ jiri ya rịọ ọrụ data ma ọ bụ mmemme"
     ]
   },

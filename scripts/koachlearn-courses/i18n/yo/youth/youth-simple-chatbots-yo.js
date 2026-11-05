@@ -28,7 +28,7 @@ module.exports = {
       "Ẹ̀rọ: kọ̀mpútà tí ó ní browser; kò sí nǹkan láti fi sórí ẹ̀rọ (install)",
       "Ìsọfúnni àdáni: bot kì í béèrè tàbí tọ́jú ọ̀rọ̀ aṣínà, nọ́mbà fóònù, àdírẹ́sì tàbí nọ́mbà ìdánimọ̀ láéláé"
     ],
-    prerequisites: "Kò sí. \"Ìfihàn sí Kóòdù pẹ̀lú AI\" máa ràn ọ́ lọ́wọ́, ṣùgbọ́n kò pọn dandan."
+    prerequisites: "Kò sí. \"Ìfihàn sí Kíkọ Kóòdù pẹ̀lú AI\" máa ràn ọ́ lọ́wọ́, ṣùgbọ́n kò pọn dandan."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

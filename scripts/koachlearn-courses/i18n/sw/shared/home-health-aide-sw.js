@@ -29,7 +29,7 @@ module.exports = {
       "Hakuna ushauri wa dawa wala vipimo vya dawa; hakuna mazoezi ya mikono kwa wateja halisi nyumbani",
       "Baadhi ya wanafunzi wana rekodi za uhalifu; sheria za ukaguzi wa historia zinatofautiana kwa jimbo na shirika"
     ],
-    prerequisites: "Hakuna. Kozi \"Kumhudumia Mpendwa Wako\" na \"Ujuzi wa Afya\" zinasaidia lakini hazihitajiki."
+    prerequisites: "Hakuna. Kozi \"Kumhudumia Mpendwa Wako: Kuwa Mlezi\" na \"Ujuzi wa Afya\" zinasaidia lakini hazihitajiki."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

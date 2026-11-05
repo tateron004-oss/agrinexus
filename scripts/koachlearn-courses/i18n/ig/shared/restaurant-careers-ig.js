@@ -31,7 +31,7 @@ module.exports = {
       "Iwu ụgwọ ọrụ na iwu ọrụ ndị ntorobịa dị iche n'otu steeti; ndị na-amụ ihe na-elele ụlọ ọrụ labọ steeti ha",
       "Ụfọdụ ndị na-amụ ihe nwere ndekọ mpụ; ihe ọmụmụ a na-egosi ndị were ọrụ na-enye ohere ọzọ (fair-chance), ọ naghị ekwe nkwa ọrụ ọ bụla"
     ],
-    prerequisites: "Ọ dịghị. Ndị na-amụ ihe ga-emetụ nri aka kwesịkwara ịgụ \"Food Handler and ServSafe Exam Preparation\"."
+    prerequisites: "Ọ dịghị. Ndị na-amụ ihe ga-emetụ nri aka kwesịkwara ịgụ \"Onye Na-elekọta Nri na Nkwadebe maka Ule ServSafe\"."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

@@ -19,13 +19,13 @@ module.exports = {
     "Olùṣàyẹ̀wò ààbò (security analyst) ń dáàbò bo kọ̀mpútà, àkáǹtì àti ìsọfúnni ilé-iṣẹ́ kan. Wọ́n ń wo àwọn àmì ìkìlọ̀, wọ́n ń ṣàyẹ̀wò ètò (settings), wọ́n sì ń dáhùn nígbà tí nǹkan bá dàrú. CompTIA Security+ jẹ́ ọ̀kan lára àwọn ìwé-ẹ̀rí tí a mọ̀ jù fún bíbẹ̀rẹ̀ iṣẹ́ yìí.",
     "Ẹ̀kọ́ yìí ń múra rẹ sílẹ̀ fún Security+. Kò fún ọ ní ìwé-ẹ̀rí náà; CompTIA ló ń fúnni ní i nígbà tí o bá yege ìdánwò. Ìdánwò náà ń yí padà ní ìparí ọdún 2026, nítorí náà Ẹ̀kọ́ 1 fi bí o ṣe lè yan ẹ̀yà tó tọ́ hàn ọ́, àti ibi tí o ti lè ṣàyẹ̀wò àlàyé tuntun.",
     "Gbogbo ohun tó wà níbí jẹ́ fún ìdáàbòbò nìkan. O máa ṣe àṣeṣe lórí kọ̀mpútà àti àkáǹtì tìrẹ nìkan, àti lórí àwọn àkọsílẹ̀ àròsọ inú ẹ̀kọ́. Má ṣe dán wò, ṣàwárí (scan) tàbí wọlé sí ẹ̀rọ tí kì í ṣe tìrẹ, tàbí tí o kò ní ìyọ̀ǹda tí a kọ sílẹ̀ láti lò: ìyẹn lè jẹ́ ìwà ọ̀daràn.",
-    "Tí ààbò bá jẹ́ tuntun fún ọ, kọ́kọ́ ṣe \"Ìfihàn sí Ààbò Ẹ̀rọ Ayélujára\". Ó kọ́ni nípa ọ̀rọ̀ aṣínà, ìjẹ́rìísí onípele-púpọ̀ (MFA) àti phishing fún àwọn àkáǹtì tìrẹ; ẹ̀kọ́ yìí ń kọ́ lé e lórí fún iṣẹ́."
+    "Tí ààbò bá jẹ́ tuntun fún ọ, kọ́kọ́ ṣe \"Ìfihàn sí Ààbò Ẹ̀rọ Ayélujára (Cybersecurity)\". Ó kọ́ni nípa ọ̀rọ̀ aṣínà, ìjẹ́rìísí onípele-púpọ̀ (MFA) àti phishing fún àwọn àkáǹtì tìrẹ; ẹ̀kọ́ yìí ń kọ́ lé e lórí fún iṣẹ́."
   ],
   finalTask: "Ṣe àkójọ iṣẹ́ ààbò àkọ́kọ́ rẹ (portfolio): (1) àkọsílẹ̀ àyẹ̀wò fún mímú kọ̀mpútà tìrẹ le, tó fi ètò kọ̀ọ̀kan tí o ṣàyẹ̀wò àti èsì rẹ̀ hàn; (2) àkọsílẹ̀ ìṣẹ̀lẹ̀ kúkúrú lórí àkọsílẹ̀ ìwọlé àṣeṣe láti Ẹ̀kọ́ 5: ohun tí o rí, ìdí tí ó fi ń fura, ipa rẹ̀ lórí CIA àti ìdíwọ̀n ewu rẹ̀, àti àwọn ìgbésẹ̀ ìdáhùn sí ìṣẹ̀lẹ̀ tí o máa gbé; àti (3) ètò ẹ̀kọ́ àti ìdánwò Security+ rẹ: ẹ̀yà ìdánwò tí o máa ṣe àti ìdí rẹ̀, ọjọ́ tí o fojú sí, apá ìdánwò (domain) kọ̀ọ̀kan pẹ̀lú ìwọ̀n rẹ̀, àti wákàtí ìkẹ́kọ̀ọ́ rẹ lọ́sẹ̀.",
   // ---- ADDIE: Analysis ----
   analysis: {
     learners: "Àwọn àgbàlagbà àti ọ̀dọ́ tí wọ́n ń wá iṣẹ́ ààbò àkọ́kọ́: àwọn tí ń wá iṣẹ́, àwọn ológun tẹ́lẹ̀ (veterans; ọ̀pọ̀ ní ìyọ̀ǹda ààbò tàbí iṣẹ́ IT), àwọn tí ń yí iṣẹ́ padà, àti àwọn tí ń ṣe iṣẹ́ ìrànlọ́wọ́ IT tí wọ́n fẹ́ gòkè. Ìpìlẹ̀ wọn yàtọ̀ síra; ọ̀pọ̀ ti ń lo kọ̀mpútà lójoojúmọ́ ṣùgbọ́n wọn kò tíì ṣiṣẹ́ ààbò rí.",
-    startingPoint: "Wọ́n mọ ààbò ara ẹni ìpìlẹ̀ (ọ̀rọ̀ aṣínà, ìjẹ́rìísí onípele-púpọ̀, phishing), tàbí wọ́n lè kọ́ ọ láti inú \"Ìfihàn sí Ààbò Ẹ̀rọ Ayélujára\". Wọn kò tíì ka àkọsílẹ̀ ìṣẹ̀lẹ̀ (log), díwọ̀n ewu, tàbí tẹ̀lé ìlànà ìṣẹ̀lẹ̀ ààbò rí. Díẹ̀ ló mọ bí ìdánwò Security+ ṣe rí, tàbí pé ó ń yí padà.",
+    startingPoint: "Wọ́n mọ ààbò ara ẹni ìpìlẹ̀ (ọ̀rọ̀ aṣínà, ìjẹ́rìísí onípele-púpọ̀, phishing), tàbí wọ́n lè kọ́ ọ láti inú \"Ìfihàn sí Ààbò Ẹ̀rọ Ayélujára (Cybersecurity)\". Wọn kò tíì ka àkọsílẹ̀ ìṣẹ̀lẹ̀ (log), díwọ̀n ewu, tàbí tẹ̀lé ìlànà ìṣẹ̀lẹ̀ ààbò rí. Díẹ̀ ló mọ bí ìdánwò Security+ ṣe rí, tàbí pé ó ń yí padà.",
     gap: "Iṣẹ́ ààbò ìpele àkọ́kọ́ ń retí àwọn ìwà olùṣàyẹ̀wò: pípín ìṣòro sí ìsọ̀rí, dídíwọ̀n ewu, ṣíṣàyẹ̀wò ètò, kíka àkọsílẹ̀ ìṣẹ̀lẹ̀, àti títẹ̀lé ìgbésẹ̀ ìṣẹ̀lẹ̀ ààbò pẹ̀lú ìfọ̀kànbalẹ̀. Àwọn akẹ́kọ̀ọ́ tún nílò ètò tó ṣe kedere, tó ní ọjọ́, fún ẹ̀yà Security+ tó tọ́, kí wọ́n má baà kàwé fún ìdánwò tí wọ́n fẹ́ dá dúró.",
     constraints: [
       "Ìpele kíkàwé: ọ̀rọ̀ tó rọrùn àti gbólóhùn kúkúrú; a ṣàlàyé ọ̀rọ̀ iṣẹ́ kọ̀ọ̀kan",
@@ -34,7 +34,7 @@ module.exports = {
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú 4 sí 6",
       "Ìdánwò náà ń yí padà ní ìparí ọdún 2026: àwọn akẹ́kọ̀ọ́ gbọ́dọ̀ ṣàyẹ̀wò comptia.org fún ẹ̀yà, ọjọ́ àti owó"
     ],
-    prerequisites: "Ìtura pẹ̀lú kọ̀mpútà àti ààbò àkáǹtì ìpìlẹ̀. Ó dára láti kọ́kọ́ ṣe \"Ìfihàn sí Ààbò Ẹ̀rọ Ayélujára\" àti \"Ìpìlẹ̀ Ìrànlọ́wọ́ IT (Ìmúrasílẹ̀ fún CompTIA A+)\"."
+    prerequisites: "Ìtura pẹ̀lú kọ̀mpútà àti ààbò àkáǹtì ìpìlẹ̀. Ó dára láti kọ́kọ́ ṣe \"Ìfihàn sí Ààbò Ẹ̀rọ Ayélujára (Cybersecurity)\" àti \"Ìpìlẹ̀ Ìrànlọ́wọ́ IT (Ìmúrasílẹ̀ fún CompTIA A+)\"."
   },
   // ---- ADDIE: Design ----
   objectives: [

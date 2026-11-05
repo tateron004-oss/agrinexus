@@ -30,7 +30,7 @@ module.exports = {
       "Muda: masomo ya dakika 4 hadi 6 yanayoingia kati ya zamu za kazi",
       "Sheria za kazini (sheria za kutoa taarifa ya kutofika, sheria za usalama) zinatofautiana kwa kila mwajiri: wanafunzi wanafuata kitabu cha mwongozo na mafunzo ya mwajiri wao"
     ],
-    prerequisites: "Anaweza kusoma sentensi fupi na rahisi za Kiingereza. Kozi \"English for Everyday Life (ESL)\" ni kozi nzuri ya kwanza kwa wanafunzi wanaoanza kabisa."
+    prerequisites: "Anaweza kusoma sentensi fupi na rahisi za Kiingereza. Kozi \"Kiingereza kwa Maisha ya Kila Siku (ESL)\" ni kozi nzuri ya kwanza kwa wanafunzi wanaoanza kabisa."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [
@@ -285,7 +285,7 @@ module.exports = {
       "Matoleo yaliyotafsiriwa yanabakiza maneno ya Kiingereza kwa Kiingereza; yaelezeni kwa lugha ya wanafunzi lakini yafanyieni mazoezi kwa Kiingereza.",
       "Rekebisha somo la usalama lilingane na kazi wanazotaka wanafunzi; leta alama halisi au picha kutoka mahali pa kazi pa karibu ukiweza.",
       "Sheria za kutoa taarifa ya kutofika, sheria za likizo na sheria za usalama zinatofautiana kwa kila mwajiri: wakumbushe wanafunzi kufuata kitabu cha mwongozo na mafunzo ya mwajiri wao. Kozi hii inafundisha lugha, si sheria za mwajiri.",
-      "Tumia majina na maelezo ya kubuni katika ripoti na jumbe za mazoezi. Unganisha kozi hii na msaada wa kutafuta kazi (angalia \"Resumes, LinkedIn and Job Interviews\")."
+      "Tumia majina na maelezo ya kubuni katika ripoti na jumbe za mazoezi. Unganisha kozi hii na msaada wa kutafuta kazi (angalia \"CV (Wasifu wa Kazi), LinkedIn na Usaili wa Kazi\")."
     ]
   }
 };

@@ -28,7 +28,7 @@ module.exports = {
       "Àwọn irinṣẹ́ aṣojú ń yí padà kíákíá; ṣàyẹ̀wò ohun tí wọ́n ń ṣe àti òdiwọ̀n ètò wọn lórí ojú-òpó irinṣẹ́ kọ̀ọ̀kan",
       "Kò sí ìsọfúnni oníbàárà gidi, ìsanwó tàbí fífi nǹkan ránṣẹ́ sí oníbàárà nígbà ìdánrawò; ìbéèrè òfin lọ sọ́dọ̀ agbẹjọ́rò"
     ],
-    prerequisites: "A gbà ọ́ níyànjú láti kọ́kọ́ ṣe \"AI Automation and Agentic Workflows\"."
+    prerequisites: "A gbà ọ́ níyànjú láti kọ́kọ́ ṣe \"Iṣẹ́ Aládàáṣe pẹ̀lú AI àti Àwọn Aṣojú AI (Agentic Workflows)\"."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

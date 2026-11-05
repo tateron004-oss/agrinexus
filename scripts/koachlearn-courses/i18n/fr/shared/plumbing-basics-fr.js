@@ -31,7 +31,7 @@ module.exports = {
       "Temps : leçons de 5 à 6 minutes, à placer entre le travail, l'école et les rendez-vous",
       "Les licences varient selon l'État et la ville : chaque apprenant vérifie les règles sur la page officielle du lieu où il vit"
     ],
-    prerequisites: "Aucun. \"Commencer une carrière dans les métiers qualifiés\" est une bonne première étape pour choisir un métier ; ce cours va plus loin en plomberie."
+    prerequisites: "Aucun. \"Commencer une carrière dans les métiers techniques\" est une bonne première étape pour choisir un métier ; ce cours va plus loin en plomberie."
   },
   // ---- ADDIE : Conception (objectifs : condition, action observable, critère) ----
   objectives: [

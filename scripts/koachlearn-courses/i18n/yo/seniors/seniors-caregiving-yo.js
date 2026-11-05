@@ -28,7 +28,7 @@ module.exports = {
       "Ìlera: yíyí oògùn padà gbọ́dọ̀ wá láti ọ̀dọ̀ dókítà tàbí onímọ̀ oògùn nìkan; a nílò àṣẹ ẹni tí a fẹ́ràn láti pín ìsọfúnni ìlera rẹ̀",
       "Àṣírí àti àlàáfíà: kò sí nọ́mbà Medicare, Social Security tàbí báńkì kíkún nínú AI tàbí ímeèlì; ìrànlọ́wọ́ pàjáwìrì nípasẹ̀ 988"
     ],
-    prerequisites: "Kò sí. Ẹ̀kọ́ \"Medicare Basics\" jẹ́ ẹ̀kọ́ alábàárìn tó wúlò."
+    prerequisites: "Kò sí. Ẹ̀kọ́ \"Ìpìlẹ̀ Medicare\" jẹ́ ẹ̀kọ́ alábàárìn tó wúlò."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

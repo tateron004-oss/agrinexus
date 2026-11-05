@@ -28,7 +28,7 @@ module.exports = {
       "Ìyípo kọ̀ọ̀kan ní òdiwọ̀n ìyípo, ó sì ń gbé iṣẹ́ tí kò yanjú lọ sọ́dọ̀ ènìyàn",
       "Àkókò: ẹ̀kọ́ kúkúrú pẹ̀lú iṣẹ́ àṣeṣe kan ní ọ̀kọ̀ọ̀kan"
     ],
-    prerequisites: "Ẹ̀kọ́ 3 àti 4 nínú Design, Build, and Deploy Autonomous AI Agents (\"Building AI Agents\" àti \"AI Agent Tool Use and Automation\")."
+    prerequisites: "Ẹ̀kọ́ 3 àti 4 nínú Design, Build, and Deploy Autonomous AI Agents (\"Kíkọ́ Àwọn Agent AI\" àti \"Lílo Irinṣẹ́ àti Automation pẹ̀lú Aṣojú AI\")."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

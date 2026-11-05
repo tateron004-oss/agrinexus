@@ -28,7 +28,7 @@ module.exports = {
       "Certaines conditions de libération conditionnelle ou de mise à l'épreuve limitent l'usage d'internet ; chaque apprenant suit ses propres conditions",
       "Vie privée : aucun numéro de dossier, numéro d'identité ou autre donnée privée dans un outil d'IA ou un rappel"
     ],
-    prerequisites: "Le cours « Introduction à l'IA et confiance numérique » est utile, mais pas obligatoire."
+    prerequisites: "Le cours « Découvrir l'IA et prendre confiance avec le numérique » est utile, mais pas obligatoire."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

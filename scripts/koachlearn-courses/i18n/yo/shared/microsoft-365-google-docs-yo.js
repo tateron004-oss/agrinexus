@@ -28,7 +28,7 @@ module.exports = {
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú 4 sí 6, nǹkan bí ìṣẹ́jú 60 lápapọ̀",
       "Ìpamọ́: a kì í pín fáìlì tó ní àdírẹ́sì, nọ́mbà ìdánimọ̀ tàbí ìsọfúnni ìlera pẹ̀lú \"Anyone with the link\""
     ],
-    prerequisites: "Kò sí, ṣùgbọ́n Ọgbọ́n Kọ̀mpútà Ìpìlẹ̀ tàbí Ìpìlẹ̀ Íńtánẹ́ẹ̀tì máa ran àwọn akẹ́kọ̀ọ́ tí mouse àti browser jẹ́ tuntun fún lọ́wọ́."
+    prerequisites: "Kò sí, ṣùgbọ́n \"Ìmọ̀ Ìpìlẹ̀ Kọ̀mpútà\" tàbí Ìpìlẹ̀ Íńtánẹ́ẹ̀tì máa ran àwọn akẹ́kọ̀ọ́ tí mouse àti browser jẹ́ tuntun fún lọ́wọ́."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [
@@ -302,7 +302,7 @@ module.exports = {
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n parí ẹ̀kọ́ náà tí wọ́n sì gba Meets tàbí Exceeds ní gbogbo ìlà rubric ti iṣẹ́ ìkẹyìn",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé wọ́n ṣe ìwé gidi, ètò owó tàbí àkọsílẹ̀ orúkọ láàárín ọjọ́ 30 lẹ́yìn ẹ̀kọ́ náà (ìwádìí àtẹ̀lé)",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n fi PDF ránṣẹ́ fún ìwé ìbéèrè iṣẹ́, ilé-ìwé tàbí fọ́ọ̀mù ọ́fíìsì láìsí ìrànlọ́wọ́",
-      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀síwájú sí ẹ̀kọ́ tó kàn, bí Ímeèlì àti Ìbánisọ̀rọ̀ Orí Ayélujára tàbí ẹ̀kọ́ wíwá iṣẹ́"
+      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀síwájú sí ẹ̀kọ́ tó kàn, bí \"Í-meèlì àti Ìbánisọ̀rọ̀ lórí Ayélujára\" tàbí ẹ̀kọ́ wíwá iṣẹ́"
     ]
   },
   // ---- ADDIE: Implementation ----

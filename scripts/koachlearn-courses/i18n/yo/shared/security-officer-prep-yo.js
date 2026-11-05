@@ -40,7 +40,7 @@ module.exports = {
       "Àyẹ̀wò ìtàn ìwà: a sọ fún àwọn akẹ́kọ̀ọ́ tí wọ́n ní àkọsílẹ̀ ẹ̀ṣẹ̀ pé kí wọ́n dáhùn ní òtítọ́, kí wọ́n sì wo òfin ìpínlẹ̀ wọn tàbí ètò ìrànlọ́wọ́ òfin fún àwọn tó ń padà sílé",
       "Ẹ̀rọ: fóònù tàbí kọ̀mpútà ilé-ìkàwé fún ojú-òpó ìpínlẹ̀; ìwé fún àkọsílẹ̀ àyẹ̀wò àti ìròyìn"
     ],
-    prerequisites: "Kò sí. \"Customer Service Excellence\" àti \"Résumés, LinkedIn and Interviews\" máa ràn ọ́ lọ́wọ́ pẹ̀lú ẹ̀kọ́ yìí."
+    prerequisites: "Kò sí. \"Iṣẹ́ Ìsìn Oníbàárà Tó Dára Jù\" àti \"Résumés, LinkedIn and Interviews\" máa ràn ọ́ lọ́wọ́ pẹ̀lú ẹ̀kọ́ yìí."
   },
   // ---- ADDIE: Design ----
   objectives: [

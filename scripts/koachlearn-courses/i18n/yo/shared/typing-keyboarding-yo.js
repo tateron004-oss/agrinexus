@@ -20,7 +20,7 @@ module.exports = {
   // ---- ADDIE: Analysis ----
   analysis: {
     learners: "Àwọn tó ń wá iṣẹ́ ní gbogbo ọjọ́ orí: àwọn ọ̀dọ́ tó ń wá iṣẹ́ àkọ́kọ́, àwọn àgbàlagbà tó ń yí iṣẹ́ padà tàbí tó ń padà sí iṣẹ́, àwọn àgbà, àwọn tó ń padà sílé láti ẹ̀wọ̀n àti àwọn tí èdè míì jẹ́ èdè àkọ́kọ́ wọn. Ọ̀pọ̀ ń lo fóònù lójoojúmọ́, ṣùgbọ́n wọ́n ń fi ìka méjì tẹ ọ̀rọ̀ lórí kọ̀mpútà, wọ́n sì ń wo àwọn kọ́kọ́rọ́.",
-    startingPoint: "Wọ́n lè tan kọ̀mpútà, ṣí ètò kan kí wọ́n sì tẹ gbólóhùn kan nípa wíwo àwọn kọ́kọ́rọ́ (bí a ṣe kọ́ni nínú \"Ọgbọ́n Ìpìlẹ̀ Kọ̀mpútà\"). Ọ̀pọ̀ jù lọ kò tíì kọ́ ìlà ilé rí, wọn kò mọ ìyára wọn, wọ́n sì ń lo mouse fún gbogbo copy, paste àti undo.",
+    startingPoint: "Wọ́n lè tan kọ̀mpútà, ṣí ètò kan kí wọ́n sì tẹ gbólóhùn kan nípa wíwo àwọn kọ́kọ́rọ́ (bí a ṣe kọ́ni nínú \"Ìmọ̀ Ìpìlẹ̀ Kọ̀mpútà\"). Ọ̀pọ̀ jù lọ kò tíì kọ́ ìlà ilé rí, wọn kò mọ ìyára wọn, wọ́n sì ń lo mouse fún gbogbo copy, paste àti undo.",
     gap: "Iṣẹ́ ọ́fíìsì, iṣẹ́ ìrànlọ́wọ́ oníbàárà, títẹ data àti iṣẹ́ ìlera ń retí títẹ̀ ọ̀rọ̀ tó dúró ṣinṣin tí kò sì ní àṣìṣe, àwọn agbanisíṣẹ́ kan sì ń dán ìyára títẹ̀ wò kí wọ́n tó gbani síṣẹ́. Títẹ̀ nípa wíwá kọ́kọ́rọ́ kọ̀ọ̀kan (hunt and peck) lọ́ra, ó ń rẹni, ó sì kún fún àṣìṣe. Àwọn akẹ́kọ̀ọ́ nílò ìlò ìka tó tọ́, ọ̀nà láti wọn ìtẹ̀síwájú, ìjókòó tó láìléwu àti ètò ojoojúmọ́ tí wọ́n lè tẹ̀lé fúnra wọn.",
     constraints: [
       "Ìpele kíkàwé: ọ̀rọ̀ tó rọrùn àti gbólóhùn kúkúrú (nǹkan bí kíláàsì 6)",
@@ -29,7 +29,7 @@ module.exports = {
       "Àkókò: ẹ̀kọ́ ìṣẹ́jú 4 sí 6 pẹ̀lú àṣeṣe ìṣẹ́jú 10 sí 15 lójoojúmọ́",
       "Ìtura àti ìlera: dúró tí títẹ̀ ọ̀rọ̀ bá ń fa ìrora tàbí kíkú ara, kí o sì bá òṣìṣẹ́ ìlera sọ̀rọ̀"
     ],
-    prerequisites: "Kí o lè tan kọ̀mpútà kí o sì ṣí ètò kan láti tẹ ọ̀rọ̀ sí. Àwọn akẹ́kọ̀ọ́ tí kò tíì lo kọ̀mpútà rí kọ́kọ́ ṣe \"Ọgbọ́n Ìpìlẹ̀ Kọ̀mpútà\"."
+    prerequisites: "Kí o lè tan kọ̀mpútà kí o sì ṣí ètò kan láti tẹ ọ̀rọ̀ sí. Àwọn akẹ́kọ̀ọ́ tí kò tíì lo kọ̀mpútà rí kọ́kọ́ ṣe \"Ìmọ̀ Ìpìlẹ̀ Kọ̀mpútà\"."
   },
   // ---- ADDIE: Design ----
   objectives: [

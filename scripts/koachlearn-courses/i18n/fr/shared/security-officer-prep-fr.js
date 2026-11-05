@@ -41,7 +41,7 @@ module.exports = {
       "Vérification des antécédents : on dit aux apprenants qui ont un casier judiciaire de répondre honnêtement et de vérifier les règles de leur État ou de s'adresser à un service d'aide juridique pour la réinsertion",
       "Appareils : un téléphone ou un ordinateur de bibliothèque pour les pages de l'État ; du papier pour les listes et le rapport"
     ],
-    prerequisites: "Aucun. « Excellence du service client » et « CV, LinkedIn et entretiens » sont de bons cours complémentaires."
+    prerequisites: "Aucun. « L'excellence du service client » et « CV, LinkedIn et entretiens » sont de bons cours complémentaires."
   },
   // ---- ADDIE : Conception ----
   objectives: [

@@ -28,7 +28,7 @@ module.exports = {
       "Matangazo lazima yawe ya kweli, matangazo ya kulipwa yawekwe wazi, maoni ya uongo yamepigwa marufuku, na barua pepe lazima zifuate CAN-SPAM",
       "Hadithi na picha za wateja zinatumiwa tu kwa ruhusa yao"
     ],
-    prerequisites: "\"Utangulizi wa AI kwa Wajasiriamali\". Kozi \"Zana za AI Ambazo Kila Mjasiriamali Anapaswa Kujua\" inasaidia kuhusu Canva."
+    prerequisites: "\"Utangulizi wa AI kwa Wajasiriamali\". Kozi \"Zana za AI Ambazo Kila Mjasiriamali Anapaswa Kuzijua\" inasaidia kuhusu Canva."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

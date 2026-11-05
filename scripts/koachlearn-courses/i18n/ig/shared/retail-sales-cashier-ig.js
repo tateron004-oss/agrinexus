@@ -31,7 +31,7 @@ module.exports = {
       "Iwu ahịa nwere oke afọ dị iche n'otu steeti; n'ụfọdụ steeti, a gaghị ekwe ka ndị ntorobịa ree mmanya ma ọ bụ ụtaba",
       "Nchekwa: agbasoghị onye ohi ụlọ ahịa ọsọ, egbochighị onye ohi; gbasoo iwu ụlọ ahịa ma kpọọ 911"
     ],
-    prerequisites: "Ọ dịghị. Ndị na-amụ ihe chọrọ omume ọzọ na pasenti (percent) na ego nwere ike ịgụ \"Everyday Math for Work and Life\"; \"Customer Service Excellence\" na-aga n'ime miri banyere ije ozi ndị ahịa."
+    prerequisites: "Ọ dịghị. Ndị na-amụ ihe chọrọ omume ọzọ na pasenti (percent) na ego nwere ike ịgụ \"Mgbakọ na Mwepụ Kwa Ụbọchị maka Ọrụ na Ndụ\"; \"Ọrụ Ndị Ahịa Kacha Mma\" na-aga n'ime miri banyere ije ozi ndị ahịa."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [
@@ -223,7 +223,7 @@ module.exports = {
           text: [
             "Ụlọ ahịa ọ bụla nwere iwu nlọghachi (return policy): ụbọchị ole, ma a chọrọ rịsịt, na otu ego si alaghachi (na kaadị, dị ka ego nkịtị ma ọ bụ dị ka store credit). Mụta nke gị n'ọzụzụ. Gbasoo ya otu ụzọ maka onye ọ bụla, ma rịọ onye njikwa mgbe nlọghachi dị n'èzí iwu ahụ.",
             "Nsogbu ọnụahịa na-emekarị: tag shelf sị $4.99, rejista sị $5.49. Nọrọ nwayọ, mee price check, ma gbasoo iwu ụlọ ahịa gị. Arụla ụka, agbanwekwala ọnụahịa n'onwe gị.",
-            "Na onye ahịa iwe were, jiri nzọụkwụ anọ: gee ntị n'egbochighị ya okwu, rịọ mgbaghara maka nsogbu ahụ, dozie ihe ị nwere ike idozi ma ọ bụ kpọta onye njikwa, ma kelee ya. Ihe ọmụmụ \"Customer Service Excellence\" na-aga n'ime miri.",
+            "Na onye ahịa iwe were, jiri nzọụkwụ anọ: gee ntị n'egbochighị ya okwu, rịọ mgbaghara maka nsogbu ahụ, dozie ihe ị nwere ike idozi ma ọ bụ kpọta onye njikwa, ma kelee ya. Ihe ọmụmụ \"Ọrụ Ndị Ahịa Kacha Mma\" na-aga n'ime miri.",
             "Nchekwa gị bụ ihe mbụ. Agbasola ma ọ bụ jide onye ohi ụlọ ahịa; gwa onye njikwa ma ọ bụ ndị nche. Ọ bụrụ na onye ahịa yiri gị egwu, ma ọ bụ n'oge ohi, arụla ụka ma ọ bụ lụọ ọgụ: gbasoo ọzụzụ nchekwa ụlọ ahịa gị, nye ihe a rịọrọ, ma kpọọ 911 mgbe ọ dị mma. OSHA (ụlọ ọrụ gọọmentị US na-ahụ maka nchekwa n'ọrụ) depụtara ijikwa ego n'ihu ọha na ọrụ n'abalị dị ka ihe na-eme ka ime ihe ike n'ọrụ dị njọ karịa."
           ],
           steps: [

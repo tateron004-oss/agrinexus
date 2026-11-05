@@ -34,7 +34,7 @@ module.exports = {
       "Muda: masomo ya dakika 4 hadi 6",
       "Mtihani unabadilika mwishoni mwa 2026: wanafunzi lazima wakague comptia.org kwa toleo, tarehe na bei"
     ],
-    prerequisites: "Kuweza kutumia kompyuta na usalama wa msingi wa akaunti. \"Utangulizi wa Usalama wa Mtandao\" na \"Misingi ya Msaada wa IT (Maandalizi ya CompTIA A+)\" ni vizuri kuzisoma kwanza."
+    prerequisites: "Kuweza kutumia kompyuta na usalama wa msingi wa akaunti. \"Utangulizi wa Usalama wa Mtandao\" na \"Misingi ya Msaada wa TEHAMA (Maandalizi ya CompTIA A+)\" ni vizuri kuzisoma kwanza."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

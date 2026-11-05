@@ -34,7 +34,7 @@ module.exports = {
       "Kunyunyizia au kusambaza kwa droni kunahitaji vibali vya usafiri wa anga na vya viuatilifu",
       "Data za wakulima ni siri na zinashirikiwa tu kwa ruhusa yao"
     ],
-    prerequisites: "\"Droni za Ufuatiliaji wa Kilimo 3: Afya ya Mazao, Wadudu na Uchakataji wa Data\" (kuunganisha ramani na kutengeneza ramani ya NDVI)."
+    prerequisites: "\"Droni kwa Ufuatiliaji wa Kilimo 3: Afya ya Mazao, Wadudu na Uchakataji wa Data\" (kuunganisha ramani na kutengeneza ramani ya NDVI)."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

@@ -26,7 +26,7 @@ module.exports = {
   // ---- ADDIE: Uchambuzi ----
   analysis: {
     learners: "Watu wazima wa aina mbalimbali: wanaotafuta kazi za data, ripoti au uendeshaji, wanajeshi wastaafu wanaohamia kazi za kiraia, wamiliki wa biashara ndogo, vijana, na watu wanaorudi nyumbani kutoka gerezani wanaojenga upya ujuzi wa kazi. Wengi wametumia spreadsheet; wachache wametengeneza dashibodi.",
-    startingPoint: "Wanaweza kuingiza data kwenye spreadsheet, kuongeza jumla kwa SUM na kutengeneza chati rahisi (au wamesoma kozi \"Excel na Spreadsheets kwa Kazi\"). Hawajatumia Power BI wala Looker Studio. Baadhi hawana uhakika wa chati ipi itumike au kwa nini namba kwenye ripoti zinaweza kuwa si sahihi.",
+    startingPoint: "Wanaweza kuingiza data kwenye spreadsheet, kuongeza jumla kwa SUM na kutengeneza chati rahisi (au wamesoma kozi \"Excel na Lahajedwali kwa Kazi\"). Hawajatumia Power BI wala Looker Studio. Baadhi hawana uhakika wa chati ipi itumike au kwa nini namba kwenye ripoti zinaweza kuwa si sahihi.",
     gap: "Waajiri wanataka watu wanaoweza kugeuza data ghafi kuwa ukurasa mmoja ulio wazi unaojibu swali la biashara na unaoweza kuaminiwa. Wanafunzi wanahitaji kupanga, kutengeneza, kukagua na kushiriki dashibodi, na kuonyesha moja kwenye usaili. Huu pia ni ujuzi wa ripoti unaopimwa katika PL-300 na CompTIA Data+.",
     constraints: [
       "Kiwango cha kusoma: maneno rahisi na sentensi fupi; kila neno la data linaelezwa",
@@ -35,7 +35,7 @@ module.exports = {
       "Muda: masomo ya dakika 5 hadi 6 yanayoingia kati ya kazi na utafutaji wa kazi",
       "Faragha: data ya mazoezi ni ya kubuni; usipakie kamwe data halisi ya wateja, wagonjwa au wafanyakazi kwa mazoezi"
     ],
-    prerequisites: "Matumizi ya msingi ya spreadsheet: kuingiza data, SUM, kupanga (sort) na chati rahisi. Kama hayo ni mapya kwako, soma kwanza kozi \"Excel na Spreadsheets kwa Kazi\"."
+    prerequisites: "Matumizi ya msingi ya spreadsheet: kuingiza data, SUM, kupanga (sort) na chati rahisi. Kama hayo ni mapya kwako, soma kwanza kozi \"Excel na Lahajedwali kwa Kazi\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

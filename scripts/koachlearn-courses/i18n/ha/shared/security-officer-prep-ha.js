@@ -43,7 +43,7 @@ module.exports = {
       "Binciken tarihin laifi: ana gaya wa masu koyo da ke da tarihin laifi su amsa da gaskiya su duba ƙa'idojin jiharsu ko shirin taimakon shari'a na masu dawowa gida",
       "Na'urori: waya ko kwamfutar ɗakin karatu don shafukan jiha; takarda don jerin abubuwan dubawa da rahoto"
     ],
-    prerequisites: "Babu. Kwasa-kwasan \"Customer Service Excellence\" da \"Résumés, LinkedIn and Interviews\" suna taimakawa tare da wannan."
+    prerequisites: "Babu. Kwasa-kwasan \"Ƙwarewa a Hidimar Abokan Ciniki\" da \"Résumés, LinkedIn and Interviews\" suna taimakawa tare da wannan."
   },
   // ---- ADDIE: Design ----
   objectives: [

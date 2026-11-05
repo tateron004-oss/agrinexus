@@ -28,7 +28,7 @@ module.exports = {
       "Makadirio na namba za AI lazima zikaguliwe; masharti na ada za vyeti zinatoka pmi.org",
       "Maneno rahisi ya kiraia; maneno ya kijeshi yanatafsiriwa, hayachukuliwi kuwa yanajulikana"
     ],
-    prerequisites: "Hakuna. Wanafunzi wapya kwa zana za AI wanaweza kuanza na kozi ya \"Utangulizi wa AI na Kujiamini Kidijitali\"."
+    prerequisites: "Hakuna. Wanafunzi wapya kwa zana za AI wanaweza kuanza na kozi ya \"Utangulizi wa AI na Kujiamini katika Teknolojia\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

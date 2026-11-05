@@ -29,7 +29,7 @@ module.exports = {
       "Kanuni za NIL za NCAA, NAIA, vyama vya majimbo na shule zinatofautiana na zinabadilika; uliza ofisi ya kufuata kanuni au mkurugenzi wa michezo",
       "Wanamichezo walio chini ya miaka 18 wanamhusisha mzazi au mlezi; haya ni mafunzo, si ushauri wa kisheria wala wa kodi"
     ],
-    prerequisites: "Hakuna. Kozi \"Kujenga Jina kwenye Mitandao ya Kijamii kwa Wanamichezo\" ni hatua nzuri ya kwanza."
+    prerequisites: "Hakuna. Kozi \"Kujenga Chapa ya Mwanamichezo kwenye Mitandao ya Kijamii\" ni hatua nzuri ya kwanza."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

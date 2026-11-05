@@ -306,7 +306,7 @@ module.exports = {
     results: [
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n parí ẹ̀kọ́ náà tí wọ́n sì dé ìpele tàbí kọjá rẹ̀ ní gbogbo ìlà rubric ti iṣẹ́ ìkẹyìn",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé àwọn ń lo kọ̀mpútà fúnra wọn, bí ní ilé-ìkàwé tàbí ibùdó iṣẹ́, ní ọjọ́ 30 lẹ́yìn ẹ̀kọ́ náà (ìwádìí lẹ́yìn ẹ̀kọ́)",
-      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀síwájú sí ẹ̀kọ́ míì, bí Internet Basics tàbí Microsoft 365 and Google Docs",
+      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀síwájú sí ẹ̀kọ́ míì, bí “Ìpìlẹ̀ Íńtánẹ́ẹ̀tì” tàbí Microsoft 365 and Google Docs",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé àwọn parí iṣẹ́ gidi kan lórí kọ̀mpútà, bí lẹ́tà tàbí ìwé ìbéèrè iṣẹ́"
     ]
   },

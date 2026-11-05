@@ -30,7 +30,7 @@ module.exports = {
       "Owó: Wi-Fi ọ̀fẹ́ nílé, ní ilé-ìkàwé tàbí ní kafé; kò sí app tí a ń sanwó fún",
       "Ààbò: kò sí iṣẹ́ báńkì tàbí ìsọfúnni àdáni lórí Wi-Fi gbogbogbò nígbà àṣeṣe"
     ],
-    prerequisites: "Kò sí. \"Smartphone and Tablet\" tàbí \"Basic Computer Skills\" lè ran àwọn akẹ́kọ̀ọ́ tí kò tíì lo ẹ̀rọ rí lọ́wọ́."
+    prerequisites: "Kò sí. \"Smartphone and Tablet\" tàbí \"Ìmọ̀ Ìpìlẹ̀ Kọ̀mpútà\" lè ran àwọn akẹ́kọ̀ọ́ tí kò tíì lo ẹ̀rọ rí lọ́wọ́."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [
@@ -295,7 +295,7 @@ module.exports = {
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n parí ẹ̀kọ́ náà tí wọ́n sì dé ìpele tàbí kọjá rẹ̀ ní gbogbo ìlà rubric fún ètò ìjáde náà",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé àwọn lo íńtánẹ́ẹ̀tì fúnra wọn fún ohun gidi kan, bí àkókò ìṣísílẹ̀, ojú ọjọ́ tàbí ojú-òpó ìlera, láàárín ọjọ́ 30 lẹ́yìn ẹ̀kọ́ náà (ìwádìí àtẹ̀lé)",
       "Àwọn akẹ́kọ̀ọ́ tí wọ́n sọ pé àwọn pa pop-up irọ́ dé tàbí yẹra fún ojú-òpó tó jọ ti gidi",
-      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀síwájú sí ẹ̀kọ́ tó kàn, bí \"Email and Online Communication\" tàbí \"Digital Literacy Basics\""
+      "Àwọn akẹ́kọ̀ọ́ tí wọ́n tẹ̀síwájú sí ẹ̀kọ́ tó kàn, bí \"Í-meèlì àti Ìbánisọ̀rọ̀ lórí Ayélujára\" tàbí \"Ìpìlẹ̀ Ìmọ̀ Ẹ̀rọ Ayélujára\""
     ]
   },
   // ---- ADDIE: Implementation ----

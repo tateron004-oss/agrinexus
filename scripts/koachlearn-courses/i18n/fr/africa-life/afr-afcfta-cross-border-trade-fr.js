@@ -36,7 +36,7 @@ module.exports = {
       "Sécurité de l'argent : on ne partage ni code PIN ni mot de passe ; aucun conseil en investissement",
       "Le cours est aussi traduit en français et en arabe, donc les exemples incluent des commerçants francophones et d'Afrique du Nord"
     ],
-    prerequisites: "Savoir lire un peu et utiliser un téléphone. Les cours « Utiliser le mobile money en toute sécurité » et « Créer et gérer une petite entreprise en Afrique » sont utiles mais pas obligatoires."
+    prerequisites: "Savoir lire un peu et utiliser un téléphone. Les cours « Utiliser le mobile money en toute sécurité » et « Enregistrer et gérer une petite entreprise en Afrique » sont utiles mais pas obligatoires."
   },
   // ---- ADDIE : Conception (objectifs : condition, action observable, critère) ----
   objectives: [

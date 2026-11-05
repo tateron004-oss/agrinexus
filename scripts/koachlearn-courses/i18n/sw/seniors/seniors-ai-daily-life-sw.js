@@ -28,7 +28,7 @@ module.exports = {
       "Mlo maalum unatoka kwa daktari wa mwanafunzi, si kwa AI",
       "Faragha: hakuna majina, namba za akaunti, za Medicare au za Social Security katika prompts au picha za barua"
     ],
-    prerequisites: "Kozi \"AI for Seniors: Using AI Assistants\" inasaidia kuanza nayo, lakini si lazima."
+    prerequisites: "Kozi \"AI kwa Wazee: Kutumia Wasaidizi wa AI\" inasaidia kuanza nayo, lakini si lazima."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

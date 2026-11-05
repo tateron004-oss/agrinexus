@@ -29,7 +29,7 @@ module.exports = {
       "Kuɗi: masu koyo suna iya samun kuɗi kaɗan; kada a taɓa biyan kuɗi ga mutum ko wakili kafin a duba makarantar",
       "Lokaci: darussa na minti 4 zuwa 6; kusan minti 60 zuwa 75 gaba ɗaya"
     ],
-    prerequisites: "Babu. Masu koyo da har yanzu suke zaɓen sana'a za su iya ɗaukar kwas ɗin \"Skilled Trades Careers\" (Ayyukan Sana'o'in Hannu); masu koyo da suke sababbi a intanet za su iya fara ɗaukar \"Internet Basics\" (Tushen Intanet)."
+    prerequisites: "Babu. Masu koyo da har yanzu suke zaɓen sana'a za su iya ɗaukar kwas ɗin \"Skilled Trades Careers\" (Ayyukan Sana'o'in Hannu); masu koyo da suke sababbi a intanet za su iya fara ɗaukar \"Tushen Amfani da Intanet\"."
   },
   // ---- ADDIE: Design ----
   objectives: [

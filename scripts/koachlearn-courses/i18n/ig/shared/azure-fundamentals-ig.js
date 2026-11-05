@@ -34,7 +34,7 @@ module.exports = {
       "Oge: nkuzi nkeji 5, ihe dị ka nkeji 60 n'ozuzu, gbakwunye ule omume",
       "Ozi ule na ọnụahịa na-agbanwe; ndị na-amụ ihe na-elele peeji gọọmentị Microsoft"
     ],
-    prerequisites: "Ọ dịghị. \"Ntọala Cloud Computing\" bụ mmalite dị nro karịa maka ndị na-anụbeghị okwu cloud mgbe ọ bụla."
+    prerequisites: "Ọ dịghị. \"Mmalite Cloud Computing\" bụ mmalite dị nro karịa maka ndị na-anụbeghị okwu cloud mgbe ọ bụla."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

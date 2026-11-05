@@ -38,7 +38,7 @@ module.exports = {
       "Las reglas, los costos y las opciones de examen cambian según el estado y con el tiempo: siempre remitir a ged.com o a la oficina del estado",
       "Ansiedad con las matemáticas: muchos ejemplos resueltos, comprobar las respuestas, sin presión de tiempo al practicar"
     ],
-    prerequisites: "Sumar, restar, multiplicar y dividir números enteros. Quien no esté seguro con las fracciones, los decimales y los porcentajes puede tomar primero \"Matemáticas cotidianas para el trabajo y la vida\"."
+    prerequisites: "Sumar, restar, multiplicar y dividir números enteros. Quien no esté seguro con las fracciones, los decimales y los porcentajes puede tomar primero \"Matemáticas diarias para el trabajo y la vida\"."
   },
   // ---- ADDIE: Diseño ----
   objectives: [
@@ -303,7 +303,7 @@ module.exports = {
       "Imprime la hoja de fórmulas actual y la hoja de referencia de la calculadora de ged.com para que practiquen con lo que verán en el examen.",
       "Ayuda a cada persona a revisar las reglas de su estado (GED o HiSET, edad, identificación, costo, en línea o en un centro de examen) en los sitios oficiales; no des costos ni puntajes para aprobar de memoria.",
       "En programas correccionales o de reinserción, pregunta a la oficina de educación cómo se organiza el examen en el lugar.",
-      "Combina este curso con \"Matemáticas cotidianas para el trabajo y la vida\" para quienes necesiten más práctica con fracciones y porcentajes."
+      "Combina este curso con \"Matemáticas diarias para el trabajo y la vida\" para quienes necesiten más práctica con fracciones y porcentajes."
     ]
   }
 };

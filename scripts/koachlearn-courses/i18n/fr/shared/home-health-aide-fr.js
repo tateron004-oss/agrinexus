@@ -29,7 +29,7 @@ module.exports = {
       "Aucun conseil sur les médicaments ni les doses ; aucun entraînement pratique sur de vrais clients chez eux",
       "Certains apprenants ont un casier judiciaire ; les règles de vérification des antécédents changent selon l'État et l'agence"
     ],
-    prerequisites: "Aucun. \"S'occuper d'un proche\" et \"Comprendre l'information sur la santé\" sont utiles, mais pas obligatoires."
+    prerequisites: "Aucun. \"Aidant : prendre soin d'un proche\" et \"Comprendre l'information sur la santé\" sont utiles, mais pas obligatoires."
   },
   // ---- ADDIE : Conception (objectifs : condition, action observable, critère) ----
   objectives: [

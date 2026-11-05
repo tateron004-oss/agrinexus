@@ -30,7 +30,7 @@ module.exports = {
       "Faragha: mazoezi yanatumia wageni, namba za kadi na namba za vyumba za kubuni tu",
       "Sheria za ajira zinatofautiana: mipaka ya umri kwa vijana na ukaguzi wa historia hutofautiana kwa jimbo na kwa mwajiri"
     ],
-    prerequisites: "Hakuna. Kozi \"Customer Service Excellence\" (Ubora wa Huduma kwa Wateja) ni kozi nzuri ya kuambatana nayo kwa ujuzi wa jumla wa huduma."
+    prerequisites: "Hakuna. Kozi \"Ubora katika Huduma kwa Wateja\" ni kozi nzuri ya kuambatana nayo kwa ujuzi wa jumla wa huduma."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

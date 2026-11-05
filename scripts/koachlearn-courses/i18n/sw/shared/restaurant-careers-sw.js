@@ -30,7 +30,7 @@ module.exports = {
       "Sheria za malipo na za kazi za vijana zinatofautiana kwa kila jimbo; wanafunzi wanakagua ofisi ya kazi ya jimbo lao",
       "Baadhi ya wanafunzi wana rekodi za uhalifu; kozi inaonyesha waajiri wanaotoa nafasi ya haki na haiahidi kazi yoyote"
     ],
-    prerequisites: "Hakuna. Wanafunzi watakaoshughulikia chakula wanapaswa pia kusoma kozi \"Maandalizi ya Mshughulikiaji Chakula na Mtihani wa ServSafe\"."
+    prerequisites: "Hakuna. Wanafunzi watakaoshughulikia chakula wanapaswa pia kusoma kozi \"Mhudumu wa Chakula na Maandalizi ya Mtihani wa ServSafe\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

@@ -29,7 +29,7 @@ module.exports = {
       "Muda: masomo ya dakika 5 hadi 6 yanayoingia kati ya kazi na miadi",
       "Sheria zinatofautiana kwa jimbo na jiji: wanafunzi wanakagua leseni kwenye ukurasa rasmi wa mahali wanapoishi"
     ],
-    prerequisites: "Hakuna. Kozi \"Kuanza Kazi katika Fani za Ufundi\" inawasaidia wanafunzi kuchagua fani; kozi hii inaingia ndani zaidi katika uchomeleaji."
+    prerequisites: "Hakuna. Kozi \"Kuanza Kazi katika Ufundi Stadi\" inawasaidia wanafunzi kuchagua fani; kozi hii inaingia ndani zaidi katika uchomeleaji."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

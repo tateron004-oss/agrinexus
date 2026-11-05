@@ -22,7 +22,7 @@ module.exports = {
   about: [
     "Ce cours s'adresse aux petits exploitants et aux agriculteurs commerciaux en croissance, aux ouvriers agricoles, aux jeunes agripreneurs et aux agents de vulgarisation des zones les plus sèches du Kenya, du Nigeria, du Ghana, du Burkina Faso, du Sénégal et de toute l'Afrique, où les pluies sont courtes, les poches de sécheresse fréquentes, et où le labour laisse le sol nu, dur et assoiffé.",
     "Le chapitre 1 explique les trois principes de l'agriculture de conservation tels que la FAO les définit, et montre comment préparer la terre sans labourer : cuvettes de semis, zaï, sous-solage et semis direct. Le chapitre 2 porte sur la couverture du sol avec du paillis, le désherbage sans labour, les outils et le calendrier d'une saison, ce qu'on peut attendre les années de sécheresse, et la façon de tenir pendant les premières saisons.",
-    "L'irrigation et la collecte des eaux de pluie sont traitées dans \"Irrigation et gestion de l'eau\", et les bases du compost et du paillage dans \"Santé et fertilité des sols\" ; ce cours ne les répète pas. Commencez sur un champ et gardez à côté une parcelle labourée pour comparer. Chaque leçon dure environ cinq minutes et se termine par une tâche sur votre propre terre."
+    "L'irrigation et la collecte des eaux de pluie sont traitées dans \"Irrigation et gestion de l'eau\", et les bases du compost et du paillage dans \"Santé et fertilité du sol\" ; ce cours ne les répète pas. Commencez sur un champ et gardez à côté une parcelle labourée pour comparer. Chaque leçon dure environ cinq minutes et se termine par une tâche sur votre propre terre."
   ],
   finalTask: "Écrivez un plan d'une saison d'agriculture de conservation pour un champ (ou un exemple : 1 acre de maïs et de niébé à Machakos, 2 hectares de sorgho dans le nord du Ghana, ou 1 hectare de mil et d'arachide sur le Plateau central du Burkina Faso) : un croquis du champ ; comment vous le préparerez sans labourer (cuvettes, zaï, sous-solage ou semis direct) et pourquoi ; comment vous garderez au moins 30 pour cent du sol couvert ; la culture et la rotation ou l'association ; votre plan de désherbage ; un calendrier mois par mois des travaux, des outils et des coûts ; et comment vous le comparerez avec une parcelle labourée.",
   // ---- ADDIE : Analyse ----
@@ -37,7 +37,7 @@ module.exports = {
       "Sécurité des pesticides : herbicides seulement s'ils sont homologués dans le pays, utilisés comme le dit l'étiquette, avec un équipement de protection",
       "Temps : leçons de 4 à 6 minutes ; les résultats se construisent sur plusieurs saisons"
     ],
-    prerequisites: "Aucun. \"Santé et fertilité des sols\" et \"Agriculture intelligente face au climat\" sont des bases utiles."
+    prerequisites: "Aucun. \"Santé et fertilité du sol\" et \"Agriculture intelligente face au climat\" sont des bases utiles."
   },
   // ---- ADDIE : Conception (objectifs : condition, action observable, critère) ----
   objectives: [

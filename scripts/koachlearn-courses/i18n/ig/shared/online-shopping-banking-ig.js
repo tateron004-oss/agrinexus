@@ -29,7 +29,7 @@ module.exports = {
       "Ọ dịghị mkpa ịzụta ezigbo ihe: ọrụ ikpeazụ na-akwụsị na peeji ịkwụ ụgwọ",
       "Nzuzo: ndị na-amụ ihe anaghị ede nọmba kaadị, okwuntughe ma ọ bụ koodu n'ihu ndị ọzọ, na Wi-Fi ọha n'enweghị data nke ha, ma ọ bụ n'email, ozi ederede ma ọ bụ chat"
     ],
-    prerequisites: "Ọ dịghị. \"Ihe Ndabere Ịntanetị\" ma ọ bụ \"Iji Smartphone na Tablet\" na-enyere ndị ọhụrụ na weebụsaịtị na app aka."
+    prerequisites: "Ọ dịghị. \"Mmalite Ịntanetị\" ma ọ bụ \"Iji Smartphone na Tablet\" na-enyere ndị ọhụrụ na weebụsaịtị na app aka."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

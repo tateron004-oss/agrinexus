@@ -30,7 +30,7 @@ module.exports = {
       "Oge: nkuzi nkeji 5 ruo 6 nke dabara n'etiti ọrụ na oge ịhụ ndị ọrụ",
       "Ndị ntorobịa na-erubeghị afọ 18: iwu gọọmentị etiti gbasara ọrụ ụmụaka na-egbochi ọrụ power saw na igwe osisi; iwu akwụkwọ ikike na mmemme dị iche n'otu steeti"
     ],
-    prerequisites: "Mgbakọ nọmba zuru oke. \"Ịmalite Ọrụ n'Ọrụ Aka\" na-enyere ndị na-amụ ihe aka ịhọrọ ọrụ aka; \"Ntọala Nchekwa n'Ebe Ọrụ (OSHA)\" na-akụzi nchekwa n'ebe ọrụ n'ozuzu. Ihe ọmụmụ a na-abanyekwu n'ime carpentry."
+    prerequisites: "Mgbakọ nọmba zuru oke. \"Ịmalite Ọrụ n'Ọrụ Aka Nka (Skilled Trades)\" na-enyere ndị na-amụ ihe aka ịhọrọ ọrụ aka; \"Ihe Ndabere nke Nchekwa n'Ebe Ọrụ (OSHA)\" na-akụzi nchekwa n'ebe ọrụ n'ozuzu. Ihe ọmụmụ a na-abanyekwu n'ime carpentry."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

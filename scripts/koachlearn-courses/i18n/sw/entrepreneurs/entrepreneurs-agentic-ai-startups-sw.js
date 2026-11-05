@@ -28,7 +28,7 @@ module.exports = {
       "Zana za mawakala hubadilika haraka; kagua vipengele na mipaka ya mipango kwenye tovuti ya kila zana yenyewe",
       "Wakati wa mazoezi: hakuna data halisi ya wateja, malipo wala kutuma kwa wateja; maswali ya kisheria yaende kwa wakili"
     ],
-    prerequisites: "Kozi \"AI Automation and Agentic Workflows\" (AI ya kujiendesha na mtiririko wa kazi wa mawakala) inapendekezwa."
+    prerequisites: "Kozi \"Uendeshaji Kiotomatiki kwa AI na Mawakala wa AI\" inapendekezwa."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

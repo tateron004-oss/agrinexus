@@ -28,7 +28,7 @@ module.exports = {
       "Ruhusa ya kuwarekodi wachezaji wenzako, makocha na wengine; kanuni za timu kuhusu kurekodi",
       "Muziki wenye leseni tu; kanuni za FTC za kutangaza uhusiano na kanuni za NIL pale chapa yoyote inapohusika"
     ],
-    prerequisites: "Hakuna. Kozi \"Social Media Branding for Athletes\" inakusaidia kuchagua nguzo za maudhui yako kwanza."
+    prerequisites: "Hakuna. Kozi \"Kujenga Chapa ya Mwanamichezo kwenye Mitandao ya Kijamii\" inakusaidia kuchagua nguzo za maudhui yako kwanza."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

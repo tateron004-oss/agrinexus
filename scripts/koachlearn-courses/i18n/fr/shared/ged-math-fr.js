@@ -38,7 +38,7 @@ module.exports = {
       "Les règles, les prix et les options d'examen varient selon l'État et peuvent changer : toujours renvoyer vers ged.com ou le bureau de l'État",
       "Peur des mathématiques : beaucoup d'exemples résolus, vérification des réponses, pas de pression de temps pendant l'entraînement"
     ],
-    prerequisites: "Additionner, soustraire, multiplier et diviser des nombres entiers. Les apprenants qui ne sont pas sûrs d'eux avec les fractions, les nombres décimaux et les pourcentages peuvent suivre d'abord « Les maths du quotidien pour le travail et la vie »."
+    prerequisites: "Additionner, soustraire, multiplier et diviser des nombres entiers. Les apprenants qui ne sont pas sûrs d'eux avec les fractions, les nombres décimaux et les pourcentages peuvent suivre d'abord « Les maths de tous les jours, au travail et dans la vie »."
   },
   // ---- ADDIE : Conception ----
   objectives: [
@@ -303,7 +303,7 @@ module.exports = {
       "Imprimez la fiche de formules actuelle et la fiche de référence de la calculatrice depuis ged.com pour que les apprenants s'entraînent avec ce qu'ils verront.",
       "Aidez les apprenants à vérifier les règles de leur État (GED ou HiSET, âge, pièce d'identité, prix, en ligne ou en centre d'examen) sur les sites officiels ; ne citez pas de mémoire les prix ni les notes de réussite.",
       "Dans les programmes en milieu carcéral ou de réinsertion, demandez au service éducatif comment l'examen est organisé sur place.",
-      "Associez ce cours à « Les maths du quotidien pour le travail et la vie » pour les apprenants qui ont besoin de plus d'entraînement avec les fractions et les pourcentages."
+      "Associez ce cours à « Les maths de tous les jours, au travail et dans la vie » pour les apprenants qui ont besoin de plus d'entraînement avec les fractions et les pourcentages."
     ]
   }
 };

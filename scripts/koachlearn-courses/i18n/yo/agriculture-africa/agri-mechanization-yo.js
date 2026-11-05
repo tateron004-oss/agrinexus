@@ -21,7 +21,7 @@ module.exports = {
   outcome: "pinnu, pẹ̀lú ìṣirò, bóyá kí o yá ẹ̀rọ tàbí kí o rà á fún iṣẹ́ kan lórí oko: yan àwọn iṣẹ́ tí ẹ̀rọ máa mérè wá fún, fi owó yíyá wé owó níní ẹ̀rọ, yá iṣẹ́ ẹ̀rọ kí o sì ṣàyẹ̀wò rẹ̀, yan ẹ̀rọ kékeré tó yẹ, lò ó láìléwu pẹ̀lú ìwé àkọsílẹ̀ ìtọ́jú, kí o sì ṣètò iṣẹ́ ìyálò fún àwọn aládùúgbò rẹ tí níní ẹ̀rọ bá lè mérè wá ní ọ̀nà yẹn nìkan.",
   about: [
     "Ẹ̀kọ́ yìí wà fún àwọn àgbẹ̀ kékeré àti àwọn àgbẹ̀ tó ń dàgbà, àwọn òṣìṣẹ́ oko, àwọn ọ̀dọ́ oníṣòwò àgbẹ̀ àti àwọn òṣìṣẹ́ ìtọ́sọ́nà àgbẹ̀ ní Nàìjíríà, Ghana, Kenya, Senegal, Burkina Faso àti káàkiri Áfíríkà. Ọwọ́ ni a ṣì fi ń ṣe ọ̀pọ̀ jù lọ iṣẹ́ oko ní Áfíríkà. Ẹ̀rọ lè gbìn lásìkò, dín iṣẹ́ líle kù, kí ó sì dín àdánù kù, ṣùgbọ́n ẹ̀rọ tí ó dúró láìṣiṣẹ́ fún ọ̀pọ̀ jù lọ ọdún lè kó oko sínú gbèsè.",
-    "Orí 1 jẹ́ nípa ìpinnu: àwọn iṣẹ́ tí ẹ̀rọ máa mérè wá fún, yíyá ẹ̀rọ àti níní ẹ̀rọ pẹ̀lú àpẹẹrẹ ìṣirò owó, àti yíyá iṣẹ́ tírákítọ̀, pẹ̀lú àwọn tí a ń yá nípasẹ̀ app bí Hello Tractor. Orí 2 jẹ́ nípa lílo ẹ̀rọ: ẹ̀rọ kékeré bí tírákítọ̀ oníkẹ̀kẹ́ méjì, ẹ̀rọ ìyọ-àgbàdo, ẹ̀rọ ìpakà àti ẹ̀rọ ìfọ́n oògùn olóńjìnnì; ààbò àti ìwé àkọsílẹ̀ ìtọ́jú; àti bíbẹ̀rẹ̀ òwò iṣẹ́ ẹ̀rọ fún àwọn aládùúgbò rẹ. Lílo ẹ̀rọ papọ̀ gẹ́gẹ́ bí ẹgbẹ́ wà nínú ẹ̀kọ́ \"Kíkó Àwùjọ Jọ: Lílo Ẹ̀rọ Papọ̀ àti Ìdúnàádúrà fún Ohun Èlò Oko\".",
+    "Orí 1 jẹ́ nípa ìpinnu: àwọn iṣẹ́ tí ẹ̀rọ máa mérè wá fún, yíyá ẹ̀rọ àti níní ẹ̀rọ pẹ̀lú àpẹẹrẹ ìṣirò owó, àti yíyá iṣẹ́ tírákítọ̀, pẹ̀lú àwọn tí a ń yá nípasẹ̀ app bí Hello Tractor. Orí 2 jẹ́ nípa lílo ẹ̀rọ: ẹ̀rọ kékeré bí tírákítọ̀ oníkẹ̀kẹ́ méjì, ẹ̀rọ ìyọ-àgbàdo, ẹ̀rọ ìpakà àti ẹ̀rọ ìfọ́n oògùn olóńjìnnì; ààbò àti ìwé àkọsílẹ̀ ìtọ́jú; àti bíbẹ̀rẹ̀ òwò iṣẹ́ ẹ̀rọ fún àwọn aládùúgbò rẹ. Lílo ẹ̀rọ papọ̀ gẹ́gẹ́ bí ẹgbẹ́ wà nínú ẹ̀kọ́ \"Ìkójọpọ̀ Àwùjọ: Pínpín Ẹ̀rọ Oko àti Ìdúnàádúrà fún Ohun Èlò Ọ̀gbìn\".",
     "Àpẹẹrẹ lásán ni àwọn iye owó inú ẹ̀kọ́ yìí; lo iye owó gidi láti ọ̀dọ̀ àwọn olùtajà ẹ̀rọ, iṣẹ́ ìyálò àti àwọn ayánilówó. Ẹ̀kọ́ yìí ṣàlàyé bí owó àyáwó àti àdéhùn ìyálò (lease) ṣe ń ṣiṣẹ́, ṣùgbọ́n kò fúnni ní ìmọ̀ràn ìdókòwò: ka gbogbo àdéhùn tán kí o sì béèrè lọ́wọ́ olùdámọ̀ràn tí o gbẹ́kẹ̀ lé. Ẹ̀kọ́ kọ̀ọ̀kan gba nǹkan bí ìṣẹ́jú márùn-ún, ó sì parí pẹ̀lú iṣẹ́ kan fún oko rẹ. Ìdánwò ìmọ̀ wà ní ìparí orí kọ̀ọ̀kan, ìdánwò ìbéèrè 20 sì wà ní ìparí ẹ̀kọ́ náà."
   ],
   finalTask: "Ṣe ìwé ìpinnu yíyá-tàbí-rírà fún ẹ̀rọ kan àti iṣẹ́ kan lórí oko rẹ (tàbí àpẹẹrẹ bí tírákítọ̀ fún títúlẹ̀ hẹ́kítà 10 àgbàdo ní Kaduna, tàbí ẹ̀rọ ìyọ-àgbàdo fún ẹgbẹ́ àgbẹ̀ kan nítòsí Tamale): iṣẹ́ náà àti ìdí tí ẹ̀rọ fi máa mérè wá fún un; owó ọdọọdún níní ẹ̀rọ (owó tí kì í yí padà àti owó fún hẹ́kítà kọ̀ọ̀kan); owó yíyá; iye hẹ́kítà ìdọ́gba; ìpinnu rẹ; àti àwọn òfin ààbò àti ìwé àkọsílẹ̀ ìtọ́jú tí o máa lò. Tí o bá pinnu láti rà á, fi ètò ojú-ewé kan kún un láti máa yá ẹ̀rọ náà fún àwọn aládùúgbò: àwọn iṣẹ́, àwọn oníbàárà àti hẹ́kítà, iye owó, ìnáwó, ìdọ́gba, ìforúkọsílẹ̀ àti ìsanwó, àti àwọn ewu pàtàkì.",
@@ -299,7 +299,7 @@ module.exports = {
       "Ṣàlàyé owó àyáwó, àdéhùn ìyálò àti san-bí-o-ṣe-ń-lò àti ewu wọn, ṣùgbọ́n má ṣe fúnni ní ìmọ̀ràn ìdókòwò; tọ́ àwọn akẹ́kọ̀ọ́ sọ́dọ̀ olùdámọ̀ràn tí wọ́n gbẹ́kẹ̀ lé.",
       "Jẹ́ kí àwọn ọmọdé jìnnà sí gbogbo àṣefihàn ẹ̀rọ.",
       "Fi rubric ṣe àmì fún iṣẹ́ ìkẹyìn, kí o sì fúnni ní èsì lórí ìlà \"Kò tíì dé\" kan lẹ́ẹ̀kan.",
-      "Darí àwọn ẹgbẹ́ tí wọ́n fẹ́ lo ẹ̀rọ papọ̀ sí \"Kíkó Àwùjọ Jọ: Lílo Ẹ̀rọ Papọ̀ àti Ìdúnàádúrà fún Ohun Èlò Oko\"."
+      "Darí àwọn ẹgbẹ́ tí wọ́n fẹ́ lo ẹ̀rọ papọ̀ sí \"Ìkójọpọ̀ Àwùjọ: Pínpín Ẹ̀rọ Oko àti Ìdúnàádúrà fún Ohun Èlò Ọ̀gbìn\"."
     ]
   }
 };

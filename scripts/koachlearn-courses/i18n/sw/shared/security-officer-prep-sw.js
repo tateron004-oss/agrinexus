@@ -40,7 +40,7 @@ module.exports = {
       "Ukaguzi wa historia ya uhalifu: wanafunzi wenye rekodi wanaambiwa wajibu kwa ukweli na wakague kanuni za jimbo lao au mpango wa msaada wa kisheria kwa wanaorudi katika jamii",
       "Vifaa: simu au kompyuta ya maktaba kwa kurasa za jimbo; karatasi kwa orodha za kukagua na ripoti"
     ],
-    prerequisites: "Hakuna. Kozi \"Huduma Bora kwa Wateja\" na \"CV, LinkedIn na Usaili wa Kazi\" ni wenzi wazuri wa kozi hii."
+    prerequisites: "Hakuna. Kozi \"Ubora katika Huduma kwa Wateja\" na \"CV, LinkedIn na Usaili wa Kazi\" ni wenzi wazuri wa kozi hii."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

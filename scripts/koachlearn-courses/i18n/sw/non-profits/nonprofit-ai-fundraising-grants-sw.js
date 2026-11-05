@@ -28,7 +28,7 @@ module.exports = {
       "Kauli za kodi na za kisheria zinakaguliwa na mhasibu au mwongozo rasmi wa IRS",
       "Muda: wafanyakazi na watu wa kujitolea wana shughuli nyingi, kwa hiyo kila somo ni kama dakika 5"
     ],
-    prerequisites: "Kozi \"Utangulizi wa AI kwa Mashirika Yasiyo ya Faida\", au uzoefu fulani wa kutumia msaidizi wa AI."
+    prerequisites: "Kozi \"Utangulizi wa AI kwa Mashirika Yasiyo ya Kiserikali\", au uzoefu fulani wa kutumia msaidizi wa AI."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

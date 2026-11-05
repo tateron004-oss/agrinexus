@@ -30,7 +30,7 @@ module.exports = {
       "Lokaci: darussa na minti 5 zuwa 6 da suka dace da aiki da ganawa",
       "Matasa 'yan ƙasa da shekara 18: dokokin tarayya na aikin yara suna iyakance aiki da zarto mai wuta da injunan aikin katako; ƙa'idojin lasisi da na shirye-shirye sun bambanta bisa jiha"
     ],
-    prerequisites: "Lissafin lambobi cikakku. Kwas ɗin \"Starting a Career in the Skilled Trades\" (Fara Aiki a Sana'o'in Hannu) yana taimaka wa masu koyo su zaɓi sana'a; \"Workplace Safety Basics (OSHA)\" (Tushen Tsaro a Wurin Aiki) yana koyar da tsaron wurin gini gaba ɗaya. Wannan kwas ɗin yana zurfafa a kan aikin kafinta."
+    prerequisites: "Lissafin lambobi cikakku. Kwas ɗin \"Fara Sana'a a Ayyukan Hannu na Ƙwarewa\" yana taimaka wa masu koyo su zaɓi sana'a; \"Tushen Tsaro a Wurin Aiki (OSHA)\" yana koyar da tsaron wurin gini gaba ɗaya. Wannan kwas ɗin yana zurfafa a kan aikin kafinta."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

@@ -39,7 +39,7 @@ module.exports = {
       "Reglas: las licencias de exportación, los límites de residuos y las reglas de certificación cambian y varían según el país y el mercado; los participantes consultan fuentes oficiales",
       "Seguridad: solo plaguicidas registrados, usados como dice la etiqueta y con equipo de protección; el curso no da cifras de dosis"
     ],
-    prerequisites: "Útil: Cooperativas agrícolas y acceso al mercado, y Registros de la finca y bases del negocio (Agronegocios y administración de fincas). Saber leer y sumar."
+    prerequisites: "Útil: Cooperativas agrícolas y acceso al mercado, y Registros de la finca y bases del negocio (\"Agronegocios y administración de la finca\"). Saber leer y sumar."
   },
   // ---- ADDIE: Diseño (objetivos: condición, acción observable, criterio) ----
   objectives: [

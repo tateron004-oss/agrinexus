@@ -28,7 +28,7 @@ module.exports = {
       "Iṣẹ́ kíkọ máa wà ní ipò dry run títí ènìyàn yóò fi fọwọ́ sí i",
       "MCP server tí a gbẹ́kẹ̀ lé nìkan, pẹ̀lú ìwọlé tó kéré jù tí ó nílò"
     ],
-    prerequisites: "Ẹ̀kọ́ 3 nínú Design, Build, and Deploy Autonomous AI Agents (\"Building AI Agents\")."
+    prerequisites: "Ẹ̀kọ́ 3 nínú Design, Build, and Deploy Autonomous AI Agents (\"Kíkọ́ Àwọn Agent AI\")."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

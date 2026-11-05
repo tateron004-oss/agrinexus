@@ -28,7 +28,7 @@ module.exports = {
       "Hakuna ushauri wa uwekezaji: maamuzi ya pesa yanakaguliwa na chanzo rasmi au mtaalamu aliyehitimu",
       "Muda: masomo ya kama dakika 5 yanayoingia kati ya miadi ya kuondoka jeshini, kazi na familia"
     ],
-    prerequisites: "Hakuna. Wanafunzi wapya kwa wasaidizi wa AI wanaweza kwanza kuchukua kozi \"Utangulizi wa AI na Nguvu Kazi ya Baadaye\"."
+    prerequisites: "Hakuna. Wanafunzi wapya kwa wasaidizi wa AI wanaweza kwanza kuchukua kozi \"Utangulizi wa AI na Kazi za Baadaye\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

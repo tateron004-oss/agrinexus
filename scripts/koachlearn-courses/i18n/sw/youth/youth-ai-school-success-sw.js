@@ -28,7 +28,7 @@ module.exports = {
       "Faragha: hakuna taarifa binafsi zinazobandikwa katika zana za AI",
       "Ratiba zenye shughuli nyingi: masomo ya dakika 5 na maneno rahisi"
     ],
-    prerequisites: "Hakuna. Kozi \"What Is AI? (for Young People)\" inawasaidia wanafunzi ambao hawajawahi kutumia msaidizi wa AI."
+    prerequisites: "Hakuna. Kozi \"AI ni Nini? (kwa Vijana)\" inawasaidia wanafunzi ambao hawajawahi kutumia msaidizi wa AI."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

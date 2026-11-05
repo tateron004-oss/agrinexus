@@ -15,7 +15,7 @@ module.exports = {
   outcome: "kujenga, kufunza na kujaribu mtandao mdogo wa neva katika Google Colab kwa Keras unaosoma tarakimu zilizoandikwa kwa mkono, kuripoti usahihi wake kwenye picha mpya, kujaribu badiliko moja la kuuboresha, na kueleza modeli inachoweza na isichoweza kufanya.",
   about: [
     "Deep learning ndiyo inayoendesha kufungua simu kwa uso, wasaidizi wa sauti, apps za kutafsiri, zana za picha za kitabibu na kamera zinazokagua vipuri kiwandani. Kozi hii inaeleza jinsi inavyofanya kazi kwa maneno rahisi, kisha unajenga mtandao wa neva unaofanya kazi wewe mwenyewe.",
-    "Inawafaa wanajeshi wastaafu wanaoingia katika teknolojia, watu wanaojua Python kidogo, na yeyote aliyemaliza kozi \"Utangulizi wa Machine Learning\". Sura 1 inajenga mawazo kwa mazoezi ya karatasi na kalamu. Sura 2 inahamia Google Colab, tovuti ya bure inayoendesha Python, ambapo unafunza mtandao kwa Keras, maktaba ya bure ya deep learning. Kila mstari wa msimbo umetolewa na kuelezwa.",
+    "Inawafaa wanajeshi wastaafu wanaoingia katika teknolojia, watu wanaojua Python kidogo, na yeyote aliyemaliza kozi \"Utangulizi wa Machine Learning (Kujifunza kwa Mashine)\". Sura 1 inajenga mawazo kwa mazoezi ya karatasi na kalamu. Sura 2 inahamia Google Colab, tovuti ya bure inayoendesha Python, ambapo unafunza mtandao kwa Keras, maktaba ya bure ya deep learning. Kila mstari wa msimbo umetolewa na kuelezwa.",
     "Kila somo linachukua kama dakika tano na linaisha na kazi ya \"Jaribu sasa\". Jaribio la maarifa linafunga kila sura na mtihani wa maswali 20 unafunga kozi."
   ],
   finalTask: "Katika Google Colab, pakia tarakimu za MNIST zilizoandikwa kwa mkono, zipime upya, jenga na ufunze mtandao wa neva wa Keras, ripoti usahihi wake kwenye picha za majaribio, tabiri picha tano za majaribio na uzilinganishe na lebo sahihi, kisha fanya badiliko moja (neuroni zaidi au epoch zaidi), funza tena, na uandike sentensi mbili kuhusu kama lilisaidia na kikomo kimoja cha modeli.",
@@ -31,7 +31,7 @@ module.exports = {
       "Muda: kama dakika 5 hadi 6 kwa somo pamoja na mazoezi na muda wa kufunza, kama dakika 60 hadi 75 kwa jumla",
       "Hesabu: kuzidisha na kujumlisha namba ndogo kwa mkono; hakuna calculus inayohitajika"
     ],
-    prerequisites: "Utangulizi wa Kuandika Programu kwa Python; Utangulizi wa Machine Learning unasaidia."
+    prerequisites: "Utangulizi wa Kuandika Programu kwa Python; \"Utangulizi wa Machine Learning (Kujifunza kwa Mashine)\" unasaidia."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

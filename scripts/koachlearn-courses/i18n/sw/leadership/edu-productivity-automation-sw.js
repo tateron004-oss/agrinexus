@@ -28,7 +28,7 @@ module.exports = {
       "Tafsiri zinakaguliwa na mzungumzaji mwenye sifa kabla ya kutumwa",
       "Muda: masomo mafupi, pamoja na wiki moja ya kuendesha mitiririko ya kazi"
     ],
-    prerequisites: "Inapendekezwa kozi \"AI kwa Viongozi wa Shule na Elimu 2: Zana za AI kwa Waelimishaji\"."
+    prerequisites: "Inapendekezwa kozi \"AI kwa Viongozi wa Shule na Elimu 2: Zana za AI kwa Walimu\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

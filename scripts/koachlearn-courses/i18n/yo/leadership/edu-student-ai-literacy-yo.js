@@ -28,7 +28,7 @@ module.exports = {
       "Àwọn irinṣẹ́ AI ń yí padà, nítorí náà a máa ń dán àwọn ìbéèrè ẹ̀kọ́ tí a ti pèsè wò ní kété ṣáájú kíkọ́ni",
       "Àkókò: ẹ̀kọ́ kúkúrú tí ó bá ọjọ́ ilé-ẹ̀kọ́ mu, pẹ̀lú ẹ̀kọ́ akẹ́kọ̀ọ́ ìṣẹ́jú 30"
     ],
-    prerequisites: "A gbà ọ́ níyànjú láti kọ́kọ́ ṣe \"AI fún Àwọn Olùkọ́ àti Aṣáájú Ilé-ẹ̀kọ́ 2: Àwọn Irinṣẹ́ AI fún Olùkọ́\"."
+    prerequisites: "A gbà ọ́ níyànjú láti kọ́kọ́ ṣe \"AI fún Àwọn Olórí Ilé-ẹ̀kọ́ àti Ètò Ẹ̀kọ́ 2: Àwọn Irinṣẹ́ AI fún Àwọn Olùkọ́\"."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [

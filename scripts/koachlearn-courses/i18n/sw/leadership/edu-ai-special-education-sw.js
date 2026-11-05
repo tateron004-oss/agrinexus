@@ -28,7 +28,7 @@ module.exports = {
       "Vifaa vya familia vinabaki vya jumla na vinakaguliwa dhidi ya vifaa vya wilaya; tafsiri zinakaguliwa na wazungumzaji wenye sifa",
       "Muda: masomo mafupi yanayoingia katika siku ya kufundisha"
     ],
-    prerequisites: "Hakuna. Kozi \"AI for School and Educational Leaders 2: AI Tools for Educators\" ni mwanzo mzuri."
+    prerequisites: "Hakuna. Kozi \"AI kwa Viongozi wa Shule na Elimu 2: Zana za AI kwa Walimu\" ni mwanzo mzuri."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

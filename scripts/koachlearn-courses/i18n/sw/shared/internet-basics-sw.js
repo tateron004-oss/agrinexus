@@ -295,7 +295,7 @@ module.exports = {
       "Wanafunzi wanaomaliza kozi na kupata Anafikia au Anazidi katika kila mstari wa kipimo kwa mpango wa matembezi",
       "Wanafunzi wanaosema wametumia intaneti wenyewe kwa hitaji halisi, kama saa za kazi, hali ya hewa au tovuti ya afya, katika siku 30 baada ya kozi (utafiti wa ufuatiliaji)",
       "Wanafunzi wanaosema wamefunga pop-up bandia au wameepuka tovuti inayoiga",
-      "Wanafunzi wanaoendelea na kozi inayofuata, kama Barua Pepe na Mawasiliano Mtandaoni au Misingi ya Ujuzi wa Kidijitali"
+      "Wanafunzi wanaoendelea na kozi inayofuata, kama \"Barua Pepe na Mawasiliano ya Mtandaoni\" au Misingi ya Ujuzi wa Kidijitali"
     ]
   },
   // ---- ADDIE: Utekelezaji ----

@@ -29,7 +29,7 @@ module.exports = {
       "Ego: naanị ihe efu, dị ka Wi-Fi ọba akwụkwọ na app iskaan efu na ekwentị",
       "Nzuzo na iwu: omume na-eji akwụkwọ omume, ọ bụghị ezi ID; ndị nọ na parole ma ọ bụ probation na-agbaso iwu ịntanetị ọ bụla ha nwere"
     ],
-    prerequisites: "Ọ dịghị. \"Nkà Kọmputa Mbụ\" ma ọ bụ \"Smartphone na Tablet\" na-enyere ndị ọhụrụ n'ngwaọrụ aka."
+    prerequisites: "Ọ dịghị. \"Nka Mbụ nke Kọmputa\" ma ọ bụ \"Smartphone na Tablet\" na-enyere ndị ọhụrụ n'ngwaọrụ aka."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [
@@ -296,7 +296,7 @@ module.exports = {
       "Ndị na-amụ ihe mechara ihe ọmụmụ a ma nweta Ruru eru ma ọ bụ Karịrị n'ahịrị rubric ọ bụla nke ọrụ ikpeazụ",
       "Ndị na-amụ ihe kwuru na ha mechara ezi arịrịọ n'ịntanetị, dị ka maka ọrụ, ID ma ọ bụ enyemaka gọọmentị, n'ime ụbọchị 30 mgbe ihe ọmụmụ a gachara (nnyocha nsochi)",
       "Ndị na-amụ ihe kwuru na ha zeere saịtị adịgboroja, aghụghọ ma ọ bụ post ụgha n'ihi na ha lelere ya",
-      "Ndị na-amụ ihe gara n'ihe ọmụmụ ọzọ, dị ka Email na Nkwurịta Okwu n'Ịntanetị ma ọ bụ ihe ọmụmụ ịchọ ọrụ"
+      "Ndị na-amụ ihe gara n'ihe ọmụmụ ọzọ, dị ka \"Email na Mkparịta Ụka n'Ịntanetị\" ma ọ bụ ihe ọmụmụ ịchọ ọrụ"
     ]
   },
   // ---- ADDIE: Mmejupụta ----

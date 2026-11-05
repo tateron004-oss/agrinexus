@@ -33,7 +33,7 @@ module.exports = {
       "Muda: masomo ya dakika 5, kama dakika 60 kwa jumla pamoja na jaribio la mazoezi",
       "Maelezo ya mtihani na bei hubadilika; wanafunzi wanakagua kurasa rasmi za Microsoft"
     ],
-    prerequisites: "Hakuna. \"Cloud Computing Basics\" (Misingi ya Kompyuta ya Wingu) ni mwanzo rahisi zaidi kwa wanafunzi ambao hawajawahi kusikia neno wingu (cloud)."
+    prerequisites: "Hakuna. \"Misingi ya Kompyuta ya Wingu (Cloud Computing)\" ni mwanzo rahisi zaidi kwa wanafunzi ambao hawajawahi kusikia neno wingu (cloud)."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

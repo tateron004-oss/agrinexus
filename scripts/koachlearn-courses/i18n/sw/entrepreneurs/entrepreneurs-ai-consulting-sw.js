@@ -28,7 +28,7 @@ module.exports = {
       "Kanuni za barua pepe za matangazo zinatumika; mpangilio wa kodi na sheria unakaguliwa kwa vyanzo rasmi, mhasibu na wakili",
       "Majina ya wateja na taarifa zao binafsi huondolewa kabla maelezo yoyote hayajawekwa kwenye AI"
     ],
-    prerequisites: "Inapendekezwa kwanza kozi \"Zana za AI Kila Mjasiriamali Anapaswa Kujua\" na \"Maadili, Hatari na Masuala ya Kisheria ya AI\"."
+    prerequisites: "Inapendekezwa kwanza kozi \"Zana za AI Ambazo Kila Mjasiriamali Anapaswa Kuzijua\" na \"Maadili ya AI, Hatari na Masuala ya Kisheria\"."
   },
   // ---- ADDIE: Usanifu (malengo: hali, kitendo kinachoonekana, kiwango) ----
   objectives: [

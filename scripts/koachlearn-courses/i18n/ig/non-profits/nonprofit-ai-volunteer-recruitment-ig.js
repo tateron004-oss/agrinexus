@@ -29,7 +29,7 @@ module.exports = {
       "Akụkọ chọrọ ikike ma ọ bụ ka ọ bụrụ akụkọ e chepụtara",
       "Ngwa n'efu dị ka Google Forms ma ọ bụ Microsoft Forms"
     ],
-    prerequisites: "\"Mmalite AI maka Òtù Na-adịghị Achọ Uru\", ma ọ bụ ahụmahụ ụfọdụ n'iji ngwa enyemaka AI."
+    prerequisites: "\"Mmalite AI maka Otu Na-adịghị Achọ Uru\", ma ọ bụ ahụmahụ ụfọdụ n'iji ngwa enyemaka AI."
   },
   // ---- ADDIE: Nhazi (ebumnuche: ọnọdụ, omume a na-ahụ anya, ọkwa) ----
   objectives: [

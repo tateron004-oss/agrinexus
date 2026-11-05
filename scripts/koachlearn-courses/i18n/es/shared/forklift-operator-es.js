@@ -42,7 +42,7 @@ module.exports = {
       "Dispositivos: un teléfono o una computadora de la biblioteca para las páginas de OSHA; papel para las listas",
       "Estas reglas son de OSHA federal; algunos estados tienen su propio plan de OSHA con reglas al menos igual de estrictas"
     ],
-    prerequisites: "Ninguno. \"Fundamentos de seguridad en el trabajo (OSHA)\" es un curso complementario útil."
+    prerequisites: "Ninguno. \"Seguridad básica en el trabajo (OSHA)\" es un curso complementario útil."
   },
   // ---- ADDIE: Diseño (objetivos: condición, acción observable, criterio) ----
   objectives: [

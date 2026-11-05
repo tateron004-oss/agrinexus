@@ -30,7 +30,7 @@ module.exports = {
       "Les règles changent selon le pays : le cours enseigne les pratiques courantes et comment vérifier les consignes de l'employeur ou du pays",
       "Sécurité : jamais de numéro d'identité, de passeport ou de compte bancaire dans un CV ou un fichier d'exercice ; aucun conseil sur les visas ni conseil juridique"
     ],
-    prerequisites: "Savoir taper un texte simple sur un téléphone ou un ordinateur. Les débutants en informatique peuvent d'abord suivre « Compétences informatiques de base » ; les apprenants aux États-Unis qui veulent un CV américain d'une page et s'entraîner aux entretiens peuvent aussi suivre « CV, LinkedIn et entretiens d'embauche »."
+    prerequisites: "Savoir taper un texte simple sur un téléphone ou un ordinateur. Les débutants en informatique peuvent d'abord suivre « Les bases de l'ordinateur » ; les apprenants aux États-Unis qui veulent un CV américain d'une page et s'entraîner aux entretiens peuvent aussi suivre « CV, LinkedIn et entretiens d'embauche »."
   },
   // ---- ADDIE : Conception (objectifs : condition, action observable, critère) ----
   objectives: [

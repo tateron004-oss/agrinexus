@@ -30,7 +30,7 @@ module.exports = {
       "Àkókò: nǹkan bí ìṣẹ́jú 5 sí 6 fún ẹ̀kọ́ kan pẹ̀lú àṣeṣe, nǹkan bí ìṣẹ́jú 60 sí 75 lápapọ̀",
       "Ìṣirò: àròpọ̀, ìfiwéra àti nọ́mbà ẹlẹ́sẹ̀ (decimal) tó rọrùn nìkan"
     ],
-    prerequisites: "Kò sí. \"Ọgbọ́n Kọ̀mpútà Ìpìlẹ̀\" (Basic Computer Skills) ń ran àwọn tí kò mọ títẹ̀ àti lílo browser dáadáa lọ́wọ́."
+    prerequisites: "Kò sí. \"Ìmọ̀ Ìpìlẹ̀ Kọ̀mpútà\" (Basic Computer Skills) ń ran àwọn tí kò mọ títẹ̀ àti lílo browser dáadáa lọ́wọ́."
   },
   // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
   objectives: [
