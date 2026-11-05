@@ -84,3 +84,17 @@ test("the church case: a picture of 'the church building' has church in its titl
   // the words of a title may sit anywhere in it, in any case
   assert.equal((await find("church", [commons("THE CHURCH, from the south")])).title, "THE CHURCH, from the south");
 });
+
+test("an Openverse licence code reads as a licence in the printed credit, not as a stray word (live, 5 November 2026: 'Picture: flickr, striatic, by')", async () => {
+  const { readableLicense, searchPictureCandidates, creditLine } = require("../../server/providers/picture-fetch.js");
+  assert.equal(readableLicense("by"), "CC BY");
+  assert.equal(readableLicense("by-sa"), "CC BY-SA");
+  assert.equal(readableLicense("by-nc-nd"), "CC BY-NC-ND");
+  assert.equal(readableLicense("cc0"), "CC0");
+  assert.equal(readableLicense("pdm"), "Public domain");
+  assert.equal(readableLicense(""), "");
+  assert.equal(readableLicense("CC BY-SA 3.0"), "CC BY-SA 3.0", "a licence already written out is left alone");
+  const found = await searchPictureCandidates("church building", { fetchFn: async () => { throw new Error("offline"); }, openImages: async () => [{ title: "church building", imageUrl: "https://example.org/a.jpg", sourceUrl: "https://example.org/a", creator: "striatic", license: "by", sourceName: "flickr" }] });
+  assert.equal(found[0].license, "CC BY");
+  assert.equal(creditLine(found[0]), "Picture: flickr, striatic, CC BY");
+});
