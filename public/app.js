@@ -38432,6 +38432,7 @@ function renderUserWorkspace() {
   );
   // "I want to type" or the keyboard button: the typed box shows even when voice works, until the person says "use voice" (see kyroSetTypedMode).
   const typedModeOn = !microphoneFallbackRequired && trueExperienceMode !== "mission" && nexusTypedModeRequested === true;
+  kyroUpdateTypeButton(!(microphoneFallbackRequired || typedModeOn) && trueExperienceMode !== "mission");
   document.body.classList.add("nexus-os-visual-boundary");
   document.body.classList.toggle("nexus-low-bandwidth-mode", nexusLowBandwidthMode);
   // Static QA compatibility notes for the safer service descriptions preserved by app-behavior-audit:
@@ -52387,6 +52388,49 @@ const KYRO_TUTOR_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:teach|tu
 const KYRO_TUTOR_NOT = /\b(?:letters?|alphabet|abc|to read|reading|counting|to count|adding|subtract\w*|take away|maths?|mathematics|numbers?|arithmetic|herufi|hesabu|kusoma|kuhesabu)\b(?![\s\S]*\bhomework\b)|\b(?:apply(?:ing)?\s+for|file\s+(?:my|a|an|the)|renew|open(?:ing)?\s+(?:a|an)\s+(?:bank\s+)?account|get(?:ting)?\s+(?:a|an|my)\s+(?:id|license|licence|passport|visa|card|permit)|start(?:ing)?\s+(?:a|my)\s+business|find(?:ing)?\s+(?:a\s+)?job|(?:use|using|about|with)\s+(?:kyro|nexus|this\s+app|the\s+app))\b/i;
 // In a session, a sentence that is a request of its own is not the learner's answer.
 const KYRO_TUTOR_OTHER = /^(?:open|show(?: me)? (?:my\b|all\b|some\b|(?:(?:a|an|the)\s+)?(?:pictures?|videos?|images?|photos?|maps?|weather|documents?|lists?|notes?|reminders?|calendar)\b)|play|pause|resume|call|text|send|remind me|set (?:a|an|my)|add (?:a|an|my)|delete|cancel my|find (?:a|an|the|me)|search(?: for)?|look up|navigate|directions? to|take me to|go to|close|(?:create|make|draft|prepare|generate|build)\s+(?:me\s+)?(?:an?|the|my|some)|what(?:'s| is| are) (?:the )?(?:weather|time|date)|weather|my (?:lists|notes|reminders|documents)|fungua|onyesha|cheza|piga|tuma|nikumbushe|tafuta|hali ya hewa)\b/i;
+// Typing instead of talking: "I want to type", "let me type", "use the keyboard" (or the small Type button) shows the typed box even when voice works, and "use voice" (or the Use voice button) goes back.
+// The choice is kept in the browser, so it is still on after a reload. (Before this the typed box showed only when voice could not run, and nobody could tell how to get it.)
+const KYRO_TYPE_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:i\s+)?(?:want|would\s+like|'d\s+like|need|prefer)\s+to\s+(?:type|use\s+(?:the\s+)?keyboard)\b|let\s+me\s+type\b|(?:can|could)\s+i\s+type\b|type\s+instead\b|(?:switch|change|go)\s+(?:over\s+)?to\s+(?:typing|the\s+keyboard)\b|(?:turn\s+on\s+|use\s+)?typing\s+mode\b|use\s+(?:the\s+)?keyboard\b|i\s+(?:can'?t|cannot)\s+(?:talk|speak)\b|nataka\s+kuandika\b|niruhusu\s+niandike\b|nitaandika\b)`, "i");
+const KYRO_VOICE_BACK = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:use|go\s+back\s+to|switch\s+to|back\s+to)\s+(?:my\s+)?voice(?:\s+mode)?\b|(?:(?:i\s+)?(?:want|would\s+like|'d\s+like)\s+to\s+(?:talk|speak)|let\s+me\s+(?:talk|speak))(?:\s+(?:now|again|instead))?\s*[.?!]*$|(?:talk|speak)\s+instead\b|voice\s+mode\b|tumia\s+sauti\b|nataka\s+kuongea\s*[.?!]*$)`, "i");
+let nexusTypedModeRequested = (() => { try { return window.localStorage.getItem("kyroTypedMode") === "1"; } catch { return false; } })();
+const KYRO_TYPE_TEXT = Object.freeze({
+  en: { label: "Type your request", hint: "Type your request below. Say \"use voice\" or tap the button to talk again.", useVoice: "Use voice", button: "Type", buttonLabel: "Type instead of talking",
+    on: "Okay. Type in the box. Say \"use voice\" any time to talk again.", off: "Okay, I am listening." },
+  sw: { label: "Andika ombi lako", hint: "Andika ombi lako hapa chini. Sema \"tumia sauti\" au bonyeza kitufe kuongea tena.", useVoice: "Tumia sauti", button: "Andika", buttonLabel: "Andika badala ya kuongea",
+    on: "Sawa. Andika kwenye kisanduku. Sema \"tumia sauti\" wakati wowote kuongea tena.", off: "Sawa, ninakusikiliza." }
+});
+function kyroTypeText(key) {
+  let lang = "en"; try { lang = languageCode() === "sw" ? "sw" : "en"; } catch { lang = "en"; }
+  return KYRO_TYPE_TEXT[lang][key];
+}
+// The small Type button, bottom left, for a person who cannot or will not speak (and so cannot say "I want to type"). It is shown while the typed box is not, and the result cards cover it.
+function kyroUpdateTypeButton(show = true) {
+  try {
+    const signedIn = typeof data !== "undefined" && Boolean(data);
+    const want = show !== false && signedIn && !nexusTypedModeRequested;
+    let button = document.getElementById("kyroTypeInstead");
+    if (!button && want) {
+      button = document.createElement("button");
+      button.type = "button"; button.id = "kyroTypeInstead";
+      button.style.cssText = "position:fixed;left:16px;bottom:16px;z-index:40;padding:10px 18px;border-radius:999px;border:1px solid #475569;background:#1e293b;color:#f1f5f9;font:inherit;font-weight:600;cursor:pointer";
+      button.addEventListener("click", () => { kyroSetTypedMode(true, { say: false }); });
+      document.body.append(button);
+    }
+    if (button) { button.hidden = !want; button.textContent = kyroTypeText("button"); button.setAttribute("aria-label", kyroTypeText("buttonLabel")); }
+  } catch { /* the button is a convenience */ }
+}
+// On: the typed box shows (an open answer card that is not a lesson is put away, so the box is not hidden behind it) and takes the cursor. Off: the orb alone again.
+function kyroSetTypedMode(on, options = {}) {
+  nexusTypedModeRequested = on === true;
+  try { window.localStorage.setItem("kyroTypedMode", nexusTypedModeRequested ? "1" : "0"); } catch { /* the choice lasts until the page is reloaded */ }
+  try { document.querySelectorAll("[data-kyro-result]").forEach(node => { if (!node.querySelector("[data-kyro-tutor-box]")) node.remove(); }); } catch { /* the box is shown anyway */ }
+  try { renderUserWorkspace(); } catch { /* the next render shows it */ }
+  kyroUpdateTypeButton(!nexusTypedModeRequested);
+  if (nexusTypedModeRequested) setTimeout(() => { try { document.querySelector("#nexusCommandCenterInput")?.focus(); } catch { /* the box is there to click */ } }, 250);
+  if (options.say !== false) { try { setVoiceResponse(kyroTypeText(nexusTypedModeRequested ? "on" : "off"), true, { allowHandoff: false, source: "kyro-open" }); } catch { /* the box says it too */ } }
+  return true;
+}
+try { document.addEventListener("click", event => { const target = event && event.target; if (target && target.closest && target.closest("[data-kyro-use-voice]")) kyroSetTypedMode(false, { say: false }); }); } catch { /* no document yet */ }
 // In a lesson, "show me a picture" / "show me a video" (no subject said) means pictures or videos of the lesson's own subject, and when that screen is closed the lesson comes back where it was.
 const KYRO_TUTOR_DEMO = /^(?:(?:can|could)\s+(?:you|i)\s+)?(?:(?:please\s+)?show(?:\s+me)?|let\s+me\s+(?:see|watch)|i\s+(?:want|would\s+like|'d\s+like)\s+to\s+(?:see|watch)|(?:can|could)\s+i\s+(?:see|watch)|watch)\s+(?:(?:a|an|the|some)\s+)?(picture|pictures|image|images|photo|photos|diagram|diagrams|drawing|video|videos|clip|clips|demo|demonstration)(?:\s+(?:of|about|for)\s+(?:it|this|that|the\s+lesson|the\s+topic))?\s*[.?!]*$/i;
 let kyroTutorSubject = ""; // the subject of the open lesson, as the server last said it
@@ -52768,6 +52812,9 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
       }
     }
   }
+  // "I want to type", "let me type", "use the keyboard": the typed box shows even when voice works; "use voice" goes back (before the lesson claims below, so it works in a lesson too)
+  if (KYRO_TYPE_REQUEST.test(said)) { if (!options.typed) kyroTakeOverTurn(); kyroSetTypedMode(true); return true; }
+  if (nexusTypedModeRequested && KYRO_VOICE_BACK.test(said)) { if (!options.typed) kyroTakeOverTurn(); kyroSetTypedMode(false); return true; }
   // A tutoring session is open, or this asks for one: said aloud it goes the typed way, so the next step is drawn on a card and read out (see KYRO_TUTOR_REQUEST). While a session is open every sentence that is not a request of its own is the
   // learner's answer or question, and "stop" ends it on the server.
   // "Show me a picture" / "show me a video" in a lesson: pictures or videos of the lesson's own subject (said or typed)

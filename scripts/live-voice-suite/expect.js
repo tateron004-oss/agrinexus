@@ -10,6 +10,7 @@
 //   download: true                      a Download button is on the screen
 //   intake: true | false | "regex"      a form (intake) is on the screen / not / its words match
 //   orb: true                           nothing is on the screen: the orb is back
+//   typedBox: true | false              the typed box (#nexusCommandCenterInput) is visible / not
 //   said: "regex"                       what the model said aloud matches (any of its lines)     notSaid: "regex"
 //   player: { active: true, state: "playing" }   the music/video player      model: true   the model must have answered (spoken)
 //   tool: "regex" | typed: "regex"      the model called a tool matching, or the page answered a typed route matching      section: "regex"   the page section
@@ -44,6 +45,7 @@ function makeEvaluator() {
       else if (expect.intake === false) check(!state.intake, `a form is still on the screen: "${String(state.intake).slice(0, 80)}"`);
       else check(asRegex(expect.intake).test(state.intake || ""), `the form's words did not match ${asRegex(expect.intake)}: "${String(state.intake || "none").slice(0, 100)}"`);
     }
+    if (expect.typedBox !== undefined) check(Boolean(state.typedBox) === Boolean(expect.typedBox), `expected the typed box ${expect.typedBox ? "to be showing" : "not to be showing"}`);
     if (expect.said !== undefined) check(said.some(line => asRegex(expect.said).test(line)), `nothing said aloud matched ${asRegex(expect.said)} (said: ${said.join(" / ").slice(0, 160) || "nothing"})`);
     if (expect.notSaid !== undefined) check(!said.some(line => asRegex(expect.notSaid).test(line)), `something said aloud matched what must not be said ${asRegex(expect.notSaid)}`);
     if (expect.model) check(said.length > 0, "nothing was said aloud at all");
