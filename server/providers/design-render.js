@@ -161,7 +161,7 @@ async function renderDesignDocx(kind, title, text) {
   const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, ShadingType, BorderStyle, AlignmentType, VerticalAlign, PageBorderDisplay, PageBorderOffsetFrom, TableLayoutType } = docx;
   const { layout, accent } = ir;
   const font = layout === "invitation" ? "Georgia" : "Arial";
-  const WIDTH = 10512;
+  const WIDTH = layout === "invitation" ? 9648 : 10512; // the text width between the margins: the invitation's margins are wider (room for its frame), so a full-width box stuck out past the frame (seen in Word, 5 Nov 2026)
   const centred = layout === "flyer" || layout === "poster" || layout === "invitation";
   const alignment = centred ? AlignmentType.CENTER : AlignmentType.LEFT;
   const bodySize = layout === "poster" ? 32 : layout === "invitation" ? 28 : layout === "flyer" ? 26 : 24; // half-points: 24 = 12 pt
