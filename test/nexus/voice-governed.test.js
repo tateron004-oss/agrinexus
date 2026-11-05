@@ -100,7 +100,9 @@ test("the wiring: what the page says is captured for the model, the tool call go
   const call = app.slice(app.indexOf("async function callNexusOpenAiRealtimeTool("), app.indexOf("const correlationId = `rt-sdk-", app.indexOf("async function callNexusOpenAiRealtimeTool(")));
   assert.match(call, /kyroToolCalledAt = Date\.now\(\);/);
   assert.match(call, /if \(\(KYRO_GOVERNED_VOICE_TOOLS\.has\(String\(toolName \|\| ""\)\) && !\(typeof KYRO_VOICE_TOOL_ANSWERS !== "undefined" && KYRO_VOICE_TOOL_ANSWERS\.test\(command\)\)\) \|\| nexusPendingBehaviorConfirmation\) \{\s*const governed = await kyroAnswerLikeTyped\(command\);\s*if \(governed\) return governed;/);
-  assert.ok(call.indexOf("kyroShowVisualRequest") < call.indexOf("kyroAnswerLikeTyped"), "after the page's own quick answers");
+  // (compared at the real call sites: a sentence tutoring owns is answered by the lesson through the same typed route at the top, before the older tools, and its own "show me a picture" is not one of those: see kyroTutorOwns)
+  assert.ok(call.indexOf("if (visualKind) return kyroShowVisualRequest(") < call.indexOf("const governed = await kyroAnswerLikeTyped(command);"), "after the page's own quick answers");
+  assert.ok(call.indexOf("if (kyroTutorOwns(command)) {") > 0 && call.indexOf("if (kyroTutorOwns(command)) {") < call.indexOf("const mediaAsk = window.KyroMediaCommands?.parse?.(command);"), "a lesson sentence is answered by the lesson before any older tool is asked");
   assert.match(call, /Date\.now\(\) - kyroConfirmedAt < 8000/, "a yes the page already answered is not answered twice");
   const route = app.slice(app.indexOf("function routeKyroVoiceIntakeTranscript("), app.indexOf("function startKyroResumeIntake") > 0 ? app.indexOf("function routeKyroVoiceIntakeTranscript(") + 16000 : undefined);
   assert.match(route, /if \(trimmed && source !== "tool-call"\) \{[\s\S]*kyroHeard = \{ key: heardKey, text: trimmed, at: Date\.now\(\), recovered: false \};/);

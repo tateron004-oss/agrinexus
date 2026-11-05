@@ -206,7 +206,8 @@ test("the model's tool call does not clear the screen the page has just opened f
   sandbox.kyroLastSpokenOpen = { key: "open health", at: Date.now() - 9000 }; assert.equal(sandbox.just("Open Health"), false, "long ago");
   sandbox.kyroLastSpokenOpen = { key: "", at: 0 }; assert.equal(sandbox.just(""), false);
   const handler = app.slice(app.indexOf("async function callNexusOpenAiRealtimeTool("), app.indexOf("async function callNexusOpenAiRealtimeTool(") + 600);
-  assert.match(handler, /if \(!\(typeof kyroPageJustOpened === "function" && kyroPageJustOpened\(command\)\)\) kyroDismissStaleWorkspace\(command\);/);
+  // (and not for a lesson sentence either: the lesson card the page has just drawn for those words is the answer; kyroTutorOwns is the tutor mode's own fence)
+  assert.match(handler, /if \(!\(typeof kyroPageJustOpened === "function" && kyroPageJustOpened\(command\)\) && !kyroTutorOwns\(command\)\) kyroDismissStaleWorkspace\(command\);/);
 });
 
 // Found by the live voice test: "prepare a provider summary of my readings" gave a card of rows, or a question, or nothing, depending on what the planner chose that time. The voice tool's own reader answers it the same way every time.

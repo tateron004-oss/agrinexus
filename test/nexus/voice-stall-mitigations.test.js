@@ -412,7 +412,7 @@ test("the tool call from the voice session: a 429 reaches the model as a refusal
     const base = loadResilience();
     const sandbox = base.sandbox;
     Object.assign(sandbox, {
-      KYRO_GOVERNED_VOICE_TOOLS: new Set(), nexusPendingBehaviorConfirmation: null, kyroDismissStaleWorkspace() {}, kyroVoiceIntakeOwnsTurn: () => false, nexusGenesisVoiceDebugLog() {}, languageCode: () => "en",
+      KYRO_GOVERNED_VOICE_TOOLS: new Set(), nexusPendingBehaviorConfirmation: null, kyroDismissStaleWorkspace() {}, kyroTutorOwns: () => false, kyroTutorDemoCommand: () => null, kyroTutorSentAt: 0, kyroVoiceIntakeOwnsTurn: () => false, nexusGenesisVoiceDebugLog() {}, languageCode: () => "en",
       genesisWorkspaceActionFromFinalTranscript: () => null, executeGenesisWorkspaceFromFinalTranscript: async () => false, runAuthoritativeGenesisWorkspaceBridge: async () => {},
       kyroDeviceTimeZone: () => "America/Chicago", kyroVisualRequestKind: () => null, kyroShowResultScreen: () => false
     });
