@@ -38430,6 +38430,9 @@ function renderUserWorkspace() {
         : nexusOsVoiceRuntimeState?.mode || "").toLowerCase()
     )
   );
+  // "I want to type" or the keyboard button: the typed box shows even when voice works, until the person says "use voice" (see kyroSetTypedMode).
+  const typedModeOn = !microphoneFallbackRequired && trueExperienceMode !== "mission" && nexusTypedModeRequested === true;
+  kyroUpdateTypeButton(!(microphoneFallbackRequired || typedModeOn) && trueExperienceMode !== "mission");
   document.body.classList.add("nexus-os-visual-boundary");
   document.body.classList.toggle("nexus-low-bandwidth-mode", nexusLowBandwidthMode);
   // Static QA compatibility notes for the safer service descriptions preserved by app-behavior-audit:
@@ -38450,6 +38453,12 @@ function renderUserWorkspace() {
           <section class="nexus-true-conversation" data-nexus-microphone-fallback="true" aria-label="${escapeHtml(translateText("Typed Nexus fallback"))}">
             <p class="nexus-companion-recovery-hint" role="status">${escapeHtml(translateText("Voice is unavailable right now. Type your request below while the microphone retry remains available."))}</p>
             ${renderNexusTrueCommandComposer({ compact: true })}
+          </section>
+        ` : typedModeOn ? `
+          <section class="nexus-true-conversation" data-kyro-typed-mode="true" aria-label="${escapeHtml(kyroTypeText("label"))}">
+            <p class="nexus-companion-recovery-hint" role="status">${escapeHtml(kyroTypeText("hint"))}</p>
+            ${renderNexusTrueCommandComposer({ compact: true })}
+            <button type="button" class="kyro-use-voice" data-kyro-use-voice="true" style="margin:10px auto 0;display:block;padding:10px 20px;border:0;border-radius:999px;background:#334155;color:#f1f5f9;font:inherit;font-weight:600;cursor:pointer">${escapeHtml(kyroTypeText("useVoice"))}</button>
           </section>
         ` : ""}
         ${showMission ? renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace) : ""}
@@ -52379,6 +52388,49 @@ const KYRO_TUTOR_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:teach|tu
 const KYRO_TUTOR_NOT = /\b(?:letters?|alphabet|abc|to read|reading|counting|to count|adding|subtract\w*|take away|maths?|mathematics|numbers?|arithmetic|herufi|hesabu|kusoma|kuhesabu)\b(?![\s\S]*\bhomework\b)|\b(?:apply(?:ing)?\s+for|file\s+(?:my|a|an|the)|renew|open(?:ing)?\s+(?:a|an)\s+(?:bank\s+)?account|get(?:ting)?\s+(?:a|an|my)\s+(?:id|license|licence|passport|visa|card|permit)|start(?:ing)?\s+(?:a|my)\s+business|find(?:ing)?\s+(?:a\s+)?job|(?:use|using|about|with)\s+(?:kyro|nexus|this\s+app|the\s+app))\b/i;
 // In a session, a sentence that is a request of its own is not the learner's answer.
 const KYRO_TUTOR_OTHER = /^(?:open|show(?: me)? (?:my\b|all\b|some\b|(?:(?:a|an|the)\s+)?(?:pictures?|videos?|images?|photos?|maps?|weather|documents?|lists?|notes?|reminders?|calendar)\b)|play|pause|resume|call|text|send|remind me|set (?:a|an|my)|add (?:a|an|my)|delete|cancel my|find (?:a|an|the|me)|search(?: for)?|look up|navigate|directions? to|take me to|go to|close|(?:create|make|draft|prepare|generate|build)\s+(?:me\s+)?(?:an?|the|my|some)|what(?:'s| is| are) (?:the )?(?:weather|time|date)|weather|my (?:lists|notes|reminders|documents)|fungua|onyesha|cheza|piga|tuma|nikumbushe|tafuta|hali ya hewa)\b/i;
+// Typing instead of talking: "I want to type", "let me type", "use the keyboard" (or the small Type button) shows the typed box even when voice works, and "use voice" (or the Use voice button) goes back.
+// The choice is kept in the browser, so it is still on after a reload. (Before this the typed box showed only when voice could not run, and nobody could tell how to get it.)
+const KYRO_TYPE_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:i\s+)?(?:want|would\s+like|'d\s+like|need|prefer)\s+to\s+(?:type|use\s+(?:the\s+)?keyboard)\b|let\s+me\s+type\b|(?:can|could)\s+i\s+type\b|type\s+instead\b|(?:switch|change|go)\s+(?:over\s+)?to\s+(?:typing|the\s+keyboard)\b|(?:turn\s+on\s+|use\s+)?typing\s+mode\b|use\s+(?:the\s+)?keyboard\b|i\s+(?:can'?t|cannot)\s+(?:talk|speak)\b|nataka\s+kuandika\b|niruhusu\s+niandike\b|nitaandika\b)`, "i");
+const KYRO_VOICE_BACK = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:use|go\s+back\s+to|switch\s+to|back\s+to)\s+(?:my\s+)?voice(?:\s+mode)?\b|(?:(?:i\s+)?(?:want|would\s+like|'d\s+like)\s+to\s+(?:talk|speak)|let\s+me\s+(?:talk|speak))(?:\s+(?:now|again|instead))?\s*[.?!]*$|(?:talk|speak)\s+instead\b|voice\s+mode\b|tumia\s+sauti\b|nataka\s+kuongea\s*[.?!]*$)`, "i");
+let nexusTypedModeRequested = (() => { try { return window.localStorage.getItem("kyroTypedMode") === "1"; } catch { return false; } })();
+const KYRO_TYPE_TEXT = Object.freeze({
+  en: { label: "Type your request", hint: "Type your request below. Say \"use voice\" or tap the button to talk again.", useVoice: "Use voice", button: "Type", buttonLabel: "Type instead of talking",
+    on: "Okay. Type in the box. Say \"use voice\" any time to talk again.", off: "Okay, I am listening." },
+  sw: { label: "Andika ombi lako", hint: "Andika ombi lako hapa chini. Sema \"tumia sauti\" au bonyeza kitufe kuongea tena.", useVoice: "Tumia sauti", button: "Andika", buttonLabel: "Andika badala ya kuongea",
+    on: "Sawa. Andika kwenye kisanduku. Sema \"tumia sauti\" wakati wowote kuongea tena.", off: "Sawa, ninakusikiliza." }
+});
+function kyroTypeText(key) {
+  let lang = "en"; try { lang = languageCode() === "sw" ? "sw" : "en"; } catch { lang = "en"; }
+  return KYRO_TYPE_TEXT[lang][key];
+}
+// The small Type button, bottom left, for a person who cannot or will not speak (and so cannot say "I want to type"). It is shown while the typed box is not, and the result cards cover it.
+function kyroUpdateTypeButton(show = true) {
+  try {
+    const signedIn = typeof data !== "undefined" && Boolean(data);
+    const want = show !== false && signedIn && !nexusTypedModeRequested;
+    let button = document.getElementById("kyroTypeInstead");
+    if (!button && want) {
+      button = document.createElement("button");
+      button.type = "button"; button.id = "kyroTypeInstead";
+      button.style.cssText = "position:fixed;left:16px;bottom:16px;z-index:40;padding:10px 18px;border-radius:999px;border:1px solid #475569;background:#1e293b;color:#f1f5f9;font:inherit;font-weight:600;cursor:pointer";
+      button.addEventListener("click", () => { kyroSetTypedMode(true, { say: false }); });
+      document.body.append(button);
+    }
+    if (button) { button.hidden = !want; button.textContent = kyroTypeText("button"); button.setAttribute("aria-label", kyroTypeText("buttonLabel")); }
+  } catch { /* the button is a convenience */ }
+}
+// On: the typed box shows (an open answer card that is not a lesson is put away, so the box is not hidden behind it) and takes the cursor. Off: the orb alone again.
+function kyroSetTypedMode(on, options = {}) {
+  nexusTypedModeRequested = on === true;
+  try { window.localStorage.setItem("kyroTypedMode", nexusTypedModeRequested ? "1" : "0"); } catch { /* the choice lasts until the page is reloaded */ }
+  try { document.querySelectorAll("[data-kyro-result]").forEach(node => { if (!node.querySelector("[data-kyro-tutor-box]")) node.remove(); }); } catch { /* the box is shown anyway */ }
+  try { renderUserWorkspace(); } catch { /* the next render shows it */ }
+  kyroUpdateTypeButton(!nexusTypedModeRequested);
+  if (nexusTypedModeRequested) setTimeout(() => { try { document.querySelector("#nexusCommandCenterInput")?.focus(); } catch { /* the box is there to click */ } }, 250);
+  if (options.say !== false) { try { setVoiceResponse(kyroTypeText(nexusTypedModeRequested ? "on" : "off"), true, { allowHandoff: false, source: "kyro-open" }); } catch { /* the box says it too */ } }
+  return true;
+}
+try { document.addEventListener("click", event => { const target = event && event.target; if (target && target.closest && target.closest("[data-kyro-use-voice]")) kyroSetTypedMode(false, { say: false }); }); } catch { /* no document yet */ }
 // In a lesson, "show me a picture" / "show me a video" (no subject said) means pictures or videos of the lesson's own subject, and when that screen is closed the lesson comes back where it was.
 const KYRO_TUTOR_DEMO = /^(?:(?:can|could)\s+(?:you|i)\s+)?(?:(?:please\s+)?show(?:\s+me)?|let\s+me\s+(?:see|watch)|i\s+(?:want|would\s+like|'d\s+like)\s+to\s+(?:see|watch)|(?:can|could)\s+i\s+(?:see|watch)|watch)\s+(?:(?:a|an|the|some)\s+)?(picture|pictures|image|images|photo|photos|diagram|diagrams|drawing|video|videos|clip|clips|demo|demonstration)(?:\s+(?:of|about|for)\s+(?:it|this|that|the\s+lesson|the\s+topic))?\s*[.?!]*$/i;
 let kyroTutorSubject = ""; // the subject of the open lesson, as the server last said it
@@ -52397,9 +52449,88 @@ function kyroResumeTutor() {
   try {
     if (!kyroTutorOpen() || !kyroTutorLast) return false;
     const shown = kyroShowResultScreen("typed", "Continue the lesson", { ok: true, status: "completed", response: kyroTutorLast.response, requiresConfirmation: true, tutor: kyroTutorLast.tutor });
-    if (shown) kyroAddTutorBox(kyroTutorLast.tutor);
+    if (shown) kyroAddTutorBox(kyroTutorLast.tutor, kyroTutorLast.items || null);
     return shown;
   } catch { return false; }
+}
+// ---- the pictures and videos that go with a lesson step ----
+// The server (nexus/tutor/tutor.js) sends tutor.media = { picture, video }: what to search for. The lesson text is on the screen at once; these are fetched with the ordinary picture and video search, one after the other, and drawn INSIDE the
+// lesson card when they arrive. They are never presented to the learner as a source, and a failed search leaves the lesson exactly as it was.
+function kyroTutorSafeUrl(value) {
+  const url = String(value || "").trim();
+  return /^https:\/\/[^\s"'<>]+$/i.test(url) ? url : "";
+}
+// The pictures (up to 3) or the one video of a search result: [{ title, url }] or [{ title, embedUrl, videoUrl, thumbnailUrl, mimeType }]. Only https addresses are used.
+function kyroTutorMediaItems(result, kind) {
+  const data = (result && result.render && result.render.data) || {};
+  const list = kind === "video" ? data.videos : data.images;
+  const out = [];
+  for (const item of Array.isArray(list) ? list : []) {
+    if (!item || typeof item !== "object") continue;
+    if (kind === "video") {
+      const embedUrl = kyroTutorSafeUrl(item.embedUrl); const videoUrl = kyroTutorSafeUrl(item.videoUrl);
+      if (embedUrl || videoUrl) out.push({ title: String(item.title || "").slice(0, 120), embedUrl, videoUrl, thumbnailUrl: kyroTutorSafeUrl(item.thumbnailUrl), mimeType: String(item.mimeType || "video/webm").slice(0, 40) });
+    } else {
+      const url = kyroTutorSafeUrl(item.url);
+      if (url) out.push({ title: String(item.title || "").slice(0, 120), url });
+    }
+    if (out.length >= (kind === "video" ? 1 : 3)) break;
+  }
+  return out;
+}
+function kyroDrawTutorMedia(holder, items, tutor) {
+  try {
+    if (!holder || !holder.isConnected) return false;
+    const pictures = (items && items.pictures) || []; const videos = (items && items.videos) || [];
+    if (!pictures.length && !videos.length) return false;
+    holder.textContent = "";
+    holder.style.display = "flex";
+    if (pictures.length) {
+      const row = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap" });
+      for (const picture of pictures) {
+        const button = kyroMake("button", { type: "button", "data-kyro-tutor-picture": "true", "aria-label": picture.title || "Picture", style: "padding:0;border:0;background:none;cursor:pointer;border-radius:12px;overflow:hidden;max-width:100%" });
+        button.append(kyroMake("img", { src: picture.url, alt: picture.title || "Picture", loading: "lazy", referrerpolicy: "no-referrer", style: "display:block;height:110px;width:auto;max-width:100%;border-radius:12px;background:#0f172a" }));
+        // a tap opens the picture on the full screen (the same as saying "show me a picture"); closing it brings the lesson back
+        button.addEventListener("click", () => { if (tutor && tutor.media && tutor.media.picture) void handleNexusUnifiedBrainRuntimeCommand(`Show me pictures of ${tutor.media.picture}`, { source: "typed", kyroDirect: true }); });
+        row.append(button);
+      }
+      holder.append(row);
+    }
+    for (const video of videos) {
+      let player;
+      if (video.embedUrl) {
+        player = kyroMake("iframe", { src: video.embedUrl, title: video.title || "Video", loading: "lazy", allowfullscreen: "true", allow: "encrypted-media; picture-in-picture; fullscreen", style: "width:100%;max-width:28em;aspect-ratio:16/9;border:0;border-radius:12px;background:#0f172a" });
+      } else {
+        player = kyroMake("video", { controls: "true", preload: "none", style: "width:100%;max-width:28em;border-radius:12px;background:#0f172a" });
+        if (video.thumbnailUrl) player.setAttribute("poster", video.thumbnailUrl);
+        player.append(kyroMake("source", { src: video.videoUrl, type: video.mimeType }));
+      }
+      holder.append(player);
+      if (video.title) holder.append(kyroMake("p", { style: "margin:0;font-size:.9rem;color:#94a3b8;overflow-wrap:anywhere" }, video.title));
+    }
+    return true;
+  } catch { return false; }
+}
+async function kyroLoadTutorMedia(holder, tutor) {
+  try {
+    const media = tutor && tutor.media;
+    if (!holder || !media) return;
+    const step = tutor.step;
+    const items = { pictures: [], videos: [] };
+    // the learner may already have answered (a newer step) or closed the card: then what arrives is dropped
+    const stillHere = () => holder.isConnected && kyroTutorOpen() && Boolean(kyroTutorLast && kyroTutorLast.tutor && kyroTutorLast.tutor.step === step);
+    if (media.picture) {
+      try { items.pictures = kyroTutorMediaItems(await kyroSilentTurn(`Show me pictures of ${media.picture}`), "picture"); } catch { items.pictures = []; }
+      if (!stillHere()) return;
+      kyroDrawTutorMedia(holder, items, tutor);
+    }
+    if (media.video) {
+      try { items.videos = kyroTutorMediaItems(await kyroSilentTurn(`Show me videos about ${media.video}`), "video"); } catch { items.videos = []; }
+      if (!stillHere()) return;
+      kyroDrawTutorMedia(holder, items, tutor);
+    }
+    if (stillHere()) kyroTutorLast.items = items; // (kept so the lesson comes back with them after a picture or video is closed, without searching again)
+  } catch { /* the lesson is on the screen without them */ }
 }
 function kyroTutorEnd() {
   if (!kyroTutorOpen()) return;
@@ -52760,6 +52891,9 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
       }
     }
   }
+  // "I want to type", "let me type", "use the keyboard": the typed box shows even when voice works; "use voice" goes back (before the lesson claims below, so it works in a lesson too)
+  if (KYRO_TYPE_REQUEST.test(said)) { if (!options.typed) kyroTakeOverTurn(); kyroSetTypedMode(true); return true; }
+  if (nexusTypedModeRequested && KYRO_VOICE_BACK.test(said)) { if (!options.typed) kyroTakeOverTurn(); kyroSetTypedMode(false); return true; }
   // A tutoring session is open, or this asks for one: said aloud it goes the typed way, so the next step is drawn on a card and read out (see KYRO_TUTOR_REQUEST). While a session is open every sentence that is not a request of its own is the
   // learner's answer or question, and "stop" ends it on the server.
   // "Show me a picture" / "show me a video" in a lesson: pictures or videos of the lesson's own subject (said or typed)
@@ -54365,7 +54499,7 @@ function kyroShowTypedResult(result, text, message) {
     const shown = kyroShowResultScreen("typed", text, { ok: true, status: "completed", ...answer });
     if (shown && wantsButtons) kyroAddConfirmButtons();
     if (shown && tutor && tutor.active === true) {
-      kyroTutorLast = { response: String(message || ""), tutor: { active: true, subject: String(tutor.subject || "") } };
+      kyroTutorLast = { response: String(message || ""), tutor: { active: true, subject: String(tutor.subject || ""), step: Number(tutor.step) || 0, media: tutor.media || null }, items: null };
       kyroAddTutorBox(tutor);
     }
     if (shown && typeof kyroAddResumeButtons === "function" && /^show my r[e\u00e9]sum[e\u00e9]s?$/i.test(String(text || "").trim())) void kyroAddResumeButtons();
@@ -54376,12 +54510,23 @@ function kyroShowTypedResult(result, text, message) {
   } catch { return false; }
 }
 // Under a tutoring turn: a box to type the answer in (Enter sends it), a Send button, and a Stop tutoring button. Typing and saying it are the same turn.
-function kyroAddTutorBox(tutor = null) {
+function kyroAddTutorBox(tutor = null, cachedMedia = null) {
   try {
     const screen = document.querySelector("[data-kyro-result]");
     if (!screen || screen.querySelector("[data-kyro-tutor-box]")) return false;
     const sw = (() => { try { return languageCode() === "sw"; } catch { return false; } })();
     screen.setAttribute("data-kyro-keep", "true");
+    // "Step 3" under the heading: where the lesson is
+    const stepNumber = Number(tutor && tutor.step) || 0;
+    if (stepNumber >= 1 && !screen.querySelector("[data-kyro-tutor-step]")) {
+      const stepNode = kyroMake("p", { "data-kyro-tutor-step": "true", style: "margin:0;color:#94a3b8;font-size:.9rem" }, sw ? `Hatua ya ${stepNumber}` : `Step ${stepNumber}`);
+      const heading = screen.querySelector("h2");
+      if (heading) heading.after(stepNode); else screen.prepend(stepNode);
+    }
+    // a picture and/or a video that goes with this step (not in low-bandwidth mode): the holder sits above the answer box and is filled when the search comes back
+    const holder = tutor && tutor.media && !nexusLowBandwidthMode
+      ? kyroMake("div", { "data-kyro-tutor-media": "true", style: "display:none;flex-direction:column;gap:10px;width:100%;max-width:34em;position:relative;z-index:1" })
+      : null;
     const form = kyroMake("form", { "data-kyro-tutor-box": "true", style: "display:flex;flex-direction:column;gap:10px;width:100%;max-width:34em;position:relative;z-index:1" });
     const box = kyroMake("textarea", { name: "answer", rows: "2", "aria-label": sw ? "Jibu lako" : "Your answer", placeholder: sw ? "Andika jibu lako hapa, au sema jibu lako" : "Type your answer here, or say it", style: KYRO_FIELD_STYLE });
     const row = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap" });
@@ -54400,6 +54545,11 @@ function kyroAddTutorBox(tutor = null) {
       demo(sw ? "Onyesha video" : "Show a video", `Show me videos about ${subject}`);
     }
     form.append(box, row); screen.append(form);
+    if (holder) {
+      screen.insertBefore(holder, form);
+      if (cachedMedia) kyroDrawTutorMedia(holder, cachedMedia, tutor);
+      else void kyroLoadTutorMedia(holder, tutor);
+    }
     form.addEventListener("submit", event => {
       event.preventDefault();
       const answer = box.value.trim();
