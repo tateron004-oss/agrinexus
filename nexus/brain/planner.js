@@ -66,6 +66,9 @@ const { offersFor, offerLine, checklistAsk } = require("../knowledge/offers.js")
 const { feedRequest, grantsAnswer, rulesAnswer } = require("../knowledge/live-feeds.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 const { handoutRequest, handoutTemplate } = require("../knowledge/handout-templates.js");
+const handoutWording = require("../knowledge/handout-wording.js");
+const { designFor, needsWording } = handoutWording;
+const { designKind } = require("../../server/providers/design-render.js");
 const { scheduleRequest, scheduleTemplate } = require("../knowledge/schedule-templates.js");
 const tutorMode = require("../tutor/tutor.js");
 const sharedTutorSessions = tutorMode.createTutorSessions();
@@ -158,6 +161,16 @@ class OpenEndedPlanner {
       written.push(body.length >= 20 && !echoesInstruction(body, command?.text) ? { ...step, input: { ...step.input, content: body.slice(0, 4000) } } : step);
     }
     return { ...plan, steps: written };
+  }
+
+  // A flyer, newsletter, invitation... whose details the person gave in their request, with those facts (and only those) put in the right places by one tool-less model call; null (so the fixed layout is used) when the call fails or returns nothing usable.
+  async wordedHandout(handout, command, profile) {
+    if (typeof this.model?.respond !== "function") return null;
+    const said = String(command.spokenText || command.text || "");
+    const reply = await this.model.respond({ goal: handoutWording.wordingGoal(handout, said), instructions: handoutWording.wordingInstructions(handout.kind), maxOutputTokens: 400,
+      interactionProfile: profile, tenantId: command.tenantId, conversationHistory: [], memories: [], capabilities: [] }).catch(() => null);
+    const facts = handoutWording.validateWording(reply, said);
+    return facts ? handoutWording.composeFromFacts(handout, facts) : null;
   }
 
   // The no-workspace answer for a business/nonprofit request, or null when the person has a workspace (or this cannot be told: then the request goes on as before and the executor's own check still applies).
@@ -1045,9 +1058,12 @@ class OpenEndedPlanner {
     // directly with no model call (the model, asked to write a flyer for a person with no business workspace, saved a description of a flyer as the flyer). A person with a workspace asking for a flyer or newsletter already went to the workspace's own drafts above.
     const handout = handoutRequest(command.text);
     if (handout && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) {
-      const made = handoutTemplate(handout);
+      // With details beyond a subject and a day ("... on Saturday at ten at the church hall") one model call sorts only the person's own facts into the layout; with none, or if it fails, it is the fixed layout (see knowledge/handout-wording.js).
+      const worded = needsWording(handout) && context?.deterministicOnly !== true ? await this.wordedHandout(handout, command, interactionProfile) : null;
+      const made = worded || handoutTemplate(handout);
+      // `design` makes the Word and PDF files a designed flyer, poster, newsletter, invitation or brochure (server/providers/design-render.js) from this same text; the text stays what is edited.
       return Object.freeze({ goal: String(command.text || "").trim(), application: "documents", riskTier: "low", clarification: null, planningAttempts: 1,
-        steps: [{ clientStepId: "handout-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: requestedDocumentFormat(command.text) || "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
+        steps: [{ clientStepId: "handout-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: requestedDocumentFormat(command.text) || "docx", design: designFor(handout.kind), reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
     }
     // "Make me a weekly meal plan", "Make a study schedule for my exam", "Make me a schedule for my work week": one line per day with a [bracket] for everything the person did not say, made directly with no model call
     // (the model gave a document on one try and a question on the next, and its question was the same blanks, asked aloud).
@@ -1055,7 +1071,7 @@ class OpenEndedPlanner {
     if (schedule && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) {
       const made = scheduleTemplate(schedule);
       return Object.freeze({ goal: String(command.text || "").trim(), application: "documents", riskTier: "low", clarification: null, planningAttempts: 1,
-        steps: [{ clientStepId: "schedule-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: requestedDocumentFormat(command.text) || "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
+        steps: [{ clientStepId: "schedule-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: requestedDocumentFormat(command.text) || "docx", design: "schedule", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
     }
     // "Export it as a PDF" right after a document was saved: the same text again, in the file type asked for (found on production: nothing handled this sentence, so it went to the AI model).
     const exportFormat = exportLatestDocumentFormat(command.text);
@@ -1958,7 +1974,14 @@ async function exportLatestDocumentPlan(documents, { text, format, tenantId, own
   if (!source?.sourceText) return say(`I cannot convert "${latest.title}" because it was saved before I kept its text. Create it again with "Create a document called ${latest.title} that says ...", and then I can export it.`);
   return { goal, application: "documents", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "export-document", title: `Export "${latest.title}" as ${format}`, toolId: "documents.create",
-      input: { title: latest.title, content: source.sourceText, format, reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
+      input: { title: latest.title, content: source.sourceText, format, ...(savedDesign(latest) ? { design: savedDesign(latest) } : {}), reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
+}
+
+// the design (flyer, newsletter, ...) a saved document was made with, kept in its metadata: "export it as a PDF" gives the designed PDF
+function savedDesign(row) {
+  let metadata = row?.metadata;
+  if (typeof metadata === "string") { try { metadata = JSON.parse(metadata); } catch { metadata = null; } }
+  return designKind(metadata && typeof metadata === "object" ? metadata.design : "");
 }
 
 // What the document screen's Save changes button says: "Save changes to document doc_a1b2c3: the new words". The document is named by its own id, so the right one gets the new version.
