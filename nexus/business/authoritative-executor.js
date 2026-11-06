@@ -167,7 +167,10 @@ function createBusinessPreview({ repository, access, consents, env }) {
     api ||= createBusinessApi({ access, consents, agent: null }, { env, repository });
     const result = await voiceDispatch.run({ command: text, args: {}, confirmed: false, timeZone: context?.timeZone,
       businessRequest: ({ method, pathname, body = {} }) => api.handle({ method, pathname, context, body }) });
-    return result?.status === "needs-confirmation" && typeof result.response === "string" && result.response.trim() ? result.response.trim() : null;
+    if (result?.status === "needs-confirmation" && typeof result.response === "string" && result.response.trim()) return result.response.trim();
+    // A refusal or an answer that changes nothing ("Wednesday at 2 PM is already taken by Grace Otieno. The next openings are ...") is said as it is, instead of a bare "I need your confirmation" that only turns into the refusal after a yes.
+    if (result?.status === "completed" && !result.businessRecord && !voiceDispatch.isReadIntent(voiceDispatch.classify(text)) && typeof result.response === "string" && result.response.trim()) return `${result.response.trim()} Nothing will be changed.`;
+    return null;
   };
 }
 

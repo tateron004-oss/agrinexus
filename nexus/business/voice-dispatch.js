@@ -1121,6 +1121,11 @@ function precheck(command = "", args = {}) {
     // every retry re-parses "$0" into unitPrice:0 and hits the same falsy check again -- a genuine dead end
     // with no way to complete the action through voice/chat at all.
     if (item.unitPrice === null) clarification = "What is the unit price for this line item?";
+  } else if (scheduleVoice.SCHEDULE_WRITE_INTENTS.includes(intent)) {
+    // the question the front desk would ask, before anyone is asked for a yes (nothing here needs the workspace)
+    clarification = scheduleVoice.missingFor(intent, command);
+  } else if (campaignVoice.CAMPAIGN_WRITE_INTENTS.includes(intent)) {
+    clarification = campaignVoice.missingFor(intent, command);
   } else if (intent === "addGrant") {
     const grant = extractGrantArgs(command, args);
     if (!grant.funderName && !grant.program) clarification = "What is the name of the funder or the grant/funding program?";

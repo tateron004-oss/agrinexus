@@ -319,8 +319,10 @@ function hoursRowsAfter(editable, days, range) {
   return DAY_NAMES.slice(1).concat(DAY_NAMES[0]).filter(day => map.has(day)).map(day => map.get(day));
 }
 
-function serviceIn(rest, nameWords) {
+// (the business's own name can come along in the words, "... for a haircut at Mama Grace Salon": it is not the service)
+function serviceIn(rest, nameWords, workspace = "") {
   let text = String(rest || "");
+  if (workspace) text = text.replace(new RegExp(String(workspace).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"), "ig"), " ");
   for (const word of String(nameWords || "").split(/\s+/).filter(Boolean)) text = text.replace(new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i"), " ");
   text = withoutDuration(text).replace(/\b(?:please|kyro|nexus|book|schedule|set up|put|an?|the|appointment|booking|for|with|on|at|in|to|and|me|her|him|them|a)\b/ig, " ").replace(/\s+/g, " ").trim();
   return text.replace(/^(?:an?|the)\s+/i, "").replace(/[.,;!?]+$/g, "").trim();
@@ -394,7 +396,7 @@ function planScheduleWrite(intent, { command, editable, workspace, today, nowTim
       return { response: `${withCapital(slot)} is already taken by ${result.conflict.item.customer || result.conflict.item.title}, so I did not book ${person}.${alt}`, info: true };
     }
     if ((editable.appointments || []).length >= APPOINTMENT_LIMIT) return { response: `${name} already holds ${APPOINTMENT_LIMIT} appointments. Cancel or remove some before booking more.`, info: true };
-    const service = serviceIn(when.rest, person);
+    const service = serviceIn(when.rest, person, workspace);
     const row = { title: `${person}${service ? ` - ${service}` : ""}`, start: `${callDay(when.day, today)} at ${clock(when.time)}`, end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "", startAt, durationMinutes: minutes, customer: person, service, confirmation: "" };
     const note = result.hours.assumed ? ` ${ASSUMED_NOTE}` : "";
     return {
@@ -521,5 +523,25 @@ function planScheduleWrite(intent, { command, editable, workspace, today, nowTim
   return null;
 }
 
-module.exports = Object.freeze({ classifySchedule, readSchedule, planScheduleWrite, SCHEDULE_READ_INTENTS, SCHEDULE_WRITE_INTENTS, leadFor,
+// The question to ask BEFORE anyone is asked for a yes, when the words do not say who, which day or what time (null when nothing is missing). It needs no workspace, so the planner can ask it first.
+function missingFor(intent, command) {
+  const reference = "2000-01-03";
+  if (intent === "bookCustomer") {
+    const who = nameIn(command); const when = parseWhen(command, reference);
+    if (!who) return "Who is the appointment for?";
+    if (!when.day) return `Which day should I book ${who} for?`;
+    if (!when.time) return `What time should I book ${who} for?`;
+  } else if (intent === "setHours") {
+    if (!daysIn(command).length) return "Which days? For example: set my hours Monday to Friday 9 to 5.";
+    if (!/\b(?:closed|not open|off)\b/i.test(command) && !timeRange(command)) return "What are the opening and closing times? For example: set my hours Monday to Friday 9 to 5.";
+  } else if (intent === "moveBooking") {
+    const when = parseWhen(command, reference);
+    if (!when.day && !when.time) return `When should I move ${nameIn(command) ? `${nameIn(command)}'s` : "that"} booking to? For example: move Grace's appointment to Friday at 3.`;
+  } else if (["cancelBooking", "confirmBooking", "recordCallConsent", "requestQuote", "quoteSent"].includes(intent) && !nameIn(command)) {
+    return intent === "cancelBooking" || intent === "confirmBooking" ? "Whose appointment? Say the customer's name." : "Who is this about? Say the customer's name.";
+  }
+  return null;
+}
+
+module.exports = Object.freeze({ classifySchedule, readSchedule, planScheduleWrite, SCHEDULE_READ_INTENTS, SCHEDULE_WRITE_INTENTS, leadFor, missingFor,
   hoursFor, check, freeIntervals, nextOpenings, bookedOn, parseDuration, parseWhen, timeRange, daysIn, nameIn, channelFor, confirmationText, clock });

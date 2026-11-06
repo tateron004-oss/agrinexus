@@ -202,4 +202,14 @@ function planCampaignWrite(intent, { command, editable, workspace, today }) {
   return null;
 }
 
-module.exports = Object.freeze({ classifyCampaign, readCampaign, planCampaignWrite, CAMPAIGN_READ_INTENTS, CAMPAIGN_WRITE_INTENTS, SEND_CAP, STOP_LINE, NOT_SEEN, campaignName, messageOf });
+// The question to ask BEFORE anyone is asked for a yes (null when nothing is missing); it needs no workspace.
+function missingFor(intent, command) {
+  if (intent === "createCampaign") {
+    if (!campaignName(command)) return 'What should the campaign be called? For example: "Create an email campaign called Grand Opening saying We open Saturday at ten at the church hall."';
+    if (messageOf(command).length < MESSAGE_MIN) return `What should the message say? Say it all in one go, for example: "Create an email campaign called ${campaignName(command)} saying We open Saturday at ten at the church hall."`;
+  } else if (intent === "sendCampaign" && !campaignName(command)) return null;
+  else if ((intent === "markCampaignReply" || intent === "recordMessageConsent") && !nameIn(command) && !/\b[Ss]top (?:messaging|texting|e-?mailing)\s+[A-Z]/.test(command)) return "Who is this about? Say the customer's name.";
+  return null;
+}
+
+module.exports = Object.freeze({ classifyCampaign, readCampaign, planCampaignWrite, missingFor, CAMPAIGN_READ_INTENTS, CAMPAIGN_WRITE_INTENTS, SEND_CAP, STOP_LINE, NOT_SEEN, campaignName, messageOf });
