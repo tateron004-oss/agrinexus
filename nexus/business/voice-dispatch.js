@@ -1001,7 +1001,7 @@ function classify(command = "") {
   const wantsListListings = !wantsAddListing && !wantsUpdateListingStatus && /\b(listings?|properties|houses|homes|condos|apartments|townhouses|duplexes)\b/i.test(command) && /\b(?:show|list|what|which|my|do i have)\b/i.test(command);
   const wantsGenerateDocuments = /\b(?:create|generate|draft|make)\b/i.test(command) && /\b(service agreement|contract|intake form|client intake|application checklist)\b/i.test(command);
   const wantsGenerateBusinessPlanPdf = /\bbusiness plan\b/i.test(command) && /\b(?:generate|print|export|make)\b/i.test(command) && /\b(pdf|document)\b/i.test(command);
-  const wantsGenerateMarketing = /\b(?:create|generate|make|draft)\b/i.test(command) && /\b(flyer|newsletter|promotional email|marketing email|marketing material|marketing content|marketing draft)\b/i.test(command);
+  const wantsGenerateMarketing = /\b(?:create|generate|make|draft)\b/i.test(command) && /\b(flyer|newsletter|promotional email|marketing email|marketing material|marketing content|marketing draft|social(?: media)? (?:posts?|captions?)|(?:facebook|instagram|linkedin|twitter|tiktok|whatsapp) posts?|advertisements?|adverts?|web ?site (?:copy|content|page|text)|web ?page|landing page)\b/i.test(command);
   // Confirmed live: business.manage/business.query already existed for every
   // OTHER business operation, but "strategy" (service.js's operation===
   // "strategy", which calls strategy.js's real agent-profile templates --
