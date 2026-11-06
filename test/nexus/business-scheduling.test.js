@@ -290,5 +290,5 @@ test("the workspace keeps the new fields when saved, and an older saved workspac
   const source = require("node:fs").readFileSync(require.resolve("../../nexus/business/service.js"), "utf8");
   assert.match(source, /startAt: "", durationMinutes: 0, customer: "", service: "", confirmation: "" \}, 400, new Set\(\["durationMinutes"\]\)/);
   assert.match(source, /hours: rows\(input\.hours === undefined \? \(starter\.hours \|\| \[\]\) : input\.hours, \{ day: "", open: "", close: "" \}, 7\)/);
-  assert.match(source, /consent: "", consentDate: "", callConsent: "", callConsentDate: "" \}\)/);
+  assert.match(source, /callConsent: "", callConsentDate: "", messageConsent: "", messageConsentDate: "" \}\)/);
 });

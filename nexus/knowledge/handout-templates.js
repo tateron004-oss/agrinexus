@@ -7,10 +7,22 @@
 // handoutRequest(text) -> { kind, subject, when } | null
 // handoutTemplate({ kind, subject, when }) -> { title, content }
 
-const KINDS = Object.freeze({ flyer: "Flyer", poster: "Poster", newsletter: "Newsletter", brochure: "Brochure", handout: "Handout", invitation: "Invitation", email: "Promotional Email" });
+const KINDS = Object.freeze({ flyer: "Flyer", poster: "Poster", newsletter: "Newsletter", brochure: "Brochure", handout: "Handout", invitation: "Invitation", email: "Promotional Email", social: "Social Media Post", ad: "Ad", webpage: "Web Page" });
+// the words a person uses for the three kinds added for the small-business team (5 November 2026): "write a Facebook post for my salon", "make an ad for my bakery", "write the website page for my shop"
+const SOCIAL_WORDS = "social(?: media)? (?:posts?|captions?)|(?:facebook|instagram|linkedin|twitter|tiktok|whatsapp|x) (?:posts?|captions?|updates?)|captions?";
+const AD_WORDS = "advertisements?|adverts?|ads?";
+const WEB_WORDS = "(?:web ?site|web ?page|landing page|home ?page)(?: (?:copy|content|text|page))?";
+function kindOfWord(word) {
+  const text = String(word || "").toLowerCase();
+  if (/e-?mail/.test(text)) return "email";
+  if (new RegExp(`^(?:${SOCIAL_WORDS})$`).test(text)) return "social";
+  if (new RegExp(`^(?:${AD_WORDS})$`).test(text)) return "ad";
+  if (new RegExp(`^(?:${WEB_WORDS})$`).test(text)) return "webpage";
+  return text;
+}
 
 const LEAD = "^\\s*(?:please\\s+)?(?:(?:hey\\s+)?(?:kyro|nexus)[,.]?\\s+)?(?:(?:can|could|would|will) you\\s+)?(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?";
-const REQUEST = new RegExp(`${LEAD}(?:create|make|write|draft|prepare|generate|build|put together|compose|type up)\\s+(?:me\\s+)?(?:an?|the|my|some)?\\s*(?:[a-z'-]+\\s+){0,2}?(flyer|poster|newsletter|brochure|handout|invitation|(?:promotional|promo|marketing|sales|advertising)\\s+e-?mail)\\b(.*)$`, "i");
+const REQUEST = new RegExp(`${LEAD}(?:create|make|write|draft|prepare|generate|build|put together|compose|type up)\\s+(?:me\\s+)?(?:an?|the|my|some)?\\s*(?:[a-z'-]+\\s+){0,2}?(${SOCIAL_WORDS}|${WEB_WORDS}|${AD_WORDS}|flyer|poster|newsletter|brochure|handout|invitation|(?:promotional|promo|marketing|sales|advertising)\\s+e-?mail)\\b(.*)$`, "i");
 // "for my bake sale on Saturday" / "to my daughter's party on Saturday at 3": the subject, then the day or time if one is named (kept in the person's own words)
 const SUBJECT = /^\s*(?:for|to|about)\s+(?:(?:my|our|the|a|an)\s+)?(.+?)(?:\s+((?:on|at|this|next|tomorrow|from)\b.*))?\s*$/i;
 const BLANK = (what) => `[${what}]`;
@@ -21,7 +33,7 @@ function capitalise(text) { return text.replace(/(^|\s)([a-z])/g, (_, space, let
 function handoutRequest(text) {
   const match = REQUEST.exec(String(text || "").trim());
   if (!match) return null;
-  const kind = /e-?mail/i.test(match[1]) ? "email" : match[1].toLowerCase();
+  const kind = kindOfWord(match[1]);
   const rest = String(match[2] || "").replace(/\s+as\s+(?:an?\s+)?(?:pdf|word document|word|docx|markdown|md|text file|txt)\s*[.!?]*$/i, "");
   const parts = SUBJECT.exec(rest);
   let subject = parts ? clean(parts[1]) : "";
@@ -56,6 +68,22 @@ function handoutTemplate({ kind, subject = "", when = "" }) {
       "About us", BLANK("who you are, in a few sentences"), "",
       "What we offer", BLANK("the main things you do or sell"), "",
       "How to reach us", BLANK("name, phone, email or address, and hours"));
+  } else if (kind === "social") {
+    // a post is short: one friendly line, the facts that were given, and how to reach the person; the hashtags are left for the person to choose
+    lines.push((name || BLANK("what this post is about")).toUpperCase(), "", BLANK("one friendly sentence telling people what you are sharing"), "",
+      `When: ${when || BLANK("day and time")}`, `Where: ${BLANK("the place")}`, `What: ${BLANK("what is happening, or what is for sale")}`, `Cost: ${BLANK("the price, or free")}`, "",
+      `Message us: ${BLANK("name and phone number")}`, "", `${BLANK("a hashtag people would search for")} ${BLANK("a second hashtag")}`);
+  } else if (kind === "ad") {
+    lines.push((name || BLANK("what you are advertising")).toUpperCase(), "", BLANK("one clear line about what you offer and who it is for"), "",
+      `What: ${BLANK("what is happening, or what is for sale")}`, `Price: ${BLANK("the price, or free")}`, `When: ${when || BLANK("day and time, or until when")}`, `Where: ${BLANK("the place, or the web page")}`, "",
+      `Call or visit: ${BLANK("name and phone number")}`);
+  } else if (kind === "webpage") {
+    lines.push((name || BLANK("your business name")).toUpperCase(), BLANK("one short sentence about what you do"), "",
+      "About us", BLANK("who you are, in a few sentences"), "",
+      "What we offer", BLANK("the main things you do or sell"), "",
+      "Hours", BLANK("the days and times you are open"), "",
+      "Find us", BLANK("the place, or the web page"), "",
+      "Contact us", BLANK("name, phone, email or address"));
   } else if (kind === "handout") {
     lines.push((name || BLANK("the topic")).toUpperCase(), "",
       "The main points", `1. ${BLANK("first point")}`, `2. ${BLANK("second point")}`, `3. ${BLANK("third point")}`, "",

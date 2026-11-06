@@ -8,6 +8,7 @@ const financeVoice = require("./finance-voice.js");
 const programsVoice = require("./programs-voice.js");
 const operationsVoice = require("./operations-voice.js");
 const scheduleVoice = require("./scheduling-voice.js");
+const campaignVoice = require("./campaigns-voice.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 const automationCommands = require("../../public/kyro-automation-commands.js");
 const { whenOf, parseEachPrice, parseQuantity, parseCount } = require("../farmwork/parse.js");
@@ -907,7 +908,7 @@ function computeBusinessDashboard(editable, period = {}) {
 // function (rather than a second, hand-maintained copy of these regexes).
 // (the insight reads -- cash outlook, follow-ups due, deadlines due, people served, volunteer hours -- are in insights.js; "how are we doing" is the dashboard)
 const INSIGHT_READS = insights.INSIGHT_INTENTS.filter(intent => intent !== "howAreWeDoing");
-const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS, ...financeVoice.FINANCE_READ_INTENTS, ...programsVoice.PROGRAM_READ_INTENTS, ...operationsVoice.OPERATIONS_READ_INTENTS, ...scheduleVoice.SCHEDULE_READ_INTENTS]);
+const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS, ...financeVoice.FINANCE_READ_INTENTS, ...programsVoice.PROGRAM_READ_INTENTS, ...operationsVoice.OPERATIONS_READ_INTENTS, ...scheduleVoice.SCHEDULE_READ_INTENTS, ...campaignVoice.CAMPAIGN_READ_INTENTS]);
 
 function classify(command = "") {
   // A request about the person's own outside-tool automations ("send new customer Grace to my sales sheet automation", "show my automations", "connect Zapier") is the automations', never a business request: the
@@ -918,6 +919,9 @@ function classify(command = "") {
   // The front desk comes first: "who can I call back" is the people who agreed to calls, not the follow-ups that are due (scheduling-voice.js keeps its phrases narrow).
   const schedule = scheduleVoice.classifySchedule(command);
   if (schedule) return schedule;
+  // Campaigns and who agreed to get messages (campaigns-voice.js).
+  const campaign = campaignVoice.classifyCampaign(command);
+  if (campaign) return campaign;
   const insight = insights.classifyInsight(command);
   if (insight === "howAreWeDoing") return "dashboard";
   if (insight) return insight;
@@ -1001,7 +1005,7 @@ function classify(command = "") {
   const wantsListListings = !wantsAddListing && !wantsUpdateListingStatus && /\b(listings?|properties|houses|homes|condos|apartments|townhouses|duplexes)\b/i.test(command) && /\b(?:show|list|what|which|my|do i have)\b/i.test(command);
   const wantsGenerateDocuments = /\b(?:create|generate|draft|make)\b/i.test(command) && /\b(service agreement|contract|intake form|client intake|application checklist)\b/i.test(command);
   const wantsGenerateBusinessPlanPdf = /\bbusiness plan\b/i.test(command) && /\b(?:generate|print|export|make)\b/i.test(command) && /\b(pdf|document)\b/i.test(command);
-  const wantsGenerateMarketing = /\b(?:create|generate|make|draft)\b/i.test(command) && /\b(flyer|newsletter|promotional email|marketing email|marketing material|marketing content|marketing draft)\b/i.test(command);
+  const wantsGenerateMarketing = /\b(?:create|generate|make|draft)\b/i.test(command) && /\b(flyer|newsletter|promotional email|marketing email|marketing material|marketing content|marketing draft|social(?: media)? (?:posts?|captions?)|(?:facebook|instagram|linkedin|twitter|tiktok|whatsapp) posts?|advertisements?|adverts?|web ?site (?:copy|content|page|text)|web ?page|landing page)\b/i.test(command);
   // Confirmed live: business.manage/business.query already existed for every
   // OTHER business operation, but "strategy" (service.js's operation===
   // "strategy", which calls strategy.js's real agent-profile templates --
@@ -1117,6 +1121,11 @@ function precheck(command = "", args = {}) {
     // every retry re-parses "$0" into unitPrice:0 and hits the same falsy check again -- a genuine dead end
     // with no way to complete the action through voice/chat at all.
     if (item.unitPrice === null) clarification = "What is the unit price for this line item?";
+  } else if (scheduleVoice.SCHEDULE_WRITE_INTENTS.includes(intent)) {
+    // the question the front desk would ask, before anyone is asked for a yes (nothing here needs the workspace)
+    clarification = scheduleVoice.missingFor(intent, command);
+  } else if (campaignVoice.CAMPAIGN_WRITE_INTENTS.includes(intent)) {
+    clarification = campaignVoice.missingFor(intent, command);
   } else if (intent === "addGrant") {
     const grant = extractGrantArgs(command, args);
     if (!grant.funderName && !grant.program) clarification = "What is the name of the funder or the grant/funding program?";
@@ -1183,6 +1192,39 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: plan.apply(editable) } });
     return { status: "completed", localOnly: true, response: plan.done, businessRecord: updated?.body || null, summary: plan.done };
+  }
+
+  // Campaigns: an approved message to the customers who agreed to get messages, and what came of it (campaigns-voice.js). Each message is counted sent only when the provider says it went out.
+  if (campaignVoice.CAMPAIGN_READ_INTENTS.includes(intent) || campaignVoice.CAMPAIGN_WRITE_INTENTS.includes(intent)) {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
+    const workspace = resolved.client.data?.info?.businessName || "your workspace";
+    const editable = resolved.client.data.editable;
+    const ctx = { command, editable, workspace, today: todayIn(new Date(), timeZone), formatMoney };
+    if (campaignVoice.CAMPAIGN_READ_INTENTS.includes(intent)) {
+      const response = campaignVoice.readCampaign(intent, ctx);
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const plan = campaignVoice.planCampaignWrite(intent, ctx);
+    if (plan.response) return plan.info ? { status: "completed", localOnly: true, response: plan.response, summary: plan.response } : { status: "needs-input", response: plan.response, missingInformation: plan.missingInformation || [] };
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: plan.prompt };
+    let apply = plan.apply; let done = plan.done;
+    if (plan.sendMany) {
+      if (typeof sendMessage !== "function") return { status: "needs-input", response: "I can write the campaign, but sending messages is not available from here, so nothing was sent.", missingInformation: [] };
+      const results = [];
+      for (const message of plan.sendMany) {
+        try { await sendMessage(message); results.push({ ok: true, message }); } catch (error) {
+          results.push({ ok: false, message, error: String(error?.message || "not sent").replace(/\s+/g, " ") });
+          // sending that is switched off, not set up or refused for this account fails the same way for everyone: stop at the first, instead of failing it fifty times
+          if (!results.some(item => item.ok) && /not set up|restricted|cannot send|not available|disabled/i.test(String(error?.message || ""))) break;
+        }
+      }
+      if (!results.some(item => item.ok)) return { status: "needs-input", response: `Nothing was sent. ${results[0]?.error || "The messages could not be sent."}`, missingInformation: [] };
+      ({ apply, done } = plan.finish(results));
+    }
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: apply(editable) } });
+    return { status: "completed", localOnly: true, response: done, businessRecord: updated?.body || null, summary: done };
   }
 
   if (operationsVoice.OPERATIONS_READ_INTENTS.includes(intent) || operationsVoice.OPERATIONS_WRITE_INTENTS.includes(intent)) {

@@ -66,6 +66,7 @@ const { offersFor, offerLine, checklistAsk } = require("../knowledge/offers.js")
 const { feedRequest, grantsAnswer, rulesAnswer } = require("../knowledge/live-feeds.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 const { handoutRequest, handoutTemplate } = require("../knowledge/handout-templates.js");
+const { contractReviewPlan } = require("../documents/contract-check.js");
 const handoutWording = require("../knowledge/handout-wording.js");
 const { designFor, needsWording } = handoutWording;
 const { designKind } = require("../../server/providers/design-render.js");
@@ -1054,6 +1055,10 @@ class OpenEndedPlanner {
     // never receives, so it must run first and own this phrasing outright.
     const completeSaveConversation = completeSaveConversationPlan(command.text, catalog, conversationHistory);
     if (completeSaveConversation) return Object.freeze({ ...completeSaveConversation, planningAttempts: 1 });
+    // "Check my contract", "Review this lease", "Is my agreement okay?": Kyro reads the contract the person pasted, uploaded or saved and says what it says about the money, the length and how to end it, and what to look at closely.
+    // It is a checklist found by the contract's own words, not legal advice, and it says so (see documents/contract-check.js). Read only: nothing is sent, saved or changed.
+    const contractReview = await contractReviewPlan({ documents: this.documents, text: command.spokenText || command.text, tenantId: command.tenantId, ownerId: command.actorId, env: process.env });
+    if (contractReview) return Object.freeze({ ...contractReview, planningAttempts: 1 });
     // "Draft a website brief for Grace's Bakery", "Create a technology roadmap", "Make an automation audit as a PDF": a fixed starter document with blanks to complete (see knowledge/consulting-templates.js).
     // Not written by the AI and not claiming to know anything about the client, so it is made directly, with no model call.
     const template = templateRequest(command.text);

@@ -14,10 +14,11 @@
 
 const { handoutTemplate } = require("./handout-templates.js");
 
-const DESIGN_FOR = Object.freeze({ flyer: "flyer", poster: "poster", newsletter: "newsletter", brochure: "brochure", handout: "brochure", invitation: "invitation", email: "email" });
+// a social post is laid out like a poster (one big line, the facts, how to reach you), an ad like a flyer, and a web page like a brochure (About, What we offer, Hours, Find us, Contact us)
+const DESIGN_FOR = Object.freeze({ flyer: "flyer", poster: "poster", newsletter: "newsletter", brochure: "brochure", handout: "brochure", invitation: "invitation", email: "email", social: "poster", ad: "flyer", webpage: "brochure" });
 function designFor(kind) { return DESIGN_FOR[kind] || ""; }
 
-const KIND_WORD = /\b(?:flyer|poster|newsletter|brochure|handout|invitation|(?:promotional|promo|marketing|sales|advertising)\s+e-?mail)\b/i;
+const KIND_WORD = /\b(?:social(?: media)? (?:posts?|captions?)|(?:facebook|instagram|linkedin|twitter|tiktok|whatsapp|x) (?:posts?|captions?|updates?)|captions?|advertisements?|adverts?|ads?|(?:web ?site|web ?page|landing page|home ?page)(?: (?:copy|content|text|page))?|flyer|poster|newsletter|brochure|handout|invitation|(?:promotional|promo|marketing|sales|advertising)\s+e-?mail)\b/i;
 function handoutTail(text) {
   const said = String(text || "").trim();
   const match = KIND_WORD.exec(said);
@@ -43,7 +44,8 @@ const WORDING_INSTRUCTIONS = "You sort what a person said they want on a flyer, 
   + "headline is the short name of the event, business or group in their words (at most 8 words). subhead is \"\" unless they gave a short line to put under the headline. when is the day and time they said, where is the place they said, what is what is happening or for sale, cost is the price they said, contact is how to reach them. "
   + "points is a list of any other facts they gave, each one short and in their words (at most 5). Do not write anything outside the JSON.";
 function wordingInstructions() { return WORDING_INSTRUCTIONS; }
-function wordingGoal(handout, text) { return `The person asked for a ${handout.kind === "email" ? "promotional email" : handout.kind}. They said: "${String(text || "").slice(0, 600)}"`; }
+const KIND_LABEL = Object.freeze({ email: "promotional email", social: "social media post", ad: "ad", webpage: "web page" });
+function wordingGoal(handout, text) { return `The person asked for a ${KIND_LABEL[handout.kind] || handout.kind}. They said: "${String(text || "").slice(0, 600)}"`; }
 
 // words that may appear in a field that the person did not say: joining words and a few plain, factual invitation words. No adjectives, no claims.
 const JOINING = new Set(["a", "an", "the", "and", "at", "on", "in", "of", "for", "to", "with", "from", "by", "or", "is", "are", "we", "our", "you", "your", "us", "join", "come", "see", "all", "everyone", "welcome", "please", "there", "here", "it", "its", "this", "that", "will", "be", "open", "to"]);
@@ -65,7 +67,7 @@ function checked(value, said, max) {
 // "What: poster for the community clean-up" (found live on 5 November 2026): the line says what is happening, not what kind of paper this is, so a leading "poster for the" is taken off ("community clean-up"). A line that is only the kind word is dropped.
 function withoutKindWord(value) {
   const text = String(value || "").trim();
-  return text.replace(/^(?:an?\s+|the\s+|my\s+|our\s+)?(?:flyer|poster|newsletter|brochure|invitation|handout|email)s?(?:\s+(?:for|about|to|of|announcing)\b\s*(?:an?\s+|the\s+|my\s+|our\s+)?|\s*$)/i, "").trim();
+  return text.replace(/^(?:an?\s+|the\s+|my\s+|our\s+)?(?:flyer|poster|newsletter|brochure|invitation|handout|email|social post|post|caption|ad|advert|advertisement|web page|webpage|website)s?(?:\s+(?:for|about|to|of|announcing)\b\s*(?:an?\s+|the\s+|my\s+|our\s+)?|\s*$)/i, "").trim();
 }
 
 function validateWording(reply, text) {
@@ -101,9 +103,13 @@ function composeFromFacts(handout, facts) {
     content = swap(content, /\[a few sentences to greet your readers\]/, facts.subhead);
     content = swap(content, /\[what has happened since the last issue\]/, points.join("\n- ").replace(/^/, points.length ? "- " : ""));
     content = swap(content, /\[dates, times and places\]/, when ? `${when}${facts.where ? ` - ${facts.where}` : ""}` : "");
-  } else if (handout.kind === "brochure") {
+  } else if (handout.kind === "brochure" || handout.kind === "webpage") {
     content = swap(content, /\[who you are, in a few sentences\]/, facts.subhead);
     content = swap(content, /\[the main things you do or sell\]/, points.length ? points.map(point => `- ${point}`).join("\n") : facts.what);
+    if (handout.kind === "webpage") content = swap(content, /\[the days and times you are open\]/, facts.when);
+  } else if (handout.kind === "social" || handout.kind === "ad") {
+    // the one line under the headline is the person's own short line, if they gave one
+    content = swap(content, /\[one friendly sentence telling people what you are sharing\]|\[one clear line about what you offer and who it is for\]/, facts.subhead);
   } else if (handout.kind === "handout") {
     points.forEach((point, index) => { content = content.replace(new RegExp(`^${index + 1}\\. \\[[^\\]]*\\]$`, "m"), () => `${index + 1}. ${point}`); });
   } else if (facts.subhead && ["flyer", "poster", "invitation"].includes(handout.kind)) {
