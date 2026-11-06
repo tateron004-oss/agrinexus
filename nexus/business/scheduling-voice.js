@@ -36,7 +36,7 @@ function clock(time) {
   return `${h12}${minute ? `:${pad2(minute)}` : ""} ${hour < 12 ? "AM" : "PM"}`;
 }
 const say = list => (list.length <= 1 ? list.join("") : `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`);
-const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
+const plural = (count, word) => `${count} ${count === 1 ? word : word === "person" ? "people" : `${word}s`}`;
 const first = name => String(name || "").trim().split(/\s+/)[0] || "";
 const dayWord = (day, today) => describeDay(day, today);
 const NAME = "[A-Z][A-Za-z'’-]+(?:\\s+[A-Z][A-Za-z'’-]+){0,2}";
@@ -91,7 +91,7 @@ const NAME_PATTERNS = [
   new RegExp(String.raw`\b(${NAME})['’]s\s+${any(["appointment", "booking"])}\b`),
   new RegExp(String.raw`\b${any(["confirmation", "confirm"])}\s+${any(["to", "for", "with"])}\s+(${NAME})\b`),
   new RegExp(String.raw`\b${any(["send", "text", "email", "message"])}\s+(${NAME})\s+${any(["her", "his", "their", "the", "a", "an"])}\b`),
-  new RegExp(String.raw`${LEAD_IN}(${NAME})\s+${any(["agreed", "said", "is ok", "consented", "opted", "gave", "does not", "doesn't", "doesn’t", "asked", "wants", "want", "needs", "need", "requested", "would", "has asked", "called", "says", "is fine"])}\b`),
+  new RegExp(String.raw`${LEAD_IN}(${NAME})\s+${any(["agreed", "said", "is ok", "consented", "opted", "signed", "subscribed", "unsubscribed", "replied", "responded", "gave", "does not", "doesn't", "doesn’t", "asked", "wants", "want", "needs", "need", "requested", "would", "has asked", "called", "says", "is fine"])}\b`),
   new RegExp(String.raw`\b${any(["i", "we"])}\s+${any(["sent", "gave", "emailed", "texted"])}\s+(${NAME})\b`),
   new RegExp(String.raw`\b${any(["from", "for", "with", "to"])}\s+(${NAME})\b`)
 ];
@@ -186,7 +186,7 @@ function classifySchedule(command = "") {
     && daysIn(text).length > 0 && !/\b(?:appointment|booking|book)\b/i.test(text)) return "setHours";
 
   // ---- who can be called, and the quotes
-  if (asks && /\bwho\b[^.?!]{0,30}\b(?:can|may|could|should)\s+(?:i|we)\s+(?:call|text|contact|phone|ring)\b|\bwho\b[^.?!]{0,25}\b(?:agreed|said yes|opted in|is ok(?:ay)?|are ok(?:ay)?|gave (?:me )?(?:permission|consent))\b[^.?!]{0,25}\b(?:call|calls|called|calling|texts?|contact)/i.test(text)) return "listCallbacks";
+  if (asks && /\bwho\b[^.?!]{0,30}\b(?:can|may|could|should)\s+(?:i|we)\s+(?:call|phone|ring)\b|\bwho\b[^.?!]{0,25}\b(?:agreed|said yes|opted in|is ok(?:ay)?|are ok(?:ay)?|gave (?:me )?(?:permission|consent))\b[^.?!]{0,25}\b(?:call|calls|called|calling)\b/i.test(text)) return "listCallbacks";
   if (asks && /\b(?:who|which|what|any|how many)\b[^.?!]{0,40}\b(?:quotes?|estimates?|bids?)\b/i.test(text) && /\b(?:waiting|pending|asked|requested|open|outstanding|follow|need|owe|haven['’]?t|not (?:yet )?(?:sent|answered))\b/i.test(text)) return "listQuotes";
 
   // ---- who is free when
@@ -203,8 +203,8 @@ function classifySchedule(command = "") {
     if (/\b(?:send|text|email|message)\b[^.?!]{0,40}\b(?:confirmation|confirm(?:ing)?)\b|\bconfirm\b[^.?!]{0,30}\b(?:appointment|booking)\b/i.test(text) && !/\bgrant\b/i.test(text)) return "confirmBooking";
     if (/\b(?:cancel|call off)\b[^.?!]{0,40}\b(?:appointment|booking)\b/i.test(text)) return "cancelBooking";
     if (/\b(?:move|reschedule|change|shift|push)\b[^.?!]{0,50}\b(?:appointment|booking)\b/i.test(text) && (hasDay(text) || hasTime(text))) return "moveBooking";
-    if (/\b(?:does not|doesn['’]t|do not|don['’]t|did not|didn['’]t|no longer)\b[^.?!]{0,25}\b(?:want|wish|like|agree)\b[^.?!]{0,40}\b(?:calls?|called|calling|texts?|messages?|contact(?:ed)?)\b|\bopted out\b|\bdo not call\b|\bdon['’]t call\b|\bstop calling\b|\bno more (?:calls|texts)\b/i.test(text) && nameIn(text)) return "recordCallConsent";
-    if (/\b(?:agreed|said (?:yes|ok(?:ay)?|it(?:'s| is) ok(?:ay)?)|is ok(?:ay)? with|consented|opted in|gave (?:me )?(?:permission|consent)|is fine with|says (?:yes|ok(?:ay)?|it(?:'s| is) ok(?:ay)?))\b[^.?!]{0,50}\b(?:calls?|called|calling|call (?:her|him|them)|texts?|texting|messages?|contact(?:ed)?)\b/i.test(text) && nameIn(text)) return "recordCallConsent";
+    if (/\b(?:does not|doesn['’]t|do not|don['’]t|did not|didn['’]t|no longer)\b[^.?!]{0,25}\b(?:want|wish|like|agree)\b[^.?!]{0,40}\b(?:calls?|called|calling)\b|\bopted out of calls?\b|\bdo not call\b|\bdon['’]t call\b|\bstop calling\b|\bno more calls\b/i.test(text) && nameIn(text)) return "recordCallConsent";
+    if (/\b(?:agreed|said (?:yes|ok(?:ay)?|it(?:'s| is) ok(?:ay)?)|is ok(?:ay)? with|consented|opted in|gave (?:me )?(?:permission|consent)|is fine with|says (?:yes|ok(?:ay)?|it(?:'s| is) ok(?:ay)?))\b[^.?!]{0,50}\b(?:calls?|called|calling|call (?:her|him|them))\b/i.test(text) && nameIn(text)) return "recordCallConsent";
     if (/\b(?:i|we)\s+(?:sent|gave|emailed|texted|delivered)\b[^.?!]{0,30}\b(?:the |a |her |his |their )?(?:quote|estimate|bid|proposal)\b/i.test(text) && nameIn(text)) return "quoteSent";
     if ((/\b(?:asked for|wants?|needs?|requested|is asking for|would like|has asked for|asks for|want)\b[^.?!]{0,20}\b(?:an? |the )?(?:quote|estimate|bid|proposal)\b/i.test(text) || /\b(?:log|record|add|note|track)\b[^.?!]{0,20}\b(?:quote|estimate)\s+request\b/i.test(text)) && nameIn(text)) return "requestQuote";
     // booking a named customer: "Book Grace Otieno for Thursday at 2", "Schedule an appointment for Grace Otieno on Friday at 10 for a haircut"
@@ -521,5 +521,5 @@ function planScheduleWrite(intent, { command, editable, workspace, today, nowTim
   return null;
 }
 
-module.exports = Object.freeze({ classifySchedule, readSchedule, planScheduleWrite, SCHEDULE_READ_INTENTS, SCHEDULE_WRITE_INTENTS,
+module.exports = Object.freeze({ classifySchedule, readSchedule, planScheduleWrite, SCHEDULE_READ_INTENTS, SCHEDULE_WRITE_INTENTS, leadFor,
   hoursFor, check, freeIntervals, nextOpenings, bookedOn, parseDuration, parseWhen, timeRange, daysIn, nameIn, channelFor, confirmationText, clock });

@@ -94,7 +94,11 @@ function normalizeEditable(info, input = {}) {
     // rather than a leads-only list; "followUpDate" is a real date field
     // (distinct from the free-text "nextAction") so a follow-up can be
     // reminded on, not just described.
-    leads: rows(input.leads === undefined ? starter.leads : input.leads, { name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "", skills: "", availability: "", source: "", consent: "", consentDate: "", callConsent: "", callConsentDate: "" }),
+    leads: rows(input.leads === undefined ? starter.leads : input.leads, { name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "", skills: "", availability: "", source: "", consent: "", consentDate: "", callConsent: "", callConsentDate: "", messageConsent: "", messageConsentDate: "" }),
+    // Phase 3 of the small-business assistant team: campaigns (a message to send by email or text to the customers who agreed to get messages) and the log of what was sent to whom, whether it failed and whether they replied.
+    // Both start empty, so a workspace saved before this existed reads back exactly as it was.
+    campaigns: rows(input.campaigns === undefined ? (starter.campaigns || []) : input.campaigns, { name: "", channel: "email", subject: "", message: "", status: "draft", createdOn: "", sentOn: "" }, 100),
+    campaignLog: rows(input.campaignLog === undefined ? (starter.campaignLog || []) : input.campaignLog, { campaign: "", customer: "", channel: "email", to: "", status: "sent", at: "", note: "" }, 1500),
     // Phase 3 of the business-intelligence tools (the people side). Volunteer hours, the services each participant received (recorded only once their consent is recorded), the results measured, and the program goals.
     // Hours and services are the lists that grow fastest, so they hold 400 rows rather than 200. All start empty, so a workspace saved before this existed reads back exactly as it was.
     volunteerHours: rows(input.volunteerHours === undefined ? (starter.volunteerHours || []) : input.volunteerHours, { volunteer: "", hours: 0, date: "", activity: "", program: "" }, 400, new Set(["hours"])),
