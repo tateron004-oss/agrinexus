@@ -51687,7 +51687,7 @@ function startKyroVoiceIntake(definition, options = {}) {
 
 function kyroVoiceIntakeOwnsTurn(command) {
   if (kyroActiveVoiceIntake && kyroActiveVoiceIntake.engine.phase !== "paused") return true;
-  return Boolean(window.KyroIntakeForms?.isBusinessPlanRequest?.(command) || window.KyroPrTopics?.isPrBriefRequest?.(command) || window.KyroIntakeForms?.isSponsorshipProposalRequest?.(command) || window.KyroIntakeForms?.isTeamPacketRequest?.(command) || window.KyroIntakeForms?.isMoneyPlanRequest?.(command) || window.KyroIntakeForms?.isProgramKitRequest?.(command) || window.KyroIntakeForms?.isResumeBuildRequest?.(command) || window.KyroIntakeForms?.isSaleRequest?.(command) || window.KyroIntakeForms?.isTelehealthRequest?.(command) || window.KyroCapture?.isLookRequest?.(command) || kyroSpokenOpenOwns(command));
+  return Boolean(window.KyroIntakeForms?.isBusinessPlanRequest?.(command) || window.KyroPrTopics?.isPrBriefRequest?.(command) || window.KyroIntakeForms?.isSponsorshipProposalRequest?.(command) || window.KyroIntakeForms?.isTeamPacketRequest?.(command) || window.KyroIntakeForms?.isMoneyPlanRequest?.(command) || window.KyroIntakeForms?.isProgramKitRequest?.(command) || window.KyroIntakeForms?.isDoctorVisitRequest?.(command) || window.KyroIntakeForms?.isResumeBuildRequest?.(command) || window.KyroIntakeForms?.isSaleRequest?.(command) || window.KyroIntakeForms?.isTelehealthRequest?.(command) || window.KyroCapture?.isLookRequest?.(command) || kyroSpokenOpenOwns(command));
 }
 
 // Returns true when the transcript was consumed by a Kyro voice intake (caller must skip its own
@@ -51758,6 +51758,11 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // "Help me make a money plan", "build me a budget", "help me plan a financial education program": the same kind of interview for a person's money and for an organizer (a question or a template is still the money guide's)
     if (trimmed && window.KyroIntakeForms?.isMoneyPlanRequest?.(trimmed)) {
       startKyroAthleteDocIntake("moneyPlan", { seedUtterance: { id: utteranceId, text: trimmed }, source });
+      return true;
+    }
+    // "Help me set up a doctor's appointment", "I need to make a dentist appointment": Kyro cannot book it, so it gets the person ready (what to say, what to ask, what to bring) in a sheet to take when they call
+    if (trimmed && window.KyroIntakeForms?.isDoctorVisitRequest?.(trimmed)) {
+      startKyroAthleteDocIntake("doctorVisit", { seedUtterance: { id: utteranceId, text: trimmed }, source });
       return true;
     }
     if (trimmed && window.KyroIntakeForms?.isProgramKitRequest?.(trimmed)) {
@@ -52098,6 +52103,12 @@ const KYRO_ATHLETE_DOCS = Object.freeze({
     done: "Done. Your 90-day money plan is saved and on the screen. You can change it there and download it as a Word document. Where it says Not decided yet, you can fill it in later. I have not sent it to anyone, and I have not opened, moved or invested any money.",
     note: values => `The money plan interview finished. A 90-day money plan was saved and is shown on screen with a Download button. It was not sent to anyone and no money was moved.`
   }),
+  doctorVisit: Object.freeze({
+    intakeId: "doctor-visit", label: "Appointment sheet interview", incompleteCode: "doctor_visit_incomplete", incompleteField: "reason",
+    incompleteSay: "I need to know what the appointment is for.",
+    done: "Done. Your appointment sheet is saved and on the screen. It has what to say when you call, what to ask the clinic, and what to bring. You can change it there and download it as a Word document. I have not booked anything or called anyone, and this is not medical advice.",
+    note: () => "The appointment interview finished. A sheet to get ready for a doctor, dentist or clinic appointment was saved and is shown on screen with a Download button. Nothing was booked, nobody was called, and no medical advice was given."
+  }),
   programKit: Object.freeze({
     intakeId: "program-kit", label: "Program plan interview", incompleteCode: "program_kit_incomplete", incompleteField: "organization",
     incompleteSay: "Please tell me your organization and what the people you serve need first.",
@@ -52226,6 +52237,7 @@ function kyroIntakeBusyLine(command) {
   if (id === "sponsorship-proposal" || (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isSponsorshipProposalRequest?.(command))) return "Kyro is already asking the athlete the questions for a sponsorship proposal, one at a time. Say nothing now.";
   if (id === "team-packet" || (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isTeamPacketRequest?.(command))) return "Kyro is already asking the coach the questions for a team and club packet, one at a time. Say nothing now.";
   if (id === "money-plan" || (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isMoneyPlanRequest?.(command))) return "Kyro is already asking the person the questions for a 90-day money plan, one at a time. Say nothing now, and do not ask for account numbers or passwords.";
+  if (id === "doctor-visit" || (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isDoctorVisitRequest?.(command))) return "Kyro is already asking the person the questions to get ready for a doctor, dentist or clinic appointment, one at a time. Say nothing now, do not give medical advice, and do not ask for ID numbers or passwords.";
   if (id === "program-kit" || (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isProgramKitRequest?.(command))) return "Kyro is already asking the organizer the questions for a financial education program plan, one at a time. Say nothing now.";
   if (id === "pr-brief" || (!kyroActiveVoiceIntake && window.KyroPrTopics?.isPrBriefRequest?.(command))) return "Kyro is already asking the person the questions for a brief to give a PR or event firm, one at a time. Say nothing now.";
   if (id === "sale" || (!kyroActiveVoiceIntake && forms?.isSaleRequest?.(command))) return "Kyro is already asking the person about what they want to sell, one question at a time. Say nothing now.";
@@ -62103,6 +62115,10 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   }
   if (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isMoneyPlanRequest?.(text)) {
     startKyroAthleteDocIntake("moneyPlan", { seedUtterance: { id: "", text }, source: options.source || "typed" });
+    return true;
+  }
+  if (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isDoctorVisitRequest?.(text)) {
+    startKyroAthleteDocIntake("doctorVisit", { seedUtterance: { id: "", text }, source: options.source || "typed" });
     return true;
   }
   if (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isProgramKitRequest?.(text)) {
