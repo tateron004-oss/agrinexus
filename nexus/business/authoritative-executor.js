@@ -5,6 +5,23 @@ const voiceDispatch = require("./voice-dispatch.js");
 const financeVoice = require("./finance-voice.js");
 const programsVoice = require("./programs-voice.js");
 const operationsVoice = require("./operations-voice.js");
+const scheduleVoice = require("./scheduling-voice.js");
+const { createCommunicationsSendExecutor, verifyCommunicationsSendOutcome } = require("../communications/executor.js");
+
+// Sends one message to a customer through the same governed sender the text and email commands use (it refuses a restricted account, a provider that is off, and a simulated send). It resolves only when the provider
+// really sent it; otherwise it throws the plain reason, so a booking is never marked "confirmation sent" when nothing went out.
+function makeSendMessage(env, context) {
+  const execute = createCommunicationsSendExecutor({ env });
+  return async input => {
+    const result = await execute({ input, context });
+    const verdict = verifyCommunicationsSendOutcome({ result });
+    if (!verdict.verified) {
+      throw new Error(result?.simulated === true || result?.data?.simulated === true ? "I could not send it: message sending is not set up on this server yet, so nothing was sent."
+        : "I could not confirm that the message was delivered, so I have not marked the confirmation as sent.");
+    }
+    return result;
+  };
+}
 
 // Real executor for the authoritative runtime's business.manage/business.query
 // canonical tools (see nexus/runtime/create-runtime.js's LOCAL_EXECUTORS and
@@ -33,7 +50,8 @@ function createBusinessExecutor({ repository, access, consents, env }) {
       throw error;
     }
     const result = await voiceDispatch.run({
-      command: String(input?.command || ""), args: input?.args || {}, confirmed: true, businessRequest, timeZone: context?.timeZone
+      command: String(input?.command || ""), args: input?.args || {}, confirmed: true, businessRequest, timeZone: context?.timeZone,
+      sendMessage: makeSendMessage(env, context)
     });
     // A read with nothing to read yet ("show my business dashboard" before any workspace exists) is a true answer, not a
     // failure: it said so, and how to start, instead of surfacing as a 422 error.
@@ -81,7 +99,7 @@ function createBusinessWorkspaceCounter({ repository, access, consents, env }) {
 // understood and nothing is changed.
 // Resolves to the spoken answer, or null when this is not for the workspace.
 const SPOKEN_WRITES = new Set(["addLead", "performIntake", "logTransaction", "createInvoice", "addInvoiceItem", "addGrant", "updateGrantStatus", "addTask", "updateTaskStatus", "addAppointment", "markInvoicePaid", "setFollowUp",
-  "createWorkspace", "addListing", "updateListingStatus", ...financeVoice.FINANCE_WRITE_INTENTS, ...programsVoice.PROGRAM_WRITE_INTENTS, ...operationsVoice.OPERATIONS_WRITE_INTENTS]);
+  "createWorkspace", "addListing", "updateListingStatus", ...financeVoice.FINANCE_WRITE_INTENTS, ...programsVoice.PROGRAM_WRITE_INTENTS, ...operationsVoice.OPERATIONS_WRITE_INTENTS, ...scheduleVoice.SCHEDULE_WRITE_INTENTS]);
 const PENDING_MS = 2 * 60 * 1000;
 const YES = /^(?:(?:ok|okay)[,.]?\s+)?(?:yes|yeah|yep|yup|sure|ok|okay|go ahead|do it|confirm|confirmed|correct|that is right|that's right|please do|yes please|sure thing)(?:[ ,.]+(?:please|go ahead|do it|thanks|thank you))?[ .!]*$/i;
 const NO = /^(?:no|nope|cancel|stop|never ?mind|don'?t|do not|forget it|not now|no thanks|no thank you)(?:[ ,.]+(?:thanks|please|cancel it|don'?t))?[ .!]*$/i;
@@ -94,7 +112,7 @@ function createBusinessReader({ repository, access, consents, env, now = () => D
     api ||= createBusinessApi({ access, consents, agent: null }, { env, repository });
     return ({ method, pathname, body = {} }) => api.handle({ method, pathname, context, body });
   };
-  const runCommand = (text, context, confirmed) => voiceDispatch.run({ command: text, args: {}, confirmed, businessRequest: bridge(context), timeZone: context?.timeZone });
+  const runCommand = (text, context, confirmed) => voiceDispatch.run({ command: text, args: {}, confirmed, businessRequest: bridge(context), timeZone: context?.timeZone, sendMessage: makeSendMessage(env, context) });
   const spoken = result => (typeof result?.response === "string" && result.response.trim() ? result.response : null);
 
   async function handle(text, context) {
@@ -157,4 +175,4 @@ function verifyBusinessOutcome({ result }) {
   return { verified, method: "real_business_workspace_write", reason: verified ? null : "business_outcome_incomplete" };
 }
 
-module.exports = Object.freeze({ createBusinessExecutor, createBusinessWorkspaceCounter, createBusinessReader, createBusinessPreview, verifyBusinessOutcome });
+module.exports = Object.freeze({ makeSendMessage, createBusinessExecutor, createBusinessWorkspaceCounter, createBusinessReader, createBusinessPreview, verifyBusinessOutcome });

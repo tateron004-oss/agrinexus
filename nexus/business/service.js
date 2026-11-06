@@ -94,7 +94,7 @@ function normalizeEditable(info, input = {}) {
     // rather than a leads-only list; "followUpDate" is a real date field
     // (distinct from the free-text "nextAction") so a follow-up can be
     // reminded on, not just described.
-    leads: rows(input.leads === undefined ? starter.leads : input.leads, { name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "", skills: "", availability: "", source: "", consent: "", consentDate: "" }),
+    leads: rows(input.leads === undefined ? starter.leads : input.leads, { name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "", skills: "", availability: "", source: "", consent: "", consentDate: "", callConsent: "", callConsentDate: "" }),
     // Phase 3 of the business-intelligence tools (the people side). Volunteer hours, the services each participant received (recorded only once their consent is recorded), the results measured, and the program goals.
     // Hours and services are the lists that grow fastest, so they hold 400 rows rather than 200. All start empty, so a workspace saved before this existed reads back exactly as it was.
     volunteerHours: rows(input.volunteerHours === undefined ? (starter.volunteerHours || []) : input.volunteerHours, { volunteer: "", hours: 0, date: "", activity: "", program: "" }, 400, new Set(["hours"])),
@@ -150,7 +150,11 @@ function normalizeEditable(info, input = {}) {
     // workspace. calendarEventId/calendarLink stay empty until an
     // appointment is actually synced -- an unsynced row is honestly just a
     // local plan, never mistaken for a real calendar booking.
-    appointments: rows(input.appointments === undefined ? starter.appointments : input.appointments, { title: "", start: "", end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "" }),
+    // Phase 1 of the small-business assistant team: a booking now also carries a real day and time ("startAt", YYYY-MM-DDTHH:MM in the business's own zone), how long it lasts, who it is for, what for and whether the
+    // customer was sent a confirmation, so availability can be checked and a double-booking refused. "start" stays the words as they were said. An older saved booking has no startAt and reads back exactly as it was.
+    appointments: rows(input.appointments === undefined ? starter.appointments : input.appointments, { title: "", start: "", end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "", startAt: "", durationMinutes: 0, customer: "", service: "", confirmation: "" }, 400, new Set(["durationMinutes"])),
+    // The days and times the business is open (one row per open day, e.g. { day: "monday", open: "09:00", close: "17:00" }). No rows means no hours were set; the assistant then assumes Monday to Friday, 9 to 5, and says so.
+    hours: rows(input.hours === undefined ? (starter.hours || []) : input.hours, { day: "", open: "", close: "" }, 7),
     // Core-essentials real estate support: property listings. Reuses this
     // same generic workspace/leads/invoices engine rather than a separate
     // vertical-specific system -- "leads" already tracks buyer/seller/tenant
