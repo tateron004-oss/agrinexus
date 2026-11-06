@@ -67,7 +67,8 @@ function checked(value, said, max) {
 // "What: poster for the community clean-up" (found live on 5 November 2026): the line says what is happening, not what kind of paper this is, so a leading "poster for the" is taken off ("community clean-up"). A line that is only the kind word is dropped.
 function withoutKindWord(value) {
   const text = String(value || "").trim();
-  return text.replace(/^(?:an?\s+|the\s+|my\s+|our\s+)?(?:flyer|poster|newsletter|brochure|invitation|handout|email|social post|post|caption|ad|advert|advertisement|web page|webpage|website)s?(?:\s+(?:for|about|to|of|announcing)\b\s*(?:an?\s+|the\s+|my\s+|our\s+)?|\s*$)/i, "").trim();
+  // also the request itself ("Make an Instagram post"), found live on 6 November 2026 as "What: Make an Instagram post" for a bake sale
+  return text.replace(/^(?:(?:please\s+)?(?:make|write|create|draft|design|do|give)\b(?:\s+me)?\s+)?(?:an?\s+|the\s+|my\s+|our\s+)?(?:(?:facebook|instagram|linkedin|twitter|tiktok|whatsapp|x)\s+)?(?:social media post|social post|flyer|poster|newsletter|brochure|invitation|handout|email|post|caption|ad|advert|advertisement|web page|webpage|website)s?(?:\s+(?:for|about|to|of|announcing)\b\s*(?:an?\s+|the\s+|my\s+|our\s+)?|\s*$)/i, "").trim();
 }
 
 function validateWording(reply, text) {
