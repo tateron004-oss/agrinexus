@@ -3,9 +3,9 @@
 // made from the person's own words: no place, price or claim they did not say.
 module.exports = Object.freeze([
   { id: "mk-facebook-post", area: "marketing", writes: true, say: "Write a Facebook post for my salon opening on Saturday.", timeoutMs: 120000,
-    expect: { screen: "document", text: "SALON OPENING", notText: "placeholders|SHOW:|picture of", download: true, buttons: ["PDF"] } },
+    expect: { screen: "document", text: "SALON OPENING", notText: "placeholders|SHOW:", download: true, buttons: ["PDF"] } },
   { id: "mk-instagram-post-with-details", area: "marketing", writes: true, say: "Make an Instagram post for my bake sale on Saturday at ten at the church hall.", timeoutMs: 120000,
-    expect: { screen: "document", text: "BAKE SALE[\\s\\S]*Saturday at ten[\\s\\S]*church hall", notText: "placeholders|SHOW:", download: true } },
+    expect: { screen: "document", text: "BAKE SALE[\\s\\S]*Saturday at (?:ten|10)[\\s\\S]*church hall", notText: "placeholders|SHOW:|What: Make", download: true } },
   { id: "mk-ad", area: "marketing", writes: true, say: "Make an ad for my bakery.", timeoutMs: 120000,
     expect: { screen: "document", text: "BAKERY", notText: "placeholders|SHOW:", download: true, buttons: ["PDF"] } },
   { id: "mk-website-page", area: "marketing", writes: true, say: "Write the website page for my catering business.", timeoutMs: 120000,

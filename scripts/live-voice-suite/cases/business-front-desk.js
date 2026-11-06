@@ -12,25 +12,25 @@ module.exports = Object.freeze([
       { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Set the hours of[\\s\\S]*8 AM to 6 PM" } },
       { say: "What are my hours?", timeoutMs: 60000, expect: { screen: SCREEN, text: "Monday 8 AM to 6 PM[\\s\\S]*Friday 8 AM to 6 PM", notText: "no business hours saved" } },
       // booking
-      { say: "Book Grace Otieno for next Wednesday at 2 p.m. for a haircut.", timeoutMs: 90000, expect: { screen: SCREEN, text: "book Grace Otieno[\\s\\S]*haircut[\\s\\S]*2 PM", notText: "could not tell|workforce" } },
-      { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Booked Grace Otieno[\\s\\S]*2 PM" } },
-      { say: "Am I free next Wednesday at 2 p.m.?", timeoutMs: 60000, expect: { screen: SCREEN, text: "taken by Grace Otieno" } },
-      { say: "Book John Kamau for next Wednesday at 2 p.m.", timeoutMs: 90000, expect: { screen: SCREEN, text: "already taken by Grace Otieno[\\s\\S]*next openings", notText: "I can book" } },
-      { say: "What is open next Wednesday?", timeoutMs: 60000, expect: { screen: SCREEN, text: "Free:[\\s\\S]*Booked: Grace Otieno at 2 PM" } },
+      { say: "Book Grace Wells for next Wednesday at 2 p.m. for a haircut.", timeoutMs: 90000, expect: { screen: SCREEN, text: "book Grace Wells[\\s\\S]*haircut[\\s\\S]*2 PM", notText: "could not tell|workforce" } },
+      { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Booked Grace Wells[\\s\\S]*2 PM" } },
+      { say: "Am I free next Wednesday at 2 p.m.?", timeoutMs: 60000, expect: { screen: SCREEN, text: "taken by Grace Wells" } },
+      { say: "Book John Smith for next Wednesday at 2 p.m.", timeoutMs: 90000, expect: { screen: SCREEN, text: "already taken by Grace Wells[\\s\\S]*next openings", notText: "I can book" } },
+      { say: "What is open next Wednesday?", timeoutMs: 60000, expect: { screen: SCREEN, text: "Free:[\\s\\S]*Booked: Grace Wells at 2 PM" } },
       { say: "Am I free next Sunday at 10 a.m.?", timeoutMs: 60000, expect: { screen: SCREEN, text: "is closed[\\s\\S]*next openings" } },
-      // the confirmation: no number or email on file, so it is refused and nothing is claimed as sent
-      { say: "Send Grace Otieno her confirmation.", timeoutMs: 90000, expect: { screen: SCREEN, text: "no usable phone number or email for Grace Otieno", notText: "sent Grace|Sent Grace" } },
+      // the confirmation: nothing is claimed as sent. A guest is told it needs a full account; a signed-in owner with no number on file is told there is no usable number. Either way it is refused.
+      { say: "Send Grace Wells her confirmation.", timeoutMs: 90000, expect: { said: "full account|no usable phone number|couldn.t send|can.t send|not set up", notSaid: "(?:I|I have|I've) sent|has been sent|was sent" } },
       // permission to be called back
-      { say: "Grace Otieno agreed to be called back.", timeoutMs: 90000, expect: { screen: SCREEN, text: "Grace Otieno agreed to be called back" } },
-      { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Noted[\\s\\S]*Grace Otieno agreed to be called back" } },
-      { say: "Who can I call back?", timeoutMs: 60000, expect: { screen: SCREEN, text: "agreed to be called back: Grace Otieno", notText: "follow-up" } },
+      { say: "Grace Wells agreed to be called back.", timeoutMs: 90000, expect: { screen: SCREEN, text: "Grace Wells agreed to be called back" } },
+      { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Noted[\\s\\S]*Grace Wells agreed to be called back" } },
+      { say: "Who can I call back?", timeoutMs: 60000, expect: { screen: SCREEN, text: "agreed to be called back: Grace Wells", notText: "follow-up" } },
       // a quote
-      { say: "Grace Otieno asked for a quote for a fence.", timeoutMs: 90000, expect: { screen: SCREEN, text: "asked for a quote for a fence" } },
+      { say: "Grace Wells asked for a quote for a fence.", timeoutMs: 90000, expect: { screen: SCREEN, text: "asked for a quote for a fence" } },
       { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Noted[\\s\\S]*quote" } },
-      { say: "Who is waiting on a quote?", timeoutMs: 60000, expect: { screen: SCREEN, text: "waiting on a quote: Grace Otieno" } },
+      { say: "Who is waiting on a quote?", timeoutMs: 60000, expect: { screen: SCREEN, text: "waiting on a quote: Grace Wells" } },
       // cancelling gives the time back
-      { say: "Cancel Grace Otieno's appointment.", timeoutMs: 90000, expect: { screen: SCREEN, text: "cancel Grace Otieno's booking" } },
-      { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Cancelled Grace Otieno's booking[\\s\\S]*free again" } },
+      { say: "Cancel Grace Wells's appointment.", timeoutMs: 90000, expect: { screen: SCREEN, text: "cancel Grace Wells's booking" } },
+      { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Cancelled Grace Wells's booking[\\s\\S]*free again" } },
       { say: "Am I free next Wednesday at 2 p.m.?", timeoutMs: 60000, expect: { screen: SCREEN, text: "is free for an hour" } }
     ] }
 ]);

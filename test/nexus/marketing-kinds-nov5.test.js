@@ -118,3 +118,14 @@ test("the owner's workspace and the spoken page treat them like flyers", () => {
   const line = app.split("\n").find(row => row.startsWith("const KYRO_DOCUMENT_REQUEST"));
   assert.ok(line && /social\(\?: media\)\? \(\?:posts\?\|captions\?\)/.test(line) && /advertisements\?\|adverts\?\|ads\?/.test(line) && /landing page/.test(line));
 });
+
+// Found live on 6 November 2026: "Make an Instagram post for my bake sale on Saturday at ten at the church hall" put "What: Make an Instagram post" on the post.
+test("the request itself is never put on the 'What:' line", () => {
+  const said = "Make an Instagram post for my bake sale on Saturday at 10 at the church hall.";
+  const sorted = reply => wording.validateWording(reply, said);
+  assert.equal(sorted({ headline: "bake sale", when: "Saturday at 10", where: "the church hall", what: "Make an Instagram post" }).what, "");
+  assert.equal(sorted({ headline: "bake sale", when: "Saturday at 10", where: "the church hall", what: "make an Instagram post for the bake sale" }).what, "bake sale");
+  assert.equal(sorted({ headline: "bake sale", when: "Saturday at 10", where: "the church hall", what: "bake sale" }).what, "bake sale");
+  const post = wording.composeFromFacts({ kind: "social", subject: "bake sale", when: "Saturday at 10" }, sorted({ headline: "bake sale", when: "Saturday at 10", where: "the church hall", what: "Make an Instagram post" }));
+  assert.ok(!/Make an Instagram/i.test(post.content) && /When: Saturday at 10/.test(post.content) && /Where: the church hall/.test(post.content) && /What: \[what is happening/.test(post.content));
+});
