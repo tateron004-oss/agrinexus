@@ -52423,6 +52423,8 @@ const KYRO_OPEN_LEAD = "^(?:please\\s+)?(?:(?:hey\\s+)?(?:kyro|nexus)[,.]?\\s+)?
 const KYRO_OPEN_DOCS = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:(?:my|the|all|some)\\s+)?(?:saved\\s+)?(?:documents?|docs?|files?|papers|business plans?|letters|reports)[.?!]*$`, "i");
 const KYRO_OPEN_MEDIA = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:(?:my|the|some|any)\\s+)?(images?|pictures?|photos?|videos?|clips?)[.?!]*$`, "i");
 const KYRO_DOCUMENT_REQUEST = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:create|make|write|draft|prepare|generate|build|put together|compose|type up)\\s+(?:me\\s+)?(?:a|an|my|the|some)?\\s*(?:[a-z'-]+\\s+){0,3}?(?:document|letter|report|proposal|contract|agreement|roadmap|invoice|business plan|marketing plan|farm plan|financial plan|funding plan|action plan|agenda|e-?mail|(?:thank[- ]?you |thank-you |apology )note|bio|biography|speech|toast|meal plan|menu|schedule|timetable|table|outline|announcement|notice|statement|job description|lesson plan|workout plan|study plan|flyer|newsletter|poster|brochure|handout|invitation|social(?: media)? (?:posts?|captions?)|(?:facebook|instagram|linkedin|twitter|tiktok|whatsapp) (?:posts?|captions?)|advertisements?|adverts?|ads?|web ?page|web ?site (?:copy|content|page|text)|landing page)\\b`, "i");
+// "Check my contract", "Review this lease", "Is my agreement okay?", "What does my contract say?": the contract is read and checked (nexus/documents/contract-check.js); it is the page's own turn, like a document request
+const KYRO_CONTRACT_CHECK = /^\s*(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:(?:can|could|would|will) you\s+)?(?:check|review|read|look (?:over|at|through)|go (?:over|through)|scan|analy[sz]e|explain|summari[sz]e)\s+(?:over\s+)?(?:my|the|this|that|our|a|an)?\s*(?:[a-z'-]+\s+){0,3}?(?:contracts?|agreements?|leases?|nda|mou|terms)\b|^\s*(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?is\s+(?:my|this|the|that)\s+(?:[a-z'-]+\s+){0,2}?(?:contract|agreement|lease)\s+(?:ok(?:ay)?|fair|safe|good|risky)\b|^\s*(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?what does\s+(?:my|this|the)\s+(?:[a-z'-]+\s+){0,2}?(?:contract|agreement|lease)\s+say\b/i;
 // "Add a picture of fresh bread to the flyer", "put my logo on it", "add the photo I uploaded": the pictures go into the latest designed document (flyer, poster, newsletter, brochure, invitation, promotional email), said aloud or typed (nexus/documents/pictures.js is the other half).
 const KYRO_ADD_PICTURE = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:add|put|place|include|insert|attach)\\s+(?:in\\s+)?(?:(?:a|an|the|some|my|our|one)\\s+)?(?:(?:nice|good|great|real)\\s+)?(?:(?:company|business|church|farm|shop)\\s+)?(?:picture|photo|image|logo)\\b`, "i");
 const KYRO_ADD_PICTURE_NOT = /\b(?:profile|contact|record|health|patient|crop|animal|cow|goat|chicken|field|list|checklist|calendar|note|reminder|cart|message|text|email to)\b/i;
@@ -52767,7 +52769,7 @@ async function kyroOpenNamedDocument(name) {
 function kyroSpokenOpenOwns(text) {
   const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
-  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || (typeof kyroFileReadingMore === "function" && kyroFileReadingMore(said)) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_ACTIVITY.test(said) || window.KyroAutomationCommands?.isOpen?.(said) || KYRO_ASK_MEMORY.test(said) || KYRO_OPEN_DOCS.test(said) || kyroNamedDocument(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
+  return KYRO_CONTRACT_CHECK.test(said) || KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || (typeof kyroFileReadingMore === "function" && kyroFileReadingMore(said)) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_ACTIVITY.test(said) || window.KyroAutomationCommands?.isOpen?.(said) || KYRO_ASK_MEMORY.test(said) || KYRO_OPEN_DOCS.test(said) || kyroNamedDocument(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
 }
 // A card or interview left open by an earlier request (the AgriTrade card a "sell" opened, a telehealth card) stays in front of everything after it: the quiet-spell return never closes work the person is "in". A new
 // request closes it first; if the new request opens a workspace of its own, that opens after this.
@@ -53093,6 +53095,11 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
       : (lang === "sw" ? "Ungependa kuona picha za nini? Kwa mfano: nionyeshe picha za mmea wa mahindi." : "What would you like to see pictures of? For example: show me pictures of a maize plant.");
     kyroShowResultScreen("typed", said, { ok: true, status: "completed", response: ask });
     try { setVoiceResponse(ask, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the screen asks too */ }
+    return true;
+  }
+  if (!options.typed && KYRO_CONTRACT_CHECK.test(said)) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
     return true;
   }
   if (!options.typed && KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said)) {
