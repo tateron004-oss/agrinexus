@@ -44,3 +44,4 @@ build/
 
 # Koach Learn course exports (scripts/koachlearn-export.js)
 output/koachlearn/
+output/koachlearn-audio/

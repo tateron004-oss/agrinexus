@@ -468,18 +468,45 @@ function lessonVideo(dir, base, kicker, lesson, L = LABELS.en, rtl = false) {
 }
 
 // each slide is drawn once as a picture; the video shows the pictures in turn, encoded once at a low frame rate (the slides do not move)
+// NARRATION (scripts/koachlearn-narration.js): with --narrate each slide is read aloud in the course's language and stays up until the voice has finished.
+// Building runs in two passes (the voice services are asynchronous, the video builder is not): the first only collects what is to be said, then it is all spoken and kept, and the second builds the videos from the kept audio.
+let narration = null; // { lang, module, collect: [] | null }
+const PAUSE_AFTER_SPEECH = 1.2;
+
 function stillsVideo(dir, base, scenes) {
   const slidesDir = path.join(dir, `${base}-slides`);
+  const spoken = narration ? scenes.map(blocks => narration.module.narrationLines(blocks)) : [];
+  if (narration && narration.collect) { spoken.forEach(text => narration.collect.push({ lang: narration.lang, text })); return { video: `${base}.mp4`, slides: `${base}-slides`, slideCount: scenes.length }; }
   fs.mkdirSync(slidesDir, { recursive: true });
+  const audios = [];
   const shown = scenes.map((blocks, i) => {
     card(slidesDir, pad(i + 1), blocks, 0, { still: true });
-    return { file: `${base}-slides/${pad(i + 1)}.png`, seconds: readingSeconds(blocks.reduce((sum, b) => sum + b.text.split(/\s+/).length, 0)) };
+    let seconds = readingSeconds(blocks.reduce((sum, b) => sum + b.text.split(/\s+/).length, 0));
+    if (narration) {
+      const clip = narration.module.cachedAudio(narration.lang, spoken[i]);
+      if (!clip) throw new Error(`${base} slide ${i + 1}: the narration for this slide has not been spoken yet (run the build with --narrate)`);
+      seconds = Math.max(seconds, Math.ceil((clip.seconds + PAUSE_AFTER_SPEECH) * 10) / 10);
+      audios.push({ clip, seconds });
+    }
+    return { file: `${base}-slides/${pad(i + 1)}.png`, seconds };
   });
   const list = [...shown.map(s => `file '${s.file}'\nduration ${s.seconds}`), `file '${shown[shown.length - 1].file}'`].join("\n");
   fs.writeFileSync(path.join(dir, `${base}.list`), list);
-  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", `${base}.list`, "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
-    "-vf", "fps=5,format=yuv420p", "-c:v", "libx264", "-tune", "stillimage", "-c:a", "aac", "-b:a", "64k", "-shortest", "-movflags", "+faststart", `${base}.mp4`], { cwd: dir, stdio: "inherit" });
+  const soundInput = ["-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo"];
+  if (narration) {
+    // each slide's voice is padded with quiet to the length of its slide, then the slides' sound is joined in order
+    const parts = audios.map((a, i) => {
+      const part = `${base}-voice-${pad(i + 1)}.wav`;
+      execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", a.clip.file, "-af", `apad=whole_dur=${a.seconds}`, "-t", String(a.seconds), "-ar", "44100", "-ac", "1", part], { cwd: dir });
+      return part;
+    });
+    fs.writeFileSync(path.join(dir, `${base}.voices`), parts.map(p => `file '${p}'`).join("\n"));
+    soundInput.splice(0, soundInput.length, "-f", "concat", "-safe", "0", "-i", `${base}.voices`);
+  }
+  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", `${base}.list`, ...soundInput,
+    "-vf", "fps=5,format=yuv420p", "-c:v", "libx264", "-tune", "stillimage", "-c:a", "aac", "-b:a", narration ? "96k" : "64k", "-t", String(shown.reduce((sum, s) => sum + s.seconds, 0)), "-movflags", "+faststart", `${base}.mp4`], { cwd: dir, stdio: "inherit" });
   fs.unlinkSync(path.join(dir, `${base}.list`));
+  if (narration) { fs.unlinkSync(path.join(dir, `${base}.voices`)); for (let i = 0; i < audios.length; i += 1) fs.unlinkSync(path.join(dir, `${base}-voice-${pad(i + 1)}.wav`)); }
   return { video: `${base}.mp4`, slides: `${base}-slides`, slideCount: scenes.length };
 }
 
@@ -519,6 +546,7 @@ function exportWritten(file, outRoot) {
   if (problems.length) throw new Error(`${path.basename(file)}:\n  ${problems.join("\n  ")}`);
   const L = LABELS[c.lang || "en"], rtl = RTL.has(c.lang);
   fontSwap = FONTS_BY_LANG[c.lang] || null;
+  if (narration) narration.lang = c.lang || "en";
   const dir = path.join(outRoot, slug(c.category), c.id);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
@@ -674,11 +702,25 @@ if (require.main === module) {
   }
   const all = args.includes("--all-written");
   if (!names.length && !all) { console.error(`usage: node scripts/koachlearn-export.js <${Object.keys(COURSES).join("|")}|path/to/course.js ...|--all-written> [--out dir]   or   --check [files]`); process.exit(1); }
-  for (const name of all ? writtenFiles() : names) {
-    if (COURSES[name]) { const r = exportCourse(name, outRoot); console.log(`${name}: ${r.chapters} chapters, ${r.lessons} lessons -> ${r.dir}`); continue; }
-    const r = exportWritten(path.resolve(name), outRoot);
-    console.log(`${path.basename(name)}: ${r.lessons} lessons -> ${r.dir}`);
-  }
+  const targets = all ? writtenFiles() : names;
+  // --narrate: speak every slide (needs the voice keys in .env.narration, see scripts/koachlearn-narration.js); --voice-test uses a test tone instead of a voice (for checking the timing only)
+  (async () => {
+    if (args.includes("--narrate") || args.includes("--voice-test")) {
+      const module_ = require("./koachlearn-narration.js");
+      if (args.includes("--voice-test")) for (const k of Object.keys(module_.VOICES)) module_.VOICES[k] = { provider: "fake", voice: "test-tone", locale: k };
+      narration = { lang: "en", module: module_, collect: [] };
+      for (const name of targets) if (!COURSES[name]) exportWritten(path.resolve(name), outRoot);
+      const planned = narration.collect.length;
+      const result = await module_.fillCache(narration.collect, { onProgress: (n, total) => { if (n % 25 === 0 || n === total) console.log(`spoken ${n} of ${total}`); } });
+      console.log(`narration: ${planned} slides, ${result.spoken} newly spoken (${result.characters} characters), ${result.kept} already kept`);
+      narration.collect = null;
+    }
+    for (const name of targets) {
+      if (COURSES[name]) { const r = exportCourse(name, outRoot); console.log(`${name}: ${r.chapters} chapters, ${r.lessons} lessons -> ${r.dir}`); continue; }
+      const r = exportWritten(path.resolve(name), outRoot);
+      console.log(`${path.basename(name)}: ${r.lessons} lessons -> ${r.dir}`);
+    }
+  })().catch(error => { console.error(error.message); process.exit(1); });
 }
 
 module.exports = { COURSES, exportCourse, exportWritten, validateCourse, parityProblems, englishOf, loadCourse, wrap, lessonHtml };
