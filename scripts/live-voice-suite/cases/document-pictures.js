@@ -11,6 +11,11 @@ module.exports = Object.freeze([
   { id: "picture-flyer-drawn", area: "documents", writes: true, say: "Make me a flyer for my bake sale on Saturday at ten at the church hall with an illustration of fresh bread.", timeoutMs: 120000,
     expect: { screen: "document", text: "BAKE SALE", notText: "illustration of|placeholders|SHOW:", download: true },
     then: [{ expect: { screen: "document", text: "drawn by a computer|cannot draw pictures yet" }, timeoutMs: 90000 }] },
+  // a slideshow video of the flyer (7 November 2026): said aloud, made on this device from its words and pictures, with the pictures' credits on the last slide
+  { id: "video-flyer-slideshow", area: "documents", writes: true, say: "Make me a flyer for my bake sale on Saturday at ten at the church hall with a picture of fresh bread.", timeoutMs: 120000,
+    expect: { screen: "document", text: "BAKE SALE", download: true },
+    then: [{ say: "Make a video of it.", timeoutMs: 60000, expect: { screen: "document", text: "Making the video|Your video is ready|cannot make a video" } },
+      { expect: { screen: "document", text: "Your video is ready", notText: "could not be made" }, timeoutMs: 90000 }] },
   { id: "picture-newsletter-with-found-picture", area: "documents", writes: true, say: "Create a newsletter for the church with a picture of the church building.", timeoutMs: 120000,
     expect: { screen: "document", text: "CHURCH|Church", download: true },
     then: [{ expect: { screen: "document", images: 1, text: "belong to their owners" }, timeoutMs: 90000 }] },

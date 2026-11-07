@@ -52442,6 +52442,9 @@ const KYRO_DOCUMENT_REQUEST = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|nee
 const KYRO_CONTRACT_CHECK = /^\s*(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:(?:can|could|would|will) you\s+)?(?:check|review|read|look (?:over|at|through)|go (?:over|through)|scan|analy[sz]e|explain|summari[sz]e)\s+(?:over\s+)?(?:my|the|this|that|our|a|an)?\s*(?:[a-z'-]+\s+){0,3}?(?:contracts?|agreements?|leases?|nda|mou|terms)\b|^\s*(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?is\s+(?:my|this|the|that)\s+(?:[a-z'-]+\s+){0,2}?(?:contract|agreement|lease)\s+(?:ok(?:ay)?|fair|safe|good|risky)\b|^\s*(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?what does\s+(?:my|this|the)\s+(?:[a-z'-]+\s+){0,2}?(?:contract|agreement|lease)\s+say\b/i;
 // "Add a picture of fresh bread to the flyer", "put my logo on it", "add the photo I uploaded": the pictures go into the latest designed document (flyer, poster, newsletter, brochure, invitation, promotional email), said aloud or typed (nexus/documents/pictures.js is the other half).
 const KYRO_ADD_PICTURE = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:add|put|place|include|insert|attach)\\s+(?:in\\s+)?(?:(?:a|an|the|some|my|our|one)\\s+)?(?:(?:nice|good|great|real)\\s+)?(?:(?:company|business|church|farm|shop)\\s+)?(?:picture|photo|image|logo)\\b`, "i");
+// "Make a video of it", "turn the flyer into a slideshow video", "make me a slideshow": a slideshow video of the flyer, poster or post that is open (made on this device by public/kyro-slideshow.js, no sound), said aloud or typed.
+const KYRO_MAKE_VIDEO = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:(?:make|create|build|produce|prepare)\\s+(?:me\\s+)?(?:a|the|my|one)?\\s*(?:short\\s+|little\\s+|quick\\s+)?(?:slide\\s?show\\s+)?(?:video|slide\\s?show)\\b|(?:turn|make|change)\\s+(?:it|this|that|the\\s+(?:flyer|poster|newsletter|post|invitation|brochure|document))\\s+(?:in)?to\\s+(?:a\\s+)?(?:slide\\s?show|video)\\b)`, "i");
+const KYRO_MAKE_VIDEO_NOT = /\b(?:play|find|search|show me|watch|youtube|tutorial|lesson|walk ?through|how to|call|record)\b/i;
 const KYRO_ADD_PICTURE_NOT = /\b(?:profile|contact|record|health|patient|crop|animal|cow|goat|chicken|field|list|checklist|calendar|note|reminder|cart|message|text|email to)\b/i;
 const KYRO_DOCUMENT_NOT =/\b(?:resume|résumé|cv|checklist|to-?do|reminder|list)\b|(?<!thank you |thank-you |thank |apology )\bnote\b|\bsend\b|\bas a pdf\b|^(?:how|what|why|should i|can i)\b/i;
 // A spoken request to make a list ("make a shopping list with milk, eggs and bread", "make me a packing list for a week in Tokyo"), to see the lists, or "what should I pack": taken by the page and answered on the screen by the typed route, which makes the list and shows it
@@ -53130,6 +53133,16 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   if (!options.typed && (KYRO_NOTE_REQUEST.test(said) || KYRO_REMINDER_REQUEST.test(said)) && !KYRO_NOTE_NOT.test(said)) {
     kyroTakeOverTurn();
     void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
+  }
+  if (KYRO_MAKE_VIDEO.test(said) && !KYRO_MAKE_VIDEO_NOT.test(said)) {
+    if (!options.typed) { try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ } }
+    const makeButton = document.querySelector("[data-kyro-doc-make-video]");
+    if (makeButton) { try { makeButton.dispatchEvent(new CustomEvent("kyro-make-video", { detail: { spoken: true } })); return true; } catch { /* the line below says what to do */ } }
+    const line = lang === "sw"
+      ? "Ninaweza kutengeneza video ya picha kutoka kwa tangazo, bango au chapisho. Tengeneza moja kwanza, kisha useme: tengeneza video yake."
+      : "I can make a slideshow video from a flyer, poster or post. Make one first, with a picture if you like, then say: make a video of it.";
+    try { setVoiceResponse(line, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the line is only said */ }
     return true;
   }
   if (!options.typed && KYRO_ADD_PICTURE.test(said) && !KYRO_ADD_PICTURE_NOT.test(said)) {
@@ -54175,7 +54188,7 @@ async function kyroDocumentPictureTools(screen, id, status, info = {}) {
   const notes = kyroMake("div", { "data-kyro-doc-picture-notes": id, role: "status", style: "display:flex;flex-direction:column;gap:6px;color:#cbd5e1;font-size:.95rem" });
   const row = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap" });
   const files = kyroMake("input", { type: "file", accept: "image/png,image/jpeg", "data-kyro-doc-picture-file": id, "aria-label": kyroT("Choose a picture"), style: "position:absolute;left:-9999px;width:1px;height:1px;opacity:0" });
-  let asLogo = false; let found = false;
+  let asLogo = false; let found = false; let currentPictures = [];
   const showNotes = list => {
     notes.textContent = "";
     for (const text of list) if (String(text || "").trim() && !/^Pictures found on the web belong/.test(String(text))) notes.append(kyroMake("p", { style: "margin:0" }, kyroT(String(text))));
@@ -54183,6 +54196,7 @@ async function kyroDocumentPictureTools(screen, id, status, info = {}) {
   };
   const drawPictures = list => {
     strip.textContent = "";
+    currentPictures = list;
     found = list.some(item => item.source === "search");
     for (const item of list) {
       const figure = kyroMake("figure", { "data-kyro-doc-picture": String(item.n), style: "margin:0;display:flex;flex-direction:column;gap:4px;max-width:200px" });
@@ -54261,7 +54275,49 @@ async function kyroDocumentPictureTools(screen, id, status, info = {}) {
     });
     other.append(button);
   }
-  box.append(strip, where, notes, row, other, files);
+  // A SLIDESHOW VIDEO of the document: its headline and key lines over its pictures, the pictures' credits on the last slide. Made on this device (public/kyro-slideshow.js), in real time, with no sound; nothing is uploaded.
+  const videoRow = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center" });
+  const videoStatus = kyroMake("p", { role: "status", "data-kyro-doc-video-status": id, style: "margin:0;color:#cbd5e1;font-size:.95rem" });
+  const videoOut = kyroMake("div", { "data-kyro-doc-video-out": id, style: "display:flex;flex-direction:column;gap:8px;align-items:flex-start" });
+  let makingVideo = false; let videoUrl = "";
+  const saySlideshow = line => { try { setVoiceResponse(line, true, { allowHandoff: false, command: "make a video", source: "kyro-open" }); } catch { /* the line is on the screen */ } };
+  const makeVideoNow = async (tall, spoken) => {
+    if (makingVideo) return false;
+    const maker = window.KyroSlideshow;
+    if (!maker || !maker.canMakeVideo(window)) { videoStatus.textContent = kyroT("This browser cannot make a video. Try Chrome, Edge, Firefox or Safari on a recent phone or computer."); if (spoken) saySlideshow(videoStatus.textContent); return false; }
+    const words = String(screen.querySelector("[data-kyro-doc-editor]")?.value || screen.querySelector("[data-kyro-doc-words]")?.textContent || "").trim();
+    const title = String(screen.querySelector("h2")?.textContent || "").trim();
+    const slides = maker.buildSlides({ title, text: words, pictures: currentPictures });
+    const seconds = Math.round(maker.totalSeconds(slides));
+    makingVideo = true; videoOut.textContent = "";
+    const starting = kyroT("Making the video. It takes about") + " " + seconds + " " + kyroT("seconds. Please keep this page open until it is ready.");
+    videoStatus.textContent = starting;
+    if (spoken) saySlideshow(starting);
+    try {
+      const loadPicture = item => new Promise((resolve, reject) => { const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = "/api/nexus/runtime/documents/" + encodeURIComponent(id) + "/pictures/" + encodeURIComponent(String(item.n)); });
+      const made = await maker.makeVideo({ slides, loadPicture, width: tall ? 720 : 1280, height: tall ? 1280 : 720, windowLike: window, onProgress: share => { videoStatus.textContent = kyroT("Making the video:") + " " + Math.min(99, Math.round(share * 100)) + "%"; } });
+      if (videoUrl) { try { URL.revokeObjectURL(videoUrl); } catch { /* an old copy */ } }
+      videoUrl = URL.createObjectURL(made.blob);
+      const player = kyroMake("video", { controls: "true", playsinline: "true", "aria-label": kyroT("Your slideshow video"), "data-kyro-doc-video": id, style: "max-width:100%;max-height:50vh;border-radius:12px;background:#000" });
+      player.src = videoUrl;
+      const save = kyroMake("a", { href: videoUrl, download: (String(title || "video").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50) || "video") + "." + made.ext, "data-kyro-doc-video-download": id, style: KYRO_BUTTON_STYLE + ";text-decoration:none;display:inline-block" }, kyroT("Download the video"));
+      videoOut.append(player, save);
+      const done = kyroT("Your video is ready, " + made.seconds + " seconds. It has no sound. You can watch it here and download it. Pictures found on the web belong to their owners; their credit is the last slide.");
+      videoStatus.textContent = done;
+      if (spoken) saySlideshow(kyroT("Your video is ready. You can watch it on the screen and download it."));
+    } catch (error) { videoStatus.textContent = kyroT(String(error?.message || "The video could not be made. Please try again.")); if (spoken) saySlideshow(videoStatus.textContent); }
+    makingVideo = false;
+    return true;
+  };
+  const videoButton = (label, tall, main) => {
+    const button = kyroMake("button", { type: "button", "data-kyro-doc-make-video": tall ? "tall" : "wide", style: KYRO_BUTTON_STYLE.replace("#06a77d", "#7a3fa0") }, kyroT(label));
+    button.addEventListener("click", () => { void makeVideoNow(tall, false); });
+    if (main) button.addEventListener("kyro-make-video", event => { void makeVideoNow(false, Boolean(event?.detail?.spoken)); });
+    videoRow.append(button);
+  };
+  videoButton("Make a video", false, true);
+  videoButton("Make a tall phone video", true, false);
+  box.append(strip, where, notes, row, other, videoRow, videoStatus, videoOut, files);
   if (design === "email") box.append(kyroMake("p", { "data-kyro-email-note": "true", style: "margin:0;color:#94a3b8;font-size:.9rem" }, kyroT("To use it in an email: choose Web page, open the file, select everything, copy it, and paste it into your email. Some email programs hide pictures inside a message, so the Word and PDF files are there too. Kyro does not send it for you.")));
   screen.append(box);
   const first = Array.isArray(info.data?.pictureNotes) ? info.data.pictureNotes : [];
