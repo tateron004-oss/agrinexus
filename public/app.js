@@ -51947,6 +51947,9 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     kyroActiveVoiceIntake.engine.pause("safety");
     renderKyroVoiceIntakePanel(null);
     setKyroRealtimeAutoResponse(true);
+    // While the interview ran the voice model was told not to answer, so it does not answer this turn: the screen showed the emergency words (found by the live voice test of 6 November: "I have chest pain and cannot
+    // breathe" in the middle of the doctor-visit questions) and nothing was said. The page says them now, the way it says any line it shows.
+    try { const line = String(nexusAgenticBrainLastResult?.message || "").trim(); if (line) kyroSpeakPageLine(line); } catch { /* the words are on the screen */ }
     return true;
   }
   const decision = kyroActiveVoiceIntake.engine.handleUtterance(trimmed, { utteranceId, source });
