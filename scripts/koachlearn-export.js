@@ -683,7 +683,7 @@ if (require.main === module) {
   const args = process.argv.slice(2);
   const outAt = args.indexOf("--out");
   const outRoot = path.resolve(outAt >= 0 ? args[outAt + 1] : path.join(__dirname, "..", "output", "koachlearn"));
-  const names = args.filter((a, i) => !a.startsWith("--") && (outAt < 0 || i !== outAt + 1) && args[i - 1] !== "--max-dollars");
+  const names = args.filter((a, i) => !a.startsWith("--") && (outAt < 0 || i !== outAt + 1) && args[i - 1] !== "--max-dollars" && args[i - 1] !== "--dump-narration");
   // --check [files]: only validate written courses (fast; no videos)
   if (args.includes("--check")) {
     const files = names.length ? names.map(f => path.resolve(f)) : writtenFiles();
@@ -711,6 +711,7 @@ if (require.main === module) {
       narration = { lang: "en", module: module_, collect: [] };
       for (const name of targets) if (!COURSES[name]) exportWritten(path.resolve(name), outRoot);
       const planned = narration.collect.length;
+      const dump = args.indexOf("--dump-narration"); if (dump >= 0) fs.writeFileSync(args[dump + 1], JSON.stringify(narration.collect));
       const cost = module_.plan(narration.collect);
       console.log(`to speak: ${cost.todo.length} slides, about US$${cost.dollars.toFixed(2)} (estimate; Azure rate is an assumption unless AZURE_PER_MILLION is set)`);
       for (const [l, p] of Object.entries(cost.perLang)) console.log(`  ${l}: ${p.slides} slides, ${p.characters} characters, about US$${p.dollars.toFixed(2)}`);
