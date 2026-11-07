@@ -100,7 +100,7 @@ async function spitchSpeak(v, text) {
 
 // a quiet tone about as long as the words would take to say: only for testing the video timing without a voice service
 function fakeSpeak(_v, text, file) {
-  const seconds = Math.max(1, text.length / 14);
+  const seconds = Math.max(1, text.length / (Number(process.env.FAKE_CPS) || 14));
   execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", `sine=frequency=330:sample_rate=24000:duration=${seconds.toFixed(2)}`, "-af", "volume=0.05", "-b:a", "48k", file]);
 }
 
