@@ -7,6 +7,10 @@ module.exports = Object.freeze([
   { id: "picture-flyer-with-found-picture", area: "documents", writes: true, say: "Make me a flyer for my bake sale on Saturday at ten at the church hall with a picture of fresh bread.", timeoutMs: 120000,
     expect: { screen: "document", text: "BAKE SALE", notText: "picture of|placeholders|SHOW:", download: true, buttons: ["Add a picture", "Add my logo", "PDF"] },
     then: [{ expect: { screen: "document", images: 1, text: "Picture: .*\\n?[\\s\\S]*belong to their owners|belong to their owners", notText: "could not find a good picture" }, timeoutMs: 90000 }] },
+  // a drawn picture (7 November 2026): with the Cloudflare settings it is drawn and labelled as drawn by a computer; without them the flyer is still made and the person is told plainly
+  { id: "picture-flyer-drawn", area: "documents", writes: true, say: "Make me a flyer for my bake sale on Saturday at ten at the church hall with an illustration of fresh bread.", timeoutMs: 120000,
+    expect: { screen: "document", text: "BAKE SALE", notText: "illustration of|placeholders|SHOW:", download: true },
+    then: [{ expect: { screen: "document", text: "drawn by a computer|cannot draw pictures yet" }, timeoutMs: 90000 }] },
   { id: "picture-newsletter-with-found-picture", area: "documents", writes: true, say: "Create a newsletter for the church with a picture of the church building.", timeoutMs: 120000,
     expect: { screen: "document", text: "CHURCH|Church", download: true },
     then: [{ expect: { screen: "document", images: 1, text: "belong to their owners" }, timeoutMs: 90000 }] },

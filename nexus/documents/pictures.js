@@ -20,7 +20,9 @@ const NOUN = "(?:picture|photo|image|photograph)s?";
 const ASK_VERB = "(?:with|and|plus|including|include|add|adding|using|use|put|place|insert)";
 const STOP = "(?=\\s*(?:[,.;!?]|$)|\\s+(?:on|at|in|for|from|by|that|which|saying|and|with|as|to|onto|under|above|below)\\s)";
 const SEARCH_CLAUSE = new RegExp(`(?:,\\s*|\\s+)${ASK_VERB}\\s+${A}${NOUN}\\s+(?:of|showing|about)\\s+(?<q>[\\p{L}\\p{N}'’ -]{2,60}?)${STOP}`, "iu");
-const LOGO_CLAUSE = new RegExp(`(?:,\\s*|\\s+)${ASK_VERB}\\s+(?:my|our|the)\\s+(?:(?:company|business|church|farm|shop|school|team|club)\\s+)?logo\\b`, "i");
+// "... with an illustration of fresh bread", "add a drawing of a tractor", "with an AI picture of a market": a picture DRAWN by a computer (server/providers/picture-draw.js), never a photograph from the web
+const DRAW_CLAUSE = new RegExp(`(?:,\\s*|\\s+)${ASK_VERB}\\s+${A}(?:(?:drawn|generated|ai|ai-generated|illustrated|cartoon|computer-drawn)\\s+(?:picture|photo|image|photograph|illustration|drawing)s?|(?:illustration|drawing|cartoon|sketch)s?)\\s+(?:of|showing|about)\\s+(?<q>[\\p{L}\\p{N}'’ -]{2,60}?)${STOP}`, "iu");
+const LOGO_CLAUSE =new RegExp(`(?:,\\s*|\\s+)${ASK_VERB}\\s+(?:my|our|the)\\s+(?:(?:company|business|church|farm|shop|school|team|club)\\s+)?logo\\b`, "i");
 const UPLOADED_CLAUSE = new RegExp(`(?:,\\s*|\\s+)${ASK_VERB}\\s+(?:the\\s+|my\\s+|our\\s+)?(?:${NOUN}\\s+(?:that\\s+)?(?:i|we)\\s+(?:just\\s+)?(?:uploaded|sent|added|took|saved)|(?:uploaded|own)\\s+${NOUN}|(?:my|our)\\s+(?:own\\s+)?${NOUN}(?!\\s+(?:of|showing|about)))`, "i");
 
 function squeeze(text) { return String(text || "").replace(/\s+/g, " ").replace(/\s+([,.;!?])/g, "$1").replace(/^[\s,;]+|[\s,;]+$/g, "").trim(); }
@@ -30,6 +32,7 @@ function extractPictureRequest(text) {
   let rest = ` ${String(text || "").trim()}`; const specs = [];
   for (let guard = 0; guard < 6 && specs.length < MAX_PICTURES; guard += 1) {
     let match;
+    if ((match = DRAW_CLAUSE.exec(rest))) { specs.push({ source: "draw", query: squeeze(match.groups.q) }); rest = rest.replace(match[0], ""); continue; }
     if ((match = SEARCH_CLAUSE.exec(rest))) { specs.push({ source: "search", query: squeeze(match.groups.q) }); rest = rest.replace(match[0], ""); continue; }
     if ((match = LOGO_CLAUSE.exec(rest))) { specs.push({ source: "upload", hint: "logo", role: "logo" }); rest = rest.replace(match[0], ""); continue; }
     if ((match = UPLOADED_CLAUSE.exec(rest))) { specs.push({ source: "upload", hint: "latest" }); rest = rest.replace(match[0], ""); continue; }
@@ -109,13 +112,21 @@ async function pictureFromSearch(spec, { deps }) {
     ref: { query: spec.query, imageUrl: found.imageUrl, sourceUrl: found.sourceUrl, creator: found.creator, license: found.license } } };
 }
 
+async function pictureFromDraw(spec, { env, context, deps }) {
+  const draw = deps.drawPicture || require("../../server/providers/picture-draw.js").drawPicture;
+  let drawn;
+  try { drawn = await draw(spec.query, { env, userId: context?.userId || "guest" }); } catch (error) { return { note: String(error?.message || "I could not draw that picture.") }; }
+  return { picture: { role: spec.role || "", source: "draw", title: drawn.title || spec.query, alt: `Drawing of ${spec.query}`, caption: String(spec.caption || ""), credit: drawn.credit, mime: drawn.mime, ext: drawn.ext, width: drawn.width, height: drawn.height, buffer: drawn.buffer,
+    ref: { query: spec.query } } };
+}
+
 // kept: the pictures a saved document already has (from fromStored); specs: new ones asked for now. The result never has more than three.
 async function resolvePictures({ specs = [], kept = [], env = process.env, context = null, deps = {} } = {}) {
   const pictures = kept.slice(0, MAX_PICTURES); const notes = [];
   for (const spec of Array.isArray(specs) ? specs : []) {
     if (pictures.length >= MAX_PICTURES) { notes.push("A document holds at most three pictures, so one was left out."); break; }
     let result;
-    try { result = spec?.source === "upload" ? await pictureFromUpload(spec, { env, context, deps }) : spec?.source === "search" && spec.query ? await pictureFromSearch(spec, { deps }) : { note: "" }; } catch { result = { note: "I could not add that picture." }; }
+    try { result = spec?.source === "upload" ? await pictureFromUpload(spec, { env, context, deps }) : spec?.source === "draw" && spec.query ? await pictureFromDraw(spec, { env, context, deps }) : spec?.source === "search" && spec.query ? await pictureFromSearch(spec, { deps }) : { note: "" }; } catch { result = { note: "I could not add that picture." }; }
     if (result.picture) {
       pictures.push(result.picture);
       if (result.guessed) notes.push("I used the newest picture you uploaded as your logo.");
@@ -124,6 +135,7 @@ async function resolvePictures({ specs = [], kept = [], env = process.env, conte
   // the total the file may carry
   let total = 0; const kept2 = [];
   for (const picture of pictures) { total += picture.buffer.length; if (total > MAX_STORED_PICTURE_BYTES) { notes.push("Those pictures together are too large for one document, so one was left out."); total -= picture.buffer.length; continue; } kept2.push(picture); }
+  if (kept2.some(picture => picture.source === "draw")) notes.push("A drawn picture is made by a computer from your words. It is not a photograph, so look at it and be sure it shows what you want.");
   if (kept2.some(picture => picture.source === "search")) notes.push("Pictures found on the web belong to their owners: the credit is printed in the file, so be sure you may use them. Your own pictures need no such check.");
   return { pictures: kept2, notes, missingUpload: Boolean(specs.some(spec => spec?.source === "upload") && notes.some(note => /Add a picture button/.test(note))) };
 }
