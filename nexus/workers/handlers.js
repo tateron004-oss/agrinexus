@@ -2,6 +2,8 @@
 
 const { createId } = require("../contracts/identifiers.js");
 const { createCommand } = require("../contracts/command.js");
+const { createScheduledCampaignSender } = require("../business/scheduled-campaigns.js");
+const { makeSendMessage } = require("../business/authoritative-executor.js");
 
 // The notification that carries an autonomous task's outcome summary is
 // tagged with this content.kind so notifications.deliver can recognize it as
@@ -49,6 +51,15 @@ function contactChannel(contact) {
 
 function createHandlers({ runtime, deliveryProviders = {}, logger = null, workerId = null }) {
   if (!runtime) throw new Error("The authoritative runtime is required.");
+  // Sends a business owner's scheduled campaigns when their time comes (nexus/business/scheduled-campaigns.js). Built once. The messages go through the same governed sender as a message sent by hand. Whether the account may send messages was
+  // checked when the owner scheduled it (a guest or a demo account cannot), so the worker, which has no account in front of it, does not ask again. The owner is told the outcome by a push notification.
+  let scheduledCampaigns = null;
+  const scheduledCampaignSender = () => (scheduledCampaigns ||= createScheduledCampaignSender({
+    repository: runtime.businessRecords,
+    sendMessageFor: context => makeSendMessage(process.env, { ...context, isRestrictedFrom: () => false }),
+    notify: ({ tenantId, userId, key, title, body }) => runtime.notifications.enqueue({ tenantId, userId, channel: "push", scheduledAt: new Date(), idempotencyKey: key, content: { title, body, kind: "campaign_outcome" } }),
+    isPaused: runtime.autonomyControl ? ({ tenantId }) => runtime.autonomyControl.isPaused({ tenantId }) : null,
+    logger }));
   return Object.freeze({
     "acceptance.canary": async ({ job }) => ({ accepted: true, releaseSha: process.env.RENDER_GIT_COMMIT || process.env.GIT_SHA || "development",
       nonce: required(job.payload?.nonce, "Acceptance canary nonce") }),
@@ -56,6 +67,8 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
     "brief.send-due": async () => (runtime.brief?.sendDue ? runtime.brief.sendDue({}) : { checked: 0, sent: 0 }),
     // Sends each repeating reminder ("every morning at 8, check the pump") when its local time arrives (see nexus/reminders/repeat-service.js).
     "reminders.repeat-send-due": async () => (runtime.repeatReminders?.sendDue ? runtime.repeatReminders.sendDue({}) : { checked: 0, sent: 0 }),
+    // Sends each campaign a business owner scheduled for a day and time, when that time comes (see nexus/business/scheduled-campaigns.js).
+    "business.campaigns-send-due": async () => (runtime.businessRecords?.listScheduledCampaignWorkspaces && runtime.notifications ? scheduledCampaignSender().sendDue({}) : { checked: 0, sent: 0 }),
     // Warns everyone who turned weather alerts on when their forecast turns serious (see nexus/alerts/service.js).
     // Sends the weekly summary to everyone whose chosen weekday and time has arrived (see nexus/brief/weekly.js).
     // Asks people how they are when their check-in time comes, and follows up once on missed ones (see nexus/companion/checkins.js).

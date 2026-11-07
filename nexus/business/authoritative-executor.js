@@ -9,6 +9,9 @@ const scheduleVoice = require("./scheduling-voice.js");
 const campaignVoice = require("./campaigns-voice.js");
 const { createCommunicationsSendExecutor, verifyCommunicationsSendOutcome } = require("../communications/executor.js");
 
+// Whether this account may send messages to customers: the same check the sender makes (a guest or a demo account may not). Scheduling a send for later needs it, because the worker that sends later cannot see the account.
+const canSendFor = context => !context?.isRestrictedFrom?.("communications-send");
+
 // Sends one message to a customer through the same governed sender the text and email commands use (it refuses a restricted account, a provider that is off, and a simulated send). It resolves only when the provider
 // really sent it; otherwise it throws the plain reason, so a booking is never marked "confirmation sent" when nothing went out.
 function makeSendMessage(env, context) {
@@ -52,7 +55,7 @@ function createBusinessExecutor({ repository, access, consents, env }) {
     }
     const result = await voiceDispatch.run({
       command: String(input?.command || ""), args: input?.args || {}, confirmed: true, businessRequest, timeZone: context?.timeZone,
-      sendMessage: makeSendMessage(env, context)
+      sendMessage: makeSendMessage(env, context), canSend: canSendFor(context)
     });
     // A read with nothing to read yet ("show my business dashboard" before any workspace exists) is a true answer, not a
     // failure: it said so, and how to start, instead of surfacing as a 422 error.
@@ -113,7 +116,7 @@ function createBusinessReader({ repository, access, consents, env, now = () => D
     api ||= createBusinessApi({ access, consents, agent: null }, { env, repository });
     return ({ method, pathname, body = {} }) => api.handle({ method, pathname, context, body });
   };
-  const runCommand = (text, context, confirmed) => voiceDispatch.run({ command: text, args: {}, confirmed, businessRequest: bridge(context), timeZone: context?.timeZone, sendMessage: makeSendMessage(env, context) });
+  const runCommand = (text, context, confirmed) => voiceDispatch.run({ command: text, args: {}, confirmed, businessRequest: bridge(context), timeZone: context?.timeZone, sendMessage: makeSendMessage(env, context), canSend: canSendFor(context) });
   const spoken = result => (typeof result?.response === "string" && result.response.trim() ? result.response : null);
 
   async function handle(text, context) {
@@ -165,7 +168,7 @@ function createBusinessPreview({ repository, access, consents, env }) {
     const text = String(command || "").replace(/\s+/g, " ").trim();
     if (!text || !voiceDispatch.classify(text)) return null;
     api ||= createBusinessApi({ access, consents, agent: null }, { env, repository });
-    const result = await voiceDispatch.run({ command: text, args: {}, confirmed: false, timeZone: context?.timeZone,
+    const result = await voiceDispatch.run({ command: text, args: {}, confirmed: false, timeZone: context?.timeZone, canSend: canSendFor(context),
       businessRequest: ({ method, pathname, body = {} }) => api.handle({ method, pathname, context, body }) });
     if (result?.status === "needs-confirmation" && typeof result.response === "string" && result.response.trim()) return result.response.trim();
     // A refusal or an answer that changes nothing ("Wednesday at 2 PM is already taken by Grace Otieno. The next openings are ...") is said as it is, instead of a bare "I need your confirmation" that only turns into the refusal after a yes.
@@ -179,4 +182,4 @@ function verifyBusinessOutcome({ result }) {
   return { verified, method: "real_business_workspace_write", reason: verified ? null : "business_outcome_incomplete" };
 }
 
-module.exports = Object.freeze({ makeSendMessage, createBusinessExecutor, createBusinessWorkspaceCounter, createBusinessReader, createBusinessPreview, verifyBusinessOutcome });
+module.exports = Object.freeze({ canSendFor, makeSendMessage, createBusinessExecutor, createBusinessWorkspaceCounter, createBusinessReader, createBusinessPreview, verifyBusinessOutcome });

@@ -1163,7 +1163,8 @@ function precheck(command = "", args = {}) {
 // gates confirmation before this ever runs (the authoritative runtime's
 // business.manage tool, confirmationRequired: true) should simply always
 // pass `confirmed: true`.
-async function run({ command = "", args = {}, confirmed, businessRequest, timeZone, sendMessage }) {
+// canSend: whether this account may send messages to customers (not a guest or a demo account). Scheduling a send for later is refused unless it is exactly true, because the later send is made by the background worker, which cannot see the account.
+async function run({ command = "", args = {}, confirmed, businessRequest, timeZone, sendMessage, canSend = false }) {
   if (typeof businessRequest !== "function") throw new Error("A businessRequest bridge function is required.");
   const isConfirmed = confirmed !== undefined ? Boolean(confirmed) : (args.confirmed === true || args.confirmation === true);
   const intent = classify(command);
@@ -1200,7 +1201,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
     const workspace = resolved.client.data?.info?.businessName || "your workspace";
     const editable = resolved.client.data.editable;
-    const ctx = { command, editable, workspace, today: todayIn(new Date(), timeZone), formatMoney };
+    const ctx = { command, editable, workspace, today: todayIn(new Date(), timeZone), formatMoney, nowClock: timeIn(new Date(), timeZone), timeZone: validTimeZone(timeZone || DEFAULT_TIME_ZONE), canSend: canSend === true };
     if (campaignVoice.CAMPAIGN_READ_INTENTS.includes(intent)) {
       const response = campaignVoice.readCampaign(intent, ctx);
       return { status: "completed", localOnly: true, response, summary: response };

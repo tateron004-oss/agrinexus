@@ -46,6 +46,10 @@ function select(options = {}) {
     if (entry.writes && !options.writes) return false;
     if (entry.risky && !options.risky) return false;
     if (entry.needs === "sound" && options.sound === false) return false;
+    // a few cases only make sense as a guest (the refusals) or only as a signed-in test account (what an account may do); the account is the one the run was given
+    const account = Boolean(process.env.KYRO_TEST_EMAIL);
+    if (entry.needs === "guest" && account) return false;
+    if (entry.needs === "account" && !account) return false;
     return true;
   });
 }

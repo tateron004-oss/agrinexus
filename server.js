@@ -24701,7 +24701,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         command, args, timeZone: context.timeZone || args.timeZone,
         businessRequest: opts => authoritativeNexusRuntime.businessRequest({ ...opts, user: authoritativeUser }),
         // the confirmation to a customer goes through the same governed sender as the text and email commands (a restricted account cannot send)
-        sendMessage: nexusBusinessAuthoritative.makeSendMessage(process.env, { isRestrictedFrom: name => userIsRestrictedFrom(user, name) })
+        sendMessage: nexusBusinessAuthoritative.makeSendMessage(process.env, { isRestrictedFrom: name => userIsRestrictedFrom(user, name) }),
+        canSend: !userIsRestrictedFrom(user, "communications-send")
       });
       return { ...common, capability: "business-assistant", ...result };
     } catch (error) {
