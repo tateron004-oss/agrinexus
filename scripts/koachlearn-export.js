@@ -683,7 +683,7 @@ if (require.main === module) {
   const args = process.argv.slice(2);
   const outAt = args.indexOf("--out");
   const outRoot = path.resolve(outAt >= 0 ? args[outAt + 1] : path.join(__dirname, "..", "output", "koachlearn"));
-  const names = args.filter((a, i) => !a.startsWith("--") && (outAt < 0 || i !== outAt + 1));
+  const names = args.filter((a, i) => !a.startsWith("--") && (outAt < 0 || i !== outAt + 1) && args[i - 1] !== "--max-dollars");
   // --check [files]: only validate written courses (fast; no videos)
   if (args.includes("--check")) {
     const files = names.length ? names.map(f => path.resolve(f)) : writtenFiles();
@@ -705,13 +705,18 @@ if (require.main === module) {
   const targets = all ? writtenFiles() : names;
   // --narrate: speak every slide (needs the voice keys in .env.narration, see scripts/koachlearn-narration.js); --voice-test uses a test tone instead of a voice (for checking the timing only)
   (async () => {
-    if (args.includes("--narrate") || args.includes("--voice-test")) {
+    if (args.includes("--narrate") || args.includes("--voice-test") || args.includes("--estimate")) {
       const module_ = require("./koachlearn-narration.js");
       if (args.includes("--voice-test")) for (const k of Object.keys(module_.VOICES)) module_.VOICES[k] = { provider: "fake", voice: "test-tone", locale: k };
       narration = { lang: "en", module: module_, collect: [] };
       for (const name of targets) if (!COURSES[name]) exportWritten(path.resolve(name), outRoot);
       const planned = narration.collect.length;
-      const result = await module_.fillCache(narration.collect, { onProgress: (n, total) => { if (n % 25 === 0 || n === total) console.log(`spoken ${n} of ${total}`); } });
+      const cost = module_.plan(narration.collect);
+      console.log(`to speak: ${cost.todo.length} slides, about US$${cost.dollars.toFixed(2)} (estimate; Azure rate is an assumption unless AZURE_PER_MILLION is set)`);
+      for (const [l, p] of Object.entries(cost.perLang)) console.log(`  ${l}: ${p.slides} slides, ${p.characters} characters, about US$${p.dollars.toFixed(2)}`);
+      if (args.includes("--estimate")) process.exit(0);
+      const limit = args.indexOf("--max-dollars");
+      const result = await module_.fillCache(narration.collect, { maxDollars: limit >= 0 ? Number(args[limit + 1]) : null, onProgress: (n, total) => { if (n % 25 === 0 || n === total) console.log(`spoken ${n} of ${total}`); } });
       console.log(`narration: ${planned} slides, ${result.spoken} newly spoken (${result.characters} characters), ${result.kept} already kept`);
       narration.collect = null;
     }

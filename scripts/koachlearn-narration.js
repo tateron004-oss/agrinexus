@@ -123,8 +123,10 @@ async function speakOnce(lang, text) {
 }
 
 // speaks every line that is not already kept; at most three at a time (the services refuse a flood)
-async function fillCache(lines, { onProgress = () => {}, concurrency = 3 } = {}) {
-  loadKeys();
+// what speaking the missing lines would cost, per language, BEFORE anything is spoken (about 14 characters a second; Azure bills by characters, Spitch by the second)
+const SPITCH_PER_SECOND = 0.0014;                                   // from docs.spitch.app, 7 November 2026
+const AZURE_PER_MILLION = Number(process.env.AZURE_PER_MILLION) || 16; // NOT confirmed from Microsoft's page: set AZURE_PER_MILLION to the price shown in the Azure portal
+function plan(lines) {
   const todo = [], seen = new Set();
   for (const { lang, text } of lines) {
     if (!text) continue;
@@ -132,6 +134,21 @@ async function fillCache(lines, { onProgress = () => {}, concurrency = 3 } = {})
     if (seen.has(id)) continue; seen.add(id);
     if (!cachedAudio(lang, text)) todo.push({ lang, text });
   }
+  const perLang = {}; let dollars = 0;
+  for (const j of todo) {
+    const p = (perLang[j.lang] = perLang[j.lang] || { slides: 0, characters: 0, dollars: 0 });
+    p.slides += 1; p.characters += j.text.length;
+    const cost = VOICES[j.lang].provider === "spitch" ? (j.text.length / 14) * SPITCH_PER_SECOND : (j.text.length / 1e6) * AZURE_PER_MILLION;
+    p.dollars += cost; dollars += cost;
+  }
+  return { todo, perLang, dollars, unique: seen.size };
+}
+
+async function fillCache(lines, { onProgress = () => {}, concurrency = 3, maxDollars = null } = {}) {
+  loadKeys();
+  const { todo, unique } = plan(lines);
+  const seen = { size: unique };
+  if (maxDollars != null) { const { dollars } = plan(lines); if (dollars > maxDollars) throw new Error(`speaking the missing lines would cost about US$${dollars.toFixed(2)}, more than the limit of US$${maxDollars}; nothing was spoken`); }
   let done = 0, next = 0;
   async function worker() {
     while (next < todo.length) {
@@ -144,4 +161,4 @@ async function fillCache(lines, { onProgress = () => {}, concurrency = 3 } = {})
   return { spoken: todo.length, kept: seen.size - todo.length, characters: todo.reduce((n, j) => n + j.text.length, 0) };
 }
 
-module.exports = { VOICES, narrationLines, cachedAudio, fillCache, fileFor, loadKeys, AUDIO_ROOT };
+module.exports = { plan, VOICES, narrationLines, cachedAudio, fillCache, fileFor, loadKeys, AUDIO_ROOT };
