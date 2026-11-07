@@ -85,3 +85,23 @@ test("when Pexels fails (busy, wrong key) the open sources still answer", async 
   assert.equal(out.length, 1);
   assert.equal(out[0].sourceName, "Openverse");
 });
+
+test("Pixabay: asked only with a key that looks like one, its tags are what a picture is checked against, only pixabay.com pictures are taken, the credit names the person, and the answer is kept 24 hours", async () => {
+  const PIX = "12345678-abcdef0123456789abcdef012";
+  let asked = 0; let seenUrl = "";
+  const hit = (id, tags, extra = {}) => ({ id, pageURL: `https://pixabay.com/photos/x-${id}/`, tags, user: "Some Person", largeImageURL: `https://pixabay.com/get/g${id}_1280.jpg`, ...extra });
+  const fetchFn = async url => { asked += 1; seenUrl = String(url); return { ok: true, status: 200, json: async () => ({ hits: [hit(1, "bread, food, baked"), hit(2, "bread", { largeImageURL: "https://evil.example.com/a.jpg" })] }) }; };
+  assert.deepEqual(await pictureFetch.searchPixabay("pixabay-test-none", { fetchFn, apiKey: "" }), []);
+  assert.equal(asked, 0);
+  let clock = 5_000_000;
+  const found = await pictureFetch.searchPixabay("pixabay-test-one", { fetchFn, apiKey: PIX, now: () => clock });
+  assert.equal(found.length, 1, "the picture on another site is left out");
+  assert.match(seenUrl, /^https:\/\/pixabay\.com\/api\/\?/);
+  assert.equal(pictureFetch.creditLine(found[0]), "Picture: Pixabay, Some Person, Pixabay Content License");
+  clock += 23 * 3600 * 1000;
+  await pictureFetch.searchPixabay("pixabay-test-one", { fetchFn, apiKey: PIX, now: () => clock });
+  assert.equal(asked, 1, "kept for 24 hours");
+  const ranked = pictureFetch.rankCandidates("fresh bread", [{ ...found[0], description: "car, road" , title: "car, road" }, ...found]);
+  assert.equal(ranked.length, 0, "tags that are not about the words (no 'fresh') are not used");
+  assert.equal(pictureFetch.rankCandidates("bread", found).length, 1);
+});
