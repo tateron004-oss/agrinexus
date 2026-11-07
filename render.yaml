@@ -155,6 +155,8 @@ services:
         sync: false
       - key: SENDGRID_REPLY_TO
         sync: false
+      - key: PEXELS_API_KEY
+        sync: false
       - key: MAILGUN_API_KEY
         sync: false
       - key: SMS_PROVIDER
