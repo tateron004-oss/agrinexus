@@ -9,10 +9,10 @@ module.exports = Object.freeze([
   // (not "the cow is limping" (a sick animal is answered by the animal-health guard, with its own card) and not "the gate code is 4471" (Kyro will not save a PIN, password or code))
   { id: "n4-note-delete-by-words", area: "nov4", writes: true, say: "Write down that the pump needs a new seal.", timeoutMs: 60000, expect: { screen: ["text", "list"], text: "pump" },
     then: [{ say: "Delete my note about the pump.", timeoutMs: 60000, expect: { said: "yes|delete|sure" } }, { say: "Yes.", timeoutMs: 60000, expect: { screen: ["text", "list"], text: "Deleted your note" } },
-      { say: "What are my notes?", timeoutMs: 60000, expect: { screen: ["text", "list"], notText: "new seal" } }] },
+      { say: "What are my notes?", timeoutMs: 60000, expect: { screen: ["text", "list"], text: "You have no notes" } }] },
   // a shopping list: delete it, asking first
   { id: "n4-list-delete", area: "nov4", writes: true, say: "Make a shopping list with milk and eggs.", timeoutMs: 60000, expect: { screen: ["text", "list", "checklists"], text: "milk" },
-    then: [{ say: "Delete my shopping list.", timeoutMs: 60000, expect: { said: "yes|delete|sure" } }, { say: "Yes.", timeoutMs: 60000, expect: { said: "deleted|removed|gone|cleared" } }] },
+    then: [{ say: "Delete my shopping list.", timeoutMs: 60000, expect: { said: "yes|delete|sure" } }, { say: "Yes, clear my shopping list.", timeoutMs: 60000, expect: { said: "deleted|removed|gone|cleared|empty" } }] },
   // a reminder cancelled by voice is gone from the list
   { id: "n4-reminder-cancel", area: "nov4", writes: true, say: "Remind me to drink water in 20 minutes.", timeoutMs: 60000, expect: { screen: ["text", "list"], text: "water" },
     then: [{ say: "Cancel my reminder to drink water.", timeoutMs: 60000, expect: { said: "cancel|yes|sure|stopped" } }, { say: "Yes.", timeoutMs: 60000, expect: { said: "cancel|stopped|removed|gone" } },

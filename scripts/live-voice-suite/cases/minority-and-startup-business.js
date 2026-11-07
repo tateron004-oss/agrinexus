@@ -13,7 +13,8 @@ module.exports = Object.freeze([
   strict("free-help", "Where can I get free business help?", "SCORE"),
   strict("score-near", "Find a SCORE mentor near 30303", "30303"),
   strict("start", "How do I start a business?", "business plan"),
-  strict("start-steps", "What are the steps to start a small business?", "business plan"),
+  // (the steps are walked through one at a time on a walkthrough screen, so the screen is checked for the walkthrough's title)
+  { id: "mbiz-start-steps", area: "business-guide", say: "What are the steps to start a small business?", timeoutMs: 45000, expect: { screen: "walkthrough", text: "STARTING A SMALL BUSINESS", notText: "I cannot find|not sure what you" } },
   strict("plan", "How do I write a business plan?", "plan"),
   strict("costs", "How much does it cost to start a business?", "cost"),
   strict("fund", "How can I fund my startup?", "investor|crowdfund|loan"),
