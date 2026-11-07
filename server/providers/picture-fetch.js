@@ -1,6 +1,6 @@
 "use strict";
 
-// Getting a picture from the public web for a flyer, newsletter, invitation or email, SAFELY. The person says "add a picture of fresh bread"; the app finds open-licence pictures (Wikimedia Commons, then Openverse), downloads one on the SERVER and puts it
+// Getting a picture from the public web for a flyer, newsletter, invitation or email, SAFELY. The person says "add a picture of fresh bread"; the app finds pictures (Pexels first when the server has a PEXELS_API_KEY, then the open-licence Wikimedia Commons and Openverse), downloads one on the SERVER and puts it
 // in the file. Nothing a web page says is trusted:
 //   - https only, no user name, no port, no number address, no private or internal name (checkLink), and every address the name resolves to must be public (assertPublicHost); the connection is then made to the address that was checked,
 //     so the name cannot be pointed somewhere else between the check and the download (DNS rebinding)
@@ -116,10 +116,71 @@ function readableLicense(value) {
   return code;
 }
 
-async function searchPictureCandidates(query, { fetchFn = globalThis.fetch, openImages } = {}) {
+// Pexels (free photographs, free to use with credit to the photographer): used first when PEXELS_API_KEY is set, because its pictures are made to look good on a flyer. The key is the server's own and is never sent anywhere but api.pexels.com.
+// Pexels allows 200 requests an hour, so an answer is kept for ten minutes and an hour's worth of requests is counted; past the allowance (or on any error) the open sources below are used as before.
+const PEXELS_CACHE_MS = 10 * 60 * 1000;
+const PEXELS_HOURLY_LIMIT = 150;
+const pexelsCache = new Map();
+const pexelsCalls = [];
+async function searchPexels(query, { fetchFn = globalThis.fetch, apiKey = process.env.PEXELS_API_KEY, now = () => Date.now() } = {}) {
+  const key = String(apiKey || "").trim();
+  if (!key || !/^[A-Za-z0-9_-]{20,120}$/.test(key)) return [];
+  const asked = now();
+  const kept = pexelsCache.get(query);
+  if (kept && asked - kept.at < PEXELS_CACHE_MS) return kept.items;
+  while (pexelsCalls.length && asked - pexelsCalls[0] > 3600 * 1000) pexelsCalls.shift();
+  if (pexelsCalls.length >= PEXELS_HOURLY_LIMIT) return [];
+  pexelsCalls.push(asked);
+  const url = new URL("https://api.pexels.com/v1/search");
+  url.searchParams.set("query", query); url.searchParams.set("per_page", "10"); url.searchParams.set("orientation", "landscape");
+  const response = await fetchFn(url, { headers: { authorization: key, "user-agent": USER_AGENT, accept: "application/json" }, redirect: "error", signal: AbortSignal.timeout(8000) });
+  if (!response.ok) throw fail("picture_search", `Pexels answered ${response.status}.`);
+  const payload = await response.json();
+  const items = (Array.isArray(payload?.photos) ? payload.photos : []).map(photo => {
+    const imageUrl = String(photo?.src?.large || photo?.src?.medium || "");
+    if (!/^https:\/\/images\.pexels\.com\//i.test(imageUrl)) return null;
+    // Pexels ranks by meaning, and its short description ("alt") is what the picture is checked against; a picture with no description is trusted to be about the search
+    const alt = clean(photo.alt, 300);
+    return { title: alt || query, imageUrl, sourceUrl: String(photo.url || ""), creator: clean(photo.photographer, 120), license: "Pexels License", sourceName: "Pexels", description: alt || query, categories: "", preferred: true };
+  }).filter(Boolean);
+  pexelsCache.set(query, { at: asked, items });
+  if (pexelsCache.size > 200) pexelsCache.delete(pexelsCache.keys().next().value);
+  return items;
+}
+
+// Pixabay (free photographs, free to use, credit appreciated): used the same way as Pexels when PIXABAY_API_KEY is set. Pixabay puts the key in the address (its own way), so the address is never shown or logged here; it allows 100 requests a minute and asks that answers are kept
+// for 24 hours, and the picture is downloaded to the file (never linked to).
+const PIXABAY_CACHE_MS = 24 * 3600 * 1000;
+const pixabayCache = new Map();
+async function searchPixabay(query, { fetchFn = globalThis.fetch, apiKey = process.env.PIXABAY_API_KEY, now = () => Date.now() } = {}) {
+  const key = String(apiKey || "").trim();
+  if (!key || !/^[A-Za-z0-9_-]{10,80}$/.test(key)) return [];
+  const asked = now();
+  const kept = pixabayCache.get(query);
+  if (kept && asked - kept.at < PIXABAY_CACHE_MS) return kept.items;
+  const url = new URL("https://pixabay.com/api/");
+  url.searchParams.set("key", key); url.searchParams.set("q", query.slice(0, 100)); url.searchParams.set("image_type", "photo"); url.searchParams.set("orientation", "horizontal"); url.searchParams.set("safesearch", "true"); url.searchParams.set("per_page", "10");
+  const response = await fetchFn(url, { headers: { "user-agent": USER_AGENT, accept: "application/json" }, redirect: "error", signal: AbortSignal.timeout(8000) });
+  if (!response.ok) throw fail("picture_search", `Pixabay answered ${response.status}.`);
+  const payload = await response.json();
+  const items = (Array.isArray(payload?.hits) ? payload.hits : []).map(hit => {
+    const imageUrl = String(hit?.largeImageURL || hit?.webformatURL || "");
+    if (!/^https:\/\/(?:cdn\.)?pixabay\.com\//i.test(imageUrl)) return null;
+    // Pixabay describes a picture with its tags ("bread, food, baked"): they are what the picture is checked against
+    const tags = clean(hit.tags, 300);
+    return { title: tags || query, imageUrl, sourceUrl: String(hit.pageURL || ""), creator: clean(hit.user, 120), license: "Pixabay Content License", sourceName: "Pixabay", description: tags || query, categories: "", preferred: true };
+  }).filter(Boolean);
+  pixabayCache.set(query, { at: asked, items });
+  if (pixabayCache.size > 200) pixabayCache.delete(pixabayCache.keys().next().value);
+  return items;
+}
+
+async function searchPictureCandidates(query, { fetchFn = globalThis.fetch, openImages, pexelsKey, pixabayKey } = {}) {
   const text = cleanQuery(query);
   if (!text) return [];
   const out = [];
+  try { out.push(...await searchPexels(text, pexelsKey === undefined ? { fetchFn } : { fetchFn, apiKey: pexelsKey })); } catch { /* the open sources are used */ }
+  try { out.push(...await searchPixabay(text, pixabayKey === undefined ? { fetchFn } : { fetchFn, apiKey: pixabayKey })); } catch { /* the open sources are used */ }
   try { out.push(...await searchCommons(text, { fetchFn })); } catch { /* the next source is tried */ }
   try {
     const search = openImages || require("../nexus-open-image-fallback.js").searchOpenImages;
@@ -160,7 +221,8 @@ function rankCandidates(query, candidates) {
     const exactCategory = String(item.categories || "").split(" . ").some(category => { const words = new Set(wordsOf(category)); return words.size > 0 && needed.every(word => words.has(word)) && [...words].every(word => all.includes(word) || KIND_WORDS.has(word)); });
     // a night view or a silhouette prints as a dark smudge on a flyer: it is used only when nothing better matches (unless it is what was asked for)
     const dark = ["night", "dark", "evening", "dusk", "silhouette"].some(word => inTitle.has(word) && !all.includes(word)) ? 1 : 0;
-    scored.push({ item, order, points: (exactCategory ? 2 : 0) + (needed.every(word => inTitle.has(word)) ? 1 : 0) - dark, titleShare: all.filter(word => inTitle.has(word)).length });
+    // (a Pexels photograph is made to look good on a flyer: it goes before an equally good open picture)
+    scored.push({ item, order, points: (item.preferred ? 3 : 0) + (exactCategory ? 2 : 0) + (needed.every(word => inTitle.has(word)) ? 1 : 0) - dark, titleShare: all.filter(word => inTitle.has(word)).length });
   });
   return scored.sort((a, b) => b.points - a.points || b.titleShare - a.titleShare || a.order - b.order).map(entry => entry.item);
 }
@@ -188,4 +250,4 @@ async function findPicture(query, { candidates, fetchOptions = {}, searchOptions
   return null;
 }
 
-module.exports = Object.freeze({ MAX_BYTES, TIMEOUT_MS, fetchPublicImage, searchPictureCandidates, findPicture, cleanQuery, creditLine, rankCandidates, queryWords, readableLicense });
+module.exports = Object.freeze({ MAX_BYTES, TIMEOUT_MS, fetchPublicImage, searchPexels, searchPixabay, searchPictureCandidates, findPicture, cleanQuery, creditLine, rankCandidates, queryWords, readableLicense });
