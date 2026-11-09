@@ -31,11 +31,12 @@ const businessMarketing = require("./business-marketing.js");
 const businessContracts = require("./business-contracts.js");
 const businessCampaigns = require("./business-campaigns.js");
 const doctorVisit = require("./doctor-visit.js");
+const nov9Fixes = require("./nov9-fixes.js");
 
 
 // Which cases run: by default the ones that change nothing on the account; --writes adds the ones that save something, --risky the emergency words,
 // --only a,b (ids) or --area documents,lists (areas) narrows it, and --no-sound leaves out the ones that need sound to start.
-const ALL = Object.freeze([...documentsAndLists, ...businessAndApps, ...mediaSearchHealthForms, ...resourcesForPeople, ...minorityAndStartupBusiness, ...spanishBusiness, ...automations, ...californiaBusiness, ...athletes, ...money, ...moneyAfrica, ...athleteDocuments, ...moneyDocuments, ...walkthroughs, ...walkthroughsGuides, ...safety, ...specialEd, ...reentry, ...trips, ...spokenDocuments, ...spokenSweep, ...tutorCases, ...typingCases, ...nov4Fixes, ...nov5Platform, ...nov5Business, ...documentPictures, ...businessFrontDesk, ...businessMarketing, ...businessContracts, ...businessCampaigns, ...doctorVisit]);
+const ALL = Object.freeze([...documentsAndLists, ...businessAndApps, ...mediaSearchHealthForms, ...resourcesForPeople, ...minorityAndStartupBusiness, ...spanishBusiness, ...automations, ...californiaBusiness, ...athletes, ...money, ...moneyAfrica, ...athleteDocuments, ...moneyDocuments, ...walkthroughs, ...walkthroughsGuides, ...safety, ...specialEd, ...reentry, ...trips, ...spokenDocuments, ...spokenSweep, ...tutorCases, ...typingCases, ...nov4Fixes, ...nov5Platform, ...nov5Business, ...documentPictures, ...businessFrontDesk, ...businessMarketing, ...businessContracts, ...businessCampaigns, ...doctorVisit, ...nov9Fixes]);
 
 function select(options = {}) {
   const only = new Set(String(options.only || "").split(",").map(item => item.trim()).filter(Boolean));

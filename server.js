@@ -22899,13 +22899,20 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // ("show me Nairobi", "where is Kisumu": one place and no route opens the map, instead of "Origin and destination text are required")
     const onePlace = !routeArgs.origin && /^(?:please\s+)?(?:(?:kyro|nexus)[,.]?\s+)?(?:show(?:\s+me)?|where\s+is|find|map\s+of|open\s+the\s+map\s+of)\s+(?:the\s+)?([A-Za-z][A-Za-z'.-]*(?:\s+[A-Za-z][A-Za-z'.-]*){0,2})[.?!]*$/i.exec(String(command || "").trim());
     const placeNamed = onePlace && !/\bmaps?\b/i.test(onePlace[1]) ? onePlace : null;
+    // (found on 9 November 2026: the model sometimes hands the tool one place as the "origin" with no destination, for "show me Cairo on a map", and the answer was "Origin and destination text are required": one place and no word of a route is a map, not a route)
+    const oneNamedPlace = Boolean(routeArgs.origin && !routeArgs.destination && !routeArgs.waypoints?.length
+      && !/\b(?:route|routes|directions?|from|between|how far|distance|travel time|how long|drive|driving|walk|walking|navigate|traffic)\b/i.test(command)
+      && /\b(?:maps?|show|where|find|locate)\b/i.test(command));
     const mapOnlyRequest = (!routeArgs.origin && !/\b(route|directions?|navigation|from\\s+.+\\s+to)\b/i.test(command) && /\b(open|show|display|pull up|bring up|launch|start)\b.*\b(maps?|kenya)\b/i.test(command))
+      || oneNamedPlace
       || Boolean(placeNamed && !/\b(?:clinic|pharmacy|hospital|doctor|near|nearby|nearest|jobs?|price|prices|weather|news)\b/i.test(placeNamed[1]));
     if (mapOnlyRequest) {
       return nexusOpenAiNativeBlockedToolResult(db, common, {
         status: "local-ready",
         response: /\bgoogle maps?\b/i.test(command)
           ? "I can't open the Google Maps app from here, so I am opening the Kyro map instead. Tell me two places and I will show the route and the travel time."
+          : oneNamedPlace
+          ? `Here is ${String(routeArgs.origin).trim()} on the map. For a route, tell me where it starts and where it ends.`
           : placeNamed
           ? `The Nexus Maps workspace is ready. I have not calculated anything for ${placeNamed[1].trim()}; say "route from ${placeNamed[1].trim()} to" a second place and I will give the distance and travel time.`
           : "The Nexus Maps workspace is ready. No route was calculated because no origin or destination was requested.",

@@ -66,10 +66,23 @@ test("going back to the orb by itself: only a finished answer, only after a quie
     assert.equal(decision.go, false, `${JSON.stringify(busy)} must hold it off`);
     assert.equal(decision.retryMs, D.AUTO_RETURN_RETRY_MS);
   }
-  assert.equal(D.shouldAutoReturn({ ...quiet, answerShowing: false }, later).go, false, "no answer on the screen: nothing to clear");
-  const work = D.shouldAutoReturn({ ...quiet, workOpen: true }, later);
-  assert.equal(work.go, false, "a map, a function window, a form or navigation is work: never closed by itself");
-  assert.equal(work.retryMs, D.AUTO_RETURN_RETRY_MS);
+  assert.equal(D.shouldAutoReturn({ ...quiet, answerShowing: false }, later).go, false, "no answer and no task on the screen: nothing to clear");
+  // 9 November 2026 (owner: "keeps open the last task; I want it to go back to the home page after a task was completed")
+  // a finished task nobody has touched for three minutes goes home; before that, it stays
+  const task = { userMode: true, answerShowing: false, answerOnTop: false, workOpen: true, lastActivityAt: 1000 };
+  assert.equal(D.shouldAutoReturn(task, 1000 + D.WORK_RETURN_MS - 5000).go, false, "a task is kept until the quiet time is up");
+  assert.equal(D.shouldAutoReturn(task, 1000 + D.WORK_RETURN_MS + 1).go, true, "a finished task left alone goes back to the home screen");
+  assert.equal(D.shouldAutoReturn({ ...task, documentEditing: true }, 1000 + D.WORK_RETURN_MS + 1).go, false, "a box that may hold unsaved writing waits longer");
+  assert.equal(D.shouldAutoReturn({ ...task, documentEditing: true }, 1000 + D.WORK_EDITING_RETURN_MS + 1).go, true);
+  for (const busy of [{ protectedWork: true }, { assistantSpeaking: true }, { userSpeaking: true }, { focusInField: true }, { pendingConfirmation: true }, { intakeActive: true }]) {
+    assert.equal(D.shouldAutoReturn({ ...task, ...busy }, 1000 + D.WORK_EDITING_RETURN_MS + 1).go, false, `${JSON.stringify(busy)} holds a task open (the camera, navigation, a form, a question, speech)`);
+  }
+  // a card drawn over an earlier task uses the card's own short timer, and the old task does not hold it up
+  const cardOverTask = { ...quiet, workOpen: true, answerOnTop: true, resultShowing: true };
+  assert.equal(D.shouldAutoReturn(cardOverTask, 1000 + D.RESULT_RETURN_MS + 1).go, true, "a card over a task clears by itself");
+  assert.equal(D.shouldAutoReturn(cardOverTask, 1000 + D.RESULT_RETURN_MS - 5000).go, false);
+  // only a remembered reply (no card drawn) over a task does not shorten the task's time
+  assert.equal(D.shouldAutoReturn({ ...quiet, workOpen: true, answerOnTop: false }, 1000 + D.AUTO_RETURN_MS + 1).go, false, "a reply the page remembers is not a card on top");
   assert.equal(D.shouldAutoReturn({ ...quiet, userMode: false }, later).go, false, "admin and investor screens are never closed by itself");
   assert.equal(D.shouldAutoReturn(null, later).go, false);
 });
