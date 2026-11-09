@@ -94,7 +94,11 @@ function normalizeEditable(info, input = {}) {
     // rather than a leads-only list; "followUpDate" is a real date field
     // (distinct from the free-text "nextAction") so a follow-up can be
     // reminded on, not just described.
-    leads: rows(input.leads === undefined ? starter.leads : input.leads, { name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "", skills: "", availability: "", source: "", consent: "", consentDate: "", callConsent: "", callConsentDate: "", messageConsent: "", messageConsentDate: "" }),
+    leads: rows(input.leads === undefined ? starter.leads : input.leads, { name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "", skills: "", availability: "", source: "", consent: "", consentDate: "", callConsent: "", callConsentDate: "", messageConsent: "", messageConsentDate: "", tags: "" }),
+    // A sales pipeline with the person's own stages, the deals in it, and a history of notes and calls for each contact (pipeline-voice.js; 9 November 2026). All start empty, so a workspace saved before this existed reads back exactly as it was.
+    pipelineStages: rows(input.pipelineStages === undefined ? (starter.pipelineStages || []) : input.pipelineStages, { name: "" }, 10),
+    deals: rows(input.deals === undefined ? (starter.deals || []) : input.deals, { id: "", title: "", contact: "", value: 0, currency: "USD", stage: "", openedOn: "", movedOn: "", closedOn: "", note: "" }, 400, new Set(["value"])),
+    contactNotes: rows(input.contactNotes === undefined ? (starter.contactNotes || []) : input.contactNotes, { contact: "", at: "", kind: "note", text: "" }, 2000),
     // Phase 3 of the small-business assistant team: campaigns (a message to send by email or text to the customers who agreed to get messages) and the log of what was sent to whom, whether it failed and whether they replied.
     // Both start empty, so a workspace saved before this existed reads back exactly as it was.
     campaigns: rows(input.campaigns === undefined ? (starter.campaigns || []) : input.campaigns, { name: "", channel: "email", subject: "", message: "", status: "draft", createdOn: "", sentOn: "", sendOn: "", sendTime: "", scheduleZone: "", note: "", claimedAt: "" }, 100),
