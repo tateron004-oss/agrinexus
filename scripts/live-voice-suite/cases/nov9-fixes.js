@@ -16,5 +16,5 @@ module.exports = Object.freeze([
   { id: "finished-document-returns-home", area: "control", writes: true, say: "Make me a flyer for my bake sale on Saturday at ten at the church hall.", timeoutMs: 120000, expect: { screen: "document" },
     then: [{ expect: { orb: true }, timeoutMs: 300000 }] },
   { id: "card-over-a-task-clears-both", area: "control", writes: true, say: "Make me a flyer for my bake sale on Saturday at ten at the church hall.", timeoutMs: 120000, expect: { screen: "document" },
-    then: [{ say: "What is the weather in Nairobi?", timeoutMs: 90000 }, { expect: { orb: true }, timeoutMs: 150000 }] }
+    then: [{ say: "What is the weather in Nairobi?", timeoutMs: 90000, expect: { tool: "nexus_weather" } }, { expect: { orb: true }, timeoutMs: 200000 }] }
 ]);

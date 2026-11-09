@@ -74,3 +74,16 @@ test("by voice or typed, a place on the map is a map: with a comma, with a list,
   for (const no of ["Give me directions from Stockton to Sacramento.", "Show me the route from Cairo to Alexandria on the map", "Show me clinics near me on the map", "Show me my clients on the map",
     "Where is my order on the map", "Find a pharmacy on the map", "Show me the map", "Show me a video of Cairo"]) assert.equal(kyroMapPlace(no), "", no);
 });
+
+test("a city in a country opens the city (not the country map), and a document or list is a task with its own longer time, not a short answer", () => {
+  const app = fs.readFileSync(path.join(__dirname, "..", "..", "public", "app.js"), "utf8");
+  // "Mombasa, Kenya" names the city; only "Kenya" alone opens the country map
+  assert.ok(app.includes("if (country && mapPlace && /,/.test(mapPlace)) {") && /country = null;/.test(app.slice(app.indexOf("if (country && mapPlace && /,/.test(mapPlace)) {"), app.indexOf("if (country && mapPlace && /,/.test(mapPlace)) {") + 700)));
+  // a card that is a document, a résumé or a list is not an answer on top
+  const fn = app.slice(app.indexOf("function kyroAnswerOnTop()"), app.indexOf("function kyroWorkOpen()"));
+  assert.ok(fn.includes("[data-kyro-keep], [data-nexus-document-lifecycle], [data-nexus-resume]"));
+  assert.match(fn.split("return true")[0], /return false;/, "the task check comes before any answer is counted");
+  // writing counts only when the person has typed in the box
+  assert.match(app, /data-kyro-touched/);
+  assert.ok(app.includes("event.isTrusted"));
+});
