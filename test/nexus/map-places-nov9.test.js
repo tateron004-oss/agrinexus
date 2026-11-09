@@ -23,6 +23,18 @@ test("a named city is the most important one with that name, not the first the s
   assert.equal(CAIRO[0].lat, "37.0058", "the list given is not changed");
 });
 
+test("a city is not outranked by its own country or county: \"Mombasa, Kenya\" is Mombasa", () => {
+  const MOMBASA = [
+    { category: "place", addresstype: "city", importance: 0.55, display_name: "Mombasa, Kenya" },
+    { category: "boundary", addresstype: "county", importance: 0.6, display_name: "Mombasa County, Kenya" },
+    { category: "place", addresstype: "country", importance: 0.82, display_name: "Kenya" }
+  ];
+  assert.equal(bestPlace(MOMBASA).display_name, "Mombasa, Kenya");
+  // and a state named alone is compared with regions, not with towns of the same name
+  const NEWYORK = [{ category: "boundary", addresstype: "state", importance: 0.8, display_name: "New York, United States" }, { category: "place", addresstype: "city", importance: 0.9, display_name: "New York City" }];
+  assert.equal(bestPlace(NEWYORK).display_name, "New York, United States");
+});
+
 test("a street, shop or building keeps the search's own order, and an empty or single list is safe", () => {
   const street = [
     { category: "highway", importance: 0.2, display_name: "12 Main Street, Stockton" },
