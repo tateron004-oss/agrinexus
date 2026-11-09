@@ -174,7 +174,7 @@ test("through the dispatcher: the whole journey, with permission first", async (
 
 test("the workspace keeps the new fields when saved, and an older saved workspace reads back as it was", () => {
   const source = require("node:fs").readFileSync(require.resolve("../../nexus/business/service.js"), "utf8");
-  assert.match(source, /messageConsent: "", messageConsentDate: "" \}\)/);
+  assert.match(source, /messageConsent: "", messageConsentDate: "", tags: "" \}\)/);
   assert.match(source, /campaigns: rows\(input\.campaigns === undefined \? \(starter\.campaigns \|\| \[\]\) : input\.campaigns, \{ name: "", channel: "email", subject: "", message: "", status: "draft", createdOn: "", sentOn: "", sendOn: "", sendTime: "", scheduleZone: "", note: "", claimedAt: "" \}, 100\)/);
   assert.match(source, /campaignLog: rows\(input\.campaignLog === undefined/);
   assert.equal(typeof schedule.leadFor, "function");

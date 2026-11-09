@@ -9,6 +9,7 @@ const programsVoice = require("./programs-voice.js");
 const operationsVoice = require("./operations-voice.js");
 const scheduleVoice = require("./scheduling-voice.js");
 const campaignVoice = require("./campaigns-voice.js");
+const pipelineVoice = require("./pipeline-voice.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 const automationCommands = require("../../public/kyro-automation-commands.js");
 const { whenOf, parseEachPrice, parseQuantity, parseCount } = require("../farmwork/parse.js");
@@ -908,7 +909,7 @@ function computeBusinessDashboard(editable, period = {}) {
 // function (rather than a second, hand-maintained copy of these regexes).
 // (the insight reads -- cash outlook, follow-ups due, deadlines due, people served, volunteer hours -- are in insights.js; "how are we doing" is the dashboard)
 const INSIGHT_READS = insights.INSIGHT_INTENTS.filter(intent => intent !== "howAreWeDoing");
-const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS, ...financeVoice.FINANCE_READ_INTENTS, ...programsVoice.PROGRAM_READ_INTENTS, ...operationsVoice.OPERATIONS_READ_INTENTS, ...scheduleVoice.SCHEDULE_READ_INTENTS, ...campaignVoice.CAMPAIGN_READ_INTENTS]);
+const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS, ...financeVoice.FINANCE_READ_INTENTS, ...programsVoice.PROGRAM_READ_INTENTS, ...operationsVoice.OPERATIONS_READ_INTENTS, ...scheduleVoice.SCHEDULE_READ_INTENTS, ...campaignVoice.CAMPAIGN_READ_INTENTS, ...pipelineVoice.PIPELINE_READ_INTENTS]);
 
 function classify(command = "") {
   // A request about the person's own outside-tool automations ("send new customer Grace to my sales sheet automation", "show my automations", "connect Zapier") is the automations', never a business request: the
@@ -922,6 +923,9 @@ function classify(command = "") {
   // Campaigns and who agreed to get messages (campaigns-voice.js).
   const campaign = campaignVoice.classifyCampaign(command);
   if (campaign) return campaign;
+  // Deals, the pipeline, tags and a contact's notes and history (pipeline-voice.js).
+  const pipeline = pipelineVoice.classifyPipeline(command);
+  if (pipeline) return pipeline;
   const insight = insights.classifyInsight(command);
   if (insight === "howAreWeDoing") return "dashboard";
   if (insight) return insight;
@@ -1226,6 +1230,25 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: apply(editable) } });
     return { status: "completed", localOnly: true, response: done, businessRecord: updated?.body || null, summary: done };
+  }
+
+  // The sales pipeline: deals and their stages, tags, and the notes and history of a contact (pipeline-voice.js). Every change asks for a yes first.
+  if (pipelineVoice.PIPELINE_READ_INTENTS.includes(intent) || pipelineVoice.PIPELINE_WRITE_INTENTS.includes(intent)) {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
+    const workspace = resolved.client.data?.info?.businessName || "your workspace";
+    const editable = resolved.client.data.editable;
+    const ctx = { command, editable, workspace, today: todayIn(new Date(), timeZone), formatMoney };
+    if (pipelineVoice.PIPELINE_READ_INTENTS.includes(intent)) {
+      const response = pipelineVoice.readPipeline(intent, ctx);
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const plan = pipelineVoice.planPipelineWrite(intent, ctx);
+    if (plan.response) return plan.info ? { status: "completed", localOnly: true, response: plan.response, summary: plan.response } : { status: "needs-input", response: plan.response, missingInformation: plan.missingInformation || [] };
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: plan.prompt };
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: plan.apply(editable) } });
+    return { status: "completed", localOnly: true, response: plan.done, businessRecord: updated?.body || null, summary: plan.done };
   }
 
   if (operationsVoice.OPERATIONS_READ_INTENTS.includes(intent) || operationsVoice.OPERATIONS_WRITE_INTENTS.includes(intent)) {
