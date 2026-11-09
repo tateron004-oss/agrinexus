@@ -199,6 +199,11 @@
     rows("deals", editable.deals || [], [["title", "Deal"], ["contact", "With (a name)"], ["value", "Worth"], ["currency", "Currency (KES, USD, NGN...)"], ["stage", "Stage"], ["note", "Note"]]);
     rows("pipeline-stage-fields", editable.pipelineStages || [], [["name", "Stage name"]]);
     rows("contact-notes", editable.contactNotes || [], [["contact", "Person"], ["at", "Day"], ["kind", "Kind (note, call, deal or stage)"], ["text", "What happened"]]);
+    rows("sequences", editable.sequences || [], [["name", "Sequence name"], ["status", "Status (active or paused)"]]);
+    rows("sequence-steps", editable.sequenceSteps || [], [["sequence", "Sequence"], ["step", "Step number"], ["afterDays", "Days after the step before (0 = right away)"], ["channel", "Channel (sms or email)"], ["message", "Message"]]);
+    rows("sequence-runs", editable.sequenceRuns || [], [["sequence", "Sequence"], ["customer", "Person"], ["nextStep", "Next step"], ["dueOn", "Next message on"], ["status", "Status (active, done, stopped or replied)"], ["note", "Note"]]);
+    const runningNow = (editable.sequenceRuns || []).filter(item => item.status === "active");
+    byId("sequence-summary").textContent = runningNow.length ? runningNow.length + " person(s) running through a sequence now." : "Nobody is running through a sequence now.";
     rows("listings", editable.listings, [["address", "Address"], ["price", "Price"], ["propertyType", "Property type"], ["beds", "Beds"], ["baths", "Baths"], ["status", "Status (active, pending, under-contract, sold)"], ["notes", "Notes"]]);
     rows("transactions", editable.transactions, [["date", "Date"], ["type", "Type (income or expense)"], ["category", "Category"], ["amount", "Amount"], ["currency", "Currency (KES, USD, NGN...)"], ["description", "Description"], ["fund", "Restricted to (the purpose a gift is held for; blank if unrestricted)"]]);
     const money = moneyByCurrency(editable.transactions);
@@ -284,6 +289,8 @@
   byId("reload").addEventListener("click", () => run(reload));
   byId("save").addEventListener("click", () => run(async () => { await save(); notice("Changes saved."); }));
   byId("add-lead").addEventListener("click", () => { current.data.editable.leads.push({ name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "", skills: "", availability: "", source: "", consent: "", consentDate: "" }); render(); });
+  byId("add-sequence").addEventListener("click", () => { const editable = current.data.editable; (editable.sequences = editable.sequences || []).push({ name: "", status: "active", createdOn: new Date().toISOString().slice(0, 10) }); render(); });
+  byId("add-sequence-step").addEventListener("click", () => { const editable = current.data.editable; const list = (editable.sequenceSteps = editable.sequenceSteps || []); const name = (editable.sequences || []).length ? editable.sequences[editable.sequences.length - 1].name : ""; list.push({ sequence: name, step: list.filter(item => item.sequence === name).length + 1, afterDays: 0, channel: "sms", subject: name, message: "" }); render(); });
   byId("add-deal").addEventListener("click", () => { const editable = current.data.editable; (editable.deals = editable.deals || []).push({ id: "D" + Date.now().toString(36), title: "", contact: "", value: 0, currency: "USD", stage: pipelineStages(editable)[0], openedOn: new Date().toISOString().slice(0, 10), movedOn: "", closedOn: "", note: "" }); render(); });
   byId("add-stage").addEventListener("click", () => { const editable = current.data.editable; if (!(editable.pipelineStages || []).some(row => row.name)) editable.pipelineStages = USUAL_STAGES.map(name => ({ name })); else if (editable.pipelineStages.length < 10) editable.pipelineStages.push({ name: "" }); render(); });
   byId("add-contact-note").addEventListener("click", () => { const editable = current.data.editable; (editable.contactNotes = editable.contactNotes || []).push({ contact: "", at: new Date().toISOString().slice(0, 10), kind: "note", text: "" }); render(); });

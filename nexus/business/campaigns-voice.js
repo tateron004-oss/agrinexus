@@ -211,6 +211,8 @@ function planCampaignWrite(intent, ctx) {
   }
 
   if (intent === "createCampaign") {
+    // (found in the 9 November 2026 audit: "whatsapp" was read as a text, so a WhatsApp campaign went out as an SMS. WhatsApp needs an account that is not connected here, so it is refused, never sent as something else)
+    if (/\bwhats?app\b/i.test(command) && !/\be-?mails?\b/i.test(command)) return { response: "I can send a campaign by text or by email. WhatsApp campaigns are not set up yet, so I have not saved this one. Say it again with text or email.", info: true };
     const campaignTitle = campaignName(command);
     const channel = channelOf(command);
     const message = messageOf(command);
@@ -324,4 +326,4 @@ function missingFor(intent, command) {
 }
 
 module.exports = Object.freeze({ classifyCampaign, readCampaign, planCampaignWrite, missingFor, CAMPAIGN_READ_INTENTS, CAMPAIGN_WRITE_INTENTS, SEND_CAP, STOP_LINE, NOT_SEEN, campaignName, messageOf,
-  dueState, sendPlanFor, whenWords, LATE_GRACE, WINDOW_END, SENDING_STALE_MS, LOG_LIMIT, SEND_FROM, SEND_LATEST_START });
+  usable, dueState, sendPlanFor, whenWords, LATE_GRACE, WINDOW_END, SENDING_STALE_MS, LOG_LIMIT, SEND_FROM, SEND_LATEST_START });
