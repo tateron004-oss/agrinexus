@@ -101,6 +101,7 @@ async function main() {
   // Scheduled campaigns are due at a chosen minute and not sent after 3 hours late, so this checks about once a minute (a campaign is claimed before it is sent, so it can never go out twice).
   const campaignIntervalMs = Number(process.env.NEXUS_CAMPAIGN_POLL_MS || 60000);
   let lastCampaignSweepAt = 0;
+  let lastSequenceSweepAt = 0;
   // Weather changes slowly and the forecast service is free but shared, so alerts are checked every 30 minutes (towns are fetched once per pass).
   const weatherAlertIntervalMs = Number(process.env.NEXUS_WEATHER_ALERT_POLL_MS || 30 * 60 * 1000);
   let lastWeatherAlertSweepAt = 0;
@@ -132,6 +133,12 @@ async function main() {
       lastCampaignSweepAt = Date.now();
       try { const outcome = await handlers["business.campaigns-send-due"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.sent || outcome?.missed || outcome?.interrupted || outcome?.errors) logger.info("worker.campaign_sweep", outcome); }
       catch (error) { logger.error("worker.campaign_sweep_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    // Sequence steps are due on a day and sent in the 8 AM to 8 PM window, so this checks about once a minute too (a step is claimed before it is sent, so it can never go out twice).
+    if (Date.now() - lastSequenceSweepAt >= campaignIntervalMs) {
+      lastSequenceSweepAt = Date.now();
+      try { const outcome = await handlers["business.sequences-send-due"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.messages || outcome?.failed || outcome?.stopped || outcome?.interrupted || outcome?.errors) logger.info("worker.sequence_sweep", outcome); }
+      catch (error) { logger.error("worker.sequence_sweep_failed", { error: { code: error.code, message: error.message } }); }
     }
     if (Date.now() - lastBriefSweepAt >= briefIntervalMs) {
       lastBriefSweepAt = Date.now();

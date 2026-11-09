@@ -10,6 +10,7 @@ const operationsVoice = require("./operations-voice.js");
 const scheduleVoice = require("./scheduling-voice.js");
 const campaignVoice = require("./campaigns-voice.js");
 const pipelineVoice = require("./pipeline-voice.js");
+const sequenceVoice = require("./sequences-voice.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 const automationCommands = require("../../public/kyro-automation-commands.js");
 const { whenOf, parseEachPrice, parseQuantity, parseCount } = require("../farmwork/parse.js");
@@ -134,7 +135,7 @@ function extractLeadArgs(command = "", args = {}) {
   // words for the person being tracked -- follow the same pattern.
   const typeMatch = text.match(/\b(customer|donor|lead|sponsor|volunteer|client|participant|member|congregant|buyer|seller|tenant|landlord)s?\b/i);
   const contactMatch = text.match(EMAIL_IN_TEXT)
-    || text.match(/\b(?:contact|phone|email|reach(?:able)? at)\s+["']?([^"'\n,.]{3,80})/i)
+    || text.match(/\b(?:contact|phone(?: number)?|mobile(?: number)?|email(?: address)?|reach(?:able)? at)\s*(?:is\s+|:\s*)?["']?([^"'\n,.]{3,80})/i)
     || text.match(/([+()\d\s.-]{7,}|[^\s,]+@[^\s,]+)/);
   return {
     name: sanitizeText(args.name || (nameMatch ? personNameOnly(nameMatch[1]) : ""), 160),
@@ -909,7 +910,7 @@ function computeBusinessDashboard(editable, period = {}) {
 // function (rather than a second, hand-maintained copy of these regexes).
 // (the insight reads -- cash outlook, follow-ups due, deadlines due, people served, volunteer hours -- are in insights.js; "how are we doing" is the dashboard)
 const INSIGHT_READS = insights.INSIGHT_INTENTS.filter(intent => intent !== "howAreWeDoing");
-const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS, ...financeVoice.FINANCE_READ_INTENTS, ...programsVoice.PROGRAM_READ_INTENTS, ...operationsVoice.OPERATIONS_READ_INTENTS, ...scheduleVoice.SCHEDULE_READ_INTENTS, ...campaignVoice.CAMPAIGN_READ_INTENTS, ...pipelineVoice.PIPELINE_READ_INTENTS]);
+const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS, ...financeVoice.FINANCE_READ_INTENTS, ...programsVoice.PROGRAM_READ_INTENTS, ...operationsVoice.OPERATIONS_READ_INTENTS, ...scheduleVoice.SCHEDULE_READ_INTENTS, ...campaignVoice.CAMPAIGN_READ_INTENTS, ...pipelineVoice.PIPELINE_READ_INTENTS, ...sequenceVoice.SEQUENCE_READ_INTENTS]);
 
 function classify(command = "") {
   // A request about the person's own outside-tool automations ("send new customer Grace to my sales sheet automation", "show my automations", "connect Zapier") is the automations', never a business request: the
@@ -917,6 +918,9 @@ function classify(command = "") {
   if (automationCommands.parseTrigger(command) || automationCommands.isList(command) || automationCommands.isOpen(command)) return null;
   // Questions about how the organisation is doing, money to cover expenses, who needs a follow-up, funding deadlines, people served and volunteer hours come before the general word-matching below, which
   // would otherwise read "customers or donors" as a list request and "log 3 volunteer hours for Joy" as a new person called by that whole phrase.
+  // Follow-up sequences come before the front desk: a sequence is named by its own word, and its name may hold another command's word ("Quote Follow-up" is not the quotes) (sequences-voice.js).
+  const sequence = sequenceVoice.classifySequence(command);
+  if (sequence) return sequence;
   // The front desk comes first: "who can I call back" is the people who agreed to calls, not the follow-ups that are due (scheduling-voice.js keeps its phrases narrow).
   const schedule = scheduleVoice.classifySchedule(command);
   if (schedule) return schedule;
@@ -1230,6 +1234,25 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: apply(editable) } });
     return { status: "completed", localOnly: true, response: done, businessRecord: updated?.body || null, summary: done };
+  }
+
+  // Follow-up sequences: built and started by voice, sent by the background worker (sequence-sender.js). Every change asks for a yes first; nothing is sent from here.
+  if (sequenceVoice.SEQUENCE_READ_INTENTS.includes(intent) || sequenceVoice.SEQUENCE_WRITE_INTENTS.includes(intent)) {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
+    const workspace = resolved.client.data?.info?.businessName || "your workspace";
+    const editable = resolved.client.data.editable;
+    const ctx = { command, editable, workspace, today: todayIn(new Date(), timeZone), formatMoney, timeZone: validTimeZone(timeZone || DEFAULT_TIME_ZONE) };
+    if (sequenceVoice.SEQUENCE_READ_INTENTS.includes(intent)) {
+      const response = sequenceVoice.readSequence(intent, ctx);
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const plan = sequenceVoice.planSequenceWrite(intent, ctx);
+    if (plan.response) return plan.info ? { status: "completed", localOnly: true, response: plan.response, summary: plan.response } : { status: "needs-input", response: plan.response, missingInformation: plan.missingInformation || [] };
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: plan.prompt };
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: plan.apply(editable) } });
+    return { status: "completed", localOnly: true, response: plan.done, businessRecord: updated?.body || null, summary: plan.done };
   }
 
   // The sales pipeline: deals and their stages, tags, and the notes and history of a contact (pipeline-voice.js). Every change asks for a yes first.

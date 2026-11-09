@@ -244,6 +244,17 @@ class RecordRepository {
     return result.rows || result;
   }
 
+  // Business workspaces with a follow-up sequence running (a run that is "active"), for nexus/business/sequence-sender.js (9 November 2026). Whole records, because the worker saves back with the record's own version; the oldest first, 200 at most.
+  async listActiveSequenceWorkspaces({ limit = 50 } = {}) {
+    const result = await this.db.query(`select tenant_id, owner_id, record_id, version, data
+      from nexus_records
+      where record_type='business-client' and workspace_id='operations' and state='active' and deleted_at is null
+        and exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'sequenceRuns','[]'::jsonb)) r where r->>'status' = 'active')
+      order by updated_at
+      limit $1`, [Math.min(Math.max(Number(limit) || 50, 1), 200)]);
+    return result.rows || result;
+  }
+
   // A more precise business-domain signal than listStaleBusinessWorkspaces()'s
   // whole-record staleness: a lead/customer/donor's own followUpDate --
   // stored by the dashboard's real HTML date input (public/business-

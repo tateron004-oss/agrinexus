@@ -99,6 +99,10 @@ function normalizeEditable(info, input = {}) {
     pipelineStages: rows(input.pipelineStages === undefined ? (starter.pipelineStages || []) : input.pipelineStages, { name: "" }, 10),
     deals: rows(input.deals === undefined ? (starter.deals || []) : input.deals, { id: "", title: "", contact: "", value: 0, currency: "USD", stage: "", openedOn: "", movedOn: "", closedOn: "", note: "" }, 400, new Set(["value"])),
     contactNotes: rows(input.contactNotes === undefined ? (starter.contactNotes || []) : input.contactNotes, { contact: "", at: "", kind: "note", text: "" }, 2000),
+    // Follow-up sequences (sequences-voice.js, 9 November 2026): the sequences, their steps, and the people running through them. All start empty, so a workspace saved before this existed reads back exactly as it was.
+    sequences: rows(input.sequences === undefined ? (starter.sequences || []) : input.sequences, { name: "", status: "active", createdOn: "" }, 20),
+    sequenceSteps: rows(input.sequenceSteps === undefined ? (starter.sequenceSteps || []) : input.sequenceSteps, { sequence: "", step: 1, afterDays: 0, channel: "email", subject: "", message: "" }, 200, new Set(["step", "afterDays"])),
+    sequenceRuns: rows(input.sequenceRuns === undefined ? (starter.sequenceRuns || []) : input.sequenceRuns, { sequence: "", customer: "", startedOn: "", nextStep: 1, dueOn: "", status: "active", lastSentOn: "", note: "", claimedAt: "", zone: "" }, 600, new Set(["nextStep"])),
     // Phase 3 of the small-business assistant team: campaigns (a message to send by email or text to the customers who agreed to get messages) and the log of what was sent to whom, whether it failed and whether they replied.
     // Both start empty, so a workspace saved before this existed reads back exactly as it was.
     campaigns: rows(input.campaigns === undefined ? (starter.campaigns || []) : input.campaigns, { name: "", channel: "email", subject: "", message: "", status: "draft", createdOn: "", sentOn: "", sendOn: "", sendTime: "", scheduleZone: "", note: "", claimedAt: "" }, 100),

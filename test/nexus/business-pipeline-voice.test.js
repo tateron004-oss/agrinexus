@@ -223,6 +223,6 @@ test("a note addressed to a NAMED person goes to the business contact; the perso
 
 test("every change the pipeline can make is on the list of spoken changes, so the real runtime accepts it", () => {
   const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "..", "nexus", "business", "authoritative-executor.js"), "utf8");
-  assert.ok(source.includes("...pipelineVoice.PIPELINE_WRITE_INTENTS]);"));
+  assert.ok(source.includes("...pipelineVoice.PIPELINE_WRITE_INTENTS"));
   for (const intent of pipeline.PIPELINE_WRITE_INTENTS) assert.ok(typeof intent === "string" && intent.length);
 });

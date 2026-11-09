@@ -3,6 +3,7 @@
 const { createId } = require("../contracts/identifiers.js");
 const { createCommand } = require("../contracts/command.js");
 const { createScheduledCampaignSender } = require("../business/scheduled-campaigns.js");
+const { createSequenceSender } = require("../business/sequence-sender.js");
 const { makeSendMessage } = require("../business/authoritative-executor.js");
 
 // The notification that carries an autonomous task's outcome summary is
@@ -60,6 +61,14 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
     notify: ({ tenantId, userId, key, title, body }) => runtime.notifications.enqueue({ tenantId, userId, channel: "push", scheduledAt: new Date(), idempotencyKey: key, content: { title, body, kind: "campaign_outcome" } }),
     isPaused: runtime.autonomyControl ? ({ tenantId }) => runtime.autonomyControl.isPaused({ tenantId }) : null,
     logger }));
+  // Sends the next step of each follow-up sequence when its day comes (nexus/business/sequence-sender.js): same governed sender, same consent and sending-hours rules as a scheduled campaign.
+  let sequenceSender = null;
+  const sequences = () => (sequenceSender ||= createSequenceSender({
+    repository: runtime.businessRecords,
+    sendMessageFor: context => makeSendMessage(process.env, { ...context, isRestrictedFrom: () => false }),
+    notify: ({ tenantId, userId, key, title, body }) => runtime.notifications.enqueue({ tenantId, userId, channel: "push", scheduledAt: new Date(), idempotencyKey: key, content: { title, body, kind: "sequence_outcome" } }),
+    isPaused: runtime.autonomyControl ? ({ tenantId }) => runtime.autonomyControl.isPaused({ tenantId }) : null,
+    logger }));
   return Object.freeze({
     "acceptance.canary": async ({ job }) => ({ accepted: true, releaseSha: process.env.RENDER_GIT_COMMIT || process.env.GIT_SHA || "development",
       nonce: required(job.payload?.nonce, "Acceptance canary nonce") }),
@@ -68,6 +77,7 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
     // Sends each repeating reminder ("every morning at 8, check the pump") when its local time arrives (see nexus/reminders/repeat-service.js).
     "reminders.repeat-send-due": async () => (runtime.repeatReminders?.sendDue ? runtime.repeatReminders.sendDue({}) : { checked: 0, sent: 0 }),
     // Sends each campaign a business owner scheduled for a day and time, when that time comes (see nexus/business/scheduled-campaigns.js).
+    "business.sequences-send-due": async () => (runtime.businessRecords?.listActiveSequenceWorkspaces && runtime.notifications ? sequences().sendDue({}) : { checked: 0, messages: 0 }),
     "business.campaigns-send-due": async () => (runtime.businessRecords?.listScheduledCampaignWorkspaces && runtime.notifications ? scheduledCampaignSender().sendDue({}) : { checked: 0, sent: 0 }),
     // Warns everyone who turned weather alerts on when their forecast turns serious (see nexus/alerts/service.js).
     // Sends the weekly summary to everyone whose chosen weekday and time has arrived (see nexus/brief/weekly.js).
