@@ -90,7 +90,7 @@ const appSource = fs.readFileSync(path.join(__dirname, "../../public/app.js"), "
 function idleSnapshot({ responseInProgress = false, startedAgoMs = 0, speaking = false, openReplies = [] }) {
   const source = appSource.slice(appSource.indexOf("function kyroAutoReturnSnapshot()"), appSource.indexOf("function kyroAutoReturnTick()"));
   const context = { Date, kyroOpenReplies: openReplies, kyroLastAssistantSpokeAt: 0, kyroLastActivityAt: 0, experienceMode: "user", nexusVoiceSession: { assistantSpeaking: speaking, userSpeaking: false },
-    realtimeVoiceSession: { responseInProgress, responseStartedAt: Date.now() - startedAgoMs }, kyroAnswerShowing: () => true, kyroWorkOpen: () => false,
+    realtimeVoiceSession: { responseInProgress, responseStartedAt: Date.now() - startedAgoMs }, kyroAnswerShowing: () => true, kyroAnswerOnTop: () => true, kyroWorkOpen: () => false,
     nexusPendingBehaviorConfirmation: null, pendingAgentClarification: null, kyroActiveVoiceIntake: null,
     document: { activeElement: null, body: { classList: { contains: () => true } }, querySelector: () => null } };
   vm.runInNewContext(`${source}\nthis.snapshot = kyroAutoReturnSnapshot;`, context);

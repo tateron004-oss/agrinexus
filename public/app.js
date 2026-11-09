@@ -28019,6 +28019,14 @@ function kyroAnswerShowing() {
     return Boolean(nexusPresenceState?.lastResponse);
   } catch { return false; }
 }
+// An answer actually drawn on the screen (a card, a result, the research window): not merely a reply the page remembers (nexusPresenceState.lastResponse), which is nearly always set.
+function kyroAnswerOnTop() {
+  try {
+    if (document.querySelector("[data-nexus-live-weather-shell]:not([data-kyro-parked]), #nexusRichDataOverlay, [data-kyro-result]")) return true;
+    if (kyroFinishedResultShowing()) return true;
+    return Boolean(nexusActiveWorkflowState?.id && (nexusActiveWorkflowState.functionId === "live-knowledge" || nexusActiveWorkflowState.workflow === "live-knowledge"));
+  } catch { return false; }
+}
 function kyroWorkOpen() {
   try {
     // the camera, while the person is showing something to it, is work in progress: nothing clears it by itself
@@ -28062,6 +28070,11 @@ function kyroAutoReturnSnapshot() {
   return {
     userMode: experienceMode === "user" || document.body.classList.contains("user-mode"),
     answerShowing: kyroAnswerShowing(),
+    // an answer (not only a reply left in the page's memory) drawn on the screen: it decides the return time even over an older task, and takes that task down with it (9 November 2026)
+    answerOnTop: kyroAnswerOnTop(),
+    // work the person is doing: the camera, turn-by-turn navigation; and a box that may hold writing not yet saved
+    protectedWork: Boolean(document.querySelector("[data-kyro-capture], [data-kn=\"stop\"]")),
+    documentEditing: Boolean(document.querySelector("[data-nexus-document-lifecycle] textarea, [data-kyro-keep] textarea, [data-nexus-resume] textarea")),
     // (the "open health" help screen is not an answer to be read in ten seconds: it keeps the usual thirty)
     resultShowing: Boolean(document.querySelector("[data-kyro-result]:not([data-kyro-result=\"help\"])")),
     workOpen: kyroWorkOpen(),
@@ -52649,9 +52662,10 @@ function kyroOpenMapRequest(text) {
 }
 // "Show me the city of Stockton on the map", "show me California on the map", "open a map of Stockton", "open the Stockton map": the PLACE asked for, or "" when none is named. The map used to open only for a country or one of four
 // Kenyan cities, and by voice it was left to the map tool, which wants a start and a destination: "Stockton" and "California" got nothing (found by the owner's own voice test).
-const KYRO_MAP_PLACE_ON = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:me\\s+)?(?:the\\s+)?(?:(?:city|town|state|county|region|village|province|district) of\\s+)?([a-z][a-z.' -]{1,40}?)\\s+(?:on|in)\\s+(?:the\\s+|a\\s+)?(?:street\\s+|live\\s+|full\\s+|big\\s+)?maps?[.?!]*$`, "i");
+// (found on 9 November 2026: a comma in the place, which speech writes in ("Cairo, Egypt", or a list of three cities), left the sentence unmatched, so it went to the map tool, which wants a start and a destination; "where is" and "find" a place on the map are the same request)
+const KYRO_MAP_PLACE_ON = new RegExp(`${KYRO_OPEN_LEAD}(?:${KYRO_OPEN_VERB}|where(?:'s| is)|find|locate|put)\\s+(?:me\\s+)?(?:the\\s+)?(?:(?:city|town|state|county|region|village|province|district) of\\s+)?([a-z][a-z.,' -]{1,50}?)\\s+(?:on|in)\\s+(?:the\\s+|a\\s+)?(?:street\\s+|live\\s+|full\\s+|big\\s+|world\\s+)?maps?[.?!]*$`, "i");
 const KYRO_MAP_PLACE_OF = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:me\\s+)?(?:(?:the|a|an|my)\\s+)?(?:(?:street|live|full|big|world|interactive)\\s+)?maps?\\s+(?:of|for|in|around)\\s+(?:the\\s+)?(?:(?:city|town|state|county|region|village|province|district) of\\s+)?([a-z][a-z.,' -]{1,40}?)[.?!]*$`, "i");
-const KYRO_MAP_PLACE_NAMED = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:me\\s+)?(?:the\\s+)?([a-z][a-z.' -]{1,30}?)\\s+maps?[.?!]*$`, "i");
+const KYRO_MAP_PLACE_NAMED = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:me\\s+)?(?:the\\s+)?([a-z][a-z.,' -]{1,40}?)\\s+maps?[.?!]*$`, "i");
 // (words that are not a place: the map itself, kinds of map, and the person's own things, which are not found on a map by name)
 const KYRO_MAP_NOT_A_PLACE = /^(?:the|a|an|my|me|this|that|it|here|there|full|big|world|street|live|interactive|map|maps|current location|clients?|customers?|farms?|fields?|crops?|animals?|jobs?|shipments?|deliveries|orders|donors|volunteers|friends|family|home|work|everything|all)$/i;
 function kyroMapPlace(text) {
@@ -52665,13 +52679,22 @@ function kyroMapPlace(text) {
 const KYRO_US_STATES = new Set(["alabama", "alaska", "arizona", "arkansas", "california", "colorado", "connecticut", "delaware", "florida", "georgia", "hawaii", "idaho", "illinois", "indiana", "iowa", "kansas", "kentucky", "louisiana", "maine", "maryland", "massachusetts", "michigan", "minnesota", "mississippi", "missouri", "montana", "nebraska", "nevada", "new hampshire", "new jersey", "new mexico", "new york", "north carolina", "north dakota", "ohio", "oklahoma", "oregon", "pennsylvania", "rhode island", "south carolina", "south dakota", "tennessee", "texas", "utah", "vermont", "virginia", "washington", "west virginia", "wisconsin", "wyoming"]);
 // Opens the map and centres it on the place: found by the server's place search (the same OpenStreetMap search the GPS uses), a state or a country-sized place wide, anything else at city size.
 async function kyroOpenMapAtPlace(place, said, lang) {
-  const name = String(place).replace(/\b[a-z]/g, letter => letter.toUpperCase());
+  let name = String(place).replace(/\b[a-z]/g, letter => letter.toUpperCase());
   const say = line => { try { setVoiceResponse(line, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the map is on the screen */ } };
   let found = null;
-  try {
-    const out = await request("/api/nexus/runtime/navigation", { method: "POST", body: { action: "search", query: place } });
-    found = (Array.isArray(out?.places) ? out.places : []).find(item => Number.isFinite(Number(item?.lat)) && Number.isFinite(Number(item?.lng))) || null;
-  } catch { found = null; }
+  const findPlace = async query => {
+    try {
+      const out = await request("/api/nexus/runtime/navigation", { method: "POST", body: { action: "search", query } });
+      return (Array.isArray(out?.places) ? out.places : []).find(item => Number.isFinite(Number(item?.lat)) && Number.isFinite(Number(item?.lng))) || null;
+    } catch { return null; }
+  };
+  found = await findPlace(place);
+  // Said as a list ("Stockton, Cairo or Mombasa"), the whole is no place: the first is shown and the rest are asked for next, one at a time (found on 9 November 2026, when a list was answered "I need a start and an end")
+  let listRest = "";
+  if (!found && /\s*(?:,|\band\b|\bor\b)\s*/i.test(String(place))) {
+    const parts = String(place).split(/\s*(?:,|\band\b|\bor\b)\s*/i).map(part => part.trim()).filter(Boolean);
+    if (parts.length > 1) { found = await findPlace(parts[0]); if (found) { listRest = parts.slice(1).join(", "); place = parts[0]; name = String(place).replace(/\b[a-z]/g, letter => letter.toUpperCase()); } }
+  }
   let opened = false;
   try { opened = dispatchGenesisWorkspaceAction({ type: "genesis.workspace.open", workspace: "map", requestId: `typed-map-${Date.now().toString(36)}`, payload: { query: said, country: "" } }, {}, { suppressAcknowledgement: true }); } catch { opened = false; }
   if (!opened) { say(lang === "sw" ? "Siwezi kufungua ramani sasa." : "I could not open the map just now."); return false; }
@@ -52684,7 +52707,8 @@ async function kyroOpenMapAtPlace(place, said, lang) {
     try { userMapLayers.markers?.clearLayers?.(); if (zoom >= 10) L.marker([Number(found.lat), Number(found.lng)]).addTo(userMapLayers.markers).bindPopup(`<strong>${escapeHtml(name)}</strong>`); } catch { /* the map is centred without a marker */ }
     safeInvalidateLeafletMap(userMap);
   }).catch(() => {});
-  say(lang === "sw" ? `Hii ni ramani ya ${name}. Unaweza kuikuza na kuisogeza.` : `Here is ${name} on the map. You can zoom and drag it.`);
+  const next = listRest ? (lang === "sw" ? ` Ninaonyesha mahali pamoja kwa wakati mmoja. Sema ${listRest} nikuonyeshe.` : ` I show one place at a time. Say ${listRest} next and I will show that.`) : "";
+  say((lang === "sw" ? `Hii ni ramani ya ${name}. Unaweza kuikuza na kuisogeza.` : `Here is ${name} on the map. You can zoom and drag it.`) + next);
   return true;
 }
 // "Open YouTube", "open Spotify", "play something on YouTube": found testing by voice, these were answered "I'm not sure what you'd like me to do". Kyro asks what to play and the next short answer is played.

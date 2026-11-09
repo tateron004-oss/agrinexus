@@ -122,16 +122,28 @@
   // snapshot: { userMode, answerShowing, resultShowing, workOpen, lastActivityAt, assistantSpeaking, userSpeaking, focusInField, pendingConfirmation, intakeActive }
   // "activity" is anything that means the person is still there: a touch, a key, speech, a new answer arriving.
   // It only ever clears a FINISHED ANSWER (a weather card, a research answer, an answer left on the home screen). Work the person is in (a function window, the map, a form, navigation) is never closed by itself.
+  // Found by the owner's testing on 9 November 2026: "when it gets stuck or glitchy it defers back to a knowledge card and keeps open the last task; I want it to go back to the home page after a task was completed".
+  // Two causes, both here. (1) Work (a saved document, the map, another section) was NEVER cleared, so a task stayed open for ever once it was finished. (2) A card drawn over an earlier task was held up by that task,
+  // so the card, and the old task under it, stayed until the person closed them. Now: a finished task that nobody has touched, spoken to or typed in for WORK_RETURN_MS goes back to the home screen (longer where there is
+  // a box that may hold unsaved writing), and an answer drawn over an older task clears on its own short timer and takes that task down with it. Anything the person is doing (the camera, turn-by-turn navigation,
+  // a form, a question waiting for yes or no, speech either way, a touch, a key or a scroll) still holds everything off.
+  const WORK_RETURN_MS = 180000;         // a finished task (a saved document, the map, a section) nobody has touched for three minutes
+  const WORK_EDITING_RETURN_MS = 600000; // the same, where a box that may hold unsaved writing is open
   function shouldAutoReturn(snapshot, now) {
     const s = snapshot || {};
-    if (!s.userMode || !s.answerShowing) return { go: false, retryMs: 0 };
-    if (s.workOpen) return { go: false, retryMs: AUTO_RETURN_RETRY_MS };
+    if (!s.userMode || !(s.answerShowing || s.workOpen)) return { go: false, retryMs: 0 };
+    if (s.protectedWork) return { go: false, retryMs: AUTO_RETURN_RETRY_MS };
     if (s.assistantSpeaking || s.userSpeaking || s.focusInField || s.pendingConfirmation || s.intakeActive) return { go: false, retryMs: AUTO_RETURN_RETRY_MS };
     const quietFor = Number(now) - Number(s.lastActivityAt || 0);
-    const limit = s.resultShowing ? (s.listShowing ? LIST_RETURN_MS : RESULT_RETURN_MS) : AUTO_RETURN_MS;
+    // an answer on top (a card, a result) decides the time, even over an older task; with only a task showing, the task's own longer time applies
+    const answerOnTop = s.answerOnTop === undefined ? !s.workOpen : Boolean(s.answerOnTop);
+    let limit;
+    if (answerOnTop) limit = s.resultShowing ? (s.listShowing ? LIST_RETURN_MS : RESULT_RETURN_MS) : AUTO_RETURN_MS;
+    else if (s.workOpen) limit = s.documentEditing ? WORK_EDITING_RETURN_MS : WORK_RETURN_MS;
+    else limit = AUTO_RETURN_MS;
     if (!(quietFor >= limit)) return { go: false, retryMs: Math.max(1000, limit - Math.max(0, quietFor)) };
     return { go: true, retryMs: 0 };
   }
 
-  return Object.freeze({ parse, shouldAutoReturn, normalise, AUTO_RETURN_MS, RESULT_RETURN_MS, LIST_RETURN_MS, AUTO_RETURN_RETRY_MS });
+  return Object.freeze({ parse, shouldAutoReturn, normalise, AUTO_RETURN_MS, RESULT_RETURN_MS, LIST_RETURN_MS, AUTO_RETURN_RETRY_MS, WORK_RETURN_MS, WORK_EDITING_RETURN_MS });
 });
