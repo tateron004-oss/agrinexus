@@ -31,7 +31,7 @@ env:
 jobs:
   qualify-release-candidate:
     name: Prove release candidate before production
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     # packages: read lets the built-in token pull the database image from this repository's own GitHub registry (copied there by mirror-pgvector-image.yml)
     permissions:
@@ -141,7 +141,7 @@ jobs:
     if: github.event_name != 'pull_request'
     name: Deploy and verify exact production release
     needs: qualify-release-candidate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: nexus-genesis-certified
     steps:
