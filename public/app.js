@@ -28022,6 +28022,9 @@ function kyroAnswerShowing() {
 // An answer actually drawn on the screen (a card, a result, the research window): not merely a reply the page remembers (nexusPresenceState.lastResponse), which is nearly always set.
 function kyroAnswerOnTop() {
   try {
+    // a screen the person works in or collects from (a document with its Download button, a résumé, a list or anything marked to be kept) is a task, not a short answer: it keeps the task's own longer time
+    // (found on the live site on 9 November 2026: a flyer left alone went home after 30 seconds, because its card counted as an answer)
+    if (document.querySelector("[data-kyro-keep], [data-nexus-document-lifecycle], [data-nexus-resume], [data-kyro-result=\"document\"], [data-kyro-result=\"list\"], [data-kyro-result=\"places\"]")) return false;
     if (document.querySelector("[data-nexus-live-weather-shell]:not([data-kyro-parked]), #nexusRichDataOverlay, [data-kyro-result]")) return true;
     if (kyroFinishedResultShowing()) return true;
     return Boolean(nexusActiveWorkflowState?.id && (nexusActiveWorkflowState.functionId === "live-knowledge" || nexusActiveWorkflowState.workflow === "live-knowledge"));
@@ -28074,7 +28077,8 @@ function kyroAutoReturnSnapshot() {
     answerOnTop: kyroAnswerOnTop(),
     // work the person is doing: the camera, turn-by-turn navigation; and a box that may hold writing not yet saved
     protectedWork: Boolean(document.querySelector("[data-kyro-capture], [data-kn=\"stop\"]")),
-    documentEditing: Boolean(document.querySelector("[data-nexus-document-lifecycle] textarea, [data-kyro-keep] textarea, [data-nexus-resume] textarea")),
+    // (a box the person has typed in, not merely one that is on the screen: every document card has one)
+    documentEditing: Boolean(document.querySelector("textarea[data-kyro-touched=\"1\"], input[data-kyro-touched=\"1\"]")),
     // (the "open health" help screen is not an answer to be read in ten seconds: it keeps the usual thirty)
     resultShowing: Boolean(document.querySelector("[data-kyro-result]:not([data-kyro-result=\"help\"])")),
     workOpen: kyroWorkOpen(),
@@ -28104,6 +28108,8 @@ function startKyroAutoReturn() {
   if (kyroAutoReturnTimer || typeof document === "undefined") return;
   // (a scroll, a click, a hand moving over the screen and focus arriving on something are all signs the person is still using what is shown)
   for (const name of ["pointerdown", "keydown", "touchstart", "input", "wheel", "scroll", "click", "focusin"]) document.addEventListener(name, kyroNoteActivity, { capture: true, passive: true });
+  // a box the person has typed in may hold writing that is not saved: the return home waits longer for it (documentEditing above)
+  document.addEventListener("input", event => { try { if (event.isTrusted && event.target && /^(?:TEXTAREA|INPUT)$/.test(event.target.tagName)) event.target.setAttribute("data-kyro-touched", "1"); } catch { /* a marker only */ } }, { capture: true, passive: true });
   let kyroPointerNoted = 0;
   document.addEventListener("pointermove", () => { const now = Date.now(); if (now - kyroPointerNoted > 1000) { kyroPointerNoted = now; kyroNoteActivity(); } }, { capture: true, passive: true });
   kyroAutoReturnTimer = setInterval(kyroAutoReturnTick, 3000);
@@ -53178,7 +53184,13 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   const mapPlace = kyroMapPlace(said);
   if (kyroOpenMapRequest(said) || mapPlace) {
     if (!options.typed) { try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ } }
-    const country = africanMapCountryTarget(said) || kyroWorldMapTarget(said);
+    let country = africanMapCountryTarget(said) || kyroWorldMapTarget(said);
+    // "Mombasa, Kenya" names a city in a country: the city is the place, and the country map is only for a request that names the country alone (found on the live site on 9 November 2026)
+    if (country && mapPlace && /,/.test(mapPlace)) {
+      const city = String(mapPlace).split(",")[0].toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+      const countryName = String(country.name || "").toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+      if (city && city !== countryName && city !== `the ${countryName}`) country = null;
+    }
     if (!country && mapPlace) { void kyroOpenMapAtPlace(mapPlace, said, lang); return true; }
     let opened = false;
     try { opened = dispatchGenesisWorkspaceAction({ type: "genesis.workspace.open", workspace: "map", requestId: `typed-map-${Date.now().toString(36)}`, payload: { query: said, country: "" } }, {}, { suppressAcknowledgement: true }) === true; } catch { opened = false; }
