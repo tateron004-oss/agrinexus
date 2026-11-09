@@ -30,7 +30,10 @@ test("a city is not outranked by its own country or county: \"Mombasa, Kenya\" i
     { category: "place", addresstype: "country", importance: 0.82, display_name: "Kenya" }
   ];
   assert.equal(bestPlace(MOMBASA).display_name, "Mombasa, Kenya");
-  // and a state named alone is compared with regions, not with towns of the same name
+  // the search lists the county first for "Mombasa, Kenya": a region at the top keeps the search order, so the country does not win
+  const COUNTY_FIRST = [{ category: "boundary", addresstype: "county", importance: 0.5, display_name: "Mombasa County, Kenya" }, { category: "place", addresstype: "country", importance: 0.82, display_name: "Kenya" }, { category: "place", addresstype: "city", importance: 0.55, display_name: "Mombasa, Kenya" }];
+  assert.equal(bestPlace(COUNTY_FIRST).display_name, "Mombasa County, Kenya");
+  // a state named alone keeps the search order too
   const NEWYORK = [{ category: "boundary", addresstype: "state", importance: 0.8, display_name: "New York, United States" }, { category: "place", addresstype: "city", importance: 0.9, display_name: "New York City" }];
   assert.equal(bestPlace(NEWYORK).display_name, "New York, United States");
 });

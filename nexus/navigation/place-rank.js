@@ -17,7 +17,9 @@ const importance = item => (Number.isFinite(Number(item?.importance)) ? Number(i
 function rankPlaces(list) {
   const items = Array.isArray(list) ? list.slice() : [];
   if (items.length < 2 || !isPlace(items[0])) return items;
-  const kind = kindOf(items[0]);
+  // only a city, town or village at the top is re-ranked (the Cairo case). A county, state or country at the top keeps the search's own order: for "Mombasa, Kenya" the search lists Mombasa County first, and ranking regions by importance would put the whole country of Kenya on top.
+  if (kindOf(items[0]) !== "settlement") return items;
+  const kind = "settlement";
   const places = items.filter(item => isPlace(item) && kindOf(item) === kind).map((item, index) => ({ item, index }));
   const others = items.filter(item => !(isPlace(item) && kindOf(item) === kind));
   places.sort((a, b) => importance(b.item) - importance(a.item) || a.index - b.index);
