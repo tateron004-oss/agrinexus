@@ -102,3 +102,10 @@ test("a city in a country opens the city (not the country map), and a document o
   assert.match(app, /data-kyro-touched/);
   assert.ok(app.includes("event.isTrusted"));
 });
+
+test("a place found by name opens the map with the city alone, so a country named in the sentence cannot re-centre it", () => {
+  const app = fs.readFileSync(path.join(__dirname, "..", "..", "public", "app.js"), "utf8");
+  const fn = app.slice(app.indexOf("async function kyroOpenMapAtPlace("), app.indexOf("\n}\n", app.indexOf("async function kyroOpenMapAtPlace(")) + 3);
+  assert.ok(fn.includes("const mapQuery = found ? String(place).split(\",\")[0].trim() || String(said) : String(said);"));
+  assert.ok(fn.includes("payload: { query: mapQuery, country: \"\" }"));
+});

@@ -52702,7 +52702,10 @@ async function kyroOpenMapAtPlace(place, said, lang) {
     if (parts.length > 1) { found = await findPlace(parts[0]); if (found) { listRest = parts.slice(1).join(", "); place = parts[0]; name = String(place).replace(/\b[a-z]/g, letter => letter.toUpperCase()); } }
   }
   let opened = false;
-  try { opened = dispatchGenesisWorkspaceAction({ type: "genesis.workspace.open", workspace: "map", requestId: `typed-map-${Date.now().toString(36)}`, payload: { query: said, country: "" } }, {}, { suppressAcknowledgement: true }); } catch { opened = false; }
+  // The map is opened with the CITY only, not the whole sentence: the opener sets its own view when the sentence names a country, so "Show me Mombasa, Kenya on the map" re-centred the map on all of Kenya
+  // a moment after the city was found (found on the live site on 9 November 2026). The city is then centred below.
+  const mapQuery = found ? String(place).split(",")[0].trim() || String(said) : String(said);
+  try { opened = dispatchGenesisWorkspaceAction({ type: "genesis.workspace.open", workspace: "map", requestId: `typed-map-${Date.now().toString(36)}`, payload: { query: mapQuery, country: "" } }, {}, { suppressAcknowledgement: true }); } catch { opened = false; }
   if (!opened) { say(lang === "sw" ? "Siwezi kufungua ramani sasa." : "I could not open the map just now."); return false; }
   if (!found) { say(lang === "sw" ? `Sikuweza kupata ${name} kwenye ramani, kwa hiyo hii ni ramani ya kawaida.` : `I could not find ${name} on the map, so here is the map.`); return true; }
   const zoom = KYRO_US_STATES.has(String(place).toLowerCase()) ? 6 : 11;
