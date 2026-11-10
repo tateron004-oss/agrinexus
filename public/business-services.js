@@ -203,6 +203,17 @@
     rows("sequence-steps", editable.sequenceSteps || [], [["sequence", "Sequence"], ["step", "Step number"], ["afterDays", "Days after the step before (0 = right away)"], ["channel", "Channel (sms or email)"], ["message", "Message"]]);
     rows("sequence-runs", editable.sequenceRuns || [], [["sequence", "Sequence"], ["customer", "Person"], ["nextStep", "Next step"], ["dueOn", "Next message on"], ["status", "Status (active, done, stopped or replied)"], ["note", "Note"]]);
     const runningNow = (editable.sequenceRuns || []).filter(item => item.status === "active");
+    rows("pages", editable.pages || [], [["title", "Page name"], ["headline", "Headline"], ["body", "Text on the page"], ["button", "Button words"], ["fields", "Questions or fields (separated by |)"], ["status", "Status (on or off)"], ["askConsent", "Ask to agree to get messages (yes or no)"], ["minutes", "Minutes for each booking"]]);
+    const links = byId("page-links"); links.replaceChildren();
+    (editable.pages || []).forEach(page => {
+      const line = document.createElement("div"); line.className = "fields";
+      const url = location.origin + "/p/" + page.slug;
+      const label = document.createElement("strong"); label.textContent = (page.title || "Page") + " (" + page.kind + ", " + (page.status === "on" ? "on" : "off") + ")"; line.append(label);
+      const link = document.createElement("a"); link.href = url; link.target = "_blank"; link.rel = "noopener"; link.textContent = url; line.append(link);
+      const count = (editable.pageResponses || []).filter(row => row.page === page.slug).length; const used = document.createElement("span"); used.textContent = count + " answer(s) so far"; line.append(used);
+      links.append(line);
+    });
+    rows("page-responses", editable.pageResponses || [], [["title", "Page"], ["at", "When"], ["name", "Name"], ["contact", "Phone or email"], ["answers", "What they sent"], ["consent", "Agreed to get messages (yes or blank)"]]);
     byId("sequence-summary").textContent = runningNow.length ? runningNow.length + " person(s) running through a sequence now." : "Nobody is running through a sequence now.";
     rows("listings", editable.listings, [["address", "Address"], ["price", "Price"], ["propertyType", "Property type"], ["beds", "Beds"], ["baths", "Baths"], ["status", "Status (active, pending, under-contract, sold)"], ["notes", "Notes"]]);
     rows("transactions", editable.transactions, [["date", "Date"], ["type", "Type (income or expense)"], ["category", "Category"], ["amount", "Amount"], ["currency", "Currency (KES, USD, NGN...)"], ["description", "Description"], ["fund", "Restricted to (the purpose a gift is held for; blank if unrestricted)"]]);
@@ -289,6 +300,11 @@
   byId("reload").addEventListener("click", () => run(reload));
   byId("save").addEventListener("click", () => run(async () => { await save(); notice("Changes saved."); }));
   byId("add-lead").addEventListener("click", () => { current.data.editable.leads.push({ name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "", skills: "", availability: "", source: "", consent: "", consentDate: "" }); render(); });
+  byId("add-page").addEventListener("click", () => {
+    const editable = current.data.editable; const list = (editable.pages = editable.pages || []); if (list.length >= 20) return;
+    const code = Array.from(crypto.getRandomValues(new Uint8Array(8)), value => "abcdefghijklmnopqrstuvwxyz0123456789"[value % 36]).join("");
+    list.push({ slug: "page-" + code, kind: "landing", title: "New page", headline: "New page", body: "", button: "", fields: "", status: "off", askConsent: "no", minutes: 0, daysAhead: 0, zone: "", createdOn: new Date().toISOString().slice(0, 10) }); render();
+  });
   byId("add-sequence").addEventListener("click", () => { const editable = current.data.editable; (editable.sequences = editable.sequences || []).push({ name: "", status: "active", createdOn: new Date().toISOString().slice(0, 10) }); render(); });
   byId("add-sequence-step").addEventListener("click", () => { const editable = current.data.editable; const list = (editable.sequenceSteps = editable.sequenceSteps || []); const name = (editable.sequences || []).length ? editable.sequences[editable.sequences.length - 1].name : ""; list.push({ sequence: name, step: list.filter(item => item.sequence === name).length + 1, afterDays: 0, channel: "sms", subject: name, message: "" }); render(); });
   byId("add-deal").addEventListener("click", () => { const editable = current.data.editable; (editable.deals = editable.deals || []).push({ id: "D" + Date.now().toString(36), title: "", contact: "", value: 0, currency: "USD", stage: pipelineStages(editable)[0], openedOn: new Date().toISOString().slice(0, 10), movedOn: "", closedOn: "", note: "" }); render(); });

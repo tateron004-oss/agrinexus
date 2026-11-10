@@ -26,6 +26,7 @@ const { createDeliveryReminders } = require("../reminders/delivery-store.js");
 const { createMemoryNotifications, createMemoryRepeatStore } = require("../reminders/memory-stores.js");
 const { createMemoryContactStore } = require("../memory/memory-contact-store.js");
 const { createMemoryRecords } = require("../health/memory-records.js");
+const { createPublicPages } = require("../pages/public-pages.js");
 
 function safeDatabaseIdentifier(value) {
   return String(value || "").replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 128);
@@ -49,7 +50,14 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       message: `${failure.message} No legacy write fallback was used.`,
       legacyWriteFallbackUsed: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development" }; }
   }
+  // The owner's public pages ("/p/<code>": a landing page, form, survey or booking page). No sign-in: see nexus/pages/public-pages.js for what keeps that safe.
+  const publicPages = createPublicPages({
+    runtime: async () => { const active = await runtime(); await active.ready; return active; },
+    env, logger,
+    notify: async ({ tenantId, userId, key, title, body }) => { const active = await runtime(); return active.notifications.enqueue({ tenantId, userId, channel: "push", scheduledAt: new Date(), idempotencyKey: key, content: { title, body, kind: "page_answer" } }); }
+  });
   async function handle(req, res, url, send) {
+    if (url.pathname.startsWith("/p/")) return publicPages.handle(req, res, url);
     if (!url.pathname.startsWith("/api/nexus/runtime")) return false;
     if (url.pathname === "/api/nexus/runtime/status" && req.method === "GET") { const result = await status(); send(res, result.ok ? 200 : 503, result); return true; }
     if (url.pathname === "/api/nexus/runtime/production-acceptance" && req.method === "GET") {

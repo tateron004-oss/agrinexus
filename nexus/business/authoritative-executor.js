@@ -9,6 +9,7 @@ const scheduleVoice = require("./scheduling-voice.js");
 const campaignVoice = require("./campaigns-voice.js");
 const pipelineVoice = require("./pipeline-voice.js");
 const sequenceVoice = require("./sequences-voice.js");
+const pagesVoice = require("./pages-voice.js");
 const { createCommunicationsSendExecutor, verifyCommunicationsSendOutcome } = require("../communications/executor.js");
 
 // Whether this account may send messages to customers: the same check the sender makes (a guest or a demo account may not). Scheduling a send for later needs it, because the worker that sends later cannot see the account.
@@ -105,7 +106,7 @@ function createBusinessWorkspaceCounter({ repository, access, consents, env }) {
 // understood and nothing is changed.
 // Resolves to the spoken answer, or null when this is not for the workspace.
 const SPOKEN_WRITES = new Set(["addLead", "performIntake", "logTransaction", "createInvoice", "addInvoiceItem", "addGrant", "updateGrantStatus", "addTask", "updateTaskStatus", "addAppointment", "markInvoicePaid", "setFollowUp",
-  "createWorkspace", "addListing", "updateListingStatus", ...financeVoice.FINANCE_WRITE_INTENTS, ...programsVoice.PROGRAM_WRITE_INTENTS, ...operationsVoice.OPERATIONS_WRITE_INTENTS, ...scheduleVoice.SCHEDULE_WRITE_INTENTS, ...campaignVoice.CAMPAIGN_WRITE_INTENTS, ...pipelineVoice.PIPELINE_WRITE_INTENTS, ...sequenceVoice.SEQUENCE_WRITE_INTENTS]);
+  "createWorkspace", "addListing", "updateListingStatus", ...financeVoice.FINANCE_WRITE_INTENTS, ...programsVoice.PROGRAM_WRITE_INTENTS, ...operationsVoice.OPERATIONS_WRITE_INTENTS, ...scheduleVoice.SCHEDULE_WRITE_INTENTS, ...campaignVoice.CAMPAIGN_WRITE_INTENTS, ...pipelineVoice.PIPELINE_WRITE_INTENTS, ...sequenceVoice.SEQUENCE_WRITE_INTENTS, ...pagesVoice.PAGE_WRITE_INTENTS]);
 const PENDING_MS = 2 * 60 * 1000;
 const YES = /^(?:(?:ok|okay)[,.]?\s+)?(?:yes|yeah|yep|yup|sure|ok|okay|go ahead|do it|confirm|confirmed|correct|that is right|that's right|please do|yes please|sure thing)(?:[ ,.]+(?:please|go ahead|do it|thanks|thank you))?[ .!]*$/i;
 const NO = /^(?:no|nope|cancel|stop|never ?mind|don'?t|do not|forget it|not now|no thanks|no thank you)(?:[ ,.]+(?:thanks|please|cancel it|don'?t))?[ .!]*$/i;

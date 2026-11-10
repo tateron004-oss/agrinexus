@@ -255,6 +255,19 @@ class RecordRepository {
     return result.rows || result;
   }
 
+  // The business workspace that holds the public page with this link code, for nexus/pages/public-pages.js (9 November 2026). The whole record, because a visitor's answer is saved back with the record's own version. One at most.
+  async findPageRecord({ slug }) {
+    const code = String(slug || "");
+    if (!/^[a-z0-9-]{5,80}$/.test(code)) return null;
+    const result = await this.db.query(`select tenant_id, owner_id, record_id, version, data
+      from nexus_records
+      where record_type='business-client' and workspace_id='operations' and state='active' and deleted_at is null
+        and exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'pages','[]'::jsonb)) p where p->>'slug' = $1)
+      limit 1`, [code]);
+    const rows = result.rows || result;
+    return rows[0] || null;
+  }
+
   // A more precise business-domain signal than listStaleBusinessWorkspaces()'s
   // whole-record staleness: a lead/customer/donor's own followUpDate --
   // stored by the dashboard's real HTML date input (public/business-

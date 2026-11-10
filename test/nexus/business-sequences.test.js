@@ -282,7 +282,7 @@ test("the worker runs the sequence sweep, the new lists are kept by the workspac
   const root = path.join(__dirname, "..", "..");
   assert.match(fs.readFileSync(path.join(root, "nexus", "workers", "process.js"), "utf8"), /handlers\["business\.sequences-send-due"\]/);
   assert.match(fs.readFileSync(path.join(root, "nexus", "data", "record-repository.js"), "utf8"), /async listActiveSequenceWorkspaces/);
-  assert.ok(fs.readFileSync(path.join(root, "nexus", "business", "authoritative-executor.js"), "utf8").includes("...sequenceVoice.SEQUENCE_WRITE_INTENTS]);"));
+  assert.ok(fs.readFileSync(path.join(root, "nexus", "business", "authoritative-executor.js"), "utf8").includes("...sequenceVoice.SEQUENCE_WRITE_INTENTS"));
   const info = { businessName: "Shop" };
   const fresh = normalizeEditable(info, undefined);
   assert.deepEqual([fresh.sequences, fresh.sequenceSteps, fresh.sequenceRuns], [[], [], []]);
