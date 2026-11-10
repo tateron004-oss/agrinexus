@@ -40,7 +40,9 @@ function classifyPage(command = "") {
   const chatSaid = chatVoice.classifyChat(text);
   if (chatSaid) return chatSaid;
   if (!/\b(?:landing\s+pages?|web\s*pages?|booking\s+pages?|online\s+booking|(?:contact|enquiry|inquiry|sign-?up|order|feedback)\s+forms?|forms?|surveys?|questionnaires?|pages?|web\s*chat|chatbot)\b/i.test(text)) return null;
-  const asks = /\?|^(?:(?:hey|ok|okay|please)\s+)*(?:(?:kyro|nexus)[,.]?\s+)?(?:what|which|who|how|do|does|did|are|is|any|show|tell|list|give|read)\b/i.test(text);
+  // a survey's own questions end in "?": when the sentence is asking for something to be made, only the part before its list of questions can make it a question (found live, 10 November 2026: "create a survey called Feedback with the questions What did you like? ..." was taken for a question)
+  const head = /\b(?:create|make|build|set up|start|write|design|new)\b/i.test(text) ? text.replace(/\b(?:with|asking|asks?|including|questions?|fields?)\b[\s\S]*$/i, "") : text;
+  const asks = /\?/.test(head) || /^(?:(?:hey|ok|okay|please)\s+)*(?:(?:kyro|nexus)[,.]?\s+)?(?:what|which|who|how|do|does|did|are|is|any|show|tell|list|give|read)\b/i.test(text);
   if (/^(?:how\s+(?:do|can|to|should|would|does)|why|explain|tell me how|should|what(?:'s|\u2019s| is| are)\s+(?:a|an)\b)/i.test(text) && !/\b(?:my|our)\b/i.test(text)) return null;
   // not these: a page of a book, a web page to read aloud, the farm and learning "form" words
   if (/\b(?:read|open|search|find|google|look up)\s+(?:a\s+|the\s+)?(?:web\s*page|page)\b/i.test(text) && !/\b(?:my|our)\b/i.test(text)) return null;
