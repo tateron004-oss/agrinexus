@@ -81,7 +81,7 @@ function classifyPipeline(command = "") {
   if (/\buntag\b/i.test(text) || /\b(?:remove|delete|take off|clear|drop)\b[^.?!]{0,20}\b(?:tag|label)\b/i.test(text)) return "untagContact";
   if (/\btag\s+\S[^.?!]*\b(?:as|with)\s+\S/i.test(text) || /\b(?:add|put|give)\s+(?:the\s+|a\s+)?(?:tag|label)\s+\S[^.?!]*\b(?:to|on|for)\s+\S/i.test(text)) return "tagContact";
   // (the target must be a NAME, written with a capital: "add a note to my shopping list" and "a note about maize prices" are the personal notes')
-  const noteTarget = (text.match(/\b(?:add|write|make|leave|save|put|log)\s+(?:a\s+|another\s+)?(?:new\s+)?(?:note|call(?:\s+note)?)\s+(?:to|on|about|for|with)\s+(\S+)/i) || text.match(/^\s*(?:please\s+)?note\s+(?:on|about|for)\s+(\S+)/i) || [])[1];
+  const noteTarget = (text.match(/\b(?:add|write|make|leave|save|put|log)\s+(?:a\s+|another\s+)?(?:new\s+)?(?:note|call(?:\s+note)?)\s+(?:to|on|about|for|with)\s+(?:the\s+)?(?:(?:customer|client|contact|lead|donor|volunteer|person)\s+)?(\S+)/i) || text.match(/^\s*(?:please\s+)?note\s+(?:on|about|for)\s+(?:the\s+)?(?:(?:customer|client|contact|lead|donor|volunteer|person)\s+)?(\S+)/i) || [])[1];
   if (noteTarget && /^\p{Lu}/u.test(noteTarget)) return "addNote";
   // reads
   if (/^\s*(?:please\s+)?(?:who|which|show|list|what)\b[^.?!]{0,40}\b(?:tagged|(?:with|has|have)\s+(?:the\s+)?tag)\b/i.test(text)) return "listByTag";

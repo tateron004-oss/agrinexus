@@ -10,7 +10,7 @@ module.exports = Object.freeze([
       { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Made the Enquiry contact form\\. Its link is [^ ]*/p/enquiry-[a-z0-9]{8}" } },
       { say: "Create a landing page called Spring Sale with the headline Half price this week and the text Come in before Friday.", timeoutMs: 90000, expect: { screen: SCREEN, text: "landing page called Spring Sale" } },
       { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Made the Spring Sale landing page" } },
-      { say: "Create a survey called Feedback with the questions how was your visit (1-5); what could we improve.", timeoutMs: 90000, expect: { screen: SCREEN, text: "survey called Feedback" } },
+      { say: "Create a survey called Feedback with the questions what did you like; what could we improve.", timeoutMs: 90000, expect: { screen: SCREEN, text: "survey called Feedback" } },
       { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Made the Feedback survey" } },
       { say: "Create a booking page called Book a Haircut for 30 minutes.", timeoutMs: 90000, expect: { screen: SCREEN, text: "booking page called Book a Haircut[\\s\\S]*30 minutes[\\s\\S]*nobody is double-booked" } },
       { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Made the Book a Haircut booking page" } },

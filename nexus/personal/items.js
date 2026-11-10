@@ -51,7 +51,7 @@ function readRequest(text, today, depth = 0) {
 
   // "Add a note to Grace: she wants delivery on Friday" is a note on a CONTACT in the business workspace (business/pipeline-voice.js), not a note to self: the person's own notes are never addressed to a named person.
   // (found on the real runtime, 9 November 2026: it was kept as the personal note "Grace: she wants delivery on Friday" and never reached the contact's history)
-  if (/^(?:[Pp]lease )?(?:[Aa]dd|[Ww]rite|[Mm]ake|[Ll]eave|[Ss]ave|[Pp]ut|[Ll]og)\s+(?:[Aa]\s+|[Aa]nother\s+)?(?:[Nn]ew\s+)?(?:[Nn]ote|[Cc]all(?:\s+[Nn]ote)?)\s+(?:to|on|about|for|with)\s+\p{Lu}/u.test(t) || /^(?:[Pp]lease )?[Nn]ote\s+(?:on|about|for)\s+\p{Lu}/u.test(t)) return null;
+  if (/^(?:[Pp]lease )?(?:[Aa]dd|[Ww]rite|[Mm]ake|[Ll]eave|[Ss]ave|[Pp]ut|[Ll]og)\s+(?:[Aa]\s+|[Aa]nother\s+)?(?:[Nn]ew\s+)?(?:[Nn]ote|[Cc]all(?:\s+[Nn]ote)?)\s+(?:to|on|about|for|with)\s+(?:[Tt]he\s+)?(?:(?:[Cc]ustomer|[Cc]lient|[Cc]ontact|[Ll]ead|[Dd]onor|[Vv]olunteer|[Pp]erson)\s+)?\p{Lu}/u.test(t) || /^(?:[Pp]lease )?[Nn]ote\s+(?:on|about|for)\s+(?:[Tt]he\s+)?(?:(?:[Cc]ustomer|[Cc]lient|[Cc]ontact|[Ll]ead|[Dd]onor|[Vv]olunteer|[Pp]erson)\s+)?\p{Lu}/u.test(t)) return null;
   // notes
   if ((m = /^(?:please )?(?:take|make|save|add|leave|write|create|record|type)(?: me)? a note(?: to self)?(?: (?:that|which|it) says| saying| that| about| of)?[:,]?\s+(.+)$/i.exec(t)) || (m = /^(?:please )?note(?: down)?(?: that)?[:,]\s*(.+)$/i.exec(t)) ||
       (m = /^(?:please )?(?:note down|jot down|note that)\s+(.+)$/i.exec(t)) ||
