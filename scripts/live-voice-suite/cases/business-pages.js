@@ -26,11 +26,11 @@ module.exports = Object.freeze([
   { id: "chat-journey", area: "pages", writes: true, needs: "guest", say: "Start a business called Mama Grace Beauty.", timeoutMs: 90000, expect: { screen: SCREEN, text: "Mama Grace Beauty" },
     then: [
       { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Started a business" } },
-      { say: "When someone asks about parking, tell them there is free parking behind the shop.", timeoutMs: 90000, expect: { screen: SCREEN, text: "add this to the chat answers[\s\S]*questions about parking[\s\S]*word for word" } },
+      { say: "When someone asks about parking, tell them there is free parking behind the shop.", timeoutMs: 90000, expect: { screen: SCREEN, text: "add this to the chat answers[\\s\\S]*questions about parking[\\s\\S]*word for word" } },
       { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Added to the chat answers" } },
       { say: "What are my chat answers?", timeoutMs: 60000, expect: { screen: SCREEN, text: "1 chat answer: parking" } },
-      { say: "Create a chat page called Ask Us.", timeoutMs: 90000, expect: { screen: SCREEN, text: "chat page called Ask Us[\s\S]*only from the chat answers you write" } },
-      { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Made the Ask Us chat page\. Its link is [^ ]*/p/ask-us-[a-z0-9]{8}" } },
+      { say: "Create a chat page called Ask Us.", timeoutMs: 90000, expect: { screen: SCREEN, text: "chat page called Ask Us[\\s\\S]*only from the chat answers you write" } },
+      { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Made the Ask Us chat page\\. Its link is [^ ]*/p/ask-us-[a-z0-9]{8}" } },
       { say: "Remove the chat answer about parking.", timeoutMs: 90000, expect: { screen: SCREEN, text: "remove this chat answer about parking" } },
       { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "Removed that chat answer" } }
     ] },

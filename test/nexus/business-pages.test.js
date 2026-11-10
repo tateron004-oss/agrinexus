@@ -314,3 +314,13 @@ test("the server hands /p/ to the public pages, the repository can find a page b
   assert.ok(fs.readFileSync(path.join(root, "nexus", "business", "authoritative-executor.js"), "utf8").includes("...pagesVoice.PAGE_WRITE_INTENTS]);"));
   for (const intent of pagesVoice.PAGE_WRITE_INTENTS) assert.equal(voiceDispatch.isReadIntent(intent), false, intent);
 });
+
+test("a survey whose own questions end in a question mark is still a request to make one (found live, 10 November 2026)", () => {
+  const live = "Create a survey called Feedback with the questions: What did you like? What could we improve?";
+  assert.equal(pagesVoice.classifyPage(live), "createPage");
+  assert.equal(pagesVoice.classifyPage("Make a survey called Visit Feedback asking How was your visit? Would you come back?"), "createPage");
+  assert.deepEqual(pagesVoice.fieldsIn(live), ["What did you like", "What could we improve"]);
+  // real questions about pages stay questions
+  assert.equal(pagesVoice.classifyPage("What did people answer on my feedback survey?"), "pageResponses");
+  assert.equal(pagesVoice.classifyPage("What is the link for my feedback survey?"), "pageLink");
+});

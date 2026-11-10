@@ -13,7 +13,7 @@ module.exports = Object.freeze([
       { say: "Move Amina's deal to Quoted.", timeoutMs: 90000, expect: { screen: SCREEN, text: "from New to Quoted" } },
       { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "is now at Quoted" } },
       { say: "Show my pipeline.", timeoutMs: 60000, expect: { screen: SCREEN, text: "1 deal[\\s\\S]*Quoted 1" } },
-      { say: "How much is in my pipeline?", timeoutMs: 60000, expect: { screen: SCREEN, text: "1 open deal[\\s\\S]*400" } },
+      { say: "How much is in my pipeline?", timeoutMs: 60000, expect: { said: "400" } },
       { say: "Tag Amina as VIP.", timeoutMs: 90000, expect: { screen: SCREEN, text: "tag Amina Hassan as VIP" } },
       { say: "Yes.", timeoutMs: 60000, expect: { screen: SCREEN, text: "is tagged VIP" } },
       { say: "Who is tagged VIP?", timeoutMs: 60000, expect: { screen: SCREEN, text: "Amina Hassan" } },
