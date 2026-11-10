@@ -97,10 +97,10 @@ class BehaviorSpine {
         nextState: "cancelled", reason: "User declined the requested confirmation",
         outcome: { verified: false, reason: "declined_by_user" } });
       await this.conversations?.append?.({ tenantId: context.tenantId, conversationId: command.conversationId,
-        actorId: null, role: "assistant", content: "Okay, I did not proceed with that.",
+        actorId: null, role: "assistant", content: "No problem, I have left that as it was.",
         provenance: { type: "declined_outcome", systemActor: "nexus-brain", taskId } });
       return envelope({ command, plan, task: cancelled, state: "cancelled", completed: false,
-        response: "Okay, I did not proceed with that.", outcome: { verified: false, reason: "declined_by_user" } });
+        response: "No problem, I have left that as it was.", outcome: { verified: false, reason: "declined_by_user" } });
     }
     let execution;
     try {
@@ -124,7 +124,7 @@ class BehaviorSpine {
   // What the person is asked before they say yes. A step that will write their health information says exactly what
   // is stored and that yes is consent; every other confirmation keeps the generic wording.
   async confirmationPrompt({ task, pendingStepId, context }) {
-    const generic = "I prepared the request and need your confirmation before the next governed action.";
+    const generic = "I have that ready. Should I go ahead with it? Just say yes or no.";
     const step = (task?.steps || []).find(item => item.step_id === pendingStepId);
     const tool = step?.tool_id && this.engine.tools?.get ? await this.engine.tools.get(step.tool_id).catch(() => null) : null;
     return informedConfirmationPrompt({ scope: tool?.consent_scope, step })
