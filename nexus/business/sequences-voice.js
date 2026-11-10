@@ -60,6 +60,9 @@ function classifySequence(command = "") {
   if (/\b(?:create|make|start|set up|build|begin|new)\b/i.test(text) && !asks) return "createSequence";
   if (asks && /\b(?:who|which (?:people|customers|contacts)|how many people)\b/i.test(text) && /\b(?:in|on|running|enrolled|getting|receiving)\b/i.test(text)) return "sequenceWho";
   if (asks && /\b(?:what(?:'s| is| are)?\s+(?:in|the steps)|steps|details|messages)\b/i.test(text) && !/\bwho\b/i.test(text)) return "sequenceDetails";
+  // "show the Quote Follow-up sequence" (how the voice model often rewrites "what is in the quote follow-up sequence") names one sequence: read that one, not the list (found live, 10 November 2026)
+  const shown = /\b(?:show|open|read|see|view|display|pull up|give me|tell me about)\s+(?:me\s+)?(?:the\s+)?(.+?)\s+sequence\b/i.exec(text);
+  if (asks && shown && !/^(?:my|our|your|all|any|every|the|active|running|current)$/i.test(shown[1].trim())) return "sequenceDetails";
   if (asks && /\b(?:show|list|what|which|my|any|do i have|how many)\b/i.test(text)) return "listSequences";
   return null;
 }
