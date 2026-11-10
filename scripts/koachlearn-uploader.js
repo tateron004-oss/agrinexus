@@ -128,7 +128,9 @@
       while (d.querySelectorAll('input[placeholder="React is ...."]').length < q.options.length) { btn(d, "Add Option").click(); await sleep(200); }
       setVal(d.querySelector('input[placeholder="What is react?"]'), q.q);
       const opts = [...d.querySelectorAll('input[placeholder="React is ...."]')];
-      q.options.forEach((o, i) => setVal(opts[i], o));
+      // the site refuses an option shorter than 2 characters ("Option can not be empty"), so a question with one ("I", "1", "x") shows all its options in quotes
+      const shown = q.options.some(o => o.trim().length < 2) ? q.options.map(o => `"${o.trim()}"`) : q.options;
+      shown.forEach((o, i) => setVal(opts[i], o));
       [...d.querySelectorAll('button[role="checkbox"]')][q.answer].click();
       await sleep(300); btn(d, "Create Question").click(); await closed("question to save");
       await sleep(800);
