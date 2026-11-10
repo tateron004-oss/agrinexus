@@ -13,6 +13,7 @@
 const crypto = require("node:crypto");
 const scheduling = require("../business/scheduling-voice.js");
 const pagesVoice = require("../business/pages-voice.js");
+const chatAnswer = require("./chat-answer.js");
 const { localClock } = require("../brief/schedule.js");
 const { normalizeEditable } = require("../business/service.js");
 const { addDays, describeDay } = require("../personal/dates.js");
@@ -26,6 +27,10 @@ const MAX_FILL_MS = 2 * 60 * 60 * 1000;
 const PER_IP_PER_HOUR = 5;
 const PER_PAGE_PER_HOUR = 60;
 const PER_WORKSPACE_PER_DAY = 300;
+// a chat page answers a question without saving anything, so it can take more questions than a form takes answers
+const CHAT_QUESTION_MAX = 300;
+const CHAT_PER_IP_PER_HOUR = 40;
+const CHAT_PER_PAGE_PER_HOUR = 400;
 const SAVE_ATTEMPTS = 4;
 const STEP = 30;
 
@@ -34,7 +39,7 @@ const tidy = (value, max) => String(value ?? "").replace(/[\u0000-\u0008\u000b\u
 const lower = value => String(value || "").toLowerCase();
 const paragraphs = text => String(text || "").split(/\n{1,}/).map(item => item.trim()).filter(Boolean).map(item => `<p>${esc(item)}</p>`).join("");
 
-const CSS = "body{margin:0;font:17px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7f5;color:#1d2a24}main{max-width:36rem;margin:0 auto;padding:1.5rem 1rem 3rem}h1{font-size:1.7rem;line-height:1.2;margin:.2rem 0 1rem}p{margin:.6rem 0}form{margin-top:1.2rem}label{display:block;margin:.9rem 0 .25rem;font-weight:600}input,select,textarea{width:100%;box-sizing:border-box;font:inherit;padding:.65rem .7rem;border:1px solid #9aa59f;border-radius:.45rem;background:#fff;color:inherit}textarea{min-height:6rem}button{margin-top:1.2rem;font:inherit;font-weight:700;padding:.75rem 1.4rem;border:0;border-radius:.5rem;background:#1f6f54;color:#fff;cursor:pointer}.check{display:flex;gap:.6rem;align-items:flex-start;margin:1rem 0 0;font-weight:400}.check input{width:auto;margin-top:.35rem}.day{margin:1rem 0 .3rem;font-weight:700}.slots{display:flex;flex-wrap:wrap;gap:.5rem}.slot{display:inline-flex;align-items:center;gap:.35rem;margin:0;padding:.4rem .7rem;border:1px solid #9aa59f;border-radius:.45rem;background:#fff;font-weight:600}.slot input{width:auto}.note{color:#52605a;font-size:.92rem}.ok{background:#e4f3ea;border:1px solid #9cc9ae;border-radius:.5rem;padding:.8rem 1rem}.bad{background:#fbe9e7;border:1px solid #e0a9a2;border-radius:.5rem;padding:.8rem 1rem}.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}footer{margin-top:2.5rem;color:#6b7771;font-size:.85rem}@media(prefers-color-scheme:dark){body{background:#14201b;color:#e7efe9}input,select,textarea,.slot{background:#1c2b24;border-color:#5b6b63}.note,footer{color:#a9b8b0}.ok{background:#173326;border-color:#2f6a4c}.bad{background:#3a1c18;border-color:#7a3a33}}";
+const CSS = "body{margin:0;font:17px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7f5;color:#1d2a24}main{max-width:36rem;margin:0 auto;padding:1.5rem 1rem 3rem}h1{font-size:1.7rem;line-height:1.2;margin:.2rem 0 1rem}p{margin:.6rem 0}form{margin-top:1.2rem}label{display:block;margin:.9rem 0 .25rem;font-weight:600}input,select,textarea{width:100%;box-sizing:border-box;font:inherit;padding:.65rem .7rem;border:1px solid #9aa59f;border-radius:.45rem;background:#fff;color:inherit}textarea{min-height:6rem}button{margin-top:1.2rem;font:inherit;font-weight:700;padding:.75rem 1.4rem;border:0;border-radius:.5rem;background:#1f6f54;color:#fff;cursor:pointer}.check{display:flex;gap:.6rem;align-items:flex-start;margin:1rem 0 0;font-weight:400}.check input{width:auto;margin-top:.35rem}.day{margin:1rem 0 .3rem;font-weight:700}.slots{display:flex;flex-wrap:wrap;gap:.5rem}.slot{display:inline-flex;align-items:center;gap:.35rem;margin:0;padding:.4rem .7rem;border:1px solid #9aa59f;border-radius:.45rem;background:#fff;font-weight:600}.slot input{width:auto}.note{color:#52605a;font-size:.92rem}.ok{background:#e4f3ea;border:1px solid #9cc9ae;border-radius:.5rem;padding:.8rem 1rem}.bad{background:#fbe9e7;border:1px solid #e0a9a2;border-radius:.5rem;padding:.8rem 1rem}.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}.q{background:#fff;border:1px solid #c9d1cc;border-radius:.5rem;padding:.6rem .9rem}details{margin-top:1.4rem;border-top:1px solid #c9d1cc;padding-top:.6rem}summary{cursor:pointer;font-weight:700;padding:.4rem 0}footer{margin-top:2.5rem;color:#6b7771;font-size:.85rem}@media(prefers-color-scheme:dark){body{background:#14201b;color:#e7efe9}input,select,textarea,.slot{background:#1c2b24;border-color:#5b6b63}.note,footer{color:#a9b8b0}.ok{background:#173326;border-color:#2f6a4c}.bad{background:#3a1c18;border-color:#7a3a33}.q{background:#1c2b24;border-color:#5b6b63}details{border-color:#5b6b63}}";
 
 function shell(title, inner) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${esc(title)}</title><style>${CSS}</style></head><body><main>${inner}<footer>Made with Kyro</footer></main></body></html>`;
@@ -111,7 +116,19 @@ function renderForm(page, { token, editable, now, message, values = {} }) {
   const consent = page.askConsent === "yes" ? `<label class="check"><input type="checkbox" name="agree" value="yes"> I agree to get messages from this business. I can tell them to stop at any time.</label>` : "";
   return `<form method="post" action="/p/${esc(page.slug)}" autocomplete="on">${message ? `<p class="bad">${esc(message)}</p>` : ""}${rows.join("")}${consent}<div class="hp" aria-hidden="true"><label for="website">Leave this empty</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div><input type="hidden" name="t" value="${esc(token)}"><button type="submit">${esc(page.button || "Send")}</button><p class="note">What you type is sent to the business that made this page.</p></form>`;
 }
+// the chat page: no script, so a question is a form post and the answer comes back on a fresh page with the question above it, another question box below, and a way to leave a message
+function renderChat(page, { token, message, values = {}, question = "", answer = null, leave = false }) {
+  const hidden = `<div class="hp" aria-hidden="true"><label for="website">Leave this empty</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div><input type="hidden" name="t" value="${esc(token)}">`;
+  const answered = Boolean(answer && answer.text);
+  const thread = question ? `<p class="q"><strong>You asked:</strong> ${esc(question)}</p>${answered ? `<p class="ok">${esc(answer.text)}</p>` : `<p class="bad">I do not have an answer to that. I only know what this business has written down. You can leave a message below and they will reply.</p>`}` : "";
+  const ask = `<form method="post" action="/p/${esc(page.slug)}" autocomplete="off"><input type="hidden" name="act" value="ask"><label for="q">${question ? "Ask something else" : "Ask a question"}</label><input id="q" name="q" maxlength="${CHAT_QUESTION_MAX}" required>${hidden}<button type="submit">${esc(page.button || "Ask")}</button></form>`;
+  const consent = page.askConsent === "yes" ? `<label class="check"><input type="checkbox" name="agree" value="yes"> I agree to get messages from this business. I can tell them to stop at any time.</label>` : "";
+  const open = leave || (question && !answered);
+  const form = `<details${open ? " open" : ""}><summary>Leave a message for the business</summary><form method="post" action="/p/${esc(page.slug)}" autocomplete="on">${message ? `<p class="bad">${esc(message)}</p>` : ""}<input type="hidden" name="act" value="leave"><label for="n">Your name</label><input id="n" name="n" maxlength="80" autocomplete="name" required value="${esc(values.n)}"><label for="c">Your phone number or email</label><input id="c" name="c" maxlength="120" autocomplete="email" required value="${esc(values.c)}"><label for="m">Your message</label><textarea id="m" name="m" maxlength="${ANSWER_MAX}">${esc(values.m !== undefined ? values.m : question)}</textarea>${consent}${hidden.replace('for="website"', 'for="website2"').replace('id="website"', 'id="website2"')}<button type="submit">Send message</button><p class="note">What you type is sent to the business that made this page.</p></form></details>`;
+  return shell(page.title, `<h1>${esc(page.headline || page.title)}</h1>${paragraphs(page.body)}<p class="note">This is an automatic helper, not a person. It only knows what the business has written down, so it can be out of date.</p>${thread}${ask}${form}`);
+}
 function renderPage(page, ctx) {
+  if (page.kind === "chat") return renderChat(page, { ...ctx, leave: Boolean(ctx.message) });
   const intro = `<h1>${esc(page.headline || page.title)}</h1>${paragraphs(page.body)}`;
   return shell(page.title, intro + renderForm(page, ctx));
 }
@@ -123,12 +140,13 @@ const NAME_LABEL = /(^|\b)(?:your\s+|full\s+)?name\b/i;
 function readSubmission(page, form, now) {
   const clock = localClock(now, page.zone || undefined);
   const answers = []; let name = ""; let contact = ""; let total = 0;
-  if (page.kind === "booking") {
+  if (page.kind === "booking" || page.kind === "chat") {
     name = tidy(form.n, 80); contact = tidy(form.c, 120);
-    const q = tidy(form.q, ANSWER_MAX);
+    const q = tidy(page.kind === "chat" ? form.m : form.q, ANSWER_MAX);
     if (!name) return { error: "Please enter your name." };
     if (!contact) return { error: "Please enter your phone number or email." };
-    if (q) answers.push(`Note: ${q}`);
+    if (q) answers.push(page.kind === "chat" ? `Message: ${q}` : `Note: ${q}`);
+    if (page.kind === "chat" && !q) return { error: "Please type a message." };
   } else {
     const labels = pagesVoice.fieldList(page);
     labels.forEach((label, index) => {
@@ -177,7 +195,7 @@ function applySubmission(editable, page, sub, form, now) {
     if (at < 0) next = { ...next, leads: [...leads, { name: sub.name || sub.contact, contact: sub.contact, type: "customer", need: (sub.answers || "").slice(0, 300), stage: "new", nextAction: "", followUpDate: "", source: `page: ${page.title}`, ...consentRow }].slice(0, 200) };
     else if (sub.agree && !String(leads[at].messageConsent || "").trim()) next = { ...next, leads: leads.map((row, i) => (i === at ? { ...row, ...consentRow } : row)) };
     const who = sub.name || sub.contact;
-    next = { ...next, contactNotes: [...(next.contactNotes || []), { contact: (leads[at] || {}).name || who, at: clock.day, kind: "page", text: page.kind === "booking" ? `Booked online: ${page.title}, ${bookedAt}` : `Sent the ${page.title} form${sub.answers ? `: ${sub.answers.slice(0, 200)}` : ""}` }].slice(-2000) };
+    next = { ...next, contactNotes: [...(next.contactNotes || []), { contact: (leads[at] || {}).name || who, at: clock.day, kind: "page", text: page.kind === "booking" ? `Booked online: ${page.title}, ${bookedAt}` : page.kind === "chat" ? `Left a message on the ${page.title} chat${sub.answers ? `: ${sub.answers.slice(0, 200)}` : ""}` : `Sent the ${page.title} form${sub.answers ? `: ${sub.answers.slice(0, 200)}` : ""}` }].slice(-2000) };
   }
   return { editable: next, bookedAt };
 }
@@ -225,11 +243,24 @@ function createPublicPages({ runtime, env = process.env, now = () => new Date(),
     if (req.method !== "POST") return send(res, 200, req.method === "HEAD" ? "" : renderPage(state.page, { token: tokenFor(secret, slug, String(at.getTime())), editable: state.editable, now: at }));
 
     if (!/^application\/x-www-form-urlencoded\b/i.test(String(req.headers["content-type"] || ""))) return send(res, 415, shell("Not allowed", "<h1>Not allowed</h1>"));
-    if (tooMany(`ip:${slug}:${clientKey(req)}`, PER_IP_PER_HOUR) || tooMany(`page:${slug}`, PER_PAGE_PER_HOUR)) return send(res, 429, shell("Please wait", "<h1>Please try again later</h1><p>Too many answers were sent to this page. Please wait a while.</p>"), { "retry-after": "3600" });
-    let form;
-    try { form = parseForm(await readBody(req)); } catch (error) { return send(res, error.code === "too_large" ? 413 : 400, shell("Too long", "<h1>That was too long</h1>")); }
+    // a chat page's body is read first, because a question (answered, nothing saved) and a message (saved like a form) are limited differently
+    let form = null;
+    const readForm = async () => { try { form = parseForm(await readBody(req)); return null; } catch (error) { return send(res, error.code === "too_large" ? 413 : 400, shell("Too long", "<h1>That was too long</h1>")); } };
+    if (state.page.kind === "chat") { const failed = await readForm(); if (failed) return failed; }
+    const asking = state.page.kind === "chat" && form.act === "ask";
+    const limited = asking ? tooMany(`chatip:${slug}:${clientKey(req)}`, CHAT_PER_IP_PER_HOUR) || tooMany(`chatpage:${slug}`, CHAT_PER_PAGE_PER_HOUR) : tooMany(`ip:${slug}:${clientKey(req)}`, PER_IP_PER_HOUR) || tooMany(`page:${slug}`, PER_PAGE_PER_HOUR);
+    if (limited) return send(res, 429, shell("Please wait", "<h1>Please try again later</h1><p>Too many answers were sent to this page. Please wait a while.</p>"), { "retry-after": "3600" });
+    if (!form) { const failed = await readForm(); if (failed) return failed; }
     // a bot fills the hidden field or posts at once; an old or foreign page has no good token. All of them are told the same, kindly
     if (form.website || !tokenOk(secret, slug, form.t, at.getTime())) return send(res, 400, shell("Please try again", `<h1>Please load the page again</h1><p class="bad">The page was out of date. Open the link again and send it once more.</p>`));
+    if (asking) {
+      const question = tidy(form.q, CHAT_QUESTION_MAX);
+      const freshToken = tokenFor(secret, slug, String(at.getTime() - MIN_FILL_MS - 1));
+      if (!question) return send(res, 422, renderPage(state.page, { token: freshToken, editable: state.editable, now: at }));
+      const answer = chatAnswer.answerFor(state.editable, question, String(state.record.data?.info?.businessName || state.page.title));
+      return send(res, 200, renderChat(state.page, { token: freshToken, question, answer }));
+    }
+    if (state.page.kind === "chat" && form.act !== "leave") return send(res, 400, shell("Please try again", `<h1>Please load the page again</h1>`));
     const sub = readSubmission(state.page, form, at);
     if (sub.error) return send(res, 422, renderPage(state.page, { token: tokenFor(secret, slug, String(at.getTime() - MIN_FILL_MS - 1)), editable: state.editable, now: at, message: sub.error, values: form }));
 
@@ -250,7 +281,7 @@ function createPublicPages({ runtime, env = process.env, now = () => new Date(),
       }
     }
     if (typeof notify === "function") {
-      try { await notify({ tenantId: current.record.tenant_id, userId: current.record.owner_id, key: `page:${slug}:${at.getTime()}:${crypto.randomBytes(3).toString("hex")}`, title: state.page.kind === "booking" ? `New booking: ${state.page.title}` : `New answer: ${state.page.title}`, body: state.page.kind === "booking" ? `${sub.name || "Someone"} booked ${outcome.bookedAt}.` : state.page.kind === "survey" ? "Someone answered your survey." : `${sub.name || "Someone"} sent the ${state.page.title} form.` }); } catch (error) { logger?.error?.("public_page.notify_failed", { error: { code: error.code, message: error.message } }); }
+      try { await notify({ tenantId: current.record.tenant_id, userId: current.record.owner_id, key: `page:${slug}:${at.getTime()}:${crypto.randomBytes(3).toString("hex")}`, title: state.page.kind === "booking" ? `New booking: ${state.page.title}` : state.page.kind === "chat" ? `New chat message: ${state.page.title}` : `New answer: ${state.page.title}`, body: state.page.kind === "booking" ? `${sub.name || "Someone"} booked ${outcome.bookedAt}.` : state.page.kind === "chat" ? `${sub.name || "Someone"} left a message on your chat page.` : state.page.kind === "survey" ? "Someone answered your survey." : `${sub.name || "Someone"} sent the ${state.page.title} form.` }); } catch (error) { logger?.error?.("public_page.notify_failed", { error: { code: error.code, message: error.message } }); }
     }
     return send(res, 200, thanks(state.page, state.page.kind === "booking" ? `You are booked for ${outcome.bookedAt}. See you then.` : ""));
   }

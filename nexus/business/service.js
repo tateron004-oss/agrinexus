@@ -105,6 +105,8 @@ function normalizeEditable(info, input = {}) {
     sequenceRuns: rows(input.sequenceRuns === undefined ? (starter.sequenceRuns || []) : input.sequenceRuns, { sequence: "", customer: "", startedOn: "", nextStep: 1, dueOn: "", status: "active", lastSentOn: "", note: "", claimedAt: "", zone: "" }, 600, new Set(["nextStep"])),
     // Pages the owner's customers can open (pages-voice.js, public-pages.js, 9 November 2026): landing pages, forms, surveys and booking pages, and what visitors sent. Both start empty, so a workspace saved before reads back as it was.
     pages: rows(input.pages === undefined ? (starter.pages || []) : input.pages, { slug: "", kind: "landing", title: "", headline: "", body: "", button: "", fields: "", status: "on", askConsent: "no", minutes: 0, daysAhead: 0, zone: "", createdOn: "" }, 20, new Set(["minutes", "daysAhead"])),
+    // the answers the web chat page gives a visitor, in the owner's own words (nexus/pages/chat-answer.js): a few words on the topic, and the answer
+    chatAnswers: rows(input.chatAnswers === undefined ? (starter.chatAnswers || []) : input.chatAnswers, { topic: "", answer: "" }, 100),
     pageResponses: rows(input.pageResponses === undefined ? (starter.pageResponses || []) : input.pageResponses, { page: "", title: "", at: "", name: "", contact: "", answers: "", consent: "", kind: "" }, 1000),
     // Phase 3 of the small-business assistant team: campaigns (a message to send by email or text to the customers who agreed to get messages) and the log of what was sent to whom, whether it failed and whether they replied.
     // Both start empty, so a workspace saved before this existed reads back exactly as it was.
