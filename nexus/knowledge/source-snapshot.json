@@ -1,6 +1,6 @@
 {
  "takenAt": "2026-10-26T16:29:48.889Z",
- "count": 1287,
+ "count": 1285,
  "pages": {
   "https://988lifeline.org/": {
    "state": "ok",
@@ -3272,16 +3272,6 @@
     "state-entities"
    ]
   },
-  "https://www.alabamainteractive.org": {
-   "state": "broken",
-   "status": 0,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-22T18:39:57.620Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
   "https://www.athleticsintegrity.org/aiu-integrity-line": {
    "state": "changed",
    "status": 200,
@@ -4352,16 +4342,6 @@
    "fingerprint": "06c2d3ccec1f90cb",
    "bytes": 5304,
    "checkedAt": "2026-10-22T18:40:45.504Z",
-   "guides": [
-    "money-guide"
-   ]
-  },
-  "https://www.consumerfinance.gov/consumer-tools/educator-tool/your-money-your-goals/": {
-   "state": "ok",
-   "status": 200,
-   "fingerprint": "9ec38140ed6f9338",
-   "bytes": 4793,
-   "checkedAt": "2026-10-22T18:40:45.675Z",
    "guides": [
     "money-guide"
    ]
@@ -6152,16 +6132,6 @@
     "state-entities"
    ]
   },
-  "https://www.marylandcomptroller.gov/content/dam/mdcomp/tax/forms/2023/CRA.pdf": {
-   "state": "ok",
-   "status": 200,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-22T18:41:23.048Z",
-   "guides": [
-    "state-entities"
-   ]
-  },
   "https://www.marylandsbdc.org/": {
    "state": "ok",
    "status": 200,
@@ -7321,7 +7291,7 @@
    "status": 200,
    "fingerprint": "e20bfe5b7f89a1db",
    "bytes": 5080,
-   "checkedAt": "2026-10-22T18:41:40.295Z",
+   "checkedAt": "2026-11-10T00:22:27.340Z",
    "guides": [
     "state-entities"
    ]
@@ -7331,7 +7301,7 @@
    "status": 200,
    "fingerprint": "e20bee5b3788301b",
    "bytes": 4173,
-   "checkedAt": "2026-10-22T18:41:40.346Z",
+   "checkedAt": "2026-11-10T00:22:27.349Z",
    "guides": [
     "state-entities"
    ]
@@ -7341,7 +7311,7 @@
    "status": 200,
    "fingerprint": "c219ce5af689d091",
    "bytes": 4766,
-   "checkedAt": "2026-10-22T18:41:40.456Z",
+   "checkedAt": "2026-11-10T00:22:27.351Z",
    "guides": [
     "state-entities"
    ]
@@ -11239,16 +11209,6 @@
     "special-ed-guide"
    ]
   },
-  "https://www.capital.k12.de.us/students-with-disabilities": {
-   "state": "broken",
-   "status": 404,
-   "fingerprint": "",
-   "bytes": 0,
-   "checkedAt": "2026-10-25T21:31:08.018Z",
-   "guides": [
-    "special-ed-guide"
-   ]
-  },
   "https://www.cdc.gov/adhd/about/index.html": {
    "state": "ok",
    "status": 200,
@@ -12519,16 +12479,6 @@
     "reentry-guide"
    ]
   },
-  "https://www.eeoc.gov/laws/guidance/enforcement-guidance-consideration-arrest-and-conviction-records-employment-decisions": {
-   "state": "ok",
-   "status": 200,
-   "fingerprint": "064cf2fbbf4263ce",
-   "bytes": 157134,
-   "checkedAt": "2026-10-26T16:28:46.181Z",
-   "guides": [
-    "reentry-guide"
-   ]
-  },
   "https://www.fcc.gov/consumers/guides/dial-211-essential-community-services": {
    "state": "ok",
    "status": 200,
@@ -12925,6 +12875,36 @@
    "fingerprint": "8c311fc0dcf373dc",
    "bytes": 3469,
    "checkedAt": "2026-10-26T16:28:54.127Z",
+   "guides": [
+    "reentry-guide"
+   ]
+  },
+  "https://businessexpress.maryland.gov/start/taxes-and-insurance": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "982f469ae81cc83f",
+   "bytes": 4987,
+   "checkedAt": "2026-11-10T00:22:28.118Z",
+   "guides": [
+    "state-entities"
+   ]
+  },
+  "https://www.consumerfinance.gov/consumer-tools/educator-tools/your-money-your-goals/": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "9ec38140ed6f9338",
+   "bytes": 4793,
+   "checkedAt": "2026-11-10T00:22:26.614Z",
+   "guides": [
+    "money-guide"
+   ]
+  },
+  "https://www.eeoc.gov/sites/default/files/migrated_files/laws/guidance/arrest_conviction.pdf": {
+   "state": "ok",
+   "status": 200,
+   "fingerprint": "",
+   "bytes": 0,
+   "checkedAt": "2026-11-10T00:22:26.004Z",
    "guides": [
     "reentry-guide"
    ]
