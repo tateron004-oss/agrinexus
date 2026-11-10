@@ -14,6 +14,7 @@
 
 const crypto = require("node:crypto");
 const { describeDay } = require("../personal/dates.js");
+const { stripWorkspaceName } = require("./workspace-name.js");
 
 const lower = value => String(value || "").toLowerCase();
 const clean = value => String(value || "").replace(/\s+/g, " ").trim().replace(/^["'“”]+|["'“”.,;:!?]+$/g, "").trim();
@@ -132,7 +133,7 @@ function planPageWrite(intent, { command, editable, workspace, today, timeZone }
 
   if (intent === "createPage") {
     const kind = kindOf(text);
-    const title = titleIn(text);
+    const title = stripWorkspaceName(titleIn(text), workspace);
     if (!title) return { response: `What should the ${KIND_WORDS[kind]} be called? For example: "create a ${KIND_WORDS[kind]} called ${kind === "form" ? "Enquiry" : kind === "survey" ? "Feedback" : kind === "booking" ? "Book a Haircut" : "Spring Sale"}".`, missingInformation: ["title"] };
     if (pages.some(page => lower(page.title) === lower(title))) return { response: `${name} already has a page called ${title}. Pick another name.`, info: true };
     if (pages.length >= MAX_PAGES) return { response: `${name} already holds ${MAX_PAGES} pages. Delete one first.`, info: true };

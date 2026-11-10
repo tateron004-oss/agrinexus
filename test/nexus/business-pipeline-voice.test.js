@@ -42,7 +42,7 @@ test("the phrases are recognised as pipeline requests, and look-alikes are left 
     removeStage: ["Remove the stage Contacted"],
     tagContact: ["Tag Grace as VIP", "tag John Kamau with wholesale", "add the tag VIP to Amina Hassan"],
     untagContact: ["Remove the tag wholesale from John Kamau", "untag Grace"],
-    addNote: ["Add a note to Grace: she wants delivery on Friday", "log a call with John Kamau, he will decide next week", "note about Amina Hassan that she prefers texts"],
+    addNote: ["Add a note to Grace: she wants delivery on Friday", "log a call with John Kamau, he will decide next week", "note about Amina Hassan that she prefers texts", "Add a note to customer Amina Hassan: She wants delivery on Friday."],
     listByTag: ["Who is tagged VIP?", "show customers tagged wholesale"],
     contactHistory: ["What is Grace's history?", "show Grace Otieno's notes", "what happened with John Kamau"],
     pipelineValue: ["How much is in my pipeline?", "what is my pipeline value"],
@@ -217,7 +217,7 @@ test("the new lists are kept by the workspace, a workspace saved before they exi
 
 test("a note addressed to a NAMED person goes to the business contact; the person's own notes are left alone", () => {
   const { readRequest } = require("../../nexus/personal/items.js");
-  for (const text of ["Add a note to Grace: she wants delivery on Friday", "add a note about Amina Hassan: she prefers texts", "Note on John Kamau that he will decide next week"]) assert.equal(readRequest(text, "2026-11-09"), null, text);
+  for (const text of ["Add a note to Grace: she wants delivery on Friday", "Add a note to customer Amina Hassan: She wants delivery on Friday.", "add a note to the client John Kamau: call back", "add a note about Amina Hassan: she prefers texts", "Note on John Kamau that he will decide next week"]) assert.equal(readRequest(text, "2026-11-09"), null, text);
   for (const text of ["add a note to my shopping list: milk", "Add a note that the pump needs a seal", "Make a note about maize prices", "note that I paid the rent"]) assert.equal(readRequest(text, "2026-11-09")?.action, "note-add", text);
 });
 
@@ -225,4 +225,17 @@ test("every change the pipeline can make is on the list of spoken changes, so th
   const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "..", "nexus", "business", "authoritative-executor.js"), "utf8");
   assert.ok(source.includes("...pipelineVoice.PIPELINE_WRITE_INTENTS"));
   for (const intent of pipeline.PIPELINE_WRITE_INTENTS) assert.ok(typeof intent === "string" && intent.length);
+});
+
+test("the voice model's habit of adding 'in <the business>' to a name is dropped, for sequences and pages", () => {
+  const sequences = require("../../nexus/business/sequences-voice.js");
+  const pages = require("../../nexus/business/pages-voice.js");
+  const made = sequences.planSequenceWrite("createSequence", { command: "Create a sequence called Quote Follow-up in Mama Grace Spa", editable: { sequences: [], sequenceSteps: [], leads: [] }, workspace: "Mama Grace Spa", today: "2026-11-10" });
+  assert.match(made.prompt, /sequence called Quote Follow-up in "Mama Grace Spa"./);
+  assert.equal(made.apply({ sequences: [], sequenceSteps: [], leads: [] }).sequences[0].name, "Quote Follow-up");
+  const page = pages.planPageWrite("createPage", { command: "Create a contact form called Enquiry in Mama Grace Spa", editable: { pages: [] }, workspace: "Mama Grace Spa", today: "2026-11-10" });
+  assert.equal(page.apply({ pages: [] }).pages[0].title, "Enquiry");
+  // a name that merely contains 'in' is kept
+  const other = sequences.planSequenceWrite("createSequence", { command: "Create a sequence called Check in later", editable: { sequences: [], sequenceSteps: [], leads: [] }, workspace: "Mama Grace Spa", today: "2026-11-10" });
+  assert.equal(other.apply({ sequences: [], sequenceSteps: [], leads: [] }).sequences[0].name, "Check in later");
 });

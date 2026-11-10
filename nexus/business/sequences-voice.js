@@ -17,6 +17,7 @@
 
 const { describeDay, addDays } = require("../personal/dates.js");
 const { nameIn, leadFor } = require("./scheduling-voice.js");
+const { stripWorkspaceName } = require("./workspace-name.js");
 const campaignVoice = require("./campaigns-voice.js");
 
 const lower = value => String(value || "").toLowerCase();
@@ -69,7 +70,7 @@ const stepsOf = (editable, name) => (editable.sequenceSteps || []).filter(row =>
 const runsOf = (editable, name) => (editable.sequenceRuns || []).filter(row => lower(row.sequence) === lower(name));
 
 // the sequence a sentence names: one that exists ("the Quote Follow-up sequence", "Quote Follow-up"), else the word after "called/named", else "the X sequence"
-function sequenceIn(editable, text) {
+function sequenceIn(editable, text, workspace = "") {
   const wanted = lower(text);
   const known = sequencesOf(editable).map(row => row.name).sort((a, b) => b.length - a.length);
   const hit = known.find(name => wanted.includes(lower(name)));
@@ -77,7 +78,7 @@ function sequenceIn(editable, text) {
   const named = /\bsequence\s+(?:called|named|titled)\s+["'“]?([^"'”,.:;]+?)["'”]?(?=\s+(?:with|that|which|for|and|saying|to)\b|[,:.]|$)/i.exec(text)
     || /\b(?:the|my|our|a|an)\s+["'“]?([A-Za-z][\w' -]{1,40}?)["'”]?\s+(?:follow-?up\s+)?sequence\b/i.exec(text)
     || /\b(?:add|put|write)\b[^:]{0,40}\bto\s+(?:the\s+)?["'“]?([A-Za-z][\w' -]{1,40}?)["'”]?\s*[:,]/i.exec(text);
-  const name = named ? clean(named[1]).replace(/^(?:the|my|our|a|an|new)\s+/i, "") : "";
+  const name = named ? stripWorkspaceName(clean(named[1]).replace(/^(?:the|my|our|a|an|new)\s+/i, ""), workspace) : "";
   return { name: /^(?:sequence|new|this|that|it|one|follow-?up)$/i.test(name) ? "" : name.slice(0, 60), exists: false };
 }
 
@@ -124,7 +125,7 @@ function readSequence(intent, { command, editable, workspace, today: day }) {
     if (!all.length) return `${name} has no follow-up sequences yet. Say, for example, "create a sequence called Quote Follow-up", then add steps to it.`;
     return `${name} has ${plural(all.length, "sequence")}: ${say(all.map(row => `${row.name} (${plural(stepsOf(editable, row.name).length, "step")}, ${row.status === "paused" ? "paused" : `${runsOf(editable, row.name).filter(run => run.status === "active").length} running`})`))}.`;
   }
-  const found = sequenceIn(editable, command);
+  const found = sequenceIn(editable, command, workspace);
   if (!found.exists) return all.length ? `Which sequence? You have ${say(all.map(row => row.name))}.` : `${name} has no follow-up sequences yet.`;
   const steps = stepsOf(editable, found.name);
   if (intent === "sequenceDetails") {
@@ -147,7 +148,7 @@ function planSequenceWrite(intent, ctx) {
   const text = String(command || "");
 
   if (intent === "createSequence") {
-    const found = sequenceIn(editable, text);
+    const found = sequenceIn(editable, text, workspace);
     if (found.exists) return { response: `${name} already has a sequence called ${found.name}. Say "add a step to ${found.name}: ..." to build it.`, info: true };
     if (!found.name) return { response: 'What should the sequence be called? For example: "Create a sequence called Quote Follow-up".', missingInformation: ["name"] };
     if (sequencesOf(editable).length >= MAX_SEQUENCES) return { response: `${name} already holds ${MAX_SEQUENCES} sequences.`, info: true };
@@ -158,7 +159,7 @@ function planSequenceWrite(intent, ctx) {
     };
   }
 
-  const found = sequenceIn(editable, text);
+  const found = sequenceIn(editable, text, workspace);
   const known = sequencesOf(editable);
   if (!found.exists) return { response: known.length ? `Which sequence? You have ${say(known.map(row => row.name))}.` : `${name} has no sequences yet. Say "create a sequence called Quote Follow-up".`, missingInformation: ["sequence"] };
   const sequence = known.find(row => lower(row.name) === lower(found.name));
