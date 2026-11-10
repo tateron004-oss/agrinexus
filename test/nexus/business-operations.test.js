@@ -222,8 +222,8 @@ test("the web editor shows the register, the inventory, the contract fields and 
   assert.ok(html.indexOf("/business-csv.js") > 0 && html.indexOf("/business-csv.js") < html.indexOf("/business-services.js"), "the import code loads first");
   for (const needle of ['rows("compliance", editable.compliance', 'rows("inventory", editable.inventory', '["reportDue", "Next report due"]', '["requirements", "What the funder requires"]', 'byId("add-compliance")', 'byId("add-inventory")', "BusinessCsv.importRows(kind", "Press Save to keep them"]) assert.ok(script.includes(needle), needle);
   const server = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
-  assert.match(server, /talks about the papers and goods the organization keeps -- a licence, permit, insurance policy/);
-  assert.match(server, /It does not check that a licence is valid or that anyone is eligible, and you must not claim either/);
-  assert.equal(server.split("talks about the papers and goods the organization keeps").length, 2, "said once");
+  assert.match(server, /Papers and goods the organization keeps: a licence, permit, insurance policy/);
+  assert.match(server, /The tool does not check that a licence is valid or that anyone is eligible, and you must not claim either/);
+  assert.equal(server.split("Papers and goods the organization keeps").length, 2, "said once");
   assert.doesNotThrow(() => new (require("node:vm").Script)(server, { filename: "server.js" }));
 });

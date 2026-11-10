@@ -302,16 +302,16 @@ test("the web editor shows and saves the new lists: bills, pledges, budgets, the
 
 test("the orb is told the money questions are for the workspace, never to estimate; the dashboard text is unchanged", () => {
   const server = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
-  assert.match(server, /whether they have enough money for upcoming expenses/);
-  assert.match(server, /you must not estimate, add up or invent any figure, name or date/);
+  assert.match(server, /whether there is enough money for upcoming expenses/);
+  assert.match(server, /Never add, change, drop or estimate a fact, figure, name or date/);
 });
 
 test("the orb is told how a spoken change works: the tool says what it would do and asks, the person's next words go back to the same tool, and nothing is claimed until the tool says so", () => {
   const server = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
-  assert.match(server, /wants to change their workspace by voice -- add a bill, say a bill is paid, set the cash balance or a monthly budget, record a pledge/);
-  assert.match(server, /then pass their next words \(yes, no, or the answer to its question\) to the same tool/);
-  assert.match(server, /Never say anything was added, paid or saved unless the tool says so/);
-  assert.equal(server.split("wants to change their workspace by voice").length, 2, "said once");
+  assert.match(server, /To change it by voice: add a bill or mark it paid, set the cash balance or a monthly budget, record a pledge/);
+  assert.match(server, /then pass their next words \(yes, no, or the detail\) to the same tool/);
+  assert.match(server, /Never say anything was added, paid, saved or sent unless the tool says so/);
+  assert.equal(server.split("To change it by voice").length, 2, "said once");
 });
 
 test("server.js still parses after the orb instruction sentences are added (an unescaped quote in one of them stops the whole server)", () => {

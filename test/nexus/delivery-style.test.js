@@ -20,6 +20,7 @@ test("the style is a conversation: it answers what was said, follows a small det
   assert.match(DELIVERY_STYLE, /one short supporting sentence that ties it to what they are doing/, "the line that reinforces the conversation");
   assert.match(DELIVERY_STYLE, /No 'anything else\?' and no menu of options/);
   assert.match(DELIVERY_STYLE, /say the part that matters in a sentence or two/, "while the screen shows the answer");
+  assert.match(DELIVERY_STYLE, /about two or three short sentences \(around forty words\) unless a tool's words must be said in full/, "a spoken-length budget, because speech is the biggest cost, with the exact-words rule still winning");
   assert.match(DELIVERY_STYLE, /when a tool's words must be said exactly or in full, say them as given/, "the instructions that say 'say what it returns in full' still win");
   assert.match(DELIVERY_STYLE, /safety rules and the honesty about what was and was not done come first/);
   assert.match(DELIVERY_STYLE, /upset, confused or in danger gets a slower, warmer answer/, "a person in distress is not answered curtly");
