@@ -86,7 +86,8 @@ function fieldsIn(text) {
   list = list.replace(/^(?:the\s+)?(?:fields?|questions?)\s*(?:are|is|:)?\s*/i, "");
   const parts = /\?/.test(list) ? list.split(/(?<=\?)\s*/) : list.split(/\s*(?:;|,|\band then\b|\bthen\b|\band\b)\s*/i);
   const seen = new Set();
-  return parts.map(item => clean(item).replace(/^(?:the|a|an|their|your)\s+/i, "")).filter(item => item && item.length <= 80).map(item => item.charAt(0).toUpperCase() + item.slice(1))
+  // "“What did you like?” and “What could we improve?”": drop the joining word and the quote marks the voice model puts round each question
+  return parts.map(item => clean(clean(item).replace(/^(?:and|then|also)\s+/i, "")).replace(/^(?:the|a|an|their|your)\s+/i, "")).filter(item => item && item.length <= 80).map(item => item.charAt(0).toUpperCase() + item.slice(1))
     .filter(item => { const key = lower(item); if (seen.has(key)) return false; seen.add(key); return true; }).slice(0, MAX_FIELDS);
 }
 const headlineIn = text => { const m = /\b(?:headline|heading)\s*(?:is|:|says|saying)?\s*["'“]?(.+?)["'”]?(?=\s+(?:and\s+(?:the\s+)?(?:text|body|message|description|button)|with\s+the\s+(?:text|body))\b|[.!?]?$)/i.exec(text); return m ? clean(m[1]).slice(0, 120) : ""; };
