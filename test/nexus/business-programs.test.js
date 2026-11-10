@@ -226,8 +226,8 @@ test("the web editor shows and saves the people-side lists and fields; the orb i
   for (const needle of ['rows("volunteer-hours", editable.volunteerHours', 'rows("services", editable.services', 'rows("outcomes", editable.outcomes', 'rows("program-goals", editable.programGoals', '["skills", "Skills (volunteers)"]', '["consent", "Consent to keep their records', 'byId("add-service")', 'byId("add-goal")', 'skills: "", availability: "", source: "", consent: "", consentDate: ""', 'description: "", fund: ""']) assert.ok(script.includes(needle), needle);
   assert.match(html, /Record a person's consent to keep their records on their contact row first/);
   const server = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
-  assert.match(server, /talks about the people they serve or work with -- volunteer hours/);
-  assert.match(server, /It records a service only for someone whose consent is recorded and gives counts, not names, in its reports/);
-  assert.equal(server.split("talks about the people they serve or work with").length, 2, "said once");
+  assert.match(server, /People the organization serves: volunteer hours/);
+  assert.match(server, /The tool records a service only for someone whose consent is recorded and gives counts, not names, in reports/);
+  assert.equal(server.split("People the organization serves").length, 2, "said once");
   assert.doesNotThrow(() => new (require("node:vm").Script)(server, { filename: "server.js" }));
 });

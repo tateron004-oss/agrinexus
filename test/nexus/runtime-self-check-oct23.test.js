@@ -40,6 +40,11 @@ test("anyone can read the uptime, the memory and where uploads are kept, and no 
   assert.equal(readiness.uploadEnabled, true);
 });
 
+test("the status page names the voice model in use, one of the allowed ones", async () => {
+  const body = await (await fetch(`${base}/api/runtime`)).json();
+  assert.ok(["gpt-realtime", "gpt-realtime-mini", "gpt-realtime-2.1", "gpt-realtime-2.1-mini"].includes(body.voiceModel), body.voiceModel);
+});
+
 test("saved documents, résumés and data exports are checked the same way, and the verdict names the setting to change", async () => {
   const body = await (await fetch(`${base}/api/runtime`)).json();
   assert.ok(["separate-disk", "container-storage", "unknown"].includes(body.exports.kind));

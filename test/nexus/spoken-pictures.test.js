@@ -79,7 +79,7 @@ test("a picture or video result is captioned with what it is, not the server's p
 });
 
 test("the orb is told to call the everyday-records tool for a request to see pictures or videos, and to say only that they are on the screen", () => {
-  assert.match(serverSource, /When the person asks you to show, find or look up pictures, photos, images or videos of something/);
-  assert.match(serverSource, /never describe a picture you cannot see and never read out a web address/);
-  assert.equal(serverSource.split("When the person asks you to show, find or look up pictures, photos, images or videos").length, 2, "said once");
+  assert.match(serverSource, /Pictures, photos, images or videos of something/);
+  assert.match(serverSource, /never describe a picture you cannot see and never read out a web address/i);
+  assert.equal(serverSource.split("Pictures, photos, images or videos of something").length, 2, "said once");
 });

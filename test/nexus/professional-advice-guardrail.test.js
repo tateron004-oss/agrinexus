@@ -65,6 +65,6 @@ test("the voice session's instructions carry the same rules", () => {
   const start = source.indexOf("function openAiRealtimeInstructions(");
   const body = source.slice(start, source.indexOf("\nfunction ", start + 10));
   assert.match(body, /any other legal, tax, loan, grant, certification, licence, insurance or hiring question, give general information only/);
-  assert.match(body, /pass the person's complete question to the nexus_everyday_records tool and say what it returns/);
+  assert.match(body, /pass the person's complete words to nexus_everyday_records and say what it returns in full/);
   assert.match(body, /never say or imply that you filed, applied, signed, sent or paid anything/);
 });
