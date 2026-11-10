@@ -324,3 +324,12 @@ test("a survey whose own questions end in a question mark is still a request to 
   assert.equal(pagesVoice.classifyPage("What did people answer on my feedback survey?"), "pageResponses");
   assert.equal(pagesVoice.classifyPage("What is the link for my feedback survey?"), "pageLink");
 });
+
+test("survey questions the voice model wraps in curly quotes and joins with 'and' are stored cleanly (found live, 10 November 2026)", () => {
+  const said = "Create a survey called “Feedback” with the questions “What did you like?” and “What could we improve?”.";
+  assert.equal(pagesVoice.classifyPage(said), "createPage");
+  assert.deepEqual(pagesVoice.fieldsIn(said), ["What did you like", "What could we improve"]);
+  assert.equal(pagesVoice.titleIn(said), "Feedback");
+  // lists without question marks still split on commas and "and"
+  assert.deepEqual(pagesVoice.fieldsIn("Create a contact form called Enquiry asking for name, phone and message"), ["Name", "Phone", "Message"]);
+});
