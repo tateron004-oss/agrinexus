@@ -6,23 +6,27 @@ const path = require("node:path");
 const { DELIVERY_STYLE } = require("../../nexus/brain/delivery-style.js");
 const { CRISIS_RULE } = require("../../nexus/brain/crisis-rule.js");
 
-// Kyro answers like a calm, capable assistant: result first, short, composed, then stop. These tests pin what the style says, that it never loosens a rule, and that every AI prompt that speaks to the person carries it.
+// Kyro talks like a warm, capable friend (changed 10 November 2026 from result-first and stop). These tests pin what the style says, that it never loosens a rule, and that every AI prompt that speaks to the person carries it.
 
 const root = path.join(__dirname, "../..");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const planning = fs.readFileSync(path.join(root, "nexus/brain/openai-planning-model.js"), "utf8");
 
-test("the style leads with the answer, stops when done, and changes how Kyro sounds, never what is true", () => {
-  assert.match(DELIVERY_STYLE, /Lead with the answer or the result in your first sentence/);
-  assert.match(DELIVERY_STYLE, /never repeat the request back/);
-  assert.match(DELIVERY_STYLE, /No 'anything else\?', no menu of options/);
+test("the style is a conversation: it answers what was said, follows a small detour, varies its words, supports the talk, and changes how Kyro sounds, never what is true", () => {
+  assert.match(DELIVERY_STYLE, /answer THAT first: pick up their own words/);
+  assert.match(DELIVERY_STYLE, /If they step a little off the expected path, follow them/, "a small deviation is not a restart");
+  assert.match(DELIVERY_STYLE, /do not recite a fixed line/);
+  assert.match(DELIVERY_STYLE, /never open two replies the same way/, "the wording varies");
+  assert.match(DELIVERY_STYLE, /one short supporting sentence that ties it to what they are doing/, "the line that reinforces the conversation");
+  assert.match(DELIVERY_STYLE, /No 'anything else\?' and no menu of options/);
   assert.match(DELIVERY_STYLE, /say the part that matters in a sentence or two/, "while the screen shows the answer");
   assert.match(DELIVERY_STYLE, /when a tool's words must be said exactly or in full, say them as given/, "the instructions that say 'say what it returns in full' still win");
   assert.match(DELIVERY_STYLE, /safety rules and the honesty about what was and was not done come first/);
   assert.match(DELIVERY_STYLE, /upset, confused or in danger gets a slower, warmer answer/, "a person in distress is not answered curtly");
   assert.doesNotMatch(DELIVERY_STYLE, /jarvis|stark|iron man/i, "the style is a manner, not an impersonation of a character");
   assert.match(DELIVERY_STYLE, /never call the person sir or madam/);
-  assert.ok(DELIVERY_STYLE.length < 1600, "short enough not to crowd the prompt");
+  assert.doesNotMatch(DELIVERY_STYLE, /no 'sure'|never repeat the request back/i, "the old curt rules are gone");
+  assert.ok(DELIVERY_STYLE.length < 2400, "short enough not to crowd the prompt");
 });
 
 test("the voice session, the typed native prompt and the plain-answer prompt all carry it, ahead of nothing that weakens the safety rule", () => {

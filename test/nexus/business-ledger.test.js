@@ -172,7 +172,7 @@ test("the confirmation says exactly what will be logged, and every other busines
   const prompt = command => spine.confirmationPrompt({ task: { steps: [{ step_id: "s1", tool_id: "business.manage", input: { command } }] }, pendingStepId: "s1" });
   assert.equal(await prompt("I sold 5 bags of maize for 6000 shillings"), "I can log KES 6,000 as income for 5 bags of maize in your business workspace. Say yes to save it, or no to cancel.");
   assert.equal(await prompt("We spent $40.50 on seed"), "I can log $40.50 as an expense for seed in your business workspace. Say yes to save it, or no to cancel.");
-  const generic = "I prepared the request and need your confirmation before the next governed action.";
+  const generic = "I have that ready. Should I go ahead with it? Just say yes or no.";
   for (const command of ["Add a customer named Amina", "Log an expense of 500 for seed", "Start a business called Amina Farm", ""]) assert.equal(await prompt(command), generic, command);
 });
 

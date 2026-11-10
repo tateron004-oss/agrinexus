@@ -50985,6 +50985,7 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
     if (eventType && typeof kyroNoteRealtimeEvent === "function") kyroNoteRealtimeEvent(eventType);
     try { kyroWatchForRefusal(eventType, payload); } catch { /* watching never breaks the session */ }
     try { kyroNoteReplyEvent(eventType); } catch { /* noting never breaks the session */ }
+    try { kyroLiveTranscriptNote(eventType, payload); } catch { /* the strip never breaks the session */ }
     if (realtimeVoiceSession) {
       realtimeVoiceSession.lastModelEvent = eventType || realtimeVoiceSession.lastModelEvent || "";
       if (/audio|response|conversation|session|input_audio/i.test(eventType)) {
@@ -51337,6 +51338,15 @@ const KYRO_FALSE_CLAIM = /\bshould (?:now )?(?:open|appear|show)\b[^.]{0,40}\bsc
 let kyroUserSpeechAt = 0;
 let kyroWalkthroughOpenedAt = 0;
 let kyroHeard = { key: "", text: "", at: 0, recovered: false };
+// The conversation on the screen as it happens (public/kyro-live-transcript.js): what the person is saying and what Kyro is saying, word by word.
+let kyroLiveTranscriptStrip = null;
+function kyroLiveTranscriptNote(type, payload) {
+  try {
+    if (typeof window === "undefined" || !window.KyroLiveTranscript || typeof document === "undefined") return;
+    if (!kyroLiveTranscriptStrip) kyroLiveTranscriptStrip = window.KyroLiveTranscript.create(document, { lang: (typeof languageCode === "function" && languageCode() === "sw") ? "sw" : "en" });
+    kyroLiveTranscriptStrip.noteEvent(type, payload);
+  } catch { /* the strip is only for the eyes; it never breaks the voice session */ }
+}
 let kyroRefusalBuf = "";
 let kyroRefusalSeenAt = 0;
 let kyroToolCalledAt = 0;
@@ -52688,13 +52698,16 @@ async function kyroOpenMapAtPlace(place, said, lang) {
   let name = String(place).replace(/\b[a-z]/g, letter => letter.toUpperCase());
   const say = line => { try { setVoiceResponse(line, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the map is on the screen */ } };
   let found = null;
+  let lookupFailed = false; // the search itself failed (a busy server or place service), as opposed to finding nothing by that name
   const findPlace = async query => {
     try {
       const out = await request("/api/nexus/runtime/navigation", { method: "POST", body: { action: "search", query } });
       return (Array.isArray(out?.places) ? out.places : []).find(item => Number.isFinite(Number(item?.lat)) && Number.isFinite(Number(item?.lng))) || null;
-    } catch { return null; }
+    } catch { lookupFailed = true; return null; }
   };
   found = await findPlace(place);
+  // Found with the owner on 9 November 2026, when the server was struggling: every place failed at once ("could not find California"). A failed search is tried once more after a short wait before it is given up on.
+  if (!found && lookupFailed) { await new Promise(resolve => setTimeout(resolve, 1500)); lookupFailed = false; found = await findPlace(place); }
   // Said as a list ("Stockton, Cairo or Mombasa"), the whole is no place: the first is shown and the rest are asked for next, one at a time (found on 9 November 2026, when a list was answered "I need a start and an end")
   let listRest = "";
   if (!found && /\s*(?:,|\band\b|\bor\b)\s*/i.test(String(place))) {
@@ -52707,7 +52720,12 @@ async function kyroOpenMapAtPlace(place, said, lang) {
   const mapQuery = found ? String(place).split(",")[0].trim() || String(said) : String(said);
   try { opened = dispatchGenesisWorkspaceAction({ type: "genesis.workspace.open", workspace: "map", requestId: `typed-map-${Date.now().toString(36)}`, payload: { query: mapQuery, country: "" } }, {}, { suppressAcknowledgement: true }); } catch { opened = false; }
   if (!opened) { say(lang === "sw" ? "Siwezi kufungua ramani sasa." : "I could not open the map just now."); return false; }
-  if (!found) { say(lang === "sw" ? `Sikuweza kupata ${name} kwenye ramani, kwa hiyo hii ni ramani ya kawaida.` : `I could not find ${name} on the map, so here is the map.`); return true; }
+  if (!found) {
+    say(lookupFailed
+      ? (lang === "sw" ? `Nina shida kufikia utafutaji wa mahali sasa hivi, kwa hiyo hii ni ramani ya kawaida. Sema ${name} tena baada ya muda mfupi nitajaribu tena.` : `I am having trouble reaching the place search right now, so here is the map. Say ${name} again in a moment and I will try once more.`)
+      : (lang === "sw" ? `Sikuweza kupata ${name} kwenye ramani, kwa hiyo hii ni ramani ya kawaida. Jaribu kusema jina pamoja na jimbo au nchi.` : `I could not find ${name} on the map, so here is the map. Try saying it with its state or country.`));
+    return true;
+  }
   const zoom = KYRO_US_STATES.has(String(place).toLowerCase()) ? 6 : 11;
   try { document.body.dataset.genesisMapLocation = name; } catch { /* a label only */ }
   waitForStableUserMapCanvas().then(() => {
