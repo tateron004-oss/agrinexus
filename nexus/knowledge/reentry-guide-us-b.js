@@ -4,7 +4,7 @@
 module.exports = {
   SOURCES: {
     eeocArrest: { name: "U.S. Equal Employment Opportunity Commission: Arrest and Conviction Records, Resources for Job Seekers, Workers and Employers (undated)", url: "https://www.eeoc.gov/arrestandconviction" },
-    eeocGuidance: { name: "U.S. Equal Employment Opportunity Commission: Enforcement Guidance on the Consideration of Arrest and Conviction Records in Employment Decisions (issued 25 April 2012; guidance, not law)", url: "https://www.eeoc.gov/laws/guidance/enforcement-guidance-consideration-arrest-and-conviction-records-employment-decisions" },
+    eeocGuidance: { name: "U.S. Equal Employment Opportunity Commission: Enforcement Guidance on the Consideration of Arrest and Conviction Records in Employment Decisions (issued 25 April 2012; guidance, not law; the agency now keeps it as a PDF)", url: "https://www.eeoc.gov/sites/default/files/migrated_files/laws/guidance/arrest_conviction.pdf" },
     eeocBackground: { name: "EEOC with the Federal Trade Commission: Background Checks, What Job Applicants and Employees Should Know (11 March 2014)", url: "https://www.eeoc.gov/laws/guidance/background-checks-what-job-applicants-and-employees-should-know" },
     dolBonding: { name: "U.S. Department of Labor: Federal Bonding Program (undated)", url: "https://www.dol.gov/agencies/eta/federal-bonding-program" },
     bonds4jobs: { name: "The Federal Bonding Program website, linked from the Department of Labor page (undated; the page text does not say who runs the site)", url: "https://bonds4jobs.com/" },

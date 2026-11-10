@@ -52759,6 +52759,10 @@ let kyroLastSpokenOpen = { key: "", at: 0 }; // the sentence the page last answe
 // "Open my resume", "open the CRM", "open grants", "open uploads": the page opens what each is (the résumés list, the clients, the grants due, the invoices, a place to choose a file).
 const KYRO_OPEN_OFFLINE = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|check|see|view)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:offline\\s+(?:queue|work|notes|changes|sync(?:\\s+status)?)|(?:sync|offline)\\s+status|queued\\s+(?:offline\\s+)?(?:work|changes|notes))(?:\\s+(?:screen|page|section|list))?[.?!]*$`, "i");
 const KYRO_OPEN_RESUMES = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|see|view|list|find|get)\\s+(?:me\\s+)?(?:(?:my|the|our)\\s+)?(?:saved\\s+)?(?:resumes?|résumés?|resumés?|cvs?)[.?!]*$`, "i");
+// "Open the grants page", "open Business and Grants", "take me to business services", "go to the grants and funding page" (9 November 2026, the owner: "make sure the grants page opens"): the Business & Grants page (/business-services.html),
+// where the full tables, invoice PDFs and the grants live. The only link to it is in the top bar, which the signed-in screen hides, and Kyro says "Open Business services" after saving a customer: nothing opened. Plain "open grants" and
+// "open the business workspace" keep their older meaning (the grants read aloud, the list of customers), so a PAGE, SCREEN, SECTION or TAB, or the page's own name, is what asks for the page.
+const KYRO_OPEN_BUSINESS_PAGE = new RegExp(`${KYRO_OPEN_LEAD}(?:i want to (?:see|open|go to)|let me (?:see|open)|take me to|bring me to|go to|open|show|show me|pull up|bring up|launch|switch to|navigate to)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:(?:(?:business\\s+(?:and|&)\\s+grants?|business\\s+services|grants?\\s+(?:and|&)\\s+funding|business\\s+(?:and|&)\\s+funding)(?:\\s+(?:page|screen|section|tab|site))?)|(?:(?:grants?|funding)\\s+(?:page|screen|section|tab)))[.?!]*$`, "i");
 const KYRO_OPEN_BIZ = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|go to|pull up|bring up|see|view|launch|start)\\s+(?:me\\s+)?(?:(?:my|the|our)\\s+)?(?:(?:business|customer)\\s+)?(?:(crm|clients?|customers?|contacts|customer list|client list)|(donors?|donations|fundraising)|(grants?|funding|grant (?:writing|tracker|deadlines))|(invoices?|billing)|(expenses?|income|finances?|financials?|books|bookkeeping|accounting|sales|profit))[.?!]*$`, "i");
 const KYRO_OPEN_UPLOAD = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|show|start|go to)\\s+(?:the\\s+|my\\s+)?(?:file\\s+|document\\s+|photo\\s+)?uploads?|(?:i\\s+(?:want|need)\\s+to\\s+|let me\\s+|help me\\s+|i'd like to\\s+)?(?:upload|attach)(?:\\s+(?:a|an|my|the|some))?(?:\\s+(?:files?|documents?|docs?|pictures?|photos?|pdfs?|images?|letters?|spreadsheets?|sheets?|(?:ms\\s+)?(?:word|excel)(?:\\s+(?:files?|documents?|docs?|spreadsheets?|sheets?))?|docx|xlsx))?(?:\\s+(?:of|for|from|to|about|showing)\\s+[a-z' -]{1,60})?)[.?!]*$`, "i");
 // A screen with a real button (a file can only be chosen from a tap): the picture, PDF, Word or Excel file is sent and read out, as "look at this" does.
@@ -53181,6 +53185,15 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   if (!options.typed && KYRO_ADD_PICTURE.test(said) && !KYRO_ADD_PICTURE_NOT.test(said)) {
     kyroTakeOverTurn();
     void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
+  }
+  // The Business & Grants page (see KYRO_OPEN_BUSINESS_PAGE): Kyro says so, and the page opens a moment later (the sentence is finished first). "Grants" go to the grants table.
+  if (KYRO_OPEN_BUSINESS_PAGE.test(said)) {
+    if (!options.typed) { try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ } }
+    const toGrants = /\bgrants?\b|\bfunding\b/i.test(said);
+    const line = lang === "sw" ? (toGrants ? "Nafungua ukurasa wa ruzuku." : "Nafungua Biashara na Ruzuku.") : (toGrants ? "Opening the grants page." : "Opening Business and Grants.");
+    try { setVoiceResponse(line, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the page opens anyway */ }
+    setTimeout(() => { try { window.location.assign(`/business-services.html${toGrants ? "#grants" : ""}`); } catch { /* the link on the page still works */ } }, 1600);
     return true;
   }
   // The map opens on the page, typed or said aloud (said aloud it used to be left to the voice model's map tool, which asks for a start and a destination, so "the US", "California" and "Stockton" opened nothing).
