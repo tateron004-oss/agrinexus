@@ -314,3 +314,13 @@ test("a phone number or an email address said with a customer is kept as their c
     assert.equal(extractLeadArgs(said, {}).contact, contact, said);
   }
 });
+
+test("'show the <name> sequence' reads that one sequence, not the list (found live, 10 November 2026)", () => {
+  const sequencesVoice = require("../../nexus/business/sequences-voice.js");
+  assert.equal(sequencesVoice.classifySequence("Show the Quote Follow-up sequence"), "sequenceDetails");
+  assert.equal(sequencesVoice.classifySequence("Show the Quote Follow-up sequence in Mama Grace Spa"), "sequenceDetails");
+  assert.equal(sequencesVoice.classifySequence("What is in the quote follow-up sequence?"), "sequenceDetails");
+  assert.equal(sequencesVoice.classifySequence("Show my sequences"), "listSequences");
+  assert.equal(sequencesVoice.classifySequence("Show the sequences"), "listSequences");
+  assert.equal(sequencesVoice.classifySequence("What sequences do I have?"), "listSequences");
+});

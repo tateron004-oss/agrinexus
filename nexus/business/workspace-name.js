@@ -7,7 +7,8 @@ const escapeRegExp = value => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&
 function stripWorkspaceName(name, workspace) {
   const w = String(workspace || "").trim();
   if (!w) return String(name || "");
-  return String(name || "").replace(new RegExp(`\\s+(?:in|for|at)\\s+(?:my\\s+|the\\s+|our\\s+)?${escapeRegExp(w)}$`, "i"), "").trim();
+  // the tail may also say what it is ("... in the Mama Grace Bakery customer record") and may end in punctuation (found live, 10 November 2026: "Tag Amina Hassan as VIP in the Mama Grace Bakery customer record" made the tag "VIP in the Mama Grace Bakery customer record")
+  return String(name || "").replace(new RegExp(`\\s+(?:in|for|at|on)\\s+(?:my\\s+|the\\s+|our\\s+)?${escapeRegExp(w)}(?:['’]s)?(?:\\s+(?:workspace|customer\\s+records?|records?|account|business|customer\\s+list))?\\s*[.?!]*$`, "i"), "").trim();
 }
 
 module.exports = Object.freeze({ stripWorkspaceName });

@@ -239,3 +239,12 @@ test("the voice model's habit of adding 'in <the business>' to a name is dropped
   const other = sequences.planSequenceWrite("createSequence", { command: "Create a sequence called Check in later", editable: { sequences: [], sequenceSteps: [], leads: [] }, workspace: "Mama Grace Spa", today: "2026-11-10" });
   assert.equal(other.apply({ sequences: [], sequenceSteps: [], leads: [] }).sequences[0].name, "Check in later");
 });
+
+test("the voice model's added 'in the <business> customer record' is not part of the tag (found live, 10 November 2026)", () => {
+  const pipelineVoice = require("../../nexus/business/pipeline-voice.js");
+  const editable = { leads: [{ name: "Amina Hassan", contact: "", type: "customer", stage: "new", tags: "" }], deals: [], pipelineStages: [], contactNotes: [] };
+  for (const said of ["Tag Amina Hassan as VIP in the Mama Grace Bakery customer record", "Tag Amina Hassan as VIP in Mama Grace Bakery.", "Tag Amina Hassan as VIP"]) {
+    const plan = pipelineVoice.planPipelineWrite(pipelineVoice.classifyPipeline(said), { command: said, editable, workspace: "Mama Grace Bakery" });
+    assert.match(plan.prompt, /tag Amina Hassan as VIP in "Mama Grace Bakery"/, said);
+  }
+});

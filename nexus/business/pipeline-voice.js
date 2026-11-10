@@ -13,6 +13,7 @@
 
 const crmVoice = require("./crm-voice.js");
 const { describeDay } = require("../personal/dates.js");
+const { stripWorkspaceName } = require("./workspace-name.js");
 
 const DEFAULT_STAGES = Object.freeze(["New", "Contacted", "Quoted", "Booked", "Won", "Lost"]);
 const MAX_STAGES = 10;
@@ -164,7 +165,7 @@ function readPipeline(intent, { command, editable, workspace, today }) {
     return `${plural(here.length, "deal")} in ${stage}: ${sayItems(here.map(deal => `${deal.contact || "no name"}, ${deal.title || "no title"}${Number(deal.value) ? `, ${money(deal.currency || "USD", deal.value)}` : ""}`), 8)}.`;
   }
   if (intent === "listByTag") {
-    const tag = cleanName((String(command || "").match(/\b(?:tagged|tag)\s+(?:as\s+|with\s+)?["']?([^"'?.!]+?)["']?\s*[?.!]*$/i) || [])[1] || "");
+    const tag = cleanName((stripWorkspaceName(String(command || ""), workspace).match(/\b(?:tagged|tag)\s+(?:as\s+|with\s+)?["']?([^"'?.!]+?)["']?\s*[?.!]*$/i) || [])[1] || "");
     if (!tag) return "Which tag? For example, who is tagged VIP.";
     const people = (editable.leads || []).filter(lead => tagsOf(lead).some(item => item.toLowerCase() === tag.toLowerCase()));
     if (!people.length) return `Nobody in ${name} is tagged ${tag}. Say, for example, tag Grace as ${tag}.`;
@@ -200,7 +201,7 @@ function planPipelineWrite(intent, { command, editable, workspace, today }) {
   const name = `"${workspace}"`;
   const stages = stagesOf(editable);
   const deals = editable.deals || [];
-  const text = String(command || "");
+  const text = stripWorkspaceName(String(command || ""), workspace);
 
   if (intent === "setStages" || intent === "addStage" || intent === "removeStage") {
     if (intent === "setStages") {
