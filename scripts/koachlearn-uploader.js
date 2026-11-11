@@ -77,7 +77,8 @@
       const videos = el => el.querySelectorAll("svg.lucide-video").length;
       // window.klSkipVideos: while the site refuses new videos, still finish chapters, knowledge checks, questions and the quiz
       if (ch.video && videos(r) === 0 && !window.klSkipVideos) {
-        [...r.querySelectorAll("button")].find(b => /Add Video/.test(b.textContent)).click();
+        // when the site is slow a chapter's buttons draw late, so wait for the button instead of clicking nothing
+        (await until(() => [...r.querySelectorAll("button")].find(b => /Add Video/.test(b.textContent)), "Add Video button")).click();
         const d = await until(dialog, "video dialog"); await sleep(300);
         setVal(d.querySelector('input[type="text"]'), ch.video.title);
         d.querySelector(".ProseMirror").editor.commands.setContent(tables(ch.video.html), true);
@@ -89,7 +90,7 @@
       }
       let link = [...r.querySelectorAll("a")].find(a => /add-question/.test(a.getAttribute("href") || ""));
       if (!link) {
-        [...r.querySelectorAll("button")].find(b => /Add Knowledge check/.test(b.textContent)).click();
+        (await until(() => [...r.querySelectorAll("button")].find(b => /Add Knowledge check/.test(b.textContent)), "Add Knowledge check button")).click();
         const d = await until(dialog, "knowledge check dialog"); await sleep(300);
         setVal(d.querySelector("input"), ch.check.title); await sleep(200);
         btn(d, "Create Quiz").click(); await closed("knowledge check to save");
@@ -101,7 +102,7 @@
     // the course quiz sits outside the chapters
     let quizHref = [...main().querySelectorAll('a[href*="add-question"]')].map(a => a.getAttribute("href")).find(h => !hrefs.includes(h));
     if (!quizHref) {
-      btn(main(), "Add Quiz").click();
+      (await until(() => btn(main(), "Add Quiz"), "Add Quiz button")).click();
       const d = await until(dialog, "quiz dialog"); await sleep(300);
       setVal(d.querySelector("input"), plan.quiz.title); await sleep(200);
       btn(d, "Create Quiz").click(); await closed("quiz to save");
@@ -123,7 +124,7 @@
     const missing = set.questions.filter(q => !have.has(norm(q.q)));
     if (!missing.length) break;
     for (const q of missing) {
-      btn(document, "Add Question").click();
+      (await until(() => btn(document, "Add Question"), "Add Question button")).click();
       const d = await until(dialog, "question dialog");
       while (d.querySelectorAll('input[placeholder="React is ...."]').length < q.options.length) { btn(d, "Add Option").click(); await sleep(200); }
       setVal(d.querySelector('input[placeholder="What is react?"]'), q.q);
