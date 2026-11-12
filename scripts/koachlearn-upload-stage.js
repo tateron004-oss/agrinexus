@@ -48,6 +48,14 @@ if (require.main === module) {
   const only = arg("--category");
   const doneFile = path.join(UP, "done.json");
   const done = new Set(fs.existsSync(doneFile) ? JSON.parse(fs.readFileSync(doneFile, "utf8")) : []);
+  // --skip-staged also leaves out every job already packed into a bundle by an earlier run (any .upload/*/batches.json),
+  // so a run for newly written courses never repeats what the queue already holds
+  // (this run's own folder is left out: it is rebuilt from scratch below)
+  if (process.argv.includes("--skip-staged")) for (const d of fs.readdirSync(UP)) {
+    if (d === `${langs.join("+")}-${only ? slug(only) : "all"}`) continue;
+    const bf = path.join(UP, d, "batches.json");
+    if (fs.existsSync(bf)) for (const b of JSON.parse(fs.readFileSync(bf, "utf8"))) for (const k of b.keys) done.add(k);
+  }
   const jobs = [];
   for (const lang of langs) for (const cat of Object.keys(CATEGORY_IDS)) {
     if (only && cat !== only) continue;
