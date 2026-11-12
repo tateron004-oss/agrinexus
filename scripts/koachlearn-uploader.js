@@ -28,7 +28,8 @@
   async function courseId(cat, name) {
     await go(`/dashboard/admin/categories/${cat}`, () => main().innerText.includes("Add Course"), "category page");
     // the course cards arrive after the page frame; every category already has at least one course, so wait for the cards
-    await until(() => main().querySelector('a[href$="/edit-course"]'), "course cards", 60000);
+    // an empty category says "No courses found" instead of showing cards
+    await until(() => main().querySelector('a[href$="/edit-course"]') || /No courses found/i.test(main().innerText), "course cards", 60000);
     await sleep(1500);
     const found = [];
     for (const a of main().querySelectorAll('a[href$="/edit-course"]')) {
