@@ -15,6 +15,8 @@
   // a bundle that already ran (or is running) is never put in line again
   window.klSeen = window.klSeen || new Set(window.klAllResults.map(r => r.batch).concat(window.klBatch ? [window.klBatch] : []));
   const take = f => {
+    // attaching scripts/koachlearn-uploader.js itself hands the tab a newer uploader for every bundle that starts after it
+    if (f && /\.js$/.test(f.name)) { if (window.klUploaderFile !== f) { window.klUploaderFile = f; f.text().then(t => { new Function(t); window.klUploaderSrc = t; }, () => {}); } return; }
     if (!f || window.klSeen.has(f.name)) return;
     window.klSeen.add(f.name);
     const item = { name: f.name, buf: null };
@@ -27,7 +29,13 @@
     const h = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, n)));
     window.klFiles = {};
     for (const x of h.files) window.klFiles[x.name] = new File([buf.slice(4 + n + x.offset, 4 + n + x.offset + x.size)], x.name.replace(/^.*__/, ""), { type: x.type });
-    new Function(h.uploader)();
+    // bundles packed before 13 Nov carry an uploader whose pauses can hang forever if its timer worker stops replying; give those the backup timer
+    const oldSleep = "const sleep = ms => new Promise(r => { if (!worker) return setTimeout(r, ms); const id = ++seq; waiting[id] = r; worker.postMessage({ id, ms }); });";
+    const newSleep = "const sleep = ms => new Promise(r => { let ended = false; const end = () => { if (!ended) { ended = true; r(); } }; setTimeout(end, ms + 3000); if (!worker) return; const id = ++seq; waiting[id] = end; worker.postMessage({ id, ms }); });";
+    window.klPatched = h.uploader.includes(oldSleep) ? "patched" : (h.uploader.includes("let ended = false") ? "already fixed" : "not found");
+    // window.klUploaderSrc: a newer scripts/koachlearn-uploader.js pasted into the tab wins over the copy packed into the bundle
+    if (window.klUploaderSrc) window.klPatched = "newer uploader";
+    new Function(window.klUploaderSrc || h.uploader.replace(oldSleep, newSleep))();
     window.klBatch = item.name;
     const r = await window.klRunQueue(h.items);
     window.klAllResults.push(...r.map(x => ({ batch: item.name, key: x.key, state: x.state, course: x.course })));
@@ -51,6 +59,17 @@
         await new Promise(r => setTimeout(r, 3000));
       }
     })();
+  }
+  // the uploader reads failed site requests from the timing record, so keep room for a long run
+  try { performance.setResourceTimingBufferSize(5000); } catch (_) {}
+  // stall marker: page address, log, question count, bundle and course all unchanged for 12 minutes while running puts the time and place in window.klStall
+  if (!window.klWatch) {
+    window.klWatch = true; let last = "", since = Date.now();
+    setInterval(() => {
+      const k = `${location.pathname}|${(window.klLog || []).length}|${window.klQuestions || 0}|${window.klBatch}|${window.klCurrent}`;
+      if (k !== last) { last = k; since = Date.now(); window.klStall = null; }
+      else if (window.klQueueState === "running" && Date.now() - since > 720000) window.klStall = window.klStall || `${new Date().toLocaleTimeString()} at ${k} log: ${(window.klLog || []).slice(-1)}`;
+    }, 30000);
   }
   return "loader ready";
 })();

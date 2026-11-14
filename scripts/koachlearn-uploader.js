@@ -6,8 +6,12 @@
   // Chrome slows timers in tabs that are not in front, so several tabs can run at once only if waiting is timed by a worker (not slowed)
   let worker = null, seq = 0; const waiting = {};
   try { worker = new Worker(URL.createObjectURL(new Blob(["onmessage=e=>setTimeout(()=>postMessage(e.data.id),e.data.ms)"], { type: "text/javascript" }))); worker.onmessage = e => { const r = waiting[e.data]; delete waiting[e.data]; if (r) r(); }; } catch (_) { worker = null; }
-  const sleep = ms => new Promise(r => { if (!worker) return setTimeout(r, ms); const id = ++seq; waiting[id] = r; worker.postMessage({ id, ms }); });
-  const until = async (fn, what, ms = 90000) => { const t = Date.now(); while (Date.now() - t < ms) { let v; try { v = fn(); } catch (_) { v = null; } if (v) return v; await sleep(200); } throw new Error(`timed out waiting for ${what}`); };
+  // a worker reply can go missing (seen 13 Nov: tabs sat for 10+ minutes on one pause), so a plain timer a little later always ends the pause too
+  const sleep = ms => new Promise(r => { let ended = false; const end = () => { if (!ended) { ended = true; r(); } }; setTimeout(end, ms + 3000); if (!worker) return; const id = ++seq; waiting[id] = end; worker.postMessage({ id, ms }); });
+  // a site request that failed (500 or worse) after a given moment; the site's own auth checks are left out
+  const serverFailed = since => performance.getEntriesByType("resource").find(x => x.startTime > since && x.responseStatus >= 500 && x.name.startsWith(location.origin) && !/\/api\/auth\//.test(x.name));
+  // failSince: when the site answers a save with an error the form just sits there, so stop at once instead of waiting out the whole time (seen 13 Nov: 10-minute waits)
+  const until = async (fn, what, ms = 90000, failSince = null) => { const t = Date.now(); while (Date.now() - t < ms) { let v; try { v = fn(); } catch (_) { v = null; } if (v) return v; if (failSince !== null) { const f = serverFailed(failSince); if (f) throw new Error(`the site answered ${f.responseStatus} while waiting for ${what}`); } await sleep(200); } throw new Error(`timed out waiting for ${what}`); };
   const setVal = (el, v) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(el, v); el.dispatchEvent(new Event("input", { bubbles: true })); };
   const setFile = (el, f) => { const dt = new DataTransfer(); dt.items.add(f); el.files = dt.files; el.dispatchEvent(new Event("change", { bubbles: true })); };
   const btn = (root, text) => [...root.querySelectorAll("button")].find(b => b.textContent.trim().endsWith(text));
@@ -18,7 +22,10 @@
   // closed, telling it the animation has ended lets it go at once (an open dialog is never touched)
   const dialog = () => [...document.querySelectorAll('[role="dialog"]')].find(d => d.getAttribute("data-state") !== "closed");
   const finishClosing = () => document.querySelectorAll('[data-state="closed"]').forEach(el => { el.dispatchEvent(new AnimationEvent("animationend", { bubbles: true })); });
-  const closed = (what, ms = 120000) => until(() => { finishClosing(); return !dialog(); }, what, ms);
+  // the site answers many video saves with a 500 when several tabs save at once (seen 13 Nov with four tabs), so the tabs of this browser take turns:
+  // one video or new-course save at a time, with a short gap after each. The lock is let go if the tab reloads or the step fails.
+  const saveTurn = fn => (navigator.locks ? navigator.locks.request("kl-video-save", async () => { try { return await fn(); } finally { await sleep(1500); } }) : fn());
+  const closed = (what, ms = 120000, failSince = null) => until(() => { finishClosing(); return !dialog(); }, what, ms, failSince);
   // the editor cannot hold tables, so a table becomes one list item per row
   const tables = html => { const doc = new DOMParser().parseFromString(`<div id="r">${html}</div>`, "text/html"); doc.querySelectorAll("table").forEach(t => { const rows = [...t.querySelectorAll("tr")]; const head = [...rows[0].children].map(c => c.textContent.trim()); const ul = doc.createElement("ul"); rows.slice(1).forEach(r => { const cells = [...r.children]; const li = doc.createElement("li"); li.innerHTML = `<strong>${cells[0].textContent.trim()}</strong>` + cells.slice(1).map((c, i) => `<br><em>${head[i + 1]}:</em> ${c.innerHTML.trim()}`).join(""); ul.appendChild(li); }); t.replaceWith(ul); }); return doc.getElementById("r").innerHTML; };
   const header = name => [...main().querySelectorAll("button[aria-controls]")].find(b => b.textContent.replace(/^\s*\d+\.\s*/, "").trim() === name.trim());
@@ -30,7 +37,9 @@
     // the course cards arrive after the page frame; every category already has at least one course, so wait for the cards
     // an empty category says "No courses found" instead of showing cards
     await until(() => main().querySelector('a[href$="/edit-course"]') || /No courses found/i.test(main().innerText), "course cards", 60000);
-    await sleep(1500);
+    // on a slow site the cards keep arriving for a while; reading too early misses a course and adds it a second time (seen 13 Nov), so wait until the count holds still
+    let count = -1, still = 0;
+    for (let i = 0; i < 30 && still < 3; i++) { await sleep(1000); const c = main().querySelectorAll('a[href$="/edit-course"]').length; still = c === count ? still + 1 : 0; count = c; }
     const found = [];
     for (const a of main().querySelectorAll('a[href$="/edit-course"]')) {
       let el = a, card = null;
@@ -41,20 +50,28 @@
     }
     // a name that shows twice (an earlier failed run): keep working on the copy that has the most chapters
     found.sort((x, y) => y.chapters - x.chapters);
-    return found.length ? found[0].id : null;
+    // every course found is remembered in this browser, so a card that has not drawn yet never leads to the course being added again (seen 13 Nov)
+    let known = {}; try { known = JSON.parse(localStorage.getItem("kl-course-ids") || "{}"); } catch (_) {}
+    const key = `${cat}|${name.trim()}`;
+    if (found.length) { known[key] = found[0].id; try { localStorage.setItem("kl-course-ids", JSON.stringify(known)); } catch (_) {} return found[0].id; }
+    return known[key] || null;
   }
 
   async function addCourse(plan, files, cat) {
     await go(`/dashboard/admin/categories/${cat}/add-course`, () => document.querySelector('input[name="name"]') && document.querySelector(".ProseMirror"), "add-course form");
-    const fileInputs = [...document.querySelectorAll('input[type="file"]')];
-    setFile(fileInputs.find(i => i.name !== "video"), files[plan.picture]);
-    setFile(document.querySelector('input[name="video"]'), files[plan.introVideo]);
-    setVal(document.querySelector('input[name="name"]'), plan.name);
-    setVal(document.querySelector('input[name="skills"]'), plan.skills);
-    document.querySelector(".ProseMirror").editor.commands.setContent(tables(plan.descriptionHtml), true);
-    await sleep(500);
-    btn(main(), "Add Course").click();
-    await until(() => /added successfully/i.test(document.body.innerText), "course to save", 600000);
+    await saveTurn(async () => {
+      const fileInputs = [...document.querySelectorAll('input[type="file"]')];
+      setFile(fileInputs.find(i => i.name !== "video"), files[plan.picture]);
+      setFile(document.querySelector('input[name="video"]'), files[plan.introVideo]);
+      setVal(document.querySelector('input[name="name"]'), plan.name);
+      setVal(document.querySelector('input[name="skills"]'), plan.skills);
+      document.querySelector(".ProseMirror").editor.commands.setContent(tables(plan.descriptionHtml), true);
+      await sleep(500);
+      const clicked = performance.now();
+      btn(main(), "Add Course").click();
+      // the videos are well under 1 MB, so a save still not done after 3 minutes is not coming
+      await until(() => /added successfully/i.test(document.body.innerText), "course to save", 180000, clicked);
+    });
     log(`course added: ${plan.name}`);
   }
 
@@ -62,6 +79,12 @@
     const page = `/dashboard/admin/categories/${cat}/${id}`;
     await go(page, () => btn(main(), "Add Chapter"), "course page");
     await sleep(1500);
+    // never add anything to a course page whose title is another course's (a wrong remembered id put one chapter on the wrong course, 13 Nov)
+    const titled = () => [...main().querySelectorAll("h1,h2,h3,h4,p,span,div")].some(e => e.childElementCount === 0 && e.textContent.trim() === plan.name.trim());
+    if (!(await until(titled, "course title", 20000).catch(() => false))) {
+      try { const known = JSON.parse(localStorage.getItem("kl-course-ids") || "{}"); delete known[`${cat}|${plan.name.trim()}`]; localStorage.setItem("kl-course-ids", JSON.stringify(known)); } catch (_) {}
+      throw new Error(`course ${id} is not "${plan.name}"`);
+    }
     for (const ch of plan.chapters) {
       if (header(ch.name)) continue;
       btn(main(), "Add Chapter").click();
@@ -83,8 +106,10 @@
         const d = await until(dialog, "video dialog"); await sleep(300);
         setVal(d.querySelector('input[type="text"]'), ch.video.title);
         d.querySelector(".ProseMirror").editor.commands.setContent(tables(ch.video.html), true);
-        setFile(d.querySelector('input[type="file"]'), files[ch.video.file]);
-        await sleep(300); btn(d, "Upload Video").click(); await closed("video upload", 600000); // a slow connection can take minutes for one video
+        await saveTurn(async () => {
+          setFile(d.querySelector('input[type="file"]'), files[ch.video.file]);
+          await sleep(300); const clicked = performance.now(); btn(d, "Upload Video").click(); await closed("video upload", 180000, clicked);
+        });
         r = await region(header(ch.name));
         await until(() => { const rr = document.getElementById(header(ch.name).getAttribute("aria-controls")); return rr && videos(rr) > 0; }, `video "${ch.video.title}" to appear`);
         log(`video: ${ch.video.title}`);
@@ -173,7 +198,8 @@
       window.klCurrent = it.key;
       const plan = JSON.parse(await window.klFiles[it.plan].text());
       let state = await window.klRun(plan, window.klFiles, it.cat);
-      if (state !== "done") { await sleep(5000); state = await window.klRun(plan, window.klFiles, it.cat); } // one retry picks up where it stopped
+      // each retry picks up where it stopped; the site answers saves with a passing 500 now and then, so wait longer before each new try
+      for (const wait of [10000, 30000, 60000, 120000]) { if (state === "done") break; await sleep(wait); state = await window.klRun(plan, window.klFiles, it.cat); }
       window.klResults.push({ key: it.key, state, course: window.klCourseId, log: window.klLog.slice(-3) });
     }
     window.klQueueState = "done";
