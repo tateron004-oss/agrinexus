@@ -199,7 +199,8 @@
       const plan = JSON.parse(await window.klFiles[it.plan].text());
       let state = await window.klRun(plan, window.klFiles, it.cat);
       // each retry picks up where it stopped; the site answers saves with a passing 500 now and then, so wait longer before each new try
-      for (const wait of [10000, 30000, 60000, 120000]) { if (state === "done") break; await sleep(wait); state = await window.klRun(plan, window.klFiles, it.cat); }
+      // a course that is not on the site while videos are skipped will not get there by trying again
+      for (const wait of [10000, 30000, 60000, 120000]) { if (state === "done" || /not on the site yet/.test(state)) break; await sleep(wait); state = await window.klRun(plan, window.klFiles, it.cat); }
       window.klResults.push({ key: it.key, state, course: window.klCourseId, log: window.klLog.slice(-3) });
     }
     window.klQueueState = "done";
