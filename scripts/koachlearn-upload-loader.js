@@ -71,5 +71,13 @@
       else if (window.klQueueState === "running" && Date.now() - since > 720000) window.klStall = window.klStall || `${new Date().toLocaleTimeString()} at ${k} log: ${(window.klLog || []).slice(-1)}`;
     }, 30000);
   }
+  // the site's video uploader (tus) leaves a resume note in this site's local storage for every video and never removes it; on 15 Nov about
+  // 17,000 of them (10 MB) filled the browser's storage, after which every video upload failed silently and all tabs sat on an open video dialog.
+  // The notes only matter for resuming an unfinished upload, so they are cleared now and every 10 minutes.
+  if (!window.klTusClean) {
+    window.klTusClean = true;
+    const clean = () => { try { for (const k of Object.keys(localStorage)) if (k.startsWith("tus::")) localStorage.removeItem(k); } catch (_) {} };
+    clean(); setInterval(clean, 600000);
+  }
   return "loader ready";
 })();
