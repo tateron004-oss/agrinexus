@@ -11,26 +11,28 @@
   // a site request that failed (500 or worse) after a given moment; the site's own auth checks are left out
   const serverFailed = since => performance.getEntriesByType("resource").find(x => x.startTime > since && x.responseStatus >= 500 && x.name.startsWith(location.origin) && !/\/api\/auth\//.test(x.name));
   // failSince: when the site answers a save with an error the form just sits there, so stop at once instead of waiting out the whole time (seen 13 Nov: 10-minute waits)
-  const until = async (fn, what, ms = 90000, failSince = null) => { const t = Date.now(); while (Date.now() - t < ms) { let v; try { v = fn(); } catch (_) { v = null; } if (v) return v; if (failSince !== null) { const f = serverFailed(failSince); if (f) throw new Error(`the site answered ${f.responseStatus} while waiting for ${what}`); } await sleep(200); } throw new Error(`timed out waiting for ${what}`); };
+  const until = async (fn, what, ms = 90000, failSince = null) => { const t = Date.now(); while (Date.now() - t < ms) { let v; try { v = fn(); } catch (_) { v = null; } if (v) return v; if (failSince !== null) { const f = serverFailed(failSince); if (f) throw new Error(`the site answered ${f.responseStatus} while waiting for ${what}`); } await sleep(100); } throw new Error(`timed out waiting for ${what}`); };
   const setVal = (el, v) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(el, v); el.dispatchEvent(new Event("input", { bubbles: true })); };
   const setFile = (el, f) => { const dt = new DataTransfer(); dt.items.add(f); el.files = dt.files; el.dispatchEvent(new Event("change", { bubbles: true })); };
   const btn = (root, text) => [...root.querySelectorAll("button")].find(b => b.textContent.trim().endsWith(text));
   const main = () => [...document.querySelectorAll("main")].pop();
   const log = m => { window.klLog.push(`${new Date().toLocaleTimeString()} ${m}`); };
-  const go = async (url, ready, what) => { if (location.pathname !== url) window.next.router.push(url); await until(() => location.pathname === url && ready(), what); await sleep(600); };
+  // 19 Nov speed-up: the fixed pauses below were cut by about half (they were ~1.5 minutes of every 5.5-minute course); every question set is still
+  // checked against the page afterwards and re-added if anything is missing, so a shorter pause cannot lose or double a question
+  const go = async (url, ready, what) => { if (location.pathname !== url) window.next.router.push(url); await until(() => location.pathname === url && ready(), what); await sleep(300); };
   // a dialog that is closing waits for its closing animation, and Chrome does not run animations in a tab that is not in front; once it is marked
   // closed, telling it the animation has ended lets it go at once (an open dialog is never touched)
   const dialog = () => [...document.querySelectorAll('[role="dialog"]')].find(d => d.getAttribute("data-state") !== "closed");
   const finishClosing = () => document.querySelectorAll('[data-state="closed"]').forEach(el => { el.dispatchEvent(new AnimationEvent("animationend", { bubbles: true })); });
   // the site answers many video saves with a 500 when several tabs save at once (seen 13 Nov with four tabs), so the tabs of this browser take turns:
   // one video or new-course save at a time, with a short gap after each. The lock is let go if the tab reloads or the step fails.
-  const saveTurn = fn => (navigator.locks ? navigator.locks.request("kl-video-save", async () => { try { return await fn(); } finally { await sleep(1500); } }) : fn());
+  const saveTurn = fn => (navigator.locks ? navigator.locks.request("kl-video-save", async () => { try { return await fn(); } finally { await sleep(800); } }) : fn());
   const closed = (what, ms = 120000, failSince = null) => until(() => { finishClosing(); return !dialog(); }, what, ms, failSince);
   // the editor cannot hold tables, so a table becomes one list item per row
   const tables = html => { const doc = new DOMParser().parseFromString(`<div id="r">${html}</div>`, "text/html"); doc.querySelectorAll("table").forEach(t => { const rows = [...t.querySelectorAll("tr")]; const head = [...rows[0].children].map(c => c.textContent.trim()); const ul = doc.createElement("ul"); rows.slice(1).forEach(r => { const cells = [...r.children]; const li = doc.createElement("li"); li.innerHTML = `<strong>${cells[0].textContent.trim()}</strong>` + cells.slice(1).map((c, i) => `<br><em>${head[i + 1]}:</em> ${c.innerHTML.trim()}`).join(""); ul.appendChild(li); }); t.replaceWith(ul); }); return doc.getElementById("r").innerHTML; };
   const header = name => [...main().querySelectorAll("button[aria-controls]")].find(b => b.textContent.replace(/^\s*\d+\.\s*/, "").trim() === name.trim());
   // open a chapter and give its rows time to arrive, so nothing already there is added twice
-  const region = async h => { if (h.getAttribute("aria-expanded") !== "true") h.click(); const r = await until(() => { const x = document.getElementById(h.getAttribute("aria-controls")); return x && x.querySelector("button") && x; }, "chapter to open"); await sleep(2500); return document.getElementById(h.getAttribute("aria-controls")); };
+  const region = async h => { if (h.getAttribute("aria-expanded") !== "true") h.click(); const r = await until(() => { const x = document.getElementById(h.getAttribute("aria-controls")); return x && x.querySelector("button") && x; }, "chapter to open"); await sleep(1200); return document.getElementById(h.getAttribute("aria-controls")); };
 
   async function courseId(cat, name) {
     await go(`/dashboard/admin/categories/${cat}`, () => main().innerText.includes("Add Course"), "category page");
@@ -140,7 +142,7 @@
 
   async function addQuestions(href, set) {
     await go(href, () => btn(document, "Add Question"), "question page");
-    await sleep(1500);
+    await sleep(900);
     // compare by question text, so a question that did not save is found wherever it is, and nothing is added twice
     const norm = s => s.replace(/\s+/g, " ").trim();
     const onPage = () => new Set((main().innerText.match(/^\d+\. .+$/gm) || []).map(l => norm(l.replace(/^\d+\.\s*/, ""))));
@@ -152,18 +154,18 @@
     for (const q of missing) {
       (await until(() => btn(document, "Add Question"), "Add Question button")).click();
       const d = await until(dialog, "question dialog");
-      while (d.querySelectorAll('input[placeholder="React is ...."]').length < q.options.length) { btn(d, "Add Option").click(); await sleep(200); }
+      while (d.querySelectorAll('input[placeholder="React is ...."]').length < q.options.length) { btn(d, "Add Option").click(); await sleep(80); }
       setVal(d.querySelector('input[placeholder="What is react?"]'), q.q);
       const opts = [...d.querySelectorAll('input[placeholder="React is ...."]')];
       // the site refuses an option shorter than 2 characters ("Option can not be empty"), so a question with one ("I", "1", "x") shows all its options in quotes
       const shown = q.options.some(o => o.trim().length < 2) ? q.options.map(o => `"${o.trim()}"`) : q.options;
       shown.forEach((o, i) => setVal(opts[i], o));
       [...d.querySelectorAll('button[role="checkbox"]')][q.answer].click();
-      await sleep(300); btn(d, "Create Question").click(); await closed("question to save");
-      await sleep(800);
+      await sleep(120); btn(d, "Create Question").click(); await closed("question to save");
+      await sleep(250);
       window.klQuestions = (window.klQuestions || 0) + 1;
     }
-    await sleep(2000);
+    await sleep(1200);
     }
     const left = set.questions.filter(q => !onPage().has(norm(q.q))).length;
     log(`${set.title}: ${set.questions.length - left}/${set.questions.length} questions`);
@@ -172,7 +174,7 @@
 
   window.klCourseIdFor = courseId;
   window.klRun = async (plan, files, cat) => {
-    window.klLog = []; window.klState = "running"; window.klQuestions = 0;
+    window.klLog = []; window.klState = "running"; window.klQuestions = 0; window.klRunStart = Date.now();
     try {
       for (const f of plan.files) if (!files[f]) throw new Error(`file not loaded: ${f}`);
       let id = await courseId(cat, plan.name);
@@ -186,7 +188,7 @@
       window.klCourseId = id;
       const sets = await ensureStructure(plan, files, cat, id);
       for (const s of sets) await addQuestions(s.href, s.set);
-      window.klState = "done";
+      window.klState = "done"; log(`course done in ${Math.round((Date.now() - window.klRunStart) / 1000)} s`);
     } catch (e) { window.klState = "error: " + e.message; log("ERROR " + e.message); }
     return window.klState;
   };

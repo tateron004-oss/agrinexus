@@ -6,6 +6,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["server.js"],
       "port": 4173
+    },
+    {
+      "name": "koachlearn-catalog",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["koachlearn-catalog/build/serve.js"],
+      "port": 4318
     }
   ]
 }

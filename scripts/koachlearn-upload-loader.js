@@ -16,7 +16,7 @@
   window.klSeen = window.klSeen || new Set(window.klAllResults.map(r => r.batch).concat(window.klBatch ? [window.klBatch] : []));
   const take = f => {
     // attaching scripts/koachlearn-uploader.js itself hands the tab a newer uploader for every bundle that starts after it
-    if (f && /\.js$/.test(f.name)) { if (window.klUploaderFile !== f) { window.klUploaderFile = f; f.text().then(t => { new Function(t); window.klUploaderSrc = t; }, () => {}); } return; }
+    if (f && /\.js$/.test(f.name)) { if (window.klUploaderFile !== f) { window.klUploaderFile = f; f.text().then(t => { new Function(t); window.klUploaderSrc = t; try { localStorage.setItem("kl-uploader-src", t); } catch (_) {} }, () => {}); } return; }
     if (!f || window.klSeen.has(f.name)) return;
     window.klSeen.add(f.name);
     const item = { name: f.name, buf: null };
@@ -33,7 +33,9 @@
     const oldSleep = "const sleep = ms => new Promise(r => { if (!worker) return setTimeout(r, ms); const id = ++seq; waiting[id] = r; worker.postMessage({ id, ms }); });";
     const newSleep = "const sleep = ms => new Promise(r => { let ended = false; const end = () => { if (!ended) { ended = true; r(); } }; setTimeout(end, ms + 3000); if (!worker) return; const id = ++seq; waiting[id] = end; worker.postMessage({ id, ms }); });";
     window.klPatched = h.uploader.includes(oldSleep) ? "patched" : (h.uploader.includes("let ended = false") ? "already fixed" : "not found");
-    // window.klUploaderSrc: a newer scripts/koachlearn-uploader.js pasted into the tab wins over the copy packed into the bundle
+    // window.klUploaderSrc: a newer scripts/koachlearn-uploader.js pasted into the tab wins over the copy packed into the bundle;
+    // it is also kept in this site's local storage, so a tab that is reloaded (or freezes and is reloaded) keeps using it
+    if (!window.klUploaderSrc) { try { window.klUploaderSrc = localStorage.getItem("kl-uploader-src") || null; } catch (_) {} }
     if (window.klUploaderSrc) window.klPatched = "newer uploader";
     new Function(window.klUploaderSrc || h.uploader.replace(oldSleep, newSleep))();
     window.klBatch = item.name;
