@@ -1,0 +1,22 @@
+# Wave 1 review notes (from the writers' reports)
+- esl-everyday-english, esl-workplace-english: translators must keep quoted English phrases (in text and `words`) in English. 911.gov and lep.gov could not be confirmed, so no interpreter-rights claims.
+- solar-installer-basics: rubric O1 "Exceeds" mentions net metering, which no lesson teaches. FIX before translation.
+- ev-technician-basics: three service-practice claims are general knowledge framed as "follow the manufacturer"; NEC articles only in general terms.
+- ged-*: essay rubric is ours (not official); no content percentages claimed; GED Ready described as optional purchase.
+- medical-billing-coding: practice codes (J02.9, I10, E11.9, 99213, 87880, 36415, E0100) and 1500 box numbers from memory, labelled practice; a coder should glance.
+- pharmacy-technician-prep: made-up drugs only; a pharmacist should check sig abbreviations and tech vs pharmacist duties. DEA and Joint Commission pages blocked (general knowledge).
+- phlebotomy-prep: venipuncture steps, order of draw and tourniquet timing should be checked by a phlebotomy instructor. HHS HIPAA page blocked.
+- nursing-assistant-cna-prep, home-health-aide, community-health-worker: no training hours (eCFR blocked); hedged 'many states' lines on abuse reporting and the CNA written/skills test; a nurse educator should glance.
+- it-support-fundamentals, cybersecurity-analyst-entry, data-analytics-excel-sql: Security+ V7/V8 dates to re-check after 17 Nov 2026; menu paths and event IDs 4624/4625 from knowledge; SQL setup text inside a paragraph may read awkwardly on video.
+- data-dashboards: renamed to 'Power BI and Data Studio' (Google renamed Looker Studio); Power BI/Data Studio menu names unchecked. ged-math: two rubric rows span two lessons but carry one objective tag.
+- hvac-basics, electrical-basics, welding-basics: standard trade facts unsourced (wire colours, 12,000 BTU/ton, cylinders upright); welding shade-12 example to check; CareerOneStop link unverified.
+- cdl-prep, forklift-operator, warehouse-logistics: federal rules read via Cornell LII (FMCSA/eCFR blocked); 18-20 intrastate line general; military waiver 383.77 not read.
+- TRANSLATION CONSISTENCY: esl-workplace-english-{es,fr,ar} cite 'English for Everyday Life' as: Inglés para la vida diaria (ESL) / L'anglais de la vie quotidienne (ESL) / الإنجليزية للحياة اليومية (ESL). Make the esl-everyday-english translations' names match (or fix the cross-reference). Arabic lines mixing quoted English need an on-screen reading-order look.
+# Africa: Life and Work review notes
+- afr-mother-child-health, afr-nutrition-local-foods, afr-clean-cooking: a clinician or midwife should read the danger-sign lists and burns first aid; ORS/zinc mentioned only as "ask the health worker"; country handbook names not checked; IEA blocked.
+- TRANSLATION CONSISTENCY: cybersecurity-analyst-entry-{es,fr,ar} cite the IT Support course by their own rendering; make them match it-support-fundamentals-{es,fr,ar} names at the end.
+- afr-selling-online, afr-register-small-business, afr-women-entrepreneurs: many registry sites unreachable (APIX, CEPICI, ae.gov.ma, WEF, GEA); OHADA business-form wording and local permit offices from knowledge; confirm Nigeria Revenue Service name; AFAWA from knowledge (quiz Q17).
+- afr-mobile-money-safety, afr-savings-groups-microfinance, afr-online-freelancing: Safaricom codes 456/100/333 from news sources (check safaricom.co.ke); Upwork/Fiverr pages blocked so no fees stated.
+- afr-tailoring-fashion-business, afr-clean-water-hygiene, afr-malaria-prevention: health reviewer to read ORS wording (water L6) and IPTp / seasonal chemoprevention / vaccine wording (malaria L4); net-care advice unsourced; APIX unreachable.
+- afr-afcfta-cross-border-trade, afr-phone-repair-business, afr-solar-home-systems: no small-trader scheme limits (COMESA/EAC/ECOWAS pages missing); battery-fire steps and solar install practice are general (not cited); sizing example marked example.
+- TRANSLATION CONSISTENCY: translators cite other courses by their own renderings (prerequisites, cross-links). Final pass: replace each quoted course title in translations with that course's actual translated name.

@@ -1,0 +1,330 @@
+"use strict";
+
+// Koach Learn course: Small Business -> "AI for Retail Businesses" (bonus course). Written as a skill-building course: by the end the student can DO the skill in `outcome`.
+// Two chapters of three micro-lessons; a knowledge check closes each chapter; a 20-question quiz closes the course. See scripts/koachlearn-export.js for how it is built.
+// The FTC advertising rule was checked on ftc.gov on 27 October 2026.
+//
+// lesson: { title, minutes, goal, text: [paragraph], steps: [step] (optional), words: [[term, means]], slides: [{ title, bullets }], sources, tryIt, youCanNow }
+// question: { q, options: [4], answer: index of the right option, why }
+
+const FTC_ADS = { name: "FTC: Advertising and Marketing basics", url: "https://www.ftc.gov/business-guidance/advertising-marketing" };
+
+module.exports = {
+  id: "smallbiz-ai-retail",
+  category: "Small Business",
+  name: "AI for Retail Businesses",
+  skills: "Writing product descriptions, Making shelf signs, Tracking stock in a spreadsheet, Setting reorder points, Reading sales patterns, Planning a seasonal promotion",
+  outcome: "run the paperwork side of a small shop with AI help: write honest product descriptions and shelf signs, keep a stock sheet with reorder points, spot your best and slowest sellers, and plan one seasonal promotion from your own numbers.",
+  about: [
+    "This course is for owners and staff of small retail businesses: boutiques, corner stores and bodegas, beauty supply shops, gift shops, thrift stores, and people selling online or at markets. Many of our students are minority owners running a shop with a small team.",
+    "You will use a free AI assistant and a spreadsheet (Google Sheets or Excel) to write about your products, keep track of stock so you run out less, see what sells, and plan a promotion based on facts instead of guesses.",
+    "Each lesson takes about five minutes with a \"Try it now\" task. There is a knowledge check after each chapter and a 20-question quiz at the end."
+  ],
+  finalTask: "Build a retail toolkit for your shop: five honest product descriptions, three shelf signs, a stock sheet of at least 15 items with reorder points and a reorder flag, a short note on your top three and bottom three sellers, and a one-page plan for one seasonal promotion with the items, price, dates and how you will measure it.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Owners and staff of small retail businesses: boutiques, corner stores and bodegas, beauty supply shops, gift shops, thrift stores, and people selling online or at markets. Many are minority owners running a shop with a small team.",
+    startingPoint: "Know their products and customers well and use a register or POS. Little use of spreadsheets for stock, sales reports or AI for writing, and promotions are often planned from guesses.",
+    gap: "Shops lose money when they run out of best sellers, hold too much slow stock, post wrong prices or run promotions that do not make a profit. Owners need to use AI and a spreadsheet to write honest product text, track stock, read sales and plan promotions from their own numbers, while keeping shop data safe.",
+    constraints: [
+      "Reading level: plain words and short sentences",
+      "Devices: a computer is best for spreadsheets; a phone works for writing and signs",
+      "Time: about 5-minute lessons that fit around opening hours",
+      "Rules: FTC truth-in-advertising for product claims, and sign prices must match the register",
+      "Privacy and safety: no supplier passwords or customer details in AI; item totals only"
+    ],
+    prerequisites: "\"Essential AI Tools for Small Businesses\" is helpful for learners new to spreadsheets."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given the facts from a product's label or invoice", action: "write a short, honest product description with AI help", standard: "with every claim checked against the label and nothing you cannot prove" },
+    { id: "O2", condition: "Using an AI assistant", action: "make clear shelf signs and store notices", standard: "with prices that match the register, real end dates on sales and translations checked by a fluent speaker" },
+    { id: "O3", condition: "Using Google Sheets or Excel", action: "build a stock sheet with reorder points and a reorder flag", standard: "with at least 15 items, correct reorder points and a tested formula" },
+    { id: "O4", condition: "Given 4 to 8 weeks of sales by item", action: "identify your top and bottom sellers with AI help", standard: "naming the top 3 and bottom 3 and confirming any AI pattern in your own numbers" },
+    { id: "O5", condition: "Given your sales and stock numbers", action: "plan a seasonal promotion", standard: "with items, price, profit per sale, dates and enough stock, decided by you" },
+    { id: "O6", condition: "Given a promotion and your shop's data", action: "measure the promotion's results and keep shop data safe", standard: "comparing with the same weeks before, checking AI's math, and keeping passwords out of AI" }
+  ],
+  chapters: [
+    {
+      name: "Chapter 1: Products, signs and stock",
+      lessons: [
+        {
+          objectives: ["O1"],
+          title: "Writing product descriptions that sell, honestly",
+          minutes: 5,
+          goal: "Write short, honest product descriptions with AI help.",
+          text: [
+            "A product description tells a shopper what it is, who it is for, and why they want it. It works on a shelf tag, your website, an online marketplace or a social post.",
+            "Give AI the facts: \"Write a 40-word description for a 12 oz shea butter body cream, unscented, made in Ghana, for dry skin. Warm tone. Mention the size.\" AI makes the words friendly; you supply the facts.",
+            "Check every fact: size, materials, where it was made, care instructions. Remove claims you cannot prove, like \"cures eczema\" or \"best in the city\". The FTC says ad claims must be truthful and backed by evidence."
+          ],
+          steps: ["Write the product facts: name, size, material, origin, who it is for.", "Ask AI for a short description in your voice.", "Check every fact against the label or invoice.", "Remove claims you cannot prove."],
+          words: [["Product description", "a short text that tells shoppers what a product is and why they want it."], ["Claim", "a statement of fact about a product, like what it does."]],
+          slides: [
+            { title: "What, who and why", bullets: ["What it is", "Who it is for", "Why they want it"] },
+            { title: "You give the facts", bullets: ["Name, size, material, origin", "AI makes the words friendly"] },
+            { title: "Keep it honest", bullets: ["Check against the label or invoice", "No health or \"best\" claims you cannot prove", "FTC: claims must be truthful and evidence-based"] }
+          ],
+          sources: [FTC_ADS],
+          tryIt: "Pick five products in your shop. Write the facts for each, ask AI for a 30-to-50-word description, and check each one against the label.",
+          youCanNow: "write honest product descriptions with AI help.",
+          quickCheck: [
+            { objective: "O1", q: "Where do you check the facts in a product description?", options: ["The label or invoice", "A competitor's website", "Whatever AI wrote", "A customer's guess"], answer: 0, why: "The label or invoice has the real product facts." },
+            { objective: "O1", q: "AI writes that a shampoo \"stops hair loss\", but the label does not say so. What would you do?", options: ["Keep it to sell more", "Add a question mark", "Remove it unless you can prove it", "Put it in smaller print"], answer: 2, why: "Claims must be truthful and backed by evidence." }
+          ]
+        },
+        {
+          objectives: ["O2"],
+          title: "Shelf signs, price cards and store notices",
+          minutes: 4,
+          goal: "Make clear shelf signs and store notices quickly.",
+          text: [
+            "Signs answer questions before shoppers ask: price, sale, new arrivals, return policy, \"ask us about...\". Clear signs save staff time.",
+            "Ask AI for short wording: \"Write five shelf signs for my beauty supply store: new braiding hair arrivals, buy 2 get 1 free on edge control through May 31, our return policy is 14 days with receipt. Under 12 words each.\" Then design them in Canva or a document and print.",
+            "Prices on signs must match the register. Sale signs need the real end date and any limits. If you serve customers who speak another language, ask AI for a translation, then have a fluent speaker check it."
+          ],
+          steps: ["List the signs you need.", "Ask AI for short wording.", "Design and print them.", "Check every price matches the register.", "Have a fluent speaker check any translation."],
+          words: [["Shelf sign", "a small sign on a shelf showing a price, sale or information."], ["Return policy", "your rules for when customers can bring items back."]],
+          slides: [
+            { title: "Signs save staff time", bullets: ["Price, sale and new arrivals", "Return policy and \"ask us about\""] },
+            { title: "AI writes, you design", bullets: ["Ask for short wording, under 12 words", "Design in Canva or a document"] },
+            { title: "Check before you hang it", bullets: ["Price matches the register", "Sale end date and limits", "Translations checked by a fluent speaker"] }
+          ],
+          tryIt: "Ask AI for three shelf signs for your shop. Check each price against your register, then make and print or save them.",
+          youCanNow: "make clear, accurate shelf signs and store notices with AI help.",
+          quickCheck: [
+            { objective: "O2", q: "What should a sale sign show?", options: ["Only the word SALE", "The real end date and any limits", "The owner's phone number", "Every item in the store"], answer: 1, why: "A sale sign needs the real end date and any limits so it is honest." },
+            { objective: "O2", q: "AI translated your shelf sign into Spanish. What would you do before printing?", options: ["Print it right away", "Ask AI to check itself", "Remove the English", "Have a fluent speaker check it"], answer: 3, why: "A fluent speaker can catch translation mistakes." }
+          ]
+        },
+        {
+          objectives: ["O3"],
+          title: "Keeping a stock sheet with reorder points",
+          minutes: 6,
+          goal: "Build a stock spreadsheet that flags what to reorder.",
+          text: [
+            "Running out of your best seller loses sales; too much slow stock ties up cash. A simple stock sheet helps. Columns: Item, Supplier, On hand, Sold per week, Days to arrive, Reorder point, Reorder?",
+            "The reorder point is when to order again. A simple rule: sold per week x weeks to arrive + a little extra (safety stock). If you sell 10 a week, it takes 1 week to arrive, and you keep 5 extra, reorder at 15.",
+            "Ask AI to help with the formula: \"In Google Sheets, write a formula that shows REORDER when column C is less than or equal to column F.\" A common answer is =IF(C2<=F2,\"REORDER\",\"\"). Test it on a few rows to make sure it works."
+          ],
+          steps: ["Make the seven columns.", "Fill in your top 15 items.", "Work out each reorder point: weekly sales x weeks to arrive + safety stock.", "Ask AI for an IF formula to flag reorders.", "Test it on a few rows, and update On hand each week."],
+          words: [["Stock (inventory)", "the products you have on hand to sell."], ["Reorder point", "the amount left at which you order more."], ["Safety stock", "extra items kept in case sales jump or delivery is late."]],
+          slides: [
+            { title: "Why track stock", bullets: ["Running out loses sales", "Too much slow stock ties up cash"] },
+            { title: "Stock sheet columns", bullets: ["Item, Supplier, On hand", "Sold per week, Days to arrive", "Reorder point, Reorder?"] },
+            { title: "Reorder point", bullets: ["Weekly sales x weeks to arrive + safety stock", "Example: 10 x 1 + 5 = reorder at 15"] },
+            { title: "Let the sheet flag it", bullets: ["=IF(C2<=F2,\"REORDER\",\"\")", "Test on a few rows", "Update On hand weekly"] }
+          ],
+          tryIt: "Build your stock sheet with at least 15 items, work out reorder points, and add an IF formula that shows REORDER. Test it by changing one On hand number.",
+          youCanNow: "keep a stock sheet that tells you when to reorder.",
+          quickCheck: [
+            { objective: "O3", q: "What is safety stock?", options: ["Stock kept in a locked room", "Items that never sell", "Extra items in case sales jump or delivery is late", "Stock you return to the supplier"], answer: 2, why: "Safety stock covers surprises in sales or delivery." },
+            { objective: "O3", q: "AI wrote a formula for your reorder flag. What would you do next?", options: ["Test it on a few rows by changing an On hand number", "Trust it for every item", "Delete the formula", "Copy it to every sheet without checking"], answer: 0, why: "Testing a formula on a few rows shows whether it works." }
+          ]
+        }
+      ],
+      check: {
+        title: "Knowledge Check 1: Products, signs and stock",
+        questions: [
+          { objective: "O1", q: "Who supplies the facts in a product description?", options: ["The AI's guess", "You, from the label or invoice", "A competitor", "A customer review"], answer: 1, why: "AI writes the words; you supply checked facts." },
+          { objective: "O1", q: "AI writes that your body cream \"cures eczema\". What do you do?", options: ["Add \"guaranteed\"", "Keep it", "Make it bigger", "Remove it unless you can prove it"], answer: 3, why: "The FTC requires evidence for claims." },
+          { objective: "O2", q: "A sale sign must show:", options: ["The real end date and any limits", "No price", "Your password", "A fake old price"], answer: 0, why: "Honest sale signs include dates and limits." },
+          { objective: "O3", q: "You sell 8 a week, delivery takes 2 weeks, safety stock is 4. What is the reorder point?", options: ["8", "12", "14", "20"], answer: 3, why: "8 x 2 + 4 = 20." },
+          { objective: "O3", q: "What does =IF(C2<=F2,\"REORDER\",\"\") do?", options: ["Adds up sales", "Deletes the row", "Shows REORDER when on hand is at or below the reorder point", "Sends an order to the supplier"], answer: 2, why: "It flags items that need reordering." }
+        ]
+      }
+    },
+    {
+      name: "Chapter 2: Reading sales and planning promotions",
+      lessons: [
+        {
+          objectives: ["O4"],
+          title: "Finding your best and slowest sellers",
+          minutes: 5,
+          goal: "Use a sales report and AI help to find your top and bottom sellers.",
+          text: [
+            "Most point-of-sale (POS) systems can export a sales report by item as a file you open in a spreadsheet. If yours cannot, a simple weekly tally by item works.",
+            "Sort by units sold and by sales dollars. Your top sellers deserve good shelf space and never running out. Your slowest sellers may need a better spot, a bundle, a markdown or to be dropped.",
+            "You can paste item totals (no customer details) into an AI assistant: \"Here are 8 weeks of item sales for my gift shop. Which items are rising, falling, or seasonal? What questions should I ask?\" Treat the answers as ideas and confirm them in your report."
+          ],
+          steps: ["Export a sales-by-item report or tally by hand.", "Sort by units and by dollars.", "Mark your top 3 and bottom 3.", "Ask AI for patterns using item totals only.", "Confirm each pattern in your report."],
+          words: [["POS", "point of sale: the system that rings up sales."], ["Export", "save data from a system as a file you can open elsewhere."], ["Markdown", "a lower price to sell slow stock."]],
+          slides: [
+            { title: "Get the numbers", bullets: ["Export a sales-by-item report from your POS", "Or tally sales by item each week"] },
+            { title: "Sort two ways", bullets: ["By units sold", "By sales dollars", "Mark top 3 and bottom 3"] },
+            { title: "AI for patterns", bullets: ["Item totals only, no customer details", "Rising, falling, seasonal?", "Confirm in your report"] }
+          ],
+          tryIt: "Get 4 to 8 weeks of sales by item. Find your top 3 and bottom 3, then ask AI what patterns it sees and confirm one.",
+          youCanNow: "find your best and slowest sellers and check AI's ideas against your own numbers.",
+          quickCheck: [
+            { objective: "O4", q: "What does POS stand for?", options: ["Price on shelf", "Point of sale", "Product order sheet", "Profit or sales"], answer: 1, why: "POS means point of sale, the system that records your sales." },
+            { objective: "O4", q: "You want AI to help read your sales. What would you paste in?", options: ["Customer names and card numbers", "Your supplier password", "Your full POS login", "Item totals only"], answer: 3, why: "Item totals are enough, and private data stays out of AI." }
+          ]
+        },
+        {
+          objectives: ["O5"],
+          title: "Planning a seasonal promotion from your numbers",
+          minutes: 5,
+          goal: "Plan a promotion with items, price, dates and a profit check.",
+          text: [
+            "Retail runs on seasons: back to school, holidays, graduation, summer, local festivals and cultural celebrations important to your customers. Plan promotions a month ahead.",
+            "Use your numbers: promote items that sell well in that season, or bundle a slow seller with a top seller. Ask AI for ideas: \"My top seller is braiding hair; slow seller is satin bonnets. Give me three back-to-school bundle ideas that keep a profit.\"",
+            "Check the math: price, cost, profit per sale, and how many you need to sell. Write the dates and limits, and order enough stock using your reorder sheet."
+          ],
+          steps: ["Pick a season or event.", "Choose items from your sales report.", "Ask AI for promotion or bundle ideas.", "Check profit per sale on paper.", "Set dates, limits and order stock."],
+          words: [["Promotion", "a special offer for a set time."], ["Bundle", "two or more items sold together for one price."]],
+          slides: [
+            { title: "Plan a month ahead", bullets: ["Back to school, holidays, graduation", "Local festivals and cultural celebrations"] },
+            { title: "Use your numbers", bullets: ["Promote seasonal best sellers", "Bundle a slow seller with a top seller"] },
+            { title: "Check before launch", bullets: ["Price, cost and profit per sale", "Dates and limits", "Enough stock on order"] }
+          ],
+          tryIt: "Plan one promotion for the next season: items, price, profit per sale, dates and how much stock you need.",
+          youCanNow: "plan a seasonal promotion based on your own sales numbers.",
+          quickCheck: [
+            { objective: "O5", q: "What is a bundle?", options: ["Items sold together for one price", "A box of returns", "A delivery from a supplier", "A type of sign"], answer: 0, why: "A bundle groups items for one price, often pairing a slow seller with a top seller." },
+            { objective: "O5", q: "You plan a holiday promotion. What would you check before launching it?", options: ["Only how the sign looks", "What a competitor charges", "Profit per sale and whether you have enough stock", "Whether AI likes the idea"], answer: 2, why: "A promotion must make a profit and have enough stock behind it." }
+          ]
+        },
+        {
+          objectives: ["O6"],
+          title: "Measuring the promotion and protecting your shop",
+          minutes: 5,
+          goal: "Measure a promotion's results and keep shop data safe.",
+          text: [
+            "Decide how you will measure before you start: units of promoted items sold, total sales during the dates compared with the same weeks before, and profit. A promo code or a separate POS button for the bundle makes tracking easy.",
+            "Afterwards, ask AI to help you write a short summary from your numbers: what worked, what did not, what to try next time. Check its math against your sheet.",
+            "Keep shop data safe: do not paste customer names, card numbers, supplier passwords or staff details into AI tools. Watch for fake supplier invoices and \"urgent\" payment requests; call the supplier on a number you know."
+          ],
+          steps: ["Choose your measures before the promotion.", "Add a code or POS button to track it.", "Compare with the same weeks before.", "Ask AI to help summarize, and check the math.", "Keep customer and supplier data out of AI."],
+          words: [["Compare period", "an earlier time you compare results with, like the same weeks last month."], ["Promo code", "a code that tracks who used an offer."]],
+          slides: [
+            { title: "Decide measures first", bullets: ["Units of promoted items", "Sales vs the same weeks before", "Profit"] },
+            { title: "Make tracking easy", bullets: ["Promo code or a POS button for the bundle", "AI helps write the summary; you check the math"] },
+            { title: "Protect your shop", bullets: ["No customer, card, supplier or staff data in AI", "Call suppliers on known numbers about invoices"] }
+          ],
+          tryIt: "Final task: put your retail toolkit together: five product descriptions, three shelf signs, your stock sheet with reorder flags, your top and bottom sellers, and your promotion plan with how you will measure it.",
+          youCanNow: "run and measure a promotion and use AI safely across your shop's paperwork.",
+          quickCheck: [
+            { objective: "O6", q: "How do you measure a promotion?", options: ["By how busy the shop felt", "By comparing with the same weeks before", "By counting signs printed", "By asking AI to guess"], answer: 1, why: "Comparing with the same weeks before shows the real change." },
+            { objective: "O6", q: "An email says your supplier has a new bank account and you must pay today. What would you do?", options: ["Pay right away", "Reply with your bank login", "Forward it to customers", "Call the supplier on a number you already know"], answer: 3, why: "Calling a known number checks a rushed payment request safely." }
+          ]
+        }
+      ],
+      check: {
+        title: "Knowledge Check 2: Reading sales and planning promotions",
+        questions: [
+          { objective: "O4", q: "Your POS cannot export reports. What can you do?", options: ["Keep a simple weekly tally by item", "Guess", "Ask a competitor", "Stop tracking"], answer: 0, why: "A hand tally still shows patterns." },
+          { objective: "O4", q: "What might help a slow seller?", options: ["Ordering more", "Hiding it", "Raising its price a lot", "A bundle with a top seller"], answer: 3, why: "Bundles can move slow stock." },
+          { objective: "O5", q: "Before launching a bundle you should check:", options: ["Only the color", "Profit per sale", "Your horoscope", "Nothing"], answer: 1, why: "Promotions must still make money." },
+          { objective: "O6", q: "How do you track a promotion easily?", options: ["A promo code or a POS button for it", "Memory", "Asking AI to guess", "Counting customers' cars"], answer: 0, why: "Codes and buttons record each sale." },
+          { objective: "O6", q: "An email says your supplier changed bank details and to pay today. You:", options: ["Reply with your password", "Pay now", "Call the supplier on a number you know", "Forward to customers"], answer: 2, why: "Fake supplier invoices are a common scam." }
+        ]
+      }
+    }
+  ],
+  quiz: {
+    title: "Final Quiz: AI for Retail Businesses",
+    questions: [
+      { objective: "O1", q: "A product description answers:", options: ["Your password", "What it is, who it is for, why they want it", "The supplier's bank", "Nothing"], answer: 1, why: "Those three parts help shoppers decide." },
+      { objective: "O1", q: "Where do you check product facts?", options: ["A competitor", "The AI", "A social post", "The label or invoice"], answer: 3, why: "Labels and invoices hold the real facts." },
+      { objective: "O1", q: "The FTC says ad claims must be:", options: ["In capitals", "Exciting", "Short", "Truthful and evidence-based"], answer: 3, why: "That is the FTC standard." },
+      { objective: "O2", q: "Shelf sign prices must:", options: ["Be rounded up", "Match the register", "Be hidden", "Change daily"], answer: 1, why: "Mismatched prices upset customers." },
+      { objective: "O2", q: "A translated sign should be checked by:", options: ["The printer", "Nobody", "A fluent speaker", "A random website"], answer: 2, why: "AI translations can have mistakes." },
+      { objective: "O2", q: "A good shelf sign is:", options: ["Under about 12 words", "A full page", "Blank", "In tiny print"], answer: 0, why: "Short signs are read quickly." },
+      { objective: "O3", q: "What is safety stock?", options: ["Insurance", "A locked safe", "Extra items in case sales jump or delivery is late", "Expired items"], answer: 2, why: "It protects against running out." },
+      { objective: "O3", q: "Sold 5 a week, delivery 2 weeks, safety stock 5. Reorder point?", options: ["7", "10", "15", "25"], answer: 2, why: "5 x 2 + 5 = 15." },
+      { objective: "O3", q: "After AI writes a spreadsheet formula you should:", options: ["Trust it", "Test it on a few rows", "Delete it", "Print it"], answer: 1, why: "Formulas can be wrong." },
+      { objective: "O3", q: "Why track stock?", options: ["To confuse staff", "For fun", "Because AI says so", "To run out less and avoid too much slow stock"], answer: 3, why: "Both cost you money." },
+      { objective: "O4", q: "POS stands for:", options: ["Point of sale", "Price of service", "Post office slip", "Product order sheet"], answer: 0, why: "It rings up sales." },
+      { objective: "O4", q: "Sorting by sales dollars shows:", options: ["Staff hours", "Which are heaviest", "Which are newest", "Which items bring in the most money"], answer: 3, why: "Dollars show revenue by item." },
+      { objective: "O4", q: "When pasting sales into AI, include:", options: ["Card numbers", "Customer names", "Item totals only", "Supplier passwords"], answer: 2, why: "No private data." },
+      { objective: "O5", q: "When should you plan a seasonal promotion?", options: ["The same day", "About a month ahead", "After the season", "Never"], answer: 1, why: "Time to order stock and make signs." },
+      { objective: "O5", q: "What is a bundle?", options: ["A broken item", "A tax", "A loan", "Items sold together for one price"], answer: 3, why: "Bundles combine items." },
+      { objective: "O5", q: "Before a promotion, use your reorder sheet to:", options: ["Hide prices", "Delete items", "Make sure you have enough stock", "Pay staff"], answer: 2, why: "Running out ruins a promotion." },
+      { objective: "O6", q: "Measure a promotion by comparing with:", options: ["The same weeks before", "A competitor's guess", "Nothing", "Next year"], answer: 0, why: "A compare period shows the change." },
+      { objective: "O6", q: "When AI writes your promotion summary, you:", options: ["Trust every number", "Check its math against your sheet", "Skip reading it", "Post it unread"], answer: 1, why: "AI can make math mistakes." },
+      { objective: "O6", q: "Which should never go into an AI tool?", options: ["Item names", "Supplier account passwords", "Weekly totals", "Season names"], answer: 1, why: "Passwords are private." },
+      { objective: "O5", q: "Which decision does this course leave to you, not AI?", options: ["Which items to promote and at what price", "How a caption is worded", "Ideas for bundles", "Sign wording"], answer: 0, why: "AI suggests; you decide with your numbers." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      1,
+      3,
+      6,
+      7,
+      10,
+      12,
+      13,
+      14,
+      16
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "Product descriptions",
+        objective: "O1",
+        notYet: "Fewer than five, or a claim not on the label.",
+        meets: "Five short, honest descriptions checked against the label.",
+        exceeds: "Each says what it is, who it is for and why they want it."
+      },
+      {
+        name: "Shelf signs",
+        objective: "O2",
+        notYet: "Fewer than three, or a price that does not match the register.",
+        meets: "Three clear signs with prices that match the register.",
+        exceeds: "Sale signs show the end date and limits; translations were checked."
+      },
+      {
+        name: "Stock sheet",
+        objective: "O3",
+        notYet: "Fewer than 15 items, or no working reorder flag.",
+        meets: "15 or more items with reorder points and a tested REORDER flag.",
+        exceeds: "Reorder points include safety stock for each item."
+      },
+      {
+        name: "Best and slowest sellers",
+        objective: "O4",
+        notYet: "No top or bottom list, or based on a guess.",
+        meets: "Top 3 and bottom 3 from real sales numbers.",
+        exceeds: "One AI pattern confirmed in the numbers, with an idea for a slow seller."
+      },
+      {
+        name: "Promotion plan",
+        objective: "O5",
+        notYet: "Missing items, price, dates or a profit check.",
+        meets: "Items, price, profit per sale, dates and stock needed.",
+        exceeds: "Says how it will be measured against the same weeks before."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Owners who keep their stock sheet updated each week (30-day follow-up survey)",
+      "Owners who report fewer stock-outs of best sellers within 60 days",
+      "Owners who run a seasonal promotion and report its measured result"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A computer with Google Sheets or Excel (a phone works for descriptions and signs)",
+      "A free AI assistant: Microsoft Copilot, ChatGPT or Google Gemini",
+      "Product labels or invoices, and 4 to 8 weeks of sales by item from the register or a tally",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Ask owners to bring product labels or invoices and a sales report or weekly tally.",
+      "Work one reorder-point example together on a board before owners build their sheets.",
+      "Never paste supplier passwords, customer names or card details into AI; item totals are enough.",
+      "Remind owners that they, not AI, decide which items to promote and at what price.",
+      "Score the retail toolkit with the rubric, and give feedback on one Not yet row at a time."
+    ]
+  }
+};

@@ -1,0 +1,321 @@
+"use strict";
+
+// Koach Learn course: Non Profits -> "AI for Faith-Based Organizations" (bonus course). Written as a skill-building course: by the end the student can DO the skill in `outcome`.
+// Two chapters of three micro-lessons; a knowledge check closes each chapter; a 20-question quiz closes the course. See scripts/koachlearn-export.js for how it is built.
+//
+// lesson: { title, minutes, goal, text: [paragraph], steps: [step] (optional), words: [[term, means]], slides: [{ title, bullets }], sources (optional), tryIt, youCanNow }
+// question: { q, options: [4], answer: index of the right option, why }
+
+module.exports = {
+  id: "nonprofit-ai-faith-based",
+  category: "Non Profits",
+  name: "AI for Faith-Based Organizations",
+  skills: "Setting ground rules for AI in ministry, Drafting announcements and bulletins, Planning volunteer and event schedules, Protecting member privacy, Reviewing AI drafts for faith and tone",
+  outcome: "use a free AI assistant to draft a weekly announcement and a volunteer schedule for your congregation or faith-based program, keep member information private, and review every draft so it fits your faith tradition and voice.",
+  about: [
+    "This course is for pastors, imams, rabbis, ministry leaders, church office staff and volunteers in churches, mosques, temples, synagogues and faith-based nonprofits.",
+    "You will learn where AI can save time in the office work of ministry (announcements, bulletins, schedules, newsletters, grant drafts) and where it should not be used: pastoral care, confidential conversations and decisions about people.",
+    "Each lesson takes about five minutes. Read the lesson, watch the slides, then do the \"Try it now\" task. There is a short knowledge check after each chapter and a 20-question quiz at the end."
+  ],
+  finalTask: "Write a one-page \"How we use AI\" note for your congregation's leaders, then use an AI assistant to draft this week's announcement and a volunteer schedule with placeholders instead of names. Review both drafts for accuracy, faith and tone, and mark what you changed.",
+  // ---- ADDIE: Analysis ----
+  analysis: {
+    learners: "Pastors, imams, rabbis, ministry leaders, church office staff and volunteers in churches, mosques, temples, synagogues and faith-based nonprofits.",
+    startingPoint: "Write announcements, bulletins and volunteer schedules by hand each week. Many have heard of AI but have not used it, and some worry about privacy and about AI getting their faith wrong.",
+    gap: "Office writing takes hours that leaders would rather give to people. Learners need to use AI for drafts and plans while keeping prayer requests and member information private and making sure every draft fits their tradition, facts and voice.",
+    constraints: [
+      "Privacy: names, prayer requests, giving records, health, children's and contact details never go into AI",
+      "Pastoral care, counseling and decisions about people stay with trusted people",
+      "Scripture and teachings are checked in the congregation's own sacred texts",
+      "Tax-exempt rules on political activity apply (IRS Publication 1828)",
+      "Plain words; many volunteers are new to technology"
+    ],
+    prerequisites: "None."
+  },
+  // ---- ADDIE: Design (objectives: condition, observable action, standard) ----
+  objectives: [
+    { id: "O1", condition: "Given a list of ministry tasks", action: "sort them into \"AI can draft this\" and \"people only\"", standard: "keeping pastoral care, prayer requests and decisions about people with people" },
+    { id: "O2", condition: "For your congregation's leaders", action: "write a one-page \"How we use AI\" note that answers the four ground-rule questions", standard: "in plain words, ready for your board, elders or council to agree on" },
+    { id: "O3", condition: "Given a request that contains member information", action: "rewrite it as a safe prompt with placeholders", standard: "with no names, prayer requests, giving records, health or contact details" },
+    { id: "O4", condition: "Given this week's events", action: "write a clear prompt and draft a weekly announcement in your congregation's voice", standard: "with every date, time and place checked by you" },
+    { id: "O5", condition: "Given roles, dates and how many people each needs", action: "create a volunteer schedule with AI using placeholders instead of names", standard: "with real names added only in your own document" },
+    { id: "O6", condition: "Given an AI draft", action: "check it for faith, accuracy and tone and fix what does not fit", standard: "with scripture checked in your own sacred texts before a named reviewer approves it" }
+  ],
+  chapters: [
+    {
+      name: "Chapter 1: Using AI wisely in ministry",
+      lessons: [
+        {
+          objectives: ["O1"],
+          title: "Where AI helps a congregation, and where it does not",
+          minutes: 4,
+          goal: "Sort ministry tasks into \"AI can draft this\" and \"people only\".",
+          text: [
+            "An AI assistant, such as ChatGPT, Microsoft Copilot or Google Gemini, is a computer program you chat with in everyday words. It writes drafts, lists and plans in seconds.",
+            "In a congregation, it is useful for office work: weekly announcements, bulletin text, newsletters, event plans, volunteer sign-up messages, thank-you notes to donors and first drafts of grant applications.",
+            "It should not replace people in pastoral care, prayer requests, counseling, confession, conflict between members, or decisions about who serves or who receives help. Those need a trusted person, not a program."
+          ],
+          words: [["AI assistant", "a computer program you chat with by typing or talking; it writes answers back."], ["Pastoral care", "the personal care a faith leader gives members: visits, counsel, comfort and prayer."]],
+          slides: [
+            { title: "AI can draft", bullets: ["Announcements and bulletins", "Newsletters and event plans", "Volunteer sign-up messages and thank-you notes"] },
+            { title: "People only", bullets: ["Pastoral care and counseling", "Prayer requests and confidential talks", "Decisions about members and who receives help"] },
+            { title: "The rule of thumb", bullets: ["AI helps with words and plans", "People handle hearts and decisions"] }
+          ],
+          tryIt: "List ten tasks your congregation's office does in a month. Mark each one \"AI can draft\" or \"people only\".",
+          youCanNow: "name the ministry tasks where AI can help and the ones that must stay with people.",
+          quickCheck: [
+            { objective: "O1", q: "Which is a good office task for AI in a congregation?", options: ["Drafting a volunteer sign-up message", "Hearing a confession", "Deciding who receives help", "Settling a conflict between members"], answer: 0, why: "AI helps with office writing; pastoral care and decisions need a trusted person." },
+            { objective: "O1", q: "A member asks if AI can counsel them about their grief. What do you say?", options: ["Yes, AI is always available", "No; that needs a trusted person, not a program", "Yes, if it quotes scripture", "Only at night"], answer: 1, why: "Counseling and pastoral care need a trusted person." }
+          ]
+        },
+        {
+          objectives: ["O2"],
+          title: "Writing simple ground rules for AI",
+          minutes: 5,
+          goal: "Write a short \"How we use AI\" note your leaders can agree on.",
+          text: [
+            "Before staff and volunteers use AI, agree on a few simple rules. This keeps everyone safe and avoids surprises.",
+            "A good note answers four questions: What may we use AI for? What must never go into AI (names, prayer requests, giving records, health or family details)? Who reviews AI drafts before they are shared? Do we tell people when AI helped write something?",
+            "Keep it to one page and in plain words. Share it with your board, elders or ministry council and review it once a year."
+          ],
+          steps: ["List the tasks AI may help with.", "List what must never be typed into AI.", "Name who reviews every AI draft before it is shared.", "Decide whether and how you say that AI helped.", "Get your leaders to agree and set a yearly review date."],
+          words: [["Ground rules", "a short list of agreed rules everyone follows."], ["Review", "reading a draft carefully and fixing it before it is shared."]],
+          slides: [
+            { title: "Why ground rules", bullets: ["Everyone knows what is allowed", "Members' trust stays protected"] },
+            { title: "Four questions to answer", bullets: ["What may we use AI for?", "What never goes into AI?", "Who reviews drafts?", "Do we say AI helped?"] },
+            { title: "Keep it simple", bullets: ["One page, plain words", "Agreed by your leaders", "Reviewed once a year"] }
+          ],
+          tryIt: "Draft your congregation's one-page \"How we use AI\" note by answering the four questions. You may ask an AI assistant to make your draft clearer, but write the rules yourself.",
+          youCanNow: "write a short set of AI ground rules for a congregation or faith-based program.",
+          quickCheck: [
+            { objective: "O2", q: "Which question does a \"How we use AI\" note answer?", options: ["How much the pastor earns", "Which members give the most", "Who reviews AI drafts before they are shared", "Which AI company is best"], answer: 2, why: "The note answers what AI is for, what never goes in, who reviews and whether you tell people." },
+            { objective: "O2", q: "Your ministry team wrote AI ground rules. What do you do next?", options: ["Keep them secret", "Make them ten pages long", "Let each volunteer change them", "Share them with your board, elders or council and review them each year"], answer: 3, why: "Leaders agree to the note, and it is reviewed once a year." }
+          ]
+        },
+        {
+          objectives: ["O3"],
+          title: "Keeping member information private",
+          minutes: 5,
+          goal: "Turn a request that has private details into a safe prompt with placeholders.",
+          text: [
+            "Members trust you with private things: prayer requests, illness, family troubles, giving amounts, addresses and phone numbers. Many AI tools may keep what you type, so treat a prompt like a postcard anyone could read.",
+            "Never type names, prayer requests, giving records, health details, children's information or contact details into an AI assistant. Use placeholders such as [member name] or [amount] and fill them in yourself afterward, in your own document.",
+            "If your organization pays for a business or education version of an AI tool, ask your administrator what its privacy settings are. Even then, keep confidential pastoral matters out."
+          ],
+          steps: ["Write what you want the AI to help with.", "Read it for names, amounts, health, family and contact details.", "Replace each one with a placeholder like [member name].", "Send the prompt, then fill in the real details yourself outside the AI tool."],
+          words: [["Placeholder", "a stand-in such as [member name] that you replace with the real detail later."], ["Confidential", "private information shared in trust that must not be passed on."]],
+          slides: [
+            { title: "Treat a prompt like a postcard", bullets: ["Assume someone else could read it", "Keep trust with your members"] },
+            { title: "Never type into AI", bullets: ["Names and contact details", "Prayer requests, health or family troubles", "Giving records and amounts", "Children's information"] },
+            { title: "Use placeholders", bullets: ["[member name], [amount], [date]", "Fill in real details yourself afterward"] }
+          ],
+          tryIt: "Take this request: \"Write a get-well card for Sister Mary Jones, who had heart surgery at County Hospital.\" Rewrite it with placeholders so no private detail goes into the AI, then send it.",
+          youCanNow: "remove private member details from a prompt and use placeholders instead.",
+          quickCheck: [
+            { objective: "O3", q: "Why treat a prompt like a postcard?", options: ["Many AI tools may keep what you type", "Postcards are shorter", "AI prints your prompt", "It makes the answer friendlier"], answer: 0, why: "Many AI tools may keep what you type, so assume someone could read it." },
+            { objective: "O3", q: "You want AI to help write a get-well card for a member in the hospital. What do you type?", options: ["The member's name and illness", "\"Write a short get-well card for [member name] from our congregation.\"", "Their hospital room and phone", "Their family's prayer request"], answer: 1, why: "Use placeholders and fill in the real details yourself afterward." }
+          ]
+        }
+      ],
+      check: {
+        title: "Knowledge Check 1: Using AI wisely in ministry",
+        questions: [
+          { objective: "O1", q: "Which task is a good fit for an AI assistant in a church office?", options: ["Drafting the weekly announcement", "Counseling a grieving member", "Deciding who receives the benevolence fund", "Answering a confidential prayer request"], answer: 0, why: "Announcements are office writing; the others need a trusted person." },
+          { objective: "O2", q: "What should a \"How we use AI\" note include?", options: ["Every member's phone number", "A list of AI company prices", "What AI may be used for and what never goes into it", "The pastor's passwords"], answer: 2, why: "Ground rules say what is allowed and what must stay out." },
+          { objective: "O3", q: "A volunteer wants to paste the prayer list into AI to \"tidy it up\". What do you say?", options: ["Go ahead, it saves time", "Only paste half of it", "Paste it but delete the chat later", "No. Prayer requests are confidential and stay out of AI"], answer: 3, why: "Prayer requests are private and must not be typed into AI tools." },
+          { objective: "O3", q: "What is a placeholder?", options: ["A seat saved in the sanctuary", "A stand-in like [member name] you fill in later", "A type of AI app", "A password"], answer: 1, why: "Placeholders let you get help without sharing private details." },
+          { objective: "O2", q: "Who should review an AI draft before it is shared with the congregation?", options: ["Nobody, AI is always right", "The AI itself", "A named person your leaders agreed on", "Any visitor"], answer: 2, why: "Your ground rules name who reviews drafts so mistakes are caught." }
+        ]
+      }
+    },
+    {
+      name: "Chapter 2: Putting AI to work for your congregation",
+      lessons: [
+        {
+          objectives: ["O4"],
+          title: "Drafting announcements and bulletins",
+          minutes: 5,
+          goal: "Use a clear prompt to draft a weekly announcement in your congregation's voice.",
+          text: [
+            "A clear prompt gets a better draft. Tell the AI what you need, a little about your congregation (no private details), and how you want it written.",
+            "For example: \"Write a warm, short announcement for our Sunday bulletin. Events: food pantry Saturday 9 am to noon, youth group Wednesday 6 pm, choir needs two more voices. Friendly, welcoming tone, under 120 words.\"",
+            "Then ask for changes: \"Make it shorter.\" \"Add a line welcoming visitors.\" \"Use simpler words.\" Check every date, time and place yourself before it goes out."
+          ],
+          steps: ["List the events with dates, times and places.", "Say the tone you want and the length.", "Ask the AI for a draft.", "Ask for one or two changes.", "Check every date, time and place against your calendar."],
+          words: [["Prompt", "what you type or say to an AI assistant to ask for something."], ["Tone", "how writing sounds: warm, formal, joyful, calm."]],
+          slides: [
+            { title: "A clear prompt has", bullets: ["What you need", "The events, dates and places", "Tone and length"] },
+            { title: "Then improve it", bullets: ["\"Make it shorter.\"", "\"Add a welcome for visitors.\"", "\"Use simpler words.\""] },
+            { title: "Before it goes out", bullets: ["Check every date and time", "Check every place and contact", "Make sure it sounds like you"] }
+          ],
+          tryIt: "Write a prompt for this week's real announcements at your congregation or program. Get a draft, ask for one change, then check every date and time against your calendar.",
+          youCanNow: "draft a congregation announcement with AI and check it before it is shared.",
+          quickCheck: [
+            { objective: "O4", q: "What three things does a clear announcement prompt tell the AI?", options: ["Members' names, phones and addresses", "Only the word \"announcement\"", "What you need, a little about your congregation, and how you want it written", "Your password and login"], answer: 2, why: "Tell the AI what you need, about your congregation (no private details) and how it should be written." },
+            { objective: "O4", q: "The draft is good but too long for the bulletin. What do you ask?", options: ["\"Add more events.\"", "\"Use harder words.\"", "\"Write it in a new language.\"", "\"Make it shorter.\""], answer: 3, why: "Ask for changes like \"Make it shorter\" until it fits." }
+          ]
+        },
+        {
+          objectives: ["O5"],
+          title: "Planning volunteer schedules and events",
+          minutes: 5,
+          goal: "Use AI to build a volunteer schedule with roles and placeholders, not names.",
+          text: [
+            "Ushers, greeters, nursery helpers, food pantry teams and drivers all need schedules. AI can turn a list of roles and dates into a clear table in seconds.",
+            "Give it roles, dates and how many people each role needs, and use [Volunteer 1], [Volunteer 2] instead of real names. Then copy the table into your own document or spreadsheet and add names there.",
+            "AI can also make event checklists, for example for a revival, a fundraising dinner or a community health fair: what to do six weeks, two weeks and one day before."
+          ],
+          steps: ["List the roles and how many people each needs.", "List the dates.", "Ask the AI for a table using [Volunteer 1], [Volunteer 2] placeholders.", "Copy it into your own document and add real names there.", "Ask for an event checklist if you are planning an event."],
+          words: [["Table", "information set out in rows and columns."], ["Checklist", "a list of tasks you tick off as they are done."]],
+          slides: [
+            { title: "AI can build", bullets: ["Volunteer schedules as tables", "Event checklists by week", "Reminder messages for volunteers"] },
+            { title: "Keep names out", bullets: ["Use [Volunteer 1], [Volunteer 2]", "Add real names in your own file"] },
+            { title: "Event checklist", bullets: ["Six weeks before", "Two weeks before", "The day before and the day of"] }
+          ],
+          tryIt: "Ask an AI assistant for a four-week schedule for three roles (for example greeter, usher, nursery) with two people each, using placeholders. Copy it into your own document.",
+          youCanNow: "make a volunteer schedule and event checklist with AI while keeping names private.",
+          quickCheck: [
+            { objective: "O5", q: "What do you give AI to build a volunteer schedule?", options: ["Roles, dates and how many people each role needs", "Every volunteer's phone number", "Members' giving records", "Only the church's address"], answer: 0, why: "Give roles, dates and numbers needed, with placeholders instead of names." },
+            { objective: "O5", q: "You are planning a fundraising dinner. What can AI make for you?", options: ["The final guest list with names", "A checklist of what to do six weeks, two weeks and one day before", "Donors' gift amounts", "Decisions about who serves"], answer: 1, why: "AI can make event checklists by time before the event." }
+          ]
+        },
+        {
+          objectives: ["O6"],
+          title: "Checking drafts for faith, accuracy and tone",
+          minutes: 5,
+          goal: "Review an AI draft and fix anything that does not fit your tradition, facts or voice.",
+          text: [
+            "AI can make mistakes. It may quote a scripture wrongly, use words from a different tradition, get a holy day wrong, or sound stiff. It can also make up facts that sound true.",
+            "Read every draft for three things: faith (does it fit our beliefs and words?), accuracy (are quotes, dates and facts right?), and tone (does it sound like us and treat everyone with respect?). Check scripture and teachings in your own sacred texts, not in the AI.",
+            "If your organization is a tax-exempt charity, AI drafts should not endorse or oppose political candidates. The IRS explains the rules for churches and religious organizations in Publication 1828; ask your leaders or an advisor if you are unsure."
+          ],
+          steps: ["Read for faith: does it match our beliefs and words?", "Check every quote, scripture and date in your own sources.", "Read it out loud for tone.", "Fix what is wrong, and note what you changed.", "Have the agreed reviewer approve it."],
+          words: [["Hallucination", "when an AI writes something that sounds true but is made up."], ["Tax-exempt", "an organization the IRS recognizes as not paying federal income tax, with rules it must follow."]],
+          sources: [{ name: "IRS Publication 1828, Tax Guide for Churches and Religious Organizations", url: "https://www.irs.gov/pub/irs-pdf/p1828.pdf" }],
+          slides: [
+            { title: "AI can get faith wrong", bullets: ["Misquoted scripture", "Words from another tradition", "Wrong holy days or made-up facts"] },
+            { title: "Three checks", bullets: ["Faith: fits our beliefs", "Accuracy: quotes, dates, facts", "Tone: sounds like us, respectful"] },
+            { title: "Stay within the rules", bullets: ["No endorsing political candidates", "See IRS Publication 1828", "Ask your leaders when unsure"] }
+          ],
+          tryIt: "Final task: draft your \"How we use AI\" note, then use AI to draft this week's announcement and a volunteer schedule with placeholders. Review both for faith, accuracy and tone, and mark what you changed.",
+          youCanNow: "review AI drafts for faith, accuracy and tone before they reach your congregation.",
+          quickCheck: [
+            { objective: "O6", q: "What are the three review checks in this course?", options: ["Length, font and color", "Price, date and place", "Faith, accuracy and tone", "Spelling, grammar and speed"], answer: 2, why: "Read every draft for faith, accuracy and tone." },
+            { objective: "O6", q: "The AI draft gets the date of a holy day wrong. What do you do?", options: ["Leave it; AI knows dates", "Ask AI if it is sure", "Remove the holy day from the calendar", "Check it against your own tradition's calendar and fix it"], answer: 3, why: "AI may get a holy day wrong, so check and fix it yourself." }
+          ]
+        }
+      ],
+      check: {
+        title: "Knowledge Check 2: Putting AI to work for your congregation",
+        questions: [
+          { objective: "O4", q: "Which prompt will give the best bulletin draft?", options: ["\"Write a warm 100-word announcement: food pantry Sat 9-12, youth Wed 6 pm, choir needs voices.\"", "\"bulletin\"", "\"church stuff\"", "\"write everything\""], answer: 0, why: "It gives the events, tone and length." },
+          { objective: "O5", q: "How should names appear in an AI-made volunteer schedule?", options: ["As placeholders like [Volunteer 1]", "Full names and phone numbers", "Only first names and addresses", "Names with email addresses"], answer: 0, why: "Placeholders keep volunteers' details out of the AI tool." },
+          { objective: "O6", q: "The AI quoted a scripture in your announcement. What do you do?", options: ["Trust it", "Ask the AI if it is sure", "Check the quote in your own sacred text", "Delete the whole announcement"], answer: 2, why: "AI can misquote; check your own sources." },
+          { objective: "O6", q: "Which is one of the three review checks in this course?", options: ["Speed", "Tone", "Price", "Font size"], answer: 1, why: "Faith, accuracy and tone are the three checks." },
+          { objective: "O6", q: "Where can a church learn the IRS rules for religious organizations?", options: ["A social media post", "The AI assistant alone", "A random blog", "IRS Publication 1828"], answer: 3, why: "Publication 1828 is the IRS tax guide for churches and religious organizations." }
+        ]
+      }
+    }
+  ],
+  quiz: {
+    title: "Final Quiz: AI for Faith-Based Organizations",
+    questions: [
+      { objective: "O1", q: "Which task should stay with people, not AI?", options: ["Drafting an event checklist", "Counseling a member in crisis", "Writing a newsletter draft", "Making a volunteer table"], answer: 1, why: "Pastoral care needs a trusted person." },
+      { objective: "O1", q: "AI is most helpful in ministry for:", options: ["Office writing and planning", "Hearing confessions", "Deciding who receives help", "Keeping prayer secrets"], answer: 0, why: "AI drafts words and plans; people handle care and decisions." },
+      { objective: "O1", q: "A good rule of thumb is:", options: ["AI decides, people follow", "AI handles everything", "Never read AI drafts", "AI helps with words and plans; people handle hearts and decisions"], answer: 3, why: "That keeps care and judgment with people." },
+      { objective: "O2", q: "How long should a \"How we use AI\" note be?", options: ["Fifty pages", "One word", "About one page in plain words", "As long as the AI wants"], answer: 2, why: "Short and plain means people will read and follow it." },
+      { objective: "O2", q: "Who should agree to the AI ground rules?", options: ["Only the AI company", "One visitor", "Your board, elders or ministry council", "Nobody"], answer: 2, why: "Leaders agreeing gives the rules authority." },
+      { objective: "O2", q: "How often should you review your AI ground rules?", options: ["About once a year", "Never", "Every hour", "Only if the AI asks"], answer: 0, why: "Tools change, so a yearly review keeps rules current." },
+      { objective: "O3", q: "Which should NEVER be typed into an AI assistant?", options: ["\"Make it shorter\"", "A list of event dates", "\"Use a warm tone\"", "A member's prayer request with their name"], answer: 3, why: "Prayer requests and names are confidential." },
+      { objective: "O3", q: "Why treat a prompt like a postcard?", options: ["Postcards are short", "Someone else could read what you type", "AI only reads postcards", "It is faster"], answer: 1, why: "AI tools may keep what you type." },
+      { objective: "O3", q: "You need a thank-you note for a donor's gift. How do you prompt safely?", options: ["Include their name and the amount", "Use [donor name] and [amount] and fill them in yourself", "Paste the giving record", "Include their address"], answer: 1, why: "Placeholders keep giving records private." },
+      { objective: "O3", q: "Your church pays for a business AI plan. Should you type confidential pastoral matters into it?", options: ["Yes, it is paid", "Only on Sundays", "Only if it is short", "No, keep confidential pastoral matters out"], answer: 3, why: "Confidential care stays out of AI even on paid plans." },
+      { objective: "O4", q: "A clear announcement prompt includes:", options: ["Events, dates, tone and length", "Only the word \"announcement\"", "Members' phone numbers", "The pastor's password"], answer: 0, why: "Those details let AI write a useful draft." },
+      { objective: "O4", q: "After getting a draft, which follow-up is useful?", options: ["\"Here is our member list.\"", "\"Decide our budget.\"", "\"Add a line welcoming visitors.\"", "\"Send it to everyone now.\""], answer: 2, why: "It asks for a clear improvement." },
+      { objective: "O4", q: "Before an announcement goes out you must:", options: ["Add more AI text", "Remove all dates", "Skip reading it", "Check every date, time and place"], answer: 3, why: "AI can get facts wrong." },
+      { objective: "O5", q: "Where do you add real volunteer names?", options: ["In the AI prompt", "In your own document after copying the table", "In a public post", "Nowhere"], answer: 1, why: "Names stay in your own files, not the AI tool." },
+      { objective: "O5", q: "An event checklist usually lists tasks:", options: ["By member income", "In random order", "By time before the event, such as six weeks and two weeks", "Only after the event"], answer: 2, why: "Working back from the date keeps planning on track." },
+      { objective: "O6", q: "AI uses words from a different faith tradition in your draft. You should:", options: ["Fix it so it fits your tradition", "Leave it", "Ask members to vote", "Post it anyway"], answer: 0, why: "The faith check makes sure it fits your beliefs and words." },
+      { objective: "O6", q: "What is a hallucination in AI?", options: ["Something the AI writes that sounds true but is made up", "A vision during prayer", "A slow internet connection", "A type of app"], answer: 0, why: "AI can invent facts that sound real." },
+      { objective: "O6", q: "Reading a draft out loud helps you check:", options: ["The internet speed", "The AI's price", "Tone", "The weather"], answer: 2, why: "Hearing it shows whether it sounds like you." },
+      { objective: "O6", q: "An AI draft for a tax-exempt church endorses a political candidate. You should:", options: ["Publish it", "Remove it and check IRS Publication 1828 or ask your leaders", "Add a second candidate", "Ignore it"], answer: 1, why: "Tax-exempt charities have IRS rules about political campaigns." },
+      { objective: "O6", q: "Who gives final approval before an AI draft is shared?", options: ["The AI", "Whoever is nearest", "No one", "The reviewer your leaders agreed on"], answer: 3, why: "A named reviewer catches mistakes and keeps trust." }
+    ]
+  },
+  // ---- ADDIE: Evaluation ----
+  pretest: {
+    title: "Pre-Test: What Do You Already Know?",
+    from: [
+      0,
+      3,
+      6,
+      10,
+      13,
+      15
+    ]
+  },
+  rubric: {
+    mastery: "Meets or Exceeds on every row. If a row is Not yet, fix that part and try again.",
+    criteria: [
+      {
+        name: "\"How we use AI\" note",
+        objective: "O2",
+        notYet: "The note misses what must never go into AI, or who reviews.",
+        meets: "One page in plain words that answers all four questions.",
+        exceeds: "Lists the leaders who will agree to it and a yearly review date."
+      },
+      {
+        name: "Clear announcement",
+        objective: "O4",
+        notYet: "A date, time or place is wrong or missing.",
+        meets: "This week's announcement drafted from a clear prompt, every detail checked.",
+        exceeds: "Warm and welcoming, and sounds like the congregation."
+      },
+      {
+        name: "Private volunteer schedule",
+        objective: "O5",
+        notYet: "Real names or contact details went into the AI.",
+        meets: "Schedule with roles, dates and placeholders; names added in your own document.",
+        exceeds: "Also includes an event checklist by time before the event."
+      },
+      {
+        name: "Faith, accuracy and tone review",
+        objective: "O6",
+        notYet: "A wrong quote, date or word from another tradition is left in.",
+        meets: "Both drafts checked for faith, accuracy and tone, and changes are marked.",
+        exceeds: "Scripture checked in your own sacred text, with the reference noted."
+      },
+      {
+        name: "Member privacy",
+        objective: "O3",
+        notYet: "Any prayer request, giving record or member detail was typed into AI.",
+        meets: "Only placeholders were used in every prompt.",
+        exceeds: "Can show the safe prompt next to the original request."
+      }
+    ]
+  },
+  evaluation: {
+    results: [
+      "Learners who finish the course and pass the final task (rubric)",
+      "Congregations whose leaders adopt a \"How we use AI\" note within 60 days (follow-up survey)",
+      "Office hours saved each week on announcements and schedules, as reported by staff",
+      "Learners who start another Koach Learn nonprofit course within 30 days"
+    ]
+  },
+  // ---- ADDIE: Implementation ----
+  implementation: {
+    materials: [
+      "A phone or computer with internet",
+      "A free AI assistant: ChatGPT, Microsoft Copilot or Google Gemini",
+      "This week's event details and a list of volunteer roles, with no names",
+      "About 60 minutes in total: lessons, practice, checks and the final task"
+    ],
+    facilitatorNotes: [
+      "Hold the session with a pastor, imam, rabbi or ministry leader present, so the ground rules can be agreed on together.",
+      "Never use real prayer requests, giving records or member details in practice; use placeholders.",
+      "Bring your own sacred text so learners can check any scripture the AI quotes.",
+      "Remind tax-exempt congregations about the rules on political activity in IRS Publication 1828.",
+      "Score the final task with the rubric, and give feedback on one Not yet row at a time."
+    ]
+  }
+};
