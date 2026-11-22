@@ -15,7 +15,7 @@ const OUT = path.resolve(__dirname, "..", "output", "koachlearn");
 const UP = path.join(OUT, ".upload");
 const FILES = path.join(UP, "files");
 // dashboard category ids (read from www.dashboard.koachlearn.com/dashboard/admin/categories, 29 October 2026)
-const CATEGORY_IDS = { "Artificial Intelligence": 5, "Seniors and Technology": 9, "Athletes": 10, "Leadership Development": 11, "Non Profits": 12, "Entrepreneurs": 13, "Re-Entry": 14, "Workforce Development": 15, "Youth": 16, "Veterans (military)": 17, "Undeserved Community": 23, "Small Business": 43, "Agriculture (Africa)": 46 };
+const CATEGORY_IDS = { "Artificial Intelligence": 5, "Seniors and Technology": 9, "Athletes": 10, "Leadership Development": 11, "Non Profits": 12, "Entrepreneurs": 13, "Re-Entry": 14, "Workforce Development": 15, "Youth": 16, "Veterans (military)": 17, "Undeserved Community": 23, "Small Business": 43, "Agriculture (Africa)": 46, "Africa: Life and Work": 47 }; // 47 created 21 Nov 2026
 const LIMIT = (Number((process.argv.find(a => a.startsWith("--mb=")) || "--mb=5").slice(5))) * 1024 * 1024;
 const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
