@@ -24,7 +24,7 @@ test("a sentence that closes something never opens a workspace, even when it men
   const start = app.indexOf("function genesisWorkspaceActionFromFinalTranscript(");
   const end = app.indexOf("\nasync function executeGenesisWorkspaceFromFinalTranscript(", start);
   assert.ok(start > 0 && end > start);
-  const sandbox = { window: { KyroDismissCommands, KyroIntakeForms: undefined }, nexusReminderCalendarParseSchedule: () => ({ scheduleText: "" }) };
+  const sandbox = { window: { KyroDismissCommands, KyroIntakeForms: undefined }, nexusReminderCalendarParseSchedule: () => ({ scheduleText: "" }), kyroTutorOwns: () => false };
   vm.createContext(sandbox);
   vm.runInContext(app.slice(start, end) + "\nthis.run = genesisWorkspaceActionFromFinalTranscript;", sandbox);
   for (const text of ["Close out the weather information.", "close the weather card", "dismiss the weather", "hide the weather card", "close the map", "go back to the orb", "I'm done", "that's all"]) {

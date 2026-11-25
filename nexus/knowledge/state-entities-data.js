@@ -60,7 +60,7 @@ module.exports = Object.freeze({
       "name": "Alabama",
       "agency": "Alabama Secretary of State, Business Entities Division",
       "agencyUrl": "https://www.sos.alabama.gov/business-entities",
-      "onlineFilingUrl": "https://www.alabamainteractive.org",
+      "onlineFilingUrl": "https://www.sos.alabama.gov/business-entities",
       "llc": {
         "formationDocument": "Certificate of Formation (Domestic Limited Liability Company); a Certificate of Name Reservation must be attached",
         "filingFee": 200,
@@ -1299,8 +1299,8 @@ module.exports = Object.freeze({
       "registeredAgentNote": "Every Maryland LLC and corporation must name a resident agent with a Maryland street address (no P.O. boxes); a corporation cannot act as its own resident agent, and the agent must consent in writing.",
       "businessLicenseNote": "Maryland Business Express walks new businesses through registering, applying for tax accounts and insurance, and researching and obtaining licenses and permits. https://businessexpress.maryland.gov/",
       "stateTaxRegistration": {
-        "agency": "Comptroller of Maryland - Combined Registration Application (sales and use tax, employer withholding)",
-        "url": "https://www.marylandcomptroller.gov/content/dam/mdcomp/tax/forms/2023/CRA.pdf"
+        "agency": "Maryland Business Express - taxes and insurance (sales and use tax, employer withholding registration)",
+        "url": "https://businessexpress.maryland.gov/start/taxes-and-insurance"
       },
       "smallBusinessHelp": {
         "name": "Maryland Small Business Development Center (SBDC) Network, funded in part by the U.S. SBA",

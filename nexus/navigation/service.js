@@ -119,7 +119,9 @@ function createNavigationService({ env = process.env, fetchImpl = globalThis.fet
     // across that boundary instead of erroring.
     if (origin) url.searchParams.set("viewbox", [clampLng(origin.lng - 1), clampLat(origin.lat + 1), clampLng(origin.lng + 1), clampLat(origin.lat - 1)].map(value => value.toFixed(4)).join(","));
     const payload = await getJson(url.toString());
-    const places = (Array.isArray(payload) ? payload : []).filter(item => Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lon)))
+    // With no position to prefer, a named city, town, state or country is the most important one with that name ("Cairo" is Egypt's, not an Illinois village; see place-rank.js)
+    const found = (Array.isArray(payload) ? payload : []).filter(item => Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lon)));
+    const places = (origin ? found : require("./place-rank.js").rankPlaces(found))
       .map(item => ({ label: label(item), lat: Number(item.lat), lng: Number(item.lon), distanceMeters: origin ? Math.round(haversine([origin.lng, origin.lat], [Number(item.lon), Number(item.lat)])) : null }));
     if (origin) places.sort((a, b) => a.distanceMeters - b.distanceMeters);
     const result = places.slice(0, 3);

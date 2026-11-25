@@ -35,22 +35,22 @@ module.exports = [
   { id: "health-pharmacy", area: "health", say: "Find a pharmacy near Stockton.", timeoutMs: 50000, expect: { screen: "places", text: "PHARMAC" } },
   { id: "health-clinic", area: "health", say: "Find a clinic near Kisumu.", timeoutMs: 50000, expect: { screen: ["places", "text"], text: "clinic|hospital|health" } },
   { id: "health-readings", area: "health", say: "Show my blood pressure readings.", timeoutMs: 40000, expect: { screen: "text", text: "reading|blood pressure" } },
-  { id: "health-provider-summary", area: "health", say: "Prepare a provider summary of my readings.", timeoutMs: 45000, expect: { screen: "text", text: "readings", notText: "Persisted|Condition Focus|cardiometabolic" } },
+  { id: "health-provider-summary", area: "health", needs: "account", say: "Prepare a provider summary of my readings.", timeoutMs: 45000, expect: { screen: "text", text: "readings", notText: "Persisted|Condition Focus|cardiometabolic" } },
   { id: "health-emergency-number", area: "health", say: "What is the emergency number?", timeoutMs: 40000, expect: { model: true, said: "emergency|112|999|911" } },
   { id: "health-blood-sugar-asks-consent", area: "health", say: "Open health.", expect: { screen: "app", app: "health" },
     then: [{ type: { selector: "input[name=sugar]", value: "6.4" } }, { tap: "^Record$", nth: 1 }, { expect: { text: "consent|yes", buttons: ["^Yes", "^No"] }, timeoutMs: 40000 }, { tap: "^No" }, { expect: { text: "did not proceed" } }] },
   { id: "health-low-button", area: "health", say: "Open health.", expect: { screen: "app", app: "health" }, then: [{ tap: "^I am feeling low" }, { expect: { text: "sorry|feel" }, timeoutMs: 40000 }] },
   { id: "jobs-near-me", area: "work", say: "Find jobs near me.", timeoutMs: 60000, expect: { screen: "list", links: 1, keep: true } },
 
-  { id: "resume-open-list", area: "forms", say: "Open my resume.", expect: { screen: ["list", "text"], text: "R[ÉE]SUM[ÉE]S|r[ée]sum[ée]s, newest first", keep: true } },
-  { id: "resume-open-and-tap", area: "forms", say: "Open my resume.", expect: { screen: "list", text: "R[ÉE]SUM[ÉE]S" }, then: [{ tap: "^R[eé]sum[eé] - |^Resume - " }, { expect: { screen: "document", download: true }, timeoutMs: 30000 }] },
+  { id: "resume-open-list", area: "forms", needs: "account", say: "Open my resume.", expect: { screen: ["list", "text"], text: "R[ÉE]SUM[ÉE]S|r[ée]sum[ée]s, newest first", keep: true } },
+  { id: "resume-open-and-tap", area: "forms", needs: "account", say: "Open my resume.", expect: { screen: "list", text: "R[ÉE]SUM[ÉE]S" }, then: [{ tap: "^R[eé]sum[eé] - |^Resume - " }, { expect: { screen: "document", download: true }, timeoutMs: 30000 }] },
   { id: "resume-build-starts-and-cancels", area: "forms", say: "Build my resume.", timeoutMs: 40000, expect: { intake: "Question 1 of" }, then: [{ say: "Cancel." }, { expect: { intake: false }, timeoutMs: 25000 }] },
   { id: "resume-mishearing", area: "forms", say: "Builds my resume.", timeoutMs: 40000, expect: { intake: "Question 1 of" }, then: [{ say: "Cancel." }, { expect: { intake: false }, timeoutMs: 25000 }] },
   { id: "telehealth-starts-and-closes", area: "forms", say: "Start a telehealth request.", timeoutMs: 40000, expect: { intake: "Question 1 of" }, then: [{ say: "Close the screen." }, { expect: { intake: false }, timeoutMs: 25000 }] },
   { id: "sale-starts-and-cancels", area: "forms", say: "I want to sell 50 bags of maize.", timeoutMs: 40000, expect: { intake: true }, then: [{ say: "Cancel." }, { expect: { intake: false }, timeoutMs: 25000 }] },
 
-  { id: "close-the-screen", area: "control", say: "Open documents.", expect: { screen: "list" }, then: [{ say: "Close the screen." }, { expect: { orb: true }, timeoutMs: 25000 }] },
-  { id: "close-it", area: "control", say: "Show my checklists.", expect: { screen: "checklists" }, then: [{ say: "Close it." }, { expect: { orb: true }, timeoutMs: 25000 }] },
+  { id: "close-the-screen", area: "control", needs: "account", say: "Open documents.", expect: { screen: "list" }, then: [{ say: "Close the screen." }, { expect: { orb: true }, timeoutMs: 25000 }] },
+  { id: "close-it", area: "control", needs: "account", say: "Show my checklists.", expect: { screen: "checklists" }, then: [{ say: "Close it." }, { expect: { orb: true }, timeoutMs: 25000 }] },
   { id: "hello", area: "control", say: "Hello.", expect: { model: true, orb: true } },
 
   // emergencies and self-harm words: skipped unless --risky (they are answered with emergency numbers and may offer to alert the person's trusted circle)

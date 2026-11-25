@@ -68,7 +68,14 @@ const { courseRequest } = require("../../public/kyro-koachlearn-courses.js");
 const { findKoachLearnCourses, koachLearnAnswer } = require("../knowledge/koachlearn-courses.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 const { handoutRequest, handoutTemplate } = require("../knowledge/handout-templates.js");
+const { contractReviewPlan } = require("../documents/contract-check.js");
+const handoutWording = require("../knowledge/handout-wording.js");
+const { designFor, needsWording } = handoutWording;
+const { designKind } = require("../../server/providers/design-render.js");
+const documentPictures = require("../documents/pictures.js");
 const { scheduleRequest, scheduleTemplate } = require("../knowledge/schedule-templates.js");
+const tutorMode = require("../tutor/tutor.js");
+const sharedTutorSessions = tutorMode.createTutorSessions();
 // how a starter document is named when it is spoken back (the title in lower case, except where that reads wrongly)
 // "What should I pack for Kenya?", "Kyro, what do I pack for a week in Tokyo": only "pack" (not "bring" or "take", which can be about medicine or anything else).
 const PACK_QUESTION = /^\s*(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:(?:can|could|would|will) you\s+)?(?:tell me\s+)?what\s+(?:should|do|can|must)\s+(?:i|we)\s+pack\b/i;
@@ -92,9 +99,56 @@ const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, tutorSessions = sharedTutorSessions, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, tutorSessions, maxRepairAttempts });
+  }
+
+  // Tutor mode (see tutor/tutor.js): "Teach me fractions", "Help me with my homework", "Quiz me on world capitals", "Be my tutor". A session is kept for each person; while one is open, what they say next is their answer or their next
+  // question, taught one small step at a time by the AI model inside the tutor's rules, until they say stop or 45 quiet minutes pass. `starting: false` (early, after the safety readers) only carries on or ends a session that is open, so a
+  // short answer such as "7" or "yes" is not taken by the health readings or the reminders; `starting: true` (late, after the checked guides) is what opens one, so "teach me about the GI Bill" still gets its guide.
+  async tutorTurn({ command, context }, { starting }) {
+    if (context?.deterministicOnly === true || typeof this.model?.respond !== "function") return null;
+    const tenantId = command?.tenantId; const userId = command?.actorId;
+    const said = String(command?.spokenText || command?.text || "").trim();
+    if (!tenantId || !userId || !said || said.length > 600) return null;
+    let session = this.tutorSessions.get(tenantId, userId);
+    let first = false;
+    const plan = (response, extra = {}) => Object.freeze({ goal: said, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false, planningAttempts: 0, ...extra });
+    // The app says no lesson is on its screen (the card was closed, the page was reloaded, or the "stop" never arrived): the lesson is over, and what is said now is NOT a lesson answer. Without this a lesson the server still held
+    // open took every later sentence that was not an obvious command ("Does a church have to file a Form 990?" was taught as a lesson turn), for up to 45 minutes: found in the owner's test report of 4 November 2026.
+    if (session && !starting && context?.tutorLessonOpen === false && !tutorMode.isStop(said)) { this.tutorSessions.end(tenantId, userId); return null; }
+    if (session && !starting) {
+      if (tutorMode.isStop(said)) {
+        this.tutorSessions.end(tenantId, userId);
+        return plan(tutorMode.endLine(session), { tutor: Object.freeze({ active: false, subject: session.subject, kind: session.kind, turn: session.count }) });
+      }
+      const restart = tutorMode.tutorRequest(said);
+      // ("teach me more" goes on with the lesson; any other request names a new subject and starts over)
+      if (restart && restart.kind !== "continue") { session = this.tutorSessions.start(tenantId, userId, restart); first = true; }
+      else if (!restart && tutorMode.isOtherCommand(said)) return null;
+    } else if (!session && starting) {
+      const request = tutorMode.tutorRequest(said);
+      if (!request || request.kind === "continue") return null;
+      session = this.tutorSessions.start(tenantId, userId, request);
+      first = true;
+    } else return null;
+    if (!session) return null;
+    const profile = createInteractionProfile({ locale: command.locale, userPreferences: context?.userPreferences || {}, channel: command.channel });
+    const answer = await this.model.respond({ goal: tutorMode.tutorGoal({ session, said, first }), locale: command.locale, tenantId, maxOutputTokens: 520, interactionProfile: profile,
+      conversationHistory: session.turns.map(turn => ({ role: turn.role, content: turn.content })), memories: [], capabilities: [] }).catch(() => null);
+    // The model ends a step with "SHOW: picture=...; video=..." (what to search for to go with it): that line is taken off here, so it is never recorded, shown or spoken, and only the cleaned, capped searches go on (see tutor.js).
+    const shown = typeof answer === "string" ? tutorMode.splitShowLine(answer) : null;
+    const reply = shown ? shown.text : "";
+    if (!reply) {
+      // the first turn failed: there is no session to keep, and the usual route may still answer; a later turn keeps the session and asks to be said again
+      if (first) { this.tutorSessions.end(tenantId, userId); return null; }
+      return plan(tutorMode.failedLine(session.lang), { tutor: Object.freeze({ active: true, subject: session.subject, kind: session.kind, turn: session.count, step: session.count }) });
+    }
+    this.tutorSessions.record(session, said, reply);
+    const media = tutorMode.chooseMedia(shown, session, { said, turn: session.count });
+    const opening = first && ["en", "sw"].includes(session.lang) ? `${tutorMode.introLine(session.lang)}\n\n` : "";
+    return plan(`${opening}${reply}`, { modelAnswered: true, tutor: Object.freeze({ active: true, subject: session.subject, kind: session.kind, turn: session.count, step: session.count, ...(media ? { media: Object.freeze(media) } : {}) }) });
   }
 
   // A planned document whose body is only an instruction to write it (see echoesInstruction) is written out by one more model call; if that fails, the plan is kept as it was.
@@ -111,6 +165,16 @@ class OpenEndedPlanner {
       written.push(body.length >= 20 && !echoesInstruction(body, command?.text) ? { ...step, input: { ...step.input, content: body.slice(0, 4000) } } : step);
     }
     return { ...plan, steps: written };
+  }
+
+  // A flyer, newsletter, invitation... whose details the person gave in their request, with those facts (and only those) put in the right places by one tool-less model call; null (so the fixed layout is used) when the call fails or returns nothing usable.
+  async wordedHandout(handout, command, profile, saidWithoutPictures = "") {
+    if (typeof this.model?.respond !== "function") return null;
+    const said = String(saidWithoutPictures || command.spokenText || command.text || "");
+    const reply = await this.model.respond({ goal: handoutWording.wordingGoal(handout, said), instructions: handoutWording.wordingInstructions(handout.kind), maxOutputTokens: 400,
+      interactionProfile: profile, tenantId: command.tenantId, conversationHistory: [], memories: [], capabilities: [] }).catch(() => null);
+    const facts = handoutWording.validateWording(reply, said);
+    return facts ? handoutWording.composeFromFacts(handout, facts) : null;
   }
 
   // The no-workspace answer for a business/nonprofit request, or null when the person has a workspace (or this cannot be told: then the request goes on as before and the executor's own check still applies).
@@ -408,6 +472,9 @@ class OpenEndedPlanner {
     // command route and the spoken tool route already did; the typed route left it to the AI model, which was the only route where the number depended on the model getting it right.
     const emergencyNumber = safetyTexts.map(said => emergencyNumberAnswer(said, { country: context?.country })).find(Boolean);
     if (emergencyNumber) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: emergencyNumber, sourceRequired: false, planningAttempts: 0 });
+    // A tutoring session that is open takes what the person says next (their answer, their question, or "stop"), before the readers that would take a short answer such as "7" for a reading or "yes" for a confirmation.
+    const tutoring = await this.tutorTurn({ command, context }, { starting: false });
+    if (tutoring) return tutoring;
     // "Show my blood pressure readings", "delete my last reading", "that was wrong, it was 133/78", "delete all my health records", "who can see my health information": readings saved through the planner live in the
     // record store, so they are shown, deleted and corrected here, by the same conversation the older routes use for the readings kept there (see health/store-readings.js). It asks before every change and says plainly
     // when the store cannot be read. The spoken path (deterministicOnly) leaves this to its own route, which sees both kinds of reading together.
@@ -444,6 +511,10 @@ class OpenEndedPlanner {
       // A toolkit that asks a long, step-by-step question (the digital health check, a checklist, a lesson) says so, and the page then shows and speaks it whole instead of cutting it to one sentence.
       let longForm = false;
       const work = await turn({ text: command.text, store: toolkit.store, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone, roles: context?.roles || [], memory: this.memory, notifications: toolkit.notifications, nameOf: toolkit.nameOf, country: context?.country || "", onLongForm: () => { longForm = true; } });
+      // "What follow-ups do I have" from a person with a business workspace: the older buyer book says "none open" when the follow-up days were set on the workspace's own people ("follow up with Amina on Friday" is
+      // set there), so that empty answer is not the end: the workspace answers (found in the owner's test report of 4 November 2026, business-08).
+      if (toolkit === this.farmWork && typeof work === "string" && /^You have no follow-ups open\.$/.test(work.trim()) && businessVoiceDispatch.classify(command.text) === "listFollowUps"
+        && typeof this.businessWorkspaces?.count === "function" && (await this.businessWorkspaces.count(context).catch(() => null)) > 0) continue;
       const goal = String(command.text || "").trim();
       // Spoken (no tool steps possible): say the report itself, a screenful at a time, and say where the file can be made.
       if (work?.report && context?.deterministicOnly === true) {
@@ -885,6 +956,9 @@ class OpenEndedPlanner {
     }
     // "What should I pack for Kenya?": a short packing list, answered directly in one model call and shown as a card. The general planner took two or three calls (about 20 seconds) and on some tries saved a document for a question
     // or answered aloud with nothing on the screen (found by running the sweep of spoken requests against the live site on 27 October 2026). The card is drawn by the page (kyroShowResultScreen).
+    // "Teach me fractions", "Help me with my homework", "Quiz me on world capitals", "Be my tutor": a tutoring session opens here, after the checked guides and the practice lessons have had their say.
+    const tutorStarted = await this.tutorTurn({ command, context }, { starting: true });
+    if (tutorStarted) return tutorStarted;
     if (PACK_QUESTION.test(String(command.text || "")) && typeof this.model.respond === "function") {
       const answer = await this.model.respond({ goal: `${command.spokenText || command.text}\n\nAnswer with a short packing list: one item per line, each line starting with "- ", at most 15 lines, then one last line suggesting they check the weather and any rules for where they are going. If they did not say where or for how long, make it a general list.`,
         locale, tenantId: command.tenantId, maxOutputTokens: 500,
@@ -971,7 +1045,14 @@ class OpenEndedPlanner {
     const completeBusiness = completeBusinessPlan(command.text, catalog);
     // "Make me a flyer for my bake sale on Saturday" from a person with no business workspace: the workspace's own flyer, newsletter and email drafts need one, but a flyer is a document anyone can ask for, so it goes on to be written as one (found by the sweep on 27 October 2026: it said to start a workspace first).
     const marketingWithoutWorkspace = completeBusiness && businessVoiceDispatch.classify(command.text) === "generateMarketing" && Boolean(await this.noBusinessWorkspaceAnswer(command.text, context));
-    if (completeBusiness && !marketingWithoutWorkspace) {
+    // The same asked by a person who HAS a workspace (found by the owner's test report of 4 November 2026: "nothing opened or was made available to download", "only as a text file", "could not build a PDF"): the workspace's marketing kit asks "Should I go
+    // ahead?", then only says "Open Business services to review and download them", and what it makes there is Markdown and HTML, never a Word or PDF file and never a document on the screen. A flyer, newsletter, poster, brochure, handout, invitation or promotional email
+    // is a document anyone can ask for, so it is made as one for the owner too (the fixed layout below, in the file type asked for). The kit is still reached by "generate marketing materials".
+    // "... with a picture of fresh bread", "... with my logo", "... using the photo I uploaded": the picture words are taken out of the sentence (so they are not read as part of the subject) and kept as what pictures to put in
+    // (nexus/documents/pictures.js); the pictures are found, checked and added when the document is made.
+    const pictureAsk = documentPictures.extractPictureRequest(command.text);
+    const handoutForOwner = Boolean(completeBusiness) && !marketingWithoutWorkspace && businessVoiceDispatch.classify(command.text) === "generateMarketing" && Boolean(handoutRequest(pictureAsk.text));
+    if (completeBusiness && !marketingWithoutWorkspace && !handoutForOwner) {
       // Found by the phrase sweep: a person with no business workspace was asked "Should I go ahead?" and only after the yes told there is none. Say it first, with no model and before any confirmation.
       const noWorkspace = await this.noBusinessWorkspaceAnswer(command.text, context);
       if (noWorkspace) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: noWorkspace, sourceRequired: false, planningAttempts: 0 });
@@ -986,6 +1067,10 @@ class OpenEndedPlanner {
     // never receives, so it must run first and own this phrasing outright.
     const completeSaveConversation = completeSaveConversationPlan(command.text, catalog, conversationHistory);
     if (completeSaveConversation) return Object.freeze({ ...completeSaveConversation, planningAttempts: 1 });
+    // "Check my contract", "Review this lease", "Is my agreement okay?": Kyro reads the contract the person pasted, uploaded or saved and says what it says about the money, the length and how to end it, and what to look at closely.
+    // It is a checklist found by the contract's own words, not legal advice, and it says so (see documents/contract-check.js). Read only: nothing is sent, saved or changed.
+    const contractReview = await contractReviewPlan({ documents: this.documents, text: command.spokenText || command.text, tenantId: command.tenantId, ownerId: command.actorId, env: process.env });
+    if (contractReview) return Object.freeze({ ...contractReview, planningAttempts: 1 });
     // "Draft a website brief for Grace's Bakery", "Create a technology roadmap", "Make an automation audit as a PDF": a fixed starter document with blanks to complete (see knowledge/consulting-templates.js).
     // Not written by the AI and not claiming to know anything about the client, so it is made directly, with no model call.
     const template = templateRequest(command.text);
@@ -996,19 +1081,25 @@ class OpenEndedPlanner {
     }
     // "Make me a flyer for my bake sale on Saturday", "Create a newsletter for the church", "Write an invitation to my daughter's party": a short layout with the person's own words in it and a [bracket] for every detail they did not give, made
     // directly with no model call (the model, asked to write a flyer for a person with no business workspace, saved a description of a flyer as the flyer). A person with a workspace asking for a flyer or newsletter already went to the workspace's own drafts above.
-    const handout = handoutRequest(command.text);
+    const handout = handoutRequest(pictureAsk.text);
     if (handout && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) {
-      const made = handoutTemplate(handout);
+      // With details beyond a subject and a day ("... on Saturday at ten at the church hall") one model call sorts only the person's own facts into the layout; with none, or if it fails, it is the fixed layout (see knowledge/handout-wording.js).
+      const worded = needsWording(handout) && context?.deterministicOnly !== true ? await this.wordedHandout(handout, command, interactionProfile, pictureAsk.specs.length ? pictureAsk.text : "") : null;
+      const made = worded || handoutTemplate(handout);
+      // `design` makes the Word and PDF files a designed flyer, poster, newsletter, invitation, brochure or email (server/providers/design-render.js) from this same text; the text stays what is edited. `pictures` are the pictures asked for (see above).
       return Object.freeze({ goal: String(command.text || "").trim(), application: "documents", riskTier: "low", clarification: null, planningAttempts: 1,
-        steps: [{ clientStepId: "handout-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: requestedDocumentFormat(command.text) || "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
+        steps: [{ clientStepId: "handout-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: requestedDocumentFormat(command.text) || "docx", design: designFor(handout.kind), ...(pictureAsk.specs.length ? { pictures: pictureAsk.specs } : {}), reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
     }
+    // "Add a picture of fresh bread to the flyer", "put my logo on it", "add the photo I uploaded": the pictures are put in the latest designed document (and "Add picture <file> to document <id>" from the card's Add a picture button).
+    const addedPicture = await addPictureToDocumentPlan(this.documents, command.text, catalog, { tenantId: command.tenantId, ownerId: command.actorId });
+    if (addedPicture) return Object.freeze({ ...addedPicture, planningAttempts: 1 });
     // "Make me a weekly meal plan", "Make a study schedule for my exam", "Make me a schedule for my work week": one line per day with a [bracket] for everything the person did not say, made directly with no model call
     // (the model gave a document on one try and a question on the next, and its question was the same blanks, asked aloud).
     const schedule = scheduleRequest(command.text);
     if (schedule && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) {
       const made = scheduleTemplate(schedule);
       return Object.freeze({ goal: String(command.text || "").trim(), application: "documents", riskTier: "low", clarification: null, planningAttempts: 1,
-        steps: [{ clientStepId: "schedule-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: requestedDocumentFormat(command.text) || "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
+        steps: [{ clientStepId: "schedule-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: requestedDocumentFormat(command.text) || "docx", design: "schedule", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
     }
     // "Export it as a PDF" right after a document was saved: the same text again, in the file type asked for (found on production: nothing handled this sentence, so it went to the AI model).
     const exportFormat = exportLatestDocumentFormat(command.text);
@@ -1028,6 +1119,9 @@ class OpenEndedPlanner {
     if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
     const listUpdate = listUpdatePlan(command.text, catalog);
     if (listUpdate) return Object.freeze({ ...listUpdate, planningAttempts: 1 });
+    // "Delete my Tokyo packing list", "delete all my old checklists": whole checklists, asked about first (the shopping and to-do lists and the notes were read earlier, by personal/items.js)
+    const listDelete = checklistDeletePlan(command.text, catalog, conversationHistory);
+    if (listDelete) return Object.freeze({ ...listDelete, planningAttempts: 1 });
     // "Save the steps for getting a seller's permit in California as a checklist" (the offer after the answer): the walkthrough's steps as a real checklist, made the way any checklist is made
     const walkChecklist = walkthroughChecklistPlan(command.text, catalog);
     if (walkChecklist) return Object.freeze({ ...walkChecklist, planningAttempts: 1 });
@@ -1783,7 +1877,7 @@ function resumePlan(text, catalog, byKind = {}) {
 // "save this as a PDF" produced a real .txt file because this fast path never looked.
 const DOCUMENT_FORMAT_WORDS = Object.freeze({
   pdf: "pdf", docx: "docx", "word document": "docx", word: "docx", markdown: "md", md: "md",
-  txt: "txt", "text file": "txt", "plain text": "txt", json: "json"
+  txt: "txt", "text file": "txt", "plain text": "txt", json: "json", html: "html", "web page": "html", webpage: "html"
 });
 // The AI model, planning "Make me a weekly meal plan" or "Write a short bio for my website", sometimes fills the document with its own instruction to itself ("Create a simple weekly meal plan for breakfast, lunch, and dinner for 7 days.
 // Keep it practical...") instead of the document (found on the live site on 27 October 2026: the saved Weekly Meal Plan and Website Bio held that sentence). A body that is one short instruction to write something, which the person did not
@@ -1807,7 +1901,7 @@ function echoesInstruction(content, said) {
 }
 
 function requestedDocumentFormat(goal) {
-  const match = /\bas\s+(?:an?\s+)?(pdf|docx|word document|word|markdown|md|text file|plain text|txt|json)\b/i.exec(goal);
+  const match = /\bas\s+(?:an?\s+)?(pdf|docx|word document|word|markdown|md|text file|plain text|txt|json|html|web page|webpage)\b/i.exec(goal);
   return match ? DOCUMENT_FORMAT_WORDS[match[1].toLowerCase()] : null;
 }
 
@@ -1845,7 +1939,7 @@ function completeSaveConversationPlan(text, catalog, conversationHistory = []) {
 
 // "Export it as a PDF." / "Convert that to Word." / "Save the document as a text file." Only a bare "it / that / this / the document" counts, so "export this chat as a PDF" (the conversation matcher above)
 // and "export my report as a PDF" (a different request) are not taken.
-const EXPORT_LATEST_DOCUMENT = /^\s*(?:please\s+|can you\s+|could you\s+)?(?:export|convert|save|download|turn|make|give me|send me)\s+(?:(?:it|that|this|the (?:last |latest )?document|my (?:last |latest )?document)\s+)?(?:as|to|into|in)\s+(?:an?\s+)?(pdf|word document|word|docx|markdown|md|text file|plain text|txt)\b[\s.!?]*$/i;
+const EXPORT_LATEST_DOCUMENT = /^\s*(?:please\s+|can you\s+|could you\s+)?(?:export|convert|save|download|turn|make|give me|send me)\s+(?:(?:it|that|this|the (?:last |latest )?document|my (?:last |latest )?document)\s+)?(?:as|to|into|in)\s+(?:an?\s+)?(pdf|word document|word|docx|markdown|md|text file|plain text|txt|html|web page|webpage)\b[\s.!?]*$/i;
 function exportLatestDocumentFormat(text) {
   const goal = String(text || "").trim();
   if (SAVE_CONVERSATION_TARGET.test(goal)) return null;
@@ -1908,7 +2002,62 @@ async function exportLatestDocumentPlan(documents, { text, format, tenantId, own
   if (!source?.sourceText) return say(`I cannot convert "${latest.title}" because it was saved before I kept its text. Create it again with "Create a document called ${latest.title} that says ...", and then I can export it.`);
   return { goal, application: "documents", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "export-document", title: `Export "${latest.title}" as ${format}`, toolId: "documents.create",
-      input: { title: latest.title, content: source.sourceText, format, reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
+      input: { title: latest.title, content: source.sourceText, format, ...(savedDesign(latest) ? { design: savedDesign(latest), picturesFromDocumentId: latest.document_id } : {}), reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
+}
+
+// What the document card's buttons say: "Export document doc_a1b2c3 as pdf" (the same designed document, with its pictures, as another kind of file) and "Add picture <file id> to document doc_a1b2c3" (a picture the person uploaded with the Add a picture button).
+const DOCUMENT_EXPORT_BY_ID = /^\s*export document (doc_[a-z0-9_-]{4,60}) as (pdf|docx|html)\s*$/i;
+const DOCUMENT_ADD_UPLOAD = /^\s*add picture ([a-z0-9][a-z0-9._-]{7,100}) to document (doc_[a-z0-9_-]{4,60})(?:\s+as\s+(logo))?\s*$/i;
+async function documentByIdPlan(documents, text, catalog, { tenantId, ownerId }) {
+  const goal = String(text || "").trim();
+  const exportMatch = DOCUMENT_EXPORT_BY_ID.exec(goal); const addMatch = exportMatch ? null : DOCUMENT_ADD_UPLOAD.exec(goal);
+  if (!exportMatch && !addMatch) return null;
+  const say = response => ({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
+  if (!documents?.get || !catalog?.tools?.some(tool => tool.toolId === "documents.create") || !catalog.applications?.some(app => app.applicationId === "documents")) return null;
+  const documentId = (exportMatch || addMatch)[exportMatch ? 1 : 2];
+  let row = null;
+  try { row = await documents.get({ tenantId, ownerId, documentId }); } catch { return null; }
+  if (!row) return say("I could not find that document, so nothing was changed.");
+  const source = typeof documents.getSource === "function" ? await documents.getSource({ tenantId, ownerId, documentId }).catch(() => null) : null;
+  if (!source?.sourceText) return say(`I cannot change "${row.title}" because it was saved before I kept its text.`);
+  const design = savedDesign(row);
+  if (exportMatch) {
+    const format = exportMatch[2].toLowerCase();
+    if (format === "html" && !design) return say("A web page can only be made from a designed flyer, newsletter, invitation, brochure or email.");
+    return { goal, application: "documents", riskTier: "low", clarification: null, steps: [{ clientStepId: "export-document", title: `Export "${row.title}" as ${format}`, toolId: "documents.create",
+      input: { title: row.title, content: source.sourceText, format, ...(design ? { design, picturesFromDocumentId: documentId } : {}), reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
+  }
+  if (!design) return say("I can add pictures to a flyer, poster, newsletter, brochure, invitation or promotional email. This document is not one of those.");
+  return { goal, application: "documents", riskTier: "low", clarification: null, steps: [{ clientStepId: "add-picture", title: `Add a picture to "${row.title}"`, toolId: "documents.create",
+    input: { documentId, content: source.sourceText, pictures: [{ source: "upload", fileId: addMatch[1], ...(addMatch[3] ? { role: "logo" } : {}) }], reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
+}
+
+// "Add a picture of fresh bread to the flyer", "put my logo on it", "add the photo I uploaded": the pictures go into the latest saved document, which must be a designed one (flyer, poster, newsletter, brochure, invitation, promotional email).
+async function addPictureToDocumentPlan(documents, text, catalog, { tenantId, ownerId }) {
+  const goal = String(text || "").trim();
+  const byId = await documentByIdPlan(documents, goal, catalog, { tenantId, ownerId });
+  if (byId) return byId;
+  const request = documentPictures.addPictureRequest(goal);
+  if (!request || !documents?.list) return null;
+  if (!catalog?.tools?.some(tool => tool.toolId === "documents.create") || !catalog.applications?.some(app => app.applicationId === "documents")) return null;
+  const say = response => ({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
+  let rows = [];
+  try { rows = await documents.list({ tenantId, ownerId, limit: 8 }); } catch { return null; }
+  const wantsKind = /^(?:flyer|poster|newsletter|brochure|invitation|e-?mail)$/.test(request.target) ? request.target.replace(/^e-?mail$/, "email") : "";
+  const designed = (Array.isArray(rows) ? rows : []).filter(row => savedDesign(row));
+  const latest = (wantsKind ? designed.find(row => savedDesign(row) === wantsKind) : designed[0]) || null;
+  if (!latest) return say(wantsKind ? `I do not have a saved ${wantsKind} to add a picture to. Say, for example, "make me a ${wantsKind} for my bake sale", and I will make one.` : 'I do not have a saved flyer, poster, newsletter, brochure, invitation or email to add a picture to. Say, for example, "make me a flyer for my bake sale with a picture of fresh bread".');
+  const source = typeof documents.getSource === "function" ? await documents.getSource({ tenantId, ownerId, documentId: latest.document_id }).catch(() => null) : null;
+  if (!source?.sourceText) return say(`I cannot change "${latest.title}" because it was saved before I kept its text.`);
+  return { goal, application: "documents", riskTier: "low", clarification: null, steps: [{ clientStepId: "add-picture", title: `Add a picture to "${latest.title}"`, toolId: "documents.create",
+    input: { documentId: latest.document_id, content: source.sourceText, pictures: request.specs, reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
+}
+
+// the design (flyer, newsletter, ...) a saved document was made with, kept in its metadata: "export it as a PDF" gives the designed PDF
+function savedDesign(row) {
+  let metadata = row?.metadata;
+  if (typeof metadata === "string") { try { metadata = JSON.parse(metadata); } catch { metadata = null; } }
+  return designKind(metadata && typeof metadata === "object" ? metadata.design : "");
 }
 
 // What the document screen's Save changes button says: "Save changes to document doc_a1b2c3: the new words". The document is named by its own id, so the right one gets the new version.
@@ -1969,12 +2118,17 @@ const LIST_ID = "(rec_[a-z0-9_-]{4,60})";
 const LIST_ADD_ITEM = new RegExp(`^\\s*add to checklist ${LIST_ID}\\s*:\\s*(.+?)\\s*$`, "i");
 const LIST_TOGGLE_ITEM = new RegExp(`^\\s*mark item (\\d{1,3}) (?:done|not done|done or not done) on checklist ${LIST_ID}\\s*$`, "i");
 const LIST_REMOVE_ITEM = new RegExp(`^\\s*remove item (\\d{1,3}) from checklist ${LIST_ID}\\s*$`, "i");
+// "Delete checklist rec_a1b2c3" (the checklist screen's own Delete list button, after it asked "Delete this list?") and "Delete old checklists keeping the newest 5" (its "Delete the older lists" button)
+const LIST_DELETE_ID = new RegExp(`^\\s*delete checklist ${LIST_ID}\\s*$`, "i");
+const LIST_DELETE_OLD = /^\s*delete old checklists keeping the newest (\d{1,3})\s*$/i;
 function listUpdatePlan(text, catalog) {
   const goal = String(text || "").trim();
   if (!goal || !catalog?.tools?.some(tool => tool.toolId === "lists.update") || !catalog.applications?.some(app => app.applicationId === "lists")) return null;
   let input = null; let title = "";
   let match = LIST_ADD_ITEM.exec(goal);
-  if (match) {
+  if ((match = LIST_DELETE_ID.exec(goal))) { input = { listId: match[1], deleteList: true }; title = "Delete a checklist"; }
+  else if ((match = LIST_DELETE_OLD.exec(goal))) { input = { keepNewest: Number(match[1]) }; title = "Delete the older checklists"; }
+  else if ((match = LIST_ADD_ITEM.exec(goal))) {
     const items = match[2].split(/\s*[,;]\s*|\s+and\s+/i).map(item => item.trim()).filter(Boolean).slice(0, 20);
     if (!items.length) return null;
     input = { listId: match[1], addItems: items }; title = "Add to a checklist";
@@ -1986,6 +2140,41 @@ function listUpdatePlan(text, catalog) {
   if (!input) return null;
   return { goal, application: "lists", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "update-list", title, toolId: "lists.update", input, dependsOn: [], fallbackToolIds: [] }] };
+}
+
+// Deleting whole checklists by voice (found on 4 November 2026: they could not be deleted at all, and every list a test made piled up on the checklist screen). Always asked about first, with the exact words to say:
+// "Delete my old checklists" -> all but the five newest; "delete all my checklists" -> every one; "delete the Tokyo packing list" / "delete the checklist called Tokyo packing" -> that one. "Yes, delete ..." (or a plain "yes" right after) does it.
+// (the shopping list, the to-do list and the notes are read before this, by personal/items.js; a name such as "shopping" is left alone here)
+const DELETE_LISTS_VERB = "(?:delete|remove|erase|clear|wipe|empty|get rid of|scrap|throw away)";
+function checklistDeletePlan(text, catalog, history = []) {
+  const goal = String(text || "").trim();
+  if (!goal || goal.length > 200 || !catalog?.tools?.some(tool => tool.toolId === "lists.update") || !catalog.applications?.some(app => app.applicationId === "lists")) return null;
+  const lower = goal.toLowerCase().replace(/[.!?]+$/g, "");
+  let confirmed = /^(?:yes|yeah|yep|ok|okay)[, ]+\S/.test(lower);
+  let body = lower.replace(/^(?:(?:yes|yeah|yep|ok|okay)[, ]+)?(?:please\s+)?/, "").trim();
+  // a plain "yes" right after Kyro asked: the words it asked to be said are the request
+  if (/^(?:yes|yeah|yep|ok|okay|go ahead|do it|please do)[.!, ]*(?:please)?$/.test(lower)) {
+    const last = [...(Array.isArray(history) ? history : [])].reverse().find(turn => turn && /assistant|kyro|nexus/i.test(String(turn.role || "")));
+    const asked = /Say "yes, (delete [^"]+)"/i.exec(String(last?.content || ""));
+    if (!asked) return null;
+    body = asked[1].toLowerCase(); confirmed = true;
+  }
+  const make = (input, title) => ({ goal, application: "lists", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "delete-lists", title, toolId: "lists.update", input, dependsOn: [], fallbackToolIds: [] }] });
+  const ask = (what, phrase) => ({ goal, application: "lists", riskTier: "low", steps: [], clarification: `${what} Say "yes, ${phrase}" to go ahead.` });
+  let m;
+  if (new RegExp(`^${DELETE_LISTS_VERB}\\s+(?:all\\s+(?:of\\s+)?)?(?:(?:my|the)\\s+)?(?:old|previous|earlier|older|extra|finished|saved)\\s+(?:check ?lists?|lists)$`).test(body)) {
+    return confirmed ? make({ keepNewest: 5 }, "Delete the older checklists") : ask("That would delete all but your five newest checklists.", "delete my old checklists");
+  }
+  if (new RegExp(`^${DELETE_LISTS_VERB}\\s+(?:all\\s+(?:of\\s+)?)?(?:(?:my|the)\\s+)?(?:check ?lists|lists)$`).test(body)) {
+    return confirmed ? make({ keepNewest: 0 }, "Delete every checklist") : ask("That would delete every checklist you have.", "delete all my checklists");
+  }
+  if ((m = new RegExp(`^${DELETE_LISTS_VERB}\\s+(?:the\\s+|my\\s+)?(?:check ?list|list)\\s+(?:called|named|titled)\\s+(.+)$`).exec(body)) || (m = new RegExp(`^${DELETE_LISTS_VERB}\\s+(?:the\\s+|my\\s+)?(.+?)\\s+(?:check ?list|list)$`).exec(body))) {
+    const name = m[1].replace(/\s+/g, " ").trim();
+    if (!name || name.split(" ").length > 6 || /^(?:shopping|grocery|groceries|market|to-?do|todo|tasks?|old|previous|all|every|my|the|that|this|it|a|an)$/.test(name) || /\b(?:reminders?|calendar|notes?|contacts?|documents?|invoices?|emails?)\b/.test(name)) return null;
+    return confirmed ? make({ deleteTitle: name }, `Delete the checklist called ${name}`) : ask(`That would delete the checklist called ${name}.`, `delete the checklist called ${name}`);
+  }
+  return null;
 }
 
 // "Walk me through forming a church", "step by step, how do I get ready for a doctor's visit": a guide's topic with a walkthrough (see knowledge/guide-walkthroughs.js) asked for one step at a time. The person does each step; Kyro never files,

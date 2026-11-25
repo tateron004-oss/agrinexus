@@ -23,13 +23,18 @@ class NotificationRepository{
   // Upcoming reminders only: still queued, and specifically reminders (other
   // notification kinds share this table but carry no content.reminderText).
   // Scoped to the owner -- a user can never list or cancel another user's.
-  async listReminders({tenantId,userId,limit=50}){if(!tenantId||!userId)throw new Error("Tenant and user are required.");const r=await this.db.query(`select notification_id,task_id,content,scheduled_at,created_at from nexus_notifications
-    where tenant_id=$1 and user_id=$2 and state='queued' and (content->>'reminderText') is not null
-    order by scheduled_at nulls last,created_at limit $3`,[tenantId,userId,Math.min(Math.max(limit,1),200)]);return r.rows||r;}
-  // Only a still-queued reminder can be cancelled; one already delivering or
-  // delivered is history, not something to rewrite. Returns null in that case.
-  async cancelReminder({tenantId,userId,notificationId}){if(!tenantId||!userId||!notificationId)throw new Error("Tenant, user, and reminder are required.");const r=await this.db.query(`update nexus_notifications set state='cancelled'
-    where notification_id=$1 and tenant_id=$2 and user_id=$3 and state='queued' and (content->>'reminderText') is not null returning notification_id,content,scheduled_at`,[notificationId,tenantId,userId]);return (r.rows||r)[0]||null;}
+  // includeInFlight (the cancel and list flows pass it): a reminder the worker has claimed and is sending right now ('delivering', lease still running) is listed too, with its state, so it can be seen and cancelled
+  // instead of being invisible while it goes out (4 November 2026 test report: a cancelled reminder was sent anyway).
+  async listReminders({tenantId,userId,limit=50,includeInFlight=false}){if(!tenantId||!userId)throw new Error("Tenant and user are required.");const r=await this.db.query(`select notification_id,task_id,content,scheduled_at,created_at,state from nexus_notifications
+    where tenant_id=$1 and user_id=$2 and (state='queued' or ($4::boolean and state='delivering' and lease_expires_at>now())) and (content->>'reminderText') is not null
+    order by scheduled_at nulls last,created_at limit $3`,[tenantId,userId,Math.min(Math.max(limit,1),200),includeInFlight===true]);return r.rows||r;}
+  // A queued reminder is cancelled; so is one the worker has already claimed ('delivering') but not yet sent: the worker asks stillHeld() again right before each send and skips a row that is no longer
+  // its own. A reminder already delivered is history, not something to rewrite (null). previous_state says which it was, so the caller can tell the person honestly when the send may already be on its way.
+  async cancelReminder({tenantId,userId,notificationId}){if(!tenantId||!userId||!notificationId)throw new Error("Tenant, user, and reminder are required.");const r=await this.db.query(`update nexus_notifications n set state='cancelled',lease_expires_at=null,leased_by=null
+    from (select notification_id,state as previous_state from nexus_notifications where notification_id=$1 and tenant_id=$2 and user_id=$3 and state in ('queued','delivering') and (content->>'reminderText') is not null for update) p
+    where n.notification_id=p.notification_id returning n.notification_id,n.content,n.scheduled_at,p.previous_state`,[notificationId,tenantId,userId]);return (r.rows||r)[0]||null;}
+  // Whether this worker still holds the row it claimed: false once it has been cancelled (or reclaimed by another worker), so a notification cancelled between the claim and the send is not sent.
+  async stillHeld(notificationId,workerId=null){const r=await this.db.query("select 1 from nexus_notifications where notification_id=$1 and state='delivering' and leased_by is not distinct from $2",[notificationId,workerId]);return (r.rows||r).length>0;}
   // Whether a notification with this idempotency key already exists for the tenant (used so a daily brief is queued at most once per local day).
   async existsByKey({tenantId,idempotencyKey}){if(!tenantId||!idempotencyKey)return false;const r=await this.db.query("select 1 from nexus_notifications where tenant_id=$1 and idempotency_key=$2 limit 1",[tenantId,idempotencyKey]);return (r.rows||r).length>0;}
   // leased_by is not distinct from $2: a strict match when workerId is

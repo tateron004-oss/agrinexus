@@ -24,7 +24,8 @@ function shape(row) {
 function createDeliveryReminders({ notifications, tenantId, userId }) {
   if (!notifications?.enqueue || !notifications?.listReminders || !notifications?.cancelReminder) throw new Error("A notification repository is required.");
   if (!tenantId || !userId) throw new Error("Tenant and user are required.");
-  const list = async () => (await notifications.listReminders({ tenantId, userId, limit: 200 })).map(shape);
+  // includeInFlight: a reminder the worker is sending right now is listed too (state "delivering"), so it can be seen and cancelled instead of being invisible while it goes out.
+  const list = async (options = {}) => (await notifications.listReminders({ tenantId, userId, limit: 200, includeInFlight: options.includeInFlight === true })).map(shape);
   const contentOf = ({ task, whenLabel, timeZone, correlationId, legacyId, language }) => reminderContent(task, { whenLabel: whenLabel || "", timeZone: timeZone || "",
     ...(correlationId ? { correlationId } : {}), ...(legacyId ? { legacyReminderId: legacyId } : {}), ...(language ? { language } : {}), source: "older-route" });
 
@@ -35,7 +36,7 @@ function createDeliveryReminders({ notifications, tenantId, userId }) {
       if (!task || !iso(scheduledAt)) throw new Error("A reminder needs its words and a time.");
       const wanted = normalize(task); const when = Date.parse(scheduledAt);
       if (!legacyId) {
-        const dup = (await list()).find(item => normalize(item.task) === wanted && ((correlationId && item.correlationId === correlationId) || Math.abs(Date.parse(item.scheduledAt) - when) <= DEDUPE_MS));
+        const dup = (await list({ includeInFlight: true })).find(item => normalize(item.task) === wanted && ((correlationId && item.correlationId === correlationId) || Math.abs(Date.parse(item.scheduledAt) - when) <= DEDUPE_MS));
         if (dup) return { duplicate: true, reminder: dup };
       }
       // The key makes the same request, arriving twice at once, one row; a reminder moved in from the legacy list is keyed by its own id, so moving it twice is moving it once.
@@ -47,6 +48,8 @@ function createDeliveryReminders({ notifications, tenantId, userId }) {
       return { duplicate: false, reminder: shape(row) };
     },
     async cancel(id) { return Boolean(await notifications.cancelReminder({ tenantId, userId, notificationId: id })); },
+    // -> { ok, inFlight }: inFlight is true when the worker had already claimed the reminder and might already have sent it, so the person can be told honestly that it may still arrive.
+    async cancelDetailed(id) { const row = await notifications.cancelReminder({ tenantId, userId, notificationId: id }); return { ok: Boolean(row), inFlight: row?.previous_state === "delivering" }; },
     // A new time is a new queued row and the old one cancelled, so a failure at either step never leaves the person with two live reminders or none.
     async change(id, { scheduledAt, whenLabel, timeZone }) {
       const current = (await list()).find(item => item.id === id);
@@ -59,7 +62,7 @@ function createDeliveryReminders({ notifications, tenantId, userId }) {
       }
       return { ok: true, reminder: shape(made) };
     },
-    async cancelAll() { let count = 0; for (const item of await list()) if (await notifications.cancelReminder({ tenantId, userId, notificationId: item.id })) count += 1; return count; }
+    async cancelAll() { let count = 0; for (const item of await list({ includeInFlight: true })) if (await notifications.cancelReminder({ tenantId, userId, notificationId: item.id })) count += 1; return count; }
   });
 }
 

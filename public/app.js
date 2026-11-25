@@ -27992,6 +27992,14 @@ async function kyroReturnToOrb(options = {}) {
   kyroNoteActivity();
   // "I'm done" / "back to the orb" ends a typed lesson too (a quiet-spell return or closing a screen leaves it, so "next" still carries on)
   if (options.reason === "home" || options.reason === "done") kyroTypedLessonOpen = false;
+  // closing the lesson itself, "I'm done" or "go back to the orb" ends a tutoring session too (a quiet-spell return leaves it, so the learner can carry on). Closing a picture or a video seen DURING the lesson
+  // (the lesson's card is not the one on the screen) brings the lesson back where it was, drawn again after the return to the orb below.
+  let resumeTutor = false;
+  if (options.reason === "home" || options.reason === "done" || options.reason === "close") {
+    const lessonOnScreen = Boolean(document.querySelector("[data-kyro-tutor-box]"));
+    if (kyroTutorOpen() && kyroTutorLast && !lessonOnScreen && (options.reason === "close" || options.source === "gallery-screen")) resumeTutor = true;
+    else kyroTutorEnd();
+  }
   try {
     if (nexusConversationWorkflowTransitionState) { nexusConversationWorkflowTransitionState.activeWorkflow = null; nexusConversationWorkflowTransitionState.lastProposal = null; }
   } catch { /* the workflow bookkeeping is optional */ }
@@ -28005,6 +28013,7 @@ async function kyroReturnToOrb(options = {}) {
   nexusPresenceState = { ...nexusPresenceState, state: NEXUS_PRESENCE_STATES.IDLE, status: "Ask Nexus what you need.", lastUserInput: "", lastResponse: "", nextQuestion: "", activeMission: "", updatedAt: new Date().toISOString() };
   await handleNexusOsMissionLifecycleAction("return-home");
   try { nexusGenesisVoiceDebugLog("kyro-return-to-orb", { reason: options.reason || "", source: options.source || "" }); } catch { /* logging only */ }
+  if (resumeTutor) setTimeout(() => { kyroResumeTutor(); }, 400);
   return true;
 }
 // "Make the text bigger", "turn on high contrast", "stop the animations", "screen reader mode on": the four display options were buttons only (public/kyro-accessibility-commands.js).
@@ -28044,6 +28053,17 @@ function kyroAnswerShowing() {
     if (kyroFinishedResultShowing()) return true;
     if (nexusActiveWorkflowState?.id && (nexusActiveWorkflowState.functionId === "live-knowledge" || nexusActiveWorkflowState.workflow === "live-knowledge")) return true;
     return Boolean(nexusPresenceState?.lastResponse);
+  } catch { return false; }
+}
+// An answer actually drawn on the screen (a card, a result, the research window): not merely a reply the page remembers (nexusPresenceState.lastResponse), which is nearly always set.
+function kyroAnswerOnTop() {
+  try {
+    // a screen the person works in or collects from (a document with its Download button, a résumé, a list or anything marked to be kept) is a task, not a short answer: it keeps the task's own longer time
+    // (found on the live site on 9 November 2026: a flyer left alone went home after 30 seconds, because its card counted as an answer)
+    if (document.querySelector("[data-kyro-keep], [data-nexus-document-lifecycle], [data-nexus-resume], [data-kyro-result=\"document\"], [data-kyro-result=\"list\"], [data-kyro-result=\"places\"]")) return false;
+    if (document.querySelector("[data-nexus-live-weather-shell]:not([data-kyro-parked]), #nexusRichDataOverlay, [data-kyro-result]")) return true;
+    if (kyroFinishedResultShowing()) return true;
+    return Boolean(nexusActiveWorkflowState?.id && (nexusActiveWorkflowState.functionId === "live-knowledge" || nexusActiveWorkflowState.workflow === "live-knowledge"));
   } catch { return false; }
 }
 function kyroWorkOpen() {
@@ -28089,6 +28109,12 @@ function kyroAutoReturnSnapshot() {
   return {
     userMode: experienceMode === "user" || document.body.classList.contains("user-mode"),
     answerShowing: kyroAnswerShowing(),
+    // an answer (not only a reply left in the page's memory) drawn on the screen: it decides the return time even over an older task, and takes that task down with it (9 November 2026)
+    answerOnTop: kyroAnswerOnTop(),
+    // work the person is doing: the camera, turn-by-turn navigation; and a box that may hold writing not yet saved
+    protectedWork: Boolean(document.querySelector("[data-kyro-capture], [data-kn=\"stop\"]")),
+    // (a box the person has typed in, not merely one that is on the screen: every document card has one)
+    documentEditing: Boolean(document.querySelector("textarea[data-kyro-touched=\"1\"], input[data-kyro-touched=\"1\"]")),
     // (the "open health" help screen is not an answer to be read in ten seconds: it keeps the usual thirty)
     resultShowing: Boolean(document.querySelector("[data-kyro-result]:not([data-kyro-result=\"help\"])")),
     workOpen: kyroWorkOpen(),
@@ -28118,6 +28144,8 @@ function startKyroAutoReturn() {
   if (kyroAutoReturnTimer || typeof document === "undefined") return;
   // (a scroll, a click, a hand moving over the screen and focus arriving on something are all signs the person is still using what is shown)
   for (const name of ["pointerdown", "keydown", "touchstart", "input", "wheel", "scroll", "click", "focusin"]) document.addEventListener(name, kyroNoteActivity, { capture: true, passive: true });
+  // a box the person has typed in may hold writing that is not saved: the return home waits longer for it (documentEditing above)
+  document.addEventListener("input", event => { try { if (event.isTrusted && event.target && /^(?:TEXTAREA|INPUT)$/.test(event.target.tagName)) event.target.setAttribute("data-kyro-touched", "1"); } catch { /* a marker only */ } }, { capture: true, passive: true });
   let kyroPointerNoted = 0;
   document.addEventListener("pointermove", () => { const now = Date.now(); if (now - kyroPointerNoted > 1000) { kyroPointerNoted = now; kyroNoteActivity(); } }, { capture: true, passive: true });
   kyroAutoReturnTimer = setInterval(kyroAutoReturnTick, 3000);
@@ -38457,6 +38485,11 @@ function renderUserWorkspace() {
         : nexusOsVoiceRuntimeState?.mode || "").toLowerCase()
     )
   );
+  // "I want to type" or the keyboard button: the typed box shows even when voice works, until the person says "use voice" (see kyroSetTypedMode).
+  // With no signal voice cannot work at all, so the typed box shows AT ONCE, with the words for that (the owner's test of 4 November 2026: "I can't open and create the note... it finally opened after three failed attempts"); it goes when the signal returns.
+  const kyroOffline = typeof navigator !== "undefined" && navigator.onLine === false;
+  const typedModeOn = !microphoneFallbackRequired && trueExperienceMode !== "mission" && (nexusTypedModeRequested === true || kyroOffline);
+  kyroUpdateTypeButton(!(microphoneFallbackRequired || typedModeOn) && trueExperienceMode !== "mission");
   document.body.classList.add("nexus-os-visual-boundary");
   document.body.classList.toggle("nexus-low-bandwidth-mode", nexusLowBandwidthMode);
   // Static QA compatibility notes for the safer service descriptions preserved by app-behavior-audit:
@@ -38477,6 +38510,12 @@ function renderUserWorkspace() {
           <section class="nexus-true-conversation" data-nexus-microphone-fallback="true" aria-label="${escapeHtml(translateText("Typed Nexus fallback"))}">
             <p class="nexus-companion-recovery-hint" role="status">${escapeHtml(translateText("Voice is unavailable right now. Type your request below while the microphone retry remains available."))}</p>
             ${renderNexusTrueCommandComposer({ compact: true })}
+          </section>
+        ` : typedModeOn ? `
+          <section class="nexus-true-conversation" data-kyro-typed-mode="true" aria-label="${escapeHtml(kyroTypeText("label"))}">
+            <p class="nexus-companion-recovery-hint" role="status">${escapeHtml(kyroTypeText(kyroOffline ? "offlineHint" : "hint"))}</p>
+            ${renderNexusTrueCommandComposer({ compact: true })}
+            <button type="button" class="kyro-use-voice" data-kyro-use-voice="true" style="margin:10px auto 0;display:block;padding:10px 20px;border:0;border-radius:999px;background:#334155;color:#f1f5f9;font:inherit;font-weight:600;cursor:pointer">${escapeHtml(kyroTypeText("useVoice"))}</button>
           </section>
         ` : ""}
         ${showMission ? renderNexusUserWorkspaceSegment("Mission workspace", renderNexusAgenticMissionWorkspace) : ""}
@@ -50710,8 +50749,20 @@ function kyroPageJustOpened(command) {
 }
 async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
+  // The page answers many sentences itself when it hears them (a walkthrough's "next", "I want to upload a Word document", "open the offline notes", "give me directions to...", a lesson's answer, "I want to type"). The voice model's own tool call
+  // for the same words can come FIRST, and then it used to clear the screen (a walkthrough's card was taken down, so "next" was not understood and the steps stopped), open the long workspace instead of the one-button upload screen, or make a job
+  // for a worker called Me: the owner's tests of 4 November 2026. The page's own answer is given here first, whichever the page hears first, and the words heard a moment later find it done (kyroLastSpokenOpen).
+  if (command && typeof kyroPageJustOpened === "function" && typeof kyroHandleSpokenOpen === "function" && !kyroPageJustOpened(command)) {
+    let pageTookIt = false;
+    try { pageTookIt = kyroHandleSpokenOpen(command, {}) === true; } catch { pageTookIt = false; }
+    if (pageTookIt) {
+      kyroPageSpeaksUntil = Date.now() + 30000;
+      return { ok: true, status: "completed", response: "Kyro already did that and said so. Say nothing more.", executionVerified: false, blockedReason: null };
+    }
+  }
   // a card left open by an earlier request does not stay in front of this one (a workspace this request opens comes after)
-  if (!(typeof kyroPageJustOpened === "function" && kyroPageJustOpened(command))) kyroDismissStaleWorkspace(command);
+  // (but not for a lesson sentence: the lesson card the page has just drawn for these same words is the answer, and clearing it here made the lesson vanish)
+  if (!(typeof kyroPageJustOpened === "function" && kyroPageJustOpened(command)) && !kyroTutorOwns(command)) kyroDismissStaleWorkspace(command);
   // The sign-in has ended: nothing can be opened or saved, and the model must say so rather than "it is on the screen".
   if (typeof kyroSignInEnded !== "undefined" && kyroSignInEnded) return { ok: false, status: "signin_ended", response: `The person's sign-in has ended, so nothing can be opened, listed or saved until they sign in again. Tell them exactly this in one short sentence: ${KYRO_SIGNIN_ENDED_LINE}`, executionVerified: false, blockedReason: "signin_ended" };
   kyroToolCalledAt = Date.now(); // (what the model has acted on: see kyroRecoverRefusal)
@@ -50722,6 +50773,25 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   // The page has just opened this map itself (a place, a country, or the plain map): the model's own map tool, which asks for a start and a destination, is not asked as well.
   if (toolName === "nexus_maps_route" && kyroPageJustOpened(command) && (kyroOpenMapRequest(kyroWithoutPoliteTail(command)) || kyroMapPlace(command))) {
     return { ok: true, status: "completed", response: "Kyro already opened the map and said so. Say nothing more.", executionVerified: false, blockedReason: null };
+  }
+  // "Give me directions to the clinic", "take me to the airport": the phone's GPS guidance owns these (see kyroSpokenNavigation) whichever the page hears first, the words or the voice model's own tool call. When the tool call came first
+  // (and for ANY tool the model chose) the words used to go on to the map tool (a map with no list of steps) or the governed route (a job for a worker called "Me" and "add a me section": the owner's test of 4 November 2026), and the page's own
+  // answer, with the steps, never came or came second. Now the page answers them here, once, and the transcript then finds it done.
+  if (typeof kyroSpokenNavigation === "function" && kyroSpokenNavigation(kyroWithoutPoliteTail(command))) {
+    const navKey = kyroNavigationKey(kyroWithoutPoliteTail(command));
+    if (kyroLastNavigationSaid.key === navKey && Date.now() - kyroLastNavigationSaid.at < 20000) {
+      return { ok: true, status: "completed", response: "Kyro is already guiding the person and said so. Say nothing more.", executionVerified: false, blockedReason: null };
+    }
+    kyroLastNavigationSaid = { key: navKey, at: Date.now(), by: "tool" };
+    kyroVoiceCapture = []; // (what the page says is handed to the model to say: the page stays silent during a live voice, as with the player above)
+    let navigationHandled = false;
+    try { navigationHandled = await handleKyroNavigationCommand(command, { source: "voice" }); } catch { navigationHandled = false; }
+    const navigationSaid = (kyroVoiceCapture || []).map(line => kyroPlainText(line).replace(/\s+/g, " ").trim()).filter(Boolean).join(" ").slice(0, 400);
+    kyroVoiceCapture = null;
+    if (navigationHandled) {
+      return { ok: true, status: "completed", executionVerified: false, blockedReason: null, clientAction: { type: "navigation" },
+        response: navigationSaid ? `${navigationSaid} Tell the person exactly this in one short sentence. The route and its steps are on the screen.` : "Kyro is guiding the person and said so. Say nothing more." };
+    }
   }
   // A Kyro voice intake (e.g. the résumé interview) already owns this turn -- don't let the
   // model's own tool call (which would otherwise open a workforce workspace for "résumé"-shaped
@@ -50741,6 +50811,14 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   if (window.KyroDismissCommands?.parse?.(command)) {
     await kyroReturnToOrb({ reason: window.KyroDismissCommands.parse(command).kind, source: "openai-realtime-tool" });
     return { ok: true, status: "completed", response: "Okay.", executionVerified: false, blockedReason: null, clientAction: { type: "return-to-orb" } };
+  }
+  // A sentence tutoring owns (a lesson request, an answer or question in an open lesson, "stop"): the lesson answers it, and the older learning tool is NEVER asked, whatever happens to the lesson's own route: that tool opens the old Learning
+  // screen ("I opened Learning and prepared a plain-language lesson", with its sample irrigation course) or says "I couldn't do that one just now" (found in the owner's test report of 4 November 2026).
+  if (kyroTutorOwns(command)) {
+    // The page has just sent these words to the lesson itself (the model's tool call is the same sentence a moment later): not a second turn
+    if (Date.now() - kyroTutorSentAt < 8000) return { ok: true, status: "completed", response: "Kyro is already doing it and said so. Say nothing more.", executionVerified: false, blockedReason: null };
+    const lessonTurn = await kyroAnswerLikeTyped(command);
+    return lessonTurn || kyroToolFailureResult("offline", { correlationId: `lesson-${Date.now().toString(36)}` });
   }
   // "Pause the music", "next song", "louder": the player is on this page, so the page does it (the music tool would go and play a song called "pause").
   const mediaAsk = window.KyroMediaCommands?.parse?.(command);
@@ -50763,8 +50841,10 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     }
   }
   // "Find a picture of ..." / "show me videos about ...": drawn on the screen by the typed path (see kyroShowVisualRequest), not answered by a tool that has no pictures.
-  const visualKind = kyroVisualRequestKind(command);
-  if (visualKind) return kyroShowVisualRequest(command, visualKind);
+  // (in a lesson with a subject, "show me a picture" with no subject means pictures of the lesson's subject)
+  const lessonPicture = kyroTutorDemoCommand(command);
+  const visualKind = kyroVisualRequestKind(lessonPicture || command);
+  if (visualKind) return kyroShowVisualRequest(lessonPicture || command, visualKind);
   // "yes" or "no" the page already took from what it heard (see routeKyroVoiceIntakeTranscript): the model's own tool call for the same word does not answer it a second time
   if (/^(?:yes|yeah|yep|yup|sure|ok|okay|go ahead|do it|no|nope|cancel|do not|don't)\b/i.test(command) && Date.now() - kyroConfirmedAt < 8000) {
     return { ok: true, status: "completed", response: "Kyro already did that and said so. Say nothing more.", executionVerified: false, blockedReason: null };
@@ -50945,6 +51025,7 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
     if (eventType && typeof kyroNoteRealtimeEvent === "function") kyroNoteRealtimeEvent(eventType);
     try { kyroWatchForRefusal(eventType, payload); } catch { /* watching never breaks the session */ }
     try { kyroNoteReplyEvent(eventType); } catch { /* noting never breaks the session */ }
+    try { kyroLiveTranscriptNote(eventType, payload); } catch { /* the strip never breaks the session */ }
     if (realtimeVoiceSession) {
       realtimeVoiceSession.lastModelEvent = eventType || realtimeVoiceSession.lastModelEvent || "";
       if (/audio|response|conversation|session|input_audio/i.test(eventType)) {
@@ -51252,8 +51333,18 @@ let kyroLastPageLine = { text: "", at: 0 };
 // "I cannot look up addresses myself, but the official finders do it by ZIP code" matched, and when the next question began the page "recovered" by answering the PREVIOUS question again (found by the full voice run's timeline).
 let kyroRecentPageLines = [];
 const kyroLineLead = value => String(value || "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+// The words read aloud: the whole answer, up to 1600 letters, and when it is longer it stops at the end of a sentence, never in the middle of a word. (They were cut at 500 letters, so a long answer such as Kyro's tips for a person coming home
+// stopped in the middle of "Kyro never ..." with the screen still full of words: the owner heard "Kyro is stopping while answering a lot", 4 November 2026; found by the live voice test of 5 November.)
+const KYRO_SPOKEN_LINE_MAX = 1600;
+function kyroLineForSpeech(text) {
+  const whole = String(text || "").replace(/\s+/g, " ").trim();
+  if (whole.length <= KYRO_SPOKEN_LINE_MAX) return whole;
+  const cut = whole.slice(0, KYRO_SPOKEN_LINE_MAX);
+  const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("? "), cut.lastIndexOf("! "), cut.lastIndexOf(".” "));
+  return end > KYRO_SPOKEN_LINE_MAX * 0.5 ? cut.slice(0, end + 1) : cut.replace(/\s+\S*$/, "");
+}
 function kyroSpeakPageLine(text) {
-  const line = String(text || "").replace(/\s+/g, " ").trim().slice(0, 500);
+  const line = kyroLineForSpeech(text);
   if (!line || !realtimeVoiceActive()) return false;
   if (line === kyroLastPageLine.text && Date.now() - kyroLastPageLine.at < 6000) return true; // (the same words arriving twice are said once)
   kyroLastPageLine = { text: line, at: Date.now() };
@@ -51287,6 +51378,15 @@ const KYRO_FALSE_CLAIM = /\bshould (?:now )?(?:open|appear|show)\b[^.]{0,40}\bsc
 let kyroUserSpeechAt = 0;
 let kyroWalkthroughOpenedAt = 0;
 let kyroHeard = { key: "", text: "", at: 0, recovered: false };
+// The conversation on the screen as it happens (public/kyro-live-transcript.js): what the person is saying and what Kyro is saying, word by word.
+let kyroLiveTranscriptStrip = null;
+function kyroLiveTranscriptNote(type, payload) {
+  try {
+    if (typeof window === "undefined" || !window.KyroLiveTranscript || typeof document === "undefined") return;
+    if (!kyroLiveTranscriptStrip) kyroLiveTranscriptStrip = window.KyroLiveTranscript.create(document, { lang: (typeof languageCode === "function" && languageCode() === "sw") ? "sw" : "en" });
+    kyroLiveTranscriptStrip.noteEvent(type, payload);
+  } catch { /* the strip is only for the eyes; it never breaks the voice session */ }
+}
 let kyroRefusalBuf = "";
 let kyroRefusalSeenAt = 0;
 let kyroToolCalledAt = 0;
@@ -51597,10 +51697,11 @@ async function applyKyroIntakeDecision(decision) {
     // Each cleanup step stands alone: one failing must not skip the others.
     const step = work => { try { work(); } catch (error) { nexusGenesisVoiceDebugLog("kyro-voice-intake-cancel-cleanup-error", { message: error?.message || "unknown" }); } };
     step(() => renderKyroVoiceIntakePanel(null));
-    step(() => { if (decision.say) speakKyroIntakeLine(decision.say, { step: decision.snapshot?.index, language: decision.language }); });
+    step(() => { if (decision.say && decision.emergency) speakKyroIntakeLine(decision.say, { step: decision.snapshot?.index, language: decision.language }); });
     step(() => injectKyroRealtimeContext(`The ${active?.definition?.title || "form"} was cancelled; nothing was saved.`));
-    // (an interview that stopped itself because it heard an emergency says what to do and nothing else: no "nothing was saved" after it)
-    step(() => { if (!decision.emergency) speakKyroIntakeLine(kyroIntakeText("cancelled", decision.language), { language: decision.language }); });
+    // (an interview that stopped itself because it heard an emergency says what to do and nothing else: no "nothing was saved" after it. Any other end says "Okay, I stopped. Nothing was saved." and, when the engine
+    // has one, how to start again: "Say 'build my resume' to start again.")
+    step(() => { if (!decision.emergency) speakKyroIntakeLine([kyroIntakeText("cancelled", decision.language), decision.say].filter(Boolean).join(" "), { language: decision.language }); });
     step(() => active?.onCancel?.());
     return;
   }
@@ -51655,7 +51756,7 @@ function startKyroVoiceIntake(definition, options = {}) {
 
 function kyroVoiceIntakeOwnsTurn(command) {
   if (kyroActiveVoiceIntake && kyroActiveVoiceIntake.engine.phase !== "paused") return true;
-  return Boolean(window.KyroIntakeForms?.isBusinessPlanRequest?.(command) || window.KyroPrTopics?.isPrBriefRequest?.(command) || window.KyroIntakeForms?.isSponsorshipProposalRequest?.(command) || window.KyroIntakeForms?.isTeamPacketRequest?.(command) || window.KyroIntakeForms?.isMoneyPlanRequest?.(command) || window.KyroIntakeForms?.isProgramKitRequest?.(command) || window.KyroIntakeForms?.isResumeBuildRequest?.(command) || window.KyroIntakeForms?.isSaleRequest?.(command) || window.KyroIntakeForms?.isTelehealthRequest?.(command) || window.KyroCapture?.isLookRequest?.(command) || kyroSpokenOpenOwns(command));
+  return Boolean(window.KyroIntakeForms?.isBusinessPlanRequest?.(command) || window.KyroPrTopics?.isPrBriefRequest?.(command) || window.KyroIntakeForms?.isSponsorshipProposalRequest?.(command) || window.KyroIntakeForms?.isTeamPacketRequest?.(command) || window.KyroIntakeForms?.isMoneyPlanRequest?.(command) || window.KyroIntakeForms?.isProgramKitRequest?.(command) || window.KyroIntakeForms?.isDoctorVisitRequest?.(command) || window.KyroIntakeForms?.isResumeBuildRequest?.(command) || window.KyroIntakeForms?.isSaleRequest?.(command) || window.KyroIntakeForms?.isTelehealthRequest?.(command) || window.KyroCapture?.isLookRequest?.(command) || kyroSpokenOpenOwns(command));
 }
 
 // Returns true when the transcript was consumed by a Kyro voice intake (caller must skip its own
@@ -51726,6 +51827,11 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // "Help me make a money plan", "build me a budget", "help me plan a financial education program": the same kind of interview for a person's money and for an organizer (a question or a template is still the money guide's)
     if (trimmed && window.KyroIntakeForms?.isMoneyPlanRequest?.(trimmed)) {
       startKyroAthleteDocIntake("moneyPlan", { seedUtterance: { id: utteranceId, text: trimmed }, source });
+      return true;
+    }
+    // "Help me set up a doctor's appointment", "I need to make a dentist appointment": Kyro cannot book it, so it gets the person ready (what to say, what to ask, what to bring) in a sheet to take when they call
+    if (trimmed && window.KyroIntakeForms?.isDoctorVisitRequest?.(trimmed)) {
+      startKyroAthleteDocIntake("doctorVisit", { seedUtterance: { id: utteranceId, text: trimmed }, source });
       return true;
     }
     if (trimmed && window.KyroIntakeForms?.isProgramKitRequest?.(trimmed)) {
@@ -51849,14 +51955,20 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       return true;
     }
     // "Open documents", "open images", "create a business plan": answered on the page
-    if (kyroHandleSpokenOpen(trimmed, {})) { kyroPageSpeaksUntil = Date.now() + 30000; return true; }
+    // (the window in which the page says its own answer is opened BEFORE the sentence is tried: an answer given at once, like the next step of a walkthrough, was drawn but never read out, because the window opened only afterwards; found on 5 November 2026)
+    const previousPageSpeaksUntil = kyroPageSpeaksUntil;
+    kyroPageSpeaksUntil = Date.now() + 30000;
+    if (kyroHandleSpokenOpen(trimmed, {})) return true;
+    kyroPageSpeaksUntil = previousPageSpeaksUntil;
     // "Take me to Sacramento", "navigate to Nairobi", "start navigation to the airport", "where am I", "stop navigation": the phone's own GPS guidance (public/kyro-navigation.js), which starts from where the person is.
     // Said aloud these went to the voice model's map tool, which asks for a start and a destination ("I'm missing your starting point") because it cannot know where the person is (found by the owner's own testing).
     if (trimmed && typeof kyroSpokenNavigation === "function" && kyroSpokenNavigation(trimmed)) {
-      if (!heardAgain) {
+      // (the voice model's own tool call for these words may have come first and already taken them: see callNexusOpenAiRealtimeTool; they are not guided twice)
+      const toolTookIt = kyroLastNavigationSaid.by === "tool" && kyroLastNavigationSaid.key === kyroNavigationKey(trimmed) && Date.now() - kyroLastNavigationSaid.at < 20000;
+      if (!heardAgain && !toolTookIt) {
         try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
         kyroPageSpeaksUntil = Date.now() + 40000;
-        kyroLastNavigationSaid = { key: kyroNavigationKey(trimmed), at: Date.now() };
+        kyroLastNavigationSaid = { key: kyroNavigationKey(trimmed), at: Date.now(), by: "page" };
         void handleKyroNavigationCommand(trimmed, { source: "voice" });
       }
       return true;
@@ -51890,9 +52002,12 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       applyKyroIntakeDecision(kyroActiveVoiceIntake.engine.resume());
       return true;
     }
-    // "Cancel" is the way out of a paused intake (a pause keeps every answer until then).
-    if (KyroVoiceIntake.classifyControl(trimmed) === "cancel") {
-      applyKyroIntakeDecision(kyroActiveVoiceIntake.engine.cancel());
+    // "Cancel" is the way out of a paused intake (a pause keeps every answer until then), and so is a second way of saying so after the person's own "stop" ("stop" again, "skip", "no", "enough", "I'm done",
+    // "that's all", "acha"): a person who is stuck must always be able to get out by voice, not only by the button (4 November 2026). The engine decides; the turn is consumed and the model is not left to answer it.
+    const leaving = kyroActiveVoiceIntake.engine.leaveWhilePaused(trimmed);
+    if (leaving) {
+      try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch {}
+      applyKyroIntakeDecision(leaving);
       return true;
     }
     return false;
@@ -51902,6 +52017,9 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     kyroActiveVoiceIntake.engine.pause("safety");
     renderKyroVoiceIntakePanel(null);
     setKyroRealtimeAutoResponse(true);
+    // While the interview ran the voice model was told not to answer, so it does not answer this turn: the screen showed the emergency words (found by the live voice test of 6 November: "I have chest pain and cannot
+    // breathe" in the middle of the doctor-visit questions) and nothing was said. The page says them now, the way it says any line it shows.
+    try { const line = String(nexusAgenticBrainLastResult?.message || "").trim(); if (line) kyroSpeakPageLine(line); } catch { /* the words are on the screen */ }
     return true;
   }
   const decision = kyroActiveVoiceIntake.engine.handleUtterance(trimmed, { utteranceId, source });
@@ -52058,6 +52176,12 @@ const KYRO_ATHLETE_DOCS = Object.freeze({
     done: "Done. Your 90-day money plan is saved and on the screen. You can change it there and download it as a Word document. Where it says Not decided yet, you can fill it in later. I have not sent it to anyone, and I have not opened, moved or invested any money.",
     note: values => `The money plan interview finished. A 90-day money plan was saved and is shown on screen with a Download button. It was not sent to anyone and no money was moved.`
   }),
+  doctorVisit: Object.freeze({
+    intakeId: "doctor-visit", label: "Appointment sheet interview", incompleteCode: "doctor_visit_incomplete", incompleteField: "reason",
+    incompleteSay: "I need to know what the appointment is for.",
+    done: "Done. Your appointment sheet is saved and on the screen. It has what to say when you call, what to ask the clinic, and what to bring. You can change it there and download it as a Word document. I have not booked anything or called anyone, and this is not medical advice.",
+    note: () => "The appointment interview finished. A sheet to get ready for a doctor, dentist or clinic appointment was saved and is shown on screen with a Download button. Nothing was booked, nobody was called, and no medical advice was given."
+  }),
   programKit: Object.freeze({
     intakeId: "program-kit", label: "Program plan interview", incompleteCode: "program_kit_incomplete", incompleteField: "organization",
     incompleteSay: "Please tell me your organization and what the people you serve need first.",
@@ -52186,6 +52310,7 @@ function kyroIntakeBusyLine(command) {
   if (id === "sponsorship-proposal" || (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isSponsorshipProposalRequest?.(command))) return "Kyro is already asking the athlete the questions for a sponsorship proposal, one at a time. Say nothing now.";
   if (id === "team-packet" || (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isTeamPacketRequest?.(command))) return "Kyro is already asking the coach the questions for a team and club packet, one at a time. Say nothing now.";
   if (id === "money-plan" || (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isMoneyPlanRequest?.(command))) return "Kyro is already asking the person the questions for a 90-day money plan, one at a time. Say nothing now, and do not ask for account numbers or passwords.";
+  if (id === "doctor-visit" || (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isDoctorVisitRequest?.(command))) return "Kyro is already asking the person the questions to get ready for a doctor, dentist or clinic appointment, one at a time. Say nothing now, do not give medical advice, and do not ask for ID numbers or passwords.";
   if (id === "program-kit" || (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isProgramKitRequest?.(command))) return "Kyro is already asking the organizer the questions for a financial education program plan, one at a time. Say nothing now.";
   if (id === "pr-brief" || (!kyroActiveVoiceIntake && window.KyroPrTopics?.isPrBriefRequest?.(command))) return "Kyro is already asking the person the questions for a brief to give a PR or event firm, one at a time. Say nothing now.";
   if (id === "sale" || (!kyroActiveVoiceIntake && forms?.isSaleRequest?.(command))) return "Kyro is already asking the person about what they want to sell, one question at a time. Say nothing now.";
@@ -52382,13 +52507,199 @@ function kyroHeardOpenVerb(text) {
 const KYRO_OPEN_LEAD = "^(?:please\\s+)?(?:(?:hey\\s+)?(?:kyro|nexus)[,.]?\\s+)?(?:(?:can|could|would|will) you\\s+)?";
 const KYRO_OPEN_DOCS = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:(?:my|the|all|some)\\s+)?(?:saved\\s+)?(?:documents?|docs?|files?|papers|business plans?|letters|reports)[.?!]*$`, "i");
 const KYRO_OPEN_MEDIA = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:(?:my|the|some|any)\\s+)?(images?|pictures?|photos?|videos?|clips?)[.?!]*$`, "i");
-const KYRO_DOCUMENT_REQUEST = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:create|make|write|draft|prepare|generate|build|put together|compose|type up)\\s+(?:me\\s+)?(?:a|an|my|the|some)?\\s*(?:[a-z'-]+\\s+){0,3}?(?:document|letter|report|proposal|contract|agreement|roadmap|invoice|business plan|marketing plan|farm plan|financial plan|funding plan|action plan|agenda|e-?mail|(?:thank[- ]?you |thank-you |apology )note|bio|biography|speech|toast|meal plan|menu|schedule|timetable|table|outline|announcement|notice|statement|job description|lesson plan|workout plan|study plan|flyer|newsletter|poster|brochure|handout|invitation)\\b`, "i");
-const KYRO_DOCUMENT_NOT = /\b(?:resume|résumé|cv|checklist|to-?do|reminder|list)\b|(?<!thank you |thank-you |thank |apology )\bnote\b|\bsend\b|\bas a pdf\b|^(?:how|what|why|should i|can i)\b/i;
+const KYRO_DOCUMENT_REQUEST = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:create|make|write|draft|prepare|generate|build|put together|compose|type up)\\s+(?:me\\s+)?(?:a|an|my|the|some)?\\s*(?:[a-z'-]+\\s+){0,3}?(?:document|letter|report|proposal|contract|agreement|roadmap|invoice|business plan|marketing plan|farm plan|financial plan|funding plan|action plan|agenda|e-?mail|(?:thank[- ]?you |thank-you |apology )note|bio|biography|speech|toast|meal plan|menu|schedule|timetable|table|outline|announcement|notice|statement|job description|lesson plan|workout plan|study plan|flyer|newsletter|poster|brochure|handout|invitation|social(?: media)? (?:posts?|captions?)|(?:facebook|instagram|linkedin|twitter|tiktok|whatsapp) (?:posts?|captions?)|advertisements?|adverts?|ads?|web ?page|web ?site (?:copy|content|page|text)|landing page)\\b`, "i");
+// "Check my contract", "Review this lease", "Is my agreement okay?", "What does my contract say?": the contract is read and checked (nexus/documents/contract-check.js); it is the page's own turn, like a document request
+const KYRO_CONTRACT_CHECK = /^\s*(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:(?:can|could|would|will) you\s+)?(?:check|review|read|look (?:over|at|through)|go (?:over|through)|scan|analy[sz]e|explain|summari[sz]e)\s+(?:over\s+)?(?:my|the|this|that|our|a|an)?\s*(?:[a-z'-]+\s+){0,3}?(?:contracts?|agreements?|leases?|nda|mou|terms)\b|^\s*(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?is\s+(?:my|this|the|that)\s+(?:[a-z'-]+\s+){0,2}?(?:contract|agreement|lease)\s+(?:ok(?:ay)?|fair|safe|good|risky)\b|^\s*(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?what does\s+(?:my|this|the)\s+(?:[a-z'-]+\s+){0,2}?(?:contract|agreement|lease)\s+say\b/i;
+// "Add a picture of fresh bread to the flyer", "put my logo on it", "add the photo I uploaded": the pictures go into the latest designed document (flyer, poster, newsletter, brochure, invitation, promotional email), said aloud or typed (nexus/documents/pictures.js is the other half).
+const KYRO_ADD_PICTURE = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:add|put|place|include|insert|attach)\\s+(?:in\\s+)?(?:(?:a|an|the|some|my|our|one)\\s+)?(?:(?:nice|good|great|real)\\s+)?(?:(?:company|business|church|farm|shop)\\s+)?(?:picture|photo|image|logo)\\b`, "i");
+// "Make a video of it", "turn the flyer into a slideshow video", "make me a slideshow": a slideshow video of the flyer, poster or post that is open (made on this device by public/kyro-slideshow.js, no sound), said aloud or typed.
+const KYRO_MAKE_VIDEO = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:(?:make|create|build|produce|prepare)\\s+(?:me\\s+)?(?:a|the|my|one)?\\s*(?:short\\s+|little\\s+|quick\\s+)?(?:slide\\s?show\\s+)?(?:video|slide\\s?show)\\b|(?:turn|make|change)\\s+(?:it|this|that|the\\s+(?:flyer|poster|newsletter|post|invitation|brochure|document))\\s+(?:in)?to\\s+(?:a\\s+)?(?:slide\\s?show|video)\\b)`, "i");
+const KYRO_MAKE_VIDEO_NOT = /\b(?:play|find|search|show me|watch|youtube|tutorial|lesson|walk ?through|how to|call|record)\b/i;
+const KYRO_ADD_PICTURE_NOT = /\b(?:profile|contact|record|health|patient|crop|animal|cow|goat|chicken|field|list|checklist|calendar|note|reminder|cart|message|text|email to)\b/i;
+const KYRO_DOCUMENT_NOT =/\b(?:resume|résumé|cv|checklist|to-?do|reminder|list)\b|(?<!thank you |thank-you |thank |apology )\bnote\b|\bsend\b|\bas a pdf\b|^(?:how|what|why|should i|can i)\b/i;
 // A spoken request to make a list ("make a shopping list with milk, eggs and bread", "make me a packing list for a week in Tokyo"), to see the lists, or "what should I pack": taken by the page and answered on the screen by the typed route, which makes the list and shows it
 // (or asks what goes on it), shows the lists, or answers as a card. The voice model used to reword these into a tool call of its own, and the person was shown nothing or the wrong thing (found by the sweep of 34 spoken requests on 27 October 2026).
 const KYRO_LIST_REQUEST = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:(?:create|make|start|build|put together|write)\\s+(?:me\\s+)?(?:a|an|my|the|some)?\\s*(?:[a-z'-]+\\s+){0,3}?(?:list|checklist)\\b|(?:show|open|read|bring up|pull up)\\s+(?:me\\s+)?(?:all\\s+)?(?:of\\s+)?my\\s+(?:lists|checklists)\\b|(?:what|which)\\s+(?:should|do|can|must)\\s+(?:i|we)\\s+(?:pack|bring|take)\\b)`, "i");
 // The answer to "what should I pack for Kenya?" is written by the model (nexus/brain/planner.js, PACK_QUESTION); it is the one model-written answer the page also puts on a card, so the list is seen as well as heard.
 const KYRO_PACK_QUESTION = /\bwhat\s+(?:should|do|can|must)\s+(?:i|we)\s+pack\b/i;
+// Tutor mode ("Teach me fractions", "Help me with my science homework", "Quiz me on world capitals", "Be my tutor", "Nifundishe sehemu", "Nisaidie na kazi ya nyumbani"): said aloud, the page takes it to the same route as typing it, so the
+// lesson is drawn as a card and read out, and the voice model does not reword it into an answer of its own with nothing on the screen (nexus/tutor/tutor.js is the other half). The practice lessons (letters, reading, counting,
+// adding), the guides on official processes ("teach me how to apply for ...") and questions about Kyro itself are left to their own routes.
+const KYRO_TUTOR_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:teach|tutor|coach)\s+(?:me|us)\b|help\s+(?:me|us)\s+(?:to\s+)?(?:learn|study|understand|practi[sc]e|revise|prepare\s+for|get\s+better\s+at)\b|(?:i\s+)?(?:want|need|would\s+like|'d\s+like)\s+(?:you\s+)?to\s+(?:learn|study|understand|practi[sc]e|revise|teach|tutor|coach)\b|let'?s\s+(?:learn|study)\b|help\s+(?:me|us)\s+(?:with|do|finish|complete|understand)\s+(?:my\s+|our\s+|the\s+|this\s+|some\s+)?(?:[\w'-]+\s+){0,3}?(?:homework|assignment|school\s?work|revision|studies|essay|worksheet)\b|(?:quiz|test)\s+(?:me|us)\b|(?:be|become)\s+my\s+(?:tutor|teacher)\b|i\s+(?:need|want)\s+a\s+(?:tutor|teacher)\b|(?:start|begin|open)\s+(?:a\s+)?tutor(?:ing)?\b|(?:ni|mi)\s*f[uo]nd[iy]sh[ei](?:ni)?\b|nif[uo]nze\b|nisaidie\s+kuji?f[uo]nz[ae]\b|(?:ni)?nataka\s+kuji?f[uo]nz[ae]\b|naomba\s+kuji?f[uo]nz[ae]\b|nisaidie\s+(?:na|kwa)\s+(?:kazi\s+ya\s+nyumbani|zoezi|masomo)\b|nipime\b|(?:kuwa|uwe)\s+mwalimu\s+wangu\b)`, "i");
+const KYRO_TUTOR_NOT = /\b(?:letters?|alphabet|abc|to read|reading|counting|to count|adding|subtract\w*|take away|maths?|mathematics|numbers?|arithmetic|herufi|hesabu|kusoma|kuhesabu)\b(?![\s\S]*\bhomework\b)|\b(?:apply(?:ing)?\s+for|file\s+(?:my|a|an|the)|renew|open(?:ing)?\s+(?:a|an)\s+(?:bank\s+)?account|get(?:ting)?\s+(?:a|an|my)\s+(?:id|license|licence|passport|visa|card|permit)|start(?:ing)?\s+(?:a|my)\s+business|find(?:ing)?\s+(?:a\s+)?job|(?:use|using|about|with)\s+(?:kyro|nexus|this\s+app|the\s+app))\b/i;
+// In a session, a sentence that is a request of its own is not the learner's answer.
+const KYRO_TUTOR_OTHER = /^(?:open|show(?: me)? (?:my\b|all\b|some\b|(?:(?:a|an|the)\s+)?(?:pictures?|videos?|images?|photos?|maps?|weather|documents?|lists?|notes?|reminders?|calendar)\b)|play|pause|resume|call|text|send|remind me|set (?:a|an|my)|add (?:a|an|my)|delete|cancel my|find (?:a|an|the|me)|search(?: for)?|look up|navigate|directions? to|take me to|go to|close|(?:create|make|draft|prepare|generate|build)\s+(?:me\s+)?(?:an?|the|my|some)|what(?:'s| is| are) (?:the )?(?:weather|time|date)|weather|my (?:lists|notes|reminders|documents)|fungua|onyesha|cheza|piga|tuma|nikumbushe|tafuta|hali ya hewa)\b/i;
+// A person who has fallen or is hurt and says so: "I fell and can't get up", "I slipped and hurt my back", "I've had a fall", "call an ambulance", "alert my circle". Said aloud these used to depend on what the voice model chose to do:
+// it sometimes only spoke (the circle was never alerted) and sometimes opened an old health window that showed a Virtual Care Encounter form (the owner's test report of 4 November 2026, health-06). The page now sends them the typed way, to the
+// governed route that alerts the trusted circle or says plainly that there is no circle and to call the local emergency number. It leans toward catching: a false trigger costs one calm reply.
+const KYRO_EMERGENCY_SAID = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:i(?:['’]ve)?\s+(?:have\s+|just\s+)*(?:fell|fallen|slipped|tripped)\b[^.?!]{0,60}\b(?:can['’]?t|cannot|unable|hurt|injured|broke|broken|bleeding|pain|dizzy)\b|i\s+(?:can['’]?t|cannot)\s+get\s+up\b|i(?:['’]ve|\s+have|\s+had)\s+(?:just\s+)?(?:had\s+)?a\s+fall\b|i\s+had\s+a\s+fall\b|(?:please\s+)?(?:call|get|send|need|phone)\s+(?:me\s+)?(?:an?\s+|the\s+|for\s+an?\s+)?ambulance\b|i\s+need\s+an?\s+ambulance\b|alert\s+my\s+(?:trusted\s+)?(?:circle|family|emergency\s+contacts?)\b)`, "i");
+// Typing instead of talking: "I want to type", "let me type", "use the keyboard" (or the small Type button) shows the typed box even when voice works, and "use voice" (or the Use voice button) goes back.
+// The choice is kept in the browser, so it is still on after a reload. (Before this the typed box showed only when voice could not run, and nobody could tell how to get it.)
+const KYRO_TYPE_REQUEST = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:i\s+)?(?:want|would\s+like|'d\s+like|need|prefer)\s+to\s+(?:type|use\s+(?:the\s+)?keyboard)\b|let\s+me\s+type\b|(?:can|could)\s+i\s+type\b|type\s+instead\b|(?:switch|change|go)\s+(?:over\s+)?to\s+(?:typing|the\s+keyboard)\b|(?:turn\s+on\s+|use\s+)?typing\s+mode\b|use\s+(?:the\s+)?keyboard\b|i\s+(?:can'?t|cannot)\s+(?:talk|speak)\b|nataka\s+kuandika\b|niruhusu\s+niandike\b|nitaandika\b)`, "i");
+const KYRO_VOICE_BACK = new RegExp(KYRO_OPEN_LEAD + String.raw`(?:(?:use|go\s+back\s+to|switch\s+to|back\s+to)\s+(?:my\s+)?voice(?:\s+mode)?\b|(?:(?:i\s+)?(?:want|would\s+like|'d\s+like)\s+to\s+(?:talk|speak)|let\s+me\s+(?:talk|speak))(?:\s+(?:now|again|instead))?\s*[.?!]*$|(?:talk|speak)\s+instead\b|voice\s+mode\b|tumia\s+sauti\b|nataka\s+kuongea\s*[.?!]*$)`, "i");
+let nexusTypedModeRequested = (() => { try { return window.localStorage.getItem("kyroTypedMode") === "1"; } catch { return false; } })();
+const KYRO_TYPE_TEXT = Object.freeze({
+  en: { label: "Type your request", hint: "Type your request below. Say \"use voice\" or tap the button to talk again.", useVoice: "Use voice", button: "Type", buttonLabel: "Type instead of talking",
+    on: "Okay. Type in the box. Say \"use voice\" any time to talk again.", off: "Okay, I am listening.",
+    offlineHint: "There is no signal. Type a plain note such as \"sold 5 bags of maize for 4000\". I will keep it on this phone and add it to your records when the signal comes back." },
+  sw: { label: "Andika ombi lako", hint: "Andika ombi lako hapa chini. Sema \"tumia sauti\" au bonyeza kitufe kuongea tena.", useVoice: "Tumia sauti", button: "Andika", buttonLabel: "Andika badala ya kuongea",
+    on: "Sawa. Andika kwenye kisanduku. Sema \"tumia sauti\" wakati wowote kuongea tena.", off: "Sawa, ninakusikiliza.",
+    offlineHint: "Hakuna mtandao. Andika kumbukumbu rahisi kama \"nimeuza mifuko 5 ya mahindi kwa 4000\". Nitaihifadhi kwenye simu hii na kuiongeza kwenye rekodi zako mtandao ukirudi." }
+});
+function kyroTypeText(key) {
+  let lang = "en"; try { lang = languageCode() === "sw" ? "sw" : "en"; } catch { lang = "en"; }
+  return KYRO_TYPE_TEXT[lang][key];
+}
+// The small Type button, bottom left, for a person who cannot or will not speak (and so cannot say "I want to type"). It is shown while the typed box is not, and the result cards cover it.
+function kyroUpdateTypeButton(show = true) {
+  try {
+    const signedIn = typeof data !== "undefined" && Boolean(data);
+    const want = show !== false && signedIn && !nexusTypedModeRequested;
+    let button = document.getElementById("kyroTypeInstead");
+    if (!button && want) {
+      button = document.createElement("button");
+      button.type = "button"; button.id = "kyroTypeInstead";
+      button.style.cssText = "position:fixed;left:16px;bottom:16px;z-index:40;padding:10px 18px;border-radius:999px;border:1px solid #475569;background:#1e293b;color:#f1f5f9;font:inherit;font-weight:600;cursor:pointer";
+      button.addEventListener("click", () => { kyroSetTypedMode(true, { say: false }); });
+      document.body.append(button);
+    }
+    if (button) { button.hidden = !want; button.textContent = kyroTypeText("button"); button.setAttribute("aria-label", kyroTypeText("buttonLabel")); }
+  } catch { /* the button is a convenience */ }
+}
+// On: the typed box shows (an open answer card that is not a lesson is put away, so the box is not hidden behind it) and takes the cursor. Off: the orb alone again.
+function kyroSetTypedMode(on, options = {}) {
+  nexusTypedModeRequested = on === true;
+  try { window.localStorage.setItem("kyroTypedMode", nexusTypedModeRequested ? "1" : "0"); } catch { /* the choice lasts until the page is reloaded */ }
+  try { document.querySelectorAll("[data-kyro-result]").forEach(node => { if (!node.querySelector("[data-kyro-tutor-box]")) node.remove(); }); } catch { /* the box is shown anyway */ }
+  try { renderUserWorkspace(); } catch { /* the next render shows it */ }
+  kyroUpdateTypeButton(!nexusTypedModeRequested);
+  if (nexusTypedModeRequested) setTimeout(() => { try { document.querySelector("#nexusCommandCenterInput")?.focus(); } catch { /* the box is there to click */ } }, 250);
+  if (options.say !== false) {
+    const line = kyroTypeText(nexusTypedModeRequested ? "on" : "off");
+    try { setVoiceResponse(line, true, { allowHandoff: false, source: "kyro-open" }); } catch { /* the box says it too */ }
+    try { kyroSpeakPageLine(line); } catch { /* the box says it too */ } // (said in the page's own words even when the turn was not marked as taken over; the same words twice within 6 seconds are said once)
+  }
+  return true;
+}
+try { document.addEventListener("click", event => { const target = event && event.target; if (target && target.closest && target.closest("[data-kyro-use-voice]")) kyroSetTypedMode(false, { say: false }); }); } catch { /* no document yet */ }
+// In a lesson, "show me a picture" / "show me a video" (no subject said) means pictures or videos of the lesson's own subject, and when that screen is closed the lesson comes back where it was.
+const KYRO_TUTOR_DEMO = /^(?:(?:can|could)\s+(?:you|i)\s+)?(?:(?:please\s+)?show(?:\s+me)?|let\s+me\s+(?:see|watch)|i\s+(?:want|would\s+like|'d\s+like)\s+to\s+(?:see|watch)|(?:can|could)\s+i\s+(?:see|watch)|watch)\s+(?:(?:a|an|the|some)\s+)?(picture|pictures|image|images|photo|photos|diagram|diagrams|drawing|video|videos|clip|clips|demo|demonstration)(?:\s+(?:of|about|for)\s+(?:it|this|that|the\s+lesson|the\s+topic))?\s*[.?!]*$/i;
+let kyroTutorSubject = ""; // the subject of the open lesson, as the server last said it
+let kyroTutorLast = null; // the last lesson turn drawn: { response, tutor }, drawn again when a picture or video seen during the lesson is closed
+let kyroTutorUntil = 0; // set when a tutoring turn comes back, cleared when the learner stops or closes the screen (the server keeps the session and forgets it after 45 quiet minutes)
+function kyroTutorOpen() { return kyroTutorUntil > Date.now(); }
+// "Show me a picture" in a lesson with a subject: the same request with the subject said (null when it is not that sentence, or the lesson has no subject yet)
+function kyroTutorDemoCommand(said) {
+  if (!kyroTutorOpen() || !kyroTutorSubject) return null;
+  const match = KYRO_TUTOR_DEMO.exec(String(said || "").trim());
+  if (!match) return null;
+  return /^(?:video|videos|clip|clips|demo|demonstration)$/i.test(match[1]) ? `Show me videos about ${kyroTutorSubject}` : `Show me pictures of ${kyroTutorSubject}`;
+}
+// A picture or video seen during a lesson was closed: the lesson's last turn is drawn again, with its answer box.
+function kyroResumeTutor() {
+  try {
+    if (!kyroTutorOpen() || !kyroTutorLast) return false;
+    const shown = kyroShowResultScreen("typed", "Continue the lesson", { ok: true, status: "completed", response: kyroTutorLast.response, requiresConfirmation: true, tutor: kyroTutorLast.tutor });
+    if (shown) kyroAddTutorBox(kyroTutorLast.tutor, kyroTutorLast.items || null);
+    return shown;
+  } catch { return false; }
+}
+// ---- the pictures and videos that go with a lesson step ----
+// The server (nexus/tutor/tutor.js) sends tutor.media = { picture, video }: what to search for. The lesson text is on the screen at once; these are fetched with the ordinary picture and video search, one after the other, and drawn INSIDE the
+// lesson card when they arrive. They are never presented to the learner as a source, and a failed search leaves the lesson exactly as it was.
+function kyroTutorSafeUrl(value) {
+  const url = String(value || "").trim();
+  return /^https:\/\/[^\s"'<>]+$/i.test(url) ? url : "";
+}
+// The pictures (up to 3) or the one video of a search result: [{ title, url }] or [{ title, embedUrl, videoUrl, thumbnailUrl, mimeType }]. Only https addresses are used.
+function kyroTutorMediaItems(result, kind) {
+  const data = (result && result.render && result.render.data) || {};
+  const list = kind === "video" ? data.videos : data.images;
+  const out = [];
+  for (const item of Array.isArray(list) ? list : []) {
+    if (!item || typeof item !== "object") continue;
+    if (kind === "video") {
+      const embedUrl = kyroTutorSafeUrl(item.embedUrl); const videoUrl = kyroTutorSafeUrl(item.videoUrl);
+      if (embedUrl || videoUrl) out.push({ title: String(item.title || "").slice(0, 120), embedUrl, videoUrl, thumbnailUrl: kyroTutorSafeUrl(item.thumbnailUrl), mimeType: String(item.mimeType || "video/webm").slice(0, 40) });
+    } else {
+      const url = kyroTutorSafeUrl(item.url);
+      if (url) out.push({ title: String(item.title || "").slice(0, 120), url });
+    }
+    if (out.length >= (kind === "video" ? 1 : 3)) break;
+  }
+  return out;
+}
+function kyroDrawTutorMedia(holder, items, tutor) {
+  try {
+    if (!holder || !holder.isConnected) return false;
+    const pictures = (items && items.pictures) || []; const videos = (items && items.videos) || [];
+    if (!pictures.length && !videos.length) return false;
+    holder.textContent = "";
+    holder.style.display = "flex";
+    if (pictures.length) {
+      const row = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap" });
+      for (const picture of pictures) {
+        const button = kyroMake("button", { type: "button", "data-kyro-tutor-picture": "true", "aria-label": picture.title || "Picture", style: "padding:0;border:0;background:none;cursor:pointer;border-radius:12px;overflow:hidden;max-width:100%" });
+        button.append(kyroMake("img", { src: picture.url, alt: picture.title || "Picture", loading: "lazy", referrerpolicy: "no-referrer", style: "display:block;height:110px;width:auto;max-width:100%;border-radius:12px;background:#0f172a" }));
+        // a tap opens the picture on the full screen (the same as saying "show me a picture"); closing it brings the lesson back
+        button.addEventListener("click", () => { if (tutor && tutor.media && tutor.media.picture) void handleNexusUnifiedBrainRuntimeCommand(`Show me pictures of ${tutor.media.picture}`, { source: "typed", kyroDirect: true }); });
+        row.append(button);
+      }
+      holder.append(row);
+    }
+    for (const video of videos) {
+      let player;
+      if (video.embedUrl) {
+        player = kyroMake("iframe", { src: video.embedUrl, title: video.title || "Video", loading: "lazy", allowfullscreen: "true", allow: "encrypted-media; picture-in-picture; fullscreen", style: "width:100%;max-width:28em;aspect-ratio:16/9;border:0;border-radius:12px;background:#0f172a" });
+      } else {
+        player = kyroMake("video", { controls: "true", preload: "none", style: "width:100%;max-width:28em;border-radius:12px;background:#0f172a" });
+        if (video.thumbnailUrl) player.setAttribute("poster", video.thumbnailUrl);
+        player.append(kyroMake("source", { src: video.videoUrl, type: video.mimeType }));
+      }
+      holder.append(player);
+      if (video.title) holder.append(kyroMake("p", { style: "margin:0;font-size:.9rem;color:#94a3b8;overflow-wrap:anywhere" }, video.title));
+    }
+    return true;
+  } catch { return false; }
+}
+async function kyroLoadTutorMedia(holder, tutor) {
+  try {
+    const media = tutor && tutor.media;
+    if (!holder || !media) return;
+    const step = tutor.step;
+    const items = { pictures: [], videos: [] };
+    // the learner may already have answered (a newer step) or closed the card: then what arrives is dropped
+    const stillHere = () => holder.isConnected && kyroTutorOpen() && Boolean(kyroTutorLast && kyroTutorLast.tutor && kyroTutorLast.tutor.step === step);
+    if (media.picture) {
+      try { items.pictures = kyroTutorMediaItems(await kyroSilentTurn(`Show me pictures of ${media.picture}`), "picture"); } catch { items.pictures = []; }
+      if (!stillHere()) return;
+      kyroDrawTutorMedia(holder, items, tutor);
+    }
+    if (media.video) {
+      try { items.videos = kyroTutorMediaItems(await kyroSilentTurn(`Show me videos about ${media.video}`), "video"); } catch { items.videos = []; }
+      if (!stillHere()) return;
+      kyroDrawTutorMedia(holder, items, tutor);
+    }
+    if (stillHere()) kyroTutorLast.items = items; // (kept so the lesson comes back with them after a picture or video is closed, without searching again)
+  } catch { /* the lesson is on the screen without them */ }
+}
+function kyroTutorEnd() {
+  if (!kyroTutorOpen()) return;
+  kyroTutorUntil = 0; kyroTutorSubject = ""; kyroTutorLast = null;
+  // (sent again once if it did not get through: a lesson the server still holds open is also ended by the next turn, which says no lesson is open, see tutorLessonOpen)
+  try { void kyroSilentTurn("Stop tutoring").catch(() => new Promise(resolve => setTimeout(resolve, 1500)).then(() => kyroSilentTurn("Stop tutoring")).catch(() => {})); } catch { /* the server forgets the session after 45 quiet minutes anyway */ }
+}
+// A sentence tutor mode owns: it asks for a lesson, or it is said in an open lesson and is not a request of its own. The older routes (the voice model's learning tool, the workspace opener that reads a sentence's words) must never take such a
+// sentence: the old Learning screen with its sample irrigation course, and "I couldn't do that one just now", came from them (found in the owner's test report of 4 November 2026).
+let kyroTutorSentAt = 0; // when the page last sent a lesson sentence to the lesson, so the voice model's own tool call for the same words is not a second turn
+function kyroTutorOwns(text) {
+  const said = String(text || "").trim();
+  if (!said) return false;
+  const requestsLesson = KYRO_TUTOR_REQUEST.test(said);
+  if (requestsLesson && !KYRO_TUTOR_NOT.test(said)) return true;
+  if (!kyroTutorOpen() || requestsLesson) return false;
+  return !KYRO_TUTOR_OTHER.test(said);
+}
 const KYRO_LIST_NOT = /^(?:how|why|should i|can i)\b|\b(?:walk|teach|guide|show)\s+(?:me\s+)?(?:how|through)\b|\b(?:what|which) (?:is|are) (?:a|the)\b/i;
 // A spoken note or reminder ("Write down milk, eggs and flour", "Make a note that I paid the rent", "Remind me to buy bread tomorrow"): the voice model answered these aloud and the page showed nothing (found by the sweep of 34 spoken requests on 27 October 2026).
 // The typed route saves it the same way and shows "Noted: ..." or "I will remind you ..." on a card. "Remind me what ..." is a question about what was said, not a reminder.
@@ -52408,9 +52719,10 @@ function kyroOpenMapRequest(text) {
 }
 // "Show me the city of Stockton on the map", "show me California on the map", "open a map of Stockton", "open the Stockton map": the PLACE asked for, or "" when none is named. The map used to open only for a country or one of four
 // Kenyan cities, and by voice it was left to the map tool, which wants a start and a destination: "Stockton" and "California" got nothing (found by the owner's own voice test).
-const KYRO_MAP_PLACE_ON = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:me\\s+)?(?:the\\s+)?(?:(?:city|town|state|county|region|village|province|district) of\\s+)?([a-z][a-z.' -]{1,40}?)\\s+(?:on|in)\\s+(?:the\\s+|a\\s+)?(?:street\\s+|live\\s+|full\\s+|big\\s+)?maps?[.?!]*$`, "i");
+// (found on 9 November 2026: a comma in the place, which speech writes in ("Cairo, Egypt", or a list of three cities), left the sentence unmatched, so it went to the map tool, which wants a start and a destination; "where is" and "find" a place on the map are the same request)
+const KYRO_MAP_PLACE_ON = new RegExp(`${KYRO_OPEN_LEAD}(?:${KYRO_OPEN_VERB}|where(?:'s| is)|find|locate|put)\\s+(?:me\\s+)?(?:the\\s+)?(?:(?:city|town|state|county|region|village|province|district) of\\s+)?([a-z][a-z.,' -]{1,50}?)\\s+(?:on|in)\\s+(?:the\\s+|a\\s+)?(?:street\\s+|live\\s+|full\\s+|big\\s+|world\\s+)?maps?[.?!]*$`, "i");
 const KYRO_MAP_PLACE_OF = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:me\\s+)?(?:(?:the|a|an|my)\\s+)?(?:(?:street|live|full|big|world|interactive)\\s+)?maps?\\s+(?:of|for|in|around)\\s+(?:the\\s+)?(?:(?:city|town|state|county|region|village|province|district) of\\s+)?([a-z][a-z.,' -]{1,40}?)[.?!]*$`, "i");
-const KYRO_MAP_PLACE_NAMED = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:me\\s+)?(?:the\\s+)?([a-z][a-z.' -]{1,30}?)\\s+maps?[.?!]*$`, "i");
+const KYRO_MAP_PLACE_NAMED = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:me\\s+)?(?:the\\s+)?([a-z][a-z.,' -]{1,40}?)\\s+maps?[.?!]*$`, "i");
 // (words that are not a place: the map itself, kinds of map, and the person's own things, which are not found on a map by name)
 const KYRO_MAP_NOT_A_PLACE = /^(?:the|a|an|my|me|this|that|it|here|there|full|big|world|street|live|interactive|map|maps|current location|clients?|customers?|farms?|fields?|crops?|animals?|jobs?|shipments?|deliveries|orders|donors|volunteers|friends|family|home|work|everything|all)$/i;
 function kyroMapPlace(text) {
@@ -52424,17 +52736,37 @@ function kyroMapPlace(text) {
 const KYRO_US_STATES = new Set(["alabama", "alaska", "arizona", "arkansas", "california", "colorado", "connecticut", "delaware", "florida", "georgia", "hawaii", "idaho", "illinois", "indiana", "iowa", "kansas", "kentucky", "louisiana", "maine", "maryland", "massachusetts", "michigan", "minnesota", "mississippi", "missouri", "montana", "nebraska", "nevada", "new hampshire", "new jersey", "new mexico", "new york", "north carolina", "north dakota", "ohio", "oklahoma", "oregon", "pennsylvania", "rhode island", "south carolina", "south dakota", "tennessee", "texas", "utah", "vermont", "virginia", "washington", "west virginia", "wisconsin", "wyoming"]);
 // Opens the map and centres it on the place: found by the server's place search (the same OpenStreetMap search the GPS uses), a state or a country-sized place wide, anything else at city size.
 async function kyroOpenMapAtPlace(place, said, lang) {
-  const name = String(place).replace(/\b[a-z]/g, letter => letter.toUpperCase());
+  let name = String(place).replace(/\b[a-z]/g, letter => letter.toUpperCase());
   const say = line => { try { setVoiceResponse(line, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the map is on the screen */ } };
   let found = null;
-  try {
-    const out = await request("/api/nexus/runtime/navigation", { method: "POST", body: { action: "search", query: place } });
-    found = (Array.isArray(out?.places) ? out.places : []).find(item => Number.isFinite(Number(item?.lat)) && Number.isFinite(Number(item?.lng))) || null;
-  } catch { found = null; }
+  let lookupFailed = false; // the search itself failed (a busy server or place service), as opposed to finding nothing by that name
+  const findPlace = async query => {
+    try {
+      const out = await request("/api/nexus/runtime/navigation", { method: "POST", body: { action: "search", query } });
+      return (Array.isArray(out?.places) ? out.places : []).find(item => Number.isFinite(Number(item?.lat)) && Number.isFinite(Number(item?.lng))) || null;
+    } catch { lookupFailed = true; return null; }
+  };
+  found = await findPlace(place);
+  // Found with the owner on 9 November 2026, when the server was struggling: every place failed at once ("could not find California"). A failed search is tried once more after a short wait before it is given up on.
+  if (!found && lookupFailed) { await new Promise(resolve => setTimeout(resolve, 1500)); lookupFailed = false; found = await findPlace(place); }
+  // Said as a list ("Stockton, Cairo or Mombasa"), the whole is no place: the first is shown and the rest are asked for next, one at a time (found on 9 November 2026, when a list was answered "I need a start and an end")
+  let listRest = "";
+  if (!found && /\s*(?:,|\band\b|\bor\b)\s*/i.test(String(place))) {
+    const parts = String(place).split(/\s*(?:,|\band\b|\bor\b)\s*/i).map(part => part.trim()).filter(Boolean);
+    if (parts.length > 1) { found = await findPlace(parts[0]); if (found) { listRest = parts.slice(1).join(", "); place = parts[0]; name = String(place).replace(/\b[a-z]/g, letter => letter.toUpperCase()); } }
+  }
   let opened = false;
-  try { opened = dispatchGenesisWorkspaceAction({ type: "genesis.workspace.open", workspace: "map", requestId: `typed-map-${Date.now().toString(36)}`, payload: { query: said, country: "" } }, {}, { suppressAcknowledgement: true }); } catch { opened = false; }
+  // The map is opened with the CITY only, not the whole sentence: the opener sets its own view when the sentence names a country, so "Show me Mombasa, Kenya on the map" re-centred the map on all of Kenya
+  // a moment after the city was found (found on the live site on 9 November 2026). The city is then centred below.
+  const mapQuery = found ? String(place).split(",")[0].trim() || String(said) : String(said);
+  try { opened = dispatchGenesisWorkspaceAction({ type: "genesis.workspace.open", workspace: "map", requestId: `typed-map-${Date.now().toString(36)}`, payload: { query: mapQuery, country: "" } }, {}, { suppressAcknowledgement: true }); } catch { opened = false; }
   if (!opened) { say(lang === "sw" ? "Siwezi kufungua ramani sasa." : "I could not open the map just now."); return false; }
-  if (!found) { say(lang === "sw" ? `Sikuweza kupata ${name} kwenye ramani, kwa hiyo hii ni ramani ya kawaida.` : `I could not find ${name} on the map, so here is the map.`); return true; }
+  if (!found) {
+    say(lookupFailed
+      ? (lang === "sw" ? `Nina shida kufikia utafutaji wa mahali sasa hivi, kwa hiyo hii ni ramani ya kawaida. Sema ${name} tena baada ya muda mfupi nitajaribu tena.` : `I am having trouble reaching the place search right now, so here is the map. Say ${name} again in a moment and I will try once more.`)
+      : (lang === "sw" ? `Sikuweza kupata ${name} kwenye ramani, kwa hiyo hii ni ramani ya kawaida. Jaribu kusema jina pamoja na jimbo au nchi.` : `I could not find ${name} on the map, so here is the map. Try saying it with its state or country.`));
+    return true;
+  }
   const zoom = KYRO_US_STATES.has(String(place).toLowerCase()) ? 6 : 11;
   try { document.body.dataset.genesisMapLocation = name; } catch { /* a label only */ }
   waitForStableUserMapCanvas().then(() => {
@@ -52443,7 +52775,8 @@ async function kyroOpenMapAtPlace(place, said, lang) {
     try { userMapLayers.markers?.clearLayers?.(); if (zoom >= 10) L.marker([Number(found.lat), Number(found.lng)]).addTo(userMapLayers.markers).bindPopup(`<strong>${escapeHtml(name)}</strong>`); } catch { /* the map is centred without a marker */ }
     safeInvalidateLeafletMap(userMap);
   }).catch(() => {});
-  say(lang === "sw" ? `Hii ni ramani ya ${name}. Unaweza kuikuza na kuisogeza.` : `Here is ${name} on the map. You can zoom and drag it.`);
+  const next = listRest ? (lang === "sw" ? ` Ninaonyesha mahali pamoja kwa wakati mmoja. Sema ${listRest} nikuonyeshe.` : ` I show one place at a time. Say ${listRest} next and I will show that.`) : "";
+  say((lang === "sw" ? `Hii ni ramani ya ${name}. Unaweza kuikuza na kuisogeza.` : `Here is ${name} on the map. You can zoom and drag it.`) + next);
   return true;
 }
 // "Open YouTube", "open Spotify", "play something on YouTube": found testing by voice, these were answered "I'm not sure what you'd like me to do". Kyro asks what to play and the next short answer is played.
@@ -52485,6 +52818,10 @@ let kyroLastSpokenOpen = { key: "", at: 0 }; // the sentence the page last answe
 // "Open my resume", "open the CRM", "open grants", "open uploads": the page opens what each is (the résumés list, the clients, the grants due, the invoices, a place to choose a file).
 const KYRO_OPEN_OFFLINE = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|check|see|view)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:offline\\s+(?:queue|work|notes|changes|sync(?:\\s+status)?)|(?:sync|offline)\\s+status|queued\\s+(?:offline\\s+)?(?:work|changes|notes))(?:\\s+(?:screen|page|section|list))?[.?!]*$`, "i");
 const KYRO_OPEN_RESUMES = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|see|view|list|find|get)\\s+(?:me\\s+)?(?:(?:my|the|our)\\s+)?(?:saved\\s+)?(?:resumes?|résumés?|resumés?|cvs?)[.?!]*$`, "i");
+// "Open the grants page", "open Business and Grants", "take me to business services", "go to the grants and funding page" (9 November 2026, the owner: "make sure the grants page opens"): the Business & Grants page (/business-services.html),
+// where the full tables, invoice PDFs and the grants live. The only link to it is in the top bar, which the signed-in screen hides, and Kyro says "Open Business services" after saving a customer: nothing opened. Plain "open grants" and
+// "open the business workspace" keep their older meaning (the grants read aloud, the list of customers), so a PAGE, SCREEN, SECTION or TAB, or the page's own name, is what asks for the page.
+const KYRO_OPEN_BUSINESS_PAGE = new RegExp(`${KYRO_OPEN_LEAD}(?:i want to (?:see|open|go to)|let me (?:see|open)|take me to|bring me to|go to|open|show|show me|pull up|bring up|launch|switch to|navigate to)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:(?:(?:business\\s+(?:and|&)\\s+grants?|business\\s+services|grants?\\s+(?:and|&)\\s+funding|business\\s+(?:and|&)\\s+funding)(?:\\s+(?:page|screen|section|tab|site))?)|(?:(?:grants?|funding)\\s+(?:page|screen|section|tab)))[.?!]*$`, "i");
 const KYRO_OPEN_BIZ = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|go to|pull up|bring up|see|view|launch|start)\\s+(?:me\\s+)?(?:(?:my|the|our)\\s+)?(?:(?:business|customer)\\s+)?(?:(crm|clients?|customers?|contacts|customer list|client list)|(donors?|donations|fundraising)|(grants?|funding|grant (?:writing|tracker|deadlines))|(invoices?|billing)|(expenses?|income|finances?|financials?|books|bookkeeping|accounting|sales|profit))[.?!]*$`, "i");
 const KYRO_OPEN_UPLOAD = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|show|start|go to)\\s+(?:the\\s+|my\\s+)?(?:file\\s+|document\\s+|photo\\s+)?uploads?|(?:i\\s+(?:want|need)\\s+to\\s+|let me\\s+|help me\\s+|i'd like to\\s+)?(?:upload|attach)(?:\\s+(?:a|an|my|the|some))?(?:\\s+(?:files?|documents?|docs?|pictures?|photos?|pdfs?|images?|letters?|spreadsheets?|sheets?|(?:ms\\s+)?(?:word|excel)(?:\\s+(?:files?|documents?|docs?|spreadsheets?|sheets?))?|docx|xlsx))?(?:\\s+(?:of|for|from|to|about|showing)\\s+[a-z' -]{1,60})?)[.?!]*$`, "i");
 // A screen with a real button (a file can only be chosen from a tap): the picture, PDF, Word or Excel file is sent and read out, as "look at this" does.
@@ -52546,7 +52883,7 @@ async function kyroOpenNamedDocument(name) {
 function kyroSpokenOpenOwns(text) {
   const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
-  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || (typeof kyroFileReadingMore === "function" && kyroFileReadingMore(said)) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_ACTIVITY.test(said) || window.KyroAutomationCommands?.isOpen?.(said) || KYRO_ASK_MEMORY.test(said) || KYRO_OPEN_DOCS.test(said) || kyroNamedDocument(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
+  return KYRO_CONTRACT_CHECK.test(said) || KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || (typeof kyroFileReadingMore === "function" && kyroFileReadingMore(said)) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_ACTIVITY.test(said) || window.KyroAutomationCommands?.isOpen?.(said) || KYRO_ASK_MEMORY.test(said) || KYRO_OPEN_DOCS.test(said) || kyroNamedDocument(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
 }
 // A card or interview left open by an earlier request (the AgriTrade card a "sell" opened, a telehealth card) stays in front of everything after it: the quiet-spell return never closes work the person is "in". A new
 // request closes it first; if the new request opens a workspace of its own, that opens after this.
@@ -52675,6 +53012,12 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
   const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
+  // an emergency comes before everything else, in a lesson too
+  if (!options.typed && KYRO_EMERGENCY_SAID.test(said)) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
+  }
   // "The next part", "part 3", "read on": the next part of the Word or Excel file just read out
   const filePart = typeof kyroFileReadingMore === "function" ? kyroFileReadingMore(said) : 0;
   if (filePart) { kyroTakeOverTurn(); void kyroContinueFileReading(filePart, lang); return true; }
@@ -52730,6 +53073,24 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
         }
       }
     }
+  }
+  // "I want to type", "let me type", "use the keyboard": the typed box shows even when voice works; "use voice" goes back (before the lesson claims below, so it works in a lesson too)
+  if (KYRO_TYPE_REQUEST.test(said)) { if (!options.typed) kyroTakeOverTurn(); kyroSetTypedMode(true); return true; }
+  if (nexusTypedModeRequested && KYRO_VOICE_BACK.test(said)) { if (!options.typed) kyroTakeOverTurn(); kyroSetTypedMode(false); return true; }
+  // A tutoring session is open, or this asks for one: said aloud it goes the typed way, so the next step is drawn on a card and read out (see KYRO_TUTOR_REQUEST). While a session is open every sentence that is not a request of its own is the
+  // learner's answer or question, and "stop" ends it on the server.
+  // "Show me a picture" / "show me a video" in a lesson: pictures or videos of the lesson's own subject (said or typed)
+  const tutorDemo = kyroTutorDemoCommand(said);
+  if (tutorDemo) {
+    if (!options.typed) kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand(tutorDemo, { source: "typed", kyroDirect: true });
+    return true;
+  }
+  if (!options.typed && kyroTutorOwns(said)) {
+    kyroTakeOverTurn();
+    kyroTutorSentAt = Date.now();
+    void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
   }
   // "Open the Sales Plan document", "read my latest document": that one document opens, with its words and the Download button (it used to list all of them and say "it's open").
   const namedDocument = kyroNamedDocument(said);
@@ -52850,6 +53211,11 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
     try { setVoiceResponse(ask, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the screen asks too */ }
     return true;
   }
+  if (!options.typed && KYRO_CONTRACT_CHECK.test(said)) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
+  }
   if (!options.typed && KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said)) {
     kyroTakeOverTurn();
     void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
@@ -52865,11 +53231,41 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
     void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
     return true;
   }
+  if (KYRO_MAKE_VIDEO.test(said) && !KYRO_MAKE_VIDEO_NOT.test(said)) {
+    if (!options.typed) { try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ } }
+    const makeButton = document.querySelector("[data-kyro-doc-make-video]");
+    if (makeButton) { try { makeButton.dispatchEvent(new CustomEvent("kyro-make-video", { detail: { spoken: true } })); return true; } catch { /* the line below says what to do */ } }
+    const line = lang === "sw"
+      ? "Ninaweza kutengeneza video ya picha kutoka kwa tangazo, bango au chapisho. Tengeneza moja kwanza, kisha useme: tengeneza video yake."
+      : "I can make a slideshow video from a flyer, poster or post. Make one first, with a picture if you like, then say: make a video of it.";
+    try { setVoiceResponse(line, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the line is only said */ }
+    return true;
+  }
+  if (!options.typed && KYRO_ADD_PICTURE.test(said) && !KYRO_ADD_PICTURE_NOT.test(said)) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
+  }
+  // The Business & Grants page (see KYRO_OPEN_BUSINESS_PAGE): Kyro says so, and the page opens a moment later (the sentence is finished first). "Grants" go to the grants table.
+  if (KYRO_OPEN_BUSINESS_PAGE.test(said)) {
+    if (!options.typed) { try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ } }
+    const toGrants = /\bgrants?\b|\bfunding\b/i.test(said);
+    const line = lang === "sw" ? (toGrants ? "Nafungua ukurasa wa ruzuku." : "Nafungua Biashara na Ruzuku.") : (toGrants ? "Opening the grants page." : "Opening Business and Grants.");
+    try { setVoiceResponse(line, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the page opens anyway */ }
+    setTimeout(() => { try { window.location.assign(`/business-services.html${toGrants ? "#grants" : ""}`); } catch { /* the link on the page still works */ } }, 1600);
+    return true;
+  }
   // The map opens on the page, typed or said aloud (said aloud it used to be left to the voice model's map tool, which asks for a start and a destination, so "the US", "California" and "Stockton" opened nothing).
   const mapPlace = kyroMapPlace(said);
   if (kyroOpenMapRequest(said) || mapPlace) {
     if (!options.typed) { try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ } }
-    const country = africanMapCountryTarget(said) || kyroWorldMapTarget(said);
+    let country = africanMapCountryTarget(said) || kyroWorldMapTarget(said);
+    // "Mombasa, Kenya" names a city in a country: the city is the place, and the country map is only for a request that names the country alone (found on the live site on 9 November 2026)
+    if (country && mapPlace && /,/.test(mapPlace)) {
+      const city = String(mapPlace).split(",")[0].toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+      const countryName = String(country.name || "").toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+      if (city && city !== countryName && city !== `the ${countryName}`) country = null;
+    }
     if (!country && mapPlace) { void kyroOpenMapAtPlace(mapPlace, said, lang); return true; }
     let opened = false;
     try { opened = dispatchGenesisWorkspaceAction({ type: "genesis.workspace.open", workspace: "map", requestId: `typed-map-${Date.now().toString(36)}`, payload: { query: said, country: "" } }, {}, { suppressAcknowledgement: true }) === true; } catch { opened = false; }
@@ -52916,7 +53312,7 @@ function kyroWritableListKind(text) {
 async function kyroSilentTurn(text) {
   const result = await requestWithTimeout("/api/nexus/runtime/behavior/turn", {
     method: "POST",
-    body: { text, channel: "typed", locale: languageCode(), conversationId: nexusAuthoritativeConversationId(), timeZone: kyroDeviceTimeZone() }
+    body: { text, channel: "typed", locale: languageCode(), conversationId: nexusAuthoritativeConversationId(), timeZone: kyroDeviceTimeZone(), tutorLessonOpen: kyroTutorOpen() }
   }, 60000);
   if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true) throw new Error("Kyro did not understand that.");
   return result;
@@ -52925,11 +53321,15 @@ const KYRO_COMPOSER_TEXT = Object.freeze({
   en: { saving: "Saving...", saved: "Saved.", failed: "That did not save. Please try again.", missing: "Write something first.",
     noteLabel: "Write a note", noteButton: "Save note", whatLabel: "What should I remind you about?", dayLabel: "Day", timeLabel: "Time", reminderButton: "Set reminder",
     titleLabel: "Title", bodyLabel: "What it says", documentButton: "Save document", checklistName: "New checklist name", checklistItems: "Items, separated by commas", checklistButton: "Create checklist",
-    addItem: "Add an item", add: "Add", remove: "Remove", checklists: "Your checklists", today: "Today", tomorrow: "Tomorrow", close: "Close" },
+    addItem: "Add an item", add: "Add", remove: "Remove", checklists: "Your checklists", today: "Today", tomorrow: "Tomorrow", close: "Close",
+    deleteList: "Delete list", confirmDelete: "Delete this whole list?", yesDelete: "Yes, delete", no: "No", deleted: "Deleted.", hideOlder: "Hide older lists", deleteOlder: "Delete the older lists",
+    showOlder: n => `Show ${n} older ${n === 1 ? "list" : "lists"}`, confirmDeleteOlder: n => `Delete the ${n} older ${n === 1 ? "list" : "lists"}? Your newest five stay.` },
   sw: { saving: "Inahifadhi...", saved: "Imehifadhiwa.", failed: "Haikuhifadhiwa. Tafadhali jaribu tena.", missing: "Andika kitu kwanza.",
     noteLabel: "Andika kumbuka", noteButton: "Hifadhi kumbuka", whatLabel: "Nikukumbushe nini?", dayLabel: "Siku", timeLabel: "Saa", reminderButton: "Weka ukumbusho",
     titleLabel: "Kichwa", bodyLabel: "Inasema nini", documentButton: "Hifadhi waraka", checklistName: "Jina la orodha mpya", checklistItems: "Vitu, vitenganishwe kwa koma", checklistButton: "Tengeneza orodha",
-    addItem: "Ongeza kitu", add: "Ongeza", remove: "Ondoa", checklists: "Orodha zako", today: "Leo", tomorrow: "Kesho", close: "Funga" }
+    addItem: "Ongeza kitu", add: "Ongeza", remove: "Ondoa", checklists: "Orodha zako", today: "Leo", tomorrow: "Kesho", close: "Funga",
+    deleteList: "Futa orodha", confirmDelete: "Futa orodha hii yote?", yesDelete: "Ndiyo, futa", no: "Hapana", deleted: "Imefutwa.", hideOlder: "Ficha orodha za zamani", deleteOlder: "Futa orodha za zamani",
+    showOlder: n => `Onyesha orodha ${n} za zamani`, confirmDeleteOlder: n => `Futa orodha ${n} za zamani? Tano mpya zaidi zinabaki.` }
 });
 function kyroUiText() {
   try { return KYRO_COMPOSER_TEXT[languageCode() === "sw" ? "sw" : "en"]; } catch { return KYRO_COMPOSER_TEXT.en; }
@@ -53026,13 +53426,45 @@ function kyroShowChecklistScreen(lists, savedLine) {
     screen.append(close, kyroMake("h2", { style: "margin:8px 0 0;font-size:1.4rem;color:#94a3b8;letter-spacing:.02em;text-transform:uppercase" }, t.checklists));
     const status = kyroMake("p", { "data-kyro-composer-status": "true", role: "status", style: "margin:0;color:#94a3b8;min-height:1.4em" }, savedLine || "");
     screen.append(status);
-    const act = async command => {
+    const act = async (command, doneLine) => {
       status.textContent = t.saving;
-      try { await kyroSilentTurn(command); await kyroRefreshList("checklists", t.saved); } catch { status.textContent = t.failed; }
+      try { await kyroSilentTurn(command); await kyroRefreshList("checklists", doneLine || t.saved); } catch { status.textContent = t.failed; }
     };
-    for (const list of Array.isArray(lists) ? lists : []) {
-      if (!list || !list.listId) continue;
-      const card = kyroMake("div", { "data-kyro-checklist": list.listId, style: "width:100%;max-width:34em;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.07)" });
+    // Only the newest five lists are open (the store gives them newest-changed first); the rest are behind "Show N older lists", so a person with dozens of lists (every checklist a test or a walkthrough made) sees a screen that can be read
+    // (found on 4 November 2026: all of them were drawn, one under another, with no way to delete one). A whole list is deleted only after "Delete this whole list?" is answered Yes.
+    const SHOWN = 5;
+    const valid = (Array.isArray(lists) ? lists : []).filter(list => list && list.listId);
+    const olderCount = Math.max(0, valid.length - SHOWN);
+    const olderCards = [];
+    const confirmRow = (message, yesLabel, onYes) => {
+      const row = kyroMake("div", { role: "alertdialog", "aria-label": message, style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px" });
+      const yes = kyroMake("button", { type: "button", "data-kyro-confirm-yes": "true", style: "padding:10px 14px;border:0;border-radius:10px;background:#7f1d1d;color:#fff;font:inherit;cursor:pointer" }, yesLabel);
+      const no = kyroMake("button", { type: "button", style: "padding:10px 14px;border:0;border-radius:10px;background:rgba(255,255,255,.14);color:#f1f5f9;font:inherit;cursor:pointer" }, t.no);
+      yes.addEventListener("click", () => { row.remove(); onYes(); });
+      no.addEventListener("click", () => row.remove());
+      row.append(kyroMake("span", { style: "color:#fca5a5" }, message), yes, no);
+      return row;
+    };
+    for (const [position, list] of valid.entries()) {
+      if (position === SHOWN) {
+        const toggleRow = kyroMake("div", { "data-kyro-older-lists": "true", style: "width:100%;max-width:34em;display:flex;gap:8px;flex-wrap:wrap;align-items:center" });
+        const toggle = kyroMake("button", { type: "button", "aria-expanded": "false", "data-kyro-older-toggle": "true", style: KYRO_BUTTON_STYLE }, t.showOlder(olderCount));
+        toggle.addEventListener("click", () => {
+          const open = toggle.getAttribute("aria-expanded") === "true";
+          olderCards.forEach(card => { card.style.display = open ? "none" : ""; });
+          toggle.setAttribute("aria-expanded", String(!open));
+          toggle.textContent = open ? t.showOlder(olderCount) : t.hideOlder;
+        });
+        const deleteOlder = kyroMake("button", { type: "button", "data-kyro-older-delete": "true", style: "padding:12px 18px;border:0;border-radius:12px;background:rgba(127,29,29,.55);color:#fecaca;font:inherit;font-size:1.05rem;cursor:pointer" }, t.deleteOlder);
+        deleteOlder.addEventListener("click", () => {
+          if (toggleRow.querySelector("[role=alertdialog]")) return;
+          toggleRow.append(confirmRow(t.confirmDeleteOlder(olderCount), t.yesDelete, () => { void act("Delete old checklists keeping the newest " + SHOWN, t.deleted); }));
+        });
+        toggleRow.append(toggle, deleteOlder);
+        screen.append(toggleRow);
+      }
+      const card = kyroMake("div", { "data-kyro-checklist": list.listId, style: "width:100%;max-width:34em;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.07)" + (position >= SHOWN ? ";display:none" : "") });
+      if (position >= SHOWN) olderCards.push(card);
       card.append(kyroMake("h3", { style: "margin:0 0 8px;font-size:1.3rem" }, String(list.title || "Checklist")));
       const items = Array.isArray(list.items) ? list.items : [];
       items.forEach((item, index) => {
@@ -53049,7 +53481,13 @@ function kyroShowChecklistScreen(lists, savedLine) {
       const box = kyroMake("input", { type: "text", name: "item", "aria-label": t.addItem, placeholder: t.addItem, style: KYRO_FIELD_STYLE });
       add.append(box, kyroMake("button", { type: "submit", style: KYRO_BUTTON_STYLE }, t.add));
       add.addEventListener("submit", event => { event.preventDefault(); const said = box.value.trim(); if (!said) { status.textContent = t.missing; return; } void act("Add to checklist " + list.listId + ": " + said.replace(/\s+/g, " ")); });
-      card.append(add); screen.append(card);
+      card.append(add);
+      const del = kyroMake("button", { type: "button", "data-kyro-list-delete": list.listId, style: "margin-top:12px;padding:8px 14px;border:0;border-radius:10px;background:rgba(127,29,29,.5);color:#fecaca;font:inherit;cursor:pointer" }, t.deleteList);
+      del.addEventListener("click", () => {
+        if (card.querySelector("[role=alertdialog]")) return;
+        card.append(confirmRow(t.confirmDelete, t.yesDelete, () => { void act("Delete checklist " + list.listId, t.deleted); }));
+      });
+      card.append(del); screen.append(card);
     }
     document.body.append(screen);
     kyroAddComposer("checklists");
@@ -53832,12 +54270,18 @@ function kyroShowDocumentScreen(drawn) {
     });
     if (readonly) screen.append(readonly);
     screen.append(editor, save, download, status);
+    // a flyer, poster, newsletter, brochure, invitation or promotional email: its pictures, the Add a picture buttons and the other file types (Word, PDF, web page)
+    let toolsAdded = false;
+    const addTools = info => { if (toolsAdded || !info || !info.design) return; toolsAdded = true; try { kyroDocumentPictureTools(screen, id, status, info); } catch { /* the document is shown without them */ } };
+    addTools({ design: drawn?.data?.design, format: drawn?.data?.format, data: drawn?.data?.data || {} });
     document.body.append(screen);
     void (async () => {
       try {
         const response = await fetch("/api/nexus/runtime/documents/" + encodeURIComponent(id), { credentials: "same-origin" });
         if (!response.ok) return;
-        const source = String((await response.json())?.sourceText || "").trim();
+        const body = await response.json();
+        addTools({ design: body?.document?.design, format: body?.document?.documentType, data: {} });
+        const source = String(body?.sourceText || "").trim();
         if (!source) return;
         editor.value = source; editor.hidden = false; save.hidden = false;
         if (readonly) readonly.hidden = true;
@@ -53846,6 +54290,154 @@ function kyroShowDocumentScreen(drawn) {
     try { kyroNoteActivity(); } catch { /* nothing to note */ }
     return true;
   } catch { return false; }
+}
+// PICTURES in a designed document (a flyer, poster, newsletter, brochure, invitation or promotional email), on its card:
+//   - the pictures that are in it (small previews, each with its credit), and a plain note that pictures found on the web belong to their owners
+//   - Add a picture / Add my logo: the person's own file goes up through the ordinary upload (/api/nexus/upload) and the document is saved again with it ("Add picture <file> to document <id>")
+//   - the same document as Word, PDF or a web page (a web page is how a promotional email is copied into an email)
+// Whatever could not be done is said in plain words: a picture that is not in the file is never shown as if it were.
+async function kyroDocumentPictureTools(screen, id, status, info = {}) {
+  const design = String(info.design || "");
+  const box = kyroMake("div", { "data-kyro-doc-tools": id, style: "width:100%;max-width:40em;display:flex;flex-direction:column;gap:12px;margin-top:6px" });
+  const strip = kyroMake("div", { "data-kyro-doc-picture-strip": id, style: "display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start" });
+  const where = kyroMake("p", { "data-kyro-picture-where": id, style: "margin:0;color:#94a3b8;font-size:.9rem" });
+  const notes = kyroMake("div", { "data-kyro-doc-picture-notes": id, role: "status", style: "display:flex;flex-direction:column;gap:6px;color:#cbd5e1;font-size:.95rem" });
+  const row = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap" });
+  const files = kyroMake("input", { type: "file", accept: "image/png,image/jpeg", "data-kyro-doc-picture-file": id, "aria-label": kyroT("Choose a picture"), style: "position:absolute;left:-9999px;width:1px;height:1px;opacity:0" });
+  let asLogo = false; let found = false; let currentPictures = [];
+  const showNotes = list => {
+    notes.textContent = "";
+    for (const text of list) if (String(text || "").trim() && !/^Pictures found on the web belong/.test(String(text))) notes.append(kyroMake("p", { style: "margin:0" }, kyroT(String(text))));
+    if (found) notes.append(kyroMake("p", { "data-kyro-picture-owner-note": "true", style: "margin:0" }, kyroT("Pictures found on the web belong to their owners. Their credit is printed in the file. Be sure you may use them. Your own pictures need no such check.")));
+  };
+  const drawPictures = list => {
+    strip.textContent = "";
+    currentPictures = list;
+    found = list.some(item => item.source === "search");
+    for (const item of list) {
+      const figure = kyroMake("figure", { "data-kyro-doc-picture": String(item.n), style: "margin:0;display:flex;flex-direction:column;gap:4px;max-width:200px" });
+      // A light, framed box (a night photo or a transparent PNG on the dark card looked like an empty dark box on 5 November 2026, and the picture takes a moment to arrive): the box says "Loading the picture..." until it is there,
+      // and says plainly that it cannot be shown here (it is in the file) if it does not load. No lazy loading: the previews are right on the card.
+      const frame = kyroMake("div", { style: "position:relative;min-width:120px;min-height:96px;border-radius:10px;overflow:hidden;background:#e2e8f0;border:1px solid #94a3b8;display:flex;align-items:center;justify-content:center" });
+      const picture = kyroMake("img", { src: "/api/nexus/runtime/documents/" + encodeURIComponent(id) + "/pictures/" + item.n, alt: String(item.title || kyroT("Picture")), style: "display:block;height:96px;width:auto;max-width:100%;background:#e2e8f0" });
+      const state = kyroMake("span", { "data-kyro-picture-state": "loading", role: "status", style: "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px;font-size:.8rem;line-height:1.25;color:#1e293b" }, kyroT("Loading the picture..."));
+      const failed = () => { picture.style.display = "none"; state.setAttribute("data-kyro-picture-state", "failed"); state.style.position = "static"; state.style.padding = "14px 10px"; state.textContent = kyroT("Picture could not be shown here, it is in the file."); if (!state.isConnected) frame.append(state); };
+      picture.addEventListener("load", () => { if (picture.naturalWidth > 0) { picture.style.display = "block"; state.remove(); } else failed(); });
+      picture.addEventListener("error", failed);
+      frame.append(picture, state);
+      figure.append(frame);
+      if (item.credit) figure.append(kyroMake("figcaption", { style: "font-size:.8rem;color:#94a3b8;overflow-wrap:anywhere" }, String(item.credit)));
+      strip.append(figure);
+      setTimeout(() => { if (picture.complete) { if (picture.naturalWidth > 0) state.remove(); else failed(); } }, 0); // (already there from the cache)
+    }
+    // which download holds them: the file the Download button gives (the other buttons make the same document, with its pictures, as another kind of file)
+    where.textContent = "";
+    if (list.length) {
+      const kind = { docx: "Word file", pdf: "PDF", html: "web page file" }[String(info.format || "").toLowerCase()] || "file";
+      where.textContent = kyroT((list.length === 1 ? "The picture shown here is" : "The pictures shown here are") + " in the " + kind + " you get with Download. The buttons under it make the same document, with its " + (list.length === 1 ? "picture" : "pictures") + ", as another kind of file.");
+    }
+  };
+  const load = async (extraNotes = []) => {
+    let list = [];
+    try {
+      const response = await fetch("/api/nexus/runtime/documents/" + encodeURIComponent(id) + "/pictures", { credentials: "same-origin" });
+      if (response.ok) { const body = await response.json(); list = Array.isArray(body?.pictures) ? body.pictures : []; }
+    } catch { list = []; }
+    drawPictures(list);
+    showNotes(extraNotes.length || list.length ? extraNotes : [kyroT("No picture is in it yet. Say \"add a picture of\" and what you want, or add one of your own.")]);
+  };
+  const addButton = (label, logo) => {
+    const button = kyroMake("button", { type: "button", "data-kyro-doc-add-picture": logo ? "logo" : "picture", style: KYRO_BUTTON_STYLE.replace("#06a77d", "#1e5f8a") }, kyroT(label));
+    button.addEventListener("click", () => { asLogo = logo; files.value = ""; files.click(); });
+    row.append(button);
+  };
+  addButton("Add a picture", false);
+  addButton("Add my logo", true);
+  files.addEventListener("change", async () => {
+    const file = files.files && files.files[0];
+    if (!file) return;
+    if (!/^image\/(?:png|jpeg)$/i.test(String(file.type || ""))) { showNotes([kyroT("Please choose a PNG or JPG picture. A picture in another format can be saved as a PNG or JPG first.")]); return; }
+    if (file.size > 6 * 1024 * 1024) { showNotes([kyroT("That picture is larger than 6 MB. Please choose a smaller one.")]); return; }
+    status.textContent = kyroT("Adding the picture...");
+    try {
+      const form = new FormData();
+      form.append("file", file, file.name || "picture");
+      const upload = await kyroFetchWithTimeout("/api/nexus/upload", { method: "POST", credentials: "same-origin", body: form }, 40000);
+      const uploaded = await upload.json().catch(() => ({}));
+      if (!upload.ok || !uploaded.ok || !uploaded.fileId) { status.textContent = ""; showNotes([String(uploaded.error || kyroT("I could not receive that picture. Please try again."))]); return; }
+      const result = await kyroSilentTurn("Add picture " + uploaded.fileId + " to document " + id + (asLogo ? " as logo" : ""));
+      const saved = result?.render?.data;
+      if (!saved || String(saved.documentId || "") !== id) { status.textContent = ""; showNotes([String(result?.response || kyroT("I could not add that picture."))]); return; }
+      status.textContent = kyroT("Saved.") + (saved.savedVersion ? " (" + kyroT("version") + " " + saved.savedVersion + ")" : "");
+      await load(Array.isArray(saved.data?.pictureNotes) ? saved.data.pictureNotes : []);
+    } catch { status.textContent = ""; showNotes([kyroT("I could not add that picture. Please try again.")]); }
+  });
+  // the other file types: a new saved document with the same words and pictures, downloaded at once
+  const formats = [["docx", "Word"], ["pdf", "PDF"], ["html", "Web page"]].filter(([format]) => format !== String(info.format || "").toLowerCase());
+  const other = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center" });
+  other.append(kyroMake("span", { style: "color:#94a3b8;font-size:.95rem" }, kyroT("Get it as:")));
+  for (const [format, label] of formats) {
+    const button = kyroMake("button", { type: "button", "data-kyro-doc-export": format, style: KYRO_BUTTON_STYLE.replace("#06a77d", "#475569") }, kyroT(label));
+    button.addEventListener("click", async () => {
+      button.disabled = true; status.textContent = kyroT("Preparing...");
+      try {
+        const result = await kyroSilentTurn("Export document " + id + " as " + format);
+        const made = result?.render?.data;
+        if (!made || !made.documentId) throw new Error("not made");
+        await downloadNexusAuthoritativeDocument(String(made.documentId), status);
+        status.textContent = kyroT("Saved.");
+      } catch { status.textContent = kyroT("That did not work. Please try again."); }
+      button.disabled = false;
+    });
+    other.append(button);
+  }
+  // A SLIDESHOW VIDEO of the document: its headline and key lines over its pictures, the pictures' credits on the last slide. Made on this device (public/kyro-slideshow.js), in real time, with no sound; nothing is uploaded.
+  const videoRow = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center" });
+  const videoStatus = kyroMake("p", { role: "status", "data-kyro-doc-video-status": id, style: "margin:0;color:#cbd5e1;font-size:.95rem" });
+  const videoOut = kyroMake("div", { "data-kyro-doc-video-out": id, style: "display:flex;flex-direction:column;gap:8px;align-items:flex-start" });
+  let makingVideo = false; let videoUrl = "";
+  const saySlideshow = line => { try { setVoiceResponse(line, true, { allowHandoff: false, command: "make a video", source: "kyro-open" }); } catch { /* the line is on the screen */ } };
+  const makeVideoNow = async (tall, spoken) => {
+    if (makingVideo) return false;
+    const maker = window.KyroSlideshow;
+    if (!maker || !maker.canMakeVideo(window)) { videoStatus.textContent = kyroT("This browser cannot make a video. Try Chrome, Edge, Firefox or Safari on a recent phone or computer."); if (spoken) saySlideshow(videoStatus.textContent); return false; }
+    const words = String(screen.querySelector("[data-kyro-doc-editor]")?.value || screen.querySelector("[data-kyro-doc-words]")?.textContent || "").trim();
+    const title = String(screen.querySelector("h2")?.textContent || "").trim();
+    const slides = maker.buildSlides({ title, text: words, pictures: currentPictures });
+    const seconds = Math.round(maker.totalSeconds(slides));
+    makingVideo = true; videoOut.textContent = "";
+    const starting = kyroT("Making the video. It takes about") + " " + seconds + " " + kyroT("seconds. Please keep this page open until it is ready.");
+    videoStatus.textContent = starting;
+    if (spoken) saySlideshow(starting);
+    try {
+      const loadPicture = item => new Promise((resolve, reject) => { const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = "/api/nexus/runtime/documents/" + encodeURIComponent(id) + "/pictures/" + encodeURIComponent(String(item.n)); });
+      const made = await maker.makeVideo({ slides, loadPicture, width: tall ? 720 : 1280, height: tall ? 1280 : 720, windowLike: window, onProgress: share => { videoStatus.textContent = kyroT("Making the video:") + " " + Math.min(99, Math.round(share * 100)) + "%"; } });
+      if (videoUrl) { try { URL.revokeObjectURL(videoUrl); } catch { /* an old copy */ } }
+      videoUrl = URL.createObjectURL(made.blob);
+      const player = kyroMake("video", { controls: "true", playsinline: "true", "aria-label": kyroT("Your slideshow video"), "data-kyro-doc-video": id, style: "max-width:100%;max-height:50vh;border-radius:12px;background:#000" });
+      player.src = videoUrl;
+      const save = kyroMake("a", { href: videoUrl, download: (String(title || "video").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50) || "video") + "." + made.ext, "data-kyro-doc-video-download": id, style: KYRO_BUTTON_STYLE + ";text-decoration:none;display:inline-block" }, kyroT("Download the video"));
+      videoOut.append(player, save);
+      const done = kyroT("Your video is ready, " + made.seconds + " seconds. It has no sound. You can watch it here and download it. Pictures found on the web belong to their owners; their credit is the last slide.");
+      videoStatus.textContent = done;
+      if (spoken) saySlideshow(kyroT("Your video is ready. You can watch it on the screen and download it."));
+    } catch (error) { videoStatus.textContent = kyroT(String(error?.message || "The video could not be made. Please try again.")); if (spoken) saySlideshow(videoStatus.textContent); }
+    makingVideo = false;
+    return true;
+  };
+  const videoButton = (label, tall, main) => {
+    const button = kyroMake("button", { type: "button", "data-kyro-doc-make-video": tall ? "tall" : "wide", style: KYRO_BUTTON_STYLE.replace("#06a77d", "#7a3fa0") }, kyroT(label));
+    button.addEventListener("click", () => { void makeVideoNow(tall, false); });
+    if (main) button.addEventListener("kyro-make-video", event => { void makeVideoNow(false, Boolean(event?.detail?.spoken)); });
+    videoRow.append(button);
+  };
+  videoButton("Make a video", false, true);
+  videoButton("Make a tall phone video", true, false);
+  box.append(strip, where, notes, row, other, videoRow, videoStatus, videoOut, files);
+  if (design === "email") box.append(kyroMake("p", { "data-kyro-email-note": "true", style: "margin:0;color:#94a3b8;font-size:.9rem" }, kyroT("To use it in an email: choose Web page, open the file, select everything, copy it, and paste it into your email. Some email programs hide pictures inside a message, so the Word and PDF files are there too. Kyro does not send it for you.")));
+  screen.append(box);
+  const first = Array.isArray(info.data?.pictureNotes) ? info.data.pictureNotes : [];
+  await load(first);
 }
 // A saved document from the list of them: its words and a box to change them in.
 async function kyroOpenDocumentById(id, title) {
@@ -53986,7 +54578,7 @@ function kyroShowResultScreen(toolName, command, result) {
     if ((KYRO_FORM_FLOW.test(String(command || "")) && result.genesisAction) || kyroExplicitOpenCard(command)) return false;
     // a greeting, a thank-you or a "yes" is spoken back, not drawn across the whole screen
     // (but not the reply "no" or "ok" to a checklist, lesson or course question: its answer, the next lesson, is the screen)
-    if (KYRO_SMALL_TALK.test(String(command || "").trim()) && !(typeof kyroGuidedReply === "function" && kyroGuidedReply(command))) return false;
+    if (KYRO_SMALL_TALK.test(String(command || "").trim()) && !(typeof kyroGuidedReply === "function" && kyroGuidedReply(command)) && !kyroTutorOpen()) return false;
     const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
     if (result && typeof result.response === "string") result = { ...result, response: kyroPlainText(result.response) };
     const model = window.KyroResultScreen.buildModel(result, { command, lang });
@@ -54219,6 +54811,15 @@ function kyroShowTypedResult(result, text, message) {
     // a walkthrough ("walk me through getting a seller's permit"): one step at a time, with its official page; the opening line and the first step are read out (see kyroWalkthroughOpening)
     if (result && result.plan && result.plan.walkthrough && typeof kyroOpenWalkthrough === "function" && kyroOpenWalkthrough(result.plan.walkthrough, message)) return true;
     if (!window.KyroResultScreen || !result || typeof result !== "object") return false;
+    // a tutoring turn (nexus/tutor/tutor.js): the page notes that a session is open, so what is said next goes the typed way to the same session
+    const tutor = result.plan && result.plan.tutor ? result.plan.tutor : null;
+    if (tutor) {
+      kyroTutorUntil = tutor.active === true ? Date.now() + 45 * 60 * 1000 : 0;
+      kyroTutorSubject = tutor.active === true ? String(tutor.subject || "") : "";
+      if (tutor.active !== true) kyroTutorLast = null;
+      // an older workspace window (the Learning screen with its sample irrigation course, the AI tutor window) that opened before or behind the lesson is taken down: nothing is left stuck behind the lesson or after "stop"
+      try { if (document.querySelector("#nexus-workspace")) closeNexusFunctionWindow({ command: "" }); } catch { /* the lesson card is drawn over it anyway */ }
+    }
     if (kyroExplicitOpenCard(text)) return false;
     const drawn = result.render;
     let answer = null; let wantsButtons = false;
@@ -54239,7 +54840,9 @@ function kyroShowTypedResult(result, text, message) {
         const body = drawn.data || {};
         const single = body.list || (Array.isArray(body.items) ? { listId: body.listId, title: body.title, items: body.items } : null);
         const lists = (Array.isArray(body.lists) ? body.lists : single ? [single] : []).filter(list => list && list.listId);
-        if (lists.length && kyroShowChecklistScreen(lists, "")) {
+        // a list (or several) was just deleted: the lists that are left are shown, with "Deleted.", even when none is left
+        const deletedLine = body.deleted === true ? kyroUiText().deleted : "";
+        if ((lists.length || body.deleted === true) && kyroShowChecklistScreen(lists, deletedLine)) {
           if (!Array.isArray(body.lists)) void kyroRefreshList("checklists", "").catch(() => {}); // a list just made or changed: all of them, as they are now
           return true;
         }
@@ -54253,6 +54856,9 @@ function kyroShowTypedResult(result, text, message) {
       if (drawn.presentation?.kind !== "location-list" || !cards.length || KYRO_FORM_FLOW.test(String(text || ""))) return false;
       const pharmacy = cards.some(card => /pharmac/i.test(String(card?.category || ""))) || result.application === "pharmacy";
       answer = { response: message, [pharmacy ? "pharmacyLocations" : "mobileClinics"]: cards, locationNote: drawn.data?.locationNote };
+    } else if (tutor && result.state === "completed" && String(message || "").trim().length >= 12) {
+      // a tutoring turn is on the screen and stays there until the learner answers or closes it, with a box under it to type the answer in
+      answer = { response: message, requiresConfirmation: tutor.active === true, tutor: { active: tutor.active === true, subject: String(tutor.subject || "") } };
     } else if (result.state === "completed" && result.application === "conversation" && result.outcome?.modelAnswered === true && KYRO_PACK_QUESTION.test(String(text || "")) && String(message || "").trim().length >= 24) {
       answer = { response: message };
     } else if (result.state === "completed" && result.application === "conversation" && result.outcome?.modelAnswered === false && String(message || "").trim().length >= 24) {
@@ -54269,11 +54875,68 @@ function kyroShowTypedResult(result, text, message) {
     } else return false;
     const shown = kyroShowResultScreen("typed", text, { ok: true, status: "completed", ...answer });
     if (shown && wantsButtons) kyroAddConfirmButtons();
+    if (shown && tutor && tutor.active === true) {
+      kyroTutorLast = { response: String(message || ""), tutor: { active: true, subject: String(tutor.subject || ""), step: Number(tutor.step) || 0, media: tutor.media || null }, items: null };
+      kyroAddTutorBox(tutor);
+    }
     if (shown && typeof kyroAddResumeButtons === "function" && /^show my r[e\u00e9]sum[e\u00e9]s?$/i.test(String(text || "").trim())) void kyroAddResumeButtons();
     // a list of notes, reminders, documents or checklists has a form under it to write in
     const writable = shown ? kyroWritableListKind(text) : "";
     if (writable) kyroAddComposer(writable);
     return shown;
+  } catch { return false; }
+}
+// Under a tutoring turn: a box to type the answer in (Enter sends it), a Send button, and a Stop tutoring button. Typing and saying it are the same turn.
+function kyroAddTutorBox(tutor = null, cachedMedia = null) {
+  try {
+    const screen = document.querySelector("[data-kyro-result]");
+    if (!screen || screen.querySelector("[data-kyro-tutor-box]")) return false;
+    const sw = (() => { try { return languageCode() === "sw"; } catch { return false; } })();
+    screen.setAttribute("data-kyro-keep", "true");
+    // "Step 3" under the heading: where the lesson is
+    const stepNumber = Number(tutor && tutor.step) || 0;
+    if (stepNumber >= 1 && !screen.querySelector("[data-kyro-tutor-step]")) {
+      const stepNode = kyroMake("p", { "data-kyro-tutor-step": "true", style: "margin:0;color:#94a3b8;font-size:.9rem" }, sw ? `Hatua ya ${stepNumber}` : `Step ${stepNumber}`);
+      const heading = screen.querySelector("h2");
+      if (heading) heading.after(stepNode); else screen.prepend(stepNode);
+    }
+    // a picture and/or a video that goes with this step (not in low-bandwidth mode): the holder sits above the answer box and is filled when the search comes back
+    const holder = tutor && tutor.media && !nexusLowBandwidthMode
+      ? kyroMake("div", { "data-kyro-tutor-media": "true", style: "display:none;flex-direction:column;gap:10px;width:100%;max-width:34em;position:relative;z-index:1" })
+      : null;
+    const form = kyroMake("form", { "data-kyro-tutor-box": "true", style: "display:flex;flex-direction:column;gap:10px;width:100%;max-width:34em;position:relative;z-index:1" });
+    const box = kyroMake("textarea", { name: "answer", rows: "2", "aria-label": sw ? "Jibu lako" : "Your answer", placeholder: sw ? "Andika jibu lako hapa, au sema jibu lako" : "Type your answer here, or say it", style: KYRO_FIELD_STYLE });
+    const row = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap" });
+    const send = kyroMake("button", { type: "submit", style: KYRO_BUTTON_STYLE }, sw ? "Tuma" : "Send");
+    const stop = kyroMake("button", { type: "button", "data-kyro-tutor-stop": "true", style: KYRO_BUTTON_STYLE.replace("#06a77d", "#475569") }, sw ? "Maliza somo" : "Stop tutoring");
+    row.append(send, stop);
+    // with a subject, two more buttons: the same as saying "show me a picture" or "show me a video" (the lesson comes back when the picture or video is closed)
+    const subject = String((tutor && tutor.subject) || "").trim();
+    if (subject) {
+      const demo = (label, command) => {
+        const button = kyroMake("button", { type: "button", "data-kyro-tutor-demo": "true", style: KYRO_BUTTON_STYLE.replace("#06a77d", "#1e5f8a") }, label);
+        button.addEventListener("click", () => { void handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed", kyroDirect: true }); });
+        row.append(button);
+      };
+      demo(sw ? "Onyesha picha" : "Show a picture", `Show me pictures of ${subject}`);
+      demo(sw ? "Onyesha video" : "Show a video", `Show me videos about ${subject}`);
+    }
+    form.append(box, row); screen.append(form);
+    if (holder) {
+      screen.insertBefore(holder, form);
+      if (cachedMedia) kyroDrawTutorMedia(holder, cachedMedia, tutor);
+      else void kyroLoadTutorMedia(holder, tutor);
+    }
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      const answer = box.value.trim();
+      if (!answer) return;
+      box.value = "";
+      void handleNexusUnifiedBrainRuntimeCommand(answer, { source: "typed", kyroDirect: true });
+    });
+    box.addEventListener("keydown", event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); } });
+    stop.addEventListener("click", () => { void handleNexusUnifiedBrainRuntimeCommand(sw ? "Acha somo" : "Stop tutoring", { source: "typed", kyroDirect: true }); });
+    return true;
   } catch { return false; }
 }
 // A Yes and a No under a question that waits for one: tapping is the same as saying it (submitNexusPendingBehaviorConfirmation).
@@ -54322,6 +54985,8 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   if (!command) return null;
   // "close the weather card" mentions the weather, but it asks for nothing to be opened.
   if (window.KyroDismissCommands?.parse?.(command)) return null;
+  // A sentence tutoring owns ("teach me about irrigation", a lesson answer that mentions a crop or a doctor) is a lesson turn: it opens no Agriculture, Health, Learning or other workspace from its words.
+  if (kyroTutorOwns(command)) return null;
   const explicitOpen = /\b(open|show|display|start|begin|launch|find|search|play|plan|reset|record|create|take me to|remind me|help (?:me )?(?:with|find|sell|record|enter|create))\b/.test(lower);
   const routeRequest = /\b(route|directions?|navigate|navigation)\b/.test(lower) || (explicitOpen && /\bmaps?\b/.test(lower));
   const workforceRequest = explicitOpen && (
@@ -60475,7 +61140,7 @@ async function downloadNexusAuthoritativeDocument(documentId, statusEl) {
     if (!response.ok || !body.contentBase64) throw new Error(body.error || `Download failed (${response.status})`);
     const bytes = Uint8Array.from(atob(body.contentBase64), char => char.charCodeAt(0));
     const blob = new Blob([bytes], { type: body.contentType || "application/octet-stream" });
-    const extension = { pdf: "pdf", docx: "docx", markdown: "md", md: "md" }[String(body.document?.documentType || "").toLowerCase()] || "txt";
+    const extension = { pdf: "pdf", docx: "docx", html: "html", markdown: "md", md: "md" }[String(body.document?.documentType || "").toLowerCase()] || "txt";
     const filename = `${(body.document?.title || "document").replace(/[^a-z0-9 _-]/gi, "").trim() || "document"}.${extension}`;
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -61336,7 +62001,13 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
       else if (kind && kind !== "map" && kind !== "media-player") renderNexusAuthoritativeData(drawn);
     }
   } catch { /* the result is still held by the server and its receipt; only the drawing is missing */ }
-  setVoiceResponse(message, true, {
+  // a picture that could not be had (no logo uploaded yet, nothing found) is SAID with the answer, so a flyer is never taken to have a picture it does not have; the card shows the same words and the Add a picture buttons
+  let pictureNotesSaid = "";
+  try {
+    const pictureNotes = result.render?.presentation?.kind === "document" ? result.render?.data?.data?.pictureNotes : null;
+    if (Array.isArray(pictureNotes)) pictureNotesSaid = pictureNotes.filter(note => !/^Pictures found on the web belong/.test(String(note))).join(" ").trim();
+  } catch { /* the card says it too */ }
+  setVoiceResponse(pictureNotesSaid ? `${message} ${pictureNotesSaid}`.trim() : message, true, {
     allowHandoff: false,
     command: text,
     source: "nexus-authoritative-behavior-spine",
@@ -61434,6 +62105,8 @@ async function replayKyroOfflineNotes() {
   } catch { /* try again next time the phone is online */ } finally { kyroOfflineReplayRunning = false; }
 }
 window.addEventListener("online", () => { setTimeout(replayKyroOfflineNotes, 1500); });
+// The typed box shows the moment the signal goes (voice cannot work without it) and goes when it returns: the screen is drawn again for each (see kyroOffline in renderUserWorkspace).
+for (const kyroSignalEvent of ["offline", "online"]) window.addEventListener(kyroSignalEvent, () => { try { if (typeof renderUserWorkspace === "function") renderUserWorkspace(); } catch { /* the next draw shows it */ } });
 setTimeout(replayKyroOfflineNotes, 10000);
 
 // Emergency location (public/kyro-emergency.js): the phone only reads its location after the server says an alert went to someone chosen to receive it.
@@ -61619,6 +62292,10 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
     startKyroAthleteDocIntake("moneyPlan", { seedUtterance: { id: "", text }, source: options.source || "typed" });
     return true;
   }
+  if (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isDoctorVisitRequest?.(text)) {
+    startKyroAthleteDocIntake("doctorVisit", { seedUtterance: { id: "", text }, source: options.source || "typed" });
+    return true;
+  }
   if (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isProgramKitRequest?.(text)) {
     startKyroAthleteDocIntake("programKit", { seedUtterance: { id: "", text }, source: options.source || "typed" });
     return true;
@@ -61677,6 +62354,8 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
         locale: typeof voiceLanguageCode === "function" ? voiceLanguageCode() : languageCode(),
         conversationId: nexusAuthoritativeConversationId(),
         taskId: localStorage.getItem(NEXUS_AUTHORITATIVE_TASK_KEY) || undefined,
+        // Whether a tutoring lesson is on the screen: a lesson the server holds open that the screen has closed (or never got) is ended there, not taught from (see tutorTurn in nexus/brain/planner.js).
+        tutorLessonOpen: kyroTutorOpen(),
         // Where the person is, so times like "7am" mean their own morning.
         timeZone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; } })()
       }
@@ -63456,6 +64135,13 @@ async function handleVoiceCommand(rawCommand, options = {}) {
 async function runBackendAgentCommand(command, locationContext = null, options = {}) {
   const turnToken = options.turnToken || null;
   if (ignoreStaleNexusTurn(turnToken, "backend answer")) return null;
+  // This is the door to the OLDER server route (the one that answers "teach me ..." by opening the Learning window with its sample irrigation course, and "One half" with "I couldn't do that one just now"). It is reached when the voice
+  // connection is not confirmed, and by the older readers. A sentence tutoring owns goes to the lesson instead, however it got here (found in the owner's test report of 4 November 2026).
+  if (kyroTutorOwns(command)) {
+    kyroTutorSentAt = Date.now();
+    await handleNexusUnifiedBrainRuntimeCommand(String(command || ""), { source: "typed", kyroDirect: true });
+    return null;
+  }
   abortActiveAgentCommand();
   const controller = new AbortController();
   activeAgentCommandController = controller;

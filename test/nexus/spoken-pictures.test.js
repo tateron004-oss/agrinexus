@@ -59,9 +59,10 @@ test("the model is told truthfully: pictures on the screen, or nothing showing; 
 test("the orb's tool call checks for a picture or video request after the dismiss command and before anything is sent to the server", () => {
   const body = slice("async function callNexusOpenAiRealtimeTool(", "nexusGenesisVoiceDebugLog(\"openai-agents-tool-http-failed\"");
   const at = needle => { const index = body.indexOf(needle); assert.ok(index > 0, needle); return index; };
-  assert.ok(at("KyroDismissCommands?.parse?.(command)") < at("kyroVisualRequestKind(command)"), "after the dismiss command");
-  assert.ok(at("kyroVisualRequestKind(command)") < at("/api/voice/realtime/tool"), "before the request to the server");
-  assert.match(body, /if \(visualKind\) return kyroShowVisualRequest\(command, visualKind\)/);
+  // (in a tutoring lesson "show me a picture" is first made into pictures of the lesson's own subject; every other sentence is checked as it was said)
+  assert.ok(at("KyroDismissCommands?.parse?.(command)") < at("kyroVisualRequestKind(lessonPicture || command)"), "after the dismiss command");
+  assert.ok(at("kyroVisualRequestKind(lessonPicture || command)") < at("/api/voice/realtime/tool"), "before the request to the server");
+  assert.match(body, /const lessonPicture = kyroTutorDemoCommand\(command\);\s+const visualKind = kyroVisualRequestKind\(lessonPicture \|\| command\);\s+if \(visualKind\) return kyroShowVisualRequest\(lessonPicture \|\| command, visualKind\)/);
 });
 
 test("a picture or video result is captioned with what it is, not the server's placeholder line", () => {
@@ -78,7 +79,7 @@ test("a picture or video result is captioned with what it is, not the server's p
 });
 
 test("the orb is told to call the everyday-records tool for a request to see pictures or videos, and to say only that they are on the screen", () => {
-  assert.match(serverSource, /When the person asks you to show, find or look up pictures, photos, images or videos of something/);
-  assert.match(serverSource, /never describe a picture you cannot see and never read out a web address/);
-  assert.equal(serverSource.split("When the person asks you to show, find or look up pictures, photos, images or videos").length, 2, "said once");
+  assert.match(serverSource, /Pictures, photos, images or videos of something/);
+  assert.match(serverSource, /never describe a picture you cannot see and never read out a web address/i);
+  assert.equal(serverSource.split("Pictures, photos, images or videos of something").length, 2, "said once");
 });

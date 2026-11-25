@@ -141,6 +141,25 @@ test("a follow-up that cannot be set asks the right question and saves nothing",
   const empty = workspace({ editable: { leads: [] } }); assert.match((await say(empty, "set a follow-up for Grace on Friday")).response, /no customers or leads yet/);
 });
 
+// Found in the owner's 4 November 2026 test report (business-08): a buyer saved as "Amina Hassan", then "Follow up with Amina on Friday" -> "could not find person". Only the whole saved name was matched.
+test("a follow-up names the person by a first or last name when that is exactly one person; two people with the same first name are asked which", async () => {
+  const ws = workspace();
+  const first = await say(ws, "Follow up with Amina on 15 October 2099", true);
+  assert.equal(first.status, "completed", first.response); assert.match(first.response, /^Set a follow-up with Amina Hassan for .* I will remind you when it is due\.$/);
+  assert.equal(ws.client.data.editable.leads.find(lead => lead.name === "Amina Hassan").followUpDate, "2099-10-15");
+  const last = workspace(); const lastDone = await say(last, "follow up with Kamau on 2099-03-02", true);
+  assert.equal(last.client.data.editable.leads.find(lead => lead.name === "John Kamau").followUpDate, "2099-03-02", lastDone.response);
+  const asked = await say(workspace(), "Follow up with Amina on Friday", false);
+  assert.equal(asked.status, "needs-confirmation"); assert.match(asked.response, /follow-up with Amina Hassan for/);
+  const twins = workspace({ editable: { leads: [{ name: "Amina Hassan", contact: "", type: "customer" }, { name: "Amina Wanjiru", contact: "", type: "customer" }] } });
+  const which = await say(twins, "Follow up with Amina on Friday"); assert.equal(which.status, "needs-input"); assert.match(which.response, /Which one: Amina Hassan and Amina Wanjiru\?/);
+  assert.equal(twins.saves.length, 0);
+  const unknown = await say(workspace(), "Follow up with Joseph on Friday"); assert.equal(unknown.status, "needs-input"); assert.match(unknown.response, /could not find that person/);
+  // a day name is never mistaken for a person's name
+  const friday = workspace({ editable: { leads: [{ name: "Friday Market", contact: "", type: "customer" }] } });
+  const day = await say(friday, "Follow up with Friday Market on 15 October 2099", true); assert.equal(day.status, "completed", day.response);
+});
+
 test("with no workspace at all, these say so instead of guessing", async () => {
   const none = { businessRequest: async () => ({ body: { clients: [] } }) };
   for (const phrase of ["who are my customers", "mark invoice INV-1001 as paid", "set a follow-up for Grace on Friday"]) {

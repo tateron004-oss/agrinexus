@@ -39,7 +39,10 @@ test("the page opens the map for a spoken request and for a place, and the model
 
 test("a place is found by the server's place search, centred at state size for a US state and city size otherwise, and a place that cannot be found is said plainly", () => {
   const fn = app.slice(app.indexOf("async function kyroOpenMapAtPlace("), app.indexOf("\n}\n", app.indexOf("async function kyroOpenMapAtPlace(")) + 3);
-  assert.match(fn, /request\("\/api\/nexus\/runtime\/navigation", \{ method: "POST", body: \{ action: "search", query: place \} \}\)/);
+  assert.match(fn, /request\("\/api\/nexus\/runtime\/navigation", \{ method: "POST", body: \{ action: "search", query \} \}\)/);
+  // (9 November 2026: a list of places is searched whole first, then its first place)
+  assert.match(fn, /found = await findPlace\(place\);/);
+  assert.match(fn, /findPlace\(parts\[0\]\)/);
   assert.match(fn, /KYRO_US_STATES\.has\(String\(place\)\.toLowerCase\(\)\) \? 6 : 11/);
   assert.match(fn, /I could not find \$\{name\} on the map, so here is the map\./);
   assert.match(fn, /Here is \$\{name\} on the map\. You can zoom and drag it\./);

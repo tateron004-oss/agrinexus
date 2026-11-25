@@ -46,6 +46,7 @@ const APP_SHELL = [
   `/kyro-template-topics.js?v=kyro-template-topics-1`,
   `/kyro-automation-commands.js?v=kyro-automation-commands-3`,
   `/kyro-navigation.js?v=kyro-navigation-7`,
+  `/kyro-slideshow.js?v=kyro-slideshow-1`,
   `/kyro-emergency.js?v=kyro-emergency-1`,
   `/kyro-voice-intake.js?v=kyro-voice-intake-1`,
   `/kyro-intake-forms.js?v=kyro-intake-forms-6`,
@@ -58,6 +59,7 @@ const APP_SHELL = [
   `/kyro-task-stage.js?v=kyro-task-stage-1`,
   `/kyro-answer-card.js?v=kyro-answer-card-1`,
   `/kyro-result-screen.js?v=kyro-result-screen-5`,
+  `/kyro-live-transcript.js?v=kyro-live-transcript-1`,
   `/kyro-walkthrough.js?v=kyro-walkthrough-3`,
   `/kyro-media-player.js?v=kyro-media-player-1`
 ];

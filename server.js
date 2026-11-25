@@ -31,6 +31,7 @@ const nexusProductionRuntime = require("./server/nexusProductionRuntime.js");
 const nexusAgenticBrainRuntime = require("./server/nexusAgenticBrainRuntime.js");
 const nexusRealProviders = require("./server/providers");
 const nexusBusinessVoiceDispatch = require("./nexus/business/voice-dispatch.js");
+const nexusBusinessAuthoritative = require("./nexus/business/authoritative-executor.js");
 const nexusDemoProviderDataset = require("./server/nexus-demo-provider-dataset.js");
 const nexusUserTestingRuntime = require("./server/nexus-user-testing-runtime.js");
 const nexusTelehealthProvider = require("./server/telehealth/provider.js");
@@ -243,6 +244,7 @@ const COMMUNICATIONS_TESTS_PER_HOUR = 6;
 const { HEALTH_BRIDGE_KEYS, profileWithOwnHealthRecordsOnly, scopeHealthDb, collectOwnedHealthBridgeRecords, eraseOwnedHealthBridgeRecords } = require("./server/providers/healthRecordScope.js");
 const { parseAssistantReminderTime, resolveReminderTime, extractAssistantReminderTask, describeMoment: describeReminderMoment } = require("./nexus/reminders/time-phrase.js");
 const floorReminders = require("./nexus/reminders/floor-reminders.js");
+const { areAllCopies: areAllReminderCopies } = require("./nexus/reminders/duplicates.js");
 const { classifyRepeatRequest, repeatTurnAnyLanguage, unreachableStore: unreachableRepeatStore } = require("./nexus/reminders/repeat-turn.js");
 const { resolveReminderTimeZone, resolveReminderTimeZoneDetail, isValidTimeZone, DEFAULT_TIME_ZONE: DEFAULT_REMINDER_TIME_ZONE } = require("./nexus/reminders/time-zone.js");
 const {
@@ -20826,7 +20828,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     `User: ${user?.displayName || user?.name || user?.email || "AgriNexus user"}. Preferred language code: ${language || "en"}.`,
     "Speak naturally: warm, calm, concise, human-paced, and clear for seniors and users with varying literacy or technical comfort.",
     DELIVERY_STYLE,
-    "Ordinary conversation remains conversation: greetings, presence checks, emotional support, small talk, capability questions, and pure follow-up questions about something you already said do not need a function tool.",
+    "Ordinary conversation remains conversation: greetings, presence checks, emotional support, small talk, capability questions, remarks, thanks, changes of mind, corrections, thinking out loud, and pure follow-up questions about something you already said do not need a function tool.",
     "For everything else, prefer calling a tool over answering from your own knowledge. If the user reports a real fact Nexus can act on (a vital sign, a symptom, an intent to buy or sell, a place to find), or asks Nexus to do, check, find, save, track, plan, export, or remind something, call the matching tool below even if they phrased it as a statement rather than a command. Do not silently answer in conversation when a tool exists for the request — that leaves no real record and is a failure mode, not a shortcut.",
     "When the user explicitly asks Nexus to translate text or change language and say a phrase, you must call nexus_translation with the complete request and the requested language code.",
     "When the user explicitly asks to open, show, display, or use Maps, or requests a route, directions, or traffic between two places, you must call nexus_maps_route with the user's complete request. Never answer that you cannot open a Maps app.",
@@ -20855,7 +20857,15 @@ function openAiRealtimeInstructions(user, language = "en") {
     // Found by the full voice audit: the model began "I can't see a clock..." before the page's own (correct, time-zone-aware) answer cut it off.
     "When the user asks what time or what date it is (\"what time is it\", \"what is today's date\", \"¿qué hora es?\"), do not call any tool and say nothing at all: the page answers by itself with the right time for where they are. Never say you cannot see a clock, a calendar or the time.",
     "When the user asks to open their documents, images, pictures, photos or videos with no subject (\"open documents\", \"open images\", \"open videos\"), or asks to create a document, a letter, a report or a business plan (\"create a business plan\"), do not call any tool and say nothing: the page answers by itself (it lists the saved documents, asks what to look for, or creates the document and shows its Download button).",
-    "When a business owner in the United States asks about free business help or mentors, a certification (8(a), NMSDC, Women-Owned, HUBZone, veteran-owned), SBA loans or community lenders, grants, estimated taxes, a 1099, business licences, selling to the government, choosing a business structure (LLC, S corporation, C corporation, for-profit or nonprofit), a business plan, the steps to start a business, funding or investors, growing or marketing a business, a trademark or business name, an EIN or registering a business, or where to find local help, pass the person's complete question to the nexus_everyday_records tool and say what it returns: it answers from a checked guide with its sources and the date they were checked, and you must not add, change or drop any of it. When a business owner asks for a digital health check, to be walked through a checklist (securing accounts, getting online, protecting email from spoofing, starting with AI, what to do after a data breach), or to start the AI basics course, pass the complete words to the nexus_everyday_records tool and read out what it returns in full, then pass each answer the person gives afterwards (yes, no, not sure, done, skip, cancel) the same way until it finishes; do not answer those yourself, and do not shorten the questions, steps or lessons. When a business owner anywhere asks which AI tools to use, how to choose an AI tool, or how AI can help with a business plan, funding, marketing, customer service or day-to-day operations, pass the complete question to the nexus_everyday_records tool and say what it returns in full: it describes the kinds of tool and what to check, and it does not name or recommend any product or company, so you must not either. When a business owner or nonprofit leader asks about their own workspace -- how their business or nonprofit is doing (this month), whether they have enough money for upcoming expenses, which customers or donors need a follow-up, which grants or contracts have approaching deadlines, how many people the program served and what results were measured, who owes them money, their donations, or volunteer hours -- pass the complete question to the nexus_everyday_records tool and say what it returns in full: it reads their own saved records and says plainly what it cannot see, and you must not estimate, add up or invent any figure, name or date. When a business owner or nonprofit leader wants to change their workspace by voice -- add a bill, say a bill is paid, set the cash balance or a monthly budget, record a pledge or say a pledge was paid, log a donation or expense (a restricted gift names what it is for), add a donor or customer, a grant, a task -- pass the complete words to the nexus_everyday_records tool: it replies with what it would do and asks 'Should I go ahead?', or asks for the one detail it is missing. Say that to the person exactly, then pass their next words (yes, no, or the answer to its question) to the same tool, and say what it returns. Never say anything was added, paid or saved unless the tool says so. For profit margin and fundraising net it works out the sum from the numbers said or the money already logged. When a nonprofit leader or business owner talks about the people they serve or work with -- volunteer hours ('log 3 volunteer hours for Joy'), a volunteer's skills or availability, a participant's consent to keep their records, a service someone received ('Maria Lopez received a food box'), a result that was measured ('record an outcome: 42 people completed job training'), a program goal, how many people the program served, or an impact report -- pass the complete words to the nexus_everyday_records tool and say what it returns in full, the same way as for any change: it describes what it would do and asks 'Should I go ahead?', then pass their yes or no. It records a service only for someone whose consent is recorded and gives counts, not names, in its reports; do not add names, numbers or results of your own. When a business owner or nonprofit leader talks about the papers and goods the organization keeps -- a licence, permit, insurance policy, certification or board record and when it expires or was renewed, the inventory ('add 20 jars of candles to inventory', 'received 30 donated blankets', what is running low, what was wasted), where a donor or customer came from, or what a contract or grant requires and when its report is due -- pass the complete words to the nexus_everyday_records tool and say what it returns in full, with the same yes step for changes. It does not check that a licence is valid or that anyone is eligible, and you must not claim either. When a business owner or nonprofit founder asks how to register, form, set up or incorporate an LLC, a corporation or a nonprofit in a state of the United States, or what it costs (fees, annual reports, extra state taxes), pass the complete question to the nexus_everyday_records tool and say what it returns in full: it gives that state's fees, steps and official pages from the state's own filing office, and you must not add, change or guess any fee or date. If the person has not named their state, say what the tool returns and ask which state they live in. When a business owner in Kenya or Nigeria asks about registering a business, business taxes, the government's support for small businesses or government funding for them, pass the complete question to the nexus_everyday_records tool and say what it returns in full: it answers from the agencies' own pages with their names and the date they were checked, and it says where it could not confirm a figure, so you must not add a rate, a fee or a deadline of your own. When the person asks you to show, find or look up pictures, photos, images or videos of something (for example 'find a picture of a maize armyworm' or 'show me videos about drip irrigation'), call the nexus_everyday_records tool with their complete words: it puts them on the screen. Then say in one short sentence that they are on the screen, or say plainly that nothing is showing if the tool says so; never describe a picture you cannot see and never read out a web address. For any other legal, tax, loan, grant, certification, licence, insurance or hiring question, give general information only and say plainly that you are not a lawyer, a tax advisor or a financial advisor. Name the official place to check (for example irs.gov, sba.gov or the state's business office; outside the United States, the local government office instead), mention the free help (a Small Business Development Center or a SCORE mentor in the United States), say that rules and deadlines change and differ by place so they should confirm on the official site, and never say or imply that you filed, applied, signed, sent or paid anything.",
+    "Business and nonprofit topics (listed below): pass the person's complete words to nexus_everyday_records and say what it returns in full. Never add, change, drop or estimate a fact, figure, name or date. It answers from checked guides (with their sources and the date they were checked) or from the person's own saved records, and it says plainly what it cannot see or confirm. A request that changes something comes back as what it would do plus 'Should I go ahead?', or as the one detail it still needs: say that to the person exactly, then pass their next words (yes, no, or the detail) to the same tool and say what it returns. Never say anything was added, paid, saved or sent unless the tool says so.",
+    "Topics for a business owner in the United States: free business help or mentors; certifications (8(a), NMSDC, Women-Owned, HUBZone, veteran-owned); SBA loans or community lenders; grants; estimated taxes; a 1099; business licences; selling to the government; choosing a structure (LLC, S corporation, C corporation, for-profit or nonprofit); a business plan; the steps to start; funding or investors; growing or marketing; a trademark or business name; an EIN or registering; where to find local help. Also how to register, form, set up or incorporate an LLC, a corporation or a nonprofit in a US state, and what it costs (fees, annual reports, extra state taxes): the tool gives that state's fees, steps and official pages, so if the person has not named their state, say what it returns and ask which state they live in.",
+    "In Kenya or Nigeria: registering a business, business taxes, and government support or funding for small businesses. The tool answers from the agencies' own pages, so never add a rate, fee or deadline of your own.",
+    "Walk-throughs: a digital health check, a checklist (securing accounts, getting online, protecting email from spoofing, starting with AI, what to do after a data breach) or the AI basics course. Read out what the tool returns in full, then pass each answer the person gives (yes, no, not sure, done, skip, cancel) the same way until it finishes. Do not answer these yourself or shorten the questions, steps or lessons. For which AI tools to use, how to choose one, or how AI can help a business anywhere, the tool describes the kinds of tool and what to check and names no product or company, so you must not either.",
+    "Their own workspace: how the business or nonprofit is doing (this month); whether there is enough money for upcoming expenses; which customers or donors need a follow-up; which grants or contracts have deadlines coming; how many people the program served and what was measured; who owes them money; donations; volunteer hours. To change it by voice: add a bill or mark it paid, set the cash balance or a monthly budget, record a pledge or mark it paid, log a donation or expense (a restricted gift names what it is for), add a donor, customer, grant or task. Profit margin and fundraising net are worked out from the numbers said or the money already logged.",
+    "People the organization serves: volunteer hours, a volunteer's skills or availability, a participant's consent to keep their records, a service someone received, a result measured, a program goal, how many people were served, an impact report. The tool records a service only for someone whose consent is recorded and gives counts, not names, in reports; add no names, numbers or results of your own.",
+    "Papers and goods the organization keeps: a licence, permit, insurance policy, certification or board record and when it expires or was renewed; inventory (adding stock, donated goods received, what is running low, what was wasted); where a donor or customer came from; what a contract or grant requires and when its report is due. The tool does not check that a licence is valid or that anyone is eligible, and you must not claim either.",
+    "Pictures, photos, images or videos of something ('find a picture of a maize armyworm', 'show me videos about drip irrigation'): call the nexus_everyday_records tool with their complete words: it puts them on the screen. Then say in one short sentence that they are on the screen, or say plainly that nothing is showing if the tool says so. Never describe a picture you cannot see and never read out a web address.",
+    "For any other legal, tax, loan, grant, certification, licence, insurance or hiring question, give general information only and say plainly that you are not a lawyer, a tax advisor or a financial advisor. Name the official place to check (for example irs.gov, sba.gov or the state's business office; outside the United States, the local government office instead), mention the free help (a Small Business Development Center or a SCORE mentor in the United States), say that rules and deadlines change and differ by place so they should confirm on the official site, and never say or imply that you filed, applied, signed, sent or paid anything.",
     // (the server hands these on to the tool that does them: a checklist, saving as a PDF, the offline queue, a receipt, a translation, a flyer or invoice, whether a service is connected)
     "Your tool list in this session may be shorter than the tools named below. When you are told to call a tool you do not have (nexus_lists, nexus_automation_reminder, nexus_business_assistant, nexus_document_export, nexus_memory, nexus_translation, nexus_receipts, nexus_visual_analysis and similar), or the person tells you something to save or asks to read it back -- a note, a shopping list or to-do, a sale, a cost, a debt or stock, a farm log entry (milk, eggs, rain, planting, spraying), a contact, a reminder, a fact about themselves, an undo -- call nexus_everyday_records with their complete words, and say what it returns. Never say something was saved unless the tool says so.",
     "Music and radio: when the person asks to play a song, an artist, a genre or a station, or to pause, skip or stop it, call nexus_everyday_records with their complete words.",
@@ -20863,7 +20873,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
     "When the user wants to personally talk to someone via a call Kyro places for them -- \"connect me to X\", \"patch me through to X\", \"let me talk to X\", \"get me on the phone with X\" -- you must call nexus_communications with channel: \"call\". This rings the user's own phone first, then bridges in the target; Kyro does not participate in that conversation. This is different from a plain \"call X and tell them...\" request, where Kyro itself delivers the message. If the user also asks Kyro to listen, take notes, or remember the call (\"connect me to X and listen\", \"call X and take notes\"), pass mode: \"connect_and_listen\" -- Kyro will transcribe that call (with a real spoken consent disclosure to the other party, which is legally required and never skipped) so a follow-up request can use what was actually discussed. If recentCallContext is present in this turn and the user's request plainly follows up on that recent call (asking to call/message someone else about it, or referencing what was discussed), use those real details instead of asking the user to repeat them.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
-    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, to add/schedule an appointment or sync an appointment to their calendar, to create/generate a service agreement, contract, client intake form, or application checklist, to generate/print the business plan PDF, to create/generate a flyer, newsletter, or promotional email, or to check how their business or nonprofit is doing/performing (a performance dashboard/summary), for their business or nonprofit workspace, you must call nexus_business_assistant.",
+    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, to add/schedule an appointment or sync an appointment to their calendar, to book a named customer for a day and time, ask who is free or what is open, set or ask their business hours, move or cancel a booking, send a customer their appointment confirmation, record that someone agreed (or does not want) to be called back or ask who can be called back, record that someone asked for a quote or ask who is waiting on one, create or send an email or text campaign to the customers who agreed to get messages and ask how it did, record who agreed (or does not want) to get messages, to create/generate a service agreement, contract, client intake form, or application checklist, to generate/print the business plan PDF, to create/generate a flyer, newsletter, promotional email, social media post, ad or website page, or to check how their business or nonprofit is doing/performing (a performance dashboard/summary), for their business or nonprofit workspace, you must call nexus_business_assistant.",
     "When the user asks to learn about, or wants a self-paced lesson on, financial literacy, marketing strategy, grant writing, minority-owned business development, government partnership readiness, or technology modernization, you must call nexus_workforce_learning — these are real local learning-catalog resources, not fabricated.",
     "When the user asks about current, hourly, or daily/weekly weather, temperature, or conditions in a place, or asks to compare weather between places, you must call nexus_weather.",
     "When the user asks to see, find, show, or play images, photos, pictures, or videos of anything (including crop damage, pests, disease, or any other subject), you must call nexus_visual_analysis with that request. This is a real search (Wikimedia Commons for images, YouTube/Wikimedia Commons for videos) — never say visual or video search is disabled without calling it first.",
@@ -21372,7 +21382,7 @@ function nexusOpenAiNativeToolSchemas() {
     tool("nexus_marketplace_logistics", "Run Nexus marketplace, buyer/seller, vendor research, logistics, shipment, route, and no-payment/no-purchase guarded support.", "commerce-preparation"),
     tool("nexus_communications", "Run Nexus SMS, WhatsApp, email, phone, Telegram, and message-preparation workflows. Sending/calling remains confirmation- and credential-gated.", "high-risk-confirmation-required"),
     tool("nexus_workflow", "Open or continue a clearly requested Nexus workflow only when the user asks for structured task support.", "workflow-preparation"),
-    tool("nexus_business_assistant", "List, start, or check the user's Kyro business or nonprofit admin-assistant workspace (task/lead management, launch-kit drafting, and in Kyro Business & Grants: grant proposal, marketing strategy, financial literacy, minority-owned business development, and government/public-sector partnership planning templates); also add a customer/donor/lead/sponsor/volunteer, log or record an income or expense transaction, create an invoice or receipt, add a line item to an invoice, generate/print an invoice PDF, add/track a grant or funding opportunity and update its status, add a project task and mark/complete/update its status, add an appointment and sync it to the configured real calendar provider, generate a service agreement, client intake form, and application checklist template, generate/print the business plan PDF, generate a flyer, newsletter, and promotional email draft, or get a computed business performance dashboard summary (income/expenses, customers/donors, invoices, grants, tasks, appointments), in that workspace through the existing Nexus business-services backend.", "business-assistant-preparation"),
+    tool("nexus_business_assistant", "List, start, or check the user's Kyro business or nonprofit admin-assistant workspace (task/lead management, launch-kit drafting, and in Kyro Business & Grants: grant proposal, marketing strategy, financial literacy, minority-owned business development, and government/public-sector partnership planning templates); also add a customer/donor/lead/sponsor/volunteer, log or record an income or expense transaction, create an invoice or receipt, add a line item to an invoice, generate/print an invoice PDF, add/track a grant or funding opportunity and update its status, add a project task and mark/complete/update its status, add an appointment and sync it to the configured real calendar provider, book a named customer for a day and time without double-booking, check availability and business hours, move or cancel a booking, send the customer a confirmation, record who agreed to be called back, track quote requests, create and send email or text campaigns to customers who agreed to get messages and track the replies, generate a service agreement, client intake form, and application checklist template, generate/print the business plan PDF, generate a flyer, newsletter, and promotional email draft, or get a computed business performance dashboard summary (income/expenses, customers/donors, invoices, grants, tasks, appointments), in that workspace through the existing Nexus business-services backend.", "business-assistant-preparation"),
     tool("nexus_provider_readiness", "Inspect Nexus provider, credential, connector, missing-env, and blocked-state information without exposing secrets.", "read-only-provider-status"),
     tool("nexus_deep_research", "Run multi-source Nexus research through the existing live knowledge and evidence pipeline. Returns citations or a truthful missing-provider state; never fabricates sources.", "read-only-source"),
     tool("nexus_file_document_analysis", "Analyze uploaded or referenced files, PDFs, Word documents, spreadsheets, presentations, and structured documents when an uploaded-file provider or local document store is available.", "document-analysis"),
@@ -21489,7 +21499,7 @@ function nexusDelegatedToolFor(command = "") {
   // "Say good morning in Kiswahili" ("Kiswahili" is how Kenyans say Swahili; the hint only knows "swahili")
   if (/\btranslate\b/.test(lower) || /\b(?:say|write|how do (?:i|you) say)\b.+\b(?:in|into|to)\s+(?:english|spanish|french|(?:ki)?swahili|arabic|portuguese)\b/.test(lower)) return "nexus_translation";
   // "Make me a flyer for my bakery", "create an invoice", "write a newsletter": the business assistant makes these
-  if (/\b(?:flyer|newsletter|promotional email|invoice|service agreement|launch kit)\b/.test(lower) && /\b(?:create|make|write|draft|generate|prepare|print)\b/.test(lower)) return "nexus_business_assistant";
+  if (/\b(?:flyer|newsletter|promotional email|social media post|(?:facebook|instagram|linkedin|twitter|tiktok|whatsapp) post|advertisement|website page|landing page|invoice|service agreement|launch kit)\b/.test(lower) && /\b(?:create|make|write|draft|generate|prepare|print)\b/.test(lower)) return "nexus_business_assistant";
   // "Is Spotify connected?" / "are text messages switched on": the readiness of a named service (the bare words "status" or "ready" are not enough: they are in many other questions)
   if (/\b(connected|configured|set up|switched on|turned on|working|available)\b/.test(lower) && /\b(spotify|sms|text messages?|whatsapp|twilio|email|provider|integration|calling)\b/.test(lower)) return "nexus_provider_readiness";
   let hint = nexusOpenAiNativeToolChoiceHint(command);
@@ -21659,7 +21669,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
     "When the user wants to personally talk to someone via a call Kyro places for them -- \"connect me to X\", \"patch me through to X\", \"let me talk to X\", \"get me on the phone with X\" -- you must call nexus_communications with channel: \"call\". This rings the user's own phone first, then bridges in the target; Kyro does not participate in that conversation. This is different from a plain \"call X and tell them...\" request, where Kyro itself delivers the message. If the user also asks Kyro to listen, take notes, or remember the call (\"connect me to X and listen\", \"call X and take notes\"), pass mode: \"connect_and_listen\" -- Kyro will transcribe that call (with a real spoken consent disclosure to the other party, which is legally required and never skipped) so a follow-up request can use what was actually discussed. If recentCallContext is present in this turn and the user's request plainly follows up on that recent call (asking to call/message someone else about it, or referencing what was discussed), use those real details instead of asking the user to repeat them.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
-    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, to add/schedule an appointment or sync an appointment to their calendar, to create/generate a service agreement, contract, client intake form, or application checklist, to generate/print the business plan PDF, to create/generate a flyer, newsletter, or promotional email, or to check how their business or nonprofit is doing/performing (a performance dashboard/summary), for their business or nonprofit workspace, you must call nexus_business_assistant.",
+    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, to add/schedule an appointment or sync an appointment to their calendar, to book a named customer for a day and time, ask who is free or what is open, set or ask their business hours, move or cancel a booking, send a customer their appointment confirmation, record that someone agreed (or does not want) to be called back or ask who can be called back, record that someone asked for a quote or ask who is waiting on one, create or send an email or text campaign to the customers who agreed to get messages and ask how it did, record who agreed (or does not want) to get messages, to create/generate a service agreement, contract, client intake form, or application checklist, to generate/print the business plan PDF, to create/generate a flyer, newsletter, promotional email, social media post, ad or website page, or to check how their business or nonprofit is doing/performing (a performance dashboard/summary), for their business or nonprofit workspace, you must call nexus_business_assistant.",
     "When the user asks to learn about, or wants a self-paced lesson on, financial literacy, marketing strategy, grant writing, minority-owned business development, government partnership readiness, or technology modernization, you must call nexus_workforce_learning — these are real local learning-catalog resources, not fabricated.",
     "recentTurns shows the actual conversation history in order. If the most recent assistant turn asked the user to confirm a specific action (an export, a message, a call, a payment) and the user's new message is a confirmation (yes, confirm, confirmed, go ahead, do it, that's right), you must call the SAME tool again with the SAME arguments reconstructed from recentTurns (title, content, recipient, format, etc.) plus confirmed: true. Never just repeat the confirmation request back to the user — a user who already said yes has confirmed.",
     "If recentTurns shows a mental-health crisis, self-harm, or emergency-safety turn, but the user's CURRENT message is a plainly unrelated, routine request (a clinic location, weather, shipment, learning, marketplace, or any other everyday task), answer the current request plainly and factually using the real tool result. Do not re-open, repeat, or extend crisis-support or 'your safety comes first' language into an answer to an unrelated request — that reads as dismissive of a real request and confusing after a crisis has already been acknowledged. Only continue crisis-support framing when the user's current message itself still relates to safety, self-harm, or the same crisis topic.",
@@ -22121,7 +22131,7 @@ async function nexusOpenAiNativeCancelPushReminder(user, title, language = "en")
       taskId: turn.taskId, commandId: turn.commandId, correlationId: turn.correlationId, workspace: turn.render.workspace,
       rendered: true, visible: false, audible: true, evidence: { cancelled: true, reminderId: data.reminderId }, user: authoritativeUser
     }).catch(() => null);
-    return { ok: true, reminder: data.reminder || title, reminderId: data.reminderId || "" };
+    return { ok: true, reminder: data.reminder || title, reminderId: data.reminderId || "", copies: Number(data.copies) || 1, inFlight: data.inFlight === true };
   } catch {
     return null;
   }
@@ -22422,6 +22432,10 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   const saidInput = sanitizePilotText(spokenInput.clean.slice(-3000), 3000);
   // Only plain conversation is cleaned: the other tools (drafts, documents, lists...) take the words of a message or a document from the sentence, exactly as said.
   const command = sanitizePilotText(toolName === "nexus_general_conversation" ? spokenInput.text : (args.query || context.command || args.command || ""), 700);
+  // "Remind me on 15 October at 10 am about the clinic" is a REMINDER, not a calendar event: the tool-calling model sometimes picks nexus_calendar for a reminder that names a date, and the person was told "the calendar is not
+  // switched on for this account yet" and got no reminder (4 November 2026 test report, everyday-09). A "remind me" sentence that does not name a calendar, meeting, appointment or event goes to the reminders, as the
+  // server's own tool chooser (nexusOpenAiNativeToolChoiceHint) already sends it. (typeof guard: several tests evaluate this function's source alone)
+  if (toolName === "nexus_calendar" && typeof floorReminders !== "undefined" && floorReminders.isSetRequest(command) && !/\b(calendar|meeting|appointment|event)\b/i.test(command)) toolName = "nexus_automation_reminder";
   const capability = args.capability || nexusOpenAiNativeToolChoiceHint(command);
   const common = {
     ok: true,
@@ -22900,13 +22914,20 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // ("show me Nairobi", "where is Kisumu": one place and no route opens the map, instead of "Origin and destination text are required")
     const onePlace = !routeArgs.origin && /^(?:please\s+)?(?:(?:kyro|nexus)[,.]?\s+)?(?:show(?:\s+me)?|where\s+is|find|map\s+of|open\s+the\s+map\s+of)\s+(?:the\s+)?([A-Za-z][A-Za-z'.-]*(?:\s+[A-Za-z][A-Za-z'.-]*){0,2})[.?!]*$/i.exec(String(command || "").trim());
     const placeNamed = onePlace && !/\bmaps?\b/i.test(onePlace[1]) ? onePlace : null;
+    // (found on 9 November 2026: the model sometimes hands the tool one place as the "origin" with no destination, for "show me Cairo on a map", and the answer was "Origin and destination text are required": one place and no word of a route is a map, not a route)
+    const oneNamedPlace = Boolean(routeArgs.origin && !routeArgs.destination && !routeArgs.waypoints?.length
+      && !/\b(?:route|routes|directions?|from|between|how far|distance|travel time|how long|drive|driving|walk|walking|navigate|traffic)\b/i.test(command)
+      && /\b(?:maps?|show|where|find|locate)\b/i.test(command));
     const mapOnlyRequest = (!routeArgs.origin && !/\b(route|directions?|navigation|from\\s+.+\\s+to)\b/i.test(command) && /\b(open|show|display|pull up|bring up|launch|start)\b.*\b(maps?|kenya)\b/i.test(command))
+      || oneNamedPlace
       || Boolean(placeNamed && !/\b(?:clinic|pharmacy|hospital|doctor|near|nearby|nearest|jobs?|price|prices|weather|news)\b/i.test(placeNamed[1]));
     if (mapOnlyRequest) {
       return nexusOpenAiNativeBlockedToolResult(db, common, {
         status: "local-ready",
         response: /\bgoogle maps?\b/i.test(command)
           ? "I can't open the Google Maps app from here, so I am opening the Kyro map instead. Tell me two places and I will show the route and the travel time."
+          : oneNamedPlace
+          ? `Here is ${String(routeArgs.origin).trim()} on the map. For a route, tell me where it starts and where it ends.`
           : placeNamed
           ? `The Nexus Maps workspace is ready. I have not calculated anything for ${placeNamed[1].trim()}; say "route from ${placeNamed[1].trim()} to" a second place and I will give the distance and travel time.`
           : "The Nexus Maps workspace is ready. No route was calculated because no origin or destination was requested.",
@@ -23297,7 +23318,10 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // title -- not just a read leak but a genuine cross-user mutation.
       const ownedPilotReminders = (db.nexusPilotReminders || []).filter(reminder => nexusPilotRecordOwned(reminder, user));
       const { candidates: matches } = nexusReminderCancelCandidates(command, ownedPilotReminders, pushCards);
-      const match = matches.length === 1 ? matches[0] : null;
+      // The same reminder set more than once (the same words, as a push reminder and/or a local note) is ONE reminder: it is cancelled with every copy. "I found 2 reminders matching that ... tell me the exact title" cannot be
+      // answered when both have the same title, so a copy was left to fire after the person had asked to cancel (4 November 2026 test report). Different reminders that merely share words are still asked about.
+      const sameReminderCopies = matches.length > 1 && matches.every(item => nexusReminderMatchKey(item.title) === nexusReminderMatchKey(matches[0].title));
+      const match = matches.length === 1 || sameReminderCopies ? (matches.find(item => item.kind === "push") || matches[0]) : null;
       if (!(args.confirmed === true || args.confirmation === true)) {
         return nexusOpenAiNativeBlockedToolResult(db, common, {
           status: "confirmation-required",
@@ -23307,7 +23331,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
           didNot: ["Nexus did not delete any reminder."]
         });
       }
-      if (matches.length > 1) {
+      if (matches.length > 1 && !sameReminderCopies) {
         return { ...common, capability: "automation-reminder", status: "reminder-ambiguous", response: `I found ${matches.length} reminders matching that: ${matches.slice(0, 5).map(r => `"${r.title}"`).join(", ")}. Tell me the exact title of the one to cancel.`, localOnly: true };
       }
       if (!match) {
@@ -23316,9 +23340,13 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       if (match.kind === "push") {
         const cancelled = await nexusOpenAiNativeCancelPushReminder(user, match.title, language);
         if (!cancelled?.ok) return { ...common, capability: "automation-reminder", status: "reminder-cancel-blocked", response: `I could not cancel the reminder "${match.title}" right now. Please try again.` };
-        return { ...common, capability: "automation-reminder", status: "reminder-canceled", response: `I canceled the reminder "${match.title}".`, executionAttempted: true, executionVerified: true, pushNotification: true };
+        // a local note with the same words goes too (it is the same reminder), and a reminder the worker had already claimed may still arrive once: said plainly
+        const copyIds = new Set(matches.filter(item => item.kind === "local").map(item => item.id));
+        if (copyIds.size) db.nexusPilotReminders = db.nexusPilotReminders.filter(reminder => !copyIds.has(reminder.id));
+        return { ...common, capability: "automation-reminder", status: "reminder-canceled", response: `I canceled the reminder "${match.title}".${cancelled.copies > 1 ? ` It had been set ${cancelled.copies} times, so I canceled all ${cancelled.copies}.` : ""}${cancelled.inFlight ? " It was already being sent when I stopped it, so it may still arrive once." : ""}`, executionAttempted: true, executionVerified: true, pushNotification: true };
       }
-      db.nexusPilotReminders = db.nexusPilotReminders.filter(reminder => reminder.id !== match.id);
+      if (sameReminderCopies) { const copyIds = new Set(matches.map(item => item.id)); db.nexusPilotReminders = db.nexusPilotReminders.filter(reminder => !copyIds.has(reminder.id)); }
+      else db.nexusPilotReminders = db.nexusPilotReminders.filter(reminder => reminder.id !== match.id);
       return { ...common, capability: "automation-reminder", status: "reminder-canceled", response: `I canceled the reminder "${match.title}".`, localOnly: true };
     }
     // Found live: this tool's own description promises "recurring
@@ -24693,7 +24721,10 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // planner's free AI guess among an unrelated tool catalog.
       const result = await nexusBusinessVoiceDispatch.run({
         command, args, timeZone: context.timeZone || args.timeZone,
-        businessRequest: opts => authoritativeNexusRuntime.businessRequest({ ...opts, user: authoritativeUser })
+        businessRequest: opts => authoritativeNexusRuntime.businessRequest({ ...opts, user: authoritativeUser }),
+        // the confirmation to a customer goes through the same governed sender as the text and email commands (a restricted account cannot send)
+        sendMessage: nexusBusinessAuthoritative.makeSendMessage(process.env, { isRestrictedFrom: name => userIsRestrictedFrom(user, name) }),
+        canSend: !userIsRestrictedFrom(user, "communications-send")
       });
       return { ...common, capability: "business-assistant", ...result };
     } catch (error) {
@@ -33337,7 +33368,8 @@ async function upcomingReminders(db, user, api, zone) {
   const unmoved = legacy.filter(item => !item.notificationId).map(item => ({ ...item, source: "legacy", original: item }));
   if (!api) return { items: unmoved, complete: false };
   let rows;
-  try { rows = await api.list(); } catch { return { items: unmoved, complete: false, api: null }; }
+  // (a reminder the worker is sending right now is in the list too, so it can be cancelled and the person can be told honestly that it may still arrive)
+  try { rows = await api.list({ includeInFlight: true }); } catch { return { items: unmoved, complete: false, api: null }; }
   const mirrors = new Map(legacy.filter(item => item.notificationId).map(item => [item.notificationId, item]));
   const delivery = rows.map(row => { const mirror = mirrors.get(row.id) || null; return { id: row.id, source: "delivery", reminderNumber: mirror?.reminderNumber || "", task: row.task, scheduledAt: row.scheduledAt, createdAt: row.createdAt || mirror?.createdAt || "",
     status: "scheduled", createdBy: email, section: mirror?.section || "agent", whenLabel: row.whenLabel, timeZone: row.timeZone, mirror }; });
@@ -33348,10 +33380,27 @@ function cancelMirror(item) {
   const target = item.source === "legacy" ? item.original : item.mirror;
   if (target) { target.status = "canceled"; target.canceledAt = new Date().toISOString(); }
 }
+// Cancels the reminder AND every copy of it (item.duplicates: the same words within 90 seconds, said more than once): a copy left behind is a reminder that fires after the person was told it was canceled.
+// -> { ok, inFlight, cancelledCount, total }: inFlight when a copy had already been claimed by the worker and may already be on its way.
 async function cancelReminderItem(api, item) {
-  if (item.source === "delivery") { if (!(await api.cancel(item.id))) return false; }
-  cancelMirror(item);
-  return true;
+  const targets = [item, ...(Array.isArray(item.duplicates) ? item.duplicates : [])];
+  let cancelledCount = 0; let inFlight = false;
+  for (const target of targets) {
+    if (target.source === "delivery") {
+      const result = typeof api.cancelDetailed === "function" ? await api.cancelDetailed(target.id) : { ok: await api.cancel(target.id), inFlight: false };
+      if (!result.ok) continue;
+      if (result.inFlight) inFlight = true;
+    }
+    cancelMirror(target);
+    cancelledCount += 1;
+  }
+  return { ok: cancelledCount > 0, inFlight, cancelledCount, total: targets.length };
+}
+// The words the person is told after a cancel: one reminder, several copies of it, or some copies, and plainly when one may still arrive.
+function cancelReminderReply(M, lang, item, outcome) {
+  const base = outcome.cancelledCount < outcome.total ? M.canceledSomeCopies[lang](item, outcome.cancelledCount, outcome.total)
+    : outcome.cancelledCount > 1 ? M.canceledCopies[lang](item, outcome.cancelledCount) : M.canceled[lang](item);
+  return `${base}${outcome.inFlight ? M.canceledInFlightNote[lang] : ""}`;
 }
 
 // The answer to a question just asked about a reminder ("At 6 in the morning or in the evening?", "Cancel all 5?"). Anything that is not an answer is dropped and handled as the new request it is.
@@ -33369,12 +33418,12 @@ async function resolvePendingReminder(db, user, text, options = {}) {
       const api = await deliveryStoreFor(user);
       const { items } = await upcomingReminders(db, user, api, options.timeZone);
       const wanted = new Set(pending.ids || []);
-      let count = 0;
-      for (const item of items) if (wanted.has(item.id)) { try { if (await cancelReminderItem(api, item)) count += 1; } catch { /* left as it was */ } }
+      let count = 0; let anyInFlight = false;
+      for (const item of items) if (wanted.has(item.id)) { try { const outcome = await cancelReminderItem(api, item); if (outcome.ok) count += 1; if (outcome.inFlight) anyInFlight = true; } catch { /* left as it was */ } }
       let repeating = 0;
       if (pending.repeating) { const turn = await repeatStoreTurn(user, "stop all my repeating reminders", options.timeZone); const done = /stopped (\d+)/.exec(turn.reply || ""); repeating = done ? Number(done[1]) : 0; }
       db.profile.agentMemory.lastStatus = "assistant-reminders-canceled-all";
-      return reminderReply("assistant.reminders_canceled_all", M.canceledAll[lang](count + repeating), { extra: { canceledCount: count + repeating } });
+      return reminderReply("assistant.reminders_canceled_all", `${M.canceledAll[lang](count + repeating)}${anyInFlight ? M.canceledInFlightNote[lang] : ""}`, { extra: { canceledCount: count + repeating } });
     }
     delete table[email];
     if (floorReminders.NO.test(String(text).trim())) return reminderReply("assistant.reminders_kept", M.keptAll[lang]);
@@ -33550,7 +33599,8 @@ async function assistantReminderCommandResponse(db, user, text, lower, options =
       if (!items.length) return !view.complete ? unreachable() : reminderReply("assistant.no_reminder_to_cancel", "I do not see an active reminder to cancel. Nothing was changed.", { status: "needs-input" });
       const mine = items.filter(entry => entry.createdBy === email);
       const matches = stopReminding.subject ? mine.filter(entry => reminderMatchesSubject({ task: entry.task, sourceCommand: (entry.mirror || entry.original)?.sourceCommand }, stopReminding.subject)) : mine;
-      if (matches.length !== 1) {
+      // (the same reminder set more than once is one reminder: it is canceled with every copy, not asked about)
+      if (matches.length !== 1 && !areAllReminderCopies(matches)) {
         const shown = (matches.length ? matches : mine).slice(0, 5);
         const listed = lines(shown, lang).join(". ");
         const example = shown[0].reminderNumber ? `cancel ${shown[0].reminderNumber}` : `cancel my reminder to ${shown[0].task}`;
@@ -33559,23 +33609,25 @@ async function assistantReminderCommandResponse(db, user, text, lower, options =
           : `I could not find a reminder about ${stopReminding.subject}. Your reminders are: ${listed}. Tell me which one to cancel, for example "${example}". Nothing was canceled.`, { status: "needs-input", extra: { reminders: shown } });
       }
       item = matches[0];
+      if (matches.length > 1) item = { ...item, duplicates: matches.slice(1) };
     } else {
       const found = floorReminders.findReminder(items, email, cancel);
       if (found.none) return !view.complete && !items.length ? unreachable() : reminderReply("assistant.no_reminder_to_cancel", cancel.subject || cancel.id ? M.notFound[lang] : M.nothingToCancel[lang], { status: "needs-input" });
       if (found.ambiguous || (found.count > 1 && !cancel.subject && !cancel.id)) {
         const choices = found.ambiguous || items;
-        return reminderReply("assistant.reminder_cancel_ambiguous", M.whichOne[lang](choices.length, lines(choices, lang), "cancel"), { status: "needs-input" });
-      }
-      item = found.match;
+        // The same reminder set more than once (the same words within 90 seconds) is one reminder: it is canceled with every copy, not asked about ("which one?" left a copy to fire after "canceled").
+        if (areAllReminderCopies(choices)) item = { ...choices[0], duplicates: choices.slice(1) };
+        else return reminderReply("assistant.reminder_cancel_ambiguous", M.whichOne[lang](choices.length, lines(choices, lang), "cancel"), { status: "needs-input" });
+      } else item = found.match;
     }
-    let done = false;
-    try { done = await cancelReminderItem(api, item); } catch { done = false; }
-    if (!done) return reminderReply("assistant.reminder_cancel_failed", M.cancelFailed[lang], { status: "needs-review" });
+    let outcome = { ok: false };
+    try { outcome = await cancelReminderItem(api, item); } catch { outcome = { ok: false }; }
+    if (!outcome.ok) return reminderReply("assistant.reminder_cancel_failed", M.cancelFailed[lang], { status: "needs-review" });
     db.profile.agentMemory.lastStatus = "assistant-reminder-canceled";
     db.profile.agentMemory.lastSummary = `Canceled ${item.reminderNumber || "a reminder"}: ${item.task}.`;
     db.profile.agentMemory.updatedAt = new Date().toISOString();
     logIntegration(db, { providerId: "openai", module: "Agent AI", action: "assistant.reminder_canceled", detail: `${item.reminderNumber || item.id} canceled.`, metadata: { reminderId: item.id }, dispatch: false });
-    return reminderReply("assistant.reminder_canceled", M.canceled[lang](item), { section: item.section || "agent", extra: { reminder: item } });
+    return reminderReply("assistant.reminder_canceled", cancelReminderReply(M, lang, item, outcome), { section: item.section || "agent", extra: { reminder: item } });
   }
   if (floorReminders.isSetRequest(text)) {
     const task = extractAssistantReminderTask(text);
@@ -48890,6 +48942,8 @@ async function api(req, res, url) {
       startedAt: new Date(Date.now() - Math.round(process.uptime() * 1000)).toISOString(),
       uptimeSeconds: Math.round(process.uptime()),
       memoryMb: { rss: Math.round(memory.rss / 1048576), heapUsed: Math.round(memory.heapUsed / 1048576) },
+      // which voice model the live voice session uses (the OPENAI_REALTIME_MODEL setting): it is the biggest cost, so a change of it can be seen here without a login
+      voiceModel: openAiRealtimeModel(),
       node: process.version,
       uploads: uploadStorageSelfCheck(process.env),
       exports: exportStorageSelfCheck(process.env),

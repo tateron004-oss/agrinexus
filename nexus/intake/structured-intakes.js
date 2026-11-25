@@ -5,6 +5,7 @@ const { prBriefDocument, KEYS: PR_BRIEF_KEYS } = require("../knowledge/pr-brief.
 const { businessPlanDocument, KEYS: BUSINESS_PLAN_KEYS } = require("../knowledge/business-plan-doc.js");
 const { sponsorshipProposalDocument, teamPacketDocument, SPONSORSHIP_KEYS, TEAM_PACKET_KEYS } = require("../knowledge/athlete-docs.js");
 const { moneyPlanDocument, programKitDocument, MONEY_PLAN_KEYS, PROGRAM_KIT_KEYS } = require("../knowledge/money-docs.js");
+const { doctorVisitDocument, KEYS: DOCTOR_VISIT_KEYS } = require("../knowledge/doctor-visit.js");
 
 // A small, explicit allowlist turning a completed voice intake (public/kyro-voice-intake.js +
 // public/kyro-intake-forms.js) into a plan step, in exactly the shape nexus/brain/planner.js's
@@ -60,6 +61,14 @@ const STRUCTURED_INTAKES = Object.freeze({
     toolId: "documents.create",
     title: "Save your program plan",
     keys: PROGRAM_KIT_KEYS
+  }),
+  // The sheet a person takes when they call a doctor, dentist or clinic to make an appointment (public/kyro-intake-forms.js "doctorVisit"): built on the server from the answers only, word for word (nexus/knowledge/doctor-visit.js), saved as a
+  // Word document. Nothing is booked, nobody is called, and no medical advice is given.
+  "doctor-visit": Object.freeze({
+    application: "documents",
+    toolId: "documents.create",
+    title: "Save your appointment sheet",
+    keys: DOCTOR_VISIT_KEYS
   })
 });
 
@@ -107,6 +116,17 @@ function structuredIntakePlan(intakeId, values) {
       riskTier: "low",
       clarification: null,
       steps: [{ clientStepId: "create-pr-brief", title: definition.title, toolId: definition.toolId, input: { title: made.title, content: made.content, format: "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }]
+    };
+  }
+  if (intakeId === "doctor-visit") {
+    const made = doctorVisitDocument(input);
+    if (!made) throw new NexusRuntimeError("doctor_visit_incomplete", "An appointment sheet needs what the appointment is for.", 422);
+    return {
+      goal: made.title,
+      application: definition.application,
+      riskTier: "low",
+      clarification: null,
+      steps: [{ clientStepId: "create-doctor-visit", title: definition.title, toolId: definition.toolId, input: { title: made.title, content: made.content, format: "docx", reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }]
     };
   }
   if (intakeId === "business-plan") {

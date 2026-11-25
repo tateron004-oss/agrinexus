@@ -85,7 +85,8 @@ test("a promotional email from a person with no business workspace is a saved do
   assert.equal(seen.length, 0);
   assert.equal(plan.application, "documents");
   assert.equal(plan.steps[0].input.title, "Shop Promotional Email");
-  assert.equal((await ask(planner({ workspaces: 1 }), "Create a promotional email for my shop.")).application, "business");
+  // (a person who HAS a workspace gets the same document, not the workspace kit's Markdown drafts: see workspace-owner-documents-nov4.test.js)
+  assert.equal((await ask(planner({ workspaces: 1 }), "Create a promotional email for my shop.")).application, "documents");
 });
 
 const app = fs.readFileSync(path.join(__dirname, "../../public/app.js"), "utf8");

@@ -2,6 +2,10 @@
 
 const { extractAssistantReminderTask } = require("./time-phrase.js");
 const { whenWords } = require("./repeat-service.js");
+const { areAllCopies } = require("./duplicates.js");
+
+// A reminder the worker is sending right now is listed too (with its state), so it can be seen and cancelled instead of being invisible while it goes out.
+const withInFlight = ({ tenantId, userId }) => ({ tenantId, userId, includeInFlight: true });
 
 // Real executors for reminders.list and reminders.cancel. reminders.schedule
 // could always create a reminder but nothing could show or remove one, so a
@@ -50,7 +54,7 @@ function subjectMatches(storedText, subject) {
 function createRemindersListExecutor({ notifications, repeatStore = null }) {
   if (!notifications?.listReminders) throw new Error("A notification repository is required.");
   return async function execute({ context }) {
-    const rows = await notifications.listReminders({ tenantId: context.tenantId, userId: context.userId });
+    const rows = await notifications.listReminders(withInFlight(context));
     // Reminders that repeat live in their own store: they are listed too, so "what are my reminders" is not "none" for someone who only has repeating ones.
     let repeating = [];
     if (repeatStore?.list) { try { repeating = await repeatStore.list({ tenantId: context.tenantId, userId: context.userId }); } catch { repeating = []; } }
@@ -99,29 +103,43 @@ function findCancelMatches(rows, input = {}) {
 function createRemindersCancelPreview({ notifications }) {
   if (!notifications?.listReminders) throw new Error("A notification repository is required.");
   return async function preview({ input = {}, context }) {
-    const rows = await notifications.listReminders({ tenantId: context.tenantId, userId: context.userId });
+    const rows = await notifications.listReminders(withInFlight(context));
     const { matches } = findCancelMatches(rows, input);
-    if (matches.length !== 1) return null;
-    return `I can cancel your reminder "${describe(matches[0], context.timeZone)}". Say yes to cancel it, or no to keep it.`;
+    // The same reminder set more than once is ONE reminder: it is asked about once, and every copy is cancelled.
+    if (matches.length !== 1 && !areAllCopies(matches)) return null;
+    const copies = matches.length > 1 ? ` (set ${matches.length} times; I will cancel all ${matches.length})` : "";
+    return `I can cancel your reminder "${describe(matches[0], context.timeZone)}"${copies}. Say yes to cancel it, or no to keep it.`;
   };
 }
 
 function createRemindersCancelExecutor({ notifications }) {
   if (!notifications?.listReminders || !notifications?.cancelReminder) throw new Error("A notification repository is required.");
   return async function execute({ input = {}, context }) {
-    const rows = await notifications.listReminders({ tenantId: context.tenantId, userId: context.userId });
+    const rows = await notifications.listReminders(withInFlight(context));
     const { wantedId, subject, matches } = findCancelMatches(rows, input);
     const unresolved = reason => ({ cancelled: false, reason, matches: matches.length,
       // When several match, the candidates are those several, not every reminder the person has.
       candidates: (reason === "ambiguous" ? matches : rows).map(row => describe(row, context.timeZone)), candidateIds: (reason === "ambiguous" ? matches : rows).map(row => row.notification_id) });
     if (!wantedId && subject.length < 3) return unresolved("which_reminder");
     if (matches.length === 0) return unresolved("not_found");
-    if (matches.length > 1) return unresolved("ambiguous");
-    const target = matches[0];
-    const cancelled = await notifications.cancelReminder({ tenantId: context.tenantId, userId: context.userId, notificationId: target.notification_id });
-    if (!cancelled) return unresolved("no_longer_upcoming");
-    return { cancelled: true, reminderId: target.notification_id, reminder: describe(target, context.timeZone),
-      summary: `Cancelled the reminder: ${describe(target, context.timeZone)}` };
+    // Copies of the same reminder (the same words, within 90 seconds) are one reminder said more than once: every copy is cancelled, never just one of them (a copy left behind is a reminder that
+    // fires after the person was told it was cancelled). Different reminders that merely share words are still asked about.
+    const targets = matches.length > 1 && areAllCopies(matches) ? matches : matches.length > 1 ? null : [matches[0]];
+    if (!targets) return unresolved("ambiguous");
+    const target = targets[0];
+    let cancelledCount = 0; let inFlight = false;
+    for (const copy of targets) {
+      const cancelled = await notifications.cancelReminder({ tenantId: context.tenantId, userId: context.userId, notificationId: copy.notification_id });
+      if (cancelled) { cancelledCount += 1; if (cancelled.previous_state === "delivering") inFlight = true; }
+    }
+    if (!cancelledCount) return unresolved("no_longer_upcoming");
+    // Said plainly: a reminder the worker had already claimed may be on its way, and a cancel cannot recall a push that has already left.
+    const summary = [`Cancelled the reminder: ${describe(target, context.timeZone)}`,
+      cancelledCount > 1 ? ` (it had been set ${targets.length} times; all ${cancelledCount} are cancelled)` : "",
+      targets.length > cancelledCount ? ` (${targets.length - cancelledCount} of ${targets.length} copies could not be stopped because they had just been sent)` : "",
+      inFlight ? ". It was already being sent when I stopped it, so it may still arrive once" : ""].join("");
+    return { cancelled: true, reminderId: target.notification_id, reminderIds: targets.map(copy => copy.notification_id), copies: targets.length, cancelledCount, inFlight,
+      reminder: describe(target, context.timeZone), summary };
   };
 }
 

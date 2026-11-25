@@ -6,7 +6,7 @@ function installKyroVoiceRig(makeEvaluator) {
   if (window.__kyroRig) return "already installed";
   const rig = window.__kyroRig = { log: [], buffers: {}, t0: Date.now(), used: 0 };
   const log = rig.log;
-  const add = (kind, value) => { let text; try { text = typeof value === "string" ? value : JSON.stringify(value); } catch { text = String(value); } log.push({ at: Date.now() - rig.t0, kind, text: String(text).slice(0, 600) }); };
+  const add = (kind, value) => { let text; try { text = typeof value === "string" ? value : JSON.stringify(value); } catch { text = String(value); } log.push({ at: Date.now() - rig.t0, kind, text: String(text).slice(0, 6000) }); };
   rig.add = add;
   try { Object.defineProperty(document, "visibilityState", { get: () => "visible", configurable: true }); Object.defineProperty(document, "hidden", { get: () => false, configurable: true }); document.hasFocus = () => true; } catch { /* optional */ }
 
@@ -91,7 +91,9 @@ function installKyroVoiceRig(makeEvaluator) {
     const start = Date.now(); let lastCount = -1; let still = 0;
     while (Date.now() - start < maxMs) {
       const relevant = log.filter(e => e.kind === "page-line" || (e.kind === "event" && /response\.created|output_audio\.done|audio_start|audio_stopped|output_audio_transcript\.done/.test(e.text))).length;
-      if (relevant === lastCount) { still += 1; if (still >= 4) break; } else { still = 0; lastCount = relevant; }
+      // (a long reading keeps playing for a minute after the model has finished producing it: the page says whether the voice is still speaking, and the next sentence waits for that, or it would cut the reading off: found on 5 November 2026)
+      const speaking = (() => { try { return typeof window.kyroAutoReturnSnapshot === "function" && window.kyroAutoReturnSnapshot().assistantSpeaking === true; } catch { return false; } })();
+      if (speaking) { still = 0; } else if (relevant === lastCount) { still += 1; if (still >= 4) break; } else { still = 0; lastCount = relevant; }
       await new Promise(r => setTimeout(r, 700));
     }
     return Date.now() - start;
@@ -151,6 +153,7 @@ function installKyroVoiceRig(makeEvaluator) {
         .map(e => `${e.at}ms ${e.kind} ${e.kind === "event" ? String(e.text).replace(/\s+/g, " ").replace(/^transport_event /, "").slice(0, 90)
           : e.kind === "heard" ? (parts => `${parts[0].slice(0, 24)} via ${parts[1]} id=${parts[2] || "none"}`)(String(e.text).split("\u0001")) : String(e.text).replace(/\s+/g, " ").slice(0, e.kind === "tick" ? 200 : 46)}`),
       web: of("web"), screenCalls: of("screen-call"), returns: of("return-to-orb"), removals: of("screen-removed"), screens: rig.screens(), top: topKind(), intake: rig.intake(), player: rig.player(),
+      typedBox: (() => { try { const box = document.querySelector("#nexusCommandCenterInput"); return Boolean(box && visible(box)); } catch { return false; } })(),
       routeSteps: (() => { try { const sheet = document.querySelector("[data-kyro-route-steps]"); return sheet ? sheet.innerText.replace(/\s+/g, " ").trim().slice(0, 600) : ""; } catch { return ""; } })(),
       mapCenter: (() => { try { const c = typeof userMap !== "undefined" && userMap && userMap.getCenter ? userMap.getCenter() : null; return c ? { lat: Number(c.lat.toFixed(2)), lng: Number(c.lng.toFixed(2)), zoom: userMap.getZoom(), open: document.body.classList.contains("user-map-full-open"), where: document.body.dataset.genesisMapLocation || "" } : { open: document.body.classList.contains("user-map-full-open"), where: document.body.dataset.genesisMapLocation || "" }; } catch { return null; } })(),
       section: typeof currentSectionId === "function" ? currentSectionId() : "", voiceActive: typeof realtimeVoiceActive === "function" ? realtimeVoiceActive() : false,
@@ -214,6 +217,13 @@ function installKyroVoiceRig(makeEvaluator) {
   rig.cleanup = async lastState => {
     // a form still open is ended the way a person ends it (its own voice command), so the session's normal answering is restored
     if (lastState && lastState.intake) { try { await rig.say("Cancel."); await sleep(7000); } catch { /* cleared below */ } }
+    // a tutoring lesson still open (a case that failed before its own stop) is ended the way a person ends it, so the next case does not start inside it
+    try {
+      if (typeof kyroTutorOpen === "function" && kyroTutorOpen()) {
+        await rig.say("Stop tutoring."); await sleep(6000);
+        if (kyroTutorOpen()) { kyroTutorEnd(); await sleep(1500); }
+      }
+    } catch { /* cleared below */ }
     rig.clear();
   };
   rig.runSteps = async (startMark, steps, defaultTimeout) => {
@@ -222,8 +232,10 @@ function installKyroVoiceRig(makeEvaluator) {
       if (step.tap !== undefined) { const result = rig.tap(step.tap, step.nth || 0); if (!result.tapped) { failures.push(`could not tap "${step.tap}" (buttons: ${(result.available || []).join(" | ")})`); break; } await sleep(1500); }
       else if (step.type) { if (!rig.type(step.type.selector, step.type.value, step.type.nth || 0)) { failures.push(`no field for ${step.type.selector}`); break; } }
       else if (step.choose) { if (!(await rig.chooseFile(step.choose))) { failures.push("no file chooser on the screen"); break; } mark = rig.mark(); }
-      else if (step.say) { await rig.settle(20000); mark = (await rig.say(step.say)).index; }
+      else if (step.say) { await rig.settle(120000); mark = (await rig.say(step.say)).index; }
       else if (step.wait) await sleep(step.wait);
+      // the signal goes or comes back, as the browser says it (navigator.onLine and the offline / online events): { offline: true } then { offline: false }. runCase puts the real value back at the end.
+      else if (step.offline !== undefined) { rig.offlineSet = true; try { Object.defineProperty(navigator, "onLine", { configurable: true, get: () => !step.offline }); } catch { /* the event below is still sent */ } window.dispatchEvent(new Event(step.offline ? "offline" : "online")); await sleep(1200); }
       // sets something up behind the scenes with the page's own signed-in session (for example a second résumé, so a list of résumés has something to list): { post: { path, body } }
       else if (step.post) {
         let ok = false;
@@ -243,11 +255,19 @@ function installKyroVoiceRig(makeEvaluator) {
   rig.runCase = async entry => {
     const started = Date.now(); const timeout = entry.timeoutMs || 30000;
     try {
-      let mark;
-      if (entry.typed) { mark = rig.mark(); rig.typedCommand(entry.typed); } else { await rig.settle(25000); mark = (await rig.say(entry.say)).index; }
-      const first = await rig.until(mark, entry.expect || {}, timeout);
+      let mark; let first;
+      // The pretend voice is turned into words by a real speech-to-text, which sometimes drops or changes a word ("My email got hacked, what do I do?" came back as "My email got do I do."). A case that names the word it needs to have been heard (heard: "hacked") is said once more, after a clean-up, when it failed and that word was not heard: the page cannot be blamed for words it never received.
+      for (let attempt = 1; ; attempt += 1) {
+        if (entry.typed) { mark = rig.mark(); rig.typedCommand(entry.typed); } else { await rig.settle(120000); mark = (await rig.say(entry.say)).index; }
+        first = await rig.until(mark, entry.expect || {}, timeout);
+        const failed = !first.outcome || first.outcome.failures.length > 0;
+        const misheard = entry.heard && !entry.typed && !((first.state && first.state.heard) || []).some(line => new RegExp(entry.heard, "i").test(line));
+        if (!failed || !misheard || attempt >= 2) break;
+        try { await rig.cleanup(first.state); } catch { /* the next try starts from what is there */ }
+      }
       let failures = [...(first.outcome ? first.outcome.failures : ["no state"])]; let warnings = [...(first.outcome ? first.outcome.warnings : [])]; let last = first.state;
       if (!failures.length && entry.then) { const rest = await rig.runSteps(mark, entry.then, timeout); failures = rest.failures; warnings = warnings.concat(rest.warnings); last = rest.state || last; }
+      if (rig.offlineSet) { rig.offlineSet = false; try { delete navigator.onLine; window.dispatchEvent(new Event("online")); } catch { /* the real value was never replaced */ } }
       await rig.cleanup(last);
       return { id: entry.id, area: entry.area, say: entry.say || entry.typed, status: failures.length ? "fail" : "pass", failures, warnings, ms: Date.now() - started, heard: (first.state && first.state.heard) || [], detail: failures.length ? rig.detail(last || first.state) : undefined };
     } catch (error) {

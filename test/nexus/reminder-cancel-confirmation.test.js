@@ -4,10 +4,10 @@ const assert = require("node:assert/strict");
 const { BehaviorSpine, reminderCancelledResponse } = require("../../nexus/runtime/behavior-spine.js");
 const { createRemindersCancelPreview, createRemindersCancelExecutor } = require("../../nexus/reminders/manage-executor.js");
 
-// Found testing the live site: "Cancel my reminder about my Pap smear" asked "I prepared the request and need your confirmation before the next governed action" (which reminder?) and, after yes, said only "Done. It is on your screen."
+// Found testing the live site: "Cancel my reminder about my Pap smear" asked "I have that ready. Should I go ahead with it? Just say yes or no. (which reminder?) and, after yes, said only "Done. It is on your screen."
 // The question now names the one reminder that will be cancelled, and the answer says which was cancelled, or why none was.
 
-const GENERIC = "I prepared the request and need your confirmation before the next governed action.";
+const GENERIC = "I have that ready. Should I go ahead with it? Just say yes or no.";
 const context = { tenantId: "t", userId: "u", timeZone: "America/Chicago" };
 const rows = [
   { notification_id: "n1", content: { reminderText: "about my Pap smear" }, scheduled_at: "2026-10-14T14:00:00.000Z" },

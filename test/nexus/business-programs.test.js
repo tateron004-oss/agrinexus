@@ -82,7 +82,10 @@ test("volunteer hours: described, saved only after the yes, the person found by 
   assert.match(await workspace.confirm("Joy volunteered 2 hours at the pantry"), /Logged 2 volunteer hours for Joy Wanjiru on pantry/);
   const summary = await workspace.say("How many volunteer hours do we have?");
   assert.match(summary, /6 hours from 1 volunteer over 3 entries\. Most hours: Joy Wanjiru 6/);
-  assert.match(await workspace.say("How many volunteer hours do we have last month?"), /No volunteer hours are logged .* last month/);
+  // (the hour logged for "yesterday" is last month's when today is the 1st: on that day it is counted, and nothing else is)
+  const lastMonth = await workspace.say("How many volunteer hours do we have last month?");
+  if (day(-1).slice(0, 7) !== day(0).slice(0, 7)) assert.match(lastMonth, /last month: 1 hours from 1 volunteer over 1 entry/);
+  else assert.match(lastMonth, /No volunteer hours are logged .* last month/);
 });
 
 test("skills and availability go on the volunteer's contact; a name that is not on the list is not invented", async () => {
@@ -223,8 +226,8 @@ test("the web editor shows and saves the people-side lists and fields; the orb i
   for (const needle of ['rows("volunteer-hours", editable.volunteerHours', 'rows("services", editable.services', 'rows("outcomes", editable.outcomes', 'rows("program-goals", editable.programGoals', '["skills", "Skills (volunteers)"]', '["consent", "Consent to keep their records', 'byId("add-service")', 'byId("add-goal")', 'skills: "", availability: "", source: "", consent: "", consentDate: ""', 'description: "", fund: ""']) assert.ok(script.includes(needle), needle);
   assert.match(html, /Record a person's consent to keep their records on their contact row first/);
   const server = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
-  assert.match(server, /talks about the people they serve or work with -- volunteer hours/);
-  assert.match(server, /It records a service only for someone whose consent is recorded and gives counts, not names, in its reports/);
-  assert.equal(server.split("talks about the people they serve or work with").length, 2, "said once");
+  assert.match(server, /People the organization serves: volunteer hours/);
+  assert.match(server, /The tool records a service only for someone whose consent is recorded and gives counts, not names, in reports/);
+  assert.equal(server.split("People the organization serves").length, 2, "said once");
   assert.doesNotThrow(() => new (require("node:vm").Script)(server, { filename: "server.js" }));
 });

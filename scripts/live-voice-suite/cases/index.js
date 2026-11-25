@@ -21,11 +21,27 @@ const trips = require("./trips.js");
 const spokenDocuments = require("./spoken-documents.js");
 const spokenSweep = require("./spoken-sweep.js");
 const koachLearnCourses = require("./koachlearn-courses.js");
+const tutorCases = require("./tutor.js");
+const nov5Platform = require("./nov5-everyday-platform.js");
+const typingCases = require("./typing.js");
+const nov5Business = require("./nov5-business-farm-health.js");
+const nov4Fixes = require("./nov4-fixes.js");
+const documentPictures = require("./document-pictures.js");
+const businessFrontDesk = require("./business-front-desk.js");
+const businessMarketing = require("./business-marketing.js");
+const businessContracts = require("./business-contracts.js");
+const businessCampaigns = require("./business-campaigns.js");
+const doctorVisit = require("./doctor-visit.js");
+const nov9Fixes = require("./nov9-fixes.js");
+const businessPipeline = require("./business-pipeline.js");
+const businessSequences = require("./business-sequences.js");
+const businessPages = require("./business-pages.js");
 
-const ALL = Object.freeze([...documentsAndLists, ...businessAndApps, ...mediaSearchHealthForms, ...resourcesForPeople, ...minorityAndStartupBusiness, ...spanishBusiness, ...automations, ...californiaBusiness, ...athletes, ...money, ...moneyAfrica, ...athleteDocuments, ...moneyDocuments, ...walkthroughs, ...walkthroughsGuides, ...safety, ...specialEd, ...reentry, ...trips, ...spokenDocuments, ...spokenSweep, ...koachLearnCourses]);
 
 // Which cases run: by default the ones that change nothing on the account; --writes adds the ones that save something, --risky the emergency words,
 // --only a,b (ids) or --area documents,lists (areas) narrows it, and --no-sound leaves out the ones that need sound to start.
+const ALL = Object.freeze([...documentsAndLists, ...businessAndApps, ...mediaSearchHealthForms, ...resourcesForPeople, ...minorityAndStartupBusiness, ...spanishBusiness, ...automations, ...californiaBusiness, ...athletes, ...money, ...moneyAfrica, ...athleteDocuments, ...moneyDocuments, ...walkthroughs, ...walkthroughsGuides, ...safety, ...specialEd, ...reentry, ...trips, ...spokenDocuments, ...spokenSweep, ...tutorCases, ...typingCases, ...nov4Fixes, ...nov5Platform, ...nov5Business, ...documentPictures, ...businessFrontDesk, ...businessMarketing, ...businessContracts, ...businessCampaigns, ...doctorVisit, ...nov9Fixes, ...businessPipeline, ...businessSequences, ...businessPages, ...koachLearnCourses]);
+
 function select(options = {}) {
   const only = new Set(String(options.only || "").split(",").map(item => item.trim()).filter(Boolean));
   const areas = new Set(String(options.area || "").split(",").map(item => item.trim()).filter(Boolean));
@@ -35,6 +51,10 @@ function select(options = {}) {
     if (entry.writes && !options.writes) return false;
     if (entry.risky && !options.risky) return false;
     if (entry.needs === "sound" && options.sound === false) return false;
+    // a few cases only make sense as a guest (the refusals) or only as a signed-in test account (what an account may do); the account is the one the run was given
+    const account = Boolean(process.env.KYRO_TEST_EMAIL);
+    if (entry.needs === "guest" && account) return false;
+    if (entry.needs === "account" && !account) return false;
     return true;
   });
 }

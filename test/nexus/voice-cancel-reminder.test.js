@@ -65,7 +65,7 @@ test("a push reminder is cancelled through the authoritative cancel, confirming 
   const cancelled = { state: "render_required", taskId: "tsk_9", commandId: "c9", correlationId: "k9", render: { workspace: "reminders", data: { cancelled: true, reminder: "test push", reminderId: "ntf_1" } } };
   const { sandbox, calls } = load({ turns: [{ state: "confirmation_required", taskId: "tsk_9", outcome: { pendingStepId: "stp_1" } }], confirmTurn: cancelled });
   const result = await sandbox.cancel({ name: "Ron" }, "test push", "en");
-  assert.deepEqual(JSON.parse(JSON.stringify(result)), { ok: true, reminder: "test push", reminderId: "ntf_1" });
+  assert.deepEqual(JSON.parse(JSON.stringify(result)), { ok: true, reminder: "test push", reminderId: "ntf_1", copies: 1, inFlight: false });
   assert.equal(calls.turns[0].text, "Cancel my reminder about test push"); assert.equal(calls.turns[0].channel, "voice");
   assert.deepEqual(JSON.parse(JSON.stringify(calls.confirms[0])).taskId, "tsk_9"); assert.equal(calls.confirms[0].stepId, "stp_1"); assert.equal(calls.confirms[0].approved, true);
   assert.equal(calls.acks[0].evidence.cancelled, true);

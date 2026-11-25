@@ -4,10 +4,10 @@ const assert = require("node:assert/strict");
 const { BehaviorSpine } = require("../../nexus/runtime/behavior-spine.js");
 const { createBusinessPreview } = require("../../nexus/business/authoritative-executor.js");
 
-// Found testing the live site: "Start a business workspace called ..." and most other business writes asked "I prepared the request and need your confirmation before the next governed action", which says nothing about what
+// Found testing the live site: "Start a business workspace called ..." and most other business writes asked "I have that ready. Should I go ahead with it? Just say yes or no., which says nothing about what
 // the person is agreeing to. The sentence is now the specific one the spoken path already gives, made without writing anything.
 
-const GENERIC = "I prepared the request and need your confirmation before the next governed action.";
+const GENERIC = "I have that ready. Should I go ahead with it? Just say yes or no.";
 const context = { tenantId: "t", userId: "u", can: () => true, hasRole: () => false, roles: [], requestId: "r", correlationId: "c" };
 const workspace = { record_id: "ws1", version: 1, data: { info: { businessName: "Green Acres" }, editable: { leads: [], invoices: [], transactions: [], grants: [], tasks: [], appointments: [] } } };
 

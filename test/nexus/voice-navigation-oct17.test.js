@@ -35,10 +35,28 @@ test("the page takes a spoken navigation request itself, but not a request to op
 });
 
 test("the spoken route starts the guidance and cuts off the model, and the model's own map tool is not asked as well", () => {
-  assert.match(app, /if \(trimmed && typeof kyroSpokenNavigation === "function" && kyroSpokenNavigation\(trimmed\)\) \{\s+if \(!heardAgain\) \{\s+try \{ kyroTakeOverTurn\(\); \} catch \{[^}]*\}\s+kyroPageSpeaksUntil = Date\.now\(\) \+ 40000;\s+kyroLastNavigationSaid = \{ key: kyroNavigationKey\(trimmed\), at: Date\.now\(\) \};\s+void handleKyroNavigationCommand\(trimmed, \{ source: "voice" \}\);/);
+  assert.match(app, /if \(trimmed && typeof kyroSpokenNavigation === "function" && kyroSpokenNavigation\(trimmed\)\) \{[\s\S]{0,400}?if \(!heardAgain && !toolTookIt\) \{\s+try \{ kyroTakeOverTurn\(\); \} catch \{[^}]*\}\s+kyroPageSpeaksUntil = Date\.now\(\) \+ 40000;\s+kyroLastNavigationSaid = \{ key: kyroNavigationKey\(trimmed\), at: Date\.now\(\), by: "page" \};\s+void handleKyroNavigationCommand\(trimmed, \{ source: "voice" \}\);/);
   assert.match(app, /if \(toolName === "nexus_maps_route" && kyroLastNavigationSaid\.key && kyroLastNavigationSaid\.key === kyroNavigationKey\(kyroWithoutPoliteTail\(command\)\)/);
   const spoken = app.indexOf("if (kyroHandleSpokenOpen(trimmed, {}))"); const nav = app.indexOf("typeof kyroSpokenNavigation === \"function\" && kyroSpokenNavigation(trimmed)");
   assert.ok(spoken > 0 && nav > spoken, "a request to open a screen is taken first");
+});
+
+// The owner's test of 4 November 2026: "Give me directions to the clinic" showed the map with no steps, and "Give me directions to the nearest pharmacy" asked to add a "me" section (a job for a worker called Me). The voice model's own tool call for the
+// words arrived before the page's answer and was sent on to the map tool or the governed route. The page now answers the words itself whichever comes first (the tool call's answer is handed to the model to say), and the transcript finds it done.
+test("a navigation request is answered by the phone's GPS even when the voice model's tool call comes first, and only once", () => {
+  const start = app.indexOf("async function callNexusOpenAiRealtimeTool(");
+  const body = app.slice(start, start + 14000);
+  const block = body.indexOf("kyroSpokenNavigation(kyroWithoutPoliteTail(command))");
+  assert.ok(block > 0, "the tool call asks whether the words are navigation");
+  assert.match(body.slice(block, block + 1800), /kyroLastNavigationSaid\.key === navKey && Date\.now\(\) - kyroLastNavigationSaid\.at < 20000\) \{\s+return \{ ok: true, status: "completed", response: "Kyro is already guiding the person and said so\. Say nothing more\."/);
+  assert.match(body.slice(block, block + 1800), /kyroLastNavigationSaid = \{ key: navKey, at: Date\.now\(\), by: "tool" \};\s+kyroVoiceCapture = \[\];/);
+  assert.match(body.slice(block, block + 2600), /navigationHandled = await handleKyroNavigationCommand\(command, \{ source: "voice" \}\)/);
+  const governed = body.indexOf("KYRO_GOVERNED_VOICE_TOOLS.has(String(toolName");
+  const mapTool = body.indexOf('"/api/voice/realtime/tool"', block);
+  assert.ok(governed > block, "before the governed route and the server's tools");
+  assert.ok(mapTool > block, "before the server tool request");
+  // and the transcript does not guide a second time when the tool call already did
+  assert.match(app, /const toolTookIt = kyroLastNavigationSaid\.by === "tool" && kyroLastNavigationSaid\.key === kyroNavigationKey\(trimmed\) && Date\.now\(\) - kyroLastNavigationSaid\.at < 20000;/);
 });
 
 test("'estimate the delivery time from A to B' is a shipment estimate between the two places", () => {

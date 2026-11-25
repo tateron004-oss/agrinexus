@@ -47,7 +47,7 @@ test("the confirmation prompt says exactly what will be stored and that yes is c
 
 test("every other confirmation keeps its generic wording, including sending a message", async () => {
   const { spine } = harness({ task: ownerTask([]) });
-  const generic = "I prepared the request and need your confirmation before the next governed action.";
+  const generic = "I have that ready. Should I go ahead with it? Just say yes or no.";
   for (const toolId of ["reminders.cancel", "communications.send", "unknown.tool"])
     assert.equal(await spine.confirmationPrompt({ task: ownerTask([step(toolId, { message: "hi" })]), pendingStepId: "stp_1" }), generic, toolId);
   assert.equal(await spine.confirmationPrompt({ task: ownerTask([step("telehealth.prepare")]), pendingStepId: "no_such_step" }), generic, "no matching step");

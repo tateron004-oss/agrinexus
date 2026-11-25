@@ -83,9 +83,10 @@ test("a relative time phrase ('tomorrow at 3pm') resolves in the caller's real t
   assert.notEqual(nairobiStart, losAngelesStart,
     "the same relative phrase must resolve to a DIFFERENT real UTC instant depending on the caller's real time zone, not the same hardcoded default zone every time");
 
-  // 3pm Africa/Nairobi (UTC+3) is 12:00 UTC; 3pm America/Los_Angeles (UTC-7
-  // in September, daylight saving) is 22:00 UTC -- confirm each actually
-  // reflects ITS OWN stated zone, not both silently defaulting to Nairobi.
+  // 3pm Africa/Nairobi (UTC+3) is 12:00 UTC; 3pm America/Los_Angeles is 22:00 UTC in daylight saving time and 23:00 UTC in winter time (the clocks go back on the first Sunday of November,
+  // which is why this asserts the wall-clock hour in each zone and not a fixed UTC hour) -- confirm each actually reflects ITS OWN stated zone, not both silently defaulting to Nairobi.
+  const hourIn = (instant, timeZone) => Number(new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", hourCycle: "h23" }).format(new Date(instant)));
   assert.equal(new Date(nairobiStart).getUTCHours(), 12, `Nairobi 3pm should be 12:00 UTC, got ${nairobiStart}`);
-  assert.equal(new Date(losAngelesStart).getUTCHours(), 22, `Los Angeles 3pm should be 22:00 UTC, got ${losAngelesStart}`);
+  assert.equal(hourIn(nairobiStart, "Africa/Nairobi"), 15, `Nairobi 3pm, got ${nairobiStart}`);
+  assert.equal(hourIn(losAngelesStart, "America/Los_Angeles"), 15, `Los Angeles 3pm should be 22:00 UTC (summer) or 23:00 UTC (winter), got ${losAngelesStart}`);
 });

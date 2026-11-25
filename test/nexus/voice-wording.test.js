@@ -73,7 +73,7 @@ test("what the player says about a spoken music request is given to the model to
   const run = async ({ said, handled }) => {
     let fetched = 0;
     const sandbox = {
-      KYRO_GOVERNED_VOICE_TOOLS: new Set(), nexusPendingBehaviorConfirmation: null, kyroDismissStaleWorkspace: () => {}, kyroActiveVoiceIntake: null, kyroVoiceIntakeOwnsTurn: () => false, kyroIntakeBusyLine: () => "",
+      KYRO_GOVERNED_VOICE_TOOLS: new Set(), nexusPendingBehaviorConfirmation: null, kyroDismissStaleWorkspace: () => {}, kyroTutorOwns: () => false, kyroTutorDemoCommand: () => null, kyroTutorSentAt: 0, kyroActiveVoiceIntake: null, kyroVoiceIntakeOwnsTurn: () => false, kyroIntakeBusyLine: () => "",
       routeKyroVoiceIntakeTranscript: () => false, kyroVisualRequestKind: () => null, kyroShowResultScreen: () => false, kyroPlainText: text => String(text).replace(/\*\*/g, ""),
       kyroMediaCommand: async () => { said.forEach(line => sandbox.pushCapture(line)); return handled; },
       kyroDeviceTimeZone: () => "UTC", languageCode: () => "en", nexusGenesisVoiceDebugLog: () => {}, Date, String, Promise,

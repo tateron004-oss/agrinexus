@@ -18,7 +18,7 @@ const DEFAULT_URL = "https://nexus-genesis-certified.onrender.com";
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 function parseArgs(argv = []) {
-  const options = { url: DEFAULT_URL, writes: false, risky: false, sound: true, show: false, only: "", area: "", out: "" };
+  const options = { url: DEFAULT_URL, writes: false, risky: false, sound: true, show: false, only: "", area: "", out: "", shots: "" };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]; const next = () => argv[++i];
     if (arg === "--url") options.url = String(next() || "").replace(/\/+$/, "");
@@ -29,6 +29,7 @@ function parseArgs(argv = []) {
     else if (arg === "--only") options.only = String(next() || "");
     else if (arg === "--area") options.area = String(next() || "");
     else if (arg === "--out") options.out = String(next() || "");
+    else if (arg === "--shots") options.shots = String(next() || "");
     else if (arg === "--help" || arg === "-h") options.help = true;
     else throw new Error(`Unknown option ${arg}`);
   }
@@ -60,6 +61,20 @@ async function waitForPage(client, timeoutMs = 45000) {
   throw new Error("The page did not finish loading.");
 }
 
+// True once the page holds a real session (the page's own state request is answered, not refused with 401). Pressed again once after 25 seconds when nothing came.
+async function waitForGuestSession(client, { seconds = 60, retryAfter = 25 } = {}) {
+  const press = "(() => { const b = [...document.querySelectorAll('button')].find(x => /start as user/i.test(x.innerText) && x.getBoundingClientRect().width > 0); if (b) b.click(); return !!b; })()";
+  let pressedAgain = false;
+  for (let waited = 0; waited < seconds; waited += 2) {
+    await sleep(2000);
+    let status = 0;
+    try { status = await client.evaluate("fetch('/api/state', { credentials: 'same-origin' }).then(r => r.status).catch(() => 0)"); } catch { status = 0; }
+    if (status === 200) { await sleep(1500); return true; }
+    if (!pressedAgain && waited >= retryAfter) { pressedAgain = true; try { await client.evaluate(press); } catch { /* the loop goes on */ } }
+  }
+  return false;
+}
+
 async function main(argv) {
   const options = parseArgs(argv);
   if (options.help) { console.log(fs.readFileSync(__filename, "utf8").split("\n").slice(2, 10).map(line => line.replace(/^\/\/ ?/, "")).join("\n")); return 0; }
@@ -85,14 +100,31 @@ async function main(argv) {
       await client.evaluate("(() => { const f = [...document.querySelectorAll('input')].find(x => /your name|type your name/i.test(x.placeholder || x.getAttribute('aria-label') || '') && x.getBoundingClientRect().width > 0); if (f) { f.focus(); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(f, 'Voice Checker'); f.dispatchEvent(new Event('input', { bubbles: true })); } return !!f; })()");
       const started =await client.evaluate("(() => { const b = [...document.querySelectorAll('button')].find(x => /start as user/i.test(x.innerText) && x.getBoundingClientRect().width > 0); if (b) b.click(); return !!b; })()");
       if (!started) { console.error("There is no 'Start as User' button to start a guest session with."); return 2; }
-      await sleep(6000); await waitForPage(client);
+      // (found by the 5 November 2026 runs: a fixed 6 seconds was not always enough on the live host, and the first case then began with no session and failed with "Sign in required" (about 2 runs in 8). The session is now waited for, and the button pressed once more if it never came.)
+      if (!(await waitForGuestSession(client))) { console.error("The guest session did not start (no sign-in after 60 seconds, and the button pressed twice)."); return 2; }
+      await waitForPage(client);
     }
     await client.evaluate(buildInstallScript());
     if (!(await client.evaluate("__kyroRig.startVoice()", 150000))) { console.error("The live voice session could not be started."); return 2; }
     await client.evaluate(`__kyroRig.runCases(${JSON.stringify(cases)})`);
     let printed = 0;
+    // --shots DIR: a picture of the screen each time the card the voice session drew changes, so what a person would see can be looked at (the words alone do not show how it looks)
+    let lastCard = ""; let shotCount = 0;
+    if (options.shots) fs.mkdirSync(options.shots, { recursive: true });
     for (;;) {
-      await sleep(4000);
+      await sleep(options.shots ? 1500 : 4000);
+      if (options.shots) {
+        try {
+          const card = await client.evaluate("[...document.querySelectorAll('[data-kyro-result]')].map(n => n.getAttribute('data-kyro-result') + ': ' + n.innerText.replace(/\\s+/g, ' ').slice(0, 160)).join(' || ')");
+          if (card && card !== lastCard) {
+            lastCard = card; shotCount += 1;
+            const picture = await client.send("Page.captureScreenshot", { format: "png" });
+            const file = path.join(options.shots, `${String(shotCount).padStart(3, "0")}.png`);
+            fs.writeFileSync(file, Buffer.from(picture.data, "base64"));
+            console.log(`        [screen ${shotCount}] ${file}: ${card.slice(0, 140)}`);
+          } else if (!card) lastCard = "";
+        } catch { /* a picture is a convenience: the run goes on without it */ }
+      }
       const progress = await client.evaluate("({ results: __kyroRig.results, running: __kyroRig.running, finished: __kyroRig.finished, crash: __kyroRig.crash || '' })");
       for (; printed < progress.results.length; printed += 1) console.log(formatResult(progress.results[printed]));
       results = progress.results;

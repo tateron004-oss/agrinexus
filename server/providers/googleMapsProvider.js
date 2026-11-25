@@ -83,9 +83,10 @@ async function geocodeLocation(locationText, fetchImpl, env = process.env) {
   const url = new URL(NOMINATIM_SEARCH_URL);
   url.searchParams.set("q", locationText);
   url.searchParams.set("format", "jsonv2");
-  url.searchParams.set("limit", "1");
+  // Five, not one: the first the search lists is not always the place meant ("Cairo" lists an Illinois village before Egypt's capital; see nexus/navigation/place-rank.js)
+  url.searchParams.set("limit", "5");
   const payload = await fetchJsonRetry(fetchImpl, url, { accept: "application/json", "user-agent": "AgriNexus/1.0 route-readonly-validation" }, env);
-  const match = Array.isArray(payload) ? payload[0] : null;
+  const match = Array.isArray(payload) ? require("../../nexus/navigation/place-rank.js").bestPlace(payload) : null;
   if (!match || !match.lat || !match.lon) throw new Error(`location-not-found:${locationText}`);
   const value = { label: clean(match.display_name || locationText), lat: Number(match.lat), lon: Number(match.lon) };
   if (real) {

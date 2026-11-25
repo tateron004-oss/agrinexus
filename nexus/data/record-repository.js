@@ -232,6 +232,42 @@ class RecordRepository {
     return result.rows || result;
   }
 
+  // Business workspaces with a campaign that is scheduled to go out, or is being sent, for nexus/business/scheduled-campaigns.js (6 November 2026). Whole records, because the worker saves back with the record's own version.
+  // The campaign list sits in the JSON, so the test is inside it; the cap (200) and the oldest-first order keep one pass small.
+  async listScheduledCampaignWorkspaces({ limit = 50 } = {}) {
+    const result = await this.db.query(`select tenant_id, owner_id, record_id, version, data
+      from nexus_records
+      where record_type='business-client' and workspace_id='operations' and state='active' and deleted_at is null
+        and exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'campaigns','[]'::jsonb)) c where c->>'status' in ('scheduled','sending'))
+      order by updated_at
+      limit $1`, [Math.min(Math.max(Number(limit) || 50, 1), 200)]);
+    return result.rows || result;
+  }
+
+  // Business workspaces with a follow-up sequence running (a run that is "active"), for nexus/business/sequence-sender.js (9 November 2026). Whole records, because the worker saves back with the record's own version; the oldest first, 200 at most.
+  async listActiveSequenceWorkspaces({ limit = 50 } = {}) {
+    const result = await this.db.query(`select tenant_id, owner_id, record_id, version, data
+      from nexus_records
+      where record_type='business-client' and workspace_id='operations' and state='active' and deleted_at is null
+        and exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'sequenceRuns','[]'::jsonb)) r where r->>'status' = 'active')
+      order by updated_at
+      limit $1`, [Math.min(Math.max(Number(limit) || 50, 1), 200)]);
+    return result.rows || result;
+  }
+
+  // The business workspace that holds the public page with this link code, for nexus/pages/public-pages.js (9 November 2026). The whole record, because a visitor's answer is saved back with the record's own version. One at most.
+  async findPageRecord({ slug }) {
+    const code = String(slug || "");
+    if (!/^[a-z0-9-]{5,80}$/.test(code)) return null;
+    const result = await this.db.query(`select tenant_id, owner_id, record_id, version, data
+      from nexus_records
+      where record_type='business-client' and workspace_id='operations' and state='active' and deleted_at is null
+        and exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'pages','[]'::jsonb)) p where p->>'slug' = $1)
+      limit 1`, [code]);
+    const rows = result.rows || result;
+    return rows[0] || null;
+  }
+
   // A more precise business-domain signal than listStaleBusinessWorkspaces()'s
   // whole-record staleness: a lead/customer/donor's own followUpDate --
   // stored by the dashboard's real HTML date input (public/business-

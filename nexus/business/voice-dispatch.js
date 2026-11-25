@@ -7,6 +7,11 @@ const crmVoice = require("./crm-voice.js");
 const financeVoice = require("./finance-voice.js");
 const programsVoice = require("./programs-voice.js");
 const operationsVoice = require("./operations-voice.js");
+const scheduleVoice = require("./scheduling-voice.js");
+const campaignVoice = require("./campaigns-voice.js");
+const pipelineVoice = require("./pipeline-voice.js");
+const sequenceVoice = require("./sequences-voice.js");
+const pagesVoice = require("./pages-voice.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 const automationCommands = require("../../public/kyro-automation-commands.js");
 const { whenOf, parseEachPrice, parseQuantity, parseCount } = require("../farmwork/parse.js");
@@ -131,7 +136,7 @@ function extractLeadArgs(command = "", args = {}) {
   // words for the person being tracked -- follow the same pattern.
   const typeMatch = text.match(/\b(customer|donor|lead|sponsor|volunteer|client|participant|member|congregant|buyer|seller|tenant|landlord)s?\b/i);
   const contactMatch = text.match(EMAIL_IN_TEXT)
-    || text.match(/\b(?:contact|phone|email|reach(?:able)? at)\s+["']?([^"'\n,.]{3,80})/i)
+    || text.match(/\b(?:contact|phone(?: number)?|mobile(?: number)?|email(?: address)?|reach(?:able)? at)\s*(?:is\s+|:\s*)?["']?([^"'\n,.]{3,80})/i)
     || text.match(/([+()\d\s.-]{7,}|[^\s,]+@[^\s,]+)/);
   return {
     name: sanitizeText(args.name || (nameMatch ? personNameOnly(nameMatch[1]) : ""), 160),
@@ -306,6 +311,10 @@ function extractTransactionArgs(command = "", args = {}) {
 // hours later (now fully into UTC's next day too) -- both the write and the read used the same wrong
 // clock, so this stayed invisible except in exactly this ~3-hour window every day. Uses the same
 // DST-immune, date-only-string arithmetic (localDay + addDays) every other module already relies on.
+// The person's own clock, HH:MM (24-hour), so a booking for "today" is never made for a time that has already passed.
+function timeIn(now, timeZone) {
+  try { return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: validTimeZone(timeZone || DEFAULT_TIME_ZONE) }).format(now).replace(/^24:/, "00:"); } catch { return ""; }
+}
 function todayIn(now, timeZone) { return localDay(now, validTimeZone(timeZone || DEFAULT_TIME_ZONE)); }
 // "this month", "last month", "today", "this week", "this year"; anything else means everything recorded.
 function periodIn(text, now = new Date(), timeZone) {
@@ -902,7 +911,7 @@ function computeBusinessDashboard(editable, period = {}) {
 // function (rather than a second, hand-maintained copy of these regexes).
 // (the insight reads -- cash outlook, follow-ups due, deadlines due, people served, volunteer hours -- are in insights.js; "how are we doing" is the dashboard)
 const INSIGHT_READS = insights.INSIGHT_INTENTS.filter(intent => intent !== "howAreWeDoing");
-const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS, ...financeVoice.FINANCE_READ_INTENTS, ...programsVoice.PROGRAM_READ_INTENTS, ...operationsVoice.OPERATIONS_READ_INTENTS]);
+const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS, ...financeVoice.FINANCE_READ_INTENTS, ...programsVoice.PROGRAM_READ_INTENTS, ...operationsVoice.OPERATIONS_READ_INTENTS, ...scheduleVoice.SCHEDULE_READ_INTENTS, ...campaignVoice.CAMPAIGN_READ_INTENTS, ...pipelineVoice.PIPELINE_READ_INTENTS, ...sequenceVoice.SEQUENCE_READ_INTENTS, ...pagesVoice.PAGE_READ_INTENTS]);
 
 function classify(command = "") {
   // A request about the person's own outside-tool automations ("send new customer Grace to my sales sheet automation", "show my automations", "connect Zapier") is the automations', never a business request: the
@@ -910,6 +919,21 @@ function classify(command = "") {
   if (automationCommands.parseTrigger(command) || automationCommands.isList(command) || automationCommands.isOpen(command)) return null;
   // Questions about how the organisation is doing, money to cover expenses, who needs a follow-up, funding deadlines, people served and volunteer hours come before the general word-matching below, which
   // would otherwise read "customers or donors" as a list request and "log 3 volunteer hours for Joy" as a new person called by that whole phrase.
+  // Follow-up sequences come before the front desk: a sequence is named by its own word, and its name may hold another command's word ("Quote Follow-up" is not the quotes) (sequences-voice.js).
+  const sequence = sequenceVoice.classifySequence(command);
+  if (sequence) return sequence;
+  // Pages the owner's customers can open: a landing page, a form, a survey, a booking page (pages-voice.js).
+  const pageIntent = pagesVoice.classifyPage(command);
+  if (pageIntent) return pageIntent;
+  // The front desk comes first: "who can I call back" is the people who agreed to calls, not the follow-ups that are due (scheduling-voice.js keeps its phrases narrow).
+  const schedule = scheduleVoice.classifySchedule(command);
+  if (schedule) return schedule;
+  // Campaigns and who agreed to get messages (campaigns-voice.js).
+  const campaign = campaignVoice.classifyCampaign(command);
+  if (campaign) return campaign;
+  // Deals, the pipeline, tags and a contact's notes and history (pipeline-voice.js).
+  const pipeline = pipelineVoice.classifyPipeline(command);
+  if (pipeline) return pipeline;
   const insight = insights.classifyInsight(command);
   if (insight === "howAreWeDoing") return "dashboard";
   if (insight) return insight;
@@ -993,7 +1017,7 @@ function classify(command = "") {
   const wantsListListings = !wantsAddListing && !wantsUpdateListingStatus && /\b(listings?|properties|houses|homes|condos|apartments|townhouses|duplexes)\b/i.test(command) && /\b(?:show|list|what|which|my|do i have)\b/i.test(command);
   const wantsGenerateDocuments = /\b(?:create|generate|draft|make)\b/i.test(command) && /\b(service agreement|contract|intake form|client intake|application checklist)\b/i.test(command);
   const wantsGenerateBusinessPlanPdf = /\bbusiness plan\b/i.test(command) && /\b(?:generate|print|export|make)\b/i.test(command) && /\b(pdf|document)\b/i.test(command);
-  const wantsGenerateMarketing = /\b(?:create|generate|make|draft)\b/i.test(command) && /\b(flyer|newsletter|promotional email|marketing email|marketing material|marketing content|marketing draft)\b/i.test(command);
+  const wantsGenerateMarketing = /\b(?:create|generate|make|draft)\b/i.test(command) && /\b(flyer|newsletter|promotional email|marketing email|marketing material|marketing content|marketing draft|social(?: media)? (?:posts?|captions?)|(?:facebook|instagram|linkedin|twitter|tiktok|whatsapp) posts?|advertisements?|adverts?|web ?site (?:copy|content|page|text)|web ?page|landing page)\b/i.test(command);
   // Confirmed live: business.manage/business.query already existed for every
   // OTHER business operation, but "strategy" (service.js's operation===
   // "strategy", which calls strategy.js's real agent-profile templates --
@@ -1109,6 +1133,11 @@ function precheck(command = "", args = {}) {
     // every retry re-parses "$0" into unitPrice:0 and hits the same falsy check again -- a genuine dead end
     // with no way to complete the action through voice/chat at all.
     if (item.unitPrice === null) clarification = "What is the unit price for this line item?";
+  } else if (scheduleVoice.SCHEDULE_WRITE_INTENTS.includes(intent)) {
+    // the question the front desk would ask, before anyone is asked for a yes (nothing here needs the workspace)
+    clarification = scheduleVoice.missingFor(intent, command);
+  } else if (campaignVoice.CAMPAIGN_WRITE_INTENTS.includes(intent)) {
+    clarification = campaignVoice.missingFor(intent, command);
   } else if (intent === "addGrant") {
     const grant = extractGrantArgs(command, args);
     if (!grant.funderName && !grant.program) clarification = "What is the name of the funder or the grant/funding program?";
@@ -1146,10 +1175,127 @@ function precheck(command = "", args = {}) {
 // gates confirmation before this ever runs (the authoritative runtime's
 // business.manage tool, confirmationRequired: true) should simply always
 // pass `confirmed: true`.
-async function run({ command = "", args = {}, confirmed, businessRequest, timeZone }) {
+// canSend: whether this account may send messages to customers (not a guest or a demo account). Scheduling a send for later is refused unless it is exactly true, because the later send is made by the background worker, which cannot see the account.
+async function run({ command = "", args = {}, confirmed, businessRequest, timeZone, sendMessage, canSend = false }) {
   if (typeof businessRequest !== "function") throw new Error("A businessRequest bridge function is required.");
   const isConfirmed = confirmed !== undefined ? Boolean(confirmed) : (args.confirmed === true || args.confirmation === true);
   const intent = classify(command);
+
+  if (scheduleVoice.SCHEDULE_READ_INTENTS.includes(intent) || scheduleVoice.SCHEDULE_WRITE_INTENTS.includes(intent)) {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
+    const workspace = resolved.client.data?.info?.businessName || "your workspace";
+    const editable = resolved.client.data.editable;
+    const now = new Date();
+    const ctx = { command, editable, workspace, today: todayIn(now, timeZone), nowTime: timeIn(now, timeZone), formatMoney };
+    if (scheduleVoice.SCHEDULE_READ_INTENTS.includes(intent)) {
+      const response = scheduleVoice.readSchedule(intent, ctx);
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const plan = scheduleVoice.planScheduleWrite(intent, ctx);
+    if (plan.response) return plan.info ? { status: "completed", localOnly: true, response: plan.response, summary: plan.response } : { status: "needs-input", response: plan.response, missingInformation: plan.missingInformation || [] };
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: plan.prompt };
+    // A message to a customer is marked sent only after the sending provider says it went out; a failure is said, and nothing is marked.
+    if (plan.send) {
+      if (typeof sendMessage !== "function") return { status: "needs-input", response: "I can write the confirmation, but sending a message is not available from here. Use the text or email command with the customer's number or address.", missingInformation: [] };
+      try { await sendMessage(plan.send); } catch (error) {
+        return { status: "needs-input", response: String(error?.message || "I could not send it, so nothing was sent.").replace(/\s+/g, " "), missingInformation: [] };
+      }
+    }
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: plan.apply(editable) } });
+    return { status: "completed", localOnly: true, response: plan.done, businessRecord: updated?.body || null, summary: plan.done };
+  }
+
+  // Campaigns: an approved message to the customers who agreed to get messages, and what came of it (campaigns-voice.js). Each message is counted sent only when the provider says it went out.
+  if (campaignVoice.CAMPAIGN_READ_INTENTS.includes(intent) || campaignVoice.CAMPAIGN_WRITE_INTENTS.includes(intent)) {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
+    const workspace = resolved.client.data?.info?.businessName || "your workspace";
+    const editable = resolved.client.data.editable;
+    const ctx = { command, editable, workspace, today: todayIn(new Date(), timeZone), formatMoney, nowClock: timeIn(new Date(), timeZone), timeZone: validTimeZone(timeZone || DEFAULT_TIME_ZONE), canSend: canSend === true };
+    if (campaignVoice.CAMPAIGN_READ_INTENTS.includes(intent)) {
+      const response = campaignVoice.readCampaign(intent, ctx);
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const plan = campaignVoice.planCampaignWrite(intent, ctx);
+    if (plan.response) return plan.info ? { status: "completed", localOnly: true, response: plan.response, summary: plan.response } : { status: "needs-input", response: plan.response, missingInformation: plan.missingInformation || [] };
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: plan.prompt };
+    let apply = plan.apply; let done = plan.done;
+    if (plan.sendMany) {
+      if (typeof sendMessage !== "function") return { status: "needs-input", response: "I can write the campaign, but sending messages is not available from here, so nothing was sent.", missingInformation: [] };
+      const results = [];
+      for (const message of plan.sendMany) {
+        try { await sendMessage(message); results.push({ ok: true, message }); } catch (error) {
+          results.push({ ok: false, message, error: String(error?.message || "not sent").replace(/\s+/g, " ") });
+          // sending that is switched off, not set up or refused for this account fails the same way for everyone: stop at the first, instead of failing it fifty times
+          if (!results.some(item => item.ok) && /not set up|restricted|cannot send|not available|disabled/i.test(String(error?.message || ""))) break;
+        }
+      }
+      if (!results.some(item => item.ok)) return { status: "needs-input", response: `Nothing was sent. ${results[0]?.error || "The messages could not be sent."}`, missingInformation: [] };
+      ({ apply, done } = plan.finish(results));
+    }
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: apply(editable) } });
+    return { status: "completed", localOnly: true, response: done, businessRecord: updated?.body || null, summary: done };
+  }
+
+  // Pages the owner's customers can open (pages-voice.js; the public side is nexus/pages/public-pages.js). Every change asks for a yes first; nothing is sent to anyone from here.
+  if (pagesVoice.PAGE_READ_INTENTS.includes(intent) || pagesVoice.PAGE_WRITE_INTENTS.includes(intent)) {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
+    const workspace = resolved.client.data?.info?.businessName || "your workspace";
+    const editable = resolved.client.data.editable;
+    const ctx = { command, editable, workspace, today: todayIn(new Date(), timeZone), formatMoney, timeZone: validTimeZone(timeZone || DEFAULT_TIME_ZONE) };
+    if (pagesVoice.PAGE_READ_INTENTS.includes(intent)) {
+      const response = pagesVoice.readPage(intent, ctx);
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const plan = pagesVoice.planPageWrite(intent, ctx);
+    if (plan.response) return plan.info ? { status: "completed", localOnly: true, response: plan.response, summary: plan.response } : { status: "needs-input", response: plan.response, missingInformation: plan.missingInformation || [] };
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: plan.prompt };
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: plan.apply(editable) } });
+    return { status: "completed", localOnly: true, response: plan.done, businessRecord: updated?.body || null, summary: plan.done };
+  }
+
+  // Follow-up sequences: built and started by voice, sent by the background worker (sequence-sender.js). Every change asks for a yes first; nothing is sent from here.
+  if (sequenceVoice.SEQUENCE_READ_INTENTS.includes(intent) || sequenceVoice.SEQUENCE_WRITE_INTENTS.includes(intent)) {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
+    const workspace = resolved.client.data?.info?.businessName || "your workspace";
+    const editable = resolved.client.data.editable;
+    const ctx = { command, editable, workspace, today: todayIn(new Date(), timeZone), formatMoney, timeZone: validTimeZone(timeZone || DEFAULT_TIME_ZONE) };
+    if (sequenceVoice.SEQUENCE_READ_INTENTS.includes(intent)) {
+      const response = sequenceVoice.readSequence(intent, ctx);
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const plan = sequenceVoice.planSequenceWrite(intent, ctx);
+    if (plan.response) return plan.info ? { status: "completed", localOnly: true, response: plan.response, summary: plan.response } : { status: "needs-input", response: plan.response, missingInformation: plan.missingInformation || [] };
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: plan.prompt };
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: plan.apply(editable) } });
+    return { status: "completed", localOnly: true, response: plan.done, businessRecord: updated?.body || null, summary: plan.done };
+  }
+
+  // The sales pipeline: deals and their stages, tags, and the notes and history of a contact (pipeline-voice.js). Every change asks for a yes first.
+  if (pipelineVoice.PIPELINE_READ_INTENTS.includes(intent) || pipelineVoice.PIPELINE_WRITE_INTENTS.includes(intent)) {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
+    const workspace = resolved.client.data?.info?.businessName || "your workspace";
+    const editable = resolved.client.data.editable;
+    const ctx = { command, editable, workspace, today: todayIn(new Date(), timeZone), formatMoney };
+    if (pipelineVoice.PIPELINE_READ_INTENTS.includes(intent)) {
+      const response = pipelineVoice.readPipeline(intent, ctx);
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const plan = pipelineVoice.planPipelineWrite(intent, ctx);
+    if (plan.response) return plan.info ? { status: "completed", localOnly: true, response: plan.response, summary: plan.response } : { status: "needs-input", response: plan.response, missingInformation: plan.missingInformation || [] };
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: plan.prompt };
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: plan.apply(editable) } });
+    return { status: "completed", localOnly: true, response: plan.done, businessRecord: updated?.body || null, summary: plan.done };
+  }
 
   if (operationsVoice.OPERATIONS_READ_INTENTS.includes(intent) || operationsVoice.OPERATIONS_WRITE_INTENTS.includes(intent)) {
     const resolved = await resolveBusinessClient(businessRequest, command);
@@ -1541,7 +1687,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     const conflictNote = conflict ? ` Note: "${conflict.title}" is already scheduled for the same time -- check this isn't a double-booking.` : "";
     if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can add an appointment "${appointment.title}"${startPhrase} to "${workspaceName}" as a local plan.${conflictNote} This does not book anything on a real calendar until you sync it. Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, appointments: [...resolved.client.data.editable.appointments,
-      { title: appointment.title, start: appointment.start, end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "" }] };
+      (() => { const when = scheduleVoice.parseWhen(appointment.start, todayIn(new Date(), timeZone)); const startAt = when.day && when.time ? `${when.day}T${when.time}` : ""; return { title: appointment.title, start: appointment.start, end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "", startAt, durationMinutes: startAt ? 60 : 0, customer: "", service: "", confirmation: "" }; })()] };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
     const response = `Added an appointment "${appointment.title}"${startPhrase} to "${workspaceName}" as a local plan.${conflictNote} Say "sync it to my calendar" when you want a real calendar event created.`;

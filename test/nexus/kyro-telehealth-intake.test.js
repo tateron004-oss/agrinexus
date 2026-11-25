@@ -55,7 +55,9 @@ test("it is wired: spoken and typed requests start it, the guards leave the sent
   assert.match(app, /isSaleRequest\?\.\(command\) \|\| window\.KyroIntakeForms\?\.isTelehealthRequest\?\.\(command\)/);
   assert.match(app, /response: kyroIntakeBusyLine\(command\),/);
   assert.match(app, /isTelehealthRequest\?\.\(command\); \/\/ the short interview, not the form/);
-  assert.match(app, /if \(!decision\.emergency\) speakKyroIntakeLine\(kyroIntakeText\("cancelled", decision\.language\)/);
+  // (an emergency says its own line and nothing else; any other end says "Okay, I stopped. Nothing was saved." ONCE, followed by the engine's own "how to start again" line, which never says it again)
+  assert.match(app, /step\(\(\) => \{ if \(decision\.say && decision\.emergency\) speakKyroIntakeLine\(decision\.say, \{ step: decision\.snapshot\?\.index, language: decision\.language \}\); \}\);/);
+  assert.match(app, /step\(\(\) => \{ if \(!decision\.emergency\) speakKyroIntakeLine\(\[kyroIntakeText\("cancelled", decision\.language\), decision\.say\]\.filter\(Boolean\)\.join\(" "\), \{ language: decision\.language \}\); \}\);/);
   const submit = app.slice(app.indexOf("async function submitKyroTelehealthIntake"), app.indexOf("function kyroIntakeBusyLine"));
   assert.match(submit, /name: "nexus_health_preparation"/); assert.match(submit, /arguments: \{ command: "Start my telehealth intake", summary,/);
   assert.match(submit, /if \(result\?\.status === "emergency-guidance"\) return \{ ok: true, say: said,/, "an emergency answered by the server ends the interview");

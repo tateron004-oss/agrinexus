@@ -150,6 +150,43 @@
     ];
     byId("dashboard-summary").innerHTML = rows.map(([label, value]) => `<div class="fields"><strong>${label}</strong><span>${value}</span></div>`).join("");
   }
+
+  // The pipeline board (9 November 2026): one column per stage, a card per deal, and a button on each card that moves it to the next stage. Computed from the data on the page; moving a card writes the same history line the voice command does.
+  const USUAL_STAGES = ["New", "Contacted", "Quoted", "Booked", "Won", "Lost"];
+  const isClosedStage = name => /\b(?:won|sold|lost|declined)\b/i.test(String(name || ""));
+  function pipelineStages(editable) { const own = (editable.pipelineStages || []).map(row => String(row.name || "").trim()).filter(Boolean); return own.length ? own : USUAL_STAGES; }
+  function renderPipeline() {
+    const editable = current.data.editable; const deals = editable.deals || []; const stages = pipelineStages(editable);
+    const board = byId("pipeline-board"); board.replaceChildren();
+    const extra = [...new Set(deals.map(deal => deal.stage).filter(stage => stage && !stages.includes(stage)))];
+    [...stages, ...extra].forEach((stage, stageIndex, all) => {
+      const column = document.createElement("div"); column.className = "board-column";
+      const here = deals.filter(deal => deal.stage === stage);
+      const heading = document.createElement("h5"); heading.textContent = stage + " (" + here.length + ")"; column.append(heading);
+      here.forEach(deal => {
+        const card = document.createElement("div"); card.className = "board-card";
+        const title = document.createElement("strong"); title.textContent = deal.title || "New deal"; card.append(title);
+        const who = document.createElement("span"); who.textContent = (deal.contact || "no name") + (Number(deal.value) ? " · " + deal.currency + " " + Number(deal.value).toLocaleString() : ""); card.append(who);
+        if (stageIndex < all.length - 1) {
+          const next = all[stageIndex + 1];
+          const move = document.createElement("button"); move.type = "button"; move.textContent = "Move to " + next;
+          move.addEventListener("click", () => {
+            const today = new Date().toISOString().slice(0, 10);
+            deal.stage = next; deal.movedOn = today; deal.closedOn = isClosedStage(next) ? today : "";
+            (editable.contactNotes = editable.contactNotes || []).push({ contact: deal.contact, at: today, kind: "stage", text: "Deal " + (deal.title ? '"' + deal.title + '" ' : "") + "moved from " + stage + " to " + next });
+            render();
+          });
+          card.append(move);
+        }
+        column.append(card);
+      });
+      board.append(column);
+    });
+    const open = deals.filter(deal => !isClosedStage(deal.stage));
+    const totals = {}; open.forEach(deal => { totals[deal.currency || "USD"] = (totals[deal.currency || "USD"] || 0) + Number(deal.value || 0); });
+    byId("pipeline-summary").textContent = deals.length ? open.length + " open deal(s)" + (Object.keys(totals).length ? ", worth " + Object.entries(totals).map(([code, total]) => code + " " + total.toLocaleString()).join(" and ") : "") + "." : "No deals yet.";
+    byId("pipeline-stages-note").textContent = (editable.pipelineStages || []).some(row => row.name) ? "Your stages, in order: " + stages.join(", ") + "." : "The usual stages are in use: " + USUAL_STAGES.join(", ") + ".";
+  }
   function render() {
     byId("editor").hidden = !current; byId("empty").hidden = Boolean(current); if (!current) return;
     byId("client-name").textContent = current.data.info.businessName;
@@ -157,7 +194,28 @@
     renderDashboard();
     const business = byId("business-fields"); business.replaceChildren();
     for (const [key, label] of [["businessName", "Business name"], ["industry", "Industry"], ["location", "Location"], ["customer", "Who you serve"], ["problem", "Customer need"], ["objective", "Business goal"]]) field(business, label, info[key], value => { info[key] = value; });
-    rows("leads", editable.leads, [["name", "Name"], ["contact", "Contact"], ["type", "Type (customer, donor, sponsor, volunteer)"], ["need", "Need"], ["stage", "Stage"], ["nextAction", "Next action"], ["followUpDate", "Follow-up date"], ["skills", "Skills (volunteers)"], ["availability", "Availability (volunteers)"], ["consent", "Consent to keep their records (given or declined; blank if not asked)"], ["consentDate", "Consent recorded on"], ["source", "How they heard about us"]]);
+    rows("leads", editable.leads, [["name", "Name"], ["contact", "Contact"], ["type", "Type (customer, donor, sponsor, volunteer)"], ["need", "Need"], ["stage", "Stage"], ["nextAction", "Next action"], ["followUpDate", "Follow-up date"], ["skills", "Skills (volunteers)"], ["availability", "Availability (volunteers)"], ["consent", "Consent to keep their records (given or declined; blank if not asked)"], ["consentDate", "Consent recorded on"], ["source", "How they heard about us"], ["tags", "Tags (words separated by commas, for example VIP, wholesale)"]]);
+    renderPipeline();
+    rows("deals", editable.deals || [], [["title", "Deal"], ["contact", "With (a name)"], ["value", "Worth"], ["currency", "Currency (KES, USD, NGN...)"], ["stage", "Stage"], ["note", "Note"]]);
+    rows("pipeline-stage-fields", editable.pipelineStages || [], [["name", "Stage name"]]);
+    rows("contact-notes", editable.contactNotes || [], [["contact", "Person"], ["at", "Day"], ["kind", "Kind (note, call, deal or stage)"], ["text", "What happened"]]);
+    rows("sequences", editable.sequences || [], [["name", "Sequence name"], ["status", "Status (active or paused)"]]);
+    rows("sequence-steps", editable.sequenceSteps || [], [["sequence", "Sequence"], ["step", "Step number"], ["afterDays", "Days after the step before (0 = right away)"], ["channel", "Channel (sms or email)"], ["message", "Message"]]);
+    rows("sequence-runs", editable.sequenceRuns || [], [["sequence", "Sequence"], ["customer", "Person"], ["nextStep", "Next step"], ["dueOn", "Next message on"], ["status", "Status (active, done, stopped or replied)"], ["note", "Note"]]);
+    const runningNow = (editable.sequenceRuns || []).filter(item => item.status === "active");
+    rows("pages", editable.pages || [], [["title", "Page name"], ["headline", "Headline"], ["body", "Text on the page"], ["button", "Button words"], ["fields", "Questions or fields (separated by |)"], ["status", "Status (on or off)"], ["askConsent", "Ask to agree to get messages (yes or no)"], ["minutes", "Minutes for each booking"]]);
+    const links = byId("page-links"); links.replaceChildren();
+    (editable.pages || []).forEach(page => {
+      const line = document.createElement("div"); line.className = "fields";
+      const url = location.origin + "/p/" + page.slug;
+      const label = document.createElement("strong"); label.textContent = (page.title || "Page") + " (" + page.kind + ", " + (page.status === "on" ? "on" : "off") + ")"; line.append(label);
+      const link = document.createElement("a"); link.href = url; link.target = "_blank"; link.rel = "noopener"; link.textContent = url; line.append(link);
+      const count = (editable.pageResponses || []).filter(row => row.page === page.slug).length; const used = document.createElement("span"); used.textContent = count + " answer(s) so far"; line.append(used);
+      links.append(line);
+    });
+    rows("chat-answers", editable.chatAnswers || [], [["topic", "When someone asks about (a few words)"], ["answer", "Answer"]]);
+    rows("page-responses", editable.pageResponses || [], [["title", "Page"], ["at", "When"], ["name", "Name"], ["contact", "Phone or email"], ["answers", "What they sent"], ["consent", "Agreed to get messages (yes or blank)"]]);
+    byId("sequence-summary").textContent = runningNow.length ? runningNow.length + " person(s) running through a sequence now." : "Nobody is running through a sequence now.";
     rows("listings", editable.listings, [["address", "Address"], ["price", "Price"], ["propertyType", "Property type"], ["beds", "Beds"], ["baths", "Baths"], ["status", "Status (active, pending, under-contract, sold)"], ["notes", "Notes"]]);
     rows("transactions", editable.transactions, [["date", "Date"], ["type", "Type (income or expense)"], ["category", "Category"], ["amount", "Amount"], ["currency", "Currency (KES, USD, NGN...)"], ["description", "Description"], ["fund", "Restricted to (the purpose a gift is held for; blank if unrestricted)"]]);
     const money = moneyByCurrency(editable.transactions);
@@ -243,6 +301,17 @@
   byId("reload").addEventListener("click", () => run(reload));
   byId("save").addEventListener("click", () => run(async () => { await save(); notice("Changes saved."); }));
   byId("add-lead").addEventListener("click", () => { current.data.editable.leads.push({ name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "", skills: "", availability: "", source: "", consent: "", consentDate: "" }); render(); });
+  byId("add-page").addEventListener("click", () => {
+    const editable = current.data.editable; const list = (editable.pages = editable.pages || []); if (list.length >= 20) return;
+    const code = Array.from(crypto.getRandomValues(new Uint8Array(8)), value => "abcdefghijklmnopqrstuvwxyz0123456789"[value % 36]).join("");
+    list.push({ slug: "page-" + code, kind: "landing", title: "New page", headline: "New page", body: "", button: "", fields: "", status: "off", askConsent: "no", minutes: 0, daysAhead: 0, zone: "", createdOn: new Date().toISOString().slice(0, 10) }); render();
+  });
+  byId("add-chat-answer").addEventListener("click", () => { const editable = current.data.editable; const list = (editable.chatAnswers = editable.chatAnswers || []); if (list.length >= 100) return; list.push({ topic: "", answer: "" }); render(); });
+  byId("add-sequence").addEventListener("click", () => { const editable = current.data.editable; (editable.sequences = editable.sequences || []).push({ name: "", status: "active", createdOn: new Date().toISOString().slice(0, 10) }); render(); });
+  byId("add-sequence-step").addEventListener("click", () => { const editable = current.data.editable; const list = (editable.sequenceSteps = editable.sequenceSteps || []); const name = (editable.sequences || []).length ? editable.sequences[editable.sequences.length - 1].name : ""; list.push({ sequence: name, step: list.filter(item => item.sequence === name).length + 1, afterDays: 0, channel: "sms", subject: name, message: "" }); render(); });
+  byId("add-deal").addEventListener("click", () => { const editable = current.data.editable; (editable.deals = editable.deals || []).push({ id: "D" + Date.now().toString(36), title: "", contact: "", value: 0, currency: "USD", stage: pipelineStages(editable)[0], openedOn: new Date().toISOString().slice(0, 10), movedOn: "", closedOn: "", note: "" }); render(); });
+  byId("add-stage").addEventListener("click", () => { const editable = current.data.editable; if (!(editable.pipelineStages || []).some(row => row.name)) editable.pipelineStages = USUAL_STAGES.map(name => ({ name })); else if (editable.pipelineStages.length < 10) editable.pipelineStages.push({ name: "" }); render(); });
+  byId("add-contact-note").addEventListener("click", () => { const editable = current.data.editable; (editable.contactNotes = editable.contactNotes || []).push({ contact: "", at: new Date().toISOString().slice(0, 10), kind: "note", text: "" }); render(); });
   byId("add-listing").addEventListener("click", () => { current.data.editable.listings.push({ address: "", price: 0, propertyType: "", beds: 0, baths: 0, status: "active", notes: "" }); render(); });
   byId("add-transaction").addEventListener("click", () => { current.data.editable.transactions.push({ date: new Date().toISOString().slice(0, 10), type: "income", category: "", amount: 0, currency: "USD", description: "", fund: "" }); render(); });
   // Found live: "invoices.length + 1001" recycles a number once an invoice

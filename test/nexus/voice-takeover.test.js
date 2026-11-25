@@ -36,7 +36,7 @@ function speaker({ active = true, sent = true } = {}) {
   const sandbox = { realtimeVoiceActive: () => active, languageCode: () => "en", sendKyroRealtimeEvent: event => { events.push(event); return sent; },
     realtimeVoiceSession: { sdkController: { interrupt: () => interrupts.push(1) } }, Date, String, Number };
   vm.createContext(sandbox);
-  vm.runInContext(`let kyroPageSpeaksUntil = 0; let kyroLastPageLine = { text: "", at: 0 };\n${sliceFn("function kyroSpeakPageLine(")}\nthis.api = { kyroSpeakPageLine, reset: () => { kyroLastPageLine = { text: "", at: 0 }; } };`, sandbox);
+  vm.runInContext(`let kyroPageSpeaksUntil = 0; let kyroLastPageLine = { text: "", at: 0 };\nconst KYRO_SPOKEN_LINE_MAX = 1600;\n${sliceFn("function kyroLineForSpeech(")}\n${sliceFn("function kyroSpeakPageLine(")}\nthis.api = { kyroSpeakPageLine, reset: () => { kyroLastPageLine = { text: "", at: 0 }; } };`, sandbox);
   return { api: sandbox.api, events, interrupts };
 }
 
@@ -51,14 +51,15 @@ test("the page's own words are said by the live voice: the model is cut off, the
   assert.equal(api.kyroSpeakPageLine("Your saved documents, newest first: 1, Field Notes; 2, Business plan."), true, "the same words arriving twice");
   assert.equal(events.length, 1, "are said once");
   assert.equal(api.kyroSpeakPageLine("   "), false);
-  api.kyroSpeakPageLine("x".repeat(900)); assert.equal(events.at(-1).response.input[0].content[0].text, "x".repeat(500), "at most 500 characters");
+  api.kyroSpeakPageLine("x".repeat(2000)); assert.equal(events.at(-1).response.input[0].content[0].text, "x".repeat(1600), "at most 1600 characters (it was 500: a long answer stopped in the middle of a word)");
+  api.reset(); api.kyroSpeakPageLine("A sentence of ordinary length. ".repeat(80)); assert.ok(events.at(-1).response.input[0].content[0].text.endsWith("length."), "a longer answer stops at the end of a sentence");
   assert.equal(speaker({ active: false }).api.kyroSpeakPageLine("Hello"), false, "no live voice: nothing is sent (the page speaks the older way)");
   assert.equal(speaker({ sent: false }).api.kyroSpeakPageLine("Hello"), false, "a failed send is reported");
 });
 
 test("the page takes over spoken requests and a spoken 'close it', and says its words in this voice", () => {
   assert.match(app, /if \(speak && Date\.now\(\) < kyroPageSpeaksUntil && options\.source !== "kyro-voice-intake" && options\.kyroPageLine !== true\) \{\s*try \{ kyroSpeakPageLine\(kyroPlainText\(String\(message \|\| ""\)\)\); \}/, "setVoiceResponse hands the page's words to the live voice");
-  assert.match(app, /if \(kyroHandleSpokenOpen\(trimmed, \{\}\)\) \{ kyroPageSpeaksUntil = Date\.now\(\) \+ 30000; return true; \}/, "a request the page took over opens the speaking window");
+  assert.match(app, /const previousPageSpeaksUntil = kyroPageSpeaksUntil;\s+kyroPageSpeaksUntil = Date\.now\(\) \+ 30000;\s+if \(kyroHandleSpokenOpen\(trimmed, \{\}\)\) return true;\s+kyroPageSpeaksUntil = previousPageSpeaksUntil;/, "a request the page took over opens the speaking window (before the sentence is tried, so an answer given at once is read out)");
   const route = sliceFn("function routeKyroVoiceIntakeTranscript(");
   assert.match(route, /kyroPageSpeaksUntil = 0;[\s\S]*\/\/ "Close it"/, "the next thing said ends the window");
   assert.match(route, /window\.KyroDismissCommands\?\.parse\?\.\(trimmed\)[\s\S]*handleKyroDismissCommand\(trimmed, \{ source: "voice-transcript" \}\)\) return true;/, "a spoken 'close it' closes things, as a typed one does");

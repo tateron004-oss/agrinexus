@@ -224,8 +224,8 @@
     intro: "",
     confirmBeforeSubmit: true,
     confirmTail: { en: "Shall I post it? Say yes, or tell me which part to change.", sw: "Niiweke sasa? Sema ndiyo, au niambie sehemu ya kubadilisha." },
-    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop.",
-    sw: { title: "Uza kwenye ubao wa jamii", intro: "", pausedLine: "Sawa, nitasubiri. Sema endelea ukiwa tayari, au sema ghairi kuacha." },
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop. Say stop again to end it.",
+    sw: { title: "Uza kwenye ubao wa jamii", intro: "", pausedLine: "Sawa, nitasubiri. Sema endelea ukiwa tayari, au sema ghairi kuacha. Sema acha tena kumaliza." },
     fields: SALE_FIELDS,
     readback: saleReadback,
     toCommand: saleCommand,
@@ -282,8 +282,8 @@
     intro: "I will ask a few short questions for a provider. If this is an emergency, call your local emergency number now. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
     confirmTail: { en: "Shall I send it for review? Say yes, or tell me which part to change.", sw: "Niitume ipitiwe? Sema ndiyo, au niambie sehemu ya kubadilisha." },
-    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop.",
-    sw: { title: "Ombi la telehealth", intro: "Nitakuuliza maswali machache mafupi kwa mtoa huduma. Ikiwa ni dharura, piga namba ya dharura sasa. Unaweza kusema rudia, ruka, rudi, au acha wakati wowote.", pausedLine: "Sawa, nitasubiri. Sema endelea ukiwa tayari, au sema ghairi kuacha." },
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop. Say stop again to end it.",
+    sw: { title: "Ombi la telehealth", intro: "Nitakuuliza maswali machache mafupi kwa mtoa huduma. Ikiwa ni dharura, piga namba ya dharura sasa. Unaweza kusema rudia, ruka, rudi, au acha wakati wowote.", pausedLine: "Sawa, nitasubiri. Sema endelea ukiwa tayari, au sema ghairi kuacha. Sema acha tena kumaliza." },
     fields: TELE_FIELDS,
     readback: teleReadback,
     interrupt: teleInterrupt,
@@ -322,7 +322,7 @@
     intro: "I will ask you ten short questions, one at a time, for a brief you can give to a PR or event firm. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
     confirmTail: { en: "Shall I save it as a document you can edit and send? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuituma? Sema ndiyo, au niambie sehemu ya kubadilisha." },
-    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the brief.",
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the brief. Say stop again to end it.",
     fields: PRBRIEF_FIELDS,
     readback: prBriefReadback,
     toRequest: prBriefToRequest
@@ -368,7 +368,7 @@
     intro: "I will ask you ten short questions, one at a time, for a one-page business plan. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
     confirmTail: { en: "Shall I save it as a document you can edit and show to others? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuwaonyesha wengine? Sema ndiyo, au niambie sehemu ya kubadilisha." },
-    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the business plan.",
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the business plan. Say stop again to end it.",
     fields: BP_FIELDS,
     readback: bpReadback,
     toRequest: bpToRequest,
@@ -430,7 +430,7 @@
     intro: "I will ask you ten short questions, one at a time, for a sponsorship proposal. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
     confirmTail: { en: "Shall I save it as a document you can edit and send? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuituma? Sema ndiyo, au niambie sehemu ya kubadilisha." },
-    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the proposal.",
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the proposal. Say stop again to end it.",
     fields: SPONSOR_FIELDS,
     readback: readbackOf(SPONSOR_FIELDS),
     toRequest: requestOf(SPONSOR_FIELDS),
@@ -457,7 +457,7 @@
     intro: "I will ask you ten short questions, one at a time, for a team packet you can give to families. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
     confirmTail: { en: "Shall I save it as a document you can edit and hand out? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuigawa? Sema ndiyo, au niambie sehemu ya kubadilisha." },
-    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the packet.",
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the packet. Say stop again to end it.",
     fields: TEAM_FIELDS,
     readback: readbackOf(TEAM_FIELDS),
     toRequest: requestOf(TEAM_FIELDS),
@@ -527,7 +527,7 @@
     intro: "I will ask you ten short questions, one at a time, to build a plan for the next 90 days. Please do not tell me account numbers, PINs, passwords or your Social Security number. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
     confirmTail: { en: "Shall I save it as a document you can edit and keep? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuiweka? Sema ndiyo, au niambie sehemu ya kubadilisha." },
-    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the money plan.",
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the money plan. Say stop again to end it.",
     fields: MONEYPLAN_FIELDS,
     readback: readbackOf(MONEYPLAN_FIELDS),
     toRequest: requestOf(MONEYPLAN_FIELDS),
@@ -539,11 +539,55 @@
     intro: "I will ask you ten short questions, one at a time, for a plan for a community financial education program. Please do not tell me account numbers, PINs or passwords. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
     confirmTail: { en: "Shall I save it as a document you can edit and share? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kushiriki? Sema ndiyo, au niambie sehemu ya kubadilisha." },
-    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the program plan.",
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the program plan. Say stop again to end it.",
     fields: PROGRAM_FIELDS,
     readback: readbackOf(PROGRAM_FIELDS),
     toRequest: requestOf(PROGRAM_FIELDS),
     isProgramKitRequest
+  });
+
+  // --- getting ready for a doctor, dentist or clinic appointment ---------------------------------------------------
+  // "Help me set up a doctor's appointment", "I need to make a dentist appointment" (5 November 2026, the small-business assistant team and its health side): Kyro cannot book into a clinic's system, so it gets the person READY: nine short
+  // questions (what it is for, who it is for, which doctor or clinic, which days and times work, how long it has been going on, medicines, how they will pay, what would make the visit work, the questions to ask), read back, and after a yes saved
+  // as a Word document (nexus/knowledge/doctor-visit.js builds it from these answers only, word for word) with what to say when calling, what to ask the clinic, what to bring and a place to write the booking. It books nothing, calls no one
+  // and gives no medical advice. If an answer describes an emergency the interview stops, says what to do and saves nothing. No ID number, password or Social Security number is asked for or kept.
+  // THE EMERGENCY WORDING AND THE DANGER-SIGN LIST NEED A CLINICIAN'S REVIEW (as for telehealth).
+  const VISIT_WHO = "doctor|doctor'?s|dentist|dental|clinic|nurse|physician|specialist|pediatrician|paediatrician|optometrist|eye doctor|health cent(?:er|re)|gp|therapist|counsel+or";
+  const VISIT_ORDER = /\b(?:help me|i need|i want|i'?d like|i would like|can you|could you|would you|please|let'?s|make|set up|schedule|book|arrange|get me|get an?|fix|plan|organi[sz]e)\b/i;
+  const VISIT_THING = new RegExp(`\\b(?:appointments?|visits?|check-?ups?|consultations?)\\b|\\bsee (?:a|an|my|the) (?:${VISIT_WHO})\\b`, "i");
+  const VISIT_PLACE = new RegExp(`\\b(?:${VISIT_WHO})\\b|\\bcheck-?up\\b|\\bphysical exam\\b`, "i");
+  const VISIT_NOT = /^\s*(?:how|what|when|where|why|which|who|is|are|does|do|did|should|can you explain|tips)\b|\b(?:remind|reminder|cancel|reschedule|move|change|telehealth|tele-health|virtual|video|online|vet|vets|veterinar\w*|cow|cows|goat|goats|chicken|chickens|animal|animals|livestock|cost|price|insurance cover\w*|template|checklist|sample|example)\b|\b(?:business|invoice|customer|client)\b/i;
+  function isDoctorVisitRequest(text) {
+    const value = clean(text).replace(/[’]/g, "'").replace(WAKE_LEAD, "").replace(FILLER_LEAD, "").trim();
+    if (!value || value.split(/\s+/).length > 24) return false;
+    if (isTelehealthRequest(value) || DANGER_SIGNS.test(value)) return false;
+    return VISIT_ORDER.test(value) && VISIT_THING.test(value) && VISIT_PLACE.test(value) && !VISIT_NOT.test(value);
+  }
+  const HEALTH_RETRY = "Please say that again in your own words, without any ID numbers, passwords or a Social Security number, or say skip.";
+  const health = (key, label, question, kind, aliases, required = false) => ({ key, label, question, required, kind, aliases, normalize: normalizeMoneyText, retryPrompt: HEALTH_RETRY });
+  const VISIT_FIELDS = [
+    health("reason", "Reason", "What is the appointment for? Tell me in your own words.", "sentences", ["reason", "for", "visit"], true),
+    health("who", "Who it is for", "Who is it for: you, your child, or someone else? Or say 'skip'.", "text", ["who", "patient", "for"]),
+    health("clinic", "Doctor or clinic", "Which doctor or clinic do you want to see? If you do not have one yet, say 'skip'.", "text", ["doctor", "clinic", "dentist", "where"]),
+    health("when", "Days and times", "Which days and times work for you? Or say 'skip'.", "sentences", ["days", "times", "when", "available"]),
+    health("started", "How long", "How long has it been going on, or is it a regular check-up? Or say 'skip'.", "sentences", ["started", "long", "since", "checkup"]),
+    health("medicines", "Medicines", "What medicines do you take now? Or say 'skip'.", "sentences", ["medicines", "medications", "pills", "drugs"]),
+    health("pay", "How you will pay", "How will you pay: insurance, a health program, or on your own? Please do not tell me any ID numbers. Or say 'skip'.", "sentences", ["pay", "insurance", "cost", "program"]),
+    health("access", "What would help", "What would make the visit work: an interpreter, a ride, childcare, or an accessible room? Or say 'skip'.", "sentences", ["interpreter", "ride", "childcare", "access", "help"]),
+    health("questions", "Your questions", "What do you want to ask the doctor? Or say 'skip'.", "sentences", ["questions", "ask"])
+  ];
+  const doctorVisit = Object.freeze({
+    id: "doctor-visit",
+    title: "Get ready for your appointment",
+    intro: "I will ask you nine short questions, one at a time, to get you ready to make an appointment. I cannot book it for you, and I do not give medical advice. If this is an emergency, call your local emergency number now. Please do not tell me ID numbers or passwords. You can say repeat, skip, go back, or stop at any time.",
+    confirmBeforeSubmit: true,
+    confirmTail: { en: "Shall I save it as a sheet you can edit and take with you when you call? Say yes, or tell me which part to change.", sw: "Niihifadhi kama karatasi unayoweza kuihariri na kwenda nayo unapopiga simu? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop. Say stop again to end it.",
+    fields: VISIT_FIELDS,
+    readback: readbackOf(VISIT_FIELDS),
+    interrupt: teleInterrupt,
+    toRequest: requestOf(VISIT_FIELDS),
+    isDoctorVisitRequest
   });
 
   const resume = Object.freeze({
@@ -551,11 +595,13 @@
     title: "Your résumé",
     intro: "I will ask you a few short questions, one at a time. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
-    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the résumé.",
+    restartLine: "Say build my resume to start again.",
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the résumé. Say stop again to end it.",
     sw: {
       title: "CV yako",
       intro: "Nitakuuliza maswali machache mafupi, moja baada ya jingine. Unaweza kusema rudia, ruka, rudi, au acha wakati wowote.",
-      pausedLine: "Sawa, nitasubiri. Sema endelea ukiwa tayari, au sema ghairi kuacha CV."
+      restartLine: "Sema tengeneza CV yangu kuanza tena.",
+      pausedLine: "Sawa, nitasubiri. Sema endelea ukiwa tayari, au sema ghairi kuacha CV. Sema acha tena kumaliza."
     },
     fields: RESUME_FIELDS,
     validate: resumeValidate,
@@ -565,5 +611,5 @@
     isContinueRequest: isResumeContinueRequest
   });
 
-  return Object.freeze({ resume, sale, telehealth, prBrief, businessPlan, sponsorshipProposal, teamPacket, moneyPlan, programKit, isMoneyPlanRequest, isProgramKitRequest, isSponsorshipProposalRequest, isTeamPacketRequest, isBusinessPlanRequest, isTelehealthRequest, isSaleRequest, parseSale, isResumeBuildRequest, isResumeContinueRequest: isResumeContinueRequest, isResumeDownloadRequest });
+  return Object.freeze({ resume, sale, telehealth, prBrief, businessPlan, sponsorshipProposal, teamPacket, moneyPlan, programKit, doctorVisit, isDoctorVisitRequest, isMoneyPlanRequest, isProgramKitRequest, isSponsorshipProposalRequest, isTeamPacketRequest, isBusinessPlanRequest, isTelehealthRequest, isSaleRequest, parseSale, isResumeBuildRequest, isResumeContinueRequest: isResumeContinueRequest, isResumeDownloadRequest });
 });

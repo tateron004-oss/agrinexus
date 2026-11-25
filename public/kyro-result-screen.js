@@ -141,6 +141,17 @@
       return placesModel(places, mobile ? t(lang).mobile : t(lang).clinics, lang, locationNote);
     }
     if (Array.isArray(result.pharmacyLocations) && result.pharmacyLocations.length) return placesModel(result.pharmacyLocations, t(lang).pharmacies, lang, locationNote);
+    // A tutoring turn (nexus/tutor/tutor.js): the lesson is the screen, in type that can be read at length, and the line saying the tutor is an AI that can make mistakes (said with the first turn only) is the small print.
+    if (result.tutor && typeof result.tutor === "object") {
+      const paragraphs = String(result.response == null ? "" : result.response).split(/\n\s*\n/).map(clean).filter(Boolean);
+      const isIntro = text => /^(?:I am an AI tutor|Mimi ni mwalimu wa AI)\b/.test(text);
+      const body = paragraphs.filter(text => !isIntro(text)).join(" ");
+      if (body.length >= 8) {
+        const subject = clean(result.tutor.subject);
+        const label = lang === "sw" ? "Mwalimu" : "Tutor";
+        return { kind: "text", title: subject ? `${label}: ${subject}` : label, headline: body, items: [], notes: paragraphs.filter(isIntro), awaiting: isAwaiting(result), tutor: true };
+      }
+    }
     // A list written one item per line ("- Passport", "- Phone charger", as for "what should I pack for Kenya?"): each line is an item, a first line that is not an item is the title, and the other lines are the notes.
     // (clean() below joins every line into one paragraph, which showed such a list as "- Passport - Phone charger - Cash ...")
     const lines = String(result.response == null ? "" : result.response).split(/\r?\n/).map(line => line.trim()).filter(Boolean);
@@ -186,6 +197,7 @@
 [data-kyro-result]::before, [data-kyro-result]::after { content: ""; flex: 1 1 0; }
 [data-kyro-result] h2 { margin: 0; font-size: clamp(1.1rem, 4vw, 1.5rem); font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: #94a3b8; }
 [data-kyro-result] p.kyro-result-headline { color: #f1f5f9; margin: 0; font-size: clamp(1.7rem, 6.5vw, 2.8rem); line-height: 1.25; font-weight: 600; max-width: 22em; }
+[data-kyro-result] p.kyro-result-lesson { font-size: clamp(1.3rem, 3.8vw, 1.8rem); line-height: 1.45; font-weight: 500; max-width: 32em; }
 [data-kyro-result] .kyro-result-note { margin: 0; max-width: 34em; font-size: clamp(1rem, 3.4vw, 1.2rem); line-height: 1.5; color: #cbd5e1; }
 [data-kyro-result] .kyro-result-lead { margin: 0; color: #94a3b8; font-size: clamp(.95rem, 3.2vw, 1.1rem); }
 [data-kyro-result] ol, [data-kyro-result] ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; max-width: 34em; }
@@ -232,7 +244,7 @@
     screen.setAttribute("aria-label", model.title || model.headline || "Answer");
     if (model.title) screen.appendChild(element(doc, "h2", "", model.title));
     if (model.id) screen.setAttribute("data-kyro-result-id", model.id);
-    if (model.headline) screen.appendChild(element(doc, "p", "kyro-result-headline", model.headline));
+    if (model.headline) screen.appendChild(element(doc, "p", model.tutor ? "kyro-result-headline kyro-result-lesson" : "kyro-result-headline", model.headline));
     // "open health": what Kyro can do first, then what to say (the sentences are plain text, not buttons)
     if (model.kind === "help") for (const note of model.notes || []) screen.appendChild(element(doc, "p", "kyro-result-note", note));
     if (model.lead) screen.appendChild(element(doc, "p", "kyro-result-lead", model.lead));

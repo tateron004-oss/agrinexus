@@ -13,8 +13,8 @@ const { CdpClient } = require(path.join(suite, "cdp.js"));
 const { findChrome, chromeArguments } = require(path.join(suite, "chrome.js"));
 const { buildInstallScript } = require(path.join(suite, "rig-page.js"));
 
-const STEP_KEYS = new Set(["tap", "nth", "type", "choose", "say", "wait", "expect", "timeoutMs"]);
-const EXPECT_KEYS = new Set(["screen", "app", "text", "notText", "keep", "buttons", "fields", "images", "frames", "links", "download", "intake", "orb", "said", "notSaid", "player", "model", "tool", "typed", "heard", "section", "allowRefusal", "mapOpen", "mapNear", "routeSteps"]);
+const STEP_KEYS = new Set(["tap", "nth", "type", "choose", "say", "wait", "offline", "expect", "timeoutMs"]);
+const EXPECT_KEYS = new Set(["screen", "app", "text", "notText", "keep", "buttons", "fields", "images", "frames", "links", "download", "intake", "orb", "said", "notSaid", "player", "model", "tool", "typed", "heard", "section", "allowRefusal", "mapOpen", "mapNear", "routeSteps", "typedBox"]);
 
 test("every case has a unique id, an area, something to say, and an expectation that only uses known fields", () => {
   const ids = new Set();
@@ -112,7 +112,9 @@ test("the page script is valid JavaScript and installs one rig with the run func
 });
 
 test("the command line, the summary and the printed result", () => {
-  assert.deepEqual(parseArgs(["--url", "http://x.test/", "--writes", "--only", "a,b", "--no-sound"]), { url: "http://x.test", writes: true, risky: false, sound: false, show: false, only: "a,b", area: "", out: "" });
+  assert.deepEqual(parseArgs(["--url", "http://x.test/", "--writes", "--only", "a,b", "--no-sound"]), { url: "http://x.test", writes: true, risky: false, sound: false, show: false, only: "a,b", area: "", out: "", shots: "" });
+  // --shots DIR: a picture of the screen each time the voice session's card changes
+  assert.equal(parseArgs(["--shots", "C:/tmp/shots"]).shots, "C:/tmp/shots");
   assert.throws(() => parseArgs(["--nope"]), /Unknown option/);
   const results = [{ id: "a", status: "pass", ms: 1500, failures: [], warnings: ["w"] }, { id: "b", status: "fail", ms: 2000, failures: ["no button"], warnings: [] }, { id: "c", status: "error", ms: 10, failures: ["boom"], warnings: [] }];
   assert.deepEqual(summarise(results), { total: 3, passed: 1, failed: 1, errors: 1, warnings: 1 });

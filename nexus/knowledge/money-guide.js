@@ -22,7 +22,7 @@ const CHECKED_ON = "22 October 2026";
 
 const SOURCES = Object.freeze({
   // where to start, and free teaching materials
-  cfpbYmyg: { name: "CFPB: Your Money, Your Goals", url: "https://www.consumerfinance.gov/consumer-tools/educator-tool/your-money-your-goals/" },
+  cfpbYmyg: { name: "CFPB: Your Money, Your Goals", url: "https://www.consumerfinance.gov/consumer-tools/educator-tools/your-money-your-goals/" },
   fdicMoneySmart: { name: "FDIC: Money Smart for Adults", url: "https://www.fdic.gov/consumer-resource-center/money-smart-adults" },
   invIntro: { name: "Investor.gov: introduction to investing", url: "https://www.investor.gov/introduction-investing" },
   // a spending plan, income that changes, savings

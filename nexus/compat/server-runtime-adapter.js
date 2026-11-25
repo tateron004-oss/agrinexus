@@ -26,6 +26,7 @@ const { createDeliveryReminders } = require("../reminders/delivery-store.js");
 const { createMemoryNotifications, createMemoryRepeatStore } = require("../reminders/memory-stores.js");
 const { createMemoryContactStore } = require("../memory/memory-contact-store.js");
 const { createMemoryRecords } = require("../health/memory-records.js");
+const { createPublicPages } = require("../pages/public-pages.js");
 
 function safeDatabaseIdentifier(value) {
   return String(value || "").replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 128);
@@ -49,7 +50,14 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       message: `${failure.message} No legacy write fallback was used.`,
       legacyWriteFallbackUsed: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development" }; }
   }
+  // The owner's public pages ("/p/<code>": a landing page, form, survey or booking page). No sign-in: see nexus/pages/public-pages.js for what keeps that safe.
+  const publicPages = createPublicPages({
+    runtime: async () => { const active = await runtime(); await active.ready; return active; },
+    env, logger,
+    notify: async ({ tenantId, userId, key, title, body }) => { const active = await runtime(); return active.notifications.enqueue({ tenantId, userId, channel: "push", scheduledAt: new Date(), idempotencyKey: key, content: { title, body, kind: "page_answer" } }); }
+  });
   async function handle(req, res, url, send) {
+    if (url.pathname.startsWith("/p/")) return publicPages.handle(req, res, url);
     if (!url.pathname.startsWith("/api/nexus/runtime")) return false;
     if (url.pathname === "/api/nexus/runtime/status" && req.method === "GET") { const result = await status(); send(res, result.ok ? 200 : 503, result); return true; }
     if (url.pathname === "/api/nexus/runtime/production-acceptance" && req.method === "GET") {
@@ -579,7 +587,9 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       } else if (url.pathname === "/api/nexus/runtime/behavior/turn" && req.method === "POST") {
         if (!active.behavior) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy fallback was used.", code: "behavior_spine_unavailable" }); return true; }
         // The device's own time zone, when the app sends one and it is a real IANA zone, so "7am" means 7am where the person is.
-        const turnContext = validIanaZone(body.timeZone) ? Object.freeze({ ...context, timeZone: body.timeZone }) : context;
+        const zonedContext = validIanaZone(body.timeZone) ? Object.freeze({ ...context, timeZone: body.timeZone }) : context;
+        // Whether the app has a tutoring lesson on the screen (true or false when it says; nothing when it does not): the planner ends a lesson the app says is closed instead of treating what is said next as a lesson answer (nexus/brain/planner.js tutorTurn).
+        const turnContext = typeof body.tutorLessonOpen === "boolean" ? Object.freeze({ ...zonedContext, tutorLessonOpen: body.tutorLessonOpen }) : zonedContext;
         let result;
         try {
           result = await active.behavior.turn({ input: { correlationId: request.context.requestId,
@@ -703,6 +713,23 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       } else if (url.pathname === "/api/nexus/runtime/documents" && req.method === "GET") {
         const list = await active.documents.list({ tenantId: context.tenantId, ownerId: context.userId, limit: Number(request.query.limit) || 50 });
         send(res, 200, { authoritative: true, documents: list.map(row => formatDocumentSummary(row)) }); return true;
+      } else if (/^\/api\/nexus\/runtime\/documents\/[^/]+\/pictures(?:\/\d+)?$/.test(url.pathname) && req.method === "GET") {
+        // The pictures in a designed document (owner-scoped like the document itself): the list, or one picture's bytes for the card's preview. Never cached, never sniffed.
+        const parts = url.pathname.split("/");
+        const index = /^\d+$/.test(parts[parts.length - 1]) ? Number(parts.pop()) : -1;
+        parts.pop();
+        const documentId = decodeURIComponent(parts.pop());
+        let stored = [];
+        try { stored = typeof active.documents.getPictures === "function" ? await active.documents.getPictures({ tenantId: context.tenantId, ownerId: context.userId, documentId }) : []; } catch { stored = []; }
+        const list = (Array.isArray(stored) ? stored : []).filter(item => item && typeof item.dataBase64 === "string");
+        if (index < 0) { send(res, 200, { authoritative: true, pictures: list.map((item, n) => ({ n, role: item.role || "", source: item.source || "", title: item.title || "", credit: item.credit || "", caption: item.caption || "" })) }); return true; }
+        const item = list[index];
+        const mime = item && /^image\/(?:png|jpeg)$/.test(String(item.mime || "")) ? item.mime : "";
+        if (!mime) { send(res, 404, { error: "Picture not found.", code: "picture_not_found" }); return true; }
+        const bytes = Buffer.from(item.dataBase64, "base64");
+        res.writeHead(200, { "content-type": mime, "content-length": bytes.length, "cache-control": "private, no-store", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'" });
+        res.end(bytes);
+        return true;
       } else if (/^\/api\/nexus\/runtime\/documents\/[^/]+$/.test(url.pathname) && req.method === "DELETE") {
         // Archive (hide) one of the caller's own documents; the file and its versions are kept. Owner scoping is in the query, so a
         // document that is not the caller's is reported exactly like one that does not exist.
@@ -727,7 +754,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         // download route above.
         if (String(document.object_key || "").startsWith("local:")) {
           const filename = document.object_key.slice("local:".length);
-          if (!/^[0-9a-f-]+\.(json|txt|md|pdf|docx)$/i.test(filename)) { send(res, 404, { error: "Document not found.", code: "document_not_found" }); return true; }
+          if (!/^[0-9a-f-]+\.(json|txt|md|pdf|docx|html)$/i.test(filename)) { send(res, 404, { error: "Document not found.", code: "document_not_found" }); return true; }
           const exportRoot = path.resolve(String(env.NEXUS_EXPORT_DIR || "").trim() || path.join(process.cwd(), "output", "nexus-exports"));
           const filePath = path.join(exportRoot, filename);
           if (!filePath.startsWith(exportRoot)) { send(res, 403, { error: "Forbidden.", code: "path_traversal_rejected" }); return true; }
@@ -1112,11 +1139,15 @@ async function executeProductionFaultIsolation({ active, principal, releaseSha, 
 }
 
 const DOCUMENT_CONTENT_TYPES = Object.freeze({ json: "application/json", txt: "text/plain", md: "text/markdown",
-  pdf: "application/pdf", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+  pdf: "application/pdf", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", html: "text/html; charset=utf-8" });
 function contentTypeForFormat(format) { return DOCUMENT_CONTENT_TYPES[String(format || "").toLowerCase()] || "application/octet-stream"; }
 function formatDocumentSummary(row) {
+  // the design (flyer, newsletter, email, ...) a document was made in, so the screen can offer pictures and the other file types for it
+  let metadata = row.metadata;
+  if (typeof metadata === "string") { try { metadata = JSON.parse(metadata); } catch { metadata = null; } }
+  const design = metadata && typeof metadata === "object" && typeof metadata.design === "string" && /^[a-z]{3,12}$/.test(metadata.design) ? metadata.design : "";
   return { documentId: row.document_id, title: row.title, documentType: row.document_type,
-    version: row.version || null, createdAt: row.created_at, updatedAt: row.updated_at };
+    version: row.version || null, createdAt: row.created_at, updatedAt: row.updated_at, ...(design ? { design } : {}) };
 }
 
 function acceptanceAuthorized(req, expected) {
