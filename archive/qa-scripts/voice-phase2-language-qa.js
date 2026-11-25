@@ -80,7 +80,8 @@ async function twilioPost(route, body) {
   assert(serverSource.includes("language: commandLanguage") && serverSource.includes("targetLanguage: commandLanguage"), "Companion-safe command metadata should carry canonical language");
   assert(serverSource.includes("English with Hausa fallback") && serverSource.includes("French with Lingala fallback"), "phone/Twilio fallback languages should be explicit");
 
-  assert.deepStrictEqual(bridge.languageContract.fullAppLanguages, ["en", "es", "fr", "sw", "ar", "pt"], "native bridge should document Portuguese as a full app language");
+  // (Hausa, Amharic, Yoruba and Igbo joined as full languages on 25 Nov 2026)
+  assert.deepStrictEqual(bridge.languageContract.fullAppLanguages, ["en", "es", "fr", "sw", "ar", "pt", "ha", "am", "yo", "ig"], "native bridge should document Portuguese as a full app language");
   assert.deepStrictEqual(bridge.languageContract.partialLanguages, [], "native bridge should not document partial app languages for the current supported set");
   assert.equal(bridge.languageContract.fallback, "Missing, unsupported, or unknown language values fall back to English.");
 

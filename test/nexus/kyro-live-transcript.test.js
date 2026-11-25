@@ -85,8 +85,8 @@ test("the strip is hidden until someone speaks, draws the turns as plain text, a
 });
 
 test("the page loads the strip, caches it for offline, and feeds it every voice event", () => {
-  assert.match(html, /\/kyro-live-transcript\.js\?v=kyro-live-transcript-1/);
-  assert.match(sw, /\/kyro-live-transcript\.js\?v=kyro-live-transcript-1/);
+  assert.match(html, /\/kyro-live-transcript\.js\?v=kyro-live-transcript-2/);
+  assert.match(sw, /\/kyro-live-transcript\.js\?v=kyro-live-transcript-2/);
   assert.match(app, /KyroLiveTranscript/);
   assert.match(app, /kyroLiveTranscriptNote\(eventType, payload\)/);
 });

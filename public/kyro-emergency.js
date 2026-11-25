@@ -22,7 +22,11 @@
   // What the phone says, in the language the alert was raised in (English or Kiswahili; the Swahili is a first draft that needs a fluent speaker to review it).
   const TEXT = {
     en: { sent: "I've sent your location to {names}, and I'll keep it updated. Say \"I'm safe\" when you are.", warned: "I couldn't get your location yet. Your circle has still been alerted. I'll keep trying.", failed: "I couldn't get your location. Your circle was alerted without it, so please tell them where you are.", notSent: "I couldn't send your location. Your circle was alerted without it, so please tell them where you are." },
-    sw: { sent: "Nimetuma eneo lako kwa {names}, na nitaendelea kulisasisha. Sema \"niko salama\" ukiwa salama.", warned: "Bado sijapata eneo lako. Mzunguko wako umeshapewa tahadhari. Nitaendelea kujaribu.", failed: "Sikuweza kupata eneo lako. Mzunguko wako ulipewa tahadhari bila eneo, kwa hivyo tafadhali wajulishe ulipo.", notSent: "Sikuweza kutuma eneo lako. Mzunguko wako ulipewa tahadhari bila eneo, kwa hivyo tafadhali wajulishe ulipo." }
+    sw: { sent: "Nimetuma eneo lako kwa {names}, na nitaendelea kulisasisha. Sema \"niko salama\" ukiwa salama.", warned: "Bado sijapata eneo lako. Mzunguko wako umeshapewa tahadhari. Nitaendelea kujaribu.", failed: "Sikuweza kupata eneo lako. Mzunguko wako ulipewa tahadhari bila eneo, kwa hivyo tafadhali wajulishe ulipo.", notSent: "Sikuweza kutuma eneo lako. Mzunguko wako ulipewa tahadhari bila eneo, kwa hivyo tafadhali wajulishe ulipo." },
+    ha: { sent: "Na aika wurin da kake ga {names}, kuma zan ci gaba da sabunta shi. Ka ce \"Ina lafiya\" idan ka samu lafiya.", warned: "Ban samu wurin da kake ba tukuna. Duk da haka an sanar da mutanenka. Zan ci gaba da ƙoƙari.", failed: "Ban samu wurin da kake ba. An sanar da mutanenka ba tare da shi ba, don haka don Allah ka faɗa musu inda kake.", notSent: "Ban iya aika wurin da kake ba. An sanar da mutanenka ba tare da shi ba, don haka don Allah ka faɗa musu inda kake." },
+    am: { sent: "ያሉበትን ቦታ ለ{names} ልኬያለሁ፤ እያዘመንኩም እቀጥላለሁ። ደህና ሲሆኑ \"ደህና ነኝ\" ይበሉ።", warned: "እስካሁን ያሉበትን ቦታ ማግኘት አልቻልኩም። ቢሆንም ሰዎችዎ ተነግሯቸዋል። መሞከሬን እቀጥላለሁ።", failed: "ያሉበትን ቦታ ማግኘት አልቻልኩም። ሰዎችዎ ያለ ቦታው ተነግሯቸዋል፤ ስለዚህ እባክዎ የት እንዳሉ ይንገሯቸው።", notSent: "ያሉበትን ቦታ መላክ አልቻልኩም። ሰዎችዎ ያለ ቦታው ተነግሯቸዋል፤ ስለዚህ እባክዎ የት እንዳሉ ይንገሯቸው።" },
+    yo: { sent: "Mo ti fi ibi tí o wà ránṣẹ́ sí {names}, màá sì máa ṣe àtúnṣe rẹ̀. Sọ pé \"Mo wà láìléwu\" nígbà tí o bá wà láìléwu.", warned: "N kò tíì rí ibi tí o wà. Síbẹ̀, a ti kìlọ̀ fún àwọn ènìyàn rẹ. Màá máa gbìyànjú.", failed: "N kò rí ibi tí o wà. A ti kìlọ̀ fún àwọn ènìyàn rẹ láìsí i, nítorí náà jọ̀wọ́ sọ ibi tí o wà fún wọn.", notSent: "N kò lè fi ibi tí o wà ránṣẹ́. A ti kìlọ̀ fún àwọn ènìyàn rẹ láìsí i, nítorí náà jọ̀wọ́ sọ ibi tí o wà fún wọn." },
+    ig: { sent: "Ezigala m ebe ị nọ nye {names}, m ga-anọgide na-emelite ya. Kwuo \"Adị m mma\" mgbe ị nọ n'udo.", warned: "Achọtabeghị m ebe ị nọ. N'agbanyeghị nke ahụ, agwala ndị gị. M ga-anọgide na-agbalị.", failed: "Achọtaghị m ebe ị nọ. Agwala ndị gị n'enweghị ya, ya mere biko gwa ha ebe ị nọ.", notSent: "Enweghị m ike iziga ebe ị nọ. Agwala ndị gị n'enweghị ya, ya mere biko gwa ha ebe ị nọ." }
   };
   const words = (language, key, params = {}) => String((TEXT[language] || TEXT.en)[key]).replace(/\{(\w+)\}/g, (whole, name) => (params[name] === undefined ? whole : String(params[name])));
 
@@ -76,7 +80,7 @@
         if (!emergency.shareLocation || !emergency.alertId) return;
         if (running && running.alertId === emergency.alertId) return;
         stop();
-        running = { alertId: emergency.alertId, startedAt: now(), timer: null, failures: 0, updates: 0, told: false, warned: false, language: /^sw/i.test(String(emergency.language || "")) ? "sw" : "en" };
+        running = { alertId: emergency.alertId, startedAt: now(), timer: null, failures: 0, updates: 0, told: false, warned: false, language: ((code) => (["sw", "ha", "am", "yo", "ig"].includes(code) ? code : "en"))(String(emergency.language || "").trim().toLowerCase().split(/[-_]/)[0]) };
         tick(running);
       },
       stop

@@ -59,7 +59,11 @@
   function isWomensCareSearch(text) { return WOMENS_CARE_SEARCH.test(String(text || "")); }
   const WOMENS_CARE_NOTE = Object.freeze({
     en: "I cannot tell which of these offer women's health care, so ask when you call.",
-    sw: "Siwezi kujua ni zipi kati ya hizi zinatoa huduma za afya ya wanawake, kwa hiyo uliza unapopiga simu."
+    sw: "Siwezi kujua ni zipi kati ya hizi zinatoa huduma za afya ya wanawake, kwa hiyo uliza unapopiga simu.",
+    ha: "Ba zan iya sanin wanne daga cikin waɗannan ke ba da kulawar lafiyar mata ba, don haka ka tambaya idan ka kira.",
+    am: "ከእነዚህ ውስጥ የትኛው የሴቶች ጤና አገልግሎት እንደሚሰጥ ማወቅ አልችልም፣ ስለዚህ ሲደውሉ ይጠይቁ።",
+    yo: "Mi ò lè mọ èwo nínú àwọn wọ̀nyí ló ń pèsè ìtọ́jú ìlera obìnrin, nítorí náà béèrè nígbà tí o bá pè.",
+    ig: "Enweghị m ike ịma nke n'ime ndị a na-enye ọgwụgwọ ahụike ụmụ nwanyị, ya mere jụọ mgbe ị kpọrọ."
   });
 
   return Object.freeze({ womensHealthTopic, isWomensCareSearch, WOMENS_CARE_NOTE });

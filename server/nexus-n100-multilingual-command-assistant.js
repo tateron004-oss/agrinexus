@@ -30,7 +30,11 @@ const HIGH_RISK_TERMS_BY_LANGUAGE = Object.freeze({
   fr: Object.freeze(["appelle", "appeler", "message", "whatsapp", "acheter", "payer", "urgence", "camera", "position", "rendez-vous"]),
   ar: Object.freeze(["اتصل", "رسالة", "واتساب", "شراء", "ادفع", "طوارئ", "كاميرا", "موقع", "موعد"]),
   pt: Object.freeze(["ligar", "chamar", "mensagem", "whatsapp", "comprar", "pagar", "emergencia", "camera", "localizacao", "consulta"]),
-  sw: Object.freeze(["piga", "ujumbe", "whatsapp", "nunua", "lipa", "dharura", "kamera", "mahali", "miadi"])
+  sw: Object.freeze(["piga", "ujumbe", "whatsapp", "nunua", "lipa", "dharura", "kamera", "mahali", "miadi"]),
+  ha: Object.freeze(["kira", "saƙo", "whatsapp", "telegram", "saya", "biya", "aika", "gaggawa", "kamara", "wuri", "ajiye wuri"]),
+  am: Object.freeze(["ደውል", "መልእክት", "whatsapp", "telegram", "ግዛ", "ክፈል", "ላክ", "አስቸኳይ", "ካሜራ", "አካባቢ", "ቦታ ያዝ"]),
+  yo: Object.freeze(["pè", "ọ̀rọ̀", "whatsapp", "telegram", "rà", "sanwó", "fi ránṣẹ́", "pàjáwìrì", "kámẹ́rà", "ibi", "gba àyè"]),
+  ig: Object.freeze(["kpọọ", "ozi", "whatsapp", "telegram", "zụta", "kwụọ ụgwọ", "zipu", "mberede", "igwefoto", "ọnọdụ", "debe oge"])
 });
 
 const SAFE_INTENT_TERMS_BY_LANGUAGE = Object.freeze({
@@ -39,7 +43,11 @@ const SAFE_INTENT_TERMS_BY_LANGUAGE = Object.freeze({
   fr: Object.freeze(["travail", "formation", "apprendre", "liste", "comparer", "suivant"]),
   ar: Object.freeze(["عمل", "تدريب", "تعلم", "قائمة", "قارن", "التالي"]),
   pt: Object.freeze(["trabalho", "treinamento", "aprender", "lista", "comparar", "proximo"]),
-  sw: Object.freeze(["kazi", "mafunzo", "jifunze", "orodha", "linganisha", "ijayo"])
+  sw: Object.freeze(["kazi", "mafunzo", "jifunze", "orodha", "linganisha", "ijayo"]),
+  ha: Object.freeze(["ayyuka", "horarwa", "koyo", "jerin dubawa", "kwatanta", "na gaba"]),
+  am: Object.freeze(["ሥራዎች", "ስልጠና", "ተማር", "የማረጋገጫ ዝርዝር", "አወዳድር", "ቀጣይ"]),
+  yo: Object.freeze(["iṣẹ́", "ìdálẹ́kọ̀ọ́", "kọ́", "àtòjọ àyẹ̀wò", "fi wéra", "tókàn"]),
+  ig: Object.freeze(["ọrụ", "ọzụzụ", "mụta", "ndepụta nyocha", "tụnyere", "na-esote"])
 });
 
 function text(value, fallback = "") {

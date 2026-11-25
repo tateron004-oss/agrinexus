@@ -97,9 +97,37 @@ const WORDS = {
     saved: town => `Nimetafuta karibu na ${town}, mji uliniambia. Niambie ukiwa mahali pengine.`,
     mismatch: (found, expected) => `Kumbuka: maeneo haya yako ${found}, si ${expected}.`,
     mismatchNamed: found => `Kumbuka: maeneo haya yako ${found}.`
-  }
+  },
+  ha: {
+      ask: kind => `A wane gari zan duba? Ban san inda kake ba tukuna. Faɗa kamar haka "${kind} kusa da Kisumu", ko ka faɗa mini "Ina zaune a <garinka>".`,
+      country: (near, country) => `Ban san ainihin inda kake ba, don haka na duba kusa da ${near}; faɗa mini garinka don samun sakamako mafi kyau.`,
+      saved: town => `Na duba kusa da ${town}, garin da ka faɗa mini. Faɗa mini idan kana wani wuri dabam.`,
+      mismatch: (found, expected) => `Lura: waɗannan wuraren suna ${found}, ba ${expected} ba.`,
+      mismatchNamed: found => `Lura: waɗannan wuraren suna ${found}.`
+    },
+  am: {
+      ask: kind => `በየትኛው ከተማ ልፈልግ? እስካሁን የት እንዳሉ አላውቅም። እንዲህ ይበሉ፦ "ከኪሱሙ አቅራቢያ ${kind}"፣ ወይም "የምኖረው <ከተማዎ> ነው" ይበሉኝ።`,
+      country: (near, country) => `የት እንዳሉ በትክክል አላውቅም፣ ስለዚህ በ${near} አቅራቢያ ፈልጌያለሁ፤ ለተሻለ ውጤት ከተማዎን ይንገሩኝ።`,
+      saved: town => `በነገሩኝ ከተማ፣ በ${town} አቅራቢያ ፈልጌያለሁ። ሌላ ቦታ ከሆኑ ይንገሩኝ።`,
+      mismatch: (found, expected) => `ማሳሰቢያ፦ እነዚህ ቦታዎች ያሉት በ${found} ነው፣ በ${expected} አይደለም።`,
+      mismatchNamed: found => `ማሳሰቢያ፦ እነዚህ ቦታዎች ያሉት በ${found} ነው።`
+    },
+  yo: {
+      ask: kind => `Ìlú wo ni kí n wá? N kò tíì mọ ibi tí o wà. Sọ ọ́ báyìí: "${kind} nítòsí Kisumu", tàbí sọ fún mi pé "Mo ń gbé ní <ìlú rẹ>".`,
+      country: (near, country) => `N kò mọ ibi tí o wà gan-an, nítorí náà mo wá nítòsí ${near}; sọ ìlú rẹ fún mi kí èsì lè dára sí i.`,
+      saved: town => `Mo wá nítòsí ${town}, ìlú tí o sọ fún mi. Sọ fún mi bí o bá wà níbòmíràn.`,
+      mismatch: (found, expected) => `Àkíyèsí: àwọn ibí wọ̀nyí wà ní ${found}, kì í ṣe ní ${expected}.`,
+      mismatchNamed: found => `Àkíyèsí: àwọn ibí wọ̀nyí wà ní ${found}.`
+    },
+  ig: {
+      ask: kind => `Obodo kedu ka m ga-achọ? Amabeghị m ebe ị nọ. Kwuo ya dị ka "${kind} nso Kisumu", ma ọ bụ gwa m "Ebi m na <obodo gị>".`,
+      country: (near, country) => `Amaghị m kpọmkwem ebe ị nọ, ya mere achọrọ m nso ${near}; gwa m obodo gị ka m nweta ihe ka mma.`,
+      saved: town => `Achọrọ m nso ${town}, obodo ị gwara m. Gwa m ma ị nọ ebe ọzọ.`,
+      mismatch: (found, expected) => `Rịba ama: ebe ndị a dị na ${found}, ọ bụghị na ${expected}.`,
+      mismatchNamed: found => `Rịba ama: ebe ndị a dị na ${found}.`
+    }
 };
-const wordsFor = language => WORDS[String(language || "").toLowerCase().startsWith("sw") ? "sw" : "en"];
+const wordsFor = language => WORDS[((code) => (["sw", "ha", "am", "yo", "ig"].includes(code) ? code : "en"))(String(language || "").trim().toLowerCase().split(/[-_]/)[0])];
 
 // What to search near, from what was asked and what is known about the person. Always one of:
 //   named          the place they said

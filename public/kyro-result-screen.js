@@ -28,9 +28,29 @@
       close: "Funga", open: "Fungua", pages: "Kurasa nyuma ya jibu hili", say: "Unaweza kusema:", clinics: "Kliniki karibu nawe", mobile: "Kliniki zinazotembea karibu nawe", pharmacies: "Maduka ya dawa karibu nawe",
       sourceNote: source => `Kutoka ${source}. Saa za kufungua zinaweza kuwa zimepitwa na wakati. Huu si uhamisho wa kimatibabu.`,
       hours: hours => `Wazi ${hours}`
+    },
+    ha: {
+      close: "Rufe", open: "Buɗe", pages: "Shafukan da ke bayan wannan amsa", say: "Za ka iya cewa:", clinics: "Asibitoci kusa da kai", mobile: "Asibitocin tafi-da-gidanka kusa da kai", pharmacies: "Kantunan magani kusa da kai",
+      sourceNote: source => `Daga ${source}. Lokutan buɗewa na iya zama tsofaffi. Wannan ba turawa zuwa likita ba ne.`,
+      hours: hours => `A buɗe ${hours}`
+    },
+    am: {
+      close: "ዝጋ", open: "ክፈት", pages: "ከዚህ መልስ በስተጀርባ ያሉ ገጾች", say: "ማለት ይችላሉ፦", clinics: "በአቅራቢያዎ ያሉ ክሊኒኮች", mobile: "በአቅራቢያዎ ያሉ ተንቀሳቃሽ ክሊኒኮች", pharmacies: "በአቅራቢያዎ ያሉ ፋርማሲዎች",
+      sourceNote: source => `ከ${source} የተገኘ። የመክፈቻ ሰዓቶች ያረጁ ሊሆኑ ይችላሉ። ይህ የሕክምና ሪፈራል አይደለም።`,
+      hours: hours => `ክፍት ${hours}`
+    },
+    yo: {
+      close: "Pa á dé", open: "Ṣí", pages: "Àwọn ojú-ìwé tó wà lẹ́yìn ìdáhùn yìí", say: "O lè sọ pé:", clinics: "Àwọn ilé-ìwòsàn nítòsí rẹ", mobile: "Àwọn ilé-ìwòsàn alágbèéká nítòsí rẹ", pharmacies: "Àwọn ilé-òògùn nítòsí rẹ",
+      sourceNote: source => `Láti ${source}. Àkókò ìṣísílẹ̀ lè ti pẹ́. Èyí kì í ṣe ìtọ́kasí sí dókítà.`,
+      hours: hours => `Ó ṣí ${hours}`
+    },
+    ig: {
+      close: "Mechie", open: "Mepee", pages: "Ibe ndị dị n'azụ azịza a", say: "Ị nwere ike ịsị:", clinics: "Ụlọ ọgwụ dị nso gị", mobile: "Ụlọ ọgwụ na-agagharị dị nso gị", pharmacies: "Ụlọ ahịa ọgwụ dị nso gị",
+      sourceNote: source => `Site na ${source}. Oge mmeghe nwere ike ịbụ nke ochie. Nke a abụghị ntụnye gaa n'ụlọ ọgwụ.`,
+      hours: hours => `Emeghere ${hours}`
     }
   };
-  const t = lang => TEXT[lang === "sw" ? "sw" : "en"];
+  const t = lang => TEXT[TEXT[lang] ? lang : "en"];
 
   function clean(value) { return String(value == null ? "" : value).replace(/\s+/g, " ").trim(); }
 
@@ -131,7 +151,7 @@
 
   function buildBaseModel(result, options = {}) {
     if (!result || typeof result !== "object") return null;
-    const lang = options.lang === "sw" ? "sw" : "en";
+    const lang = (["sw", "ha", "am", "yo", "ig"].includes(options.lang) ? options.lang : "en");
     const command = clean(options.command).toLowerCase();
     // which town the lookup used when it could not tell where the person is: from the data when it has it, else the sentence the spoken answer carries
     const locationNote = clean(result.locationNote) || (/I don.t know exactly where you are[^.]*\./.exec(clean(result.response)) || [""])[0];

@@ -24,7 +24,7 @@
   const MAX_TURNS = 6;
   const MAX_TEXT = 600;
   const HIDE_AFTER_MS = 30000;
-  const LABEL = { en: { you: "You", kyro: "Kyro", name: "Conversation", hide: "Hide" }, sw: { you: "Wewe", kyro: "Kyro", name: "Mazungumzo", hide: "Ficha" } };
+  const LABEL = { en: { you: "You", kyro: "Kyro", name: "Conversation", hide: "Hide" }, sw: { you: "Wewe", kyro: "Kyro", name: "Mazungumzo", hide: "Ficha" }, ha: {"you":"Kai","kyro":"Kyro","name":"Tattaunawa","hide":"Ɓoye"}, am: {"you":"እርስዎ","kyro":"Kyro","name":"ውይይት","hide":"ደብቅ"}, yo: {"you":"Ìwọ","kyro":"Kyro","name":"Ìjíròrò","hide":"Fi pamọ́"}, ig: {"you":"Gị","kyro":"Kyro","name":"Mkparịta ụka","hide":"Zoo"} };
 
   const clean = value => String(value == null ? "" : value).replace(/\s+/g, " ").trim();
   const cut = value => { const text = String(value || ""); return text.length > MAX_TEXT ? `…${text.slice(text.length - MAX_TEXT + 1)}` : text; };

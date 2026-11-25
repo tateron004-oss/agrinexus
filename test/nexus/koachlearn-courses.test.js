@@ -176,10 +176,10 @@ test("the page takes a spoken course request itself, loads the matcher, and the 
   assert.ok(html.includes('<script src="/kyro-koachlearn-courses.js?v=kyro-koachlearn-courses-2"></script>'));
   assert.ok(html.indexOf("kyro-koachlearn-courses.js") < html.indexOf('src="/app.js'));
   assert.ok(sw.includes("`/kyro-koachlearn-courses.js?v=kyro-koachlearn-courses-2`"), "the offline copy has it");
-  assert.ok(app.includes('const partialAppLanguageCodes = new Set(["ha", "am", "yo", "ig"]);'));
+  assert.ok(app.includes('const fullAppLanguageCodes = new Set(["en", "fr", "sw", "ar", "es", "pt", "ha", "am", "yo", "ig"]);'), "the four are full languages (25 Nov)");
   assert.ok(app.includes("/api/voice/realtime/session?language=${encodeURIComponent(voiceLanguageCode())}"), "the voice session hears the chosen language");
   assert.ok(app.includes('        locale: typeof voiceLanguageCode === "function" ? voiceLanguageCode() : languageCode(),'), "Kyro's own route is told the chosen language");
   for (const code of ["ha", "am", "yo", "ig"]) assert.ok(app.includes(`["${code}", "`), `${code} is in the language switch`);
-  assert.ok(server.includes('const PARTIAL_LANGUAGE_CODES = new Set(["ha", "am", "yo", "ig"]);'));
+  assert.ok(server.includes('const FULL_APP_LANGUAGE_CODES = new Set(["en", "es", "fr", "sw", "ar", "pt", "ha", "am", "yo", "ig"]);'));
   assert.ok(server.includes("!FULL_APP_LANGUAGE_CODES.has(requested) && !PARTIAL_LANGUAGE_CODES.has(requested)"), "the language route accepts them");
 });

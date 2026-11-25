@@ -15,7 +15,11 @@
     fr: { label: "French", locale: "fr-FR", dir: "ltr" },
     sw: { label: "Kiswahili", locale: "sw-KE", dir: "ltr" },
     ar: { label: "Arabic", locale: "ar", dir: "rtl" },
-    pt: { label: "Portuguese", locale: "pt-BR", dir: "ltr" }
+    pt: { label: "Portuguese", locale: "pt-BR", dir: "ltr" },
+    ha: { label: "Hausa", locale: "ha-NG", dir: "ltr" },
+    am: { label: "Amharic", locale: "am-ET", dir: "ltr" },
+    yo: { label: "Yoruba", locale: "yo-NG", dir: "ltr" },
+    ig: { label: "Igbo", locale: "ig-NG", dir: "ltr" }
   });
 
   const LOCALIZED_RESPONSES = Object.freeze({
@@ -108,6 +112,66 @@
       noLiveKnowledge: "Posso fornecer orientação geral local-segura, mas conhecimento ao vivo da internet/fontes não está conectado agora.",
       notDiagnosis: "Isto é orientação geral, não um diagnóstico.",
       emergency: "Procure ajuda urgente se isto puder ser uma emergência."
+    },
+    ha: {
+      opened: "Na buɗe wurin aikin da ya shafi wannan.",
+      welcome: "Babu komai. Ina nan duk lokacin da kake buƙatar taimako.",
+      inputUnavailable: "Shigar da murya ba ya aiki a wannan burauza. Buɗe Nexus a burauzar da ke tallafawa don amfani da murya; filayen cikewa suna bayyana ne kawai bayan Nexus ya buɗe hanyar aiki.",
+      outputUnavailable: "Fitar da murya ba ya aiki a wannan burauza. Ana nuna amsar Nexus a kan allo.",
+      providerRequired: "Wannan aiki yana buƙatar kunna mai bayar da sabis.",
+      localSafe: "Wannan bayanan gwaji ne masu aminci na cikin waya.",
+      credentialsRequired: "Aiki na gaske yana buƙatar bayanan shiga na mai bayar da sabis da aka haɗa.",
+      canHelp: "Zan iya taimakawa da samun lafiya, noma, kasuwa, jigilar kaya, koyo, aikin ma'aikata, sadarwa, shirin masu bayar da sabis, da bayanai masu aminci na cikin waya.",
+      next: "Me kake so ka yi a gaba?",
+      answerAndOpen: "Zan iya amsa wannan kuma in buɗe wurin aikin da ya shafi shi.",
+      noLiveKnowledge: "Zan iya ba da shawara gabaɗaya mai aminci, amma ba a haɗa ilimin intanet kai tsaye ko na tushe yanzu ba.",
+      notDiagnosis: "Wannan shawara ce gabaɗaya, ba gano cuta ba.",
+      emergency: "Don Allah ka nemi taimakon gaggawa idan wannan na iya zama gaggawa."
+    },
+    am: {
+      opened: "ተዛማጅ የሥራ ቦታውን ከፍቻለሁ።",
+      welcome: "ምንም አይደል። እርዳታ ሲፈልጉ እዚህ ነኝ።",
+      inputUnavailable: "በዚህ አሳሽ የድምፅ ግብዓት አይገኝም። ድምፅን ለመጠቀም Nexusን በሚደግፍ አሳሽ ይክፈቱ፤ የሚሞሉ መስኮች የሚታዩት Nexus የሥራ ሂደት ከከፈተ በኋላ ብቻ ነው።",
+      outputUnavailable: "በዚህ አሳሽ የድምፅ ውጤት አይገኝም። የNexus መልስ በማያ ገጹ ላይ ይታያል።",
+      providerRequired: "ይህ ተግባር የአገልግሎት አቅራቢ ማንቃትን ይፈልጋል።",
+      localSafe: "ይህ በመሣሪያው ላይ ብቻ ያለ ደህንነቱ የተጠበቀ የሙከራ መረጃ ነው።",
+      credentialsRequired: "እውነተኛ አፈጻጸም የተገናኘ የአገልግሎት አቅራቢ መለያ መረጃ ይፈልጋል።",
+      canHelp: "በጤና አገልግሎት፣ በግብርና፣ በገበያ፣ በማጓጓዣ፣ በትምህርት፣ በሥራ ኃይል፣ በግንኙነት፣ በአቅራቢ ዝግጁነት እና በደህንነቱ የተጠበቀ የመሣሪያ መዝገብ ልረዳ እችላለሁ።",
+      next: "ቀጥሎ ምን ማድረግ ይፈልጋሉ?",
+      answerAndOpen: "ያንን መመለስ እና ተዛማጅ የሥራ ቦታውንም መክፈት እችላለሁ።",
+      noLiveKnowledge: "አጠቃላይ ደህንነቱ የተጠበቀ ምክር መስጠት እችላለሁ፣ ግን የቀጥታ ኢንተርኔት ወይም ምንጭ ያለው እውቀት አሁን አልተገናኘም።",
+      notDiagnosis: "ይህ አጠቃላይ ምክር ነው፣ የበሽታ ምርመራ አይደለም።",
+      emergency: "ይህ አስቸኳይ ሁኔታ ሊሆን ከቻለ እባክዎ አስቸኳይ እርዳታ ይፈልጉ።"
+    },
+    yo: {
+      opened: "Mo ti ṣí ibi iṣẹ́ tó jọ mọ́ ọn.",
+      welcome: "Kò tọ́pẹ́. Mo wà níbí nígbà tí o bá nílò ìrànlọ́wọ́.",
+      inputUnavailable: "Ìtẹ̀wọlé ohùn kò sí lórí ẹ̀rọ aṣàwákiri yìí. Ṣí Nexus nínú ẹ̀rọ aṣàwákiri tó ṣe àtìlẹ́yìn fún ohùn; àwọn àyè ìkọsílẹ̀ máa hàn nìkan lẹ́yìn tí Nexus bá ṣí ọ̀nà iṣẹ́ kan.",
+      outputUnavailable: "Ìjáde ohùn kò sí lórí ẹ̀rọ aṣàwákiri yìí. Ìdáhùn Nexus wà lójú ìbojú.",
+      providerRequired: "Ìgbésẹ̀ yìí nílò kí wọ́n mú olùpèsè iṣẹ́ ṣiṣẹ́.",
+      localSafe: "Èyí jẹ́ dátà àdánwò tó ní ààbò lórí ẹ̀rọ yìí.",
+      credentialsRequired: "Iṣẹ́ gidi nílò àwọn ìwé ìwọlé olùpèsè iṣẹ́ tí a ti so pọ̀.",
+      canHelp: "Mo lè ṣèrànwọ́ pẹ̀lú ìlera, iṣẹ́ àgbẹ̀, ọjà, ìkójọpọ̀ ẹrù, ẹ̀kọ́, iṣẹ́ òṣìṣẹ́, ìbánisọ̀rọ̀, ìmúrasílẹ̀ olùpèsè, àti àkọsílẹ̀ tó ní ààbò lórí ẹ̀rọ.",
+      next: "Kí lo fẹ́ ṣe tó kàn?",
+      answerAndOpen: "Mo lè dáhùn ìyẹn, kí n sì ṣí ibi iṣẹ́ tó jọ mọ́ ọn.",
+      noLiveKnowledge: "Mo lè fún ọ ní ìmọ̀ràn gbogbogbò tó ní ààbò, ṣùgbọ́n ìmọ̀ láti íńtánẹ́ẹ̀tì tàbí orísun kò tíì so pọ̀ báyìí.",
+      notDiagnosis: "Ìmọ̀ràn gbogbogbò ni èyí, kì í ṣe àyẹ̀wò àìsàn.",
+      emergency: "Jọ̀wọ́ wá ìrànlọ́wọ́ kíákíá tí èyí bá lè jẹ́ pàjáwìrì."
+    },
+    ig: {
+      opened: "Emeghere m ebe ọrụ metụtara ya.",
+      welcome: "Ọ dị mma. Anọ m ebe a mgbe ọ bụla ịchọrọ enyemaka.",
+      inputUnavailable: "Ntinye olu adịghị na ihe nchọgharị a. Mepee Nexus n'ihe nchọgharị na-akwado ya iji olu; ebe ndejupụta na-apụta naanị mgbe Nexus mepere usoro ọrụ.",
+      outputUnavailable: "Mwepụta olu adịghị na ihe nchọgharị a. A na-egosi azịza Nexus na ihuenyo.",
+      providerRequired: "Omume a chọrọ ka a gbanye onye na-enye ọrụ.",
+      localSafe: "Nke a bụ data nnwale dị nchebe na ngwaọrụ a.",
+      credentialsRequired: "Ọrụ n'ezie chọrọ nkọwa nbanye nke onye na-enye ọrụ ejikọrọ.",
+      canHelp: "Enwere m ike inyere aka n'ahụike, ọrụ ugbo, ahịa, mbugharị ngwongwo, mmụta, ọrụ ndị ọrụ, nkwurịta okwu, njikere ndị na-enye ọrụ, na ndekọ dị nchebe na ngwaọrụ.",
+      next: "Gịnị ka ị chọrọ ime ọzọ?",
+      answerAndOpen: "Enwere m ike ịza nke ahụ ma meekwa ebe ọrụ metụtara ya.",
+      noLiveKnowledge: "Enwere m ike inye ndụmọdụ izugbe dị nchebe, mana ejikọghị ihe ọmụma ịntanetị ma ọ bụ isi mmalite ugbu a.",
+      notDiagnosis: "Nke a bụ ndụmọdụ izugbe, ọ bụghị nchọpụta ọrịa.",
+      emergency: "Biko chọọ enyemaka ngwa ngwa ma ọ bụrụ na nke a nwere ike ịbụ ihe mberede."
     }
   });
 

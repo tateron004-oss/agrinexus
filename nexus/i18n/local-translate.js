@@ -16,7 +16,11 @@ const AGENT_NOT_HANDLED_RESPONSE = `I couldn't do that one just now, and nothing
 // The short plain question asked when Kyro did not understand and has nothing real to offer. Never internal wording, never a claim of any action.
 const NOT_UNDERSTOOD_QUESTION = {
   en: "Sorry, I did not understand that well. Can you say it again in a few words? For example: health, farm, work, money.",
-  sw: "Samahani, sikuelewa vizuri. Unaweza kusema tena kwa maneno machache? Kwa mfano: afya, shamba, kazi, pesa."
+  sw: "Samahani, sikuelewa vizuri. Unaweza kusema tena kwa maneno machache? Kwa mfano: afya, shamba, kazi, pesa.",
+  ha: "Yi haƙuri, ban gane sosai ba. Za ka iya sake faɗa a cikin 'yan kalmomi? Misali: lafiya, gona, aiki, kuɗi.",
+  am: "ይቅርታ፣ በደንብ አልገባኝም። በጥቂት ቃላት እንደገና ልትለው ትችላለህ? ለምሳሌ፦ ጤና፣ እርሻ፣ ሥራ፣ ገንዘብ።",
+  yo: "Má bínú, kò yé mi dáadáa. Ṣé o lè tún un sọ ní ọ̀rọ̀ díẹ̀? Fún àpẹẹrẹ: ìlera, oko, iṣẹ́, owó.",
+  ig: "Ndo, aghọtaghị m nke ọma. Ị nwere ike ikwu ya ọzọ n'okwu ole na ole? Dị ka: ahụike, ugbo, ọrụ, ego."
 };
 
 // NEEDS REVIEW BY A FLUENT KISWAHILI SPEAKER. English sentence (exactly as the app says it) -> Kiswahili sentence. Only sentences that say "I did not do it" belong here.

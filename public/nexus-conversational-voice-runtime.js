@@ -43,7 +43,11 @@
     fr: { listen: "Ecouter", stop: "Arreter", repeat: "Repeter", mute: "Muet", unmute: "Son", send: "Demander", ready: "Conversation prete" },
     sw: { listen: "Sikiliza", stop: "Simama", repeat: "Rudia", mute: "Nyamazisha", unmute: "Sauti", send: "Uliza", ready: "Mazungumzo tayari" },
     ar: { listen: "استمع", stop: "إيقاف", repeat: "كرر", mute: "كتم", unmute: "صوت", send: "اسأل", ready: "المحادثة جاهزة" },
-    pt: { listen: "Ouvir", stop: "Parar", repeat: "Repetir", mute: "Silenciar", unmute: "Som", send: "Perguntar", ready: "Conversa pronta" }
+    pt: { listen: "Ouvir", stop: "Parar", repeat: "Repetir", mute: "Silenciar", unmute: "Som", send: "Perguntar", ready: "Conversa pronta" },
+    ha: { listen: "Saurara", stop: "Tsaya", repeat: "Maimaita", mute: "Kashe sauti", unmute: "Kunna sauti", send: "Tambaya", ready: "Tattaunawa a shirye take" },
+    am: { listen: "አዳምጥ", stop: "አቁም", repeat: "ድገም", mute: "ድምፅ አጥፋ", unmute: "ድምፅ አብራ", send: "ጠይቅ", ready: "ውይይት ዝግጁ ነው" },
+    yo: { listen: "Gbọ́", stop: "Dúró", repeat: "Tún sọ", mute: "Pa ohùn", unmute: "Tan ohùn", send: "Béèrè", ready: "Ìjíròrò ti ṣetán" },
+    ig: { listen: "Gee ntị", stop: "Kwụsị", repeat: "Kwughachi", mute: "Gbanyụọ olu", unmute: "Gbanye olu", send: "Jụọ", ready: "Mkparịta ụka adịla njikere" }
   });
 
   let state = "idle";
@@ -71,6 +75,10 @@
     if (raw.startsWith("sw")) return "sw";
     if (raw.startsWith("ar")) return "ar";
     if (raw.startsWith("pt")) return "pt";
+    if (raw.startsWith("ha")) return "ha";
+    if (raw.startsWith("am")) return "am";
+    if (raw.startsWith("yo")) return "yo";
+    if (raw.startsWith("ig")) return "ig";
     return "en";
   }
 

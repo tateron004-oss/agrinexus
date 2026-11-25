@@ -162,7 +162,7 @@ test("on the page: the plan's walkthrough opens on the screen, the matchers are 
   assert.match(app, /result\.plan\.walkthrough && typeof kyroOpenWalkthrough === "function" && kyroOpenWalkthrough\(result\.plan\.walkthrough, message\)/);
   const index = fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8");
   const sw = fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8");
-  for (const tag of ["kyro-money-topics.js?v=kyro-money-topics-2", "kyro-athlete-topics.js?v=kyro-athlete-topics-3", "kyro-intake-forms.js?v=kyro-intake-forms-6"]) { assert.ok(index.includes(`<script src="/${tag}"></script>`), tag); assert.ok(sw.includes("`/" + tag + "`"), tag); }
+  for (const tag of ["kyro-money-topics.js?v=kyro-money-topics-2", "kyro-athlete-topics.js?v=kyro-athlete-topics-3", "kyro-intake-forms.js?v=kyro-intake-forms-7"]) { assert.ok(index.includes(`<script src="/${tag}"></script>`), tag); assert.ok(sw.includes("`/" + tag + "`"), tag); }
   assert.match(moneyGuide.moneyAnswer("money-overview").text, /I can also walk you through it one step at a time: say walk me through making a budget, checking my credit report, or getting a KRA PIN/);
   assert.match(athleteGuide.athleteAnswer("athlete-overview").text, /I can also walk you through six processes one step at a time: registering with Athletics Kenya, getting a US student visa, filing your whereabouts/);
   // "what can you walk me through" and the path through the six steps

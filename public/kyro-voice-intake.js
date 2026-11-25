@@ -94,6 +94,20 @@
     yes: /^(?:ndiyo|ndio|sawa|sawa sawa|sawa kabisa|naam|ni sahihi|ni kweli|kweli|hakika|poa|ndiyo sawa|ndio sawa|ndiyo ni sahihi)$/,
     no: /^(?:hapana|la|siyo|sio|si sahihi|sio sahihi|siyo sahihi|bado)$/
   };
+  // --- Hausa, Amharic, Yoruba and Igbo (25 Nov 2026) ----------------------------------------------
+  // The command words the forms' own prompts tell people to say in these four languages ("tsallake" to skip, "ሰርዝ" to cancel...), with a few common other ways and the
+  // spellings without tone marks a speech-to-text often writes. Machine-drafted first version (owner: "this is the first iteration"); a whole utterance must be the word.
+  const MORE_CONTROL = {
+    cancel: /^(?:kagbuo ya|fi sílẹ̀|pa á rẹ́|fi sile|pa a re|hapụ ya|hapu ya|fagilé|fagile|kagbuo|soke|fasa|bari|ሰርዝ|ይቅር|ተው)$/u,
+    repeat: /^(?:sọ lẹ́ẹ̀kan sí i|so leekan si i|sake fada min|kwughachi ya|እንደገና ተናገር|sake faɗa|sake fada|tún un sọ|tun un so|kwughachi|maimaita|kwuo ọzọ|kwuo ozo|tún sọ|tun so|እንደገና|ድገም)$/u,
+    skip: /^(?:mataki na gaba|ìgbésẹ̀ tó kàn|igbese to kan|nke na-esote|nzọụkwụ ọzọ|nzoukwu ozo|èyí tó kàn|eyi to kan|tsallake|tsallaka|na gaba|ቀጣይ ደረጃ|wụfe ya|wufe ya|nke ọzọ|nke ozo|tó kàn|to kan|wụfee|gafee|wufee|wuce|gaba|አሳልፍ|fò ó|kọjá|fo o|koja|እለፍ|ዝለል|ቀጣይ|ቀጣዩ|fò|fo)$/u,
+    back: /^(?:laghachi azụ|laghachi azu|padà sẹ́yìn|pada seyin|koma baya|laghachi|sẹ́yìn|ወደ ኋላ|seyin|baya|koma|ተመለስ|padà|pada|azụ|azu|ኋላ)$/u,
+    yes: /^(?:bẹ́ẹ̀ ni|ọ dị mma|o di mma|bẹ́ẹ̀ni|bee ni|na'am|ó dáa|beeni|o daa|naam|አዎን|eh|to|አዎ|እሺ|ee|i)$/u,
+    no: /^(?:bẹ́ẹ̀ kọ́|ọ bụghị|o bughi|bee ko|ee mba|አይደለም|babu|rárá|ó tì|rara|o ti|a'a|የለም|mba|aa|አይ)$/u,
+    pause: /^(?:kwụsị ya|kwusi ya|dúró ná|duro na|dakata|በቃ አቁም|tsaya|daina|dákẹ́|kwụsị|kwusi|dúró|duro|dake|zuru|አቁም|ቁም)$/u,
+    done: /^(?:emechaala m|shi ke nan|mo ti parí|mo ti pari|na gama|ó ti tó|o ti to|ọ zuola|o zuola|ya isa|o zuru|ጨርሻለሁ|ይበቃል|ó tó|o to|በቃ)$/u,
+    restart: /^(?:bẹ̀rẹ̀ láti ìbẹ̀rẹ̀|malite site na mbụ|malite site na mbu|fara daga farko|bere lati ibere|tún un bẹ̀rẹ̀|sake farawa|እንደገና እንጀምር|tun un bere|ከመጀመሪያ ጀምር|tún bẹ̀rẹ̀|malite ọzọ|malite ozo|sake fara|እንደገና ጀምር|tun bere|bido ọzọ|bido ozo)$/u
+  };
   const SW_PAUSE = /^(?:tafadhali )?(?:subiri|ngoja|simama|sitisha|acha|nyamaza|dakika moja|subiri kidogo|ngoja kidogo|acha kwanza|acha kidogo|nipe (?:dakika|muda)(?: moja)?|nahitaji (?:dakika|muda|mapumziko))(?: tafadhali)?$/;
   const SW_REPEAT_NATURAL = /\b(?:sikuelewa|sijaelewa|sikusikia|sijasikia|rudia|sema tena|unasema nini|ulisema nini|swali ni nini)\b/;
   const SW_DONE_COLLECTING = /^(?:(?:ndiyo|ndio|sawa|hapana|la)[, ]+)?(?:(?:ndiyo|ndio|ni) )?(?:hayo tu|hiyo tu|ni hayo|ni hiyo|hakuna zaidi|hakuna kingine|hakuna nyingine|hakuna tena|basi|tosha|imetosha|nimemaliza|nimeshamaliza|ndiyo basi|ndio basi|ndiyo hiyo|ndio hiyo)(?: (?:kwa sasa|asante))?(?:[, ]+(?:asante|tafadhali))?$/;
@@ -118,7 +132,7 @@
   }
   function isBareYes(text) {
     const stripped = normalizeText(text).replace(WAKE_PREFIX, "");
-    return CONTROL_PATTERNS.yes.test(stripped) || SW_CONTROL.yes.test(stripped);
+    return CONTROL_PATTERNS.yes.test(stripped) || SW_CONTROL.yes.test(stripped) || MORE_CONTROL.yes.test(stripped);
   }
 
   // Everything the engine itself says, in both languages. {x} is filled in from the caller. The English text is what the original tests pin: keep it identical.
@@ -142,7 +156,11 @@
       needThisLeave: "Ninahitaji jibu la swali hili ili kuendelea, kwa hiyo siwezi kulirukia. {q} Au sema ghairi kuacha.", startAgain: "Unaweza kuanza tena wakati wowote.", oneMoment: "Subiri kidogo.", failed: "Haikufaulu. Tujaribu tena.",
       failedYes: "Haikufaulu. Sema ndiyo kujaribu tena.", done: "Imekamilika.", here: "Hivi ndivyo nilivyoandika.", noAnswers: "Bado sina majibu yoyote.",
       yesFollow: "Sawa. {q}", yesMore: "Sawa, niambie. {q}"
-    }
+    },
+    ha: {"gotIt":"Na gane.","sorryRetry":"Ban gane sosai ba. {q}","orSkip":" Ko ka ce 'tsallake'.","moreDefault":"Akwai wani abu kuma? Ko ka ce shi ke nan.","confirmTail":"In yi shi yanzu? Ka ce eh, ko ka faɗa min wane ɓangare zan canza.","updated":"An sabunta.","notSure":"Ban tabbata wane ɓangare kake nufi ba. {summary} Ka ce eh, ko ka faɗi ɓangaren da zan canza.","whichPart":"Wane ɓangare zan canza?","startOver":"To, mu sake farawa. {q}","needThis":"Ina buƙatar wannan don ci gaba. {q}","removed":"To, na cire shi. {q}","firstQuestion":"Wannan ita ce tambaya ta farko. {q}","redo":"Mu sake wannan. {q}","talk":"To, na tsaya. An ajiye amsoshinka. Ka faɗa min abin da ba daidai ba, ko ka ce ci gaba don mu ci gaba, ko ka ce soke don tsayawa. Ka sake cewa tsaya don gamawa.","hold":"To, zan jira. Ka ce ci gaba idan ka shirya, ko ka ce soke don tsayawa. Ka sake cewa tsaya don gamawa.","keepGoing":"Mu ci gaba. {q}","needThisLeave":"Ina buƙatar wannan don ci gaba, don haka ba zan iya tsallake shi ba. {q} Ko ka ce soke don tsayawa.","startAgain":"Za ka iya sake farawa a kowane lokaci.","oneMoment":"Ɗan lokaci kaɗan.","failed":"Hakan bai yi aiki ba. Mu sake gwadawa.","failedYes":"Hakan bai yi aiki ba. Ka ce eh don sake gwadawa.","done":"An gama duka.","here":"Ga abin da nake da shi.","noAnswers":"Ba ni da wata amsa tukuna.","yesFollow":"To. {q}","yesMore":"To, faɗa min. {q}"},
+    am: {"gotIt":"ገባኝ።","sorryRetry":"በደንብ አልገባኝም። {q}","orSkip":" ወይም 'እለፍ' ይበሉ።","moreDefault":"ሌላ ነገር አለ? ወይም በቃ ይበሉ።","confirmTail":"አሁን ላዘጋጀው? አዎ ይበሉ፣ ወይም የትኛውን ክፍል እንደምቀይር ይንገሩኝ።","updated":"ተዘምኗል።","notSure":"የትኛውን ክፍል ማለትዎ እንደሆነ እርግጠኛ አይደለሁም። {summary} አዎ ይበሉ፣ ወይም የሚቀየረውን ክፍል ይጥቀሱ።","whichPart":"የትኛውን ክፍል ልቀይር?","startOver":"እሺ፣ እንደገና እንጀምር። {q}","needThis":"ለመቀጠል ይህ ያስፈልገኛል። {q}","removed":"እሺ፣ ያንን አስወገድኩ። {q}","firstQuestion":"ይህ የመጀመሪያው ጥያቄ ነው። {q}","redo":"ያንን እንደገና እንሥራ። {q}","talk":"እሺ፣ ቆምኩ። መልሶችዎ ተቀምጠዋል። ምን እንደተሳሳተ ይንገሩኝ፣ ወይም ለመቀጠል ቀጥል ይበሉ፣ ወይም ለማቆም ሰርዝ ይበሉ። ለመጨረስ እንደገና አቁም ይበሉ።","hold":"እሺ፣ እጠብቃለሁ። ዝግጁ ሲሆኑ ቀጥል ይበሉ፣ ወይም ለማቆም ሰርዝ ይበሉ። ለመጨረስ እንደገና አቁም ይበሉ።","keepGoing":"እንቀጥል። {q}","needThisLeave":"ለመቀጠል ይህ ያስፈልገኛል፣ ስለዚህ ልዘለው አልችልም። {q} ወይም ለማቆም ሰርዝ ይበሉ።","startAgain":"በማንኛውም ጊዜ እንደገና መጀመር ይችላሉ።","oneMoment":"አንድ ጊዜ ይጠብቁ።","failed":"አልሠራም። እንደገና እንሞክር።","failedYes":"አልሠራም። እንደገና ለመሞከር አዎ ይበሉ።","done":"ሁሉም ተጠናቋል።","here":"ያለኝ ይህ ነው።","noAnswers":"እስካሁን ምንም መልስ የለኝም።","yesFollow":"እሺ። {q}","yesMore":"እሺ፣ ይንገሩኝ። {q}"},
+    yo: {"gotIt":"Ó yé mi.","sorryRetry":"Kò yé mi dáadáa. {q}","orSkip":" Tàbí sọ pé 'fò ó'.","moreDefault":"Ṣé nǹkan mìíràn wà? Tàbí sọ pé ó ti tó.","confirmTail":"Ṣé kí n ṣe é báyìí? Sọ bẹ́ẹ̀ni, tàbí sọ apá tí kí n yí padà fún mi.","updated":"A ti ṣe àtúnṣe.","notSure":"Kò dá mi lójú apá tí o ń sọ. {summary} Sọ bẹ́ẹ̀ni, tàbí dárúkọ apá tí kí n yí padà.","whichPart":"Apá wo ni kí n yí padà?","startOver":"Ó dáa, jẹ́ ká tún bẹ̀rẹ̀. {q}","needThis":"Mo nílò èyí láti tẹ̀síwájú. {q}","removed":"Ó dáa, mo ti yọ ọ́ kúrò. {q}","firstQuestion":"Èyí ni ìbéèrè àkọ́kọ́. {q}","redo":"Jẹ́ ká tún ìyẹn ṣe. {q}","talk":"Ó dáa, mo ti dúró. A ti fi àwọn ìdáhùn rẹ pamọ́. Sọ ohun tí kò tọ́ fún mi, tàbí sọ tẹ̀síwájú láti máa lọ, tàbí sọ fagilé láti dúró. Tún sọ dúró láti parí rẹ̀.","hold":"Ó dáa, màá dúró dè ọ́. Sọ tẹ̀síwájú nígbà tí o bá ṣetán, tàbí sọ fagilé láti dúró. Tún sọ dúró láti parí rẹ̀.","keepGoing":"Jẹ́ ká máa bá a lọ. {q}","needThisLeave":"Mo nílò èyí láti tẹ̀síwájú, nítorí náà mi ò lè fò ó. {q} Tàbí sọ fagilé láti dúró.","startAgain":"O lè tún un bẹ̀rẹ̀ nígbàkígbà.","oneMoment":"Dúró díẹ̀.","failed":"Ìyẹn kò ṣiṣẹ́. Jẹ́ ká tún gbìyànjú.","failedYes":"Ìyẹn kò ṣiṣẹ́. Sọ bẹ́ẹ̀ni láti tún gbìyànjú.","done":"Gbogbo rẹ̀ ti parí.","here":"Ohun tí mo ní nìyí.","noAnswers":"Mi ò tíì ní ìdáhùn kankan.","yesFollow":"Ó dáa. {q}","yesMore":"Ó dáa, sọ fún mi. {q}"},
+    ig: {"gotIt":"Aghọtala m.","sorryRetry":"Aghọtaghị m nke ọma. {q}","orSkip":" Ma ọ bụ kwuo 'wụfee'.","moreDefault":"Ọ dị ihe ọzọ? Ma ọ bụ kwuo na ọ zuola.","confirmTail":"Ka m mee ya ugbu a? Kwuo ee, ma ọ bụ gwa m akụkụ m ga-agbanwe.","updated":"Emelitela.","notSure":"Amaghị m akụkụ ị na-ekwu. {summary} Kwuo ee, ma ọ bụ kpọọ akụkụ m ga-agbanwe.","whichPart":"Kedu akụkụ m ga-agbanwe?","startOver":"Ọ dị mma, ka anyị malite ọzọ. {q}","needThis":"Achọrọ m nke a iji gaa n'ihu. {q}","removed":"Ọ dị mma, ewepụla m ya. {q}","firstQuestion":"Nke a bụ ajụjụ mbụ. {q}","redo":"Ka anyị meghachi nke ahụ. {q}","talk":"Ọ dị mma, akwụsịla m. Echekwala azịza gị. Gwa m ihe na-adịghị mma, ma ọ bụ kwuo gaa n'ihu ka anyị gaa n'ihu, ma ọ bụ kwuo kagbuo ka ịkwụsị. Kwuo kwụsị ọzọ iji mechie ya.","hold":"Ọ dị mma, aga m echere. Kwuo gaa n'ihu mgbe ị dị njikere, ma ọ bụ kwuo kagbuo ka ịkwụsị. Kwuo kwụsị ọzọ iji mechie ya.","keepGoing":"Ka anyị gaa n'ihu. {q}","needThisLeave":"Achọrọ m nke a iji gaa n'ihu, ya mere enweghị m ike ịwụfe ya. {q} Ma ọ bụ kwuo kagbuo ka ịkwụsị.","startAgain":"Ị nwere ike ịmalite ya ọzọ mgbe ọ bụla.","oneMoment":"Chere ntakịrị.","failed":"Nke ahụ arụghị ọrụ. Ka anyị nwaa ọzọ.","failedYes":"Nke ahụ arụghị ọrụ. Kwuo ee ka anyị nwaa ọzọ.","done":"Emechaala ihe niile.","here":"Nke a bụ ihe m nwere.","noAnswers":"Enwebeghị m azịza ọ bụla.","yesFollow":"Ọ dị mma. {q}","yesMore":"Ọ dị mma, gwa m. {q}"}
   };
   function fill(template, params) { return String(template).replace(/\{(\w+)\}/g, (whole, name) => (params && params[name] !== undefined ? params[name] : whole)).replace(/\s+$/g, ""); }
 
@@ -150,7 +168,7 @@
 
   function isDoneCollecting(text) {
     const norm = normalizeText(text).replace(WAKE_PREFIX, "");
-    return DONE_COLLECTING.test(norm) || SW_DONE_COLLECTING.test(norm);
+    return DONE_COLLECTING.test(norm) || SW_DONE_COLLECTING.test(norm) || MORE_CONTROL.done.test(norm);
   }
 
   function classifyControl(text, { inConfirm = false } = {}) {
@@ -161,23 +179,23 @@
     const stripped = norm.replace(WAKE_PREFIX, "");
     const words = wordCount(stripped);
     if (inConfirm) {
-      if (CONTROL_PATTERNS.yes.test(stripped) || SW_CONTROL.yes.test(stripped)) return "yes";
+      if (CONTROL_PATTERNS.yes.test(stripped) || SW_CONTROL.yes.test(stripped) || MORE_CONTROL.yes.test(stripped)) return "yes";
       if (CHANGE_PATTERN.test(stripped) || SW_CHANGE.test(stripped)) return "change";
-      if (CONTROL_PATTERNS.no.test(stripped) || SW_CONTROL.no.test(stripped)) return "no";
+      if (CONTROL_PATTERNS.no.test(stripped) || SW_CONTROL.no.test(stripped) || MORE_CONTROL.no.test(stripped)) return "no";
     }
-    if (CONTROL_PATTERNS.cancel.test(stripped) || SW_CONTROL.cancel.test(stripped)) return "cancel";
-    if (PAUSE_PATTERN.test(stripped) || SW_PAUSE.test(stripped)) return "pause";
-    if (CONTROL_PATTERNS.repeat.test(stripped) || SW_CONTROL.repeat.test(stripped)) return "repeat";
+    if (CONTROL_PATTERNS.cancel.test(stripped) || SW_CONTROL.cancel.test(stripped) || MORE_CONTROL.cancel.test(stripped)) return "cancel";
+    if (PAUSE_PATTERN.test(stripped) || SW_PAUSE.test(stripped) || MORE_CONTROL.pause.test(stripped)) return "pause";
+    if (CONTROL_PATTERNS.repeat.test(stripped) || SW_CONTROL.repeat.test(stripped) || MORE_CONTROL.repeat.test(stripped)) return "repeat";
     if (words <= MAX_NATURAL_CONTROL_WORDS && (REPEAT_NATURAL.some(pattern => pattern.test(stripped)) || SW_REPEAT_NATURAL.test(stripped))) return "repeat";
     if (SWITCH_PATTERN.test(norm) || SW_SWITCH.test(norm)) return "switch";
     // A short QUESTION put to Kyro ("do you understand?", "what do you mean?") is never an answer to
     // a form field -- re-ask rather than saving it.
     if (words <= MAX_NATURAL_CONTROL_WORDS && /\?\s*$/.test(raw)
       && (/\b(?:you|your|kyro)\b/.test(stripped) || /^(?:what|why|how|who|where|when|which|huh|pardon|sorry)\b/.test(stripped))) return "repeat";
-    if (CONTROL_PATTERNS.back.test(stripped) || SW_CONTROL.back.test(stripped)) return "back";
-    if (CONTROL_PATTERNS.skip.test(stripped) || SW_CONTROL.skip.test(stripped)) return "skip";
+    if (CONTROL_PATTERNS.back.test(stripped) || SW_CONTROL.back.test(stripped) || MORE_CONTROL.back.test(stripped)) return "back";
+    if (CONTROL_PATTERNS.skip.test(stripped) || SW_CONTROL.skip.test(stripped) || MORE_CONTROL.skip.test(stripped)) return "skip";
     if (words <= MAX_DIRECTED_WORDS) {
-      if (RESTART_PATTERN.test(stripped) || SW_RESTART.test(stripped)) return "restart";
+      if (RESTART_PATTERN.test(stripped) || SW_RESTART.test(stripped) || MORE_CONTROL.restart.test(stripped)) return "restart";
       if (DIRECTED_AT_KYRO.test(stripped)) return "pause-talk";
     }
     return null;
@@ -192,7 +210,7 @@
     const norm = normalizeText(text).replace(WAKE_PREFIX, "");
     if (!norm || wordCount(norm) > MAX_NATURAL_CONTROL_WORDS) return false;
     const control = classifyControl(text);
-    return control === "cancel" || control === "pause" || control === "pause-talk" || EXIT_WORDS.test(norm) || DONE_COLLECTING.test(norm) || SW_DONE_COLLECTING.test(norm);
+    return control === "cancel" || control === "pause" || control === "pause-talk" || EXIT_WORDS.test(norm) || DONE_COLLECTING.test(norm) || SW_DONE_COLLECTING.test(norm) || MORE_CONTROL.done.test(norm);
   }
 
   // --- default per-field-kind normalizers ----------------------------------------------------
@@ -335,7 +353,7 @@
     const fields = definition.fields;
     const intakeId = options.intakeId || `${definition.id || "intake"}-${now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-    let lang = String(options.language || "").toLowerCase().startsWith("sw") ? "sw" : "en";
+    let lang = ((code) => (["sw", "ha", "am", "yo", "ig"].includes(code) ? code : "en"))(String(options.language || "").trim().toLowerCase().split(/[-_]/)[0]);
     if (options.seedUtterance && options.seedUtterance.text) {
       const seedLang = detectLanguage(options.seedUtterance.text, { strict: false });
       if (seedLang) lang = seedLang;

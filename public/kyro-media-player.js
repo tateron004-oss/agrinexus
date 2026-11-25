@@ -66,11 +66,111 @@
       live: "MOJA KWA MOJA", preview: "Sekunde 30 tu", source: "Chanzo", license: "Leseni", buffering: "Inapakia...",
       play: "Cheza", pause: "Sitisha", stop: "Simamisha", next: "Inayofuata", previous: "Iliyopita", close: "Funga", volumeLabel: "Sauti", audioOnly: "Sauti pekee",
       region: "Kicheza muziki cha Kyro"
+    },
+    ha: {
+      looking: "Ina neman {q}...", lookingLocal: "Ina neman gidan rediyo maka...",
+      playingTrack: "Ana kunna {title} na {artist} a {provider}.", playingTitle: "Ana kunna {title} a {provider}.",
+      playingStation: "Ana kunna {title} kai tsaye a {provider}.", playingVideo: "Ana kunna bidiyon {title} a {provider}.",
+      playingPreview: "Ana kunna samfurin daƙiƙa 30 na {title} na {artist}. Cikakkiyar waƙar ba ta samuwa daga hanyoyina na kyauta.",
+      orSong: "Ko ka faɗa min wata waƙa.", lastChoice: "Ana kunna zaɓinka na ƙarshe, {title}.",
+      tapToPlay: "Taɓa kunna don farawa.", trying: "Wannan rediyon ba ya samuwa, ina gwada wani.", streamStopped: "Rediyon ya tsaya. Ina gwada wani.",
+      tryYoutube: "Za ka iya cewa kuma: kunna {q} a YouTube.",
+      playInLabel: "Kunna waƙa a", playInKyro2: "Kyro", playInYoutube2: "YouTube",
+      foundButFailed: "Na samu {title}, amma bai fara a wannan na'ura ba. Don Allah ka sake gwadawa.",
+      noneFound: "Ban samu wani abin kunnawa na {q} ba.", noYoutube: "Ba a saita YouTube a wannan sabar ba.",
+      resolverDown: "Ban iya isa ga sabis na waƙa yanzu ba. Don Allah ka sake gwadawa.",
+      paused: "An dakata.", heldPlace: "An tsaya. Ka ce kunna, zan ci gaba daga nan.", resumed: "Ana sake kunnawa.", stopped: "An tsaya.", nothingPlaying: "Babu abin da ake kunnawa yanzu.",
+      nextNone: "Ban samu wani ba.", previousNone: "Babu na baya.", volume: "Ƙarar sauti kashi {pct}.",
+      muted: "An kashe sauti.", unmuted: "Sauti ya dawo.", ended: "Wannan ya ƙare.",
+      queued: "Na saka {title} a jerin YouTube. Taɓa Buɗe don kunnawa.", queuedSearch: "Na buɗe binciken YouTube na {title}. Taɓa Buɗe don zaɓa ka kunna.",
+      queuedHome: "Taɓa Buɗe don zuwa YouTube.", adsNote: "YouTube na iya nuna talla sai dai idan kana da YouTube Premium.",
+      openYoutube: "Buɗe a YouTube", queuedLabel: "An saka a jerin YouTube",
+      videoData: "Bidiyo na cin data mai yawa. Ka ce 'sauti kawai' don ajiye data.",
+      audioOnlyOn: "Sauti kawai yana kunne. Zan fi son rediyo da sauti.", audioOnlyOff: "Sauti kawai a kashe yake.",
+      playInKyro: "Waƙa za ta kunna a cikin Kyro.", playInYoutube: "Waƙa za ta buɗe a YouTube.",
+      live: "KAI TSAYE", preview: "Samfurin daƙiƙa 30", source: "Tushe", license: "Lasisi", buffering: "Ana lodawa...",
+      play: "Kunna", pause: "Dakata", stop: "Tsaya", next: "Na gaba", previous: "Na baya", close: "Rufe", volumeLabel: "Ƙarar sauti", audioOnly: "Sauti kawai",
+      region: "Na'urar kunna waƙa ta Kyro"
+    },
+    am: {
+      looking: "{q}ን እየፈለግሁ ነው...", lookingLocal: "የሬዲዮ ጣቢያ እየፈለግሁልዎ ነው...",
+      playingTrack: "{title}ን በ{artist} በ{provider} ላይ እያጫወትኩ ነው።", playingTitle: "{title}ን በ{provider} ላይ እያጫወትኩ ነው።",
+      playingStation: "{title}ን በቀጥታ በ{provider} ላይ እያጫወትኩ ነው።", playingVideo: "{title} የተባለውን ቪዲዮ በ{provider} ላይ እያጫወትኩ ነው።",
+      playingPreview: "የ{title}ን በ{artist} የ30 ሰከንድ ቅምሻ እያጫወትኩ ነው። ሙሉው ዘፈን ከነፃ ምንጮቼ አይገኝም።",
+      orSong: "ወይም አንድ ዘፈን ይንገሩኝ።", lastChoice: "የመጨረሻ ምርጫዎን {title}ን እያጫወትኩ ነው።",
+      tapToPlay: "ለመጀመር አጫውትን ይንኩ።", trying: "ያ ስርጭት አይገኝም፣ ሌላ እየሞከርኩ ነው።", streamStopped: "ስርጭቱ ቆመ። ሌላ እየሞከርኩ ነው።",
+      tryYoutube: "እንዲሁም ማለት ይችላሉ፦ {q}ን በYouTube አጫውት።",
+      playInLabel: "ሙዚቃ የሚጫወትበት", playInKyro2: "Kyro", playInYoutube2: "YouTube",
+      foundButFailed: "{title}ን አግኝቻለሁ፣ ግን በዚህ መሣሪያ ላይ አልጀመረም። እባክዎ እንደገና ይሞክሩ።",
+      noneFound: "ለ{q} የሚጫወት ምንም ነገር ማግኘት አልቻልኩም።", noYoutube: "YouTube በዚህ አገልጋይ ላይ አልተዘጋጀም።",
+      resolverDown: "አሁን የሙዚቃ አገልግሎቱን ማግኘት አልቻልኩም። እባክዎ እንደገና ይሞክሩ።",
+      paused: "ቆም ብሏል።", heldPlace: "ቆሟል። አጫውት ይበሉ፣ ከዚህ እቀጥላለሁ።", resumed: "እንደገና እየተጫወተ ነው።", stopped: "ቆሟል።", nothingPlaying: "አሁን ምንም እየተጫወተ አይደለም።",
+      nextNone: "ሌላ ማግኘት አልቻልኩም።", previousNone: "ከዚህ በፊት ያለ የለም።", volume: "ድምፅ {pct} በመቶ።",
+      muted: "ድምፅ ጠፍቷል።", unmuted: "ድምፅ ተመልሷል።", ended: "ያ አልቋል።",
+      queued: "{title}ን በYouTube ላይ ተራ አስይዣለሁ። ለማጫወት ክፈትን ይንኩ።", queuedSearch: "ለ{title} የYouTube ፍለጋ ከፍቻለሁ። መርጠው ለማጫወት ክፈትን ይንኩ።",
+      queuedHome: "ወደ YouTube ለመሄድ ክፈትን ይንኩ።", adsNote: "YouTube Premium ከሌለዎት YouTube ማስታወቂያ ሊያሳይ ይችላል።",
+      openYoutube: "በYouTube ክፈት", queuedLabel: "በYouTube ተራ ተይዟል",
+      videoData: "ቪዲዮ ብዙ የሞባይል ዳታ ይጠቀማል። ዳታ ለመቆጠብ 'ድምፅ ብቻ' ይበሉ።",
+      audioOnlyOn: "ድምፅ ብቻ በርቷል። ሬዲዮና ድምፅን እመርጣለሁ።", audioOnlyOff: "ድምፅ ብቻ ጠፍቷል።",
+      playInKyro: "ሙዚቃ በKyro ውስጥ ይጫወታል።", playInYoutube: "ሙዚቃ በYouTube ይከፈታል።",
+      live: "ቀጥታ", preview: "የ30 ሰከንድ ቅምሻ", source: "ምንጭ", license: "ፈቃድ", buffering: "እየጫነ ነው...",
+      play: "አጫውት", pause: "ቆም አድርግ", stop: "አቁም", next: "ቀጣይ", previous: "ቀዳሚ", close: "ዝጋ", volumeLabel: "ድምፅ", audioOnly: "ድምፅ ብቻ",
+      region: "የKyro ሚዲያ ማጫወቻ"
+    },
+    yo: {
+      looking: "Mò ń wá {q}...", lookingLocal: "Mò ń wá ilé-iṣẹ́ rédíò fún ọ...",
+      playingTrack: "Mò ń ṣe {title} láti ọwọ́ {artist} lórí {provider}.", playingTitle: "Mò ń ṣe {title} lórí {provider}.",
+      playingStation: "Mò ń ṣe {title} ní tààrà lórí {provider}.", playingVideo: "Mò ń ṣe fídíò {title} lórí {provider}.",
+      playingPreview: "Mò ń ṣe àpẹẹrẹ ìṣẹ́jú-àáyá 30 ti {title} láti ọwọ́ {artist}. Gbogbo orin náà kò sí lára àwọn orísun ọ̀fẹ́ mi.",
+      orSong: "Tàbí sọ orin kan fún mi.", lastChoice: "Mò ń ṣe ohun tí o yàn kẹ́yìn, {title}.",
+      tapToPlay: "Tẹ ṣe láti bẹ̀rẹ̀.", trying: "Ìgbóhùnsáfẹ́fẹ́ yẹn kò sí, mò ń gbìyànjú òmíràn.", streamStopped: "Ìgbóhùnsáfẹ́fẹ́ náà dúró. Mò ń gbìyànjú òmíràn.",
+      tryYoutube: "O tún lè sọ pé: ṣe {q} lórí YouTube.",
+      playInLabel: "Ṣe orin nínú", playInKyro2: "Kyro", playInYoutube2: "YouTube",
+      foundButFailed: "Mo rí {title}, ṣùgbọ́n kò bẹ̀rẹ̀ lórí ẹ̀rọ yìí. Jọ̀wọ́ tún gbìyànjú.",
+      noneFound: "Mi ò rí nǹkan kan láti ṣe fún {q}.", noYoutube: "A kò tíì ṣètò YouTube lórí olupin yìí.",
+      resolverDown: "Mi ò lè dé iṣẹ́ orin náà báyìí. Jọ̀wọ́ tún gbìyànjú.",
+      paused: "Ó ti dánu dúró.", heldPlace: "Ó ti dúró. Sọ pé ṣe, màá sì tẹ̀síwájú láti ibí.", resumed: "Ó ń ṣe lẹ́ẹ̀kan sí i.", stopped: "Ó ti dúró.", nothingPlaying: "Kò sí ohun tó ń ṣe báyìí.",
+      nextNone: "Mi ò rí òmíràn.", previousNone: "Kò sí èyí tó ṣáájú.", volume: "Ohùn ìpín {pct} nínú ọgọ́rùn-ún.",
+      muted: "Ohùn ti pa.", unmuted: "Ohùn ti padà.", ended: "Ìyẹn ti parí.",
+      queued: "Mo ti fi {title} sí ìlà lórí YouTube. Tẹ Ṣí láti ṣe é.", queuedSearch: "Mo ti ṣí ìwádìí YouTube fún {title}. Tẹ Ṣí láti yan kí o sì ṣe é.",
+      queuedHome: "Tẹ Ṣí láti lọ sí YouTube.", adsNote: "YouTube lè fi ìpolówó hàn àyàfi tí o bá ní YouTube Premium.",
+      openYoutube: "Ṣí nínú YouTube", queuedLabel: "Wà ní ìlà lórí YouTube",
+      videoData: "Fídíò máa ń lo dátà púpọ̀. Sọ pé 'ohùn nìkan' láti fi dátà pamọ́.",
+      audioOnlyOn: "Ohùn nìkan ti tàn. Màá yan rédíò àti ohùn.", audioOnlyOff: "Ohùn nìkan ti pa.",
+      playInKyro: "Orin máa ṣe nínú Kyro.", playInYoutube: "Orin máa ṣí nínú YouTube.",
+      live: "LÁYÉ", preview: "Àpẹẹrẹ ìṣẹ́jú-àáyá 30", source: "Orísun", license: "Ìwé-àṣẹ", buffering: "Ó ń kó wọlé...",
+      play: "Ṣe", pause: "Dánu dúró", stop: "Dúró", next: "Èyí tó kàn", previous: "Èyí tó ṣáájú", close: "Pa á dé", volumeLabel: "Ohùn", audioOnly: "Ohùn nìkan",
+      region: "Ẹ̀rọ orin Kyro"
+    },
+    ig: {
+      looking: "Ana m achọ {q}...", lookingLocal: "Ana m achọtara gị ọdụ redio...",
+      playingTrack: "Ana m akpọ {title} nke {artist} na {provider}.", playingTitle: "Ana m akpọ {title} na {provider}.",
+      playingStation: "Ana m akpọ {title} ozugbo na {provider}.", playingVideo: "Ana m akpọ vidiyo {title} na {provider}.",
+      playingPreview: "Ana m akpọ ntụle sekọnd 30 nke {title} nke {artist}. Egwu ahụ niile adịghị n'ebe m na-enweta n'efu.",
+      orSong: "Ma ọ bụ gwa m otu egwu.", lastChoice: "Ana m akpọ ihe ikpeazụ i họọrọ, {title}.",
+      tapToPlay: "Pịa kpọọ ka ọ malite.", trying: "Mgbasa ozi ahụ adịghị, ana m anwa ọzọ.", streamStopped: "Mgbasa ozi ahụ kwụsịrị. Ana m anwa ọzọ.",
+      tryYoutube: "I nwekwara ike ịsị: kpọọ {q} na YouTube.",
+      playInLabel: "Kpọọ egwu na", playInKyro2: "Kyro", playInYoutube2: "YouTube",
+      foundButFailed: "Achọtara m {title}, mana ọ malitaghị na ngwaọrụ a. Biko nwaa ọzọ.",
+      noneFound: "Achọtaghị m ihe ọ bụla m ga-akpọ maka {q}.", noYoutube: "Edozibeghị YouTube na sava a.",
+      resolverDown: "Enweghị m ike iru ọrụ egwu ahụ ugbu a. Biko nwaa ọzọ.",
+      paused: "Akwụsịtụla.", heldPlace: "Akwụsịla. Sị kpọọ, m ga-aga n'ihu site ebe a.", resumed: "Ọ na-akpọ ọzọ.", stopped: "Akwụsịla.", nothingPlaying: "Ọ dịghị ihe na-akpọ ugbu a.",
+      nextNone: "Achọtaghị m ọzọ.", previousNone: "Ọ dịghị nke bu ya ụzọ.", volume: "Olu pasent {pct}.",
+      muted: "Agbanyụọla olu.", unmuted: "Olu alọghachila.", ended: "Nke ahụ agwụla.",
+      queued: "Etinyela m {title} n'usoro na YouTube. Pịa Mepee ka ị kpọọ ya.", queuedSearch: "Emeghere m nchọta YouTube maka {title}. Pịa Mepee ka ị họrọ ma kpọọ ya.",
+      queuedHome: "Pịa Mepee ka ị gaa YouTube.", adsNote: "YouTube nwere ike igosi mgbasa ozi ma ọ bụrụ na i nweghị YouTube Premium.",
+      openYoutube: "Mepee na YouTube", queuedLabel: "Etinyere n'usoro na YouTube",
+      videoData: "Vidiyo na-eri ọtụtụ data ekwentị. Sị 'naanị olu' ka i chekwaa data.",
+      audioOnlyOn: "Naanị olu agbanyela. M ga-ahọrọ redio na olu.", audioOnlyOff: "Naanị olu agbanyụọla.",
+      playInKyro: "Egwu ga-akpọ n'ime Kyro.", playInYoutube: "Egwu ga-emepe na YouTube.",
+      live: "OZUGBO", preview: "Ntụle sekọnd 30", source: "Ebe o si", license: "Ikike", buffering: "Ọ na-ebudata...",
+      play: "Kpọọ", pause: "Kwụsịtụ", stop: "Kwụsị", next: "Nke ọzọ", previous: "Nke gara aga", close: "Mechie", volumeLabel: "Olu", audioOnly: "Naanị olu",
+      region: "Ihe ọkpụkpọ egwu Kyro"
     }
   };
 
   function say(lang, key, vars) {
-    const table = STRINGS[lang === "sw" ? "sw" : "en"];
+    const table = STRINGS[STRINGS[lang] ? lang : "en"];
     return String(table[key] || STRINGS.en[key] || key).replace(/\{(\w+)\}/g, (_, name) => (vars && vars[name] != null ? String(vars[name]) : ""));
   }
 
@@ -137,7 +237,7 @@
 
     function langFor(options) {
       const lang = options && options.lang ? options.lang : (deps.getLanguage ? deps.getLanguage() : sessionLang);
-      return lang === "sw" ? "sw" : "en";
+      return STRINGS[lang] ? lang : "en";
     }
     function t(key, vars, lang) { return say(lang || sessionLang, key, vars); }
 
@@ -786,7 +886,7 @@
     document.body.appendChild(bar);
 
     function render(snapshot, lang) {
-      const s = (key) => STRINGS[lang === "sw" ? "sw" : "en"][key];
+      const s = (key) => STRINGS[STRINGS[lang] ? lang : "en"][key];
       const visible = snapshot.state !== "idle";
       bar.hidden = !visible;
       bar.dataset.state = snapshot.state;

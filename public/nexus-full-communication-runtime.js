@@ -15,7 +15,11 @@
     fr: { label: "French", locale: "fr-FR", dir: "ltr" },
     sw: { label: "Kiswahili", locale: "sw-KE", dir: "ltr" },
     ar: { label: "Arabic", locale: "ar", dir: "rtl" },
-    pt: { label: "Portuguese", locale: "pt-BR", dir: "ltr" }
+    pt: { label: "Portuguese", locale: "pt-BR", dir: "ltr" },
+    ha: { label: "Hausa", locale: "ha-NG", dir: "ltr" },
+    am: { label: "Amharic", locale: "am-ET", dir: "ltr" },
+    yo: { label: "Yoruba", locale: "yo-NG", dir: "ltr" },
+    ig: { label: "Igbo", locale: "ig-NG", dir: "ltr" }
   });
 
   const INPUT_TYPES = Object.freeze([
@@ -225,6 +229,50 @@
       noLiveKnowledge: "Posso dar orientacao geral local, mas conhecimento ao vivo nao esta conectado agora.",
       notDiagnosis: "Isto e orientacao geral, nao diagnostico.",
       emergency: "Contate diretamente os servicos de emergencia locais se isto puder ser uma emergencia."
+    },
+    ha: {
+      canHelp: "Zan iya saurara, amsa, magana, tura, shirya saƙonni da kira, nuna ko masu bayar da sabis suna shirye, da ƙirƙirar shaida a nan. Sadarwa ta gaske zuwa waje tana buƙatar bayanan shiga na mai bayar da sabis da tabbatarwarka.",
+      welcome: "Babu komai.",
+      blockedProvider: "Aiki na gaske yana buƙatar bayanan shiga na mai bayar da sabis da aka haɗa.",
+      localPrepared: "Nexus ya shirya wannan a nan. Ba a aika wani saƙo waje ba.",
+      noCall: "Ba a yi kira ba.",
+      noMessage: "Ba a aika saƙo ba.",
+      noLiveKnowledge: "Zan iya ba da shawara gaba ɗaya mai aminci, amma ba a haɗa ni da intanet ko majiya kai tsaye yanzu ba.",
+      notDiagnosis: "Wannan shawara ce gaba ɗaya, ba gano cuta ba.",
+      emergency: "Don Allah ka tuntuɓi ma'aikatan agajin gaggawa na yankinku kai tsaye idan wannan na iya zama gaggawa."
+    },
+    am: {
+      canHelp: "ማዳመጥ፣ መመለስ፣ መናገር፣ ማስተላለፍ፣ መልእክቶችንና ጥሪዎችን ማዘጋጀት፣ አገልግሎት ሰጪዎች ዝግጁ መሆናቸውን ማሳየት እና እዚሁ ደረሰኝ መፍጠር እችላለሁ። እውነተኛ የውጭ ግንኙነት የአገልግሎት ሰጪ መግቢያ መረጃ እና የእርስዎን ማረጋገጫ ይፈልጋል።",
+      welcome: "ምንም አይደለም።",
+      blockedProvider: "እውነተኛ ተግባር የተገናኘ የአገልግሎት ሰጪ መግቢያ መረጃ ይፈልጋል።",
+      localPrepared: "Nexus ይህን እዚሁ አዘጋጅቷል። ወደ ውጭ ምንም መልእክት አልተላከም።",
+      noCall: "ምንም ጥሪ አልተደረገም።",
+      noMessage: "ምንም መልእክት አልተላከም።",
+      noLiveKnowledge: "አጠቃላይ እና ደህንነቱ የተጠበቀ ምክር መስጠት እችላለሁ፣ ነገር ግን አሁን ከኢንተርኔት ወይም ከቀጥታ ምንጭ ጋር አልተገናኘሁም።",
+      notDiagnosis: "ይህ አጠቃላይ ምክር ነው፣ የበሽታ ምርመራ አይደለም።",
+      emergency: "ይህ አስቸኳይ ሊሆን ከቻለ እባክዎ በቀጥታ የአካባቢዎን የአደጋ ጊዜ አገልግሎት ያግኙ።"
+    },
+    yo: {
+      canHelp: "Mo lè fetí sílẹ̀, dáhùn, sọ̀rọ̀, darí, ṣètò ọ̀rọ̀ àti ìpè, fi hàn bóyá àwọn olùpèsè ti ṣetán, kí n sì ṣe ìwé-ẹ̀rí níbí. Ìbánisọ̀rọ̀ gidi sí òde nílò àlàyé ìwọlé olùpèsè àti ìfọwọ́sí rẹ.",
+      welcome: "Kò tọ́pẹ́.",
+      blockedProvider: "Iṣẹ́ gidi nílò àlàyé ìwọlé olùpèsè tí a ti so pọ̀.",
+      localPrepared: "Nexus ṣètò èyí níbí. A kò fi ọ̀rọ̀ kankan ránṣẹ́ sí òde.",
+      noCall: "A kò pe ẹnikẹ́ni.",
+      noMessage: "A kò fi ọ̀rọ̀ kankan ránṣẹ́.",
+      noLiveKnowledge: "Mo lè fún ọ ní ìmọ̀ràn gbogbogbò tí ó ní ààbò, ṣùgbọ́n a kò so mí pọ̀ mọ́ íntánẹ́ẹ̀tì tàbí orísun tààrà báyìí.",
+      notDiagnosis: "Ìmọ̀ràn gbogbogbò ni èyí, kì í ṣe àyẹ̀wò àìsàn.",
+      emergency: "Jọ̀wọ́ kàn sí àwọn òṣìṣẹ́ pàjáwìrì àdúgbò rẹ tààrà bí èyí bá lè jẹ́ pàjáwìrì."
+    },
+    ig: {
+      canHelp: "Enwere m ike ige ntị, ịza, ikwu okwu, iduzi, ịkwadebe ozi na oku, igosi ma ndị na-enye ọrụ dị njikere, ma mepụta nnata ebe a. Ezigbo nkwurịta okwu na mpụga chọrọ ozi nbanye nke onye na-enye ọrụ na nkwado gị.",
+      welcome: "Ọ dịghị nsogbu.",
+      blockedProvider: "Ezigbo ọrụ chọrọ ozi nbanye nke onye na-enye ọrụ ejikọrọ.",
+      localPrepared: "Nexus kwadebere nke a ebe a. E zipughị ozi ọ bụla na mpụga.",
+      noCall: "Akpọghị oku ọ bụla.",
+      noMessage: "E zipughị ozi ọ bụla.",
+      noLiveKnowledge: "Enwere m ike inye ndụmọdụ izugbe dị nchebe, mana ejikọbeghị m na ịntanetị ma ọ bụ isi mmalite ozi ugbu a.",
+      notDiagnosis: "Nke a bụ ndụmọdụ izugbe, ọ bụghị nchọpụta ọrịa.",
+      emergency: "Biko kpọtụrụ ndị ọrụ mberede dị n'obodo gị ozugbo ma ọ bụrụ na nke a nwere ike ịbụ mberede."
     }
   });
 
@@ -255,6 +303,10 @@
     if (raw.startsWith("sw")) return "sw";
     if (raw.startsWith("ar")) return "ar";
     if (raw.startsWith("pt")) return "pt";
+    if (raw.startsWith("ha")) return "ha";
+    if (raw.startsWith("am")) return "am";
+    if (raw.startsWith("yo")) return "yo";
+    if (raw.startsWith("ig")) return "ig";
     return "en";
   }
 
