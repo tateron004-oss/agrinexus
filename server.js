@@ -20916,6 +20916,13 @@ function nexusRealtimeCallableToolSchemas() {
   return nexusOpenAiNativeToolSchemas().filter(tool => tool.name !== "nexus_general_conversation");
 }
 
+// The languages the realtime speech-to-text accepts as its language (the six the voice used before 25 Nov 2026, all working live); any other language is detected from the speech.
+const OPENAI_TRANSCRIPTION_LANGUAGES = new Set(["en", "es", "fr", "sw", "ar", "pt"]);
+function openAiRealtimeTranscriptionLanguage(language = "en") {
+  const code = String(language || "en").trim().toLowerCase().split(/[-_]/)[0];
+  return OPENAI_TRANSCRIPTION_LANGUAGES.has(code) ? code : undefined;
+}
+
 function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
   const turnDetectionType = String(env.OPENAI_REALTIME_TURN_DETECTION || "semantic_vad").trim() || "semantic_vad";
   const turnDetection = turnDetectionType === "server_vad"
@@ -20943,8 +20950,10 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
         },
         transcription: {
           model: String(env.OPENAI_REALTIME_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe").trim() || "gpt-4o-mini-transcribe",
-          // (the speech-to-text has no Igbo: for Igbo the language is left out, so it finds it itself instead of being told one it does not know; JSON leaves an undefined value out)
-          language: /^ig(?:$|[-_])/i.test(String(language || "")) ? undefined : String(language || "en").slice(0, 12),
+          // The speech-to-text language, only for the languages OpenAI accepts here. It refused the whole voice session as invalid for "ha" (and "am", "yo"), so a Hausa, Amharic
+          // or Yoruba speaker had no voice at all, while Igbo, sent without one, worked (live check, 25 Nov 2026). For the others the language is left out and found from the speech;
+          // JSON leaves an undefined value out.
+          language: openAiRealtimeTranscriptionLanguage(language),
           // A short hint for the speech-to-text (it heard "Close it" as "Flows it", "Kisumu" as "Hisumu", "maize" as "maze"): the assistant's name, Koach Learn and the four course languages it misheard ("Hausa courses" as "how the course", "Koach Learn" as "Coach Learn": live voice run, 25 Nov), the towns and crops people name, and the short commands.
           prompt: "Kyro, AgriNexus, Koach Learn. Close it. Close the screen. Show my notes, reminders, checklists. Kisumu, Nairobi, Nakuru, Mombasa, Lagos, Stockton, Sacramento. Maize, sorghum, cassava. Hausa, Yoruba, Igbo, Amharic."
         },
@@ -60129,21 +60138,28 @@ async function api(req, res, url) {
       }, baseHeaders);
     } catch (error) {
       const category = error.category || nexusRealtimeFailureCategory(error);
-      voiceRecord(db, authContext.user, "openai-agents-realtime", nexusSafeRealtimeFailureDetail(category), {
-        provider: "openai-realtime",
-        errorCategory: category,
-        language: url.searchParams.get("language") || authContext.user.language || "en"
-      });
-      logIntegration(db, {
-        providerId: "openai",
-        module: "AI Voice",
-        action: "voice.openai_agents_realtime_session_failed",
-        status: "error",
-        detail: category,
-        metadata: { transport: "agents-sdk-webrtc", category, httpStatus: error.httpStatus || null },
-        dispatch: false
-      });
-      await writeDb(db);
+      // A guest's failed start is not written down, the same as a guest's successful one above: the page asks again every few seconds after a failure, and each write of the
+      // whole stored document (about 5 MB) piled up until the server ran out of memory (live, 25 Nov 2026: a Hausa voice session OpenAI refused took the site down for minutes).
+      // The failure is still logged to the console.
+      if (authContext.authMechanism !== "bounded_genesis_voice_guest_cookie") {
+        voiceRecord(db, authContext.user, "openai-agents-realtime", nexusSafeRealtimeFailureDetail(category), {
+          provider: "openai-realtime",
+          errorCategory: category,
+          language: url.searchParams.get("language") || authContext.user.language || "en"
+        });
+        logIntegration(db, {
+          providerId: "openai",
+          module: "AI Voice",
+          action: "voice.openai_agents_realtime_session_failed",
+          status: "error",
+          detail: category,
+          metadata: { transport: "agents-sdk-webrtc", category, httpStatus: error.httpStatus || null },
+          dispatch: false
+        });
+        await writeDb(db);
+      } else {
+        console.warn("[voice-session-failed]", JSON.stringify({ category, httpStatus: error.httpStatus || null, language: String(url.searchParams.get("language") || "").slice(0, 8), at: new Date().toISOString() }));
+      }
       return send(res, 502, {
         error: "OpenAI Agents Realtime session failed truthfully.",
         category,
