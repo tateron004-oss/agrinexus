@@ -20925,8 +20925,8 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
           model: String(env.OPENAI_REALTIME_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe").trim() || "gpt-4o-mini-transcribe",
           // (the speech-to-text has no Igbo: for Igbo the language is left out, so it finds it itself instead of being told one it does not know; JSON leaves an undefined value out)
           language: /^ig(?:$|[-_])/i.test(String(language || "")) ? undefined : String(language || "en").slice(0, 12),
-          // A short hint for the speech-to-text (it heard "Close it" as "Flows it", "Kisumu" as "Hisumu", "maize" as "maze"): the assistant's name, the towns and crops people name, and the short commands.
-          prompt: "Kyro, AgriNexus. Close it. Close the screen. Show my notes, reminders, checklists. Kisumu, Nairobi, Nakuru, Mombasa, Lagos, Stockton, Sacramento. Maize, sorghum, cassava."
+          // A short hint for the speech-to-text (it heard "Close it" as "Flows it", "Kisumu" as "Hisumu", "maize" as "maze"): the assistant's name, Koach Learn and the four course languages it misheard ("Hausa courses" as "how the course", "Koach Learn" as "Coach Learn": live voice run, 25 Nov), the towns and crops people name, and the short commands.
+          prompt: "Kyro, AgriNexus, Koach Learn. Close it. Close the screen. Show my notes, reminders, checklists. Kisumu, Nairobi, Nakuru, Mombasa, Lagos, Stockton, Sacramento. Maize, sorghum, cassava. Hausa, Yoruba, Igbo, Amharic."
         },
         turn_detection: turnDetection
       },

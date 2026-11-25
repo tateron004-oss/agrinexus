@@ -117,7 +117,8 @@
   function courseRequest(text) {
     const said = String(text || "").trim();
     if (!said || said.length > 240) return null;
-    const folded = fold(said);
+    // (the speech-to-text writes the name as it sounds: "What Coach Learn courses are there in Amharic?" searched for "Coach" on the live voice run, 25 Nov)
+    const folded = fold(said).replace(/\bcoach ?learn\b/g, "koach learn");
     const tokens = tokensOf(folded);
     const courseWord = tokens.some(t => COURSE_TOKENS.has(t)) || COURSE_PHRASES.test(folded) || COURSE_INSIDE.test(folded);
     if (!courseWord) return null;
