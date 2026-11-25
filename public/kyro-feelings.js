@@ -59,7 +59,11 @@
 
   const SAFETY = {
     en: " If you ever think about hurting yourself, tell me, and call your local emergency number.",
-    sw: " Ukifikiria kujidhuru wakati wowote, niambie, na piga namba ya dharura ya eneo lako."
+    sw: " Ukifikiria kujidhuru wakati wowote, niambie, na piga namba ya dharura ya eneo lako.",
+    ha: " Idan ka taɓa tunanin cutar da kanka, ka faɗa mini, ka kuma kira lambar gaggawa ta yankinku.",
+    am: " ራስዎን ለመጉዳት ካሰቡ፣ ይንገሩኝ፣ እና የአካባቢዎን የአደጋ ጊዜ ቁጥር ይደውሉ።",
+    yo: " Bí o bá ń ronú láti ṣe ara rẹ léṣe, sọ fún mi, kí o sì pe nọ́mbà pàjáwìrì ní agbègbè rẹ.",
+    ig: " Ọ bụrụ na ị na-eche iwe onwe gị merụọ ahụ, gwa m, ma kpọọ nọmba mberede mpaghara gị."
   };
 
   const REPLIES = {
@@ -78,11 +82,43 @@
       lonely: "Pole kwa kuhisi upweke. Niko hapa, na nafurahi kuzungumza nawe. Je, kuna mtu unayemwamini unayeweza kumfikia leo, hata kwa ujumbe mfupi? Au niambie kinachokusumbua.",
       overwhelmed: "Ni mengi kwa wakati mmoja. Tupunguze kasi. Vuta pumzi polepole pamoja nami, nne ndani na sita nje. Kisha niambie jambo moja linalokulemea zaidi, na tuanze hapo.",
       depressed: "Asante kwa kuniambia. Kuhisi mfadhaiko mkubwa ni mzigo, na inafaa kuzungumza na daktari, nesi au mshauri, ambaye anaweza kusaidia kweli. Naweza kukusikiliza sasa na kukusaidia kujiandaa. Imekuwaje siku za karibuni?"
+    },
+    ha: {
+      sad: "Na yi baƙin ciki da kake jin baƙin ciki. Ba laifi ba ne ka ji haka, kuma ba sai ka warware shi kai kaɗai ba. Kana so ka faɗa min abin da ke faruwa, ko mu ɗauki minti ɗaya muna jan numfashi a hankali tare?",
+      anxious: "Wannan kamar ba shi da daɗi ko kaɗan. Jin fargaba yana da wahala, kuma zai iya sauƙi. Mu rage gudu tare: ja numfashi har ƙirga huɗu, riƙe har huɗu, sannan fitar da shi har shida. Kana so mu yi haka yanzu, ko ka faɗa min abin da ke sa ka fargaba?",
+      stressed: "Wannan kamar nauyi ne mai yawa. Mu ɗauki abu ɗaya bayan ɗaya. Me ya fi damunka yanzu? Idan kana so, za mu iya fara yin minti ɗaya na jan numfashi a hankali.",
+      lonely: "Na yi baƙin ciki da kake jin kaɗaici. Ina nan, kuma ina farin cikin yin magana. Akwai wanda ka amince da shi da za ka iya tuntuɓa yau, ko da gajeren saƙo ne? Ko faɗa min abin da ke zuciyarka.",
+      overwhelmed: "Wannan abu ne mai yawa a lokaci ɗaya. Mu rage gudu. Ja numfashi ɗaya a hankali tare da ni, shiga har huɗu, fita har shida. Sannan faɗa min abu ɗaya da ya fi nauyi, mu fara daga can.",
+      depressed: `Na gode da ka faɗa min. Jin damuwa mai zurfi yana da wahalar ɗauka, kuma ya dace ka yi magana da likita, nas ko mai ba da shawara, wanda zai iya taimakawa sosai. Zan iya saurara yanzu kuma in taimaka maka ka shirya abin da za ka faɗa musu. Yaya abubuwa suke a kwanan nan?`
+    },
+    am: {
+      sad: "በማዘንህ አዝናለሁ። እንዲህ መሰማት ችግር የለውም፣ እና ብቻህን መፍታት የለብህም። እየሆነ ያለውን ልትነግረኝ ትፈልጋለህ ወይስ ከእኔ ጋር ለአንድ ደቂቃ ቀስ ብለህ መተንፈስ?",
+      anxious: "ያ በጣም የማይመች ይመስላል። የጭንቀት ስሜት ከባድ ነው፣ ግን ሊቀል ይችላል። አብረን ቀስ እንበል፦ እስከ አራት ቆጥረህ ተንፍስ፣ እስከ አራት ያዝ፣ እስከ ስድስት አውጣ። አሁን ይህን ማድረግ ትፈልጋለህ ወይስ ምን እንደሚያስጨንቅህ ትነግረኛለህ?",
+      stressed: "ያ ብዙ ሸክም ይመስላል። አንድ በአንድ እንውሰደው። አሁን በጣም የሚከብድህ ምንድን ነው? ከፈለግህ መጀመሪያ ለአንድ ደቂቃ ቀስ ብለን መተንፈስ እንችላለን።",
+      lonely: "ብቸኝነት ስለተሰማህ አዝናለሁ። እዚህ ነኝ፣ ማውራትም ደስ ይለኛል። ዛሬ በአጭር መልእክትም ቢሆን ልታገኘው የምትችለው የምታምነው ሰው አለ? ወይም በአእምሮህ ያለውን ንገረኝ።",
+      overwhelmed: "ያ በአንድ ጊዜ ብዙ ነው። ቀስ እንበል። ከእኔ ጋር አንድ ቀስ ያለ ትንፋሽ ውሰድ፣ እስከ አራት አስገባ እስከ ስድስት አውጣ። ከዚያ በጣም የከበደህን አንድ ነገር ንገረኝ፣ ከዚያ እንጀምራለን።",
+      depressed: `ስለነገርከኝ አመሰግናለሁ። የድባቴ ስሜት ለመሸከም ከባድ ነው፣ እና በእውነት ሊረዳህ ከሚችል ሐኪም፣ ነርስ ወይም አማካሪ ጋር መነጋገር ተገቢ ነው። አሁን ላዳምጥህ እና ምን እንደምትላቸው እንድታዘጋጅ ልረዳህ እችላለሁ። በቅርቡ ሁኔታው እንዴት ነበር?`
+    },
+    yo: {
+      sad: "Ó dùn mí pé inú rẹ bàjẹ́. Kò burú láti ní irú ìmọ̀lára yìí, o kò sì ní láti yanjú rẹ̀ nìkan. Ṣé o fẹ́ sọ ohun tó ń ṣẹlẹ̀ fún mi, tàbí ká jọ mí kanlẹ̀ díẹ̀díẹ̀ fún ìṣẹ́jú kan?",
+      anxious: "Ìyẹn dà bí ohun tí kò rọrùn rárá. Ìmọ̀lára àníyàn le, ṣùgbọ́n ó lè rọlẹ̀. Jẹ́ ká jọ fà sẹ́yìn: mí sínú títí di mẹ́rin, dì í mú títí di mẹ́rin, kí o sì mí jáde títí di mẹ́fà. Ṣé o fẹ́ ṣe bẹ́ẹ̀ báyìí, tàbí sọ ohun tó ń dà ọ́ láàmú fún mi?",
+      stressed: "Ìyẹn dà bí ẹrù tó pọ̀. Jẹ́ ká mú un ní ọ̀kan lẹ́ẹ̀kan. Kí ló ń wọ̀ ọ́ lọ́rùn jù báyìí? Bí o bá fẹ́, a lè kọ́kọ́ mí kanlẹ̀ díẹ̀díẹ̀ fún ìṣẹ́jú kan.",
+      lonely: "Ó dùn mí pé o ń dá wà. Mo wà níbí, inú mi sì dùn láti bá ọ sọ̀rọ̀. Ṣé ẹnìkan wà tí o gbẹ́kẹ̀lé tí o lè kàn sí lónìí, kódà pẹ̀lú ọ̀rọ̀ kúkúrú? Tàbí sọ ohun tó wà lọ́kàn rẹ fún mi.",
+      overwhelmed: "Ìyẹn pọ̀ lẹ́ẹ̀kan náà. Jẹ́ ká fà sẹ́yìn. Mí kanlẹ̀ díẹ̀díẹ̀ lẹ́ẹ̀kan pẹ̀lú mi, sínú títí di mẹ́rin, jáde títí di mẹ́fà. Lẹ́yìn náà sọ ohun kan tó wúwo jù fún mi, a ó sì bẹ̀rẹ̀ láti ibẹ̀.",
+      depressed: `O ṣé tí o sọ fún mi. Ìrẹ̀wẹ̀sì ọkàn ṣòro láti gbé, ó sì yẹ kí o bá dókítà, nọ́ọ̀sì tàbí olùdámọ̀ràn sọ̀rọ̀, tí ó lè ràn ọ́ lọ́wọ́ gan-an. Mo lè gbọ́ ọ báyìí kí n sì ràn ọ́ lọ́wọ́ láti múra ohun tí o máa sọ fún wọn. Báwo ló ṣe rí láìpẹ́ yìí?`
+    },
+    ig: {
+      sad: "Ọ dị m nwute na obi adịghị gị mma. Ọ dị mma inwe mmetụta a, ị chọghịkwa idozi ya naanị gị. Ị ga-achọ ịgwa m ihe na-eme, ma ọ bụ ka anyị kuo ume nwayọọ nwayọọ ọnụ otu nkeji?",
+      anxious: "Nke ahụ dị ka ihe na-adịghị mma ma ọlị. Mmetụta nchegbu siri ike, ma ọ nwere ike ịdị nwayọọ. Ka anyị jiri nwayọọ ọnụ: kuo ume ruo anọ, jide ya ruo anọ, ma kupụ ya ruo isii. Ị chọrọ ime nke ahụ ugbu a, ma ọ bụ gwa m ihe na-echegbu gị?",
+      stressed: "Nke ahụ dị ka ibu dị arọ. Ka anyị were otu ihe n'otu oge. Gịnị kacha na-anyị gị arọ ugbu a? Ọ bụrụ na ị chọrọ, anyị nwere ike ibu ụzọ kuo ume nwayọọ otu nkeji.",
+      lonely: "Ọ dị m nwute na ịnọ naanị gị na-ewute gị. Anọ m ebe a, obi dịkwa m ụtọ ikwu okwu. Ọ nwere onye ị tụkwasịrị obi ị nwere ike ịkpọtụrụ taa, ọbụlagodi obere ozi? Ma ọ bụ gwa m ihe dị gị n'obi.",
+      overwhelmed: "Nke ahụ bụ ọtụtụ ihe n'otu oge. Ka anyị jiri nwayọọ. Kuo otu ume nwayọọ na m, banye ruo anọ, pụta ruo isii. Mgbe ahụ gwa m otu ihe kacha dị arọ, anyị ga-amalite ebe ahụ.",
+      depressed: `Daalụ maka ịgwa m. Ịda mbà n'obi siri ike ibu, ọ dịkwa mma ịgwa dọkịta, nọọsụ ma ọ bụ onye ndụmọdụ okwu, onye nwere ike inye aka n'ezie. Enwere m ike ige gị ntị ugbu a ma nyere gị aka ịkwadebe ihe ị ga-agwa ha. Kedu ka ọ dị n'oge na-adịbeghị anya?`
     }
   };
 
   function reply(feeling, language) {
-    const lang = /^sw/i.test(String(language || "")) ? "sw" : "en";
+    const lang = ((code) => (["sw", "ha", "am", "yo", "ig"].includes(code) ? code : "en"))(String(language || "").trim().toLowerCase().split(/[-_]/)[0]);
     const text = (REPLIES[lang] || REPLIES.en)[feeling];
     if (!text) return "";
     // the heavier words (depressed) carry the safety line; everyone else is asked gently what is on their mind

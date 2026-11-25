@@ -6,8 +6,9 @@ const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
 const { ApplicationRegistry } = require("../../nexus/apps/registry.js");
 const { defaultApplicationManifests } = require("../../nexus/apps/default-manifests.js");
 
-test("all six Path 2 languages produce durable full-workflow interaction requirements", () => {
-  assert.deepEqual(SUPPORTED_LOCALES, ["en", "es", "fr", "sw", "ar", "pt"]);
+test("all ten Path 2 languages produce durable full-workflow interaction requirements", () => {
+  // (Hausa, Amharic, Yoruba and Igbo joined the first six on 25 Nov 2026)
+  assert.deepEqual(SUPPORTED_LOCALES, ["en", "es", "fr", "sw", "ar", "pt", "ha", "am", "yo", "ig"]);
   for (const locale of SUPPORTED_LOCALES) {
     const profile = createInteractionProfile({ locale: `${locale}-regional`, channel: "voice",
       userPreferences: { accessibility: { lowLiteracy: true, screenReader: true, captions: true } } });

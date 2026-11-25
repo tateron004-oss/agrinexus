@@ -84,7 +84,7 @@
     enabledProviderTypes: Object.freeze(PROVIDER_REQUIREMENTS.map(requirement => requirement.providerType)),
     requiredPolicies: Object.freeze(POLICIES.map(policyItem => policyItem.id)),
     supportedRoles: Object.freeze(["standard_user", "provider", "admin", "partner_reviewer", "community_health_worker"]),
-    supportedLanguages: Object.freeze(["en", "es", "fr", "ar", "pt", "sw"]),
+    supportedLanguages: Object.freeze(["en", "es", "fr", "ar", "pt", "sw", "ha", "am", "yo", "ig"]),
     sharedCore: SHARED_CORE,
     featureFlags: Object.freeze({
       standardUserCalmShell: true,
@@ -111,7 +111,7 @@
       workflows: Object.freeze(workflows),
       policyReferences: Object.freeze(policyReferences),
       supportedRoles: Object.freeze(["standard_user", "provider", "admin", "partner_reviewer", "community_health_worker"]),
-      supportedLanguages: Object.freeze(["en", "es", "fr", "ar", "pt", "sw"]),
+      supportedLanguages: Object.freeze(["en", "es", "fr", "ar", "pt", "sw", "ha", "am", "yo", "ig"]),
       receiptTypes: Object.freeze(receiptTypes),
       compatibilityVersion: "nexus-os-1.0-genesis"
     });

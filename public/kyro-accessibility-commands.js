@@ -12,7 +12,11 @@
 
   const TEXT = {
     en: { largeText: "Large text", highContrast: "High contrast", reducedMotion: "Reduced motion", screenReader: "Screen reader mode", on: "on", off: "off" },
-    sw: { largeText: "Maandishi makubwa", highContrast: "Utofautishaji wa juu", reducedMotion: "Mwendo uliopunguzwa", screenReader: "Hali ya kisoma-skrini", on: "imewashwa", off: "imezimwa" }
+    sw: { largeText: "Maandishi makubwa", highContrast: "Utofautishaji wa juu", reducedMotion: "Mwendo uliopunguzwa", screenReader: "Hali ya kisoma-skrini", on: "imewashwa", off: "imezimwa" },
+    ha: {"largeText":"Babban rubutu","highContrast":"Bambancin launi mai ƙarfi","reducedMotion":"Rage motsi","screenReader":"Yanayin mai karanta allo","on":"a kunne","off":"a kashe"},
+    am: {"largeText":"ትልቅ ጽሑፍ","highContrast":"ከፍተኛ ንፅፅር","reducedMotion":"የተቀነሰ እንቅስቃሴ","screenReader":"የስክሪን አንባቢ ሁኔታ","on":"በርቷል","off":"ጠፍቷል"},
+    yo: {"largeText":"Ọ̀rọ̀ ńlá","highContrast":"Ìyàtọ̀ àwọ̀ tó ga","reducedMotion":"Ìdínkù ìṣípòpadà","screenReader":"Ìpò ẹ̀rọ akàwé ojú-ìbòjú","on":"tàn","off":"pa"},
+    ig: {"largeText":"Ederede buru ibu","highContrast":"Ọdịiche agba siri ike","reducedMotion":"Mbelata mmegharị","screenReader":"Ọnọdụ ngwa na-agụ ihuenyo","on":"gbanyere","off":"gbanyụrụ"}
   };
 
   const clean = value => String(value || "").toLowerCase().replace(/[.!?,]+/g, " ").replace(/\s+/g, " ").trim();
@@ -42,7 +46,7 @@
   }
 
   function reply(key, on, lang) {
-    const t = TEXT[lang === "sw" ? "sw" : "en"];
+    const t = TEXT[TEXT[lang] ? lang : "en"];
     return lang === "sw" ? `${t[key]} ${on ? t.on : t.off}.` : `${t[key]} is ${on ? t.on : t.off}.`;
   }
 

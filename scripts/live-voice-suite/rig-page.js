@@ -68,24 +68,27 @@ function installKyroVoiceRig(makeEvaluator) {
   }
 
   // speech: the sentence as real audio
-  const speakOnce = async text => {
-    const key = "t:" + text; if (rig.buffers[key]) return key;
-    // (a sentence written in Spanish is spoken as Spanish)
-    const spanish = /[¿¡ñáéíóú]/i.test(text);
-    const result = await window.request("/api/voice/speak", { method: "POST", body: { correlationId: "voice-suite-" + Date.now(), text, language: spanish ? "es" : "en", locale: spanish ? "es-US" : "en-US", rate: 1, pitch: 1, forceOpenAi: true } });
+  // (a case or step can name the language its sentence is in: { say, lang: "ha" }; the pretend voice then reads it as that language. OpenAI's speech has no tuned Hausa, Amharic, Yoruba or Igbo voice, so
+  // those sound foreign; the owner, 25 Nov 2026: "i dont care how it sounds. i want it to work".)
+  const LOCALES = { en: "en-US", es: "es-US", fr: "fr-FR", sw: "sw-KE", ar: "ar-EG", pt: "pt-BR", ha: "ha-NG", am: "am-ET", yo: "yo-NG", ig: "ig-NG" };
+  const speakOnce = async (text, lang) => {
+    const key = "t:" + (lang || "") + ":" + text; if (rig.buffers[key]) return key;
+    // (otherwise a sentence written in Spanish is spoken as Spanish, anything else as English)
+    const language = LOCALES[lang] ? lang : (/[¿¡ñáéíóú]/i.test(text) ? "es" : "en");
+    const result = await window.request("/api/voice/speak", { method: "POST", body: { correlationId: "voice-suite-" + Date.now(), text, language, locale: LOCALES[language], rate: 1, pitch: 1, forceOpenAi: true } });
     const url = result && result.voiceResult && result.voiceResult.audioDataUrl;
     if (!url) throw new Error("the speech service returned no audio");
     rig.buffers[key] = await ctx.decodeAudioData(await (await fetch(url)).arrayBuffer());
     return key;
   };
-  rig.speech = async text => { let last; for (let n = 0; n < 4; n += 1) { try { return await speakOnce(text); } catch (error) { last = error; await new Promise(r => setTimeout(r, 2500)); } } throw last; };
+  rig.speech = async (text, lang) => { let last; for (let n = 0; n < 4; n += 1) { try { return await speakOnce(text, lang); } catch (error) { last = error; await new Promise(r => setTimeout(r, 2500)); } } throw last; };
   rig.mark = () => log.length;
   // true when nothing is being said by the model or the page and nothing is being heard
   rig.busy = () => {
     const recent = log.filter(entry => entry.at > Date.now() - rig.t0 - 1800);
     return recent.some(entry => entry.kind === "event" && /response\.created|output_audio_transcript\.delta|audio_start|speech_started/.test(entry.text) && !/->/.test(entry.text));
   };
-  rig.say = async text => { const key = await rig.speech(text); const index = log.length; await ctx.resume(); const source = ctx.createBufferSource(); source.buffer = rig.buffers[key]; source.connect(dest); source.start(); return { index, seconds: source.buffer.duration }; };
+  rig.say = async (text, lang) => { const key = await rig.speech(text, lang); const index = log.length; await ctx.resume(); const source = ctx.createBufferSource(); source.buffer = rig.buffers[key]; source.connect(dest); source.start(); return { index, seconds: source.buffer.duration }; };
   // waits until the model has stopped talking (so the next sentence is not spoken over it)
   rig.settle = async (maxMs = 25000) => {
     const start = Date.now(); let lastCount = -1; let still = 0;
@@ -224,6 +227,8 @@ function installKyroVoiceRig(makeEvaluator) {
         if (kyroTutorOpen()) { kyroTutorEnd(); await sleep(1500); }
       }
     } catch { /* cleared below */ }
+    // a language case that failed before its own switch back leaves the account in that language: it is put back to English, the way a person would
+    try { if (typeof languageCode === "function" && languageCode() !== "en") { await rig.say("Switch to English.", "en"); await sleep(9000); } } catch { /* the next case says what it heard */ }
     rig.clear();
   };
   rig.runSteps = async (startMark, steps, defaultTimeout) => {
@@ -232,7 +237,7 @@ function installKyroVoiceRig(makeEvaluator) {
       if (step.tap !== undefined) { const result = rig.tap(step.tap, step.nth || 0); if (!result.tapped) { failures.push(`could not tap "${step.tap}" (buttons: ${(result.available || []).join(" | ")})`); break; } await sleep(1500); }
       else if (step.type) { if (!rig.type(step.type.selector, step.type.value, step.type.nth || 0)) { failures.push(`no field for ${step.type.selector}`); break; } }
       else if (step.choose) { if (!(await rig.chooseFile(step.choose))) { failures.push("no file chooser on the screen"); break; } mark = rig.mark(); }
-      else if (step.say) { await rig.settle(120000); mark = (await rig.say(step.say)).index; }
+      else if (step.say) { await rig.settle(120000); mark = (await rig.say(step.say, step.lang)).index; }
       else if (step.wait) await sleep(step.wait);
       // the signal goes or comes back, as the browser says it (navigator.onLine and the offline / online events): { offline: true } then { offline: false }. runCase puts the real value back at the end.
       else if (step.offline !== undefined) { rig.offlineSet = true; try { Object.defineProperty(navigator, "onLine", { configurable: true, get: () => !step.offline }); } catch { /* the event below is still sent */ } window.dispatchEvent(new Event(step.offline ? "offline" : "online")); await sleep(1200); }
@@ -258,7 +263,7 @@ function installKyroVoiceRig(makeEvaluator) {
       let mark; let first;
       // The pretend voice is turned into words by a real speech-to-text, which sometimes drops or changes a word ("My email got hacked, what do I do?" came back as "My email got do I do."). A case that names the word it needs to have been heard (heard: "hacked") is said once more, after a clean-up, when it failed and that word was not heard: the page cannot be blamed for words it never received.
       for (let attempt = 1; ; attempt += 1) {
-        if (entry.typed) { mark = rig.mark(); rig.typedCommand(entry.typed); } else { await rig.settle(120000); mark = (await rig.say(entry.say)).index; }
+        if (entry.typed) { mark = rig.mark(); rig.typedCommand(entry.typed); } else { await rig.settle(120000); mark = (await rig.say(entry.say, entry.lang)).index; }
         first = await rig.until(mark, entry.expect || {}, timeout);
         const failed = !first.outcome || first.outcome.failures.length > 0;
         const misheard = entry.heard && !entry.typed && !((first.state && first.state.heard) || []).some(line => new RegExp(entry.heard, "i").test(line));

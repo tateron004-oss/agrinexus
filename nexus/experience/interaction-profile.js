@@ -1,6 +1,6 @@
 "use strict";
 
-const SUPPORTED_LOCALES = Object.freeze(["en", "es", "fr", "sw", "ar", "pt"]);
+const SUPPORTED_LOCALES = Object.freeze(["en", "es", "fr", "sw", "ar", "pt", "ha", "am", "yo", "ig"]);
 const RTL_LOCALES = new Set(["ar"]);
 
 function normalizeLocale(value, fallback = "en") {

@@ -58,13 +58,17 @@
       "Ninahitaji angalau jambo moja kwa CV yako: kazi ulizowahi kufanya, unachoweza kufanya vizuri, au masomo yako.",
       "Hakuna shida. Niambie jambo moja unaloweza kufanya, kwa mfano: kilimo, kupika, kuendesha gari, kuuza, kutengeneza simu, au kulea watoto. Kazi ya kujitolea, shule, au kusaidia biashara ya familia pia vinahesabika.",
       "Hakuna shida, tunaweza kumaliza baadaye. Ulichoniambia kimehifadhiwa. Sema 'endelea na CV yangu' ukiwa na jambo la kuongeza, au sema 'ghairi' kuacha."
-    ]
+    ],
+    ha: ["Ina buƙatar aƙalla abu ɗaya don CV ɗinka: aikin da ka yi, abin da ka iya, ko karatunka.","Ba komai. Faɗa mini abu ɗaya da ka iya yi, misali: noma, girki, tuƙi, sayarwa, gyaran waya, ko kula da yara. Aikin sa-kai, makaranta, ko taimakon kasuwancin iyalinka duk suna da amfani.","Ba komai, za mu iya gama wannan daga baya. Abin da ka faɗa mini an ajiye shi. Ka ce 'ci gaba da CV dina' idan kana da abu ɗaya da za ka ƙara, ko ka ce 'soke' don tsayawa."],
+    am: ["ለCVህ ቢያንስ አንድ ነገር ያስፈልገኛል፦ የሠራኸው ሥራ፣ የምትችለው ነገር፣ ወይም ትምህርትህ።","ችግር የለም። ልትሠራው የምትችለውን አንድ ነገር ንገረኝ፣ ለምሳሌ፦ እርሻ፣ ምግብ ማብሰል፣ መንዳት፣ መሸጥ፣ ስልክ መጠገን፣ ወይም ልጆችን መንከባከብ። የበጎ ፈቃድ ሥራ፣ ትምህርት ቤት፣ ወይም የቤተሰብ ንግድን መርዳት ሁሉም ይቆጠራሉ።","ችግር የለም፣ ይህንን በኋላ መጨረስ እንችላለን። የነገርከኝ ተቀምጧል። የሚጨመር አንድ ነገር ሲኖርህ 'CVዬን ቀጥል' በል፣ ወይም ለማቆም 'ሰርዝ' በል።"],
+    yo: ["Mo nílò ó kéré tán nǹkan kan fún CV rẹ: iṣẹ́ tí o ti ṣe, ohun tí o mọ̀ ṣe dáadáa, tàbí ẹ̀kọ́ rẹ.","Kò burú. Sọ nǹkan kan tí o lè ṣe fún mi, fún àpẹẹrẹ: iṣẹ́ àgbẹ̀, oúnjẹ sísè, wíwa ọkọ̀, títa ọjà, títún fóònù ṣe, tàbí títọ́jú ọmọdé. Iṣẹ́ ìyọ̀ǹda, ilé ìwé, tàbí ríran iṣẹ́ òwò ìdílé rẹ lọ́wọ́, gbogbo rẹ̀ ló kà.","Kò burú, a lè parí èyí lẹ́yìn náà. Ohun tí o sọ fún mi ti wà ní ìpamọ́. Sọ pé 'tẹ̀síwájú CV mi' nígbà tí o bá ní nǹkan kan láti fi kún un, tàbí sọ pé 'fagilé' láti dúró."],
+    ig: ["Achọrọ m opekata mpe otu ihe maka CV gị: ọrụ i rụrụ, ihe ị maara nke ọma, ma ọ bụ agụmakwụkwọ gị.","Ọ dị mma. Gwa m otu ihe ị nwere ike ime, dịka ọmụmaatụ: ọrụ ugbo, isi nri, ịnya ụgbọala, ire ahịa, ịrụzi ekwentị, ma ọ bụ ilekọta ụmụaka. Ọrụ afọ ofufo, ụlọ akwụkwọ, ma ọ bụ inyere azụmahịa ezinụlọ gị aka, ha niile gụrụ.","Ọ dị mma, anyị nwere ike imecha nke a ma emechaa. Echekwala m ihe ị gwara m. Kwuo 'gaa n'ihu na CV m' mgbe ị nwere otu ihe ịgbakwunye, ma ọ bụ kwuo 'kagbuo' iji kwụsị."]
   };
 
   function resumeValidate(values, context = {}) {
     const hasContent = clean(values.skills) || (Array.isArray(values.experience) && values.experience.length) || clean(values.education);
     if (hasContent) return null;
-    const lang = context.lang === "sw" ? "sw" : "en";
+    const lang = (["sw", "ha", "am", "yo", "ig"].includes(context.lang) ? context.lang : "en");
     const misses = Math.max(0, Number(context.misses) || 0);
     if (misses === 0) return { fieldKey: "experience", message: RESUME_NEEDS[lang][0] };
     if (misses === 1) return { fieldKey: "skills", message: RESUME_NEEDS[lang][1] };
@@ -159,9 +163,11 @@
   // here -- it can't be mistaken for anything else when nothing is paused. Also tolerates the wake
   // word (and the recognizer's usual mishearings of it) in front.
   const BARE_CONTINUE = /^\s*(?:(?:hey[, ]+)?(?:kyro|kiro|cairo|chatroom|nexus)[, ]+)?(?:ok(?:ay)?[, ]+)?(?:(?:i'?m |i am |we'?re |we are )?ready|continue|go on|go ahead|carry on|keep going|let'?s (?:continue|go|keep going|carry on)|(?:ok(?:ay)?[, ]+)?i'?m back|endelea|tuendelee|tuendelee tu|nimerudi|niko tayari|nipo tayari|sawa,? endelea|endelea tafadhali)[ .!,]*(?:please|tafadhali)?[ .!]*$/i;
+  // "continue" in Hausa, Amharic, Yoruba and Igbo (the words the paused form's own prompt tells people to say; 25 Nov 2026)
+  const MORE_CONTINUE = /^(?:mu ci gaba|tẹ̀síwájú|gaa n'ihu|gaa n ihu|tesiwaju|ga n'ihu|gaa nihu|ci gaba|bá a lọ|ba a lo|ga nihu|cigaba|máa lọ|maa lo|እንቀጥል|ቀጥል|ቀጥሉ)$/u;
   function isResumeContinueRequest(text) {
     const value = clean(text);
-    return RESUME_CONTINUE.test(value) || BARE_CONTINUE.test(value);
+    return RESUME_CONTINUE.test(value) || BARE_CONTINUE.test(value) || MORE_CONTINUE.test(value.trim().toLowerCase().replace(/[.,!?;:]+$/g, ""));
   }
 
   // --- selling something --------------------------------------------------------------------------
@@ -223,7 +229,7 @@
     title: "Sell on the community board",
     intro: "",
     confirmBeforeSubmit: true,
-    confirmTail: { en: "Shall I post it? Say yes, or tell me which part to change.", sw: "Niiweke sasa? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    confirmTail: { en: "Shall I post it? Say yes, or tell me which part to change.", sw: "Niiweke sasa? Sema ndiyo, au niambie sehemu ya kubadilisha.", ha: "In saka shi? Ka ce eh, ko faɗa mini wane ɓangare zan canza.", am: "ልለጥፈው? አዎ በል፣ ወይም የትኛውን ክፍል እንደምቀይር ንገረኝ።", yo: "Ṣé kí n fi síta? Sọ pé bẹ́ẹ̀ni, tàbí sọ apá tí kí n yí padà fún mi.", ig: "Ka m biputa ya? Kwuo ee, ma ọ bụ gwa m akụkụ m ga-agbanwe." },
     pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop. Say stop again to end it.",
     sw: { title: "Uza kwenye ubao wa jamii", intro: "", pausedLine: "Sawa, nitasubiri. Sema endelea ukiwa tayari, au sema ghairi kuacha. Sema acha tena kumaliza." },
     fields: SALE_FIELDS,
@@ -248,10 +254,14 @@
   const DANGER_SIGNS = /\b(?:can'?t breathe|cannot breathe|struggling to breathe|trouble breathing|difficulty breathing|not breathing|stopped breathing|short of breath|chest pain|pain in (?:my )?chest|unconscious|passed out|fainted|collapsed|seizures?|convuls\w*|fitting|bleeding (?:heavily|a lot|badly)|heavy bleeding|won'?t stop bleeding|bleeding (?:that )?(?:will not|won'?t) stop|coughing (?:up )?blood|vomiting blood|stiff neck|face (?:is )?drooping|slurred speech|weakness on one side|weak on one side|sudden loss of (?:sight|vision)|poisoned|overdose|snake ?bite|siwezi kupumua|maumivu ya kifua|nimezimia|degedege|damu nyingi|kutokwa na damu nyingi)\b/i;
   const TELE_EMERGENCY = {
     en: "That sounds like it could be an emergency. Please call your local emergency number or go to the nearest clinic now. I have stopped the questions and nothing was saved.",
-    sw: "Hiyo inaweza kuwa dharura. Tafadhali piga namba ya dharura ya eneo lako au nenda kliniki iliyo karibu sasa. Nimesimamisha maswali na hakuna kilichohifadhiwa."
+    sw: "Hiyo inaweza kuwa dharura. Tafadhali piga namba ya dharura ya eneo lako au nenda kliniki iliyo karibu sasa. Nimesimamisha maswali na hakuna kilichohifadhiwa.",
+    ha: "Wannan yana kama da gaggawa. Don Allah ka kira lambar gaggawa ta yankinku ko ka je asibiti mafi kusa yanzu. Na dakatar da tambayoyin kuma ba a ajiye komai ba.",
+    am: "ይህ አስቸኳይ ሁኔታ ሊሆን ይችላል። እባክህ አሁኑኑ የአካባቢህን የአደጋ ጊዜ ቁጥር ደውል ወይም በአቅራቢያህ ወዳለው ክሊኒክ ሂድ። ጥያቄዎቹን አቁሜያለሁ፣ ምንም ነገር አልተቀመጠም።",
+    yo: "Ó dà bí pé èyí lè jẹ́ pàjáwìrì. Jọ̀wọ́ pe nọ́mbà pàjáwìrì ní agbègbè rẹ tàbí lọ sí ilé-ìwòsàn tó sún mọ́ ọ jù báyìí. Mo ti dá àwọn ìbéèrè dúró, a kò sì fi nǹkan kan pamọ́.",
+    ig: "Nke a dị ka ọ nwere ike ịbụ ihe mberede. Biko kpọọ nọmba mberede mpaghara gị ma ọ bụ gaa n'ụlọ ọgwụ kacha nso ugbu a. Akwụsịla m ajụjụ ndị ahụ, ọ dịghịkwa ihe echekwara."
   };
   function teleInterrupt(text, context = {}) {
-    return DANGER_SIGNS.test(clean(text)) ? { say: TELE_EMERGENCY[context.lang === "sw" ? "sw" : "en"] } : null;
+    return DANGER_SIGNS.test(clean(text)) ? { say: TELE_EMERGENCY[TELE_EMERGENCY[context.lang] ? context.lang : "en"] } : null;
   }
   function teleSummary(values) {
     const parts = [];
@@ -281,7 +291,7 @@
     title: "Telehealth request",
     intro: "I will ask a few short questions for a provider. If this is an emergency, call your local emergency number now. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
-    confirmTail: { en: "Shall I send it for review? Say yes, or tell me which part to change.", sw: "Niitume ipitiwe? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    confirmTail: { en: "Shall I send it for review? Say yes, or tell me which part to change.", sw: "Niitume ipitiwe? Sema ndiyo, au niambie sehemu ya kubadilisha.", ha: "Zan aika shi don a duba? Ka ce eh, ko ka faɗa min wane sashe zan canza.", am: "ለግምገማ ልላከው? አዎ ይበሉ፣ ወይም የትኛውን ክፍል እንድቀይር ይንገሩኝ።", yo: "Ṣé kí n fi ránṣẹ́ fún àyẹ̀wò? Sọ bẹ́ẹ̀ ni, tàbí sọ apá tí kí n yí padà fún mi.", ig: "Ka m ziga ya ka e nyochaa ya? Sị ee, ma ọ bụ gwa m akụkụ m ga-agbanwe." },
     pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop. Say stop again to end it.",
     sw: { title: "Ombi la telehealth", intro: "Nitakuuliza maswali machache mafupi kwa mtoa huduma. Ikiwa ni dharura, piga namba ya dharura sasa. Unaweza kusema rudia, ruka, rudi, au acha wakati wowote.", pausedLine: "Sawa, nitasubiri. Sema endelea ukiwa tayari, au sema ghairi kuacha. Sema acha tena kumaliza." },
     fields: TELE_FIELDS,
@@ -321,7 +331,7 @@
     title: "Your PR and events brief",
     intro: "I will ask you ten short questions, one at a time, for a brief you can give to a PR or event firm. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
-    confirmTail: { en: "Shall I save it as a document you can edit and send? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuituma? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    confirmTail: { en: "Shall I save it as a document you can edit and send? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuituma? Sema ndiyo, au niambie sehemu ya kubadilisha.", ha: "Zan ajiye shi a matsayin takarda da za ka iya gyarawa ka aika? Ka ce eh, ko ka faɗa min wane sashe zan canza.", am: "ልታረሙት እና ልትልኩት የምትችሉት ሰነድ አድርጌ ላስቀምጠው? አዎ ይበሉ፣ ወይም የትኛውን ክፍል እንድቀይር ይንገሩኝ።", yo: "Ṣé kí n fi pamọ́ bí ìwé tí o lè ṣàtúnṣe kí o sì fi ránṣẹ́? Sọ bẹ́ẹ̀ ni, tàbí sọ apá tí kí n yí padà fún mi.", ig: "Ka m chekwaa ya dị ka akwụkwọ ị nwere ike idezi ma ziga? Sị ee, ma ọ bụ gwa m akụkụ m ga-agbanwe.", ha: "Zan ajiye shi a matsayin takarda da za ka iya gyarawa ka aika? Ka ce eh, ko ka faɗa mini wane sashe zan canza.", am: "ሊያስተካክሉት እና ሊልኩት የሚችሉት ሰነድ አድርጌ ላስቀምጠው? አዎ ይበሉ፣ ወይም የትኛውን ክፍል እንድቀይር ይንገሩኝ።", yo: "Ṣé kí n fi pamọ́ bí ìwé tí o lè ṣàtúnṣe kí o sì fi ránṣẹ́? Sọ bẹ́ẹ̀ni, tàbí sọ apá tí kí n yí padà fún mi.", ig: "Ka m chekwaa ya dị ka akwụkwọ ị nwere ike idezi ma zipu? Kwuo ee, ma ọ bụ gwa m akụkụ m ga-agbanwe." },
     pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the brief. Say stop again to end it.",
     fields: PRBRIEF_FIELDS,
     readback: prBriefReadback,
@@ -367,7 +377,7 @@
     title: "Your business plan",
     intro: "I will ask you ten short questions, one at a time, for a one-page business plan. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
-    confirmTail: { en: "Shall I save it as a document you can edit and show to others? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuwaonyesha wengine? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    confirmTail: { en: "Shall I save it as a document you can edit and show to others? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuwaonyesha wengine? Sema ndiyo, au niambie sehemu ya kubadilisha.", ha: "In ajiye shi a matsayin takarda da za ka iya gyarawa ka nuna wa wasu? Ka ce eh, ko ka gaya mini wane sashe zan canza.", am: "ልታስተካክለው እና ለሌሎች ልታሳየው የምትችለው ሰነድ አድርጌ ላስቀምጠው? አዎ በል፣ ወይም የትኛውን ክፍል እንደምቀይር ንገረኝ።", yo: "Ṣé kí n fi pamọ́ bí ìwé tí o lè tún ṣe kí o sì fi han àwọn ẹlòmíì? Sọ bẹ́ẹ̀ni, tàbí sọ apá tí kí n yí padà fún mi.", ig: "Ka m chekwaa ya dị ka akwụkwọ ị nwere ike idezi ma gosi ndị ọzọ? Sị ee, ma ọ bụ gwa m akụkụ m ga-agbanwe." },
     pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the business plan. Say stop again to end it.",
     fields: BP_FIELDS,
     readback: bpReadback,
@@ -456,7 +466,7 @@
     title: "Your team packet",
     intro: "I will ask you ten short questions, one at a time, for a team packet you can give to families. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
-    confirmTail: { en: "Shall I save it as a document you can edit and hand out? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuigawa? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    confirmTail: { en: "Shall I save it as a document you can edit and hand out? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuigawa? Sema ndiyo, au niambie sehemu ya kubadilisha.", ha: "In ajiye shi a matsayin takarda da za ka iya gyarawa kuma ka raba? Ka ce eh, ko ka faɗa min wane ɓangare zan canza.", am: "ማስተካከል እና ማሰራጨት የሚችሉት ሰነድ አድርጌ ላስቀምጠው? አዎ ይበሉ፣ ወይም የትኛውን ክፍል እንደምቀይር ይንገሩኝ።", yo: "Ṣé kí n fi pamọ́ bí ìwé tí o lè ṣàtúnṣe kí o sì pín fún àwọn ènìyàn? Sọ bẹ́ẹ̀ni, tàbí sọ apá tí kí n yí padà fún mi.", ig: "Ka m chekwaa ya dịka akwụkwọ ị nwere ike idezi ma kesaa? Kwuo ee, ma ọ bụ gwa m akụkụ m ga-agbanwe." },
     pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the packet. Say stop again to end it.",
     fields: TEAM_FIELDS,
     readback: readbackOf(TEAM_FIELDS),
@@ -526,7 +536,7 @@
     title: "Your 90-day money plan",
     intro: "I will ask you ten short questions, one at a time, to build a plan for the next 90 days. Please do not tell me account numbers, PINs, passwords or your Social Security number. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
-    confirmTail: { en: "Shall I save it as a document you can edit and keep? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuiweka? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    confirmTail: { en: "Shall I save it as a document you can edit and keep? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kuiweka? Sema ndiyo, au niambie sehemu ya kubadilisha.", ha: "In ajiye shi a matsayin takarda da za ka iya gyarawa ka adana? Ka ce eh, ko ka gaya mini wane sashe zan canza.", am: "ልታስተካክለው እና ልታስቀምጠው የምትችለው ሰነድ አድርጌ ላስቀምጠው? አዎ በል፣ ወይም የትኛውን ክፍል እንደምቀይር ንገረኝ።", yo: "Ṣé kí n fi pamọ́ bí ìwé tí o lè tún ṣe kí o sì tọ́jú? Sọ bẹ́ẹ̀ni, tàbí sọ apá tí kí n yí padà fún mi.", ig: "Ka m chekwaa ya dị ka akwụkwọ ị nwere ike idezi ma debe? Sị ee, ma ọ bụ gwa m akụkụ m ga-agbanwe." },
     pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the money plan. Say stop again to end it.",
     fields: MONEYPLAN_FIELDS,
     readback: readbackOf(MONEYPLAN_FIELDS),
@@ -538,7 +548,7 @@
     title: "Your financial education program plan",
     intro: "I will ask you ten short questions, one at a time, for a plan for a community financial education program. Please do not tell me account numbers, PINs or passwords. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
-    confirmTail: { en: "Shall I save it as a document you can edit and share? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kushiriki? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    confirmTail: { en: "Shall I save it as a document you can edit and share? Say yes, or tell me which part to change.", sw: "Niihifadhi kama hati unayoweza kuihariri na kushiriki? Sema ndiyo, au niambie sehemu ya kubadilisha.", ha: "Shin in ajiye shi a matsayin takarda da za ka iya gyarawa ka raba? Ka ce eh, ko faɗa mini wane ɓangare zan canza.", am: "ልታስተካክለውና ልታጋራው የምትችለው ሰነድ አድርጌ ላስቀምጠው? አዎ በል፣ ወይም የትኛውን ክፍል እንደምቀይር ንገረኝ።", yo: "Ṣé kí n fi pamọ́ gẹ́gẹ́ bí ìwé tí o lè ṣàtúnṣe kí o sì pín? Sọ pé bẹ́ẹ̀ni, tàbí sọ apá tí kí n yí padà fún mi.", ig: "Ka m chekwaa ya dịka akwụkwọ ị nwere ike idezi ma kesaa? Kwuo ee, ma ọ bụ gwa m akụkụ m ga-agbanwe." },
     pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the program plan. Say stop again to end it.",
     fields: PROGRAM_FIELDS,
     readback: readbackOf(PROGRAM_FIELDS),
@@ -581,7 +591,7 @@
     title: "Get ready for your appointment",
     intro: "I will ask you nine short questions, one at a time, to get you ready to make an appointment. I cannot book it for you, and I do not give medical advice. If this is an emergency, call your local emergency number now. Please do not tell me ID numbers or passwords. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
-    confirmTail: { en: "Shall I save it as a sheet you can edit and take with you when you call? Say yes, or tell me which part to change.", sw: "Niihifadhi kama karatasi unayoweza kuihariri na kwenda nayo unapopiga simu? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    confirmTail: { en: "Shall I save it as a sheet you can edit and take with you when you call? Say yes, or tell me which part to change.", sw: "Niihifadhi kama karatasi unayoweza kuihariri na kwenda nayo unapopiga simu? Sema ndiyo, au niambie sehemu ya kubadilisha.", ha: "In ajiye shi a matsayin takarda da za ka iya gyarawa ka tafi da ita idan ka kira? Ka ce e, ko ka faɗa mini wane sashi zan canza.", am: "ሲደውሉ ሊያስተካክሉትና ይዘውት ሊሄዱ የሚችሉት ሉህ አድርጌ ላስቀምጠው? አዎ ይበሉ፣ ወይም የትኛውን ክፍል እንድቀይር ይንገሩኝ።", yo: "Ṣé kí n fi pamọ́ bí ìwé tí o lè ṣàtúnṣe kí o sì mú lọ nígbà tí o bá pè? Sọ bẹ́ẹ̀ni, tàbí sọ apá tí kí n yí padà fún mi.", ig: "Ka m chekwaa ya dị ka mpempe akwụkwọ ị nwere ike idezi ma were ya mgbe ị na-akpọ? Sị ee, ma ọ bụ gwa m akụkụ m ga-agbanwe." },
     pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop. Say stop again to end it.",
     fields: VISIT_FIELDS,
     readback: readbackOf(VISIT_FIELDS),

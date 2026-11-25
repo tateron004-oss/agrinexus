@@ -103,6 +103,66 @@
         transportation: "Ninaweza kukusaidia kufikiria kuhusu chaguo za kupata huduma na usafiri. Sijashiriki eneo lako, sijawasiliana na mtu yeyote, sijapanga miadi, wala kupanga safari.",
         default: "Ninaweza kusaidia kuelekeza ufikiaji wa huduma ya afya. Onyesho hili huandaa hatua za kukagua tu na haliwasiliani na watoa huduma, halishiriki taarifa, halipangi huduma, haliombi eneo, wala kukamilisha vitendo vya afya."
       }
+    },
+    ha: {
+      label: "Hausa",
+      speechLang: "ha-NG",
+      changeResponse: "An canza harshe zuwa Hausa. Ta yaya zan taimaka maka?",
+      intro: "Barka da safiya. Ni ne Nexus, mataimakinka mai aiki da murya. A shirye nake in taimaka da kiwon lafiya ta waya, taimakon kantin magani, asibitin tafi-da-gidanka, sufuri zuwa asibiti, albarkatun aiki, da ayyukan noma. Ta yaya zan taimaka maka yau?",
+      health: {
+        emergency: "Idan wannan na iya zama gaggawa, kira hukumar gaggawa ta yankinku yanzu. Ba zan iya aika taimakon gaggawa a wannan gwajin ba.",
+        execution: "Don tsaro, ba zan iya kammala wannan aikin lafiya da kaina ba. Zan iya taimaka maka ka duba abin da ake buƙata kafin a raba, a tsara, a aika, a miƙa ko a tuntuɓi kowa.",
+        telehealth: "Nexus zai iya taimakawa da kiwon lafiya ta waya. Zan iya jagorantar ka ta bayanan da ake buƙata don ganin likita kuma in shirya mataki na gaba mai aminci. Ban tsara ganawa ba kuma ban tuntuɓi likita ba.",
+        mobileClinic: "Zan iya taimaka maka ka duba zaɓuɓɓukan asibitin tafi-da-gidanka da lafiyar karkara. A wannan gwajin, zan iya shirya matakai na gaba, amma ba zan nemi wurinka ba, ba zan tuntuɓi asibiti ba, kuma ba zan aika sabis ba.",
+        pharmacy: "Zan iya taimaka maka ka duba matakan samun kantin magani, tambayoyin sake cika magani, ko buƙatun sufuri. Ban miƙa sake cika magani ba, kuma ba zan iya nema, canza ko miƙa odar magani a wannan gwajin ba.",
+        transportation: "Zan iya taimaka maka ka yi tunani game da samun kulawa da zaɓuɓɓukan sufuri. Ban raba wurinka ba, ban tuntuɓi kowa ba, ban tsara ganawa ba, kuma ban tsara mota ba.",
+        default: "Zan iya taimakawa wajen samun hanyoyin lafiya. Wannan gwajin yana shirya matakai na gaba masu aminci don dubawa kawai, kuma ba ya tuntuɓar likitoci, raba bayanai, tsara kulawa, neman wuri, ko kammala ayyukan lafiya."
+      }
+    },
+    am: {
+      label: "አማርኛ",
+      speechLang: "am-ET",
+      changeResponse: "ቋንቋው ወደ አማርኛ ተቀይሯል። እንዴት ልርዳህ?",
+      intro: "እንደምን አደርክ። እኔ Nexus ነኝ፣ በድምፅ የሚሠራ ረዳትህ። በርቀት ሕክምና፣ በፋርማሲ ድጋፍ፣ በተንቀሳቃሽ ክሊኒክ፣ ወደ ሕክምና በመጓጓዝ፣ በሥራ ምንጮች እና በግብርና አገልግሎቶች ለመርዳት ዝግጁ ነኝ። ዛሬ እንዴት ልርዳህ?",
+      health: {
+        emergency: "ይህ ድንገተኛ ሊሆን ከቻለ፣ አሁኑኑ የአካባቢ ድንገተኛ አገልግሎት ደውል። በዚህ ማሳያ ውስጥ ድንገተኛ እርዳታ መላክ አልችልም።",
+        execution: "ለደህንነት ሲባል ያንን የጤና ተግባር በራሴ መፈጸም አልችልም። ማንኛውም ነገር ከመጋራቱ፣ ከመያዙ፣ ከመላኩ፣ ከመቅረቡ ወይም ከመገናኘቱ በፊት የሚያስፈልገውን እንድትመለከት ልረዳህ እችላለሁ።",
+        telehealth: "Nexus በርቀት ሕክምና ሊረዳ ይችላል። ለሕክምና ቀጠሮ ብዙ ጊዜ የሚያስፈልገውን መረጃ ልመራህ እና ደህንነቱ የተጠበቀ ቀጣይ እርምጃ ላዘጋጅ እችላለሁ። ቀጠሮ አልያዝኩም ወይም ሐኪም አላገኘሁም።",
+        mobileClinic: "የተንቀሳቃሽ ክሊኒክ እና የገጠር ጤና አማራጮችን እንድትመለከት ልረዳህ እችላለሁ። በዚህ ማሳያ ቀጣይ እርምጃዎችን ማዘጋጀት እችላለሁ፣ ነገር ግን አካባቢህን አልጠይቅም፣ ክሊኒክ አላገኝም ወይም አገልግሎት አልልክም።",
+        pharmacy: "የፋርማሲ እርምጃዎችን፣ የመድኃኒት መሙላት ጥያቄዎችን ወይም የመጓጓዣ ፍላጎቶችን እንድትመለከት ልረዳህ እችላለሁ። የመድኃኒት መሙላት አላቀረብኩም፣ እና በዚህ ማሳያ የመድኃኒት ትዕዛዝ መጠየቅ፣ መቀየር ወይም ማቅረብ አልችልም።",
+        transportation: "ስለ ሕክምና ተደራሽነት እና የመጓጓዣ አማራጮች እንድታስብ ልረዳህ እችላለሁ። አካባቢህን አላጋራሁም፣ ማንንም አላገኘሁም፣ ቀጠሮ አልያዝኩም፣ መጓጓዣም አላዘዝኩም።",
+        default: "የጤና አገልግሎት ለማግኘት መንገድ በማሳየት ልረዳ እችላለሁ። ይህ ማሳያ ለመመልከት ብቻ ደህንነቱ የተጠበቀ ቀጣይ እርምጃዎችን ያዘጋጃል፤ ሐኪሞችን አያገኝም፣ መረጃ አያጋራም፣ ሕክምና አይይዝም፣ አካባቢ አይጠይቅም ወይም የጤና ተግባራትን አይፈጽምም።"
+      }
+    },
+    yo: {
+      label: "Yorùbá",
+      speechLang: "yo-NG",
+      changeResponse: "A ti yí èdè padà sí Yorùbá. Báwo ni mo ṣe lè ràn ọ́ lọ́wọ́?",
+      intro: "Ẹ káàárọ̀. Èmi ni Nexus, olùrànlọ́wọ́ rẹ tó ń ṣiṣẹ́ pẹ̀lú ohùn. Mo ti ṣetán láti ràn ọ́ lọ́wọ́ pẹ̀lú ìtọ́jú lórí fóònù, ìrànlọ́wọ́ ilé òògùn, ilé ìwòsàn alágbèéká, ìrìnnà lọ sí ìtọ́jú, ohun èlò iṣẹ́, àti iṣẹ́ àgbẹ̀. Báwo ni mo ṣe lè ràn ọ́ lọ́wọ́ lónìí?",
+      health: {
+        emergency: "Bí èyí bá lè jẹ́ pàjáwìrì, pe iṣẹ́ pàjáwìrì àdúgbò rẹ báyìí. Mi ò lè rán ìrànlọ́wọ́ pàjáwìrì nínú àpẹẹrẹ yìí.",
+        execution: "Fún ààbò, mi ò lè parí iṣẹ́ ìlera yẹn fúnra mi. Mo lè ràn ọ́ lọ́wọ́ láti wo ohun tí a nílò kí a tó pín, ṣètò, rán, fi sílẹ̀, tàbí kàn sí ẹnikẹ́ni.",
+        telehealth: "Nexus lè ṣèrànwọ́ pẹ̀lú ìtọ́jú lórí fóònù. Mo lè tọ́ ọ sọ́nà nípa ìsọfúnni tí a sábà nílò fún ìpàdé dókítà kí n sì pèsè ìgbésẹ̀ tó kàn tó ní ààbò. Mi ò tíì ṣètò ìpàdé tàbí kàn sí dókítà.",
+        mobileClinic: "Mo lè ràn ọ́ lọ́wọ́ láti wo àṣàyàn ilé ìwòsàn alágbèéká àti ìlera ìgbèríko. Nínú àpẹẹrẹ yìí, mo lè pèsè ìgbésẹ̀ tó kàn, ṣùgbọ́n mi ò ní béèrè ibi tí o wà, kàn sí ilé ìwòsàn, tàbí rán iṣẹ́ jáde.",
+        pharmacy: "Mo lè ràn ọ́ lọ́wọ́ láti wo ìgbésẹ̀ ilé òògùn, ìbéèrè nípa àtúnkún òògùn, tàbí ohun tí o nílò fún ìrìnnà. Mi ò tíì fi àtúnkún òògùn sílẹ̀, mi ò sì lè béèrè, yí padà, tàbí fi àṣẹ òògùn sílẹ̀ nínú àpẹẹrẹ yìí.",
+        transportation: "Mo lè ràn ọ́ lọ́wọ́ láti ronú nípa rírí ìtọ́jú àti àṣàyàn ìrìnnà. Mi ò tíì pín ibi tí o wà, kàn sí ẹnikẹ́ni, ṣètò ìpàdé, tàbí ṣètò ọkọ̀.",
+        default: "Mo lè ṣèrànwọ́ láti fi ọ̀nà rírí ìtọ́jú ìlera hàn. Àpẹẹrẹ yìí ń pèsè ìgbésẹ̀ tó kàn tó ní ààbò fún wíwò nìkan, kò sì ní kàn sí dókítà, pín ìsọfúnni, ṣètò ìtọ́jú, béèrè ibi, tàbí parí iṣẹ́ ìlera."
+      }
+    },
+    ig: {
+      label: "Igbo",
+      speechLang: "ig-NG",
+      changeResponse: "Agbanweela asụsụ ka ọ bụrụ Igbo. Kedu ka m ga-esi nyere gị aka?",
+      intro: "Ụtụtụ ọma. Abụ m Nexus, onye inyeaka gị na-arụ ọrụ site n'olu. Adị m njikere inyere gị aka na ọgwụgwọ site na ekwentị, enyemaka ụlọ ahịa ọgwụ, ụlọ ọgwụ na-agagharị, njem gaa ọgwụgwọ, ihe enyemaka ọrụ, na ọrụ ugbo. Kedu ka m ga-esi nyere gị aka taa?",
+      health: {
+        emergency: "Ọ bụrụ na nke a nwere ike ịbụ ihe mberede, kpọọ ndị ọrụ mberede obodo gị ugbu a. Enweghị m ike iziga enyemaka mberede n'ihe ngosi a.",
+        execution: "Maka nchekwa, enweghị m ike imecha ọrụ ahụike ahụ n'onwe m. Enwere m ike inyere gị aka ilele ihe a chọrọ tupu e kesaa, hazie, zipu, nyefee, ma ọ bụ kpọtụrụ onye ọ bụla.",
+        telehealth: "Nexus nwere ike inye aka na ọgwụgwọ site na ekwentị. Enwere m ike iduzi gị n'ozi a na-achọkarị maka nleta dọkịta ma kwadebe nzọụkwụ na-esote dị nchebe. Ahazibeghị m oge nleta ma ọ bụ kpọtụrụ dọkịta.",
+        mobileClinic: "Enwere m ike inyere gị aka ilele nhọrọ ụlọ ọgwụ na-agagharị na ahụike ime obodo. N'ihe ngosi a, enwere m ike ịkwadebe nzọụkwụ ndị na-esote, mana agaghị m ajụ ebe ị nọ, kpọtụrụ ụlọ ọgwụ, ma ọ bụ ziga ọrụ.",
+        pharmacy: "Enwere m ike inyere gị aka ilele nzọụkwụ ụlọ ahịa ọgwụ, ajụjụ gbasara ịgbakwunye ọgwụ, ma ọ bụ mkpa njem. Enyefebeghị m arịrịọ ịgbakwunye ọgwụ, enweghịkwa m ike ịrịọ, ịgbanwe, ma ọ bụ inyefe iwu ọgwụ n'ihe ngosi a.",
+        transportation: "Enwere m ike inyere gị aka iche echiche gbasara inweta nlekọta na nhọrọ njem. Ekesabeghị m ebe ị nọ, kpọtụrụ onye ọ bụla, hazie oge nleta, ma ọ bụ hazie ụgbọ.",
+        default: "Enwere m ike inye aka n'igosi ụzọ inweta ahụike. Ihe ngosi a na-akwadebe nzọụkwụ ndị na-esote dị nchebe maka ilele naanị, ọ naghịkwa akpọtụrụ ndị dọkịta, kesaa ozi, hazie nlekọta, jụọ ebe, ma ọ bụ mezue ọrụ ahụike."
+      }
     }
   };
 

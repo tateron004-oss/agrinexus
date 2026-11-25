@@ -89,9 +89,9 @@ providerRequirements.forEach(requirement => {
   assert(Array.isArray(requirement.credentialRequirements), `${requirement.providerType} lists credential names only`);
 });
 
-assert(index.includes("nexus-os-agrinexus-deployment-profile.js?v=nexus-os-agrinexus-deployment-1"), "AgriNexus deployment profile loads before app runtime");
+assert(index.includes("nexus-os-agrinexus-deployment-profile.js?v=nexus-os-agrinexus-deployment-2"), "AgriNexus deployment profile loads before app runtime");
 assert(index.indexOf("nexus-os-agrinexus-deployment-profile.js") < index.indexOf("/app.js?v="), "deployment profile loads before app.js");
-assert(sw.includes("nexus-os-agrinexus-deployment-profile.js?v=nexus-os-agrinexus-deployment-1"), "service worker caches deployment profile module");
+assert(sw.includes("nexus-os-agrinexus-deployment-profile.js?v=nexus-os-agrinexus-deployment-2"), "service worker caches deployment profile module");
 assert(app.includes("getNexusOsActiveDeploymentProfile"), "app reads active deployment profile");
 assert(app.includes("renderNexusOsDeploymentProfileSummary"), "app renders deployment profile summary");
 assert(app.includes("data-nexus-os-deployment-profile="), "shell exposes stable deployment profile marker");

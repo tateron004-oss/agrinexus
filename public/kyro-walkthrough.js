@@ -27,9 +27,13 @@
       last: "Hiyo ilikuwa hatua ya mwisho. Unawasilisha mwenyewe: sikuombei kamwe. Sema anza upya kuipitia tena.", sayNext: "Sema inayofuata ukimaliza hili.", lastStep: "Hii ni hatua ya mwisho. Unafanya mwenyewe; sikuombei kamwe.",
       resumed: n => `Karibu tena. Ulikuwa kwenye hatua ya ${n}.`, started: "Ninakuongoza tu: unafanya kila hatua mwenyewe, na sikuombei kamwe.", checked: date => `Imekaguliwa ${date}`, finished: "Hatua zote zimeonyeshwa", note: "Unafanya kila hatua mwenyewe. Sikuombei kamwe.",
       pages: "Ukurasa rasmi wa hatua hii", sources: "Vyanzo"
-    }
+    },
+    ha: { step: (n, total) => `Mataki ${n} cikin ${total}`, you: "Za ka buƙaci:", done: "Ka gama wannan mataki idan:", words: "Kalmomin da za ka gani:", open: "Buɗe", next: "Mataki na gaba", back: "Koma baya", repeat: "Sake faɗa", close: "Rufe", last: "Wannan shi ne mataki na ƙarshe. Kai da kanka za ka aika: ba na taɓa nema maka ba. Ka ce sake farawa don sake bi ta ciki.", sayNext: "Ka ce na gaba idan ka yi wannan.", lastStep: "Wannan shi ne mataki na ƙarshe. Kai da kanka za ka yi shi; ba na taɓa nema maka ba.", resumed: n => `Barka da dawowa. Kana kan mataki na ${n}.`, started: "Ni jagora ne kawai: kai da kanka za ka yi kowane mataki, kuma ba na taɓa nema maka ba.", checked: date => `An duba ${date}`, finished: "An nuna duk matakai", note: "Kai da kanka za ka yi kowane mataki. Ba na taɓa nema maka ba.", pages: "Shafin hukuma na wannan mataki", sources: "Majiyoyi" },
+    am: { step: (n, total) => `ደረጃ ${n} ከ${total}`, you: "የሚያስፈልግዎ፦", done: "ይህን ደረጃ የጨረሱት፦", words: "የሚያጋጥሙዎት ቃላት፦", open: "ክፈት", next: "ቀጣይ ደረጃ", back: "ተመለስ", repeat: "እንደገና ተናገር", close: "ዝጋ", last: "ይህ የመጨረሻው ደረጃ ነበር። እርስዎ ራስዎ ያስገቡታል፦ እኔ በጭራሽ ለእርስዎ አላመለክትም። እንደገና ለማለፍ እንደገና ጀምር ይበሉ።", sayNext: "ይህን ሲጨርሱ ቀጣይ ይበሉ።", lastStep: "ይህ የመጨረሻው ደረጃ ነው። እርስዎ ራስዎ ያደርጉታል፤ እኔ በጭራሽ ለእርስዎ አላመለክትም።", resumed: n => `እንኳን ደህና መጡ። ደረጃ ${n} ላይ ነበሩ።`, started: "እኔ የምመራዎት ብቻ ነው፦ እያንዳንዱን ደረጃ እርስዎ ራስዎ ያደርጋሉ፣ እኔም በጭራሽ ለእርስዎ አላመለክትም።", checked: date => `${date} ላይ ተረጋግጧል`, finished: "ሁሉም ደረጃዎች ታይተዋል", note: "እያንዳንዱን ደረጃ እርስዎ ራስዎ ያደርጋሉ። እኔ በጭራሽ ለእርስዎ አላመለክትም።", pages: "ለዚህ ደረጃ ኦፊሴላዊ ገጽ", sources: "ምንጮች" },
+    yo: { step: (n, total) => `Ìgbésẹ̀ ${n} nínú ${total}`, you: "Ohun tí o máa nílò:", done: "O ti parí ìgbésẹ̀ yìí nígbà tí:", words: "Àwọn ọ̀rọ̀ tí o máa rí:", open: "Ṣí", next: "Ìgbésẹ̀ tó kàn", back: "Padà", repeat: "Tún un sọ", close: "Pa á dé", last: "Ìyẹn ni ìgbésẹ̀ tó kẹ́yìn. Ìwọ fúnra rẹ ni yóò fi í ránṣẹ́: mi kì í ṣe ìbéèrè fún ọ. Sọ tún bẹ̀rẹ̀ láti tún lọ nípasẹ̀ rẹ̀.", sayNext: "Sọ èyí tó kàn nígbà tí o bá ti ṣe èyí.", lastStep: "Èyí ni ìgbésẹ̀ tó kẹ́yìn. Ìwọ fúnra rẹ ni yóò ṣe é; mi kì í ṣe ìbéèrè fún ọ.", resumed: n => `Ẹ kú àbọ̀. O wà ní ìgbésẹ̀ ${n}.`, started: "Mo kàn ń tọ́ ọ sọ́nà ni: ìwọ fúnra rẹ ni yóò ṣe ìgbésẹ̀ kọ̀ọ̀kan, mi kì í sì ṣe ìbéèrè fún ọ.", checked: date => `A ṣàyẹ̀wò rẹ̀ ní ${date}`, finished: "Gbogbo ìgbésẹ̀ ti hàn", note: "Ìwọ fúnra rẹ ni yóò ṣe ìgbésẹ̀ kọ̀ọ̀kan. Mi kì í ṣe ìbéèrè fún ọ.", pages: "Ojú-ìwé ìjọba fún ìgbésẹ̀ yìí", sources: "Àwọn orísun" },
+    ig: { step: (n, total) => `Nzọụkwụ ${n} n'ime ${total}`, you: "Ihe ị ga-achọ:", done: "Ị mechaala nzọụkwụ a mgbe:", words: "Okwu ị ga-ahụ:", open: "Mepee", next: "Nzọụkwụ ọzọ", back: "Laghachi", repeat: "Kwughachi ya", close: "Mechie", last: "Nke ahụ bụ nzọụkwụ ikpeazụ. Ọ bụ gị onwe gị ga-ezipu ya: anaghị m etinye arịrịọ maka gị. Kwuo malite ọzọ ka i jiri ya gaa ọzọ.", sayNext: "Kwuo nke ọzọ mgbe i mechara nke a.", lastStep: "Nke a bụ nzọụkwụ ikpeazụ. Ọ bụ gị onwe gị ga-eme ya; anaghị m etinye arịrịọ maka gị.", resumed: n => `Nnọọ ọzọ. Ị nọ na nzọụkwụ ${n}.`, started: "Ana m eduzi gị naanị: ọ bụ gị onwe gị ga-eme nzọụkwụ ọ bụla, anaghịkwa m etinye arịrịọ maka gị.", checked: date => `Elelere ya na ${date}`, finished: "Egosila nzọụkwụ niile", note: "Ọ bụ gị onwe gị ga-eme nzọụkwụ ọ bụla. Anaghị m etinye arịrịọ maka gị.", pages: "Ibe gọọmentị maka nzọụkwụ a", sources: "Isi mmalite" }
   };
-  const t = lang => TEXT[lang === "sw" ? "sw" : "en"];
+  const t = lang => TEXT[TEXT[lang] ? lang : "en"];
 
   const clean = value => String(value == null ? "" : value).replace(/\s+/g, " ").trim();
 
@@ -42,6 +46,13 @@
     ["restart", /^(?:start over|begin again|go to the (?:first|beginning)|restart|anza upya)$/],
     ["where", /^(?:where am i|what step am i on|which step is this)$/]
   ];
+  // The same controls in Hausa, Amharic, Yoruba and Igbo: the words the walkthrough's own lines tell people to say, with common other ways and spellings without tone marks (25 Nov 2026, machine-drafted first version).
+  CONTROLS.push(
+    ["next", /^(?:mataki na gaba|ìgbésẹ̀ tó kàn|igbese to kan|nke na-esote|nzọụkwụ ọzọ|nzoukwu ozo|mu ci gaba|èyí tó kàn|eyi to kan|tẹ̀síwájú|gaa n'ihu|gaa n ihu|tesiwaju|ga n'ihu|gaa nihu|na gaba|ci gaba|ቀጣይ ደረጃ|bá a lọ|ba a lo|nke ọzọ|nke ozo|ga nihu|cigaba|tó kàn|to kan|máa lọ|maa lo|እንቀጥል|gaba|ቀጣይ|ቀጣዩ|ቀጥል|ቀጥሉ)$/u],
+    ["back", /^(?:laghachi azụ|laghachi azu|padà sẹ́yìn|pada seyin|koma baya|laghachi|sẹ́yìn|ወደ ኋላ|seyin|baya|koma|ተመለስ|padà|pada|azụ|azu|ኋላ)$/u],
+    ["repeat", /^(?:sọ lẹ́ẹ̀kan sí i|so leekan si i|sake fada min|kwughachi ya|እንደገና ተናገር|sake faɗa|sake fada|tún un sọ|tun un so|kwughachi|maimaita|kwuo ọzọ|kwuo ozo|tún sọ|tun so|እንደገና|ድገም)$/u],
+    ["restart", /^(?:bẹ̀rẹ̀ láti ìbẹ̀rẹ̀|malite site na mbụ|malite site na mbu|fara daga farko|bere lati ibere|tún un bẹ̀rẹ̀|sake farawa|እንደገና እንጀምር|tun un bere|ከመጀመሪያ ጀምር|tún bẹ̀rẹ̀|malite ọzọ|malite ozo|sake fara|እንደገና ጀምር|tun bere|bido ọzọ|bido ozo)$/u]
+  );
   function parseControl(text) {
     const said = clean(text).toLowerCase().replace(/[.!?,]+$/g, "");
     if (!said || said.length > 40) return null;

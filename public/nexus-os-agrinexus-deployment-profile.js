@@ -71,7 +71,7 @@
     enabledProviderTypes: Object.freeze(PROVIDER_REQUIREMENTS.map(item => item.providerType)),
     requiredPolicies: Object.freeze(POLICIES.map(item => item.id)),
     supportedRoles: Object.freeze(["standard_user", "provider", "admin", "field_agent", "partner_reviewer"]),
-    supportedLanguages: Object.freeze(["en", "es", "fr", "ar", "pt", "sw"]),
+    supportedLanguages: Object.freeze(["en", "es", "fr", "ar", "pt", "sw", "ha", "am", "yo", "ig"]),
     featureFlags: Object.freeze({
       standardUserCalmShell: true,
       contextualWorkflowRenderer: true,
@@ -104,7 +104,7 @@
       providerRequirements: Object.freeze([]),
       memoryPermissions: Object.freeze(["session", "mission", "approved_profile", "domain_scoped"]),
       supportedRoles: Object.freeze(["standard_user", "provider", "admin", "partner_reviewer"]),
-      supportedLanguages: Object.freeze(["en", "es", "fr", "ar", "pt", "sw"]),
+      supportedLanguages: Object.freeze(["en", "es", "fr", "ar", "pt", "sw", "ha", "am", "yo", "ig"]),
       receiptTypes: Object.freeze(receiptTypes),
       escalationRules: Object.freeze(["blocked external execution requires confirmation/provider readiness"]),
       compatibilityVersion: "nexus-os-1.0-genesis"

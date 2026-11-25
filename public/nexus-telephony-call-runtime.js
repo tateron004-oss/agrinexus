@@ -15,7 +15,11 @@
     fr: { label: "French", dir: "ltr" },
     ar: { label: "Arabic", dir: "rtl" },
     pt: { label: "Portuguese", dir: "ltr" },
-    sw: { label: "Kiswahili", dir: "ltr" }
+    sw: { label: "Kiswahili", dir: "ltr" },
+    ha: { label: "Hausa", dir: "ltr" },
+    am: { label: "Amharic", dir: "ltr" },
+    yo: { label: "Yoruba", dir: "ltr" },
+    ig: { label: "Igbo", dir: "ltr" }
   });
 
   const TELEPHONY_ENV_REQUIREMENTS = Object.freeze({
@@ -232,7 +236,11 @@
       fr: "Bonjour. Ceci est un script d'appel prepare par Nexus.",
       ar: "\u0645\u0631\u062d\u0628\u0627. \u0647\u0630\u0627 \u0646\u0635 \u0645\u0643\u0627\u0644\u0645\u0629 \u0623\u0639\u062f\u0647 Nexus.",
       pt: "Ola. Este e um roteiro de chamada preparado pelo Nexus.",
-      sw: "Habari. Huu ni mwongozo wa simu uliotayarishwa na Nexus."
+      sw: "Habari. Huu ni mwongozo wa simu uliotayarishwa na Nexus.",
+      ha: "Sannu. Wannan rubutaccen kira ne da Nexus ya shirya.",
+      am: "ሰላም። ይህ Nexus ያዘጋጀው የጥሪ ጽሑፍ ነው።",
+      yo: "Ẹ n lẹ́. Èyí jẹ́ ọ̀rọ̀ ìpè tí Nexus ṣètò.",
+      ig: "Ndewo. Nke a bụ ederede oku Nexus kwadebere."
     }[language] || "Hello. This is a Nexus-prepared call script.";
   }
 

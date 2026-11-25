@@ -1243,10 +1243,13 @@ const COUNTRY_LANGUAGE = {
   drc: "fr"
 };
 // Voice language contract:
-// Full app profile languages are en, es, fr, sw, ar, and pt. Hausa, Amharic, Yoruba and Igbo (the other four Koach Learn course languages) are partial: Kyro listens and answers in them and
-// shows the courses in them, while the screen's words stay English (canonicalProfileLanguage gives "en" for them; the person's choice is kept as their language).
-const FULL_APP_LANGUAGE_CODES = new Set(["en", "es", "fr", "sw", "ar", "pt"]);
-const PARTIAL_LANGUAGE_CODES = new Set(["ha", "am", "yo", "ig"]);
+// Full app profile languages are en, es, fr, sw, ar, pt, and (from 25 Nov 2026, the other four Koach Learn course languages) ha, am, yo, ig: the screen, the voice and the courses all follow
+// the person's choice. Their screen words are a machine-drafted first version (owner, 25 Nov: "this is the first iteration"). No language is partial any more; the set stays so older callers keep working.
+// The phone line is the one exception: Twilio's speech has no Hausa, Amharic, Yoruba or Igbo, so PHONE_LANGUAGE_CODES keeps the phone on the first six.
+const FULL_APP_LANGUAGE_CODES = new Set(["en", "es", "fr", "sw", "ar", "pt", "ha", "am", "yo", "ig"]);
+const PARTIAL_LANGUAGE_CODES = new Set();
+const PHONE_LANGUAGE_CODES = new Set(["en", "es", "fr", "sw", "ar", "pt"]);
+const VOICE_LANGUAGE_NAMES = { en: "English", es: "Spanish", fr: "French", sw: "Kiswahili", ar: "Arabic", pt: "Portuguese", ha: "Hausa", am: "Amharic", yo: "Yoruba", ig: "Igbo" };
 const VOICE_LANGUAGE_LOCALES = {
   en: "en-US",
   es: "es-ES",
@@ -1270,6 +1273,12 @@ function canonicalLanguageCode(value, options = {}) {
 
 function canonicalProfileLanguage(value) {
   return canonicalLanguageCode(value);
+}
+
+// The phone line's language: one of the six Twilio can hear and speak, otherwise English (what canonicalProfileLanguage gave before Hausa, Amharic, Yoruba and Igbo became full languages).
+function canonicalPhoneLanguage(value) {
+  const code = canonicalProfileLanguage(value);
+  return PHONE_LANGUAGE_CODES.has(code) ? code : "en";
 }
 
 function canonicalVoiceLanguage(value) {
@@ -19655,8 +19664,8 @@ function twimlResponse(res, xml) {
 }
 
 function twilioLanguage(language) {
-  // (the phone line keeps to the six full languages: Twilio's speech has no Hausa, Amharic, Yoruba or Igbo locale, so those are answered in English on the phone)
-  return process.env.TWILIO_GATHER_LANGUAGE || voiceLocaleForLanguage(canonicalProfileLanguage(language));
+  // (the phone line keeps to six languages: Twilio's speech has no Hausa, Amharic, Yoruba or Igbo locale, so those are answered in English on the phone)
+  return process.env.TWILIO_GATHER_LANGUAGE || voiceLocaleForLanguage(canonicalPhoneLanguage(language));
 }
 
 function twilioSay(text, language) {
@@ -20821,11 +20830,22 @@ function genesisVoiceAcceptanceHarness(runtime = "elevenlabs") {
   };
 }
 
+// The language the person chose, said plainly by name: a bare code ("ha") with "reply in the user's language when reasonably supported; otherwise say support is limited" let the voice answer a Hausa
+// speaker in English or apologise instead (owner, 25 Nov 2026: "we need all the languages to work"). It is added even when OPENAI_REALTIME_INSTRUCTIONS replaces the rest.
+function openAiRealtimeLanguageInstruction(language = "en") {
+  const code = canonicalVoiceLanguage(language);
+  const name = VOICE_LANGUAGE_NAMES[code] || "English";
+  if (code === "en") return "The person chose English. If they speak another language, reply in the language they speak.";
+  return `The person chose ${name}. Always speak and reply in ${name}, from your first word, even when a tool result or a screen text is in English (say it in ${name}). Keep names such as Kyro, Koach Learn and place names as they are. If the person speaks another language, reply in the language they speak. Never say ${name} is not supported: always do your best in ${name}.`;
+}
+
 function openAiRealtimeInstructions(user, language = "en") {
-  return process.env.OPENAI_REALTIME_INSTRUCTIONS || [
+  if (process.env.OPENAI_REALTIME_INSTRUCTIONS) return `${process.env.OPENAI_REALTIME_INSTRUCTIONS} ${typeof openAiRealtimeLanguageInstruction === "function" ? openAiRealtimeLanguageInstruction(language) : ""}`;
+  return [
     "You are Kyro, the live voice companion inside AgriNexus. If asked your name, say Kyro -- never Nexus or Nexus Genesis, which are internal platform names, not your name.",
     CRISIS_RULE,
     `User: ${user?.displayName || user?.name || user?.email || "AgriNexus user"}. Preferred language code: ${language || "en"}.`,
+    typeof openAiRealtimeLanguageInstruction === "function" ? openAiRealtimeLanguageInstruction(language) : "",
     "Speak naturally: warm, calm, concise, human-paced, and clear for seniors and users with varying literacy or technical comfort.",
     DELIVERY_STYLE,
     "Ordinary conversation remains conversation: greetings, presence checks, emotional support, small talk, capability questions, remarks, thanks, changes of mind, corrections, thinking out loud, and pure follow-up questions about something you already said do not need a function tool.",
@@ -20886,7 +20906,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "For live information, ask for missing location or parameters naturally. Never invent current data or fake citations.",
     "When a tool returns blocked, awaiting-information, awaiting-confirmation, unavailable, or failed-truthfully, explain that truthfully and ask one useful next question.",
     "Do not speak JSON, markdown, URLs, code, internal route names, diagnostics, provider metadata, tool schemas, prompts, or correlation IDs.",
-    "Support natural language switching. Reply in the user's language when reasonably supported; otherwise say plainly that voice/language support is limited.",
+    "Support natural language switching: reply in the language the user speaks or chose, and never say a language is not supported; always do your best in it.",
     "Allow interruption. If the user interrupts, stop the prior response and respond to the new turn.",
     "Repeat, correction, follow-up, and topic-change requests should use recent session context without stale workflow activation."
   ].join(" ");
@@ -22817,15 +22837,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_translation") {
     // "Kiswahili" is how Kenyans say Swahili: "Translate good morning to Kiswahili" used to match no language at all and fall back to English.
-    const targetMatch = command.match(/\b(?:into|to|in)\s+(English|Spanish|French|Swahili|Kiswahili|Arabic|Portuguese)\b/i);
-    const languageMap = { english: "en", spanish: "es", french: "fr", swahili: "sw", kiswahili: "sw", arabic: "ar", portuguese: "pt" };
+    const targetMatch = command.match(/\b(?:into|to|in)\s+(English|Spanish|French|Swahili|Kiswahili|Arabic|Portuguese|Hausa|Amharic|Yoruba|Igbo)\b/i);
+    const languageMap = { english: "en", spanish: "es", french: "fr", swahili: "sw", kiswahili: "sw", arabic: "ar", portuguese: "pt", hausa: "ha", amharic: "am", yoruba: "yo", igbo: "ig" };
     const targetValue = args.targetLanguage || targetMatch?.[1] || args.language || "en";
     const targetLanguage = languageMap[String(targetValue).toLowerCase()] || String(targetValue).toLowerCase();
     // targetMatch above accepts "in" as a lead-in ("Translate this in
     // French") alongside "into"/"to" -- this cleanup must strip the same
     // trailing lead-in set, or the "in French" fragment leaks into the text
     // that actually gets sent to the translator.
-    const sourceText = sanitizePilotText(args.text || command.replace(/^\s*translate\s*:?\s*/i, "").replace(/\s+\b(?:into|to|in)\s+(?:English|Spanish|French|Swahili|Kiswahili|Arabic|Portuguese)\s*[.!?]*$/i, ""), 1200);
+    const sourceText = sanitizePilotText(args.text || command.replace(/^\s*translate\s*:?\s*/i, "").replace(/\s+\b(?:into|to|in)\s+(?:English|Spanish|French|Swahili|Kiswahili|Arabic|Portuguese|Hausa|Amharic|Yoruba|Igbo)\s*[.!?]*$/i, ""), 1200);
     const translation = await translateDynamicContent(db, user, { text: sourceText, targetLanguage, sourceLanguage: args.sourceLanguage || "en", context: "openai-native-translation" });
     return {
       ...common,
@@ -26457,6 +26477,34 @@ function companionLocalizedWorkflowOfferResponse(offer = {}, targetLanguage = ""
       crop: offer.deferredWorkflowName === "trade.crop-sale"
         ? "Posso ajudar com essa venda. Quanto milho voce tem e onde ele esta? Depois posso ajudar com comprador, preco, rota, entrega e comprovante de entrega."
         : "Sinto muito por esse problema na plantacao. Qual cultura voce esta cultivando e quais sinais voce ve: folhas amarelas, pragas, solo seco, manchas ou murcha?"
+    },
+    ha: {
+      medicine: "Na ji ka: kana buƙatar magani. Zan iya taimaka maka ka ɗauki mataki na gaba mai lafiya, amma ba zan iya rubuta magani ba. Don kai ne, don yaro, ko don wani?",
+      work: "Zan iya taimaka maka da damar aiki. Mu fara da tambaya ɗaya. Wane irin aiki kake nema: gona, lafiya, jigilar kaya, ofis, ko horo tukuna?",
+      crop: offer.deferredWorkflowName === "trade.crop-sale"
+        ? "Zan iya taimaka maka da wannan sayarwa. Masara nawa kake da ita kuma ina take? Bayan haka zan iya taimakawa da mai saye, farashi, hanya, kai kaya da shaidar kai kaya."
+        : "Na yi baƙin ciki da kake fama da wannan matsalar amfanin gona. Wane amfanin gona kake shukawa kuma wace alama kake gani: ganye masu rawaya, ƙwari, busasshiyar ƙasa, tabo ko yaushi?"
+    },
+    am: {
+      medicine: "ሰምቼሃለሁ፤ መድኃኒት ያስፈልግሃል። ቀጣዩን ደህንነቱ የተጠበቀ እርምጃ እንድትወስድ ልረዳህ እችላለሁ፣ ግን መድኃኒት ማዘዝ አልችልም። ለአንተ ነው፣ ለልጅ ነው ወይስ ለሌላ ሰው?",
+      work: "በሥራ እድሎች ልረዳህ እችላለሁ። በአንድ ጥያቄ እንጀምር። ምን ዓይነት ሥራ ትፈልጋለህ፦ የእርሻ፣ የጤና፣ የጭነት ማጓጓዝ፣ የቢሮ ወይስ መጀመሪያ ስልጠና?",
+      crop: offer.deferredWorkflowName === "trade.crop-sale"
+        ? "በዚያ ሽያጭ ልረዳህ እችላለሁ። ምን ያህል በቆሎ አለህ፣ የት ነው ያለው? ከዚያ በገዢ፣ በዋጋ፣ በመንገድ፣ በማድረስ እና በማድረሻ ማስረጃ ልረዳህ እችላለሁ።"
+        : "በሰብልህ ላይ ያጋጠመህ ችግር ያሳዝናል። ምን ሰብል ነው የምትዘራው፣ ምን ምልክቶችስ ታያለህ፦ ቢጫ ቅጠሎች፣ ተባዮች፣ ደረቅ አፈር፣ ነጠብጣቦች ወይስ መጠውለግ?"
+    },
+    yo: {
+      medicine: "Mo gbọ́ ọ: o nílò oògùn. Mo lè ràn ọ́ lọ́wọ́ láti gbé ìgbésẹ̀ tó kàn tó ní ààbò, ṣùgbọ́n mi ò lè kọ oògùn fún ọ. Ṣé fún ìwọ ni, fún ọmọdé, tàbí fún ẹlòmíì?",
+      work: "Mo lè ràn ọ́ lọ́wọ́ pẹ̀lú àǹfààní iṣẹ́. Jẹ́ ká bẹ̀rẹ̀ pẹ̀lú ìbéèrè kan. Irú iṣẹ́ wo lò ń wá: oko, ìlera, gbígbé ẹrù, ọ́fíìsì, tàbí ìdálẹ́kọ̀ọ́ lákọ̀ọ́kọ́?",
+      crop: offer.deferredWorkflowName === "trade.crop-sale"
+        ? "Mo lè ràn ọ́ lọ́wọ́ pẹ̀lú títà yẹn. Àgbàdo mélòó ni o ní, ibo ló sì wà? Lẹ́yìn náà mo lè ràn ọ́ lọ́wọ́ pẹ̀lú olùrà, iye owó, ọ̀nà, fífi ránṣẹ́ àti ẹ̀rí pé ó ti dé."
+        : "Ó dùn mí pé o ń kojú ìṣòro yẹn pẹ̀lú irúgbìn rẹ. Irúgbìn wo lò ń gbìn, àmì wo lo sì ń rí: ewé aláwọ̀ ofeefee, kòkòrò, ilẹ̀ gbígbẹ, àbàwọ́n tàbí ewé tó ń rọ?"
+    },
+    ig: {
+      medicine: "Anụrụ m gị: ị chọrọ ọgwụ. Enwere m ike inyere gị aka ime nzọụkwụ ọzọ dị nchebe, mana enweghị m ike ide ọgwụ. Ọ bụ maka gị, maka nwata, ka ọ bụ maka onye ọzọ?",
+      work: "Enwere m ike inyere gị aka n'ohere ọrụ. Ka anyị jiri otu ajụjụ bido. Kedu ụdị ọrụ ị na-achọ: ọrụ ugbo, ahụike, ibuga ngwongwo, ọfịs, ka ọzụzụ mbụ?",
+      crop: offer.deferredWorkflowName === "trade.crop-sale"
+        ? "Enwere m ike inyere gị aka n'ire ahịa ahụ. Ọka ole ka ị nwere, oleekwa ebe ọ dị? Mgbe ahụ enwere m ike inye aka na onye ga-azụ, ọnụahịa, ụzọ, nnyefe na ihe akaebe nnyefe."
+        : "Ọ dị m nwute na ị na-enwe nsogbu ahụ n'ihe ọkụkụ gị. Kedu ihe ọkụkụ ị na-akụ, kedụ kwa ihe ịrịba ama ị na-ahụ: akwụkwọ odo odo, ụmụ ahụhụ, ala kpọrọ nkụ, ntụpọ ma ọ bụ ịkpọnwụ?"
     }
   };
   const response = responses[language]?.[domain] || offer.response;
@@ -27762,6 +27810,10 @@ function normalizeConversationLanguage(value = "") {
   if (["swahili", "kiswahili", "sw"].includes(language)) return "sw";
   if (["arabic", "arabe", "العربية", "عربي", "ar"].includes(language)) return "ar";
   if (["portuguese", "portugues", "português", "pt"].includes(language)) return "pt";
+  if (["hausa", "ha"].includes(language)) return "ha";
+  if (["amharic", "amarigna", "amarinya", "አማርኛ", "am"].includes(language)) return "am";
+  if (["yoruba", "yorùbá", "yo"].includes(language)) return "yo";
+  if (["igbo", "ìgbò", "ig"].includes(language)) return "ig";
   return ["ha", "yo", "ig", "am", "om", "rw", "ln"].includes(language) ? language : "en";
 }
 
@@ -28007,6 +28059,70 @@ function localGeneralConversationAnswer(db, user, command = "", options = {}) {
       patience: "Paciencia e continuar sem correr para o passo errado. Significa ficar firme, juntar boa informacao e agir com cuidado.",
       leadership: "Lideranca e ajudar pessoas a chegar a um resultado melhor. Bons lideres escutam primeiro, explicam com clareza e tornam o proximo passo mais facil.",
       default: "Sim. Posso conversar, explicar ideias, responder perguntas simples, encorajar e conectar a conversa ao AgriNexus quando voce quiser agir."
+    },
+    ha: {
+      how_are_you: `Ina nan tare da kai, ${name}. A shirye nake in saurara, in amsa, kuma in yi maka jagora mataki ɗaya bayan ɗaya. Me kake so mu yi magana a kai?`,
+      rural_farmers: "Taimaka wa manoman karkara yana da muhimmanci domin abinci, kuɗin shiga, lafiyar iyali da ayyukan gida sau da yawa suna farawa daga gona. Idan fasaha ta saurara cikin harshe mai sauƙi, za ta iya taimaka wa manoma su fahimci matsalolin amfanin gona, su sami masu saye, su kai kaya cikin aminci, kuma su yi zaɓi mafi kyau ba tare da sanin fasaha ba.",
+      talk_people: "Eh. Za mu iya magana kamar mutane biyu. Faɗa min abin da ke zuciyarka, zan amsa a sarari ko in taimaka a mayar da shi aikin AgriNexus idan hakan zai amfana.",
+      joke: "Zan iya sa abu ya yi sauƙi. Ga ɗaya: manomi ya tambayi taswira hanya, taswirar ta ce, da farko faɗa min wace hanya ce har yanzu take nan bayan ruwan sama. Yanzu faɗa min ko kana son wani, ko mu koma aiki.",
+      story: "Ga gajeren labari. Wata manomiya tana da ƙaramin buhun iri ɗaya da babban fili mai bushewa. Maimakon ta haƙura, ta shuka a hankali, ta adana ruwa, ta nemi shawarar maƙwabta, kuma tana duba gonar kowace safiya. Darasin mai sauƙi ne: mataki ɗaya mai dorewa zai iya zama girbi.",
+      encouragement: "Ba sai ka warware komai lokaci ɗaya ba. Ɗauki mataki ɗaya bayyananne, sannan na gaba. Zan iya zama tare da kai, in sauƙaƙa aikin, kuma in taimaka maka ka ci gaba.",
+      tired: "Na ji ka. Ja numfashi ka rage gudu. Idan damuwa ce ko gajiya, hutu, ruwa da ƙaramin mataki na gaba za su iya taimakawa. Idan ba ka jin lafiya ko kana cikin haɗari, tuntuɓi wanda ka amince da shi ko asibiti na kusa yanzu.",
+      mandela: "Nelson Mandela shugaba ne na Afirka ta Kudu wanda ya yaƙi wariyar launin fata, ya yi shekaru da yawa a kurkuku, daga baya ya zama shugaban ƙasar Afirka ta Kudu. Mutane da yawa suna tunawa da shi saboda jarumta, yafiya da shugabanci a lokacin tarihi mai wahala.",
+      teamwork: "Aiki tare yana nufin mutane suna aiki tare zuwa manufa ɗaya. Kyakkyawan aiki tare yana buƙatar amana, ayyuka bayyanannu, sauraro da cikawa. A AgriNexus, hakan na iya nufin manomi, asibiti, direba, mai saye da ma'aikacin taimako duka suna ganin mataki na gaba a sarari.",
+      education: "Ilimi yana da muhimmanci domin yana ba mutane ƙarin zaɓi. Yana iya taimaka wa manomi ya ƙara amfanin gona, ɗalibi ya sami aiki, mara lafiya ya fahimci umarnin kulawa, iyali kuma su yi zaɓi mafi aminci.",
+      platform_bridge: "Idan aka haɗa da AgriNexus, wannan yana nufin Nexus zai iya mayar da hira ta yau da kullum zuwa taimako: ya bayyana ra'ayin, ya yi tambaya ɗaya mai amfani, sannan ya buɗe hanyar da ta dace don lafiya, noma, koyo, aiki, kasuwanci ko taswira idan mutumin ya shirya.",
+      patience: "Haƙuri shi ne iya ci gaba ba tare da gaggawar ɗaukar mataki mara kyau ba. Ba yana nufin zama ba tare da yin komai ba; yana nufin dagewa yayin da kake tattara bayanai masu kyau kuma kana aiki da hikima.",
+      leadership: "Shugabanci yana nufin taimaka wa mutane su kai ga sakamako mafi kyau. Shugabanni nagari suna fara sauraro, suna bayyana a sarari, suna kare amana, kuma suna sauƙaƙa mataki na gaba ga kowa.",
+      default: "Eh. Zan iya yin hira ta gama-gari, in bayyana ra'ayoyi, in amsa tambayoyi masu sauƙi, in ƙarfafa ka, kuma in haɗa hirar da AgriNexus idan kana son a yi aiki. Me kake so mu yi magana a kai?"
+    },
+    am: {
+      how_are_you: `${name}፣ ከአንተ ጋር እዚህ ነኝ። ለማዳመጥ፣ ለመመለስ እና ደረጃ በደረጃ ለመምራት ዝግጁ ነኝ። ስለ ምን ማውራት ትፈልጋለህ?`,
+      rural_farmers: "የገጠር ገበሬዎችን መርዳት አስፈላጊ ነው፤ ምክንያቱም ምግብ፣ ገቢ፣ የቤተሰብ ጤና እና የአካባቢ ሥራ ብዙ ጊዜ ከእርሻ ይጀምራሉ። ቴክኖሎጂ በቀላል ቋንቋ ቢያዳምጥ፣ ገበሬዎች የሰብል ችግሮችን እንዲረዱ፣ ገዢዎችን እንዲያገኙ፣ ምርትን በደህና እንዲያጓጉዙ እና ቴክኒካዊ እውቀት ሳያስፈልጋቸው የተሻለ ምርጫ እንዲያደርጉ ሊረዳ ይችላል።",
+      talk_people: "አዎ። እንደ ሁለት ሰዎች መነጋገር እንችላለን። በአእምሮህ ያለውን ንገረኝ፤ በግልጽ እመልሳለሁ ወይም ጠቃሚ ከሆነ ወደ AgriNexus ተግባር እንዲቀየር እረዳለሁ።",
+      joke: "ቀለል አድርጌ መያዝ እችላለሁ። አንድ ቀልድ ይኸው፦ ገበሬው ካርታውን መንገድ ጠየቀው፣ ካርታውም፣ መጀመሪያ ከዝናቡ በኋላ የትኛው መንገድ አሁንም እንዳለ ንገረኝ አለው። አሁን ሌላ ትፈልጋለህ ወይስ ወደ ሥራ እንመለስ ንገረኝ።",
+      story: "አጭር ታሪክ ይኸው። አንዲት ገበሬ አንድ ትንሽ የዘር ከረጢትና ትልቅ ደረቅ ማሳ ነበራት። ተስፋ ከመቁረጥ ይልቅ በጥንቃቄ ዘራች፣ ውሃ ቆጠበች፣ ጎረቤቶቿን ምክር ጠየቀች፣ በየማለዳውም ማሳዋን ተመለከተች። ትምህርቱ ቀላል ነው፦ አንድ የጸና እርምጃ ምርት ሊሆን ይችላል።",
+      encouragement: "ሁሉንም በአንድ ጊዜ መፍታት የለብህም። አንድ ግልጽ እርምጃ ውሰድ፣ ከዚያ ቀጣዩን። ከአንተ ጋር መቆየት፣ ሥራውን ማቅለል እና ወደፊት እንድትሄድ መርዳት እችላለሁ።",
+      tired: "ሰምቼሃለሁ። ትንፋሽ ውሰድና ቀስ በል። ይህ ጭንቀት ወይም ድካም ከሆነ፣ ዕረፍት፣ ውሃ እና አንድ ትንሽ ቀጣይ እርምጃ ሊረዱ ይችላሉ። ደህንነት ካልተሰማህ ወይም በጣም ከታመምክ፣ አሁኑኑ የምታምነውን ሰው ወይም የአካባቢ ጤና ተቋም አግኝ።",
+      mandela: "ኔልሰን ማንዴላ አፓርታይድን የታገሉ፣ ብዙ ዓመታት በእስር ያሳለፉ እና በኋላ የደቡብ አፍሪካ ፕሬዚዳንት የሆኑ የደቡብ አፍሪካ መሪ ነበሩ። ብዙ ሰዎች በድፍረታቸው፣ በይቅርታቸው እና በአስቸጋሪ ታሪክ ውስጥ በመሪነታቸው ያስታውሷቸዋል።",
+      teamwork: "የቡድን ሥራ ማለት ሰዎች ወደ አንድ ግብ አብረው መሥራት ማለት ነው። ጥሩ የቡድን ሥራ መተማመን፣ ግልጽ ሚና፣ ማዳመጥ እና ቃልን መፈጸም ይፈልጋል። በ AgriNexus ላይ ይህ ማለት ገበሬ፣ ክሊኒክ፣ ሾፌር፣ ገዢ እና የድጋፍ ሠራተኛ ሁሉም ቀጣዩን እርምጃ በግልጽ ማየታቸው ሊሆን ይችላል።",
+      education: "ትምህርት አስፈላጊ ነው፤ ምክንያቱም ለሰዎች ተጨማሪ ምርጫ ይሰጣል። ገበሬ ምርቱን እንዲያሳድግ፣ ተማሪ ሥራ እንዲያገኝ፣ ታካሚ የሕክምና መመሪያን እንዲረዳ እና ቤተሰብ ደህንነቱ የተጠበቀ ውሳኔ እንዲያደርግ ሊረዳ ይችላል።",
+      platform_bridge: "ከ AgriNexus ጋር ሲገናኝ፣ ይህ ማለት Nexus የተለመደ ውይይትን ወደ እርዳታ መቀየር ይችላል፦ ሐሳቡን ያብራራል፣ አንድ ጠቃሚ ጥያቄ ይጠይቃል፣ ከዚያም ሰውየው ዝግጁ ሲሆን ለጤና፣ ለእርሻ፣ ለትምህርት፣ ለሥራ፣ ለንግድ ወይም ለካርታ ትክክለኛውን መንገድ ይከፍታል።",
+      patience: "ትዕግሥት የተሳሳተውን እርምጃ ሳትቸኩል መቀጠል መቻል ነው። ምንም አለማድረግ ማለት አይደለም፤ ትክክለኛውን መረጃ ስትሰበስብና በጥበብ ስትሠራ ጸንቶ መቆየት ማለት ነው።",
+      leadership: "መሪነት ሰዎች ወደ የተሻለ ውጤት እንዲሄዱ መርዳት ማለት ነው። ምርጥ መሪዎች መጀመሪያ ያዳምጣሉ፣ በግልጽ ያብራራሉ፣ መተማመንን ይጠብቃሉ፣ እና ቀጣዩን እርምጃ ለሁሉም ያቀላሉ።",
+      default: "አዎ። አጠቃላይ ውይይት ማድረግ፣ ሐሳቦችን ማብራራት፣ ቀላል ጥያቄዎችን መመለስ፣ ማበረታታት እና ተግባር ስትፈልግ ውይይቱን ከ AgriNexus ጋር ማገናኘት እችላለሁ። ስለ ምን ማውራት ትፈልጋለህ?"
+    },
+    yo: {
+      how_are_you: `Mo wà níbí pẹ̀lú rẹ, ${name}. Mo ti ṣetán láti gbọ́, láti dáhùn, àti láti tọ́ ọ sọ́nà ní ìgbésẹ̀ kan lẹ́ẹ̀kan. Kí ni o fẹ́ ká sọ̀rọ̀ nípa rẹ̀?`,
+      rural_farmers: "Ríran àwọn àgbẹ̀ ìgbèríko lọ́wọ́ ṣe pàtàkì nítorí oúnjẹ, owó ìwọlé, ìlera ẹbí, àti iṣẹ́ àdúgbò sábà máa ń bẹ̀rẹ̀ láti oko. Bí ẹ̀rọ bá ń gbọ́ ní èdè tó rọrùn, ó lè ran àwọn àgbẹ̀ lọ́wọ́ láti mọ ìṣòro irè oko, láti rí olùrà, láti gbé ọjà lọ láìléwu, àti láti ṣe ìpinnu tó dára láìní láti mọ ẹ̀rọ.",
+      talk_people: "Bẹ́ẹ̀ni. A lè sọ̀rọ̀ bí ènìyàn méjì. Sọ ohun tó wà lọ́kàn rẹ fún mi, màá dáhùn ní kedere tàbí ràn ọ́ lọ́wọ́ láti sọ ọ́ di iṣẹ́ AgriNexus bí ó bá wúlò.",
+      joke: "Mo lè jẹ́ kó rọrùn. Èyí ni ọ̀kan: àgbẹ̀ béèrè ọ̀nà lọ́wọ́ máàpù, máàpù sì sọ pé, kọ́kọ́ sọ fún mi ọ̀nà wo ló ṣì wà lẹ́yìn òjò. Báyìí sọ fún mi bí o bá fẹ́ òmíràn tàbí ká padà sí iṣẹ́.",
+      story: "Èyí ni ìtàn kúkúrú kan. Àgbẹ̀ obìnrin kan ní àpò irúgbìn kékeré kan àti oko ńlá tó gbẹ. Dípò kí ó jáwọ́, ó gbìn pẹ̀lú ìṣọ́ra, ó tọ́jú omi, ó béèrè ìmọ̀ràn lọ́wọ́ àwọn aládùúgbò, ó sì ń wo oko rẹ̀ ní àràárọ̀. Ẹ̀kọ́ náà rọrùn: ìgbésẹ̀ kan tó dúró ṣinṣin lè di ìkórè.",
+      encouragement: "O kò ní láti yanjú gbogbo nǹkan lẹ́ẹ̀kan náà. Gbé ìgbésẹ̀ kan tó ṣe kedere, lẹ́yìn náà èyí tó kàn. Mo lè dúró tì ọ́, mú iṣẹ́ náà rọrùn, kí n sì ràn ọ́ lọ́wọ́ láti tẹ̀síwájú.",
+      tired: "Mo gbọ́ ọ. Mí kanlẹ̀ kí o sì fà sẹ́yìn díẹ̀. Bí ó bá jẹ́ wàhálà tàbí àárẹ̀, ìsinmi, omi, àti ìgbésẹ̀ kékeré kan tó kàn lè ṣèrànwọ́. Bí o kò bá ní ààbò tàbí ara rẹ kò yá rárá, kàn sí ẹni tí o gbẹ́kẹ̀lé tàbí ilé ìwòsàn tó wà nítòsí báyìí.",
+      mandela: "Nelson Mandela jẹ́ olórí ní South Africa tó jà lòdì sí ẹlẹ́yàmẹ̀yà, tó lo ọ̀pọ̀lọpọ̀ ọdún ní ẹ̀wọ̀n, tó sì di ààrẹ South Africa lẹ́yìn náà. Ọ̀pọ̀ ènìyàn ń rántí rẹ̀ fún ìgboyà, ìdáríjì, àti aṣáájú nígbà ìtàn tó le.",
+      teamwork: "Iṣẹ́ àjùmọ̀ṣe túmọ̀ sí kí àwọn ènìyàn ṣiṣẹ́ papọ̀ sí ète kan. Iṣẹ́ àjùmọ̀ṣe tó dára nílò ìgbẹ́kẹ̀lé, ipa tó ṣe kedere, gbígbọ́, àti ṣíṣe ohun tí a sọ. Lórí AgriNexus, ìyẹn lè túmọ̀ sí pé àgbẹ̀, ilé ìwòsàn, awakọ̀, olùrà, àti òṣìṣẹ́ ìrànlọ́wọ́ ń rí ìgbésẹ̀ tó kàn ní kedere.",
+      education: "Ẹ̀kọ́ ṣe pàtàkì nítorí ó ń fún ènìyàn ní àṣàyàn púpọ̀ sí i. Ó lè ran àgbẹ̀ lọ́wọ́ láti mú irè pọ̀ sí i, akẹ́kọ̀ọ́ láti rí iṣẹ́, aláìsàn láti lóye ìtọ́ni ìtọ́jú, àti ẹbí láti ṣe ìpinnu tó ní ààbò.",
+      platform_bridge: "Nígbà tí ó bá so mọ́ AgriNexus, èyí túmọ̀ sí pé Nexus lè sọ ìjíròrò lásán di ìrànlọ́wọ́: ṣàlàyé èrò náà, béèrè ìbéèrè kan tó wúlò, lẹ́yìn náà ṣí ọ̀nà tó tọ́ fún ìlera, oko, ẹ̀kọ́, iṣẹ́, òwò, tàbí máàpù nígbà tí ẹni náà bá ṣetán.",
+      patience: "Sùúrù ni agbára láti máa tẹ̀síwájú láìkánjú gbé ìgbésẹ̀ tí kò tọ́. Kò túmọ̀ sí jíjókòó láìṣe nǹkan; ó túmọ̀ sí dídúró ṣinṣin nígbà tí o ń kó ìsọfúnni tó tọ́ jọ tí o sì ń ṣe pẹ̀lú ọgbọ́n.",
+      leadership: "Aṣáájú túmọ̀ sí ríran àwọn ènìyàn lọ́wọ́ láti dé àbájáde tó dára jù. Àwọn aṣáájú tó dára jù ń kọ́kọ́ gbọ́, wọ́n ń ṣàlàyé ní kedere, wọ́n ń dáàbò bo ìgbẹ́kẹ̀lé, wọ́n sì ń mú ìgbésẹ̀ tó kàn rọrùn fún gbogbo ènìyàn.",
+      default: "Bẹ́ẹ̀ni. Mo lè bá ọ sọ̀rọ̀ lásán, ṣàlàyé èrò, dáhùn ìbéèrè tó rọrùn, gbà ọ́ níyànjú, kí n sì so ìjíròrò náà mọ́ AgriNexus nígbà tí o bá fẹ́ ṣe nǹkan. Kí ni o fẹ́ ká sọ̀rọ̀ nípa rẹ̀?"
+    },
+    ig: {
+      how_are_you: `Anọ m ebe a gị, ${name}. Adị m njikere ịge ntị, ịza, na iduzi gị otu nzọụkwụ n'otu oge. Gịnị ka ị chọrọ ka anyị kwuo maka ya?`,
+      rural_farmers: "Inyere ndị ọrụ ugbo nọ n'ime obodo aka dị mkpa n'ihi na nri, ego, ahụike ezinụlọ, na ọrụ obodo na-amalitekarị site n'ugbo. Ọ bụrụ na teknụzụ na-ege ntị n'asụsụ dị mfe, ọ nwere ike inyere ndị ọrụ ugbo aka ịghọta nsogbu ihe ọkụkụ, ịchọta ndị na-azụ ahịa, ibuga ngwaahịa n'enweghị nsogbu, na ime nhọrọ ka mma n'achọghị ịma teknụzụ.",
+      talk_people: "Ee. Anyị nwere ike ikwu okwu dị ka mmadụ abụọ. Gwa m ihe dị gị n'obi, m ga-aza nke ọma ma ọ bụ nyere gị aka ime ya ọrụ AgriNexus ma ọ bụrụ na ọ ga-aba uru.",
+      joke: "Enwere m ike ime ka ọ dị mfe. Lee otu: onye ọrụ ugbo jụrụ map ụzọ, map wee sị, buru ụzọ gwa m ụzọ nke ka dị mgbe mmiri zochara. Ugbu a gwa m ma ị chọrọ ọzọ ma ọ bụ ka anyị laghachi n'ọrụ.",
+      story: "Lee akụkọ dị mkpụmkpụ. Otu nwanyị ọrụ ugbo nwere obere akpa mkpụrụ na nnukwu ala kpọrọ nkụ. Kama ịkwụsị, ọ kụrụ nke ọma, chekwaa mmiri, jụọ ndị agbata obi ndụmọdụ, ma lelee ugbo ya kwa ụtụtụ. Ihe mmụta dị mfe: otu nzọụkwụ kwụsiri ike nwere ike ịghọ owuwe ihe ubi.",
+      encouragement: "Ị chọghị idozi ihe niile n'otu oge. Were otu nzọụkwụ doro anya, mgbe ahụ nke ọzọ. Enwere m ike ịnọnyere gị, mee ka ọrụ dị mfe, ma nyere gị aka ịga n'ihu.",
+      tired: "Anụrụ m gị. Kuo ume ma jiri nwayọọ. Ọ bụrụ na ọ bụ nchekasị ma ọ bụ ike ọgwụgwụ, izu ike, mmiri, na obere nzọụkwụ na-esote nwere ike inye aka. Ọ bụrụ na ị naghị enwe nchebe ma ọ bụ ahụ adịghị gị nke ukwuu, kpọtụrụ onye ị tụkwasịrị obi ma ọ bụ ụlọ ọgwụ dị nso ugbu a.",
+      mandela: "Nelson Mandela bụ onye ndu South Africa lụrụ ọgụ megide apartheid, nọrọ ọtụtụ afọ n'ụlọ mkpọrọ, ma mesịa bụrụ onye isi ala South Africa. Ọtụtụ mmadụ na-echeta ya maka obi ike, mgbaghara, na idu ndú n'oge akụkọ ihe mere eme siri ike.",
+      teamwork: "Ọrụ otu pụtara ndị mmadụ na-arụkọ ọrụ ọnụ maka otu ebumnuche. Ọrụ otu dị mma chọrọ ntụkwasị obi, ọrụ doro anya, ige ntị, na imezu ihe e kwuru. Na AgriNexus, nke ahụ nwere ike ịpụta onye ọrụ ugbo, ụlọ ọgwụ, onye ọkwọ ụgbọ, onye na-azụ ahịa, na onye ọrụ nkwado niile na-ahụ nzọụkwụ na-esote nke ọma.",
+      education: "Agụmakwụkwọ dị mkpa n'ihi na ọ na-enye ndị mmadụ nhọrọ ndị ọzọ. Ọ nwere ike inyere onye ọrụ ugbo aka ịba ụba ihe ubi, nwa akwụkwọ ịchọta ọrụ, onye ọrịa ịghọta ntụziaka nlekọta, na ezinụlọ ime mkpebi ka nchebe.",
+      platform_bridge: "Mgbe ejikọrọ ya na AgriNexus, nke a pụtara na Nexus nwere ike ime mkparịta ụka nkịtị ka ọ bụrụ enyemaka: kọwaa echiche ahụ, jụọ otu ajụjụ bara uru, wee mepee ụzọ kwesịrị ekwesị maka ahụike, ọrụ ugbo, mmụta, ọrụ, ahịa, ma ọ bụ map mgbe onye ahụ dị njikere.",
+      patience: "Ndidi bụ ike ịga n'ihu n'emeghị ọsọ were nzọụkwụ na-ezighị ezi. Ọ pụtaghị ịnọ n'emeghị ihe ọ bụla; ọ pụtara ịkwụsi ike mgbe ị na-achịkọta ozi ziri ezi ma na-eme ihe n'amamihe.",
+      leadership: "Idu ndú pụtara inyere ndị mmadụ aka iru nsonaazụ ka mma. Ndị ndu kacha mma na-ebu ụzọ ege ntị, na-akọwa nke ọma, na-echekwa ntụkwasị obi, ma na-eme ka nzọụkwụ na-esote dị mfe maka onye ọ bụla.",
+      default: "Ee. Enwere m ike ikwu okwu nkịtị, kọwaa echiche, zaa ajụjụ ndị dị mfe, gbaa gị ume, ma jikọọ mkparịta ụka ahụ na AgriNexus mgbe ị chọrọ ime ihe. Gịnị ka ị chọrọ ka anyị kwuo maka ya?"
     }
   };
   const response = (localized[language] || localized.en)[kind] || (localized[language] || localized.en).default;
@@ -44561,7 +44677,11 @@ const NEXUS_LANGUAGE_REGISTRY = Object.freeze([
   { code: "sw", label: "Swahili", localSupport: "partial", productionTranslation: "requires_provider_or_review" },
   { code: "ar", label: "Arabic", localSupport: "partial", productionTranslation: "requires_provider_or_review" },
   { code: "pt", label: "Portuguese", localSupport: "partial", productionTranslation: "requires_provider_or_review" },
-  { code: "es", label: "Spanish", localSupport: "partial", productionTranslation: "requires_provider_or_review" }
+  { code: "es", label: "Spanish", localSupport: "partial", productionTranslation: "requires_provider_or_review" },
+  { code: "ha", label: "Hausa", localSupport: "partial", productionTranslation: "requires_provider_or_review" },
+  { code: "am", label: "Amharic", localSupport: "partial", productionTranslation: "requires_provider_or_review" },
+  { code: "yo", label: "Yoruba", localSupport: "partial", productionTranslation: "requires_provider_or_review" },
+  { code: "ig", label: "Igbo", localSupport: "partial", productionTranslation: "requires_provider_or_review" }
 ]);
 
 const NEXUS_LEGAL_SAFETY_PAGES = Object.freeze([
@@ -53931,7 +54051,7 @@ async function api(req, res, url) {
       const callerName = extractCallerName(command) || "friend";
       const autoChoice = phoneAutoLanguageChoice(command);
       if (autoChoice) {
-        const chosenLanguage = canonicalProfileLanguage(autoChoice.code);
+        const chosenLanguage = canonicalPhoneLanguage(autoChoice.code);
         updatePhoneVoiceSession(db, session, { callerName, language: chosenLanguage, locale: autoChoice.locale, step: "command" });
         phoneUser.language = chosenLanguage;
         await writeDb(db);
@@ -53954,12 +54074,12 @@ async function api(req, res, url) {
 </Response>`);
     }
     if (skippedNameWithCommand) {
-      const fallbackLanguage = canonicalProfileLanguage(session.language || phoneUser?.language || "en");
+      const fallbackLanguage = canonicalPhoneLanguage(session.language || phoneUser?.language || "en");
       updatePhoneVoiceSession(db, session, { callerName: session.callerName || "caller", step: "command", language: fallbackLanguage, locale: session.locale || twilioLanguage(fallbackLanguage) });
     }
     if (step === "language") {
-      const choice = phoneLanguageChoice(command) || { code: canonicalProfileLanguage(phoneUser?.language || "en"), locale: twilioLanguage(phoneUser?.language || "en"), label: voiceLanguageLabel(phoneUser?.language || "en") };
-      const chosenLanguage = canonicalProfileLanguage(choice.code);
+      const choice = phoneLanguageChoice(command) || { code: canonicalPhoneLanguage(phoneUser?.language || "en"), locale: twilioLanguage(phoneUser?.language || "en"), label: voiceLanguageLabel(phoneUser?.language || "en") };
+      const chosenLanguage = canonicalPhoneLanguage(choice.code);
       updatePhoneVoiceSession(db, session, { language: chosenLanguage, locale: choice.locale, step: "command" });
       phoneUser.language = chosenLanguage;
       await writeDb(db);

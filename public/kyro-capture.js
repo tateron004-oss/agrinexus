@@ -13,9 +13,13 @@
 
   const TEXT = {
     en: { hold: "Hold it up to the camera. I will take the picture in", go: "Taking the picture", close: "Close", noCamera: "I can't open the camera here. Choose a photo instead.", choose: "Choose a photo", looking: "Looking at it now.", seconds: n => `${n}` },
-    sw: { hold: "Ishike mbele ya kamera. Nitapiga picha baada ya", go: "Napiga picha", close: "Funga", noCamera: "Siwezi kufungua kamera hapa. Chagua picha badala yake.", choose: "Chagua picha", looking: "Naiangalia sasa.", seconds: n => `${n}` }
+    sw: { hold: "Ishike mbele ya kamera. Nitapiga picha baada ya", go: "Napiga picha", close: "Funga", noCamera: "Siwezi kufungua kamera hapa. Chagua picha badala yake.", choose: "Chagua picha", looking: "Naiangalia sasa.", seconds: n => `${n}` },
+    ha: { hold: "Ka riƙe shi a gaban kamara. Zan ɗauki hoton cikin", go: "Ana ɗaukar hoto", close: "Rufe", noCamera: "Ba zan iya buɗe kamara a nan ba. Zaɓi hoto maimakon haka.", choose: "Zaɓi hoto", looking: "Ina dubawa yanzu.", seconds: n => `${n}` },
+    am: { hold: "ወደ ካሜራው ያቅርቡት። ፎቶውን የማነሳው በ", go: "ፎቶ እየተነሳ ነው", close: "ዝጋ", noCamera: "እዚህ ካሜራውን መክፈት አልችልም። በምትኩ ፎቶ ይምረጡ።", choose: "ፎቶ ይምረጡ", looking: "አሁን እየተመለከትኩት ነው።", seconds: n => `${n}` },
+    yo: { hold: "Gbé e sókè níwájú kámẹ́rà. Màá ya àwòrán náà ní", go: "Mo ń ya àwòrán", close: "Pa á dé", noCamera: "Mi ò lè ṣí kámẹ́rà níbí. Yan àwòrán dípò rẹ̀.", choose: "Yan àwòrán", looking: "Mo ń wò ó báyìí.", seconds: n => `${n}` },
+    ig: { hold: "Jide ya n'ihu igwefoto. Aga m ese foto ahụ n'ime", go: "A na-ese foto", close: "Mechie", noCamera: "Enweghị m ike imepe igwefoto ebe a. Họrọ foto kama.", choose: "Họrọ foto", looking: "Ana m ele ya ugbu a.", seconds: n => `${n}` }
   };
-  const t = lang => TEXT[lang === "sw" ? "sw" : "en"];
+  const t = lang => TEXT[TEXT[lang] ? lang : "en"];
 
   const clean = value => String(value == null ? "" : value).replace(/[’]/g, "'").replace(/\s+/g, " ").trim();
   const WAKE = /^(?:(?:hey|hi|hello|ok(?:ay)?)[, ]+)?(?:(?:kyro|kiro|kairo|cairo|nexus)[, ]+)?(?:(?:please|can you|could you|kindly)[, ]+)*/i;
@@ -55,7 +59,7 @@
   function open(doc, nav, handlers = {}, options = {}) {
     if (!doc || !doc.body) return null;
     remove(doc);
-    const lang = options.lang === "sw" ? "sw" : "en";
+    const lang = (["sw", "ha", "am", "yo", "ig"].includes(options.lang) ? options.lang : "en");
     const seconds = Number.isFinite(options.seconds) ? options.seconds : 3;
     const wait = typeof options.wait === "function" ? options.wait : (fn, ms) => setTimeout(fn, ms);
     if (!doc.getElementById(STYLE_ID)) { const style = doc.createElement("style"); style.id = STYLE_ID; style.textContent = STYLE; (doc.head || doc.body).appendChild(style); }

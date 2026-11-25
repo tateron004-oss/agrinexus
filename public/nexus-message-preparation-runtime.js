@@ -15,7 +15,11 @@
     fr: { label: "French", locale: "fr-FR", dir: "ltr" },
     sw: { label: "Kiswahili", locale: "sw-KE", dir: "ltr" },
     ar: { label: "Arabic", locale: "ar", dir: "rtl" },
-    pt: { label: "Portuguese", locale: "pt-BR", dir: "ltr" }
+    pt: { label: "Portuguese", locale: "pt-BR", dir: "ltr" },
+    ha: { label: "Hausa", locale: "ha-NG", dir: "ltr" },
+    am: { label: "Amharic", locale: "am-ET", dir: "ltr" },
+    yo: { label: "Yoruba", locale: "yo-NG", dir: "ltr" },
+    ig: { label: "Igbo", locale: "ig-NG", dir: "ltr" }
   });
 
   const INPUT_TYPES = Object.freeze([
@@ -227,6 +231,34 @@
       missingRecipient: "Faltam detalhes do destinatario. Nexus pode manter isto como rascunho ou item de revisao.",
       missingProvider: "O envio real requer credenciais do provedor de comunicacao.",
       localizationFallback: "A localizacao completa da mensagem ainda nao esta disponivel para este idioma. Nexus usa rotulos traduzidos disponiveis e orientacao padrao."
+    },
+    ha: {
+      prepared: "An shirya a cikin waya - ba a aika ba.",
+      confirmation: "Ana buƙatar tabbatarwa kafin kowace sadarwa ta waje.",
+      missingRecipient: "Bayanan wanda za a aika masa sun ɓace. Nexus zai iya riƙe wannan a matsayin daftari ko abin dubawa.",
+      missingProvider: "Aika na gaske yana buƙatar bayanan shiga na mai bayar da sabis na sadarwa.",
+      localizationFallback: "Cikakkiyar fassarar saƙo ba ta samuwa ga wannan harshe tukuna. Nexus yana amfani da alamomin da aka fassara da shawarwarin asali."
+    },
+    am: {
+      prepared: "በመሣሪያው ላይ ተዘጋጅቷል - አልተላከም።",
+      confirmation: "ከማንኛውም የውጭ ግንኙነት በፊት ማረጋገጫ ያስፈልጋል።",
+      missingRecipient: "የተቀባዩ ዝርዝር መረጃ የለም። Nexus ይህን እንደ ረቂቅ ወይም ለግምገማ ሊያስቀምጠው ይችላል።",
+      missingProvider: "እውነተኛ መላክ የግንኙነት አገልግሎት አቅራቢ መለያ መረጃ ይፈልጋል።",
+      localizationFallback: "ለዚህ ቋንቋ ሙሉ የመልእክት ትርጉም ገና የለም። Nexus ያሉትን የተተረጎሙ ስያሜዎች እና መደበኛ ምክሮችን እየተጠቀመ ነው።"
+    },
+    yo: {
+      prepared: "A ti pèsè rẹ̀ lórí ẹ̀rọ - a kò tíì fi ránṣẹ́.",
+      confirmation: "A nílò ìfọwọ́sí kí ìbánisọ̀rọ̀ èyíkéyìí tó jáde lọ.",
+      missingRecipient: "Àlàyé ẹni tí yóò gbà á kò sí. Nexus lè tọ́jú èyí bí àkọsílẹ̀ àkọ́kọ́ tàbí ohun fún àyẹ̀wò.",
+      missingProvider: "Fífi ránṣẹ́ gidi nílò àwọn ìwé ìwọlé olùpèsè iṣẹ́ ìbánisọ̀rọ̀.",
+      localizationFallback: "Ìtumọ̀ ìfiránṣẹ́ kíkún kò tíì sí fún èdè yìí. Nexus ń lo àwọn àkọlé tí a ti túmọ̀ àti ìmọ̀ràn àkọ́kọ́."
+    },
+    ig: {
+      prepared: "Akwadebere ya na ngwaọrụ - ezigabeghị ya.",
+      confirmation: "Achọrọ nkwenye tupu nkwurịta okwu ọ bụla apụọ.",
+      missingRecipient: "Nkọwa onye a ga-ezigara efuola. Nexus nwere ike idebe nke a dị ka nhazi mbụ ma ọ bụ ihe a ga-enyocha.",
+      missingProvider: "Iziga n'ezie chọrọ nkọwa nbanye nke onye na-enye ọrụ nkwurịta okwu.",
+      localizationFallback: "Ntụgharị ozi zuru ezu adịbeghị maka asụsụ a. Nexus na-eji aha ndị a tụgharịrị na ndụmọdụ ndabara."
     }
   });
 
