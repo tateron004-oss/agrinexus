@@ -1241,16 +1241,21 @@ const COUNTRY_LANGUAGE = {
   drc: "fr"
 };
 // Voice language contract:
-// Full app profile languages are en, es, fr, sw, ar, and pt.
+// Full app profile languages are en, es, fr, sw, ar, and pt. Hausa, Amharic, Yoruba and Igbo (the other four Koach Learn course languages) are partial: Kyro listens and answers in them and
+// shows the courses in them, while the screen's words stay English (canonicalProfileLanguage gives "en" for them; the person's choice is kept as their language).
 const FULL_APP_LANGUAGE_CODES = new Set(["en", "es", "fr", "sw", "ar", "pt"]);
-const PARTIAL_LANGUAGE_CODES = new Set([]);
+const PARTIAL_LANGUAGE_CODES = new Set(["ha", "am", "yo", "ig"]);
 const VOICE_LANGUAGE_LOCALES = {
   en: "en-US",
   es: "es-ES",
   fr: "fr-FR",
   sw: "sw-KE",
   ar: "ar-EG",
-  pt: "pt-BR"
+  pt: "pt-BR",
+  ha: "ha-NG",
+  am: "am-ET",
+  yo: "yo-NG",
+  ig: "ig-NG"
 };
 
 function canonicalLanguageCode(value, options = {}) {
@@ -19648,7 +19653,8 @@ function twimlResponse(res, xml) {
 }
 
 function twilioLanguage(language) {
-  return process.env.TWILIO_GATHER_LANGUAGE || voiceLocaleForLanguage(language);
+  // (the phone line keeps to the six full languages: Twilio's speech has no Hausa, Amharic, Yoruba or Igbo locale, so those are answered in English on the phone)
+  return process.env.TWILIO_GATHER_LANGUAGE || voiceLocaleForLanguage(canonicalProfileLanguage(language));
 }
 
 function twilioSay(text, language) {
@@ -20907,7 +20913,8 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
         },
         transcription: {
           model: String(env.OPENAI_REALTIME_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe").trim() || "gpt-4o-mini-transcribe",
-          language: String(language || "en").slice(0, 12),
+          // (the speech-to-text has no Igbo: for Igbo the language is left out, so it finds it itself instead of being told one it does not know; JSON leaves an undefined value out)
+          language: /^ig(?:$|[-_])/i.test(String(language || "")) ? undefined : String(language || "en").slice(0, 12),
           // A short hint for the speech-to-text (it heard "Close it" as "Flows it", "Kisumu" as "Hisumu", "maize" as "maze"): the assistant's name, the towns and crops people name, and the short commands.
           prompt: "Kyro, AgriNexus. Close it. Close the screen. Show my notes, reminders, checklists. Kisumu, Nairobi, Nakuru, Mombasa, Lagos, Stockton, Sacramento. Maize, sorghum, cassava."
         },
@@ -56342,8 +56349,8 @@ async function api(req, res, url) {
   if (url.pathname === "/api/user/language" && req.method === "POST") {
     const body = await readBody(req);
     const requested = String(body.language || "").trim().toLowerCase().replace("_", "-").split("-")[0];
-    if (!FULL_APP_LANGUAGE_CODES.has(requested)) return send(res, 400, { error: "Unsupported language" });
-    const language = canonicalProfileLanguage(requested);
+    if (!FULL_APP_LANGUAGE_CODES.has(requested) && !PARTIAL_LANGUAGE_CODES.has(requested)) return send(res, 400, { error: "Unsupported language" });
+    const language = PARTIAL_LANGUAGE_CODES.has(requested) ? requested : canonicalProfileLanguage(requested);
     const current = db.users.find(item => item.id === user.id);
     current.language = language;
     db.profile.accessibilityProfile = {

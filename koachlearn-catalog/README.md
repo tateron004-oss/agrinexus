@@ -14,7 +14,8 @@ Arabic pages read right to left. Languages not uploaded yet show "Coming soon" a
 
 - `site/` — the page (`index.html`, `app.js`, `style.css`, `i18n.js` page words in 10 languages) and `site/data/` (one JSON file per language, built).
 - `build/build-data.js` — fetches https://www.dashboard.koachlearn.com/api/categories and writes `site/data/`.
-- `build/lang-map.json` — which uploaded course is in which language and which courses are translations of each other (made by `build/make-lang-map.js` from the upload bundles; rerun it if new courses are packed).
+- `build/lang-map.json` — which uploaded course is in which language and which courses are translations of each other. Made by `build/make-lang-map.js --plans <folder of review plans>` (keyed by the site's own course id, so a renamed course keeps its language), or from the upload bundles without `--plans`; rerun it after new courses are uploaded.
+- Kyro reads this catalogue's `site/data/` files to find courses in the person's language (`nexus/knowledge/koachlearn-courses.js` in the AgriNexus repository), so a fix here reaches Kyro within the hour.
 - `build/serve.js` — local preview on http://localhost:4318.
 - `.github/workflows/publish.yml` — refreshes the data every hour and publishes on GitHub Pages.
 

@@ -64,6 +64,8 @@ const { usWalkthrough, usWalkTopic } = require("../knowledge/us-walkthroughs.js"
 const { guideWalkthrough, walkthroughForText: guideWalkthroughForText } = require("../knowledge/guide-walkthroughs.js");
 const { offersFor, offerLine, checklistAsk } = require("../knowledge/offers.js");
 const { feedRequest, grantsAnswer, rulesAnswer } = require("../knowledge/live-feeds.js");
+const { courseRequest } = require("../../public/kyro-koachlearn-courses.js");
+const { findKoachLearnCourses, koachLearnAnswer } = require("../knowledge/koachlearn-courses.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 const { handoutRequest, handoutTemplate } = require("../knowledge/handout-templates.js");
 const { scheduleRequest, scheduleTemplate } = require("../knowledge/schedule-templates.js");
@@ -90,9 +92,9 @@ const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, maxRepairAttempts });
   }
 
   // A planned document whose body is only an instruction to write it (see echoesInstruction) is written out by one more model call; if that fails, the plan is kept as it was.
@@ -571,6 +573,16 @@ class OpenEndedPlanner {
     // "Walk me through using the shopping list", "teach me to use the farm log": a part of Kyro taught one step at a time (see knowledge/howto-walkthroughs.js). A part-of-Kyro word and a request to be taught are both required (public/kyro-howto-topics.js), so a guide's question
     // and the plain use of a feature ("show my notes") are never taken; without a walkthrough for the topic the request goes on as it did.
     { const howtoWalk = guideWalkthroughPlan(command, askText, "kyro-howto", howtoTopic(askText), "app-help", true); if (howtoWalk) return howtoWalk; }
+    // "Find me a course on farming", "Ina son kwas game da noma", "ስለ ግብርና ኮርስ እፈልጋለሁ", "Show me Hausa courses about small business": Koach Learn's real courses, in the language asked for (or the language of the words), from the
+    // catalogue learners browse (see knowledge/koachlearn-courses.js; the matcher, public/kyro-koachlearn-courses.js, is shared with the page, which takes such a spoken turn itself). Each course shown is a real course with its
+    // own page and its translations. The person's own learning ("continue my course", "my progress", a quiz, a certificate) is never taken. Asked before the guides, so "courses about starting a business" lists courses
+    // instead of answering how to start one. Not for the spoken-only caller, which leaves live lookups to its own route.
+    const courseAsk = this.koachLearn && context?.deterministicOnly !== true && !ownWorkspace ? courseRequest(askText) : null;
+    if (courseAsk) {
+      const found = await findKoachLearnCourses(this.koachLearn, courseAsk, { defaultLang: command.locale });
+      const answer = koachLearnAnswer(found);
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: answer.text, sourceRequired: false, knowledge: `koachlearn-courses:${found.kind}`, sources: answer.sources, responseLanguage: found.replyLang, planningAttempts: 0 });
+    }
     // A SIMULATED sample travel itinerary for anywhere ("Plan a 7 day trip to Kenya", "make me a sample itinerary for Paris for five days", "I am traveling to Nairobi from Atlanta, help me with my travel arrangements"), for a travel agent to show a client or for anyone
     // planning a trip (see trips/itinerary.js). Made as a document with a Download button, never only talked about: the days are written by the AI model and the document says they are an illustration (nothing booked, no prices or schedules, official sources to check).
     // A region instead of a place ("a trip to Africa") is asked about, not guessed. Typed route only: the spoken-only route leaves it to the page, which takes the request itself (public/kyro-trip-topics.js is shared with it).
