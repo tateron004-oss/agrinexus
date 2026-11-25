@@ -77,6 +77,8 @@
   const STOP = new Set(("course courses classes class trainings training program programs programme programmes koach learn koachlearn curso cursos cours formation formations kozi mafunzo kwas kwasa kwasa-kwasai kwasa-kwasan eko koosi nkuzi omumu ihe "
     + "find show list search look looking for recommend suggest what which any are is there do does you have offer got give get me i want need would like id i'd tell about help can could take study where please some the a an on in to of and or with that teach teaching my "
     + "kyro hey hello hi ok okay nexus available new good best free "
+    // (the voice model's own English requests for a Hausa, Amharic, Yoruba or Igbo speaker: "show available lessons or courses, ideally in Amharic", "include Yoruba options if available")
+    + "ideally include including options option suitable provide user wants if possible lessons "
     + "quiero busco muestrame muestra hay necesito puedes quisiera tienes dame los las el en del una unos sobre para que aprender de y o con por favor me algun alguno algunos "
     + "je cherche veux voudrais montre montrez moi des sur les quels quelles quel pour apprendre besoin trouve trouvez avez vous il y a une un du le la et ou s'il plait svp "
     + "quero procuro mostre mostra tem preciso voce gostaria encontre os as em ha sao uma um do da no na e ou por favor "

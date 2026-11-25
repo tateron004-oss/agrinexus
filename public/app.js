@@ -13549,8 +13549,10 @@ function languageFromVoiceCommand(command) {
     igbo: "ig",
     kiigbo: "ig"
   };
-  const match = lower.match(/\b(?:to|into|in|as|use|speak|talk|respond|reply|change|switch|set|translate|mudar|trocar|usar|falar|responder)\s+(english|eng|englsh|englisch|inglish|anglais|ingles|kiingereza|nigeria|nigerian|french|francais|frances|kifaransa|drc|congo|swahili|kiswahili|suajili|kenya|kenyan|arabic|arabe|kiarabu|egypt|egyptian|spanish|espanol|espanhol|kihispania|portuguese|portugues|portuguesa|brazil|brasil|brasileiro|hausa|haoussa|kihausa|amharic|amharique|kiamhari|yoruba|kiyoruba|igbo|kiigbo)\b/);
-  if (match?.[1]) return languages[match[1]] || "";
+  const match = lower.match(/\b(?:to|into|in|as|use|speak|talk|respond|reply|change|switch|set|translate|mudar|trocar|usar|falar|responder)\s+(english|eng|englsh|englisch|inglish|anglais|ingles|kiingereza|nigeria|nigerian|french|francais|frances|kifaransa|drc|congo|swahili|kiswahili|suajili|kenya|kenyan|arabic|arabe|kiarabu|egypt|egyptian|spanish|espanol|espanhol|kihispania|portuguese|portugues|portuguesa|brazil|brasil|brasileiro|hausa|haoussa|kihausa|amharic|amharique|kiamhari|yoruba|kiyoruba|igbo|kiigbo|ibo|ego|eebo)\b/);
+  // "Switch to Igbo" was written "Switch to ego" by the live speech-to-text (local voice run, 25 Nov 2026), and Igbo is also spelled Ibo: these count only right after "switch to", "speak" and the like,
+  // never anywhere in a sentence (the fallback below), so "my ego" or "Lego" is never a language.
+  if (match?.[1]) return languages[match[1]] || ({ ibo: "ig", ego: "ig", eebo: "ig" })[match[1]] || "";
   return Object.entries(languages).find(([name]) => lower.includes(name))?.[1] || "";
 }
 
@@ -52811,6 +52813,7 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
     try { kyroWatchForRefusal(eventType, payload); } catch { /* watching never breaks the session */ }
     try { kyroNoteReplyEvent(eventType); } catch { /* noting never breaks the session */ }
     try { kyroLiveTranscriptNote(eventType, payload); } catch { /* the strip never breaks the session */ }
+    try { if (typeof kyroPageVoiceEvent === "function") kyroPageVoiceEvent(eventType, payload); } catch { /* the page's own voice never breaks the session */ }
     if (realtimeVoiceSession) {
       realtimeVoiceSession.lastModelEvent = eventType || realtimeVoiceSession.lastModelEvent || "";
       if (/audio|response|conversation|session|input_audio/i.test(eventType)) {
@@ -52858,6 +52861,7 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
       const transcript = String(payload.acceptanceText || payload.transcript || payload.text || content.map(part => part.transcript || part.text || "").join(" ") || "").trim();
       const kyroUtteranceId = payload.item_id || payload.item?.id || payload.transcript_id || "";
       if (!routeKyroVoiceIntakeTranscript({ transcript, utteranceId: kyroUtteranceId, source: "realtime-transport" })) {
+      if (eventType === "conversation.item.input_audio_transcription.completed") { try { kyroAnswerFromTranscript(transcript, kyroUtteranceId); } catch { /* the model's own answer stands */ } }
       try { kyroRecoverRefusal(); } catch { /* recovery never breaks the session */ }
       const controllerResult = window.NexusBrowserActionController?.handleFinalUserTranscript({ transcript, transcriptId: payload.transcript_id || payload.item_id || payload.item?.id || "", sessionId: nexusRealtimeConversationIdentity || realtimeVoiceSession?.sessionId || "", role: payload.role || payload.item?.role || "user", isFinal: payload.is_final !== false }, genesisWorkspaceActionFromFinalTranscript);
       nexusGenesisVoiceDebugLog("browser-action-controller-transcript", { handled: controllerResult?.handled === true, duplicate: controllerResult?.duplicate === true, transcriptLength: transcript.length });
@@ -52865,6 +52869,11 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
       if (!controllerResult?.handled && transcript) void executeGenesisWorkspaceFromFinalTranscript(transcript);
       if (!controllerResult?.handled && !transcript && payload.acceptanceText) void executeGenesisWorkspaceFromFinalTranscript(payload.acceptanceText);
       }
+    }
+    // After Kyro was cut off to answer an Amharic transcript (kyroAnswerFromTranscript), the SDK sends no new "audio started" for the answers that follow (and a text-only
+    // session, where the page speaks, sends none at all), so they were never marked as under way, and the stall watchdog asked for the same answer again 6 seconds after the tool (heard twice: local voice run, 25 Nov 2026). They are marked here.
+    if (eventType === "response.created" && ((typeof kyroPageSpeaks === "function" && kyroPageSpeaks()) || (typeof kyroAnsweredFromTranscriptAt === "number" && Date.now() - kyroAnsweredFromTranscriptAt < 60000))) {
+      try { markRealtimeResponseStarted(payload, "response-created-after-transcript-answer"); } catch { /* the watchdog still has its own timers */ }
     }
     if (eventType === "response.done") {
       markRealtimeResponseCompleted("response-completed");
@@ -53167,6 +53176,13 @@ function kyroSpeakPageLine(text) {
   kyroLastPageLine = { text: line, at: Date.now() };
   try { kyroRecentPageLines = [...kyroRecentPageLines.filter(entry => Date.now() - entry.at < 180000), { lead: kyroLineLead(line), at: Date.now() }].slice(-8); } catch { /* noting the line is only for the refusal watcher */ }
   try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch { /* nothing to cut off */ }
+  // Amharic: the page says the line itself, word for word (see kyroPageSpeaks).
+  if (typeof kyroPageSpeaks === "function" && kyroPageSpeaks()) {
+    kyroPageVoiceStop();
+    kyroPageSay(line);
+    try { injectKyroRealtimeContext(`Kyro's screen just told the person: ${line.slice(0, 400)} Do not repeat it unless they ask.`); } catch { /* the note is only for the model's memory */ }
+    return true;
+  }
   // Out of band (conversation "none"): the line is spoken but is not a turn of the conversation the model then answers or repeats; the model is told afterwards, as a note, what the person was told.
   const sent = sendKyroRealtimeEvent({
     type: "response.create",
@@ -53276,6 +53292,8 @@ async function kyroAnswerLikeTyped(command) {
 function speakKyroIntakeLine(text, options = {}) {
   const safeText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 600);
   if (!safeText) return;
+  // Amharic: the page says the question itself (see kyroPageSpeaks).
+  if (realtimeVoiceActive() && typeof kyroPageSpeaks === "function" && kyroPageSpeaks()) { kyroPageVoiceStop(); kyroPageSay(safeText); return; }
   if (realtimeVoiceActive()) {
     const sent = sendKyroRealtimeEvent({
       type: "response.create",
@@ -54745,6 +54763,121 @@ function kyroDismissStaleWorkspace(command = "") {
 // The model may already have started to answer what was just said: it is cut off before the page answers.
 function kyroTakeOverTurn() {
   try { if (realtimeVoiceActive()) realtimeVoiceSession?.sdkController?.interrupt?.(); } catch { /* nothing to cut off */ }
+}
+// Amharic: the voice model's own hearing of spoken Amharic is poor. On the local voice run of 25 Nov 2026 it answered "I want to learn about farming" with a muddled Amharic
+// question and looked nothing up, while the speech-to-text (gpt-4o-transcribe with an Amharic hint, server.js) wrote the sentence almost exactly, and given the same words as
+// text the model answered well and asked for farming courses. So for Amharic the model's first answer is cut off as soon as the transcript is in, and it answers the
+// transcript. Hausa, Yoruba and Igbo are heard well enough by the model itself (same run) and are not cut off.
+const KYRO_ANSWER_FROM_TRANSCRIPT_LANGUAGES = Object.freeze({ am: "Amharic" });
+let kyroAnsweredFromTranscript = "";
+let kyroAnsweredFromTranscriptAt = 0;
+function kyroAnswerFromTranscript(transcript, utteranceId) {
+  const lang = typeof voiceLanguageCode === "function" ? voiceLanguageCode() : "en";
+  const name = KYRO_ANSWER_FROM_TRANSCRIPT_LANGUAGES[lang];
+  const said = String(transcript || "").replace(/\s+/g, " ").trim();
+  if (!name || said.length < 2 || !realtimeVoiceActive()) return false;
+  const key = `${utteranceId || ""}|${said}`;
+  if (kyroAnsweredFromTranscript === key) return false; // the same words reach the page more than once
+  kyroAnsweredFromTranscript = key;
+  kyroAnsweredFromTranscriptAt = Date.now();
+  try { if (typeof kyroPageVoice !== "undefined") kyroPageVoice.staleBefore = Date.now(); } catch { /* only for the page's own voice */ }
+  kyroTakeOverTurn();
+  injectKyroRealtimeContext(`The person just said this in ${name}, as the speech-to-text wrote it (more exact than what you heard): "${said.slice(0, 400)}". Answer these words, in ${name}.`);
+  sendKyroRealtimeEvent({ type: "response.create" });
+  return true;
+}
+
+// ---- Amharic: Kyro writes its answer and the page says it ----
+// Even when it answered the right words, the voice model's own SPOKEN Amharic was often badly worded (local voice run, 25 Nov 2026: "How can I teach my children?" got a
+// muddled answer), while its WRITTEN Amharic is good (asked "I am very tired today, what should I do?" in text, it answered plainly and naturally). So an Amharic session is
+// text-only (server.js, OPENAI_PAGE_SPOKEN_LANGUAGES) and the page reads each finished answer aloud with the speech service (/api/voice/speak).
+// An answer to the voice model's own hearing of a turn is held until that turn's transcript is in: then it is dropped, because Kyro answers the transcript instead
+// (kyroAnswerFromTranscript), so the person never hears an answer to words that were misheard (the transcript once took 8 seconds). Speaking again stops the page's voice.
+const kyroPageVoice = { committedAt: 0, transcriptAt: 0, staleBefore: 0, open: [], held: null, heldTimer: null, chain: Promise.resolve(), audio: null, generation: 0 };
+function kyroPageSpeaks() {
+  return Boolean(typeof realtimeVoiceSession !== "undefined" && realtimeVoiceSession?.pageSpeaks === true && realtimeVoiceActive());
+}
+function kyroPageVoiceStop() {
+  kyroPageVoice.generation += 1; // what was queued is not said
+  kyroPageVoice.held = null;
+  if (kyroPageVoice.heldTimer) { clearTimeout(kyroPageVoice.heldTimer); kyroPageVoice.heldTimer = null; }
+  const audio = kyroPageVoice.audio; kyroPageVoice.audio = null;
+  if (audio) { try { audio.pause(); } catch { /* already stopped */ } try { updateNexusVoiceSession({ state: "realtime-listening", assistantSpeaking: false, lastAssistantSpeechAt: Date.now() }, "kyro-page-voice-stopped"); } catch { /* the orb catches up */ } }
+}
+// in short parts (a sentence or a few), so the first is heard while the rest is still being made
+function kyroPageVoiceParts(text) {
+  const sentences = String(text || "").replace(/\s+/g, " ").trim().split(/(?<=[።፧!?.])\s+/).filter(Boolean);
+  const parts = []; let current = "";
+  for (const sentence of sentences) { if (current && (current + " " + sentence).length > 260) { parts.push(current); current = sentence; } else current = current ? `${current} ${sentence}` : sentence; }
+  if (current) parts.push(current);
+  return parts.slice(0, 8);
+}
+function kyroPageSay(text) {
+  const parts = kyroPageVoiceParts(text);
+  if (!parts.length) return;
+  const generation = kyroPageVoice.generation;
+  const fetchPart = part => {
+    const language = /[ሀ-፿]/.test(part) ? "am" : "en";
+    return request("/api/voice/speak", { method: "POST", body: { correlationId: `kyro-page-voice-${Date.now().toString(36)}`, text: part, language, locale: language === "am" ? "am-ET" : "en-US", rate: 1, pitch: 1, forceOpenAi: true } })
+      .then(result => result?.voiceResult?.audioDataUrl || "").catch(() => "");
+  };
+  const urls = parts.map(fetchPart); // all asked for at once; said in order
+  kyroPageVoice.chain = kyroPageVoice.chain.then(async () => {
+    for (const pending of urls) {
+      const url = await pending;
+      if (generation !== kyroPageVoice.generation) return;
+      if (!url) continue;
+      await new Promise(resolve => {
+        const audio = new Audio(url); kyroPageVoice.audio = audio;
+        const done = () => { if (kyroPageVoice.audio === audio) kyroPageVoice.audio = null; resolve(); };
+        audio.onended = done; audio.onerror = done; audio.onpause = done;
+        try { updateNexusVoiceSession({ state: "realtime-speaking", assistantSpeaking: true, userSpeaking: false }, "kyro-page-voice-start"); } catch { /* the orb catches up */ }
+        audio.play().catch(done);
+      });
+    }
+    if (generation === kyroPageVoice.generation) { try { updateNexusVoiceSession({ state: "realtime-listening", assistantSpeaking: false, lastAssistantSpeechAt: Date.now() }, "kyro-page-voice-end"); } catch { /* the orb catches up */ } }
+  }).catch(() => {});
+}
+function kyroPageVoiceEvent(eventType, payloadIn) {
+  const payload = payloadIn || {};
+  if (!kyroPageSpeaks()) return;
+  const voice = kyroPageVoice;
+  // (the voice SDK wrapper hands the page a slim event: the words are in acceptanceText, with no response id, status or metadata, so each answer is followed by when it began)
+  if (eventType === "input_audio_buffer.speech_started") { kyroPageVoiceStop(); return; }
+  if (eventType === "input_audio_buffer.committed") { voice.committedAt = Date.now(); return; }
+  if (eventType === "conversation.item.input_audio_transcription.completed") {
+    voice.transcriptAt = Date.now();
+    const held = voice.held; voice.held = null;
+    if (voice.heldTimer) { clearTimeout(voice.heldTimer); voice.heldTimer = null; }
+    // with no words written there is nothing to answer instead: the held answer is said
+    if (held && !String(payload.transcript || payload.acceptanceText || "").trim()) kyroPageSay(held);
+    return;
+  }
+  if (eventType === "response.created") {
+    voice.open.push({ createdAt: Date.now(), text: "" });
+    if (voice.open.length > 6) voice.open.shift();
+    return;
+  }
+  if (eventType === "response.output_text.done") {
+    const words = String(payload.acceptanceText || payload.text || payload.transcript || "").trim();
+    const current = voice.open[voice.open.length - 1];
+    if (current && words) current.text = current.text ? `${current.text} ${words}` : words;
+    return;
+  }
+  if (eventType !== "response.done") return;
+  const answer = voice.open.shift();
+  const text = String(answer?.text || "").trim();
+  if (!answer || !text) return;
+  // started before Kyro turned to the transcript of this turn (and so cut off): an answer to misheard words, never said
+  if (answer.createdAt < voice.staleBefore && answer.createdAt >= voice.committedAt) return;
+  if (voice.committedAt > voice.transcriptAt && answer.createdAt >= voice.committedAt) {
+    // an answer to what the model heard, before the transcript of the same turn: held, and dropped when the transcript comes (said if it never comes)
+    voice.held = text;
+    if (voice.heldTimer) clearTimeout(voice.heldTimer);
+    voice.heldTimer = setTimeout(() => { const held = voice.held; voice.held = null; voice.heldTimer = null; if (held) kyroPageSay(held); }, 12000);
+    return;
+  }
+  kyroPageSay(text);
 }
 // True when the page answered the sentence itself. options.typed: it was typed, so a document request already goes the typed way and is left to the usual route.
 function kyroHandleSpokenOpen(text, options = {}) {
@@ -57135,6 +57268,8 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
     });
     realtimeVoiceSession.sdkController = controller;
     realtimeVoiceSession.sdkSession = controller.session;
+    // A text-only session (Amharic, server.js): the page says Kyro's answers (kyroPageSpeaks).
+    { const modalities = sessionPayload.clientConfig?.outputModalities; realtimeVoiceSession.pageSpeaks = Array.isArray(modalities) && modalities.includes("text") && !modalities.includes("audio"); }
     // Captured so setKyroRealtimeAutoResponse() can restore exactly this session's own negotiated
     // turn-detection config (type/eagerness/threshold/timing) when re-enabling auto-response,
     // instead of resetting to the Realtime API's own unrelated defaults.

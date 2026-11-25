@@ -173,13 +173,27 @@ test("the page takes a spoken course request itself, loads the matcher, and the 
   const server = fs.readFileSync(path.join(ROOT, "server.js"), "utf8");
   assert.ok(app.includes("function kyroKoachLearnQuestion(text)"));
   assert.ok(app.includes('(typeof kyroKoachLearnQuestion === "function" && kyroKoachLearnQuestion(trimmed))'), "the spoken turn is claimed");
-  assert.ok(html.includes('<script src="/kyro-koachlearn-courses.js?v=kyro-koachlearn-courses-2"></script>'));
+  assert.ok(html.includes('<script src="/kyro-koachlearn-courses.js?v=kyro-koachlearn-courses-3"></script>'));
   assert.ok(html.indexOf("kyro-koachlearn-courses.js") < html.indexOf('src="/app.js'));
-  assert.ok(sw.includes("`/kyro-koachlearn-courses.js?v=kyro-koachlearn-courses-2`"), "the offline copy has it");
+  assert.ok(sw.includes("`/kyro-koachlearn-courses.js?v=kyro-koachlearn-courses-3`"), "the offline copy has it");
   assert.ok(app.includes('const fullAppLanguageCodes = new Set(["en", "fr", "sw", "ar", "es", "pt", "ha", "am", "yo", "ig"]);'), "the four are full languages (25 Nov)");
   assert.ok(app.includes("/api/voice/realtime/session?language=${encodeURIComponent(voiceLanguageCode())}"), "the voice session hears the chosen language");
   assert.ok(app.includes('        locale: typeof voiceLanguageCode === "function" ? voiceLanguageCode() : languageCode(),'), "Kyro's own route is told the chosen language");
   for (const code of ["ha", "am", "yo", "ig"]) assert.ok(app.includes(`["${code}", "`), `${code} is in the language switch`);
   assert.ok(server.includes('const FULL_APP_LANGUAGE_CODES = new Set(["en", "es", "fr", "sw", "ar", "pt", "ha", "am", "yo", "ig"]);'));
   assert.ok(server.includes("!FULL_APP_LANGUAGE_CODES.has(requested) && !PARTIAL_LANGUAGE_CODES.has(requested)"), "the language route accepts them");
+});
+
+test("a Hausa speaker's course request, written in English by the voice model for the tools, is answered in Hausa without the English topic word", async () => {
+  const catalog = kl.createKoachLearnCatalog({ fetchImpl: stubFetch().impl });
+  const asked = matcher.courseRequest("find Koach Learn courses about farming in Hausa");
+  const theirs = await kl.findKoachLearnCourses(catalog, asked, { defaultLang: "ha-NG" });
+  assert.deepEqual([theirs.kind, theirs.replyLang, theirs.courseLang, theirs.courses[0].i], ["found", "ha", "ha", 20]);
+  const text = kl.koachLearnAnswer(theirs).text;
+  assert.match(text, /^Ga kwasa-kwasai 1 na Koach Learn da Hausa: 1\. Bayanan Noma da Tsari/);
+  assert.doesNotMatch(text, /farming/);
+  // an English speaker asking for Hausa courses still hears English
+  const english = await kl.findKoachLearnCourses(catalog, asked, { defaultLang: "en" });
+  assert.equal(english.replyLang, "en");
+  assert.match(kl.koachLearnAnswer(english).text, /^Here are 1 Koach Learn courses in Hausa about "farming"/);
 });

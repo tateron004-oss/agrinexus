@@ -20832,11 +20832,17 @@ function genesisVoiceAcceptanceHarness(runtime = "elevenlabs") {
 
 // The language the person chose, said plainly by name: a bare code ("ha") with "reply in the user's language when reasonably supported; otherwise say support is limited" let the voice answer a Hausa
 // speaker in English or apologise instead (owner, 25 Nov 2026: "we need all the languages to work"). It is added even when OPENAI_REALTIME_INSTRUCTIONS replaces the rest.
+const OPENAI_NATIVE_TOOL_ENGLISH_LANGUAGES = new Set(["ha", "am", "yo", "ig"]);
 function openAiRealtimeLanguageInstruction(language = "en") {
   const code = canonicalVoiceLanguage(language);
   const name = VOICE_LANGUAGE_NAMES[code] || "English";
   if (code === "en") return "The person chose English. If they speak another language, reply in the language they speak.";
-  return `The person chose ${name}. Always speak and reply in ${name}, from your first word, even when a tool result or a screen text is in English (say it in ${name}). Keep names such as Kyro, Koach Learn and place names as they are. If the person speaks another language, reply in the language they speak. Never say ${name} is not supported: always do your best in ${name}.`;
+  const base = `The person chose ${name}. Always speak and reply in ${name}, from your first word, even when a tool result or a screen text is in English (say it in ${name}). Keep names such as Kyro, Koach Learn and place names as they are. If the person speaks another language, reply in the language they speak. Never say ${name} is not supported: always do your best in ${name}.`;
+  // Found on the live voice run, 25 Nov 2026: "Ina so in koyi game da noma" (Hausa: I want to learn about farming) went to the tools word for word, they read English, and "noma" came back
+  // as a disease and a restaurant; the Hausa answer was about those. Kyro's tools understand English and the six first languages, not these four.
+  if (!OPENAI_NATIVE_TOOL_ENGLISH_LANGUAGES.has(code)) return base;
+  const readAloud = typeof OPENAI_PAGE_SPOKEN_LANGUAGES !== "undefined" && OPENAI_PAGE_SPOKEN_LANGUAGES.has(code) ? ` Your answers are written down and then read aloud to the person: write them exactly as you would say them, short and warm, with no lists, symbols or markdown.` : "";
+  return `${base}${readAloud} Kyro's tools read English, not ${name}: whenever you call a tool, write command and query in English with the person's meaning (for example "I want to learn about farming", "show tomorrow's weather in Kano"), never their ${name} words as they are, because a ${name} word can mean something quite different in English. Keep it short and plain. When they want to learn about something or want courses or lessons, ask for Koach Learn's courses in ${name}: "find Koach Learn courses about farming in ${name}". Then answer the person in ${name}.`;
 }
 
 function openAiRealtimeInstructions(user, language = "en") {
@@ -20923,6 +20929,34 @@ function openAiRealtimeTranscriptionLanguage(language = "en") {
   return OPENAI_TRANSCRIPTION_LANGUAGES.has(code) ? code : undefined;
 }
 
+// Hausa, Amharic, Yoruba and Igbo: the speech-to-text takes no language for them (above), and with the small model and the English hint it wrote Amharic as Arabic or
+// Latin letters and Hausa as Japanese (matching 0.10 to 0.14 for Amharic and 0.05 for one Hausa sentence; 0.60 on average over eight sentences). The larger model with a hint
+// written in the person's own language matched 0.96 on average on the same sentences (0.92 to 1.00 for Amharic), and heard the English commands said in that mode word for word
+// (1.00; without "English: ..." in the hint it turned "Close the screen" into Amharic, Yoruba or Igbo). OpenAI speech files, offline check, 25 Nov 2026.
+const OPENAI_NATIVE_TRANSCRIPTION_HINTS = {
+  ha: "Kyro yana magana da Hausa. Koach Learn. Sannu, yaya, don Allah, na gode, aiki, makaranta. English: Switch to English. Close the screen.",
+  am: "ኪሮ በአማርኛ ይናገራል። Koach Learn። ሰላም፣ እባክህ፣ አመሰግናለሁ፣ ሥራ፣ ትምህርት። English: Switch to English. Close the screen.",
+  yo: "Kyro ń sọ èdè Yorùbá. Koach Learn. Ẹ káàbọ̀, báwo ni, ẹ jọ̀ọ́, ẹ ṣé, iṣẹ́, ẹ̀kọ́. English: Switch to English. Close the screen.",
+  ig: "Kyro na-asụ Igbo. Koach Learn. Ndewo, kedu, biko, daalụ, ọrụ, mmụta. English: Switch to English. Close the screen."
+};
+const OPENAI_REALTIME_TRANSCRIPTION_HINT = "Kyro, AgriNexus, Koach Learn. Close it. Close the screen. Show my notes, reminders, checklists. Kisumu, Nairobi, Nakuru, Mombasa, Lagos, Stockton, Sacramento. Maize, sorghum, cassava. Hausa, Yoruba, Igbo, Amharic.";
+// Amharic: the voice model's spoken Amharic was often badly worded while its written Amharic is good (local voice run and a typed check, 25 Nov 2026), so an Amharic session is
+// text-only and the page reads each answer aloud with the speech service (public/app.js, kyroPageSpeaks).
+const OPENAI_PAGE_SPOKEN_LANGUAGES = new Set(["am"]);
+function openAiRealtimeOutputModalities(language = "en") {
+  return OPENAI_PAGE_SPOKEN_LANGUAGES.has(openAiRealtimeTranscriptionCode(language)) ? ["text"] : ["audio"];
+}
+function openAiRealtimeTranscriptionCode(language = "en") {
+  return String(language || "en").trim().toLowerCase().split(/[-_]/)[0];
+}
+function openAiRealtimeTranscriptionModel(language = "en", env = process.env) {
+  if (OPENAI_NATIVE_TRANSCRIPTION_HINTS[openAiRealtimeTranscriptionCode(language)]) return String(env.OPENAI_REALTIME_NATIVE_TRANSCRIBE_MODEL || "gpt-4o-transcribe").trim() || "gpt-4o-transcribe";
+  return String(env.OPENAI_REALTIME_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe").trim() || "gpt-4o-mini-transcribe";
+}
+function openAiRealtimeTranscriptionHint(language = "en") {
+  return OPENAI_NATIVE_TRANSCRIPTION_HINTS[openAiRealtimeTranscriptionCode(language)] || OPENAI_REALTIME_TRANSCRIPTION_HINT;
+}
+
 function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
   const turnDetectionType = String(env.OPENAI_REALTIME_TURN_DETECTION || "semantic_vad").trim() || "semantic_vad";
   const turnDetection = turnDetectionType === "server_vad"
@@ -20936,7 +20970,11 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
       }
     : {
         type: "semantic_vad",
-        eagerness: String(env.OPENAI_REALTIME_VAD_EAGERNESS || "auto").trim() || "auto",
+        // Hausa, Amharic, Yoruba and Igbo: "low" waits longer before it takes a pause as the end of what the person says. With "auto", the pause after "ሰላም ኪሮ።" (Hello Kyro.)
+        // ended the turn, the rest was heard from mid-word ("ትላይት ግብር" for "ስለ ግብርና", about farming) and Kyro answered a question about taxes (local voice run, 25 Nov 2026).
+        eagerness: OPENAI_NATIVE_TRANSCRIPTION_HINTS[openAiRealtimeTranscriptionCode(language)]
+          ? (String(env.OPENAI_REALTIME_NATIVE_VAD_EAGERNESS || "low").trim() || "low")
+          : (String(env.OPENAI_REALTIME_VAD_EAGERNESS || "auto").trim() || "auto"),
         create_response: true,
         interrupt_response: true
       };
@@ -20949,13 +20987,13 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
           type: String(env.OPENAI_REALTIME_NOISE_REDUCTION || "near_field").trim() || "near_field"
         },
         transcription: {
-          model: String(env.OPENAI_REALTIME_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe").trim() || "gpt-4o-mini-transcribe",
+          model: openAiRealtimeTranscriptionModel(language, env),
           // The speech-to-text language, only for the languages OpenAI accepts here. It refused the whole voice session as invalid for "ha" (and "am", "yo"), so a Hausa, Amharic
           // or Yoruba speaker had no voice at all, while Igbo, sent without one, worked (live check, 25 Nov 2026). For the others the language is left out and found from the speech;
           // JSON leaves an undefined value out.
           language: openAiRealtimeTranscriptionLanguage(language),
-          // A short hint for the speech-to-text (it heard "Close it" as "Flows it", "Kisumu" as "Hisumu", "maize" as "maze"): the assistant's name, Koach Learn and the four course languages it misheard ("Hausa courses" as "how the course", "Koach Learn" as "Coach Learn": live voice run, 25 Nov), the towns and crops people name, and the short commands.
-          prompt: "Kyro, AgriNexus, Koach Learn. Close it. Close the screen. Show my notes, reminders, checklists. Kisumu, Nairobi, Nakuru, Mombasa, Lagos, Stockton, Sacramento. Maize, sorghum, cassava. Hausa, Yoruba, Igbo, Amharic."
+          // A short hint for the speech-to-text (it heard "Close it" as "Flows it", "Kisumu" as "Hisumu", "maize" as "maze"): the assistant's name, Koach Learn and the four course languages it misheard ("Hausa courses" as "how the course", "Koach Learn" as "Coach Learn": live voice run, 25 Nov), the towns and crops people name, and the short commands. For Hausa, Amharic, Yoruba and Igbo the hint is in that language (OPENAI_NATIVE_TRANSCRIPTION_HINTS).
+          prompt: openAiRealtimeTranscriptionHint(language)
         },
         turn_detection: turnDetection
       },
@@ -20963,7 +21001,7 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
         voice: openAiRealtimeVoice(env)
       }
     },
-    output_modalities: ["audio"],
+    output_modalities: openAiRealtimeOutputModalities(language),
     instructions: openAiRealtimeInstructions(user, language),
     tools: nexusRealtimeCallableToolSchemas().map(({ metadata, strict, ...tool }) => tool),
     tool_choice: "auto"
@@ -20975,7 +21013,7 @@ function openAiAgentsRealtimeClientConfig(user, language = "en", env = process.e
   return {
     model: session.model,
     instructions: session.instructions,
-    outputModalities: ["audio"],
+    outputModalities: session.output_modalities,
     audio: {
       input: {
         noiseReduction: session.audio.input.noise_reduction,
