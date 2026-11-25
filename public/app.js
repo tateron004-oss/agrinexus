@@ -14332,6 +14332,20 @@ async function changeLanguageByVoice(command) {
   }
 }
 
+// A language change said aloud in the live voice: the page's own change (profile, screen words, the spoken "Language changed to ..."), then the live voice is started again, since
+// the language it listens and answers in is fixed when it starts (the session is asked for in voiceLanguageCode()).
+async function kyroSwitchLanguageBySpeech(command) {
+  const before = typeof voiceLanguageCode === "function" ? voiceLanguageCode() : languageCode();
+  await changeLanguageByVoice(command);
+  const after = typeof voiceLanguageCode === "function" ? voiceLanguageCode() : languageCode();
+  const session = typeof realtimeVoiceSession !== "undefined" ? realtimeVoiceSession : null;
+  if (after === before || !session?.active) return false;
+  // (a moment for the page's own line to start before the voice is started again)
+  await new Promise(resolve => setTimeout(resolve, 2500));
+  try { stopRealtimeVoiceSession(`Language changed to ${after}.`); } catch { /* the restart below still runs */ }
+  return kyroRestartVoiceWithLiveMicrophone(session, { source: "language-change" });
+}
+
 function refreshVoiceForLanguageChange() {
   const languageName = voiceLanguageName();
   const locale = voiceLocale();
@@ -53583,6 +53597,16 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
         const heardKey = trimmed.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
         if (heardKey && (heardKey !== kyroHeard.key || Date.now() - kyroHeard.at > 6000)) { kyroHeard = { key: heardKey, text: trimmed, at: Date.now(), recovered: false }; if (typeof kyroNoteVoice === "function") kyroNoteVoice("requests"); }
       } catch { /* noting what was heard never stops it being handled */ }
+    }
+    // "Switch to Hausa", "Change the language to Igbo", "Speak Yoruba": typed, the page always changed the language; said aloud in the live voice nothing did, and the voice answered on its own
+    // ("I can't switch to Hausa from this setup": live voice run, 25 Nov 2026). The page changes the language and starts the voice again in it. ("Translate ... into Hausa" is a translation, not this.)
+    if (trimmed && source !== "tool-call" && !/\btranslat/i.test(trimmed) && typeof isUniversalLanguageCommand === "function" && isUniversalLanguageCommand(trimmed)) {
+      if (!heardAgain) {
+        try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+        kyroPageSpeaksUntil = Date.now() + 15000;
+        void kyroSwitchLanguageBySpeech(trimmed);
+      }
+      return true;
     }
     // "Close it", "close the screen", "go back to the orb", "I'm done": typed, the page always did it; said aloud it did nothing, so the last list or map stayed in front of everything that came after it.
     if (trimmed && window.KyroDismissCommands?.parse?.(trimmed)) {

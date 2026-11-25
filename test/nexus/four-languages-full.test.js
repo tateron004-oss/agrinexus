@@ -113,3 +113,22 @@ test("the live voice test can speak the four and has a case for each", () => {
   const { ALL } = require("../../scripts/live-voice-suite/cases/index.js");
   assert.ok(ALL.some(c => c.id === "lang-yo"));
 });
+
+test("a language change said aloud in the live voice is done by the page, which starts the voice again in that language", () => {
+  const app = read("public/app.js");
+  const route = app.slice(app.indexOf("function routeKyroVoiceIntakeTranscript("), app.indexOf("function routeKyroVoiceIntakeTranscript(") + 12000);
+  assert.ok(route.includes("!/\\btranslat/i.test(trimmed) && typeof isUniversalLanguageCommand === \"function\" && isUniversalLanguageCommand(trimmed)"), "the spoken turn is claimed (a translation is not)");
+  assert.ok(route.includes("void kyroSwitchLanguageBySpeech(trimmed);"));
+  assert.ok(route.indexOf("kyroSwitchLanguageBySpeech") < route.indexOf("KyroDismissCommands"), "before anything else can answer it");
+  assert.ok(app.includes("async function kyroSwitchLanguageBySpeech(command) {"));
+  assert.ok(app.includes("return kyroRestartVoiceWithLiveMicrophone(session, { source: \"language-change\" });"), "the voice starts again in the new language");
+  const grab = name => { const i = app.indexOf(`function ${name}(`); let depth = 0; for (let k = app.indexOf("{", i); k < app.length; k += 1) { if (app[k] === "{") depth += 1; else if (app[k] === "}") { depth -= 1; if (!depth) return app.slice(i, k + 1); } } return ""; };
+  const sandbox = new Function(`${grab("languageFromVoiceCommand")}
+${grab("isUniversalLanguageCommand")}
+return { isUniversalLanguageCommand, languageFromVoiceCommand };`)();
+  for (const [said, code] of [["Switch to Hausa.", "ha"], ["Change the language to Igbo", "ig"], ["Speak Yoruba", "yo"], ["Switch to Amharic.", "am"], ["Switch to English.", "en"]]) {
+    assert.equal(sandbox.isUniversalLanguageCommand(said), true, said);
+    assert.equal(sandbox.languageFromVoiceCommand(said), code, said);
+  }
+  for (const said of ["Show me Hausa courses about farming.", "Find Yoruba courses about small business.", "What Koach Learn courses are there in Amharic?"]) assert.equal(sandbox.isUniversalLanguageCommand(said), false, said);
+});

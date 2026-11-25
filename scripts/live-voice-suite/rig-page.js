@@ -159,6 +159,7 @@ function installKyroVoiceRig(makeEvaluator) {
       typedBox: (() => { try { const box = document.querySelector("#nexusCommandCenterInput"); return Boolean(box && visible(box)); } catch { return false; } })(),
       routeSteps: (() => { try { const sheet = document.querySelector("[data-kyro-route-steps]"); return sheet ? sheet.innerText.replace(/\s+/g, " ").trim().slice(0, 600) : ""; } catch { return ""; } })(),
       mapCenter: (() => { try { const c = typeof userMap !== "undefined" && userMap && userMap.getCenter ? userMap.getCenter() : null; return c ? { lat: Number(c.lat.toFixed(2)), lng: Number(c.lng.toFixed(2)), zoom: userMap.getZoom(), open: document.body.classList.contains("user-map-full-open"), where: document.body.dataset.genesisMapLocation || "" } : { open: document.body.classList.contains("user-map-full-open"), where: document.body.dataset.genesisMapLocation || "" }; } catch { return null; } })(),
+      language: (() => { try { return typeof voiceLanguageCode === "function" ? voiceLanguageCode() : (typeof languageCode === "function" ? languageCode() : ""); } catch { return ""; } })(),
       section: typeof currentSectionId === "function" ? currentSectionId() : "", voiceActive: typeof realtimeVoiceActive === "function" ? realtimeVoiceActive() : false,
       responding: events.filter(t => /response\.created/.test(t)).length > events.filter(t => /response\.done/.test(t)).length, now: Date.now() - rig.t0
     };

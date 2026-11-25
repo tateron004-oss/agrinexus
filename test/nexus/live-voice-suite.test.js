@@ -15,7 +15,7 @@ const { buildInstallScript } = require(path.join(suite, "rig-page.js"));
 
 // (lang: the language a spoken step is read in, for the Hausa, Amharic, Yoruba and Igbo cases)
 const STEP_KEYS = new Set(["tap", "nth", "type", "choose", "say", "lang", "wait", "offline", "expect", "timeoutMs"]);
-const EXPECT_KEYS = new Set(["screen", "app", "text", "notText", "keep", "buttons", "fields", "images", "frames", "links", "download", "intake", "orb", "said", "notSaid", "player", "model", "tool", "typed", "heard", "section", "allowRefusal", "mapOpen", "mapNear", "routeSteps", "typedBox"]);
+const EXPECT_KEYS = new Set(["screen", "app", "text", "notText", "keep", "buttons", "fields", "images", "frames", "links", "download", "intake", "orb", "said", "notSaid", "player", "model", "tool", "typed", "heard", "section", "allowRefusal", "mapOpen", "mapNear", "routeSteps", "typedBox", "language"]);
 
 test("every case has a unique id, an area, something to say, and an expectation that only uses known fields", () => {
   const ids = new Set();

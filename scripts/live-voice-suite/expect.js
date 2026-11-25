@@ -14,6 +14,7 @@
 //   said: "regex"                       what the model said aloud matches (any of its lines)     notSaid: "regex"
 //   player: { active: true, state: "playing" }   the music/video player      model: true   the model must have answered (spoken)
 //   tool: "regex" | typed: "regex"      the model called a tool matching, or the page answered a typed route matching      section: "regex"   the page section
+//   language: "ha"                     the app's language (what the person chose) is this code
 //   heard: "regex"                      the speech-to-text wrote this: reported as a WARNING only (it is not the page's fault)
 // By default the model must not say it cannot open or see something (REFUSAL) over a screen that did open, unless the case sets allowRefusal.
 function makeEvaluator() {
@@ -51,6 +52,7 @@ function makeEvaluator() {
     if (expect.model) check(said.length > 0, "nothing was said aloud at all");
     if (expect.tool !== undefined) check((state.tools || []).some(tool => asRegex(expect.tool).test(tool)), `the model called no tool matching ${asRegex(expect.tool)} (called: ${(state.tools || []).join(", ") || "none"})`);
     if (expect.typed !== undefined) check((state.typed || []).some(route => asRegex(expect.typed).test(route)), `the page answered no typed route matching ${asRegex(expect.typed)} (answered: ${(state.typed || []).join(" / ") || "none"})`);
+    if (expect.language !== undefined) check(state.language === expect.language, `expected the app language to be ${expect.language}, it is "${state.language || "unknown"}"`);
     if (expect.section !== undefined) check(asRegex(expect.section).test(state.section || ""), `expected the page section ${asRegex(expect.section)}, it is "${state.section || "none"}"`);
     // the full map really is open (not merely the home screen), and, when asked, centred near a place: { lat, lng, within: degrees, zoomAtLeast, zoomAtMost }
     if (expect.mapOpen !== undefined) check(Boolean(state.mapCenter && state.mapCenter.open) === Boolean(expect.mapOpen), `expected the map to be ${expect.mapOpen ? "open" : "closed"}, it is ${state.mapCenter && state.mapCenter.open ? "open" : "closed"}`);
