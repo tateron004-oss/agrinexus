@@ -14426,7 +14426,11 @@ function translateLiteral(value) {
   return map[String(value).trim()] || value;
 }
 
+// (Hausa, Amharic, Yoruba and Igbo: no word-by-word swapping. Words swapped one at a time into an English sentence gave "Murya transcript appears here when akwai" and
+// "Enter hanyar aiki details", harder to read than the plain English; a sentence their tables translate is shown translated, anything else stays whole English. Live, 25 Nov 2026.)
+const KYRO_NO_WORD_SWAP_LANGUAGES = new Set(["ha", "am", "yo", "ig"]);
 function translateByWordMap(value, lang) {
+  if (KYRO_NO_WORD_SWAP_LANGUAGES.has(lang)) return value;
   const words = wordTranslations[lang];
   if (!words || !value) return value;
   return String(value).replace(/\b[A-Za-z][A-Za-z-]*\b/g, word => {

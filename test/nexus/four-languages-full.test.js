@@ -132,3 +132,32 @@ return { isUniversalLanguageCommand, languageFromVoiceCommand };`)();
   }
   for (const said of ["Show me Hausa courses about farming.", "Find Yoruba courses about small business.", "What Koach Learn courses are there in Amharic?"]) assert.equal(sandbox.isUniversalLanguageCommand(said), false, said);
 });
+
+test("the voice starts in every language: the speech-to-text is told the language only where OpenAI accepts it", () => {
+  // (live, 25 Nov 2026: OpenAI refused the whole voice session as invalid for "ha", so Hausa, Amharic and Yoruba speakers had no voice; Igbo, sent without one, worked)
+  const server = read("server.js");
+  const grab = name => { const i = server.indexOf(`function ${name}(`); let depth = 0; for (let k = server.indexOf("{", i); k < server.length; k += 1) { if (server[k] === "{") depth += 1; else if (server[k] === "}") { depth -= 1; if (!depth) return server.slice(i, k + 1); } } return ""; };
+  const set = /const OPENAI_TRANSCRIPTION_LANGUAGES = new Set\(\[[^\]]+\]\);/.exec(server)[0];
+  const pick = new Function(`${set}\n${grab("openAiRealtimeTranscriptionLanguage")}\nreturn openAiRealtimeTranscriptionLanguage;`)();
+  for (const code of ["en", "es", "fr", "sw", "ar", "pt"]) assert.equal(pick(code), code);
+  assert.equal(pick("sw-KE"), "sw");
+  for (const code of FOUR) assert.equal(pick(code), undefined, `${code} is found from the speech`);
+  assert.ok(server.includes("language: openAiRealtimeTranscriptionLanguage(language),"));
+});
+
+test("a guest's failed voice start does not write the whole stored document (the retries took the site down)", () => {
+  const server = read("server.js");
+  const failed = server.slice(server.indexOf('action: "voice.openai_agents_realtime_session_failed"') - 1200, server.indexOf('error: "OpenAI Agents Realtime session failed truthfully."'));
+  assert.ok(failed.includes('if (authContext.authMechanism !== "bounded_genesis_voice_guest_cookie") {'));
+  assert.ok(failed.indexOf("await writeDb(db);") > failed.indexOf('if (authContext.authMechanism !== "bounded_genesis_voice_guest_cookie") {'), "the write is inside the signed-in branch");
+  assert.ok(failed.includes('console.warn("[voice-session-failed]"'));
+});
+
+test("the four new languages never get English sentences with single words swapped in", () => {
+  const app = read("public/app.js");
+  assert.ok(app.includes('const KYRO_NO_WORD_SWAP_LANGUAGES = new Set(["ha", "am", "yo", "ig"]);'));
+  const grab = name => { const i = app.indexOf(`function ${name}(`); let depth = 0; for (let k = app.indexOf("{", i); k < app.length; k += 1) { if (app[k] === "{") depth += 1; else if (app[k] === "}") { depth -= 1; if (!depth) return app.slice(i, k + 1); } } return ""; };
+  const swap = new Function(`const KYRO_NO_WORD_SWAP_LANGUAGES = new Set(["ha", "am", "yo", "ig"]);\nconst wordTranslations = { ha: { voice: "murya" }, es: { voice: "voz" } };\n${grab("translateByWordMap")}\nreturn translateByWordMap;`)();
+  assert.equal(swap("Voice transcript appears here", "ha"), "Voice transcript appears here");
+  assert.equal(swap("Voice transcript appears here", "es"), "Voz transcript appears here", "the other languages are as before");
+});

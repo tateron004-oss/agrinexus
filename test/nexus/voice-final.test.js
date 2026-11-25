@@ -50,8 +50,8 @@ test("the speech-to-text is given a short hint for the assistant's name, the tow
   assert.ok(hint, "a prompt in the transcription settings");
   for (const word of ["Kyro", "Close it", "Close the screen", "Kisumu", "Nairobi", "Stockton", "Sacramento", "Maize"]) assert.ok(hint[1].includes(word), word);
   assert.ok(hint[1].length < 220, "short: a long list can be echoed back on silence");
-  // (the language is left out for Igbo, which the speech-to-text does not know: see koachlearn-courses.test.js)
-  assert.match(config, /language: (?:[^\n]*\? undefined : )?String\(language \|\| "en"\)\.slice\(0, 12\),\s*\/\/[^\n]*\n\s*prompt:/, "next to the language, in the same transcription settings");
+  // (the language is given only where the speech-to-text accepts it: see four-languages-full.test.js)
+  assert.match(config, /language: openAiRealtimeTranscriptionLanguage\(language\),\s*\/\/[^\n]*\n\s*prompt:/, "next to the language, in the same transcription settings");
 });
 
 // Found on the same run, on the live build after the wording round:
