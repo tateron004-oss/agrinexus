@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Koach Learn courses</title>
+  <meta name="description" content="Koach Learn courses in English, Español, Français, العربية, Kiswahili, Hausa, አማርኛ, Yorùbá, Igbo and Português.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Sans+Arabic:wght@400;600;700&family=Noto+Sans+Ethiopic:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="#" id="home">Koach&nbsp;Learn</a>
+    <label class="langpick">
+      <span class="sr" id="langLabel">Language</span>
+      <select id="lang" aria-labelledby="langLabel"></select>
+    </label>
+  </header>
+
+  <section id="chooser" class="chooser" hidden>
+    <h1 id="chooseTitle">Choose your language</h1>
+    <div id="chooserGrid" class="chooser-grid"></div>
+  </section>
+
+  <main id="main" hidden>
+    <div class="intro">
+      <h1 id="title">Koach Learn courses</h1>
+      <div class="searchrow">
+        <input id="q" type="search" autocomplete="off" spellcheck="false">
+        <button id="clear" class="ghost" type="button" hidden>×</button>
+      </div>
+      <nav id="topics" class="topics" aria-label="Topics"></nav>
+      <p id="count" class="count" aria-live="polite"></p>
+    </div>
+    <div id="grid" class="grid"></div>
+    <div class="moreRow"><button id="more" type="button" hidden>Show more</button></div>
+    <p id="soon" class="soon" hidden></p>
+  </main>
+
+  <footer class="foot"><span id="signin"></span></footer>
+
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
