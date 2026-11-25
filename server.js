@@ -20841,7 +20841,8 @@ function openAiRealtimeLanguageInstruction(language = "en") {
   // Found on the live voice run, 25 Nov 2026: "Ina so in koyi game da noma" (Hausa: I want to learn about farming) went to the tools word for word, they read English, and "noma" came back
   // as a disease and a restaurant; the Hausa answer was about those. Kyro's tools understand English and the six first languages, not these four.
   if (!OPENAI_NATIVE_TOOL_ENGLISH_LANGUAGES.has(code)) return base;
-  return `${base} Kyro's tools read English, not ${name}: whenever you call a tool, write command and query in English with the person's meaning (for example "I want to learn about farming", "show tomorrow's weather in Kano"), never their ${name} words as they are, because a ${name} word can mean something quite different in English. Keep it short and plain. When they want to learn about something or want courses or lessons, ask for Koach Learn's courses in ${name}: "find Koach Learn courses about farming in ${name}". Then answer the person in ${name}.`;
+  const readAloud = typeof OPENAI_PAGE_SPOKEN_LANGUAGES !== "undefined" && OPENAI_PAGE_SPOKEN_LANGUAGES.has(code) ? ` Your answers are written down and then read aloud to the person: write them exactly as you would say them, short and warm, with no lists, symbols or markdown.` : "";
+  return `${base}${readAloud} Kyro's tools read English, not ${name}: whenever you call a tool, write command and query in English with the person's meaning (for example "I want to learn about farming", "show tomorrow's weather in Kano"), never their ${name} words as they are, because a ${name} word can mean something quite different in English. Keep it short and plain. When they want to learn about something or want courses or lessons, ask for Koach Learn's courses in ${name}: "find Koach Learn courses about farming in ${name}". Then answer the person in ${name}.`;
 }
 
 function openAiRealtimeInstructions(user, language = "en") {
@@ -20939,6 +20940,12 @@ const OPENAI_NATIVE_TRANSCRIPTION_HINTS = {
   ig: "Kyro na-asụ Igbo. Koach Learn. Ndewo, kedu, biko, daalụ, ọrụ, mmụta. English: Switch to English. Close the screen."
 };
 const OPENAI_REALTIME_TRANSCRIPTION_HINT = "Kyro, AgriNexus, Koach Learn. Close it. Close the screen. Show my notes, reminders, checklists. Kisumu, Nairobi, Nakuru, Mombasa, Lagos, Stockton, Sacramento. Maize, sorghum, cassava. Hausa, Yoruba, Igbo, Amharic.";
+// Amharic: the voice model's spoken Amharic was often badly worded while its written Amharic is good (local voice run and a typed check, 25 Nov 2026), so an Amharic session is
+// text-only and the page reads each answer aloud with the speech service (public/app.js, kyroPageSpeaks).
+const OPENAI_PAGE_SPOKEN_LANGUAGES = new Set(["am"]);
+function openAiRealtimeOutputModalities(language = "en") {
+  return OPENAI_PAGE_SPOKEN_LANGUAGES.has(openAiRealtimeTranscriptionCode(language)) ? ["text"] : ["audio"];
+}
 function openAiRealtimeTranscriptionCode(language = "en") {
   return String(language || "en").trim().toLowerCase().split(/[-_]/)[0];
 }
@@ -20994,7 +21001,7 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
         voice: openAiRealtimeVoice(env)
       }
     },
-    output_modalities: ["audio"],
+    output_modalities: openAiRealtimeOutputModalities(language),
     instructions: openAiRealtimeInstructions(user, language),
     tools: nexusRealtimeCallableToolSchemas().map(({ metadata, strict, ...tool }) => tool),
     tool_choice: "auto"
@@ -21006,7 +21013,7 @@ function openAiAgentsRealtimeClientConfig(user, language = "en", env = process.e
   return {
     model: session.model,
     instructions: session.instructions,
-    outputModalities: ["audio"],
+    outputModalities: session.output_modalities,
     audio: {
       input: {
         noiseReduction: session.audio.input.noise_reduction,

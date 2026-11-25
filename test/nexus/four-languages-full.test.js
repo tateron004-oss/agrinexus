@@ -233,7 +233,7 @@ test("Amharic is answered from the transcript, the answers after it are tracked 
   // the transcript path calls it only for the finished transcript, after the page did not take the words itself
   assert.ok(app.includes('if (eventType === "conversation.item.input_audio_transcription.completed") { try { kyroAnswerFromTranscript(transcript, kyroUtteranceId); } catch { /* the model\'s own answer stands */ } }'));
   // the answers that follow are marked under way, so the stall watchdog does not ask for the same answer again
-  assert.ok(app.includes('if (eventType === "response.created" && typeof kyroAnsweredFromTranscriptAt === "number" && Date.now() - kyroAnsweredFromTranscriptAt < 60000) {'));
+  assert.ok(app.includes('if (eventType === "response.created" && ((typeof kyroPageSpeaks === "function" && kyroPageSpeaks()) || (typeof kyroAnsweredFromTranscriptAt === "number" && Date.now() - kyroAnsweredFromTranscriptAt < 60000))) {'));
   assert.ok(app.includes('markRealtimeResponseStarted(payload, "response-created-after-transcript-answer");'));
 });
 
@@ -248,4 +248,72 @@ test('"Switch to Igbo" heard as "Switch to ego" still switches to Igbo, but "my 
   const pick = new Function(`${grabFrom(app, "languageFromVoiceCommand")}\n${grabFrom(app, "isUniversalLanguageCommand")}\nreturn { lang: languageFromVoiceCommand, command: isUniversalLanguageCommand };`)();
   for (const said of ["Switch to ego.", "Switch to Igbo.", "speak Ibo"]) { assert.equal(pick.lang(said), "ig", said); assert.equal(pick.command(said), true, said); }
   for (const said of ["I have a big ego", "Change my Lego set", "tell me about my ego"]) assert.equal(pick.command(said), false, said);
+});
+
+test("an Amharic session is text-only, told its words are read aloud, and every other language still speaks for itself", () => {
+  const server = read("server.js");
+  const set = /const OPENAI_PAGE_SPOKEN_LANGUAGES = new Set\(\[[^\]]+\]\);/.exec(server)[0];
+  assert.equal(set, 'const OPENAI_PAGE_SPOKEN_LANGUAGES = new Set(["am"]);');
+  const modal = new Function(`${set}\n${grabFrom(server, "openAiRealtimeTranscriptionCode")}\n${grabFrom(server, "openAiRealtimeOutputModalities")}\nreturn openAiRealtimeOutputModalities;`)();
+  assert.deepEqual(modal("am"), ["text"]); assert.deepEqual(modal("am-ET"), ["text"]);
+  for (const code of ["en", "es", "fr", "sw", "ar", "pt", "ha", "yo", "ig"]) assert.deepEqual(modal(code), ["audio"], code);
+  const config = server.slice(server.indexOf("function openAiRealtimeSessionConfig("), server.indexOf("function openAiAgentsRealtimeClientConfig("));
+  assert.ok(config.includes("output_modalities: openAiRealtimeOutputModalities(language),"));
+  const client = grabFrom(server, "openAiAgentsRealtimeClientConfig");
+  assert.ok(client.includes("outputModalities: session.output_modalities,"), "the browser session gets the same");
+  assert.match(grabFrom(server, "openAiRealtimeLanguageInstruction"), /Your answers are written down and then read aloud to the person/);
+});
+
+test("in a text-only session the page says Kyro's answers, never an answer to misheard words, and stops when the person speaks", async () => {
+  const app = read("public/app.js");
+  const said = []; const stops = [];
+  const src = `${/const kyroPageVoice = \{[^\n]+\};/.exec(app)[0]}\n${grabFrom(app, "kyroPageSpeaks")}\n${grabFrom(app, "kyroPageVoiceStop")}\n${grabFrom(app, "kyroPageVoiceEvent")}\n`
+    + "return { event: kyroPageVoiceEvent, voice: kyroPageVoice };";
+  const env = new Function("realtimeVoiceSession", "realtimeVoiceActive", "kyroPageSay", "updateNexusVoiceSession", "setTimeout", "clearTimeout", src);
+  const timers = [];
+  const page = env({ pageSpeaks: true }, () => true, text => said.push(text), () => stops.push(1), (fn, ms) => { timers.push(fn); return timers.length; }, () => {});
+  // (the events as the voice SDK wrapper hands them over: the words in acceptanceText, no response id or status)
+  const answer = (id, text) => { page.event("response.output_text.done", { acceptanceText: text }); page.event("response.done", {}); };
+  // a turn: the model answers what it heard before the transcript is in -> held; the transcript comes -> dropped; the answer to the transcript is said
+  page.event("input_audio_buffer.committed");
+  page.event("response.created", {});
+  answer("r1", "answer to misheard words");
+  assert.deepEqual(said, [], "held while the transcript is not in");
+  page.event("conversation.item.input_audio_transcription.completed", { transcript: "ልጆቼን እንዴት ማስተማር እችላለሁ?" });
+  page.voice.staleBefore = Date.now(); // (kyroAnswerFromTranscript)
+  await new Promise(r => setTimeout(r, 5));
+  page.event("response.created", {});
+  answer("r2", "ልጆችን በጨዋታ ማስተማር ይቻላል።");
+  assert.deepEqual(said, ["ልጆችን በጨዋታ ማስተማር ይቻላል።"]);
+  // an answer started before Kyro turned to the transcript is never said, even if it was not cut off in time
+  page.event("input_audio_buffer.committed");
+  page.event("response.created", {});
+  page.event("conversation.item.input_audio_transcription.completed", { transcript: "ሰላም" });
+  page.voice.staleBefore = Date.now() + 1;
+  answer("r3", "stale");
+  assert.ok(!said.includes("stale"));
+  // an answer with no words (a tool call only): nothing said
+  page.event("response.created", {}); page.event("response.done", {});
+  assert.equal(said.length, 1);
+  // no transcript ever comes: the held answer is said after a while
+  await new Promise(r => setTimeout(r, 5));
+  page.event("input_audio_buffer.committed");
+  page.event("response.created", {});
+  answer("r6", "held then said");
+  timers.at(-1)();
+  assert.equal(said.at(-1), "held then said");
+  // the person speaks: the page's voice stops
+  page.event("input_audio_buffer.speech_started");
+  assert.equal(page.voice.held, null);
+  // an audio session: nothing to do with the page
+  const audioPage = env({ pageSpeaks: false }, () => true, text => said.push(`AUDIO ${text}`), () => {}, setTimeout, clearTimeout);
+  audioPage.event("response.created", {}); audioPage.event("response.output_text.done", { acceptanceText: "x" }); audioPage.event("response.done", {});
+  assert.ok(!said.some(line => line.startsWith("AUDIO")));
+  // the screen's lines and the form's questions are said by the page too, in a text-only session
+  assert.ok(grabFrom(app, "kyroSpeakPageLine").includes('if (typeof kyroPageSpeaks === "function" && kyroPageSpeaks()) {'));
+  assert.ok(app.includes('if (realtimeVoiceActive() && typeof kyroPageSpeaks === "function" && kyroPageSpeaks()) { kyroPageVoiceStop(); kyroPageSay(safeText); return; }'));
+  assert.ok(app.includes('realtimeVoiceSession.pageSpeaks = Array.isArray(modalities) && modalities.includes("text") && !modalities.includes("audio");'));
+  const parts = new Function(`${grabFrom(app, "kyroPageVoiceParts")}\nreturn kyroPageVoiceParts;`)();
+  assert.deepEqual(parts("ሰላም። እንዴት ነህ? ደህና ነኝ።"), ["ሰላም። እንዴት ነህ? ደህና ነኝ።"]);
+  assert.ok(parts(("አንድ ሁለት ሶስት። ").repeat(60)).every(part => part.length <= 280), "short parts, so the first is heard soon");
 });
