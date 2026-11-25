@@ -161,3 +161,91 @@ test("the four new languages never get English sentences with single words swapp
   assert.equal(swap("Voice transcript appears here", "ha"), "Voice transcript appears here");
   assert.equal(swap("Voice transcript appears here", "es"), "Voz transcript appears here", "the other languages are as before");
 });
+
+test("the live voice rig waits for the voice to come back after a spoken language switch restarts it", () => {
+  const rig = read("scripts/live-voice-suite/rig-page.js");
+  const until = rig.slice(rig.indexOf("rig.until = async"), rig.indexOf("rig.cleanup = async"));
+  assert.ok(rig.includes("rig.waitForVoiceBack = async (maxMs = 30000) => {"));
+  assert.ok(until.includes("if (!voiceUp()) await rig.waitForVoiceBack();"), "the second look waits out the restart");
+  assert.ok(until.indexOf("waitForVoiceBack") < until.indexOf("return { state, outcome: evaluate(expect, state, { requireVoiceActive: true }) }"));
+});
+
+// Quality, not only wiring (owner, 25 Nov 2026: "the quality can not be compromised"). Found on the live voice run that day: Amharic speech was written as Latin letters
+// ("Stalam Kyro, delag gubernamemath"), and a Hausa sentence about learning farming was answered about a disease and a restaurant ("noma" searched as it was said).
+const grabFrom = (source, name) => { const i = source.indexOf(`function ${name}(`); let depth = 0; for (let k = source.indexOf("{", i); k < source.length; k += 1) { if (source[k] === "{") depth += 1; else if (source[k] === "}") { depth -= 1; if (!depth) return source.slice(i, k + 1); } } return ""; };
+
+test("the speech-to-text for the four uses the larger model and a hint in their own language, and keeps English commands English", () => {
+  const server = read("server.js");
+  const hints = /const OPENAI_NATIVE_TRANSCRIPTION_HINTS = \{[\s\S]*?\n\};/.exec(server)[0];
+  const english = /const OPENAI_REALTIME_TRANSCRIPTION_HINT = "[^"]+";/.exec(server)[0];
+  const make = new Function(`${hints}\n${english}\n${grabFrom(server, "openAiRealtimeTranscriptionCode")}\n${grabFrom(server, "openAiRealtimeTranscriptionModel")}\n${grabFrom(server, "openAiRealtimeTranscriptionHint")}\nreturn { model: openAiRealtimeTranscriptionModel, hint: openAiRealtimeTranscriptionHint, english: OPENAI_REALTIME_TRANSCRIPTION_HINT };`)();
+  for (const code of FOUR) {
+    assert.equal(make.model(code, {}), "gpt-4o-transcribe", code);
+    assert.equal(make.model(`${code}-NG`, { OPENAI_REALTIME_NATIVE_TRANSCRIBE_MODEL: "gpt-x" }), "gpt-x", "it can be changed without a release");
+    const hint = make.hint(code);
+    assert.notEqual(hint, make.english, `${code} has its own hint`);
+    assert.ok(hint.includes("Koach Learn") && hint.includes("English: Switch to English. Close the screen."), `${code}: names and the English commands (without them "Close the screen" was written in ${code})`);
+    assert.ok(hint.length < 220, "short: a long list can be echoed back on silence");
+  }
+  assert.match(make.hint("am"), /[ሀ-፿]/, "the Amharic hint is in Ethiopic letters");
+  for (const code of ["en", "es", "fr", "sw", "ar", "pt"]) {
+    assert.equal(make.model(code, {}), "gpt-4o-mini-transcribe", `${code} is as before`);
+    assert.equal(make.hint(code), make.english);
+  }
+  const config = server.slice(server.indexOf("function openAiRealtimeSessionConfig("), server.indexOf("function openAiAgentsRealtimeClientConfig("));
+  assert.ok(config.includes("model: openAiRealtimeTranscriptionModel(language, env),"));
+  assert.ok(config.includes("prompt: openAiRealtimeTranscriptionHint(language)"));
+});
+
+test("for the four, the voice sends its tools the request in English and asks for Koach Learn courses in their language", () => {
+  const server = read("server.js");
+  const names = /const VOICE_LANGUAGE_NAMES = \{[^}]+\};/.exec(server)[0];
+  const set = /const OPENAI_NATIVE_TOOL_ENGLISH_LANGUAGES = new Set\(\[[^\]]+\]\);/.exec(server)[0];
+  const say = new Function(`${names}\n${set}\nconst canonicalVoiceLanguage = l => String(l || "en").split("-")[0];\n${grabFrom(server, "openAiRealtimeLanguageInstruction")}\nreturn openAiRealtimeLanguageInstruction;`)();
+  for (const code of FOUR) {
+    const line = say(code);
+    assert.match(line, /Kyro's tools read English/);
+    assert.match(line, /never their \S+ words as they are/);
+    assert.ok(line.includes(`find Koach Learn courses about farming in ${({ ha: "Hausa", am: "Amharic", yo: "Yoruba", ig: "Igbo" })[code]}`));
+  }
+  for (const code of ["es", "fr", "sw", "ar", "pt"]) assert.doesNotMatch(say(code), /tools read English/, `${code}: the tools read it`);
+  const matcher = require(path.join(ROOT, "public/kyro-koachlearn-courses.js"));
+  // the voice model's own English requests in the offline check: the request words are not search words
+  assert.deepEqual(matcher.courseRequest("find Koach Learn courses about farming in Hausa").terms, ["farming"]);
+  assert.deepEqual(matcher.courseRequest("I want to learn about farming. Show available lessons or courses, ideally in Amharic.").terms, ["farming"]);
+  assert.deepEqual(matcher.courseRequest("farming courses and lessons; include Yoruba options").terms, ["farming"]);
+});
+
+test("Amharic is answered from the transcript, the answers after it are tracked (no repeated answer), and only Amharic is cut off", () => {
+  const app = read("public/app.js");
+  assert.ok(app.includes('const KYRO_ANSWER_FROM_TRANSCRIPT_LANGUAGES = Object.freeze({ am: "Amharic" });'), "Hausa, Yoruba and Igbo are heard well enough by the model itself");
+  const fn = grabFrom(app, "kyroAnswerFromTranscript");
+  const sent = []; let interrupted = 0; let lang = "am";
+  const run = new Function("voiceLanguageCode", "realtimeVoiceActive", "kyroTakeOverTurn", "injectKyroRealtimeContext", "sendKyroRealtimeEvent",
+    `const KYRO_ANSWER_FROM_TRANSCRIPT_LANGUAGES = Object.freeze({ am: "Amharic" }); let kyroAnsweredFromTranscript = ""; let kyroAnsweredFromTranscriptAt = 0;\n${fn}\nreturn (t, id) => [kyroAnswerFromTranscript(t, id), kyroAnsweredFromTranscriptAt];`)(
+    () => lang, () => true, () => { interrupted += 1; }, text => sent.push(["note", text]), event => sent.push(["event", event.type]));
+  const [answered, at] = run("እባክህ የነገውን የአየር ሁኔታ በአዲስ አበባ አሳየኝ።", "item_1");
+  assert.equal(answered, true); assert.ok(at > 0); assert.equal(interrupted, 1);
+  assert.match(sent[0][1], /^The person just said this in Amharic, as the speech-to-text wrote it .*"እባክህ የነገውን የአየር ሁኔታ በአዲስ አበባ አሳየኝ።"\. Answer these words, in Amharic\.$/);
+  assert.deepEqual(sent[1], ["event", "response.create"]);
+  assert.equal(run("እባክህ የነገውን የአየር ሁኔታ በአዲስ አበባ አሳየኝ።", "item_1")[0], false, "the same words arriving again are not answered twice");
+  lang = "ha"; assert.equal(run("Sannu Kyro", "item_2")[0], false, "Hausa is not cut off");
+  // the transcript path calls it only for the finished transcript, after the page did not take the words itself
+  assert.ok(app.includes('if (eventType === "conversation.item.input_audio_transcription.completed") { try { kyroAnswerFromTranscript(transcript, kyroUtteranceId); } catch { /* the model\'s own answer stands */ } }'));
+  // the answers that follow are marked under way, so the stall watchdog does not ask for the same answer again
+  assert.ok(app.includes('if (eventType === "response.created" && typeof kyroAnsweredFromTranscriptAt === "number" && Date.now() - kyroAnsweredFromTranscriptAt < 60000) {'));
+  assert.ok(app.includes('markRealtimeResponseStarted(payload, "response-created-after-transcript-answer");'));
+});
+
+test("the four wait longer before a pause ends the turn; the others are as before", () => {
+  const server = read("server.js");
+  const config = server.slice(server.indexOf("function openAiRealtimeSessionConfig("), server.indexOf("function openAiAgentsRealtimeClientConfig("));
+  assert.ok(config.includes('eagerness: OPENAI_NATIVE_TRANSCRIPTION_HINTS[openAiRealtimeTranscriptionCode(language)]\n          ? (String(env.OPENAI_REALTIME_NATIVE_VAD_EAGERNESS || "low").trim() || "low")\n          : (String(env.OPENAI_REALTIME_VAD_EAGERNESS || "auto").trim() || "auto"),'));
+});
+
+test('"Switch to Igbo" heard as "Switch to ego" still switches to Igbo, but "my ego" or "Lego" is never a language', () => {
+  const app = read("public/app.js");
+  const pick = new Function(`${grabFrom(app, "languageFromVoiceCommand")}\n${grabFrom(app, "isUniversalLanguageCommand")}\nreturn { lang: languageFromVoiceCommand, command: isUniversalLanguageCommand };`)();
+  for (const said of ["Switch to ego.", "Switch to Igbo.", "speak Ibo"]) { assert.equal(pick.lang(said), "ig", said); assert.equal(pick.command(said), true, said); }
+  for (const said of ["I have a big ego", "Change my Lego set", "tell me about my ego"]) assert.equal(pick.command(said), false, said);
+});

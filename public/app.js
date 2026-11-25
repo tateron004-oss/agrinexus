@@ -13549,8 +13549,10 @@ function languageFromVoiceCommand(command) {
     igbo: "ig",
     kiigbo: "ig"
   };
-  const match = lower.match(/\b(?:to|into|in|as|use|speak|talk|respond|reply|change|switch|set|translate|mudar|trocar|usar|falar|responder)\s+(english|eng|englsh|englisch|inglish|anglais|ingles|kiingereza|nigeria|nigerian|french|francais|frances|kifaransa|drc|congo|swahili|kiswahili|suajili|kenya|kenyan|arabic|arabe|kiarabu|egypt|egyptian|spanish|espanol|espanhol|kihispania|portuguese|portugues|portuguesa|brazil|brasil|brasileiro|hausa|haoussa|kihausa|amharic|amharique|kiamhari|yoruba|kiyoruba|igbo|kiigbo)\b/);
-  if (match?.[1]) return languages[match[1]] || "";
+  const match = lower.match(/\b(?:to|into|in|as|use|speak|talk|respond|reply|change|switch|set|translate|mudar|trocar|usar|falar|responder)\s+(english|eng|englsh|englisch|inglish|anglais|ingles|kiingereza|nigeria|nigerian|french|francais|frances|kifaransa|drc|congo|swahili|kiswahili|suajili|kenya|kenyan|arabic|arabe|kiarabu|egypt|egyptian|spanish|espanol|espanhol|kihispania|portuguese|portugues|portuguesa|brazil|brasil|brasileiro|hausa|haoussa|kihausa|amharic|amharique|kiamhari|yoruba|kiyoruba|igbo|kiigbo|ibo|ego|eebo)\b/);
+  // "Switch to Igbo" was written "Switch to ego" by the live speech-to-text (local voice run, 25 Nov 2026), and Igbo is also spelled Ibo: these count only right after "switch to", "speak" and the like,
+  // never anywhere in a sentence (the fallback below), so "my ego" or "Lego" is never a language.
+  if (match?.[1]) return languages[match[1]] || ({ ibo: "ig", ego: "ig", eebo: "ig" })[match[1]] || "";
   return Object.entries(languages).find(([name]) => lower.includes(name))?.[1] || "";
 }
 
@@ -52858,6 +52860,7 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
       const transcript = String(payload.acceptanceText || payload.transcript || payload.text || content.map(part => part.transcript || part.text || "").join(" ") || "").trim();
       const kyroUtteranceId = payload.item_id || payload.item?.id || payload.transcript_id || "";
       if (!routeKyroVoiceIntakeTranscript({ transcript, utteranceId: kyroUtteranceId, source: "realtime-transport" })) {
+      if (eventType === "conversation.item.input_audio_transcription.completed") { try { kyroAnswerFromTranscript(transcript, kyroUtteranceId); } catch { /* the model's own answer stands */ } }
       try { kyroRecoverRefusal(); } catch { /* recovery never breaks the session */ }
       const controllerResult = window.NexusBrowserActionController?.handleFinalUserTranscript({ transcript, transcriptId: payload.transcript_id || payload.item_id || payload.item?.id || "", sessionId: nexusRealtimeConversationIdentity || realtimeVoiceSession?.sessionId || "", role: payload.role || payload.item?.role || "user", isFinal: payload.is_final !== false }, genesisWorkspaceActionFromFinalTranscript);
       nexusGenesisVoiceDebugLog("browser-action-controller-transcript", { handled: controllerResult?.handled === true, duplicate: controllerResult?.duplicate === true, transcriptLength: transcript.length });
@@ -52865,6 +52868,11 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
       if (!controllerResult?.handled && transcript) void executeGenesisWorkspaceFromFinalTranscript(transcript);
       if (!controllerResult?.handled && !transcript && payload.acceptanceText) void executeGenesisWorkspaceFromFinalTranscript(payload.acceptanceText);
       }
+    }
+    // After Kyro was cut off to answer an Amharic transcript (kyroAnswerFromTranscript), the SDK sends no new "audio started" for the answers that follow, so they were never
+    // marked as under way, and the stall watchdog asked for the same answer again 6 seconds after the tool (heard twice: local voice run, 25 Nov 2026). They are marked here.
+    if (eventType === "response.created" && typeof kyroAnsweredFromTranscriptAt === "number" && Date.now() - kyroAnsweredFromTranscriptAt < 60000) {
+      try { markRealtimeResponseStarted(payload, "response-created-after-transcript-answer"); } catch { /* the watchdog still has its own timers */ }
     }
     if (eventType === "response.done") {
       markRealtimeResponseCompleted("response-completed");
@@ -54745,6 +54753,27 @@ function kyroDismissStaleWorkspace(command = "") {
 // The model may already have started to answer what was just said: it is cut off before the page answers.
 function kyroTakeOverTurn() {
   try { if (realtimeVoiceActive()) realtimeVoiceSession?.sdkController?.interrupt?.(); } catch { /* nothing to cut off */ }
+}
+// Amharic: the voice model's own hearing of spoken Amharic is poor. On the local voice run of 25 Nov 2026 it answered "I want to learn about farming" with a muddled Amharic
+// question and looked nothing up, while the speech-to-text (gpt-4o-transcribe with an Amharic hint, server.js) wrote the sentence almost exactly, and given the same words as
+// text the model answered well and asked for farming courses. So for Amharic the model's first answer is cut off as soon as the transcript is in, and it answers the
+// transcript. Hausa, Yoruba and Igbo are heard well enough by the model itself (same run) and are not cut off.
+const KYRO_ANSWER_FROM_TRANSCRIPT_LANGUAGES = Object.freeze({ am: "Amharic" });
+let kyroAnsweredFromTranscript = "";
+let kyroAnsweredFromTranscriptAt = 0;
+function kyroAnswerFromTranscript(transcript, utteranceId) {
+  const lang = typeof voiceLanguageCode === "function" ? voiceLanguageCode() : "en";
+  const name = KYRO_ANSWER_FROM_TRANSCRIPT_LANGUAGES[lang];
+  const said = String(transcript || "").replace(/\s+/g, " ").trim();
+  if (!name || said.length < 2 || !realtimeVoiceActive()) return false;
+  const key = `${utteranceId || ""}|${said}`;
+  if (kyroAnsweredFromTranscript === key) return false; // the same words reach the page more than once
+  kyroAnsweredFromTranscript = key;
+  kyroAnsweredFromTranscriptAt = Date.now();
+  kyroTakeOverTurn();
+  injectKyroRealtimeContext(`The person just said this in ${name}, as the speech-to-text wrote it (more exact than what you heard): "${said.slice(0, 400)}". Answer these words, in ${name}.`);
+  sendKyroRealtimeEvent({ type: "response.create" });
+  return true;
 }
 // True when the page answered the sentence itself. options.typed: it was typed, so a document request already goes the typed way and is left to the usual route.
 function kyroHandleSpokenOpen(text, options = {}) {

@@ -46,8 +46,10 @@ test("a picture or video search that found nothing it may show is said as that, 
 test("the speech-to-text is given a short hint for the assistant's name, the towns and crops people name, and the short commands", () => {
   const start = server.indexOf("function openAiRealtimeSessionConfig(");
   const config = server.slice(start, server.indexOf("function openAiAgentsRealtimeClientConfig(", start));
-  const hint = /prompt: "([^"]+)"/.exec(config);
-  assert.ok(hint, "a prompt in the transcription settings");
+  // (the hint is a constant since Hausa, Amharic, Yoruba and Igbo got their own: see four-languages-full.test.js)
+  assert.ok(config.includes("prompt: openAiRealtimeTranscriptionHint(language)"), "a prompt in the transcription settings");
+  const hint = /const OPENAI_REALTIME_TRANSCRIPTION_HINT = "([^"]+)";/.exec(server);
+  assert.ok(hint, "the English hint");
   for (const word of ["Kyro", "Close it", "Close the screen", "Kisumu", "Nairobi", "Stockton", "Sacramento", "Maize"]) assert.ok(hint[1].includes(word), word);
   assert.ok(hint[1].length < 220, "short: a long list can be echoed back on silence");
   // (the language is given only where the speech-to-text accepts it: see four-languages-full.test.js)

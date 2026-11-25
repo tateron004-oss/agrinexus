@@ -209,11 +209,20 @@ function installKyroVoiceRig(makeEvaluator) {
   // judging and running cases, here in the page (so the same code runs from a script that drives Chrome and from a person's own signed-in browser)
   const { evaluate } = makeEvaluator();
   rig.evaluate = evaluate;
+  // A spoken language switch stops the voice and starts it again in the new language (about 12 seconds on the live site, 25 Nov 2026).
+  // Found on that run: the check passed, then the second look 3.5 seconds later fell in that gap and failed with "no longer connected".
+  // So after a pass, give a voice the page is restarting up to 30 seconds to come back before the second look.
+  const voiceUp = () => typeof realtimeVoiceActive === "function" && realtimeVoiceActive() && !(typeof realtimeVoiceStarting !== "undefined" && realtimeVoiceStarting);
+  rig.waitForVoiceBack = async (maxMs = 30000) => {
+    const start = Date.now();
+    while (Date.now() - start < maxMs) { if (voiceUp()) { await sleep(1500); if (voiceUp()) return true; } await sleep(750); }
+    return false;
+  };
   rig.until = async (mark, expect, timeoutMs) => {
     const start = Date.now(); let state = null; let outcome = null;
     while (Date.now() - start < timeoutMs) {
       state = rig.state(mark); outcome = evaluate(expect, state, { requireVoiceActive: true });
-      if (outcome.pass) { await sleep(3500); state = rig.state(mark); return { state, outcome: evaluate(expect, state, { requireVoiceActive: true }) }; }
+      if (outcome.pass) { await sleep(3500); if (!voiceUp()) await rig.waitForVoiceBack(); state = rig.state(mark); return { state, outcome: evaluate(expect, state, { requireVoiceActive: true }) }; }
       await sleep(900);
     }
     return { state, outcome };

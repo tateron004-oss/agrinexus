@@ -105,10 +105,14 @@ function search(courses, terms) {
 
 async function findKoachLearnCourses(catalog, request, { defaultLang = "en" } = {}) {
   const fallback = LANGS.includes(String(defaultLang || "").split("-")[0]) ? String(defaultLang).split("-")[0] : "en";
-  const replyLang = request?.wordsLang || fallback;
+  // A Hausa, Amharic, Yoruba or Igbo speaker's request reaches here in English: the voice model writes the tools' request in English ("find Koach Learn courses about farming in Hausa"),
+  // since a word of theirs can mean something else in English ("noma", farming, came back as a disease and a restaurant: live voice run, 25 Nov 2026). The answer is then in the person's
+  // own language, which is the language of the courses asked for, and without the English topic word in the middle of it (the course names are in their language).
+  const englishForTheirs = request?.wordsLang === "en" && fallback !== "en" && request?.courseLang === fallback;
+  const replyLang = englishForTheirs ? fallback : (request?.wordsLang || fallback);
   const courseLang = request?.courseLang || request?.wordsLang || fallback;
   const terms = Array.isArray(request?.terms) ? request.terms : [];
-  const base = { replyLang, courseLang, terms, topic: String(request?.topic || terms.join(" ")) };
+  const base = { replyLang, courseLang, terms, topic: String(request?.topic || terms.join(" ")), ...(englishForTheirs ? { topicInEnglish: true } : {}) };
   try {
     const target = await catalog.courses(courseLang);
     const meta = await catalog.meta().catch(() => ({ counts: {}, categories: [] }));
@@ -220,7 +224,7 @@ function koachLearnAnswer(result) {
   const lines = courses.map((course, index) => { const line = `${index + 1}. ${course.n}${course.s ? `: ${learns(course)}` : ""}`; return /[.!?።۔…]$/.test(line) ? line : `${line}.`; });
   const others = courses.length ? LANGS.filter(code => code !== result.courseLang && courses.every(course => course.o && course.o[code])) : [];
   const also = others.length === 9 ? fill(T.also, { others: T.allOthers }) : others.length ? fill(T.also, { others: listJoin(others.map(code => names[code]), lang) }) : "";
-  const text = [fill(T.found, { n: courses.length, language, about: query ? fill(T.about, { query }) : "" }), ...lines, result.total > courses.length ? fill(T.more, { total: result.total }) : "", also, T.start].filter(Boolean).join(" ");
+  const text = [fill(T.found, { n: courses.length, language, about: query && !(result.topicInEnglish && lang !== "en") ? fill(T.about, { query }) : "" }), ...lines, result.total > courses.length ? fill(T.more, { total: result.total }) : "", also, T.start].filter(Boolean).join(" ");
   const sources = courses.map(course => ({ name: course.n, publisher: cut(course.n, 38), title: course.n, url: `${CATALOG}/#lang=${result.courseLang}&c=${course.i}` }));
   return { text, sources: [...sources, all] };
 }
