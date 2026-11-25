@@ -27,6 +27,7 @@ window.KL_TEXT = {
 
 // Koach Learn category ids -> name in each language
 window.KL_CATS = {
+  47: { en: "Africa: Life and Work", es: "África: vida y trabajo", fr: "Afrique : vie et travail", ar: "أفريقيا: الحياة والعمل", sw: "Afrika: Maisha na Kazi", ha: "Afirka: Rayuwa da Aiki", am: "አፍሪካ፦ ሕይወትና ሥራ", yo: "Áfíríkà: Ìgbésí Ayé àti Iṣẹ́", ig: "Afrịka: Ndụ na Ọrụ", pt: "África: vida e trabalho" },
   5: { en: "Artificial Intelligence", es: "Inteligencia artificial", fr: "Intelligence artificielle", ar: "الذكاء الاصطناعي", sw: "Akili Bandia", ha: "Basirar Na'ura", am: "ሰው ሰራሽ አስተውሎት", yo: "Ọgbọ́n Àtọwọ́dá", ig: "Ọgụgụ Isi Arụrụ Arụ", pt: "Inteligência artificial" },
   9: { en: "Seniors and Technology", es: "Personas mayores y tecnología", fr: "Seniors et technologie", ar: "كبار السن والتكنولوجيا", sw: "Wazee na Teknolojia", ha: "Tsofaffi da Fasaha", am: "አረጋውያን እና ቴክኖሎጂ", yo: "Àwọn Àgbàlagbà àti Ìmọ̀ Ẹ̀rọ", ig: "Ndị Agadi na Teknụzụ", pt: "Idosos e tecnologia" },
   10: { en: "Athletes", es: "Atletas", fr: "Athlètes", ar: "الرياضيون", sw: "Wanamichezo", ha: "'Yan Wasa", am: "አትሌቶች", yo: "Àwọn Eléré Ìdárayá", ig: "Ndị Egwuregwu", pt: "Atletas" },

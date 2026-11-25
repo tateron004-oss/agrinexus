@@ -24,7 +24,7 @@ const guess = name => (/[؀-ۿ]/.test(name) ? "ar" : /[ሀ-፿]/.test(name) ? "a
   let guessed = 0;
   for (const c of cats) for (const co of c.Course || []) {
     if (co.private) continue;
-    const hit = map[`${c.id}|${norm(co.name)}`];
+    const hit = map[`#${co.id}`] || map[`${c.id}|${norm(co.name)}`];
     const lang = hit ? hit[0] : guess(co.name);
     if (!hit) guessed++;
     const slug = hit ? hit[1] : null;

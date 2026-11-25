@@ -7091,7 +7091,11 @@ const voiceLocaleMap = {
   sw: "sw-KE",
   ar: "ar-EG",
   es: "es-ES",
-  pt: "pt-BR"
+  pt: "pt-BR",
+  ha: "ha-NG",
+  am: "am-ET",
+  yo: "yo-NG",
+  ig: "ig-NG"
 };
 const voiceLanguageNames = {
   en: "English",
@@ -7099,10 +7103,16 @@ const voiceLanguageNames = {
   sw: "Kiswahili",
   ar: "Arabic",
   es: "Spanish",
-  pt: "Portuguese"
+  pt: "Portuguese",
+  ha: "Hausa",
+  am: "Amharic",
+  yo: "Yoruba",
+  ig: "Igbo"
 };
 const fullAppLanguageCodes = new Set(["en", "fr", "sw", "ar", "es", "pt"]);
-const partialAppLanguageCodes = new Set([]);
+// Hausa, Amharic, Yoruba and Igbo, the other four languages the Koach Learn courses are in: Kyro listens and answers in them and shows the courses in them, while the screen's own words stay in English
+// (languageCode() is still "en" for them, so no screen text is looked up in a language it has no words for). voiceLanguageCode() is the language the person chose.
+const partialAppLanguageCodes = new Set(["ha", "am", "yo", "ig"]);
 let voiceTranslationToken = 0;
 
 const voiceStopTranslations = {
@@ -10104,12 +10114,17 @@ function languageCode() {
   return canonicalLanguageCode(data?.user?.language || localStorage.getItem("agrinexusLoginLanguage") || "en");
 }
 
+// The language the person chose, Hausa, Amharic, Yoruba and Igbo included (languageCode() is the screen's language, "en" for those four).
+function voiceLanguageCode() {
+  return canonicalLanguageCode(data?.user?.language || localStorage.getItem("agrinexusLoginLanguage") || "en", { allowPartial: true });
+}
+
 function voiceLocale() {
-  return voiceLocaleMap[canonicalLanguageCode(languageCode(), { allowPartial: true })] || "en-US";
+  return voiceLocaleMap[voiceLanguageCode()] || "en-US";
 }
 
 function voiceLanguageName() {
-  return voiceLanguageNames[canonicalLanguageCode(languageCode(), { allowPartial: true })] || "English";
+  return voiceLanguageNames[voiceLanguageCode()] || "English";
 }
 
 function speechRateForLanguage(language = languageCode()) {
@@ -11795,9 +11810,19 @@ function languageFromVoiceCommand(command) {
     portuguesa: "pt",
     brazil: "pt",
     brasil: "pt",
-    brasileiro: "pt"
+    brasileiro: "pt",
+    hausa: "ha",
+    haoussa: "ha",
+    kihausa: "ha",
+    amharic: "am",
+    amharique: "am",
+    kiamhari: "am",
+    yoruba: "yo",
+    kiyoruba: "yo",
+    igbo: "ig",
+    kiigbo: "ig"
   };
-  const match = lower.match(/\b(?:to|into|in|as|use|speak|talk|respond|reply|change|switch|set|translate|mudar|trocar|usar|falar|responder)\s+(english|eng|englsh|englisch|inglish|anglais|ingles|kiingereza|nigeria|nigerian|french|francais|frances|kifaransa|drc|congo|swahili|kiswahili|suajili|kenya|kenyan|arabic|arabe|kiarabu|egypt|egyptian|spanish|espanol|espanhol|kihispania|portuguese|portugues|portuguesa|brazil|brasil|brasileiro)\b/);
+  const match = lower.match(/\b(?:to|into|in|as|use|speak|talk|respond|reply|change|switch|set|translate|mudar|trocar|usar|falar|responder)\s+(english|eng|englsh|englisch|inglish|anglais|ingles|kiingereza|nigeria|nigerian|french|francais|frances|kifaransa|drc|congo|swahili|kiswahili|suajili|kenya|kenyan|arabic|arabe|kiarabu|egypt|egyptian|spanish|espanol|espanhol|kihispania|portuguese|portugues|portuguesa|brazil|brasil|brasileiro|hausa|haoussa|kihausa|amharic|amharique|kiamhari|yoruba|kiyoruba|igbo|kiigbo)\b/);
   if (match?.[1]) return languages[match[1]] || "";
   return Object.entries(languages).find(([name]) => lower.includes(name))?.[1] || "";
 }
@@ -11856,14 +11881,18 @@ async function applyAutoLanguageFromSpeech(rawCommand, options = {}) {
   }
 }
 
-function languageDisplayName(code = languageCode()) {
+function languageDisplayName(code = voiceLanguageCode()) {
   return ({
     en: "English",
     fr: "French",
     sw: "Kiswahili",
     ar: "Arabic",
     es: "Spanish",
-    pt: "Portuguese"
+    pt: "Portuguese",
+    ha: "Hausa",
+    am: "Amharic",
+    yo: "Yoruba",
+    ig: "Igbo"
   })[code] || "English";
 }
 
@@ -11874,13 +11903,17 @@ function userLanguageQuickSwitchHtml() {
     ["fr", "French"],
     ["ar", "Arabic"],
     ["pt", "Portuguese"],
-    ["sw", "Kiswahili"]
+    ["sw", "Kiswahili"],
+    ["ha", "Hausa"],
+    ["am", "Amharic"],
+    ["yo", "Yoruba"],
+    ["ig", "Igbo"]
   ];
   return `
     <div class="user-language-quickbar" aria-label="${translateText("Language switcher")}">
       <span>${translateText("Language")}: <strong>${translateText(languageDisplayName())}</strong></span>
       <div>
-        ${languages.map(([code, label]) => `<button type="button" class="${languageCode() === code ? "active" : ""}" data-user-language="${code}" aria-pressed="${languageCode() === code}">${code === "en" ? "English" : translateText(label)}</button>`).join("")}
+        ${languages.map(([code, label]) => `<button type="button" class="${voiceLanguageCode() === code ? "active" : ""}" data-user-language="${code}" aria-pressed="${voiceLanguageCode() === code}">${code === "en" ? "English" : translateText(label)}</button>`).join("")}
       </div>
     </div>
   `;
@@ -12546,19 +12579,22 @@ function moduleUseExplanation(moduleId) {
 async function changeLanguageByVoice(command) {
   const language = languageFromVoiceCommand(command);
   if (!language) {
-    setVoiceResponse("I can change the app language to English, French, Kiswahili, Arabic, Portuguese, or Spanish.", true);
+    setVoiceResponse("I can change the app language to English, French, Kiswahili, Arabic, Portuguese, Spanish, Hausa, Amharic, Yoruba, or Igbo.", true);
     return;
   }
   try {
-    const previousLanguage = languageCode();
+    const previousLanguage = voiceLanguageCode();
     data = await request("/api/user/language", { method: "POST", body: { language } });
     render();
     refreshLanguageEverywhere();
-    if (previousLanguage !== languageCode()) refreshVoiceForLanguageChange();
+    if (previousLanguage !== voiceLanguageCode()) refreshVoiceForLanguageChange();
     const label = voiceLanguageName();
     updateNexusBehaviorLayer("ready", `Nexus will keep listening and responding in ${label}.`);
     document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
-    setVoiceResponse(`Language changed to ${label}. The platform text and voice responses will use ${label} where translation is available.`, true);
+    // (Hausa, Amharic, Yoruba and Igbo: the screen's own words are not translated yet, and it says so)
+    setVoiceResponse(partialAppLanguageCodes.has(language)
+      ? `Language changed to ${label}. I will listen and answer in ${label}, and show Koach Learn courses in ${label}. The screen's own words stay in English for now.`
+      : `Language changed to ${label}. The platform text and voice responses will use ${label} where translation is available.`, true);
     toast(`Language changed to ${label}`);
   } catch (error) {
     setVoiceResponse(error.message || "I could not change the language.");
@@ -16357,8 +16393,8 @@ function installAgriNexusNativeBridge() {
       if (type === "voice.language_changed") {
         const requestedLanguage = String(event.language || event.targetLanguage || "").trim();
         const requestedCode = requestedLanguage.toLowerCase().replace("_", "-").split("-")[0];
-        const lang = canonicalLanguageCode(requestedLanguage);
-        if (requestedLanguage && fullAppLanguageCodes.has(requestedCode)) {
+        const lang = canonicalLanguageCode(requestedLanguage, { allowPartial: true });
+        if (requestedLanguage && (fullAppLanguageCodes.has(requestedCode) || partialAppLanguageCodes.has(requestedCode))) {
           void request("/api/user/language", { method: "POST", body: { language: lang } })
             .then(state => {
               data = state;
@@ -38501,8 +38537,12 @@ function renderUserWorkspace() {
           ["sw", "Kiswahili"],
           ["ar", "Arabic"],
           ["pt", "Portuguese"],
-          ["es", "Spanish"]
-        ].map(([code, label]) => `<button type="button" class="${languageCode() === code ? "active" : ""}" data-user-language="${code}" aria-pressed="${languageCode() === code}">
+          ["es", "Spanish"],
+          ["ha", "Hausa"],
+          ["am", "Amharic"],
+          ["yo", "Yoruba"],
+          ["ig", "Igbo"]
+        ].map(([code, label]) => `<button type="button" class="${voiceLanguageCode() === code ? "active" : ""}" data-user-language="${code}" aria-pressed="${voiceLanguageCode() === code}">
           ${translateText(label)}
         </button>`).join("")}
       </div>
@@ -50631,7 +50671,7 @@ async function requestNexusOpenAiRealtimeSession(status = {}) {
   let response = null;
   for (let attempt = 0; attempt < 2 && !response; attempt += 1) {
     try {
-      response = await kyroFetchWithTimeout(`/api/voice/realtime/session?language=${encodeURIComponent(languageCode())}`, {
+      response = await kyroFetchWithTimeout(`/api/voice/realtime/session?language=${encodeURIComponent(voiceLanguageCode())}`, {
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",
@@ -51815,7 +51855,8 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // "What are my birth control options?", "how often should I get a Pap smear?": the checked women's health guide, with its official sources. The voice model reworded such a question when it called a tool, and the reworded
     // one was sometimes answered from memory with no sources.
     // "What is type 2 diabetes?", "how do I keep track of my blood sugar?", "how can I lower my blood pressure?": the checked diabetes and high blood pressure guide, with its sources (a person's own reading, symptoms or a medicine are never taken).
-    if (trimmed && ((typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) || (typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)) || (typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest(trimmed)) || (typeof kyroPrQuestion === "function" && kyroPrQuestion(trimmed)) || (typeof kyroChurchQuestion === "function" && kyroChurchQuestion(trimmed)) || (typeof kyroAthleteQuestion === "function" && kyroAthleteQuestion(trimmed)) || (typeof kyroMoneyQuestion === "function" && kyroMoneyQuestion(trimmed)) || (typeof kyroHowtoQuestion === "function" && kyroHowtoQuestion(trimmed)) || (typeof kyroTechWalkQuestion === "function" && kyroTechWalkQuestion(trimmed)) || (typeof kyroSafetyQuestion === "function" && kyroSafetyQuestion(trimmed)) || (typeof kyroSpecialEdQuestion === "function" && kyroSpecialEdQuestion(trimmed)) || (typeof kyroReentryQuestion === "function" && kyroReentryQuestion(trimmed)))) {
+    // "Find me a course on farming", "Nataka kozi za kilimo", "Show me Hausa courses about small business": Koach Learn's real courses from the catalogue, in the language asked for (see kyroKoachLearnQuestion).
+    if (trimmed && ((typeof kyroKoachLearnQuestion === "function" && kyroKoachLearnQuestion(trimmed)) || (typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) ||(typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)) || (typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest(trimmed)) || (typeof kyroPrQuestion === "function" && kyroPrQuestion(trimmed)) || (typeof kyroChurchQuestion === "function" && kyroChurchQuestion(trimmed)) || (typeof kyroAthleteQuestion === "function" && kyroAthleteQuestion(trimmed)) || (typeof kyroMoneyQuestion === "function" && kyroMoneyQuestion(trimmed)) || (typeof kyroHowtoQuestion === "function" && kyroHowtoQuestion(trimmed)) || (typeof kyroTechWalkQuestion === "function" && kyroTechWalkQuestion(trimmed)) || (typeof kyroSafetyQuestion === "function" && kyroSafetyQuestion(trimmed)) || (typeof kyroSpecialEdQuestion === "function" && kyroSpecialEdQuestion(trimmed)) || (typeof kyroReentryQuestion === "function" && kyroReentryQuestion(trimmed)))) {
       if (!heardAgain) {
         try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
         kyroPageSpeaksUntil = Date.now() + 40000;
@@ -53963,6 +54004,11 @@ function kyroParentsAbuseQuestion(text) {
     const runtime = window.NexusMentalHealthBehavioralWellness;
     return Boolean(runtime && runtime.shouldHandle?.(text) && runtime.classifyState(text, {})?.state === "abuse_or_safeguarding_concern");
   } catch { return false; }
+}
+// A request to find a Koach Learn course, in any of its 10 languages ("find me a course on farming", "Ina son kwas game da noma", "ስለ ግብርና ኮርስ እፈልጋለሁ"; public/kyro-koachlearn-courses.js, shared with the server): the page takes it
+// itself so the voice model never names a course from memory. The planner answers from the Koach Learn catalogue with each course's own page. The person's own learning (continue, progress, a quiz) is never taken by it.
+function kyroKoachLearnQuestion(text) {
+  try { return Boolean(window.KyroKoachLearnCourses && typeof window.KyroKoachLearnCourses.courseRequest === "function" && window.KyroKoachLearnCourses.courseRequest(text)); } catch { return false; }
 }
 // A question for the checked small-business guide (public/kyro-business-topics.js): minority-owned businesses, startups, loans, grants, certification, taxes. Only when it is about a business at all, and on a device in the
 // United States or naming a US programme (SBA, 8(a), NMSDC ...); "how do I grow a garden" is left to the voice model.
@@ -62305,7 +62351,7 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
       body: {
         text: routedText,
         channel: options.source === "voice" || options.source === "voice_transcript" ? "voice" : "typed",
-        locale: languageCode(),
+        locale: typeof voiceLanguageCode === "function" ? voiceLanguageCode() : languageCode(),
         conversationId: nexusAuthoritativeConversationId(),
         taskId: localStorage.getItem(NEXUS_AUTHORITATIVE_TASK_KEY) || undefined,
         // Whether a tutoring lesson is on the screen: a lesson the server holds open that the screen has closed (or never got) is ended there, not taught from (see tutorTurn in nexus/brain/planner.js).
