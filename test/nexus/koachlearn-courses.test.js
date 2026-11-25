@@ -38,6 +38,10 @@ test("a request to FIND a course is read in all 10 languages, with the language 
   }
   assert.equal(matcher.courseRequest("Mo fẹ́ ẹ̀kọ́ nípa iṣẹ́ ọ̀gbìn").topic, "iṣẹ́ ọ̀gbìn", "what it is about is said back as it was said, with its tone marks");
   assert.equal(matcher.courseRequest("Koach Learn courses").named, true);
+  // the speech-to-text wrote the name as it sounds (live voice run, 25 Nov): it is still the name, not a subject
+  const heard = matcher.courseRequest("What Coach Learn courses are there in Amharic?");
+  assert.deepEqual([heard.named, heard.courseLang, [...heard.terms]], [true, "am", []]);
+  assert.equal(matcher.courseRequest("Find me a course on coaching").terms[0], "coaching", "coaching as a subject is kept");
 });
 
 test("the person's own learning, a period, 'of course' and other uses of the words are never taken", () => {
@@ -169,9 +173,9 @@ test("the page takes a spoken course request itself, loads the matcher, and the 
   const server = fs.readFileSync(path.join(ROOT, "server.js"), "utf8");
   assert.ok(app.includes("function kyroKoachLearnQuestion(text)"));
   assert.ok(app.includes('(typeof kyroKoachLearnQuestion === "function" && kyroKoachLearnQuestion(trimmed))'), "the spoken turn is claimed");
-  assert.ok(html.includes('<script src="/kyro-koachlearn-courses.js?v=kyro-koachlearn-courses-1"></script>'));
+  assert.ok(html.includes('<script src="/kyro-koachlearn-courses.js?v=kyro-koachlearn-courses-2"></script>'));
   assert.ok(html.indexOf("kyro-koachlearn-courses.js") < html.indexOf('src="/app.js'));
-  assert.ok(sw.includes("`/kyro-koachlearn-courses.js?v=kyro-koachlearn-courses-1`"), "the offline copy has it");
+  assert.ok(sw.includes("`/kyro-koachlearn-courses.js?v=kyro-koachlearn-courses-2`"), "the offline copy has it");
   assert.ok(app.includes('const partialAppLanguageCodes = new Set(["ha", "am", "yo", "ig"]);'));
   assert.ok(app.includes("/api/voice/realtime/session?language=${encodeURIComponent(voiceLanguageCode())}"), "the voice session hears the chosen language");
   assert.ok(app.includes('        locale: typeof voiceLanguageCode === "function" ? voiceLanguageCode() : languageCode(),'), "Kyro's own route is told the chosen language");
