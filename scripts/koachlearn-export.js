@@ -610,6 +610,80 @@ function exportWritten(file, outRoot) {
   return { dir, lessons: total };
 }
 
+// ---- Answers explained (owner, 22 November 2026: "build it out") ----------------------------------------------------------------------------
+// Koach Learn has no place to show why an answer is right, and it lists a course's chapters in the order they were added, so every course gets one
+// more chapter at the end, just before the final quiz: a short video that goes over both chapter checks, one slide per question with the
+// question, the right answer and its "why" (already written for every question in every language).
+const REVIEW = {
+  en: { think: "Think first: which answer is right?", chapter: "Answers Explained: Before the Final Quiz", title: "Answers explained", intro: "Before the final quiz, go over the chapter checks: the right answer to each question, and why.", right: "Right answer:", why: "Why:", closeTitle: "Now take the final quiz", closeText: "You have gone over every chapter check. Come back to this video any time you need it." },
+  es: { think: "Piensa primero: ¿cuál es la respuesta correcta?", chapter: "Respuestas explicadas: antes del examen final", title: "Respuestas explicadas", intro: "Antes del examen final, repasa las comprobaciones de los capítulos: la respuesta correcta a cada pregunta y por qué.", right: "Respuesta correcta:", why: "Por qué:", closeTitle: "Ahora haz el examen final", closeText: "Ya repasaste todas las comprobaciones de los capítulos. Vuelve a este video cuando lo necesites." },
+  fr: { think: "Réfléchissez d'abord : quelle est la bonne réponse ?", chapter: "Réponses expliquées : avant le quiz final", title: "Réponses expliquées", intro: "Avant le quiz final, revoyez les contrôles des chapitres : la bonne réponse à chaque question, et pourquoi.", right: "Bonne réponse :", why: "Pourquoi :", closeTitle: "Passez maintenant le quiz final", closeText: "Vous avez revu tous les contrôles des chapitres. Revenez à cette vidéo quand vous en avez besoin." },
+  ar: { think: "فكّر أولاً: ما الإجابة الصحيحة؟", chapter: "شرح الإجابات: قبل الاختبار النهائي", title: "شرح الإجابات", intro: "قبل الاختبار النهائي، راجع اختبارات الفصول: الإجابة الصحيحة لكل سؤال، وسببها.", right: "الإجابة الصحيحة:", why: "السبب:", closeTitle: "الآن قدّم الاختبار النهائي", closeText: "لقد راجعت كل اختبارات الفصول. يمكنك العودة إلى هذا الفيديو في أي وقت." },
+  sw: { think: "Fikiri kwanza: jibu lipi ni sahihi?", chapter: "Majibu yameelezwa: kabla ya jaribio la mwisho", title: "Majibu yameelezwa", intro: "Kabla ya jaribio la mwisho, pitia majaribio ya sura: jibu sahihi la kila swali, na sababu yake.", right: "Jibu sahihi:", why: "Kwa nini:", closeTitle: "Sasa fanya jaribio la mwisho", closeText: "Umepitia majaribio yote ya sura. Rudi kwenye video hii wakati wowote unapoihitaji." },
+  ha: { think: "Ka fara tunani: wace amsa ce daidai?", chapter: "Bayanin amsoshi: kafin jarrabawar ƙarshe", title: "Bayanin amsoshi", intro: "Kafin jarrabawar ƙarshe, ku sake duba gwaje-gwajen babi: amsar da ta dace ga kowace tambaya, da dalilinta.", right: "Amsar da ta dace:", why: "Dalili:", closeTitle: "Yanzu ku yi jarrabawar ƙarshe", closeText: "Kun sake duba dukkan gwaje-gwajen babi. Ku dawo wannan bidiyon duk lokacin da kuke bukata." },
+  am: { think: "መጀመሪያ ያስቡ: ትክክለኛው መልስ የትኛው ነው?", chapter: "የመልሶች ማብራሪያ: ከመጨረሻው ፈተና በፊት", title: "የመልሶች ማብራሪያ", intro: "ከመጨረሻው ፈተና በፊት የምዕራፎቹን ፍተሻዎች ይከልሱ: የእያንዳንዱ ጥያቄ ትክክለኛ መልስ እና ምክንያቱ።", right: "ትክክለኛው መልስ:", why: "ምክንያቱ:", closeTitle: "አሁን የመጨረሻውን ፈተና ይውሰዱ", closeText: "ሁሉንም የምዕራፍ ፍተሻዎች ከልሰዋል። በሚፈልጉት ጊዜ ወደዚህ ቪዲዮ ይመለሱ።" },
+  yo: { think: "Kọ́kọ́ ronú: ìdáhùn wo ló tọ́?", chapter: "Àlàyé ìdáhùn: kí o tó ṣe ìdánwò ìkẹyìn", title: "Àlàyé ìdáhùn", intro: "Kí o tó ṣe ìdánwò ìkẹyìn, wo àwọn ìdánwò orí padà: ìdáhùn tó tọ́ sí ìbéèrè kọ̀ọ̀kan, àti ìdí rẹ̀.", right: "Ìdáhùn tó tọ́:", why: "Ìdí:", closeTitle: "Báyìí, ṣe ìdánwò ìkẹyìn", closeText: "O ti wo gbogbo ìdánwò orí padà. Padà wá sí fídíò yìí nígbàkígbà tí o bá nílò rẹ̀." },
+  ig: { think: "Buru ụzọ chee: olee azịza ziri ezi?", chapter: "Nkọwa azịza: tupu ule ikpeazụ", title: "Nkọwa azịza", intro: "Tupu ule ikpeazụ, legharịa nnwale isi niile anya: azịza ziri ezi nye ajụjụ ọ bụla, na ihe kpatara ya.", right: "Azịza ziri ezi:", why: "Ihe kpatara ya:", closeTitle: "Ugbu a, mee ule ikpeazụ", closeText: "I legharịala nnwale isi niile anya. Laghachi na vidiyo a mgbe ọ bụla ị chọrọ ya." },
+  pt: { think: "Pense primeiro: qual é a resposta certa?", chapter: "Respostas explicadas: antes do teste final", title: "Respostas explicadas", intro: "Antes do teste final, revise as verificações dos capítulos: a resposta certa de cada pergunta e o porquê.", right: "Resposta certa:", why: "Por quê:", closeTitle: "Agora faça o teste final", closeText: "Você revisou todas as verificações dos capítulos. Volte a este vídeo sempre que precisar." }
+};
+const GREEN = "0x4ade80";
+
+// a slide whose text must never be cut short: the sizes shrink step by step until every block fits whole on the frame
+// (characters per line follow the sizes used elsewhere in this file: about 1900 / size for bold, 2150 / size for plain)
+// Ethiopic letters in Ebrima are wider than Latin ones, so Amharic gets fewer characters per line
+const WIDTH_BY_LANG = { am: 0.78 };
+function fitBlocks(blocks, lang = "en") {
+  const k = WIDTH_BY_LANG[lang] || 1;
+  for (let scale = 1; scale >= 0.55; scale -= 0.05) {
+    const out = blocks.map(b => { const size = Math.round(b.size * (b.fixed ? 1 : scale)); return { ...b, size, width: Math.floor(k * (b.font === PLAIN ? 2150 : 1900) / size), maxLines: 99, gap: Math.round((b.gap == null ? 40 : b.gap) * scale) }; });
+    const height = 70 + out.reduce((s, b) => s + wrap(b.text, b.width, 99).length * Math.round(b.size * 1.3) + b.gap, 0);
+    if (height <= H - 24) return out.map(b => ({ ...b, maxLines: wrap(b.text, b.width, 99).length }));
+  }
+  throw new Error(`slide text too long to fit: ${blocks.map(b => b.text).join(" | ").slice(0, 200)}`);
+}
+
+function reviewHtml(questions, R, rtl) {
+  const body = `<p>${esc(R.intro)}</p><ol>${questions.map(q => `<li><p><strong>${esc(q.q)}</strong></p><p>${esc(R.right)} ${esc(q.options[q.answer])}</p><p><em>${esc(R.why)}</em> ${esc(q.why)}</p></li>`).join("")}</ol>`;
+  return rtl ? `<div dir="rtl">${body}</div>` : body;
+}
+
+// builds only the review video and review.json in a course folder that was already built (nothing else there is touched)
+function exportReview(file, outRoot) {
+  const c = loadCourse(file);
+  const lang = c.lang || "en", R = REVIEW[lang], rtl = RTL.has(lang);
+  fontSwap = FONTS_BY_LANG[lang] || null;
+  if (narration) narration.lang = lang;
+  const dir = path.join(outRoot, slug(c.category), c.id);
+  if (!fs.existsSync(path.join(dir, "course.json"))) throw new Error(`not built yet: ${dir}`);
+  const questions = c.chapters.flatMap(ch => ch.check.questions);
+  const total = questions.length;
+  const scenes = [
+    fitBlocks([{ text: c.name, size: 28, font: PLAIN, color: GREY, gap: 60, fixed: true }, { text: R.title, size: 64, gap: 50 }, { text: R.intro, size: 36, font: PLAIN, color: RED }], lang),
+    // owner, 22 November 2026 ("effective, not efficient"): each question is shown first on its own with its options, so the learner tries to
+    // answer before seeing it (trying first makes the answer stick); the next slide gives the right answer and why
+    ...questions.flatMap((q, i) => [fitBlocks([
+      { text: `${R.title}  |  ${i + 1} / ${total}`, size: 26, font: PLAIN, color: GREY, gap: 30, fixed: true },
+      { text: q.q, size: 44, gap: 36 },
+      ...q.options.map((o, k) => ({ text: `${rtl ? RLM : ""}•  ${o}`, size: 34, font: PLAIN, gap: k === q.options.length - 1 ? 34 : 14 })),
+      { text: R.think, size: 34, color: RED }
+    ], lang), fitBlocks([
+      { text: `${R.title}  |  ${i + 1} / ${total}`, size: 26, font: PLAIN, color: GREY, gap: 30, fixed: true },
+      { text: q.q, size: 44, gap: 44 },
+      { text: `${R.right} ${q.options[q.answer]}`, size: 38, color: GREEN, gap: 30 },
+      { text: `${R.why} ${q.why}`, size: 34, font: PLAIN }
+    ], lang)]),
+    fitBlocks([{ text: c.name, size: 28, font: PLAIN, color: GREY, gap: 60, fixed: true }, { text: R.closeTitle, size: 60, gap: 44 }, { text: R.closeText, size: 36, font: PLAIN, color: RED }], lang)
+  ];
+  // the collecting pass of --narrate only gathers what is to be said
+  if (narration && narration.collect) { stillsVideo(dir, "review", scenes); return { dir, questions: total }; }
+  fs.rmSync(path.join(dir, "review-slides"), { recursive: true, force: true });
+  const v = stillsVideo(dir, "review", scenes);
+  // a narrated review is titled with a speaker mark, so the uploader can tell it from the silent first version (and learners see it has sound)
+  const review = { chapter: R.chapter, title: narration ? `${R.title} 🔊` : R.title, video: v.video, slides: v.slides, descriptionHtml: reviewHtml(questions, R, rtl), questions: total };
+  fs.writeFileSync(path.join(dir, "review.json"), JSON.stringify(review, null, 2));
+  return { dir, questions: total };
+}
+
 function writtenPreviewHtml(m) {
   const L = LABELS[m.lang || "en"];
   return `<!doctype html><html lang="${m.lang || "en"}" dir="${RTL.has(m.lang) ? "rtl" : "ltr"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(m.name)}</title>
@@ -701,10 +775,45 @@ if (require.main === module) {
     process.exit(bad ? 1 : 0);
   }
   const all = args.includes("--all-written");
-  if (!names.length && !all) { console.error(`usage: node scripts/koachlearn-export.js <${Object.keys(COURSES).join("|")}|path/to/course.js ...|--all-written> [--out dir]   or   --check [files]`); process.exit(1); }
+  // --review [files|--all-written] [--part k/n] [--skip-built]: only the "answers explained" video of courses already built (--part splits the list for parallel runs)
+  const reviewMode = args.includes("--review");
+  if (reviewMode) (async () => {
+    let files = (all ? writtenFiles() : names.filter(n => !/^\d+\/\d+$/.test(n))).map(f => path.resolve(f)).sort();
+    const part = args.find(a => /^\d+\/\d+$/.test(a));
+    if (part) { const [k, n] = part.split("/").map(Number); files = files.filter((_, i) => i % n === k - 1); }
+    // --langs en,es,...: only those languages (a course file's language is its -xx suffix; no suffix is English)
+    const langsAt = args.indexOf("--langs");
+    if (langsAt >= 0) { const want = new Set(args[langsAt + 1].split(",")); files = files.filter(f => want.has((path.basename(f, ".js").match(/-(es|fr|ar|sw|ha|am|yo|ig|pt)$/) || [, "en"])[1])); }
+    let ok = 0; const bad = [];
+    if (args.includes("--narrate")) {
+      const module_ = require("./koachlearn-narration.js");
+      narration = { lang: "en", module: module_, collect: [] };
+      for (const f of files) { try { exportReview(f, outRoot); } catch (e) { bad.push(`${path.relative(process.cwd(), f)}: ${e.message}`); } }
+      const cost = module_.plan(narration.collect);
+      console.log(`review narration: ${cost.todo.length} lines to speak, about US${cost.dollars.toFixed(2)}`);
+      if (args.includes("--estimate")) process.exit(0);
+      const t0 = Date.now();
+      const res = await module_.fillCache(narration.collect, { perProvider: { azure: 12, spitch: 12 }, onProgress: (n, total, f) => { if (n % 500 === 0 || n === total) console.log(`${new Date().toLocaleTimeString()} spoken ${n} of ${total} (${f} failed, ${Math.round((Date.now() - t0) / 1000)} s)`); } });
+      console.log(`review narration done: ${res.spoken} spoken, ${res.failed.length} failed, ${res.kept} already kept`);
+      if (res.failed.length) fs.writeFileSync(path.join(outRoot, ".upload", "narration-failed.json"), JSON.stringify(res.failed, null, 1));
+      narration.collect = null;
+      if (args.includes("--speak-only")) process.exit(0);
+    }
+    for (const f of files) {
+      try {
+        const c = loadCourse(f);
+        if (args.includes("--skip-built") && fs.existsSync(path.join(outRoot, slug(c.category), c.id, "review.json"))) { ok++; continue; }
+        exportReview(f, outRoot); ok++;
+        if (ok % 50 === 0) console.log(`${new Date().toLocaleTimeString()} reviews built: ${ok} of ${files.length}`);
+      } catch (e) { bad.push(`${path.relative(process.cwd(), f)}: ${e.message}`); }
+    }
+    console.log(`reviews built: ${ok} of ${files.length}${bad.length ? `; ${bad.length} failed:\n  ${bad.join("\n  ")}` : ""}`);
+    process.exit(bad.length ? 1 : 0);
+  })().catch(error => { console.error(error.message); process.exit(1); });
+  if (!reviewMode && !names.length && !all) { console.error(`usage: node scripts/koachlearn-export.js <${Object.keys(COURSES).join("|")}|path/to/course.js ...|--all-written> [--out dir]   or   --check [files]`); process.exit(1); }
   const targets = all ? writtenFiles() : names;
   // --narrate: speak every slide (needs the voice keys in .env.narration, see scripts/koachlearn-narration.js); --voice-test uses a test tone instead of a voice (for checking the timing only)
-  (async () => {
+  if (!reviewMode) (async () => {
     if (args.includes("--narrate") || args.includes("--voice-test") || args.includes("--estimate")) {
       const module_ = require("./koachlearn-narration.js");
       if (args.includes("--voice-test")) for (const k of Object.keys(module_.VOICES)) module_.VOICES[k] = { provider: "fake", voice: "test-tone", locale: k };
