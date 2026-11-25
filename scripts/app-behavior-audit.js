@@ -221,10 +221,13 @@ const fullAppLanguageCodesMatch = app.match(/const fullAppLanguageCodes = new Se
 assert(fullAppLanguageCodesMatch, "App should define full app language codes");
 assert(fullAppLanguageCodesMatch[1].includes("\"pt\""), "Portuguese should be listed as a full app/profile language");
 hasAll(app, [
-  "const partialAppLanguageCodes = new Set([])",
   "pt: \"pt-BR\"",
   "pt: \"Portuguese\""
 ], "Portuguese full language support");
+// (Hausa, Amharic, Yoruba and Igbo are partial voice languages since 24 Nov 2026 for the Koach Learn courses; Portuguese must never be one of them)
+const partialAppLanguageCodesMatch = app.match(/const partialAppLanguageCodes = new Set\(\[([^\]]*)\]\);/);
+assert(partialAppLanguageCodesMatch, "App should define partial app language codes");
+assert(!partialAppLanguageCodesMatch[1].includes("\"pt\""), "Portuguese is a full app language, not a partial one");
 assert.deepStrictEqual(nativeBridge.languageContract.fullAppLanguages, ["en", "es", "fr", "sw", "ar", "pt"], "Native bridge should list Portuguese as a full app language");
 assert.deepStrictEqual(nativeBridge.languageContract.partialLanguages, [], "Native bridge should not list partial language support for the current supported set");
 
