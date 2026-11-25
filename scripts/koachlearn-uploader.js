@@ -77,6 +77,25 @@
     log(`course added: ${plan.name}`);
   }
 
+  // puts the plan's video file into an open add-video or edit-video dialog and saves it. For review plans a save counts once the site's
+  // record shows a review video with the plan's title (22 Nov: first clicks are often ignored, a hung save sends nothing, so click again and
+  // give up after 45 s for a retry instead of waiting 3 minutes)
+  async function saveVideo(d, ch, plan, files, cat, id) {
+    await saveTurn(async () => {
+      setFile(d.querySelector('input[type="file"]'), files[ch.video.file]);
+      await sleep(plan.review ? 2000 : 300); const clicked = performance.now(); btn(d, "Upload Video").click();
+      if (!plan.review) return closed("video upload", 180000, clicked);
+      const isSaved = async () => (await reviewState(cat, id, ch.name)).modules.some(m => m.name.trim() === ch.video.title.trim());
+      const t0 = Date.now(); let saved = false, lastCheck = t0, reclicks = 0;
+      while (dialog() && Date.now() - t0 < 45000) {
+        await sleep(2000); finishClosing();
+        if (reclicks < 2 && Date.now() - t0 > 6000 + reclicks * 12000) { const u = dialog() && btn(dialog(), "Upload Video"); if (u && !u.disabled) { u.click(); reclicks++; log(`clicked Upload Video again (${reclicks})`); } }
+        if (Date.now() - t0 > 20000 && Date.now() - lastCheck > 15000) { lastCheck = Date.now(); try { saved = await isSaved(); } catch (_) {} if (saved) break; }
+      }
+      if (dialog()) { const c = btn(dialog(), "Close"); if (c) c.click(); await closed("dialog to close", 20000).catch(() => {}); if (!saved) throw new Error("the video save did not start; trying again"); log("video saved; dialog closed by hand"); }
+    });
+  }
+
   async function ensureStructure(plan, files, cat, id) {
     const page = `/dashboard/admin/categories/${cat}/${id}`;
     await go(page, () => btn(main(), "Add Chapter"), "course page");
@@ -102,20 +121,30 @@
       // a video row shows its title only after it loads, but its video icon is there at once
       const videos = el => el.querySelectorAll("svg.lucide-video").length;
       // window.klSkipVideos: while the site refuses new videos, still finish chapters, knowledge checks, questions and the quiz
-      if (ch.video && videos(r) === 0 && !window.klSkipVideos) {
+      // review plans: whether the video is there comes from the site's own record of the course (plan.needVideo), because right after a chapter
+      // is added the page can hand back another chapter's panel and its video icon (22 Nov: two courses got the chapter without the video)
+      if (ch.video && (plan.review ? plan.needVideo : videos(r) === 0) && !window.klSkipVideos) {
         // when the site is slow a chapter's buttons draw late, so wait for the button instead of clicking nothing
         (await until(() => [...r.querySelectorAll("button")].find(b => /Add Video/.test(b.textContent)), "Add Video button")).click();
         const d = await until(dialog, "video dialog"); await sleep(300);
         setVal(d.querySelector('input[type="text"]'), ch.video.title);
         d.querySelector(".ProseMirror").editor.commands.setContent(tables(ch.video.html), true);
-        await saveTurn(async () => {
-          setFile(d.querySelector('input[type="file"]'), files[ch.video.file]);
-          await sleep(300); const clicked = performance.now(); btn(d, "Upload Video").click(); await closed("video upload", 180000, clicked);
-        });
+        await saveVideo(d, ch, plan, files, cat, id);
         r = await region(header(ch.name));
         await until(() => { const rr = document.getElementById(header(ch.name).getAttribute("aria-controls")); return rr && videos(rr) > 0; }, `video "${ch.video.title}" to appear`);
         log(`video: ${ch.video.title}`);
+      } else if (ch.video && plan.review && plan.replaceVideo && !window.klSkipVideos) {
+        // owner, 22 Nov: the narrated review replaces the silent one in place, through the video's own edit form (no delete needed)
+        const row = await until(() => [...r.querySelectorAll("svg.lucide-square-pen")].map(svg => svg.closest("button")).filter(Boolean).map(b => b.parentElement && b.parentElement.parentElement).find(x => x && x.querySelector("svg.lucide-video")), "review video row");
+        row.querySelector("svg.lucide-square-pen").closest("button").click();
+        const d = await until(dialog, "video edit dialog"); await sleep(500);
+        setVal(d.querySelector('input[name="name"]') || d.querySelector('input[type="text"]'), ch.video.title);
+        d.querySelector(".ProseMirror").editor.commands.setContent(tables(ch.video.html), true);
+        await saveVideo(d, ch, plan, files, cat, id);
+        log(`video replaced: ${ch.video.title}`);
       }
+      // a chapter with no knowledge check (the "answers explained" review chapter) needs nothing more
+      if (!ch.check) { hrefs.push(null); continue; }
       let link = [...r.querySelectorAll("a")].find(a => /add-question/.test(a.getAttribute("href") || ""));
       if (!link) {
         (await until(() => [...r.querySelectorAll("button")].find(b => /Add Knowledge check/.test(b.textContent)), "Add Knowledge check button")).click();
@@ -127,6 +156,8 @@
       }
       hrefs.push(link.getAttribute("href"));
     }
+    // a review-only plan adds its chapter and video to a course that is already complete, and touches nothing else
+    if (plan.review) return [];
     // the course quiz sits outside the chapters
     let quizHref = [...main().querySelectorAll('a[href*="add-question"]')].map(a => a.getAttribute("href")).find(h => !hrefs.includes(h));
     if (!quizHref) {
@@ -172,12 +203,25 @@
     if (left) throw new Error(`${left} question(s) in "${set.title}" did not save`);
   }
 
+  // the review chapter as the site records it: how many chapters carry its name, and how many videos they hold
+  const decode = h => { const re = /self\.__next_f\.push\(\[1,("(?:[^"\\]|\\.)*")\]\)/g; let m, s = ""; while ((m = re.exec(h))) s += JSON.parse(m[1]); return s; };
+  async function reviewState(cat, id, name) {
+    const t = decode(await (await fetch(`/dashboard/admin/categories/${cat}/${id}`)).text());
+    const chs = [...new Set([...t.matchAll(/\{"id":(\d+),"uniqueId":"[^"]+","name":"((?:[^"\\]|\\.)*)","description":[^,]*,"sequence":[^,]*,"createdAt":"[^"]+","courseId":(\d+)/g)].filter(m => +m[3] === +id && JSON.parse('"' + m[2] + '"').trim() === name.trim()).map(m => +m[1]))];
+    const vids = new Set(), modules = [];
+    for (const m of t.matchAll(/"type":"VIDEO","name":"((?:[^"\\]|\\.)*)".*?"chapterId":(\d+),"Chapter":\{.*?"Video":\{"id":(\d+)/g)) if (chs.includes(+m[2]) && !vids.has(m[3])) { vids.add(m[3]); modules.push({ name: JSON.parse('"' + m[1] + '"'), video: +m[3] }); }
+    return { chapters: chs.length, videos: vids.size, modules };
+  }
+  window.klReviewState = reviewState;
+
   window.klCourseIdFor = courseId;
   window.klRun = async (plan, files, cat) => {
     window.klLog = []; window.klState = "running"; window.klQuestions = 0; window.klRunStart = Date.now();
     try {
       for (const f of plan.files) if (!files[f]) throw new Error(`file not loaded: ${f}`);
-      let id = await courseId(cat, plan.name);
+      // a review-only plan names the course's id on the site; if that page turns out not to be the course, it is looked up by name
+      let id = plan.review && plan.courseId ? String(plan.courseId) : await courseId(cat, plan.name);
+      if (!id && plan.review) throw new Error("not on the site yet (the review goes only on a course that is there)");
       if (!id && window.klSkipVideos) throw new Error("not on the site yet (a new course needs its intro video)");
       if (!id) {
         await addCourse(plan, files, cat);
@@ -186,8 +230,27 @@
       }
       log(`course id ${id}`);
       window.klCourseId = id;
-      const sets = await ensureStructure(plan, files, cat, id);
+      let sets;
+      if (plan.review) {
+        // done = one review chapter holding one video with this plan's title; a review video with another title (the silent first version)
+        // is replaced in place
+        const st = await reviewState(cat, id, plan.chapters[0].name), title = plan.chapters[0].video.title.trim();
+        const current = st.videos === 1 && st.modules.every(m => m.name.trim() === title);
+        plan.needVideo = st.videos === 0; plan.replaceVideo = st.videos >= 1 && !current;
+        if (st.chapters > 1) log(`WARNING ${st.chapters} review chapters`);
+        if (st.videos > 1) log(`WARNING ${st.videos} review videos`);
+        if (st.chapters === 1 && current) { window.klState = "done"; log("review already there"); return window.klState; }
+      }
+      try { sets = await ensureStructure(plan, files, cat, id); }
+      catch (e) { if (!(plan.review && /^course \d+ is not/.test(e.message))) throw e; id = await courseId(cat, plan.name); if (!id) throw e; window.klCourseId = id; log(`course id ${id} (by name)`); sets = await ensureStructure(plan, files, cat, id); }
       for (const s of sets) await addQuestions(s.href, s.set);
+      if (plan.review) {
+        await sleep(2000);
+        const st = await reviewState(cat, window.klCourseId || id, plan.chapters[0].name);
+        log(`review on the site: ${st.chapters} chapter(s), ${st.videos} video(s)`);
+        // the page is left for the category page, so the retry reads the course page fresh
+        if (st.videos === 0 || !st.modules.some(m => m.name.trim() === plan.chapters[0].video.title.trim())) { await go(`/dashboard/admin/categories/${cat}`, () => main().innerText.includes("Add Course"), "category page"); throw new Error("the review video is not on the site yet"); }
+      }
       window.klState = "done"; log(`course done in ${Math.round((Date.now() - window.klRunStart) / 1000)} s`);
     } catch (e) { window.klState = "error: " + e.message; log("ERROR " + e.message); }
     return window.klState;

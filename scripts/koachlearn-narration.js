@@ -70,6 +70,8 @@ function cachedAudio(lang, text) {
   return fs.existsSync(file) && fs.statSync(file).size > 200 ? { file, seconds: secondsOf(file) } : null;
 }
 
+const hasAudio = (lang, text) => { try { return fs.statSync(fileFor(lang, text)).size > 200; } catch { return false; } };
+
 // ---- the voice services ----
 const xml = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -110,9 +112,11 @@ async function speakOnce(lang, text) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   if (v.provider === "fake") { fakeSpeak(v, text, file); return file; }
   let bytes;
-  for (let attempt = 0; ; attempt += 1) {
+  // a "too many" answer (429) is the service's per-minute cap (Spitch: 300 a minute), not a fault: wait and try again, up to 30 times
+  for (let attempt = 0, busy = 0; ; attempt += 1) {
     try { bytes = v.provider === "azure" ? await azureSpeak(v, text) : await spitchSpeak(v, text); break; }
     catch (error) {
+      if (error.status === 429 && busy < 30) { busy += 1; attempt -= 1; await new Promise(r => setTimeout(r, 5000 + Math.random() * 5000)); continue; }
       const again = attempt < 4 && (error.status === 429 || error.status >= 500 || /timeout|fetch failed/i.test(String(error.message)));
       if (!again) throw error;
       await new Promise(r => setTimeout(r, 1500 * 2 ** attempt));
@@ -132,7 +136,8 @@ function plan(lines) {
     if (!text) continue;
     const id = `${lang}|${text}`;
     if (seen.has(id)) continue; seen.add(id);
-    if (!cachedAudio(lang, text)) todo.push({ lang, text });
+    // only whether the line is kept (no length check): timing 48,000 kept files one by one took over an hour (22 Nov)
+    if (!hasAudio(lang, text)) todo.push({ lang, text });
   }
   const perLang = {}; let dollars = 0;
   for (const j of todo) {
@@ -149,16 +154,23 @@ async function fillCache(lines, { onProgress = () => {}, concurrency = 3, maxDol
   const { todo, unique } = plan(lines);
   const seen = { size: unique };
   if (maxDollars != null) { const { dollars } = plan(lines); if (dollars > maxDollars) throw new Error(`speaking the missing lines would cost about US$${dollars.toFixed(2)}, more than the limit of US$${maxDollars}; nothing was spoken`); }
-  let done = 0, next = 0;
-  async function worker() {
-    while (next < todo.length) {
-      const job = todo[next++];
-      await speakOnce(job.lang, job.text);
-      done += 1; onProgress(done, todo.length);
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(concurrency, todo.length) }, worker));
-  return { spoken: todo.length, kept: seen.size - todo.length, characters: todo.reduce((n, j) => n + j.text.length, 0) };
+  // each service gets its own line of workers (perProvider, e.g. { azure: 12, spitch: 4 }; otherwise `concurrency` each), and a line that
+  // still fails after its retries is set aside instead of stopping everything (22 Nov: the whole library is about 210,000 lines)
+  let done = 0; const failed = [];
+  const perProvider = arguments[1] && arguments[1].perProvider || {};
+  const pools = Object.entries(todo.reduce((m, j) => { const p = VOICES[j.lang].provider; (m[p] = m[p] || []).push(j); return m; }, {}));
+  await Promise.all(pools.flatMap(([provider, jobs]) => {
+    let next = 0;
+    const worker = async () => {
+      while (next < jobs.length) {
+        const job = jobs[next++];
+        try { await speakOnce(job.lang, job.text); } catch (error) { failed.push({ lang: job.lang, text: job.text.slice(0, 80), error: String(error.message).slice(0, 120) }); }
+        done += 1; onProgress(done, todo.length, failed.length);
+      }
+    };
+    return Array.from({ length: Math.min(perProvider[provider] || concurrency, jobs.length) }, worker);
+  }));
+  return { spoken: todo.length - failed.length, failed, kept: seen.size - todo.length, characters: todo.reduce((n, j) => n + j.text.length, 0) };
 }
 
 module.exports = { plan, VOICES, narrationLines, cachedAudio, fillCache, fileFor, loadKeys, AUDIO_ROOT };
