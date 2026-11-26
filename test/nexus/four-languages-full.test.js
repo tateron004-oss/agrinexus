@@ -317,3 +317,30 @@ test("in a text-only session the page says Kyro's answers, never an answer to mi
   assert.deepEqual(parts("ሰላም። እንዴት ነህ? ደህና ነኝ።"), ["ሰላም። እንዴት ነህ? ደህና ነኝ።"]);
   assert.ok(parts(("አንድ ሁለት ሶስት። ").repeat(60)).every(part => part.length <= 280), "short parts, so the first is heard soon");
 });
+
+test("Amharic sessions use the full voice model (the smaller one wrote muddled Amharic on the live site); every other language keeps the site's model", () => {
+  const server = read("server.js");
+  const allowed = /const NEXUS_REALTIME_ALLOWED_MODELS = new Set\(\[[^\]]+\]\);/.exec(server)[0];
+  const set = /const OPENAI_PAGE_SPOKEN_LANGUAGES = new Set\(\[[^\]]+\]\);/.exec(server)[0];
+  const pick = new Function(`${allowed}\n${set}\n${grabFrom(server, "openAiRealtimeModel")}\n${grabFrom(server, "openAiRealtimeTranscriptionCode")}\n${grabFrom(server, "openAiRealtimeSessionModel")}\nreturn openAiRealtimeSessionModel;`)();
+  const site = { OPENAI_REALTIME_MODEL: "gpt-realtime-2.1-mini" };
+  assert.equal(pick("am", site), "gpt-realtime-2.1");
+  assert.equal(pick("am", { ...site, OPENAI_REALTIME_NATIVE_MODEL: "gpt-realtime" }), "gpt-realtime", "it can be changed without a release");
+  assert.equal(pick("am", { ...site, OPENAI_REALTIME_NATIVE_MODEL: "not-a-model" }), "gpt-realtime-2.1");
+  for (const code of ["en", "es", "sw", "ha", "yo", "ig"]) assert.equal(pick(code, site), "gpt-realtime-2.1-mini", code);
+  const config = server.slice(server.indexOf("function openAiRealtimeSessionConfig("), server.indexOf("function openAiAgentsRealtimeClientConfig("));
+  assert.ok(config.includes("model: openAiRealtimeSessionModel(language, env),"));
+});
+
+test("the page's own voice and the test rig ask for speech without saving the whole store (several at once took the live site down)", () => {
+  const server = read("server.js");
+  const speak = server.slice(server.indexOf('if (url.pathname === "/api/voice/speak" && req.method === "POST") {'));
+  const lite = speak.indexOf("if (body.pageVoice === true) {");
+  assert.ok(lite > 0 && lite < speak.indexOf("await writeDb(db);"), "returned before the save");
+  assert.match(speak.slice(lite, lite + 400), /return send\(res, 200, \{ voiceResult: \{ correlationId, text, provider, audioDataUrl:/);
+  const app = read("public/app.js");
+  const say = grabFrom(app, "kyroPageSay");
+  assert.ok(say.includes("forceOpenAi: true, pageVoice: true"));
+  assert.ok(say.includes("let next = fetchPart(parts[0]);") && !say.includes("parts.map(fetchPart)"), "one part at a time, the next fetched while this one plays");
+  assert.ok(read("scripts/live-voice-suite/rig-page.js").includes("forceOpenAi: true, pageVoice: true"));
+});
