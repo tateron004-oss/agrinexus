@@ -301,6 +301,9 @@ const spaceDirectory = STATE_STORE === "postgres"
   ? businessSpaces.createPostgresDirectory(() => getPgPool())
   : businessSpaces.createFileDirectory(process.env.AGRINEXUS_SPACES_PATH || path.join(path.dirname(DB_PATH), "spaces-directory.json"));
 const PROVIDER_WEBHOOK_TIMEOUT_MS = Number(process.env.PROVIDER_WEBHOOK_TIMEOUT_MS || 3000);
+// The OpenAI translation gets longer than a provider webhook: a sentence into Amharic took 3 to 5 seconds, so with 3 every translation into Hausa, Amharic, Yoruba or Igbo gave up and the
+// "[AM] ..." stand-in (the English) was shown instead (local check, 25 Nov 2026). The captions and screens that ask for it do not wait on it: they show the English first.
+const OPENAI_TRANSLATION_TIMEOUT_MS = Number(process.env.OPENAI_TRANSLATION_TIMEOUT_MS || 15000);
 const LIVE_SERVICE_TIMEOUT_MS = Number(process.env.LIVE_SERVICE_TIMEOUT_MS || 3000);
 const sessions = new Map();
 const genesisVoiceGuestSessions = new Map();
@@ -20937,11 +20940,13 @@ function openAiRealtimeTranscriptionLanguage(language = "en") {
 // "Switch to Igbo" in Amharic too. English switch commands in these four modes, heard exactly: 48 of 56 with the old hint, 55 of 56 with this one (offline check, same day).
 // Amharic names farming (ግብርና, እርሻ) and health (ጤና): "ስለ ግብርና መማር እፈልጋለሁ" (I want to learn about farming) was written ስለ ክብርና (honor) on the live site, and the course search
 // looked for "etiquette learning" (25 Nov 2026). Offline the key word was then heard 22 of 36 times, against 17 without it (three voices, three tries each).
+// Each names its own yes and no: a lone Amharic "አይ" (no) was written "እርሻ" (farm) on the live site, so a consent question could not be answered (25 Nov 2026). One-word yes and no,
+// heard right offline (three voices, three tries each): Hausa 6 -> 15 of 18, Amharic 9 -> 18, Yoruba 16 -> 18, Igbo 15 -> 15; the farming sentences held (Yoruba, naming "iṣẹ́ àgbẹ̀", 3-6 -> 9 of 9).
 const OPENAI_NATIVE_TRANSCRIPTION_HINTS = {
-  ha: "Kyro yana magana da Hausa. Koach Learn. Sannu, yaya, don Allah, na gode, aiki, makaranta. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
-  am: "ኪሮ በአማርኛ ይናገራል። Koach Learn። ሰላም፣ እባክህ፣ አመሰግናለሁ፣ ግብርና፣ እርሻ፣ ጤና፣ ሥራ፣ ትምህርት። English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
-  yo: "Kyro ń sọ èdè Yorùbá. Koach Learn. Ẹ káàbọ̀, báwo ni, ẹ jọ̀ọ́, ẹ ṣé, iṣẹ́, ẹ̀kọ́. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
-  ig: "Kyro na-asụ Igbo. Koach Learn. Ndewo, kedu, biko, daalụ, ọrụ, mmụta. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen."
+  ha: "Kyro yana magana da Hausa. Koach Learn. Eh, a'a, sannu, yaya, don Allah, na gode, noma. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
+  am: "ኪሮ በአማርኛ ይናገራል። Koach Learn። አዎ፣ አይ፣ ሰላም፣ እባክህ፣ አመሰግናለሁ፣ ግብርና፣ እርሻ፣ ጤና፣ ትምህርት። English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
+  yo: "Kyro ń sọ èdè Yorùbá. Koach Learn. Bẹ́ẹ̀ni, rárá, ẹ káàbọ̀, báwo ni, iṣẹ́ àgbẹ̀, ẹ̀kọ́. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
+  ig: "Kyro na-asụ Igbo. Koach Learn. Ee, mba, ndewo, kedu, biko, daalụ, ọrụ, mmụta. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen."
 };
 const OPENAI_REALTIME_TRANSCRIPTION_HINT = "Kyro, AgriNexus, Koach Learn. Close it. Close the screen. Show my notes, reminders, checklists. Kisumu, Nairobi, Nakuru, Mombasa, Lagos, Stockton, Sacramento. Maize, sorghum, cassava. Hausa, Yoruba, Igbo, Amharic.";
 // Amharic: the voice model's spoken Amharic was often badly worded while its written Amharic is good (local voice run and a typed check, 25 Nov 2026), so an Amharic session is
@@ -25379,9 +25384,10 @@ async function translateDynamicContent(db, user, { text, targetLanguage, sourceL
               content: JSON.stringify({ text, sourceLanguage, targetLanguage, context })
             }
           ],
-          max_output_tokens: 600
+          // (room for the whole text: a screen's answer in Amharic or Yoruba takes several times the tokens of the English; 600 cut a long answer short)
+          max_output_tokens: Math.min(2400, 600 + String(text || "").length * 2)
         })
-      }, PROVIDER_WEBHOOK_TIMEOUT_MS);
+      }, OPENAI_TRANSLATION_TIMEOUT_MS);
       const json = await response.json().catch(() => ({}));
       const openAiText = response.ok ? extractResponseText(json) : "";
       if (openAiText) {

@@ -48813,7 +48813,9 @@ function setVoiceResponse(message, speak = false, options = {}) {
       body: { text: responseMessage, sourceLanguage: "en", targetLanguage: languageCode(), context: "voice-response", captionOnly: true } /* (only the translation back, nothing saved: see the /api/translate route) */
     }).then(result => {
       if (token !== voiceTranslationToken || interruptToken !== voiceInterruptToken || (options.turnToken && !isCurrentNexusVoiceTurn(options.turnToken))) return;
-      const translated = result.translationResult?.translatedText || responseMessage;
+      // (the "[AM] ..." stand-in a translation that did not happen gives back is the English with a tag on it: the caption keeps the words as they were)
+      const offered = String(result.translationResult?.translatedText || "");
+      const translated = offered && !/^[[A-Z]{2}]s/.test(offered) ? offered : responseMessage;
       lastVoiceResponse = translated;
       if (transcript) transcript.textContent = translated;
       if (summary) summary.textContent = translated;
@@ -56623,9 +56625,37 @@ function kyroShowResultScreen(toolName, command, result) {
     kyroPendingOffers = Array.isArray(model.offers) ? model.offers : [];
     kyroNoteActivity();
     // (a list that was just added to is shown as the list: see kyroShowListAfterAdd)
-    try { void kyroShowListAfterAdd(result, command); } catch { /* the confirmation is already showing */ }
+    if (!result?.kyroTranslated) { try { void kyroShowListAfterAdd(result, command); } catch { /* the confirmation is already showing */ } }
+    if (typeof kyroScreenTranslationToken !== "undefined") kyroScreenTranslationToken += 1;
+    if (!result?.kyroTranslated && typeof kyroTranslateScreenAfter === "function") { try { kyroTranslateScreenAfter(toolName, command, result); } catch { /* the English answer stays */ } }
     return true;
   } catch { return false; }
+}
+// Many tools answer in English (health readings and their safety advice, most toolkits). The voice says the answer in the person's language, but the screen showed the English: in a live
+// Amharic voice run (25 Nov 2026) a misheard blood pressure was refused with "I heard 11 over 5, but that does not sound like a real blood-pressure reading ..." on the screen. When the person's
+// language is not English and the answer plainly is, it is shown as it is, then drawn again in their language as soon as the translation comes back (the light translation: nothing saved).
+// A newer screen in the meantime wins; a translation that did not happen (no translation service, the "[AM] ..." stand-in) leaves the English.
+let kyroScreenTranslationToken = 0;
+const KYRO_ENGLISH_WORDS = /\b(?:the|and|you|your|is|are|to|of|for|not|this|that|it|with|please|was|did|can|will|have|from|or)\b/gi;
+function kyroLooksEnglish(text) {
+  const words = String(text || "").match(KYRO_ENGLISH_WORDS) || [];
+  return new Set(words.map(word => word.toLowerCase())).size >= 4;
+}
+function kyroTranslateScreenAfter(toolName, command, result) {
+  const language = typeof languageCode === "function" ? languageCode() : "en";
+  const text = result && typeof result.response === "string" ? result.response : "";
+  if (language === "en" || !text || text.length > 1800 || !kyroLooksEnglish(text)) return false;
+  const token = kyroScreenTranslationToken;
+  void request("/api/translate", { method: "POST", body: { text, sourceLanguage: "en", targetLanguage: language, context: "result-screen", captionOnly: true } })
+    .then(reply => {
+      const translated = String(reply?.translationResult?.translatedText || "").trim();
+      if (!translated || translated === text || /^\[[A-Z]{2}\]/.test(translated) || kyroLooksEnglish(translated)) return;
+      if (token !== kyroScreenTranslationToken || typeof languageCode !== "function" || languageCode() !== language) return;
+      if (!document.querySelector("[data-kyro-result]")) return; // (closed meanwhile)
+      kyroShowResultScreen(toolName, command, { ...result, response: translated, kyroTranslated: true });
+    })
+    .catch(() => { /* the English answer stays */ });
+  return true;
 }
 // The flows that really are forms (the telehealth intake, selling or buying, a résumé, an application) are not replaced by an answer; everything else a tool answers is.
 const KYRO_SMALL_TALK = /^(?:(?:hey|hi|hello|good (?:morning|afternoon|evening|night)|thanks?|thank you|how are you|are you (?:there|listening)|can you hear me|bye|goodbye|jambo|habari|asante)(?:[\s,]+(?:kyro|there|today|again|so much|very much))*|ok(?:ay)?|yes|no)[.?!]*$/i;

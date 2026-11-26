@@ -437,3 +437,44 @@ test("consent prompts are in the person's language, and the yes and no they name
   const spine = read("nexus/runtime/behavior-spine.js");
   assert.ok(spine.includes("response: await this.confirmationPrompt({ task, pendingStepId: execution.pendingStepId, context, language: command?.locale }),"));
 });
+
+test("an English answer on the screen is drawn again in the person's language (the health check's refusal was English on an Amharic screen)", async () => {
+  const app = read("public/app.js");
+  const start = app.indexOf("let kyroScreenTranslationToken = 0;");
+  const code = app.slice(start, app.indexOf("return true;\n}", app.indexOf("function kyroTranslateScreenAfter(")) + "return true;\n}".length);
+  const shown = []; const asked = [];
+  const run = (language, reply) => new Function("env", `
+    let languageCode = () => env.language;
+    const request = async (url, options) => { env.asked.push(options.body); return env.reply; };
+    const document = { querySelector: () => ({}) };
+    const kyroShowResultScreen = (tool, command, result) => { env.shown.push(result); };
+    ${code}
+    return { go: (result) => { kyroScreenTranslationToken += 1; return kyroTranslateScreenAfter("t", "c", result); }, bump: () => { kyroScreenTranslationToken += 1; }, looks: kyroLooksEnglish };`)({ language, reply, shown, asked });
+  const english = { response: "I heard 11 over 5, but that does not sound like a real blood-pressure reading, so I did not save it. Please check the numbers on your monitor and say them again." };
+  const am = run("am", { translationResult: { translatedText: "11 በ5 ሰማሁ፣ ግን ይህ እውነተኛ የደም ግፊት ንባብ አይመስልም፤ ስለዚህ አላስቀመጥኩትም።" } });
+  assert.equal(am.go(english), true);
+  await new Promise(r => setTimeout(r, 5));
+  assert.equal(shown.length, 1); assert.equal(shown[0].kyroTranslated, true); assert.match(shown[0].response, /የደም ግፊት/);
+  assert.equal(asked[0].captionOnly, true, "the light translation, nothing saved");
+  assert.equal(run("en", {}).go(english), false, "English: left alone");
+  assert.equal(run("ha", {}).go({ response: "Ga kwasa-kwasai 5 na Koach Learn da Hausa: 1. Kasuwancin Noma da Sarrafa Gona" }), false, "already in Hausa: left alone");
+  assert.equal(run("am", {}).go({ response: "በአማርኛ የሚገኙ 5 የKoach Learn ኮርሶች እነሆ" }), false, "already in Amharic: left alone");
+  shown.length = 0;
+  const stale = run("yo", { translationResult: { translatedText: "Mo gbọ́ 11 lórí 5, ṣùgbọ́n èyí kò dà bí ìwọ̀n ìfúnpá gidi." } });
+  stale.go(english); stale.bump();
+  await new Promise(r => setTimeout(r, 5));
+  assert.equal(shown.length, 0, "a newer screen meanwhile wins");
+  const standIn = run("ig", { translationResult: { translatedText: "[IG] " + english.response } });
+  standIn.go(english); await new Promise(r => setTimeout(r, 5));
+  assert.equal(shown.length, 0, "no translation service: the English stays");
+  assert.ok(read("server.js").includes("max_output_tokens: Math.min(2400, 600 + String(text || \"\").length * 2)"));
+});
+
+test("a translation into these languages is given time to finish, and the English stand-in is never shown as a caption", () => {
+  const server = read("server.js");
+  assert.ok(server.includes("const OPENAI_TRANSLATION_TIMEOUT_MS = Number(process.env.OPENAI_TRANSLATION_TIMEOUT_MS || 15000);"), "Amharic took 3 to 5 seconds; 3 gave up every time");
+  const call = server.slice(server.indexOf('"Use plain language suitable for rural, low-tech users."'), server.indexOf('provider = "openai-translation";'));
+  assert.ok(call.includes("}, OPENAI_TRANSLATION_TIMEOUT_MS);"));
+  const app = read("public/app.js");
+  assert.ok(app.includes('const translated = offered && !/^\[[A-Z]{2}\]\s/.test(offered) ? offered : responseMessage;'), "a caption keeps its words when no translation happened");
+});
