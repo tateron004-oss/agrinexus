@@ -75,7 +75,7 @@ function installKyroVoiceRig(makeEvaluator) {
     const key = "t:" + (lang || "") + ":" + text; if (rig.buffers[key]) return key;
     // (otherwise a sentence written in Spanish is spoken as Spanish, anything else as English)
     const language = LOCALES[lang] ? lang : (/[¿¡ñáéíóú]/i.test(text) ? "es" : "en");
-    const result = await window.request("/api/voice/speak", { method: "POST", body: { correlationId: "voice-suite-" + Date.now(), text, language, locale: LOCALES[language], rate: 1, pitch: 1, forceOpenAi: true } });
+    const result = await window.request("/api/voice/speak", { method: "POST", body: { correlationId: "voice-suite-" + Date.now(), text, language, locale: LOCALES[language], rate: 1, pitch: 1, forceOpenAi: true, pageVoice: true } }); /* (pageVoice: only the audio back, nothing saved: the test must not load the site it tests) */
     const url = result && result.voiceResult && result.voiceResult.audioDataUrl;
     if (!url) throw new Error("the speech service returned no audio");
     rig.buffers[key] = await ctx.decodeAudioData(await (await fetch(url)).arrayBuffer());

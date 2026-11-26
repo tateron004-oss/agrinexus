@@ -20943,6 +20943,13 @@ const OPENAI_REALTIME_TRANSCRIPTION_HINT = "Kyro, AgriNexus, Koach Learn. Close 
 // Amharic: the voice model's spoken Amharic was often badly worded while its written Amharic is good (local voice run and a typed check, 25 Nov 2026), so an Amharic session is
 // text-only and the page reads each answer aloud with the speech service (public/app.js, kyroPageSpeaks).
 const OPENAI_PAGE_SPOKEN_LANGUAGES = new Set(["am"]);
+// Amharic needs the full voice model: on the live site, with gpt-realtime-2.1-mini (the site's OPENAI_REALTIME_MODEL), Kyro's written Amharic was muddled ("I'm very tired"
+// was answered with a question about fear), where the full gpt-realtime-2.1 wrote it plainly and naturally (local voice run, 25 Nov 2026). Only Amharic sessions use it.
+function openAiRealtimeSessionModel(language = "en", env = process.env) {
+  if (!OPENAI_PAGE_SPOKEN_LANGUAGES.has(openAiRealtimeTranscriptionCode(language))) return openAiRealtimeModel(env);
+  const requested = String(env.OPENAI_REALTIME_NATIVE_MODEL || "gpt-realtime-2.1").trim();
+  return NEXUS_REALTIME_ALLOWED_MODELS.has(requested) ? requested : "gpt-realtime-2.1";
+}
 function openAiRealtimeOutputModalities(language = "en") {
   return OPENAI_PAGE_SPOKEN_LANGUAGES.has(openAiRealtimeTranscriptionCode(language)) ? ["text"] : ["audio"];
 }
@@ -20980,7 +20987,7 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
       };
   return {
     type: "realtime",
-    model: openAiRealtimeModel(env),
+    model: openAiRealtimeSessionModel(language, env),
     audio: {
       input: {
         noise_reduction: {
@@ -60556,6 +60563,11 @@ async function api(req, res, url) {
         };
         provider = "openai-audio-error";
       }
+    }
+    // The page's own voice (Amharic answers, public/app.js kyroPageSay) asks for a part of an answer at a time: only the audio comes back, and nothing is saved. Each request
+    // used to save the whole stored document (about 5 MB) and send the person's whole state back, and a few at once took the site down (live voice run, 25 Nov 2026).
+    if (body.pageVoice === true) {
+      return send(res, 200, { voiceResult: { correlationId, text, provider, audioDataUrl: audio?.audioDataUrl || null, model: audio?.model || null, voice: audio?.voice || null, responseFormat: audio?.responseFormat || body.responseFormat || "mp3", error: speechError } });
     }
     const record = voiceRecord(db, user, "text-to-speech", speechError ? `Speech response failed: ${speechError}` : `Speech response prepared: ${text}`, { language, locale: body.locale || voiceLocaleForLanguage(language), provider, model: audio?.model || null, voice: audio?.voice || null, error: speechError });
     await writeDb(db);

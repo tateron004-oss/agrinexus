@@ -54818,13 +54818,15 @@ function kyroPageSay(text) {
   const generation = kyroPageVoice.generation;
   const fetchPart = part => {
     const language = /[ሀ-፿]/.test(part) ? "am" : "en";
-    return request("/api/voice/speak", { method: "POST", body: { correlationId: `kyro-page-voice-${Date.now().toString(36)}`, text: part, language, locale: language === "am" ? "am-ET" : "en-US", rate: 1, pitch: 1, forceOpenAi: true } })
+    return request("/api/voice/speak", { method: "POST", body: { correlationId: `kyro-page-voice-${Date.now().toString(36)}`, text: part, language, locale: language === "am" ? "am-ET" : "en-US", rate: 1, pitch: 1, forceOpenAi: true, pageVoice: true } })
       .then(result => result?.voiceResult?.audioDataUrl || "").catch(() => "");
   };
-  const urls = parts.map(fetchPart); // all asked for at once; said in order
+  // one part asked for at a time, the next while this one is said (several at once took the live site down)
   kyroPageVoice.chain = kyroPageVoice.chain.then(async () => {
-    for (const pending of urls) {
-      const url = await pending;
+    let next = fetchPart(parts[0]);
+    for (let index = 0; index < parts.length; index += 1) {
+      const url = await next;
+      next = index + 1 < parts.length && generation === kyroPageVoice.generation ? fetchPart(parts[index + 1]) : Promise.resolve("");
       if (generation !== kyroPageVoice.generation) return;
       if (!url) continue;
       await new Promise(resolve => {
