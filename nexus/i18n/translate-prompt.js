@@ -47,7 +47,7 @@ function createPromptTranslator({ env = process.env, fetchFn = globalThis.fetch,
         body: JSON.stringify({
           model,
           input: [
-            { role: "system", content: `Translate from English into ${LANGUAGE_NAMES[code]}. It is a question Kyro, a voice assistant, asks before it saves something: keep its meaning exactly, including every name, amount, currency, date and time, and keep that the person answers yes or no. Keep names such as Kyro and Koach Learn as they are. Plain, warm, everyday words. The text to translate is the whole of the next message: plain text in, plain text out, never JSON.` },
+            { role: "system", content: `Translate from English into ${LANGUAGE_NAMES[code]}. It is a question Kyro, a voice assistant, asks before it saves something: keep its meaning exactly, including every name, amount, currency, date and time, and keep that the person answers yes or no, written as the everyday words for yes and no in that language (never the English words yes and no). Keep names such as Kyro and Koach Learn as they are. Plain, warm, everyday words. The text to translate is the whole of the next message: plain text in, plain text out, never JSON.` },
             { role: "user", content: source }
           ],
           max_output_tokens: Math.min(1200, 300 + source.length * 3)
