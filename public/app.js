@@ -54834,7 +54834,7 @@ function kyroAnswerFromTranscript(transcript, utteranceId) {
   kyroAnsweredFromTranscriptAt = Date.now();
   try { if (typeof kyroPageVoice !== "undefined") kyroPageVoice.staleBefore = Date.now(); } catch { /* only for the page's own voice */ }
   kyroTakeOverTurn();
-  injectKyroRealtimeContext(`The person just said this in ${name}, as the speech-to-text wrote it (more exact than what you heard): "${said.slice(0, 400)}". Answer these words, in ${name}.`);
+  injectKyroRealtimeContext(`The person just said this in ${name}, as the speech-to-text wrote it (more exact than what you heard): "${said.slice(0, 400)}". Understand them the way a speaker of ${name} means them (everyday sayings by their meaning, not word by word), and answer, in ${name}.`);
   sendKyroRealtimeEvent({ type: "response.create" });
   return true;
 }

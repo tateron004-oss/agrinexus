@@ -20836,6 +20836,12 @@ function genesisVoiceAcceptanceHarness(runtime = "elevenlabs") {
 // The language the person chose, said plainly by name: a bare code ("ha") with "reply in the user's language when reasonably supported; otherwise say support is limited" let the voice answer a Hausa
 // speaker in English or apologise instead (owner, 25 Nov 2026: "we need all the languages to work"). It is added even when OPENAI_REALTIME_INSTRUCTIONS replaces the rest.
 const OPENAI_NATIVE_TOOL_ENGLISH_LANGUAGES = new Set(["ha", "am", "yo", "ig"]);
+const OPENAI_NATIVE_MEANING_NOTES = Object.freeze({
+  ha: 'Understand the person as a Hausa speaker means it, everyday sayings by their meaning, never word by word: "Na gaji" means "I am tired".',
+  am: 'Understand the person as an Amharic speaker means it, everyday sayings by their meaning, never word by word: "ደክሞኛል" means "I am tired".',
+  yo: 'Understand the person as a Yoruba speaker means it, everyday sayings by their meaning, never word by word: "Ó rẹ̀ mí" means "I am tired".',
+  ig: 'Understand the person as an Igbo speaker means it, everyday sayings by their meaning, never word by word: "Ike gwụrụ m" means "I am tired" (it is about the person, not power or a battery).'
+});
 function openAiRealtimeLanguageInstruction(language = "en") {
   const code = canonicalVoiceLanguage(language);
   const name = VOICE_LANGUAGE_NAMES[code] || "English";
@@ -20844,8 +20850,10 @@ function openAiRealtimeLanguageInstruction(language = "en") {
   // Found on the live voice run, 25 Nov 2026: "Ina so in koyi game da noma" (Hausa: I want to learn about farming) went to the tools word for word, they read English, and "noma" came back
   // as a disease and a restaurant; the Hausa answer was about those. Kyro's tools understand English and the six first languages, not these four.
   if (!OPENAI_NATIVE_TOOL_ENGLISH_LANGUAGES.has(code)) return base;
+  // Found on the live sweep, 26 Nov 2026: Igbo "Ike gwụrụ m" (I am tired) was written down word for word, but the model read it word by word ("ike", strength or power;
+  // "gwụ", run out) and talked about a battery running out. Everyday sayings are meant by what a speaker means by them; one example per language shows that.
   const readAloud = typeof OPENAI_PAGE_SPOKEN_LANGUAGES !== "undefined" && OPENAI_PAGE_SPOKEN_LANGUAGES.has(code) ? ` Your answers are written down and then read aloud to the person: write them exactly as you would say them, short and warm, with no lists, symbols or markdown.` : "";
-  return `${base}${readAloud} Kyro's tools read English, not ${name}: whenever you call a tool, write command and query in English with the person's meaning (for example "I want to learn about farming", "show tomorrow's weather in Kano"), never their ${name} words as they are, because a ${name} word can mean something quite different in English. Keep it short and plain. When they want to learn about something or want courses or lessons, ask for Koach Learn's courses in ${name}: "find Koach Learn courses about farming in ${name}". Then answer the person in ${name}.`;
+  return `${base}${readAloud} ${OPENAI_NATIVE_MEANING_NOTES[code] || ""} Kyro's tools read English, not ${name}: whenever you call a tool, write command and query in English with the person's meaning (for example "I want to learn about farming", "show tomorrow's weather in Kano"), never their ${name} words as they are, because a ${name} word can mean something quite different in English. Keep it short and plain. When they want to learn about something or want courses or lessons, ask for Koach Learn's courses in ${name}: "find Koach Learn courses about farming in ${name}". Then answer the person in ${name}.`;
 }
 
 function openAiRealtimeInstructions(user, language = "en") {

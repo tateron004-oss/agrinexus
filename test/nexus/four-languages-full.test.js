@@ -201,11 +201,13 @@ test("for the four, the voice sends its tools the request in English and asks fo
   const server = read("server.js");
   const names = /const VOICE_LANGUAGE_NAMES = \{[^}]+\};/.exec(server)[0];
   const set = /const OPENAI_NATIVE_TOOL_ENGLISH_LANGUAGES = new Set\(\[[^\]]+\]\);/.exec(server)[0];
-  const say = new Function(`${names}\n${set}\nconst canonicalVoiceLanguage = l => String(l || "en").split("-")[0];\n${grabFrom(server, "openAiRealtimeLanguageInstruction")}\nreturn openAiRealtimeLanguageInstruction;`)();
+  const notes = /const OPENAI_NATIVE_MEANING_NOTES = Object\.freeze\(\{[\s\S]*?\n\}\);/.exec(server)[0];
+  const say = new Function(`${names}\n${set}\n${notes}\nconst canonicalVoiceLanguage = l => String(l || "en").split("-")[0];\n${grabFrom(server, "openAiRealtimeLanguageInstruction")}\nreturn openAiRealtimeLanguageInstruction;`)();
   for (const code of FOUR) {
     const line = say(code);
     assert.match(line, /Kyro's tools read English/);
     assert.match(line, /never their \S+ words as they are/);
+    assert.match(line, /everyday sayings by their meaning, never word by word: "[^"]+" means "I am tired"/, `${code}: sayings by their meaning`);
     assert.ok(line.includes(`find Koach Learn courses about farming in ${({ ha: "Hausa", am: "Amharic", yo: "Yoruba", ig: "Igbo" })[code]}`));
   }
   for (const code of ["es", "fr", "sw", "ar", "pt"]) assert.doesNotMatch(say(code), /tools read English/, `${code}: the tools read it`);
@@ -226,7 +228,7 @@ test("Amharic, Yoruba and Igbo are answered from the transcript, the answers aft
     () => lang, () => true, () => { interrupted += 1; }, text => sent.push(["note", text]), event => sent.push(["event", event.type]));
   const [answered, at] = run("እባክህ የነገውን የአየር ሁኔታ በአዲስ አበባ አሳየኝ።", "item_1");
   assert.equal(answered, true); assert.ok(at > 0); assert.equal(interrupted, 1);
-  assert.match(sent[0][1], /^The person just said this in Amharic, as the speech-to-text wrote it .*"እባክህ የነገውን የአየር ሁኔታ በአዲስ አበባ አሳየኝ።"\. Answer these words, in Amharic\.$/);
+  assert.match(sent[0][1], /^The person just said this in Amharic, as the speech-to-text wrote it .*"እባክህ የነገውን የአየር ሁኔታ በአዲስ አበባ አሳየኝ።"\. Understand them the way a speaker of Amharic means them \(everyday sayings by their meaning, not word by word\), and answer, in Amharic\.$/);
   assert.deepEqual(sent[1], ["event", "response.create"]);
   assert.equal(run("እባክህ የነገውን የአየር ሁኔታ በአዲስ አበባ አሳየኝ።", "item_1")[0], false, "the same words arriving again are not answered twice");
   lang = "ha"; assert.equal(run("Sannu Kyro", "item_2")[0], false, "Hausa is not cut off");
@@ -506,4 +508,67 @@ test("the sweep's fixes: the four keep the semantic turn detector, the line afte
 test("the reply after a no is in the language the page sends with it (the confirmation route used to drop it)", () => {
   assert.ok(read("nexus/compat/server-runtime-adapter.js").includes("channel: request.channel, locale: request.locale, text: body.text }, context: confirmContext });"));
   assert.ok(read("nexus/runtime/behavior-spine.js").includes('channel: input.channel || "api", locale: input.locale, correlationId:'));
+});
+
+// Live sweep, 26 Nov 2026: Igbo "Ike gwụrụ m" (I am tired) was written down right, but the model read it word by word and talked about a battery running out.
+test("the four are understood by meaning, not word by word (Igbo \"Ike gwụrụ m\" is being tired, not a battery)", () => {
+  const server = read("server.js");
+  const notes = /const OPENAI_NATIVE_MEANING_NOTES = Object\.freeze\(\{[\s\S]*?\n\}\);/.exec(server)[0];
+  const NOTES = new Function(`${notes}\nreturn OPENAI_NATIVE_MEANING_NOTES;`)();
+  sameKeys(NOTES, { ha: 1, am: 1, yo: 1, ig: 1 });
+  assert.ok(NOTES.ig.includes('"Ike gwụrụ m" means "I am tired" (it is about the person, not power or a battery)'));
+  assert.ok(read("public/app.js").includes("Understand them the way a speaker of ${name} means them (everyday sayings by their meaning, not word by word), and answer, in ${name}."), "the transcript turn says it too");
+});
+
+// Live sweep, 26 Nov 2026: the business and reminder confirmations were still English for every other language.
+test("business and reminder confirmations are asked in the person's language, and never fall back to English", async () => {
+  const { BehaviorSpine } = require("../../nexus/runtime/behavior-spine.js");
+  const consents = require("../../nexus/consent/user-confirmable-consents.js");
+  const english = { "business.manage": "I can add Grace Otieno as a lead in your business workspace. Say yes to save it, or no to cancel.", "reminders.cancel": "I can cancel your reminder \"water the maize\" at 6 PM. Say yes to cancel it, or no to keep it." };
+  const asked = [];
+  const make = translatePrompt => new BehaviorSpine({
+    agent: { command: async () => null }, engine: { executeTask: async () => null, tools: { get: async () => ({}) } }, tasks: { get: async () => null },
+    workspaceStates: { stage: async () => null, acknowledge: async () => null },
+    businessPreview: async () => english["business.manage"], reminderCancelPreview: async () => english["reminders.cancel"], translatePrompt
+  });
+  const task = toolId => ({ steps: [{ step_id: "s1", tool_id: toolId, input: { command: "add a lead named Grace Otieno" } }] });
+  const context = { tenantId: "t", userId: "u" };
+  const translated = make(async (text, language) => { asked.push([text, language]); return `[${language}] ${text}`; });
+  for (const toolId of Object.keys(english)) {
+    assert.equal(await translated.confirmationPrompt({ task: task(toolId), pendingStepId: "s1", context, language: "en" }), english[toolId], "English stays as it is");
+    for (const code of [...FOUR, "sw", "fr"]) {
+      assert.equal(await translated.confirmationPrompt({ task: task(toolId), pendingStepId: "s1", context, language: `${code}-XX` }), `[${code}] ${english[toolId]}`, `${toolId} in ${code}`);
+    }
+  }
+  assert.ok(asked.length > 0 && asked.every(([, language]) => language !== "en"), "English is never sent to be translated");
+  // no translator, a failure, or nothing back: the generic question in their language, never the English sentence
+  for (const translatePrompt of [undefined, async () => { throw new Error("down"); }, async () => null, async () => "  "]) {
+    const spine = make(translatePrompt);
+    for (const code of FOUR) {
+      const prompt = await spine.confirmationPrompt({ task: task("reminders.cancel"), pendingStepId: "s1", context, language: code });
+      assert.equal(prompt, consents.genericConfirmationPrompt(code));
+      assert.notEqual(prompt, english["reminders.cancel"]);
+    }
+  }
+});
+
+test("the confirmation translator asks once, plainly, and gives nothing back rather than English or JSON", async () => {
+  const { createPromptTranslator } = require("../../nexus/i18n/translate-prompt.js");
+  assert.equal(createPromptTranslator({ env: {} }), null, "no key, no translator");
+  const sent = [];
+  const reply = text => async (url, options) => { sent.push(JSON.parse(options.body)); return { ok: true, json: async () => ({ output_text: text }) }; };
+  const source = "I can log KES 500 as income for seeds in your business workspace. Say yes to save it, or no to cancel.";
+  const ig = createPromptTranslator({ env: { OPENAI_API_KEY: "test-key" }, fetchFn: reply("Enwere m ike idekọ KES 500 ...") });
+  assert.equal(await ig(source, "ig"), "Enwere m ike idekọ KES 500 ...");
+  assert.match(sent[0].input[0].content, /into Igbo \(with its dots and tone marks\)/);
+  assert.match(sent[0].input[0].content, /every name, amount, currency, date and time/);
+  assert.equal(sent[0].input[1].content, source);
+  assert.equal(await ig(source, "en"), null, "nothing to translate into English");
+  assert.equal(await createPromptTranslator({ env: { OPENAI_API_KEY: "k" }, fetchFn: reply(source) })(source, "ha"), null, "English handed back");
+  assert.equal(await createPromptTranslator({ env: { OPENAI_API_KEY: "k" }, fetchFn: reply('{"text":"x"}') })(source, "ha"), null, "JSON");
+  assert.equal(await createPromptTranslator({ env: { OPENAI_API_KEY: "k" }, fetchFn: async () => ({ ok: false, json: async () => ({}) }) })(source, "am"), null, "an error");
+  assert.equal(await createPromptTranslator({ env: { OPENAI_API_KEY: "k" }, fetchFn: async () => { throw new Error("offline"); } })(source, "yo"), null, "offline");
+  const slow = createPromptTranslator({ env: { OPENAI_API_KEY: "k" }, timeoutMs: 20, fetchFn: (url, options) => new Promise((resolve, reject) => options.signal.addEventListener("abort", () => reject(new Error("aborted")))) });
+  assert.equal(await slow(source, "am"), null, "too slow");
+  assert.ok(read("nexus/runtime/create-runtime.js").includes("translatePrompt: createPromptTranslator({ env, fetchFn: fetchFn || globalThis.fetch })"), "the live spine has it");
 });
