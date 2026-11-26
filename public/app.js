@@ -53220,6 +53220,7 @@ function kyroLineForSpeech(text) {
 function kyroSpeakPageLine(text) {
   const line = kyroLineForSpeech(text);
   if (!line || !realtimeVoiceActive()) return false;
+  if (typeof kyroSpokenLineTranslated === "function" && kyroSpokenLineTranslated(line)) return true; // (an English result for someone using another language: said once it is in their language)
   if (line === kyroLastPageLine.text && Date.now() - kyroLastPageLine.at < 6000) return true; // (the same words arriving twice are said once)
   kyroLastPageLine = { text: line, at: Date.now() };
   try { kyroRecentPageLines = [...kyroRecentPageLines.filter(entry => Date.now() - entry.at < 180000), { lead: kyroLineLead(line), at: Date.now() }].slice(-8); } catch { /* noting the line is only for the refusal watcher */ }
@@ -56656,10 +56657,46 @@ function kyroLooksEnglish(text) {
   const words = String(text || "").match(KYRO_ENGLISH_WORDS) || [];
   return new Set(words.map(word => word.toLowerCase())).size >= 4;
 }
+// A short result is English too: "Cancelled your reminder "water the maize (due Fri 27 Nov, 6:00 pm)"." has only two of the words above, so it stayed English on an Igbo screen and was
+// read aloud in English (live voice run, 26 Nov 2026). A line written only in plain letters with at least two common English words or result words counts; the other nine languages
+// write their own words for these (and Amharic, Yoruba and Igbo letters are not plain).
+const KYRO_ENGLISH_RESULT_WORDS = /\b(?:the|and|you|your|is|are|to|of|for|not|this|that|it|with|please|was|did|can|will|have|from|or|my|i|okay|cancelled|canceled|reminder|remind|saved|added|deleted|removed|updated|logged|created|nothing|found)\b/gi;
+function kyroLineLooksEnglish(text) {
+  const value = String(text || "");
+  if (kyroLooksEnglish(value)) return true;
+  if (/[^\x00-\x7F\u2018\u2019\u201C\u201D\u2013\u2014\u00B7]/.test(value)) return false;
+  const words = value.match(KYRO_ENGLISH_RESULT_WORDS) || [];
+  return new Set(words.map(word => word.toLowerCase())).size >= 2;
+}
+// The page reads a tool's result aloud word for word (kyroSpeakPageLine), and the tools answer in English: "Okay. I will remind you to water the maize at 6:00 pm tomorrow." and
+// "Cancelled your reminder ..." were said in English to an Igbo speaker, while the screen was redrawn in Igbo a moment later (live voice run, 26 Nov 2026). For anyone using another
+// language, such a line is translated first (the light translation: nothing saved) and then said; if that fails it is said as it is rather than not at all.
+let kyroSpokenTranslation = { source: "", at: 0, token: 0, asIs: "" };
+function kyroSpokenLineTranslated(line) {
+  const language = typeof languageCode === "function" ? languageCode() : "en";
+  if (language === "en" || !line || line === kyroSpokenTranslation.asIs || line.length > 1800 || !kyroLineLooksEnglish(line)) return false;
+  if (line === kyroSpokenTranslation.source && Date.now() - kyroSpokenTranslation.at < 6000) return true; // (the same words arriving twice are said once)
+  const token = kyroSpokenTranslation.token + 1;
+  kyroSpokenTranslation = { source: line, at: Date.now(), token, asIs: "" };
+  try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch { /* nothing to cut off */ }
+  const sayNow = words => {
+    if (kyroSpokenTranslation.token !== token || (typeof languageCode === "function" && languageCode() !== language)) return; // a newer line, or the language changed meanwhile
+    if (words === line) kyroSpokenTranslation.asIs = line;
+    kyroSpeakPageLine(words);
+  };
+  void request("/api/translate", { method: "POST", body: { text: line, sourceLanguage: "en", targetLanguage: language, context: "spoken-result", captionOnly: true } })
+    .then(reply => {
+      const translated = String(reply?.translationResult?.translatedText || "").trim();
+      const usable = translated && translated !== line && !/^\[[A-Z]{2}\]/.test(translated) && !kyroLineLooksEnglish(translated);
+      sayNow(usable ? translated : line);
+    })
+    .catch(() => sayNow(line));
+  return true;
+}
 function kyroTranslateScreenAfter(toolName, command, result) {
   const language = typeof languageCode === "function" ? languageCode() : "en";
   const text = result && typeof result.response === "string" ? result.response : "";
-  if (language === "en" || !text || text.length > 1800 || !kyroLooksEnglish(text)) return false;
+  if (language === "en" || !text || text.length > 1800 || !kyroLineLooksEnglish(text)) return false;
   const token = kyroScreenTranslationToken;
   void request("/api/translate", { method: "POST", body: { text, sourceLanguage: "en", targetLanguage: language, context: "result-screen", captionOnly: true } })
     .then(reply => {
@@ -57020,11 +57057,24 @@ function kyroAddTutorBox(tutor = null, cachedMedia = null) {
   } catch { return false; }
 }
 // A Yes and a No under a question that waits for one: tapping is the same as saying it (submitNexusPendingBehaviorConfirmation).
+// In the person's language: an Igbo question had English "Yes" and "No" buttons under it (live voice run, 26 Nov 2026); only Swahili had its own.
+const KYRO_CONFIRM_BUTTON_WORDS = Object.freeze({
+  en: { yes: "Yes", no: "No", wait: "One moment...", notDone: "Okay, I did not proceed with that." },
+  sw: { yes: "Ndiyo", no: "Hapana", wait: "Subiri kidogo...", notDone: "Sawa, sikuendelea na hilo." },
+  fr: { yes: "Oui", no: "Non", wait: "Un instant...", notDone: "D'accord, je n'ai pas continué." },
+  es: { yes: "Sí", no: "No", wait: "Un momento...", notDone: "De acuerdo, no seguí con eso." },
+  pt: { yes: "Sim", no: "Não", wait: "Um momento...", notDone: "Tudo bem, não continuei com isso." },
+  ar: { yes: "نعم", no: "لا", wait: "لحظة من فضلك...", notDone: "حسنًا، لم أتابع ذلك." },
+  ha: { yes: "Eh", no: "A'a", wait: "Dan jira kaɗan...", notDone: "To, ban ci gaba da hakan ba." },
+  am: { yes: "አዎ", no: "አይ", wait: "ትንሽ ይጠብቁ...", notDone: "እሺ፣ አልቀጠልኩበትም።" },
+  yo: { yes: "Bẹ́ẹ̀ni", no: "Rárá", wait: "Ẹ dúró díẹ̀...", notDone: "Ó dáa, mi ò tẹ̀síwájú pẹ̀lú rẹ̀." },
+  ig: { yes: "Ee", no: "Mba", wait: "Chere obere oge...", notDone: "Ọ dị mma, agaghị m n'ihu na ya." }
+});
 function kyroAddConfirmButtons() {
   try {
     const screen = document.querySelector("[data-kyro-result]");
     if (!screen) return;
-    const sw = (() => { try { return languageCode() === "sw"; } catch { return false; } })();
+    const words = (() => { try { return KYRO_CONFIRM_BUTTON_WORDS[languageCode()] || KYRO_CONFIRM_BUTTON_WORDS.en; } catch { return { yes: "Yes", no: "No", wait: "One moment...", notDone: "Okay, I did not proceed with that." }; } })();
     const row = document.createElement("div");
     row.setAttribute("data-kyro-confirm-buttons", "true");
     row.style.cssText = "display:flex;gap:16px;align-self:flex-start;position:relative;z-index:1";
@@ -57042,19 +57092,19 @@ function kyroAddConfirmButtons() {
           waiting = document.createElement("p");
           waiting.setAttribute("role", "status"); waiting.setAttribute("data-kyro-working", "true");
           waiting.style.cssText = "margin:0;font-size:1.2rem;position:relative;z-index:1";
-          waiting.textContent = sw ? "Subiri kidogo..." : "One moment...";
+          waiting.textContent = words.wait;
           screen.append(waiting);
         } catch { /* the answer still arrives */ }
         // (a "no" has nothing more to draw: the person is told, on the screen, that nothing was done)
         const done = () => {
           try { screen.remove(); } catch { /* gone already */ }
-          if (!approved) { try { if (!document.querySelector("[data-kyro-result]")) kyroShowResultScreen("typed", "I did not proceed", { ok: true, status: "completed", response: sw ? "Sawa, sikuendelea na hilo." : "Okay, I did not proceed with that." }); } catch { /* the voice said it */ } }
+          if (!approved) { try { if (!document.querySelector("[data-kyro-result]")) kyroShowResultScreen("typed", "I did not proceed", { ok: true, status: "completed", response: words.notDone }); } catch { /* the voice said it */ } }
         };
         Promise.resolve(submitNexusPendingBehaviorConfirmation(approved, approved ? "yes" : "no", { source: "typed" })).then(done, done);
       });
       return button;
     };
-    row.append(make(sw ? "Ndiyo" : "Yes", true, "#06a77d"), make(sw ? "Hapana" : "No", false, "#9b2c2c"));
+    row.append(make(words.yes, true, "#06a77d"), make(words.no, false, "#9b2c2c"));
     screen.append(row);
   } catch { /* the question is on the screen, and saying yes works */ }
 }

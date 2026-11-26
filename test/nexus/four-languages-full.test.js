@@ -572,3 +572,67 @@ test("the confirmation translator asks once, plainly, and gives nothing back rat
   assert.equal(await slow(source, "am"), null, "too slow");
   assert.ok(read("nexus/runtime/create-runtime.js").includes("translatePrompt: createPromptTranslator({ env, fetchFn: fetchFn || globalThis.fetch })"), "the live spine has it");
 });
+
+// Live voice run, 26 Nov 2026 (Igbo): "Okay. I will remind you to water the maize at 6:00 pm tomorrow." and "Cancelled your reminder ..." were read aloud in English, the short one stayed
+// English on the screen too, and the confirmation screen had English Yes and No buttons.
+const spokenLineKit = () => {
+  const app = read("public/app.js");
+  const words = /const KYRO_ENGLISH_WORDS = [^\n]+/.exec(app)[0];
+  const resultWords = /const KYRO_ENGLISH_RESULT_WORDS = [^\n]+/.exec(app)[0];
+  return { app, defs: `${words}\n${resultWords}\n${grabFrom(app, "kyroLooksEnglish")}\n${grabFrom(app, "kyroLineLooksEnglish")}` };
+};
+
+test("a short English result counts as English, and the other languages' own sentences do not", () => {
+  const { defs } = spokenLineKit();
+  const looks = new Function(`${defs}\nreturn kyroLineLooksEnglish;`)();
+  for (const line of ['Cancelled your reminder "water the maize (due Fri 27 Nov, 6:00 pm)".', "Okay. I will remind you to water the maize at 6:00 pm tomorrow.", "Saved your note.", "Nothing was found for that."]) assert.equal(looks(line), true, line);
+  for (const line of ["Ọ dị mma. Aga m echeta gị ka ị gbaa mmiri n’ọka echi.", "To, zan tunatar da kai gobe da karfe shida.", "Sawa, nimeghairi kikumbusho chako.", "D'accord, j'ai annulé ton rappel.", "Listo, cancelé tu recordatorio.", "ተሰርዟል።", "Ó dáa, mo ti fagilé ìránnilétí rẹ."]) assert.equal(looks(line), false, line);
+});
+
+test("an English result is said in the person's language, once, and still said when the translation fails", async () => {
+  const { app, defs } = spokenLineKit();
+  const run = async ({ language, reply, line }) => {
+    const said = []; const asked = []; let interrupted = 0;
+    const api = new Function("languageCode", "request", "kyroSpeakPageLine", "realtimeVoiceSession",
+      `${defs}\nlet kyroSpokenTranslation = { source: "", at: 0, token: 0, asIs: "" };\n${grabFrom(app, "kyroSpokenLineTranslated")}\nreturn kyroSpokenLineTranslated;`)(
+      () => language, async (url, options) => { asked.push(options.body); if (reply instanceof Error) throw reply; return reply; }, text => { said.push(text); }, { sdkController: { interrupt: () => { interrupted += 1; } } });
+    const first = api(line);
+    const again = api(line);
+    await new Promise(resolve => setTimeout(resolve, 5));
+    return { first, again, said, asked, interrupted };
+  };
+  const english = 'Cancelled your reminder "water the maize (due Fri 27 Nov, 6:00 pm)".';
+  const igbo = 'Akagbuola m ncheta gị "ịgbanye mmiri n’ọka (echi, 6:00 nke mgbede)".';
+  const ok = await run({ language: "ig", line: english, reply: { translationResult: { translatedText: igbo } } });
+  assert.deepEqual([ok.first, ok.again], [true, true]);
+  assert.deepEqual(ok.said, [igbo], "said in Igbo, once");
+  assert.equal(ok.asked.length, 1);
+  assert.deepEqual({ ...ok.asked[0], text: undefined }, { text: undefined, sourceLanguage: "en", targetLanguage: "ig", context: "spoken-result", captionOnly: true }, "the light translation: nothing saved");
+  assert.equal(ok.interrupted, 1);
+  for (const reply of [new Error("offline"), { translationResult: { translatedText: `[IG] ${english}` } }, { translationResult: { translatedText: english } }, {}]) {
+    const failed = await run({ language: "ig", line: english, reply });
+    assert.deepEqual(failed.said, [english], "said as it is rather than not at all");
+  }
+  const en = await run({ language: "en", line: english, reply: {} });
+  assert.deepEqual([en.first, en.asked.length, en.said.length], [false, 0, 0], "English is said as it is, straight away");
+  const already = await run({ language: "ig", line: igbo, reply: {} });
+  assert.deepEqual([already.first, already.asked.length], [false, 0], "a line already in Igbo is not translated");
+  assert.ok(grabFrom(app, "kyroSpeakPageLine").includes('if (typeof kyroSpokenLineTranslated === "function" && kyroSpokenLineTranslated(line)) return true;'));
+  assert.ok(grabFrom(app, "kyroTranslateScreenAfter").includes("!kyroLineLooksEnglish(text)"), "the screen uses the same test");
+});
+
+test("the Yes and No buttons, and the lines around them, are in all ten languages; a translated question uses the language's own yes and no", () => {
+  const app = read("public/app.js");
+  const block = /const KYRO_CONFIRM_BUTTON_WORDS = Object\.freeze\(\{[\s\S]*?\n\}\);/.exec(app)[0];
+  const WORDS = new Function(`${block}\nreturn KYRO_CONFIRM_BUTTON_WORDS;`)();
+  assert.deepEqual(Object.keys(WORDS).sort(), ["am", "ar", "en", "es", "fr", "ha", "ig", "pt", "sw", "yo"]);
+  for (const [code, words] of Object.entries(WORDS)) {
+    sameKeys(words, { yes: 1, no: 1, wait: 1, notDone: 1 });
+    if (code !== "en") assert.notEqual(words.yes, "Yes", code);
+  }
+  assert.deepEqual([WORDS.ig.yes, WORDS.ig.no, WORDS.ha.no, WORDS.am.yes], ["Ee", "Mba", "A'a", "አዎ"]);
+  const buttons = grabFrom(app, "kyroAddConfirmButtons");
+  assert.ok(buttons.includes("row.append(make(words.yes, true, \"#06a77d\"), make(words.no, false, \"#9b2c2c\"));"));
+  assert.doesNotMatch(buttons, /\bsw\b/);
+  assert.match(read("nexus/i18n/translate-prompt.js"), /the everyday words for yes and no in that language \(never the English words yes and no\)/);
+});
