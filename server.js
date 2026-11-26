@@ -20980,11 +20980,12 @@ function openAiRealtimeTranscriptionHint(language = "en") {
 }
 
 function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
-  // Hausa, Amharic, Yoruba and Igbo: a second of silence ends the turn, not the meaning of the words. Even at "low", the semantic detector took the pause after "Sannu Kyro."
-  // (Hello Kyro.) as the end, so "Ina so in koyi game da noma" (I want to learn about farming) was a second turn and Kyro answered twice (live sweep, 26 Nov 2026).
+  // Hausa, Amharic, Yoruba and Igbo keep the semantic detector at "low" (below). A second of silence instead (server_vad) was tried on 26 Nov 2026: the second sentence of
+  // "Sannu Kyro. Ina so in koyi game da noma." (Hello Kyro. I want to learn about farming.) was then lost altogether, in Hausa and in Yoruba, and no courses were looked for. The
+  // answers said twice were the stall watchdog's doing (public/app.js, KYRO_SLOW_VOICE_LANGUAGES), not the split. OPENAI_REALTIME_NATIVE_TURN_DETECTION=server_vad still chooses it.
   const native = Boolean(OPENAI_NATIVE_TRANSCRIPTION_HINTS[openAiRealtimeTranscriptionCode(language)]);
   const turnDetectionType = native
-    ? (String(env.OPENAI_REALTIME_NATIVE_TURN_DETECTION || "server_vad").trim() || "server_vad")
+    ? (String(env.OPENAI_REALTIME_NATIVE_TURN_DETECTION || "semantic_vad").trim() || "semantic_vad")
     : (String(env.OPENAI_REALTIME_TURN_DETECTION || "semantic_vad").trim() || "semantic_vad");
   const turnDetection = turnDetectionType === "server_vad"
     ? {

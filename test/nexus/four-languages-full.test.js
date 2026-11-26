@@ -480,11 +480,12 @@ test("a translation into these languages is given time to finish, and the Englis
   assert.ok(app.includes('const translated = offered && !/^\[[A-Z]{2}\]\s/.test(offered) ? offered : responseMessage;'), "a caption keeps its words when no translation happened");
 });
 
-test("the sweep's fixes: a second of silence ends a turn in the four, the line after a switch is said by the page, a no is answered in the person's language, and a translation is plain text", () => {
+test("the sweep's fixes: the four keep the semantic turn detector, the line after a switch is said by the page, a no is answered in the person's language, and a translation is plain text", () => {
   const server = read("server.js");
   const config = server.slice(server.indexOf("function openAiRealtimeSessionConfig("), server.indexOf("function openAiAgentsRealtimeClientConfig("));
   assert.ok(config.includes('const native = Boolean(OPENAI_NATIVE_TRANSCRIPTION_HINTS[openAiRealtimeTranscriptionCode(language)]);'));
-  assert.ok(config.includes('? (String(env.OPENAI_REALTIME_NATIVE_TURN_DETECTION || "server_vad").trim() || "server_vad")'), "the four: silence, not meaning");
+  assert.ok(config.includes('? (String(env.OPENAI_REALTIME_NATIVE_TURN_DETECTION || "semantic_vad").trim() || "semantic_vad")'), "the four keep the semantic detector (silence lost the second sentence live)");
+  assert.ok(read("public/app.js").includes('locale: typeof languageCode === "function" ? languageCode() : "en",\n        timeZone: kyroDeviceTimeZone(),'), "a yes or no carries the person's language");
   assert.ok(config.includes("silence_duration_ms: native ? Number(env.OPENAI_REALTIME_NATIVE_SILENCE_DURATION_MS || 1100) : Number(env.OPENAI_REALTIME_SILENCE_DURATION_MS || 700),"));
   const app = read("public/app.js");
   const say = grabFrom(app, "kyroSayLanguageNowLine");
