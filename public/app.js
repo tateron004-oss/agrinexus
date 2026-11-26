@@ -44506,6 +44506,7 @@ function startAskNexusAfterLogin() {
   setVoiceStatus("standby");
   const message = `Welcome ${userFirstName()}. Nexus is ready. Click Talk to Nexus or type a request. I will keep important actions review-only.`;
   recordNexusAutonomousLearning({ type: "login-greeting", command: "Nexus ready after login" });
+  try { if (typeof kyroRunPendingStudyLink === "function") kyroRunPendingStudyLink(); } catch { /* the person can still ask */ }
   if (defaultExperienceMode() !== "user") {
     openAskNexus();
   } else {
@@ -53753,7 +53754,7 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // one was sometimes answered from memory with no sources.
     // "What is type 2 diabetes?", "how do I keep track of my blood sugar?", "how can I lower my blood pressure?": the checked diabetes and high blood pressure guide, with its sources (a person's own reading, symptoms or a medicine are never taken).
     // "Find me a course on farming", "Nataka kozi za kilimo", "Show me Hausa courses about small business": Koach Learn's real courses from the catalogue, in the language asked for (see kyroKoachLearnQuestion).
-    if (trimmed && ((typeof kyroKoachLearnQuestion === "function" && kyroKoachLearnQuestion(trimmed)) || (typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) ||(typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)) || (typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest(trimmed)) || (typeof kyroPrQuestion === "function" && kyroPrQuestion(trimmed)) || (typeof kyroChurchQuestion === "function" && kyroChurchQuestion(trimmed)) || (typeof kyroAthleteQuestion === "function" && kyroAthleteQuestion(trimmed)) || (typeof kyroMoneyQuestion === "function" && kyroMoneyQuestion(trimmed)) || (typeof kyroHowtoQuestion === "function" && kyroHowtoQuestion(trimmed)) || (typeof kyroTechWalkQuestion === "function" && kyroTechWalkQuestion(trimmed)) || (typeof kyroSafetyQuestion === "function" && kyroSafetyQuestion(trimmed)) || (typeof kyroSpecialEdQuestion === "function" && kyroSpecialEdQuestion(trimmed)) || (typeof kyroReentryQuestion === "function" && kyroReentryQuestion(trimmed)))) {
+    if (trimmed && ((typeof kyroKoachLearnStudyQuestion === "function" && kyroKoachLearnStudyQuestion(trimmed)) || (typeof kyroKoachLearnQuestion === "function" && kyroKoachLearnQuestion(trimmed)) || (typeof kyroGuidedCourseRequest === "function" && kyroGuidedCourseRequest(trimmed)) ||(typeof kyroWomensHealthQuestion === "function" && kyroWomensHealthQuestion(trimmed)) || (typeof kyroChronicQuestion === "function" && kyroChronicQuestion(trimmed)) || (typeof kyroParentsQuestion === "function" && kyroParentsQuestion(trimmed)) || (typeof kyroChildHelpQuestion === "function" && kyroChildHelpQuestion(trimmed)) || (typeof kyroMemoryBookRequest === "function" && kyroMemoryBookRequest(trimmed)) || (typeof kyroPrQuestion === "function" && kyroPrQuestion(trimmed)) || (typeof kyroChurchQuestion === "function" && kyroChurchQuestion(trimmed)) || (typeof kyroAthleteQuestion === "function" && kyroAthleteQuestion(trimmed)) || (typeof kyroMoneyQuestion === "function" && kyroMoneyQuestion(trimmed)) || (typeof kyroHowtoQuestion === "function" && kyroHowtoQuestion(trimmed)) || (typeof kyroTechWalkQuestion === "function" && kyroTechWalkQuestion(trimmed)) || (typeof kyroSafetyQuestion === "function" && kyroSafetyQuestion(trimmed)) || (typeof kyroSpecialEdQuestion === "function" && kyroSpecialEdQuestion(trimmed)) || (typeof kyroReentryQuestion === "function" && kyroReentryQuestion(trimmed)))) {
       if (!heardAgain) {
         try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
         kyroPageSpeaksUntil = Date.now() + 40000;
@@ -56064,6 +56065,41 @@ function kyroParentsAbuseQuestion(text) {
 function kyroKoachLearnQuestion(text) {
   try { return Boolean(window.KyroKoachLearnCourses && typeof window.KyroKoachLearnCourses.courseRequest === "function" && window.KyroKoachLearnCourses.courseRequest(text)); } catch { return false; }
 }
+// "Help me study number 2", "teach me the farm records course", "continue my course", "next lesson", "nifundishe kozi ya kilimo": Kyro tutors from the Koach Learn course itself (public/kyro-koachlearn-study.js,
+// nexus/knowledge/koachlearn-study.js). Taken the typed way, like a course search, so it is taught from the course and never from the voice model's memory.
+// "Continue my course", "next lesson" and a bare "lesson 3" are taken only while a course lesson is open or once this person has studied a Koach Learn course with Kyro on this device;
+// otherwise they stay with Kyro's own learning (the AI basics course, the learning workspace), as before.
+const KYRO_STUDIED_KEY = "kyroKoachLearnStudied";
+function kyroKoachLearnStudyQuestion(text) {
+  try {
+    const asked = window.KyroKoachLearnStudy && typeof window.KyroKoachLearnStudy.studyRequest === "function" ? window.KyroKoachLearnStudy.studyRequest(text) : null;
+    if (!asked) return false;
+    const named = asked.slug || asked.ordinal || (asked.terms && asked.terms.length);
+    if (named) return true;
+    let studied = false; try { studied = localStorage.getItem(KYRO_STUDIED_KEY) === "1"; } catch { /* no storage */ }
+    return studied || (typeof kyroTutorOpen === "function" && kyroTutorOpen() && kyroTutorCourse === true);
+  } catch { return false; }
+}
+let kyroTutorCourse = false;
+// The "Study with Kyro" link on a course in the Koach Learn catalogue opens Kyro with ?study=<language>:<course>. It is kept until the person is signed in (a guest signs in first), then the course is opened.
+const KYRO_STUDY_LINK_KEY = "kyroStudyLink";
+(function kyroCaptureStudyLink() {
+  try {
+    const asked = new URLSearchParams(window.location.search).get("study");
+    if (asked && /^[a-z]{2}:[a-z0-9]+(?:-[a-z0-9]+){2,}$/.test(asked)) {
+      sessionStorage.setItem(KYRO_STUDY_LINK_KEY, asked);
+      window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+    }
+  } catch { /* no link, or no storage: nothing to open */ }
+})();
+function kyroRunPendingStudyLink() {
+  let asked = "";
+  try { asked = sessionStorage.getItem(KYRO_STUDY_LINK_KEY) || ""; if (asked) sessionStorage.removeItem(KYRO_STUDY_LINK_KEY); } catch { return false; }
+  const [lang, slug] = asked.split(":");
+  if (!lang || !slug) return false;
+  setTimeout(() => { try { void handleNexusUnifiedBrainRuntimeCommand(`Study course ${slug} ${lang}`, { source: "typed", kyroDirect: true }); } catch { /* the person can still ask */ } }, 1200);
+  return true;
+}
 // A question for the checked small-business guide (public/kyro-business-topics.js): minority-owned businesses, startups, loans, grants, certification, taxes. Only when it is about a business at all, and on a device in the
 // United States or naming a US programme (SBA, 8(a), NMSDC ...); "how do I grow a garden" is left to the voice model.
 function kyroBusinessQuestion(text) {
@@ -56941,6 +56977,8 @@ function kyroShowTypedResult(result, text, message) {
     if (tutor) {
       kyroTutorUntil = tutor.active === true ? Date.now() + 45 * 60 * 1000 : 0;
       kyroTutorSubject = tutor.active === true ? String(tutor.subject || "") : "";
+      // (a Koach Learn course: "continue my course" is this person's from now on, on this device; see kyroKoachLearnStudyQuestion)
+      try { kyroTutorCourse = tutor.kind === "course"; if (tutor.kind === "course") localStorage.setItem("kyroKoachLearnStudied", "1"); } catch { /* no storage: only an open lesson counts */ }
       if (tutor.active !== true) kyroTutorLast = null;
       // an older workspace window (the Learning screen with its sample irrigation course, the AI tutor window) that opened before or behind the lesson is taken down: nothing is left stuck behind the lesson or after "stop"
       try { if (document.querySelector("#nexus-workspace")) closeNexusFunctionWindow({ command: "" }); } catch { /* the lesson card is drawn over it anyway */ }
