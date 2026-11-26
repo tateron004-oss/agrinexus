@@ -295,12 +295,13 @@ function validateService(service, expectedType) {
 
 async function reconcileServiceConfiguration(client, service) {
   const configurations = {
+    // No plan here: the site's size is chosen in the Render dashboard (it is the owner's bill). With plan "starter" here every deploy put the site back on
+    // 512 MB: the owner moved it to 2 GB on 26 Nov 2026 at 09:19, the next deploy (09:28) set it back to Starter, and it ran out of memory at 09:31.
     "nexus-genesis-certified": {
       rootDir: "",
       autoDeploy: "no",
       serviceDetails: {
         runtime: "node",
-        plan: "starter",
         healthCheckPath: "/api/healthz",
         preDeployCommand: "node foundation/scripts/migrate.js",
         envSpecificDetails: {

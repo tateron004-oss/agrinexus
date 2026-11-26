@@ -47,6 +47,8 @@ test("canonical services are reconciled to root production entry points", async 
   assert.equal(body.serviceDetails.envSpecificDetails.startCommand, "npm start");
   assert.equal(body.serviceDetails.preDeployCommand, "node foundation/scripts/migrate.js");
   assert.equal(body.serviceDetails.healthCheckPath, "/api/healthz");
+  // the site's size is the owner's choice in the dashboard: a deploy put it back on Starter (512 MB) and it ran out of memory (26 Nov 2026)
+  assert.equal(Object.hasOwn(body.serviceDetails, "plan"), false, "a deploy must not change the site's plan");
 });
 
 test("worker and provider configuration use their canonical processes", async () => {
