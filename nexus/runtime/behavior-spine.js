@@ -11,17 +11,18 @@ const { toSecondPerson } = require("../reminders/second-person.js");
 const { isWomensCareSearch, WOMENS_CARE_NOTE } = require("../knowledge/womens-health-topics.js");
 const { isPrivateReminder } = require("../reminders/private-reminder.js");
 const { userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt, genericConfirmationPrompt, declinedReply } = require("../consent/user-confirmable-consents.js");
+const { consentLanguage } = require("../consent/consent-words.js");
 
 // Errors from communications.send that mean nothing went out (the provider is switched off or not configured, or refused the
 // request before sending). An undelivered text or failed call is not here: the provider did try, so it still counts.
 const NOT_SENT_CODES = new Set(["communications_provider_unavailable", "communications_send_blocked", "automation_not_found", "automation_blocked", "automation_unreachable", "automation_restricted", "automation_incomplete"]);
 
 class BehaviorSpine {
-  constructor({ agent, engine, tasks, conversations, workspaceStates, businessPreview, reminderCancelPreview }) {
+  constructor({ agent, engine, tasks, conversations, workspaceStates, businessPreview, reminderCancelPreview, translatePrompt }) {
     if (!agent?.command || !engine?.executeTask || !tasks?.get || !workspaceStates?.stage || !workspaceStates?.acknowledge) {
       throw new Error("The authoritative agent, task engine, and task repository are required.");
     }
-    Object.assign(this, { agent, engine, tasks, conversations, workspaceStates, businessPreview: typeof businessPreview === "function" ? businessPreview : null, reminderCancelPreview: typeof reminderCancelPreview === "function" ? reminderCancelPreview : null });
+    Object.assign(this, { agent, engine, tasks, conversations, workspaceStates, businessPreview: typeof businessPreview === "function" ? businessPreview : null, reminderCancelPreview: typeof reminderCancelPreview === "function" ? reminderCancelPreview : null, translatePrompt: typeof translatePrompt === "function" ? translatePrompt : null });
   }
 
   async turn({ input, context }) {
@@ -126,15 +127,26 @@ class BehaviorSpine {
   // What the person is asked before they say yes. A step that will write their health information says exactly what
   // is stored and that yes is consent; every other confirmation keeps the generic wording.
   // In the person's language (the command's locale, which is their saved language when the page sends none): a consent prompt in English was given to an
-  // Amharic speaker in a live voice run (25 Nov 2026). The business and reminder sentences below are still English.
+  // Amharic speaker in a live voice run (25 Nov 2026). The business and reminder sentences are built in English with the person's names and amounts in them, so for
+  // any other language they are translated (translatePrompt); when that cannot be done the generic question in their language is asked: never the English sentence.
   async confirmationPrompt({ task, pendingStepId, context, language }) {
     const spoken = language || context?.locale || context?.language || "en";
     const generic = genericConfirmationPrompt(spoken);
     const step = (task?.steps || []).find(item => item.step_id === pendingStepId);
     const tool = step?.tool_id && this.engine.tools?.get ? await this.engine.tools.get(step.tool_id).catch(() => null) : null;
-    return informedConfirmationPrompt({ scope: tool?.consent_scope, step, language: spoken })
-      || (step?.tool_id === "business.manage" ? businessDispatch.confirmationPrompt(step.input?.command) || await this.businessPromptFor(step, context) : null)
-      || (step?.tool_id === "reminders.cancel" ? await this.reminderCancelPromptFor(step, context) : null) || generic;
+    const informed = informedConfirmationPrompt({ scope: tool?.consent_scope, step, language: spoken });
+    if (informed) return informed;
+    const english = (step?.tool_id === "business.manage" ? businessDispatch.confirmationPrompt(step.input?.command) || await this.businessPromptFor(step, context) : null)
+      || (step?.tool_id === "reminders.cancel" ? await this.reminderCancelPromptFor(step, context) : null);
+    if (!english) return generic;
+    if (consentLanguage(spoken) === "en") return english;
+    return (await this.translatedPrompt(english, consentLanguage(spoken))) || generic;
+  }
+
+  // Never blocks the prompt: any failure gives null, and the caller asks the generic question in the person's language.
+  async translatedPrompt(text, language) {
+    if (!this.translatePrompt) return null;
+    try { const translated = await this.translatePrompt(text, language); return typeof translated === "string" && translated.trim() ? translated.trim() : null; } catch { return null; }
   }
 
   // The reminder that a cancel will remove, by name and time. Never blocks the prompt: any failure falls back to the generic wording.
