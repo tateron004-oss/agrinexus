@@ -20933,11 +20933,13 @@ function openAiRealtimeTranscriptionLanguage(language = "en") {
 // Latin letters and Hausa as Japanese (matching 0.10 to 0.14 for Amharic and 0.05 for one Hausa sentence; 0.60 on average over eight sentences). The larger model with a hint
 // written in the person's own language matched 0.96 on average on the same sentences (0.92 to 1.00 for Amharic), and heard the English commands said in that mode word for word
 // (1.00; without "English: ..." in the hint it turned "Close the screen" into Amharic, Yoruba or Igbo). OpenAI speech files, offline check, 25 Nov 2026.
+// Every language is named: with only "Switch to English" in the hint, "Switch to Amharic" said in a Hausa voice was written "Switch to English" (live voice run, 25 Nov 2026), and
+// "Switch to Igbo" in Amharic too. English switch commands in these four modes, heard exactly: 48 of 56 with the old hint, 55 of 56 with this one (offline check, same day).
 const OPENAI_NATIVE_TRANSCRIPTION_HINTS = {
-  ha: "Kyro yana magana da Hausa. Koach Learn. Sannu, yaya, don Allah, na gode, aiki, makaranta. English: Switch to English. Close the screen.",
-  am: "ኪሮ በአማርኛ ይናገራል። Koach Learn። ሰላም፣ እባክህ፣ አመሰግናለሁ፣ ሥራ፣ ትምህርት። English: Switch to English. Close the screen.",
-  yo: "Kyro ń sọ èdè Yorùbá. Koach Learn. Ẹ káàbọ̀, báwo ni, ẹ jọ̀ọ́, ẹ ṣé, iṣẹ́, ẹ̀kọ́. English: Switch to English. Close the screen.",
-  ig: "Kyro na-asụ Igbo. Koach Learn. Ndewo, kedu, biko, daalụ, ọrụ, mmụta. English: Switch to English. Close the screen."
+  ha: "Kyro yana magana da Hausa. Koach Learn. Sannu, yaya, don Allah, na gode, aiki, makaranta. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
+  am: "ኪሮ በአማርኛ ይናገራል። Koach Learn። ሰላም፣ እባክህ፣ አመሰግናለሁ፣ ሥራ፣ ትምህርት። English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
+  yo: "Kyro ń sọ èdè Yorùbá. Koach Learn. Ẹ káàbọ̀, báwo ni, ẹ jọ̀ọ́, ẹ ṣé, iṣẹ́, ẹ̀kọ́. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
+  ig: "Kyro na-asụ Igbo. Koach Learn. Ndewo, kedu, biko, daalụ, ọrụ, mmụta. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen."
 };
 const OPENAI_REALTIME_TRANSCRIPTION_HINT = "Kyro, AgriNexus, Koach Learn. Close it. Close the screen. Show my notes, reminders, checklists. Kisumu, Nairobi, Nakuru, Mombasa, Lagos, Stockton, Sacramento. Maize, sorghum, cassava. Hausa, Yoruba, Igbo, Amharic.";
 // Amharic: the voice model's spoken Amharic was often badly worded while its written Amharic is good (local voice run and a typed check, 25 Nov 2026), so an Amharic session is
