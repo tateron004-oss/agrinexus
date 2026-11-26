@@ -397,7 +397,8 @@ function extractAssistantReminderTask(text = "") {
   // "...tomorrow at 9 too call the vet": "too" where the person meant "to"
   task = task.replace(/^(?:too|2)\s+(?=[a-z]{3,})/i, "").replace(/^to\s+(?=[a-z]{3,})/i, "");
   task = task.replace(/\s+(?:please|pls|plz|abeg|tafadhali|for me|too)\s*([.!?]*)$/i, "$1").replace(/\s+([.,!?;:])/g, "$1").replace(/\s+/g, " ").trim();
-  task = task.replace(/^[,;:.\-\s]+|[,;:\-\s]+$/g, "").trim();
+  // (and the full stop, question or exclamation mark that ends the spoken sentence: "take my medicine." was saved, and said back as "remind you to take your medicine. at 6:00 pm", 26 Nov 2026)
+  task = task.replace(/^[,;:.\-\s]+|[,;:.!?\-\s]+$/g, "").trim();
   if (task && aboutLead && !/^about\b/i.test(task)) task = `about ${task}`;
   return task || "follow up";
 }

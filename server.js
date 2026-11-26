@@ -22511,6 +22511,14 @@ function secretNotSavedReply(text, language = "en") {
 
 // The tools whose spoken requests go to the planner's no-model answers first (notes, lists, money books, the farm log, contacts, reminders, remembered facts). The catch-all is the one the orb is told to use; the farm and workflow tools are the nearest ones a model reaches for when it has no better tool for "my cow gave 18 litres" or "sold 3 sacks of maize 4500", and the planner answers null for anything it cannot do itself, so they carry on as before.
 const PLANNER_BRIDGE_VOICE_TOOLS = new Set(["nexus_general_conversation", "nexus_agriculture", "nexus_workflow"]);
+// A request about the person's own reminders (set one, cancel one, list them) that names no message channel. (Used by executeNexusOpenAiNativeTool: see there.)
+function isOwnReminderRequest(command = "") {
+  const text = String(command || "");
+  if (!text || /\b(?:sms|texts?|texting|whats ?app|telegram|e-?mails?|call|calling|phone|messages?|send|tell)\b/i.test(text)) return false;
+  // (a reminder word must be said: the reminder code also takes "follow up" as a reminder, and "I need a community health worker to follow up with me" is the health tool's)
+  if (!/\b(?:remind(?:er|ers)?|nikumbush\w*|unikumbushe|kikumbusho|vikumbusho)\b/i.test(text)) return false;
+  return Boolean(floorReminders.isSetRequest(text) || floorReminders.isListRequest(text) || floorReminders.isCancelAllRequest(text) || floorReminders.readCancelRequest(text));
+}
 async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, context = {}, realUserEmail = user?.email) {
   // The orb's everyday-records tool is the catch-all conversation tool under a name the browser can expose (a QA rule keeps "general conversation" itself out of the browser's function tools).
   if (toolName === "nexus_everyday_records") toolName = "nexus_general_conversation";
@@ -22648,6 +22656,21 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       if (repeatTurn?.response) {
         return { ...common, capability: "reminders", status: repeatTurn.status === "needs-input" ? "needs-input" : "completed", intent: repeatTurn.intent, response: repeatTurn.response,
           executionAttempted: true, executionVerified: /^Okay\. I will/.test(repeatTurn.response) };
+      }
+    }
+  }
+  // A ONE-TIME reminder of the person's own sent to the messaging, email or health tool is handled the same way, by the same reminder code the page's own route uses (set straight away, then
+  // "Okay. I will remind you ..."; a cancel asks first). Setting, cancelling or listing one's own reminder sends nothing and writes no health record, but a guest was told "This account type
+  // cannot use that action here" and nothing was set (live Igbo voice run, 26 Nov 2026: "Remind me tomorrow at 6 PM to water the maize", "Cancel my reminder to water the maize": the
+  // speech-to-text wrote them in Igbo, so the page did not take them and the model picked the messaging tool). A sentence naming a text, call, email, WhatsApp, Telegram or message is left alone.
+  if (["nexus_communications", "nexus_email", "nexus_health_preparation"].includes(toolName) && typeof isOwnReminderRequest === "function" && typeof floorReminders !== "undefined" && typeof assistantReminderCommandResponse === "function" && effectiveMentalHealthSignal.state !== "medical_emergency") {
+    const ownAsk = rawCallerText && isOwnReminderRequest(rawCallerText) ? rawCallerText : command;
+    if (isOwnReminderRequest(ownAsk)) {
+      const ownOptions = { language: canonicalVoiceLanguage(language), timeZone: resolveReminderTimeZoneDetail({ requested: context.timeZone, user }).zone, correlationId: context.correlationId };
+      const ownTurn = (typeof resolvePendingReminder === "function" ? await resolvePendingReminder(db, user, ownAsk, ownOptions) : null) || (await assistantReminderCommandResponse(db, user, ownAsk, ownAsk.toLowerCase(), ownOptions));
+      if (ownTurn?.response) {
+        return { ...common, capability: "reminders", status: ownTurn.status === "needs-input" ? "needs-input" : "completed", intent: ownTurn.intent, response: ownTurn.response,
+          executionAttempted: true, executionVerified: ownTurn.intent === "assistant.reminder_scheduled" || /^Okay\. I will/.test(ownTurn.response) };
       }
     }
   }
@@ -25329,6 +25352,7 @@ function deepVoiceIntent(lower) {
 
 // The offline translator lives in nexus/i18n/local-translate.js (it must never turn an honest "nothing was saved" into a success sentence).
 const { localTranslateText, AGENT_NOT_HANDLED_RESPONSE } = require("./nexus/i18n/local-translate.js");
+const { localizeDateWords, lostWeekday } = require("./nexus/i18n/date-words.js");
 
 const TRANSLATION_LANGUAGE_NAMES = Object.freeze({ en: "English", sw: "Kiswahili", fr: "French", es: "Spanish", pt: "Portuguese", ar: "Arabic", ha: "Hausa", am: "Amharic (in Ge'ez script)", yo: "Yoruba (with its tone marks)", ig: "Igbo (with its dots and tone marks)" });
 function translationLanguageName(code) {
@@ -25392,8 +25416,12 @@ async function translateDynamicContent(db, user, { text, targetLanguage, sourceL
   // genuinely configured OPENAI_API_KEY translation was never attempted for
   // free-text requests, even though it was available and would have worked.
   if ((provider === "local-dictionary" || provider === "local-after-translation-error" || provider === "local-after-google-translation-error" || provider === "local-translation") && process.env.OPENAI_API_KEY && targetLanguage && targetLanguage !== sourceLanguage) {
+    // Days and months go in already in the person's language, and a translation that lost the day it was given is asked once more, then not used (a wrong day is worse than English):
+    // "due Fri 27 Nov" was said in Igbo as Thursday, and the model often left "(due Fri 27 Nov, 6:00 pm)" in English. Offline check, 26 Nov 2026, four languages, 24 translations each way:
+    // the day kept exactly 24 of 24 and no English left, against English left in 2 of 24 before. (typeof guard: tests evaluate this function's source alone.)
+    const datePrepared = typeof localizeDateWords === "function" && String(sourceLanguage || "en").toLowerCase().startsWith("en") ? localizeDateWords(text, targetLanguage) : { text: String(text || ""), days: [] };
     try {
-      const response = await fetchWithTimeout("https://api.openai.com/v1/responses", {
+      const askOpenAi = () => fetchWithTimeout("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -25407,6 +25435,7 @@ async function translateDynamicContent(db, user, { text, targetLanguage, sourceL
               content: [
                 "Translate the user's content for AgriNexus.",
                 "Preserve product names, button labels, IDs, safety meaning, and workflow intent.",
+                "Leave no English words: translate every word, keeping only people's and place names and the names Kyro and Koach Learn as they are. Days and months already written in the target language stay exactly as they are; numbers and times stay as they are.",
                 "Return only the translated text.",
                 "Use plain language suitable for rural, low-tech users.",
                 // (the text was sent as JSON, and an answer came back as JSON, {"text":"..."}, shown on an Amharic screen as it was; and "No problem" became "no seedling": live sweep, 26 Nov 2026)
@@ -25415,15 +25444,22 @@ async function translateDynamicContent(db, user, { text, targetLanguage, sourceL
             },
             {
               role: "user",
-              content: String(text || "")
+              content: datePrepared.text
             }
           ],
           // (room for the whole text: a screen's answer in Amharic or Yoruba takes several times the tokens of the English; 600 cut a long answer short)
           max_output_tokens: Math.min(2400, 600 + String(text || "").length * 2)
         })
       }, OPENAI_TRANSLATION_TIMEOUT_MS);
-      const json = await response.json().catch(() => ({}));
-      const openAiText = response.ok ? unwrapTranslationText(extractResponseText(json)) : "";
+      const translateOnce = async () => {
+        const response = await askOpenAi();
+        const json = await response.json().catch(() => ({}));
+        return response.ok ? unwrapTranslationText(extractResponseText(json)) : "";
+      };
+      const keptDays = value => !value || typeof lostWeekday !== "function" || !lostWeekday(value, targetLanguage, datePrepared.days);
+      let openAiText = await translateOnce();
+      if (!keptDays(openAiText)) openAiText = await translateOnce();
+      if (!keptDays(openAiText)) openAiText = "";
       if (openAiText) {
         translatedText = openAiText;
         provider = "openai-translation";

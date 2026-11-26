@@ -500,7 +500,7 @@ test("the sweep's fixes: the four keep the semantic turn detector, the line afte
   assert.ok(read("nexus/runtime/behavior-spine.js").includes('const declined = declinedReply(command?.locale || context?.locale || "en");'));
   const unwrap = new Function(`${grabFrom(server, "unwrapTranslationText")}\nreturn unwrapTranslationText;`)();
   assert.equal(unwrap('{"text":"ችግር የለም"}'), "ችግር የለም"); assert.equal(unwrap('{"translatedText":"Ba matsala"}'), "Ba matsala"); assert.equal(unwrap("Ba matsala"), "Ba matsala");
-  assert.ok(server.includes("content: String(text || \"\")"), "plain text in");
+  assert.ok(server.includes("content: datePrepared.text") && server.includes('{ text: String(text || ""), days: [] }'), "plain text in (with its days and months already in the language: see below)");
   assert.match(server, /Translate from \$\{translationLanguageName\(sourceLanguage\)\} into \$\{translationLanguageName\(targetLanguage\)\}\./);
   assert.ok(/ig: "Kyro na-asụ Igbo\. Koach Learn\. Ee, mba, ndewo, kedu, biko, daalụ, ọrụ ugbo, mmụta\./.test(server), "Igbo names ugbo (farm), heard as ụgbọ (a vehicle)");
 });
@@ -635,4 +635,40 @@ test("the Yes and No buttons, and the lines around them, are in all ten language
   assert.ok(buttons.includes("row.append(make(words.yes, true, \"#06a77d\"), make(words.no, false, \"#9b2c2c\"));"));
   assert.doesNotMatch(buttons, /\bsw\b/);
   assert.match(read("nexus/i18n/translate-prompt.js"), /the everyday words for yes and no in that language \(never the English words yes and no\)/);
+});
+
+// Live Igbo voice run, 26 Nov 2026: "due Fri 27 Nov, 6:00 pm" was said as Thursday ("Tọsde"); offline, the model often left "(due Fri 27 Nov, 6:00 pm)" in English.
+test("days and months go to the translator already in the person's language, and a translation that lost its day is not used", async () => {
+  const { localizeDateWords, lostWeekday, dateNames } = require("../../nexus/i18n/date-words.js");
+  assert.deepEqual(localizeDateWords("You have: water the maize (due Fri 27 Nov, 6:00 pm).", "ig"), { text: "You have: water the maize (due Fraịdee 27 Novemba, 6:00 pm).", days: [5] });
+  assert.deepEqual(localizeDateWords("See you on Friday, 27 November.", "ha"), { text: "See you on Jummaʼa, 27 Nuwamba.", days: [5] }, "a sentence's own full stop stays");
+  assert.equal(localizeDateWords("Due Fri, Nov 27th.", "am").text, "Due ዓርብ, ኖቬምበር 27th.");
+  assert.equal(localizeDateWords("Sat in the sun and march on.", "yo").text, "Sat in the sun and march on.", "sat, sun, march and may are words too: only next to a date");
+  assert.equal(localizeDateWords("due Fri 27 Nov", "en").text, "due Fri 27 Nov", "English is left as it is");
+  for (const code of [...FOUR, "sw", "fr", "es", "pt", "ar"]) {
+    const local = dateNames(code);
+    assert.ok(local && local.days.length === 7 && local.months.length === 12, code);
+    assert.ok(local.days.every(Boolean) && local.months.every(Boolean), code);
+  }
+  assert.equal(lostWeekday("… Tọsde 27 Novemba …", "ig", [5]), true, "the live mistake: Thursday for Friday");
+  assert.equal(lostWeekday("… Fraịdee 27 Novemba …", "ig", [5]), false);
+  assert.equal(lostWeekday("anything", "ig", []), false, "no day given, nothing to lose");
+
+  const server = read("server.js");
+  const start = server.indexOf("async function translateDynamicContent(");
+  const body = server.slice(start, server.indexOf("\n}\n", start));
+  assert.ok(body.includes("localizeDateWords(text, targetLanguage)"));
+  assert.ok(body.includes("content: datePrepared.text"), "the model is given the prepared text");
+  assert.ok(body.includes("if (!keptDays(openAiText)) openAiText = await translateOnce();\n      if (!keptDays(openAiText)) openAiText = \"\";"), "asked once more, then not used");
+  assert.ok(body.includes('"Leave no English words: translate every word, keeping only people\'s and place names and the names Kyro and Koach Learn as they are.'));
+
+  // the confirmation translator: dates prepared, and a lost day gives null (the generic question in their language)
+  const { createPromptTranslator } = require("../../nexus/i18n/translate-prompt.js");
+  const sent = [];
+  const reply = out => async (url, options) => { sent.push(JSON.parse(options.body)); return { ok: true, json: async () => ({ output_text: out }) }; };
+  const source = 'I can cancel your reminder "water the maize (due Fri 27 Nov, 6:00 pm)". Say yes to cancel it, or no to keep it.';
+  const right = await createPromptTranslator({ env: { OPENAI_API_KEY: "k" }, fetchFn: reply("Enwere m ike ịkagbu ncheta gị (Fraịdee 27 Novemba, 6:00). Kwuo ee ma ọ bụ mba.") })(source, "ig");
+  assert.match(right, /Fraịdee/);
+  assert.match(sent[0].input[1].content, /due Fraịdee 27 Novemba, 6:00 pm/);
+  assert.equal(await createPromptTranslator({ env: { OPENAI_API_KEY: "k" }, fetchFn: reply("Enwere m ike ịkagbu ncheta gị (Tọsde 27 Novemba). Kwuo ee ma ọ bụ mba.") })(source, "ig"), null);
 });

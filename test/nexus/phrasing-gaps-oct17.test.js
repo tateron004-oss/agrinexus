@@ -31,9 +31,9 @@ test("'wake me up ... with a reminder to ...' is a reminder: it is routed, and t
   // (a bare "six" is asked about, never guessed)
   const asked = completeRemainingWorkspacePlan("Wake me up tomorrow at six with a reminder to check the irrigation.", full);
   assert.equal(asked.application, "reminders"); assert.equal(asked.steps.length, 0); assert.match(asked.clarification, /morning or in the evening/);
-  assert.equal(extractAssistantReminderTask("Wake me up tomorrow at 6 am with a reminder to check the irrigation."), "check the irrigation.");
-  assert.equal(extractAssistantReminderTask("Wake me up at six tomorrow to check the irrigation."), "check the irrigation.");
-  assert.equal(extractAssistantReminderTask("Wake me up at 6 am tomorrow."), "Wake me up.", "a plain wake-up with no task is left as it was");
+  assert.equal(extractAssistantReminderTask("Wake me up tomorrow at 6 am with a reminder to check the irrigation."), "check the irrigation");
+  assert.equal(extractAssistantReminderTask("Wake me up at six tomorrow to check the irrigation."), "check the irrigation");
+  assert.equal(extractAssistantReminderTask("Wake me up at 6 am tomorrow."), "Wake me up", "a plain wake-up with no task is left as it was");
 });
 
 test("'send a message to my X automation saying Y' and 'tell my X automation Y' name the automation first and the words after; ordinary messages to people are not automations", () => {
