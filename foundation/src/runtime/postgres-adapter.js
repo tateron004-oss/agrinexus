@@ -28,6 +28,8 @@ class PostgresAdapter {
     // garbage collected, never needing manual cleanup.
     this.clientReady = new WeakMap();
     if (!pool) {
+      // An idle connection that fails when the database restarts must not take the whole process down (no listener makes it fatal): the pool replaces it. (26 Nov 2026)
+      this.pool.on("error", error => { console.error("[postgres-adapter] an idle database connection failed (the pool replaces it):", error?.message || error); });
       // statement_timeout must not go in the Pool config: node-postgres sends
       // it as a connection *startup* parameter, and a pooled (e.g. PgBouncer)
       // connection string rejects unrecognized startup parameters with

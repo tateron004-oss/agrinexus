@@ -13,7 +13,8 @@ const { toSecondPerson } = require("./second-person.js");
 const clean = value => String(value ?? "").replace(/[’]/g, "'").replace(/\s+/g, " ").trim();
 const strip = value => clean(value).replace(/[.!?]+$/g, "").toLowerCase();
 
-const SET_REQUEST = /\b(?:remind\s+(?:me|us)|set\s+(?:a\s+)?reminder|notify\s+me|remember\s+to|follow\s+up|nikumbushe|nikumbushie|unikumbushe|niwekee\s+kikumbusho|weka\s+kikumbusho|ni-?remind)\b|^(?:(?:hey|please|ok|okay)\s+)*remind(?:er)?\b(?!s\b)/i;
+// ("create / add / schedule a reminder ..." is how the voice model words it when it hands one to a tool: 26 Nov 2026)
+const SET_REQUEST = /\b(?:remind\s+(?:me|us)|set\s+(?:a\s+)?reminder|(?:create|add|make|schedule|set\s+up|save)\s+(?:a\s+|an\s+|one\s+)?(?:new\s+)?(?:one-time\s+|one\s+time\s+)?reminder\b(?!s)|notify\s+me|remember\s+to|follow\s+up|nikumbushe|nikumbushie|unikumbushe|niwekee\s+kikumbusho|weka\s+kikumbusho|ni-?remind)\b|^(?:(?:hey|please|ok|okay)\s+)*remind(?:er)?\b(?!s\b)/i;
 // "nikumbushe" can also be a plain reminder lead-in; the repeating forms are read before this (see repeat-turn.js).
 const isSetRequest = text => SET_REQUEST.test(clean(text)) && !/^(?:what|which|show|list|do i have)\b/i.test(clean(text));
 

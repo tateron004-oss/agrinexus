@@ -104,7 +104,14 @@ function createRemindersCancelPreview({ notifications }) {
   if (!notifications?.listReminders) throw new Error("A notification repository is required.");
   return async function preview({ input = {}, context }) {
     const rows = await notifications.listReminders(withInFlight(context));
-    const { matches } = findCancelMatches(rows, input);
+    const { wantedId, subject, matches } = findCancelMatches(rows, input);
+    // A reminder was named and none is like it: said before the yes, with the ones the person has. (It used to ask the generic "shall I go ahead?" and only after the yes say
+    // "I could not find a reminder like that": live Igbo voice run, 26 Nov 2026.)
+    if (!matches.length && (wantedId || subject.length >= 3)) {
+      if (!rows.length) return "You have no upcoming reminders, so there is nothing to cancel. Say no to leave it there.";
+      const list = rows.slice(0, 5).map(row => describe(row, context.timeZone)).join("; ");
+      return `I could not find a reminder like that, so nothing would be cancelled. Your reminders are: ${list}. Say no, then tell me which one to cancel.`;
+    }
     // The same reminder set more than once is ONE reminder: it is asked about once, and every copy is cancelled.
     if (matches.length !== 1 && !areAllCopies(matches)) return null;
     const copies = matches.length > 1 ? ` (set ${matches.length} times; I will cancel all ${matches.length})` : "";

@@ -22,7 +22,9 @@ test("the question names the one reminder, by its words and its time; nothing fo
   assert.equal(said, 'I can cancel your reminder "about my Pap smear (due Wed 14 Oct, 9:00 am)". Say yes to cancel it, or no to keep it.');
   assert.equal(await preview({ input: { reminderId: "n2" }, context }), 'I can cancel your reminder "check the pump (due Wed 14 Oct, 10:00 am)". Say yes to cancel it, or no to keep it.');
   assert.equal(await preview({ input: { reminder: "the pump" }, context }), null, "two match: the cancel asks which");
-  assert.equal(await preview({ input: { reminder: "the tractor" }, context }), null);
+  // nothing like it: said before the yes, with the reminders there are (26 Nov 2026)
+  assert.match(await preview({ input: { reminder: "the tractor" }, context }), /^I could not find a reminder like that, so nothing would be cancelled\. Your reminders are: about my Pap smear \(due Wed 14 Oct, 9:00 am\); check the pump/);
+  assert.equal(await createRemindersCancelPreview({ notifications: { listReminders: async () => [] } })({ input: { reminder: "the tractor" }, context }), "You have no upcoming reminders, so there is nothing to cancel. Say no to leave it there.");
   assert.equal(await preview({ input: {}, context }), null);
   assert.throws(() => createRemindersCancelPreview({}));
 });
