@@ -78,8 +78,8 @@ test("the handlers still work without a logger", async () => {
 });
 
 test("reminder text has no stray space before punctuation after the time phrase is removed", () => {
-  assert.equal(extractAssistantReminderTask("Remind me to test push in 2 minutes."), "test push.");
-  assert.equal(extractAssistantReminderTask("Remind me to call Ron tomorrow!"), "call Ron!");
+  assert.equal(extractAssistantReminderTask("Remind me to test push in 2 minutes."), "test push"); // (the spoken full stop is not part of the task, 26 Nov 2026)
+  assert.equal(extractAssistantReminderTask("Remind me to call Ron tomorrow!"), "call Ron");
   assert.equal(extractAssistantReminderTask("Remind me to check my crops in 30 minutes"), "check my crops");
   assert.equal(extractAssistantReminderTask(""), "follow up");
 });
