@@ -14309,7 +14309,18 @@ function moduleUseExplanation(moduleId) {
   return explanations[moduleId] || explanations.dashboard;
 }
 
-async function changeLanguageByVoice(command) {
+// One spoken "Switch to Hausa" reached this from two parts of the page at once, and each saved the language (live voice run, 25 Nov 2026: two saves, then two caption translations,
+// then the site ran out of memory). The same language asked for again within a few seconds waits for the change already on its way.
+let kyroLanguageChangeInFlight = null;
+function changeLanguageByVoice(command) {
+  const language = languageFromVoiceCommand(command);
+  const recent = kyroLanguageChangeInFlight;
+  if (language && recent && recent.language === language && Date.now() - recent.at < 8000) return recent.promise;
+  const promise = kyroChangeLanguageByVoiceOnce(command);
+  if (language) kyroLanguageChangeInFlight = { language, at: Date.now(), promise };
+  return promise;
+}
+async function kyroChangeLanguageByVoiceOnce(command) {
   const language = languageFromVoiceCommand(command);
   if (!language) {
     setVoiceResponse("I can change the app language to English, French, Kiswahili, Arabic, Portuguese, Spanish, Hausa, Amharic, Yoruba, or Igbo.", true);
@@ -48799,7 +48810,7 @@ function setVoiceResponse(message, speak = false, options = {}) {
   if (languageCode() !== "en" && !options.alreadyTranslated) {
     request("/api/translate", {
       method: "POST",
-      body: { text: responseMessage, sourceLanguage: "en", targetLanguage: languageCode(), context: "voice-response" }
+      body: { text: responseMessage, sourceLanguage: "en", targetLanguage: languageCode(), context: "voice-response", captionOnly: true } /* (only the translation back, nothing saved: see the /api/translate route) */
     }).then(result => {
       if (token !== voiceTranslationToken || interruptToken !== voiceInterruptToken || (options.turnToken && !isCurrentNexusVoiceTurn(options.turnToken))) return;
       const translated = result.translationResult?.translatedText || responseMessage;

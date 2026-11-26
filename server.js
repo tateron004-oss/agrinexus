@@ -60652,6 +60652,10 @@ async function api(req, res, url) {
       sourceLanguage: body.sourceLanguage || "en",
       context: body.context || "dynamic"
     });
+    // The page's captions (setVoiceResponse) ask for this for every line it shows in a language other than English. Each call saved the whole stored document (about 5 MB) and sent
+    // the person's whole state back (125 to 220 KB); around a spoken language change several came at once, and the live site ran out of memory and went down twice in one voice run
+    // (25 Nov 2026). A caption needs only the translation: nothing is saved.
+    if (body.captionOnly === true) return send(res, 200, { translationResult: result });
     await writeDb(db);
     const state = publicState(db, user);
     state.translationResult = result;
