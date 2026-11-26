@@ -63040,7 +63040,7 @@ const KYRO_CONFIRMATION_WORDS = Object.freeze({
   ha: { yes: ["eh", "e", "ee", "toh", "to", "na yarda", "eh na yarda", "yi shi", "eh yi shi", "ci gaba"], no: ["a'a", "a a", "aa", "a'a na gode", "kada", "soke", "a'a soke"] },
   am: { yes: ["አዎ", "አዎን", "እሺ", "አዎ እሺ", "ቀጥል", "ቀጥሉ", "አዎ ቀጥል"], no: ["አይ", "አይደለም", "አልፈልግም", "ሰርዝ", "አይ አመሰግናለሁ", "ይቅር"] },
   yo: { yes: ["beeni", "beni", "o dara", "mo gba", "beeni o", "beeni mo gba"], no: ["rara", "rara o", "beeko", "fagile", "rara fagile"] },
-  ig: { yes: ["ee", "eh", "e", "o di mma", "ka o di", "ee o di mma", "kwado"], no: ["mba", "mba o", "kagbuo", "mba kagbuo"] }
+  ig: { yes: ["ee", "eh", "e", "o di mma", "ka o di", "ee o di mma", "kwado"], no: ["mba", "umba", "mba o", "kagbuo", "mba kagbuo"] } /* ("Mba" was written "Ụmba" in the live sweep, 26 Nov 2026) */
 });
 function kyroConfirmationWordKey(text) {
   return String(text || "").trim().toLowerCase().normalize("NFD")
@@ -64191,6 +64191,8 @@ async function submitNexusPendingBehaviorConfirmation(approved, text, options = 
         stepId: pending.stepId,
         approved,
         text,
+        // (the person's language: without it the server used the saved one, and "No problem, I have left that as it was" was said in English after "A'a" and "Rárá": live sweep, 26 Nov 2026)
+        locale: typeof languageCode === "function" ? languageCode() : "en",
         timeZone: kyroDeviceTimeZone(),
         channel: options.source === "voice" || options.source === "voice_transcript" ? "voice" : "typed"
       }
