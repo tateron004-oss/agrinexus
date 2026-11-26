@@ -14362,6 +14362,15 @@ const KYRO_LANGUAGE_NOW_LINES = Object.freeze({
   yo: "Láti ìsinsìnyí, màá bá ọ sọ̀rọ̀ ní èdè Yorùbá. Kí ni mo lè ṣe fún ọ?",
   ig: "Ugbu a, anyị ga-akparịta ụka n'asụsụ Igbo. Kedu ka m ga-esi nyere gị aka?"
 });
+// Said by the page's own voice, not the model's: back in English, the new English voice was asked to read "I'm speaking English again. How can I help?" and answered it instead
+// ("Hey, welcome back! You can help by telling me what you'd like to do...", each of three switches back in the live sweep, 26 Nov 2026). The model is told it was said.
+function kyroSayLanguageNowLine(line) {
+  if (!line) return false;
+  kyroPageVoiceStop();
+  kyroPageSay(line);
+  try { injectKyroRealtimeContext(`Kyro's screen just told the person: ${line} Do not repeat it or answer it; wait for the person to speak.`); } catch { /* the note is only for the model's memory */ }
+  return true;
+}
 async function kyroSwitchLanguageBySpeech(command) {
   const before = typeof voiceLanguageCode === "function" ? voiceLanguageCode() : languageCode();
   const wanted = typeof languageFromVoiceCommand === "function" ? languageFromVoiceCommand(command) : "";
@@ -14377,7 +14386,7 @@ async function kyroSwitchLanguageBySpeech(command) {
   if (started && KYRO_LANGUAGE_NOW_LINES[after]) {
     // (a moment for the new voice to be ready to speak)
     await new Promise(resolve => setTimeout(resolve, 900));
-    try { kyroSpeakPageLine(KYRO_LANGUAGE_NOW_LINES[after]); } catch { /* the screen has said it */ }
+    try { kyroSayLanguageNowLine(KYRO_LANGUAGE_NOW_LINES[after]); } catch { /* the screen has said it */ }
   }
   return started;
 }
@@ -52908,7 +52917,10 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
     }
     // After Kyro was cut off to answer an Amharic transcript (kyroAnswerFromTranscript), the SDK sends no new "audio started" for the answers that follow (and a text-only
     // session, where the page speaks, sends none at all), so they were never marked as under way, and the stall watchdog asked for the same answer again 6 seconds after the tool (heard twice: local voice run, 25 Nov 2026). They are marked here.
-    if (eventType === "response.created" && ((typeof kyroPageSpeaks === "function" && kyroPageSpeaks()) || (typeof kyroAnsweredFromTranscriptAt === "number" && Date.now() - kyroAnsweredFromTranscriptAt < 60000))) {
+    // Hausa, Amharic, Yoruba and Igbo too: their full voice model can take more than the watchdog's six seconds before its first sound, so the watchdog asked again while the
+    // first answer was still being made, and every Hausa answer was said twice (local voice run, 26 Nov 2026: the second response.create came from the watchdog's nudge).
+    if (eventType === "response.created" && ((typeof kyroPageSpeaks === "function" && kyroPageSpeaks()) || (typeof kyroAnsweredFromTranscriptAt === "number" && Date.now() - kyroAnsweredFromTranscriptAt < 60000)
+      || (typeof voiceLanguageCode === "function" && KYRO_SLOW_VOICE_LANGUAGES.has(voiceLanguageCode())))) {
       try { markRealtimeResponseStarted(payload, "response-created-after-transcript-answer"); } catch { /* the watchdog still has its own timers */ }
     }
     if (eventType === "response.done") {
@@ -54807,7 +54819,8 @@ function kyroTakeOverTurn() {
 // question and looked nothing up, while the speech-to-text (gpt-4o-transcribe with an Amharic hint, server.js) wrote the sentence almost exactly, and given the same words as
 // text the model answered well and asked for farming courses. So for Amharic the model's first answer is cut off as soon as the transcript is in, and it answers the
 // transcript. Hausa, Yoruba and Igbo are heard well enough by the model itself (same run) and are not cut off.
-const KYRO_ANSWER_FROM_TRANSCRIPT_LANGUAGES = Object.freeze({ am: "Amharic" });
+const KYRO_SLOW_VOICE_LANGUAGES = new Set(["ha", "am", "yo", "ig"]);
+const KYRO_ANSWER_FROM_TRANSCRIPT_LANGUAGES = Object.freeze({ am: "Amharic", yo: "Yoruba", ig: "Igbo" }); // (Yoruba and Igbo from 26 Nov 2026: see server.js OPENAI_PAGE_SPOKEN_LANGUAGES)
 let kyroAnsweredFromTranscript = "";
 let kyroAnsweredFromTranscriptAt = 0;
 function kyroAnswerFromTranscript(transcript, utteranceId) {
@@ -54851,13 +54864,15 @@ function kyroPageVoiceParts(text) {
   if (current) parts.push(current);
   return parts.slice(0, 8);
 }
+const KYRO_PAGE_VOICE_LOCALES = Object.freeze({ en: "en-US", am: "am-ET", yo: "yo-NG", ig: "ig-NG", ha: "ha-NG" });
 function kyroPageSay(text) {
   const parts = kyroPageVoiceParts(text);
   if (!parts.length) return;
   const generation = kyroPageVoice.generation;
   const fetchPart = part => {
-    const language = /[ሀ-፿]/.test(part) ? "am" : "en";
-    return request("/api/voice/speak", { method: "POST", body: { correlationId: `kyro-page-voice-${Date.now().toString(36)}`, text: part, language, locale: language === "am" ? "am-ET" : "en-US", rate: 1, pitch: 1, forceOpenAi: true, pageVoice: true } })
+    const spoken = typeof voiceLanguageCode === "function" ? voiceLanguageCode() : "en";
+    const language = /[ሀ-፿]/.test(part) ? "am" : (KYRO_PAGE_VOICE_LOCALES[spoken] && !(typeof kyroLooksEnglish === "function" && kyroLooksEnglish(part)) ? spoken : "en");
+    return request("/api/voice/speak", { method: "POST", body: { correlationId: `kyro-page-voice-${Date.now().toString(36)}`, text: part, language, locale: KYRO_PAGE_VOICE_LOCALES[language] || "en-US", rate: 1, pitch: 1, forceOpenAi: true, pageVoice: true } })
       .then(result => result?.voiceResult?.audioDataUrl || "").catch(() => "");
   };
   // one part asked for at a time, the next while this one is said (several at once took the live site down)

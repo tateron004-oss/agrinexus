@@ -12,6 +12,7 @@
 const WORDS = Object.freeze({
   en: {
     generic: "I have that ready. Should I go ahead with it? Just say yes or no.",
+    declined: "No problem, I have left that as it was.",
     call: ({ who, intro, message }) => `I can place a phone call to ${who}. A computer voice will first say "${intro}" and then "${message}". The call really happens and cannot be undone. Say yes to call, or no to cancel.`,
     kinds: { sms: "text message", whatsapp: "WhatsApp message", email: "email" },
     send: ({ kind, who, subject, message }) => `I can send this ${kind} to ${who}${subject ? `, subject "${subject}"` : ""}: "${message}". It will really be sent and cannot be unsent. Say yes to send it, or no to cancel.`,
@@ -35,6 +36,7 @@ const WORDS = Object.freeze({
   },
   sw: {
     generic: "Nimeandaa hilo. Niendelee nalo? Sema ndiyo au hapana tu.",
+    declined: "Sawa, nimeiacha kama ilivyokuwa.",
     call: ({ who, intro, message }) => `Ninaweza kupiga simu kwa ${who}. Sauti ya kompyuta itasema kwanza "${intro}" kisha "${message}". Simu itapigwa kweli na haiwezi kutenduliwa. Sema ndiyo kupiga, au hapana kughairi.`,
     kinds: { sms: "ujumbe mfupi", whatsapp: "ujumbe wa WhatsApp", email: "barua pepe" },
     send: ({ kind, who, subject, message }) => `Ninaweza kutuma ${kind} kwa ${who}${subject ? `, kichwa "${subject}"` : ""}: "${message}". Itatumwa kweli na haiwezi kurudishwa. Sema ndiyo kuituma, au hapana kughairi.`,
@@ -58,6 +60,7 @@ const WORDS = Object.freeze({
   },
   fr: {
     generic: "C'est prêt. Je continue ? Dites simplement oui ou non.",
+    declined: "Pas de problème, je n'ai rien changé.",
     call: ({ who, intro, message }) => `Je peux appeler ${who}. Une voix d'ordinateur dira d'abord « ${intro} » puis « ${message} ». L'appel aura vraiment lieu et ne peut pas être annulé. Dites oui pour appeler, ou non pour annuler.`,
     kinds: { sms: "ce SMS", whatsapp: "ce message WhatsApp", email: "cet e-mail" },
     send: ({ kind, who, subject, message }) => `Je peux envoyer ${kind} à ${who}${subject ? `, objet « ${subject} »` : ""} : « ${message} ». Il sera vraiment envoyé et ne pourra pas être retiré. Dites oui pour l'envoyer, ou non pour annuler.`,
@@ -81,6 +84,7 @@ const WORDS = Object.freeze({
   },
   es: {
     generic: "Ya está listo. ¿Sigo adelante? Solo diga sí o no.",
+    declined: "No hay problema, lo dejé como estaba.",
     call: ({ who, intro, message }) => `Puedo llamar a ${who}. Una voz de computadora dirá primero "${intro}" y luego "${message}". La llamada se hace de verdad y no se puede deshacer. Diga sí para llamar, o no para cancelar.`,
     kinds: { sms: "este mensaje de texto", whatsapp: "este mensaje de WhatsApp", email: "este correo" },
     send: ({ kind, who, subject, message }) => `Puedo enviar ${kind} a ${who}${subject ? `, asunto "${subject}"` : ""}: "${message}". Se enviará de verdad y no se puede retirar. Diga sí para enviarlo, o no para cancelar.`,
@@ -104,6 +108,7 @@ const WORDS = Object.freeze({
   },
   pt: {
     generic: "Está pronto. Posso continuar? Diga apenas sim ou não.",
+    declined: "Sem problema, deixei como estava.",
     call: ({ who, intro, message }) => `Posso ligar para ${who}. Uma voz de computador dirá primeiro "${intro}" e depois "${message}". A ligação acontece de verdade e não pode ser desfeita. Diga sim para ligar, ou não para cancelar.`,
     kinds: { sms: "esta mensagem de texto", whatsapp: "esta mensagem de WhatsApp", email: "este e-mail" },
     send: ({ kind, who, subject, message }) => `Posso enviar ${kind} para ${who}${subject ? `, assunto "${subject}"` : ""}: "${message}". Será enviado de verdade e não pode ser desfeito. Diga sim para enviar, ou não para cancelar.`,
@@ -127,6 +132,7 @@ const WORDS = Object.freeze({
   },
   ar: {
     generic: "هذا جاهز. هل أتابع؟ قل نعم أو لا فقط.",
+    declined: "لا مشكلة، تركت الأمر كما كان.",
     call: ({ who, intro, message }) => `يمكنني الاتصال بـ ${who}. سيقول صوت حاسوب أولًا "${intro}" ثم "${message}". سيتم الاتصال فعلًا ولا يمكن التراجع عنه. قل نعم للاتصال، أو لا للإلغاء.`,
     kinds: { sms: "هذه الرسالة النصية", whatsapp: "رسالة واتساب هذه", email: "هذا البريد الإلكتروني" },
     send: ({ kind, who, subject, message }) => `يمكنني إرسال ${kind} إلى ${who}${subject ? `، الموضوع "${subject}"` : ""}: "${message}". سيتم إرسالها فعلًا ولا يمكن استرجاعها. قل نعم لإرسالها، أو لا للإلغاء.`,
@@ -150,6 +156,7 @@ const WORDS = Object.freeze({
   },
   ha: {
     generic: "Na shirya wannan. In ci gaba? Ka ce eh ko a'a kawai.",
+    declined: "Ba matsala, na bar shi yadda yake.",
     call: ({ who, intro, message }) => `Zan iya kiran ${who} ta waya. Muryar kwamfuta za ta fara cewa "${intro}" sannan "${message}". Kiran zai faru da gaske kuma ba za a iya janyewa ba. Ka ce eh don a kira, ko a'a don a soke.`,
     kinds: { sms: "saƙon tes ɗin nan", whatsapp: "saƙon WhatsApp ɗin nan", email: "imel ɗin nan" },
     send: ({ kind, who, subject, message }) => `Zan iya aika ${kind} zuwa ga ${who}${subject ? `, take "${subject}"` : ""}: "${message}". Za a aika shi da gaske kuma ba za a iya janyewa ba. Ka ce eh don a aika, ko a'a don a soke.`,
@@ -173,6 +180,7 @@ const WORDS = Object.freeze({
   },
   am: {
     generic: "ይህ ዝግጁ ነው። ልቀጥል? አዎ ወይም አይ ብቻ ይበሉ።",
+    declined: "ችግር የለም፣ እንደነበረ ተውኩት።",
     call: ({ who, intro, message }) => `ወደ ${who} ስልክ መደወል እችላለሁ። የኮምፒውተር ድምፅ መጀመሪያ "${intro}" ከዚያም "${message}" ይላል። ጥሪው በእርግጥ ይደረጋል፤ መመለስም አይቻልም። ለመደወል አዎ ይበሉ፣ ለመሰረዝ አይ ይበሉ።`,
     kinds: { sms: "ይህን የጽሑፍ መልእክት", whatsapp: "ይህን የWhatsApp መልእክት", email: "ይህን ኢሜይል" },
     send: ({ kind, who, subject, message }) => `${kind} ወደ ${who} መላክ እችላለሁ${subject ? `፣ ርዕስ "${subject}"` : ""}፦ "${message}"። በእርግጥ ይላካል፤ መመለስም አይቻልም። ለመላክ አዎ ይበሉ፣ ለመሰረዝ አይ ይበሉ።`,
@@ -196,6 +204,7 @@ const WORDS = Object.freeze({
   },
   yo: {
     generic: "Mo ti ṣètò rẹ̀. Ṣé kí n tẹ̀síwájú? Kan sọ bẹ́ẹ̀ni tàbí rárá.",
+    declined: "Kò sí wàhálà, mo fi sílẹ̀ bí ó ṣe wà.",
     call: ({ who, intro, message }) => `Mo lè pe ${who} lórí fóònù. Ohùn kọ̀ǹpútà yóò kọ́kọ́ sọ "${intro}" lẹ́yìn náà "${message}". Ìpè náà yóò wáyé ní tòótọ́, a kò sì lè dá a padà. Sọ bẹ́ẹ̀ni láti pè, tàbí rárá láti fagilé.`,
     kinds: { sms: "ọ̀rọ̀ àtẹ̀jíṣẹ́ yìí", whatsapp: "ọ̀rọ̀ WhatsApp yìí", email: "ímeèlì yìí" },
     send: ({ kind, who, subject, message }) => `Mo lè fi ${kind} ránṣẹ́ sí ${who}${subject ? `, àkòrí "${subject}"` : ""}: "${message}". Yóò lọ ní tòótọ́, a kò sì lè dá a padà. Sọ bẹ́ẹ̀ni láti fi ránṣẹ́, tàbí rárá láti fagilé.`,
@@ -219,6 +228,7 @@ const WORDS = Object.freeze({
   },
   ig: {
     generic: "Edoziela m ya. Ka m gaa n'ihu? Kwuo ee ma ọ bụ mba.",
+    declined: "Ọ dịghị nsogbu, ahapụrụ m ya ka ọ dị.",
     call: ({ who, intro, message }) => `Enwere m ike ịkpọ ${who} n'ekwentị. Olu kọmputa ga-ebu ụzọ kwuo "${intro}", wee kwuo "${message}". A ga-akpọ oku ahụ n'ezie, a gaghị enwe ike ịkagbu ya. Kwuo ee ka m kpọọ, ma ọ bụ mba ka m kagbuo.`,
     kinds: { sms: "ozi ederede a", whatsapp: "ozi WhatsApp a", email: "ozi email a" },
     send: ({ kind, who, subject, message }) => `Enwere m ike iziga ${kind} nye ${who}${subject ? `, isiokwu "${subject}"` : ""}: "${message}". A ga-eziga ya n'ezie, a gaghị enwe ike iweghachi ya. Kwuo ee ka m ziga ya, ma ọ bụ mba ka m kagbuo.`,

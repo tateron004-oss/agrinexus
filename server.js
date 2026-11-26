@@ -20946,12 +20946,15 @@ const OPENAI_NATIVE_TRANSCRIPTION_HINTS = {
   ha: "Kyro yana magana da Hausa. Koach Learn. Eh, a'a, sannu, yaya, don Allah, na gode, noma. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
   am: "ኪሮ በአማርኛ ይናገራል። Koach Learn። አዎ፣ አይ፣ ሰላም፣ እባክህ፣ አመሰግናለሁ፣ ግብርና፣ እርሻ፣ ጤና፣ ትምህርት። English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
   yo: "Kyro ń sọ èdè Yorùbá. Koach Learn. Bẹ́ẹ̀ni, rárá, ẹ káàbọ̀, báwo ni, iṣẹ́ àgbẹ̀, ẹ̀kọ́. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
-  ig: "Kyro na-asụ Igbo. Koach Learn. Ee, mba, ndewo, kedu, biko, daalụ, ọrụ, mmụta. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen."
+  ig: "Kyro na-asụ Igbo. Koach Learn. Ee, mba, ndewo, kedu, biko, daalụ, ọrụ ugbo, mmụta. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen."
 };
 const OPENAI_REALTIME_TRANSCRIPTION_HINT = "Kyro, AgriNexus, Koach Learn. Close it. Close the screen. Show my notes, reminders, checklists. Kisumu, Nairobi, Nakuru, Mombasa, Lagos, Stockton, Sacramento. Maize, sorghum, cassava. Hausa, Yoruba, Igbo, Amharic.";
 // Amharic: the voice model's spoken Amharic was often badly worded while its written Amharic is good (local voice run and a typed check, 25 Nov 2026), so an Amharic session is
 // text-only and the page reads each answer aloud with the speech service (public/app.js, kyroPageSpeaks).
-const OPENAI_PAGE_SPOKEN_LANGUAGES = new Set(["am"]);
+// Yoruba and Igbo too (live sweep, 26 Nov 2026): their speech-to-text wrote what was said word for word ("Ó rẹ mi gan an. Kíni kín ṣe?", I am very tired, what should I do?), but the
+// voice model, answering what it heard itself, talked about farming plans, and in Igbo about speaking clearly; in Yoruba it did not look for the courses asked for. Amharic, answered
+// from the written words, was right each time. Hausa, which the model understands well by ear, still speaks for itself.
+const OPENAI_PAGE_SPOKEN_LANGUAGES = new Set(["am", "yo", "ig"]);
 // Amharic needs the full voice model: on the live site, with gpt-realtime-2.1-mini (the site's OPENAI_REALTIME_MODEL), Kyro's written Amharic was muddled ("I'm very tired"
 // was answered with a question about fear), where the full gpt-realtime-2.1 wrote it plainly and naturally (local voice run, 25 Nov 2026).
 // Yoruba and Igbo too (live voice run after #1260, 25 Nov 2026): on the smaller model, Yoruba heard "Mo fẹ́ kọ́ nípa iṣẹ́ àgbẹ̀" (I want to learn about farming) word for word and answered
@@ -20977,13 +20980,18 @@ function openAiRealtimeTranscriptionHint(language = "en") {
 }
 
 function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
-  const turnDetectionType = String(env.OPENAI_REALTIME_TURN_DETECTION || "semantic_vad").trim() || "semantic_vad";
+  // Hausa, Amharic, Yoruba and Igbo: a second of silence ends the turn, not the meaning of the words. Even at "low", the semantic detector took the pause after "Sannu Kyro."
+  // (Hello Kyro.) as the end, so "Ina so in koyi game da noma" (I want to learn about farming) was a second turn and Kyro answered twice (live sweep, 26 Nov 2026).
+  const native = Boolean(OPENAI_NATIVE_TRANSCRIPTION_HINTS[openAiRealtimeTranscriptionCode(language)]);
+  const turnDetectionType = native
+    ? (String(env.OPENAI_REALTIME_NATIVE_TURN_DETECTION || "server_vad").trim() || "server_vad")
+    : (String(env.OPENAI_REALTIME_TURN_DETECTION || "semantic_vad").trim() || "semantic_vad");
   const turnDetection = turnDetectionType === "server_vad"
     ? {
         type: "server_vad",
         threshold: Number(env.OPENAI_REALTIME_VAD_THRESHOLD || 0.5),
         prefix_padding_ms: 300,
-        silence_duration_ms: Number(env.OPENAI_REALTIME_SILENCE_DURATION_MS || 700),
+        silence_duration_ms: native ? Number(env.OPENAI_REALTIME_NATIVE_SILENCE_DURATION_MS || 1100) : Number(env.OPENAI_REALTIME_SILENCE_DURATION_MS || 700),
         create_response: true,
         interrupt_response: true
       }
@@ -25313,6 +25321,21 @@ function deepVoiceIntent(lower) {
 // The offline translator lives in nexus/i18n/local-translate.js (it must never turn an honest "nothing was saved" into a success sentence).
 const { localTranslateText, AGENT_NOT_HANDLED_RESPONSE } = require("./nexus/i18n/local-translate.js");
 
+const TRANSLATION_LANGUAGE_NAMES = Object.freeze({ en: "English", sw: "Kiswahili", fr: "French", es: "Spanish", pt: "Portuguese", ar: "Arabic", ha: "Hausa", am: "Amharic (in Ge'ez script)", yo: "Yoruba (with its tone marks)", ig: "Igbo (with its dots and tone marks)" });
+function translationLanguageName(code) {
+  const key = String(code || "en").toLowerCase().split(/[-_]/)[0];
+  return TRANSLATION_LANGUAGE_NAMES[key] || String(code || "English");
+}
+// An answer that still came back as JSON ({"text": "..."} or {"translatedText": "..."}) is unwrapped, so the words, not the braces, reach the screen.
+function unwrapTranslationText(value) {
+  const text = String(value || "").trim();
+  if (!/^\{[\s\S]*\}$/.test(text)) return text;
+  try {
+    const parsed = JSON.parse(text);
+    const inner = parsed && (parsed.translatedText || parsed.translation || parsed.text);
+    return typeof inner === "string" && inner.trim() ? inner.trim() : text;
+  } catch { return text; }
+}
 async function translateDynamicContent(db, user, { text, targetLanguage, sourceLanguage = "en", context = "platform", intent = "" }) {
   const runtime = providerRuntime("translation");
   const evidenceContext = /\b(source|evidence|citation|receipt|provenance|source_followup|current_knowledge|weather)\b/i.test(`${context || ""} ${text || ""}`);
@@ -25376,12 +25399,14 @@ async function translateDynamicContent(db, user, { text, targetLanguage, sourceL
                 "Translate the user's content for AgriNexus.",
                 "Preserve product names, button labels, IDs, safety meaning, and workflow intent.",
                 "Return only the translated text.",
-                "Use plain language suitable for rural, low-tech users."
+                "Use plain language suitable for rural, low-tech users.",
+                // (the text was sent as JSON, and an answer came back as JSON, {"text":"..."}, shown on an Amharic screen as it was; and "No problem" became "no seedling": live sweep, 26 Nov 2026)
+                `Translate from ${translationLanguageName(sourceLanguage)} into ${translationLanguageName(targetLanguage)}. The text to translate is the whole of the next message: plain text in, plain text out, never JSON.`
               ].join(" ")
             },
             {
               role: "user",
-              content: JSON.stringify({ text, sourceLanguage, targetLanguage, context })
+              content: String(text || "")
             }
           ],
           // (room for the whole text: a screen's answer in Amharic or Yoruba takes several times the tokens of the English; 600 cut a long answer short)
@@ -25389,7 +25414,7 @@ async function translateDynamicContent(db, user, { text, targetLanguage, sourceL
         })
       }, OPENAI_TRANSLATION_TIMEOUT_MS);
       const json = await response.json().catch(() => ({}));
-      const openAiText = response.ok ? extractResponseText(json) : "";
+      const openAiText = response.ok ? unwrapTranslationText(extractResponseText(json)) : "";
       if (openAiText) {
         translatedText = openAiText;
         provider = "openai-translation";

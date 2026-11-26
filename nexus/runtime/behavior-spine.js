@@ -10,7 +10,7 @@ const { setReplySw } = require("../reminders/swahili-reminder.js");
 const { toSecondPerson } = require("../reminders/second-person.js");
 const { isWomensCareSearch, WOMENS_CARE_NOTE } = require("../knowledge/womens-health-topics.js");
 const { isPrivateReminder } = require("../reminders/private-reminder.js");
-const { userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt, genericConfirmationPrompt } = require("../consent/user-confirmable-consents.js");
+const { userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt, genericConfirmationPrompt, declinedReply } = require("../consent/user-confirmable-consents.js");
 
 // Errors from communications.send that mean nothing went out (the provider is switched off or not configured, or refused the
 // request before sending). An undelivered text or failed call is not here: the provider did try, so it still counts.
@@ -96,11 +96,12 @@ class BehaviorSpine {
       const cancelled = await this.engine.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
         nextState: "cancelled", reason: "User declined the requested confirmation",
         outcome: { verified: false, reason: "declined_by_user" } });
+      const declined = declinedReply(command?.locale || context?.locale || "en");
       await this.conversations?.append?.({ tenantId: context.tenantId, conversationId: command.conversationId,
-        actorId: null, role: "assistant", content: "No problem, I have left that as it was.",
+        actorId: null, role: "assistant", content: declined,
         provenance: { type: "declined_outcome", systemActor: "nexus-brain", taskId } });
       return envelope({ command, plan, task: cancelled, state: "cancelled", completed: false,
-        response: "No problem, I have left that as it was.", outcome: { verified: false, reason: "declined_by_user" } });
+        response: declined, outcome: { verified: false, reason: "declined_by_user" } });
     }
     let execution;
     try {

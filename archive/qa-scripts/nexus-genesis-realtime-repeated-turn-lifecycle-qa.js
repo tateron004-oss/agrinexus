@@ -64,7 +64,7 @@ notIncludes(app.slice(app.indexOf("if (type === \"response.done\""), app.indexOf
 
 includes(server, "create_response: true", "server VAD repeated response creation");
 includes(server, "interrupt_response: true", "server VAD interruption support");
-includes(server, "silence_duration_ms: Number(env.OPENAI_REALTIME_SILENCE_DURATION_MS || 700)", "server VAD silence duration retained");
+includes(server, ": Number(env.OPENAI_REALTIME_SILENCE_DURATION_MS || 700),", "server VAD silence duration retained (the four languages wait longer: OPENAI_REALTIME_NATIVE_SILENCE_DURATION_MS)");
 
 ["__NEXUS_RELEASE_SHA__", "agrinexus-pwa-__NEXUS_RELEASE_SHA__"].forEach(marker => {
   includes(app, marker, `app marker ${marker}`);
