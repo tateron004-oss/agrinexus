@@ -20944,9 +20944,12 @@ const OPENAI_REALTIME_TRANSCRIPTION_HINT = "Kyro, AgriNexus, Koach Learn. Close 
 // text-only and the page reads each answer aloud with the speech service (public/app.js, kyroPageSpeaks).
 const OPENAI_PAGE_SPOKEN_LANGUAGES = new Set(["am"]);
 // Amharic needs the full voice model: on the live site, with gpt-realtime-2.1-mini (the site's OPENAI_REALTIME_MODEL), Kyro's written Amharic was muddled ("I'm very tired"
-// was answered with a question about fear), where the full gpt-realtime-2.1 wrote it plainly and naturally (local voice run, 25 Nov 2026). Only Amharic sessions use it.
+// was answered with a question about fear), where the full gpt-realtime-2.1 wrote it plainly and naturally (local voice run, 25 Nov 2026).
+// Yoruba and Igbo too (live voice run after #1260, 25 Nov 2026): on the smaller model, Yoruba heard "Mo fẹ́ kọ́ nípa iṣẹ́ àgbẹ̀" (I want to learn about farming) word for word and answered
+// that it did not understand, with no course search; Igbo found the right courses and then added a made-up sentence about sheep. The full model answered both well locally. So
+// Hausa, Amharic, Yoruba and Igbo sessions all use it; every other language keeps the site's model.
 function openAiRealtimeSessionModel(language = "en", env = process.env) {
-  if (!OPENAI_PAGE_SPOKEN_LANGUAGES.has(openAiRealtimeTranscriptionCode(language))) return openAiRealtimeModel(env);
+  if (!OPENAI_NATIVE_TOOL_ENGLISH_LANGUAGES.has(openAiRealtimeTranscriptionCode(language))) return openAiRealtimeModel(env);
   const requested = String(env.OPENAI_REALTIME_NATIVE_MODEL || "gpt-realtime-2.1").trim();
   return NEXUS_REALTIME_ALLOWED_MODELS.has(requested) ? requested : "gpt-realtime-2.1";
 }

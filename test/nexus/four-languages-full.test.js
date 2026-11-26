@@ -318,16 +318,16 @@ test("in a text-only session the page says Kyro's answers, never an answer to mi
   assert.ok(parts(("አንድ ሁለት ሶስት። ").repeat(60)).every(part => part.length <= 280), "short parts, so the first is heard soon");
 });
 
-test("Amharic sessions use the full voice model (the smaller one wrote muddled Amharic on the live site); every other language keeps the site's model", () => {
+test("Hausa, Amharic, Yoruba and Igbo sessions use the full voice model (the smaller one muddled Amharic, Yoruba and Igbo on the live site); every other language keeps the site's model", () => {
   const server = read("server.js");
   const allowed = /const NEXUS_REALTIME_ALLOWED_MODELS = new Set\(\[[^\]]+\]\);/.exec(server)[0];
-  const set = /const OPENAI_PAGE_SPOKEN_LANGUAGES = new Set\(\[[^\]]+\]\);/.exec(server)[0];
+  const set = /const OPENAI_NATIVE_TOOL_ENGLISH_LANGUAGES = new Set\(\[[^\]]+\]\);/.exec(server)[0];
   const pick = new Function(`${allowed}\n${set}\n${grabFrom(server, "openAiRealtimeModel")}\n${grabFrom(server, "openAiRealtimeTranscriptionCode")}\n${grabFrom(server, "openAiRealtimeSessionModel")}\nreturn openAiRealtimeSessionModel;`)();
   const site = { OPENAI_REALTIME_MODEL: "gpt-realtime-2.1-mini" };
-  assert.equal(pick("am", site), "gpt-realtime-2.1");
-  assert.equal(pick("am", { ...site, OPENAI_REALTIME_NATIVE_MODEL: "gpt-realtime" }), "gpt-realtime", "it can be changed without a release");
-  assert.equal(pick("am", { ...site, OPENAI_REALTIME_NATIVE_MODEL: "not-a-model" }), "gpt-realtime-2.1");
-  for (const code of ["en", "es", "sw", "ha", "yo", "ig"]) assert.equal(pick(code, site), "gpt-realtime-2.1-mini", code);
+  for (const code of ["ha", "am", "yo", "ig"]) assert.equal(pick(code, site), "gpt-realtime-2.1", code);
+  assert.equal(pick("yo", { ...site, OPENAI_REALTIME_NATIVE_MODEL: "gpt-realtime" }), "gpt-realtime", "it can be changed without a release");
+  assert.equal(pick("ig", { ...site, OPENAI_REALTIME_NATIVE_MODEL: "not-a-model" }), "gpt-realtime-2.1");
+  for (const code of ["en", "es", "sw", "fr", "ar", "pt"]) assert.equal(pick(code, site), "gpt-realtime-2.1-mini", code);
   const config = server.slice(server.indexOf("function openAiRealtimeSessionConfig("), server.indexOf("function openAiAgentsRealtimeClientConfig("));
   assert.ok(config.includes("model: openAiRealtimeSessionModel(language, env),"));
 });
