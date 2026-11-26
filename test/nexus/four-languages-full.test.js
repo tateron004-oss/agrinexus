@@ -216,13 +216,13 @@ test("for the four, the voice sends its tools the request in English and asks fo
   assert.deepEqual(matcher.courseRequest("farming courses and lessons; include Yoruba options").terms, ["farming"]);
 });
 
-test("Amharic is answered from the transcript, the answers after it are tracked (no repeated answer), and only Amharic is cut off", () => {
+test("Amharic, Yoruba and Igbo are answered from the transcript, the answers after it are tracked (no repeated answer), and Hausa is not cut off", () => {
   const app = read("public/app.js");
-  assert.ok(app.includes('const KYRO_ANSWER_FROM_TRANSCRIPT_LANGUAGES = Object.freeze({ am: "Amharic" });'), "Hausa, Yoruba and Igbo are heard well enough by the model itself");
+  assert.ok(app.includes('const KYRO_ANSWER_FROM_TRANSCRIPT_LANGUAGES = Object.freeze({ am: "Amharic", yo: "Yoruba", ig: "Igbo" });'), "Hausa is heard well enough by the model itself");
   const fn = grabFrom(app, "kyroAnswerFromTranscript");
   const sent = []; let interrupted = 0; let lang = "am";
   const run = new Function("voiceLanguageCode", "realtimeVoiceActive", "kyroTakeOverTurn", "injectKyroRealtimeContext", "sendKyroRealtimeEvent",
-    `const KYRO_ANSWER_FROM_TRANSCRIPT_LANGUAGES = Object.freeze({ am: "Amharic" }); let kyroAnsweredFromTranscript = ""; let kyroAnsweredFromTranscriptAt = 0;\n${fn}\nreturn (t, id) => [kyroAnswerFromTranscript(t, id), kyroAnsweredFromTranscriptAt];`)(
+    `const KYRO_ANSWER_FROM_TRANSCRIPT_LANGUAGES = Object.freeze({ am: "Amharic", yo: "Yoruba", ig: "Igbo" }); let kyroAnsweredFromTranscript = ""; let kyroAnsweredFromTranscriptAt = 0;\n${fn}\nreturn (t, id) => [kyroAnswerFromTranscript(t, id), kyroAnsweredFromTranscriptAt];`)(
     () => lang, () => true, () => { interrupted += 1; }, text => sent.push(["note", text]), event => sent.push(["event", event.type]));
   const [answered, at] = run("እባክህ የነገውን የአየር ሁኔታ በአዲስ አበባ አሳየኝ።", "item_1");
   assert.equal(answered, true); assert.ok(at > 0); assert.equal(interrupted, 1);
@@ -233,7 +233,8 @@ test("Amharic is answered from the transcript, the answers after it are tracked 
   // the transcript path calls it only for the finished transcript, after the page did not take the words itself
   assert.ok(app.includes('if (eventType === "conversation.item.input_audio_transcription.completed") { try { kyroAnswerFromTranscript(transcript, kyroUtteranceId); } catch { /* the model\'s own answer stands */ } }'));
   // the answers that follow are marked under way, so the stall watchdog does not ask for the same answer again
-  assert.ok(app.includes('if (eventType === "response.created" && ((typeof kyroPageSpeaks === "function" && kyroPageSpeaks()) || (typeof kyroAnsweredFromTranscriptAt === "number" && Date.now() - kyroAnsweredFromTranscriptAt < 60000))) {'));
+  assert.ok(app.includes('if (eventType === "response.created" && ((typeof kyroPageSpeaks === "function" && kyroPageSpeaks()) || (typeof kyroAnsweredFromTranscriptAt === "number" && Date.now() - kyroAnsweredFromTranscriptAt < 60000)\n      || (typeof voiceLanguageCode === "function" && KYRO_SLOW_VOICE_LANGUAGES.has(voiceLanguageCode())))) {'), "and in the four, whose voice is slow to start (the watchdog asked again: every Hausa answer twice)");
+  assert.ok(app.includes('const KYRO_SLOW_VOICE_LANGUAGES = new Set(["ha", "am", "yo", "ig"]);'));
   assert.ok(app.includes('markRealtimeResponseStarted(payload, "response-created-after-transcript-answer");'));
 });
 
@@ -250,13 +251,13 @@ test('"Switch to Igbo" heard as "Switch to ego" still switches to Igbo, but "my 
   for (const said of ["I have a big ego", "Change my Lego set", "tell me about my ego"]) assert.equal(pick.command(said), false, said);
 });
 
-test("an Amharic session is text-only, told its words are read aloud, and every other language still speaks for itself", () => {
+test("Amharic, Yoruba and Igbo sessions are text-only, told their words are read aloud, and every other language still speaks for itself", () => {
   const server = read("server.js");
   const set = /const OPENAI_PAGE_SPOKEN_LANGUAGES = new Set\(\[[^\]]+\]\);/.exec(server)[0];
-  assert.equal(set, 'const OPENAI_PAGE_SPOKEN_LANGUAGES = new Set(["am"]);');
+  assert.equal(set, 'const OPENAI_PAGE_SPOKEN_LANGUAGES = new Set(["am", "yo", "ig"]);');
   const modal = new Function(`${set}\n${grabFrom(server, "openAiRealtimeTranscriptionCode")}\n${grabFrom(server, "openAiRealtimeOutputModalities")}\nreturn openAiRealtimeOutputModalities;`)();
-  assert.deepEqual(modal("am"), ["text"]); assert.deepEqual(modal("am-ET"), ["text"]);
-  for (const code of ["en", "es", "fr", "sw", "ar", "pt", "ha", "yo", "ig"]) assert.deepEqual(modal(code), ["audio"], code);
+  for (const code of ["am", "am-ET", "yo", "ig-NG"]) assert.deepEqual(modal(code), ["text"], code);
+  for (const code of ["en", "es", "fr", "sw", "ar", "pt", "ha"]) assert.deepEqual(modal(code), ["audio"], code);
   const config = server.slice(server.indexOf("function openAiRealtimeSessionConfig("), server.indexOf("function openAiAgentsRealtimeClientConfig("));
   assert.ok(config.includes("output_modalities: openAiRealtimeOutputModalities(language),"));
   const client = grabFrom(server, "openAiAgentsRealtimeClientConfig");
@@ -361,7 +362,7 @@ test("a spoken language change: the old voice says nothing, the new one says a s
       const changeLanguageByVoice = async () => { calls.push(["line-spoken-by-old-voice", Date.now() < kyroPageSpeaksUntil]); env.language = ${JSON.stringify(to)}; };
       const stopRealtimeVoiceSession = () => { calls.push(["stop"]); realtimeVoiceSession = null; };
       const kyroRestartVoiceWithLiveMicrophone = async () => { calls.push(["restart"]); realtimeVoiceSession = { active: true }; return ${restarts}; };
-      const kyroSpeakPageLine = line => calls.push(["new-voice", line]);
+      const kyroSayLanguageNowLine = line => calls.push(["new-voice", line]);
       ${lines}
       async ${grab("kyroSwitchLanguageBySpeech")}
       return kyroSwitchLanguageBySpeech;`)(env, calls);
@@ -477,4 +478,26 @@ test("a translation into these languages is given time to finish, and the Englis
   assert.ok(call.includes("}, OPENAI_TRANSLATION_TIMEOUT_MS);"));
   const app = read("public/app.js");
   assert.ok(app.includes('const translated = offered && !/^\[[A-Z]{2}\]\s/.test(offered) ? offered : responseMessage;'), "a caption keeps its words when no translation happened");
+});
+
+test("the sweep's fixes: a second of silence ends a turn in the four, the line after a switch is said by the page, a no is answered in the person's language, and a translation is plain text", () => {
+  const server = read("server.js");
+  const config = server.slice(server.indexOf("function openAiRealtimeSessionConfig("), server.indexOf("function openAiAgentsRealtimeClientConfig("));
+  assert.ok(config.includes('const native = Boolean(OPENAI_NATIVE_TRANSCRIPTION_HINTS[openAiRealtimeTranscriptionCode(language)]);'));
+  assert.ok(config.includes('? (String(env.OPENAI_REALTIME_NATIVE_TURN_DETECTION || "server_vad").trim() || "server_vad")'), "the four: silence, not meaning");
+  assert.ok(config.includes("silence_duration_ms: native ? Number(env.OPENAI_REALTIME_NATIVE_SILENCE_DURATION_MS || 1100) : Number(env.OPENAI_REALTIME_SILENCE_DURATION_MS || 700),"));
+  const app = read("public/app.js");
+  const say = grabFrom(app, "kyroSayLanguageNowLine");
+  assert.ok(say.includes("kyroPageSay(line);") && !say.includes("kyroSpeakPageLine"), "the page says it, not the model (which answered it)");
+  const speak = grabFrom(app, "kyroPageSay");
+  assert.ok(speak.includes("KYRO_PAGE_VOICE_LOCALES[spoken]"), "read in the person's language");
+  const consents = require("../../nexus/consent/user-confirmable-consents.js");
+  assert.equal(consents.declinedReply(), "No problem, I have left that as it was.");
+  for (const code of ["ha", "am", "yo", "ig", "sw", "fr", "es", "pt", "ar"]) assert.notEqual(consents.declinedReply(code), consents.declinedReply(), code);
+  assert.ok(read("nexus/runtime/behavior-spine.js").includes('const declined = declinedReply(command?.locale || context?.locale || "en");'));
+  const unwrap = new Function(`${grabFrom(server, "unwrapTranslationText")}\nreturn unwrapTranslationText;`)();
+  assert.equal(unwrap('{"text":"ችግር የለም"}'), "ችግር የለም"); assert.equal(unwrap('{"translatedText":"Ba matsala"}'), "Ba matsala"); assert.equal(unwrap("Ba matsala"), "Ba matsala");
+  assert.ok(server.includes("content: String(text || \"\")"), "plain text in");
+  assert.match(server, /Translate from \$\{translationLanguageName\(sourceLanguage\)\} into \$\{translationLanguageName\(targetLanguage\)\}\./);
+  assert.ok(/ig: "Kyro na-asụ Igbo\. Koach Learn\. Ee, mba, ndewo, kedu, biko, daalụ, ọrụ ugbo, mmụta\./.test(server), "Igbo names ugbo (farm), heard as ụgbọ (a vehicle)");
 });

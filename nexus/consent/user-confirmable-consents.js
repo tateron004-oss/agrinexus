@@ -135,5 +135,7 @@ function informedConfirmationPrompt({ scope, step, language = "en" }) {
 
 // The question asked before any other confirmation, in the person's language.
 function genericConfirmationPrompt(language = "en") { return consentWords(language).generic; }
+// What is said when the person says no, in their language ("No problem, I have left that as it was." was English after "A'a", "አይ" and "Mba" in the live sweep, 26 Nov 2026).
+function declinedReply(language = "en") { return consentWords(language).declined; }
 
-module.exports = Object.freeze({ userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt, genericConfirmationPrompt, describeReading, POLICIES });
+module.exports = Object.freeze({ userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt, genericConfirmationPrompt, declinedReply, describeReading, POLICIES });
