@@ -380,3 +380,24 @@ test("a spoken language change: the old voice says nothing, the new one says a s
   assert.ok(!failed.some(c => c[0] === "new-voice"), "no line when the voice did not come back");
   for (const code of ["en", "fr", "sw", "ar", "pt", "es", "ha", "am", "yo", "ig"]) assert.ok(new RegExp(`\\b${code}: "`).test(lines), code);
 });
+
+test("a spoken language change is saved once, and the captions' translations save nothing (several at once took the live site down)", async () => {
+  const app = read("public/app.js");
+  const grab = name => { const i = app.indexOf(`function ${name}(`); let depth = 0; for (let k = app.indexOf("{", i); k < app.length; k += 1) { if (app[k] === "{") depth += 1; else if (app[k] === "}") { depth -= 1; if (!depth) return app.slice(i, k + 1); } } return ""; };
+  const saves = [];
+  const change = new Function("saves", `
+    ${grab("languageFromVoiceCommand")}
+    let kyroLanguageChangeInFlight = null;
+    const kyroChangeLanguageByVoiceOnce = async command => { saves.push(command); await new Promise(r => setTimeout(r, 20)); };
+    ${grab("changeLanguageByVoice")}
+    return changeLanguageByVoice;`)(saves);
+  await Promise.all([change("Switch to Hausa."), change("switch to hausa")]);
+  assert.equal(saves.length, 1, "two parts of the page hearing it: one save");
+  await change("Switch to English.");
+  assert.equal(saves.length, 2, "another language is its own change");
+  const server = read("server.js");
+  const route = server.slice(server.indexOf('if (url.pathname === "/api/translate" && req.method === "POST") {'));
+  const lite = route.indexOf("if (body.captionOnly === true) return send(res, 200, { translationResult: result });");
+  assert.ok(lite > 0 && lite < route.indexOf("await writeDb(db);"), "returned before the save");
+  assert.ok(app.includes('context: "voice-response", captionOnly: true }'), "the captions ask for the light reply");
+});
