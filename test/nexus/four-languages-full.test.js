@@ -184,7 +184,7 @@ test("the speech-to-text for the four uses the larger model and a hint in their 
     assert.equal(make.model(`${code}-NG`, { OPENAI_REALTIME_NATIVE_TRANSCRIBE_MODEL: "gpt-x" }), "gpt-x", "it can be changed without a release");
     const hint = make.hint(code);
     assert.notEqual(hint, make.english, `${code} has its own hint`);
-    assert.ok(hint.includes("Koach Learn") && hint.includes("English: Switch to English. Close the screen."), `${code}: names and the English commands (without them "Close the screen" was written in ${code})`);
+    assert.ok(hint.includes("Koach Learn") && hint.includes("English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen."), `${code}: names and the English commands (without them "Close the screen" was written in ${code})`);
     assert.ok(hint.length < 220, "short: a long list can be echoed back on silence");
   }
   assert.match(make.hint("am"), /[ሀ-፿]/, "the Amharic hint is in Ethiopic letters");
