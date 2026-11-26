@@ -86,7 +86,8 @@ services:
   - type: web
     name: nexus-genesis-certified
     env: node
-    plan: starter
+    # Standard (2 GB): on Starter (512 MB) the site ran out of memory and went down for minutes at a time (10 Nov 2026; twice in one voice run on 25 Nov).
+    plan: standard
     buildCommand: npm install
     preDeployCommand: node foundation/scripts/migrate.js
     startCommand: npm start
