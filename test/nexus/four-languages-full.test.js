@@ -121,7 +121,7 @@ test("a language change said aloud in the live voice is done by the page, which 
   assert.ok(route.includes("void kyroSwitchLanguageBySpeech(trimmed);"));
   assert.ok(route.indexOf("kyroSwitchLanguageBySpeech") < route.indexOf("KyroDismissCommands"), "before anything else can answer it");
   assert.ok(app.includes("async function kyroSwitchLanguageBySpeech(command) {"));
-  assert.ok(app.includes("return kyroRestartVoiceWithLiveMicrophone(session, { source: \"language-change\" });"), "the voice starts again in the new language");
+  assert.ok(app.includes("const started = await kyroRestartVoiceWithLiveMicrophone(session, { source: \"language-change\" });"), "the voice starts again in the new language");
   const grab = name => { const i = app.indexOf(`function ${name}(`); let depth = 0; for (let k = app.indexOf("{", i); k < app.length; k += 1) { if (app[k] === "{") depth += 1; else if (app[k] === "}") { depth -= 1; if (!depth) return app.slice(i, k + 1); } } return ""; };
   const sandbox = new Function(`${grab("languageFromVoiceCommand")}
 ${grab("isUniversalLanguageCommand")}
@@ -343,4 +343,40 @@ test("the page's own voice and the test rig ask for speech without saving the wh
   assert.ok(say.includes("forceOpenAi: true, pageVoice: true"));
   assert.ok(say.includes("let next = fetchPart(parts[0]);") && !say.includes("parts.map(fetchPart)"), "one part at a time, the next fetched while this one plays");
   assert.ok(read("scripts/live-voice-suite/rig-page.js").includes("forceOpenAi: true, pageVoice: true"));
+});
+
+test("a spoken language change: the old voice says nothing, the new one says a short line in the new language (the old one said things that were not on the screen)", async () => {
+  const app = read("public/app.js");
+  const grab = name => { const i = app.indexOf(`function ${name}(`); let depth = 0; for (let k = app.indexOf("{", i); k < app.length; k += 1) { if (app[k] === "{") depth += 1; else if (app[k] === "}") { depth -= 1; if (!depth) return app.slice(i, k + 1); } } return ""; };
+  const lines = app.slice(app.indexOf("const KYRO_LANGUAGE_NOW_LINES = Object.freeze({"), app.indexOf("});", app.indexOf("const KYRO_LANGUAGE_NOW_LINES")) + 3);
+  const run = async ({ from, said, to, restarts = true }) => {
+    const calls = [];
+    const env = { language: from, kyroPageSpeaksUntil: Date.now() + 15000 };
+    const fn = new Function("env", "calls", `
+      let kyroPageSpeaksUntil = env.kyroPageSpeaksUntil;
+      let realtimeVoiceSession = { active: true };
+      const voiceLanguageCode = () => env.language;
+      const languageCode = () => env.language;
+      ${grab("languageFromVoiceCommand")}
+      const changeLanguageByVoice = async () => { calls.push(["line-spoken-by-old-voice", Date.now() < kyroPageSpeaksUntil]); env.language = ${JSON.stringify(to)}; };
+      const stopRealtimeVoiceSession = () => { calls.push(["stop"]); realtimeVoiceSession = null; };
+      const kyroRestartVoiceWithLiveMicrophone = async () => { calls.push(["restart"]); realtimeVoiceSession = { active: true }; return ${restarts}; };
+      const kyroSpeakPageLine = line => calls.push(["new-voice", line]);
+      ${lines}
+      async ${grab("kyroSwitchLanguageBySpeech")}
+      return kyroSwitchLanguageBySpeech;`)(env, calls);
+    await fn(said);
+    return calls;
+  };
+  const yo = await run({ from: "en", said: "Switch to Yoruba.", to: "yo" });
+  assert.deepEqual(yo.map(c => c[0]), ["line-spoken-by-old-voice", "stop", "restart", "new-voice"]);
+  assert.equal(yo[0][1], false, "the old voice is not asked to say it");
+  assert.match(yo[3][1], /Yorùbá/);
+  const en = await run({ from: "ig", said: "Switch to English.", to: "en" });
+  assert.equal(en[3][1], "I'm speaking English again. How can I help?");
+  const same = await run({ from: "en", said: "Switch to English.", to: "en" });
+  assert.deepEqual(same, [["line-spoken-by-old-voice", true]], "already that language: the page's line is still said, nothing restarts");
+  const failed = await run({ from: "en", said: "Switch to Igbo.", to: "ig", restarts: false });
+  assert.ok(!failed.some(c => c[0] === "new-voice"), "no line when the voice did not come back");
+  for (const code of ["en", "fr", "sw", "ar", "pt", "es", "ha", "am", "yo", "ig"]) assert.ok(new RegExp(`\\b${code}: "`).test(lines), code);
 });

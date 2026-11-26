@@ -14336,16 +14336,39 @@ async function changeLanguageByVoice(command) {
 
 // A language change said aloud in the live voice: the page's own change (profile, screen words, the spoken "Language changed to ..."), then the live voice is started again, since
 // the language it listens and answers in is fixed when it starts (the session is asked for in voiceLanguageCode()).
+// The voice that is about to be stopped says nothing: it used to be asked to read "Language changed to Yoruba ..." and, still the English voice, it said things that were not on the
+// screen instead ("I don't see the text you're referring to", "There is no text" in Igbo, "let us continue with sadness" in Yoruba: live voice runs, 25 Nov 2026). The new voice, once
+// it is listening, says a short line written for each language, in that language (KYRO_LANGUAGE_NOW_LINES); the screen still shows the page's own words.
+const KYRO_LANGUAGE_NOW_LINES = Object.freeze({
+  en: "I'm speaking English again. How can I help?",
+  fr: "Je parle maintenant français. Comment puis-je vous aider ?",
+  sw: "Sasa tutazungumza kwa Kiswahili. Nikusaidie nini?",
+  ar: "سأتحدث معك الآن بالعربية. كيف يمكنني مساعدتك؟",
+  pt: "Agora falo português. Como posso ajudar?",
+  es: "Ahora hablo español. ¿En qué puedo ayudarte?",
+  ha: "Yanzu zan yi magana da kai da Hausa. Me zan taimaka maka da shi?",
+  am: "አሁን በአማርኛ እናወራለን። በምን ልርዳዎት?",
+  yo: "Láti ìsinsìnyí, màá bá ọ sọ̀rọ̀ ní èdè Yorùbá. Kí ni mo lè ṣe fún ọ?",
+  ig: "Ugbu a, anyị ga-akparịta ụka n'asụsụ Igbo. Kedu ka m ga-esi nyere gị aka?"
+});
 async function kyroSwitchLanguageBySpeech(command) {
   const before = typeof voiceLanguageCode === "function" ? voiceLanguageCode() : languageCode();
+  const wanted = typeof languageFromVoiceCommand === "function" ? languageFromVoiceCommand(command) : "";
+  const live = typeof realtimeVoiceSession !== "undefined" ? realtimeVoiceSession : null;
+  // (a real change with a live voice: the old voice is not asked to say the page's line; a refusal, or the language it already is, is still said)
+  if (wanted && wanted !== before && live?.active) kyroPageSpeaksUntil = 0;
   await changeLanguageByVoice(command);
   const after = typeof voiceLanguageCode === "function" ? voiceLanguageCode() : languageCode();
   const session = typeof realtimeVoiceSession !== "undefined" ? realtimeVoiceSession : null;
   if (after === before || !session?.active) return false;
-  // (a moment for the page's own line to start before the voice is started again)
-  await new Promise(resolve => setTimeout(resolve, 2500));
   try { stopRealtimeVoiceSession(`Language changed to ${after}.`); } catch { /* the restart below still runs */ }
-  return kyroRestartVoiceWithLiveMicrophone(session, { source: "language-change" });
+  const started = await kyroRestartVoiceWithLiveMicrophone(session, { source: "language-change" });
+  if (started && KYRO_LANGUAGE_NOW_LINES[after]) {
+    // (a moment for the new voice to be ready to speak)
+    await new Promise(resolve => setTimeout(resolve, 900));
+    try { kyroSpeakPageLine(KYRO_LANGUAGE_NOW_LINES[after]); } catch { /* the screen has said it */ }
+  }
+  return started;
 }
 
 function refreshVoiceForLanguageChange() {
@@ -53184,11 +53207,14 @@ function kyroSpeakPageLine(text) {
     return true;
   }
   // Out of band (conversation "none"): the line is spoken but is not a turn of the conversation the model then answers or repeats; the model is told afterwards, as a note, what the person was told.
+  // The line is read in the language it is written in. It used to say "in ${languageCode()}", and after a spoken language switch that is already the new language while the line
+  // ("Language changed to Yoruba ...") is English and the voice still the English one: it translated on the fly and said things that were not on the screen, "There is no text" in Igbo,
+  // "let us continue with sadness" in Yoruba (live voice run, 25 Nov 2026).
   const sent = sendKyroRealtimeEvent({
     type: "response.create",
     response: {
       conversation: "none",
-      instructions: `You are Kyro's speaking voice. The next message is the exact text the person is being shown on their screen. Read it aloud, in ${languageCode()}, clearly and warmly, word for word. Add nothing, explain nothing, never say you cannot see or open anything, and call no tool.`,
+      instructions: `You are Kyro's speaking voice. The next message is the exact text the person is being shown on their screen. Read it aloud word for word, in the language it is written in, clearly and warmly. Do not translate it. Add nothing, explain nothing, never say you cannot see or open anything, and call no tool.`,
       // (the text itself is the input: given only as instructions, the model sometimes answered with a refusal of its own instead of reading it)
       input: [{ type: "message", role: "user", content: [{ type: "input_text", text: line }] }],
       tool_choice: "none",
