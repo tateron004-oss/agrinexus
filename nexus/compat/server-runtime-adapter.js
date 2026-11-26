@@ -624,7 +624,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const confirmContext = validIanaZone(body.timeZone) ? Object.freeze({ ...context, timeZone: body.timeZone }) : context;
         const result = await active.behavior.confirm({ input: { correlationId: request.context.requestId,
           taskId: body.taskId, stepId: body.stepId, approved: body.approved === true,
-          channel: request.channel, text: body.text }, context: confirmContext });
+          channel: request.channel, locale: request.locale, text: body.text }, context: confirmContext });
         send(res, result.completed ? 200 : 202, result); return true;
       } else if (url.pathname === "/api/nexus/runtime/behavior/conversation" && req.method === "GET") {
         const conversationId = String(request.query.conversationId || "").trim();

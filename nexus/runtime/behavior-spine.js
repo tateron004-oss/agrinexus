@@ -75,8 +75,9 @@ class BehaviorSpine {
     if (approved && priorTask.ownerId !== context.userId) {
       throw new NexusRuntimeError("confirmation_owner_required", "Only the person this task belongs to can say yes to it.", 403);
     }
+    // (the person's language, which the page sends with a yes or no: without it the reply after a no was English: live check, 26 Nov 2026)
     const command = createCommand({ text: input.text || (approved ? "Confirmed." : "Cancelled."),
-      channel: input.channel || "api", correlationId: input.correlationId || crypto.randomUUID(),
+      channel: input.channel || "api", locale: input.locale, correlationId: input.correlationId || crypto.randomUUID(),
       conversationId: priorTask.conversationId, taskId, tenantId: context.tenantId, actorId: context.userId });
     // (the stored steps name their tool tool_id; the sentences that say what was done ("Saved ...", "Cancelled your reminder ...") look for toolId, as in a plan made just now, so both names are given)
     const plan = { application: priorTask.application, goal: priorTask.goal, riskTier: priorTask.riskTier,
