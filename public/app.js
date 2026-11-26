@@ -56704,8 +56704,15 @@ function kyroTranslateScreenAfter(toolName, command, result) {
       const translated = String(reply?.translationResult?.translatedText || "").trim();
       if (!translated || translated === text || /^\[[A-Z]{2}\]/.test(translated) || kyroLooksEnglish(translated)) return;
       if (token !== kyroScreenTranslationToken || typeof languageCode !== "function" || languageCode() !== language) return;
-      if (!document.querySelector("[data-kyro-result]")) return; // (closed meanwhile)
+      const before = document.querySelector("[data-kyro-result]");
+      if (!before) return; // (closed meanwhile)
+      // The form under a list and the Yes/No buttons were added after the screen was drawn: they are put back on the redrawn one. (An Igbo reminders screen lost its
+      // "set a reminder" form when it was redrawn in Igbo: live voice run, 26 Nov 2026.)
+      const composerKind = before.querySelector?.("[data-kyro-composer]")?.getAttribute?.("data-kyro-composer") || "";
+      const hadButtons = Boolean(before.querySelector?.("[data-kyro-confirm-buttons]"));
       kyroShowResultScreen(toolName, command, { ...result, response: translated, kyroTranslated: true });
+      try { if (hadButtons && typeof kyroAddConfirmButtons === "function") kyroAddConfirmButtons(); } catch { /* saying yes or no still works */ }
+      try { if (composerKind && typeof kyroAddComposer === "function") kyroAddComposer(composerKind); } catch { /* the list is still shown */ }
     })
     .catch(() => { /* the English answer stays */ });
   return true;

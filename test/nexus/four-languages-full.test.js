@@ -706,3 +706,24 @@ test("the reminders screen names the days in the person's language (the browser 
   assert.equal(name("ig", 6), "Satọdee"); assert.equal(name("en", 6), "Saturday"); assert.equal(name("sw", 6), "Jumamosi"); assert.equal(name("xx", 6), "Saturday");
   assert.ok(app.includes('day.append(kyroMake("option", { value: "on " + names[(today + ahead) % 7] }, typeof kyroWeekdayName === "function" ? kyroWeekdayName((today + ahead) % 7) : names[(today + ahead) % 7]));'), "the value stays English, the label is theirs");
 });
+
+// Live Igbo voice run, 26 Nov 2026 (after #1275): the reminders screen, redrawn in Igbo, lost the "set a reminder" form under it.
+test("a screen redrawn in the person's language keeps the form under a list and its Yes/No buttons", async () => {
+  const app = read("public/app.js");
+  const start = app.indexOf("let kyroScreenTranslationToken = 0;");
+  const code = app.slice(start, app.indexOf("return true;\n}", app.indexOf("function kyroTranslateScreenAfter(")) + "return true;\n}".length);
+  const added = [];
+  const screen = { querySelector: selector => (selector === "[data-kyro-composer]" ? { getAttribute: () => "reminders" } : selector === "[data-kyro-confirm-buttons]" ? {} : null) };
+  const api = new Function("env", `
+    let languageCode = () => "ig";
+    const request = async () => ({ translationResult: { translatedText: "Ị nweghị ncheta ọ bụla na-abịa." } });
+    const document = { querySelector: () => env.screen };
+    const kyroShowResultScreen = () => {};
+    const kyroAddConfirmButtons = () => env.added.push("buttons");
+    const kyroAddComposer = kind => env.added.push("composer:" + kind);
+    ${code}
+    return { go: result => { kyroScreenTranslationToken += 1; return kyroTranslateScreenAfter("t", "Show my reminders", result); } };`)({ screen, added });
+  assert.equal(api.go({ response: "You have no upcoming reminders." }), true);
+  await new Promise(resolve => setTimeout(resolve, 5));
+  assert.deepEqual(added, ["buttons", "composer:reminders"]);
+});
