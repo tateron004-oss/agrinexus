@@ -401,3 +401,39 @@ test("a spoken language change is saved once, and the captions' translations sav
   assert.ok(lite > 0 && lite < route.indexOf("await writeDb(db);"), "returned before the save");
   assert.ok(app.includes('context: "voice-response", captionOnly: true }'), "the captions ask for the light reply");
 });
+
+test("consent prompts are in the person's language, and the yes and no they name are taken (an Amharic speaker was asked in English)", () => {
+  const consents = require("../../nexus/consent/user-confirmable-consents.js");
+  const { LANGUAGES } = require("../../nexus/consent/consent-words.js");
+  const steps = {
+    "health:telehealth-intake:write": { input: { concern: "በጣም ደክሞኛል" } },
+    "health:record:write": { input: { systolic: 190, diastolic: 125 } },
+    "communications:send:write": { input: { channel: "sms", to: "+254700000000", message: "I am on my way" } },
+    "automations:trigger:write": { input: { connection: "farm log", text: "Maize planted" } }
+  };
+  const english = consents.informedConfirmationPrompt({ scope: "health:telehealth-intake:write", step: steps["health:telehealth-intake:write"] });
+  assert.equal(english, 'I can save this telehealth intake to your own health records: "በጣም ደክሞኛል". It is not shared with or sent to any provider. Say yes to consent and save it, or no to cancel.', "English as before");
+  assert.equal(consents.genericConfirmationPrompt(), "I have that ready. Should I go ahead with it? Just say yes or no.");
+  const app = read("public/app.js");
+  const words = new Function(`${app.slice(app.indexOf("const KYRO_CONFIRMATION_WORDS = Object.freeze({"), app.indexOf("function detectNexusPendingConfirmationReply("))}\nreturn { KYRO_CONFIRMATION_WORDS, kyroConfirmationWordKey };`)();
+  const yesWord = { en: "yes", sw: "ndiyo", fr: "oui", es: "sí", pt: "sim", ar: "نعم", ha: "eh", am: "አዎ", yo: "bẹ́ẹ̀ni", ig: "ee" };
+  const noWord = { en: "no", sw: "hapana", fr: "non", es: "no", pt: "não", ar: "لا", ha: "a'a", am: "አይ", yo: "rárá", ig: "mba" };
+  for (const language of LANGUAGES) {
+    for (const [scope, step] of Object.entries(steps)) {
+      const prompt = consents.informedConfirmationPrompt({ scope, step, language });
+      assert.ok(prompt && prompt.length > 40, `${language} ${scope}`);
+      if (language !== "en") assert.notEqual(prompt, consents.informedConfirmationPrompt({ scope, step }), `${language} ${scope} is not the English`);
+      for (const kept of Object.values(step.input).filter(v => typeof v === "string" && v !== "sms")) assert.ok(prompt.includes(kept), `${language} ${scope} keeps "${kept}" exactly`);
+      assert.ok(prompt.toLowerCase().includes(yesWord[language].toLowerCase()) && prompt.toLowerCase().includes(noWord[language].toLowerCase()), `${language} ${scope} names yes and no`);
+    }
+    assert.ok(consents.informedConfirmationPrompt({ scope: "health:record:write", step: steps["health:record:write"], language }).includes("190"), `${language}: the reading itself`);
+    if (language === "en") continue;
+    const set = words.KYRO_CONFIRMATION_WORDS[language];
+    assert.ok(set.yes.includes(words.kyroConfirmationWordKey(yesWord[language])), `${language}: "${yesWord[language]}" is taken as yes`);
+    assert.ok(set.no.includes(words.kyroConfirmationWordKey(noWord[language] + ".")), `${language}: "${noWord[language]}." is taken as no`);
+  }
+  assert.ok(words.KYRO_CONFIRMATION_WORDS.am.yes.includes(words.kyroConfirmationWordKey("አዎ።")), "Amharic full stop");
+  assert.ok(words.KYRO_CONFIRMATION_WORDS.ha.no.includes(words.kyroConfirmationWordKey("Aʼa")), "Hausa a'a however the apostrophe is written");
+  const spine = read("nexus/runtime/behavior-spine.js");
+  assert.ok(spine.includes("response: await this.confirmationPrompt({ task, pendingStepId: execution.pendingStepId, context, language: command?.locale }),"));
+});

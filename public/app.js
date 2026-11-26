@@ -62983,11 +62983,36 @@ function normalizeNexusConfirmationReplyText(text) {
 // Deliberately an exact-phrase match against a short, specific set, not a
 // loose keyword search: a real new command that happens to contain "yes" or
 // "no" mid-sentence must never be swallowed as a confirmation reply.
+// Yes and no in the person's own language: each consent prompt tells them which word to say (nexus/consent/consent-words.js), and until 25 Nov 2026 only the
+// English words above were taken (an Amharic speaker asked to say "አዎ" would have been answered by the model instead). Written as heard and without accents
+// or punctuation (kyroConfirmationWordKey); English yes and no are taken in every language too.
+const KYRO_CONFIRMATION_WORDS = Object.freeze({
+  sw: { yes: ["ndiyo", "ndio", "naam", "sawa", "thibitisha", "ndiyo tafadhali", "ndiyo endelea"], no: ["hapana", "ghairi", "acha", "hapana asante", "usitume"] },
+  fr: { yes: ["oui", "oui merci", "d'accord", "oui vas y", "oui allez y", "confirmer"], no: ["non", "annuler", "non merci", "non annule"] },
+  es: { yes: ["si", "si por favor", "claro", "adelante", "confirmar", "si adelante"], no: ["no", "cancelar", "no gracias", "cancela"] },
+  pt: { yes: ["sim", "sim por favor", "claro", "pode", "confirmar", "sim pode"], no: ["nao", "cancelar", "nao obrigado", "nao obrigada", "cancela"] },
+  ar: { yes: ["نعم", "اجل", "موافق", "حسنا", "نعم من فضلك", "اكد"], no: ["لا", "الغاء", "لا شكرا", "الغ"] },
+  ha: { yes: ["eh", "e", "ee", "toh", "to", "na yarda", "eh na yarda", "yi shi", "eh yi shi", "ci gaba"], no: ["a'a", "a a", "aa", "a'a na gode", "kada", "soke", "a'a soke"] },
+  am: { yes: ["አዎ", "አዎን", "እሺ", "አዎ እሺ", "ቀጥል", "ቀጥሉ", "አዎ ቀጥል"], no: ["አይ", "አይደለም", "አልፈልግም", "ሰርዝ", "አይ አመሰግናለሁ", "ይቅር"] },
+  yo: { yes: ["beeni", "beni", "o dara", "mo gba", "beeni o", "beeni mo gba"], no: ["rara", "rara o", "beeko", "fagile", "rara fagile"] },
+  ig: { yes: ["ee", "eh", "e", "o di mma", "ka o di", "ee o di mma", "kwado"], no: ["mba", "mba o", "kagbuo", "mba kagbuo"] }
+});
+function kyroConfirmationWordKey(text) {
+  return String(text || "").trim().toLowerCase().normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "").replace(/[\u064b-\u065f\u0670]/g, "").replace(/[\u0622\u0623\u0625]/g, "\u0627")
+    .replace(/[\u2018\u2019\u02bc\u02bb`]/g, "'").replace(/[,.!?;:\u1361-\u1368\u060c\u061f\u06d4"]+/g, " ").replace(/\s+/g, " ").trim();
+}
 function detectNexusPendingConfirmationReply(text) {
   const normalized = normalizeNexusConfirmationReplyText(text);
   if (!normalized) return null;
   if (NEXUS_CONFIRMATION_AFFIRM_PHRASES.has(normalized)) return "approve";
   if (NEXUS_CONFIRMATION_DECLINE_PHRASES.has(normalized)) return "decline";
+  const words = typeof KYRO_CONFIRMATION_WORDS !== "undefined" ? KYRO_CONFIRMATION_WORDS[typeof languageCode === "function" ? languageCode() : "en"] : null;
+  if (words && typeof kyroConfirmationWordKey === "function") {
+    const key = kyroConfirmationWordKey(text);
+    if (words.yes.includes(key)) return "approve";
+    if (words.no.includes(key)) return "decline";
+  }
   return null;
 }
 

@@ -20935,9 +20935,11 @@ function openAiRealtimeTranscriptionLanguage(language = "en") {
 // (1.00; without "English: ..." in the hint it turned "Close the screen" into Amharic, Yoruba or Igbo). OpenAI speech files, offline check, 25 Nov 2026.
 // Every language is named: with only "Switch to English" in the hint, "Switch to Amharic" said in a Hausa voice was written "Switch to English" (live voice run, 25 Nov 2026), and
 // "Switch to Igbo" in Amharic too. English switch commands in these four modes, heard exactly: 48 of 56 with the old hint, 55 of 56 with this one (offline check, same day).
+// Amharic names farming (ግብርና, እርሻ) and health (ጤና): "ስለ ግብርና መማር እፈልጋለሁ" (I want to learn about farming) was written ስለ ክብርና (honor) on the live site, and the course search
+// looked for "etiquette learning" (25 Nov 2026). Offline the key word was then heard 22 of 36 times, against 17 without it (three voices, three tries each).
 const OPENAI_NATIVE_TRANSCRIPTION_HINTS = {
   ha: "Kyro yana magana da Hausa. Koach Learn. Sannu, yaya, don Allah, na gode, aiki, makaranta. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
-  am: "ኪሮ በአማርኛ ይናገራል። Koach Learn። ሰላም፣ እባክህ፣ አመሰግናለሁ፣ ሥራ፣ ትምህርት። English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
+  am: "ኪሮ በአማርኛ ይናገራል። Koach Learn። ሰላም፣ እባክህ፣ አመሰግናለሁ፣ ግብርና፣ እርሻ፣ ጤና፣ ሥራ፣ ትምህርት። English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
   yo: "Kyro ń sọ èdè Yorùbá. Koach Learn. Ẹ káàbọ̀, báwo ni, ẹ jọ̀ọ́, ẹ ṣé, iṣẹ́, ẹ̀kọ́. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen.",
   ig: "Kyro na-asụ Igbo. Koach Learn. Ndewo, kedu, biko, daalụ, ọrụ, mmụta. English: Switch to English, Hausa, Amharic, Yoruba, Igbo, Kiswahili, French, Arabic, Spanish or Portuguese. Close the screen."
 };

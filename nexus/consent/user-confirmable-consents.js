@@ -18,6 +18,8 @@ const { glucoseLevel } = require("../../server/providers/bloodGlucose.js");
 // premium-rate number) gets no consent here and simply does not go out.
 const { normalizeSendRequest, CALL_INTRO } = require("../communications/send-request.js");
 const { normalizeName } = require("../automations/connection.js");
+// (the words of every prompt, in the person's own language: consent-words.js)
+const { consentWords } = require("./consent-words.js");
 
 const POLICIES = Object.freeze({
   "health:record:write": Object.freeze({ policyVersion: "user-confirmation-health-record-v1",
@@ -74,58 +76,64 @@ function dailyCaps(scope, step) {
 
 const clip = (value, limit) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, limit);
 
-function describeReading(input = {}) {
+function describeReading(input = {}, language = "en") {
   const has = key => input[key] !== undefined && input[key] !== null && input[key] !== "" && Number.isFinite(Number(input[key]));
-  if (has("systolic") && has("diastolic")) return `blood pressure ${Number(input.systolic)} over ${Number(input.diastolic)}`;
-  if (has("glucose")) return input.glucoseUnit === "mmol/L" && has("glucoseSaid") ? `blood sugar ${Number(input.glucoseSaid)} millimoles per litre (about ${Number(input.glucose)} milligrams per decilitre)` : `blood glucose ${Number(input.glucose)}${input.glucoseUnit === "mg/dL" ? " milligrams per decilitre" : ""}`;
-  if (has("oxygenSaturation")) return `oxygen saturation ${Number(input.oxygenSaturation)} percent`;
-  if (has("temperature")) return `temperature ${Number(input.temperature)}`;
-  if (has("pulse")) return `pulse ${Number(input.pulse)}`;
+  const say = consentWords(language).reading;
+  if (has("systolic") && has("diastolic")) return say.bp(Number(input.systolic), Number(input.diastolic));
+  if (has("glucose")) return input.glucoseUnit === "mmol/L" && has("glucoseSaid") ? say.glucoseMmol(Number(input.glucoseSaid), Number(input.glucose)) : say.glucose(Number(input.glucose), input.glucoseUnit === "mg/dL");
+  if (has("oxygenSaturation")) return say.oxygen(Number(input.oxygenSaturation));
+  if (has("temperature")) return say.temperature(Number(input.temperature));
+  if (has("pulse")) return say.pulse(Number(input.pulse));
   return "";
 }
 
 // A reading that is very high or very low is said plainly BEFORE the question about saving it, so the person is told what to do even if they never answer. General safety
 // information only (Kyro does not diagnose); the wording must be reviewed by a clinician before it is relied on, like the spoken wording in server/providers.
-function urgentReadingLead(input = {}) {
+function urgentReadingLead(input = {}, language = "en") {
   const has = key => input[key] !== undefined && input[key] !== null && input[key] !== "" && Number.isFinite(Number(input[key]));
+  const urgent = consentWords(language).urgent;
   if (has("systolic") && has("diastolic")) {
     const level = assessBloodPressure(input.systolic, input.diastolic).level;
-    if (level === "urgent") return "This is a very high blood pressure. If you have chest pain, trouble breathing, a bad headache, weakness or numbness, confusion, trouble speaking or changes in your sight, get emergency help now: call your local emergency number or go to the nearest clinic. If you feel well, sit quietly for five minutes and measure again. ";
-    if (level === "low") return "This is lower than many people's usual reading. If you feel dizzy, faint or unwell, sit or lie down and get medical help. ";
+    if (level === "urgent") return urgent.bpUrgent;
+    if (level === "low") return urgent.bpLow;
   }
   if (has("glucose")) {
     const level = glucoseLevel({ unit: "mg/dL", value: Number(input.glucose) });
-    if (level === "very-low") return "This is a very low blood sugar. If you feel shaky, sweaty, confused, very sleepy or faint, get emergency help now: call your local emergency number or go to the nearest clinic, and do not be alone. ";
-    if (level === "low") return "This is lower than usual. If you feel shaky, sweaty, confused or faint, get help now and do not be alone, and contact your clinic today. ";
-    if (level === "very-high") return "This is a very high blood sugar. If you have vomiting, stomach pain, fast breathing, confusion, or you are very sleepy or very thirsty, get emergency help now: call your local emergency number or go to the nearest clinic. ";
+    if (level === "very-low") return urgent.glucoseVeryLow;
+    if (level === "low") return urgent.glucoseLow;
+    if (level === "very-high") return urgent.glucoseVeryHigh;
   }
   return "";
 }
 
-// The words the person hears or reads before they say yes. Null when this step needs no informed consent prompt.
-function informedConfirmationPrompt({ scope, step }) {
+// The words the person hears or reads before they say yes, in their language (consent-words.js). Null when this step needs no informed consent prompt.
+// What is sent, to whom, and the person's own words stay exactly as they are.
+function informedConfirmationPrompt({ scope, step, language = "en" }) {
   if (!userConfirmableConsent(scope, step)) return null;
+  const words = consentWords(language);
   const input = step?.input && typeof step.input === "object" ? step.input : {};
   if (scope === "communications:send:write") {
     const send = normalizeSendRequest(input);
     // When the person named someone they saved, the prompt says who as well as the number, so they can catch a wrong match.
     const who = /^[A-Za-z][A-Za-z'’ -]{0,60}$/.test(String(input.contactName || "")) ? `${input.contactName} (${send.to})` : send.to;
-    if (send.channel === "call") {
-      return `I can place a phone call to ${who}. A computer voice will first say "${CALL_INTRO}" and then "${send.message}". The call really happens and cannot be undone. Say yes to call, or no to cancel.`;
-    }
-    const kind = { sms: "text message", whatsapp: "WhatsApp message", email: "email" }[send.channel];
-    return `I can send this ${kind} to ${who}${send.subject ? `, subject "${send.subject}"` : ""}: "${send.message}". It will really be sent and cannot be unsent. Say yes to send it, or no to cancel.`;
+    if (send.channel === "call") return words.call({ who, intro: CALL_INTRO, message: send.message });
+    return words.send({ kind: words.kinds[send.channel], who, subject: send.subject, message: send.message });
   }
   if (scope === "automations:trigger:write") {
     const request = automationRequest(step);
-    return `I can send this to your automation "${request.name}": "${request.text}". It goes to the outside service you connected, and it cannot be unsent. Say yes to send it, or no to cancel.`;
+    return words.automation({ name: request.name, text: request.text });
   }
   if (scope === "health:telehealth-intake:write") {
     const concern = clip(input.concern || input.reason || input.goal, 160);
-    return `I can save this telehealth intake to your own health records${concern ? `: "${concern}"` : ""}. It is not shared with or sent to any provider. Say yes to consent and save it, or no to cancel.`;
+    return words.telehealth({ concern });
   }
-  const what = describeReading(input) || clip(step?.title, 100).toLowerCase() || "this health information";
-  return `${urgentReadingLead(input)}I can save this to your own health records: ${what}. It stays in your records and is not shared with anyone. Say yes to consent and save it, or no to cancel.`;
+  // (a step's title is English: in another language the prompt names the reading, or says "this health information" in that language)
+  const english = words === consentWords("en");
+  const what = describeReading(input, language) || (english ? clip(step?.title, 100).toLowerCase() : "") || words.fallback;
+  return words.record({ lead: urgentReadingLead(input, language), what });
 }
 
-module.exports = Object.freeze({ userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt, describeReading, POLICIES });
+// The question asked before any other confirmation, in the person's language.
+function genericConfirmationPrompt(language = "en") { return consentWords(language).generic; }
+
+module.exports = Object.freeze({ userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt, genericConfirmationPrompt, describeReading, POLICIES });
