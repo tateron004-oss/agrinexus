@@ -55423,7 +55423,8 @@ function kyroAddComposer(kind) {
       const names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       const today = new Date().getDay();
       day.append(kyroMake("option", { value: "today" }, t.today), kyroMake("option", { value: "tomorrow" }, t.tomorrow));
-      for (let ahead = 2; ahead <= 6; ahead += 1) day.append(kyroMake("option", { value: "on " + names[(today + ahead) % 7] }, names[(today + ahead) % 7]));
+      // (the value stays English, the words the reminder code reads; the label is the day in the person's language: an Igbo screen said "Taa, Echi, Saturday, Sunday ...", 26 Nov 2026)
+      for (let ahead = 2; ahead <= 6; ahead += 1) day.append(kyroMake("option", { value: "on " + names[(today + ahead) % 7] }, typeof kyroWeekdayName === "function" ? kyroWeekdayName((today + ahead) % 7) : names[(today + ahead) % 7]));
       const time = kyroMake("input", { name: "time", type: "time", value: "09:00", "aria-label": t.timeLabel, style: KYRO_FIELD_STYLE });
       row.append(day, time); form.append(row);
       submitLabel = t.reminderButton; command = () => (what.value.trim() ? "Remind me to " + what.value.trim() + " " + day.value + " at " + kyroTwelveHour(time.value) : "");
@@ -57055,6 +57056,23 @@ function kyroAddTutorBox(tutor = null, cachedMedia = null) {
     stop.addEventListener("click", () => { void handleNexusUnifiedBrainRuntimeCommand(sw ? "Acha somo" : "Stop tutoring", { source: "typed", kyroDirect: true }); });
     return true;
   } catch { return false; }
+}
+// The name of a day of the week (0 = Sunday) in the person's language. The browser has no Hausa, Igbo or Yoruba day names (it gave "Saturday"), so those three are written here,
+// from the same calendar data the server uses (nexus/i18n/date-words.js); the others come from the browser; English when nothing else is known.
+const KYRO_WEEKDAY_NAMES = Object.freeze({
+  ha: ["Lahadi", "Litinin", "Talata", "Laraba", "Alhamis", "Jummaʼa", "Asabar"],
+  ig: ["Sọndee", "Mọnde", "Tiuzdee", "Wenezdee", "Tọọzdee", "Fraịdee", "Satọdee"],
+  yo: ["Àìkú", "Ajé", "Ìsẹ́gun", "Ọjọ́rú", "Ọjọ́bọ", "Ẹtì", "Àbámẹ́ta"]
+});
+function kyroWeekdayName(index) {
+  const english = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][index] || "";
+  const lang = (() => { try { return typeof languageCode === "function" ? languageCode() : "en"; } catch { return "en"; } })();
+  if (lang === "en") return english;
+  if (KYRO_WEEKDAY_NAMES[lang]) return KYRO_WEEKDAY_NAMES[lang][index] || english;
+  try {
+    if (!Intl.DateTimeFormat.supportedLocalesOf([lang]).length) return english;
+    return new Intl.DateTimeFormat(lang, { weekday: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 10, 1 + index, 12))); // (1 Nov 2026 is a Sunday)
+  } catch { return english; }
 }
 // A Yes and a No under a question that waits for one: tapping is the same as saying it (submitNexusPendingBehaviorConfirmation).
 // In the person's language: an Igbo question had English "Yes" and "No" buttons under it (live voice run, 26 Nov 2026); only Swahili had its own.

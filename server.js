@@ -2461,8 +2461,28 @@ function getPgPool() {
   if (!pgPool) {
     const { Pool } = require("pg");
     pgPool = new Pool(postgresConfig());
+    // When the database restarts, an idle connection in the pool reports an error. With no listener, Node treats it as fatal and the whole site went down with it
+    // (26 Nov 2026, 09:55 and 12:31: the database was briefly in recovery mode after one of its processes ran out of memory; the site exited with status 1 and
+    // was down for minutes). The pool drops that connection by itself and opens a new one on the next query, so it is only written down here.
+    pgPool.on("error", error => { console.error("[postgres] an idle database connection failed (the pool replaces it):", error?.message || error); });
   }
   return pgPool;
+}
+
+// Several requests that need the whole state at the same moment (right after a deploy every open page asks at once) share ONE read of it, instead of each making the
+// database load the whole document again: on 26 Nov 2026 the database ran out of memory and restarted, the process killed was running exactly this read. Each request still
+// gets its own copy (parsed from the shared text), and a read never joins one that began before the last save finished, so a request always sees its own save.
+let pgStateWriteGeneration = 0;
+const pgStateReadsInFlight = new Map();
+function readPgStateText(space) {
+  const key = `${space}\u0000${pgStateWriteGeneration}`;
+  const pending = pgStateReadsInFlight.get(key);
+  if (pending) return pending;
+  const read = getPgPool().query("select state::text as state from agrinexus_app_state where id = $1", [space])
+    .then(result => (result.rows[0] ? result.rows[0].state : null))
+    .finally(() => { pgStateReadsInFlight.delete(key); });
+  pgStateReadsInFlight.set(key, read);
+  return read;
 }
 
 async function ensurePostgresState() {
@@ -2537,9 +2557,9 @@ async function readDbUntimed() {
   const space = businessSpaces.currentSpace();
   if (usingPostgresState()) {
     await ensurePostgresState();
-    const result = await getPgPool().query("select state from agrinexus_app_state where id = $1", [space]);
-    if (!result.rows[0]) throw new Error("Unknown business space");
-    const state = result.rows[0].state;
+    const stateText = await readPgStateText(space);
+    if (stateText === null || stateText === undefined) throw new Error("Unknown business space");
+    const state = JSON.parse(stateText);
     if (dbMergeEnabled() && state && typeof state === "object") dbReadSnapshots.set(state, JSON.stringify(state));
     return state;
   }
@@ -2586,6 +2606,14 @@ async function writeDbUntimed(db) {
     if (waiting && typeof waiting === "object" && !waiting.by) waiting.by = String(stamping.email).trim().toLowerCase();
   }
   if (usingPostgresState()) {
+    // (a read that starts after this save is over never joins one that began before it: see readPgStateText)
+    // (typeof guard: a test runs this function's source alone, without the counter)
+    try { return await writePgState(db); } finally { if (typeof pgStateWriteGeneration === "number") pgStateWriteGeneration += 1; }
+  }
+  return writeDbToFile(db);
+}
+async function writePgState(db) {
+  {
     await ensurePostgresState();
     const space = businessSpaces.currentSpace();
     const baseText = dbMergeEnabled() && db && typeof db === "object" ? dbReadSnapshots.get(db) : undefined;
@@ -2613,6 +2641,8 @@ async function writeDbUntimed(db) {
     dbReadSnapshots.set(db, text);
     return;
   }
+}
+async function writeDbToFile(db) {
   // Two real races confirmed live under concurrent load once writeFile
   // stopped blocking the event loop: (1) a concurrent readDb() landing
   // mid-write of the same file ("Unexpected end of JSON input" on a

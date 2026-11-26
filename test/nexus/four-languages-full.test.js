@@ -672,3 +672,37 @@ test("days and months go to the translator already in the person's language, and
   assert.match(sent[0].input[1].content, /due Fraịdee 27 Novemba, 6:00 pm/);
   assert.equal(await createPromptTranslator({ env: { OPENAI_API_KEY: "k" }, fetchFn: reply("Enwere m ike ịkagbu ncheta gị (Tọsde 27 Novemba). Kwuo ee ma ọ bụ mba.") })(source, "ig"), null);
 });
+
+// Live Igbo voice re-test, 26 Nov 2026 (after #1274): the model handed the reminder over as "Create a reminder for to turn off the water ...", saved with those words in its name; and the
+// reminders screen's day choices read "Taa, Echi, Saturday, Sunday ...".
+test("the voice model's own reminder wording is a reminder request, and its lead-in is not saved in the reminder's name", () => {
+  const { extractAssistantReminderTask } = require("../../nexus/reminders/time-phrase.js");
+  const floor = require("../../nexus/reminders/floor-reminders.js");
+  const cases = {
+    "Create a reminder for to turn off the water and the stove at 8:00 am tomorrow": "turn off the water and the stove",
+    "Create a reminder to water the maize tomorrow at 6 pm": "water the maize",
+    "Add a reminder to water the maize at 6 pm tomorrow": "water the maize",
+    "Create a reminder: water the maize, tomorrow 6 pm": "water the maize",
+    "Schedule a one-time reminder for tomorrow at 6 pm to water the maize": "water the maize",
+    "Remind me to create a budget at 5 pm": "create a budget"
+  };
+  for (const [said, task] of Object.entries(cases)) {
+    assert.equal(extractAssistantReminderTask(said), task, said);
+    assert.equal(floor.isSetRequest(said), true, said);
+  }
+  assert.equal(floor.isSetRequest("Show my reminders"), false);
+  assert.equal(floor.isSetRequest("Create reminders list"), false);
+});
+
+test("the reminders screen names the days in the person's language (the browser has no Hausa, Igbo or Yoruba day names)", () => {
+  const app = read("public/app.js");
+  const table = /const KYRO_WEEKDAY_NAMES = Object\.freeze\(\{[\s\S]*?\n\}\);/.exec(app)[0];
+  const NAMES = new Function(`${table}\nreturn KYRO_WEEKDAY_NAMES;`)();
+  for (const code of ["ha", "ig", "yo"]) {
+    const calendar = new Intl.DateTimeFormat(code, { weekday: "long", timeZone: "UTC" });
+    assert.deepEqual(NAMES[code], [0, 1, 2, 3, 4, 5, 6].map(i => calendar.format(new Date(Date.UTC(2026, 10, 1 + i, 12)))), `${code}: the same names the server uses`);
+  }
+  const name = (lang, index) => new Function("languageCode", `${table}\n${grabFrom(app, "kyroWeekdayName")}\nreturn kyroWeekdayName(${index});`)(() => lang);
+  assert.equal(name("ig", 6), "Satọdee"); assert.equal(name("en", 6), "Saturday"); assert.equal(name("sw", 6), "Jumamosi"); assert.equal(name("xx", 6), "Saturday");
+  assert.ok(app.includes('day.append(kyroMake("option", { value: "on " + names[(today + ahead) % 7] }, typeof kyroWeekdayName === "function" ? kyroWeekdayName((today + ahead) % 7) : names[(today + ahead) % 7]));'), "the value stays English, the label is theirs");
+});

@@ -365,6 +365,8 @@ const REMINDER_TIME_PHRASE = new RegExp(`\\b(?:${TIME_ALTERNATION})\\b`, "i");
 const FILLER_WORDS = "hey|hi|hello|ok|okay|please|pls|plz|kindly|maybe|perhaps|abeg|naomba|nakuomba|tafadhali|kyro|nexus|agrinexus|sasa|then|so|um|uh|er|erm|just|quickly";
 const ASK_WRAPPERS = "(?:(?:can|could|would|will)\\s+you(?:\\s+please)?|(?:i|we)\\s+(?:want|need|would\\s+like|'d\\s+like|wish|would\\s+love)\\s+you\\s+to|i\\s+(?:want|need)\\s+to\\s+be)";
 const LEAD_INS = [
+  // the voice model's own wording when it hands a reminder to a tool: "Create a reminder for to turn off the water ..." was saved with "Create a reminder for to" in its name (live Igbo voice run, 26 Nov 2026)
+  "(?:create|add|make|schedule|set\\s+up|save)\\s+(?:a\\s+|an\\s+|one\\s+)?(?:new\\s+)?(?:one-time\\s+|one\\s+time\\s+)?reminder(?:\\s+(?:for|to|about|that))*\\s*:?",
   "remind\\s+(?:me|us|you)\\s+(?:to|about|that|of)", "remind\\s+(?:me|us|you)", "reminder\\s+(?:to|about|that|for)", "a\\s+reminder\\s+(?:to|about|that|for)", "notify\\s+me\\s+(?:to|about|that)", "notify\\s+me", "set\\s+(?:a\\s+)?reminder\\s+(?:to|about|that|for)",
   "set\\s+(?:a\\s+)?reminder", "remember\\s+to", "follow\\s+up\\s+(?:to|about)", "i\\s+need\\s+(?:a\\s+)?reminder\\s+(?:to|about|that)?", "ni-?remind(?:\\s+me)?", "reminders?", "remind",
   "(?:ni)?(?:kumbushe|kumbushie|kumbusheni)(?:\\s+(?:kwamba|kuhusu|ya|kuwa))?", "(?:wa)?kumbushe(?:\\s+(?:kwamba|kuhusu|ya))?", "unikumbushe(?:\\s+(?:kwamba|kuhusu|ya))?", "(?:niwekee|weka)\\s+kikumbusho(?:\\s+(?:cha|kwamba|kuhusu|ya))?"
