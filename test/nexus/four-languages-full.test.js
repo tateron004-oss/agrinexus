@@ -502,3 +502,8 @@ test("the sweep's fixes: the four keep the semantic turn detector, the line afte
   assert.match(server, /Translate from \$\{translationLanguageName\(sourceLanguage\)\} into \$\{translationLanguageName\(targetLanguage\)\}\./);
   assert.ok(/ig: "Kyro na-asụ Igbo\. Koach Learn\. Ee, mba, ndewo, kedu, biko, daalụ, ọrụ ugbo, mmụta\./.test(server), "Igbo names ugbo (farm), heard as ụgbọ (a vehicle)");
 });
+
+test("the reply after a no is in the language the page sends with it (the confirmation route used to drop it)", () => {
+  assert.ok(read("nexus/compat/server-runtime-adapter.js").includes("channel: request.channel, locale: request.locale, text: body.text }, context: confirmContext });"));
+  assert.ok(read("nexus/runtime/behavior-spine.js").includes('channel: input.channel || "api", locale: input.locale, correlationId:'));
+});
