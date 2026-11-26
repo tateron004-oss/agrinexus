@@ -105,5 +105,5 @@ test("on the page: after 'Added ... to your shopping list.' the list is fetched 
   const down = make({ ok: false });
   assert.equal(await down.run({ response: "Added milk to your shopping list. You have 1 open item." }, "x"), false);
   // wired: called after the confirmation card is drawn
-  assert.match(app, /kyroNoteActivity\(\);\s+\/\/ \(a list that was just added to is shown as the list: see kyroShowListAfterAdd\)\s+try \{ void kyroShowListAfterAdd\(result, command\); \} catch \{ \/\* the confirmation is already showing \*\/ \}\s+return true;/);
+  assert.match(app, /kyroNoteActivity\(\);\s+\/\/ \(a list that was just added to is shown as the list: see kyroShowListAfterAdd\)\s+if \(!result\?\.kyroTranslated\) \{ try \{ void kyroShowListAfterAdd\(result, command\); \} catch \{ \/\* the confirmation is already showing \*\/ \} \}[^]*?return true;/);
 });
