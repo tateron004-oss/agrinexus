@@ -562,7 +562,8 @@ services:
 
 databases:
   - name: nexus-postgres
-    plan: basic-1gb
+    # 1 CPU, 4 GB (owner, 26 Nov 2026): on 1 GB the database ran out of memory reading the whole state after deploys and restarted, twice in one day.
+    plan: basic-4gb
     region: oregon
     postgresMajorVersion: "17"
     databaseName: nexus
