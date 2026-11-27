@@ -64493,7 +64493,11 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   const text = String(command || "").trim();
   if (!text) return false;
   // a card left open by an earlier request does not stay in front of this one
-  kyroDismissStaleWorkspace(text);
+  // (but an open lesson's card stays for a sentence the lesson owns, "Next lesson" or an answer, until the next step replaces it: clearing it left no screen for a moment,
+  //  found by the live voice run of the Koach Learn course tutor on 27 Nov 2026)
+  let kyroLessonOwnsTurn = false;
+  try { kyroLessonOwnsTurn = typeof kyroTutorOpen === "function" && kyroTutorOpen() && typeof kyroTutorOwns === "function" && kyroTutorOwns(text) && !(typeof KYRO_TUTOR_REQUEST !== "undefined" && KYRO_TUTOR_REQUEST.test(text)); } catch { kyroLessonOwnsTurn = false; }
+  if (!kyroLessonOwnsTurn) kyroDismissStaleWorkspace(text);
   // The trip's route, for typed and spoken requests alike (found on the live site on 27 October 2026: typing "Show the route on the map." after a trip asked "Where should the route start and end?", because only the spoken path remembered the trip).
   // "Show the route on the map" draws the last trip's route; a trip request that also asks for the map ("...and show the route on the map") is made as a document first and then the map is opened.
   if (options.kyroTripWrapped !== true) {

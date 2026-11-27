@@ -281,3 +281,13 @@ test("a spoken number word picks the course or the lesson, the same as its digit
   for (const [say, lesson] of [["Lesson three.", 3], ["Go to lesson four", 4], ["teach me lesson two", 2]]) assert.equal(study.studyRequest(say)?.lesson, lesson, say);
   for (const say of ["no one taught me this", "teach me fractions", "Find me a course on farming.", "one of the courses"]) assert.equal(study.studyRequest(say), null, say);
 });
+
+// (27 Nov 2026, the live voice run: "Next lesson" cleared the lesson card before the next step came back, so for a moment there was no screen)
+test("an open lesson's card stays for the lesson's own next sentence until the next step replaces it", () => {
+  const app = read("public/app.js");
+  const at = app.indexOf("async function handleNexusUnifiedBrainRuntimeCommand(");
+  const body = app.slice(at, at + 1600);
+  assert.ok(body.includes("kyroLessonOwnsTurn = typeof kyroTutorOpen === \"function\" && kyroTutorOpen() && typeof kyroTutorOwns === \"function\" && kyroTutorOwns(text)"), "an open lesson's own sentence");
+  assert.ok(body.includes("if (!kyroLessonOwnsTurn) kyroDismissStaleWorkspace(text);"), "anything else still clears the old card");
+  assert.match(read("public/kyro-result-screen.js"), /function show\(doc, model, handlers, lang\) \{\n    if \(!doc \|\| !doc\.body \|\| !model\) return null;\n    remove\(doc\);/, "the next step's card replaces the one kept");
+});
