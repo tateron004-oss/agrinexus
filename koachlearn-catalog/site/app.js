@@ -1,6 +1,8 @@
 // Language-first Koach Learn catalogue. Reads data/<lang>.json (built from Koach Learn's public course list).
 (() => {
   const SIGNIN = "https://www.dashboard.koachlearn.com";
+  // Kyro, the voice assistant, can teach a course alongside it, lesson by lesson, from the course itself (its study pack: packs/<lang>/<course>.json)
+  const KYRO = "https://nexus-genesis-certified.onrender.com/";
   const PAGE = 24;
   const LANGS = window.KL_LANGS, TEXT = window.KL_TEXT, CATS = window.KL_CATS;
   const byCode = Object.fromEntries(LANGS.map(l => [l.code, l]));
@@ -151,7 +153,7 @@
       ${c.s ? `<p class="learn"><b>${esc(t("learn"))}:</b> ${esc(c.s)}</p>` : ""}
       ${c.d ? `<p class="desc">${esc(c.d)}</p>` : ""}
       ${also ? `<div class="also"><span>${esc(t("alsoIn"))}:</span>${also}</div>` : ""}
-      <a class="go" href="${SIGNIN}" target="_blank" rel="noopener">${esc(t("start"))}</a>
+      <div class="actions"><a class="go" href="${SIGNIN}" target="_blank" rel="noopener">${esc(t("start"))}</a>${c.g ? `<a class="kyro" href="${KYRO}?study=${state.lang}:${encodeURIComponent(c.g)}" target="_blank" rel="noopener">${esc(t("study"))}</a>` : ""}</div>
     </article>`;
   }
 

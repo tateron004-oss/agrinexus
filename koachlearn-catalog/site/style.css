@@ -48,7 +48,9 @@ html[dir="rtl"] #q { padding: 12px 14px 12px 44px; }
 .card .desc { font-size: 14px; margin: 0; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 .card .also { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline; }
 .card .also a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
-.card .go { margin-top: auto; align-self: flex-start; display: inline-block; padding: 10px 16px; border-radius: 10px; background: var(--brand); color: var(--brand-ink); font-weight: 600; text-decoration: none; min-height: 44px; }
+.card .actions { margin-top: auto; display: flex; flex-wrap: wrap; gap: 8px; }
+.card .kyro { display: inline-block; padding: 10px 16px; border-radius: 10px; border: 2px solid var(--brand); color: var(--brand); font-weight: 600; text-decoration: none; min-height: 44px; box-sizing: border-box; }
+.card .go { align-self: flex-start; display: inline-block; padding: 10px 16px; border-radius: 10px; background: var(--brand); color: var(--brand-ink); font-weight: 600; text-decoration: none; min-height: 44px; }
 
 .moreRow { text-align: center; padding: 20px 0; }
 #more { font: inherit; font-weight: 600; padding: 12px 22px; border-radius: 12px; border: 1px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; min-height: 48px; }

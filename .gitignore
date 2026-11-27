@@ -45,3 +45,6 @@ build/
 # Koach Learn course exports (scripts/koachlearn-export.js)
 output/koachlearn/
 output/koachlearn-audio/
+
+# Koach Learn study packs are built into the published catalogue repo, not this one (82 MB): koachlearn-catalog/build/make-study-packs.js
+koachlearn-catalog/site/packs/
