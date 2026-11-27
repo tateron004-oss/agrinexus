@@ -56072,6 +56072,8 @@ function kyroKoachLearnQuestion(text) {
 const KYRO_STUDIED_KEY = "kyroKoachLearnStudied";
 function kyroKoachLearnStudyQuestion(text) {
   try {
+    // ("my certificate number is m62bt9uq", "what have I finished on Koach Learn?": the learner's Koach Learn record, answered the typed way too)
+    if (window.KyroKoachLearnStudy && typeof window.KyroKoachLearnStudy.recordRequest === "function" && window.KyroKoachLearnStudy.recordRequest(text)) return true;
     const asked = window.KyroKoachLearnStudy && typeof window.KyroKoachLearnStudy.studyRequest === "function" ? window.KyroKoachLearnStudy.studyRequest(text) : null;
     if (!asked) return false;
     const named = asked.slug || asked.ordinal || (asked.terms && asked.terms.length);

@@ -106,5 +106,37 @@
     return Object.freeze({ kind: lesson ? "lesson" : "start", ordinal, lesson, terms: Object.freeze(terms), slug: slugHit ? slugHit[1] : null, slugLang: slugHit && slugHit[2] ? slugHit[2] : null, wordsLang });
   }
 
-  return Object.freeze({ studyRequest });
+  // The learner's Koach Learn record (nexus/knowledge/koachlearn-sync.js): "link my Koach Learn", "my certificate number is m62bt9uq", "what have I finished on Koach Learn?",
+  // "show my Koach Learn certificates". -> null | { kind: "link", number } | { kind: "show" }
+  // A certificate number is 5-16 letters and digits with at least one digit and one letter; said aloud it comes back spelled out ("m 6 2 b t 9 u q"), so single letters
+  // and digits after the certificate word are joined.
+  const CERT_WORD = /\b(?:certificates?|cert|certificados?|certificats?|vyeti|cheti|takardar shaida\w*|takardun shaida\w*|iwe eri|asambodo)\b|شهاد\S*|ሰርተፊኬት\S*/;
+  const KOACH = /\bkoach ?learn\b|\bkoachlearn\b/;
+  const RECORD_WORD = /\b(?:link|connect|sync|finished|completed|done|progress|record|records|vincula\w*|conecta\w*|terminado|terminados|termine|completado|progreso|registro|lie[rz]?|connecte[rz]?|termines?|progres|dossier|liga[rr]?|concluido|conclui|progresso|registo|unganisha|nimemaliza|nimemaliza nini|maendeleo|rekodi|hada|haɗa|gama|na gama|ci gaba|bayanai|so po|pari|ti pari|ilosiwaju|akosile|jikota|mechara|mụchaala|muchaala|ndeko)\b|ربط|انهيت|أنهيت|اكملت|أكملت|تقدم|سجل|አገናኝ|ጨረስኩ|ጨርሻለሁ|እድገት|መዝገብ/;
+  function recordRequest(text) {
+    const said = String(text || "").trim();
+    if (!said || said.length > 240) return null;
+    const folded = fold(said);
+    const cert = CERT_WORD.exec(folded);
+    if (cert) {
+      const NUMBER = /^(?=[a-z0-9]*\d)(?=[a-z0-9]*[a-z])[a-z0-9]{5,16}$/;
+      const pieces = folded.split(/[\s,.;:!?#"'()-]+/).filter(Boolean);
+      let candidate = pieces.find(piece => NUMBER.test(piece)) || "";
+      if (!candidate) {
+        // spelled out: the longest run of single letters and digits ("m 6 2 b t 9 u q")
+        let run = []; let best = "";
+        for (const piece of folded.slice(cert.index + cert[0].length).split(/[\s,.;:!?#-]+/).filter(Boolean)) {
+          if (/^[a-z0-9]$/.test(piece) || /^\d{2,}$/.test(piece)) run.push(piece); else { if (run.join("").length > best.length) best = run.join(""); run = []; }
+        }
+        if (run.join("").length > best.length) best = run.join("");
+        candidate = best;
+      }
+      if (NUMBER.test(candidate)) return Object.freeze({ kind: "link", number: candidate });
+    }
+    if (KOACH.test(folded) && (cert || RECORD_WORD.test(folded))) return Object.freeze({ kind: "show" });
+    if (cert && /\b(?:my|mis|mes|meus|minhas|vyeti vyangu|cheti changu|na|mi|mi|m)\b|شهاداتي|ሰርተፊኬቶቼ/.test(folded) && !/\b(?:how|what is|como|comment|vipi|yaya)\b/.test(folded)) return Object.freeze({ kind: "show" });
+    return null;
+  }
+
+  return Object.freeze({ studyRequest, recordRequest });
 });
