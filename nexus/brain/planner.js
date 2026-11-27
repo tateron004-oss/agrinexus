@@ -211,11 +211,12 @@ class OpenEndedPlanner {
     if (!link) return this.studyPlan(command, [say("ask"), kyroLine].filter(Boolean).join("\n\n"), { knowledge: "koachlearn-record:ask" });
     const finished = await sync.forStudent(link.studentId);
     if (!finished) return this.studyPlan(command, [...lines, say("unavailable")].join("\n\n"), { knowledge: "koachlearn-record:unavailable" });
-    if (finished.length) lines.push([say("done", { count: koachLearnRecord.countText(lang, finished.length) }), ...finished.map(row => `• ${row.courseName}${row.completedAt ? ` (${row.completedAt.slice(0, 10)})` : ""}`)].join("\n"));
+    // (one paragraph with numbered courses, as the course list is written: bullet lines were drawn as a list with the opening sentence under it, found by the live voice run of 27 Nov 2026)
+    if (finished.length) lines.push([say("done", { count: koachLearnRecord.countText(lang, finished.length) }), ...finished.map((row, index) => `${index + 1}. ${row.courseName}${row.completedAt ? ` (${row.completedAt.slice(0, 10)})` : ""}.`)].join(" "));
     else lines.push(say("none"));
     if (kyroLine) lines.push(kyroLine);
     lines.push(say("next"));
-    return this.studyPlan(command, lines.join("\n\n"), { knowledge: "koachlearn-record:shown" });
+    return this.studyPlan(command, lines.join(" "), { knowledge: "koachlearn-record:shown" });
   }
   // The Koach Learn course ids this person has a certificate for (an empty set when their record is not linked, or Koach Learn cannot be read).
   async koachLearnFinishedIds(command) {
