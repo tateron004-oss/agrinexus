@@ -66,7 +66,9 @@ const { offersFor, offerLine, checklistAsk } = require("../knowledge/offers.js")
 const { feedRequest, grantsAnswer, rulesAnswer } = require("../knowledge/live-feeds.js");
 const { courseRequest } = require("../../public/kyro-koachlearn-courses.js");
 const { findKoachLearnCourses, koachLearnAnswer } = require("../knowledge/koachlearn-courses.js");
-const { studyRequest } = require("../../public/kyro-koachlearn-study.js");
+const { studyRequest, recordRequest } = require("../../public/kyro-koachlearn-study.js");
+const koachLearnRecord = require("../knowledge/koachlearn-sync.js");
+const { wordsLanguage: koachLearnWordsLanguage } = require("../../public/kyro-koachlearn-courses.js");
 const koachLearnStudy = require("../knowledge/koachlearn-study.js");
 const { CATALOG: KOACHLEARN_CATALOG } = require("../knowledge/koachlearn-courses.js");
 const sharedStudyPacks = koachLearnStudy.createStudyPacks();
@@ -105,9 +107,9 @@ const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, studyPacks = sharedStudyPacks, tutorSessions = sharedTutorSessions, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, koachLearnSync = null, studyPacks = sharedStudyPacks, tutorSessions = sharedTutorSessions, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, studyPacks, tutorSessions, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, koachLearnSync, studyPacks, tutorSessions, maxRepairAttempts });
   }
 
   // ---- Kyro as a tutor alongside a Koach Learn course (see knowledge/koachlearn-study.js) ----
@@ -179,6 +181,52 @@ class OpenEndedPlanner {
       tutor: Object.freeze({ active: true, subject: now.name, kind: "course", turn: session.count, step: session.count, course: Object.freeze({ name: now.name, lesson: now.lesson + 1, total: now.total }) }) });
   }
   // Starting (or coming back to) a course: which course, which lesson, the pack in the learner's language; then the first step.
+  // The learner's Koach Learn record (knowledge/koachlearn-sync.js): "my certificate number is m62bt9uq" links it (only Koach Learn's student id is kept), and "what have I finished on
+  // Koach Learn?" lists the courses they have a certificate for, with where they are in the course they study with Kyro.
+  async koachLearnRecordTurn({ command, context, request, askText }) {
+    if (context?.deterministicOnly === true) return null;
+    const tenantId = command?.tenantId; const userId = command?.actorId;
+    if (!tenantId || !userId) return null;
+    // (the language of the words, without the certificate number: "M 6 2 B T 9 U Q" spelled out is not a language)
+    const words = String(askText || "").split(/\s+/).filter(word => !/^[A-Za-z0-9]{1,2}[.,!?]?$/.test(word) && !/\d/.test(word)).join(" ");
+    const lang = this.studyLanguage(command, { wordsLang: koachLearnWordsLanguage(words) });
+    const say = (key, values) => koachLearnRecord.recordText(lang, key, values);
+    const sync = this.koachLearnSync;
+    if (!sync || !sync.configured) return this.studyPlan(command, say("off"), { knowledge: "koachlearn-record:off" });
+    const scope = { tenantId, userId };
+    let link = await koachLearnRecord.readLink(this.automationRecords, scope);
+    const lines = [];
+    if (request.kind === "link") {
+      const all = await sync.certificates();
+      if (!all) return this.studyPlan(command, say("unavailable"), { knowledge: "koachlearn-record:unavailable" });
+      const found = await sync.byNumber(request.number);
+      if (!found) return this.studyPlan(command, say("notFound", { number: request.number }), { knowledge: "koachlearn-record:not-found" });
+      await koachLearnRecord.saveLink(this.automationRecords, scope, found.studentId);
+      link = { studentId: found.studentId };
+      lines.push(say("linked"));
+    }
+    const progress = await koachLearnStudy.readProgress(this.automationRecords, scope);
+    const current = progress?.current && progress.courses?.[progress.current];
+    const kyroLine = current ? say(current.done ? "kyroDone" : "kyro", { course: current.name, lesson: (Number(current.lesson) || 0) + 1, total: current.total }) : "";
+    if (!link) return this.studyPlan(command, [say("ask"), kyroLine].filter(Boolean).join("\n\n"), { knowledge: "koachlearn-record:ask" });
+    const finished = await sync.forStudent(link.studentId);
+    if (!finished) return this.studyPlan(command, [...lines, say("unavailable")].join("\n\n"), { knowledge: "koachlearn-record:unavailable" });
+    if (finished.length) lines.push([say("done", { count: koachLearnRecord.countText(lang, finished.length) }), ...finished.map(row => `• ${row.courseName}${row.completedAt ? ` (${row.completedAt.slice(0, 10)})` : ""}`)].join("\n"));
+    else lines.push(say("none"));
+    if (kyroLine) lines.push(kyroLine);
+    lines.push(say("next"));
+    return this.studyPlan(command, lines.join("\n\n"), { knowledge: "koachlearn-record:shown" });
+  }
+  // The Koach Learn course ids this person has a certificate for (an empty set when their record is not linked, or Koach Learn cannot be read).
+  async koachLearnFinishedIds(command) {
+    try {
+      if (!this.koachLearnSync?.configured || !command?.tenantId || !command?.actorId) return new Set();
+      const link = await koachLearnRecord.readLink(this.automationRecords, { tenantId: command.tenantId, userId: command.actorId });
+      const rows = link ? await this.koachLearnSync.forStudent(link.studentId) : null;
+      return new Set((rows || []).map(row => row.courseId));
+    } catch { return new Set(); }
+  }
+
   async courseStudyTurn({ command, context, request }) {
     if (context?.deterministicOnly === true || typeof this.model?.respond !== "function" || !this.koachLearn || !this.studyPacks) return null;
     const tenantId = command?.tenantId; const userId = command?.actorId;
@@ -786,6 +834,12 @@ class OpenEndedPlanner {
     // catalogue learners browse (see knowledge/koachlearn-courses.js; the matcher, public/kyro-koachlearn-courses.js, is shared with the page, which takes such a spoken turn itself). Each course shown is a real course with its
     // own page and its translations. The person's own learning ("continue my course", "my progress", a quiz, a certificate) is never taken. Asked before the guides, so "courses about starting a business" lists courses
     // instead of answering how to start one. Not for the spoken-only caller, which leaves live lookups to its own route.
+    // "My certificate number is m62bt9uq", "what have I finished on Koach Learn?": the learner's own Koach Learn record (see koachLearnRecordTurn).
+    const recordAsk = this.koachLearnSync && context?.deterministicOnly !== true && !ownWorkspace ? recordRequest(askText) : null;
+    if (recordAsk) {
+      const record = await this.koachLearnRecordTurn({ command, context, request: recordAsk, askText });
+      if (record) return record;
+    }
     const studyAsk = this.koachLearn && context?.deterministicOnly !== true && !ownWorkspace ? studyRequest(askText) : null;
     if (studyAsk) {
       const studying = await this.courseStudyTurn({ command, context, request: studyAsk });
@@ -799,6 +853,10 @@ class OpenEndedPlanner {
       if (found.kind === "found" && Array.isArray(found.courses) && found.courses.length) {
         this.rememberShownCourses(command, found.courses, found.courseLang);
         if (found.courses.some(course => course.g)) answer.text = `${answer.text}\n\n${koachLearnStudy.studyText(found.replyLang, "offer")}`;
+        // (a course the person already has a Koach Learn certificate for is named as finished)
+        const finishedIds = await this.koachLearnFinishedIds(command);
+        const already = found.courses.filter(course => finishedIds.has(course.i)).map(course => course.n);
+        if (already.length) answer.text = `${answer.text}\n\n${koachLearnRecord.recordText(found.replyLang, "already", { courses: already.join(", ") })}`;
       }
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: answer.text, sourceRequired: false, knowledge: `koachlearn-courses:${found.kind}`, sources: answer.sources, responseLanguage: found.replyLang, planningAttempts: 0 });
     }
