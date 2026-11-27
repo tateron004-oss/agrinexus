@@ -106,7 +106,7 @@
     return Object.freeze({ kind: lesson ? "lesson" : "start", ordinal, lesson, terms: Object.freeze(terms), slug: slugHit ? slugHit[1] : null, slugLang: slugHit && slugHit[2] ? slugHit[2] : null, wordsLang });
   }
 
-  // The learner's Koach Learn record (nexus/knowledge/koachlearn-sync.js): "link my Koach Learn", "my certificate number is m62bt9uq", "what have I finished on Koach Learn?",
+  // The learner's Koach Learn record (nexus/knowledge/koachlearn-sync.js): "link my Koach Learn", "my certificate number is q4w7e2rt", "what have I finished on Koach Learn?",
   // "show my Koach Learn certificates". -> null | { kind: "link", number } | { kind: "show" }
   // A certificate number is 5-16 letters and digits with at least one digit and one letter; said aloud it comes back spelled out ("m 6 2 b t 9 u q"), so single letters
   // and digits after the certificate word are joined.

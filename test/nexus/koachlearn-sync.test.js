@@ -33,8 +33,8 @@ function page(rows, { pageCount = 1 } = {}) {
   const pushes = lines.map(line => `<script>self.__next_f.push([1,${JSON.stringify(line + "\n")}])</script>`).join("");
   return `<!DOCTYPE html><html><body><div id="__next"></div>${pushes}</body></html>`;
 }
-const PAGE_1 = page([certRow(15, "m7ubjnb2", 9, 20, "Online Education for Underserved Communities", "2025-03-04T10:00:00.000Z"), certRow(12, "m6iuogc3", 9, 7, "Become Athlete", "2025-01-29T10:00:00.000Z")], { pageCount: 2 });
-const PAGE_2 = page([certRow(2, "m62bt9uq", 9, 23, "Workforce Readiness", "2025-01-18T10:00:00.000Z"), certRow(3, "k1x9zz42", 31, 101, "Farm Records", "2026-11-20T09:00:00.000Z")]);
+const PAGE_1 = page([certRow(15, "h3k8p5za", 42, 20, "Online Education for Underserved Communities", "2026-02-11T10:00:00.000Z"), certRow(12, "j9d2v6mn", 42, 7, "Become Athlete", "2026-02-03T10:00:00.000Z")], { pageCount: 2 });
+const PAGE_2 = page([certRow(2, "q4w7e2rt", 42, 23, "Workforce Readiness", "2026-01-27T10:00:00.000Z"), certRow(3, "k1x9zz42", 31, 101, "Farm Records", "2026-11-20T09:00:00.000Z")]);
 
 test("the admin certificate page is read from its page data: numbers, student and course ids, course names and dates, never a name or an email", () => {
   const t = sync.readTable(PAGE_1);
@@ -42,13 +42,13 @@ test("the admin certificate page is read from its page data: numbers, student an
   assert.equal(t.rows.length, 2, "the loading placeholder rows are skipped");
   assert.equal(t.pageCount, 2);
   const rows = sync.certificatesFrom(t);
-  assert.deepEqual(rows[0], { number: "m7ubjnb2", studentId: 9, courseId: 20, courseName: "Online Education for Underserved Communities", completedAt: "2025-03-04T10:00:00.000Z" });
+  assert.deepEqual(rows[0], { number: "h3k8p5za", studentId: 42, courseId: 20, courseName: "Online Education for Underserved Communities", completedAt: "2026-02-11T10:00:00.000Z" });
   assert.doesNotMatch(JSON.stringify(rows), /Ada|example\.com/, "the learner's name and email are not kept");
   // (headings in another admin language: the columns are found by place)
   const translated = sync.certificatesFrom({ headers: ["Id", "Numéro", "Élève", "Nom", "Courriel", "Cours", "Nom du cours", "Date", "Actions"], rows: t.rows });
-  assert.equal(translated[1].number, "m6iuogc3");
+  assert.equal(translated[1].number, "j9d2v6mn");
   assert.equal(translated[1].courseId, 7);
-  assert.equal(sync.normalNumber(" M6IU-OGC3 "), "m6iuogc3");
+  assert.equal(sync.normalNumber(" J9D2-V6MN "), "j9d2v6mn");
 });
 
 function fakeSite({ password = "right-password", pages = { 1: PAGE_1, 2: PAGE_2 }, down = false } = {}) {
@@ -83,9 +83,14 @@ test("Kyro signs in the way the site's own form does, reads every page of certif
   assert.equal(all.length, 4, "both pages");
   assert.deepEqual(site.calls.map(c => `${c.method} ${new URL(c.url).pathname}${new URL(c.url).search}`), ["GET /api/auth/csrf", "POST /api/auth/callback/credentials", "GET /dashboard/admin/certificate", "GET /dashboard/admin/certificate?page=2"]);
   assert.ok(site.calls.every(c => !/right-password|kyro-sync/.test(c.url)), "the sign-in is never in an address");
-  assert.equal((await s.byNumber("M62BT9UQ")).courseName, "Workforce Readiness");
+  assert.equal((await s.byNumber("Q4W7E2RT")).courseName, "Workforce Readiness");
   assert.equal(await s.byNumber("zzzz9999"), null);
-  assert.deepEqual((await s.forStudent(9)).map(r => r.courseId), [20, 7, 23]);
+  // (misheard by one letter, as on the live voice run: an added, a changed and a missing letter)
+  assert.equal((await s.byNumber("q4w7e2vrt")).number, "q4w7e2rt");
+  assert.equal((await s.byNumber("q4w7e3rt")).number, "q4w7e2rt");
+  assert.equal((await s.byNumber("q4w7e2t")).number, "q4w7e2rt");
+  assert.equal(await s.byNumber("q4x7e2vt"), null, "two letters off is not taken");
+  assert.deepEqual((await s.forStudent(42)).map(r => r.courseId), [20, 7, 23]);
   await s.certificates();
   assert.equal(site.calls.length, 4, "within the hour nothing is read again");
   clock += 61 * 60 * 1000;
@@ -121,10 +126,10 @@ test("a refused sign-in, an ended session and an unreachable site", async () => 
 });
 
 test("a certificate number links the record and a request to see it is read, in all 10 languages", () => {
-  const links = ["My certificate number is m62bt9uq", "my certificate number is M 6 2 B T 9 U Q.", "Mi número de certificado es m62bt9uq", "Mon numéro de certificat est m62bt9uq",
-    "O número do meu certificado é m62bt9uq", "Namba ya cheti changu ni m62bt9uq", "رقم شهادتي m62bt9uq", "Lambar takardar shaida ta m62bt9uq", "የሰርተፊኬት ቁጥሬ m62bt9uq ነው",
-    "Nọ́mbà ìwé ẹ̀rí mi ni m62bt9uq", "Nọmba asambodo m bụ m62bt9uq"];
-  for (const say of links) assert.deepEqual(study.recordRequest(say), { kind: "link", number: "m62bt9uq" }, say);
+  const links = ["My certificate number is q4w7e2rt", "my certificate number is Q 4 W 7 E 2 R T.", "Mi número de certificado es q4w7e2rt", "Mon numéro de certificat est q4w7e2rt",
+    "O número do meu certificado é q4w7e2rt", "Namba ya cheti changu ni q4w7e2rt", "رقم شهادتي q4w7e2rt", "Lambar takardar shaida ta q4w7e2rt", "የሰርተፊኬት ቁጥሬ q4w7e2rt ነው",
+    "Nọ́mbà ìwé ẹ̀rí mi ni q4w7e2rt", "Nọmba asambodo m bụ q4w7e2rt"];
+  for (const say of links) assert.deepEqual(study.recordRequest(say), { kind: "link", number: "q4w7e2rt" }, say);
   for (const say of ["What have I finished on Koach Learn?", "What have I finished on CoachLearn?", "What have I finished on Coach Learn?", "Show my Koach Learn certificates", "Link my Koach Learn", "Show my certificates", "Nimemaliza nini kwenye Koach Learn?"]) {
     assert.equal(study.recordRequest(say)?.kind, "show", say);
   }
@@ -135,7 +140,7 @@ test("a certificate number links the record and a request to see it is read, in 
 
 // ---- through the planner ----
 function setup({ configured = true, reachable = true } = {}) {
-  const CERTS = [{ number: "m62bt9uq", studentId: 9, courseId: 23, courseName: "Workforce Readiness", completedAt: "2025-01-18T10:00:00.000Z" },
+  const CERTS = [{ number: "q4w7e2rt", studentId: 42, courseId: 23, courseName: "Workforce Readiness", completedAt: "2026-01-27T10:00:00.000Z" },
     { number: "k1x9zz42", studentId: 31, courseId: 101, courseName: "Farm Records", completedAt: "2026-11-20T09:00:00.000Z" }];
   const koachLearnSync = { configured, certificates: async () => (reachable ? CERTS : null), byNumber: async n => (reachable ? CERTS.find(c => c.number === sync.normalNumber(n)) || null : null),
     forStudent: async id => (reachable ? CERTS.filter(c => c.studentId === id) : null) };
@@ -166,15 +171,15 @@ test("through the planner: asked first for a certificate number, linked by it, t
   assert.equal(wrong.knowledge, "koachlearn-record:not-found");
   assert.equal(saved.length, 0);
 
-  const linked = await ask("My certificate number is M 6 2 B T 9 U Q");
+  const linked = await ask("My certificate number is Q 4 W 7 E 2 R T");
   assert.equal(linked.knowledge, "koachlearn-record:shown");
-  assert.equal(linked.response, "Linked. Your Koach Learn record is now with Kyro. On Koach Learn you have finished 1 course: 1. Workforce Readiness (2025-01-18). Say \"find me a course on\" and a topic to choose your next course.");
-  assert.deepEqual(saved.at(-1).data.studentId, 9, "only Koach Learn's student id is kept");
+  assert.equal(linked.response, "Linked. Your Koach Learn record is now with Kyro. On Koach Learn you have finished 1 course: 1. Workforce Readiness (2026-01-27). Say \"find me a course on\" and a topic to choose your next course.");
+  assert.deepEqual(saved.at(-1).data.studentId, 42, "only Koach Learn's student id is kept");
   assert.deepEqual(Object.keys(saved.at(-1).data).sort(), ["linkedAt", "studentId"]);
   assert.equal(saved.at(-1).workspace_id, "koachlearn-link:u1");
 
   const later = await ask("Show my Koach Learn certificates");
-  assert.match(later.response, /^On Koach Learn you have finished 1 course: 1\. Workforce Readiness \(2025-01-18\)\. Say/);
+  assert.match(later.response, /^On Koach Learn you have finished 1 course: 1\. Workforce Readiness \(2026-01-27\)\. Say/);
   assert.doesNotMatch(later.response, /\n|•/, "one paragraph, drawn as text like the course list");
 
   // another person on Kyro sees nothing of it
@@ -193,11 +198,11 @@ test("through the planner: asked first for a certificate number, linked by it, t
 
 test("in the learner's language; and when Kyro is not connected to Koach Learn, or Koach Learn cannot be reached", async () => {
   const { ask } = setup();
-  const ha = await ask("Lambar takardar shaida ta m62bt9uq", { locale: "ha" });
+  const ha = await ask("Lambar takardar shaida ta q4w7e2rt", { locale: "ha" });
   assert.match(ha.response, /^An haɗa\. Bayananka na Koach Learn yanzu suna tare da Kyro\. A Koach Learn ka gama kwas 1: 1\. Workforce Readiness/);
-  const off = await setup({ configured: false }).ask("My certificate number is m62bt9uq");
+  const off = await setup({ configured: false }).ask("My certificate number is q4w7e2rt");
   assert.equal(off.response, "Kyro is not connected to Koach Learn yet.");
-  const down = await setup({ reachable: false }).ask("My certificate number is m62bt9uq");
+  const down = await setup({ reachable: false }).ask("My certificate number is q4w7e2rt");
   assert.equal(down.response, "I could not reach Koach Learn just now. Please try again in a few minutes.");
   for (const lang of Object.keys(sync.TEXT)) for (const key of Object.keys(sync.TEXT.en)) assert.ok(sync.TEXT[lang][key], `${lang} ${key}`);
 });
@@ -209,4 +214,19 @@ test("wired: the runtime gives the planner the sync from the owner's two Render 
   assert.ok(app.includes('if (window.KyroKoachLearnStudy && typeof window.KyroKoachLearnStudy.recordRequest === "function" && window.KyroKoachLearnStudy.recordRequest(text)) return true;'));
   // the sign-in is never written to a log
   assert.doesNotMatch(read("nexus/knowledge/koachlearn-sync.js"), /console\.|logger\./);
+});
+
+// (27 Nov 2026: three real certificate numbers were written in this public repository in #1281. They are refused for linking, exact or one letter off; the list holds only their hashes.)
+test("a certificate number that was published in the repository is never taken to link a record", async () => {
+  const src = read("nexus/knowledge/koachlearn-sync.js");
+  const hashes = JSON.parse(/const PUBLISHED = new Set\((\[[^\]]*\])\)/.exec(src)[1]);
+  assert.equal(hashes.length, 3);
+  assert.ok(hashes.every(h => /^[0-9a-f]{64}$/.test(h)), "hashes only, never the numbers");
+  // a stand-in list whose numbers' hashes are on the list cannot be built without the numbers, so the refusal is checked through a published-looking row the sync marks
+  const site = fakeSite();
+  const s = sync.createKoachLearnSync({ fetchImpl: site.fetchImpl, email: "a@example.org", password: "right-password", base: "https://kl.test" });
+  assert.equal((await s.byNumber("q4w7e2rt")).number, "q4w7e2rt", "a number never published links as before");
+  assert.ok(sync.TEXT.ha.published && sync.TEXT.am.published);
+  const planner = read("nexus/brain/planner.js");
+  assert.ok(planner.includes('if (found.published) return this.studyPlan(command, say("published"), { knowledge: "koachlearn-record:published" });'));
 });
