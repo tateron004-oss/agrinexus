@@ -252,9 +252,10 @@ test("every record answer is drawn by the screen in reading order, in all 10 lan
   const names = ["Workforce Readiness", "Become Athlete", "Senior integration with technology", "Online Education for Underserved Communities"];
   const certs = [1, 2, 4].flatMap(n => names.slice(0, n).map((name, i) => ({ number: `q4w7e${n}r${i}`, studentId: 100 + n, courseId: 500 + i, courseName: name, completedAt: `2026-01-2${i}T10:00:00.000Z` })));
   const draw = (plan, lang) => R.buildModel({ ok: true, status: "completed", response: plan.response }, { command: "x", lang });
-  for (const lang of Object.keys(sync.TEXT)) {
+  // (with and without a course being studied with Kyro: its line is one more sentence, which on the live run of 27 Nov 2026 turned the list into one block)
+  for (const lang of Object.keys(sync.TEXT)) for (const studying of [false, true]) {
     for (const n of [1, 2, 4]) {
-      const saved = [];
+      const saved = studying ? [{ owner: "u", ws: "koachlearn-study:u", data: { current: "agri-farm-records", courses: { "agri-farm-records": { name: "Farm Records", lesson: 1, total: 6, done: false } } } }] : [];
       const records = { list: async q => saved.filter(r => r.owner === q.ownerId && r.ws === q.workspaceId).slice(-1), upsertSingleton: async r => { saved.push({ owner: r.ownerId, ws: r.workspaceId, data: r.data }); return r; } };
       const koachLearnSync = { configured: true, certificates: async () => certs, byNumber: async x => certs.find(c => c.number === x) || null, forStudent: async id => certs.filter(c => c.studentId === id) };
       const planner = new OpenEndedPlanner({ model: { plan: async () => { throw new Error("no model"); }, respond: async () => "x" }, tools: { list: async () => [] }, applications: { list: () => [] },
@@ -274,6 +275,7 @@ test("every record answer is drawn by the screen in reading order, in all 10 lan
         assert.ok(order.indexOf(names[0]) > order.indexOf(sync.recordText(lang, "linked").slice(0, 6)), `${lang} ${n}: linked, then the courses`);
         if (n === 2) assert.ok(order.indexOf(names[1]) > order.indexOf(names[0]), `${lang} ${n}: in order`);
       }
+      if (studying) assert.ok(order.includes(sync.recordText(lang, "kyro", { course: "Farm Records", lesson: 2, total: 6 })), `${lang} ${n}: the course studied with Kyro is named`);
     }
   }
 });
