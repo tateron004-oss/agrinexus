@@ -125,7 +125,7 @@ test("a certificate number links the record and a request to see it is read, in 
     "O número do meu certificado é m62bt9uq", "Namba ya cheti changu ni m62bt9uq", "رقم شهادتي m62bt9uq", "Lambar takardar shaida ta m62bt9uq", "የሰርተፊኬት ቁጥሬ m62bt9uq ነው",
     "Nọ́mbà ìwé ẹ̀rí mi ni m62bt9uq", "Nọmba asambodo m bụ m62bt9uq"];
   for (const say of links) assert.deepEqual(study.recordRequest(say), { kind: "link", number: "m62bt9uq" }, say);
-  for (const say of ["What have I finished on Koach Learn?", "Show my Koach Learn certificates", "Link my Koach Learn", "Show my certificates", "Nimemaliza nini kwenye Koach Learn?"]) {
+  for (const say of ["What have I finished on Koach Learn?", "What have I finished on CoachLearn?", "What have I finished on Coach Learn?", "Show my Koach Learn certificates", "Link my Koach Learn", "Show my certificates", "Nimemaliza nini kwenye Koach Learn?"]) {
     assert.equal(study.recordRequest(say)?.kind, "show", say);
   }
   for (const say of ["How do I get a certificate?", "I want a certificate in farming", "Find Koach Learn courses about farming", "Find me a course on farming.", "Help me study number 1", "I got a certificate in 2025"]) {

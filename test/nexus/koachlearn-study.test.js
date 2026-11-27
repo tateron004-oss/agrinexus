@@ -222,8 +222,8 @@ test("the spoken-only caller leaves it alone, and the general tutor and the cour
 test("the page takes a spoken study request itself, before the course finder, and the catalogue's 'Study with Kyro' link opens the course after sign-in", () => {
   const app = read("public/app.js");
   const html = read("public/index.html");
-  assert.ok(html.indexOf("/kyro-koachlearn-study.js?v=kyro-koachlearn-study-3") > html.indexOf("/kyro-koachlearn-courses.js"), "loaded after the course matcher it uses");
-  assert.ok(read("public/sw.js").includes("`/kyro-koachlearn-study.js?v=kyro-koachlearn-study-3`"));
+  assert.ok(html.indexOf("/kyro-koachlearn-study.js?v=kyro-koachlearn-study-4") > html.indexOf("/kyro-koachlearn-courses.js"), "loaded after the course matcher it uses");
+  assert.ok(read("public/sw.js").includes("`/kyro-koachlearn-study.js?v=kyro-koachlearn-study-4`"));
   assert.ok(app.includes('if (trimmed && ((typeof kyroKoachLearnStudyQuestion === "function" && kyroKoachLearnStudyQuestion(trimmed)) || (typeof kyroKoachLearnQuestion === "function" && kyroKoachLearnQuestion(trimmed)) ||'));
   // "continue my course" with nothing named: only once this person studied a Koach Learn course with Kyro on this device, or while a course lesson is open
   assert.ok(app.includes("return studied || (typeof kyroTutorOpen === \"function\" && kyroTutorOpen() && kyroTutorCourse === true);"));
