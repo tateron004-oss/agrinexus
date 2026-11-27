@@ -138,6 +138,20 @@ test("a certificate number links the record and a request to see it is read, in 
   }
 });
 
+// (the sweep of 27 Nov 2026, before the next live run: how speech-to-text may write the same things)
+test("the ways speech-to-text writes Koach Learn and a spoken certificate number", () => {
+  for (const say of ["What have I finished on Koch Learn?", "What have I finished on coach learning?", "What did I finish on Koach Learn?", "Did I finish any courses on Koach Learn?", "Show my Kotch Learn progress"]) {
+    assert.equal(study.recordRequest(say)?.kind, "show", say);
+  }
+  for (const say of ["My certificate number is Q four W seven E two R T.", "my certificate number is q4w7 e2rt", "My certificate number is q-4-w-7-e-2-r-t.", "Mi certificado es Q cuatro W siete E dos R T",
+    "Namba ya cheti changu ni Q nne W saba E mbili R T", "Certificate number: Q4W7E2RT.", "My certificate number is q 4 w 7 e 2 r t oh and thanks"]) {
+    assert.deepEqual(study.recordRequest(say), { kind: "link", number: "q4w7e2rt" }, say);
+  }
+  for (const say of ["I want to coach learners", "teach me to coach learning teams", "Find me a course on coaching", "What courses does Koach Learn have?", "Is Koach Learn free?"]) {
+    assert.equal(study.recordRequest(say), null, say);
+  }
+});
+
 // ---- through the planner ----
 function setup({ configured = true, reachable = true } = {}) {
   const CERTS = [{ number: "q4w7e2rt", studentId: 42, courseId: 23, courseName: "Workforce Readiness", completedAt: "2026-01-27T10:00:00.000Z" },
@@ -173,14 +187,14 @@ test("through the planner: asked first for a certificate number, linked by it, t
 
   const linked = await ask("My certificate number is Q 4 W 7 E 2 R T");
   assert.equal(linked.knowledge, "koachlearn-record:shown");
-  assert.equal(linked.response, "Linked. Your Koach Learn record is now with Kyro. On Koach Learn you have finished 1 course: 1. Workforce Readiness (2026-01-27). Say \"find me a course on\" and a topic to choose your next course.");
+  assert.equal(linked.response, "Linked. Your Koach Learn record is now with Kyro. On Koach Learn you have finished 1 course: Workforce Readiness (2026-01-27). Say \"find me a course on\" and a topic to choose your next course.");
   assert.deepEqual(saved.at(-1).data.studentId, 42, "only Koach Learn's student id is kept");
   assert.deepEqual(Object.keys(saved.at(-1).data).sort(), ["linkedAt", "studentId"]);
   assert.equal(saved.at(-1).workspace_id, "koachlearn-link:u1");
 
   const later = await ask("Show my Koach Learn certificates");
-  assert.match(later.response, /^On Koach Learn you have finished 1 course: 1\. Workforce Readiness \(2026-01-27\)\. Say/);
-  assert.doesNotMatch(later.response, /\n|•/, "one paragraph, drawn as text like the course list");
+  assert.match(later.response, /^On Koach Learn you have finished 1 course: Workforce Readiness \(2026-01-27\)\. Say/);
+  assert.doesNotMatch(later.response, /\n|•/, "one or two courses: one paragraph, drawn as text");
 
   // another person on Kyro sees nothing of it
   const other = await ask("What have I finished on Koach Learn?", { user: "u2" });
@@ -199,7 +213,7 @@ test("through the planner: asked first for a certificate number, linked by it, t
 test("in the learner's language; and when Kyro is not connected to Koach Learn, or Koach Learn cannot be reached", async () => {
   const { ask } = setup();
   const ha = await ask("Lambar takardar shaida ta q4w7e2rt", { locale: "ha" });
-  assert.match(ha.response, /^An haɗa\. Bayananka na Koach Learn yanzu suna tare da Kyro\. A Koach Learn ka gama kwas 1: 1\. Workforce Readiness/);
+  assert.match(ha.response, /^An haɗa\. Bayananka na Koach Learn yanzu suna tare da Kyro\. A Koach Learn ka gama kwas 1: Workforce Readiness/);
   const off = await setup({ configured: false }).ask("My certificate number is q4w7e2rt");
   assert.equal(off.response, "Kyro is not connected to Koach Learn yet.");
   const down = await setup({ reachable: false }).ask("My certificate number is q4w7e2rt");
@@ -229,4 +243,37 @@ test("a certificate number that was published in the repository is never taken t
   assert.ok(sync.TEXT.ha.published && sync.TEXT.am.published);
   const planner = read("nexus/brain/planner.js");
   assert.ok(planner.includes('if (found.published) return this.studyPlan(command, say("published"), { knowledge: "koachlearn-record:published" });'));
+});
+
+// (live voice run of 27 Nov 2026: the first answer was drawn as a list headed "Linked." with "you have finished 4 courses:" under it, and the next version cut numbered courses at
+//  each "1.". Every answer is now drawn by the real screen model here: three or more courses a list under its "you have finished" heading, one or two in the text.)
+test("every record answer is drawn by the screen in reading order, in all 10 languages", async () => {
+  const R = require("../../public/kyro-result-screen.js");
+  const names = ["Workforce Readiness", "Become Athlete", "Senior integration with technology", "Online Education for Underserved Communities"];
+  const certs = [1, 2, 4].flatMap(n => names.slice(0, n).map((name, i) => ({ number: `q4w7e${n}r${i}`, studentId: 100 + n, courseId: 500 + i, courseName: name, completedAt: `2026-01-2${i}T10:00:00.000Z` })));
+  const draw = (plan, lang) => R.buildModel({ ok: true, status: "completed", response: plan.response }, { command: "x", lang });
+  for (const lang of Object.keys(sync.TEXT)) {
+    for (const n of [1, 2, 4]) {
+      const saved = [];
+      const records = { list: async q => saved.filter(r => r.owner === q.ownerId && r.ws === q.workspaceId).slice(-1), upsertSingleton: async r => { saved.push({ owner: r.ownerId, ws: r.workspaceId, data: r.data }); return r; } };
+      const koachLearnSync = { configured: true, certificates: async () => certs, byNumber: async x => certs.find(c => c.number === x) || null, forStudent: async id => certs.filter(c => c.studentId === id) };
+      const planner = new OpenEndedPlanner({ model: { plan: async () => { throw new Error("no model"); }, respond: async () => "x" }, tools: { list: async () => [] }, applications: { list: () => [] },
+        memory: Object.assign(fakeMemory(), { search: async () => [] }), koachLearnSync, automationRecords: records, tutorSessions: require("../../nexus/tutor/tutor.js").createTutorSessions() });
+      const plan = await planner.plan({ command: { text: `My certificate number is q4w7e${n}r0`, tenantId: "t", actorId: "u", locale: lang }, context: { timeZone: "UTC" } });
+      assert.equal(plan.knowledge, "koachlearn-record:shown", `${lang} ${n}`);
+      assert.doesNotMatch(plan.response, /\{\w+\}/, `${lang} ${n}: every blank filled`);
+      const m = draw(plan, lang);
+      const order = [m.title, m.headline, ...(m.items || []).map(i => i.name), ...(m.notes || [])].filter(Boolean).join(" | ");
+      const heading = sync.recordText(lang, "done", { count: sync.countText(lang, n) });
+      if (n >= 3) {
+        assert.equal(m.kind, "list", `${lang} ${n}`);
+        assert.equal(m.title, heading, `${lang} ${n}: the heading is "you have finished"`);
+        assert.deepEqual(m.items.map(i => i.name), names.slice(0, n).map((name, i) => `${name} (2026-01-2${i})`), `${lang} ${n}: the courses, in order`);
+      } else {
+        assert.equal(m.kind, "text", `${lang} ${n}`);
+        assert.ok(order.indexOf(names[0]) > order.indexOf(sync.recordText(lang, "linked").slice(0, 6)), `${lang} ${n}: linked, then the courses`);
+        if (n === 2) assert.ok(order.indexOf(names[1]) > order.indexOf(names[0]), `${lang} ${n}: in order`);
+      }
+    }
+  }
 });

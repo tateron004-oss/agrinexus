@@ -210,15 +210,19 @@ class OpenEndedPlanner {
     const progress = await koachLearnStudy.readProgress(this.automationRecords, scope);
     const current = progress?.current && progress.courses?.[progress.current];
     const kyroLine = current ? say(current.done ? "kyroDone" : "kyro", { course: current.name, lesson: (Number(current.lesson) || 0) + 1, total: current.total }) : "";
-    if (!link) return this.studyPlan(command, [say("ask"), kyroLine].filter(Boolean).join("\n\n"), { knowledge: "koachlearn-record:ask" });
+    if (!link) return this.studyPlan(command, [say("ask"), kyroLine].filter(Boolean).join(" "), { knowledge: "koachlearn-record:ask" });
     const finished = await sync.forStudent(link.studentId);
-    if (!finished) return this.studyPlan(command, [...lines, say("unavailable")].join("\n\n"), { knowledge: "koachlearn-record:unavailable" });
-    // (one paragraph with numbered courses, as the course list is written: bullet lines were drawn as a list with the opening sentence under it, found by the live voice run of 27 Nov 2026)
-    if (finished.length) lines.push([say("done", { count: koachLearnRecord.countText(lang, finished.length) }), ...finished.map((row, index) => `${index + 1}. ${row.courseName}${row.completedAt ? ` (${row.completedAt.slice(0, 10)})` : ""}.`)].join(" "));
-    else lines.push(say("none"));
-    if (kyroLine) lines.push(kyroLine);
-    lines.push(say("next"));
-    return this.studyPlan(command, lines.join(" "), { knowledge: "koachlearn-record:shown" });
+    if (!finished) return this.studyPlan(command, [...lines, say("unavailable")].join(" "), { knowledge: "koachlearn-record:unavailable" });
+    const after = [...lines, kyroLine, say("next")].filter(Boolean);
+    const named = row => `${row.courseName}${row.completedAt ? ` (${row.completedAt.slice(0, 10)})` : ""}`;
+    const heading = finished.length ? say("done", { count: koachLearnRecord.countText(lang, finished.length) }) : "";
+    // How the screen draws it (public/kyro-result-screen.js): three or more courses are a list, the "you have finished" sentence its heading and the other sentences under it;
+    // one or two are one sentence in the text. (The first version put "Linked." as the list's heading and "you have finished 4 courses:" under the list, and numbered
+    // courses were cut at each "1." -- found by the live voice run of 27 Nov 2026.)
+    if (finished.length >= 3) return this.studyPlan(command, [heading, ...finished.map(row => `• ${named(row)}`), ...after].join("\n"), { knowledge: "koachlearn-record:shown" });
+    // (each course its own sentence: "a; b" was taken by the screen as a list with the rest of the answer inside its last item)
+    const middle = finished.length ? `${heading} ${finished.map(row => `${named(row)}.`).join(" ")}` : say("none");
+    return this.studyPlan(command, [...lines, middle, kyroLine, say("next")].filter(Boolean).join(" "), { knowledge: "koachlearn-record:shown" });
   }
   // The Koach Learn course ids this person has a certificate for (an empty set when their record is not linked, or Koach Learn cannot be read).
   async koachLearnFinishedIds(command) {
