@@ -62,10 +62,29 @@
   // (the asking words of Amharic and Arabic carry prefixes and endings, so they are matched inside a word)
   const OWN_INSIDE = /^(?:ኮርስ|ትምህርት|ስለ|በ|አስተምረኝ|እንዳጠና|ማጥናት|እፈልጋለሁ|እንማር|ላጥና|አብረን)|^(?:و|ب|ل|ف)?(?:ال)?(?:دوره|دورات|درس|كورس)$|^(?:علمني|ساعدني|ادرس|اتعلم|تعلم|دراسه|اريد|ان|لندرس|درسني|اشرح|لي|في|على|عن)$/;
 
+  // Speech-to-text writes a spoken number as a word ("help me study number one", "lesson two"), so a number word right after "number" or "lesson" becomes its digit (folded words, 1-10).
+  const NUMBER_WORDS = {
+    one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+    uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10,
+    un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, sept: 7, huit: 8, neuf: 9, dix: 10,
+    um: 1, dois: 2, duas: 2, sete: 7, oito: 8, nove: 9, dez: 10,
+    moja: 1, mbili: 2, tatu: 3, nne: 4, tano: 5, sita: 6, saba: 7, nane: 8, tisa: 9, kumi: 10,
+    daya: 1, biyu: 2, uku: 3, hudu: 4, biyar: 5, shida: 6, bakwai: 7, takwas: 8, tara: 9, goma: 10,
+    okan: 1, eji: 2, meji: 2, eta: 3, meta: 3, erin: 4, merin: 4, arun: 5, marun: 5,
+    otu: 1, abuo: 2, ato: 3, ano: 4, ise: 5, isii: 6, asaa: 7, asato: 8, itoolu: 9, iri: 10,
+    "واحد": 1, "اثنين": 2, "اثنان": 2, "ثلاثه": 3, "اربعه": 4, "خمسه": 5,
+    "አንድ": 1, "ሁለት": 2, "ሶስት": 3, "ሦስት": 3, "አራት": 4, "አምስት": 5
+  };
+  const NUMBER_KEY = "(?:number|numero|namba|lamba|nomba|course|lesson|leccion|lecon|licao|aula|somo|darasi|ihe omumu)";
+  const NUMBER_WORD = new RegExp(`((?<![\\p{L}\\p{M}])${NUMBER_KEY}\\s+|(?:ቁጥር|ትምህርት|رقم|الدرس|درس)\\s*)(${Object.keys(NUMBER_WORDS).join("|")})(?=ን?(?![\\p{L}\\p{M}]))`, "gu");
+  function numbersAsDigits(folded) {
+    return folded.replace(NUMBER_WORD, (whole, key, word) => `${key}${NUMBER_WORDS[word]}`);
+  }
+
   function studyRequest(text) {
     const said = String(text || "").trim();
     if (!said || said.length > 240) return null;
-    const folded = fold(said).replace(/\bcoach ?learn\b/g, "koach learn");
+    const folded = numbersAsDigits(fold(said).replace(/\bcoach ?learn\b/g, "koach learn"));
     const wordsLang = courses && courses.wordsLanguage ? courses.wordsLanguage(said) : null;
     const lessonHit = LESSON_NO.exec(folded);
     const lesson = lessonHit ? Number(lessonHit[1]) : null;
