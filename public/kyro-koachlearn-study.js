@@ -116,7 +116,8 @@
   function recordRequest(text) {
     const said = String(text || "").trim();
     if (!said || said.length > 240) return null;
-    const folded = fold(said);
+    // (speech-to-text writes "Coach Learn" and "CoachLearn": live voice run, 27 Nov 2026)
+    const folded = fold(said).replace(/\bcoach ?learn\b/g, "koach learn");
     const cert = CERT_WORD.exec(folded);
     if (cert) {
       const NUMBER = /^(?=[a-z0-9]*\d)(?=[a-z0-9]*[a-z])[a-z0-9]{5,16}$/;
