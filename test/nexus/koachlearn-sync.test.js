@@ -168,13 +168,14 @@ test("through the planner: asked first for a certificate number, linked by it, t
 
   const linked = await ask("My certificate number is M 6 2 B T 9 U Q");
   assert.equal(linked.knowledge, "koachlearn-record:shown");
-  assert.equal(linked.response, "Linked. Your Koach Learn record is now with Kyro.\n\nOn Koach Learn you have finished 1 course:\n• Workforce Readiness (2025-01-18)\n\nSay \"find me a course on\" and a topic to choose your next course.");
+  assert.equal(linked.response, "Linked. Your Koach Learn record is now with Kyro. On Koach Learn you have finished 1 course: 1. Workforce Readiness (2025-01-18). Say \"find me a course on\" and a topic to choose your next course.");
   assert.deepEqual(saved.at(-1).data.studentId, 9, "only Koach Learn's student id is kept");
   assert.deepEqual(Object.keys(saved.at(-1).data).sort(), ["linkedAt", "studentId"]);
   assert.equal(saved.at(-1).workspace_id, "koachlearn-link:u1");
 
   const later = await ask("Show my Koach Learn certificates");
-  assert.match(later.response, /^On Koach Learn you have finished 1 course:\n• Workforce Readiness/);
+  assert.match(later.response, /^On Koach Learn you have finished 1 course: 1\. Workforce Readiness \(2025-01-18\)\. Say/);
+  assert.doesNotMatch(later.response, /\n|•/, "one paragraph, drawn as text like the course list");
 
   // another person on Kyro sees nothing of it
   const other = await ask("What have I finished on Koach Learn?", { user: "u2" });
@@ -193,7 +194,7 @@ test("through the planner: asked first for a certificate number, linked by it, t
 test("in the learner's language; and when Kyro is not connected to Koach Learn, or Koach Learn cannot be reached", async () => {
   const { ask } = setup();
   const ha = await ask("Lambar takardar shaida ta m62bt9uq", { locale: "ha" });
-  assert.match(ha.response, /^An haɗa\. Bayananka na Koach Learn yanzu suna tare da Kyro\.\n\nA Koach Learn ka gama kwas 1:\n• Workforce Readiness/);
+  assert.match(ha.response, /^An haɗa\. Bayananka na Koach Learn yanzu suna tare da Kyro\. A Koach Learn ka gama kwas 1: 1\. Workforce Readiness/);
   const off = await setup({ configured: false }).ask("My certificate number is m62bt9uq");
   assert.equal(off.response, "Kyro is not connected to Koach Learn yet.");
   const down = await setup({ reachable: false }).ask("My certificate number is m62bt9uq");
