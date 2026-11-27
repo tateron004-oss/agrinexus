@@ -222,8 +222,8 @@ test("the spoken-only caller leaves it alone, and the general tutor and the cour
 test("the page takes a spoken study request itself, before the course finder, and the catalogue's 'Study with Kyro' link opens the course after sign-in", () => {
   const app = read("public/app.js");
   const html = read("public/index.html");
-  assert.ok(html.indexOf("/kyro-koachlearn-study.js?v=kyro-koachlearn-study-1") > html.indexOf("/kyro-koachlearn-courses.js"), "loaded after the course matcher it uses");
-  assert.ok(read("public/sw.js").includes("`/kyro-koachlearn-study.js?v=kyro-koachlearn-study-1`"));
+  assert.ok(html.indexOf("/kyro-koachlearn-study.js?v=kyro-koachlearn-study-2") > html.indexOf("/kyro-koachlearn-courses.js"), "loaded after the course matcher it uses");
+  assert.ok(read("public/sw.js").includes("`/kyro-koachlearn-study.js?v=kyro-koachlearn-study-2`"));
   assert.ok(app.includes('if (trimmed && ((typeof kyroKoachLearnStudyQuestion === "function" && kyroKoachLearnStudyQuestion(trimmed)) || (typeof kyroKoachLearnQuestion === "function" && kyroKoachLearnQuestion(trimmed)) ||'));
   // "continue my course" with nothing named: only once this person studied a Koach Learn course with Kyro on this device, or while a course lesson is open
   assert.ok(app.includes("return studied || (typeof kyroTutorOpen === \"function\" && kyroTutorOpen() && kyroTutorCourse === true);"));
@@ -268,4 +268,16 @@ test("the tutor teaches the whole lesson before the quiz, judges only a real ans
   assert.match(asked.at(-1).goal, /Do not introduce yourself again/, "a new lesson in the same session: no second introduction");
   const stopped = await ask("Tsaya", { locale: "ha", user: "h1" });
   assert.equal(stopped.response, 'To, mu tsaya nan. Faɗi "ci gaba da kwas" a kowane lokaci don mu ci gaba daga darasi na 2.');
+});
+
+// (27 Nov 2026, the live voice run: speech-to-text wrote "Help me study number one." and the general tutor took it, teaching a subject called "number one")
+test("a spoken number word picks the course or the lesson, the same as its digit, in every language", () => {
+  const picks = [
+    ["Help me study number one.", 1], ["help me study number three", 3], ["Teach me course two", 2], ["Ayúdame a estudiar el número uno", 1], ["Aide-moi à étudier le numéro deux", 2],
+    ["Me ajude a estudar o número um", 1], ["Nifundishe namba moja", 1], ["Taimaka min in karanta lamba biyu", 2], ["Ràn mí lọ́wọ́ láti kọ́ nọ́mbà ọ̀kan", 1], ["Nyere m aka ịmụ nọmba otu", 1],
+    ["ساعدني في دراسة رقم واحد", 1], ["ቁጥር አንድን እንዳጠና እርዳኝ", 1]
+  ];
+  for (const [say, ordinal] of picks) assert.equal(study.studyRequest(say)?.ordinal, ordinal, say);
+  for (const [say, lesson] of [["Lesson three.", 3], ["Go to lesson four", 4], ["teach me lesson two", 2]]) assert.equal(study.studyRequest(say)?.lesson, lesson, say);
+  for (const say of ["no one taught me this", "teach me fractions", "Find me a course on farming.", "one of the courses"]) assert.equal(study.studyRequest(say), null, say);
 });
