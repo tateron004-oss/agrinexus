@@ -181,13 +181,13 @@ class OpenEndedPlanner {
       tutor: Object.freeze({ active: true, subject: now.name, kind: "course", turn: session.count, step: session.count, course: Object.freeze({ name: now.name, lesson: now.lesson + 1, total: now.total }) }) });
   }
   // Starting (or coming back to) a course: which course, which lesson, the pack in the learner's language; then the first step.
-  // The learner's Koach Learn record (knowledge/koachlearn-sync.js): "my certificate number is m62bt9uq" links it (only Koach Learn's student id is kept), and "what have I finished on
+  // The learner's Koach Learn record (knowledge/koachlearn-sync.js): "my certificate number is q4w7e2rt" links it (only Koach Learn's student id is kept), and "what have I finished on
   // Koach Learn?" lists the courses they have a certificate for, with where they are in the course they study with Kyro.
   async koachLearnRecordTurn({ command, context, request, askText }) {
     if (context?.deterministicOnly === true) return null;
     const tenantId = command?.tenantId; const userId = command?.actorId;
     if (!tenantId || !userId) return null;
-    // (the language of the words, without the certificate number: "M 6 2 B T 9 U Q" spelled out is not a language)
+    // (the language of the words, without the certificate number: "Q 4 W 7 E 2 R T" spelled out is not a language)
     const words = String(askText || "").split(/\s+/).filter(word => !/^[A-Za-z0-9]{1,2}[.,!?]?$/.test(word) && !/\d/.test(word)).join(" ");
     const lang = this.studyLanguage(command, { wordsLang: koachLearnWordsLanguage(words) });
     const say = (key, values) => koachLearnRecord.recordText(lang, key, values);
@@ -201,6 +201,8 @@ class OpenEndedPlanner {
       if (!all) return this.studyPlan(command, say("unavailable"), { knowledge: "koachlearn-record:unavailable" });
       const found = await sync.byNumber(request.number);
       if (!found) return this.studyPlan(command, say("notFound", { number: request.number }), { knowledge: "koachlearn-record:not-found" });
+      // (a number once published in the public repository proves nothing: another of the learner's certificates is asked for)
+      if (found.published) return this.studyPlan(command, say("published"), { knowledge: "koachlearn-record:published" });
       await koachLearnRecord.saveLink(this.automationRecords, scope, found.studentId);
       link = { studentId: found.studentId };
       lines.push(say("linked"));
@@ -208,15 +210,19 @@ class OpenEndedPlanner {
     const progress = await koachLearnStudy.readProgress(this.automationRecords, scope);
     const current = progress?.current && progress.courses?.[progress.current];
     const kyroLine = current ? say(current.done ? "kyroDone" : "kyro", { course: current.name, lesson: (Number(current.lesson) || 0) + 1, total: current.total }) : "";
-    if (!link) return this.studyPlan(command, [say("ask"), kyroLine].filter(Boolean).join("\n\n"), { knowledge: "koachlearn-record:ask" });
+    if (!link) return this.studyPlan(command, [say("ask"), kyroLine].filter(Boolean).join(" "), { knowledge: "koachlearn-record:ask" });
     const finished = await sync.forStudent(link.studentId);
-    if (!finished) return this.studyPlan(command, [...lines, say("unavailable")].join("\n\n"), { knowledge: "koachlearn-record:unavailable" });
-    // (one paragraph with numbered courses, as the course list is written: bullet lines were drawn as a list with the opening sentence under it, found by the live voice run of 27 Nov 2026)
-    if (finished.length) lines.push([say("done", { count: koachLearnRecord.countText(lang, finished.length) }), ...finished.map((row, index) => `${index + 1}. ${row.courseName}${row.completedAt ? ` (${row.completedAt.slice(0, 10)})` : ""}.`)].join(" "));
-    else lines.push(say("none"));
-    if (kyroLine) lines.push(kyroLine);
-    lines.push(say("next"));
-    return this.studyPlan(command, lines.join(" "), { knowledge: "koachlearn-record:shown" });
+    if (!finished) return this.studyPlan(command, [...lines, say("unavailable")].join(" "), { knowledge: "koachlearn-record:unavailable" });
+    const after = [...lines, kyroLine, say("next")].filter(Boolean);
+    const named = row => `${row.courseName}${row.completedAt ? ` (${row.completedAt.slice(0, 10)})` : ""}`;
+    const heading = finished.length ? say("done", { count: koachLearnRecord.countText(lang, finished.length) }) : "";
+    // How the screen draws it (public/kyro-result-screen.js): three or more courses are a list, the "you have finished" sentence its heading and the other sentences under it;
+    // one or two are one sentence in the text. (The first version put "Linked." as the list's heading and "you have finished 4 courses:" under the list, and numbered
+    // courses were cut at each "1." -- found by the live voice run of 27 Nov 2026.)
+    if (finished.length >= 3) return this.studyPlan(command, [heading, ...finished.map(row => `• ${named(row)}`), ...after].join("\n"), { knowledge: "koachlearn-record:shown" });
+    // (each course its own sentence: "a; b" was taken by the screen as a list with the rest of the answer inside its last item)
+    const middle = finished.length ? `${heading} ${finished.map(row => `${named(row)}.`).join(" ")}` : say("none");
+    return this.studyPlan(command, [...lines, middle, kyroLine, say("next")].filter(Boolean).join(" "), { knowledge: "koachlearn-record:shown" });
   }
   // The Koach Learn course ids this person has a certificate for (an empty set when their record is not linked, or Koach Learn cannot be read).
   async koachLearnFinishedIds(command) {
@@ -835,7 +841,7 @@ class OpenEndedPlanner {
     // catalogue learners browse (see knowledge/koachlearn-courses.js; the matcher, public/kyro-koachlearn-courses.js, is shared with the page, which takes such a spoken turn itself). Each course shown is a real course with its
     // own page and its translations. The person's own learning ("continue my course", "my progress", a quiz, a certificate) is never taken. Asked before the guides, so "courses about starting a business" lists courses
     // instead of answering how to start one. Not for the spoken-only caller, which leaves live lookups to its own route.
-    // "My certificate number is m62bt9uq", "what have I finished on Koach Learn?": the learner's own Koach Learn record (see koachLearnRecordTurn).
+    // "My certificate number is q4w7e2rt", "what have I finished on Koach Learn?": the learner's own Koach Learn record (see koachLearnRecordTurn).
     const recordAsk = this.koachLearnSync && context?.deterministicOnly !== true && !ownWorkspace ? recordRequest(askText) : null;
     if (recordAsk) {
       const record = await this.koachLearnRecordTurn({ command, context, request: recordAsk, askText });

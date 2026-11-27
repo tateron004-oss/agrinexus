@@ -106,30 +106,41 @@
     return Object.freeze({ kind: lesson ? "lesson" : "start", ordinal, lesson, terms: Object.freeze(terms), slug: slugHit ? slugHit[1] : null, slugLang: slugHit && slugHit[2] ? slugHit[2] : null, wordsLang });
   }
 
-  // The learner's Koach Learn record (nexus/knowledge/koachlearn-sync.js): "link my Koach Learn", "my certificate number is m62bt9uq", "what have I finished on Koach Learn?",
+  // The learner's Koach Learn record (nexus/knowledge/koachlearn-sync.js): "link my Koach Learn", "my certificate number is q4w7e2rt", "what have I finished on Koach Learn?",
   // "show my Koach Learn certificates". -> null | { kind: "link", number } | { kind: "show" }
   // A certificate number is 5-16 letters and digits with at least one digit and one letter; said aloud it comes back spelled out ("m 6 2 b t 9 u q"), so single letters
   // and digits after the certificate word are joined.
   const CERT_WORD = /\b(?:certificates?|cert|certificados?|certificats?|vyeti|cheti|takardar shaida\w*|takardun shaida\w*|iwe eri|asambodo)\b|شهاد\S*|ሰርተፊኬት\S*/;
   const KOACH = /\bkoach ?learn\b|\bkoachlearn\b/;
-  const RECORD_WORD = /\b(?:link|connect|sync|finished|completed|done|progress|record|records|vincula\w*|conecta\w*|terminado|terminados|termine|completado|progreso|registro|lie[rz]?|connecte[rz]?|termines?|progres|dossier|liga[rr]?|concluido|conclui|progresso|registo|unganisha|nimemaliza|nimemaliza nini|maendeleo|rekodi|hada|haɗa|gama|na gama|ci gaba|bayanai|so po|pari|ti pari|ilosiwaju|akosile|jikota|mechara|mụchaala|muchaala|ndeko)\b|ربط|انهيت|أنهيت|اكملت|أكملت|تقدم|سجل|አገናኝ|ጨረስኩ|ጨርሻለሁ|እድገት|መዝገብ/;
+  // a digit said as a word inside a spelled-out number (0-9; folded)
+  const SPOKEN_DIGITS = Object.freeze({ zero: "0", one: "1", two: "2", three: "3", four: "4", five: "5", six: "6", seven: "7", eight: "8", nine: "9",
+    cero: "0", uno: "1", dos: "2", tres: "3", cuatro: "4", cinco: "5", seis: "6", siete: "7", ocho: "8", nueve: "9",
+    deux: "2", trois: "3", quatre: "4", cinq: "5", sept: "7", huit: "8", neuf: "9", dois: "2", quatro: "4", sete: "7", oito: "8", nove: "9",
+    sifuri: "0", moja: "1", mbili: "2", tatu: "3", nne: "4", tano: "5", sita: "6", saba: "7", nane: "8", tisa: "9" });
+  const RECORD_WORD = /\b(?:link|connect|sync|finish|finished|complete|completed|done|passed|earned|progress|record|records|vincula\w*|conecta\w*|terminado|terminados|termine|completado|progreso|registro|lie[rz]?|connecte[rz]?|termines?|progres|dossier|liga[rr]?|concluido|conclui|progresso|registo|unganisha|nimemaliza|nimemaliza nini|maendeleo|rekodi|hada|haɗa|gama|na gama|ci gaba|bayanai|so po|pari|ti pari|ilosiwaju|akosile|jikota|mechara|mụchaala|muchaala|ndeko)\b|ربط|انهيت|أنهيت|اكملت|أكملت|تقدم|سجل|አገናኝ|ጨረስኩ|ጨርሻለሁ|እድገት|መዝገብ/;
   function recordRequest(text) {
     const said = String(text || "").trim();
     if (!said || said.length > 240) return null;
-    // (speech-to-text writes "Coach Learn" and "CoachLearn": live voice run, 27 Nov 2026)
-    const folded = fold(said).replace(/\bcoach ?learn\b/g, "koach learn");
+    // (speech-to-text writes "Coach Learn", "CoachLearn" (live voice run, 27 Nov 2026), and may write "Koch Learn", "Kotch Learn", "coach learning")
+    const folded = fold(said).replace(/\b[kc]oa?t?ch[ -]?learn(?:ing)?\b/g, "koach learn");
     const cert = CERT_WORD.exec(folded);
     if (cert) {
       const NUMBER = /^(?=[a-z0-9]*\d)(?=[a-z0-9]*[a-z])[a-z0-9]{5,16}$/;
       const pieces = folded.split(/[\s,.;:!?#"'()-]+/).filter(Boolean);
       let candidate = pieces.find(piece => NUMBER.test(piece)) || "";
       if (!candidate) {
-        // spelled out: the longest run of single letters and digits ("m 6 2 b t 9 u q")
+        // spelled out: the longest run of single letters and digits ("m 6 2 b t 9 u q"), a digit said as a word ("q four w seven", "q cuatro w siete"), and a number
+        // written in pieces ("q4w7 e2rt")
+        const digitWord = piece => (piece in SPOKEN_DIGITS ? SPOKEN_DIGITS[piece] : null);
         let run = []; let best = "";
+        const close = () => { const joined = run.join(""); if (NUMBER.test(joined) && joined.length > best.length) best = joined; run = []; };
         for (const piece of folded.slice(cert.index + cert[0].length).split(/[\s,.;:!?#-]+/).filter(Boolean)) {
-          if (/^[a-z0-9]$/.test(piece) || /^\d{2,}$/.test(piece)) run.push(piece); else { if (run.join("").length > best.length) best = run.join(""); run = []; }
+          const digit = digitWord(piece);
+          if (digit !== null && run.length) run.push(digit);
+          else if (/^[a-z0-9]$/.test(piece) || (/\d/.test(piece) && /^[a-z0-9]{2,8}$/.test(piece))) run.push(piece);
+          else close();
         }
-        if (run.join("").length > best.length) best = run.join("");
+        close();
         candidate = best;
       }
       if (NUMBER.test(candidate)) return Object.freeze({ kind: "link", number: candidate });
