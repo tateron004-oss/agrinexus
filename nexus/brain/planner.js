@@ -219,7 +219,9 @@ class OpenEndedPlanner {
     // How the screen draws it (public/kyro-result-screen.js): three or more courses are a list, the "you have finished" sentence its heading and the other sentences under it;
     // one or two are one sentence in the text. (The first version put "Linked." as the list's heading and "you have finished 4 courses:" under the list, and numbered
     // courses were cut at each "1." -- found by the live voice run of 27 Nov 2026.)
-    if (finished.length >= 3) return this.studyPlan(command, [heading, ...finished.map(row => `• ${named(row)}`), ...after].join("\n"), { knowledge: "koachlearn-record:shown" });
+    // (the sentences after the list are ONE line: the screen draws a list only when at most three lines are not items, and "Linked", the Kyro course line and "say find me a
+    //  course" as three lines made the linking answer one block with "•" in it -- found by the complete live voice run of 27 Nov 2026)
+    if (finished.length >= 3) return this.studyPlan(command, [heading, ...finished.map(row => `• ${named(row)}`), after.join(" ")].join("\n"), { knowledge: "koachlearn-record:shown" });
     // (each course its own sentence: "a; b" was taken by the screen as a list with the rest of the answer inside its last item)
     const middle = finished.length ? `${heading} ${finished.map(row => `${named(row)}.`).join(" ")}` : say("none");
     return this.studyPlan(command, [...lines, middle, kyroLine, say("next")].filter(Boolean).join(" "), { knowledge: "koachlearn-record:shown" });
