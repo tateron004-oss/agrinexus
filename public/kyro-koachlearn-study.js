@@ -108,7 +108,7 @@
 
   // The learner's Koach Learn record (nexus/knowledge/koachlearn-sync.js): "link my Koach Learn", "my certificate number is q4w7e2rt", "what have I finished on Koach Learn?",
   // "show my Koach Learn certificates". -> null | { kind: "link", number } | { kind: "show" }
-  // A certificate number is 5-16 letters and digits with at least one digit and one letter; said aloud it comes back spelled out ("m 6 2 b t 9 u q"), so single letters
+  // A certificate number is 5-16 letters and digits with at least one digit and one letter; said aloud it comes back spelled out ("q 4 w 7 e 2 r t"), so single letters
   // and digits after the certificate word are joined.
   const CERT_WORD = /\b(?:certificates?|cert|certificados?|certificats?|vyeti|cheti|takardar shaida\w*|takardun shaida\w*|iwe eri|asambodo)\b|شهاد\S*|ሰርተፊኬት\S*/;
   const KOACH = /\bkoach ?learn\b|\bkoachlearn\b/;
@@ -129,7 +129,7 @@
       const pieces = folded.split(/[\s,.;:!?#"'()-]+/).filter(Boolean);
       let candidate = pieces.find(piece => NUMBER.test(piece)) || "";
       if (!candidate) {
-        // spelled out: the longest run of single letters and digits ("m 6 2 b t 9 u q"), a digit said as a word ("q four w seven", "q cuatro w siete"), and a number
+        // spelled out: the longest run of single letters and digits ("q 4 w 7 e 2 r t"), a digit said as a word ("q four w seven", "q cuatro w siete"), and a number
         // written in pieces ("q4w7 e2rt")
         const digitWord = piece => (piece in SPOKEN_DIGITS ? SPOKEN_DIGITS[piece] : null);
         let run = []; let best = "";
