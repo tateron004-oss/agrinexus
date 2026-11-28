@@ -150,5 +150,37 @@
     return null;
   }
 
-  return Object.freeze({ studyRequest, recordRequest });
+  // Paying for courses (nexus/billing): "how much are the courses?", "buy one course", "buy 10 courses", "buy every course for a year", "buy more voice minutes",
+  // "how many courses do I have left?", "I paid" / "check my payment". -> null | { kind: "prices" | "buy" | "balance" | "check", plan }
+  const BUY = /\b(?:buy|purchase|pay for|comprar|compra|compre|acheter|achete|achat|nunua|kununua|ninunue|saya|sayi|biya|ra|zuta|izuta|zụta)\b|اشتري|اشتر|شراء|ግዛ|መግዛት|ልግዛ|እገዛ/;
+  const PRICE = /\b(?:how much|price|prices|cost|costs|cuanto|cuesta|precio|precios|combien|prix|tarif|quanto|preco|precos|bei gani|bei|nawa|kudin|farashi|elo ni|owo|ego ole|ego)\b|كم|سعر|اسعار|ዋጋ|ስንት/;
+  const PLAN_COURSE = /\b(?:courses?|curso|cursos|cours|kozi|kwas|kwasa\w*|eko|nkuzi|omumu ihe|ihe omumu|lessons?|classes?|koach ?learn)\b|ኮርስ|دورة|دورات|كورس/;
+  const VOICE_MIN = /\b(?:voice minutes?|more minutes|minutes? of voice|minutos de voz|minutes de voix|minutos de voz|dakika za sauti|mintunan murya|iseju ohun|nkeji olu)\b|دقائق صوت|የድምፅ ደቂቃ/;
+  const YEAR = /\b(?:every course|all (?:the )?courses|all courses|a year|for a year|todos los cursos|tous les cours|todos os cursos|kozi zote|duk kwasa|gbogbo eko|ihe omumu niile|ọmụmụ ihe niile)\b|كل الدورات|ሁሉንም ኮርሶች/;
+  const COUNT_WORDS = { one: 1, a: 1, an: 1, uno: 1, un: 1, una: 1, um: 1, uma: 1, moja: 1, daya: 1, okan: 1, otu: 1, three: 3, tres: 3, trois: 3, tatu: 3, uku: 3, meta: 3, ato: 3, ten: 10, diez: 10, dix: 10, dez: 10, kumi: 10, goma: 10, mewa: 10, iri: 10, "واحد": 1, "ثلاث": 3, "ثلاثه": 3, "عشر": 10, "عشره": 10, "አንድ": 1, "ሶስት": 3, "ሦስት": 3, "አስር": 10, "አሥር": 10 };
+  const BALANCE = /\b(?:courses? (?:do i have|have i got|i have) left|how many courses|my course plan|my plan|minutes (?:do i have )?left|my voice minutes|cursos me quedan|cours me reste|cursos me restam|kozi ngapi|zimebaki)\b/;
+  const CHECK = /\b(?:i (?:have )?paid|i just paid|check my payment|did my payment|payment (?:go|went) through|ya pague|j'ai paye|ja paguei|nimelipa|na biya|mo ti san|akwụọla m|akwuola m)\b|دفعت|ከፍያለሁ/;
+  function purchaseRequest(text) {
+    const said = String(text || "").trim();
+    if (!said || said.length > 200) return null;
+    const folded = fold(said).replace(/\b[kc]oa?t?ch[ -]?learn(?:ing)?\b/g, "koach learn");
+    const voice = VOICE_MIN.test(folded);
+    const course = PLAN_COURSE.test(folded);
+    // ("I paid" on its own, or with payment or course words: "I paid the rent" is not about courses)
+    if (CHECK.test(folded) && (course || /\b(?:payment|pago|paiement|pagamento|malipo)\b/.test(folded) || folded.split(/\s+/).filter(Boolean).length <= 3)) return Object.freeze({ kind: "check", plan: null });
+    if (BALANCE.test(folded)) return Object.freeze({ kind: "balance", plan: null });
+    if (!voice && !course) return null;
+    if (BUY.test(folded)) {
+      if (voice) return Object.freeze({ kind: "buy", plan: "voice" });
+      if (YEAR.test(folded)) return Object.freeze({ kind: "buy", plan: "year" });
+      const digit = /\b(10|3|1)\b/.exec(folded);
+      const word = folded.split(/[\s,.!?]+/).find(w => w in COUNT_WORDS);
+      const n = digit ? Number(digit[1]) : word ? COUNT_WORDS[word] : 1;
+      return Object.freeze({ kind: "buy", plan: n >= 10 ? "course10" : n >= 3 ? "course3" : "course1" });
+    }
+    if (PRICE.test(folded)) return Object.freeze({ kind: "prices", plan: null });
+    return null;
+  }
+
+  return Object.freeze({ studyRequest, recordRequest, purchaseRequest });
 });

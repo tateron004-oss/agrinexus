@@ -56074,6 +56074,8 @@ function kyroKoachLearnStudyQuestion(text) {
   try {
     // ("my certificate number is q4w7e2rt", "what have I finished on Koach Learn?": the learner's Koach Learn record, answered the typed way too)
     if (window.KyroKoachLearnStudy && typeof window.KyroKoachLearnStudy.recordRequest === "function" && window.KyroKoachLearnStudy.recordRequest(text)) return true;
+    // ("how much are the courses?", "buy ten courses", "how many courses do I have left?", "I paid": paying for courses)
+    if (window.KyroKoachLearnStudy && typeof window.KyroKoachLearnStudy.purchaseRequest === "function" && window.KyroKoachLearnStudy.purchaseRequest(text)) return true;
     const asked = window.KyroKoachLearnStudy && typeof window.KyroKoachLearnStudy.studyRequest === "function" ? window.KyroKoachLearnStudy.studyRequest(text) : null;
     if (!asked) return false;
     const named = asked.slug || asked.ordinal || (asked.terms && asked.terms.length);
@@ -56094,7 +56096,29 @@ const KYRO_STUDY_LINK_KEY = "kyroStudyLink";
     }
   } catch { /* no link, or no storage: nothing to open */ }
 })();
+// Back from paying for courses: Stripe returns ?koachlearn_paid=stripe&ref=<checkout id>, Paystack ?koachlearn_paid=paystack&reference=<ref>. Kept until the person is signed in;
+// then the server asks the provider whether it is paid (nothing is granted on this page's word), and Kyro says what was bought.
+const KYRO_PAID_KEY = "kyroCoursePaid";
+(function kyroCapturePaidReturn() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const provider = params.get("koachlearn_paid");
+    if (!provider) return;
+    const reference = params.get("ref") || params.get("reference") || params.get("trxref") || "";
+    if ((provider === "stripe" || provider === "paystack") && /^[A-Za-z0-9_]{6,120}$/.test(reference)) sessionStorage.setItem(KYRO_PAID_KEY, JSON.stringify({ provider, reference }));
+    window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+  } catch { /* nothing to confirm */ }
+})();
+async function kyroConfirmPendingPayment() {
+  let pending = null;
+  try { pending = JSON.parse(sessionStorage.getItem(KYRO_PAID_KEY) || "null"); if (pending) sessionStorage.removeItem(KYRO_PAID_KEY); } catch { return false; }
+  if (!pending || !pending.provider || !pending.reference) return false;
+  try { await requestWithTimeout("/api/nexus/runtime/koachlearn/checkout/confirm", { method: "POST", body: { provider: pending.provider, reference: pending.reference } }, 30000); } catch { /* "check my payment" asks again */ }
+  setTimeout(() => { try { void handleNexusUnifiedBrainRuntimeCommand("Check my payment", { source: "typed", kyroDirect: true }); } catch { /* the person can still ask */ } }, 1200);
+  return true;
+}
 function kyroRunPendingStudyLink() {
+  try { if (typeof kyroConfirmPendingPayment === "function" && sessionStorage.getItem(KYRO_PAID_KEY)) { void kyroConfirmPendingPayment(); return true; } } catch { /* carry on */ }
   let asked = "";
   try { asked = sessionStorage.getItem(KYRO_STUDY_LINK_KEY) || ""; if (asked) sessionStorage.removeItem(KYRO_STUDY_LINK_KEY); } catch { return false; }
   const [lang, slug] = asked.split(":");
@@ -56979,6 +57003,8 @@ function kyroShowTypedResult(result, text, message) {
     if (tutor) {
       kyroTutorUntil = tutor.active === true ? Date.now() + 45 * 60 * 1000 : 0;
       kyroTutorSubject = tutor.active === true ? String(tutor.subject || "") : "";
+      // (the learner's voice minutes for courses are used up: the answer says so, and the voice is turned off after it, so the lesson carries on in the typed box)
+      if (tutor.voiceOut === true) { setTimeout(() => { try { if (typeof stopRealtimeVoiceSession === "function") stopRealtimeVoiceSession("Course voice minutes used up."); } catch { /* the lesson still shows */ } }, 9000); }
       // (a Koach Learn course: "continue my course" is this person's from now on, on this device; see kyroKoachLearnStudyQuestion)
       try { kyroTutorCourse = tutor.kind === "course"; if (tutor.kind === "course") localStorage.setItem("kyroKoachLearnStudied", "1"); } catch { /* no storage: only an open lesson counts */ }
       if (tutor.active !== true) kyroTutorLast = null;
@@ -64617,7 +64643,9 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
         // Whether a tutoring lesson is on the screen: a lesson the server holds open that the screen has closed (or never got) is ended there, not taught from (see tutorTurn in nexus/brain/planner.js).
         tutorLessonOpen: kyroTutorOpen(),
         // Where the person is, so times like "7am" mean their own morning.
-        timeZone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; } })()
+        timeZone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; } })(),
+        // Whether the voice is on: a spoken course lesson uses the learner's voice minutes (nexus/billing).
+        voiceOn: (() => { try { return typeof realtimeVoiceActive === "function" && realtimeVoiceActive() === true; } catch { return false; } })()
       }
     }, 90000), () => setVoiceResponse("One moment, Kyro is being updated. I will try again.", true, { allowHandoff: false, command: text, source: "kyro-updating", turnToken: options.turnToken }));
     if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true || result.legacyFallbackUsed !== false) {

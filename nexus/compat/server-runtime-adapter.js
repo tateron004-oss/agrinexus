@@ -557,6 +557,21 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       }
       return true;
     }
+    // Stripe's webhook for Koach Learn course purchases (a backup for a learner who closes the tab before coming back): signed with KOACHLEARN_STRIPE_WEBHOOK_SECRET,
+    // checked in nexus/billing/course-checkout.js, and a paid checkout of the exact price is granted once to the person it was started for.
+    if (url.pathname === "/api/nexus/runtime/koachlearn/webhooks/stripe" && req.method === "POST") {
+      if (!env.KOACHLEARN_STRIPE_WEBHOOK_SECRET) { send(res, 503, { code: "course_webhook_unavailable", error: "The course payment webhook is not set up." }); return true; }
+      try {
+        const chunks = []; let length = 0;
+        for await (const chunk of req) { const bytes = Buffer.from(chunk); length += bytes.length; if (length > 1024 * 1024) { send(res, 413, { code: "course_webhook_too_large", error: "Webhook body exceeds the limit." }); return true; } chunks.push(bytes); }
+        const active = await runtime(); await active.ready;
+        if (!active.courseBilling) { send(res, 503, { code: "course_billing_unavailable", error: "Course payments are unavailable." }); return true; }
+        const purchase = active.courseBilling.stripeWebhook(Buffer.concat(chunks), req.headers["stripe-signature"]);
+        const result = purchase ? await active.courseBilling.grantFromWebhook(purchase) : { granted: false };
+        send(res, 200, { received: true, granted: result.granted === true });
+      } catch (error) { send(res, error.status || 400, { code: error.code || "course_webhook_invalid", error: error.status ? error.message : "Invalid webhook." }); }
+      return true;
+    }
     if (url.pathname === "/api/nexus/runtime/business/webhooks/stripe" && req.method === "POST") {
       if (env.NEXUS_REAL_PROVIDER_EXECUTION_ENABLED !== "true" || env.NEXUS_BUSINESS_BILLING_ENABLED !== "true" || !env.STRIPE_WEBHOOK_SECRET) {
         send(res, 503, { code: "business_provider_unavailable", error: "Business billing webhooks are disabled or unconfigured." }); return true;
@@ -584,17 +599,28 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
           send(res, 403, { error: "This account type cannot start a real payment transaction.", code: "business_checkout_restricted" }); return true;
         }
         result = await createBusinessApi(active, { env }).handle({ method: req.method, pathname: url.pathname, context, body });
+      } else if (url.pathname === "/api/nexus/runtime/koachlearn/checkout/confirm" && req.method === "POST") {
+        // Back from the payment page: the provider is asked whether this checkout is paid, and a paid checkout of this person's becomes their purchase (nexus/billing/course-billing.js).
+        if (!active.courseBilling) { send(res, 503, { error: "Course payments are unavailable.", code: "course_billing_unavailable" }); return true; }
+        const provider = body.provider === "paystack" ? "paystack" : body.provider === "stripe" ? "stripe" : "";
+        const reference = String(body.reference || "").slice(0, 120);
+        if (!provider || !reference) { send(res, 400, { error: "A provider and a reference are needed.", code: "course_checkout_invalid" }); return true; }
+        const confirmed = await active.courseBilling.confirm({ tenantId: context.tenantId, userId: context.userId }, { provider, reference }).catch(() => ({ paid: false, error: true }));
+        const summary = await active.courseBilling.summary({ tenantId: context.tenantId, userId: context.userId }).catch(() => null);
+        send(res, 200, { authoritative: true, paid: confirmed.paid === true, granted: confirmed.granted === true, plan: confirmed.purchase ? confirmed.purchase.plan : null, summary }, { "cache-control": "no-store" }); return true;
       } else if (url.pathname === "/api/nexus/runtime/behavior/turn" && req.method === "POST") {
         if (!active.behavior) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy fallback was used.", code: "behavior_spine_unavailable" }); return true; }
         // The device's own time zone, when the app sends one and it is a real IANA zone, so "7am" means 7am where the person is.
         const zonedContext = validIanaZone(body.timeZone) ? Object.freeze({ ...context, timeZone: body.timeZone }) : context;
         // Whether the app has a tutoring lesson on the screen (true or false when it says; nothing when it does not): the planner ends a lesson the app says is closed instead of treating what is said next as a lesson answer (nexus/brain/planner.js tutorTurn).
         const turnContext = typeof body.tutorLessonOpen === "boolean" ? Object.freeze({ ...zonedContext, tutorLessonOpen: body.tutorLessonOpen }) : zonedContext;
+        // Whether the app's voice is on: a spoken course tutoring turn uses the learner's voice minutes (nexus/billing).
+        const voicedContext = body.voiceOn === true ? Object.freeze({ ...turnContext, voiceOn: true }) : turnContext;
         let result;
         try {
           result = await active.behavior.turn({ input: { correlationId: request.context.requestId,
             conversationId: body.conversationId, taskId: body.taskId, channel: request.channel,
-            locale: request.locale, text: body.text }, context: turnContext });
+            locale: request.locale, text: body.text }, context: voicedContext });
         } catch (error) {
           // Found by the phrase sweep: "I have chest pain" is answered by a tool provider; when that call fails the person got an HTTP 503 and no words at all. The urgent answers that need no provider (the same sentences the
           // older route gives) are said instead; anything that is not urgent keeps its error exactly as before.
@@ -1248,7 +1274,7 @@ function requestContext(req, user, isRestrictedFrom = () => false) {
   // handling), but this context -- the one built for every real live user request -- did not. Harmless
   // today (authoritativeRuntimeUser() only ever grants an explicit permission list, never "*"), but kept
   // consistent so a future admin/superuser permission model doesn't silently fail under this context.
-  return Object.freeze({ requestId, correlationId: requestId, tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), country: String(user.country || ""), ...(userClockZone(user) ? { timeZone: userClockZone(user) } : {}), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has("*") || permissions.has(permission), isRestrictedFrom: restriction => isRestrictedFrom(user, restriction) });
+  return Object.freeze({ requestId, correlationId: requestId, tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), country: String(user.country || ""), email: String(user.email || ""), ...(userClockZone(user) ? { timeZone: userClockZone(user) } : {}), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has("*") || permissions.has(permission), isRestrictedFrom: restriction => isRestrictedFrom(user, restriction) });
 }
 
 function acceptanceContext(principal, values = {}) {

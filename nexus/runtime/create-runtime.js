@@ -82,6 +82,7 @@ const { CommunityRepository } = require("../community/store.js");
 const { createLiveFeeds } = require("../knowledge/live-feeds.js");
 const { createKoachLearnCatalog } = require("../knowledge/koachlearn-courses.js");
 const { createKoachLearnSync } = require("../knowledge/koachlearn-sync.js");
+const { createCourseBilling } = require("../billing/course-billing.js");
 const { WeatherAlertSettingsRepository } = require("../alerts/settings.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
@@ -104,6 +105,8 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const models = new ModelGovernanceRepository(db);
   const outcomes = new OutcomeRepository(db);
   const records = new RecordRepository(db);
+  // Paying for Koach Learn courses (nexus/billing): prices, what each person bought, Stripe and Paystack checkout. Courses are paid only when KOACHLEARN_COURSES_PAID=1.
+  const courseBilling = createCourseBilling({ env, records });
   const businessRecords = new BusinessRepository(db);
   const documents = new DocumentRepository(db);
   const workspaceStates = new WorkspaceStateRepository(records);
@@ -220,6 +223,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     koachLearn: createKoachLearnCatalog(),
     // The learner's Koach Learn certificates, read from Koach Learn's admin pages by an admin account made for Kyro (the owner sets KOACHLEARN_SYNC_EMAIL and KOACHLEARN_SYNC_PASSWORD in Render; off without them): see knowledge/koachlearn-sync.js.
     koachLearnSync: createKoachLearnSync({ email: env.KOACHLEARN_SYNC_EMAIL || "", password: env.KOACHLEARN_SYNC_PASSWORD || "" }),
+    courseBilling,
     // The person's saved documents, so "Export it as a PDF" can find the latest one (see planner.js exportLatestDocumentPlan).
     documents,
     // How many business/nonprofit workspaces the person has, read the way the business tools read them (same access check); lets the planner say "no workspace yet" before it asks for a yes.
@@ -228,7 +232,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates, businessPreview: createBusinessPreview({ repository: businessRecords, access, consents, env }), reminderCancelPreview: createRemindersCancelPreview({ notifications }), translatePrompt: createPromptTranslator({ env, fetchFn: fetchFn || globalThis.fetch }) }) : null;
   const ready = providers.register(tools);
   return Object.freeze({ config, adapter, db, brief, repeatReminders, repeatReminderRecords, alerts, weekly, companion, conversations, tasks, executions, tools, consents,
-    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, farmRecords, healthRecords, wellnessRecords, businessRecords, documents, workspaceStates, workspaceMigrations, autonomyControl, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
+    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, courseBilling, farmRecords, healthRecords, wellnessRecords, businessRecords, documents, workspaceStates, workspaceMigrations, autonomyControl, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
     engine, planner, agent, behavior, providers, adapters, verifiers, authority, authorityCoverage, acceptance, path2Evidence, objectStorage, ready,
     async close() { await adapter.close(); } });
 }
