@@ -83,6 +83,7 @@ const { createLiveFeeds } = require("../knowledge/live-feeds.js");
 const { createKoachLearnCatalog } = require("../knowledge/koachlearn-courses.js");
 const { createKoachLearnSync } = require("../knowledge/koachlearn-sync.js");
 const { createCourseBilling } = require("../billing/course-billing.js");
+const { createKoachLearnInsights } = require("../knowledge/koachlearn-insights.js");
 const { WeatherAlertSettingsRepository } = require("../alerts/settings.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
@@ -224,6 +225,8 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     // The learner's Koach Learn certificates, read from Koach Learn's admin pages by an admin account made for Kyro (the owner sets KOACHLEARN_SYNC_EMAIL and KOACHLEARN_SYNC_PASSWORD in Render; off without them): see knowledge/koachlearn-sync.js.
     koachLearnSync: createKoachLearnSync({ email: env.KOACHLEARN_SYNC_EMAIL || "", password: env.KOACHLEARN_SYNC_PASSWORD || "" }),
     courseBilling,
+    // Learners' "this wording is confusing" reports and quick-check pass rates by language, for the owner (knowledge/koachlearn-insights.js).
+    koachLearnInsights: createKoachLearnInsights({ records, env }),
     // The person's saved documents, so "Export it as a PDF" can find the latest one (see planner.js exportLatestDocumentPlan).
     documents,
     // How many business/nonprofit workspaces the person has, read the way the business tools read them (same access check); lets the planner say "no workspace yet" before it asks for a yes.

@@ -56076,6 +56076,9 @@ function kyroKoachLearnStudyQuestion(text) {
     if (window.KyroKoachLearnStudy && typeof window.KyroKoachLearnStudy.recordRequest === "function" && window.KyroKoachLearnStudy.recordRequest(text)) return true;
     // ("how much are the courses?", "buy ten courses", "how many courses do I have left?", "I paid": paying for courses)
     if (window.KyroKoachLearnStudy && typeof window.KyroKoachLearnStudy.purchaseRequest === "function" && window.KyroKoachLearnStudy.purchaseRequest(text)) return true;
+    // ("how do I sign up for Koach Learn?": the steps from the live sign-up page; "pass rates by language": the owner's report, which the server shows the owner only)
+    if (window.KyroKoachLearnStudy && typeof window.KyroKoachLearnStudy.signupRequest === "function" && window.KyroKoachLearnStudy.signupRequest(text)) return true;
+    if (window.KyroKoachLearnStudy && typeof window.KyroKoachLearnStudy.insightsRequest === "function" && window.KyroKoachLearnStudy.insightsRequest(text)) return true;
     const asked = window.KyroKoachLearnStudy && typeof window.KyroKoachLearnStudy.studyRequest === "function" ? window.KyroKoachLearnStudy.studyRequest(text) : null;
     if (!asked) return false;
     const named = asked.slug || asked.ordinal || (asked.terms && asked.terms.length);
@@ -57050,6 +57053,8 @@ function kyroShowTypedResult(result, text, message) {
     } else if (tutor && result.state === "completed" && String(message || "").trim().length >= 12) {
       // a tutoring turn is on the screen and stays there until the learner answers or closes it, with a box under it to type the answer in
       answer = { response: message, requiresConfirmation: tutor.active === true, tutor: { active: tutor.active === true, subject: String(tutor.subject || "") } };
+      // (a Koach Learn course lesson has buttons under it: "Explain it more simply", "Show it in English", "This wording is confusing")
+      if (Array.isArray(result.plan?.offers) && result.plan.offers.length) answer.offers = result.plan.offers;
     } else if (result.state === "completed" && result.application === "conversation" && result.outcome?.modelAnswered === true && KYRO_PACK_QUESTION.test(String(text || "")) && String(message || "").trim().length >= 24) {
       answer = { response: message };
     } else if (result.state === "completed" && result.application === "conversation" && result.outcome?.modelAnswered === false && String(message || "").trim().length >= 24) {

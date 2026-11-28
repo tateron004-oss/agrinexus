@@ -182,5 +182,33 @@
     return null;
   }
 
-  return Object.freeze({ studyRequest, recordRequest, purchaseRequest });
+  // Help inside a course lesson: "this wording is confusing" (a report, and the lesson again more simply), "explain it more simply" / "I don't understand", "show it in English".
+  // -> null | { kind: "confusing" | "plain" | "english" }
+  const CONFUSING = /\b(?:(?:this |the )?wording is confusing|confusing|confused by|report (?:this|the) (?:wording|lesson|sentence)|hard to understand|redaccion es confusa|es confuso|confusa|formulation est confuse|c'est confus|texto esta confuso|esta confuso|yanachanganya|inachanganya|maneno haya|yana rikitarwa|rikitarwa|n dani laamu|n da mi laamu|ọrọ yii|oro yii|na-agbagwoju|agbagwoju)\b|مربك|مربكة|ግራ የሚያጋባ/;
+  const PLAIN = /\b(?:explain (?:it |that |this )?(?:again|more simply|simpler|in simple(?:r)? words)|more simply|simpler|i don'?t understand|i do not understand|say it more simply|explica(?:lo|melo)? (?:mas )?(?:facil|simple)|no entiendo|explique plus simplement|plus simplement|je ne comprends pas|explique de forma mais simples|mais simples|nao entendo|eleza kwa urahisi|sielewi|bayyana shi a saukake|ban gane ba|ban fahimta ba|salaye re ni ona to rorun|ko ye mi|kowaa ya n'uzo di mfe|aghotaghi m)\b|اشرحها بشكل أبسط|لم أفهم|لا أفهم|لم افهم|لا افهم|በቀላሉ አስረዳኝ|አልገባኝም/;
+  const ENGLISH = /\b(?:in english|english version|show (?:it )?in english|muestralo en ingles|en ingles|montre-le en anglais|en anglais|mostre em ingles|em ingles|onyesha kwa kiingereza|kwa kiingereza|nuna shi da turanci|da turanci|fi han ni ede geesi|ni ede geesi|gosi ya n'asusu bekee|asusu bekee)\b|بالإنجليزية|በእንግሊዝኛ/;
+  function lessonHelpRequest(text) {
+    const said = String(text || "").trim();
+    if (!said || said.length > 200) return null;
+    const folded = fold(said);
+    if (CONFUSING.test(folded)) return Object.freeze({ kind: "confusing" });
+    if (ENGLISH.test(folded)) return Object.freeze({ kind: "english" });
+    if (PLAIN.test(folded)) return Object.freeze({ kind: "plain" });
+    return null;
+  }
+  // Signing up for Koach Learn: "how do I sign up for Koach Learn?", "create a Koach Learn account", "join Koach Learn". -> boolean
+  const SIGNUP = /\b(?:sign ?up|signup|register|registration|create (?:an? |my )?account|make (?:an? )?account|open (?:an? )?account|join|registrar(?:me|se)?|crear (?:una )?cuenta|inscribirme|s'inscrire|m'inscrire|inscription|creer un compte|cadastrar|inscrever|criar (?:uma )?conta|kujisajili|jisajili|fungua akaunti|yi rajista|rajista|bude asusu|forukosile|forukọsilẹ|debanye aha|mepee akaunti)\b|تسجيل|سجل|إنشاء حساب|መመዝገብ|ልመዝገብ|አካውንት/;
+  function signupRequest(text) {
+    const said = String(text || "").trim();
+    if (!said || said.length > 200) return false;
+    const folded = fold(said).replace(/\b[kc]oa?t?ch[ -]?learn(?:ing)?\b/g, "koach learn");
+    return /\bkoach ?learn\b/.test(folded) && (SIGNUP.test(folded) || /\b(?:create|make|open|start)\b.*\baccount\b/.test(folded));
+  }
+  // The owner's report: "show the learner reports", "pass rates by language", "show the Koach Learn report". -> boolean
+  function insightsRequest(text) {
+    const folded = fold(String(text || "")).replace(/\b[kc]oa?t?ch[ -]?learn(?:ing)?\b/g, "koach learn");
+    return /\b(?:(?:show|read|give) (?:me )?(?:the )?(?:learner|learners'?|wording|koach learn) reports?|pass rates? (?:by|per|for each) language|(?:quiz|quick.check|learners?'?) pass rates?|koach learn report|how are (?:the )?learners doing)\b/.test(folded);
+  }
+
+  return Object.freeze({ studyRequest, recordRequest, purchaseRequest, lessonHelpRequest, signupRequest, insightsRequest });
 });
