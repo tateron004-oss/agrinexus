@@ -171,7 +171,7 @@ test("through the planner: pick a course from the list, learn it lesson by lesso
   assert.match(asked.at(-1).goal, /Next lesson: none, this is the last lesson of the course\./);
 
   const stopped = await ask("stop");
-  assert.equal(stopped.response, 'Okay, we will stop here. Say "continue my course" any time to pick up at lesson 4.');
+  assert.equal(stopped.response, 'Okay, we will stop here. Say "continue my course" any time to pick up at lesson 4. Tip: say "remind me to study every day at 7 pm" and I will remind you.');
   assert.equal(stopped.tutor.active, false);
 
   const back = await ask("continue my course");
@@ -222,8 +222,8 @@ test("the spoken-only caller leaves it alone, and the general tutor and the cour
 test("the page takes a spoken study request itself, before the course finder, and the catalogue's 'Study with Kyro' link opens the course after sign-in", () => {
   const app = read("public/app.js");
   const html = read("public/index.html");
-  assert.ok(html.indexOf("/kyro-koachlearn-study.js?v=kyro-koachlearn-study-6") > html.indexOf("/kyro-koachlearn-courses.js"), "loaded after the course matcher it uses");
-  assert.ok(read("public/sw.js").includes("`/kyro-koachlearn-study.js?v=kyro-koachlearn-study-6`"));
+  assert.ok(html.indexOf("/kyro-koachlearn-study.js?v=kyro-koachlearn-study-7") > html.indexOf("/kyro-koachlearn-courses.js"), "loaded after the course matcher it uses");
+  assert.ok(read("public/sw.js").includes("`/kyro-koachlearn-study.js?v=kyro-koachlearn-study-7`"));
   assert.ok(app.includes('if (trimmed && ((typeof kyroKoachLearnStudyQuestion === "function" && kyroKoachLearnStudyQuestion(trimmed)) || (typeof kyroKoachLearnQuestion === "function" && kyroKoachLearnQuestion(trimmed)) ||'));
   // "continue my course" with nothing named: only once this person studied a Koach Learn course with Kyro on this device, or while a course lesson is open
   assert.ok(app.includes("return studied || (typeof kyroTutorOpen === \"function\" && kyroTutorOpen() && kyroTutorCourse === true);"));

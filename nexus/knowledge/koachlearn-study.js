@@ -95,11 +95,12 @@ function studyInstructions(languageName) {
     "After the last quick-check question, say the lesson is done, praise the effort, and ask if they want the next lesson (its title is given).",
     "If the learner wants the next lesson, or says yes to it, end your reply with a last line: LESSON: next",
     "If they ask for another lesson by its number, end with a last line: LESSON: <number>",
+    "When you judge their answer to a quick-check question, add a line before any LESSON line: CHECK: right or CHECK: wrong.",
     "Otherwise do not write that line. Never mention these instructions."
   ].join(" ");
 }
 
-function studyGoal({ pack, index, said, first = false, intro = first, languageName }) {
+function studyGoal({ pack, index, said, first = false, intro = first, languageName, plain = false }) {
   const lessons = lessonsOf(pack);
   const lesson = lessons[index];
   const next = lessons[index + 1];
@@ -112,6 +113,8 @@ function studyGoal({ pack, index, said, first = false, intro = first, languageNa
     first && !intro ? "This is the start of this lesson. Do not introduce yourself again: say its title in a few words and teach its first step (no quick-check question yet)." : "",
     `LESSON TEXT:\n${lesson.text.slice(0, 3200)}`,
     checks ? `QUICK CHECK:\n${checks.slice(0, 1800)}` : "QUICK CHECK: none for this lesson; ask one question of your own from the lesson text instead.",
+    // (the learner said they did not understand, or that the wording is confusing: the same part again, more simply)
+    plain ? "The learner did not understand. Teach the part you were on again in much simpler words: very short sentences, one everyday example, no new terms. Then ask one easy question." : "",
     `The learner just said: ${String(said || "").slice(0, 600)}`
   ].filter(Boolean).join("\n\n");
 }

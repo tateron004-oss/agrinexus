@@ -66,7 +66,9 @@ const { offersFor, offerLine, checklistAsk } = require("../knowledge/offers.js")
 const { feedRequest, grantsAnswer, rulesAnswer } = require("../knowledge/live-feeds.js");
 const { courseRequest } = require("../../public/kyro-koachlearn-courses.js");
 const { findKoachLearnCourses, koachLearnAnswer } = require("../knowledge/koachlearn-courses.js");
-const { studyRequest, recordRequest, purchaseRequest } = require("../../public/kyro-koachlearn-study.js");
+const { studyRequest, recordRequest, purchaseRequest, lessonHelpRequest, signupRequest, insightsRequest } = require("../../public/kyro-koachlearn-study.js");
+const koachLearnHelp = require("../knowledge/koachlearn-help-text.js");
+const { readCheck: readCourseCheck } = require("../knowledge/koachlearn-insights.js");
 const { spokenMinutes: courseSpokenMinutes } = require("../billing/course-billing.js");
 const courseBillingText = require("../billing/course-billing-text.js");
 const coursePlans = require("../billing/course-plans.js");
@@ -110,9 +112,9 @@ const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, koachLearnSync = null, courseBilling = null, studyPacks = sharedStudyPacks, tutorSessions = sharedTutorSessions, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, koachLearnSync = null, courseBilling = null, koachLearnInsights = null, studyPacks = sharedStudyPacks, tutorSessions = sharedTutorSessions, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, koachLearnSync, courseBilling, studyPacks, tutorSessions, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, koachLearnSync, courseBilling, koachLearnInsights, studyPacks, tutorSessions, maxRepairAttempts });
   }
 
   // ---- Kyro as a tutor alongside a Koach Learn course (see knowledge/koachlearn-study.js) ----
@@ -143,11 +145,11 @@ class OpenEndedPlanner {
     return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false, planningAttempts: 0, ...extra });
   }
   // One taught step of the lesson the session is on: the model, inside the study rules, with the lesson text and its quick checks; then where the learner is is saved.
-  async teachCourseStep({ command, context, session, said, first }) {
+  async teachCourseStep({ command, context, session, said, first, plain = false }) {
     const study = session.course;
     const languageName = koachLearnStudy.languageNameOf(study.lang);
     const profile = createInteractionProfile({ locale: study.lang, userPreferences: context?.userPreferences || {}, channel: command.channel });
-    const ask = async (index, saidNow, isFirst) => this.model.respond({ goal: koachLearnStudy.studyGoal({ pack: study.pack, index, said: saidNow, first: isFirst, intro: isFirst && !session.course.introduced, languageName }),
+    const ask = async (index, saidNow, isFirst, plainNow = false) => this.model.respond({ goal: koachLearnStudy.studyGoal({ pack: study.pack, index, said: saidNow, first: isFirst, intro: isFirst && !session.course.introduced, languageName, plain: plainNow }),
       instructions: koachLearnStudy.studyInstructions(languageName), locale: study.lang, tenantId: command.tenantId, maxOutputTokens: 600, interactionProfile: profile,
       conversationHistory: isFirst ? [] : session.turns.map(turn => ({ role: turn.role, content: turn.content })), memories: [], capabilities: [] }).catch(() => null);
     const freeOnly = Boolean(study.billing && study.billing.why === "free-lesson");
@@ -155,7 +157,10 @@ class OpenEndedPlanner {
       this.tutorSessions.end(command.tenantId, command.actorId);
       return this.studyPlan(command, courseBillingText.billingText(study.lang, "freeDone", { course: study.name }), { knowledge: "koachlearn-billing:free-done" });
     }
-    let answer = koachLearnStudy.readMarker(await ask(study.lesson, said, first));
+    // (the tutor's hidden "CHECK: right|wrong" line, when it judged a quick-check answer, is counted for the pass rates by language and never shown or spoken)
+    const checked = readCourseCheck(await ask(study.lesson, said, first, plain));
+    if (checked.check && this.koachLearnInsights) await this.koachLearnInsights.recordCheck({ tenantId: command.tenantId, userId: command.actorId }, { lang: study.lang, slug: study.slug, check: checked.check }).catch(() => null);
+    let answer = koachLearnStudy.readMarker(checked.text);
     // the learner moved on ("LESSON: next" / "LESSON: 3"): the next lesson is started at once, in the same turn
     let moved = false;
     if (answer.text !== null && answer.move !== null) {
@@ -175,7 +180,7 @@ class OpenEndedPlanner {
         session.course = { ...study, lesson: target };
         session.turns = [];
         moved = true;
-        answer = koachLearnStudy.readMarker(await ask(target, said, true));
+        answer = koachLearnStudy.readMarker(readCourseCheck(await ask(target, said, true)).text);
       }
     }
     const reply = answer.text;
@@ -196,7 +201,7 @@ class OpenEndedPlanner {
       voiceOut = left <= 0;
     }
     const shown = voiceOut ? `${reply}\n\n${courseBillingText.billingText(now.lang, "voiceOut")}` : reply;
-    return this.studyPlan(command, shown, { modelAnswered: true, sources: now.sources,
+    return this.studyPlan(command, shown, { modelAnswered: true, sources: now.sources, offers: koachLearnHelp.lessonOffers(now.lang),
       tutor: Object.freeze({ active: true, subject: now.name, kind: "course", turn: session.count, step: session.count, course: Object.freeze({ name: now.name, lesson: now.lesson + 1, total: now.total }), ...(voiceOut ? { voiceOut: true } : {}) }) });
   }
   // Starting (or coming back to) a course: which course, which lesson, the pack in the learner's language; then the first step.
@@ -386,6 +391,20 @@ class OpenEndedPlanner {
         if (target >= 0) { session.course = { ...session.course, lesson: target }; session.turns = []; return this.teachCourseStep({ command, context, session, said, first: true }); }
       }
       if (study && study.kind !== "next" && study.kind !== "lesson") return null;
+      // "show it in English", "explain it more simply" / "I don't understand", "this wording is confusing" (noted for the owner, then the same part more simply)
+      const help = lessonHelpRequest(said);
+      if (help) {
+        const course = session.course;
+        if (help.kind === "english") {
+          const english = course.lang === "en" ? course.pack : await this.studyPacks.load("en", course.slug).catch(() => null);
+          const lesson = english ? koachLearnStudy.lessonsOf(english)[course.lesson] : null;
+          if (lesson) return this.studyPlan(command, `${koachLearnHelp.helpText(course.lang, "englishHeader")}\n\n${lesson.text}`, { modelAnswered: true, sources: course.sources, offers: koachLearnHelp.lessonOffers(course.lang),
+            tutor: Object.freeze({ active: true, subject: course.name, kind: "course", turn: session.count, step: session.count, course: Object.freeze({ name: course.name, lesson: course.lesson + 1, total: course.total }) }) });
+        }
+        if (help.kind === "confusing" && this.koachLearnInsights) await this.koachLearnInsights.reportWording({ tenantId, userId }, { slug: course.slug, lang: course.lang, lesson: course.lesson + 1, said }).catch(() => null);
+        const step = await this.teachCourseStep({ command, context, session, said, first: false, plain: true });
+        return help.kind === "confusing" && step && step.tutor ? Object.freeze({ ...step, response: `${koachLearnHelp.helpText(course.lang, "thanks")}\n\n${step.response}` }) : step;
+      }
       if (tutorMode.isOtherCommand(said)) return null;
       return this.teachCourseStep({ command, context, session, said, first: false });
     }
@@ -394,7 +413,8 @@ class OpenEndedPlanner {
       if (stopping) {
         this.tutorSessions.end(tenantId, userId);
         // (a course: said in the learner's language, with how to pick it up again at the lesson reached)
-        const ended = session.course ? koachLearnStudy.studyText(session.course.lang, "stopped", { lesson: session.course.lesson + 1, course: session.course.name }) : tutorMode.endLine(session);
+        const remindTip = session.course && koachLearnHelp.TEXT[session.course.lang] && koachLearnHelp.TEXT[session.course.lang].remind;
+        const ended = session.course ? `${koachLearnStudy.studyText(session.course.lang, "stopped", { lesson: session.course.lesson + 1, course: session.course.name })}${remindTip ? ` ${remindTip}` : ""}` : tutorMode.endLine(session);
         return plan(ended, { tutor: Object.freeze({ active: false, subject: session.subject, kind: session.kind, turn: session.count }) });
       }
       const restart = tutorMode.tutorRequest(said);
@@ -928,6 +948,16 @@ class OpenEndedPlanner {
     // own page and its translations. The person's own learning ("continue my course", "my progress", a quiz, a certificate) is never taken. Asked before the guides, so "courses about starting a business" lists courses
     // instead of answering how to start one. Not for the spoken-only caller, which leaves live lookups to its own route.
     // "My certificate number is q4w7e2rt", "what have I finished on Koach Learn?": the learner's own Koach Learn record (see koachLearnRecordTurn).
+    // "How do I sign up for Koach Learn?": the steps, read from the live sign-up page, with a button that opens it (Kyro never signs anyone up; see knowledge/koachlearn-help-text.js).
+    if (this.koachLearn && context?.deterministicOnly !== true && !ownWorkspace && signupRequest(askText)) {
+      const lang = this.studyLanguage(command, { wordsLang: koachLearnWordsLanguage(askText) });
+      const guide = koachLearnHelp.signupAnswer(lang);
+      return this.studyPlan(command, guide.text, { knowledge: "koachlearn-signup", sources: guide.sources });
+    }
+    // "Show the learner reports", "pass rates by language": for the owner only (see knowledge/koachlearn-insights.js); anyone else's question goes on as before.
+    if (this.koachLearnInsights && context?.deterministicOnly !== true && insightsRequest(askText) && this.koachLearnInsights.isOwner(context)) {
+      return this.studyPlan(command, await this.koachLearnInsights.ownerReport(command.tenantId), { knowledge: "koachlearn-insights" });
+    }
     // "How much are the courses?", "buy ten courses", "how many courses do I have left?", "I paid": paying for courses (see koachLearnBillingTurn).
     const purchaseAsk = this.courseBilling && context?.deterministicOnly !== true && !ownWorkspace ? purchaseRequest(askText) : null;
     if (purchaseAsk) {
