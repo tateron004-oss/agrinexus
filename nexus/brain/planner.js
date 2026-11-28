@@ -66,7 +66,10 @@ const { offersFor, offerLine, checklistAsk } = require("../knowledge/offers.js")
 const { feedRequest, grantsAnswer, rulesAnswer } = require("../knowledge/live-feeds.js");
 const { courseRequest } = require("../../public/kyro-koachlearn-courses.js");
 const { findKoachLearnCourses, koachLearnAnswer } = require("../knowledge/koachlearn-courses.js");
-const { studyRequest, recordRequest } = require("../../public/kyro-koachlearn-study.js");
+const { studyRequest, recordRequest, purchaseRequest } = require("../../public/kyro-koachlearn-study.js");
+const { spokenMinutes: courseSpokenMinutes } = require("../billing/course-billing.js");
+const courseBillingText = require("../billing/course-billing-text.js");
+const coursePlans = require("../billing/course-plans.js");
 const koachLearnRecord = require("../knowledge/koachlearn-sync.js");
 const { wordsLanguage: koachLearnWordsLanguage } = require("../../public/kyro-koachlearn-courses.js");
 const koachLearnStudy = require("../knowledge/koachlearn-study.js");
@@ -107,9 +110,9 @@ const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, koachLearnSync = null, studyPacks = sharedStudyPacks, tutorSessions = sharedTutorSessions, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, koachLearnSync = null, courseBilling = null, studyPacks = sharedStudyPacks, tutorSessions = sharedTutorSessions, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, koachLearnSync, studyPacks, tutorSessions, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, liveFeeds, koachLearn, koachLearnSync, courseBilling, studyPacks, tutorSessions, maxRepairAttempts });
   }
 
   // ---- Kyro as a tutor alongside a Koach Learn course (see knowledge/koachlearn-study.js) ----
@@ -147,6 +150,11 @@ class OpenEndedPlanner {
     const ask = async (index, saidNow, isFirst) => this.model.respond({ goal: koachLearnStudy.studyGoal({ pack: study.pack, index, said: saidNow, first: isFirst, intro: isFirst && !session.course.introduced, languageName }),
       instructions: koachLearnStudy.studyInstructions(languageName), locale: study.lang, tenantId: command.tenantId, maxOutputTokens: 600, interactionProfile: profile,
       conversationHistory: isFirst ? [] : session.turns.map(turn => ({ role: turn.role, content: turn.content })), memories: [], capabilities: [] }).catch(() => null);
+    const freeOnly = Boolean(study.billing && study.billing.why === "free-lesson");
+    if (freeOnly && study.lesson > 0) {
+      this.tutorSessions.end(command.tenantId, command.actorId);
+      return this.studyPlan(command, courseBillingText.billingText(study.lang, "freeDone", { course: study.name }), { knowledge: "koachlearn-billing:free-done" });
+    }
     let answer = koachLearnStudy.readMarker(await ask(study.lesson, said, first));
     // the learner moved on ("LESSON: next" / "LESSON: 3"): the next lesson is started at once, in the same turn
     let moved = false;
@@ -158,6 +166,10 @@ class OpenEndedPlanner {
         this.tutorSessions.end(command.tenantId, command.actorId);
         return this.studyPlan(command, `${answer.text ? `${answer.text}\n\n` : ""}${koachLearnStudy.studyText(study.lang, "finished", { course: study.name })}`, { modelAnswered: true, sources: study.sources,
           tutor: Object.freeze({ active: false, subject: study.name, kind: "course", turn: session.count, course: Object.freeze({ name: study.name, lesson: study.total, total: study.total, done: true }) }) });
+      }
+      if (freeOnly && target > 0) {
+        this.tutorSessions.end(command.tenantId, command.actorId);
+        return this.studyPlan(command, `${answer.text ? `${answer.text}\n\n` : ""}${courseBillingText.billingText(study.lang, "freeDone", { course: study.name })}`, { modelAnswered: true, knowledge: "koachlearn-billing:free-done" });
       }
       if (target >= 0 && target !== study.lesson) {
         session.course = { ...study, lesson: target };
@@ -177,8 +189,15 @@ class OpenEndedPlanner {
     if (first || moved) {
       now.progress = await koachLearnStudy.saveProgress(this.automationRecords, { tenantId: command.tenantId, userId: command.actorId }, { slug: now.slug, lang: now.lang, name: now.name, courseId: now.courseId, lesson: now.lesson, total: now.total }, now.progress) || now.progress;
     }
-    return this.studyPlan(command, reply, { modelAnswered: true, sources: now.sources,
-      tutor: Object.freeze({ active: true, subject: now.name, kind: "course", turn: session.count, step: session.count, course: Object.freeze({ name: now.name, lesson: now.lesson + 1, total: now.total }) }) });
+    // (a spoken turn uses voice minutes; when they are used up Kyro says so, and the page carries the lesson on by typing)
+    let voiceOut = false;
+    if (this.courseBilling && this.courseBilling.enforced && context?.voiceOn === true) {
+      const left = now.billing && now.billing.why === "free-lesson" ? 0 : await this.courseBilling.useVoice({ tenantId: command.tenantId, userId: command.actorId }, courseSpokenMinutes(reply, said)).catch(() => Infinity);
+      voiceOut = left <= 0;
+    }
+    const shown = voiceOut ? `${reply}\n\n${courseBillingText.billingText(now.lang, "voiceOut")}` : reply;
+    return this.studyPlan(command, shown, { modelAnswered: true, sources: now.sources,
+      tutor: Object.freeze({ active: true, subject: now.name, kind: "course", turn: session.count, step: session.count, course: Object.freeze({ name: now.name, lesson: now.lesson + 1, total: now.total }), ...(voiceOut ? { voiceOut: true } : {}) }) });
   }
   // Starting (or coming back to) a course: which course, which lesson, the pack in the learner's language; then the first step.
   // The learner's Koach Learn record (knowledge/koachlearn-sync.js): "my certificate number is q4w7e2rt" links it (only Koach Learn's student id is kept), and "what have I finished on
@@ -226,6 +245,54 @@ class OpenEndedPlanner {
     const middle = finished.length ? `${heading} ${finished.map(row => `${named(row)}.`).join(" ")}` : say("none");
     return this.studyPlan(command, [...lines, middle, kyroLine, say("next")].filter(Boolean).join(" "), { knowledge: "koachlearn-record:shown" });
   }
+  // Paying for Koach Learn courses (nexus/billing; owner, 27 Nov 2026: every course is paid and keeps $3 for the company after what it costs): "how much are the courses?",
+  // "buy ten courses", "how many courses do I have left?", "I paid". A purchase is made only on the provider's own checkout page, and granted only when the provider says it is paid.
+  async koachLearnBillingTurn({ command, context, request, askText }) {
+    if (context?.deterministicOnly === true || !this.courseBilling) return null;
+    const tenantId = command?.tenantId; const userId = command?.actorId;
+    if (!tenantId || !userId) return null;
+    const lang = this.studyLanguage(command, { wordsLang: koachLearnWordsLanguage(askText) });
+    const say = (key, values) => courseBillingText.billingText(lang, key, values);
+    const plan = (text, extra = {}) => this.studyPlan(command, text, { knowledge: `koachlearn-billing:${request.kind}`, ...extra });
+    const guest = Array.isArray(context?.permissions) && context.permissions.includes("guest:restricted");
+    const list = this.courseBilling.prices({ country: context?.country || "", lang });
+    if (request.kind === "prices") return plan(`${courseBillingText.pricesText(lang, list)} ${say("howBuy")}`);
+    if (guest) return plan(say("guest"));
+    const scope = { tenantId, userId };
+    if (request.kind === "check") {
+      const before = await this.courseBilling.summary(scope);
+      await this.courseBilling.confirmPending(scope, { all: true }).catch(() => null);
+      const after = await this.courseBilling.summary(scope);
+      if (!before.pending && !after.latestAt) return plan(say("none"));
+      // (paid just now: confirmed here, or a moment ago by the page coming back from the payment page)
+      const recent = Boolean(after.latestAt) && Date.now() - Date.parse(after.latestAt) < 15 * 60 * 1000;
+      if (after.purchases > before.purchases || recent) {
+        const bought = coursePlans.planFrom(list, after.latestPlan) || coursePlans.planFrom(list, "course1");
+        return plan(`${say("paid", { what: courseBillingText.planWhat(lang, bought) })} ${this.koachLearnBalanceText(lang, after)}`);
+      }
+      return plan(say("notYet"));
+    }
+    if (request.kind === "balance") return plan(this.koachLearnBalanceText(lang, await this.courseBilling.summary(scope)));
+    // "buy": the provider's checkout page, as a link
+    const chosen = coursePlans.planFrom(list, request.plan || "course1");
+    if (!this.courseBilling.ready(list.currency)) return plan(say("notReady"));
+    try {
+      const started = await this.courseBilling.start(scope, { email: context?.email || "", country: context?.country || "", lang, planId: chosen.id });
+      const price = coursePlans.formatPrice(started.amount, started.currency);
+      const what = courseBillingText.planWhat(lang, chosen);
+      return plan(say("link", { what, price }), { sources: [{ name: say("pay", { price }), publisher: started.provider === "paystack" ? "Paystack" : "Stripe", title: what, url: started.url }],
+        checkout: Object.freeze({ provider: started.provider, reference: started.reference }) });
+    } catch (error) {
+      return plan(error && error.code === "email_needed" ? say("guest") : say("failed"));
+    }
+  }
+  koachLearnBalanceText(lang, summary) {
+    const say = (key, values) => courseBillingText.billingText(lang, key, values);
+    const voice = Math.floor(summary.voiceLeft);
+    if (summary.allCoursesUntil) return say("all", { date: String(summary.allCoursesUntil).slice(0, 10), voice });
+    if (!summary.purchases) return `${say("nothing")} ${say("howBuy")}`;
+    return say("left", { n: summary.coursesLeft, voice });
+  }
   // The Koach Learn course ids this person has a certificate for (an empty set when their record is not linked, or Koach Learn cannot be read).
   async koachLearnFinishedIds(command) {
     try {
@@ -269,9 +336,21 @@ class OpenEndedPlanner {
     const courseId = course.i; // (the course found in the learner's language: its own page)
     const page = `${KOACHLEARN_CATALOG}/#lang=${lang}&c=${courseId}`;
     const sources = [{ name: pack.name, publisher: "Koach Learn", title: pack.name, url: page }];
+    // (courses are paid: a course slot is used the first time a course is studied; without one, Kyro says how to buy)
+    let billing = null;
+    if (this.courseBilling && this.courseBilling.enforced) {
+      const guest = Array.isArray(context?.permissions) && context.permissions.includes("guest:restricted");
+      billing = await this.courseBilling.access({ tenantId, userId }, { slug, lessonIndex: lesson, guest });
+      if (!billing.ok) {
+        const say = (key, values) => courseBillingText.billingText(lang, key, values);
+        if (billing.why === "guest") return this.studyPlan(command, `${say("need", { course: pack.name })} ${say("guest")}`, { knowledge: "koachlearn-billing:need" });
+        const list = this.courseBilling.prices({ country: context?.country || "", lang });
+        return this.studyPlan(command, `${say("need", { course: pack.name })} ${courseBillingText.pricesText(lang, list)} ${say("howBuy")}`, { knowledge: "koachlearn-billing:need" });
+      }
+    }
     const session = this.tutorSessions.start(tenantId, userId, { kind: "course", subject: pack.name, lang });
     if (!session) return null;
-    session.course = { slug, lang, name: pack.name, courseId, pack, lesson, total, sources, progress };
+    session.course = { slug, lang, name: pack.name, courseId, pack, lesson, total, sources, progress, billing: billing ? { why: billing.why } : null };
     const said = String(command.spokenText || command.text || "").trim();
     return this.teachCourseStep({ command, context, session, said, first: true });
   }
@@ -668,6 +747,11 @@ class OpenEndedPlanner {
     const emergencyNumber = safetyTexts.map(said => emergencyNumberAnswer(said, { country: context?.country })).find(Boolean);
     if (emergencyNumber) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: emergencyNumber, sourceRequired: false, planningAttempts: 0 });
     // A tutoring session that is open takes what the person says next (their answer, their question, or "stop"), before the readers that would take a short answer such as "7" for a reading or "yes" for a confirmation.
+    // (paying for courses is answered even in the middle of a lesson: "how many courses do I have left?", "buy more voice minutes" are not lesson answers)
+    if (this.courseBilling && context?.deterministicOnly !== true) {
+      const paying = purchaseRequest(stripWakeWord(command.text));
+      if (paying) { const billing = await this.koachLearnBillingTurn({ command, context, request: paying, askText: stripWakeWord(command.text) }); if (billing) return billing; }
+    }
     const tutoring = await this.tutorTurn({ command, context }, { starting: false });
     if (tutoring) return tutoring;
     // "Show my blood pressure readings", "delete my last reading", "that was wrong, it was 133/78", "delete all my health records", "who can see my health information": readings saved through the planner live in the
@@ -844,6 +928,12 @@ class OpenEndedPlanner {
     // own page and its translations. The person's own learning ("continue my course", "my progress", a quiz, a certificate) is never taken. Asked before the guides, so "courses about starting a business" lists courses
     // instead of answering how to start one. Not for the spoken-only caller, which leaves live lookups to its own route.
     // "My certificate number is q4w7e2rt", "what have I finished on Koach Learn?": the learner's own Koach Learn record (see koachLearnRecordTurn).
+    // "How much are the courses?", "buy ten courses", "how many courses do I have left?", "I paid": paying for courses (see koachLearnBillingTurn).
+    const purchaseAsk = this.courseBilling && context?.deterministicOnly !== true && !ownWorkspace ? purchaseRequest(askText) : null;
+    if (purchaseAsk) {
+      const billing = await this.koachLearnBillingTurn({ command, context, request: purchaseAsk, askText });
+      if (billing) return billing;
+    }
     const recordAsk = this.koachLearnSync && context?.deterministicOnly !== true && !ownWorkspace ? recordRequest(askText) : null;
     if (recordAsk) {
       const record = await this.koachLearnRecordTurn({ command, context, request: recordAsk, askText });
